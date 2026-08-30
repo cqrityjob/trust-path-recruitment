@@ -158,6 +158,22 @@
       "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() with two additional allowed values, 'career_center_test_started' and 'career_filter_used'. Nothing renders differently before or after it runs; trackV31FunnelEvent is fire-and-forget and never throws to its caller. Applied through the official Supabase GitHub integration.",
       "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';",
       "evidenceSource": "Official Supabase GitHub integration check run 99141209788 completed successfully against owner project wrygicdfxwjnrugduxnt for main merge ecbe91b18dbf9d95f8847f5a98cc34d921ef79ea on 2026-08-29. The merged migration keeps cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() aligned; clean replay, RLS, S2.16/S2.17 and rollback verification were green before merge."
+    },
+    {
+      "file": "20261005090000_cd_v31_scoring_version_draft4_ranking.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "note": "Career Discovery SCORING_VERSION v3.1-draft-3 -> v3.1-draft-4 (Profession Recommendation Validation). Introduces no object: it copies the 164 existing cd_option_loadings rows under the new scoring_version and updates cd_definition_versions.scoring_version. MUST ship together with the code change that bumps version.ts, never separately in either direction -- cd_v31_validate_session_evidence compares cd_option_loadings.scoring_version against cd_definition_versions.scoring_version, so a code-only deploy breaks every save carrying a single_choice answer with CD_OPTION_NOT_IN_MATRIX (the incident 20260816160000 was written to fix), and a migration-only deploy makes the database stamp disagree with the payload constant. Verified locally against the 54322 stack: forward, rollback and re-apply all succeed, self-verification passes, and every draft-3 option id resolves under draft-4.",
+      "verify": "SELECT dv.scoring_version, (SELECT count(*) FROM cd_option_loadings ol WHERE ol.scoring_version = dv.scoring_version) FROM cd_definition_versions dv WHERE dv.definition_version = '2026-scd-v3.1.0';",
+      "rollback": "supabase/rollback/20261005090000_cd_v31_scoring_version_draft4_ranking_rollback.sql"
+    },
+    {
+      "file": "20261006090000_cd_layer4_entry_gap_professions.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "note": "Four DRAFT entry-level Career Discovery professions (SP015 Butikskontrollant, SP016 Larmoperator, SP017 Sakerhetsreceptionist, SP018 Larminstallator) and their 68 calibration rows. Introduces no object: rows only, into the existing cd_professions and cd_profession_profiles. Every row is approved_for_ranking = false and review_state = 'ai_researched', and the TypeScript catalogue mirror is deliberately NOT updated, so no application code path can reference them -- fetchApprovedProfessionCatalog filters on the same flag and the approved catalogue stays at exactly 14. Safe to apply before, after or independently of the code. Awaiting owner/SME review before approval. Verified locally against the 54322 stack: forward, rollback and re-apply all succeed; self-verification confirms 17 calibration rows per profession, nothing approved for ranking, and no work-style dimension marked central.",
+      "verify": "SELECT profession_id, approved_for_ranking, review_state FROM cd_professions WHERE profession_id IN ('SP015','SP016','SP017','SP018');",
+      "rollback": "supabase/rollback/20261006090000_cd_layer4_entry_gap_professions_rollback.sql"
     }
   ],
   "policyVersion": 2,

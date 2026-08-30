@@ -12,25 +12,25 @@ Context: `exploring_security`
   3. **Public Order, Defence & Public Safety** (SCA02) — aligned: Learning & Development, Service Orientation, Regulatory & Compliance Orientation, Technical Orientation
 
 ### Strongest directions to explore
-  - **Polis** (SP005) — stage: explore_now, fit: strong
+  - **Polis** (SP005) — stage: explore_now, fit: moderate
     why: Din kombination av operativ handlingskraft, serviceorientering och konflikthantering liknar den bredd som polisyrket kräver i det dagliga arbetet.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Konflikthantering, Serviceorientering, Operativ orientering, Teknisk orientering
-  - **Väktare** (SP001) — stage: explore_now, fit: strong
+  - **Väktare** (SP001) — stage: explore_now, fit: moderate
     why: Ditt svarsmönster visar ett tydligt drag mot praktiskt, situationsnära arbete kombinerat med stark riskmedvetenhet -- kärnan i en väktarroll.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Lärande och utveckling, Ledarskapsorientering, Analytisk orientering
-  - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
+  - **Skyddsvakt** (SP003) — stage: explore_now, fit: moderate
     why: Din operativa handlingskraft tillsammans med hög riskmedvetenhet passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Operativ orientering, Lärande och utveckling, Ledarskapsorientering, Analytisk orientering
 
 ### Also worth exploring
-  - **Ordningsvakt** (SP002) — stage: explore_now, fit: strong
+  - **Ordningsvakt** (SP002) — stage: explore_now, fit: moderate
     why: Du kombinerar operativ handlingskraft med förmåga att hantera motstånd och sätta gränser -- centralt i ordningsvaktsrollen, som ofta innebär direkt konflikthantering i publika miljöer.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Operativ orientering, Serviceorientering, Teknisk orientering, Lärande och utveckling
-  - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: strong
+  - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: moderate
     why: Din kombination av operativ handlingskraft, riskmedvetenhet och konflikthantering matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Riskmedvetenhet, Konflikthantering, Operativ orientering, Lärande och utveckling
@@ -46,9 +46,9 @@ Context: `exploring_security`
   (none)
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
-  1. **Personskyddsvakt** — Stark matchning
-  2. **Polis** — Stark matchning
-  3. **Väktare** — Stark matchning
+  1. **Polis** — Värd att utforska
+  2. **Personskyddsvakt** — Värd att utforska
+  3. **Väktare** — Värd att utforska
   strongest indicators: Lärande · Service · Lugn under press
 
 ## New to security
@@ -61,25 +61,25 @@ Context: `exploring_security`
   3. **Security Technology & Physical Security** (SCA03) — aligned: Operational Orientation, Conflict Management, Regulatory & Compliance Orientation
 
 ### Strongest directions to explore
-  - **Väktare** (SP001) — stage: explore_now, fit: strong
+  - **Väktare** (SP001) — stage: explore_now, fit: moderate
     why: Ditt svarsmönster visar ett tydligt drag mot praktiskt, situationsnära arbete kombinerat med stark riskmedvetenhet -- kärnan i en väktarroll.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Operativ orientering, Riskmedvetenhet, Teknisk orientering, Utredande orientering
-  - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
+  - **Skyddsvakt** (SP003) — stage: explore_now, fit: moderate
     why: Din operativa handlingskraft tillsammans med hög riskmedvetenhet passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Operativ orientering, Teknisk orientering, Utredande orientering
-  - **Polis** (SP005) — stage: explore_now, fit: strong
-    why: Din kombination av operativ handlingskraft, serviceorientering och konflikthantering liknar den bredd som polisyrket kräver i det dagliga arbetet.
-    Det här är en riktning du kan börja utforska direkt.
-    aligned: Operativ orientering, Teknisk orientering, Utredande orientering, Strategisk orientering
-
-### Also worth exploring
   - **Ordningsvakt** (SP002) — stage: explore_now, fit: moderate
     why: Du kombinerar operativ handlingskraft med förmåga att hantera motstånd och sätta gränser -- centralt i ordningsvaktsrollen, som ofta innebär direkt konflikthantering i publika miljöer.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Operativ orientering, Teknisk orientering, Serviceorientering, Utredande orientering
-  - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: strong
+
+### Also worth exploring
+  - **Polis** (SP005) — stage: explore_now, fit: moderate
+    why: Din kombination av operativ handlingskraft, serviceorientering och konflikthantering liknar den bredd som polisyrket kräver i det dagliga arbetet.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Operativ orientering, Teknisk orientering, Utredande orientering, Strategisk orientering
+  - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: moderate
     why: Din kombination av operativ handlingskraft, riskmedvetenhet och konflikthantering matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Riskmedvetenhet, Operativ orientering, Teknisk orientering, Utredande orientering
@@ -91,9 +91,9 @@ Context: `exploring_security`
   (none)
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
-  1. **Väktare** — Stark matchning
-  2. **Skyddsvakt** — Stark matchning
-  3. **Personskyddsvakt** — Stark matchning
+  1. **Väktare** — Värd att utforska
+  2. **Skyddsvakt** — Värd att utforska
+  3. **Personskyddsvakt** — Värd att utforska
   strongest indicators: Operativ · Riskmedveten · Struktur
 
 ## Väktare (1-3 years)
@@ -110,7 +110,7 @@ Context: `working_in_security` · experience: `1_3y` · current profession: `vak
     why: Din operativa handlingskraft tillsammans med hög riskmedvetenhet passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Operativ orientering, Lärande och utveckling, Analytisk orientering
-  - **Polis** (SP005) — stage: explore_now, fit: strong
+  - **Polis** (SP005) — stage: explore_now, fit: moderate
     why: Din kombination av operativ handlingskraft, serviceorientering och konflikthantering liknar den bredd som polisyrket kräver i det dagliga arbetet.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Serviceorientering, Operativ orientering, Lärande och utveckling, Teknisk orientering
@@ -120,7 +120,7 @@ Context: `working_in_security` · experience: `1_3y` · current profession: `vak
     aligned: Operativ orientering, Serviceorientering, Lärande och utveckling, Teknisk orientering
 
 ### Also worth exploring
-  - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: strong
+  - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: moderate
     why: Din kombination av operativ handlingskraft, riskmedvetenhet och konflikthantering matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Riskmedvetenhet, Operativ orientering, Lärande och utveckling, Analytisk orientering
@@ -133,8 +133,8 @@ Context: `working_in_security` · experience: `1_3y` · current profession: `vak
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **Skyddsvakt** — Stark matchning
-  2. **Personskyddsvakt** — Stark matchning
-  3. **Polis** — Stark matchning
+  2. **Personskyddsvakt** — Värd att utforska
+  3. **Polis** — Värd att utforska
   strongest indicators: Operativ · Lärande · Riskmedveten
 
 ## Experienced Väktare (8+ years)
@@ -147,14 +147,14 @@ Context: `developing_current_role` · experience: `8_plus_y` · current professi
   3. **Security Technology & Physical Security** (SCA03) — aligned: Risk Awareness, Composure Under Pressure, Independent Decision-Making, Operational Orientation
 
 ### Strongest directions to explore
-  - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
-    why: Din operativa handlingskraft tillsammans med hög riskmedvetenhet passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
-    Det här är en riktning du kan börja utforska direkt.
-    aligned: Riskmedvetenhet, Operativ orientering, Struktur och dokumentation, Lugn under press
   - **Personskyddsvakt** (SP004) — stage: explore_now, fit: strong
     why: Din kombination av operativ handlingskraft, riskmedvetenhet och konflikthantering matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Konflikthantering, Operativ orientering, Struktur och dokumentation
+  - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
+    why: Din operativa handlingskraft tillsammans med hög riskmedvetenhet passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Riskmedvetenhet, Operativ orientering, Struktur och dokumentation, Lugn under press
 
 ### Also worth exploring
   (none)
@@ -173,9 +173,9 @@ Context: `developing_current_role` · experience: `8_plus_y` · current professi
     aligned: Konflikthantering, Operativ orientering, Teknisk orientering, Struktur och dokumentation
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
-  1. **Ordningsvakt** — Stark matchning
+  1. **Personskyddsvakt** — Stark matchning
   2. **Skyddsvakt** — Stark matchning
-  3. **Personskyddsvakt** — Stark matchning
+  3. **Ordningsvakt** — Stark matchning
   strongest indicators: Lugn under press · Riskmedveten · Operativ
 
 ## Operational guarding profile
@@ -219,8 +219,8 @@ Context: `exploring_security`
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **Väktare** — Stark matchning
-  2. **Skyddsvakt** — Stark matchning
-  3. **Personskyddsvakt** — Stark matchning
+  2. **Personskyddsvakt** — Stark matchning
+  3. **Skyddsvakt** — Stark matchning
   strongest indicators: Operativ · Riskmedveten · Lugn under press
 
 ## Säkerhetschef / Head of Security (8+ years)
@@ -238,7 +238,7 @@ Context: `security_leader` · experience: `8_plus_y` · current profession: `sak
     why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Strategisk orientering, Analytisk orientering, Ledarskapsorientering
-  - **Säkerhetssamordnare** (SP006) — stage: explore_now, fit: moderate
+  - **Säkerhetssamordnare** (SP006) — stage: explore_now, fit: strong
     why: Du visar ett tydligt ledarskapsintresse -- ett drag som ofta förekommer hos den som samordnar säkerhetsarbete mellan flera team och funktioner.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Ledarskapsorientering, Kommunikation, Samarbete, Strategisk orientering
@@ -258,7 +258,7 @@ Context: `security_leader` · experience: `8_plus_y` · current profession: `sak
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **Riskchef** — Stark matchning
   2. **Krisberedskapssamordnare** — Stark matchning
-  3. **Säkerhetssamordnare** — Värd att utforska
+  3. **Säkerhetssamordnare** — Stark matchning
   strongest indicators: Ledarskap · Strategisk · Kommunikation
 
 ## Experienced Säkerhetssamordnare
@@ -272,7 +272,7 @@ Context: `developing_current_role` · current profession: `sakerhetssamordnare`
   (top areas are closely grouped, not a strict order)
 
 ### Strongest directions to explore
-  - **Krisberedskapssamordnare** (SP012) — stage: explore_now, fit: strong
+  - **Krisberedskapssamordnare** (SP012) — stage: explore_now, fit: moderate
     why: Ditt strategiska tänkande tillsammans med hög riskmedvetenhet matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Strategisk orientering, Ledarskapsorientering, Serviceorientering
@@ -282,7 +282,7 @@ Context: `developing_current_role` · current profession: `sakerhetssamordnare`
     why: Din profil visar starka signaler för ledarskap, strategiskt tänkande och kommunikation -- egenskaper som väger tungt när säkerhetsarbete ska styras på organisationsnivå.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Ledarskapsorientering, Strategisk orientering, Kommunikation, Samarbete
-  - **Riskchef** (SP011) — stage: possible_next_step, fit: strong
+  - **Riskchef** (SP011) — stage: possible_next_step, fit: moderate
     why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Riskmedvetenhet, Strategisk orientering, Ledarskapsorientering, Kommunikation
@@ -291,7 +291,7 @@ Context: `developing_current_role` · current profession: `sakerhetssamordnare`
   (none)
 
 ### Career pivot — real affinity, different direction
-  - **Polis** (SP005) — stage: career_pivot, fit: strong
+  - **Polis** (SP005) — stage: career_pivot, fit: moderate
     why: Din kombination av operativ handlingskraft, serviceorientering och konflikthantering liknar den bredd som polisyrket kräver i det dagliga arbetet.
     Det här visar en verklig koppling till din profil, men det är inte nästa steg utifrån var du är idag -- snarare en annan riktning värd att ha i åtanke om du någon gång vill byta spår.
     aligned: Konflikthantering, Serviceorientering, Ledarskapsorientering, Strategisk orientering
@@ -302,8 +302,8 @@ Context: `developing_current_role` · current profession: `sakerhetssamordnare`
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **Säkerhetschef** — Stark matchning
-  2. **Krisberedskapssamordnare** — Stark matchning
-  3. **Riskchef** — Stark matchning
+  2. **Riskchef** — Värd att utforska
+  3. **Krisberedskapssamordnare** — Värd att utforska
   strongest indicators: Kommunikation · Struktur · Ledarskap
 
 ## Career changer (already working in security)
@@ -317,32 +317,32 @@ Context: `changing_career_area`
   (top areas are closely grouped, not a strict order)
 
 ### Strongest directions to explore
-  - **Krisberedskapssamordnare** (SP012) — stage: explore_now, fit: strong
-    why: Ditt strategiska tänkande tillsammans med hög riskmedvetenhet matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
-    Det här är en riktning du kan börja utforska direkt.
-    aligned: Riskmedvetenhet, Serviceorientering, Operativ orientering, Konflikthantering
-  - **Polis** (SP005) — stage: explore_now, fit: strong
+  - **Polis** (SP005) — stage: explore_now, fit: moderate
     why: Din kombination av operativ handlingskraft, serviceorientering och konflikthantering liknar den bredd som polisyrket kräver i det dagliga arbetet.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Serviceorientering, Teknisk orientering, Strategisk orientering, Ledarskapsorientering
-  - **Personskyddsvakt** (SP004) — stage: explore_now, fit: strong
+  - **Personskyddsvakt** (SP004) — stage: explore_now, fit: moderate
     why: Din kombination av operativ handlingskraft, riskmedvetenhet och konflikthantering matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Strategisk orientering, Ledarskapsorientering, Analytisk orientering
-
-### Also worth exploring
-  - **Säkerhetssamordnare** (SP006) — stage: explore_now, fit: moderate
-    why: Du visar ett tydligt ledarskapsintresse -- ett drag som ofta förekommer hos den som samordnar säkerhetsarbete mellan flera team och funktioner.
-    Det här är en riktning du kan börja utforska direkt.
-    aligned: Ledarskapsorientering, Serviceorientering, Operativ orientering, Utredande orientering
   - **Skyddsvakt** (SP003) — stage: explore_now, fit: moderate
     why: Din operativa handlingskraft tillsammans med hög riskmedvetenhet passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Strategisk orientering, Ledarskapsorientering, Analytisk orientering, Utredande orientering
+
+### Also worth exploring
+  - **Krisberedskapssamordnare** (SP012) — stage: explore_now, fit: moderate
+    why: Ditt strategiska tänkande tillsammans med hög riskmedvetenhet matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Riskmedvetenhet, Serviceorientering, Operativ orientering, Konflikthantering
   - **Väktare** (SP001) — stage: explore_now, fit: moderate
     why: Ditt svarsmönster visar ett tydligt drag mot praktiskt, situationsnära arbete kombinerat med stark riskmedvetenhet -- kärnan i en väktarroll.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Strategisk orientering, Ledarskapsorientering, Analytisk orientering
+  - **Säkerhetssamordnare** (SP006) — stage: explore_now, fit: moderate
+    why: Du visar ett tydligt ledarskapsintresse -- ett drag som ofta förekommer hos den som samordnar säkerhetsarbete mellan flera team och funktioner.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Ledarskapsorientering, Serviceorientering, Operativ orientering, Utredande orientering
   - **Ordningsvakt** (SP002) — stage: explore_now, fit: moderate
     why: Du kombinerar operativ handlingskraft med förmåga att hantera motstånd och sätta gränser -- centralt i ordningsvaktsrollen, som ofta innebär direkt konflikthantering i publika miljöer.
     Det här är en riktning du kan börja utforska direkt.
@@ -367,9 +367,9 @@ Context: `changing_career_area`
   (none)
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
-  1. **Krisberedskapssamordnare** — Stark matchning
-  2. **Polis** — Stark matchning
-  3. **Personskyddsvakt** — Stark matchning
+  1. **Polis** — Värd att utforska
+  2. **Personskyddsvakt** — Värd att utforska
+  3. **Riskchef** — Värd att utforska
   strongest indicators: Struktur · Kommunikation · Service
 
 ## Technical profile
@@ -393,11 +393,11 @@ Context: `working_in_security`
     why: Din tekniska, analytiska och strategiska profil passar en roll som kräver att ligga steget före ständigt föränderliga hot mot informationstillgångar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Teknisk orientering, Analytisk orientering, Strategisk orientering, Lärande och utveckling
-  - **Säkerhetsutredare** (SP010) — stage: possible_next_step, fit: strong
+  - **Säkerhetsutredare** (SP010) — stage: possible_next_step, fit: moderate
     why: Ditt starka utredande drag, analytiska förmåga och strukturerade arbetssätt ligger nära det som ofta krävs för att granska, verifiera och fastställa vad som faktiskt hänt.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Analytisk orientering, Teknisk orientering, Ledarskapsorientering, Operativ orientering
-  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
+  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: moderate
     why: Ditt strategiska tänkande tillsammans med hög riskmedvetenhet matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Riskmedvetenhet, Teknisk orientering, Utredande orientering, Analytisk orientering
@@ -407,7 +407,7 @@ Context: `working_in_security`
     aligned: Teknisk orientering, Utredande orientering, Analytisk orientering, Lärande och utveckling
 
 ### Longer-term possibilities
-  - **Riskchef** (SP011) — stage: longer_term, fit: strong
+  - **Riskchef** (SP011) — stage: longer_term, fit: moderate
     why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
     Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
     aligned: Analytisk orientering, Teknisk orientering, Utredande orientering, Lärande och utveckling
@@ -418,7 +418,7 @@ Context: `working_in_security`
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **SOC-analytiker** — Stark matchning
   2. **Cybersäkerhetsanalytiker** — Stark matchning
-  3. **Säkerhetsutredare** — Stark matchning
+  3. **Säkerhetsutredare** — Värd att utforska
   strongest indicators: Teknisk · Analytisk · Lärande
 
 ## Cyber profile
@@ -442,7 +442,7 @@ Context: `working_in_security`
     why: Din tekniska, analytiska och strategiska profil passar en roll som kräver att ligga steget före ständigt föränderliga hot mot informationstillgångar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Teknisk orientering, Analytisk orientering, Strategisk orientering, Lärande och utveckling
-  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
+  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: moderate
     why: Ditt strategiska tänkande tillsammans med hög riskmedvetenhet matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Riskmedvetenhet, Strategisk orientering, Teknisk orientering, Analytisk orientering
@@ -458,7 +458,7 @@ Context: `working_in_security`
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **Cybersäkerhetsanalytiker** — Stark matchning
-  2. **Krisberedskapssamordnare** — Stark matchning
+  2. **SOC-analytiker** — Stark matchning
   3. **Riskchef** — Stark matchning
   strongest indicators: Teknisk · Analytisk · Lärande
 
@@ -487,25 +487,25 @@ Context: `working_in_security`
     why: Ditt starka utredande drag, analytiska förmåga och strukturerade arbetssätt ligger nära det som ofta krävs för att granska, verifiera och fastställa vad som faktiskt hänt.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Utredande orientering, Analytisk orientering, Struktur och dokumentation, Operativ orientering
-  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
-    why: Ditt strategiska tänkande tillsammans med hög riskmedvetenhet matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
-    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
-    aligned: Riskmedvetenhet, Utredande orientering, Struktur och dokumentation, Teknisk orientering
   - **AML-specialist** (SP013) — stage: possible_next_step, fit: strong
     why: Din analytiska och utredande läggning, tillsammans med en stark känsla för regelverk och regelefterlevnad, matchar arbetet med att granska transaktioner och identifiera misstänkta mönster.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Analytisk orientering, Utredande orientering, Operativ orientering, Struktur och dokumentation
-  - **Cybersäkerhetsanalytiker** (SP009) — stage: possible_next_step, fit: strong
+  - **Cybersäkerhetsanalytiker** (SP009) — stage: possible_next_step, fit: moderate
     why: Din tekniska, analytiska och strategiska profil passar en roll som kräver att ligga steget före ständigt föränderliga hot mot informationstillgångar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Analytisk orientering, Strategisk orientering, Konflikthantering, Utredande orientering
+  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: moderate
+    why: Ditt strategiska tänkande tillsammans med hög riskmedvetenhet matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Riskmedvetenhet, Utredande orientering, Struktur och dokumentation, Teknisk orientering
   - **Säkerhetssamordnare** (SP006) — stage: possible_next_step, fit: moderate
     why: Du visar ett tydligt ledarskapsintresse -- ett drag som ofta förekommer hos den som samordnar säkerhetsarbete mellan flera team och funktioner.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Utredande orientering, Struktur och dokumentation, Analytisk orientering, Teknisk orientering
 
 ### Longer-term possibilities
-  - **Riskchef** (SP011) — stage: longer_term, fit: strong
+  - **Riskchef** (SP011) — stage: longer_term, fit: moderate
     why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
     Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
     aligned: Analytisk orientering, Utredande orientering, Struktur och dokumentation, Teknisk orientering
@@ -515,8 +515,8 @@ Context: `working_in_security`
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **Säkerhetsutredare** — Stark matchning
-  2. **Krisberedskapssamordnare** — Stark matchning
-  3. **AML-specialist** — Stark matchning
+  2. **AML-specialist** — Stark matchning
+  3. **SOC-analytiker** — Stark matchning
   strongest indicators: Utredande · Struktur · Analytisk
 
 ## AML / compliance profile
@@ -533,21 +533,21 @@ Context: `working_in_security`
 
 
 ### Also worth exploring
-  - **Säkerhetsutredare** (SP010) — stage: possible_next_step, fit: strong
-    why: Ditt starka utredande drag, analytiska förmåga och strukturerade arbetssätt ligger nära det som ofta krävs för att granska, verifiera och fastställa vad som faktiskt hänt.
-    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
-    aligned: Utredande orientering, Analytisk orientering, Serviceorientering, Operativ orientering
   - **AML-specialist** (SP013) — stage: possible_next_step, fit: strong
     why: Din analytiska och utredande läggning, tillsammans med en stark känsla för regelverk och regelefterlevnad, matchar arbetet med att granska transaktioner och identifiera misstänkta mönster.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Analytisk orientering, Regelefterlevnad och granskning, Utredande orientering, Operativ orientering
+  - **Säkerhetsutredare** (SP010) — stage: possible_next_step, fit: strong
+    why: Ditt starka utredande drag, analytiska förmåga och strukturerade arbetssätt ligger nära det som ofta krävs för att granska, verifiera och fastställa vad som faktiskt hänt.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Utredande orientering, Analytisk orientering, Serviceorientering, Operativ orientering
   - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: moderate
     why: Ditt strategiska tänkande tillsammans med hög riskmedvetenhet matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Riskmedvetenhet, Utredande orientering, Analytisk orientering, Teknisk orientering
 
 ### Longer-term possibilities
-  - **Riskchef** (SP011) — stage: longer_term, fit: strong
+  - **Riskchef** (SP011) — stage: longer_term, fit: moderate
     why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
     Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
     aligned: Analytisk orientering, Utredande orientering, Teknisk orientering
@@ -556,9 +556,9 @@ Context: `working_in_security`
   (none)
 
 ### Career Card (shareable artefact — the canonical top 3, no picker)
-  1. **Säkerhetsutredare** — Stark matchning
-  2. **AML-specialist** — Stark matchning
-  3. **Riskchef** — Stark matchning
+  1. **AML-specialist** — Stark matchning
+  2. **Säkerhetsutredare** — Stark matchning
+  3. **SOC-analytiker** — Närmast dina svar
   strongest indicators: Regelefterlevnad · Analytisk · Utredande
 
 ## Risk / crisis profile
@@ -600,7 +600,7 @@ Context: `working_in_security`
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **Riskchef** — Stark matchning
   2. **Krisberedskapssamordnare** — Stark matchning
-  3. **Säkerhetssamordnare** — Värd att utforska
+  3. **Säkerhetschef** — Värd att utforska
   strongest indicators: Riskmedveten · Strategisk · Analytisk
 
 ## Broad profile (junior)
@@ -638,7 +638,7 @@ Context: `working_in_security`
 ### Career Card (shareable artefact — the canonical top 3, no picker)
   1. **Väktare** — Stark matchning
   2. **Skyddsvakt** — Stark matchning
-  3. **Säkerhetssamordnare** — Värd att utforska
+  3. **Personskyddsvakt** — Närmast dina svar
   strongest indicators: Operativ · Riskmedveten · Beslutsam
 
 ## Broad profile (senior)

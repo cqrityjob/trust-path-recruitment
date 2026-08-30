@@ -32,6 +32,24 @@
 // including it would make this script fail for the one reason that is
 // correct. It is asserted separately, positively, at the end: scoring,
 // option-matrix and pattern versions must NOT have moved.
+//
+// ── BASELINE RE-FREEZE, 2026-10 (Profession Recommendation Validation) ──
+//
+// The baseline was regenerated once more, deliberately, when that mandate
+// changed how scored dimensions become a ranked recommendation (see
+// v31/professions.ts and the SCORING_VERSION draft-4 note in version.ts).
+// The re-freeze was reviewed against the pre-change run rather than taken on
+// trust, and the delta was confined exactly where it should be:
+//
+//   MOVED    professionDiagnostics · professionOrder · buckets ·
+//            explanationsDigest · snapshotDigest
+//   UNCHANGED item values · dimension evidence · Career DNA ·
+//            Career Patterns · Career Area output · candidate story
+//
+// That split IS the claim the mandate made — the ranking layer changed and
+// nothing beneath it did — so it is recorded here rather than only in a
+// commit message. This script's ongoing job is unaffected: a future
+// WORDING-only change must still move nothing at all.
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
