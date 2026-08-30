@@ -18,6 +18,7 @@ import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { useT } from "@/i18n/context";
 import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
+import { getMyCareerJourney } from "@/lib/career-journey/career-journey.functions";
 import type { DiscoveryReport } from "@/lib/career-discovery/report";
 
 export const Route = createFileRoute(
@@ -46,6 +47,30 @@ function DiscoveryReportRoute() {
   const query = useQuery({
     queryKey: ["discovery", "report", snapshotId],
     queryFn: () => load({ data: { snapshotId } }),
+    retry: 1,
+  });
+
+  // ── THE ONE PART OF THIS PAGE THAT IS ALLOWED TO CHANGE ─────────────
+  //
+  // The report above is immutable: the same snapshot renders the same words
+  // in five years' time. The Career Journey beside it is recomputed on every
+  // view from the candidate's CURRENT professional profile, which is exactly
+  // what lets somebody update their role six months from now and see a
+  // different, honest set of next steps without re-answering twenty-eight
+  // questions. Nothing it produces is written back — the snapshot, its
+  // ranking and its scoring version are untouched by anything here.
+  //
+  // A separate query so a journey failure degrades to "not enough
+  // information" instead of taking the report down with it.
+  const rankedIds =
+    query.data?.status === "v3.1"
+      ? (query.data.snapshot.professions?.ranked ?? []).map((r) => r.match.professionId)
+      : [];
+  const loadJourney = useServerFn(getMyCareerJourney);
+  const journeyQuery = useQuery({
+    queryKey: ["career-journey", rankedIds],
+    queryFn: () => loadJourney({ data: { professionIds: rankedIds } }),
+    enabled: rankedIds.length > 0,
     retry: 1,
   });
 
@@ -96,6 +121,7 @@ function DiscoveryReportRoute() {
           generatedAt={data.generatedAt}
           versions={data.versions}
           sessionId={data.sessionId}
+          journey={journeyQuery.data ?? null}
         />
       </AssessmentLayout>
     );

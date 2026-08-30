@@ -550,6 +550,9 @@ const sv = {
   // Named after what they change, not after where the control happens to sit.
   "basics.editWorkCountry": "Ändra arbetsland",
   "basics.editCurrentRole": "Ändra nuvarande roll",
+  "basics.editProfession": "Ändra i din karriärprofil",
+  "basics.editedInCareerProfile":
+    "Ditt nuvarande yrke hör hemma i din karriärprofil under Min karriär, och ändras där. Det visas här eftersom det hör till bilden av dig \u2014 men det är en egen uppgift, inte verifierad passinformation.",
   "basics.editedBelow":
     "Den här uppgiften ändras där den hör hemma, längre ned på den här sidan, så att den bara har ett ställe att ändras på. Knappen tar dig dit.",
   "basics.declaredOn": "Intygat",
@@ -1932,6 +1935,9 @@ const en: Record<PassportCopyKey, string> = {
   "basics.savedNotice": "Your profile basics have been saved.",
   "basics.editWorkCountry": "Change work country",
   "basics.editCurrentRole": "Change current role",
+  "basics.editProfession": "Change in your career profile",
+  "basics.editedInCareerProfile":
+    "Your current profession belongs to your career profile under My Career, and is changed there. It is shown here because it is part of the picture of you \u2014 but it is self-reported, not verified Passport information.",
   "basics.editedBelow":
     "This answer is changed where it belongs, further down this page, so that it only has one place to be changed. The button takes you there.",
   "basics.declaredOn": "Declared",

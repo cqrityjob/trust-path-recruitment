@@ -11431,6 +11431,39 @@ export type Database = {
           },
         ]
       }
+      security_career_profile_reconciliations: {
+        Row: {
+          canonical_value: string | null
+          created_at: string
+          field: string
+          id: string
+          passport_value: string | null
+          resolution: string
+          resolved_at: string | null
+          user_id: string
+        }
+        Insert: {
+          canonical_value?: string | null
+          created_at?: string
+          field: string
+          id?: string
+          passport_value?: string | null
+          resolution: string
+          resolved_at?: string | null
+          user_id: string
+        }
+        Update: {
+          canonical_value?: string | null
+          created_at?: string
+          field?: string
+          id?: string
+          passport_value?: string | null
+          resolution?: string
+          resolved_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       security_career_profiles: {
         Row: {
           created_at: string

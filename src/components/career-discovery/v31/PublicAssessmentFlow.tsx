@@ -63,6 +63,14 @@ import {
   SelectableAnswer,
 } from "@/components/career-discovery/v31/shell/QuestionCard";
 import { CareerContextStep } from "@/components/career-discovery/v31/CareerContextStep";
+import { ProfileConnectionGate } from "@/components/career-journey/ProfileConnectionGate";
+import {
+  getMySecurityCareerProfile,
+  setMyCurrentProfession,
+} from "@/lib/security-career-profile/profile.functions";
+import type { SecurityCareerProfileDraft } from "@/lib/security-career-profile/types";
+import { getMyCareerJourney } from "@/lib/career-journey/career-journey.functions";
+import type { CareerJourney } from "@/lib/career-journey/types";
 import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -125,6 +133,13 @@ import {
 type Phase =
   | "checking"
   | "unavailable"
+  // The signed-in candidate's one screen about their own profile, before the
+  // intro. Its own phase rather than a banner ON the intro because the two
+  // ask for different decisions and stacking them produced a screen with
+  // four buttons. Never reached by an anonymous visitor -- see
+  // ProfileConnectionGate's header for why that is a commitment, not an
+  // omission.
+  | "profile-gate"
   | "intro"
   | "questions"
   // Master Completion Mandate item 2: a short, optional, non-scored step
@@ -184,6 +199,12 @@ export function PublicAssessmentFlow() {
   const [index, setIndex] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
   const [careerContext, setCareerContext] = useState<CareerContext>(EMPTY_CAREER_CONTEXT);
+  /** The canonical Professional Profile, for a signed-in candidate. Read
+   *  once at boot; `null` means "not signed in, or genuinely empty". */
+  const [profile, setProfile] = useState<SecurityCareerProfileDraft | null>(null);
+  const loadProfile = useServerFn(getMySecurityCareerProfile);
+  const saveProfession = useServerFn(setMyCurrentProfession);
+  const loadJourney = useServerFn(getMyCareerJourney);
   /** In-flight guard for persistence. See onSaveAndSignIn. */
   const persistingRef = useRef(false);
   /** Transient feedback for the share button — see onShareResult. Cleared on
@@ -223,6 +244,24 @@ export function PublicAssessmentFlow() {
           if (!status.allowed) {
             setPhase("unavailable");
             return;
+          }
+          // The canonical profile, read ONCE, here. Best-effort: a failure
+          // costs the gate and the career-context prefill, never the
+          // assessment -- which is the same trade every optional read in
+          // this flow already makes.
+          try {
+            const existing = await loadProfile();
+            if (!alive) return;
+            if (existing) {
+              setProfile({
+                currentStatus: existing.currentStatus,
+                currentProfessionSlug: existing.currentProfessionSlug,
+                currentProfessionOther: existing.currentProfessionOther,
+                yearsOfExperience: existing.yearsOfExperience,
+              });
+            }
+          } catch (err) {
+            console.error("[v31] career profile read failed", err);
           }
         }
         // ── RECOVER A STAGED CLAIM ────────────────────────────────────
@@ -275,13 +314,16 @@ export function PublicAssessmentFlow() {
           );
           return;
         }
-        setPhase("intro");
+        // A signed-in candidate is shown what the product already knows
+        // about them before they answer twenty-eight questions; an anonymous
+        // one goes straight to the intro, with nothing in the way.
+        setPhase(isSignedIn ? "profile-gate" : "intro");
       },
     );
     return () => {
       alive = false;
     };
-  }, [checkAvailability, checkTesterStatus]);
+  }, [checkAvailability, checkTesterStatus, loadProfile]);
 
   // The run's own question order: 2 context → 22 Career DNA → 4 Discovery
   // Path. Twenty-two ids until C1 is answered, because the Discovery Path —
@@ -575,6 +617,30 @@ export function PublicAssessmentFlow() {
 
   const canonicalSnapshot: ReportSnapshot | null = previewQuery.data?.snapshot ?? null;
 
+  // ── THE CAREER JOURNEY ──────────────────────────────────────────────
+  //
+  // A SEPARATE query from the report, deliberately, and the separation is
+  // the architecture rather than a fetching detail. The snapshot above is
+  // frozen: same answers, same bytes, forever. The journey is the opposite
+  // kind of thing — it is recomputed from whatever the candidate's profile
+  // says TODAY, so that changing jobs updates where they stand without
+  // touching a single byte of the assessment they took last spring.
+  //
+  // Signed-in only. There is no anonymous journey to fetch: with no account
+  // there is no profile, and the section renders its honest
+  // "not enough information" state from a null.
+  const journeyProfessionIds = useMemo(
+    () => (canonicalSnapshot?.professions?.ranked ?? []).map((r) => r.match.professionId),
+    [canonicalSnapshot],
+  );
+  const journeyQuery = useQuery({
+    queryKey: ["career-journey", journeyProfessionIds],
+    queryFn: () => loadJourney({ data: { professionIds: journeyProfessionIds } }),
+    enabled: signedIn && journeyProfessionIds.length > 0,
+    retry: 1,
+  });
+  const journey: CareerJourney | null = journeyQuery.data ?? null;
+
   useEffect(() => {
     if (phase === "result" && canonicalSnapshot) track("result_viewed");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -618,6 +684,24 @@ export function PublicAssessmentFlow() {
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </AssessmentPanel>
+      </AssessmentShell>
+    );
+  }
+
+  if (phase === "profile-gate") {
+    return (
+      <AssessmentShell wide>
+        <ProfileConnectionGate
+          profile={profile}
+          // The picker's own titles are not loaded on this screen, and a raw
+          // slug is not a profession name — so the gate shows the free-text
+          // answer or nothing rather than "vaktare". The full, resolved
+          // profile is one click away behind "Review my profile".
+          professionTitle={null}
+          locale={lang === "en" ? "en" : "sv"}
+          onStart={() => setPhase("intro")}
+          onOpenProfile={() => void navigate({ to: "/my-career" })}
+        />
       </AssessmentShell>
     );
   }
@@ -779,9 +863,49 @@ export function PublicAssessmentFlow() {
               currentProfessionStatus: careerContext.currentProfessionStatus ?? "",
               experienceBand: careerContext.experienceBand ?? "",
             });
+            // ── ONE ANSWER, ONE HOME ─────────────────────────────────
+            //
+            // The profession the candidate just named goes to the canonical
+            // Professional Profile, not to a third private copy. The
+            // cd_sessions columns still record it as part of THIS run --
+            // that record is immutable and is what keeps a historical report
+            // honest -- but the durable, editable answer now lives in the one
+            // row that owns it.
+            //
+            // Only the profession. The experience band is deliberately NOT
+            // written back: Career Discovery bands (under_1y / 1_3y / 4_7y /
+            // 8_plus_y) and the profile's own bands (<1 / 1-3 / 3-5 / 5-10 /
+            // 10+) are two vocabularies with no honest mapping between them
+            // -- 4-7 years is neither "3-5" nor "5-10" -- and inventing one
+            // would silently change what a candidate had said about
+            // themselves. See the branch notes.
+            //
+            // Fire-and-forget: a profile write must never stand between a
+            // candidate and the report they have just earned.
+            if (signedIn && careerContext.currentProfessionStatus !== null) {
+              const slug =
+                careerContext.currentProfessionStatus === "selected"
+                  ? careerContext.currentProfessionSlug
+                  : null;
+              const other =
+                careerContext.currentProfessionStatus === "not_listed"
+                  ? careerContext.currentProfessionOther
+                  : null;
+              if (slug || other) {
+                void saveProfession({
+                  data: { currentProfessionSlug: slug, currentProfessionOther: other },
+                }).catch((err: unknown) => {
+                  console.error("[v31] career profile profession write failed", err);
+                });
+              }
+            }
             setPhase("result");
           }}
           locale={lang === "en" ? "en" : "sv"}
+          // Signed in with a profession already on file: the question is
+          // shown pre-answered rather than asked from scratch. Null for an
+          // anonymous candidate, who has no profile to prefill from.
+          prefillProfessionSlug={profile?.currentProfessionSlug ?? null}
         />
       </AssessmentShell>
     );
@@ -980,7 +1104,14 @@ export function PublicAssessmentFlow() {
           scoring: canonicalSnapshot.versions.scoringVersion,
           taxonomy: canonicalSnapshot.versions.taxonomyVersion,
         }}
+        // Anonymous mode even for a signed-in visitor who is mid-save: the
+        // stored report, with its history links, is one navigation away and
+        // this screen is not it.
         mode="anonymous"
+        // Null for an anonymous candidate, which is what makes the journey
+        // section render its honest "we do not know your background yet"
+        // state rather than nothing at all.
+        journey={journey}
         onCareerCardEvent={(name) => {
           if ((FUNNEL_EVENT_NAMES as readonly string[]).includes(name))
             track(name as FunnelEventName);

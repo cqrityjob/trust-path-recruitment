@@ -193,6 +193,14 @@
       "rollback": "supabase/rollback/20261007090000_canonical_professional_profile_rollback.sql"
     },
     {
+      "file": "20261008090000_canonical_professional_profile_contract.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "note": "CONTRACT half. Drops the temporary compatibility trigger 20261007090000 installed, once no client writes sp_passport_profiles.cig_profession_slug any more. Introduces no object, so it creates no code dependency and never blocks an application release. ORDERING: ships in the SAME PR as the application phase and is applied AFTER it is live. That happens naturally -- Lovable rebuilds from origin/main at merge, so the new code is running before anyone can apply this file. Applying it early is premature rather than dangerous (old Passport writes would stop reaching the canonical row and the two copies could diverge again, exactly as they do on main today); applying it late costs nothing, because the trigger simply never fires. Verified locally against the 54322 stack: expand -> contract -> re-apply -> rollback all succeed, and the rollback reopens a WORKING compatibility path.",
+      "verify": "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = 'career_profile_adopt_passport_profession';",
+      "rollback": "supabase/rollback/20261008090000_canonical_professional_profile_contract_rollback.sql"
+    },
+    {
       "file": "20261009090000_scp_interview_assessment_supersede_order.sql",
       "hostedState": "pending",
       "introduces": [],
