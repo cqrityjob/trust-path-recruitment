@@ -1704,7 +1704,7 @@ function SavePromptBlock({ lang }: { lang: Lang }) {
       </p>
       <div className="mt-4">
         <a
-          href="/auth"
+          href="/login"
           className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           {lang === "sv" ? "Logga in för att spara" : "Log in to save"}

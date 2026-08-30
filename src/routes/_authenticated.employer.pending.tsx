@@ -181,7 +181,7 @@ function EmployerPendingPage() {
         <button
           type="button"
           onClick={() => {
-            void supabase.auth.signOut().then(() => navigate({ to: "/employer/login" }));
+            void supabase.auth.signOut().then(() => navigate({ to: "/login" }));
           }}
           className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50"
         >

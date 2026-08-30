@@ -10,6 +10,7 @@ export const dictionaries = {
     "nav.about": "Om oss",
     "nav.contact": "Kontakt",
     "nav.signin": "Logga in",
+    "nav.createAccount": "Skapa konto",
     "nav.signin.tooltip": "Kommer snart",
     "nav.my_career": "Min karriär",
     "nav.myAssessments": "Mina bedömningar",
@@ -482,6 +483,37 @@ export const dictionaries = {
       "Genom att skapa ett konto godkänner du vår integritetspolicy. Du kan när som helst begära export eller radering av dina uppgifter.",
     "auth.signout": "Logga ut",
     "auth.redirecting": "Omdirigerar…",
+
+    // ── The unified front door (2026-08-30) ──────────────────────────
+    // One "Logga in" and one "Skapa konto" for the whole product. See
+    // docs/architecture/adr-unified-account-and-professional-identity.md.
+    // The proposition names the IDENTITY, not the six systems behind it:
+    // a visitor should not have to learn the product's internal
+    // boundaries to know what an account is for.
+    "auth.unified.proposition": "Din säkerhetskarriär. En yrkesidentitet.",
+    "auth.unified.lede":
+      "Din yrkesidentitet, din karriärutveckling och dina verifierade kvalifikationer på ett ställe — med ett enda konto.",
+    "auth.unified.signin.intro": "Logga in för att fortsätta.",
+    "auth.unified.signup.intro":
+      "Vi behöver bara det nödvändigaste nu. Resten fyller du i när du behöver det.",
+    "auth.unified.benefit.identity": "En yrkesprofil som du fyller i en gång och återanvänder.",
+    "auth.unified.benefit.passport":
+      "Ett Säkerhetspass som skiljer på vad du uppger och vad som faktiskt är verifierat.",
+    "auth.unified.benefit.jobs": "Jobb, ansökningar och bedömningar under samma konto.",
+    "auth.unified.benefit.context":
+      "Är du också rekryterare byter du till din organisation — utan en andra inloggning.",
+    "auth.unified.organisation.toggle": "Jag skapar kontot för en organisation",
+    "auth.unified.organisation.help":
+      "Vi förbereder då en organisationsyta åt dig. Din personliga profil påverkas inte.",
+    "auth.password.hint": "Minst 8 tecken.",
+    "auth.busy.signin": "Loggar in…",
+    "auth.busy.signup": "Skapar konto…",
+    "auth.error.title": "Kontrollera följande",
+    "auth.error.emailRequired": "Ange din e-postadress.",
+    "auth.error.emailInvalid": "E-postadressen ser inte ut att vara giltig.",
+    "auth.error.passwordShort": "Lösenordet måste vara minst 8 tecken.",
+    "auth.error.companyNameRequired": "Ange organisationens namn.",
+    "auth.error.companyCountryRequired": "Ange organisationens land.",
 
     "nav.employerPortal": "Arbetsgivarportal",
 
@@ -1084,6 +1116,12 @@ export const dictionaries = {
     "account.menu.label": "Konto och inställningar",
     "account.signOut": "Logga ut",
     "account.section": "Konto",
+    "account.settings": "Konto och profil",
+    // The account menu is the context switcher. "Personligt" names the
+    // context a person is in, not a kind of account: the same login is
+    // also the recruiter's.
+    "account.context.personal": "Personligt",
+    "account.context.switchTo": "Byt till",
     "employer.loading": "Laddar…",
     "employer.comingSoon.heading": "Under utveckling",
     "employer.comingSoon.body": "Arbetsgivarytan är under utveckling och inte tillgänglig ännu.",
@@ -5130,6 +5168,7 @@ export const dictionaries = {
     "nav.about": "About",
     "nav.contact": "Contact",
     "nav.signin": "Sign in",
+    "nav.createAccount": "Create account",
     "nav.signin.tooltip": "Coming soon",
     "nav.my_career": "My career",
     "nav.myAssessments": "My assessments",
@@ -5602,6 +5641,32 @@ export const dictionaries = {
       "By creating an account you accept our privacy policy. You may request export or deletion of your data at any time.",
     "auth.signout": "Sign out",
     "auth.redirecting": "Redirecting…",
+
+    // The unified front door (2026-08-30). See the Swedish block above.
+    "auth.unified.proposition": "Your security career. One professional identity.",
+    "auth.unified.lede":
+      "Your professional identity, your career development and your verified credentials in one place — with a single account.",
+    "auth.unified.signin.intro": "Sign in to continue.",
+    "auth.unified.signup.intro":
+      "We only need the essentials now. Everything else you fill in when you need it.",
+    "auth.unified.benefit.identity": "One professional profile you complete once and reuse.",
+    "auth.unified.benefit.passport":
+      "A Security Passport that keeps what you state separate from what has actually been verified.",
+    "auth.unified.benefit.jobs": "Jobs, applications and assessments under the same account.",
+    "auth.unified.benefit.context":
+      "If you are also a recruiter, switch to your organisation — without a second sign-in.",
+    "auth.unified.organisation.toggle": "I am creating this account for an organisation",
+    "auth.unified.organisation.help":
+      "We will prepare an organisation workspace for you. Your personal profile is unaffected.",
+    "auth.password.hint": "At least 8 characters.",
+    "auth.busy.signin": "Signing in…",
+    "auth.busy.signup": "Creating account…",
+    "auth.error.title": "Please check the following",
+    "auth.error.emailRequired": "Enter your email address.",
+    "auth.error.emailInvalid": "That email address does not look valid.",
+    "auth.error.passwordShort": "The password must be at least 8 characters.",
+    "auth.error.companyNameRequired": "Enter the organisation's name.",
+    "auth.error.companyCountryRequired": "Enter the organisation's country.",
 
     "nav.employerPortal": "Employer portal",
 
@@ -6162,6 +6227,9 @@ export const dictionaries = {
     "account.menu.label": "Account and settings",
     "account.signOut": "Sign out",
     "account.section": "Account",
+    "account.settings": "Account and profile",
+    "account.context.personal": "Personal",
+    "account.context.switchTo": "Switch to",
     "employer.loading": "Loading…",
     "employer.comingSoon.heading": "Under development",
     "employer.comingSoon.body":

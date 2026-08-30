@@ -150,7 +150,13 @@ ok(
 );
 
 // The call sites must actually use it.
-const form = read("src/components/auth/PortalAuthForm.tsx");
+//
+// This named PortalAuthForm until 2026-08-30, when the four audience-specific
+// doors collapsed into one entrance
+// (docs/architecture/adr-unified-account-and-professional-identity.md). One
+// form instead of four means one place for this to regress rather than four,
+// and every property below is unchanged.
+const form = read("src/components/auth/UnifiedAuthForm.tsx");
 ok(
   form.includes("rememberOAuthReturn"),
   "1.13 the auth form remembers the destination before leaving",

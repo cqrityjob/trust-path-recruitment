@@ -9,31 +9,25 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
-/** Which portal an unauthenticated arrival should be sent to.
+/** ── ONE DOOR ──────────────────────────────────────────────────────────
  *
- *  ── WHY THIS IS NOT ALWAYS "CANDIDATE" ────────────────────────────────
+ *  This used to derive a portal "intent" from the pathname, so that a
+ *  signed-out person following an organisation invitation was not shown a
+ *  form headed "Log in as a candidate" — a portal for a different kind of
+ *  account, with nothing to connect it to the invitation they had just been
+ *  sent. Several people would reasonably conclude the link was broken.
  *
- *  The return path has always been preserved, so a signed-out person
- *  following an ORGANISATION invitation (/employer/join?org=..., a reviewer
- *  or colleague being brought into a workspace) did eventually get back to
- *  the invite. What they saw first was "Log in as a candidate" -- a portal
- *  for a different kind of account, with no indication that it had anything
- *  to do with the invitation they had just been sent. Several people will
- *  reasonably conclude the link is broken and stop there.
+ *  The unified entrance removes the problem rather than steering around it:
+ *  there is one sign-in form, it belongs to everybody, and no arrival has to
+ *  be classified before it can be shown. See
+ *  docs/architecture/adr-unified-account-and-professional-identity.md.
  *
- *  /admin already had this treatment (Phase H3.3). /employer now does too.
- *  Nothing about the organisation is disclosed by this: the intent is
- *  derived from the URL the person already has, it selects a login form and
- *  nothing else, and /auth's own contract is that intent chooses a
- *  destination and is never treated as a permission.
- *
- *  Everything outside /admin and /employer keeps the candidate default,
- *  exactly as before. */
-function intentSearch(): { intent?: "admin" | "employer" } {
-  const path = window.location.pathname;
-  if (path.startsWith("/admin")) return { intent: "admin" };
-  if (path.startsWith("/employer")) return { intent: "employer" };
-  return {};
+ *  The return path is still preserved exactly as before — pathname AND
+ *  search, because a bare pathname discards the query string, which silently
+ *  destroyed the Career Discovery session uuid on every login round trip.
+ */
+function returnSearch(): { redirect: string } {
+  return { redirect: window.location.pathname + window.location.search };
 }
 
 function AuthenticatedLayout() {
@@ -47,16 +41,7 @@ function AuthenticatedLayout() {
       if (!mounted) return;
       const session = data.session;
       if (!session) {
-        navigate({
-          to: "/auth",
-          search: {
-            // pathname + search: a bare pathname discards the query
-            // string, which silently destroyed the Career Discovery
-            // session uuid on every login round trip.
-            redirect: window.location.pathname + window.location.search,
-            ...intentSearch(),
-          } as never,
-        });
+        navigate({ to: "/login", search: returnSearch() as never });
       } else {
         setSignedIn(true);
       }
@@ -70,13 +55,7 @@ function AuthenticatedLayout() {
       // their query string. getSession() above is the authority for the
       // first decision; this handler only reacts to a real sign-out.
       if (!session && event !== "INITIAL_SESSION") {
-        navigate({
-          to: "/auth",
-          search: {
-            redirect: window.location.pathname + window.location.search,
-            ...intentSearch(),
-          } as never,
-        });
+        navigate({ to: "/login", search: returnSearch() as never });
       }
     });
     return () => {

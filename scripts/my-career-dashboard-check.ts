@@ -128,12 +128,17 @@ expect(
   cardCode.includes("sca.scp.summary.empty"),
   `${cardPath}: a profile with nothing filled in needs a real empty state.`,
 );
-// No invented completeness score: there is no governed denominator for a
-// "complete" career profile, so any percentage here would be made up.
+// No completeness score computed HERE. There is a governed definition now --
+// src/lib/professional-identity/completeness.ts, versioned, weighted to
+// exactly 100 and asserted by scripts/professional-identity-check.ts -- and
+// it is rendered by the identity header. What must never come back is this
+// card growing a second, inline one: two percentages for one profile, and
+// the one nobody versioned is the one that drifts.
 expect(
   !/completion|percentComplete|profileScore|\bcompleteness\b/i.test(cardCode),
-  `${cardPath}: no profile-completion score — the product has no governed ` +
-    "definition of a complete career profile, so a percentage would be invented.",
+  `${cardPath}: no profile-completion score may be computed here — the ` +
+    "governed one lives in professional-identity/completeness.ts and is " +
+    "rendered by the identity header.",
 );
 // The Career Profile / Security Passport boundary survives the redesign.
 expect(
@@ -228,8 +233,8 @@ expect(
   `${routePath}: no sign-out control may render on the dashboard.`,
 );
 expect(
-  !/employer\.workspace\.label/.test(routeCode),
-  `${routePath}: the workspace switch belongs to the account menu — a second ` +
+  !/employer\.workspace\.label|account\.context\.switchTo/.test(routeCode),
+  `${routePath}: the context switch belongs to the account menu — a second ` +
     "copy on the dashboard is the duplicate this cleanup removed.",
 );
 
@@ -239,19 +244,26 @@ expect(
   `${headerPath}: the header must own sign-out. Removing the dashboard row ` +
     "without this would leave the product with no way to sign out at all.",
 );
+// The account menu is now the CONTEXT SWITCHER, and each organisation is
+// named. "Arbetsgivaryta" told somebody who belongs to two organisations
+// nothing about which one it would open, so the generic label is gone and
+// the list is rendered from the rows themselves.
 expect(
-  accountMenu.includes("employer.workspace.label"),
-  "AccountMenu must offer the employer workspace switch.",
+  /identity\.workspaces\.map\(/.test(accountMenu) && accountMenu.includes("employerName"),
+  "AccountMenu must list each organisation the person belongs to BY NAME — a " +
+    "single generic 'employer workspace' entry cannot say which workspace it " +
+    "opens for somebody who holds two.",
 );
 
-// Gated on DATA — an active membership the database returned — never on a
+// Gated on DATA — active memberships the database returned — never on a
 // client-side role string, which would be a second copy of the rule.
 expect(
-  /hasEmployerWorkspace && \(/.test(accountMenu),
-  "AccountMenu: the workspace switch must be conditional on holding one.",
+  /identity\.workspaces\.length > 0 && \(/.test(accountMenu),
+  "AccountMenu: the context switch must be conditional on the database having " +
+    "returned at least one workspace.",
 );
 expect(
-  header.includes("listMyEmployerWorkspaces") && /workspaces\.data\?\.length \?\? 0/.test(header),
+  header.includes("listMyEmployerWorkspaces") && /workspaces\.data \?\? \[\]/.test(header),
   `${headerPath}: employer access must be decided by listMyEmployerWorkspaces, ` +
     "not by a role literal in the client.",
 );
@@ -260,7 +272,18 @@ expect(
   "Employer access must not be inferred from a client-side role literal.",
 );
 
-// One switch, not several. Exactly one place renders the workspace label.
+// The switcher must never gain a second copy of the access rule. It changes
+// the ROUTE; /employer/$employerSlug re-verifies membership itself.
+expect(
+  !/employer_memberships|has_employer_role|employer_is_active_status/.test(
+    header + accountMenu,
+  ),
+  "The context switcher must not reimplement the membership rule in the " +
+    "client — it lists what RLS returned and changes a route, nothing more.",
+);
+
+// One switcher, not several: exactly the two account surfaces (the desktop
+// dropdown and the mobile sheet), and never a third copy on the dashboard.
 {
   const surfaces = [
     ["SiteHeader", header],
@@ -268,14 +291,14 @@ expect(
     ["my-career route", routeCode],
   ] as const;
   const total = surfaces.reduce(
-    (n, [, src]) => n + (src.split("employer.workspace.label").length - 1),
+    (n, [, src]) => n + (src.split("account.context.switchTo").length - 1),
     0,
   );
   expect(
     total === 2,
-    `the employer workspace switch must render on exactly the two account ` +
-      `surfaces (desktop menu + mobile sheet), found ${total} use(s) of ` +
-      "employer.workspace.label across the header, the menu and the dashboard.",
+    `the context switcher must render on exactly the two account surfaces ` +
+      `(desktop menu + mobile sheet), found ${total} use(s) of ` +
+      "account.context.switchTo across the header, the menu and the dashboard.",
   );
 }
 

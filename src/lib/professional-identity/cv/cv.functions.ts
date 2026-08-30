@@ -64,6 +64,12 @@ export interface CvPreparation {
   readonly bundle: CvSourceBundle;
   /** Always present, always renderable, model or no model. */
   readonly factualDocument: CvDocument;
+  /** Whether there IS a Career Discovery result to offer including.
+   *
+   *  A separate flag rather than reading `bundle.careerInsight`, because the
+   *  preparation bundle is deliberately built with the insight OFF — it is
+   *  opt-in — so the bundle can never answer "could this person opt in". */
+  readonly hasCareerInsight: boolean;
 }
 
 export interface CvGenerationOutcome {
@@ -106,6 +112,7 @@ export const prepareMyCv = createServerFn({ method: "GET" })
       readiness: computeCvReadiness(identity),
       bundle,
       factualDocument: buildFactualCvDocument(bundle),
+      hasCareerInsight: identity.discovery.hasCompletedReport,
     };
   });
 

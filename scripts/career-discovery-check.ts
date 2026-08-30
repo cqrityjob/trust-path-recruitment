@@ -1185,12 +1185,29 @@ expect(
   authLayout.includes('event !== "INITIAL_SESSION"'),
   "auth redirect: the gate must not redirect on INITIAL_SESSION, which fires with a null session mid-restore",
 );
-const portalForm = read("src/components/auth/PortalAuthForm.tsx");
+// The one public auth form. This used to name PortalAuthForm; the four
+// audience-specific doors collapsed into a single entrance on 2026-08-30
+// (docs/architecture/adr-unified-account-and-professional-identity.md) and
+// the property being defended is unchanged: the Career Discovery session
+// uuid lives in the return path's QUERY STRING, and navigating to a path
+// that still contains "?" loses it, leaving the candidate on a dead-end
+// session page.
+const authForm = read("src/components/auth/UnifiedAuthForm.tsx");
 expect(
-  portalForm.includes("splitReturnPath") &&
-    !portalForm.includes("navigate({ to: resolveDestination() })"),
+  authForm.includes("splitReturnPath") &&
+    !authForm.includes("navigate({ to: resolveDestination() })"),
   "auth redirect: the login form must navigate with split path + search, not a path containing a query string",
 );
+
+// The unified entrance must also refuse to return anyone INTO an auth
+// surface. With one door this matters more than it did with four: /login
+// carrying a redirect back to /login is a loop the person cannot escape.
+for (const loop of ["/login", "/signup", "/login?redirect=/login", "/signup/anything"]) {
+  expect(
+    safeReturnPath(loop, "/my-career") === "/my-career",
+    `auth redirect: ${JSON.stringify(loop)} is an auth surface and must never be a return target`,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Legacy retirement — enforced in the database, not by hiding links

@@ -1,44 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PortalAuthForm } from "@/components/auth/PortalAuthForm";
-
-// Phase H3.1 — employer-specific login entry point. Public/unauthenticated
-// — NOT under the `_authenticated` layout — because a signed-out user must
-// be able to reach it. Deliberately a static top-level route
-// (src/routes/employer.login.tsx, no "_authenticated." prefix), distinct
-// from the authenticated `_authenticated.employer.$employerSlug.tsx`
-// dynamic-slug route — TanStack Router ranks the static "/employer/login"
-// path above the "$employerSlug" parameter match at the same depth, so
-// "login" is never mistaken for a workspace slug. Verified against the
-// generated route tree as part of this phase's own testing.
+// COMPATIBILITY REDIRECT — superseded by the unified entrance.
 //
-// Post-auth destination is simply "/employer" — the existing G2 index
-// route already contains the correct 0/1/2+ workspace branching logic
-// (now including the H3.1 zero-workspace -> onboarding redirect); this
-// route deliberately does not duplicate that logic.
+// /employer/login was a public route for ten months and is bookmarked, indexed and
+// linked from mail already sent, so it keeps working. It renders nothing and
+// resolves in `beforeLoad`, so there is no form to flash and no second
+// authentication implementation living on behind a redirect.
+//
+// The validated `redirect` parameter travels with it; `intent` does not,
+// because there is one door now and intent was never a permission. See
+// docs/architecture/adr-unified-account-and-professional-identity.md and
+// src/lib/auth/legacy-entry.ts.
+
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { unifiedAuthHref } from "@/lib/auth/legacy-entry";
 
 export const Route = createFileRoute("/employer/login")({
   ssr: false,
-  head: () => ({
-    meta: [
-      { title: "Log in as an employer — CQrityjob" },
-      {
-        name: "description",
-        content:
-          "Manage job listings, recruitment, candidates, and assessments in CQrityjob's employer portal.",
-      },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
-  }),
-  component: () => (
-    <PortalAuthForm
-      portal="employer"
-      mode="signin"
-      headingKey="employer.auth.signin.title"
-      introKey="employer.auth.signin.intro"
-      defaultDestination="/employer"
-      swapModeTo="/employer/register"
-      otherPortalHref="/candidate/login"
-      otherPortalLabelKey="employer.auth.signin.candidateLink"
-    />
-  ),
+  beforeLoad: ({ location }) => {
+    throw redirect({ href: unifiedAuthHref("signin", location.searchStr ?? ""), replace: true });
+  },
 });

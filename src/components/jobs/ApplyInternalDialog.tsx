@@ -228,7 +228,7 @@ export function ApplyInternalDialog({
     return (
       <div className="space-y-2">
         <Button asChild className="w-full">
-          <a href={`/candidate/login?redirect=${encodeURIComponent(redirect)}`}>
+          <a href={`/login?redirect=${encodeURIComponent(redirect)}`}>
             {t("jobs.apply.signInToApply")}
           </a>
         </Button>

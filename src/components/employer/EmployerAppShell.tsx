@@ -271,7 +271,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
 
   async function onSignOut() {
     await supabase.auth.signOut();
-    navigate({ to: "/candidate/login", replace: true });
+    navigate({ to: "/login", replace: true });
   }
 
   return (
