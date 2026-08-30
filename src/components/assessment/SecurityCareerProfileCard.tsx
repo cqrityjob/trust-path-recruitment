@@ -1,38 +1,8 @@
-// The Security Career Profile on /my-career — a SUMMARY, with the editor
-// behind it.
-//
-// ── WHY THIS IS NO LONGER A FORM ───────────────────────────────────────
-//
-// This card used to render the whole editor inline: six status options, a
-// profession select and five experience options, all permanently expanded on
-// the dashboard. Three costs, none of them cosmetic.
-//
-// The page became a form. /my-career is a career dashboard whose job is to
-// answer "where do I stand" in seconds; opening it on a half-filled
-// questionnaire answered a question nobody had asked.
-//
-// It broke the row. The three cards sit in one CSS grid, and grid items
-// stretch to the tallest sibling. An editor roughly 900px tall therefore
-// dragged the Passport and Jobs cards to 900px each, which is where the
-// dashboard's large empty panels came from. They were never a spacing bug —
-// they were this form, measured from two cards away.
-//
-// It buried Career Discovery. Everything below the first row started a full
-// screen further down than it needed to.
-//
-// So the default state is what the holder has already told us, and editing is
-// a deliberate act. The editor itself is unchanged — same form component, same
-// draft shape, same save call — it simply now opens in a dialog.
-//
-// ── THE BOUNDARY STAYS ON THIS FILE ────────────────────────────────────
-//
-// `sca.scp.notPassport` is pinned here by scripts/passport-separation-check.ts
-// and it is pinned for a reason: this card sits beside a Passport full of
-// verified credentials, and self-reported career information must never
-// borrow that credibility. It is stated on the summary — the surface a
-// candidate actually reads — not only inside the dialog they may never open.
+// The Security Career Profile on /my-career — a summary with its canonical
+// editor behind it. Passport may deep-link here to edit profession, but the
+// Passport never receives a second profession writer.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Pencil } from "lucide-react";
 import {
@@ -63,14 +33,17 @@ import {
   type SecurityCareerProfileDraft,
 } from "@/lib/security-career-profile/types";
 
+function readPassportProfessionIntent(): boolean {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("edit") === "profession" && params.get("from") === "passport";
+}
+
 export function SecurityCareerProfileCard() {
   const { t, lang } = useT();
   const [draft, setDraft] = useState<SecurityCareerProfileDraft>(
     EMPTY_SECURITY_CAREER_PROFILE_DRAFT,
   );
-  // The editor edits a COPY. A candidate who opens the dialog, changes three
-  // answers and closes it without saving has changed nothing — the summary
-  // behind them must not have silently followed along.
   const [editDraft, setEditDraft] = useState<SecurityCareerProfileDraft>(
     EMPTY_SECURITY_CAREER_PROFILE_DRAFT,
   );
@@ -78,6 +51,8 @@ export function SecurityCareerProfileCard() {
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [professions, setProfessions] = useState<CurrentProfessionOption[]>([]);
+  const [passportEditIntent] = useState(readPassportProfessionIntent);
+  const autoOpened = useRef(false);
   const getProfile = useServerFn(getMySecurityCareerProfile);
   const upsertProfile = useServerFn(upsertMySecurityCareerProfile);
 
@@ -94,16 +69,12 @@ export function SecurityCareerProfileCard() {
         }
       })
       .catch((err) => {
-        // Best-effort prefill only — an empty draft is a safe fallback.
         console.error("[SecurityCareerProfile] failed to load existing profile", err);
       })
       .finally(() => setLoaded(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Only to turn a stored slug into a readable title. The dialog's form loads
-  // the same catalogue for its picker; this is the summary's read of it, and
-  // a failure degrades one line to the raw slug rather than the card.
   useEffect(() => {
     if (!draft.currentProfessionSlug || professions.length > 0) return;
     let alive = true;
@@ -118,6 +89,39 @@ export function SecurityCareerProfileCard() {
       alive = false;
     };
   }, [draft.currentProfessionSlug, professions.length]);
+
+  // A Passport edit intent opens the existing canonical editor exactly once,
+  // only after the holder's saved profile has loaded. A normal /my-career visit
+  // remains unchanged.
+  useEffect(() => {
+    if (!loaded || !passportEditIntent || autoOpened.current) return;
+    autoOpened.current = true;
+    setEditDraft(draft);
+    setStatus("idle");
+    setOpen(true);
+    requestAnimationFrame(() => {
+      document.getElementById("career-profile")?.scrollIntoView({ block: "start" });
+    });
+  }, [draft, loaded, passportEditIntent]);
+
+  // Once the dialog has mounted, put keyboard focus on the profession picker
+  // when it exists. If current status does not expose profession yet, the
+  // dialog still opens at the gating status question rather than inventing a
+  // profession control.
+  useEffect(() => {
+    if (!open || !passportEditIntent) return;
+    requestAnimationFrame(() => {
+      const select = document.querySelector<HTMLSelectElement>('[role="dialog"] select');
+      select?.focus();
+    });
+  }, [open, passportEditIntent]);
+
+  useEffect(() => {
+    if (status !== "saved" || !passportEditIntent) return;
+    requestAnimationFrame(() => {
+      document.getElementById("scp-return-passport")?.focus();
+    });
+  }, [status, passportEditIntent]);
 
   const save = async () => {
     setStatus("saving");
@@ -163,12 +167,8 @@ export function SecurityCareerProfileCard() {
   ];
 
   return (
-    <div>
+    <div id="career-profile" className="scroll-mt-28">
       {rows.length > 0 ? (
-        // Stacked, not label-left/value-right. This is the narrowest column on
-        // the dashboard and the values are free text — "Arbetar inom
-        // säkerhetsbranschen" against a right-aligned edge wrapped mid-phrase
-        // and read as ragged. Label above value survives any width.
         <dl className="space-y-3">
           {rows.map((r) => (
             <div key={r.label}>
@@ -180,11 +180,25 @@ export function SecurityCareerProfileCard() {
           ))}
         </dl>
       ) : (
-        // Nothing filled in yet. A statement of what the profile is for, not a
-        // completion meter: there is no governed definition of a "complete"
-        // career profile, so any percentage here would be invented.
         <p className="text-sm text-muted-foreground">{t("sca.scp.summary.empty")}</p>
       )}
+
+      {passportEditIntent && status === "saved" ? (
+        <div className="mt-4 rounded-md border border-border bg-secondary/40 p-3">
+          <p role="status" className="text-sm text-foreground">
+            {lang === "sv"
+              ? "Ditt yrke är sparat i din karriärprofil."
+              : "Your profession is saved in your Career Profile."}
+          </p>
+          <a
+            id="scp-return-passport"
+            href="/passport/information"
+            className="mt-3 inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground no-underline transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {lang === "sv" ? "Tillbaka till Security Passport" : "Back to Security Passport"}
+          </a>
+        </div>
+      ) : null}
 
       <button
         type="button"
@@ -195,22 +209,10 @@ export function SecurityCareerProfileCard() {
         {rows.length > 0 ? t("sca.scp.summary.edit") : t("sca.scp.summary.fillIn")}
       </button>
 
-      {/* The Career Profile / Security Passport boundary — pinned to this file
-          by scripts/passport-separation-check.ts.
-
-          It is a FOOTNOTE, not the opening line. Leading with it meant the
-          narrowest column on the dashboard spent five lines explaining what
-          this card is not, before showing a single thing the candidate had
-          actually told us. The claim is unchanged and still sits on the
-          surface a candidate reads; it simply no longer outranks their own
-          information. */}
       <p className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
         {t("sca.scp.notPassport")}
       </p>
 
-      {/* The editor, unchanged, in a dialog that is allowed to be tall. The
-          shared DialogContent caps itself against the viewport and scrolls, so
-          a long form is reachable on a phone instead of overflowing it. */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-y-hidden">
           <DialogHeader className="shrink-0">

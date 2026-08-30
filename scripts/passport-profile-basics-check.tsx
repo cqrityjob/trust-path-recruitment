@@ -363,10 +363,29 @@ console.log("\nEDITING -- every one of the six has a way to be changed");
         new RegExp(`<a[^>]*href="#${action.anchorId}"`).test(empty),
       );
     } else {
-      ck(
-        `the ${stepId} action links to ${action.to}`,
-        new RegExp(`<a[^>]*href="${action.to}"`).test(empty),
-      );
+      // ── WHY THIS ONE IS A LITERAL COMPARISON AND NOT A PATTERN ──────
+      //
+      // A route destination is a URL, and this guard used to build a RegExp
+      // out of it. That rejected a correct application for two independent
+      // reasons, both of which are properties of URLs rather than of this
+      // particular URL:
+      //
+      //   1. The `?` before a query string is a regex metacharacter. Dropped
+      //      into a pattern unescaped it stops meaning "query string" and
+      //      starts meaning "the previous character is optional".
+      //   2. `empty` is `renderToStaticMarkup` output, where `&` between two
+      //      query parameters is correctly serialised as `&amp;`. The
+      //      contract holds the URL; the markup holds the HTML encoding of
+      //      it, and the two are not the same string.
+      //
+      // Neither is fixed by escaping harder, because there is nothing here a
+      // pattern is needed FOR: the assertion is that one exact attribute
+      // appears, so it is written as one exact attribute. The expected value
+      // is HTML-encoded the way the renderer encodes it, and compared
+      // literally. This is strictly stricter than the regex it replaces --
+      // `<a[^>]*href=` allowed any attributes in between, this allows none.
+      const renderedHref = action.to.replaceAll("&", "&amp;");
+      ck(`the ${stepId} action links to ${action.to}`, empty.includes(`href="${renderedHref}"`));
     }
   }
   // The consolidation, stated where a holder reads it: this page shows the
