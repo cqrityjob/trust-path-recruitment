@@ -385,3 +385,71 @@ export const PERSONAS: readonly AnswerPersona[] = [
     },
   },
 ];
+
+/**
+ * P9 — the acquiescent responder. NOT part of PERSONAS, on purpose.
+ *
+ * ── WHY IT IS SEPARATE ─────────────────────────────────────────────────
+ *
+ * PERSONAS above are eight differentiated humans, and the differentiation
+ * checks assert things about them that are true of real profiles: that they
+ * diverge, that some professions are excluded, that the top 3 sits in an
+ * evidence-supported area. None of that is true of an acquiescent profile,
+ * and it should not be — someone who answers "strongly agree" to everything
+ * has told the instrument almost nothing, and the honest result is that the
+ * whole catalogue looks similar to them. Folding this fixture into PERSONAS
+ * would make those assertions fail for the right reason, which is a bad
+ * reason to weaken them.
+ *
+ * So it lives here as a DIAGNOSTIC probe with its own guard (section 11 of
+ * career-discovery-profession-differentiation-check.ts). Its job is to pin
+ * the engine's behaviour in the degenerate corner where the ranking
+ * statistic is known to be weakest, so that behaviour is measured and
+ * documented rather than discovered in a pilot.
+ *
+ * ── HOW IT IS BUILT ────────────────────────────────────────────────────
+ *
+ * Every one of the 14 scale items is answered 9 of 10. The 8 forced-choice
+ * items cannot express acquiescence at all — each option assigns values
+ * across the item's whole span, so there is no "agree" to pick — and are
+ * answered with a plausible fixed pattern. That is itself worth knowing:
+ * the forced-choice half of the instrument is structurally immune to this
+ * response style, and only the 14 scale items carry the inflation.
+ */
+export const ACQUIESCENT_PERSONA: AnswerPersona = {
+  id: "P9",
+  label: "Acquiescent (high on nearly everything)",
+  contextStatus: "exploring_security",
+  discovery: {
+    ADAPT_EXPLORE_01: "a",
+    ADAPT_EXPLORE_02: "a",
+    ADAPT_EXPLORE_03: "a",
+    ADAPT_EXPLORE_04: "a",
+  },
+  scales: {
+    CQ01: 9,
+    CQ04: 9,
+    CQ05: 9,
+    CQ07: 9,
+    CQ08: 9,
+    CQ10: 9,
+    CQ11: 9,
+    CQ13: 9,
+    CQ14: 9,
+    CQ16: 9,
+    CQ18: 9,
+    CQ19: 9,
+    CQ21: 9,
+    CQ22: 9,
+  },
+  choices: {
+    CQ02: "A",
+    CQ03: "C",
+    CQ06: "C",
+    CQ09: "C",
+    CQ12: "B",
+    CQ15: "A",
+    CQ17: "A",
+    CQ20: "C",
+  },
+};

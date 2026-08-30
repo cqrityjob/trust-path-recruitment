@@ -446,7 +446,40 @@ const PROFESSION_MIN_CENTRAL_Z = 0;
  *
  *  `centralZ` is untouched and still gates INCLUSION
  *  (PROFESSION_MIN_CENTRAL_Z) — clearing the calibrated floors remains a
- *  precondition, and no profession reaches a tier without it. */
+ *  precondition, and no profession reaches a tier without it.
+ *
+ *  —— PROVISIONAL PILOT VALUE. DO NOT TUNE AGAINST FIXTURES. ——
+ *
+ *  Owner decision (Profession Recommendation Validation approval):
+ *  centralExpressionZ is approved as the PILOT ranking method, not as
+ *  permanently validated psychometrics, and this threshold is the most
+ *  provisional part of it.
+ *
+ *  1.0 was calibrated against the CLIPPED `centralZ` in an earlier cycle
+ *  and carried across to a different statistic unchanged. It has never
+ *  been fitted to anything. It is retained deliberately — inheriting a
+ *  stated value is more honest than inventing a fresh one from the same
+ *  synthetic personas that would then be used to validate it — but it is
+ *  a placeholder standing in for a number only real data can supply.
+ *
+ *  It MUST be recalibrated from real pilot response distributions before
+ *  the tier is treated as a validated claim. Two known symptoms it will
+ *  have to answer for, both measured and pinned in section 11 of
+ *  scripts/career-discovery-profession-differentiation-check.ts:
+ *
+ *    - An acquiescent respondent (high on nearly every scale item)
+ *      currently clears "strong" on ALL 14 professions in the catalogue.
+ *    - Flat, unremarkable profiles get 0 "strong" matches while
+ *      pronounced ones get 3-5. That direction is right; the cut point
+ *      is not evidence-based.
+ *
+ *  It must NOT be tuned against the golden personas, the answer-level
+ *  regression personas, or the acquiescent diagnostic fixture. Those
+ *  exist to DETECT changes in this threshold's behaviour; fitting the
+ *  threshold to them would destroy the only signal they carry and
+ *  reproduce, one level up, exactly the mistake the golden fixtures made
+ *  when they were hand-shaped until CENTRAL_DIMENSION_MAX_MISS fired
+ *  (see the file header). */
 const FIT_TIER_STRONG_Z = 1.0;
 
 export type ProfessionFitTier = "strong" | "moderate";

@@ -249,6 +249,93 @@ the "Possible next step" / "Longer-term direction" label the report now renders.
 
 ---
 
+## 6b. Approval status and safeguards
+
+`centralExpressionZ` is approved by the owner as the **pilot ranking
+method** — not as permanently validated psychometrics. Its formula is frozen
+for this branch. Two safeguards were required as a condition of that approval.
+
+### Safeguard 1 — `FIT_TIER_STRONG_Z` is provisional
+
+`1.0` was calibrated against the _clipped_ `centralZ` in an earlier cycle and
+carried across to a different statistic unchanged. **It has never been fitted
+to anything.** It is retained deliberately — inheriting a stated value is more
+honest than inventing a fresh one from the same synthetic personas that would
+then be used to validate it — but it is a placeholder standing in for a number
+only real data can supply.
+
+It **must** be recalibrated from real pilot response distributions before the
+tier is treated as a validated claim, and it **must not** be tuned against the
+golden personas, the answer-level regression personas, or the acquiescent
+diagnostic fixture. Those exist to _detect_ changes in its behaviour; fitting
+the threshold to them would destroy the only signal they carry — and would
+repeat, one level up, the mistake the golden fixtures made when they were
+hand-shaped until `CENTRAL_DIMENSION_MAX_MISS` fired.
+
+Recorded at the constant itself in `professions.ts`, where anyone tempted to
+adjust it will read it first.
+
+### Safeguard 2 — the acquiescent responder diagnostic
+
+A ninth persona answering **9 of 10 on every scale item** was added as
+`ACQUIESCENT_PERSONA`. It is deliberately **not** part of `PERSONAS`: the
+differentiation checks assert things true of real profiles (that they diverge,
+that professions get excluded), none of which should hold for someone who has
+told the instrument almost nothing. Folding it in would make those assertions
+fail for the right reason, which is a bad reason to weaken them.
+
+Worth noting first: **the 8 forced-choice items are structurally immune to
+this response style.** Each option assigns values across the item's whole
+span, so there is no "agree" to pick. All the inflation enters through the 14
+scale items.
+
+**Top 10, printed by CI on every run:**
+
+| #   | Profession                     | z     | tier   | central bands | leverage |
+| --- | ------------------------------ | ----- | ------ | ------------- | -------- |
+| 1   | SP013 AML Specialist           | 2.070 | strong | 3             | 6.00     |
+| 2   | SP008 SOC Analyst              | 2.069 | strong | 3             | 5.91     |
+| 3   | SP004 Close Protection Officer | 2.022 | strong | 3             | 5.99     |
+| 4   | SP009 Cybersecurity Analyst    | 2.019 | strong | 3             | 5.72     |
+| 5   | SP005 Police Officer           | 1.873 | strong | 3             | 5.89     |
+| 6   | SP011 Risk Manager             | 1.798 | strong | 3             | 6.00     |
+| 7   | SP002 Public Order Guard       | 1.788 | strong | 2             | 4.84     |
+| 8   | SP014 Security Technician      | 1.774 | strong | 2             | 4.57     |
+| 9   | SP001 Väktare                  | 1.674 | strong | 2             | 4.89     |
+| 10  | SP003 Skyddsvakt               | 1.608 | strong | 2             | 4.86     |
+
+**Is #1 there solely because it has more central bands? No — and the proof is
+in the table.** SP011 Risk Manager has _the same_ structural leverage as
+SP013 (6.00, the joint highest in the catalogue) yet ranks **6th, 0.27 SD
+behind**. If band structure alone decided the winner, that could not happen.
+The delivered order is also not the leverage order (leverage would put SP011
+first and SP004 second). Within the leading group the candidate's own scores
+still separate professions.
+
+**But band count does stratify the field, and that is pinned as a known
+limitation rather than hidden.** The six three-band professions occupy the top
+six places; every two-band profession follows. This is the degenerate corner
+named in §7.2: as a profile flattens upward, z collapses toward each
+profession's structural leverage, and leverage grows with band count.
+
+**Also pinned: all 14 professions come back `strong`.** That is the clearest
+single argument for Safeguard 1.
+
+Four assertions guard this (section 11 of the differentiation check):
+
+|             | Asserts                                                                                                                                                                                                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 11.1 / 11.2 | The profile is **mechanically detectable** — mean 0.834, SD 0.067, against 0.163–0.235 for all eight real personas. Less than half the dispersion of the least-dispersed real profile. It never has to be inferred from the ranking.                                          |
+| 11.3        | Rank 1 is **not** decided by band structure alone — a profession sharing or exceeding its leverage ranks below it.                                                                                                                                                            |
+| 11.4        | The delivered order is **not** the pure structural-leverage order.                                                                                                                                                                                                            |
+| 11.5 / 11.6 | **Known limitations pinned**: all 14 clear "strong"; the top six are all three-band. Both are currently-undesirable behaviour, asserted so that a future recalibration that changes them fails CI and gets reviewed — neither is a target to optimise against in this branch. |
+
+Because 11.1/11.2 hold, the practical mitigation available before any
+recalibration is detection, not ranking repair: a dimension vector with mean
+≥ 0.80 and SD ≤ 0.10 identifies this response style directly from the answers.
+
+---
+
 ## 7. Known limitations, not fixed here
 
 - **`bandHigh` is still never read.** It is persisted and round-tripped but has

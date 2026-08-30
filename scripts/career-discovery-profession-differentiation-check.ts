@@ -41,6 +41,7 @@
 // are structural instead: the top 3 must fall inside the CAREER AREAS the
 // persona's evidence points at, and different personas must not converge.
 
+import { DIMENSION_IDS } from "../src/lib/career-discovery/v31/dimensions";
 import { scoreDimensions } from "../src/lib/career-discovery/v31/scoring";
 import {
   CIG_PATHWAY_PRIORITY_BONUS_Z,
@@ -51,7 +52,12 @@ import {
 import { reportTagsFor } from "../src/lib/career-discovery/v31/personal-layer";
 import type { ContextStatus } from "../src/lib/career-discovery/types";
 import type { ExperienceBand } from "../src/lib/career-discovery/career-context";
-import { answersFor, PERSONAS, type AnswerPersona } from "./fixtures/career-dna-personas";
+import {
+  ACQUIESCENT_PERSONA,
+  answersFor,
+  PERSONAS,
+  type AnswerPersona,
+} from "./fixtures/career-dna-personas";
 import { FIRST_WAVE_CATALOG } from "./fixtures/first-wave-profession-catalog";
 
 let failures = 0;
@@ -431,6 +437,136 @@ for (const p of PERSONAS) {
     `10.3 ${p.id} — no score or percentage reaches a candidate-facing match`,
   );
 }
+
+// =========================================================================
+group("11 · DIAGNOSTIC — the acquiescent responder (high on nearly everything)");
+//
+// The known-weakest corner of the ranking statistic, pinned deliberately.
+//
+// centralExpressionZ reads the candidate's scores but not the band floors,
+// so a respondent who agrees with every scale item pushes every central
+// dimension high at once and their z against each profession collapses
+// toward that profession's own structural leverage, Sw/sqrt(Sw^2/12), which
+// grows with central band count. This section does NOT assert that the
+// effect is absent -- it is not, and claiming otherwise would be false. It
+// asserts the two things that ARE true and that matter, and pins the rest as
+// documented current behaviour so a future recalibration is noticed rather
+// than silently absorbed.
+//
+// See the FIT_TIER_STRONG_Z doc comment in professions.ts: the tier
+// threshold this section exercises is a PROVISIONAL pilot value and is to be
+// recalibrated on real pilot distributions, never tuned against this fixture.
+
+const acqDims = scoreDimensions(answersFor(ACQUIESCENT_PERSONA));
+const acq = matchProfessionsDiagnostics(
+  acqDims,
+  FIRST_WAVE_CATALOG,
+  ACQUIESCENT_PERSONA.contextStatus,
+  null,
+  [],
+  new Set<string>(),
+  null,
+);
+const acqRows = [...acq.diagnostics]
+  .filter((r) => r.priorityScore !== null)
+  .sort((a, b) => b.priorityScore! - a.priorityScore!);
+
+/** Sw / sqrt(Sw^2/12) over a profession's central bands: the candidate-
+ *  independent leverage constant, a pure property of the calibration. If the
+ *  delivered order ever equals THIS order, the ranking has stopped reading
+ *  the candidate at all. */
+function structuralLeverage(professionId: string): number {
+  const bands = FIRST_WAVE_CATALOG.find((c) => c.professionId === professionId)!.bands.filter(
+    (b) => b.centrality === "central" && b.weight > 0,
+  );
+  const sumW = bands.reduce((s, b) => s + b.weight, 0);
+  const sumW2 = bands.reduce((s, b) => s + b.weight * b.weight, 0);
+  return sumW / Math.sqrt(sumW2 / 12);
+}
+function centralBandCount(professionId: string): number {
+  return FIRST_WAVE_CATALOG.find((c) => c.professionId === professionId)!.bands.filter(
+    (b) => b.centrality === "central" && b.weight > 0,
+  ).length;
+}
+
+// Documented output. Printed every run so the Top 10 is visible in CI logs
+// rather than only in a doc that can drift from the code.
+console.log("      Top 10 for the acquiescent profile (z · tier · central bands · leverage):");
+acqRows.slice(0, 10).forEach((r, i) => {
+  console.log(
+    `        ${String(i + 1).padStart(2)}. ${r.professionId} ${r.titleEn.padEnd(32)}` +
+      ` z=${r.priorityScore!.toFixed(3)} ${r.fitTier.padEnd(8)}` +
+      ` n=${centralBandCount(r.professionId)} lev=${structuralLeverage(r.professionId).toFixed(2)}`,
+  );
+});
+
+// -- 11.1 The profile is mechanically detectable ------------------------
+// The most useful property: this response style does not have to be inferred
+// from the ranking, it is visible in the dimension vector itself. Real
+// personas disperse; this one does not, by a wide margin.
+const acqScores = DIMENSION_IDS.map((d) => acqDims.dimensions[d].score).filter(
+  (x): x is number => x !== null,
+);
+const acqMean = acqScores.reduce((a, b) => a + b, 0) / acqScores.length;
+const acqSd = Math.sqrt(acqScores.reduce((a, b) => a + (b - acqMean) ** 2, 0) / acqScores.length);
+const realSds = PERSONAS.map((p) => {
+  const d = scoreDimensions(answersFor(p));
+  const v = DIMENSION_IDS.map((x) => d.dimensions[x].score).filter((x): x is number => x !== null);
+  const m = v.reduce((a, b) => a + b, 0) / v.length;
+  return Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length);
+});
+ok(
+  acqMean >= 0.8 && acqSd <= 0.1,
+  `11.1 the acquiescent profile is mechanically detectable (mean ${acqMean.toFixed(3)} >= 0.80, sd ${acqSd.toFixed(3)} <= 0.10)`,
+);
+ok(
+  acqSd < Math.min(...realSds) / 2,
+  `11.2 its dispersion is less than half the least-dispersed real persona (${acqSd.toFixed(3)} vs ${Math.min(...realSds).toFixed(3)})`,
+);
+
+// -- 11.3 Rank 1 is NOT decided by band structure alone -----------------
+// The claim under test, stated precisely: if band structure alone decided
+// the winner, every profession with leverage >= the winner's would have to
+// rank at or above it. At least one does not, so the candidate's own scores
+// are still what separate the leaders.
+const acqTop = acqRows[0];
+const equalOrGreaterLeverage = acqRows.filter(
+  (r) => structuralLeverage(r.professionId) >= structuralLeverage(acqTop.professionId) - 1e-9,
+);
+ok(
+  equalOrGreaterLeverage.length > 1 &&
+    equalOrGreaterLeverage.some((r) => r.priorityScore! < acqTop.priorityScore! - 1e-9),
+  `11.3 rank 1 (${acqTop.professionId}) is not decided by band structure alone -- ` +
+    `${equalOrGreaterLeverage.length - 1} profession(s) share or exceed its leverage and rank below it`,
+);
+ok(
+  acqRows.map((r) => r.professionId).join() !==
+    [...acqRows]
+      .sort((a, b) => structuralLeverage(b.professionId) - structuralLeverage(a.professionId))
+      .map((r) => r.professionId)
+      .join(),
+  "11.4 the delivered order is not the pure structural-leverage order -- the ranking still reads the candidate",
+);
+
+// -- 11.5 / 11.6 Known degradation, pinned not hidden --------------------
+// Both of these assert behaviour that is UNDESIRABLE and currently true.
+// They exist so that a future threshold recalibration or catalogue change
+// that alters them fails here and gets looked at, rather than passing
+// unnoticed. Neither is a target to optimise against in this branch.
+const acqStrong = acqRows.filter((r) => r.fitTier === "strong").length;
+ok(
+  acqStrong === FIRST_WAVE_CATALOG.length,
+  `11.5 KNOWN LIMITATION pinned: an acquiescent profile currently clears "strong" on all ` +
+    `${acqStrong}/${FIRST_WAVE_CATALOG.length} professions at the provisional FIT_TIER_STRONG_Z. ` +
+    `Recalibrate on real pilot distributions, not against this fixture.`,
+);
+const topSix = acqRows.slice(0, 6).map((r) => centralBandCount(r.professionId));
+ok(
+  topSix.every((n) => n === 3),
+  "11.6 KNOWN LIMITATION pinned: band count still stratifies this profile -- the six " +
+    "three-band professions occupy the top six places. Ordering WITHIN that group is " +
+    "candidate-driven (11.3), but the grouping is structural.",
+);
 
 console.log(
   failures === 0
