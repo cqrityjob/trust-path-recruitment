@@ -1428,6 +1428,38 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Canonical Professional Profile: one home for the current profession.
+#
+# Runs BEFORE the rollback step, like every non-destructive suite: it reads
+# sp_passport_profiles and cig_professions, both of which the SCP rollback
+# drops. It also re-executes its own migration and rollback INSIDE its
+# transaction, over seeded conflicting rows -- see the suite header for why
+# reconciliation cannot otherwise be observed doing anything at all.
+# ---------------------------------------------------------------------------
+echo "==> Running canonical Professional Profile assertions"
+set +e
+CPP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/canonical_professional_profile_test.sql 2>&1)"
+CPP_RC=$?
+set -e
+
+echo "$CPP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CPP_PASSED="$(echo "$CPP_OUT" | grep -c "ok  " || true)"
+
+if [ "$CPP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the canonical Professional Profile suite exited with code ${CPP_RC}." >&2
+  echo "$CPP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "canonical Professional Profile"
+else
+  echo "    ok  ${CPP_PASSED} canonical Professional Profile assertions passed"
+  if [ "$CPP_PASSED" -lt 65 ]; then
+    echo "FAIL: expected at least 65 canonical Professional Profile assertions, only ${CPP_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "canonical Professional Profile (assertion shortfall: floor 65)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
 set +e
 ROLLBACK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_a_rollback_test.sql 2>&1)"
