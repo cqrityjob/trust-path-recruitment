@@ -2991,6 +2991,57 @@ export type Database = {
         }
         Relationships: []
       }
+      cv_documents: {
+        Row: {
+          bundle_version: string
+          created_at: string
+          document_version: string
+          id: string
+          locale: string
+          model_id: string | null
+          origin: string
+          owner_user_id: string
+          presentation: Json
+          provider_mode: string | null
+          purpose: string
+          source_bundle: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          bundle_version?: string
+          created_at?: string
+          document_version?: string
+          id?: string
+          locale?: string
+          model_id?: string | null
+          origin?: string
+          owner_user_id: string
+          presentation?: Json
+          provider_mode?: string | null
+          purpose?: string
+          source_bundle?: Json
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          bundle_version?: string
+          created_at?: string
+          document_version?: string
+          id?: string
+          locale?: string
+          model_id?: string | null
+          origin?: string
+          owner_user_id?: string
+          presentation?: Json
+          provider_mode?: string | null
+          purpose?: string
+          source_bundle?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deleted_accounts: {
         Row: {
           deleted_at: string
