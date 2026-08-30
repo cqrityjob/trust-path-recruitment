@@ -199,12 +199,29 @@ function Page() {
 
       <h2 className="mt-8 text-lg font-semibold text-foreground">{t("iiu.pl.title")}</h2>
       <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">{t("iiu.pl.intro")}</p>
+      <p className="mt-1.5 max-w-[68ch] text-sm text-muted-foreground">{t("iiu.jr.how")}</p>
 
       {!p?.exists ? (
-        <div className="mt-4 max-w-3xl">
-          <InfoPanel tone="neutral" title={t("iiu.pl.none.title")}>
-            <p>{t("iiu.pl.none.body")}</p>
+        /* The owner opened this page as a workflow step and found an empty
+           machine. Joint review is a thing two or more assessors do; for one
+           reviewer there is nothing to compare, and the honest screen says so
+           and explains what it would be for rather than implying a step was
+           missed. */
+        <div className="mt-4 max-w-3xl space-y-3">
+          <InfoPanel tone="neutral" title={t("iiu.jr.single.title")}>
+            <p>{t("iiu.jr.single.body")}</p>
           </InfoPanel>
+          <div className="rounded-lg border border-border p-4">
+            <p className="max-w-[68ch] text-sm leading-relaxed text-foreground">
+              {t("iiu.jr.how")}
+            </p>
+            <p className="mt-2 max-w-[68ch] text-sm leading-relaxed text-muted-foreground">
+              {t("iiu.jr.nomath")}
+            </p>
+            <p className="mt-2 max-w-[68ch] text-xs leading-relaxed text-muted-foreground">
+              {t("iiu.pl.none.body")}
+            </p>
+          </div>
         </div>
       ) : (
         <>

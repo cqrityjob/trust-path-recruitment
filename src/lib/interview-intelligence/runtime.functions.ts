@@ -2180,6 +2180,10 @@ export const authorEvidence = createServerFn({ method: "POST" })
         caseId: z.string().uuid(),
         questionId: z.string().uuid(),
         excerpt: z.string().min(1).max(2000),
+        // Which interview note this was taken out of. The column and the RPC
+        // parameter both existed; nothing passed it, so material confirmed
+        // from a note lost the link back to the note it came from.
+        noteId: z.string().uuid().nullable().optional(),
       })
       .parse(d),
   )
@@ -2200,6 +2204,7 @@ export const authorEvidence = createServerFn({ method: "POST" })
       _case_id: data.caseId,
       _question_id: data.questionId,
       _excerpt: data.excerpt,
+      _note_id: data.noteId ?? undefined,
     });
     if (error) throw new Error(error.message);
     return { evidenceId: id as unknown as string };

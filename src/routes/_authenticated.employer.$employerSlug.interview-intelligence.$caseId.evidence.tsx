@@ -18,7 +18,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
@@ -51,6 +51,7 @@ import {
 } from "@/components/employer/interview/InterviewLayout";
 import {
   getInterviewCase,
+  getPanel,
   reviewEvidenceProposal,
   authorEvidence,
   runInterviewAnalysis,
@@ -58,7 +59,18 @@ import {
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/evidence",
-)({ ssr: false, component: Page, errorComponent: EmployerErrorState });
+)({
+  ssr: false,
+  component: Page,
+  errorComponent: EmployerErrorState,
+  // `?q=Q2` is how the assessment screen sends a recruiter here to fetch the
+  // material one specific question is missing. Landing them on Q1 and letting
+  // them search is the dead end this exists to remove.
+  validateSearch: (search: Record<string, unknown>): { q?: string } => {
+    const raw = typeof search.q === "string" ? search.q.trim() : "";
+    return /^Q\d{1,2}$/.test(raw) ? { q: raw } : {};
+  },
+});
 
 const CORRECTION_CLASSES = [
   ["ai_model_error", "iiu.ev.reason.ai_model_error"],
@@ -96,6 +108,7 @@ function Page() {
   const analyseFn = useServerFn(runInterviewAnalysis);
   const authorFn = useServerFn(authorEvidence);
   const reviewFn = useServerFn(reviewEvidenceProposal);
+  const panelFn = useServerFn(getPanel);
 
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
@@ -104,7 +117,28 @@ function Page() {
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["ii", "case", caseId] });
 
+  // Whether joint review means anything for this case. Two or more assessors
+  // is the whole condition; below that there is nothing to compare.
+  const panelQ = useQuery({
+    queryKey: ["ii", "panel", caseId],
+    queryFn: () => panelFn({ data: { caseId } }),
+    retry: false,
+  });
+  const jointReviewRelevant = (panelQ.data?.members.length ?? 0) >= 2;
+
+  const { q: requestedCode } = Route.useSearch();
   const [active, setActive] = useState(0);
+  // Follow the deep link once the questions have loaded, and again if the
+  // recruiter arrives at a different question from the assessment screen.
+  const followed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!requestedCode || followed.current === requestedCode) return;
+    const i = (q.data?.questions ?? []).findIndex((qq) => qq.code === requestedCode);
+    if (i >= 0) {
+      followed.current = requestedCode;
+      setActive(i);
+    }
+  }, [requestedCode, q.data]);
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [correction, setCorrection] = useState<string>("ai_model_error");
@@ -113,11 +147,17 @@ function Page() {
   // reaches the case — the extraction section cannot run — so the journey
   // dead-ended here before this existed.
   const [evExcerpt, setEvExcerpt] = useState("");
+  // Which note the excerpt in the box was taken out of, so an edited quote
+  // keeps the link back to its source.
+  const [evNoteId, setEvNoteId] = useState<string | null>(null);
   const authorEv = useMutation({
-    mutationFn: (questionId: string) =>
-      authorFn({ data: { caseId, questionId, excerpt: evExcerpt } }),
+    mutationFn: (v: { questionId: string; excerpt: string; noteId: string | null }) =>
+      authorFn({
+        data: { caseId, questionId: v.questionId, excerpt: v.excerpt, noteId: v.noteId },
+      }),
     onSuccess: () => {
       setEvExcerpt("");
+      setEvNoteId(null);
       void q.refetch();
     },
   });
@@ -544,16 +584,63 @@ function Page() {
                           <Nothing>{t("iiu.ev.notes.none")}</Nothing>
                         </div>
                       ) : (
-                        <ul className="mt-2 space-y-2">
-                          {notesFor(question.id).map((n) => (
-                            <li
-                              key={n.id}
-                              className="whitespace-pre-line rounded-lg border border-sky-700/30 bg-sky-700/5 p-3.5 text-sm leading-relaxed text-foreground"
-                            >
-                              {n.body}
-                            </li>
-                          ))}
-                        </ul>
+                        <>
+                          <ul className="mt-2 space-y-2">
+                            {notesFor(question.id).map((n) => (
+                              <li
+                                key={n.id}
+                                className="rounded-lg border border-sky-700/30 bg-sky-700/5 p-3.5"
+                              >
+                                <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
+                                  {n.body}
+                                </p>
+                                {/* The material is already written down. Making
+                                  the recruiter retype their own note to turn it
+                                  into confirmed material is the slowest
+                                  possible way to do the one thing this screen
+                                  is for.
+
+                                  Confirming is still a deliberate human act,
+                                  and the note is not consumed by it: it stays a
+                                  note, and what is confirmed becomes a separate
+                                  record carrying the note's id as its
+                                  provenance. */}
+                                {canWork && (
+                                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                                    <button
+                                      type="button"
+                                      className={BUTTON}
+                                      disabled={authorEv.isPending}
+                                      onClick={() =>
+                                        authorEv.mutate({
+                                          questionId: question.id,
+                                          excerpt: n.body,
+                                          noteId: n.id,
+                                        })
+                                      }
+                                    >
+                                      {t("iiu.rv.use.note")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={BUTTON}
+                                      onClick={() => {
+                                        setEvExcerpt(n.body);
+                                        setEvNoteId(n.id);
+                                        document.getElementById("ev-x")?.focus();
+                                      }}
+                                    >
+                                      {t("iiu.rv.use.edit")}
+                                    </button>
+                                  </div>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="mt-2 max-w-[70ch] text-[11px] leading-relaxed text-muted-foreground">
+                            {t("iiu.rv.use.hint")}
+                          </p>
+                        </>
                       )}
                     </article>
 
@@ -871,7 +958,11 @@ function Page() {
                         onSubmit={(e) => {
                           e.preventDefault();
                           if (evExcerpt.trim() === "") return;
-                          authorEv.mutate(question.id);
+                          authorEv.mutate({
+                            questionId: question.id,
+                            excerpt: evExcerpt,
+                            noteId: evNoteId,
+                          });
                         }}
                       >
                         <h4 className="text-sm font-semibold text-foreground">
@@ -931,21 +1022,58 @@ function Page() {
                     {t("iiu.rv.handoff")}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-3">
+                    {/* Straight back to the question the recruiter came here
+                        to unblock, not to the top of a page of eight. Shown as
+                        the primary route the moment this question HAS material,
+                        which is the moment the errand is finished. */}
+                    {evidenceFor(question.id).length > 0 && (
+                      <Link
+                        to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
+                        params={{ employerSlug, caseId }}
+                        search={{ q: question.code }}
+                        className={PRIMARY_BUTTON}
+                      >
+                        {t("iiu.rv.assessnow")} · {question.code}
+                      </Link>
+                    )}
                     <Link
                       to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
                       params={{ employerSlug, caseId }}
-                      className={PRIMARY_BUTTON}
+                      search={requestedCode ? { q: requestedCode } : {}}
+                      className={evidenceFor(question.id).length > 0 ? BUTTON : PRIMARY_BUTTON}
                     >
                       {t("iiu.ev.toassess")}
                     </Link>
-                    <Link
-                      to="/employer/$employerSlug/interview-intelligence/$caseId/panel"
-                      params={{ employerSlug, caseId }}
-                      className={BUTTON}
-                    >
-                      {t("iiu.pl.title")}
-                    </Link>
+                    {/* Joint review is a thing two or more assessors do. For a
+                        single reviewer it is not a step, and putting it in the
+                        journey as one taught the owner to expect a workflow
+                        that does not exist for them. */}
+                    {jointReviewRelevant && (
+                      <Link
+                        to="/employer/$employerSlug/interview-intelligence/$caseId/panel"
+                        params={{ employerSlug, caseId }}
+                        className={BUTTON}
+                      >
+                        {t("iiu.pl.title")}
+                      </Link>
+                    )}
                   </div>
+                  {!jointReviewRelevant && (
+                    <Disclosure summary={t("iiu.pl.title")} className="mt-4">
+                      <p className="max-w-[70ch] text-sm leading-relaxed text-foreground">
+                        {t("iiu.jr.single.title")}
+                      </p>
+                      <p className="mt-1.5 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+                        {t("iiu.jr.single.body")}
+                      </p>
+                      <p className="mt-2 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+                        {t("iiu.jr.how")}
+                      </p>
+                      <p className="mt-1.5 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+                        {t("iiu.jr.nomath")}
+                      </p>
+                    </Disclosure>
+                  )}
                 </div>
               </>
             ) : (

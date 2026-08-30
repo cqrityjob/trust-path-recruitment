@@ -146,6 +146,7 @@ DECLARE
   _run uuid; _plan uuid; _session uuid; _q1 uuid; _q uuid;
   _noteId uuid; _prop uuid; _propReject uuid; _ev uuid; _report uuid;
   _passage uuid; _dim uuid; _comp uuid; _n integer; _status text; _hash text;
+  _first uuid; _second uuid; _q2 uuid;
 BEGIN
   SELECT ver.id INTO _packv FROM public.scp_interview_pack_versions ver
     JOIN public.scp_interview_packs p ON p.id = ver.pack_id WHERE p.slug = 'vaktare-se';
@@ -331,6 +332,62 @@ BEGIN
     PERFORM public.scp_iv_record_assessment(_case, _q, 0,
       'Frågan hanns inte med; otillräcklig evidens.');
   END LOOP;
+
+  -- 8b. A recorded assessment can be changed until the report is released.
+  --
+  -- Hosted UAT: the owner saved a rating on Q1 and could not get back to it.
+  -- The database has supported this the whole time -- it supersedes rather
+  -- than overwrites, and asks for a documented reason -- so this is the
+  -- contract the screen has to keep offering.
+  SELECT id INTO _first FROM public.scp_interview_assessments
+   WHERE case_id = _case AND question_id = _q1 AND superseded_by IS NULL;
+  PERFORM pg_temp.ok(_first IS NOT NULL, 'R2.17b the first assessment of Q1 is live');
+
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_record_assessment(%L, %L, 2, %L)', _case, _q1, 'Omprövad.'),
+    'SCP_IV_SUPERSEDE_REASON_REQUIRED',
+    'R2.17c changing a recorded assessment without a documented reason is refused');
+
+  SELECT public.scp_iv_record_assessment(_case, _q1, 2,
+    'Vid omläsning beskriver hon kontrollen men inte vad hon själv gjorde först.',
+    'Ordningen mellan kontroll och larm är fortfarande oklar.',
+    'Läste om det bekräftade utdraget och tonade ned nivån.') INTO _second;
+
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.scp_interview_assessments
+      WHERE case_id = _case AND question_id = _q1 AND superseded_by IS NULL) = 1,
+    'R2.17d exactly one assessment of Q1 is live after the change');
+
+  PERFORM pg_temp.ok(
+    (SELECT level = 2 AND uncertainty_note IS NOT NULL
+       FROM public.scp_interview_assessments WHERE id = _second),
+    'R2.17e the live one carries the new level, reasoning and uncertainty');
+
+  -- The point of superseding rather than editing: the earlier judgement is
+  -- still there, still attributed, and carries why it was replaced.
+  PERFORM pg_temp.ok(
+    (SELECT superseded_by = _second AND supersede_reason IS NOT NULL AND level = 3
+       FROM public.scp_interview_assessments WHERE id = _first),
+    'R2.17f the earlier judgement is retained with its reason, not overwritten');
+
+  PERFORM pg_temp.ok(
+    EXISTS (SELECT 1 FROM public.scp_interview_case_events
+             WHERE case_id = _case AND event = 'assessment_superseded'),
+    'R2.17g the change is on the ledger');
+
+  -- And the governance rule survives the edit path. Reaching a substantive
+  -- level by "correcting" an assessment on a question with no confirmed
+  -- material would be a hole straight through the whole product rule.
+  -- Q2 already carries a level 0 from the loop above and has no confirmed
+  -- material, so this is the real shape of the attempt: a documented change
+  -- from "cannot be assessed" to a substantive level, with nothing behind it.
+  SELECT id INTO _q2 FROM public.scp_interview_core_questions
+   WHERE pack_version_id = _packv AND code = 'Q2';
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_record_assessment(%L, %L, 3, %L, NULL, %L)',
+           _case, _q2, 'Ändrar mig.', 'Vill höja nivån.'),
+    'SCP_IV_NO_CONFIRMED_EVIDENCE',
+    'R2.17h superseding cannot reach a substantive level without confirmed material');
 
   PERFORM public.scp_iv_mark_assessed(_case);
 

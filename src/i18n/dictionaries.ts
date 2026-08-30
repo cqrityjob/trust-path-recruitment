@@ -4367,6 +4367,58 @@ export const dictionaries = {
     "iiu.rp.correctedbyreviewer": "(korrigerad av granskare)",
     "iiu.ov.cta.summary": "Sammanfatta intervjun",
     "iiu.ov.why.summary": "Bedömningen är klar. Se vad samtalet gav innan du skapar rapporten.",
+    "iiu.as2.q": "Hur tydligt visar svaret det beteende rollen kräver?",
+    "iiu.as2.group.assessable": "Går det att bedöma?",
+    "iiu.as2.group.demonstrated": "Hur tydligt beteendet visas",
+    "iiu.as2.lvl.0": "Går inte att bedöma",
+    "iiu.as2.lvl.0.body":
+      "Det finns inte tillräckligt med bekräftat material för att göra en rättvis bedömning.",
+    "iiu.as2.lvl.1": "Begränsat visat",
+    "iiu.as2.lvl.1.body":
+      "Materialet berör beteendet, men beskriver inte vad personen själv gjorde eller varför.",
+    "iiu.as2.lvl.2": "Delvis visat",
+    "iiu.as2.lvl.2.body":
+      "Ett konkret exempel finns, men delar av förloppet eller det egna handlandet saknas.",
+    "iiu.as2.lvl.3": "Tydligt visat",
+    "iiu.as2.lvl.3.body":
+      "Ett fullständigt exempel: situationen, det personen själv gjorde och vad det ledde till.",
+    "iiu.as2.lvl.4": "Mycket tydligt visat",
+    "iiu.as2.lvl.4.body":
+      "Flera fullständiga exempel, eller ett som dessutom visar eftertanke om vad som kunde gjorts annorlunda.",
+    "iiu.as2.zero.apart":
+      "Nivå 0 är ett omdöme om underlaget, inte om personen. Den räknas aldrig ihop med nivå 1–4 och betyder inte att någon presterat dåligt.",
+    "iiu.as2.anchor.governed": "Paketets egen nivåbeskrivning",
+    "iiu.as2.anchor.note":
+      "Den låsta texten i rollpaketet som bedömningen registreras mot. Den ändras aldrig i efterhand.",
+    "iiu.as2.blocked.title": "Det finns inget bekräftat bedömningsunderlag för den här frågan ännu",
+    "iiu.as2.blocked.body":
+      "Bekräftat material krävs innan beteendet kan bedömas på nivå 1–4. Gå till granskningen, bekräfta vad som får användas, och kom tillbaka hit.",
+    "iiu.as2.blocked.cta": "Granska materialet för den här frågan",
+    "iiu.as2.blocked.zero": "Eller registrera „går inte att bedöma” för den här frågan",
+    "iiu.as2.edit": "Ändra bedömningen",
+    "iiu.as2.edit.why": "Varför ändrar du bedömningen?",
+    "iiu.as2.edit.why.hint":
+      "Krävs. Den tidigare bedömningen raderas inte — den ersätts, och båda finns kvar i spårbarheten.",
+    "iiu.as2.edit.save": "Spara ändringen",
+    "iiu.as2.edit.reason.missing": "Skriv varför du ändrar bedömningen innan du sparar.",
+    "iiu.as2.locked": "Rapporten är låst. Bedömningarna kan inte längre ändras.",
+    "iiu.as2.withmaterial": "Frågor med bekräftat underlag",
+    "iiu.as2.blockedcount": "Väntar på underlag",
+    "iiu.as2.blockedlist": "De här frågorna väntar på bekräftat underlag",
+    "iiu.jr.single.title": "Sambedömning är inte aktuell här",
+    "iiu.jr.single.body":
+      "Sambedömning används när två eller fler bedömare är utsedda till samma intervju. Du är ensam bedömare, så det finns ingenting att jämföra.",
+    "iiu.jr.how":
+      "Varje bedömare gör sin bedömning självständigt först. När alla har lämnat in kan bedömningarna jämföras och diskuteras.",
+    "iiu.jr.nomath":
+      "Ingen sammanvägning, ingen omröstning och inget automatiskt beslut. Skillnader visas som de är.",
+    "iiu.rv.backtoassess": "Tillbaka till bedömningen",
+    "iiu.rv.use.note": "Använd som bedömningsunderlag",
+    "iiu.rv.use.edit": "Välj ut eller redigera avsnittet",
+    "iiu.rv.use.confirm": "Bekräfta som bedömningsunderlag",
+    "iiu.rv.use.hint":
+      "Anteckningen blir kvar som anteckning. Det du bekräftar blir ett separat, bekräftat underlag med dig som ansvarig.",
+    "iiu.rv.assessnow": "Bedöm den här frågan",
     "iiu.as2.title": "Bedöm mot rollens krav",
     "iiu.as2.lead":
       "Ett krav i taget: vad rollen kräver, vilket bekräftat material samtalet gav, och vad du som människa drar för slutsats.",
@@ -4920,7 +4972,7 @@ export const dictionaries = {
     "iiu.iv.pause": "Pausa",
     "iiu.ev.reviewfailed": "Granskningen kunde inte sparas",
     "iiu.ev.aioriginal": "AI:ts ursprungliga formulering",
-    "iiu.pl.title": "Panelgranskning",
+    "iiu.pl.title": "Sambedömning",
     "iiu.pl.conclusion.title": "Panelens slutsats",
     "iiu.rp.noblockers.title": "Inget hindrar rapporten",
     "iiu.pp.airole.short": "AI:s roll",
@@ -9275,6 +9327,57 @@ export const dictionaries = {
     "iiu.ov.cta.summary": "Summarise the interview",
     "iiu.ov.why.summary":
       "Your assessment is done. See what the conversation produced before you create the report.",
+    "iiu.as2.q": "How clearly does the response demonstrate the behaviour required for the role?",
+    "iiu.as2.group.assessable": "Can it be assessed?",
+    "iiu.as2.group.demonstrated": "How clearly the behaviour is demonstrated",
+    "iiu.as2.lvl.0": "Cannot be assessed",
+    "iiu.as2.lvl.0.body": "There is not enough confirmed material to make a fair assessment.",
+    "iiu.as2.lvl.1": "Limited evidence of the required behaviour",
+    "iiu.as2.lvl.1.body":
+      "The material touches on the behaviour but does not describe what the person did themselves, or why.",
+    "iiu.as2.lvl.2": "Partly demonstrated",
+    "iiu.as2.lvl.2.body":
+      "There is a concrete example, but part of the sequence or of the person's own action is missing.",
+    "iiu.as2.lvl.3": "Clearly demonstrated",
+    "iiu.as2.lvl.3.body":
+      "A complete example: the situation, what the person did themselves, and what it led to.",
+    "iiu.as2.lvl.4": "Very clearly demonstrated",
+    "iiu.as2.lvl.4.body":
+      "Several complete examples, or one that also shows reflection on what could have been done differently.",
+    "iiu.as2.zero.apart":
+      "Level 0 is a judgement about the material, not about the person. It never combines with levels 1–4 and it does not mean anyone performed poorly.",
+    "iiu.as2.anchor.governed": "The package's own level description",
+    "iiu.as2.anchor.note":
+      "The pinned role-package wording the assessment is recorded against. It is never rewritten afterwards.",
+    "iiu.as2.blocked.title": "No confirmed assessment material exists for this question yet",
+    "iiu.as2.blocked.body":
+      "Confirmed material is required before the behaviour can be assessed at levels 1–4. Go to review, confirm what may be used, and come back here.",
+    "iiu.as2.blocked.cta": "Review material for this question",
+    "iiu.as2.blocked.zero": "Or record \u201ccannot be assessed\u201d for this question",
+    "iiu.as2.edit": "Change this assessment",
+    "iiu.as2.edit.why": "Why are you changing this assessment?",
+    "iiu.as2.edit.why.hint":
+      "Required. The earlier assessment is not deleted — it is superseded, and both remain in the audit trail.",
+    "iiu.as2.edit.save": "Save the change",
+    "iiu.as2.edit.reason.missing": "Write why you are changing the assessment before saving.",
+    "iiu.as2.locked": "The report is locked. Assessments can no longer be changed.",
+    "iiu.as2.withmaterial": "Questions with confirmed material",
+    "iiu.as2.blockedcount": "Waiting for material",
+    "iiu.as2.blockedlist": "These questions are waiting for confirmed material",
+    "iiu.jr.single.title": "Joint review does not apply here",
+    "iiu.jr.single.body":
+      "Joint review is used when two or more assessors are assigned to the same interview. You are the only assessor, so there is nothing to compare.",
+    "iiu.jr.how":
+      "Each reviewer makes their assessment independently first. Once everyone has submitted, the assessments can be compared and discussed.",
+    "iiu.jr.nomath":
+      "No averaging, no voting and no automatic decision. Differences are shown as they are.",
+    "iiu.rv.backtoassess": "Back to the assessment",
+    "iiu.rv.use.note": "Use as assessment material",
+    "iiu.rv.use.edit": "Select or edit the excerpt",
+    "iiu.rv.use.confirm": "Confirm as assessment material",
+    "iiu.rv.use.hint":
+      "The note stays a note. What you confirm becomes separate, confirmed material with you named as responsible.",
+    "iiu.rv.assessnow": "Assess this question",
     "iiu.as2.title": "Assess against the role requirements",
     "iiu.as2.lead":
       "One requirement at a time: what the role needs, what confirmed material the conversation produced, and what you as a person conclude.",
@@ -9835,7 +9938,7 @@ export const dictionaries = {
     "iiu.iv.pause": "Pause",
     "iiu.ev.reviewfailed": "The review could not be saved",
     "iiu.ev.aioriginal": "The AI's original wording",
-    "iiu.pl.title": "Panel review",
+    "iiu.pl.title": "Joint review",
     "iiu.pl.conclusion.title": "The panel's conclusion",
     "iiu.rp.noblockers.title": "Nothing is blocking the report",
     "iiu.pp.airole.short": "The role of AI",
