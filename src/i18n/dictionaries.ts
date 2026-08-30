@@ -4311,6 +4311,36 @@ export const dictionaries = {
     "iiu.rp.correctedbyreviewer": "(korrigerad av granskare)",
     "iiu.ov.cta.summary": "Sammanfatta intervjun",
     "iiu.ov.why.summary": "Bedömningen är klar. Se vad samtalet gav innan du skapar rapporten.",
+    "iiu.as2.title": "Bedöm mot rollens krav",
+    "iiu.as2.lead":
+      "Ett krav i taget: vad rollen kräver, vilket bekräftat material samtalet gav, och vad du som människa drar för slutsats.",
+    "iiu.as2.col.requirement": "Kravet",
+    "iiu.as2.col.material": "Bekräftat material",
+    "iiu.as2.col.assessment": "Din bedömning",
+    "iiu.as2.human": "Mänsklig bedömning",
+    "iiu.as2.meaning": "Vad det innebär i rollen",
+    "iiu.as2.observable": "Att lyssna efter",
+    "iiu.as2.nomaterial": "Inget bekräftat material än",
+    "iiu.as2.nomaterial.body":
+      "Det betyder att information saknas — inte att kandidaten presterade dåligt. Antingen ställdes frågan inte, eller så är svaret inte bekräftat som material än.",
+    "iiu.as2.nomaterial.cta": "Bekräfta material i granskningen",
+    "iiu.as2.reasoning": "Din motivering",
+    "iiu.as2.reasoning.hint": "Varför den här nivån, med hänvisning till materialet bredvid.",
+    "iiu.as2.unclear": "Saknas eller är fortfarande oklart",
+    "iiu.as2.unclear.hint": "Frivilligt. Vad du inte kunde avgöra på det underlag du har.",
+    "iiu.as2.openitems": "Öppet på den här frågan",
+    "iiu.as2.recorded": "Registrerad",
+    "iiu.as2.edit.locked":
+      "En registrerad bedömning ändras inte på plats. Den ersätts, och båda versionerna finns kvar i spårbarheten.",
+    "iiu.as2.overview": "Så här långt har du kommit",
+    "iiu.as2.overview.note":
+      "Siffrorna visar hur färdig din bedömning är, inte hur kandidaten presterade.",
+    "iiu.as2.assessed": "Frågor du har bedömt",
+    "iiu.as2.openverify": "Öppna verifieringspunkter",
+    "iiu.as2.openclarify": "Öppna oklarheter",
+    "iiu.as2.scale": "Nivåskala",
+    "iiu.as2.scale.note":
+      "Nivåerna kommer från rollpaketet och är skrivna i förväg. Du väljer den beskrivning som stämmer med materialet.",
     "iiu.sm.state.title": "Läget i intervjun",
     "iiu.sm.state.body":
       "Allt du har att gå på innan rapporten skapas. Siffrorna beskriver arbetet — hur långt du har kommit — och säger ingenting om kandidaten.",
@@ -9133,6 +9163,36 @@ export const dictionaries = {
     "iiu.ov.cta.summary": "Summarise the interview",
     "iiu.ov.why.summary":
       "Your assessment is done. See what the conversation produced before you create the report.",
+    "iiu.as2.title": "Assess against the role requirements",
+    "iiu.as2.lead":
+      "One requirement at a time: what the role needs, what confirmed material the conversation produced, and what you as a person conclude.",
+    "iiu.as2.col.requirement": "The requirement",
+    "iiu.as2.col.material": "Confirmed material",
+    "iiu.as2.col.assessment": "Your assessment",
+    "iiu.as2.human": "Human assessment",
+    "iiu.as2.meaning": "What it means in the role",
+    "iiu.as2.observable": "What to listen for",
+    "iiu.as2.nomaterial": "No confirmed interview material yet",
+    "iiu.as2.nomaterial.body":
+      "This means information is missing — not that the candidate performed poorly. Either the question was not asked, or the answer has not been confirmed as material yet.",
+    "iiu.as2.nomaterial.cta": "Confirm material in review",
+    "iiu.as2.reasoning": "Your reasoning",
+    "iiu.as2.reasoning.hint": "Why this level, referring to the material beside it.",
+    "iiu.as2.unclear": "Missing or still unclear",
+    "iiu.as2.unclear.hint": "Optional. What you could not settle on the material you have.",
+    "iiu.as2.openitems": "Open on this question",
+    "iiu.as2.recorded": "Recorded",
+    "iiu.as2.edit.locked":
+      "A recorded assessment is never edited in place. It is superseded, and both versions stay in the audit trail.",
+    "iiu.as2.overview": "How far you have got",
+    "iiu.as2.overview.note":
+      "The counts show how complete your assessment is, not how the candidate performed.",
+    "iiu.as2.assessed": "Questions you have assessed",
+    "iiu.as2.openverify": "Open verification items",
+    "iiu.as2.openclarify": "Open clarifications",
+    "iiu.as2.scale": "Level scale",
+    "iiu.as2.scale.note":
+      "The levels come from the role package and were written in advance. You pick the description that matches the material.",
     "iiu.sm.state.title": "Where the interview stands",
     "iiu.sm.state.body":
       "Everything you have to go on before the report is created. The counts describe the work — how far you have got — and say nothing about the candidate.",

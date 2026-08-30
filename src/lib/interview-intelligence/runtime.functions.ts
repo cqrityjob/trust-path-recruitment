@@ -464,7 +464,9 @@ export interface CaseDetail {
     readonly nameEn: string | null;
     readonly definitionSv: string | null;
     readonly definitionEn: string | null;
-    readonly indicatorsSv: string | null;
+    /** A text[] in the database, not a sentence: four or five short behaviours
+     *  to listen for. Flattened to a string it read as one run-on word. */
+    readonly indicatorsSv: readonly string[];
   }[];
   readonly generalProbes: readonly { id: string; purpose: string; wordingSv: string }[];
   readonly prohibitedAreas: readonly {
@@ -538,12 +540,20 @@ export interface CaseDetail {
     readonly findingKind: string;
     readonly statement: string;
     readonly resolutionState: string;
+    /** The question the finding came out of. Already stored; nothing read it,
+     *  so the assessment screen could not put "Q4 is unclear about who wrote
+     *  the report" beside Q4. */
+    readonly questionId: string | null;
   }[];
   readonly assessments: readonly {
     readonly id: string;
     readonly questionId: string;
     readonly level: number;
     readonly rationale: string;
+    /** What the assessor said was still missing or unclear. recordAssessment
+     *  has always written it and the report has always published it; it just
+     *  never came back to the screen that records it. */
+    readonly uncertaintyNote: string | null;
   }[];
   readonly report: {
     readonly id: string;
@@ -744,12 +754,12 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("created_at"),
       db
         .from("scp_interview_findings")
-        .select("id, finding_kind, statement, resolution_state")
+        .select("id, finding_kind, statement, resolution_state, question_id")
         .eq("case_id", caseId)
         .order("created_at"),
       db
         .from("scp_interview_assessments")
-        .select("id, question_id, level, rationale, superseded_by")
+        .select("id, question_id, level, rationale, uncertainty_note, superseded_by")
         .eq("case_id", caseId)
         .is("superseded_by", null),
       db
@@ -962,7 +972,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         nameEn: (c.name_en as string | null) ?? null,
         definitionSv: (c.definition_sv as string | null) ?? null,
         definitionEn: (c.definition_en as string | null) ?? null,
-        indicatorsSv: (c.observable_indicators_sv as string | null) ?? null,
+        indicatorsSv: (c.observable_indicators_sv as string[] | null) ?? [],
       })),
       generalProbes: probes
         .filter((p) => p.question_id === null)
@@ -1010,12 +1020,20 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         findingKind: f.finding_kind as string,
         statement: f.statement as string,
         resolutionState: f.resolution_state as string,
+        // Findings already carry the question they came out of. Nothing read
+        // it, so the assessment screen had no way to put "Q4 is unclear about
+        // who wrote the report" next to Q4.
+        questionId: (f.question_id as string | null) ?? null,
       })),
       assessments: ((assessmentsRes.data ?? []) as Array<Record<string, unknown>>).map((a) => ({
         id: a.id as string,
         questionId: a.question_id as string,
         level: a.level as number,
         rationale: a.rationale as string,
+        // Already written by recordAssessment and already published in the
+        // report payload; it simply never came back to the screen that
+        // records it, so an assessor could not see what they had written.
+        uncertaintyNote: (a.uncertainty_note as string | null) ?? null,
       })),
       report: reportRow
         ? {
