@@ -2412,6 +2412,193 @@ if [ "$SPJC_RC" -ne 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# The trust boundaries: WHO may create trust, ON WHAT object, UNDER WHICH
+# conditions. Registered HERE, before the rollback chain, because the chain
+# drops sp_credential_types and the market packs the fixtures build claims
+# from -- a suite placed after it would fail on "relation does not exist"
+# rather than on anything it asserts.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport trust boundary assertions"
+set +e
+SPTB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_trust_boundary_test.sql 2>&1)"
+SPTB_RC=$?
+set -e
+
+echo "$SPTB_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPTB_PASSED="$(echo "$SPTB_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPTB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the trust boundary suite exited with code ${SPTB_RC}." >&2
+  echo "$SPTB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport trust boundaries"
+else
+  echo "    ok  ${SPTB_PASSED} trust boundary assertions passed"
+
+  # Named explicitly, not merely counted. These four are the boundaries a
+  # crafted PostgREST call ran through, and a run that happened to skip exactly
+  # them would otherwise pass on count alone -- which is the shape of failure
+  # this whole suite exists to make impossible.
+  for REQUIRED in \
+    "1.2 an employer cannot be asked to attest to a VU1 credential" \
+    "1.5 a direct INSERT of employer attestation on a claim is refused by the table" \
+    "2.1 an employer cannot approve a legacy attestation aimed at a credential" \
+    "4.1 an approval with a null method is refused"; do
+    if ! echo "$SPTB_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: a mandatory trust boundary assertion did not run: ${REQUIRED}" >&2
+      suite_failed "Security Passport trust boundaries (missing: ${REQUIRED})"
+    fi
+  done
+
+  if [ "$SPTB_PASSED" -lt 38 ]; then
+    echo "FAIL: expected at least 38 trust boundary assertions, only ${SPTB_PASSED} ran." >&2
+    suite_failed "Security Passport trust boundaries (assertion shortfall: floor 38)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# The concurrent decision, run as two real processes.
+#
+# This cannot live inside a suite file. One psql session holds one transaction,
+# so two calls from it are sequential, and a sequential test passes identically
+# against the broken function and the fixed one: the second call sees a
+# COMMITTED row and takes the already-decided branch whether or not a lock was
+# ever held. Two OPEN transactions on one request is the whole experiment.
+#
+# Session A decides and then sleeps inside its transaction, holding the row.
+# B is started only once A is OBSERVED holding it, and is expected to be
+# refused only after having WAITED -- a B that returns instantly would mean it
+# never contended, and the run is then not evidence of anything.
+#
+# Runs immediately after the trust boundary suite, whose reviewer identities it
+# reuses, and before the rollback chain like every other Passport suite.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport concurrent-decision regression"
+set +e
+RACE_SETUP="$(psql -tAq -v ON_ERROR_STOP=1 -v phase=setup -d "$TEST_DB" \
+  -f supabase/tests/security_passport_decision_race_test.sql 2>&1)"
+RACE_SETUP_RC=$?
+set -e
+RACE_REQ="$(echo "$RACE_SETUP" | tail -1)"
+
+if [ "$RACE_SETUP_RC" -ne 0 ] || ! echo "$RACE_REQ" | grep -qE '^[0-9a-f-]{36}$'; then
+  echo "FAIL: the concurrent-decision setup phase did not produce a request id." >&2
+  echo "$RACE_SETUP" | grep -iE "ASSERTION FAILED|ERROR:|FEL:|FAIL" | head -10 >&2
+  suite_failed "Security Passport concurrent decision (setup)"
+else
+  RACE_V1="cb000000-0000-0000-0000-000000000009"
+  RACE_V2="cb000000-0000-0000-0000-00000000000a"
+  RACE_A_LOG="$(mktemp)"; RACE_B_LOG="$(mktemp)"
+
+  # A: decide, then hold the row for three seconds without committing.
+  (
+    psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$RACE_A_LOG" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${RACE_V1}', true);
+SELECT public.sp_verifier_decide('${RACE_REQ}', 'approved', 'document_review',
+  'A granskade underlaget', 'Godkand.', NULL, NULL);
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+    echo "RC=$?" >>"$RACE_A_LOG"
+  ) &
+  RACE_A_PID=$!
+
+  # Wait for A to actually hold the row, so B starts into real contention.
+  RACE_HELD=0
+  for _ in $(seq 1 200); do
+    RACE_HELD="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_locks l join pg_class c on c.oid = l.relation where c.relname = 'sp_verification_requests' and l.mode = 'RowExclusiveLock' and l.granted;" 2>/dev/null || echo 0)"
+    [ "${RACE_HELD:-0}" -gt 0 ] && break
+    sleep 0.05
+  done
+
+  RACE_B_START="$(date +%s)"
+  set +e
+  psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$RACE_B_LOG" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${RACE_V2}', true);
+SELECT public.sp_verifier_decide('${RACE_REQ}', 'approved', 'document_review',
+  'B granskade underlaget', 'Godkand.', NULL, NULL);
+COMMIT;
+SQL
+  RACE_B_RC=$?
+  set -e
+  RACE_B_WAITED=$(( $(date +%s) - RACE_B_START ))
+  wait "$RACE_A_PID" || true
+
+  RACE_FAILED=0
+
+  if [ "${RACE_HELD:-0}" -eq 0 ]; then
+    echo "FAIL: session A never took a lock on sp_verification_requests, so the two" >&2
+    echo "      sessions were never concurrent and this run proves nothing." >&2
+    RACE_FAILED=1
+  else
+    echo "    ok  session A held the request row while B attempted the same decision"
+  fi
+
+  if ! grep -q "^RC=0" "$RACE_A_LOG"; then
+    echo "FAIL: the first decider did not succeed." >&2
+    cat "$RACE_A_LOG" >&2
+    RACE_FAILED=1
+  else
+    echo "    ok  one decider succeeded"
+  fi
+
+  if [ "$RACE_B_RC" -eq 0 ]; then
+    echo "FAIL: BOTH deciders succeeded on one request. The decision path is racy." >&2
+    RACE_FAILED=1
+  elif ! grep -q "SP_REQUEST_ALREADY_DECIDED" "$RACE_B_LOG"; then
+    echo "FAIL: the second decider was refused, but not as an already-decided request." >&2
+    grep -iE "ERROR:|FEL:" "$RACE_B_LOG" | head -5 >&2
+    RACE_FAILED=1
+  else
+    echo "    ok  the other was refused: SP_REQUEST_ALREADY_DECIDED"
+  fi
+
+  # The timing is what separates "the lock serialised them" from "they happened
+  # to run in order". B was started while A held the row and A held it for 3s,
+  # so a B that returned in under 2s did not wait on anything.
+  if [ "$RACE_B_WAITED" -lt 2 ]; then
+    echo "FAIL: the second decider returned after ${RACE_B_WAITED}s without waiting for" >&2
+    echo "      the row lock. It was not blocked, so the refusal is not evidence" >&2
+    echo "      that concurrent decisions are serialised." >&2
+    RACE_FAILED=1
+  else
+    echo "    ok  the refused decider WAITED ${RACE_B_WAITED}s on the row lock"
+  fi
+
+  rm -f "$RACE_A_LOG" "$RACE_B_LOG"
+
+  set +e
+  RACE_OUT="$(psql -v ON_ERROR_STOP=1 -q -v phase=verify -d "$TEST_DB" \
+    -f supabase/tests/security_passport_decision_race_test.sql 2>&1)"
+  RACE_RC=$?
+  set -e
+
+  echo "$RACE_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  RACE_PASSED="$(echo "$RACE_OUT" | grep -c "ok  " || true)"
+
+  if [ "$RACE_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: the concurrent-decision verification exited with code ${RACE_RC}." >&2
+    echo "$RACE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    RACE_FAILED=1
+  elif [ "$RACE_PASSED" -lt 8 ]; then
+    echo "FAIL: expected at least 8 concurrent-decision assertions, only ${RACE_PASSED} ran." >&2
+    RACE_FAILED=1
+  else
+    echo "    ok  ${RACE_PASSED} concurrent-decision assertions passed"
+  fi
+
+  if [ "$RACE_FAILED" -ne 0 ]; then
+    suite_failed "Security Passport concurrent decision"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # The correction path, phase 1 of 2: with Phase A applied, immediately before
 # the rollback chain. Creates the holder and the two claims the "after" phase
 # depends on, so claim B is a row that genuinely predates the rollback.
@@ -3020,5 +3207,7 @@ echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
 echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
 echo "              ${SPRDS_PASSED} rollback data-safety assertions"
 echo "              ${SPBF1_PASSED} pilot bug fix #1 assertions,"
+echo "              ${SPTB_PASSED} trust boundary assertions,"
+echo "              ${RACE_PASSED} concurrent-decision assertions,"
 echo "              ${SPRC_PASSED} rollback correction assertions"
 echo "===================================================="

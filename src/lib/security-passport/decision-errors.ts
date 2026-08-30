@@ -77,6 +77,14 @@ const RULES: readonly { readonly needle: string; readonly code: DecisionErrorCod
   { needle: "SP_SELF_VERIFICATION_FORBIDDEN", code: "self_verification" },
   { needle: "SP_NOT_VERIFIER", code: "not_authorised" },
   { needle: "SP_NOT_EMPLOYER_REPRESENTATIVE", code: "not_authorised" },
+  // An employer attestation aimed at a credential rather than at employment.
+  // Classified as "not authorised" rather than given a code of its own: it is
+  // precisely a statement that this decider has no standing over this object,
+  // which is what that copy already says. A reviewer cannot reach it from the
+  // form — only a request that predates the constraint, or a crafted call, can
+  // produce it — so a dedicated sentence would be copy nobody reads, and
+  // falling through to `unknown` would invite a retry that can never succeed.
+  { needle: "SP_EMPLOYER_ATTESTATION_EMPLOYMENT_ONLY", code: "not_authorised" },
   { needle: "SP_REQUEST_ALREADY_DECIDED", code: "already_decided" },
   { needle: "SP_REQUEST_NOT_FOUND", code: "not_found" },
   { needle: "SP_APPROVAL_REQUIRES_METHOD", code: "method_required" },
