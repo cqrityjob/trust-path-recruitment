@@ -85,6 +85,22 @@ jobs:
       - name: Career Discovery v3.2 scoring equivalence check
         run: bun run career-discovery-v32-equivalence:check
 
+      # Answer-level profession differentiation. Every other Layer 4 guard
+      # starts from a hand-written dimension vector, which proves the matcher
+      # behaves and proves nothing about the instrument above it. This one
+      # starts from the raw answers a candidate submits and asserts the
+      # property the product is actually sold on: that a beginner who answers
+      # operationally, one who answers technically and one who answers
+      # investigatively receive materially different professions. It also pins
+      # the ranking defects the Profession Recommendation Validation audit
+      # found — order running on a saturated metric, a context bonus large
+      # enough to move the headline recommendation, the ranked list and the
+      # tier list disagreeing about a profession's career stage, and a
+      # profession that could never be a "strong" match for anyone — each of
+      # which passed every pre-existing guard.
+      - name: Career Discovery profession differentiation check
+        run: bun run career-discovery-profession-differentiation:check
+
       # Asserts the EXACT payload persistPublicV31Run sends to cd_evidence.
       # A NOT NULL violation on answer_tags emptied every save in the live
       # environment while the SQL suite passed, because the suite wrote its own

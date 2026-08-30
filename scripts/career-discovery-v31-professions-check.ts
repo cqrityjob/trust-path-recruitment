@@ -25,6 +25,7 @@
 
 import { DIMENSION_IDS, type DimensionId } from "../src/lib/career-discovery/v31/dimensions";
 import {
+  CONTEXT_PRIORITY_BONUS_Z,
   matchProfessions,
   matchProfessionsDiagnostics,
   PROFESSION_MIN_COVERAGE,
@@ -221,7 +222,10 @@ const CATALOG: readonly ProfessionCatalogEntry[] = [
 // Synthetic candidates
 // =========================================================================
 
-function makeDims(score: number, overrides: Partial<Record<DimensionId, number>> = {}): DimensionResult {
+function makeDims(
+  score: number,
+  overrides: Partial<Record<DimensionId, number>> = {},
+): DimensionResult {
   const dimensions = Object.fromEntries(
     DIMENSION_IDS.map((id) => {
       const value = overrides[id] ?? score;
@@ -331,7 +335,10 @@ const vaktareSkyddsvakt = vaktare.matches.find((m) => m.professionId === "SP003"
 const vaktareCoordinator = vaktare.matches.find((m) => m.professionId === "SP006");
 const vaktareHeadOfSecurity = vaktare.matches.find((m) => m.professionId === "SP007");
 
-ok(vaktareSkyddsvakt?.stage === "explore_now", "5.1 Skyddsvakt is 'explore now' for working_in_security");
+ok(
+  vaktareSkyddsvakt?.stage === "explore_now",
+  "5.1 Skyddsvakt is 'explore now' for working_in_security",
+);
 ok(
   vaktareCoordinator?.stage === "possible_next_step",
   "5.2 Security Coordinator is 'possible next step' for working_in_security",
@@ -551,7 +558,10 @@ group("8 · Poor fit is excluded outright, at every stage");
 // =========================================================================
 
 const poorFit = matchProfessions(POOR_FIT, CATALOG, "exploring_security");
-ok(poorFit.matches.length === 0, "8.1 a candidate who fits nothing gets zero matches, not a padded list");
+ok(
+  poorFit.matches.length === 0,
+  "8.1 a candidate who fits nothing gets zero matches, not a padded list",
+);
 ok(poorFit.available === false, "8.2 available is false when nothing clears the fit floor");
 
 // =========================================================================
@@ -605,15 +615,26 @@ ok(
   "8b.5 Profession Affinity (fitScore) is byte-identical with or without the corroborating tag",
 );
 ok(
-  affinityWithTags?.contextPriorityBonus === 6 && affinityWithoutTags?.contextPriorityBonus === 0,
+  affinityWithTags?.contextPriorityBonus === CONTEXT_PRIORITY_BONUS_Z &&
+    affinityWithoutTags?.contextPriorityBonus === 0,
   "8b.6 contextPriorityBonus is 0 without the tag and the documented bonus with it",
 );
+// Recommendation Priority is now in centralExpressionZ's units, not on
+// fitScore's 0-100 scale -- see CONTEXT_PRIORITY_BONUS_Z in professions.ts
+// for why the bonus had to move onto the same scale as the quantity it
+// nudges. The claim being checked is unchanged: context adds exactly the
+// documented bonus on top of an Affinity it did not touch.
 ok(
   affinityWithTags !== undefined &&
     affinityWithoutTags !== undefined &&
-    affinityWithTags.priorityScore === affinityWithTags.fitScore + affinityWithTags.contextPriorityBonus &&
+    affinityWithTags.priorityScore !== null &&
+    affinityWithoutTags.priorityScore !== null &&
+    Math.abs(
+      affinityWithTags.priorityScore -
+        (affinityWithoutTags.priorityScore + affinityWithTags.contextPriorityBonus),
+    ) < 1e-9 &&
     affinityWithTags.priorityScore > affinityWithoutTags.priorityScore,
-  "8b.7 priorityScore = fitScore + contextPriorityBonus, and is strictly higher with the corroborating tag -- Recommendation Priority genuinely moved",
+  "8b.7 priorityScore = Profession Affinity (centralExpressionZ) + contextPriorityBonus, and is strictly higher with the corroborating tag -- Recommendation Priority genuinely moved",
 );
 
 // =========================================================================
@@ -624,7 +645,10 @@ for (const m of student.matches) {
   const keys = Object.keys(m);
   ok(!keys.includes("fitScore"), `9.1 ${m.professionId} does not expose fitScore`);
   ok(!keys.includes("score"), `9.2 ${m.professionId} does not expose a raw score`);
-  ok(m.fitTier === "strong" || m.fitTier === "moderate", `9.3 ${m.professionId} carries only a qualitative fitTier`);
+  ok(
+    m.fitTier === "strong" || m.fitTier === "moderate",
+    `9.3 ${m.professionId} carries only a qualitative fitTier`,
+  );
   ok(
     typeof m.cigProfessionSlug === "string" && m.cigProfessionSlug.length > 0,
     `9.4 ${m.professionId} carries its CIG slug through for live content lookup`,
@@ -678,7 +702,9 @@ ok(
 
 // =========================================================================
 // =========================================================================
-group("12 · Owner Security Manager scenario — stage baseline derives from known current profession + experience, not C1 alone");
+group(
+  "12 · Owner Security Manager scenario — stage baseline derives from known current profession + experience, not C1 alone",
+);
 // =========================================================================
 
 // Real defect, found live: a real Säkerhetschef (Head of Security) who
@@ -732,7 +758,9 @@ const affinityWithoutContext = new Map(
   scenarioA_noContext.diagnostics.map((d) => [d.professionId, d.fitScore]),
 );
 ok(
-  [...affinityWithContext.entries()].every(([id, score]) => affinityWithoutContext.get(id) === score),
+  [...affinityWithContext.entries()].every(
+    ([id, score]) => affinityWithoutContext.get(id) === score,
+  ),
   "A.1 Profession Affinity (fitScore) is byte-identical with vs without current profession + experience -- Career DNA and Affinity are untouched",
 );
 const aSkyddsvakt = scenarioA.result.matches.find((m) => m.professionId === "SP003");

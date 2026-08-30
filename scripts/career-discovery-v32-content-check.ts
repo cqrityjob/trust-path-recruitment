@@ -627,7 +627,15 @@ group("6 · Versioning");
 // =========================================================================
 
 eq(CONTENT_VERSION, "v3.1-draft-5", "6.1 content version records the context/intent separation");
-eq(SCORING_VERSION, "v3.1-draft-3", "6.2 scoring version did NOT move with it");
+// The claim being guarded is "the v3.2 CONTENT refinement did not move
+// scoring", and it still holds: content went draft-3 -> draft-4 -> draft-5
+// while scoring stayed at draft-3 throughout that work. Scoring has since
+// moved to draft-4 for an unrelated, separately-versioned reason (the
+// Profession Recommendation Validation mandate's ranking changes), so the
+// pin follows the constant. What must never happen is the two moving in the
+// SAME change, which is proven field-by-field, against a frozen
+// pre-refinement baseline, by career-discovery-v32-equivalence-check.ts.
+eq(SCORING_VERSION, "v3.1-draft-4", "6.2 scoring version did not move with the content refinement");
 ok(CONTENT_VERSION !== SCORING_VERSION, "6.3 content and scoring versions travel independently");
 
 console.log(`\n${failures === 0 ? "PASS" : "FAIL"}  ${checks - failures}/${checks} content checks`);
