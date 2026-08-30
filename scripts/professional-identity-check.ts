@@ -806,7 +806,12 @@ console.log("\n8 · boundaries");
   );
 
   const allSources = sourceFilesUnder(path.join(root, "src"));
-  const namingIt = allSources.filter((f) => /cv_documents/.test(codeOf(f)));
+  // Generated Supabase schema types describe hosted schema; they are not a runtime dependency.
+  // Keep this aligned with release-parity-check, which excludes the same generated file.
+  const runtimeSources = allSources.filter(
+    (f) => f !== "src/integrations/supabase/types.ts",
+  );
+  const namingIt = runtimeSources.filter((f) => /cv_documents/.test(codeOf(f)));
   ck(
     `exactly one file names cv_documents directly (found ${namingIt.length}: ${namingIt
       .map((f) => path.basename(f))
@@ -826,7 +831,7 @@ console.log("\n8 · boundaries");
   // on. So the transitive surface is pinned HERE instead: the files that
   // import the CV store are listed, and adding one is a visible diff on
   // this line rather than a silent widening of what a release depends on.
-  const importers = allSources.filter((f) => /cv-store\.functions/.test(codeOf(f)));
+  const importers = runtimeSources.filter((f) => /cv-store\.functions/.test(codeOf(f)));
   const expected = [
     "src/lib/professional-identity/cv/cv-store.functions.ts",
     "src/routes/_authenticated.my-career.cv.index.tsx",
