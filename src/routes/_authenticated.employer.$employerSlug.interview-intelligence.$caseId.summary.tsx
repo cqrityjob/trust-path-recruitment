@@ -5,6 +5,12 @@
 // was confirmed, which requirements it covered, what was NOT established, what
 // still has to be chased, and what they themselves concluded.
 //
+// It reads as a state of play first and a document second: seven scannable
+// rows, each with its own glyph, its own sentence and its own count, and then
+// the material itself underneath. The counts are workflow information. A count
+// on this screen says how far the RECRUITER has got; there is no number
+// anywhere on it that describes Marcus Lindqvist.
+//
 // It generates nothing. Every section is a projection of records a human has
 // already made, and with AI switched off it is exactly as complete as it is
 // with AI on. That is deliberate: a summary is the one place where a model
@@ -35,6 +41,13 @@ import {
   BUTTON,
   PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
+import {
+  Nothing,
+  ScanList,
+  ScanRow,
+  Section,
+  Surface,
+} from "@/components/employer/interview/InterviewLayout";
 import { getInterviewCase } from "@/lib/interview-intelligence/runtime.functions";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
@@ -52,7 +65,7 @@ const FINDING_LABEL: Record<string, TranslationKey> = {
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { t } = useT();
+  const { t, lang } = useT();
 
   const getFn = useServerFn(getInterviewCase);
   const q = useQuery({
@@ -96,13 +109,45 @@ function Page() {
   if (!d) return shell(<State kind="loading" />);
 
   const codeOf = (id: string) => d.questions.find((x) => x.id === id)?.code ?? "—";
-  const covered = d.questions.filter((qq) => d.evidence.some((e) => e.questionId === qq.id));
-  const missing = d.questions.filter((qq) => !d.evidence.some((e) => e.questionId === qq.id));
+  const reqName = (c: { nameSv: string; nameEn: string | null }) =>
+    (lang === "en" ? c.nameEn : c.nameSv) ?? c.nameSv;
+
+  // Coverage is reported against the ROLE REQUIREMENTS, not the question
+  // numbers. "Q2 has nothing" tells a recruiter which row of a table is empty;
+  // "conflict handling has nothing" tells them what they still do not know.
+  const questionsWithEvidence = new Set(d.evidence.map((e) => e.questionId));
+  const coveredCodes = new Set(
+    d.questions
+      .filter((qq) => questionsWithEvidence.has(qq.id))
+      .flatMap((qq) => qq.competencyCodes.slice(0, 1)),
+  );
+  const covered = d.competencies.filter((c) => coveredCodes.has(c.code));
+  const missing = d.competencies.filter((c) => !coveredCodes.has(c.code));
+
   const open = d.findings.filter((f) => f.resolutionState !== "resolved");
   const verify = open.filter((f) => f.findingKind === "verification");
   const followUp = open.filter((f) => f.findingKind !== "verification");
   const comments = (d.session?.notes ?? []).filter(
     (n) => n.noteKind === "closing_summary" || n.noteKind === "process",
+  );
+
+  const reviewLink = (label: string) => (
+    <Link
+      to="/employer/$employerSlug/interview-intelligence/$caseId/evidence"
+      params={{ employerSlug, caseId }}
+      className="text-sm font-medium text-accent underline-offset-2 hover:underline"
+    >
+      {label}
+    </Link>
+  );
+  const assessLink = (label: string) => (
+    <Link
+      to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
+      params={{ employerSlug, caseId }}
+      className="text-sm font-medium text-accent underline-offset-2 hover:underline"
+    >
+      {label}
+    </Link>
   );
 
   return shell(
@@ -117,18 +162,27 @@ function Page() {
         </Link>
       </nav>
 
-      <header className="mt-3">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          {d.candidateDisplayName}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <CaseStatusChip status={d.status} />
-          <Chip>{d.packName ?? "—"}</Chip>
+      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {d.candidateDisplayName}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <CaseStatusChip status={d.status} />
+            <Chip>{d.packName ?? "—"}</Chip>
+          </div>
         </div>
+        <Link
+          to="/employer/$employerSlug/interview-intelligence/$caseId/report"
+          params={{ employerSlug, caseId }}
+          className={`${PRIMARY_BUTTON} shrink-0`}
+        >
+          {t("iiu.sm.toreport")}
+        </Link>
       </header>
 
-      <div className="mt-6">
+      <div className="mt-5">
         <WorkflowNav
           status={d.status}
           current="summary"
@@ -137,197 +191,274 @@ function Page() {
         />
       </div>
 
-      <section className="mt-8 max-w-4xl" aria-labelledby="s-sum">
-        <h2 id="s-sum" className="text-lg font-semibold text-foreground">
-          {t("iiu.sm.title")}
-        </h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{t("iiu.sm.lead")}</p>
-      </section>
+      {/* ---- The state of play, in seven rows ---- */}
+      <Section
+        id="s-state"
+        title={t("iiu.sm.state.title")}
+        description={t("iiu.sm.state.body")}
+        className="mt-8 max-w-4xl"
+      >
+        <ScanList>
+          <ScanRow
+            glyph="✓"
+            tone={d.evidence.length > 0 ? "confirmed" : "attention"}
+            title={t("iiu.sm.row.examples")}
+            description={t("iiu.sm.row.examples.body")}
+            count={d.evidence.length}
+            action={reviewLink(t("iiu.sm.goto"))}
+          />
+          <ScanRow
+            glyph="◍"
+            tone={covered.length > 0 ? "confirmed" : "neutral"}
+            title={t("iiu.sm.row.explored")}
+            description={t("iiu.sm.row.explored.body")}
+            count={covered.length}
+            countLabel={`${t("iiu.sm.of")} ${d.competencies.length}`}
+          />
+          <ScanRow
+            glyph="○"
+            tone={missing.length > 0 ? "attention" : "neutral"}
+            title={t("iiu.sm.row.missing")}
+            description={t("iiu.sm.row.missing.body")}
+            count={missing.length}
+          />
+          <ScanRow
+            glyph="?"
+            tone={followUp.length > 0 ? "attention" : "neutral"}
+            title={t("iiu.sm.row.followup")}
+            description={t("iiu.sm.row.followup.body")}
+            count={followUp.length}
+          />
+          <ScanRow
+            glyph="!"
+            tone={verify.length > 0 ? "attention" : "neutral"}
+            title={t("iiu.sm.row.verify")}
+            description={t("iiu.sm.row.verify.body")}
+            count={verify.length}
+          />
+          <ScanRow
+            glyph="★"
+            tone={d.assessments.length === d.questions.length ? "confirmed" : "attention"}
+            title={t("iiu.sm.row.assessed")}
+            description={t("iiu.sm.row.assessed.body")}
+            count={d.assessments.length}
+            countLabel={`${t("iiu.sm.of")} ${d.questions.length}`}
+            action={assessLink(t("iiu.sm.goto"))}
+          />
+          <ScanRow
+            glyph="✎"
+            title={t("iiu.sm.row.comments")}
+            description={t("iiu.sm.row.comments.body")}
+            count={comments.length}
+          />
+        </ScanList>
+      </Section>
 
-      {/* ---- What was confirmed ---------------------------------------- */}
-      <section className="mt-8 max-w-4xl" aria-labelledby="s-ex">
-        <h2 id="s-ex" className="text-base font-semibold text-foreground">
-          {t("iiu.sm.examples")}
-        </h2>
-        {d.evidence.length === 0 ? (
-          <div className="mt-3">
-            <State kind="empty">{t("iiu.sm.examples.none")}</State>
-            <Link
-              to="/employer/$employerSlug/interview-intelligence/$caseId/evidence"
-              params={{ employerSlug, caseId }}
-              className={`${BUTTON} mt-3`}
-            >
-              {t("iiu.ov.cta.review")}
-            </Link>
-          </div>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {d.evidence.map((e) => (
-              <li key={e.id} className="rounded-lg border border-border p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Chip tone="work">{codeOf(e.questionId)}</Chip>
-                  <MaterialBadge state="confirmed" />
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-foreground">{e.excerpt}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* ---- Covered, and not ------------------------------------------ */}
-      <div className="mt-8 grid max-w-4xl gap-4 lg:grid-cols-2">
-        <section className="rounded-lg border border-border p-4" aria-labelledby="s-cov">
-          <h2 id="s-cov" className="text-sm font-semibold text-foreground">
-            {t("iiu.sm.explored")}
-          </h2>
-          {covered.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.explored.none")}</p>
-          ) : (
-            <ul className="mt-2 flex flex-wrap gap-1.5">
-              {covered.map((qq) => (
-                <li key={qq.id}>
-                  <Chip tone="confirmed">{qq.code}</Chip>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="rounded-lg border border-border p-4" aria-labelledby="s-miss">
-          <h2 id="s-miss" className="text-sm font-semibold text-foreground">
-            {t("iiu.sm.missing")}
-          </h2>
-          {missing.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.missing.none")}</p>
-          ) : (
-            <>
-              <ul className="mt-2 flex flex-wrap gap-1.5">
-                {missing.map((qq) => (
-                  <li key={qq.id}>
-                    <Chip tone="attention">{qq.code}</Chip>
-                  </li>
+      {/* ---- The material itself ---- */}
+      <Section
+        id="s-detail"
+        title={t("iiu.sm.detail")}
+        description={t("iiu.sm.lead")}
+        className="mt-10 max-w-4xl"
+      >
+        <div className="space-y-8">
+          {/* What was confirmed */}
+          <section aria-labelledby="s-ex">
+            <h3 id="s-ex" className="text-sm font-semibold text-foreground">
+              {t("iiu.sm.examples")}
+            </h3>
+            {d.evidence.length === 0 ? (
+              <div className="mt-2 space-y-3">
+                <Nothing>{t("iiu.sm.examples.none")}</Nothing>
+                <Link
+                  to="/employer/$employerSlug/interview-intelligence/$caseId/evidence"
+                  params={{ employerSlug, caseId }}
+                  className={BUTTON}
+                >
+                  {t("iiu.ov.cta.review")}
+                </Link>
+              </div>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {d.evidence.map((e) => (
+                  <Surface as="li" key={e.id} padded={false} className="px-3.5 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Chip tone="work">{codeOf(e.questionId)}</Chip>
+                      <MaterialBadge state="confirmed" />
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-foreground">{e.excerpt}</p>
+                  </Surface>
                 ))}
               </ul>
-              {/* The sentence that keeps an absence from being read as a finding. */}
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                {t("iiu.sm.missing.body")}
-              </p>
-            </>
-          )}
-        </section>
-      </div>
+            )}
+          </section>
 
-      {/* ---- Still to chase --------------------------------------------- */}
-      <div className="mt-4 grid max-w-4xl gap-4 lg:grid-cols-2">
-        <section className="rounded-lg border border-border p-4" aria-labelledby="s-fu">
-          <h2 id="s-fu" className="text-sm font-semibold text-foreground">
-            {t("iiu.sm.followup")}
-          </h2>
-          {followUp.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.followup.none")}</p>
-          ) : (
-            <>
-              <ul className="mt-2 space-y-2">
-                {followUp.map((f) => (
-                  <li key={f.id} className="text-sm">
-                    <Chip tone="attention">{uiLabel(FINDING_LABEL, f.findingKind, t)}</Chip>{" "}
-                    <span className="text-foreground">{f.statement}</span>
-                  </li>
-                ))}
-              </ul>
-              {followUp.some((f) => f.findingKind === "contradiction") && (
-                // Said where a contradiction is actually on screen, not in a
-                // policy document nobody opens.
-                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                  {t("iiu.find.contradiction.note")}
-                </p>
+          {/* Covered, and not */}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <section aria-labelledby="s-cov">
+              <h3 id="s-cov" className="text-sm font-semibold text-foreground">
+                {t("iiu.sm.explored")}
+              </h3>
+              {covered.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.explored.none")}</p>
+              ) : (
+                <ul className="mt-2 space-y-1.5">
+                  {covered.map((c) => (
+                    <li key={c.id} className="flex gap-2 text-sm">
+                      <span aria-hidden="true" className="text-teal-700 dark:text-teal-300">
+                        ✓
+                      </span>
+                      <span className="leading-snug text-foreground">{reqName(c)}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </>
-          )}
-        </section>
+            </section>
 
-        <section className="rounded-lg border border-border p-4" aria-labelledby="s-ver">
-          <h2 id="s-ver" className="text-sm font-semibold text-foreground">
-            {t("iiu.sm.verify")}
-          </h2>
-          {verify.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.verify.none")}</p>
-          ) : (
-            <>
-              <ul className="mt-2 space-y-2">
-                {verify.map((f) => (
-                  <li key={f.id} className="text-sm">
-                    <MaterialBadge state="verify" />{" "}
-                    <span className="text-foreground">{f.statement}</span>
-                  </li>
+            <section aria-labelledby="s-miss">
+              <h3 id="s-miss" className="text-sm font-semibold text-foreground">
+                {t("iiu.sm.missing")}
+              </h3>
+              {missing.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.missing.none")}</p>
+              ) : (
+                <>
+                  <ul className="mt-2 space-y-1.5">
+                    {missing.map((c) => (
+                      <li key={c.id} className="flex gap-2 text-sm">
+                        <span aria-hidden="true" className="text-amber-700 dark:text-amber-300">
+                          ○
+                        </span>
+                        <span className="leading-snug text-foreground">{reqName(c)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* The sentence that keeps an absence from being read as a finding. */}
+                  <p className="mt-3 max-w-[60ch] text-xs leading-relaxed text-muted-foreground">
+                    {t("iiu.sm.missing.body")}
+                  </p>
+                </>
+              )}
+            </section>
+          </div>
+
+          {/* Still to chase */}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <section aria-labelledby="s-fu">
+              <h3 id="s-fu" className="text-sm font-semibold text-foreground">
+                {t("iiu.sm.followup")}
+              </h3>
+              {followUp.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.followup.none")}</p>
+              ) : (
+                <>
+                  <ul className="mt-2 space-y-2.5">
+                    {followUp.map((f) => (
+                      <li key={f.id} className="text-sm leading-relaxed">
+                        <Chip tone="attention">{uiLabel(FINDING_LABEL, f.findingKind, t)}</Chip>{" "}
+                        <span className="text-foreground">{f.statement}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {followUp.some((f) => f.findingKind === "contradiction") && (
+                    // Said where a contradiction is actually on screen, not in a
+                    // policy document nobody opens.
+                    <p className="mt-3 max-w-[60ch] text-xs leading-relaxed text-muted-foreground">
+                      {t("iiu.find.contradiction.note")}
+                    </p>
+                  )}
+                </>
+              )}
+            </section>
+
+            <section aria-labelledby="s-ver">
+              <h3 id="s-ver" className="text-sm font-semibold text-foreground">
+                {t("iiu.sm.verify")}
+              </h3>
+              {verify.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.verify.none")}</p>
+              ) : (
+                <>
+                  <ul className="mt-2 space-y-2.5">
+                    {verify.map((f) => (
+                      <li key={f.id} className="text-sm leading-relaxed">
+                        <MaterialBadge state="verify" />{" "}
+                        <span className="text-foreground">{f.statement}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 max-w-[60ch] text-xs leading-relaxed text-muted-foreground">
+                    {t("iiu.sm.verify.body")}
+                  </p>
+                </>
+              )}
+            </section>
+          </div>
+
+          {/* What the recruiter concluded */}
+          <section aria-labelledby="s-as">
+            <h3
+              id="s-as"
+              className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground"
+            >
+              {t("iiu.sm.assessments")}
+              <MaterialBadge state="assessment" />
+            </h3>
+            {d.assessments.length === 0 ? (
+              <div className="mt-2 space-y-3">
+                <Nothing>{t("iiu.sm.assessments.none")}</Nothing>
+                <Link
+                  to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
+                  params={{ employerSlug, caseId }}
+                  className={BUTTON}
+                >
+                  {t("iiu.sm.assessments.cta")}
+                </Link>
+              </div>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {d.assessments.map((a) => (
+                  <Surface as="li" key={a.id} padded={false} className="px-3.5 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Chip tone="work">{codeOf(a.questionId)}</Chip>
+                      <Chip tone={a.level === 0 ? "attention" : "confirmed"}>
+                        {t("iiu.ev.level")} {a.level}
+                      </Chip>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-foreground">{a.rationale}</p>
+                  </Surface>
                 ))}
               </ul>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                {t("iiu.sm.verify.body")}
-              </p>
-            </>
-          )}
-        </section>
-      </div>
+            )}
+          </section>
 
-      {/* ---- What the recruiter concluded ------------------------------- */}
-      <section className="mt-8 max-w-4xl" aria-labelledby="s-as">
-        <h2 id="s-as" className="text-base font-semibold text-foreground">
-          {t("iiu.sm.assessments")}
-        </h2>
-        <p className="mt-1">
-          <MaterialBadge state="assessment" />
+          {/* The interviewer's own comments */}
+          <section aria-labelledby="s-com">
+            <h3 id="s-com" className="text-sm font-semibold text-foreground">
+              {t("iiu.sm.comments")}
+            </h3>
+            {comments.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.comments.none")}</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {comments.map((n) => (
+                  <Surface as="li" key={n.id} padded={false} className="px-3.5 py-3">
+                    <MaterialBadge state="note" />
+                    <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                      {n.body}
+                    </p>
+                  </Surface>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </Section>
+
+      <div className="mt-10 max-w-4xl rounded-lg border border-border bg-muted/30 p-5">
+        <p className="max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+          {t("iiu.sm.nodecision")}
         </p>
-        {d.assessments.length === 0 ? (
-          <div className="mt-3">
-            <State kind="empty">{t("iiu.sm.assessments.none")}</State>
-            <Link
-              to="/employer/$employerSlug/interview-intelligence/$caseId/evidence"
-              params={{ employerSlug, caseId }}
-              className={`${BUTTON} mt-3`}
-            >
-              {t("iiu.sm.assessments.cta")}
-            </Link>
-          </div>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {d.assessments.map((a) => (
-              <li key={a.id} className="rounded-lg border border-border p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Chip tone="work">{codeOf(a.questionId)}</Chip>
-                  <Chip tone={a.level === 0 ? "attention" : "confirmed"}>{a.level}</Chip>
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-foreground">{a.rationale}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* ---- The interviewer's own comments ------------------------------ */}
-      <section className="mt-8 max-w-4xl" aria-labelledby="s-com">
-        <h2 id="s-com" className="text-base font-semibold text-foreground">
-          {t("iiu.sm.comments")}
-        </h2>
-        {comments.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">{t("iiu.sm.comments.none")}</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {comments.map((n) => (
-              <li key={n.id} className="rounded-lg border border-border p-3">
-                <MaterialBadge state="note" />
-                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
-                  {n.body}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <div className="mt-8 max-w-4xl rounded-lg border border-border bg-muted/30 p-5">
-        <p className="text-sm text-muted-foreground">{t("iiu.sm.nodecision")}</p>
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId/report"
           params={{ employerSlug, caseId }}

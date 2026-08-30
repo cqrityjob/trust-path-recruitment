@@ -4311,6 +4311,28 @@ export const dictionaries = {
     "iiu.rp.correctedbyreviewer": "(korrigerad av granskare)",
     "iiu.ov.cta.summary": "Sammanfatta intervjun",
     "iiu.ov.why.summary": "Bedömningen är klar. Se vad samtalet gav innan du skapar rapporten.",
+    "iiu.sm.state.title": "Läget i intervjun",
+    "iiu.sm.state.body":
+      "Allt du har att gå på innan rapporten skapas. Siffrorna beskriver arbetet — hur långt du har kommit — och säger ingenting om kandidaten.",
+    "iiu.sm.row.examples": "Bekräftade exempel",
+    "iiu.sm.row.examples.body":
+      "Ordagranna avsnitt ur samtalet som du har bekräftat som användbart material.",
+    "iiu.sm.row.explored": "Krav med underlag",
+    "iiu.sm.row.explored.body": "Rollkrav där minst ett bekräftat exempel finns.",
+    "iiu.sm.row.missing": "Krav utan underlag",
+    "iiu.sm.row.missing.body":
+      "Rollkrav där samtalet inte gav något bekräftat exempel. Det betyder att frågan är obesvarad.",
+    "iiu.sm.row.followup": "Att följa upp",
+    "iiu.sm.row.followup.body": "Luckor, oklarheter och uppgifter som inte går ihop.",
+    "iiu.sm.row.verify": "Att verifiera",
+    "iiu.sm.row.verify.body": "Sakuppgifter som måste kontrolleras mot en annan källa.",
+    "iiu.sm.row.assessed": "Dina bedömningar",
+    "iiu.sm.row.assessed.body": "Frågor där du har registrerat en nivå och en motivering.",
+    "iiu.sm.row.comments": "Dina kommentarer",
+    "iiu.sm.row.comments.body": "Avslutande noteringar och reflektion från samtalet.",
+    "iiu.sm.of": "av",
+    "iiu.sm.detail": "Materialet i detalj",
+    "iiu.sm.goto": "Öppna",
     "iiu.sm.title": "Sammanfattning av intervjun",
     "iiu.sm.lead":
       "Allt som kom fram, samlat inför rapporten. Ingenting här är genererat — det är ditt bekräftade underlag och dina bedömningar.",
@@ -9111,6 +9133,28 @@ export const dictionaries = {
     "iiu.ov.cta.summary": "Summarise the interview",
     "iiu.ov.why.summary":
       "Your assessment is done. See what the conversation produced before you create the report.",
+    "iiu.sm.state.title": "Where the interview stands",
+    "iiu.sm.state.body":
+      "Everything you have to go on before the report is created. The counts describe the work — how far you have got — and say nothing about the candidate.",
+    "iiu.sm.row.examples": "Confirmed examples",
+    "iiu.sm.row.examples.body":
+      "Verbatim extracts from the conversation you have confirmed as usable material.",
+    "iiu.sm.row.explored": "Requirements with material",
+    "iiu.sm.row.explored.body": "Role requirements with at least one confirmed example.",
+    "iiu.sm.row.missing": "Requirements without material",
+    "iiu.sm.row.missing.body":
+      "Role requirements the conversation produced no confirmed example for. It means the question is unanswered.",
+    "iiu.sm.row.followup": "To follow up",
+    "iiu.sm.row.followup.body": "Gaps, ambiguities and facts that do not line up.",
+    "iiu.sm.row.verify": "To verify",
+    "iiu.sm.row.verify.body": "Facts that have to be checked against another source.",
+    "iiu.sm.row.assessed": "Your assessments",
+    "iiu.sm.row.assessed.body": "Questions where you have recorded a level and a reason.",
+    "iiu.sm.row.comments": "Your comments",
+    "iiu.sm.row.comments.body": "Closing notes and reflection from the conversation.",
+    "iiu.sm.of": "of",
+    "iiu.sm.detail": "The material in detail",
+    "iiu.sm.goto": "Open",
     "iiu.sm.title": "Interview summary",
     "iiu.sm.lead":
       "Everything that came out of the conversation, gathered before the report. Nothing here is generated — it is your confirmed material and your assessments.",
