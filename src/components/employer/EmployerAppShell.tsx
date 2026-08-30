@@ -86,6 +86,10 @@ export interface EmployerAppShellProps {
   status: EmployerStatus;
   activeSection: EmployerNavSection;
   hasMultipleWorkspaces: boolean;
+  /** A three-zone work surface needs more room than a form or a list. The
+   *  default reading width stays 6xl everywhere else, so widening one screen
+   *  never widens the rest of the portal. */
+  wide?: boolean;
   children: React.ReactNode;
 }
 
@@ -247,6 +251,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
     status,
     activeSection,
     hasMultipleWorkspaces,
+    wide = false,
     children,
   } = props;
   const { t } = useT();
@@ -330,7 +335,13 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
           <LanguageSwitcher />
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <main
+          className={
+            wide
+              ? "mx-auto w-full max-w-[96rem] flex-1 px-4 py-6 sm:px-6 sm:py-8"
+              : "mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8"
+          }
+        >
           {children}
         </main>
       </div>

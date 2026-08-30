@@ -40,28 +40,66 @@ BEGIN;
 -- A complete auth row, not just an id and an email: GoTrue refuses to issue a
 -- link for a half-built user, and a fixture nobody can sign in as is not a
 -- demonstration of anything.
+-- The empty-string token columns are not decoration. GoTrue scans them into
+-- Go `string` fields, so a NULL there fails the read with "converting NULL to
+-- string is unsupported" and the account becomes unloadable: signing in, and
+-- even the admin API, answer 500. The row looks perfectly healthy in psql.
+-- The same goes for instance_id -- a NULL one is simply not found -- and for
+-- auth.identities.last_sign_in_at.
+--
+-- Which is to say: this fixture is only a demonstration if somebody can
+-- actually sign in as it, and that is exactly what these columns decide.
 INSERT INTO auth.users
   (instance_id, id, aud, role, email, email_confirmed_at,
-   raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+   confirmation_token, recovery_token, email_change_token_new, email_change,
+   email_change_token_current, email_change_confirm_status,
+   phone_change, phone_change_token, reauthentication_token,
+   is_sso_user, is_anonymous)
 VALUES
   ('00000000-0000-0000-0000-000000000000',
    '90140000-0000-4000-8000-000000000001', 'authenticated', 'authenticated',
    'golden.rekryterare@test.local', now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
-   '{"email_verified":true}'::jsonb, now(), now())
+   '{"email_verified":true}'::jsonb, now(), now(),
+   '', '', '', '',
+   '', 0,
+   '', '', '',
+   false, false)
 ON CONFLICT (id) DO UPDATE
-   SET aud = EXCLUDED.aud,
+   SET instance_id = EXCLUDED.instance_id,
+       aud = EXCLUDED.aud,
        role = EXCLUDED.role,
        email_confirmed_at = coalesce(auth.users.email_confirmed_at, EXCLUDED.email_confirmed_at),
        raw_app_meta_data = EXCLUDED.raw_app_meta_data,
-       raw_user_meta_data = EXCLUDED.raw_user_meta_data;
+       raw_user_meta_data = EXCLUDED.raw_user_meta_data,
+       created_at = coalesce(auth.users.created_at, EXCLUDED.created_at),
+       updated_at = EXCLUDED.updated_at,
+       confirmation_token = coalesce(auth.users.confirmation_token, ''),
+       recovery_token = coalesce(auth.users.recovery_token, ''),
+       email_change_token_new = coalesce(auth.users.email_change_token_new, ''),
+       email_change = coalesce(auth.users.email_change, ''),
+       email_change_token_current = coalesce(auth.users.email_change_token_current, ''),
+       email_change_confirm_status = coalesce(auth.users.email_change_confirm_status, 0),
+       phone_change = coalesce(auth.users.phone_change, ''),
+       phone_change_token = coalesce(auth.users.phone_change_token, ''),
+       reauthentication_token = coalesce(auth.users.reauthentication_token, ''),
+       is_sso_user = coalesce(auth.users.is_sso_user, false),
+       is_anonymous = coalesce(auth.users.is_anonymous, false);
 
-INSERT INTO auth.identities (id, user_id, provider_id, provider, identity_data, created_at, updated_at)
+INSERT INTO auth.identities
+  (id, user_id, provider_id, provider, identity_data, created_at, updated_at, last_sign_in_at)
 VALUES (gen_random_uuid(), '90140000-0000-4000-8000-000000000001',
         '90140000-0000-4000-8000-000000000001', 'email',
         '{"sub":"90140000-0000-4000-8000-000000000001","email":"golden.rekryterare@test.local","email_verified":true}'::jsonb,
-        now(), now())
+        now(), now(), now())
 ON CONFLICT DO NOTHING;
+
+-- Existing local copies of the fixture predate the columns above, and a
+-- DO NOTHING on the identity leaves the old NULL in place.
+UPDATE auth.identities
+   SET last_sign_in_at = coalesce(last_sign_in_at, now())
+ WHERE user_id = '90140000-0000-4000-8000-000000000001';
 
 INSERT INTO public.employers (id, name, slug, status) VALUES
   ('90140000-0000-4000-8000-0000000000aa', 'Nordväkt Bevakning AB', 'nordvakt-bevakning', 'active')

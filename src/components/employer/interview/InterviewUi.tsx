@@ -1090,12 +1090,22 @@ export function WorkflowNav({
 
   return (
     <nav aria-label={t("iiu.wf.aria")} className="border-b border-border">
-      <ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
+      {/* Which of the seven this is, said in words. On a narrow screen the row
+          below scrolls, so the step a reader is on can be off-screen; this
+          line never is. */}
+      <p className="pb-1.5 text-xs font-medium text-muted-foreground sm:hidden">
+        {t("iiu.wf.step")} {currentIdx + 1} {t("iiu.wf.of")} {WORKFLOW.length}
+      </p>
+      {/* One row, always. A seven-step workflow that wraps onto two lines
+          stops reading as a sequence and starts reading as a pile of links,
+          so it scrolls horizontally instead -- the steps keep their order and
+          their spacing at every width. */}
+      <ol className="-mb-px flex items-stretch gap-x-0.5 overflow-x-auto text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {WORKFLOW.map((step, i) => {
           const isCurrent = i === currentIdx;
           const isDone = i < reached;
           return (
-            <li key={`${step.seg}-${step.label}`}>
+            <li key={`${step.seg}-${step.label}`} className="shrink-0">
               <Link
                 to={
                   step.seg === ""
@@ -1105,19 +1115,28 @@ export function WorkflowNav({
                 params={{ employerSlug, caseId }}
                 aria-current={isCurrent ? "step" : undefined}
                 className={cn(
-                  "inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
                   isCurrent
                     ? "border-accent font-semibold text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
+                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
                 )}
               >
-                {/* A tick for a completed step, not a score. The word is there
-                    for anyone who cannot see the glyph. */}
-                {isDone && !isCurrent && (
-                  <span aria-hidden="true" className="text-xs">
-                    ✓
-                  </span>
-                )}
+                {/* The step number, or a tick once the step is behind you.
+                    Workflow completion only -- a tick here says the recruiter
+                    has been through this step, never that anything passed. */}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "inline-flex h-[1.125rem] w-[1.125rem] items-center justify-center rounded-full border text-[10px] font-semibold tabular-nums",
+                    isCurrent
+                      ? "border-accent bg-accent text-accent-foreground"
+                      : isDone
+                        ? "border-teal-700/40 bg-teal-700/10 text-teal-800 dark:text-teal-200"
+                        : "border-border text-muted-foreground",
+                  )}
+                >
+                  {isDone && !isCurrent ? "✓" : i + 1}
+                </span>
                 {t(step.label)}
                 {isCurrent && <span className="sr-only"> ({t("iiu.wf.current")})</span>}
                 {isDone && !isCurrent && <span className="sr-only"> ({t("iiu.wf.done")})</span>}

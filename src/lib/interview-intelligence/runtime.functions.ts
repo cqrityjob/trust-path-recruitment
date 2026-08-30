@@ -448,6 +448,23 @@ export interface CaseDetail {
       countsTowardAggregation: boolean;
     }[];
     readonly probes: readonly { id: string; purpose: string; wordingSv: string }[];
+    /** The governed role requirements this question is written to explore, most
+     *  important first. Codes rather than objects, so the requirement text is
+     *  held once on `competencies` and can never disagree with itself. */
+    readonly competencyCodes: readonly string[];
+  }[];
+  /** The role requirements the pack governs, in their pinned order. These are
+   *  the pack's own rows -- what the role needs, written before anybody met
+   *  this candidate -- which is what makes an assessment against them an
+   *  assessment against a requirement rather than against an impression. */
+  readonly competencies: readonly {
+    readonly id: string;
+    readonly code: string;
+    readonly nameSv: string;
+    readonly nameEn: string | null;
+    readonly definitionSv: string | null;
+    readonly definitionEn: string | null;
+    readonly indicatorsSv: string | null;
   }[];
   readonly generalProbes: readonly { id: string; purpose: string; wordingSv: string }[];
   readonly prohibitedAreas: readonly {
@@ -663,6 +680,8 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       conductRes,
       conductProhibitionsRes,
       guidanceRes,
+      competencyRes,
+      questionCompetencyRes,
     ] = await Promise.all([
       db
         .from("scp_interview_case_sources")
@@ -763,6 +782,16 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .from("scp_interview_conduct_guidance")
         .select("id, trust_stage, surface, guidance_key, statement_sv, statement_en")
         .order("display_order"),
+      db
+        .from("scp_interview_pack_competencies")
+        .select(
+          "id, code, name_sv, name_en, definition_sv, definition_en, observable_indicators_sv",
+        )
+        .eq("pack_version_id", packVersionId)
+        .order("display_order"),
+      db
+        .from("scp_interview_question_competencies")
+        .select("question_id, pack_competency_id, is_primary"),
     ]);
 
     if (questionsRes.error) throw new Error(questionsRes.error.message);
@@ -783,6 +812,13 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       qIds.has(a.question_id as string),
     );
     const probes = (probesRes.data ?? []) as Array<Record<string, unknown>>;
+    const competencyRows = (competencyRes.data ?? []) as Array<Record<string, unknown>>;
+    // The map is read across every pack in the tenant, so it is narrowed to
+    // this pack's competencies before it is used.
+    const competencyById = new Map(competencyRows.map((c) => [c.id as string, c]));
+    const questionCompetencies = (
+      (questionCompetencyRes.data ?? []) as Array<Record<string, unknown>>
+    ).filter((m) => competencyById.has(m.pack_competency_id as string));
 
     const planRow = (planRes.data ?? [])[0] ?? null;
     let plan: CaseDetail["plan"] = null;
@@ -910,6 +946,23 @@ export const getInterviewCase = createServerFn({ method: "GET" })
             purpose: p.purpose as string,
             wordingSv: p.wording_sv as string,
           })),
+        // Primary first: a question explores one requirement principally and
+        // touches others, and a screen that lists them alphabetically loses
+        // the distinction the pack author made.
+        competencyCodes: questionCompetencies
+          .filter((m) => m.question_id === q.id)
+          .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+          .map((m) => competencyById.get(m.pack_competency_id as string)?.code as string)
+          .filter((c): c is string => Boolean(c)),
+      })),
+      competencies: competencyRows.map((c) => ({
+        id: c.id as string,
+        code: c.code as string,
+        nameSv: c.name_sv as string,
+        nameEn: (c.name_en as string | null) ?? null,
+        definitionSv: (c.definition_sv as string | null) ?? null,
+        definitionEn: (c.definition_en as string | null) ?? null,
+        indicatorsSv: (c.observable_indicators_sv as string | null) ?? null,
       })),
       generalProbes: probes
         .filter((p) => p.question_id === null)
@@ -927,27 +980,31 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       plan,
       session,
       // Cast via unknown: generated types.ts predates the 5E columns on this table.
-      proposals: ((proposalsRes.data ?? []) as unknown as Array<Record<string, unknown>>).map((p) => ({
-        id: p.id as string,
-        excerpt: p.excerpt as string,
-        questionId: p.question_id as string,
-        reviewState: p.review_state as string,
-        extractionConfidence: (p.extraction_confidence as number) ?? null,
-        relevanceRationale: (p.relevance_rationale as string) ?? "",
-        uncertaintyNote: (p.uncertainty_note as string) ?? null,
-        prohibitedConclusionNote: (p.prohibited_conclusion_note as string) ?? null,
-        noteId: (p.note_id as string) ?? null,
-        fiveE: fiveE(p),
-      })),
-      evidence: ((evidenceRes.data ?? []) as unknown as Array<Record<string, unknown>>).map((e) => ({
-        id: e.id as string,
-        excerpt: e.excerpt as string,
-        originalExcerpt: (e.original_excerpt as string) ?? null,
-        questionId: e.question_id as string,
-        origin: e.origin as string,
-        noteId: (e.note_id as string) ?? null,
-        fiveE: fiveE(e),
-      })),
+      proposals: ((proposalsRes.data ?? []) as unknown as Array<Record<string, unknown>>).map(
+        (p) => ({
+          id: p.id as string,
+          excerpt: p.excerpt as string,
+          questionId: p.question_id as string,
+          reviewState: p.review_state as string,
+          extractionConfidence: (p.extraction_confidence as number) ?? null,
+          relevanceRationale: (p.relevance_rationale as string) ?? "",
+          uncertaintyNote: (p.uncertainty_note as string) ?? null,
+          prohibitedConclusionNote: (p.prohibited_conclusion_note as string) ?? null,
+          noteId: (p.note_id as string) ?? null,
+          fiveE: fiveE(p),
+        }),
+      ),
+      evidence: ((evidenceRes.data ?? []) as unknown as Array<Record<string, unknown>>).map(
+        (e) => ({
+          id: e.id as string,
+          excerpt: e.excerpt as string,
+          originalExcerpt: (e.original_excerpt as string) ?? null,
+          questionId: e.question_id as string,
+          origin: e.origin as string,
+          noteId: (e.note_id as string) ?? null,
+          fiveE: fiveE(e),
+        }),
+      ),
       findings: ((findingsRes.data ?? []) as Array<Record<string, unknown>>).map((f) => ({
         id: f.id as string,
         findingKind: f.finding_kind as string,
