@@ -871,10 +871,76 @@ for (const file of [
       `case status "${st}" has no next action on the overview — the recruiter would be stranded`,
     );
   }
-  for (const seg of ["prepare", "interview", "evidence", "report"]) {
+  for (const seg of ["prepare", "interview", "evidence", "summary", "report"]) {
     ok(
       nextBlock.includes(`/${seg}\``),
       `the overview never routes to /${seg} — the lifecycle is not navigable end to end`,
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 17 · The summary, and the report's audit boundary                    */
+/* ------------------------------------------------------------------ */
+
+// The summary is a projection of records humans already made. If it ever
+// starts calling a model, the one place a plausible paragraph reads as a
+// conclusion has acquired a generator.
+{
+  const SUM =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.summary.tsx";
+  const sum = read(SUM);
+  ok(
+    !/useMutation|runInterviewAnalysis|runReportDraft|\.mutate\(/.test(sum),
+    "the post-interview summary triggers an action — it must project records, not generate them",
+  );
+  for (const key of [
+    "iiu.sm.examples",
+    "iiu.sm.missing",
+    "iiu.sm.followup",
+    "iiu.sm.verify",
+    "iiu.sm.assessments",
+    "iiu.sm.comments",
+  ]) {
+    ok(sum.includes(`t("${key}")`), `the summary no longer renders ${key}`);
+  }
+  // The two sentences that stop an absence and a discrepancy being read as
+  // findings about the person.
+  ok(
+    sum.includes('t("iiu.sm.missing.body")'),
+    "the summary must say that a missing answer is not a missing ability",
+  );
+  ok(
+    sum.includes('t("iiu.find.contradiction.note")'),
+    "the summary must say that a contradiction is not a judgement about honesty",
+  );
+  ok(sum.includes('t("iiu.sm.nodecision")'), "the summary must state that it recommends nothing");
+  // Empty states with a way out, not dead ends.
+  for (const key of ["iiu.sm.examples.none", "iiu.sm.assessments.none", "iiu.sm.comments.none"]) {
+    ok(sum.includes(`t("${key}")`), `the summary has no empty state for ${key}`);
+  }
+}
+
+// Everything above the audit section is what an employer reads. Provenance is
+// not deleted -- it moved to where an auditor looks.
+{
+  const RP =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx";
+  const rp = read(RP);
+  const auditAt = rp.indexOf('aria-labelledby="s-audit"');
+  ok(auditAt > 0, "the report no longer has an audit section to put provenance in");
+  const normal = rp.slice(0, auditAt);
+  for (const term of [
+    "contentHash",
+    "policyVersion",
+    "modelName",
+    "promptVersion",
+    "packContentHash",
+    "taskVersion",
+  ]) {
+    ok(
+      !normal.includes(term),
+      `the normal report view exposes ${term} — that belongs under audit details`,
     );
   }
 }

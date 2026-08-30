@@ -237,6 +237,26 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- ---- what the interview left open -------------------------------------
+  -- These are the four things a recruiter would carry out of this conversation.
+  -- The contradiction is recorded as a discrepancy to clarify, in those words,
+  -- because the wording is the safeguard: nothing downstream can turn "needs
+  -- clarifying" into "was dishonest" if the record never says the latter.
+  INSERT INTO public.scp_interview_findings
+    (case_id, finding_kind, statement, claim_class, resolution_state)
+  SELECT _case, v.k, v.s, 'governed_content', 'open'
+    FROM (VALUES
+      ('contradiction',
+       'CV:t anger 2019–2023, kandidaten säger 2020 och cirka tre år. Behöver klargöras.'),
+      ('verification',
+       'Väktarlegitimation uppges giltig och förnyad förra året. Handling ej visad.'),
+      ('unclear',
+       'Q4: oklart vem som skrev rapporten vid vattenläckan.'),
+      ('gap',
+       'Q2: ingen redogörelse för vad kandidaten själv gjorde.')
+    ) AS v(k, s)
+   WHERE NOT EXISTS (SELECT 1 FROM public.scp_interview_findings f WHERE f.case_id = _case);
+
   RAISE NOTICE 'GOLDEN: Väktare case ready — employer nordvakt-bevakning, case %', _case;
 END $$;
 

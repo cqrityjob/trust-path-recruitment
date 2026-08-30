@@ -147,11 +147,6 @@ function Page() {
               {t("iiu.rp.final")}
             </Chip>
           )}
-          {report?.contentHash && (
-            <Chip srPrefix={t("iiu.rp.hash")}>
-              <code className="font-mono text-[11px]">{report.contentHash.slice(0, 12)}</code>
-            </Chip>
-          )}
         </div>
       </header>
 
@@ -480,6 +475,16 @@ function Page() {
             match the reader's current language would change what the audit
             trail says happened, so the note explains it instead. */}
         <p className="mt-1 max-w-[68ch] text-xs text-muted-foreground">{t("iiu.rp.trace.note")}</p>
+        {/* The content hash lives here rather than beside the candidate's
+            name. It is what proves the published report has not been altered,
+            which matters enormously to an auditor and not at all to a hiring
+            manager reading the document. */}
+        {report?.contentHash && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("iiu.rp.hash")}:{" "}
+            <code className="font-mono text-[11px]">{report.contentHash.slice(0, 16)}</code>
+          </p>
+        )}
         {d.events.length === 0 ? (
           <div className="mt-3">
             <State kind="empty">{t("iiu.rp.nohistory")}</State>

@@ -56,6 +56,7 @@ const NEXT: Record<
       | "/employer/$employerSlug/interview-intelligence/$caseId/prepare"
       | "/employer/$employerSlug/interview-intelligence/$caseId/interview"
       | "/employer/$employerSlug/interview-intelligence/$caseId/evidence"
+      | "/employer/$employerSlug/interview-intelligence/$caseId/summary"
       | "/employer/$employerSlug/interview-intelligence/$caseId/report";
     cta: TranslationKey;
     why: TranslationKey;
@@ -99,7 +100,10 @@ const NEXT: Record<
     why: "iiu.ov.why.review",
     step: 3,
   },
-  assessed: { to: `${P}/report`, cta: "iiu.ov.cta.report", why: "iiu.ov.why.report", step: 5 },
+  // Assessment done goes to the SUMMARY, not straight to the report: a
+  // recruiter who has just finished a dozen small judgements needs to see
+  // what they add up to before they publish anything.
+  assessed: { to: `${P}/summary`, cta: "iiu.ov.cta.summary", why: "iiu.ov.why.summary", step: 4 },
   reported: {
     to: `${P}/report`,
     cta: "iiu.ov.cta.openreport",
