@@ -899,6 +899,79 @@ export const dictionaries = {
     "cd.public.factNoAccountShort": "Inget konto krävs för att börja",
     "cd.public.factNoAccountBody":
       "Dina svar sparas i den här fliken. Du loggar in först när du vill spara resultatet.",
+    // ── CAREER JOURNEY ──────────────────────────────────────────────
+    // Where the four products meet on one page. Every string here has to
+    // survive being read by somebody who is about to make a decision, so
+    // none of them promises more than the rules behind them can defend.
+    "cj.title": "Din karriärresa",
+    "cj.doesNotChangeDna":
+      "Den här delen bygger på din karriärprofil, ditt Security Passport och kartan över yrken i branschen. Den påverkar aldrig din Security Career DNA eller vilka yrken som passar dig -- den säger bara var du står idag och vad som är realistiskt härifrån.",
+    "cj.whereYouAre": "Var du är idag",
+    "cj.field.status": "Nuläge",
+    "cj.field.profession": "Nuvarande yrke",
+    "cj.field.experience": "Erfarenhet",
+    "cj.selfReported":
+      "Det här är uppgifter du själv har angett i din karriärprofil. De är inte verifierade.",
+    "cj.passportSupported":
+      "Du har verifierad information i ditt Security Passport. Den stärker underlaget nedan -- men vilka uppgifter det gäller delas inte här, och delas aldrig med en arbetsgivare utan att du väljer det.",
+    "cj.unknown.body":
+      "Vi vet ännu inte tillräckligt om din bakgrund för att säga hur nära du står de här yrkena. Därför visar vi inga nästa steg -- ett nästa steg från en okänd utgångspunkt vore en gissning.",
+    "cj.unknown.cta": "Fyll i min bakgrund",
+    "cj.unknown.anonymousCta":
+      "Spara ditt resultat och fyll i din bakgrund, så kan vi visa en mer personlig karriärresa.",
+    "cj.section.exploreNow": "Vad du kan utforska nu",
+    "cj.section.exploreNow.body":
+      "Yrken som ligger på eller under din nuvarande nivå och som det finns en verklig väg till från där du är.",
+    "cj.section.nextSteps": "Möjliga nästa steg",
+    "cj.section.nextSteps.body":
+      "Yrken ett steg framåt, eller yrken som passar dig men ligger i en annan del av branschen än den du arbetar i idag.",
+    "cj.section.longerTerm": "Längre fram",
+    "cj.section.longerTerm.body":
+      "Riktningar som passar dig men som ligger flera nivåer bort, eller som kräver en formell behörighet.",
+    "cj.section.unknown": "Inte tillräckligt underlag",
+    "cj.section.unknown.body": "Vi saknar uppgifter om din nuvarande situation.",
+    "cj.category.exploreNow": "Utforska nu",
+    "cj.category.possibleNextStep": "Möjligt nästa steg",
+    "cj.category.developmentNeeded": "Utveckling krävs",
+    "cj.category.longerTermDirection": "Längre fram",
+    "cj.category.formalPathway": "Formell behörighet krävs",
+    "cj.category.notEnoughInformation": "Inte tillräckligt underlag",
+    "cj.reason.noProfile": "Du har inte fyllt i din karriärprofil ännu.",
+    "cj.reason.situationUnknown": "Vi vet inte vad du arbetar med idag.",
+    "cj.reason.regulated":
+      "Yrket är reglerat och kräver en formell behörighet. Vi har inget verifierat underlag på att du har den.",
+    "cj.reason.stageAtOrBelow": "Yrket ligger på eller under den nivå du är på idag.",
+    "cj.reason.stageOneAhead": "Yrket ligger ett steg framför din nuvarande nivå.",
+    "cj.reason.stageTwoAhead": "Yrket ligger flera steg framför din nuvarande nivå.",
+    "cj.reason.adjacentTransition":
+      "Det finns en dokumenterad övergång från ditt nuvarande yrke till det här.",
+    "cj.reason.adjacentArea": "Yrket ligger inom det område du redan arbetar i.",
+    "cj.reason.entryRole": "Yrket är en ingång i branschen och är öppet för dig som är ny.",
+    "cj.reason.notAdjacent":
+      "Vi ser ingen dokumenterad väg dit från det du gör idag, och det ligger i en annan del av branschen -- det betyder inte att det är stängt, utan att det kräver att du bygger på.",
+    "cj.reason.verifiedEvidence": "Du har verifierad information i ditt Security Passport.",
+    "cj.whatHelps": "Vad som kan hjälpa dig dit",
+    "cj.whatHelps.profile":
+      "Håll din karriärprofil uppdaterad. När din roll eller erfarenhet ändras uppdateras din karriärresa -- du behöver inte göra om testet.",
+    "cj.whatHelps.regulated":
+      "Några av yrken ovan är reglerade. Läs kraven i Karriärcentret innan du planerar ett steg dit.",
+    "cj.whatHelps.passport":
+      "Verifierad information i ditt Security Passport gör underlaget starkare. Du bestämmer själv vad som verifieras och vad som delas.",
+
+    // ── PRE-ASSESSMENT PROFILE GATE ─────────────────────────────────
+    // Offered, never imposed: the assessment must remain startable in one
+    // click for somebody who does not want to answer anything about
+    // themselves first.
+    "cj.gate.connected.title": "Din karriärprofil är kopplad",
+    "cj.gate.connected.body":
+      "Vi använder den för din karriärresa. Den påverkar inte din Security Career DNA.",
+    "cj.gate.connected.start": "Starta testet",
+    "cj.gate.connected.review": "Se min profil",
+    "cj.gate.missing.title": "Vill du ha en mer personlig karriärresa?",
+    "cj.gate.missing.body":
+      "Du kan göra testet direkt. Om du berättar var du står idag kan vi efteråt visa vad som är realistiskt härifrån -- din bakgrund ändrar aldrig din Security Career DNA.",
+    "cj.gate.missing.start": "Gör testet nu",
+    "cj.gate.missing.addProfile": "Fyll i min bakgrund först",
     "cd.careerContext.title": "En sak till, innan din rapport",
     "cd.careerContext.body":
       "Det här hjälper oss visa vad som är mest relevant just nu -- det ändrar aldrig din Security Career DNA.",
@@ -5873,6 +5946,73 @@ export const dictionaries = {
     "cd.public.factNoAccountShort": "No account needed to begin",
     "cd.public.factNoAccountBody":
       "Your answers stay in this tab. You only sign in when you want to save the result.",
+    // ── CAREER JOURNEY ──────────────────────────────────────────────
+    "cj.title": "Your career journey",
+    "cj.doesNotChangeDna":
+      "This part is built from your career profile, your Security Passport and the map of professions in the industry. It never affects your Security Career DNA or which professions fit you -- it only says where you stand today and what is realistic from here.",
+    "cj.whereYouAre": "Where you are today",
+    "cj.field.status": "Current situation",
+    "cj.field.profession": "Current profession",
+    "cj.field.experience": "Experience",
+    "cj.selfReported":
+      "This is information you entered yourself in your career profile. It is not verified.",
+    "cj.passportSupported":
+      "You hold verified information in your Security Passport. It strengthens what is below -- which information is not shown here, and is never shared with an employer unless you choose to share it.",
+    "cj.unknown.body":
+      "We do not yet know enough about your background to say how close you are to these professions. So we are not showing any next steps -- a next step from an unknown starting point would be a guess.",
+    "cj.unknown.cta": "Add my background",
+    "cj.unknown.anonymousCta":
+      "Save your result and add your background, and we can show you a more personal career journey.",
+    "cj.section.exploreNow": "What you can explore now",
+    "cj.section.exploreNow.body":
+      "Professions at or below your current level, with a real route to them from where you are.",
+    "cj.section.nextSteps": "Possible next steps",
+    "cj.section.nextSteps.body":
+      "Professions one level ahead, or professions that fit you but sit in a different part of the industry from the one you work in today.",
+    "cj.section.longerTerm": "Longer-term directions",
+    "cj.section.longerTerm.body":
+      "Directions that fit you but are several levels away, or that require a formal authorisation.",
+    "cj.section.unknown": "Not enough information",
+    "cj.section.unknown.body": "We are missing information about your current situation.",
+    "cj.category.exploreNow": "Explore now",
+    "cj.category.possibleNextStep": "Possible next step",
+    "cj.category.developmentNeeded": "Development needed",
+    "cj.category.longerTermDirection": "Longer-term direction",
+    "cj.category.formalPathway": "Formal pathway required",
+    "cj.category.notEnoughInformation": "Not enough information",
+    "cj.reason.noProfile": "You have not filled in your career profile yet.",
+    "cj.reason.situationUnknown": "We do not know what you do today.",
+    "cj.reason.regulated":
+      "This profession is regulated and requires a formal authorisation. We hold no verified evidence that you have one.",
+    "cj.reason.stageAtOrBelow": "The profession sits at or below the level you are at today.",
+    "cj.reason.stageOneAhead": "The profession sits one level ahead of where you are today.",
+    "cj.reason.stageTwoAhead": "The profession sits several levels ahead of where you are today.",
+    "cj.reason.adjacentTransition":
+      "There is a documented transition from your current profession into this one.",
+    "cj.reason.adjacentArea": "The profession sits within the area you already work in.",
+    "cj.reason.entryRole": "This is an entry route into the industry and is open to newcomers.",
+    "cj.reason.notAdjacent":
+      "We see no documented route there from what you do today, and it sits in a different part of the industry -- that does not mean it is closed, it means it takes building up to.",
+    "cj.reason.verifiedEvidence": "You hold verified information in your Security Passport.",
+    "cj.whatHelps": "What can help you get there",
+    "cj.whatHelps.profile":
+      "Keep your career profile up to date. When your role or experience changes, your career journey updates -- you do not need to retake the assessment.",
+    "cj.whatHelps.regulated":
+      "Some of the professions above are regulated. Read the requirements in the Career Center before planning a step towards them.",
+    "cj.whatHelps.passport":
+      "Verified information in your Security Passport makes the picture stronger. You decide what gets verified and what gets shared.",
+
+    // ── PRE-ASSESSMENT PROFILE GATE ─────────────────────────────────
+    "cj.gate.connected.title": "Your career profile is connected",
+    "cj.gate.connected.body":
+      "We use it for your career journey. It does not change your Security Career DNA.",
+    "cj.gate.connected.start": "Start assessment",
+    "cj.gate.connected.review": "Review my profile",
+    "cj.gate.missing.title": "Want a more personal career journey?",
+    "cj.gate.missing.body":
+      "You can take the assessment right away. Telling us where you stand today lets us show what is realistic from here afterwards -- your background never changes your Security Career DNA.",
+    "cj.gate.missing.start": "Do the assessment now",
+    "cj.gate.missing.addProfile": "Add my background first",
     "cd.careerContext.title": "One more thing, before your report",
     "cd.careerContext.body":
       "This helps us show what's most relevant right now -- it never changes your Security Career DNA.",

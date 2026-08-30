@@ -90,7 +90,24 @@ export type BasicsEditMode =
 export const BASICS_EDIT_MODE: Readonly<Record<string, BasicsEditMode>> = {
   purpose: "informational",
   identity: "inline",
-  profession: "inline",
+  // ── WHY PROFESSION MOVED FROM "inline" TO "delegated" ────────────────
+  //
+  // It was the third question on this card with its own writer, and the
+  // only one of the three whose fact ALSO had a writer somewhere else
+  // entirely: "Din karriärprofil" on /my-career wrote the same current
+  // profession into security_career_profiles, this card wrote it into
+  // sp_passport_profiles, and neither knew about the other. A holder who
+  // corrected it here still found the old answer on /my-career, and the
+  // product had no way to say which one it believed.
+  //
+  // That is the same defect the wizard's removal was meant to prevent --
+  // two controls writing one fact -- except stretched across two pages,
+  // where it was invisible. So profession is resolved exactly as
+  // jurisdiction and currentRole already are: shown here in full, edited by
+  // the one control that owns it. The difference is only that its canonical
+  // editor is on another route rather than further down this page, which is
+  // why DelegatedAction below now has two shapes.
+  profession: "delegated",
   jurisdiction: "delegated",
   currentRole: "delegated",
   declaration: "inline",
@@ -110,15 +127,27 @@ export const BASICS_EDIT_MODE: Readonly<Record<string, BasicsEditMode>> = {
  *  The label is deliberately SPECIFIC. "Ändra längre ned på sidan" told the
  *  holder where the control was rather than what it did, which is the wrong
  *  half: they are looking for their work country, not for a location. */
-export interface DelegatedAction {
-  /** The `id` of the element that receives focus. Must be focusable. */
-  readonly anchorId: string;
-  readonly labelKey: PassportCopyKey;
-}
+/** Two shapes, because a canonical editor is not always on this page.
+ *
+ *  A discriminated union rather than two optional fields: an action must
+ *  name exactly one destination, and a type that can express "both" or
+ *  "neither" is a type that will eventually hold one. */
+export type DelegatedAction =
+  /** The editor is further down THIS page. `anchorId` is the id of the
+   *  element that receives focus; it must be focusable. */
+  | { readonly kind: "anchor"; readonly anchorId: string; readonly labelKey: PassportCopyKey }
+  /** The editor is a different route. Used for facts the Passport shows but
+   *  does not own -- see `profession` in BASICS_EDIT_MODE above. */
+  | { readonly kind: "route"; readonly to: string; readonly labelKey: PassportCopyKey };
+
+/** Where the canonical Professional Profile is edited. Stated once, here,
+ *  so the Passport has exactly one place that knows the address. */
+export const CAREER_PROFILE_ROUTE = "/my-career" as const;
 
 export const BASICS_DELEGATED_ACTIONS: Readonly<Record<string, DelegatedAction>> = {
-  jurisdiction: { anchorId: "sp-work-country", labelKey: "basics.editWorkCountry" },
-  currentRole: { anchorId: "sp-employment", labelKey: "basics.editCurrentRole" },
+  profession: { kind: "route", to: CAREER_PROFILE_ROUTE, labelKey: "basics.editProfession" },
+  jurisdiction: { kind: "anchor", anchorId: "sp-work-country", labelKey: "basics.editWorkCountry" },
+  currentRole: { kind: "anchor", anchorId: "sp-employment", labelKey: "basics.editCurrentRole" },
 };
 
 /** The four steps a holder actually fills in. The ONLY set a "filled in"

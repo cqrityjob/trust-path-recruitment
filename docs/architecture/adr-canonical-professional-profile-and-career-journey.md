@@ -228,7 +228,7 @@ and the log has been looked at.
 
 ## Verified by
 
-- `scripts/career-journey-check.ts` — 66 assertions (readiness behaviour for
+- `scripts/career-journey-check.ts` — 77 assertions (readiness behaviour for
   every scenario in the brief, purity, the no-Career-DNA-in-readiness ban, the
   single-writer shape, both locales).
 - `supabase/tests/canonical_professional_profile_test.sql` — 69 assertions
@@ -238,4 +238,8 @@ and the log has been looked at.
   schema; and Group G, which becomes a signed-in holder and _executes_ every
   permitted and forbidden statement against their own audit record rather
   than inspecting grants).
+- `supabase/tests/canonical_professional_profile_contract_test.sql` — 16
+  assertions (the compatibility window closes, the mirror is one-way
+  afterwards, the contract is re-runnable and reversible, and no path exists
+  from a profile write to a frozen report).
 - `scripts/passport-profile-basics-check.tsx`, updated to the new contract.

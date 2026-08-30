@@ -1460,6 +1460,36 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Canonical Professional Profile CONTRACT phase.
+#
+# The expand suite asserts the compatibility window behaves as designed; this
+# one asserts it CLOSES, and that what remains is the one-way mirror the
+# product's architecture claims. Runs immediately after the expand suite and
+# before the rollback step, for the same reason.
+# ---------------------------------------------------------------------------
+echo "==> Running canonical Professional Profile contract assertions"
+set +e
+CPC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/canonical_professional_profile_contract_test.sql 2>&1)"
+CPC_RC=$?
+set -e
+
+echo "$CPC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CPC_PASSED="$(echo "$CPC_OUT" | grep -c "ok  " || true)"
+
+if [ "$CPC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the canonical Professional Profile contract suite exited with code ${CPC_RC}." >&2
+  echo "$CPC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "canonical Professional Profile contract"
+else
+  echo "    ok  ${CPC_PASSED} canonical Professional Profile contract assertions passed"
+  if [ "$CPC_PASSED" -lt 15 ]; then
+    echo "FAIL: expected at least 15 contract assertions, only ${CPC_PASSED} ran." >&2
+    suite_failed "canonical Professional Profile contract (assertion shortfall: floor 15)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
 set +e
 ROLLBACK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_a_rollback_test.sql 2>&1)"

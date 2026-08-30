@@ -17,10 +17,20 @@
 //
 // ── WHY IT SHOWS SIX AND EDITS FOUR ────────────────────────────────────
 //
-// Two of the six already have a permanent, canonical editor a few hundred
-// pixels further down this same page: the work country (`WorkCountryCard`) and
-// the current role (the employment section, which writes real
-// `sp_experience_periods` rows carrying evidence, reviews and lifecycle).
+// Three of the six already have a permanent, canonical editor elsewhere: the
+// work country (`WorkCountryCard`) and the current role (the employment
+// section, which writes real `sp_experience_periods` rows carrying evidence,
+// reviews and lifecycle), both a few hundred pixels further down this same
+// page -- and the current PROFESSION, whose canonical home is the
+// Professional Profile on /my-career.
+//
+// Profession is the newest of the three and the one that was actually
+// broken. It had a writer here AND a writer on /my-career, writing two
+// different tables, with nothing keeping them in step: correcting it in one
+// place left the other stating the old answer, and no surface could say
+// which the product believed. It is now shown here and edited there, and
+// sp_passport_profiles.cig_profession_slug is a database-maintained mirror
+// of the canonical value rather than an independently written copy.
 // Giving this card its own writer for those would put two controls on ONE page
 // writing ONE fact — which is the defect the wizard's removal was meant to
 // prevent, rebuilt one level up.
@@ -59,7 +69,6 @@ import type { BasicsAnswerReader } from "@/lib/security-passport/profile-basics"
 export interface ProfileBasicsPatch {
   readonly displayName?: string;
   readonly headline?: string;
-  readonly professionSlug?: string;
   /** Affirm-only, mirroring the server function. A declaration is not a field
    *  that can be cleared. */
   readonly declared?: true;
@@ -119,6 +128,7 @@ export function ProfileBasicsCard({
   displayAnswers,
   declaredAccurateAt,
   onSave,
+  onEditProfession,
   onEditWorkCountry,
   onEditCurrentRole,
 }: {
@@ -133,6 +143,9 @@ export function ProfileBasicsCard({
   readonly displayAnswers?: Readonly<Record<string, string>>;
   readonly declaredAccurateAt: string | null;
   readonly onSave: (patch: ProfileBasicsPatch) => Promise<void>;
+  /** Sends the holder to the canonical Professional Profile editor. The
+   *  card never writes the profession itself. */
+  readonly onEditProfession: () => void;
   readonly onEditWorkCountry: () => void;
   readonly onEditCurrentRole: () => void;
 }) {
@@ -142,9 +155,6 @@ export function ProfileBasicsCard({
     () => answers[keyOf("identity", "displayName")] ?? "",
   );
   const [headline, setHeadline] = useState(() => answers[keyOf("identity", "headline")] ?? "");
-  const [profession, setProfession] = useState(
-    () => answers[keyOf("profession", "profession")] ?? "",
-  );
   const [declared, setDeclared] = useState(() => declaredAccurateAt !== null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -158,10 +168,9 @@ export function ProfileBasicsCard({
       ...answers,
       [keyOf("identity", "displayName")]: displayName,
       [keyOf("identity", "headline")]: headline,
-      [keyOf("profession", "profession")]: profession,
       [keyOf("declaration", "declared")]: declared ? "true" : "",
     }),
-    [answers, displayName, headline, profession, declared],
+    [answers, displayName, headline, declared],
   );
   const read = useMemo(
     () => (stepId: string, fieldId: string) => draftAnswers[keyOf(stepId, fieldId)] ?? "",
@@ -175,7 +184,6 @@ export function ProfileBasicsCard({
   const dirty =
     displayName !== (answers[keyOf("identity", "displayName")] ?? "") ||
     headline !== (answers[keyOf("identity", "headline")] ?? "") ||
-    profession !== (answers[keyOf("profession", "profession")] ?? "") ||
     (declared && declaredAccurateAt === null);
 
   async function submit(force?: ProfileBasicsPatch) {
@@ -187,7 +195,6 @@ export function ProfileBasicsCard({
         force ?? {
           displayName,
           headline,
-          professionSlug: profession,
           ...(declared && declaredAccurateAt === null ? { declared: true as const } : {}),
         },
       );
@@ -218,27 +225,9 @@ export function ProfileBasicsCard({
     const control =
       "mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-    if (field.type === "select") {
-      const value = field.id === "profession" ? profession : "";
-      return (
-        <div key={field.id} className="max-w-md">
-          {label}
-          <select
-            id={id}
-            value={value}
-            onChange={(e) => setProfession(e.target.value)}
-            className={control}
-          >
-            <option value="">—</option>
-            {(field.options ?? []).map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.labelKey ? pt(o.labelKey) : o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      );
-    }
+    // No `select` branch. The only select among the six was the profession,
+    // and it is delegated now -- an inline writer for it here is precisely
+    // the second copy this card was corrected to remove.
 
     if (field.type === "checkbox") {
       // Already declared: the act is recorded, so it is reported rather than
@@ -396,7 +385,13 @@ export function ProfileBasicsCard({
                     ))}
                   </dl>
                   <p className="max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-                    {pt("basics.editedBelow")}
+                    {/* "Ändras längre ned på sidan" is false for a fact whose
+                        editor is on another route, and a sentence that is
+                        false for one of three cases is a sentence that has to
+                        branch. */}
+                    {delegated?.kind === "route"
+                      ? pt("basics.editedInCareerProfile")
+                      : pt("basics.editedBelow")}
                   </p>
                   {/* ── A REAL ANCHOR, PLUS MANAGED FOCUS ───────────────
                       An <a href="#id"> rather than a button, so the trip is a
@@ -412,8 +407,16 @@ export function ProfileBasicsCard({
                       country, not for somewhere further down a page. */}
                   {delegated ? (
                     <a
-                      href={`#${delegated.anchorId}`}
+                      href={delegated.kind === "anchor" ? `#${delegated.anchorId}` : delegated.to}
                       onClick={(e) => {
+                        // A route delegation is a real navigation and is left
+                        // to the browser/router: preventing it here would turn
+                        // a working link into one that only works with
+                        // JavaScript, for no gain.
+                        if (delegated.kind !== "anchor") {
+                          onEditProfession();
+                          return;
+                        }
                         e.preventDefault();
                         if (step.id === "jurisdiction") onEditWorkCountry();
                         else onEditCurrentRole();

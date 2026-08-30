@@ -56,6 +56,11 @@ import {
   type RegulatedCredentialAvailability,
 } from "@/lib/security-passport/credentials.functions";
 import { Briefcase, GraduationCap, Languages, Plus, ShieldCheck, Wrench } from "lucide-react";
+import { CAREER_PROFILE_ROUTE } from "@/lib/security-passport/profile-basics";
+import {
+  listCurrentProfessionOptions,
+  type CurrentProfessionOption,
+} from "@/lib/security-career-profile/profession-options";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import {
@@ -183,6 +188,23 @@ function PassportInformationRoute() {
     declaredAccurateAt: string | null;
   } | null>(null);
   const saveBasics = useServerFn(savePassportBasics);
+  // Display titles for the profession the basics card SHOWS and does not
+  // edit. Best-effort: a failure degrades one line to the stored slug, never
+  // the page.
+  const [professionOptions, setProfessionOptions] = useState<CurrentProfessionOption[]>([]);
+  useEffect(() => {
+    let alive = true;
+    listCurrentProfessionOptions()
+      .then((opts) => {
+        if (alive) setProfessionOptions(opts);
+      })
+      .catch(() => {
+        /* the card falls back to the stored value */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // ── ONE REFRESH FOR BOTH ──────────────────────────────────────────
   //
@@ -515,7 +537,18 @@ function PassportInformationRoute() {
     "currentRole.startedOn": currentPeriod?.startedOn ?? "",
     "declaration.declared": basics?.declaredAccurateAt ? "true" : "",
   };
+  // The stored profession is a slug ("vaktare"), which is a database
+  // identifier and not something a person reads. The card shows it, does not
+  // edit it, and would otherwise render the raw slug — so the catalogue's own
+  // title is resolved for display only. Completeness is still computed from
+  // `basicsAnswers`, never from this.
+  const professionTitle = professionOptions.find((p) => p.slug === basics?.professionSlug) ?? null;
   const basicsDisplay: Record<string, string> = {
+    "profession.profession": professionTitle
+      ? lang === "sv"
+        ? professionTitle.title_sv
+        : professionTitle.title_en
+      : "",
     // "AE-DU" is a code, not something a person reads. The holder's own
     // location is formatted with the sub-jurisdiction intact, because
     // flattening Dubai into "UAE" makes the country-wide claim.
@@ -574,6 +607,10 @@ function PassportInformationRoute() {
           onSave={commitBasics}
           // The two answers that ARE domain rows are edited by the controls that
           // own them, further down this same page. One fact, one writer.
+          // Current profession is NOT edited here. Its canonical home is the
+          // Professional Profile on /my-career, and the Passport mirrors it
+          // rather than keeping a second, independently written copy.
+          onEditProfession={() => void navigate({ to: CAREER_PROFILE_ROUTE })}
           onEditWorkCountry={() => focusById("sp-work-country")}
           onEditCurrentRole={() => focusById("sp-employment")}
         />

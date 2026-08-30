@@ -418,7 +418,12 @@ const onboardingInput = z.object({
   answers: z.record(z.string(), z.string().max(400)),
   displayName: z.string().max(120).nullable().optional(),
   headline: z.string().max(200).nullable().optional(),
-  professionSlug: z.string().max(80).nullable().optional(),
+  // No `professionSlug`, for the same reason it left profileBasicsInput: the
+  // canonical Professional Profile owns current profession, and a second
+  // writer here is what let the two answers drift apart. The onboarding
+  // ROUTE writes it through setMyCurrentProfession instead, so a holder who
+  // answers the wizard's profession question fills in the canonical row —
+  // one home, reached from two doors, rather than two homes.
   // The WORK COUNTRY answer, which may be a country ("SE") or a
   // sub-jurisdiction ("AE-DU"). Split by `splitWorkCountry` below into the two
   // columns the profile keeps apart; `length(2)` would have refused Dubai.
@@ -452,7 +457,6 @@ export const saveOnboardingProgress = createServerFn({ method: "POST" })
     };
     if (data.displayName !== undefined) patch.display_name = data.displayName;
     if (data.headline !== undefined) patch.headline = data.headline;
-    if (data.professionSlug !== undefined) patch.cig_profession_slug = data.professionSlug;
     // One answer, three columns, split in exactly one place. An empty answer
     // clears ALL of them rather than leaving a stale emirate beside a new
     // country, or a confirmation standing over a value nobody gave.
@@ -633,7 +637,23 @@ export const setWorkCountry = createServerFn({ method: "POST" })
 const profileBasicsInput = z.object({
   displayName: z.string().max(120).nullable().optional(),
   headline: z.string().max(200).nullable().optional(),
-  professionSlug: z.string().max(80).nullable().optional(),
+  // `professionSlug` USED TO BE HERE, and its absence is the point.
+  //
+  // Current profession is one fact that had two editable homes: this
+  // function, and the canonical Professional Profile in
+  // security_career_profiles. Two writers, two tables, no synchronisation --
+  // so a holder who corrected their profession in "Mina uppgifter" found the
+  // old answer still waiting on /my-career, and neither surface could tell
+  // them which one the product believed.
+  //
+  // The canonical profile is now the only writer, and
+  // sp_passport_profiles.cig_profession_slug is a mirror the database keeps
+  // in step (career_profile_mirror_profession_to_passport, 20261007090000) so the
+  // disclosure package an employer receives still carries a profession.
+  // Removing the field from the SCHEMA rather than merely from the UI is
+  // what makes that true of an old client too: a stale tab still sending
+  // professionSlug is rejected by the validator instead of quietly
+  // reopening the second writer.
   /** AFFIRM-ONLY, and `z.literal(true)` is how that is enforced rather than
    *  left to the UI.
    *
@@ -711,11 +731,6 @@ export const savePassportBasics = createServerFn({ method: "POST" })
       patch.headline = data.headline;
       answers["identity.headline"] = data.headline ?? "";
     }
-    if (data.professionSlug !== undefined) {
-      patch.cig_profession_slug = data.professionSlug;
-      answers["profession.profession"] = data.professionSlug ?? "";
-    }
-
     const declaredAt = data.declared ? new Date().toISOString() : null;
     if (declaredAt) {
       patch.declared_accurate_at = declaredAt;

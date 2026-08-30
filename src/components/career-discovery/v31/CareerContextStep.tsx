@@ -8,7 +8,7 @@
 // answers, not dead ends — because this is contextual self-report, not a
 // second assessment.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Search } from "lucide-react";
@@ -28,11 +28,27 @@ export function CareerContextStep({
   onChange,
   onContinue,
   locale,
+  prefillProfessionSlug = null,
 }: {
   value: CareerContext;
   onChange: (next: CareerContext) => void;
   onContinue: () => void;
   locale: "sv" | "en";
+  /** The current profession already stored in the candidate's canonical
+   *  Professional Profile, for a signed-in candidate.
+   *
+   *  ── WHY PREFILL AND NOT SKIP ────────────────────────────────────────
+   *
+   *  Asking somebody a question the product already has the answer to is the
+   *  defect; asking it with the answer filled in is not. Removing the step
+   *  outright would be worse than either: the profession recorded on a
+   *  cd_sessions row is part of an immutable record of THAT run, so a run
+   *  that silently inherited a profile answer nobody was shown would freeze
+   *  an unconfirmed fact into a report the candidate never saw stated.
+   *
+   *  So it is shown, pre-answered, and changeable — and whatever is on
+   *  screen when they continue is what gets recorded, in both places. */
+  prefillProfessionSlug?: string | null;
 }) {
   const { t } = useT();
   const [query, setQuery] = useState("");
@@ -43,6 +59,32 @@ export function CareerContextStep({
     queryFn: () => load({}),
     staleTime: 10 * 60 * 1000,
   });
+
+  // ── PREFILL, ONCE, AND ONLY INTO AN UNANSWERED QUESTION ─────────────
+  //
+  // Guarded by a ref rather than by the value it writes: the candidate is
+  // free to clear the prefilled answer, and a plain "if unanswered" effect
+  // would helpfully put it back for them, forever. Once per mount, and only
+  // when the catalogue has actually resolved the slug to a real profession
+  // with real titles — a prefill that produced a selection with no title is
+  // how "YOU ARE HERE" ends up blank on the report.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current) return;
+    if (!prefillProfessionSlug) return;
+    if (value.currentProfessionStatus !== null) return;
+    const match = (professionsQuery.data ?? []).find((p) => p.slug === prefillProfessionSlug);
+    if (!match) return;
+    prefilled.current = true;
+    onChange({
+      ...value,
+      currentProfessionStatus: "selected",
+      currentProfessionSlug: match.slug,
+      currentProfessionTitleSv: match.titleSv,
+      currentProfessionTitleEn: match.titleEn,
+      currentProfessionOther: null,
+    });
+  }, [prefillProfessionSlug, professionsQuery.data, value, onChange]);
 
   const selectedProfession = useMemo(
     () =>

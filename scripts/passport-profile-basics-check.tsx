@@ -77,6 +77,7 @@ function card(props: Partial<React.ComponentProps<typeof ProfileBasicsCard>> = {
       displayAnswers={{ "jurisdiction.jurisdiction": "Dubai, Förenade Arabemiraten" }}
       declaredAccurateAt="2026-08-20T09:00:00.000Z"
       onSave={noopSave}
+      onEditProfession={noop}
       onEditWorkCountry={noop}
       onEditCurrentRole={noop}
       {...props}
@@ -303,7 +304,16 @@ console.log("\nEDITING -- every one of the six has a way to be changed");
 
   ck("there is a name field to fill in", empty.includes('id="sp-basics-identity-displayName"'));
   ck("there is a headline field", empty.includes('id="sp-basics-identity-headline"'));
-  ck("there is a profession select", empty.includes('id="sp-basics-profession-profession"'));
+  // NO profession select. It used to be here, and it was the third writer
+  // for a fact that already had a canonical home on /my-career: correcting
+  // your profession in "Mina uppgifter" left the career profile stating the
+  // old answer, with nothing to say which the product believed. The question
+  // is still SHOWN -- delegated, like the work country and the current role
+  // -- and edited where it is owned.
+  ck(
+    "there is NO profession select -- the canonical editor owns it",
+    !empty.includes('id="sp-basics-profession-profession"'),
+  );
   ck("there is a declaration checkbox", empty.includes('id="sp-basics-declaration-declared"'));
   ck("and a save action", empty.includes(passportT("basics.save", "sv")));
 
@@ -312,10 +322,10 @@ console.log("\nEDITING -- every one of the six has a way to be changed");
   // insists on is that the holder is told where to go, not that a second
   // writer exists.
   const delegated = PROFILE_BASICS_STEPS.filter((s) => BASICS_EDIT_MODE[s.id] === "delegated");
-  ck("exactly two questions are delegated", delegated.length === 2);
+  ck("exactly three questions are delegated", delegated.length === 3);
   ck(
-    "they are the work country and the current role -- the two that are domain rows",
-    delegated.map((s) => s.id).join(",") === "jurisdiction,currentRole",
+    "they are the profession, the work country and the current role -- the three the Passport does not own",
+    delegated.map((s) => s.id).join(",") === "profession,jurisdiction,currentRole",
   );
   /* ── EACH DELEGATED ANSWER NAMES ITSELF AND LINKS TO ITS EDITOR ─────
    *
@@ -332,17 +342,39 @@ console.log("\nEDITING -- every one of the six has a way to be changed");
     empty.includes(passportT("basics.editCurrentRole", "sv")),
   );
   ck(
-    "each delegated step declares a target",
-    Object.keys(BASICS_DELEGATED_ACTIONS).sort().join(",") === "currentRole,jurisdiction",
+    "the profession action names the career profile",
+    empty.includes(passportT("basics.editProfession", "sv")),
   );
-  // A real anchor, not a bare button: it has a target a screen reader can
-  // announce and it works with no JavaScript.
+  ck(
+    "each delegated step declares a target",
+    Object.keys(BASICS_DELEGATED_ACTIONS).sort().join(",") ===
+      "currentRole,jurisdiction,profession",
+  );
+  // A real anchor or a real link, not a bare button: it has a target a screen
+  // reader can announce and it works with no JavaScript. The profession's
+  // canonical editor is on another route, so its destination is a path rather
+  // than a fragment -- the guard checks each for what it actually is, because
+  // a check that only understood fragments is what would let a route
+  // delegation ship pointing at "#undefined".
   for (const [stepId, action] of Object.entries(BASICS_DELEGATED_ACTIONS)) {
-    ck(
-      `the ${stepId} action is an anchor to #${action.anchorId}`,
-      new RegExp(`<a[^>]*href="#${action.anchorId}"`).test(empty),
-    );
+    if (action.kind === "anchor") {
+      ck(
+        `the ${stepId} action is an anchor to #${action.anchorId}`,
+        new RegExp(`<a[^>]*href="#${action.anchorId}"`).test(empty),
+      );
+    } else {
+      ck(
+        `the ${stepId} action links to ${action.to}`,
+        new RegExp(`<a[^>]*href="${action.to}"`).test(empty),
+      );
+    }
   }
+  // The consolidation, stated where a holder reads it: this page shows the
+  // profession, does not own it, and does not make it verified.
+  ck(
+    "the card says where the profession is actually edited",
+    empty.includes(passportT("basics.editedInCareerProfile", "sv")),
+  );
   // A second employer field on this card is the regression, not the fix.
   ck(
     "the card holds no employer input of its own",
@@ -512,7 +544,9 @@ console.log("\nLANGUAGE -- both, and different from each other");
     "basics.notDeclared",
     "basics.editWorkCountry",
     "basics.editCurrentRole",
+    "basics.editProfession",
     "basics.editedBelow",
+    "basics.editedInCareerProfile",
     "basics.declaredOn",
     "basics.declareAgain",
     "basics.declarationNote",
