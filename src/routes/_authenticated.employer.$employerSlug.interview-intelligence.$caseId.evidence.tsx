@@ -89,7 +89,7 @@ const FINDING_LABEL: Record<string, TranslationKey> = {
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { t, lang } = useT();
+  const { t, tp, lang } = useT();
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
@@ -188,7 +188,10 @@ function Page() {
   if (!d) return shell(<State kind="loading" />);
 
   const question = d.questions[active] ?? d.questions[0] ?? null;
-  const notesFor = (id: string) => (d.session?.notes ?? []).filter((n) => n.questionId === id);
+  // A note with an empty body is a record of nothing, and rendering it as a
+  // blue card makes the screen look broken rather than empty.
+  const notesFor = (id: string) =>
+    (d.session?.notes ?? []).filter((n) => n.questionId === id && n.body.trim() !== "");
   const proposalsFor = (id: string) => d.proposals.filter((p) => p.questionId === id);
   const evidenceFor = (id: string) => d.evidence.filter((e) => e.questionId === id);
   const findingsFor = (id: string) =>
@@ -260,7 +263,7 @@ function Page() {
                     {qq.promptSv}
                   </span>
                   <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                    {confirmed} {t("iiu.rv.items")} · {stateLabel}
+                    {confirmed} {tp("iiu.rv.items", confirmed)} · {stateLabel}
                   </span>
                 </span>
               </button>
