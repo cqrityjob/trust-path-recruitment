@@ -13,6 +13,7 @@
 // and the candidate's own material.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -31,6 +32,7 @@ import {
   State,
   blockerMessage,
   interviewErrorMessage,
+  uiLabel,
   GovernedGuidance,
   ProviderModeChip,
   ProviderModeNote,
@@ -58,6 +60,13 @@ import {
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/report",
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
+
+const FINDING_LABEL: Record<string, TranslationKey> = {
+  gap: "iiu.find.gap",
+  unclear: "iiu.find.unclear",
+  contradiction: "iiu.find.contradiction",
+  verification: "iiu.find.verification",
+};
 
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
@@ -138,17 +147,23 @@ function Page() {
   const payload = (report?.payload ?? null) as null | Record<string, unknown>;
   const qual = quality.data?.quality ?? null;
 
-  // Header facts, taken from the record rather than invented. The interviewer's
-  // NAME is deliberately absent: the ledger stores an actor id and an actor
-  // kind, and a report that printed "Interviewer: —" would be worse than one
-  // that does not claim to know.
+  // Header facts, taken from the record rather than invented. The session
+  // itself carries when the conversation happened and who held it; the ledger
+  // is the fallback, because a fixture can be seeded without events. Neither
+  // field is printed unless the record actually holds it -- a report saying
+  // "Interviewer: —" claims to know something it does not.
   const unassessed = d.blockers
     .filter((b) => b.code === "QUESTION_NOT_ASSESSED")
     .map((b) => /\b(Q\d+)\b/.exec(b.message)?.[1])
     .filter((c): c is string => Boolean(c));
 
   const eventAt = (name: string) => d.events.find((e) => e.event === name)?.at ?? null;
-  const interviewDate = eventAt("interview_completed") ?? eventAt("interview_started");
+  const interviewDate =
+    d.session?.completedAt ??
+    d.session?.startedAt ??
+    eventAt("interview_completed") ??
+    eventAt("interview_started");
+  const interviewers = (d.session?.interviewerNames ?? "").trim();
 
   const questionByCode = new Map(d.questions.map((qq) => [qq.code, qq]));
   const requirementByCode = new Map(d.competencies.map((c) => [c.code, c]));
@@ -409,6 +424,9 @@ function Page() {
                 <Field label={t("iiu.rp.doc.date")}>
                   <ShortDate iso={interviewDate} />
                 </Field>
+                {interviewers !== "" && (
+                  <Field label={t("iiu.rp.doc.interviewer")}>{interviewers}</Field>
+                )}
                 <Field label={t("iiu.rp.doc.status")}>
                   {t("iiu.rp.final")}
                   {report ? ` · ${t("iiu.rp.doc.version")} ${report.versionNumber}` : ""}
@@ -536,7 +554,10 @@ function Page() {
               <ul className="space-y-2">
                 {followUp.map((f, i) => (
                   <li key={i} className="text-sm leading-relaxed">
-                    <Chip tone="attention">{String(f.kind)}</Chip>{" "}
+                    {/* The payload stores the enum. "contradiction" is a
+                        database value, not a word an employer reads in a
+                        document about a person. */}
+                    <Chip tone="attention">{uiLabel(FINDING_LABEL, String(f.kind), t)}</Chip>{" "}
                     <span className="text-foreground">{String(f.statement)}</span>
                   </li>
                 ))}

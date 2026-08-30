@@ -510,6 +510,9 @@ export interface CaseDetail {
     readonly id: string;
     readonly status: string;
     readonly peaceStage: PeaceStage;
+    readonly startedAt: string | null;
+    readonly completedAt: string | null;
+    readonly interviewerNames: string | null;
     readonly questions: readonly {
       readonly questionId: string;
       readonly state: string;
@@ -649,7 +652,7 @@ function fiveE(row: Record<string, unknown>): FiveE {
   return {
     e1Situation: text(row.e1_situation),
     e2OwnRole: text(row.e2_own_role),
-    e3ExactAction: text(row.e3_exact_action),
+    e3ExactAction: text(row.e3_action),
     e4Effect: text(row.e4_effect),
     e5Reflection: text(row.e5_reflection),
   };
@@ -746,21 +749,21 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .limit(1),
       db
         .from("scp_interview_sessions")
-        .select("id, status, peace_stage")
+        .select("id, status, peace_stage, started_at, completed_at, interviewer_names")
         .eq("case_id", caseId)
         .order("started_at", { ascending: false })
         .limit(1),
       db
         .from("scp_interview_evidence_proposals")
         .select(
-          "id, excerpt, question_id, review_state, extraction_confidence, relevance_rationale, uncertainty_note, prohibited_conclusion_note, note_id, e1_situation, e2_own_role, e3_exact_action, e4_effect, e5_reflection",
+          "id, excerpt, question_id, review_state, extraction_confidence, relevance_rationale, uncertainty_note, prohibited_conclusion_note, note_id, e1_situation, e2_own_role, e3_action, e4_effect, e5_reflection",
         )
         .eq("case_id", caseId)
         .order("created_at"),
       db
         .from("scp_interview_evidence")
         .select(
-          "id, excerpt, original_excerpt, question_id, origin, note_id, e1_situation, e2_own_role, e3_exact_action, e4_effect, e5_reflection",
+          "id, excerpt, original_excerpt, question_id, origin, note_id, e1_situation, e2_own_role, e3_action, e4_effect, e5_reflection",
         )
         .eq("case_id", caseId)
         .order("created_at"),
@@ -824,6 +827,26 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     ]);
 
     if (questionsRes.error) throw new Error(questionsRes.error.message);
+
+    // A failed read must not arrive as an empty list.
+    //
+    // These four selects asked for a column that does not exist -- the 5E
+    // structure is stored as e3_action and the query said e3_exact_action --
+    // so PostgREST refused both of them and `data` came back null. Every
+    // screen then rendered "no confirmed material yet" and "no suggestions",
+    // which on THIS product does not read as a broken query. It reads as a
+    // candidate who said nothing.
+    //
+    // Silence is the most expensive failure mode this domain has, so the reads
+    // whose emptiness carries meaning now raise instead of shrugging.
+    for (const [what, res] of [
+      ["evidence", evidenceRes],
+      ["proposals", proposalsRes],
+      ["findings", findingsRes],
+      ["assessments", assessmentsRes],
+    ] as const) {
+      if (res.error) throw new Error(`INTERVIEW_READ_FAILED (${what}): ${res.error.message}`);
+    }
 
     const sourceRows = (sourcesRes.data ?? []) as Array<Record<string, unknown>>;
     const passageRows = (passagesRes.data ?? []) as Array<{ id: string; source_id: string }>;
@@ -898,6 +921,14 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         id: sessionRow.id as string,
         status: sessionRow.status as string,
         peaceStage: sessionRow.peace_stage as PeaceStage,
+        // When the conversation happened and who held it. Both were already
+        // stored on the session; the report had no source for either and
+        // printed a dash where the interview date belongs.
+        startedAt: (sessionRow.started_at as string | null) ?? null,
+        completedAt: (sessionRow.completed_at as string | null) ?? null,
+        // A free-text field, not an array: scp_interview_sessions.interviewer_names
+        // is `text`, and scp_iv_start_session takes one string.
+        interviewerNames: (sessionRow.interviewer_names as string | null) ?? null,
         questions: ((sqRes.data ?? []) as Array<Record<string, unknown>>).map((s) => ({
           questionId: s.question_id as string,
           state: s.state as string,

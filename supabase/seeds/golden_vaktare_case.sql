@@ -214,7 +214,9 @@ BEGIN
     (id, case_id, plan_id, status, peace_stage, interviewer_names, started_at, completed_at, created_by)
   VALUES
     (_sess, _case, _plan, 'completed', 'evaluation',
-     ARRAY['Anna Berg'], now() - interval '2 hours', now() - interval '1 hour', _user)
+     -- interviewer_names is `text`, not text[] -- ARRAY[...] here stored the
+     -- literal {"Anna Berg"}, which is what the report header would print.
+     'Anna Berg', now() - interval '2 hours', now() - interval '1 hour', _user)
   ON CONFLICT (id) DO NOTHING;
 
   -- ---- the notes, one per question, each built for a purpose -------------
