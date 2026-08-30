@@ -88,7 +88,7 @@ export const CV = {
     "For you only, so you can tell your saved CVs apart.",
   ),
 
-  includeInsight: c("Inkludera min karriärutforskning", "Include my Career Discovery result"),
+  includeInsight: c("Inkludera min Karriäranalys", "Include my Career Analysis"),
   includeInsightHelp: c(
     "Visas som en karriärriktning, aldrig som en kompetens eller kvalifikation.",
     "Shown as a career direction, never as a competency or a qualification.",
@@ -137,13 +137,13 @@ export const CV = {
   editSummary: c("Sammanfattning", "Summary"),
   editBullets: c("Punkter", "Bullet points"),
   editHelp: c(
-    "Du redigerar hur det står — inte vad som står. Arbetsgivare, roller, datum och intyg kommer från din profil och ditt Säkerhetspass.",
+    "Du redigerar hur det står — inte vad som står. Arbetsgivare, roller, datum och intyg kommer från din profil och ditt Security Passport.",
     "You are editing how it reads — not what it says. Employers, roles, dates and credentials come from your profile and your Security Passport.",
   ),
-  editInProfile: c("Rätta uppgifter i yrkesprofilen", "Correct information in your Professional Profile"),
+  editInProfile: c("Rätta uppgifter i Min profil", "Correct information in My Profile"),
   factLocked: c(
-    "Källuppgift — redigeras i yrkesprofilen",
-    "Source information — edited in your Professional Profile",
+    "Källuppgift — redigeras i Min profil",
+    "Source information — edited in My Profile",
   ),
 
   /* -- regeneration ------------------------------------------------- */
@@ -197,7 +197,7 @@ export const CV_MISSING_FIELD: Readonly<Record<CvRequiredField, Copy>> = {
   ),
   location: c("Land", "Country"),
   professionalHistory: c(
-    "Minst en anställning eller utbildning i Säkerhetspasset",
+    "Minst en anställning eller utbildning i Security Passport",
     "At least one employment or education in the Security Passport",
   ),
 };

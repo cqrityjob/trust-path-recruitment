@@ -84,11 +84,11 @@ const COPY = {
     "Your professional title is not filled in yet",
   ),
   selfReported: c(
-    "Uppgifterna här är självrapporterade. Det som är verifierat visas i Säkerhetspasset.",
+    "Uppgifterna här är självrapporterade. Det som är verifierat visas i Security Passport.",
     "The information here is self-reported. What has been verified is shown in the Security Passport.",
   ),
   viewProfile: c("Visa profil", "View profile"),
-  viewCard: c("Visa karriärkort", "View Career Card"),
+  viewCard: c("Visa Career Card", "View Career Card"),
   experienceYears: c("{0} års erfarenhet", "{0} years of experience"),
 
   // ── The trust line ────────────────────────────────────────────────────
