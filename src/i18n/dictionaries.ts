@@ -725,6 +725,33 @@ export const dictionaries = {
     "careerDiscovery.report.v31.card.shared": "Delat.",
     "careerDiscovery.report.v31.card.savedFallback":
       "Bilden är sparad. Lägg till den i din Instagram- eller TikTok-story.",
+    // The desktop share panel (2026-08-29). Every string here is written to
+    // be true on the platform it is shown on: we say what WE do (save, copy,
+    // open LinkedIn with the link) and we say plainly what we do not do
+    // (attach the image to a LinkedIn post, post to Instagram or TikTok).
+    // Nothing here may grow into a promise the browser cannot keep.
+    "careerDiscovery.report.v31.card.share.panel": "Dela ditt kort",
+    "careerDiscovery.report.v31.card.share.panelHint":
+      "Spara eller kopiera bilden och lägg upp den där du vill.",
+    "careerDiscovery.report.v31.card.copyImage": "Kopiera bild",
+    "careerDiscovery.report.v31.card.copyLink": "Kopiera länk",
+    "careerDiscovery.report.v31.card.linkHint":
+      "Länken går till det öppna karriärtestet — aldrig till din privata rapport.",
+    "careerDiscovery.report.v31.card.linkedInHint":
+      "LinkedIn öppnas med länken. Bilden bifogas inte automatiskt — spara den och lägg till den i inlägget.",
+    "careerDiscovery.report.v31.card.appGuidance":
+      "Instagram och TikTok: spara bilden och dela den från appen.",
+    "careerDiscovery.report.v31.card.imageCopied":
+      "Bilden är kopierad. Klistra in den där du vill dela den.",
+    "careerDiscovery.report.v31.card.imageCopyFailed":
+      "Webbläsaren tillät inte att bilden kopierades. Spara den i stället.",
+    "careerDiscovery.report.v31.card.linkCopied": "Länken är kopierad.",
+    "careerDiscovery.report.v31.card.linkCopyFailed":
+      "Kunde inte kopiera länken. Markera och kopiera den nedan.",
+    "careerDiscovery.report.v31.card.linkedInOpened":
+      "LinkedIn öppnades i en ny flik. Bilden är inte bifogad — lägg till den du sparade.",
+    "careerDiscovery.report.v31.card.linkedInBlocked":
+      "Webbläsaren blockerade den nya fliken. Tillåt popup-fönster, eller kopiera länken och klistra in den på LinkedIn.",
     "careerDiscovery.report.v31.feedback.title": "Hjälp oss förbättra vägledningen",
     "careerDiscovery.report.v31.feedback.relevant":
       "Hur relevanta kändes karriärrekommendationerna? (1–5)",
@@ -2505,12 +2532,10 @@ export const dictionaries = {
       "Här får du veta vad yrkena inom säkerhetsbranschen faktiskt innebär, vad som krävs för att komma in i dem och vilket steg som är rimligt för dig härnäst.",
     "cc.hero.cta.test": "Starta karriärtestet — ca 5 min, inget konto",
     "cc.hero.cta.explore": "Utforska yrken",
-    "cc.hero.trust":
-      "Kostnadsfritt. Ingen bedömning av din kompetens eller anställningsbarhet.",
+    "cc.hero.trust": "Kostnadsfritt. Ingen bedömning av din kompetens eller anställningsbarhet.",
     "cc.hero.fact.guides": "färdiga yrkesguider",
     "cc.hero.fact.sources.title": "Källhänvisade och granskade",
-    "cc.hero.fact.sources.body":
-      "Varje guide anger sina källor och datumet den senast granskades.",
+    "cc.hero.fact.sources.body": "Varje guide anger sina källor och datumet den senast granskades.",
     "cc.hero.fact.market.title": "För svenska säkerhetsbranschen",
     "cc.hero.fact.market.body":
       "Reglering, krav och yrkesbenämningar beskrivs utifrån svenska förhållanden.",
@@ -2528,8 +2553,7 @@ export const dictionaries = {
       "Du kan yrket och vill se vilka roller som ligger ett eller två steg längre fram.",
     "cc.where.working.cta": "Se roller på nästa nivå",
     "cc.where.org.title": "Jag representerar en organisation",
-    "cc.where.org.body":
-      "Du ska rekrytera, bedöma eller utveckla personal med säkerhetsansvar.",
+    "cc.where.org.body": "Du ska rekrytera, bedöma eller utveckla personal med säkerhetsansvar.",
     "cc.where.org.cta": "Se hur ni kan bedöma säkerhetskompetens",
 
     // § 3 — Karriärtestet
@@ -2565,8 +2589,7 @@ export const dictionaries = {
     "cc.explore.clear_all": "Rensa alla",
     "cc.explore.clear_filters": "Rensa filter",
     "cc.explore.empty.title": "Inga yrken matchar just den kombinationen.",
-    "cc.explore.empty.body":
-      "Den närmaste sökningen som ger träffar är den här:",
+    "cc.explore.empty.body": "Den närmaste sökningen som ger träffar är den här:",
     "cc.explore.relax.family": "Visa alla yrkesfamiljer",
     "cc.explore.relax.level": "Visa alla nivåer",
     "cc.explore.relax.regulated": "Visa både reglerade och ej reglerade yrken",
@@ -5372,6 +5395,28 @@ export const dictionaries = {
     "careerDiscovery.report.v31.card.shared": "Shared.",
     "careerDiscovery.report.v31.card.savedFallback":
       "Image saved. Add it to your Instagram or TikTok story.",
+    "careerDiscovery.report.v31.card.share.panel": "Share your card",
+    "careerDiscovery.report.v31.card.share.panelHint":
+      "Save or copy the image and post it wherever you like.",
+    "careerDiscovery.report.v31.card.copyImage": "Copy image",
+    "careerDiscovery.report.v31.card.copyLink": "Copy link",
+    "careerDiscovery.report.v31.card.linkHint":
+      "The link goes to the open career test — never to your private report.",
+    "careerDiscovery.report.v31.card.linkedInHint":
+      "LinkedIn opens with the link. The image is not attached automatically — save it and add it to your post.",
+    "careerDiscovery.report.v31.card.appGuidance":
+      "Instagram and TikTok: save the image and share it from the app.",
+    "careerDiscovery.report.v31.card.imageCopied":
+      "Image copied. Paste it wherever you want to share it.",
+    "careerDiscovery.report.v31.card.imageCopyFailed":
+      "Your browser did not allow copying the image. Save it instead.",
+    "careerDiscovery.report.v31.card.linkCopied": "Link copied.",
+    "careerDiscovery.report.v31.card.linkCopyFailed":
+      "Couldn't copy the link. Select and copy it below.",
+    "careerDiscovery.report.v31.card.linkedInOpened":
+      "LinkedIn opened in a new tab. The image is not attached — add the one you saved.",
+    "careerDiscovery.report.v31.card.linkedInBlocked":
+      "Your browser blocked the new tab. Allow pop-ups, or copy the link and paste it into LinkedIn.",
     "careerDiscovery.report.v31.feedback.title": "Help us improve this guidance",
     "careerDiscovery.report.v31.feedback.relevant":
       "How relevant did the career recommendations feel? (1–5)",
@@ -7105,8 +7150,7 @@ export const dictionaries = {
       "Find out what the professions in the security industry actually involve, what it takes to get into them, and which step makes sense for you next.",
     "cc.hero.cta.test": "Start the career test — about 5 min, no account",
     "cc.hero.cta.explore": "Explore professions",
-    "cc.hero.trust":
-      "Free. Not an assessment of your competence or your employability.",
+    "cc.hero.trust": "Free. Not an assessment of your competence or your employability.",
     "cc.hero.fact.guides": "completed profession guides",
     "cc.hero.fact.sources.title": "Sourced and reviewed",
     "cc.hero.fact.sources.body":

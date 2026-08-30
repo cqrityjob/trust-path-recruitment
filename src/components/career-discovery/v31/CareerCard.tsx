@@ -559,6 +559,40 @@ export function measureCard(
 /** On-screen preview. Uses the page's own loaded fonts (unlike the exported
  *  PNG, which falls back to system sans-serif — a known limitation of
  *  SVG-to-canvas rasterisation without embedding the font file). */
+/** How much of the viewport's height the preview may occupy. Story is
+ *  1080x1920 — at the modal's full width it stands taller than the screen,
+ *  and the candidate scrolls past a card they cannot see whole. */
+const PREVIEW_MAX_VIEWPORT_HEIGHT = "44vh";
+/** The widest the preview ever gets, matching the modal's own measure. */
+const PREVIEW_MAX_WIDTH = "28rem";
+
+/**
+ * The card, scaled ENTIRE into whatever room the modal has.
+ *
+ * ── THE DEFECT THIS FIXES (2026-08-29, hosted UAT) ──────────────────────
+ *
+ * `renderCareerCardSvg` emits `width="1080" height="1920"` — correct and
+ * necessary for the export, which rasterises that markup at those exact
+ * pixels. Dropped into the DOM, though, those attributes are the SVG's
+ * intrinsic size: the element laid itself out 1080px wide inside a ~448px
+ * box, and the `overflow-hidden` that rounds the corners quietly cropped
+ * the rest. What the candidate saw was the left 40% of their own card, so a
+ * long Swedish title ("Säkerhetssamordnare", "Skyddsvakt/Ordningsvakt")
+ * ran off the right edge of the PREVIEW while being perfectly inside the
+ * exported PNG.
+ *
+ * The fix is CSS, not markup: the same string still goes to the canvas
+ * untouched (see CareerCardCreator's exportPng — one renderer, one call,
+ * shared by preview and export), and `svg { width:100%; height:100% }`
+ * overrides the presentation attributes for layout only. The viewBox and
+ * the default `preserveAspectRatio="xMidYMid meet"` then scale the whole
+ * canvas down and centre it, so nothing can be clipped at any size.
+ *
+ * The box itself is capped on BOTH axes: `max-width` clamps the wide
+ * formats, and a width ceiling derived from the aspect ratio
+ * (height x width/height) clamps the tall ones, which keeps the ratio exact
+ * rather than letterboxing inside an over-tall frame.
+ */
 export function CareerCardPreview({
   data,
   format,
@@ -570,12 +604,16 @@ export function CareerCardPreview({
 }) {
   const { width, height } = CARD_DIMENSIONS[format];
   const svg = renderCareerCardSvg(data, format, qrDataUrl);
+  const ratio = (width / height).toFixed(4);
   return (
     <div
       role="img"
       aria-label={cardAltText(data)}
-      className="mx-auto w-full max-w-md overflow-hidden rounded-xl border border-border shadow-sm"
-      style={{ aspectRatio: `${width} / ${height}` }}
+      className="mx-auto overflow-hidden rounded-xl border border-border shadow-sm [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
+      style={{
+        aspectRatio: `${width} / ${height}`,
+        width: `min(100%, ${PREVIEW_MAX_WIDTH}, ${ratio} * ${PREVIEW_MAX_VIEWPORT_HEIGHT})`,
+      }}
       // Trusted content: every dynamic value passed into renderCareerCardSvg
       // is escaped (see svg-text.ts) and nothing here is user-supplied markup.
       dangerouslySetInnerHTML={{ __html: svg }}

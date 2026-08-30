@@ -42,6 +42,11 @@ import {
   type CardDimensionScore,
   type CareerCardFormat,
 } from "../src/lib/career-discovery/v31/career-card";
+import {
+  linkedInShareUrl,
+  shareCapabilitiesFrom,
+  type ShareEnvironmentProbe,
+} from "../src/lib/career-discovery/v31/career-card-export";
 import { DIMENSION_IDS, DIMENSIONS } from "../src/lib/career-discovery/v31/dimensions";
 import { RECOMMENDATION_CONFIDENCE_LABEL } from "../src/lib/career-discovery/v31/profession-explanations";
 import type { RankedProfession } from "../src/lib/career-discovery/v31/professions";
@@ -398,10 +403,58 @@ ok(
   creator.includes("downloadBlob(") && creator.includes("share_unsupported"),
   "7.3 with a plain image download as the fallback where Web Share is unavailable",
 );
+// Until 2026-08-29 this read `!/linkedInShareUrl|instagram|tiktok/i` — no
+// mention of a network, anywhere. That kept the file honest by keeping it
+// silent, and silence is what shipped the defect: on desktop the only
+// control was "Dela", which opened the OS sheet and offered AirDrop. The
+// rule was never "never name a network"; it is "never claim something the
+// browser cannot do". So the guard now checks the claim itself.
 ok(
-  !/linkedInShareUrl|instagram|tiktok/i.test(creator),
-  "7.4 and no network-specific upload hacks",
+  !/instagram\.com|tiktok\.com|api\.linkedin\.com|platform\.linkedin\.com|\bin\.js\b/i.test(
+    creator,
+  ),
+  "7.4 no social deep links, APIs or SDK script tags — the panel adds no third-party surface",
 );
+ok(
+  (creator.match(/window\.open\(/g) ?? []).length === 1 &&
+    /window\.open\(linkedInShareUrl\(shareUrl\)/.test(creator),
+  "7.5 exactly one outbound hand-off, and it is LinkedIn's own share flow with our public URL",
+);
+ok(
+  linkedInShareUrl("https://cqrityjob.test/security-career-assessment") ===
+    "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fcqrityjob.test%2Fsecurity-career-assessment",
+  "7.6 that flow is the documented key-less share-offsite endpoint, URL-encoded",
+);
+ok(
+  !/[?&](title|summary|source|image|media|thumbnail)=/.test(
+    linkedInShareUrl("https://cqrityjob.test/x"),
+  ),
+  "7.7 and carries a url and nothing else — share-offsite has no image parameter to fill",
+);
+ok(
+  /\$\{K\}\.linkedInHint/.test(creator) && /\$\{K\}\.appGuidance/.test(creator),
+  "7.8 the modal renders the 'image is not attached' and 'save it and share from the app' lines",
+);
+for (const [label, needle] of [
+  ["sv", "bifogas inte automatiskt"],
+  ["en", "not attached automatically"],
+] as const) {
+  ok(
+    dictionaries.includes(needle),
+    `7.9 ${label} says plainly that LinkedIn does not receive the image`,
+  );
+}
+ok(
+  !/\bupload(ing|ed|s)?\b|\bpost(ing|s) (to|on) (LinkedIn|Instagram|TikTok)\b/i.test(creator),
+  "7.10 and nothing in the creator describes an upload it cannot perform",
+);
+{
+  const pkg = read("package.json");
+  ok(
+    !/"[^"]*(linkedin|instagram|tiktok|facebook|react-share|social-sdk)[^"]*"\s*:/i.test(pkg),
+    "7.11 no social-network SDK was added as a dependency to make any of this work",
+  );
+}
 {
   const alt = cardAltText(card);
   ok(alt.includes("Emma"), "7.5 alt text names the candidate when they chose to be named");
@@ -471,6 +524,21 @@ for (const key of [
   "careerDiscovery.report.v31.card.format.story",
   "careerDiscovery.report.v31.card.format.square",
   "careerDiscovery.report.v31.card.format.linkedin",
+  "careerDiscovery.report.v31.card.share.panel",
+  "careerDiscovery.report.v31.card.share.panelHint",
+  "careerDiscovery.report.v31.card.saveImage",
+  "careerDiscovery.report.v31.card.copyImage",
+  "careerDiscovery.report.v31.card.copyLink",
+  "careerDiscovery.report.v31.card.shareOnLinkedIn",
+  "careerDiscovery.report.v31.card.linkHint",
+  "careerDiscovery.report.v31.card.linkedInHint",
+  "careerDiscovery.report.v31.card.appGuidance",
+  "careerDiscovery.report.v31.card.imageCopied",
+  "careerDiscovery.report.v31.card.imageCopyFailed",
+  "careerDiscovery.report.v31.card.linkCopied",
+  "careerDiscovery.report.v31.card.linkCopyFailed",
+  "careerDiscovery.report.v31.card.linkedInOpened",
+  "careerDiscovery.report.v31.card.linkedInBlocked",
   "cd.public.buildingResult",
   "cd.public.resultUnavailable",
   "cd.public.retryResult",
@@ -498,6 +566,191 @@ for (const locale of ["sv", "en"] as const) {
     );
   }
 }
+
+// =========================================================================
+group("10 · Capability detection decides the share experience, and never lies");
+// =========================================================================
+
+// The decision table, driven through the platforms this actually ships on.
+// `hasShare` + `canShareFiles` are TRUE on desktop Chrome/macOS as well as
+// on a phone — that is the whole reason the hosted UAT defect existed — so
+// the matrix below is the assertion that capability alone is not what picks
+// the experience.
+const PROBE_BASE: ShareEnvironmentProbe = {
+  hasShare: false,
+  canShareFiles: false,
+  hasClipboardWrite: false,
+  hasClipboardItem: false,
+  hasClipboardWriteText: false,
+  isSecureContext: true,
+  isMobileLike: false,
+};
+
+const PLATFORMS: readonly { label: string; probe: ShareEnvironmentProbe }[] = [
+  {
+    label: "iPhone Safari",
+    probe: {
+      ...PROBE_BASE,
+      hasShare: true,
+      canShareFiles: true,
+      hasClipboardWrite: true,
+      hasClipboardItem: true,
+      hasClipboardWriteText: true,
+      isMobileLike: true,
+    },
+  },
+  {
+    label: "Android Chrome",
+    probe: {
+      ...PROBE_BASE,
+      hasShare: true,
+      canShareFiles: true,
+      hasClipboardWrite: true,
+      hasClipboardItem: true,
+      hasClipboardWriteText: true,
+      isMobileLike: true,
+    },
+  },
+  {
+    label: "desktop Chrome/macOS",
+    probe: {
+      ...PROBE_BASE,
+      // Present, and willing to take the file. This is the defect's shape.
+      hasShare: true,
+      canShareFiles: true,
+      hasClipboardWrite: true,
+      hasClipboardItem: true,
+      hasClipboardWriteText: true,
+    },
+  },
+  {
+    label: "desktop Firefox (no Web Share)",
+    probe: {
+      ...PROBE_BASE,
+      hasClipboardWrite: true,
+      hasClipboardItem: true,
+      hasClipboardWriteText: true,
+    },
+  },
+  {
+    label: "older Firefox (no image clipboard)",
+    probe: { ...PROBE_BASE, hasClipboardWriteText: true },
+  },
+  {
+    label: "insecure context (plain http)",
+    probe: {
+      ...PROBE_BASE,
+      hasClipboardWrite: true,
+      hasClipboardItem: true,
+      hasClipboardWriteText: true,
+      isSecureContext: false,
+    },
+  },
+  { label: "server render / no navigator", probe: PROBE_BASE },
+];
+
+for (const { label, probe } of PLATFORMS) {
+  const caps = shareCapabilitiesFrom(probe);
+  const mobile = probe.isMobileLike;
+  eq(
+    caps.canShareFiles,
+    mobile && probe.hasShare && probe.canShareFiles,
+    `10.1 ${label}: the OS share sheet is offered only on a phone that can take the file`,
+  );
+  ok(
+    !caps.canCopyImage || probe.isSecureContext,
+    `10.2 ${label}: no clipboard action is offered off a secure context`,
+  );
+  ok(!caps.canCopyLink || probe.isSecureContext, `10.3 ${label}: same for the link copy`);
+}
+
+eq(
+  shareCapabilitiesFrom(PLATFORMS[2].probe).canShareFiles,
+  false,
+  "10.4 desktop Chrome/macOS gets the CQrityjob panel, NOT the AirDrop sheet — the reported defect",
+);
+ok(
+  shareCapabilitiesFrom(PLATFORMS[0].probe).canShareFiles &&
+    shareCapabilitiesFrom(PLATFORMS[1].probe).canShareFiles,
+  "10.5 while iPhone and Android keep native file sharing",
+);
+{
+  const caps = shareCapabilitiesFrom(PLATFORMS[4].probe);
+  ok(
+    !caps.canCopyImage && caps.canCopyLink,
+    "10.6 a browser without an image clipboard is offered the link copy and not the image copy",
+  );
+}
+{
+  // The floor. Whatever the platform says, saving the PNG is always there:
+  // it is a plain object-URL download and needs no capability at all, which
+  // is why the creator renders it unconditionally.
+  ok(
+    /onClick=\{\(\) => void handleSave\(\)\}/.test(creator) &&
+      !/canShareFiles &&[\s\S]{0,200}handleSave/.test(creator),
+    "10.7 'Save image' is rendered unconditionally — every platform has one action that works",
+  );
+}
+ok(
+  /capabilities\?\.canCopyImage &&/.test(creator) &&
+    /capabilities\?\.canCopyLink &&/.test(creator) &&
+    /capabilities\?\.canShareFiles &&/.test(creator),
+  "10.8 every other action is gated on the detected capability, not assumed",
+);
+ok(
+  /setNotice\(\(copied \? `\$\{K\}\.imageCopied` : `\$\{K\}\.imageCopyFailed`\)/.test(creator) &&
+    /setNotice\(\(copied \? `\$\{K\}\.linkCopied` : `\$\{K\}\.linkCopyFailed`\)/.test(creator) &&
+    /setNotice\(\(opened \? `\$\{K\}\.linkedInOpened` : `\$\{K\}\.linkedInBlocked`\)/.test(creator),
+  "10.9 every action reports BOTH outcomes — a refused clipboard or a blocked pop-up is never silence",
+);
+ok(/role="status" aria-live="polite"/.test(creator), "10.10 and it is announced, not just drawn");
+
+// =========================================================================
+group("11 · The preview scales the whole card; the export keeps its pixels");
+// =========================================================================
+
+const cardComponent = read("src/components/career-discovery/v31/CareerCard.tsx");
+
+// The defect: renderCareerCardSvg emits width="1080" height="1920", which
+// is the SVG's intrinsic size once it is in the DOM. Inside a ~448px modal
+// with overflow-hidden, the browser laid it out at 1080px and cropped the
+// rest — so a long Swedish title ran off the right of the PREVIEW while
+// sitting well inside the exported PNG.
+ok(
+  /\[&>svg\]:h-full/.test(cardComponent) && /\[&>svg\]:w-full/.test(cardComponent),
+  "11.1 the preview overrides the SVG's intrinsic width/height in CSS, so it cannot lay out at 1080px",
+);
+ok(
+  /aspectRatio: `\$\{width\} \/ \$\{height\}`/.test(cardComponent),
+  "11.2 the preview box keeps the card's exact aspect ratio",
+);
+ok(
+  /min\(100%, \$\{PREVIEW_MAX_WIDTH\}, \$\{ratio\} \* \$\{PREVIEW_MAX_VIEWPORT_HEIGHT\}\)/.test(
+    cardComponent,
+  ),
+  "11.3 and is capped on BOTH axes — width for landscape, ratio-derived height for story",
+);
+ok(
+  /const ratio = \(width \/ height\)/.test(cardComponent),
+  "11.4 that height cap is derived from the format's own ratio, not a per-format magic number",
+);
+
+// The other half: none of the above may have touched what gets rasterised.
+for (const format of FORMATS) {
+  const { width, height } = CARD_DIMENSIONS[format];
+  const svg = renderCareerCardSvg(card, format, null);
+  ok(
+    svg.includes(`width="${width}" height="${height}"`) &&
+      svg.includes(`viewBox="0 0 ${width} ${height}"`),
+    `11.5 ${format}: the exported canvas is still ${width}x${height} — the preview fix changed no export pixel`,
+  );
+}
+eq(CARD_DIMENSIONS.story.width, 1080, "11.6 story is still 1080 wide");
+eq(CARD_DIMENSIONS.story.height, 1920, "11.7 story is still 1920 tall");
+eq(CARD_DIMENSIONS.square.width, 1080, "11.8 square is still 1080 wide");
+eq(CARD_DIMENSIONS.square.height, 1080, "11.9 square is still 1080 tall");
+eq(CARD_DIMENSIONS.linkedin.width, 1200, "11.10 linkedin is still 1200 wide");
+eq(CARD_DIMENSIONS.linkedin.height, 627, "11.11 linkedin is still 627 tall");
 
 // =========================================================================
 console.log("");
