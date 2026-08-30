@@ -44,6 +44,35 @@ export const dictionaries = {
     "home.pillar.hired.title": "Bli anställd",
     "home.pillar.hired.desc": "Möt arbetsgivare och uppdrag inom hela säkerhetsbranschen.",
 
+
+    // The account proposition (2026-08-30). The landing page described six
+    // capabilities and never said that ONE account is what holds them
+    // together -- a visitor could read the whole page and still believe
+    // CQrityjob was six systems. Placed before the two-paths split on
+    // purpose: the split is about audiences, and the account is what both
+    // audiences share.
+    "home.account.eyebrow": "Ett konto",
+    "home.account.title": "Din säkerhetskarriär. En yrkesidentitet.",
+    "home.account.subtitle":
+      "Du berättar om din yrkessituation en gång. Sedan används den av allt annat — och du väljer själv vad som delas.",
+    "home.account.item.profile.title": "Yrkesprofil",
+    "home.account.item.profile.desc":
+      "Din yrkesroll, erfarenhet och riktning. Ifylld en gång, återanvänd överallt.",
+    "home.account.item.discovery.title": "Karriärutforskning",
+    "home.account.item.discovery.desc":
+      "Var du står och vilka yrken inom säkerhet som passar dig.",
+    "home.account.item.card.title": "Karriärkort",
+    "home.account.item.card.desc": "Din yrkesidentitet som ett kort du kan dela.",
+    "home.account.item.passport.title": "Säkerhetspass",
+    "home.account.item.passport.desc":
+      "Skiljer på vad du uppger och vad en behörig granskare faktiskt har verifierat.",
+    "home.account.item.jobs.title": "Jobb och ansökningar",
+    "home.account.item.jobs.desc": "Sök och följ dina ansökningar under samma konto.",
+    "home.account.item.cv.title": "CV",
+    "home.account.item.cv.desc":
+      "Byggt av dina egna registrerade uppgifter. Ingenting hittas på.",
+    "home.account.note":
+      "Är du också rekryterare byter du till din organisation — utan en andra inloggning.",
     "home.paths.title": "Byggd för individer och organisationer",
     "home.paths.subtitle": "En plattform, två tydliga vägar. Välj den ingång som passar dig.",
     "home.paths.individuals.label": "För individer",
@@ -5203,6 +5232,30 @@ export const dictionaries = {
     "home.pillar.hired.desc":
       "Connect with employers and opportunities across the security industry.",
 
+
+    // The account proposition (2026-08-30). See the Swedish block above.
+    "home.account.eyebrow": "One account",
+    "home.account.title": "Your security career. One professional identity.",
+    "home.account.subtitle":
+      "You describe your professional situation once. Everything else then uses it — and you decide what is shared.",
+    "home.account.item.profile.title": "Professional profile",
+    "home.account.item.profile.desc":
+      "Your role, experience and direction. Filled in once, reused everywhere.",
+    "home.account.item.discovery.title": "Career Discovery",
+    "home.account.item.discovery.desc":
+      "Where you stand, and which security professions suit you.",
+    "home.account.item.card.title": "Career Card",
+    "home.account.item.card.desc": "Your professional identity as a card you can share.",
+    "home.account.item.passport.title": "Security Passport",
+    "home.account.item.passport.desc":
+      "Keeps what you state separate from what an authorised reviewer has actually verified.",
+    "home.account.item.jobs.title": "Jobs and applications",
+    "home.account.item.jobs.desc": "Search and track your applications under the same account.",
+    "home.account.item.cv.title": "CV",
+    "home.account.item.cv.desc":
+      "Built from your own recorded information. Nothing is invented.",
+    "home.account.note":
+      "If you are also a recruiter, switch to your organisation — without a second sign-in.",
     "home.paths.title": "Built for individuals and organizations",
     "home.paths.subtitle": "One platform, two clear paths. Pick the entry point that fits you.",
     "home.paths.individuals.label": "For individuals",

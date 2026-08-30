@@ -1,219 +1,236 @@
 {
   "states": {
-    "applied": "Applied on the hosted database. REQUIRES an evidenceSource naming how that was established -- a recorded appliedThroughLovable mapping, or a direct owner verification of the hosted schema. release-parity-check refuses an applied entry without one.",
-    "unverified": "No evidence either way in this repository. Must be confirmed by the owner before release; treated as NOT applied by the guard.",
+    "applied": "Applied on the hosted database. REQUIRES an evidenceSource naming how that was established -- a recorded appliedThroughLovable mapping, or a direct owner verification of the hosted schema. release-parity-check refuses an applied entry without one.", 
+    "unverified": "No evidence either way in this repository. Must be confirmed by the owner before release; treated as NOT applied by the guard.", 
     "pending": "Known NOT to be applied on the hosted database yet."
-  },
-  "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.",
+  }, 
+  "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
-      "file": "20260926090000_scp_interview_startable_contract.sql",
-      "hostedState": "applied",
+      "file": "20260926090000_scp_interview_startable_contract.sql", 
+      "hostedState": "applied", 
       "introduces": [
         {
-          "object": "scp_iv_case_start_basis",
+          "object": "scp_iv_case_start_basis", 
           "kind": "function"
-        },
+        }, 
         {
-          "object": "scp_iv_employer_can_start_interviews",
+          "object": "scp_iv_employer_can_start_interviews", 
           "kind": "function"
-        },
+        }, 
         {
-          "object": "scp_iv_startable_pack_versions",
-          "kind": "function"
-        }
-      ],
-      "note": "P0 from owner UAT: the new-interview selector and scp_iv_create_case answered different questions, so a pack could be offered and then refused. Introduces the single shared start contract both now call. Not applied hosted.",
-      "verify": "SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname IN ('scp_iv_case_start_basis','scp_iv_startable_pack_versions','scp_iv_employer_can_start_interviews');",
-      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
-    },
-    {
-      "file": "20260927090000_scp_interview_ai_gate_and_provenance.sql",
-      "hostedState": "applied",
-      "introduces": [
-        {
-          "table": "scp_interview_ai_runs",
-          "object": "model_confirmed_by_provider",
-          "kind": "column"
-        },
-        {
-          "object": "scp_iv_ai_real_model_permitted",
-          "kind": "function"
-        },
-        {
-          "object": "scp_iv_guard_ai_disabled",
-          "kind": "function"
-        },
-        {
-          "object": "scp_iv_record_manual_prep_plan",
+          "object": "scp_iv_startable_pack_versions", 
           "kind": "function"
         }
-      ],
-      "note": "Enforces scp_interview_ai_config.ai_enabled at the database boundary (run start, settlement and the table), separates the exact model id from the provider name in run provenance, and adds the manual preparation path so the structured interview stays reachable while AI is disabled. Does not enable AI. Not applied hosted.",
-      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_ai_runs' AND column_name='model_confirmed_by_provider';",
+      ], 
+      "note": "P0 from owner UAT: the new-interview selector and scp_iv_create_case answered different questions, so a pack could be offered and then refused. Introduces the single shared start contract both now call. Not applied hosted.", 
+      "verify": "SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname IN ('scp_iv_case_start_basis','scp_iv_startable_pack_versions','scp_iv_employer_can_start_interviews');", 
       "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
-    },
+    }, 
     {
-      "file": "20260928090000_scp_trust_stage_english_copy.sql",
-      "hostedState": "applied",
+      "file": "20260927090000_scp_interview_ai_gate_and_provenance.sql", 
+      "hostedState": "applied", 
       "introduces": [
         {
-          "table": "scp_trust_stages",
-          "object": "human_responsibility_en",
+          "table": "scp_interview_ai_runs", 
+          "object": "model_confirmed_by_provider", 
           "kind": "column"
-        },
+        }, 
         {
-          "table": "scp_trust_stage_prohibitions",
-          "object": "statement_en",
+          "object": "scp_iv_ai_real_model_permitted", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_guard_ai_disabled", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_record_manual_prep_plan", 
+          "kind": "function"
+        }
+      ], 
+      "note": "Enforces scp_interview_ai_config.ai_enabled at the database boundary (run start, settlement and the table), separates the exact model id from the provider name in run provenance, and adds the manual preparation path so the structured interview stays reachable while AI is disabled. Does not enable AI. Not applied hosted.", 
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_ai_runs' AND column_name='model_confirmed_by_provider';", 
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
+    }, 
+    {
+      "file": "20260928090000_scp_trust_stage_english_copy.sql", 
+      "hostedState": "applied", 
+      "introduces": [
+        {
+          "table": "scp_trust_stages", 
+          "object": "human_responsibility_en", 
+          "kind": "column"
+        }, 
+        {
+          "table": "scp_trust_stage_prohibitions", 
+          "object": "statement_en", 
           "kind": "column"
         }
-      ],
-      "note": "Translation only: adds English columns for the TRUST stage responsibility and the stage prohibitions, fills them for TRUST v1, and widens scp_trust_stage_for_case to carry both languages. No stage, permission, ordinal or claim changes; Swedish remains authoritative. Not applied hosted.",
-      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_trust_stages' AND column_name='human_responsibility_en';",
+      ], 
+      "note": "Translation only: adds English columns for the TRUST stage responsibility and the stage prohibitions, fills them for TRUST v1, and widens scp_trust_stage_for_case to carry both languages. No stage, permission, ordinal or claim changes; Swedish remains authoritative. Not applied hosted.", 
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_trust_stages' AND column_name='human_responsibility_en';", 
       "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
-    },
+    }, 
     {
-      "file": "20260929090000_scp_interview_english_guidance_copy.sql",
-      "hostedState": "applied",
+      "file": "20260929090000_scp_interview_english_guidance_copy.sql", 
+      "hostedState": "applied", 
       "introduces": [
         {
-          "table": "scp_interview_prohibited_areas",
-          "object": "statement_en",
+          "table": "scp_interview_prohibited_areas", 
+          "object": "statement_en", 
           "kind": "column"
-        },
+        }, 
         {
-          "table": "scp_interview_prep_plans",
-          "object": "ai_disclosure_en",
+          "table": "scp_interview_prep_plans", 
+          "object": "ai_disclosure_en", 
           "kind": "column"
         }
-      ],
-      "note": "Owner UAT finding B: translation only. Adds English for the 14 prohibited areas, 17 method practices, 39 evidence dimensions and the preparation plan's AI disclosure. Q1-Q8 and the approved probes are deliberately left untranslated and a self-check enforces that. Not applied hosted.",
-      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_prohibited_areas' AND column_name='statement_en';",
+      ], 
+      "note": "Owner UAT finding B: translation only. Adds English for the 14 prohibited areas, 17 method practices, 39 evidence dimensions and the preparation plan's AI disclosure. Q1-Q8 and the approved probes are deliberately left untranslated and a self-check enforces that. Not applied hosted.", 
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_prohibited_areas' AND column_name='statement_en';", 
       "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
-    },
+    }, 
     {
-      "file": "20260930090000_scp_interview_5e_evidence_structure.sql",
-      "hostedState": "applied",
+      "file": "20260930090000_scp_interview_5e_evidence_structure.sql", 
+      "hostedState": "applied", 
       "introduces": [
         {
-          "table": "scp_interview_evidence_proposals",
-          "object": "e1_situation",
+          "table": "scp_interview_evidence_proposals", 
+          "object": "e1_situation", 
           "kind": "column"
-        },
+        }, 
         {
-          "table": "scp_interview_evidence",
-          "object": "e1_situation",
+          "table": "scp_interview_evidence", 
+          "object": "e1_situation", 
           "kind": "column"
         }
-      ],
-      "note": "5E evidence structuring: ten nullable descriptive text columns (five on AI proposals, five on human-confirmed evidence) plus the two governed writers extended to carry them. No numeric completeness, score, total, weighting or threshold; a self-check enforces that every 5E column is nullable text and that nothing aggregates one. Not applied hosted.",
-      "verify": "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND column_name ~ '^e[1-5]_';",
+      ], 
+      "note": "5E evidence structuring: ten nullable descriptive text columns (five on AI proposals, five on human-confirmed evidence) plus the two governed writers extended to carry them. No numeric completeness, score, total, weighting or threshold; a self-check enforces that every 5E column is nullable text and that nothing aggregates one. Not applied hosted.", 
+      "verify": "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND column_name ~ '^e[1-5]_';", 
       "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
-    },
+    }, 
     {
-      "file": "20261001090000_scp_interview_rating_anchor_english_copy.sql",
-      "hostedState": "applied",
-      "introduces": [],
-      "note": "Translation only, and introduces no object: label_en and anchor_en already existed on scp_interview_rating_anchors and were empty, so nothing read them. Found by walking the interview screen in English -- the behavioural anchors rendered in Swedish, including level 0's sentence that it is not the same thing as low competence. Fills 5 level labels and 33 anchor descriptions, matched on the Swedish text so a reworded anchor stays untranslated and visible. No level, aggregation flag, safety flag or pack version changes; a self-check re-asserts five levels and that level 0 never counts toward aggregation. Not applied hosted.",
-      "verify": "SELECT count(*) FILTER (WHERE anchor_en IS NULL) FROM public.scp_interview_rating_anchors;",
+      "file": "20261001090000_scp_interview_rating_anchor_english_copy.sql", 
+      "hostedState": "applied", 
+      "introduces": [], 
+      "note": "Translation only, and introduces no object: label_en and anchor_en already existed on scp_interview_rating_anchors and were empty, so nothing read them. Found by walking the interview screen in English -- the behavioural anchors rendered in Swedish, including level 0's sentence that it is not the same thing as low competence. Fills 5 level labels and 33 anchor descriptions, matched on the Swedish text so a reworded anchor stays untranslated and visible. No level, aggregation flag, safety flag or pack version changes; a self-check re-asserts five levels and that level 0 never counts toward aggregation. Not applied hosted.", 
+      "verify": "SELECT count(*) FILTER (WHERE anchor_en IS NULL) FROM public.scp_interview_rating_anchors;", 
       "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
-    },
+    }, 
     {
-      "file": "20261002090000_scp_interview_conduct_layer.sql",
-      "hostedState": "applied",
+      "file": "20261002090000_scp_interview_conduct_layer.sql", 
+      "hostedState": "applied", 
       "introduces": [
         {
-          "table": "scp_interview_conduct_steps",
-          "object": "scp_interview_conduct_steps",
+          "table": "scp_interview_conduct_steps", 
+          "object": "scp_interview_conduct_steps", 
           "kind": "table"
-        },
+        }, 
         {
-          "table": "scp_interview_conduct_prohibitions",
-          "object": "scp_interview_conduct_prohibitions",
-          "kind": "table"
-        }
-      ],
-      "note": "The TRUST conduct layer for the live interview: six ordered conduct steps (invite, listen, reflect, clarify, substantiate, confirm) and eight named prohibited techniques, both bilingual and pinned to the TRUST method. Deterministic rows only -- the Understand stage still permits zero AI tasks and no stage binding or task permission changes. RLS: active employer members read, nobody but service_role writes; anon has no grant. Not applied hosted.",
-      "verify": "SELECT count(*) FROM public.scp_interview_conduct_steps;",
-      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
-    },
-    {
-      "file": "20261003090000_scp_interview_conduct_guidance.sql",
-      "hostedState": "applied",
-      "introduces": [
-        {
-          "table": "scp_interview_conduct_guidance",
-          "object": "scp_interview_conduct_guidance",
+          "table": "scp_interview_conduct_prohibitions", 
+          "object": "scp_interview_conduct_prohibitions", 
           "kind": "table"
         }
-      ],
-      "note": "Governed interviewer guidance for the TRUST stages either side of the live conversation: Target purpose and the five evidence classes, the Ready conduct plan and permitted neutral recall prompts, and the Trace self-review and closure guidance. Deterministic bilingual rows; no new methodology, no new stage, no AI task permission change, and no research claim registered. Not applied hosted.",
-      "verify": "SELECT count(DISTINCT surface) FROM public.scp_interview_conduct_guidance;",
+      ], 
+      "note": "The TRUST conduct layer for the live interview: six ordered conduct steps (invite, listen, reflect, clarify, substantiate, confirm) and eight named prohibited techniques, both bilingual and pinned to the TRUST method. Deterministic rows only -- the Understand stage still permits zero AI tasks and no stage binding or task permission changes. RLS: active employer members read, nobody but service_role writes; anon has no grant. Not applied hosted.", 
+      "verify": "SELECT count(*) FROM public.scp_interview_conduct_steps;", 
       "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
-    },
+    }, 
     {
-      "file": "20261004090000_cd_v31_funnel_events_career_center.sql",
-      "hostedState": "applied",
-      "introduces": [],
-      "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() with two additional allowed values, 'career_center_test_started' and 'career_filter_used'. Nothing renders differently before or after it runs; trackV31FunnelEvent is fire-and-forget and never throws to its caller. Applied through the official Supabase GitHub integration.",
-      "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';",
+      "file": "20261003090000_scp_interview_conduct_guidance.sql", 
+      "hostedState": "applied", 
+      "introduces": [
+        {
+          "table": "scp_interview_conduct_guidance", 
+          "object": "scp_interview_conduct_guidance", 
+          "kind": "table"
+        }
+      ], 
+      "note": "Governed interviewer guidance for the TRUST stages either side of the live conversation: Target purpose and the five evidence classes, the Ready conduct plan and permitted neutral recall prompts, and the Trace self-review and closure guidance. Deterministic bilingual rows; no new methodology, no new stage, no AI task permission change, and no research claim registered. Not applied hosted.", 
+      "verify": "SELECT count(DISTINCT surface) FROM public.scp_interview_conduct_guidance;", 
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
+    }, 
+    {
+      "file": "20261004090000_cd_v31_funnel_events_career_center.sql", 
+      "hostedState": "applied", 
+      "introduces": [], 
+      "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() with two additional allowed values, 'career_center_test_started' and 'career_filter_used'. Nothing renders differently before or after it runs; trackV31FunnelEvent is fire-and-forget and never throws to its caller. Applied through the official Supabase GitHub integration.", 
+      "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';", 
       "evidenceSource": "Official Supabase GitHub integration check run 99141209788 completed successfully against owner project wrygicdfxwjnrugduxnt for main merge ecbe91b18dbf9d95f8847f5a98cc34d921ef79ea on 2026-08-29. The merged migration keeps cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() aligned; clean replay, RLS, S2.16/S2.17 and rollback verification were green before merge."
-    },
+    }, 
     {
-      "file": "20261005090000_cd_v31_scoring_version_draft4_ranking.sql",
-      "hostedState": "pending",
-      "introduces": [],
-      "note": "Career Discovery SCORING_VERSION v3.1-draft-3 -> v3.1-draft-4 (Profession Recommendation Validation). Introduces no object: it copies the 164 existing cd_option_loadings rows under the new scoring_version and updates cd_definition_versions.scoring_version. MUST ship together with the code change that bumps version.ts, never separately in either direction -- cd_v31_validate_session_evidence compares cd_option_loadings.scoring_version against cd_definition_versions.scoring_version, so a code-only deploy breaks every save carrying a single_choice answer with CD_OPTION_NOT_IN_MATRIX (the incident 20260816160000 was written to fix), and a migration-only deploy makes the database stamp disagree with the payload constant. Verified locally against the 54322 stack: forward, rollback and re-apply all succeed, self-verification passes, and every draft-3 option id resolves under draft-4.",
-      "verify": "SELECT dv.scoring_version, (SELECT count(*) FROM cd_option_loadings ol WHERE ol.scoring_version = dv.scoring_version) FROM cd_definition_versions dv WHERE dv.definition_version = '2026-scd-v3.1.0';",
+      "file": "20261005090000_cd_v31_scoring_version_draft4_ranking.sql", 
+      "hostedState": "pending", 
+      "introduces": [], 
+      "note": "Career Discovery SCORING_VERSION v3.1-draft-3 -> v3.1-draft-4 (Profession Recommendation Validation). Introduces no object: it copies the 164 existing cd_option_loadings rows under the new scoring_version and updates cd_definition_versions.scoring_version. MUST ship together with the code change that bumps version.ts, never separately in either direction -- cd_v31_validate_session_evidence compares cd_option_loadings.scoring_version against cd_definition_versions.scoring_version, so a code-only deploy breaks every save carrying a single_choice answer with CD_OPTION_NOT_IN_MATRIX (the incident 20260816160000 was written to fix), and a migration-only deploy makes the database stamp disagree with the payload constant. Verified locally against the 54322 stack: forward, rollback and re-apply all succeed, self-verification passes, and every draft-3 option id resolves under draft-4.", 
+      "verify": "SELECT dv.scoring_version, (SELECT count(*) FROM cd_option_loadings ol WHERE ol.scoring_version = dv.scoring_version) FROM cd_definition_versions dv WHERE dv.definition_version = '2026-scd-v3.1.0';", 
       "rollback": "supabase/rollback/20261005090000_cd_v31_scoring_version_draft4_ranking_rollback.sql"
-    },
+    }, 
     {
-      "file": "20261006090000_cd_layer4_entry_gap_professions.sql",
-      "hostedState": "pending",
-      "introduces": [],
-      "note": "Four DRAFT entry-level Career Discovery professions (SP015 Butikskontrollant, SP016 Larmoperator, SP017 Sakerhetsreceptionist, SP018 Larminstallator) and their 68 calibration rows. Introduces no object: rows only, into the existing cd_professions and cd_profession_profiles. Every row is approved_for_ranking = false and review_state = 'ai_researched', and the TypeScript catalogue mirror is deliberately NOT updated, so no application code path can reference them -- fetchApprovedProfessionCatalog filters on the same flag and the approved catalogue stays at exactly 14. Safe to apply before, after or independently of the code. Awaiting owner/SME review before approval. Verified locally against the 54322 stack: forward, rollback and re-apply all succeed; self-verification confirms 17 calibration rows per profession, nothing approved for ranking, and no work-style dimension marked central.",
-      "verify": "SELECT profession_id, approved_for_ranking, review_state FROM cd_professions WHERE profession_id IN ('SP015','SP016','SP017','SP018');",
+      "file": "20261006090000_cd_layer4_entry_gap_professions.sql", 
+      "hostedState": "pending", 
+      "introduces": [], 
+      "note": "Four DRAFT entry-level Career Discovery professions (SP015 Butikskontrollant, SP016 Larmoperator, SP017 Sakerhetsreceptionist, SP018 Larminstallator) and their 68 calibration rows. Introduces no object: rows only, into the existing cd_professions and cd_profession_profiles. Every row is approved_for_ranking = false and review_state = 'ai_researched', and the TypeScript catalogue mirror is deliberately NOT updated, so no application code path can reference them -- fetchApprovedProfessionCatalog filters on the same flag and the approved catalogue stays at exactly 14. Safe to apply before, after or independently of the code. Awaiting owner/SME review before approval. Verified locally against the 54322 stack: forward, rollback and re-apply all succeed; self-verification confirms 17 calibration rows per profession, nothing approved for ranking, and no work-style dimension marked central.", 
+      "verify": "SELECT profession_id, approved_for_ranking, review_state FROM cd_professions WHERE profession_id IN ('SP015','SP016','SP017','SP018');", 
       "rollback": "supabase/rollback/20261006090000_cd_layer4_entry_gap_professions_rollback.sql"
-    },
+    }, 
     {
-      "file": "20261007090000_canonical_professional_profile.sql",
-      "hostedState": "pending",
+      "file": "20261007090000_canonical_professional_profile.sql", 
+      "hostedState": "pending", 
       "introduces": [
         {
-          "object": "security_career_profile_reconciliations",
+          "object": "security_career_profile_reconciliations", 
           "kind": "table"
-        },
+        }, 
         {
-          "object": "career_profile_mirror_profession_to_passport",
+          "object": "career_profile_mirror_profession_to_passport", 
           "kind": "function"
         }
-      ],
-      "note": "EXPAND half of a two-phase release; the application half is 20261008090000 + the Career Journey code, which must NOT merge before this is applied. Consolidates the self-reported current profession into ONE canonical home: before this, security_career_profiles.current_profession_slug and sp_passport_profiles.cig_profession_slug were both user-writable, from two surfaces, with nothing keeping them in step. Adds a reconciliation log with least-privilege grants: SELECT on the table, COLUMN-LEVEL UPDATE (resolved_at) only, no INSERT and no DELETE, and an explicit REVOKE first because Supabase default privileges would otherwise grant all of them including TRUNCATE. Column-level because RLS constrains rows, not columns: a table-wide UPDATE would let a holder rewrite the canonical/passport values, the resolution or created_at on their own audit row, reconciles the existing rows under a rule that never overwrites a user own answer, and installs three sync triggers: canonical -> Passport mirror, seed of a newly created Passport row, and a temporary COMPATIBILITY trigger carrying an old client Passport write back to the canonical row. BACKWARD COMPATIBLE BY CONSTRUCTION: no column is dropped, no constraint is added that an existing client could violate, and the current application keeps writing exactly what it writes today -- proven statement-for-statement in Group F of supabase/tests/canonical_professional_profile_test.sql (54 assertions, full replay green). Safe to merge and apply with current main still running.",
-      "verify": "SELECT s.user_id, s.current_profession_slug, p.cig_profession_slug FROM public.security_career_profiles s JOIN public.sp_passport_profiles p ON p.holder_user_id = s.user_id WHERE s.current_profession_slug IS DISTINCT FROM p.cig_profession_slug;",
+      ], 
+      "note": "EXPAND half of a two-phase release; the application half is 20261008090000 + the Career Journey code, which must NOT merge before this is applied. Consolidates the self-reported current profession into ONE canonical home: before this, security_career_profiles.current_profession_slug and sp_passport_profiles.cig_profession_slug were both user-writable, from two surfaces, with nothing keeping them in step. Adds a reconciliation log with least-privilege grants: SELECT on the table, COLUMN-LEVEL UPDATE (resolved_at) only, no INSERT and no DELETE, and an explicit REVOKE first because Supabase default privileges would otherwise grant all of them including TRUNCATE. Column-level because RLS constrains rows, not columns: a table-wide UPDATE would let a holder rewrite the canonical/passport values, the resolution or created_at on their own audit row, reconciles the existing rows under a rule that never overwrites a user own answer, and installs three sync triggers: canonical -> Passport mirror, seed of a newly created Passport row, and a temporary COMPATIBILITY trigger carrying an old client Passport write back to the canonical row. BACKWARD COMPATIBLE BY CONSTRUCTION: no column is dropped, no constraint is added that an existing client could violate, and the current application keeps writing exactly what it writes today -- proven statement-for-statement in Group F of supabase/tests/canonical_professional_profile_test.sql (54 assertions, full replay green). Safe to merge and apply with current main still running.", 
+      "verify": "SELECT s.user_id, s.current_profession_slug, p.cig_profession_slug FROM public.security_career_profiles s JOIN public.sp_passport_profiles p ON p.holder_user_id = s.user_id WHERE s.current_profession_slug IS DISTINCT FROM p.cig_profession_slug;", 
       "rollback": "supabase/rollback/20261007090000_canonical_professional_profile_rollback.sql"
-    },
+    }, 
     {
-      "file": "20261008090000_canonical_professional_profile_contract.sql",
-      "hostedState": "pending",
-      "introduces": [],
-      "note": "CONTRACT half. Drops the temporary compatibility trigger 20261007090000 installed, once no client writes sp_passport_profiles.cig_profession_slug any more. Introduces no object, so it creates no code dependency and never blocks an application release. ORDERING: ships in the SAME PR as the application phase and is applied AFTER it is live. That happens naturally -- Lovable rebuilds from origin/main at merge, so the new code is running before anyone can apply this file. Applying it early is premature rather than dangerous (old Passport writes would stop reaching the canonical row and the two copies could diverge again, exactly as they do on main today); applying it late costs nothing, because the trigger simply never fires. Verified locally against the 54322 stack: expand -> contract -> re-apply -> rollback all succeed, and the rollback reopens a WORKING compatibility path.",
-      "verify": "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = 'career_profile_adopt_passport_profession';",
+      "file": "20261008090000_canonical_professional_profile_contract.sql", 
+      "hostedState": "pending", 
+      "introduces": [], 
+      "note": "CONTRACT half. Drops the temporary compatibility trigger 20261007090000 installed, once no client writes sp_passport_profiles.cig_profession_slug any more. Introduces no object, so it creates no code dependency and never blocks an application release. ORDERING: ships in the SAME PR as the application phase and is applied AFTER it is live. That happens naturally -- Lovable rebuilds from origin/main at merge, so the new code is running before anyone can apply this file. Applying it early is premature rather than dangerous (old Passport writes would stop reaching the canonical row and the two copies could diverge again, exactly as they do on main today); applying it late costs nothing, because the trigger simply never fires. Verified locally against the 54322 stack: expand -> contract -> re-apply -> rollback all succeed, and the rollback reopens a WORKING compatibility path.", 
+      "verify": "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = 'career_profile_adopt_passport_profession';", 
       "rollback": "supabase/rollback/20261008090000_canonical_professional_profile_contract_rollback.sql"
-    },
+    }, 
     {
-      "file": "20261009090000_scp_interview_assessment_supersede_order.sql",
-      "hostedState": "pending",
-      "introduces": [],
-      "note": "Hosted owner UAT P0: a recruiter saved a rating and could not change it. Introduces no object. It makes scp_interview_assessments_superseded_by_fkey DEFERRABLE INITIALLY IMMEDIATE and replaces scp_iv_record_assessment so the original row is marked superseded BEFORE the replacement is inserted. The old order put two live rows in scp_interview_assessments_live_idx for the duration of the INSERT, so every attempt to supersede an assessment failed on a raw unique-violation -- the supersede path could never have worked, and had no test. Behaviour-only: no column, no table, no policy and no grant change; the unique index, the locked guard, the in-place-edit guard, the reattribution guard and the confirmed-evidence rule are all untouched, and the evidence rule is now asserted against the supersede path too (R2.17h). Order-independent with the UI: the server function has passed a supersede reason through since it was written, so this only makes a call that was already being made succeed. Verified locally against the 54322 stack -- full db-test.sh replay green, 85 Interview Intelligence runtime assertions including save -> reopen -> edit -> save.",
-      "verify": "SELECT condeferrable FROM pg_constraint WHERE conname = 'scp_interview_assessments_superseded_by_fkey';  -- expect t",
+      "file": "20261009090000_scp_interview_assessment_supersede_order.sql", 
+      "hostedState": "pending", 
+      "introduces": [], 
+      "note": "Hosted owner UAT P0: a recruiter saved a rating and could not change it. Introduces no object. It makes scp_interview_assessments_superseded_by_fkey DEFERRABLE INITIALLY IMMEDIATE and replaces scp_iv_record_assessment so the original row is marked superseded BEFORE the replacement is inserted. The old order put two live rows in scp_interview_assessments_live_idx for the duration of the INSERT, so every attempt to supersede an assessment failed on a raw unique-violation -- the supersede path could never have worked, and had no test. Behaviour-only: no column, no table, no policy and no grant change; the unique index, the locked guard, the in-place-edit guard, the reattribution guard and the confirmed-evidence rule are all untouched, and the evidence rule is now asserted against the supersede path too (R2.17h). Order-independent with the UI: the server function has passed a supersede reason through since it was written, so this only makes a call that was already being made succeed. Verified locally against the 54322 stack -- full db-test.sh replay green, 85 Interview Intelligence runtime assertions including save -> reopen -> edit -> save.", 
+      "verify": "SELECT condeferrable FROM pg_constraint WHERE conname = 'scp_interview_assessments_superseded_by_fkey';  -- expect t", 
       "rollback": "supabase/rollback/20261009090000_scp_interview_assessment_supersede_order_rollback.sql"
+    }, 
+    {
+      "file": "20261010090000_cv_documents.sql", 
+      "hostedState": "pending", 
+      "rollback": "supabase/rollback/20261010090000_cv_documents_rollback.sql", 
+      "verify": "SELECT relrowsecurity FROM pg_class WHERE oid = 'public.cv_documents'::regclass;  -- expect t. Then: SELECT policyname, cmd FROM pg_policies WHERE tablename='cv_documents';  -- expect exactly own cv select/insert/update/delete. Then: SELECT grantee, privilege_type FROM information_schema.role_table_grants WHERE table_name='cv_documents';  -- expect NO row for anon.", 
+      "introduces": [
+        {
+          "kind": "table", 
+          "object": "cv_documents"
+        }, 
+        {
+          "kind": "index", 
+          "object": "cv_documents_owner_recent_idx"
+        }
+      ], 
+      "note": "SCHEMA HALF of the AI CV. Private, owner-only storage for saved CV documents: presentation over facts that stay in security_career_profiles, sp_experience_periods, sp_claims and profiles, plus a snapshot of those facts so a saved CV does not silently change when the profile does. NO application code references cv_documents in this release -- that is the schema-first release contract working as designed, and schema-first-release-check asserts it. The save/load code becomes merge-eligible once this is recorded applied. Owner-only RLS with four separate policies (WITH CHECK on insert and update, so a row cannot be created for or reassigned to another person); privileges REVOKEd from PUBLIC/anon/authenticated first and re-granted to authenticated only, because Supabase default privileges otherwise ship anon INSERT/DELETE/TRUNCATE on any new table; anon gets nothing. No share token, no public column, no recipient table: a CV carries employment history and credentials and needs its own access model rather than the Career Card's. Writes no assertion_level, lifecycle_state, verified_at or verified_by_user_id -- it can create no verification. Verified locally: full db-test.sh replay green against the 54322 stack, including the 24 cv_documents assertions in supabase/tests/cv_documents_privacy_test.sql."
     }
-  ],
-  "policyVersion": 2,
-  "activeDirectory": "supabase/migrations",
+  ], 
+  "policyVersion": 2, 
+  "activeDirectory": "supabase/migrations", 
   "evidenceBaseline": {
-    "source": "Official Supabase GitHub integration on owner project wrygicdfxwjnrugduxnt",
-    "note": "Fresh empty-project bootstrap from canonical GitHub main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 completed successfully on 2026-08-28 (GitHub check run 98963493163). Direct hosted-ledger verification found exactly 225 active canonical migrations, first 20260716153446 and last 20260925090000. Future migrations above this version remain pending until the official integration applies them and release evidence is recorded.",
+    "source": "Official Supabase GitHub integration on owner project wrygicdfxwjnrugduxnt", 
+    "note": "Fresh empty-project bootstrap from canonical GitHub main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 completed successfully on 2026-08-28 (GitHub check run 98963493163). Direct hosted-ledger verification found exactly 225 active canonical migrations, first 20260716153446 and last 20260925090000. Future migrations above this version remain pending until the official integration applies them and release evidence is recorded.", 
     "throughVersion": "20260925090000"
   }
 }

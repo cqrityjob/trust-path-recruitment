@@ -14,6 +14,8 @@ import {
   ClipboardCheck,
   BarChart3,
   Info,
+  IdCard,
+  FileText,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
@@ -212,6 +214,69 @@ function Index() {
             </div>
           ))}
         </div>
+      </Section>
+
+      {/* ── One account ────────────────────────────────────────────────
+
+          The page described six capabilities and never said what holds
+          them together. A visitor could read all of it and still believe
+          CQrityjob is six systems, which is a description of the
+          software's internal boundaries -- and those are not the user's
+          to learn.
+
+          Placed BEFORE the two-paths split on purpose: the split is about
+          audiences, and the account is the thing both audiences share.
+
+          It is also the one place on the marketing site that states the
+          Passport boundary in the visitor's own terms -- what you say
+          versus what somebody checked -- because that distinction is the
+          product, and burying it inside a signed-in surface would mean
+          only people who already trust us ever read it. */}
+      <Section bordered>
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+            {t("home.account.eyebrow")}
+          </p>
+          <h2
+            className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {t("home.account.title")}
+          </h2>
+          <p className="mt-4 text-muted-foreground">{t("home.account.subtitle")}</p>
+        </div>
+
+        <ul className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+          {(
+            [
+              [Compass, "home.account.item.profile.title", "home.account.item.profile.desc"],
+              [TrendingUp, "home.account.item.discovery.title", "home.account.item.discovery.desc"],
+              [IdCard, "home.account.item.card.title", "home.account.item.card.desc"],
+              [ShieldCheck, "home.account.item.passport.title", "home.account.item.passport.desc"],
+              [Briefcase, "home.account.item.jobs.title", "home.account.item.jobs.desc"],
+              [FileText, "home.account.item.cv.title", "home.account.item.cv.desc"],
+            ] as const
+          ).map(([Icon, titleKey, descKey]) => (
+            <li key={titleKey} className="bg-background p-6 md:p-8">
+              <Icon className="h-5 w-5 text-accent" strokeWidth={1.5} aria-hidden="true" />
+              <h3 className="mt-4 text-base font-semibold tracking-tight text-foreground">
+                {t(titleKey)}
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t(descKey)}</p>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-10 flex flex-wrap items-center gap-4">
+          <PrimaryLink to="/signup">
+            {t("nav.createAccount")}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </PrimaryLink>
+          <PrimaryLink to="/login" variant="ghost">
+            {t("nav.signin")}
+          </PrimaryLink>
+        </div>
+        <p className="mt-6 max-w-2xl text-sm text-muted-foreground">{t("home.account.note")}</p>
       </Section>
 
       {/* Two paths */}
