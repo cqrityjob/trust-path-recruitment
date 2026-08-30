@@ -1275,6 +1275,196 @@ const REPORT =
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* 21 · The Review -> Assessment workflow, after hosted owner UAT       */
+/* ------------------------------------------------------------------ */
+
+// Every assertion here is a defect the owner met on the hosted database, in
+// the order they met it. The governance rule underneath is NOT one of them and
+// is asserted separately below: no confirmed evidence, no substantive level.
+
+{
+  const assess = read(ASSESS);
+  const review = read(REVIEW);
+  const panel =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.panel.tsx";
+  const panelSrc = read(panel);
+
+  // --- A · a blocked question is never a dead end ------------------------
+  ok(
+    assess.includes('t("iiu.as2.blocked.title")') && assess.includes('t("iiu.as2.blocked.cta")'),
+    "a question with no confirmed material must say so and offer a way to fix it",
+  );
+  ok(
+    /search=\{\{\s*q:\s*qq\.code\s*\}\}/.test(assess),
+    "the blocked-question CTA must deep-link to THAT question in review, not to the top of it",
+  );
+  ok(
+    /validateSearch/.test(assess) && /validateSearch/.test(review),
+    "both screens must accept the question search param the round trip rides on",
+  );
+  ok(
+    /search=\{\{\s*q:\s*question\.code\s*\}\}/.test(review),
+    "review must offer a route back to the SAME assessment question",
+  );
+  ok(
+    assess.includes("sessionStorage"),
+    "a half-written assessment must survive the trip to review and back",
+  );
+
+  // --- B · confirming material must not mean retyping it -----------------
+  ok(
+    review.includes('t("iiu.rv.use.note")') && /noteId:\s*n\.id/.test(review),
+    "an interview note must be confirmable as material in one action, carrying its provenance",
+  );
+  ok(
+    /_note_id:\s*data\.noteId/.test(runtimeFns),
+    "authorEvidence must pass the note id through; the column and the RPC parameter both exist",
+  );
+  // The three kinds must stay three kinds. Confirming a note must not edit it.
+  ok(
+    !/scp_interview_session_notes/.test(
+      runtimeFns.slice(
+        runtimeFns.indexOf("export const authorEvidence"),
+        runtimeFns.indexOf("export const recordAssessment"),
+      ),
+    ),
+    "confirming material must not touch the note — a note, confirmed material and an assessment are three different claims",
+  );
+
+  // --- C/D · the scale a recruiter reads --------------------------------
+  ok(
+    assess.includes('t("iiu.as2.q")'),
+    "the scale must ask what the RESPONSE demonstrated, not present bare levels",
+  );
+  for (const level of [0, 1, 2, 3, 4]) {
+    ok(
+      dictionaryRaw.includes(`"iiu.as2.lvl.${level}"`) &&
+        dictionaryRaw.includes(`"iiu.as2.lvl.${level}.body"`),
+      `level ${level} needs a recruiter-facing name and a behavioural description`,
+    );
+  }
+  // Level 0 is an evidence state. It must never be drawn as the bottom of the
+  // performance run, and must never be describable as failure.
+  ok(
+    assess.includes('t("iiu.as2.group.demonstrated")') &&
+      assess.includes('t("iiu.as2.group.assessable")'),
+    "level 0 must sit in its own group, apart from the levels 1-4",
+  );
+  ok(
+    assess.includes('t("iiu.as2.zero.apart")'),
+    "the screen must say that level 0 judges the material, not the person",
+  );
+  ok(
+    /"iiu\.as2\.lvl\.0":\s*"Går inte att bedöma"/.test(dictionaryRaw) &&
+      /"iiu\.as2\.lvl\.0":\s*"Cannot be assessed"/.test(dictionaryRaw),
+    "and it must read as 'cannot be assessed' in both locales",
+  );
+  // The pinned pack wording is what the assessment is recorded against, so it
+  // stays reachable. It lives inside scp_interview_pack_content_hash(), which
+  // every case pins -- rewriting it in a migration would invalidate the hash on
+  // every existing case, which is why the recruiter copy is a UI layer.
+  ok(
+    assess.includes('t("iiu.as2.anchor.governed")') && /a\.anchorEn : a\.anchorSv/.test(assess),
+    "the pinned pack anchor must stay visible as what is actually recorded",
+  );
+  const FAIL_WORDS = [/\bunderkänd\b/i, /\bgodkänd\b/i, /\bfail(ed|ure)?\b/i, /\bpass(ed)?\b/i];
+  for (const [key, value] of [
+    ...[
+      ...dictionaryRaw.matchAll(
+        /^\s{4}"(iiu\.as2\.lvl\.[0-9](?:\.body)?)":\s*\n?\s*"((?:[^"\\]|\\.)*)"/gm,
+      ),
+    ].map((m) => [m[1], m[2]] as const),
+  ]) {
+    ok(
+      !FAIL_WORDS.some((re) => re.test(value)),
+      `${key} uses pass/fail language — the scale describes a response, not a verdict`,
+    );
+  }
+
+  // --- E · editable until the record is released -------------------------
+  ok(
+    assess.includes('t("iiu.as2.edit")') && /supersedeReason:/.test(assess),
+    "a recorded assessment must be reopenable, and the change must carry its documented reason",
+  );
+  ok(
+    /supersedeReason:\s*z\.string\(\)/.test(runtimeFns),
+    "recordAssessment must accept a supersede reason",
+  );
+  ok(
+    assess.includes('t("iiu.as2.locked")') && /d\.report\?\.status === "final"/.test(assess),
+    "and it must stop being editable once the report is released",
+  );
+
+  // --- F · joint review is a thing two or more people do -----------------
+  ok(
+    /"iiu\.pl\.title":\s*"Sambedömning"/.test(dictionaryRaw) &&
+      /"iiu\.pl\.title":\s*"Joint review"/.test(dictionaryRaw),
+    "the feature is called Sambedömning / Joint review",
+  );
+  ok(!/Panelgranskning/.test(dictionaryRaw), "no surface may still say Panelgranskning");
+  ok(
+    /jointReviewRelevant/.test(review) && /members\.length \?\? 0\) >= 2/.test(review),
+    "the journey must offer joint review only when two or more assessors exist",
+  );
+  ok(
+    panelSrc.includes('t("iiu.jr.how")') && panelSrc.includes('t("iiu.jr.single.title")'),
+    "the panel screen must explain independent assessment, and say plainly when it does not apply",
+  );
+
+  // --- G · a recruiter must know WHY a question is blocked ---------------
+  ok(
+    assess.includes('t("iiu.as2.withmaterial")') &&
+      assess.includes('t("iiu.as2.blockedcount")') &&
+      assess.includes('t("iiu.as2.blockedlist")'),
+    "progress must separate assessed, has-material and blocked-by-missing-material",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 22 · The governance rule the UX fix must not have weakened          */
+/* ------------------------------------------------------------------ */
+
+// No confirmed evidence, no substantive level. It is enforced in the database
+// and the screen must keep telling the truth about it: the levels above 0 are
+// disabled, and no code path submits one from a question with no material.
+{
+  const assess = read(ASSESS);
+  ok(
+    /const locked = level > 0 && blocked;/.test(assess),
+    "levels above 0 must be disabled while a question has no confirmed material",
+  );
+  ok(
+    /const blocked = evidence\.length === 0;/.test(assess),
+    "and 'blocked' must mean exactly 'this question has no confirmed evidence'",
+  );
+  // The database is the enforcement. If the guard ever stops raising, the UI
+  // being tidy would not save it.
+  const runtimeSql = read("supabase/migrations/20260920090000_scp_interview_runtime.sql");
+  const supersedeSql = read(
+    "supabase/migrations/20261009090000_scp_interview_assessment_supersede_order.sql",
+  );
+  ok(
+    /SCP_IV_NO_CONFIRMED_EVIDENCE:/.test(runtimeSql) &&
+      /SCP_IV_NO_CONFIRMED_EVIDENCE:/.test(supersedeSql),
+    "the confirmed-evidence rule must survive the rewrite of scp_iv_record_assessment",
+  );
+  // And it must be checked BEFORE the supersede branch, or a documented change
+  // of mind becomes the way around it.
+  const fn = supersedeSql.slice(
+    supersedeSql.indexOf("CREATE OR REPLACE FUNCTION public.scp_iv_record_assessment"),
+  );
+  ok(
+    fn.indexOf("SCP_IV_NO_CONFIRMED_EVIDENCE:") > 0 &&
+      fn.indexOf("SCP_IV_NO_CONFIRMED_EVIDENCE:") < fn.indexOf("SCP_IV_SUPERSEDE_REASON_REQUIRED:"),
+    "the evidence rule must be checked before the supersede branch, not after it",
+  );
+  ok(
+    /R2\.17h/.test(read("supabase/tests/scp_interview_runtime_test.sql")),
+    "and a test must prove superseding cannot reach a substantive level without material",
+  );
+}
+
 console.log(`\n  assertions passed: ${passes}`);
 if (failures > 0) {
   console.error(`\ninterview-ux-contract-check FAILED (${failures} issue(s))`);
