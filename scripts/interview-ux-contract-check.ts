@@ -344,6 +344,13 @@ const SWEDISH_WORDS = new RegExp(
     "|\\b[A-ZÅÄÖ][a-zåäö]{3,}(ens|arens|erna|orna)\\b",
     // "AI:s", "AI:ts" -- the Swedish genitive colon form
     "|\\bAI:[a-zåäö]{1,2}\\b",
+    // Owner review round 2 found "Processkvalitet" and "Verifieringar kvar"
+    // still hardcoded. Neither has a Swedish glyph and neither ends in the
+    // definite forms above, so both walked past every rule here. These two
+    // endings are high precision: English forms the same nouns as
+    // "verifications" and "quality", never as -ingar or kvalitet.
+    "|\\b[A-ZÅÄÖa-zåäö]{2,}(ingar|ingarna|ningen|heten)\\b",
+    "|\\b[A-ZÅÄÖa-zåäö]*kvalitet[a-zåäö]*\\b",
   ].join(""),
 );
 
@@ -941,6 +948,83 @@ for (const file of [
     ok(
       !normal.includes(term),
       `the normal report view exposes ${term} — that belongs under audit details`,
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 18 · No hash in the report body, no Swedish left in the component    */
+/* ------------------------------------------------------------------ */
+
+// Owner review found two things this file should have been catching. The
+// report body rendered the PACK content hash inside the locked-report block,
+// above the candidate's own content, and section 17's guard missed it because
+// it searched for the camelCase `packContentHash` while the frozen payload is
+// read with the snake_case key it was stored under.
+{
+  const RP =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx";
+  const rp = read(RP);
+  const auditAt = rp.indexOf('aria-labelledby="s-audit"');
+  const normal = rp.slice(0, auditAt);
+  for (const term of ["pack_content_hash", "content_hash", "contentHash", "packContentHash"]) {
+    ok(
+      !normal.includes(term),
+      `the report body renders ${term} — a checksum is an integrity fact for an auditor, not report content`,
+    );
+  }
+  // And it must still exist somewhere, because moving provenance out of sight
+  // is not the same as deleting it.
+  ok(
+    rp.slice(auditAt).includes("pack_content_hash"),
+    "the pack content hash vanished entirely — it belongs under traceability, not nowhere",
+  );
+}
+
+// Every recruiter-facing Interview Intelligence surface, swept for Swedish
+// left in the component rather than in the dictionary. Section 8 checked this
+// per-file against a list; this checks the whole set by shape, so a file added
+// later is covered without anyone remembering to add it.
+{
+  const SURFACES = [
+    ...["prepare", "interview", "evidence", "summary", "report", "panel", "index"].map(
+      (r) =>
+        `src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.${r}.tsx`,
+    ),
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.index.tsx",
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.new.tsx",
+    "src/components/employer/interview/InterviewUi.tsx",
+  ];
+  // A JSX text node, a string attribute or a braced literal containing a
+  // Swedish glyph, that is not already a t(...) call.
+  // Reuse customerFacingSwedish rather than a second detector.
+  //
+  // I wrote a glyph-based one here and it failed its own negative control:
+  // "Processkvalitet" and "Verifieringar kvar" are Swedish and contain no
+  // å, ä or ö, so a glyph test says they are fine. That is the exact trap this
+  // file already learned once -- which is why customerFacingSwedish matches
+  // Swedish MORPHOLOGY and a word list, not just the three extra letters.
+  //
+  // Two detectors would have drifted apart. There is now one.
+  for (const file of SURFACES) {
+    let body: string;
+    try {
+      body = read(file);
+    } catch {
+      continue; // a route that does not exist is not a localisation failure
+    }
+    // codeLines blanks comments, so a Swedish word explaining WHY a label
+    // changed does not read as the label itself. Without it this guard fires
+    // on its own commentary.
+    const offending = codeLines(body)
+      .map((line, i) => ({ line, n: i + 1 }))
+      .filter(({ line }) => customerFacingSwedish(line) && !line.includes("{t("));
+    ok(
+      offending.length === 0,
+      `${file} still holds Swedish in the component at line(s) ${offending
+        .slice(0, 3)
+        .map((o) => o.n)
+        .join(", ")} — customer copy belongs in the dictionary`,
     );
   }
 }

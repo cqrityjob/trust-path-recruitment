@@ -305,20 +305,18 @@ function Page() {
             </Panel>
           </div>
 
+          {/* Which role pack this report was written against -- a fact an
+              employer can use. The pack's content hash used to sit beside it
+              and does not belong here: it is the checksum proving the pack
+              text was not altered, which is an integrity question for an
+              auditor, not something a hiring manager reads. It moved to the
+              traceability section, unchanged. */}
           <div className="mt-4 rounded-lg border border-border p-4">
             <h3 className="text-sm font-semibold text-foreground">{t("iiu.rp.locked")}</h3>
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs uppercase text-muted-foreground">{t("iiu.rp.rollpaket")}</dt>
                 <dd className="text-foreground">{d.packName}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase text-muted-foreground">{t("iiu.rp.packhash")}</dt>
-                <dd>
-                  <code className="font-mono text-xs">
-                    {String((payload.pinned as Record<string, unknown>)?.pack_content_hash ?? "—")}
-                  </code>
-                </dd>
               </div>
             </dl>
           </div>
@@ -357,7 +355,7 @@ function Page() {
                             {String(e.excerpt)}
                             {e.was_corrected === true && (
                               <span className="ml-2 text-xs text-muted-foreground">
-                                (korrigerad av granskare)
+                                {t("iiu.rp.correctedbyreviewer")}
                               </span>
                             )}
                           </li>
@@ -426,7 +424,7 @@ function Page() {
       {qual && (
         <section className="mt-10 max-w-4xl" aria-labelledby="s-quality">
           <h2 id="s-quality" className="text-lg font-semibold text-foreground">
-            Processkvalitet
+            {t("iiu.rp.quality.title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("iiu.rp.quality.note")}</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -453,14 +451,14 @@ function Page() {
               tone="attention"
             />
             <Metric
-              label="Verifieringar kvar"
+              label={t("iiu.rp.m.verifications")}
               value={qual.verifications_outstanding}
               tone={qual.verifications_outstanding > 0 ? "attention" : "neutral"}
             />
             <Metric label={t("iiu.rp.m.assessors")} value={qual.assessors_involved} />
             <Metric
-              label="Intervjuaren reflekterade"
-              value={qual.interviewer_reflected ? "Ja" : "Nej"}
+              label={t("iiu.rp.m.reflected")}
+              value={qual.interviewer_reflected ? t("iiu.rp.yes") : t("iiu.rp.no")}
             />
           </div>
         </section>
@@ -485,6 +483,17 @@ function Page() {
             <code className="font-mono text-[11px]">{report.contentHash.slice(0, 16)}</code>
           </p>
         )}
+        {/* The pack the report was pinned to, by checksum. Nothing is removed
+            from the record -- this reads the same frozen payload it always
+            did, from where an auditor looks for it. */}
+        {isFinal && payload?.pinned ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("iiu.rp.packhash")}:{" "}
+            <code className="font-mono text-[11px]">
+              {String((payload.pinned as Record<string, unknown>)?.pack_content_hash ?? "—")}
+            </code>
+          </p>
+        ) : null}
         {d.events.length === 0 ? (
           <div className="mt-3">
             <State kind="empty">{t("iiu.rp.nohistory")}</State>
@@ -502,10 +511,10 @@ function Page() {
                     {t("iiu.rp.actor")}
                   </th>
                   <th scope="col" className="px-4 py-2">
-                    Orsak
+                    {t("iiu.rp.reason")}
                   </th>
                   <th scope="col" className="px-4 py-2">
-                    Tid
+                    {t("iiu.rp.time")}
                   </th>
                 </tr>
               </thead>
