@@ -351,6 +351,103 @@ SELECT pg_temp.ok(
 
 RESET ROLE;
 
-DO $$ BEGIN RAISE NOTICE 'GROUP G — done'; END $$;
+-- ═════════════════════════════════════════════════════════════════════════
+DO $$ BEGIN RAISE NOTICE 'GROUP G — applying does not disclose a CV'; END $$;
+-- ═════════════════════════════════════════════════════════════════════════
+--
+-- The specific thing a candidate would most reasonably fear once CVs are
+-- stored: that applying to a company hands that company a browsable copy of
+-- every CV they own.
+--
+-- It does not, and the reason is structural rather than a policy somebody
+-- remembered to leave out. cv_documents has ONE read policy and its
+-- predicate is `auth.uid() = owner_user_id`. There is no employer branch, no
+-- membership branch, no "applied to us" branch and no admin branch, so there
+-- is no condition under which a recruiter's SELECT can match a row.
+--
+-- A recruiter who needs a candidate's material receives it through the
+-- application's own disclosure machinery, which records who saw what. This
+-- group exists so that a future release which adds a second, quieter route
+-- has to delete an assertion to do it.
+
+-- Group F revoked this recruiter's membership, and the groups share one
+-- transaction. Restore it first: this group is about what an ACTIVE
+-- recruiter with an application in front of them can reach, which is a
+-- different question from the one Group F answered.
+UPDATE public.employer_memberships
+   SET status = 'active', removed_at = NULL
+ WHERE user_id = 'cf000003-0000-0000-0000-000000000003';
+
+-- Created as a draft, then self-published through the real lifecycle.
+--
+-- The advert has to be open, because job_applications refuses an
+-- application to a job that is not. Going through the lifecycle rather than
+-- around it also keeps the fixture honest: `published_at` is
+-- moderation-owned and is stamped by the jobs trigger itself, so it is
+-- deliberately NOT set here -- setting it is what the guard refuses.
+INSERT INTO public.jobs
+  (id, slug, short_id, employer_id, title_sv, application_method, status)
+VALUES ('dddd0001-0000-0000-0000-000000000001', 'cvtest-vaktare', 'CVT001',
+        'ef000001-0000-0000-0000-000000000001', 'Väktare', 'internal', 'draft');
+
+UPDATE public.jobs
+   SET status = 'published',
+       expires_at = now() + interval '30 days'
+ WHERE id = 'dddd0001-0000-0000-0000-000000000001';
+
+INSERT INTO public.job_applications
+  (job_id, employer_id, applicant_user_id, status, consent_given_at)
+VALUES ('dddd0001-0000-0000-0000-000000000001',
+        'ef000001-0000-0000-0000-000000000001',
+        'cf000001-0000-0000-0000-000000000001',
+        'submitted', now());
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'cf000003-0000-0000-0000-000000000003', true);
+
+-- The recruiter genuinely can see the application. This assertion exists so
+-- that the next one means something: it establishes that the fixture is
+-- real and the recruiter's own reads work.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.job_applications
+    WHERE employer_id = 'ef000001-0000-0000-0000-000000000001') = 1,
+  'G1 a recruiter can read an application made to their own organisation');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cv_documents) = 0,
+  'G2 and still reads no CV belonging to that applicant');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cv_documents
+    WHERE owner_user_id = 'cf000001-0000-0000-0000-000000000001') = 0,
+  'G3 not even when naming the applicant directly');
+
+-- Nor may they write one into existence on somebody else's behalf.
+SELECT pg_temp.must_fail(
+  $$INSERT INTO public.cv_documents (owner_user_id, title)
+    VALUES ('cf000001-0000-0000-0000-000000000001', 'recruiter-planted')$$,
+  'row-level security',
+  'G4 nor create a CV owned by the applicant');
+
+RESET ROLE;
+
+-- The policy set itself: no branch exists that could ever admit a
+-- recruiter. Asserted on the predicate text, because a policy that GAINS an
+-- employer branch is exactly the change this group must fail on.
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM pg_policies
+     WHERE schemaname = 'public' AND tablename = 'cv_documents'
+       AND (coalesce(qual, '') || coalesce(with_check, '')) ~
+           '(employer|membership|has_employer_role|is_platform_admin|application)'),
+  'G5 no cv_documents policy mentions employers, membership, admin or applications');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'cv_documents'
+      AND coalesce(qual, '') LIKE '%owner_user_id%') = 3,
+  'G6 all three readable/writable-row policies key on owner_user_id alone');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP H — done'; END $$;
 
 ROLLBACK;

@@ -52,6 +52,10 @@ export type ActionKind =
   | "take_career_discovery"
   | "create_career_card"
   | "create_cv"
+  /** They already have one. Distinct from `create_cv` because telling
+   *  somebody to create a thing they have is the kind of small inaccuracy
+   *  that makes a home page feel like it is not looking at your account. */
+  | "open_cv"
   | "explore_jobs";
 
 export type ActionPriority = 1 | 2 | 3 | 4 | 5;
@@ -85,8 +89,26 @@ export interface NextBestActions {
  * because "whichever the sort happened to put first" is not a product
  * decision anybody made.
  */
+/**
+ * Signals that live outside the identity read model.
+ *
+ * `savedCvCount` is deliberately NOT folded into `ProfessionalIdentityV1`.
+ * The identity seam is read by the personal home in EVERY release, while
+ * `cv_documents` only exists once its migration is applied -- putting the
+ * count in the seam would make the whole identity layer depend on a table
+ * that may not be there yet, which is the exact failure the schema-first
+ * release contract exists to prevent. So it arrives as an optional extra
+ * signal, and everything behaves exactly as before when it is absent.
+ */
+export interface NextBestActionSignals {
+  /** How many CVs this person has saved. Undefined means "not known here",
+   *  which is what a release without CV persistence honestly reports. */
+  readonly savedCvCount?: number;
+}
+
 export function computeNextBestActions(
   identity: ProfessionalIdentityV1,
+  signals: NextBestActionSignals = {},
 ): NextBestActions {
   const actions: NextBestAction[] = [];
   const add = (
@@ -159,8 +181,14 @@ export function computeNextBestActions(
 
   // Only offered when the facts are actually there. A CV invitation to
   // somebody with no history is an invitation to an error message.
+  //
+  // And once they HAVE one, the invitation changes rather than repeating
+  // itself: "create your CV" on the home page of somebody who created one
+  // last week is the product not looking at their account.
   if (computeCvReadiness(identity).state === "ready") {
-    add("create_cv", 5, "/my-career/cv");
+    const saved = signals.savedCvCount ?? 0;
+    if (saved > 0) add("open_cv", 5, "/my-career/cv", saved);
+    else add("create_cv", 5, "/my-career/cv");
   }
 
   if (workload.applicationCount === 0) {

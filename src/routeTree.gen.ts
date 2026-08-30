@@ -92,6 +92,7 @@ import { Route as AuthenticatedAdminAssessmentsRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminApplicationsRouteImport } from './routes/_authenticated.admin.applications'
 import { Route as AuthenticatedAcademyAttemptIdRouteImport } from './routes/_authenticated.academy.$attemptId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AuthenticatedMyCareerCvIndexRouteImport } from './routes/_authenticated.my-career.cv.index'
 import { Route as AuthenticatedEmployerEmployerSlugIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.index'
 import { Route as AuthenticatedAdminWorkforceIndexRouteImport } from './routes/_authenticated.admin.workforce.index'
 import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated.admin.users.index'
@@ -106,6 +107,8 @@ import { Route as AuthenticatedSecurityCareerAssessmentReportSnapshotIdRouteImpo
 import { Route as AuthenticatedPassportCredentialsNewRouteImport } from './routes/_authenticated.passport.credentials.new'
 import { Route as AuthenticatedMyCareerReportsRunIdRouteImport } from './routes/_authenticated.my-career.reports.$runId'
 import { Route as AuthenticatedMyCareerInterviewsCaseIdRouteImport } from './routes/_authenticated.my-career.interviews.$caseId'
+import { Route as AuthenticatedMyCareerCvNewRouteImport } from './routes/_authenticated.my-career.cv.new'
+import { Route as AuthenticatedMyCareerCvCvIdRouteImport } from './routes/_authenticated.my-career.cv.$cvId'
 import { Route as AuthenticatedEmployerEmployerSlugSitesRouteImport } from './routes/_authenticated.employer.$employerSlug.sites'
 import { Route as AuthenticatedEmployerEmployerSlugSettingsRouteImport } from './routes/_authenticated.employer.$employerSlug.settings'
 import { Route as AuthenticatedEmployerEmployerSlugReportsRouteImport } from './routes/_authenticated.employer.$employerSlug.reports'
@@ -618,6 +621,12 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedMyCareerCvIndexRoute =
+  AuthenticatedMyCareerCvIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedMyCareerCvRoute,
+  } as any)
 const AuthenticatedEmployerEmployerSlugIndexRoute =
   AuthenticatedEmployerEmployerSlugIndexRouteImport.update({
     id: '/',
@@ -701,6 +710,18 @@ const AuthenticatedMyCareerInterviewsCaseIdRoute =
     id: '/interviews/$caseId',
     path: '/interviews/$caseId',
     getParentRoute: () => AuthenticatedMyCareerRoute,
+  } as any)
+const AuthenticatedMyCareerCvNewRoute =
+  AuthenticatedMyCareerCvNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedMyCareerCvRoute,
+  } as any)
+const AuthenticatedMyCareerCvCvIdRoute =
+  AuthenticatedMyCareerCvCvIdRouteImport.update({
+    id: '/$cvId',
+    path: '/$cvId',
+    getParentRoute: () => AuthenticatedMyCareerCvRoute,
   } as any)
 const AuthenticatedEmployerEmployerSlugSitesRoute =
   AuthenticatedEmployerEmployerSlugSitesRouteImport.update({
@@ -1150,7 +1171,7 @@ export interface FileRoutesByFullPath {
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/my-career/career-card': typeof AuthenticatedMyCareerCareerCardRoute
-  '/my-career/cv': typeof AuthenticatedMyCareerCvRoute
+  '/my-career/cv': typeof AuthenticatedMyCareerCvRouteWithChildren
   '/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
   '/passport/information': typeof AuthenticatedPassportInformationRoute
@@ -1188,6 +1209,8 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/reports': typeof AuthenticatedEmployerEmployerSlugReportsRoute
   '/employer/$employerSlug/settings': typeof AuthenticatedEmployerEmployerSlugSettingsRoute
   '/employer/$employerSlug/sites': typeof AuthenticatedEmployerEmployerSlugSitesRoute
+  '/my-career/cv/$cvId': typeof AuthenticatedMyCareerCvCvIdRoute
+  '/my-career/cv/new': typeof AuthenticatedMyCareerCvNewRoute
   '/my-career/interviews/$caseId': typeof AuthenticatedMyCareerInterviewsCaseIdRoute
   '/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
@@ -1202,6 +1225,7 @@ export interface FileRoutesByFullPath {
   '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/admin/workforce/': typeof AuthenticatedAdminWorkforceIndexRoute
   '/employer/$employerSlug/': typeof AuthenticatedEmployerEmployerSlugIndexRoute
+  '/my-career/cv/': typeof AuthenticatedMyCareerCvIndexRoute
   '/academy/training/$assignmentId/$moduleVersionId': typeof AuthenticatedAcademyTrainingAssignmentIdModuleVersionIdRoute
   '/employer/$employerSlug/applications/$applicationId': typeof AuthenticatedEmployerEmployerSlugApplicationsApplicationIdRoute
   '/employer/$employerSlug/assessments/$assessmentSlug': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute
@@ -1289,7 +1313,6 @@ export interface FileRoutesByTo {
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/my-career/career-card': typeof AuthenticatedMyCareerCareerCardRoute
-  '/my-career/cv': typeof AuthenticatedMyCareerCvRoute
   '/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
   '/passport/information': typeof AuthenticatedPassportInformationRoute
@@ -1325,6 +1348,8 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug/reports': typeof AuthenticatedEmployerEmployerSlugReportsRoute
   '/employer/$employerSlug/settings': typeof AuthenticatedEmployerEmployerSlugSettingsRoute
   '/employer/$employerSlug/sites': typeof AuthenticatedEmployerEmployerSlugSitesRoute
+  '/my-career/cv/$cvId': typeof AuthenticatedMyCareerCvCvIdRoute
+  '/my-career/cv/new': typeof AuthenticatedMyCareerCvNewRoute
   '/my-career/interviews/$caseId': typeof AuthenticatedMyCareerInterviewsCaseIdRoute
   '/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
@@ -1339,6 +1364,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/admin/workforce': typeof AuthenticatedAdminWorkforceIndexRoute
   '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugIndexRoute
+  '/my-career/cv': typeof AuthenticatedMyCareerCvIndexRoute
   '/academy/training/$assignmentId/$moduleVersionId': typeof AuthenticatedAcademyTrainingAssignmentIdModuleVersionIdRoute
   '/employer/$employerSlug/applications/$applicationId': typeof AuthenticatedEmployerEmployerSlugApplicationsApplicationIdRoute
   '/employer/$employerSlug/assessments/$assessmentSlug': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute
@@ -1444,7 +1470,7 @@ export interface FileRoutesById {
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/_authenticated/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/_authenticated/my-career/career-card': typeof AuthenticatedMyCareerCareerCardRoute
-  '/_authenticated/my-career/cv': typeof AuthenticatedMyCareerCvRoute
+  '/_authenticated/my-career/cv': typeof AuthenticatedMyCareerCvRouteWithChildren
   '/_authenticated/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/_authenticated/passport/card': typeof AuthenticatedPassportCardRoute
   '/_authenticated/passport/information': typeof AuthenticatedPassportInformationRoute
@@ -1482,6 +1508,8 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/reports': typeof AuthenticatedEmployerEmployerSlugReportsRoute
   '/_authenticated/employer/$employerSlug/settings': typeof AuthenticatedEmployerEmployerSlugSettingsRoute
   '/_authenticated/employer/$employerSlug/sites': typeof AuthenticatedEmployerEmployerSlugSitesRoute
+  '/_authenticated/my-career/cv/$cvId': typeof AuthenticatedMyCareerCvCvIdRoute
+  '/_authenticated/my-career/cv/new': typeof AuthenticatedMyCareerCvNewRoute
   '/_authenticated/my-career/interviews/$caseId': typeof AuthenticatedMyCareerInterviewsCaseIdRoute
   '/_authenticated/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/_authenticated/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
@@ -1496,6 +1524,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/admin/workforce/': typeof AuthenticatedAdminWorkforceIndexRoute
   '/_authenticated/employer/$employerSlug/': typeof AuthenticatedEmployerEmployerSlugIndexRoute
+  '/_authenticated/my-career/cv/': typeof AuthenticatedMyCareerCvIndexRoute
   '/_authenticated/academy/training/$assignmentId/$moduleVersionId': typeof AuthenticatedAcademyTrainingAssignmentIdModuleVersionIdRoute
   '/_authenticated/employer/$employerSlug/applications/$applicationId': typeof AuthenticatedEmployerEmployerSlugApplicationsApplicationIdRoute
   '/_authenticated/employer/$employerSlug/assessments/$assessmentSlug': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute
@@ -1639,6 +1668,8 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/reports'
     | '/employer/$employerSlug/settings'
     | '/employer/$employerSlug/sites'
+    | '/my-career/cv/$cvId'
+    | '/my-career/cv/new'
     | '/my-career/interviews/$caseId'
     | '/my-career/reports/$runId'
     | '/passport/credentials/new'
@@ -1653,6 +1684,7 @@ export interface FileRouteTypes {
     | '/admin/users/'
     | '/admin/workforce/'
     | '/employer/$employerSlug/'
+    | '/my-career/cv/'
     | '/academy/training/$assignmentId/$moduleVersionId'
     | '/employer/$employerSlug/applications/$applicationId'
     | '/employer/$employerSlug/assessments/$assessmentSlug'
@@ -1740,7 +1772,6 @@ export interface FileRouteTypes {
     | '/journey/$targetId'
     | '/my-career/applications'
     | '/my-career/career-card'
-    | '/my-career/cv'
     | '/my-career/profile'
     | '/passport/card'
     | '/passport/information'
@@ -1776,6 +1807,8 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/reports'
     | '/employer/$employerSlug/settings'
     | '/employer/$employerSlug/sites'
+    | '/my-career/cv/$cvId'
+    | '/my-career/cv/new'
     | '/my-career/interviews/$caseId'
     | '/my-career/reports/$runId'
     | '/passport/credentials/new'
@@ -1790,6 +1823,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/workforce'
     | '/employer/$employerSlug'
+    | '/my-career/cv'
     | '/academy/training/$assignmentId/$moduleVersionId'
     | '/employer/$employerSlug/applications/$applicationId'
     | '/employer/$employerSlug/assessments/$assessmentSlug'
@@ -1932,6 +1966,8 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/reports'
     | '/_authenticated/employer/$employerSlug/settings'
     | '/_authenticated/employer/$employerSlug/sites'
+    | '/_authenticated/my-career/cv/$cvId'
+    | '/_authenticated/my-career/cv/new'
     | '/_authenticated/my-career/interviews/$caseId'
     | '/_authenticated/my-career/reports/$runId'
     | '/_authenticated/passport/credentials/new'
@@ -1946,6 +1982,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users/'
     | '/_authenticated/admin/workforce/'
     | '/_authenticated/employer/$employerSlug/'
+    | '/_authenticated/my-career/cv/'
     | '/_authenticated/academy/training/$assignmentId/$moduleVersionId'
     | '/_authenticated/employer/$employerSlug/applications/$applicationId'
     | '/_authenticated/employer/$employerSlug/assessments/$assessmentSlug'
@@ -2599,6 +2636,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/my-career/cv/': {
+      id: '/_authenticated/my-career/cv/'
+      path: '/'
+      fullPath: '/my-career/cv/'
+      preLoaderRoute: typeof AuthenticatedMyCareerCvIndexRouteImport
+      parentRoute: typeof AuthenticatedMyCareerCvRoute
+    }
     '/_authenticated/employer/$employerSlug/': {
       id: '/_authenticated/employer/$employerSlug/'
       path: '/'
@@ -2696,6 +2740,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/my-career/interviews/$caseId'
       preLoaderRoute: typeof AuthenticatedMyCareerInterviewsCaseIdRouteImport
       parentRoute: typeof AuthenticatedMyCareerRoute
+    }
+    '/_authenticated/my-career/cv/new': {
+      id: '/_authenticated/my-career/cv/new'
+      path: '/new'
+      fullPath: '/my-career/cv/new'
+      preLoaderRoute: typeof AuthenticatedMyCareerCvNewRouteImport
+      parentRoute: typeof AuthenticatedMyCareerCvRoute
+    }
+    '/_authenticated/my-career/cv/$cvId': {
+      id: '/_authenticated/my-career/cv/$cvId'
+      path: '/$cvId'
+      fullPath: '/my-career/cv/$cvId'
+      preLoaderRoute: typeof AuthenticatedMyCareerCvCvIdRouteImport
+      parentRoute: typeof AuthenticatedMyCareerCvRoute
     }
     '/_authenticated/employer/$employerSlug/sites': {
       id: '/_authenticated/employer/$employerSlug/sites'
@@ -3501,10 +3559,28 @@ const AuthenticatedJourneyRouteChildren: AuthenticatedJourneyRouteChildren = {
 const AuthenticatedJourneyRouteWithChildren =
   AuthenticatedJourneyRoute._addFileChildren(AuthenticatedJourneyRouteChildren)
 
+interface AuthenticatedMyCareerCvRouteChildren {
+  AuthenticatedMyCareerCvCvIdRoute: typeof AuthenticatedMyCareerCvCvIdRoute
+  AuthenticatedMyCareerCvNewRoute: typeof AuthenticatedMyCareerCvNewRoute
+  AuthenticatedMyCareerCvIndexRoute: typeof AuthenticatedMyCareerCvIndexRoute
+}
+
+const AuthenticatedMyCareerCvRouteChildren: AuthenticatedMyCareerCvRouteChildren =
+  {
+    AuthenticatedMyCareerCvCvIdRoute: AuthenticatedMyCareerCvCvIdRoute,
+    AuthenticatedMyCareerCvNewRoute: AuthenticatedMyCareerCvNewRoute,
+    AuthenticatedMyCareerCvIndexRoute: AuthenticatedMyCareerCvIndexRoute,
+  }
+
+const AuthenticatedMyCareerCvRouteWithChildren =
+  AuthenticatedMyCareerCvRoute._addFileChildren(
+    AuthenticatedMyCareerCvRouteChildren,
+  )
+
 interface AuthenticatedMyCareerRouteChildren {
   AuthenticatedMyCareerApplicationsRoute: typeof AuthenticatedMyCareerApplicationsRoute
   AuthenticatedMyCareerCareerCardRoute: typeof AuthenticatedMyCareerCareerCardRoute
-  AuthenticatedMyCareerCvRoute: typeof AuthenticatedMyCareerCvRoute
+  AuthenticatedMyCareerCvRoute: typeof AuthenticatedMyCareerCvRouteWithChildren
   AuthenticatedMyCareerProfileRoute: typeof AuthenticatedMyCareerProfileRoute
   AuthenticatedMyCareerIndexRoute: typeof AuthenticatedMyCareerIndexRoute
   AuthenticatedMyCareerInterviewsCaseIdRoute: typeof AuthenticatedMyCareerInterviewsCaseIdRoute
@@ -3515,7 +3591,7 @@ const AuthenticatedMyCareerRouteChildren: AuthenticatedMyCareerRouteChildren = {
   AuthenticatedMyCareerApplicationsRoute:
     AuthenticatedMyCareerApplicationsRoute,
   AuthenticatedMyCareerCareerCardRoute: AuthenticatedMyCareerCareerCardRoute,
-  AuthenticatedMyCareerCvRoute: AuthenticatedMyCareerCvRoute,
+  AuthenticatedMyCareerCvRoute: AuthenticatedMyCareerCvRouteWithChildren,
   AuthenticatedMyCareerProfileRoute: AuthenticatedMyCareerProfileRoute,
   AuthenticatedMyCareerIndexRoute: AuthenticatedMyCareerIndexRoute,
   AuthenticatedMyCareerInterviewsCaseIdRoute:
