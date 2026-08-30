@@ -1,0 +1,55 @@
+name: Fix Release B CI guard
+
+on:
+  push:
+    branches:
+      - claude/cqrityjob-cv-persistence-release-b
+    paths:
+      - .github/workflows/fix-release-b-ci.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/cqrityjob-cv-persistence-release-b
+      - name: Apply minimal generated-types exclusion
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/professional-identity-check.ts')
+          s = p.read_text()
+          old = '''  const allSources = sourceFilesUnder(path.join(root, "src"));
+          const namingIt = allSources.filter((f) => /cv_documents/.test(codeOf(f)));'''
+          new = '''  const allSources = sourceFilesUnder(path.join(root, "src"));
+          // Generated Supabase schema types describe hosted schema; they are not a runtime dependency.
+          // Keep this aligned with release-parity-check, which excludes the same generated file.
+          const runtimeSources = allSources.filter(
+            (f) => f !== "src/integrations/supabase/types.ts",
+          );
+          const namingIt = runtimeSources.filter((f) => /cv_documents/.test(codeOf(f)));'''
+          if old not in s:
+              raise SystemExit('expected allSources/namingIt block not found')
+          s = s.replace(old, new, 1)
+          old2 = '  const importers = allSources.filter((f) => /cv-store\\.functions/.test(codeOf(f)));'
+          new2 = '  const importers = runtimeSources.filter((f) => /cv-store\\.functions/.test(codeOf(f)));'
+          if old2 not in s:
+              raise SystemExit('expected importers line not found')
+          s = s.replace(old2, new2, 1)
+          p.write_text(s)
+          PY
+          git diff --check
+          git diff -- scripts/professional-identity-check.ts
+      - name: Commit and push fix
+        shell: bash
+        run: |
+          git config user.name "CQrityjob CI Fix"
+          git config user.email "actions@users.noreply.github.com"
+          git add scripts/professional-identity-check.ts
+          git commit -m "fix(ci): exclude generated Supabase types from CV runtime guard"
+          git push origin HEAD:claude/cqrityjob-cv-persistence-release-b
