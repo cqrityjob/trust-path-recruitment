@@ -283,14 +283,6 @@ function Page() {
                   {existing.uncertaintyNote}
                 </p>
               )}
-              {existing.level === 0 && (
-                <div className="mt-2">
-                  <LevelZeroNote />
-                </div>
-              )}
-              <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                {t("iiu.as2.edit.locked")}
-              </p>
             </div>
           ) : (
             <form
@@ -511,9 +503,16 @@ function Page() {
       <div className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="min-w-0">
           <Section id="s-assess" title={t("iiu.as2.title")} description={t("iiu.as2.lead")}>
-            <div className="mb-4">
+            {/* Both of these are true of every row on the page, so they are
+                said once. Eight copies of an amber paragraph is not eight
+                times the emphasis; it is a screen that looks like it is
+                shouting. */}
+            <div className="mb-3">
               <LevelZeroNote />
             </div>
+            <p className="mb-4 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+              {t("iiu.as2.edit.locked")}
+            </p>
 
             {/* The pack is authored in one language and locked to its version.
                 An English-reading assessor meeting Swedish requirement text
@@ -535,16 +534,34 @@ function Page() {
                   </span>
                   {reqName(g.requirement)}
                 </h3>
+                {/* The requirement is written out once for the group. Three
+                    of the eight questions explore the same one, and printing
+                    its definition and indicators beside each of them filled a
+                    column with the same paragraph three times. */}
                 <ul className="divide-y divide-border">
-                  {g.questions.map((qq) =>
+                  {g.questions.map((qq, i) =>
                     renderQuestion(
                       qq,
-                      <RequirementNote
-                        name={reqName(g.requirement)}
-                        meaning={reqMeaning(g.requirement)}
-                        indicators={g.requirement.indicatorsSv}
-                        t={t}
-                      />,
+                      i === 0 ? (
+                        <RequirementNote
+                          name={reqName(g.requirement)}
+                          meaning={reqMeaning(g.requirement)}
+                          indicators={g.requirement.indicatorsSv}
+                          t={t}
+                        />
+                      ) : (
+                        <p className="flex gap-2 text-sm">
+                          <span
+                            aria-hidden="true"
+                            className="mt-px font-mono text-xs text-muted-foreground"
+                          >
+                            {g.requirement.code}
+                          </span>
+                          <span className="font-medium leading-snug text-foreground">
+                            {reqName(g.requirement)}
+                          </span>
+                        </p>
+                      ),
                     ),
                   )}
                 </ul>
