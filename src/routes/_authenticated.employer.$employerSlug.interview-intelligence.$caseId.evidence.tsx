@@ -1,13 +1,17 @@
-// Evidence review, and the human assessment.
+// Review — the information-validation workspace.
 //
-// This is where the layer-4/layer-5 boundary is actually operated. Every
-// proposal is shown with the four things that make it reviewable — what it is,
-// why it is relevant, what is uncertain, and what may NOT be concluded from it
-// — and a person confirms, edits or rejects it. Editing keeps both texts.
+// One job, and it is not assessment: decide what may legitimately be used.
+// The page is built around a single question at a time, because reviewing
+// eight questions in one scroll is how a reviewer starts forming a view of the
+// candidate while they are still deciding what the material is.
 //
-// The assessment control appears only after the evidence work, and level 0 is
-// drawn apart from 1-4 with its meaning stated, because folding it into the run
-// is exactly how it gets read as "a low score".
+// Three zones: the questions on the left, the material for the selected one in
+// the middle, the context that makes it reviewable on the right.
+//
+// Every proposal is shown with the four things that make it checkable — what
+// it is, why it is relevant, what is uncertain, and what may NOT be concluded
+// from it — beside the note it was read out of. A human confirms, edits or
+// rejects it. Editing keeps both texts. Nothing is ever auto-confirmed.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -21,14 +25,13 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
-  CaseSteps,
+  WorkflowNav,
   Chip,
-  LevelZeroNote,
-  NextStep,
   Panel,
   State,
-  TrustStageBanner,
   interviewErrorMessage,
+  MaterialBadge,
+  MaterialLegend,
   FiveEPanel,
   uiLabel,
   ProviderModeChip,
@@ -39,10 +42,15 @@ import {
   PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
 import {
+  Disclosure,
+  Eyebrow,
+  Field,
+  Nothing,
+  RailPanel,
+  Section,
+} from "@/components/employer/interview/InterviewLayout";
+import {
   getInterviewCase,
-  getTrustStage,
-  markAssessed,
-  recordAssessment,
   reviewEvidenceProposal,
   authorEvidence,
   runInterviewAnalysis,
@@ -71,50 +79,43 @@ const ANALYSIS_TASK_LABEL: Record<string, TranslationKey> = {
   enter_evidence_review: "iiu.ev.task.enter_evidence_review",
 };
 
+const FINDING_LABEL: Record<string, TranslationKey> = {
+  gap: "iiu.find.gap",
+  unclear: "iiu.find.unclear",
+  contradiction: "iiu.find.contradiction",
+  verification: "iiu.find.verification",
+};
+
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { t, lang } = useT();
+  const { t, tp, lang } = useT();
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
-
-  const trustFn = useServerFn(getTrustStage);
   const analyseFn = useServerFn(runInterviewAnalysis);
   const authorFn = useServerFn(authorEvidence);
   const reviewFn = useServerFn(reviewEvidenceProposal);
-  const assessFn = useServerFn(recordAssessment);
-  const doneFn = useServerFn(markAssessed);
 
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
     queryFn: () => getFn({ data: { caseId } }),
     retry: false,
   });
-  // Which CQrity TRUST stage this case is in. Derived in the database from
-  // the case status and the session's PEACE stage, so it cannot disagree
-  // with the workflow the rest of the screen shows.
-  const trustQ = useQuery({
-    queryKey: ["ii", "trust-stage", caseId],
-    queryFn: () => trustFn({ data: { caseId } }),
-    retry: false,
-  });
   const refresh = () => qc.invalidateQueries({ queryKey: ["ii", "case", caseId] });
 
+  const [active, setActive] = useState(0);
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [correction, setCorrection] = useState<string>("ai_model_error");
   const [note, setNote] = useState("");
-  const [levels, setLevels] = useState<Record<string, number>>({});
-  const [rationales, setRationales] = useState<Record<string, string>>({});
-  const [assessHint, setAssessHint] = useState<Record<string, "level" | "rationale" | null>>({});
   // Writing evidence by hand. With AI off this is the ONLY way evidence
   // reaches the case — the extraction section cannot run — so the journey
   // dead-ended here before this existed.
-  const [evQuestion, setEvQuestion] = useState("");
   const [evExcerpt, setEvExcerpt] = useState("");
   const authorEv = useMutation({
-    mutationFn: () => authorFn({ data: { caseId, questionId: evQuestion, excerpt: evExcerpt } }),
+    mutationFn: (questionId: string) =>
+      authorFn({ data: { caseId, questionId, excerpt: evExcerpt } }),
     onSuccess: () => {
       setEvExcerpt("");
       void q.refetch();
@@ -150,17 +151,6 @@ function Page() {
       void refresh();
     },
   });
-  const assess = useMutation({
-    mutationFn: (v: { questionId: string; level: number; rationale: string }) =>
-      assessFn({
-        data: { caseId, questionId: v.questionId, level: v.level, rationale: v.rationale },
-      }),
-    onSuccess: refresh,
-  });
-  const finishAssessing = useMutation({
-    mutationFn: () => doneFn({ data: { caseId } }),
-    onSuccess: refresh,
-  });
 
   if (ws.isLoading)
     return (
@@ -178,6 +168,7 @@ function Page() {
       status={ws.workspace!.employerStatus}
       activeSection="interviewIntelligence"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
+      wide
     >
       {children}
     </EmployerAppShell>
@@ -196,704 +187,775 @@ function Page() {
   const d = q.data;
   if (!d) return shell(<State kind="loading" />);
 
-  const pending = d.proposals.filter((p) => p.reviewState === "pending");
+  const question = d.questions[active] ?? d.questions[0] ?? null;
+  // A note with an empty body is a record of nothing, and rendering it as a
+  // blue card makes the screen look broken rather than empty.
+  const notesFor = (id: string) =>
+    (d.session?.notes ?? []).filter((n) => n.questionId === id && n.body.trim() !== "");
+  const proposalsFor = (id: string) => d.proposals.filter((p) => p.questionId === id);
+  const evidenceFor = (id: string) => d.evidence.filter((e) => e.questionId === id);
+  const findingsFor = (id: string) =>
+    d.findings.filter((f) => f.questionId === id && f.resolutionState !== "resolved");
+  const pendingFor = (id: string) =>
+    proposalsFor(id).filter((p) => p.reviewState === "pending").length;
+
+  const reqOf = (qq: (typeof d.questions)[number]) =>
+    qq.competencyCodes
+      .map((code) => d.competencies.find((c) => c.code === code))
+      .filter((c): c is NonNullable<typeof c> => Boolean(c));
+  const reqName = (c: { nameSv: string; nameEn: string | null }) =>
+    (lang === "en" ? c.nameEn : c.nameSv) ?? c.nameSv;
+
+  const openVerify = d.findings.filter(
+    (f) => f.findingKind === "verification" && f.resolutionState !== "resolved",
+  );
+  const canWork = ["interview_complete", "evidence_review"].includes(d.status);
+
+  /* ------------------------------------------------------------------ */
+  /* Left · the questions, as a work queue                               */
+  /* ------------------------------------------------------------------ */
+  const navigator = (
+    <nav aria-label={t("iiu.rv.questions")}>
+      <ol className="space-y-1">
+        {d.questions.map((qq, i) => {
+          const confirmed = evidenceFor(qq.id).length;
+          const pending = pendingFor(qq.id);
+          const isCurrent = i === active;
+          // Workflow state only. Nothing on this list says anything about how
+          // the candidate answered -- a question with three confirmed extracts
+          // is not a question that went well.
+          const stateLabel =
+            pending > 0
+              ? t("iiu.rv.pending")
+              : confirmed > 0
+                ? t("iiu.rv.reviewed")
+                : t("iiu.rv.untouched");
+          return (
+            <li key={qq.id}>
+              <button
+                type="button"
+                aria-current={isCurrent ? "true" : undefined}
+                onClick={() => {
+                  setActive(i);
+                  setEditing(null);
+                }}
+                className={`flex w-full items-start gap-2 rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  isCurrent
+                    ? "border-accent bg-accent/5"
+                    : "border-transparent hover:border-border hover:bg-muted/50"
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`mt-px font-mono text-[11px] font-semibold ${
+                    isCurrent ? "text-accent" : "text-muted-foreground"
+                  }`}
+                >
+                  {qq.code}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block truncate text-xs leading-snug ${
+                      isCurrent ? "font-semibold text-foreground" : "text-foreground"
+                    }`}
+                  >
+                    {qq.promptSv}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                    {confirmed} {tp("iiu.rv.items", confirmed)} · {stateLabel}
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+        {t("iiu.rv.questions.note")}
+      </p>
+    </nav>
+  );
+
+  /* ------------------------------------------------------------------ */
+  /* Right · what makes the material reviewable                          */
+  /* ------------------------------------------------------------------ */
+  const context = question && (
+    <div className="space-y-4">
+      <RailPanel id="s-context" title={t("iiu.rv.context")}>
+        <dl className="space-y-3">
+          <Field label={t("iiu.rv.context.requirement")}>
+            {reqOf(question).length === 0 ? (
+              "—"
+            ) : (
+              <ul className="space-y-0.5">
+                {reqOf(question).map((c) => (
+                  <li key={c.id}>{reqName(c)}</li>
+                ))}
+              </ul>
+            )}
+          </Field>
+          {/* The code and the type, not the prompt: the prompt is two columns
+              to the left in full, and printing it twice on one screen is how a
+              context panel turns into padding. */}
+          <Field label={t("iiu.rv.context.question")}>
+            {question.code} ·{" "}
+            {question.questionType === "behavioural"
+              ? t("iiu.iv.type.behavioural")
+              : t("iiu.iv.type.situational")}
+          </Field>
+          {question.dimensions.length > 0 && (
+            <Field label={t("iiu.rv.context.dimensions")}>
+              <ul className="flex flex-wrap gap-1">
+                {question.dimensions.map((dim) => (
+                  <li
+                    key={dim.id}
+                    className="rounded border border-border px-1.5 py-0.5 text-[11px] leading-snug"
+                  >
+                    {(lang === "en" ? dim.labelEn : dim.labelSv) ?? dim.labelSv}
+                  </li>
+                ))}
+              </ul>
+            </Field>
+          )}
+          <Field label={t("iiu.rv.context.sources")}>
+            {d.sources.length === 0 ? (
+              "—"
+            ) : (
+              <ul className="space-y-0.5">
+                {d.sources.map((s) => (
+                  <li key={s.id}>{s.label}</li>
+                ))}
+              </ul>
+            )}
+          </Field>
+        </dl>
+      </RailPanel>
+
+      <RailPanel id="s-verify" title={t("iiu.rv.context.verify")}>
+        {openVerify.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("iiu.rv.verify.none")}</p>
+        ) : (
+          <>
+            <Eyebrow>{t("iiu.rv.verify.open")}</Eyebrow>
+            <ul className="mt-2 space-y-2">
+              {openVerify.map((f) => (
+                <li key={f.id} className="text-xs leading-relaxed">
+                  <MaterialBadge state="verify" />{" "}
+                  <span className="text-foreground">{f.statement}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </RailPanel>
+
+      {/* The one AI action, and the manual path. Both are tools for the
+          review, not part of reading one question, so they live on the rail. */}
+      {canWork && d.aiAvailable && (
+        <RailPanel id="s-tools" title={t("iiu.rv.tools")}>
+          {
+            <>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("iiu.ev.analyse.body")}
+              </p>
+              <button
+                type="button"
+                className={`${BUTTON} mt-3`}
+                onClick={() => analyse.mutate()}
+                disabled={analyse.isPending}
+              >
+                {analyse.isPending ? t("iiu.ev.analysing") : t("iiu.ev.analyse")}
+              </button>
+
+              {analyse.isPending && (
+                <div className="mt-3">
+                  <State kind="aiRunning" />
+                </div>
+              )}
+              {analyse.isError && (
+                <div className="mt-3">
+                  <State kind="aiUnavailable" message={interviewErrorMessage(analyse.error, t)} />
+                </div>
+              )}
+              {analyse.data && (
+                <div className="mt-3">
+                  <Eyebrow>{t("iiu.ev.analyse.steps")}</Eyebrow>
+                  <ul className="mt-2 space-y-1.5 text-xs">
+                    {analyse.data.steps.map((st) => (
+                      <li key={st.task} className="flex flex-wrap items-center gap-1.5">
+                        <Chip
+                          tone={
+                            st.status === "succeeded"
+                              ? "confirmed"
+                              : st.status === "abstained"
+                                ? "attention"
+                                : "governance"
+                          }
+                        >
+                          {st.status === "succeeded"
+                            ? t("iiu.ev.step.ok")
+                            : st.status === "abstained"
+                              ? t("iiu.ev.step.abstained")
+                              : t("iiu.ev.step.failed")}
+                        </Chip>
+                        <span className="text-foreground">
+                          {uiLabel(ANALYSIS_TASK_LABEL, st.task, t)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {analyse.data.steps.some((st) => st.status !== "succeeded") && (
+                    <p className="mt-2 text-xs text-muted-foreground">{t("iiu.ev.partial")}</p>
+                  )}
+                  {analyse.data.providerMode && (
+                    <div className="mt-3 space-y-2">
+                      <ProviderModeChip mode={analyse.data.providerMode} />
+                      <ProviderModeNote mode={analyse.data.providerMode} />
+                    </div>
+                  )}
+                </div>
+              )}
+              {analyse.data && analyse.data.withheld.length > 0 && (
+                <div className="mt-3">
+                  <WithheldPanel withheld={analyse.data.withheld} />
+                </div>
+              )}
+            </>
+          }
+        </RailPanel>
+      )}
+    </div>
+  );
 
   return shell(
     <>
       <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
-          to="/employer/$employerSlug/interview-intelligence"
-          params={{ employerSlug }}
+          to="/employer/$employerSlug/interview-intelligence/$caseId"
+          params={{ employerSlug, caseId }}
           className="text-accent underline-offset-2 hover:underline"
         >
-          Interview Intelligence
+          {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
-      <header className="mt-3">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{d.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{d.candidateDisplayName}</p>
-        <div className="mt-3">
-          <CaseStatusChip status={d.status} />
+      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
+        {/* The person, then the case. Every one of these screens led with
+            the case title -- internal bookkeeping -- and put the candidate
+            underneath it in muted grey. */}
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {d.candidateDisplayName}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
+          <div className="mt-3">
+            <CaseStatusChip status={d.status} />
+          </div>
         </div>
+        <Link
+          to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
+          params={{ employerSlug, caseId }}
+          className={`${PRIMARY_BUTTON} shrink-0`}
+        >
+          {t("iiu.ev.toassess")}
+        </Link>
       </header>
 
-      <div className="mt-6 max-w-4xl">
-        <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
+      <div className="mt-5">
+        <WorkflowNav
+          status={d.status}
+          current="review"
+          employerSlug={employerSlug}
+          caseId={caseId}
+        />
       </div>
 
-      <div className="mt-6">
-        <CaseSteps current={d.status} />
-        <NextStep status={d.status} />
-      </div>
+      <Section
+        id="s-review"
+        title={t("iiu.rv.title")}
+        description={t("iiu.rv.lead")}
+        className="mt-7"
+      >
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[15rem_minmax(0,1fr)_20rem] xl:gap-7">
+          {/* The navigator is a real column at xl and a disclosure below it,
+              rather than a squeezed third of a tablet screen.
 
-      {/* ---- The interview notes, carried here automatically ----
-           The recruiter wrote these under Q1-Q8 during the interview. They
-           arrive under the same question, with the same text, and are never
-           retyped. A note is SOURCE material: it becomes evidence only when a
-           human confirms an extract from it. */}
-      {["interview_complete", "evidence_review", "assessed", "reported"].includes(d.status) && (
-        <section className="mt-8 max-w-4xl" aria-labelledby="s-notes">
-          <h2 id="s-notes" className="text-lg font-semibold text-foreground">
-            {t("iiu.ev.notes.title")}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.notes.body")}</p>
-          <ul className="mt-3 space-y-2">
-            {d.questions.map((qq) => {
-              const qNotes = (d.session?.notes ?? []).filter((n) => n.questionId === qq.id);
-              return (
-                <li key={qq.id} className="rounded-lg border border-border p-3">
+              `min-w-0` on both is load-bearing: the list truncates its prompts,
+              truncation means white-space:nowrap, and a nowrap child in an
+              auto-sized grid track sets the track's min-content width to the
+              whole sentence. Without it the document was 1447px wide at 375. */}
+          <div className="hidden min-w-0 xl:block">
+            <Eyebrow>{t("iiu.rv.questions")}</Eyebrow>
+            <div className="mt-2">{navigator}</div>
+          </div>
+          <div className="min-w-0 xl:hidden">
+            <Disclosure summary={t("iiu.rv.questions")} defaultOpen>
+              {navigator}
+            </Disclosure>
+          </div>
+
+          <div className="min-w-0">
+            {question ? (
+              <>
+                {/* ---- the question being reviewed ---- */}
+                <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Chip tone="work">{qq.code}</Chip>
-                    {qNotes.length === 0 && <Chip tone="attention">{t("iiu.ev.notes.none")}</Chip>}
-                  </div>
-                  {qNotes.map((n) => (
-                    <div key={n.id} className="mt-2">
-                      <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
-                        {n.body}
-                      </p>
-                      <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                        {t("iiu.ev.notes.source")}
-                      </p>
-                    </div>
-                  ))}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
-      {/* ---- The one AI action ---- */}
-      {d.aiAvailable && ["interview_complete", "evidence_review"].includes(d.status) && (
-        <section className="mt-8 max-w-4xl" aria-labelledby="s-analyse">
-          <h2 id="s-analyse" className="text-lg font-semibold text-foreground">
-            {t("iiu.ev.analyse")}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.analyse.body")}</p>
-          <button
-            type="button"
-            className={`${PRIMARY_BUTTON} mt-3`}
-            onClick={() => analyse.mutate()}
-            disabled={analyse.isPending}
-          >
-            {analyse.isPending ? t("iiu.ev.analysing") : t("iiu.ev.analyse")}
-          </button>
-
-          {analyse.isPending && (
-            <div className="mt-3 max-w-3xl">
-              <State kind="aiRunning" />
-            </div>
-          )}
-          {analyse.isError && (
-            <div className="mt-3 max-w-3xl">
-              <State kind="aiUnavailable" message={interviewErrorMessage(analyse.error, t)} />
-            </div>
-          )}
-
-          {analyse.data && (
-            <div className="mt-3 rounded-lg border border-border p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("iiu.ev.analyse.steps")}
-              </p>
-              <ul className="mt-2 space-y-1 text-sm">
-                {analyse.data.steps.map((st) => (
-                  <li key={st.task} className="flex flex-wrap items-center gap-2">
-                    <Chip
-                      tone={
-                        st.status === "succeeded"
-                          ? "confirmed"
-                          : st.status === "abstained"
-                            ? "attention"
-                            : "governance"
-                      }
-                    >
-                      {st.status === "succeeded"
-                        ? t("iiu.ev.step.ok")
-                        : st.status === "abstained"
-                          ? t("iiu.ev.step.abstained")
-                          : t("iiu.ev.step.failed")}
+                    <Chip tone="work">{question.code}</Chip>
+                    <Chip>
+                      {question.questionType === "behavioural"
+                        ? t("iiu.iv.type.behavioural")
+                        : t("iiu.iv.type.situational")}
                     </Chip>
-                    <span className="text-foreground">
-                      {uiLabel(ANALYSIS_TASK_LABEL, st.task, t)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {t("iiu.ev.stage")}: {st.trustStage}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {analyse.data.steps.some((st) => st.status !== "succeeded") && (
-                <p className="mt-2 text-sm text-muted-foreground">{t("iiu.ev.partial")}</p>
-              )}
-              {analyse.data.providerMode && (
-                <div className="mt-3">
-                  <ProviderModeChip mode={analyse.data.providerMode} />
-                  <div className="mt-2">
-                    <ProviderModeNote mode={analyse.data.providerMode} />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {analyse.data && analyse.data.withheld.length > 0 && (
-            <div className="mt-3 max-w-3xl">
-              <WithheldPanel withheld={analyse.data.withheld} />
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ---- Human evidence authoring ----
-           Shown when AI is off, because then it is the only way evidence is
-           created at all. The AI extraction section below is hidden in that
-           state rather than left as an empty machine with a dead button. */}
-      {!d.aiAvailable && ["interview_complete", "evidence_review"].includes(d.status) && (
-        <section className="mt-8 max-w-4xl" aria-labelledby="s-author">
-          <h2 id="s-author" className="text-lg font-semibold text-foreground">
-            {t("iiu.ev.manual.title")}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.manual.body")}</p>
-          <form
-            className="mt-3 space-y-3 rounded-lg border border-border p-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (evQuestion === "" || evExcerpt.trim() === "") return;
-              authorEv.mutate();
-            }}
-          >
-            <div>
-              <label htmlFor="ev-q" className="text-xs font-medium text-foreground">
-                {t("iiu.ev.manual.question")}
-              </label>
-              <select
-                id="ev-q"
-                value={evQuestion}
-                onChange={(e) => setEvQuestion(e.target.value)}
-                className={FIELD}
-                required
-              >
-                <option value="">{t("iiu.ev.manual.choose")}</option>
-                {d.questions.map((qq) => (
-                  <option key={qq.id} value={qq.id}>
-                    {qq.code} — {qq.promptSv}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="ev-x" className="text-xs font-medium text-foreground">
-                {t("iiu.ev.manual.excerpt")}
-              </label>
-              <textarea
-                id="ev-x"
-                rows={4}
-                value={evExcerpt}
-                onChange={(e) => setEvExcerpt(e.target.value)}
-                className={FIELD}
-                required
-              />
-            </div>
-            {authorEv.isError && (
-              <Panel tone="governance" role="alert" title={t("iiu.ev.manual.failed")}>
-                <p>{interviewErrorMessage(authorEv.error, t)}</p>
-              </Panel>
-            )}
-            <button type="submit" className={PRIMARY_BUTTON} disabled={authorEv.isPending}>
-              {authorEv.isPending ? t("iiu.pp.saving") : t("iiu.ev.manual.save")}
-            </button>
-          </form>
-        </section>
-      )}
-
-      {/* ---- Human review ---- */}
-      {/* This section reviews AI PROPOSALS. With AI off there are never any, so
-          showing it would be an empty machine above the evidence that matters.
-          The confirmed-evidence list below is rendered either way. */}
-      {(d.aiAvailable || d.proposals.length > 0) && (
-        <section className="mt-8 max-w-4xl" aria-labelledby="s-review">
-          <h2 id="s-review" className="text-lg font-semibold text-foreground">
-            {t("iiu.ev.s2.title")}
-            {pending.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({pending.length} {t("iiu.ev.pending")})
-              </span>
-            )}
-          </h2>
-
-          {d.proposals.length === 0 ? (
-            <div className="mt-3">
-              <State kind="empty">{t("iiu.ev.noproposals")}</State>
-            </div>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {d.proposals.map((p) => {
-                const qq = d.questions.find((x) => x.id === p.questionId);
-                const reviewed = p.reviewState !== "pending";
-                return (
-                  <li key={p.id} className="rounded-lg border border-border p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Chip tone="ai" srPrefix={t("iiu.ev.srprefix.origin")}>
-                        {t("iiu.ev.aiproposal")}
+                    {pendingFor(question.id) > 0 && (
+                      <Chip tone="attention">
+                        {pendingFor(question.id)} {t("iiu.ev.pending")}
                       </Chip>
-                      {qq && <Chip>{qq.code}</Chip>}
-                      <Chip
-                        tone={
-                          reviewed
-                            ? p.reviewState === "rejected"
-                              ? "governance"
-                              : "confirmed"
-                            : "attention"
-                        }
-                        srPrefix={t("iiu.ev.srprefix.review")}
-                      >
-                        {p.reviewState === "pending"
-                          ? t("iiu.ev.state.awaiting")
-                          : p.reviewState === "confirmed"
-                            ? t("iiu.ev.state.confirmed")
-                            : p.reviewState === "edited"
-                              ? t("iiu.ev.state.edited")
-                              : p.reviewState === "rejected"
-                                ? t("iiu.ev.state.rejected")
-                                : t("iiu.ev.state.unresolved")}
-                      </Chip>
-                      {p.extractionConfidence !== null && (
-                        <Chip srPrefix={t("iiu.ev.extraction.srprefix")}>
-                          {t("iiu.ev.extraction.chip")} {Math.round(p.extractionConfidence * 100)}%
-                        </Chip>
-                      )}
-                    </div>
-
-                    {/* The recruiter's own words first, then what the model
-                        made of them. Read in this order the proposal is
-                        checkable; read the other way round it is an assertion. */}
-                    {(() => {
-                      const src = (d.session?.notes ?? []).find((n) => n.id === p.noteId);
-                      if (!src) return null;
-                      return (
-                        <div className="mt-3">
-                          <p className="text-xs font-medium text-muted-foreground">
-                            {t("iiu.ev.fromnote")}
-                          </p>
-                          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                            {src.body}
-                          </p>
-                        </div>
-                      );
-                    })()}
-
-                    <p className="mt-3 text-xs font-medium text-muted-foreground">
-                      {t("iiu.ev.proposed")}
-                    </p>
-                    <blockquote className="mt-1 border-l-2 border-violet-700/40 pl-3 text-sm leading-relaxed text-foreground">
-                      {p.excerpt}
-                    </blockquote>
-
-                    <FiveEPanel value={p.fiveE} />
-
-                    <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
-                      <div>
-                        <dt className="inline font-medium">{t("iiu.ev.whyrelevant")}</dt>
-                        <dd className="inline">{p.relevanceRationale || "—"}</dd>
-                      </div>
-                      {p.uncertaintyNote && (
-                        <div>
-                          <dt className="inline font-medium">{t("iiu.ev.uncertainty")}</dt>
-                          <dd className="inline">{p.uncertaintyNote}</dd>
-                        </div>
-                      )}
-                      {p.prohibitedConclusionNote && (
-                        <div>
-                          <dt className="inline font-medium">{t("iiu.ev.mustnot")}</dt>
-                          <dd className="inline">{p.prohibitedConclusionNote}</dd>
-                        </div>
-                      )}
-                      <div className="pt-1 text-[11px]">{t("iiu.ev.extraction.note")}</div>
-                    </dl>
-
-                    {!reviewed && (
-                      <div className="mt-3">
-                        {editing === p.id ? (
-                          <div className="rounded-md border border-amber-600/40 bg-amber-500/5 p-3">
-                            <label
-                              htmlFor={`edit-${p.id}`}
-                              className="text-xs font-medium text-foreground"
-                            >
-                              {t("iiu.ev.editedexcerpt")}
-                            </label>
-                            <textarea
-                              id={`edit-${p.id}`}
-                              rows={3}
-                              value={editText}
-                              onChange={(e) => setEditText(e.target.value)}
-                              className={FIELD}
-                            />
-                            <label
-                              htmlFor={`corr-${p.id}`}
-                              className="mt-2 block text-xs font-medium text-foreground"
-                            >
-                              {t("iiu.ev.whychanged")}
-                            </label>
-                            <select
-                              id={`corr-${p.id}`}
-                              value={correction}
-                              onChange={(e) => setCorrection(e.target.value)}
-                              className={FIELD}
-                            >
-                              {CORRECTION_CLASSES.map(([v, key]) => (
-                                <option key={v} value={v}>
-                                  {t(key)}
-                                </option>
-                              ))}
-                            </select>
-                            <label
-                              htmlFor={`note-${p.id}`}
-                              className="mt-2 block text-xs font-medium text-foreground"
-                            >
-                              {t("iiu.ev.notelabel")}
-                            </label>
-                            <input
-                              id={`note-${p.id}`}
-                              value={note}
-                              onChange={(e) => setNote(e.target.value)}
-                              className={FIELD}
-                            />
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                className={PRIMARY_BUTTON}
-                                disabled={review.isPending || editText.trim() === ""}
-                                onClick={() =>
-                                  review.mutate({ proposalId: p.id, decision: "edit" })
-                                }
-                              >
-                                Spara korrigering
-                              </button>
-                              <button
-                                type="button"
-                                className={BUTTON}
-                                onClick={() => setEditing(null)}
-                              >
-                                {t("iiu.ev.cancel")}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              className={BUTTON}
-                              disabled={review.isPending}
-                              onClick={() =>
-                                review.mutate({ proposalId: p.id, decision: "accept" })
-                              }
-                            >
-                              {t("iiu.ev.confirm")}
-                            </button>
-                            <button
-                              type="button"
-                              className={BUTTON}
-                              onClick={() => {
-                                setEditing(p.id);
-                                setEditText(p.excerpt);
-                              }}
-                            >
-                              Redigera
-                            </button>
-                            <button
-                              type="button"
-                              className={BUTTON}
-                              disabled={review.isPending}
-                              onClick={() =>
-                                review.mutate({ proposalId: p.id, decision: "reject" })
-                              }
-                            >
-                              Avvisa
-                            </button>
-                            <button
-                              type="button"
-                              className={BUTTON}
-                              disabled={review.isPending}
-                              onClick={() =>
-                                review.mutate({ proposalId: p.id, decision: "unresolved" })
-                              }
-                            >
-                              {t("iiu.ev.markunresolved")}
-                            </button>
-                          </div>
-                        )}
-                      </div>
                     )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          {review.isError && (
-            <div className="mt-3">
-              <Panel tone="governance" role="alert" title={t("iiu.ev.reviewfailed")}>
-                <p>{interviewErrorMessage(review.error, t)}</p>
-              </Panel>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ---- Confirmed evidence ---- */}
-      {d.evidence.length > 0 && (
-        <section className="mt-8 max-w-4xl" aria-labelledby="s-confirmed">
-          <h2 id="s-confirmed" className="text-lg font-semibold text-foreground">
-            {t("iiu.ev.confirmed.title")}
-          </h2>
-          <ul className="mt-3 space-y-2">
-            {d.evidence.map((e) => {
-              const qq = d.questions.find((x) => x.id === e.questionId);
-              return (
-                <li
-                  key={e.id}
-                  className="rounded-md border border-teal-700/30 bg-teal-700/5 p-3 text-sm"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    {qq && <Chip>{qq.code}</Chip>}
-                    <Chip tone="confirmed" srPrefix={t("iiu.ev.srprefix.origin")}>
-                      {e.origin === "human_authored"
-                        ? t("iiu.ev.origin.human")
-                        : e.origin === "ai_proposed_edited"
-                          ? t("iiu.ev.origin.ai_corrected")
-                          : t("iiu.ev.origin.ai_confirmed")}
-                    </Chip>
                   </div>
-                  <p className="mt-2 text-foreground">{e.excerpt}</p>
-                  {e.originalExcerpt && (
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      <span className="font-medium">{t("iiu.ev.aioriginal")}: </span>
-                      {e.originalExcerpt}
-                    </p>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
-      {/* ---- Human assessment ---- */}
-      <section className="mt-10 max-w-4xl" aria-labelledby="s-assess">
-        <h2 id="s-assess" className="text-lg font-semibold text-foreground">
-          {t("iiu.ev.s3.title")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.s3.body")}</p>
-        <div className="mt-2">
-          <LevelZeroNote />
-        </div>
-
-        <ul className="mt-4 space-y-3">
-          {d.questions.map((qq) => {
-            const existing = d.assessments.find((a) => a.questionId === qq.id);
-            const evidenceCount = d.evidence.filter((e) => e.questionId === qq.id).length;
-            return (
-              <li key={qq.id} className="rounded-lg border border-border p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Chip tone="work">{qq.code}</Chip>
-                  <Chip tone={evidenceCount > 0 ? "confirmed" : "attention"}>
-                    {evidenceCount} {t("iiu.ev.confirmedcount")}
-                  </Chip>
-                  {existing && (
-                    <Chip
-                      tone={existing.level === 0 ? "attention" : "confirmed"}
-                      srPrefix={t("iiu.ev.level.srprefix")}
-                    >
-                      {t("iiu.ev.level")} {existing.level}
-                    </Chip>
-                  )}
-                </div>
-                <p className="mt-2 text-sm text-foreground">{qq.promptSv}</p>
-
-                {existing ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    <span className="font-medium">{t("iiu.ev.motivering")}</span>
-                    {existing.rationale}
+                  <p className="mt-2.5 text-base leading-relaxed text-foreground">
+                    {question.promptSv}
                   </p>
-                ) : (
-                  <form
-                    className="mt-3 space-y-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const lvl = levels[qq.id];
-                      const rat = rationales[qq.id] ?? "";
-                      // Silent returns taught the interviewer nothing about
-                      // why the button did nothing. Say it instead.
-                      if (lvl === undefined) {
-                        setAssessHint((st) => ({ ...st, [qq.id]: "level" }));
-                        return;
-                      }
-                      if (rat.trim() === "") {
-                        setAssessHint((st) => ({ ...st, [qq.id]: "rationale" }));
-                        return;
-                      }
-                      setAssessHint((st) => ({ ...st, [qq.id]: null }));
-                      assess.mutate({ questionId: qq.id, level: lvl, rationale: rat });
-                    }}
-                  >
-                    {/* The database refuses a level above 0 without confirmed
-                        evidence, and rightly so. Saying that AFTER the save
-                        button is a bad way to teach a rule the interviewer
-                        could have been told up front — which is exactly how
-                        the owner met it in UAT. So the rule is shown here,
-                        in the same place the choice is made. */}
-                    {evidenceCount === 0 && (
-                      <Panel tone="attention" title={t("iiu.ev.needevidence.title")}>
-                        <p>{t("iiu.ev.needevidence.body")}</p>
-                        <p className="mt-2 flex flex-wrap gap-2">
-                          <a
-                            href="#s-author"
-                            className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                          >
-                            {t("iiu.ev.needevidence.cta.evidence")}
-                          </a>
-                          <button
-                            type="button"
-                            className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                            onClick={() => setLevels((st) => ({ ...st, [qq.id]: 0 }))}
-                          >
-                            {t("iiu.ev.needevidence.cta.zero")}
-                          </button>
-                        </p>
-                      </Panel>
-                    )}
+                </div>
 
-                    <fieldset>
-                      <legend className="text-xs font-medium text-foreground">
-                        {t("iiu.ev.level")}
-                      </legend>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {[...qq.anchors]
-                          .sort((a, b) => a.level - b.level)
-                          .map((a) => {
-                            // Levels 1-4 are unreachable until evidence exists.
-                            // Disabled rather than hidden: the interviewer
-                            // should see the scale they are working within.
-                            const locked = a.level > 0 && evidenceCount === 0;
+                {/* ---- the material, told apart by shape ---- */}
+                <section aria-labelledby="s-material" className="mt-6">
+                  <h3 id="s-material" className="text-sm font-semibold text-foreground">
+                    {t("iiu.rv.material")}
+                  </h3>
+                  <p className="mt-1 max-w-[72ch] text-xs leading-relaxed text-muted-foreground">
+                    {t("iiu.rv.material.note")}
+                  </p>
+                  {/* Stated once, where the kinds of material first appear
+                      together. The distinction is the product; leaving it to be
+                      inferred from styling is how it gets lost. */}
+                  <MaterialLegend />
+
+                  <div className="mt-4 space-y-4">
+                    {/* 1 · what the recruiter wrote during the conversation */}
+                    <article aria-label={t("iiu.ev.notes.title")}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <MaterialBadge state="note" />
+                        <span className="text-xs text-muted-foreground">
+                          {t("iiu.ev.notes.source")}
+                        </span>
+                      </div>
+                      {notesFor(question.id).length === 0 ? (
+                        <div className="mt-2">
+                          <Nothing>{t("iiu.ev.notes.none")}</Nothing>
+                        </div>
+                      ) : (
+                        <ul className="mt-2 space-y-2">
+                          {notesFor(question.id).map((n) => (
+                            <li
+                              key={n.id}
+                              className="whitespace-pre-line rounded-lg border border-sky-700/30 bg-sky-700/5 p-3.5 text-sm leading-relaxed text-foreground"
+                            >
+                              {n.body}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </article>
+
+                    {/* 2 · what a model proposed out of it */}
+                    {proposalsFor(question.id).length > 0 && (
+                      <article aria-label={t("iiu.rv.ai.title")}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <MaterialBadge state="ai" />
+                          <span className="text-xs text-muted-foreground">
+                            {t("iiu.rv.ai.title")}
+                          </span>
+                        </div>
+                        <ul className="mt-2 space-y-3">
+                          {proposalsFor(question.id).map((p) => {
+                            const reviewed = p.reviewState !== "pending";
+                            const src = (d.session?.notes ?? []).find((n) => n.id === p.noteId);
                             return (
-                              <label
-                                key={a.id}
-                                title={locked ? t("iiu.ev.needevidence.locked") : undefined}
-                                className={`rounded-md border px-3 py-1.5 text-xs ${
-                                  locked
-                                    ? "cursor-not-allowed border-border opacity-50"
-                                    : "cursor-pointer"
-                                } ${
-                                  levels[qq.id] === a.level
-                                    ? "border-accent font-semibold"
-                                    : "border-border"
-                                } ${a.level === 0 ? "bg-amber-500/5" : ""}`}
+                              <li
+                                key={p.id}
+                                className="rounded-lg border border-violet-700/30 bg-violet-700/5 p-4"
                               >
-                                <input
-                                  type="radio"
-                                  name={`lvl-${qq.id}`}
-                                  value={a.level}
-                                  className="sr-only"
-                                  disabled={locked}
-                                  checked={levels[qq.id] === a.level}
-                                  onChange={() => setLevels((st) => ({ ...st, [qq.id]: a.level }))}
-                                />
-                                {a.level} — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
-                                {locked && (
-                                  <span className="sr-only">
-                                    {" "}
-                                    ({t("iiu.ev.needevidence.locked")})
-                                  </span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Chip
+                                    tone={
+                                      reviewed
+                                        ? p.reviewState === "rejected"
+                                          ? "governance"
+                                          : "confirmed"
+                                        : "attention"
+                                    }
+                                    srPrefix={t("iiu.ev.srprefix.review")}
+                                  >
+                                    {p.reviewState === "pending"
+                                      ? t("iiu.ev.state.awaiting")
+                                      : p.reviewState === "confirmed"
+                                        ? t("iiu.ev.state.confirmed")
+                                        : p.reviewState === "edited"
+                                          ? t("iiu.ev.state.edited")
+                                          : p.reviewState === "rejected"
+                                            ? t("iiu.ev.state.rejected")
+                                            : t("iiu.ev.state.unresolved")}
+                                  </Chip>
+                                  {p.extractionConfidence !== null && (
+                                    <Chip srPrefix={t("iiu.ev.extraction.srprefix")}>
+                                      {t("iiu.ev.extraction.chip")}{" "}
+                                      {Math.round(p.extractionConfidence * 100)}%
+                                    </Chip>
+                                  )}
+                                </div>
+
+                                {/* The recruiter's own words first, then what the
+                                    model made of them. Read in this order the
+                                    proposal is checkable; read the other way
+                                    round it is an assertion. */}
+                                {src && (
+                                  <div className="mt-3">
+                                    <Eyebrow>{t("iiu.ev.fromnote")}</Eyebrow>
+                                    <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                                      {src.body}
+                                    </p>
+                                  </div>
                                 )}
-                              </label>
+
+                                <div className="mt-3">
+                                  <Eyebrow>{t("iiu.ev.proposed")}</Eyebrow>
+                                  <blockquote className="mt-1 border-l-2 border-violet-700/40 pl-3 text-sm leading-relaxed text-foreground">
+                                    {p.excerpt}
+                                  </blockquote>
+                                </div>
+
+                                <FiveEPanel value={p.fiveE} />
+
+                                <div className="mt-3">
+                                  <Eyebrow>{t("iiu.rv.ai.why")}</Eyebrow>
+                                  <dl className="mt-1 space-y-1 text-xs text-muted-foreground">
+                                    <div>
+                                      <dt className="inline font-medium">
+                                        {t("iiu.ev.whyrelevant")}
+                                      </dt>
+                                      <dd className="inline">{p.relevanceRationale || "—"}</dd>
+                                    </div>
+                                    {p.uncertaintyNote && (
+                                      <div>
+                                        <dt className="inline font-medium">
+                                          {t("iiu.ev.uncertainty")}
+                                        </dt>
+                                        <dd className="inline">{p.uncertaintyNote}</dd>
+                                      </div>
+                                    )}
+                                    {p.prohibitedConclusionNote && (
+                                      <div>
+                                        <dt className="inline font-medium">
+                                          {t("iiu.ev.mustnot")}
+                                        </dt>
+                                        <dd className="inline">{p.prohibitedConclusionNote}</dd>
+                                      </div>
+                                    )}
+                                    <div className="pt-1 text-[11px]">
+                                      {t("iiu.ev.extraction.note")}
+                                    </div>
+                                  </dl>
+                                </div>
+
+                                {!reviewed && (
+                                  <div className="mt-4">
+                                    {editing === p.id ? (
+                                      <div className="rounded-md border border-amber-600/40 bg-amber-500/5 p-3">
+                                        <label
+                                          htmlFor={`edit-${p.id}`}
+                                          className="text-xs font-medium text-foreground"
+                                        >
+                                          {t("iiu.ev.editedexcerpt")}
+                                        </label>
+                                        <textarea
+                                          id={`edit-${p.id}`}
+                                          rows={3}
+                                          value={editText}
+                                          onChange={(e) => setEditText(e.target.value)}
+                                          className={FIELD}
+                                        />
+                                        <label
+                                          htmlFor={`corr-${p.id}`}
+                                          className="mt-2 block text-xs font-medium text-foreground"
+                                        >
+                                          {t("iiu.ev.whychanged")}
+                                        </label>
+                                        <select
+                                          id={`corr-${p.id}`}
+                                          value={correction}
+                                          onChange={(e) => setCorrection(e.target.value)}
+                                          className={FIELD}
+                                        >
+                                          {CORRECTION_CLASSES.map(([v, key]) => (
+                                            <option key={v} value={v}>
+                                              {t(key)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <label
+                                          htmlFor={`note-${p.id}`}
+                                          className="mt-2 block text-xs font-medium text-foreground"
+                                        >
+                                          {t("iiu.ev.notelabel")}
+                                        </label>
+                                        <input
+                                          id={`note-${p.id}`}
+                                          value={note}
+                                          onChange={(e) => setNote(e.target.value)}
+                                          className={FIELD}
+                                        />
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                          <button
+                                            type="button"
+                                            className={PRIMARY_BUTTON}
+                                            disabled={review.isPending || editText.trim() === ""}
+                                            onClick={() =>
+                                              review.mutate({ proposalId: p.id, decision: "edit" })
+                                            }
+                                          >
+                                            {t("iiu.rv.edit.save")}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className={BUTTON}
+                                            onClick={() => setEditing(null)}
+                                          >
+                                            {t("iiu.ev.cancel")}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        {/* Confirm is primary, edit is secondary,
+                                            reject is neither -- it removes
+                                            material from the case, so it is
+                                            drawn as the destructive choice it
+                                            is. Nothing here auto-confirms. */}
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <button
+                                            type="button"
+                                            className={PRIMARY_BUTTON}
+                                            disabled={review.isPending}
+                                            onClick={() =>
+                                              review.mutate({
+                                                proposalId: p.id,
+                                                decision: "accept",
+                                              })
+                                            }
+                                          >
+                                            {t("iiu.ev.confirm")}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className={BUTTON}
+                                            onClick={() => {
+                                              setEditing(p.id);
+                                              setEditText(p.excerpt);
+                                            }}
+                                          >
+                                            {t("iiu.rv.edit")}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className={BUTTON}
+                                            disabled={review.isPending}
+                                            onClick={() =>
+                                              review.mutate({
+                                                proposalId: p.id,
+                                                decision: "unresolved",
+                                              })
+                                            }
+                                          >
+                                            {t("iiu.ev.markunresolved")}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="inline-flex items-center rounded-md border border-destructive/40 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                                            disabled={review.isPending}
+                                            onClick={() =>
+                                              review.mutate({
+                                                proposalId: p.id,
+                                                decision: "reject",
+                                              })
+                                            }
+                                          >
+                                            {t("iiu.rv.reject")}
+                                          </button>
+                                        </div>
+                                        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                                          {t("iiu.rv.reject.note")}
+                                        </p>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </li>
                             );
                           })}
-                      </div>
-                    </fieldset>
-                    <div>
-                      <label
-                        htmlFor={`rat-${qq.id}`}
-                        className="text-xs font-medium text-foreground"
+                        </ul>
+                      </article>
+                    )}
+
+                    {/* 3 · what a human has stood behind */}
+                    {evidenceFor(question.id).length > 0 && (
+                      <article aria-label={t("iiu.ev.confirmed.title")}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <MaterialBadge state="confirmed" />
+                          <span className="text-xs text-muted-foreground">
+                            {t("iiu.ev.confirmed.title")}
+                          </span>
+                        </div>
+                        <ul className="mt-2 space-y-2">
+                          {evidenceFor(question.id).map((e) => (
+                            <li
+                              key={e.id}
+                              className="rounded-lg border border-teal-700/30 bg-teal-700/5 p-3.5 text-sm"
+                            >
+                              <p className="leading-relaxed text-foreground">{e.excerpt}</p>
+                              <p className="mt-2">
+                                <Chip srPrefix={t("iiu.ev.srprefix.origin")}>
+                                  {e.origin === "human_authored"
+                                    ? t("iiu.ev.origin.human")
+                                    : e.origin === "ai_proposed_edited"
+                                      ? t("iiu.ev.origin.ai_corrected")
+                                      : t("iiu.ev.origin.ai_confirmed")}
+                                </Chip>
+                              </p>
+                              {e.originalExcerpt && (
+                                <p className="mt-1.5 text-xs text-muted-foreground">
+                                  <span className="font-medium">{t("iiu.ev.aioriginal")}: </span>
+                                  {e.originalExcerpt}
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </article>
+                    )}
+
+                    {/* 4 · what cannot be settled in a conversation */}
+                    {findingsFor(question.id).length > 0 && (
+                      <article aria-label={t("iiu.as2.openitems")}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <MaterialBadge state="verify" />
+                          <span className="text-xs text-muted-foreground">
+                            {t("iiu.as2.openitems")}
+                          </span>
+                        </div>
+                        <ul className="mt-2 space-y-2">
+                          {findingsFor(question.id).map((f) => (
+                            <li
+                              key={f.id}
+                              className="rounded-lg border border-amber-600/40 bg-amber-500/5 p-3.5 text-sm"
+                            >
+                              <Chip tone="attention">
+                                {uiLabel(FINDING_LABEL, f.findingKind, t)}
+                              </Chip>{" "}
+                              <span className="leading-relaxed text-foreground">{f.statement}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </article>
+                    )}
+
+                    {notesFor(question.id).length === 0 &&
+                      proposalsFor(question.id).length === 0 &&
+                      evidenceFor(question.id).length === 0 && (
+                        <Nothing>{t("iiu.rv.nomaterial")}</Nothing>
+                      )}
+
+                    {/* 5 · writing material by hand, for this question */}
+                    {canWork && (
+                      <form
+                        className="rounded-lg border border-border bg-card p-4"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (evExcerpt.trim() === "") return;
+                          authorEv.mutate(question.id);
+                        }}
                       >
-                        {t("iiu.ev.rationale")}
-                      </label>
-                      <textarea
-                        id={`rat-${qq.id}`}
-                        rows={2}
-                        className={FIELD}
-                        value={rationales[qq.id] ?? ""}
-                        onChange={(e) => setRationales((s) => ({ ...s, [qq.id]: e.target.value }))}
-                      />
+                        <h4 className="text-sm font-semibold text-foreground">
+                          {t("iiu.ev.manual.title")}
+                        </h4>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {t("iiu.ev.manual.body")}
+                        </p>
+                        <label
+                          htmlFor="ev-x"
+                          className="mt-3 block text-xs font-medium text-foreground"
+                        >
+                          {t("iiu.ev.manual.excerpt")}
+                        </label>
+                        <textarea
+                          id="ev-x"
+                          rows={4}
+                          value={evExcerpt}
+                          onChange={(e) => setEvExcerpt(e.target.value)}
+                          className={FIELD}
+                          required
+                        />
+                        {authorEv.isError && (
+                          <div className="mt-2">
+                            <Panel tone="governance" role="alert" title={t("iiu.ev.manual.failed")}>
+                              <p>{interviewErrorMessage(authorEv.error, t)}</p>
+                            </Panel>
+                          </div>
+                        )}
+                        <button
+                          type="submit"
+                          className={`${BUTTON} mt-3`}
+                          disabled={authorEv.isPending}
+                        >
+                          {authorEv.isPending ? t("iiu.pp.saving") : t("iiu.ev.manual.save")}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+
+                  {review.isError && (
+                    <div className="mt-4">
+                      <Panel tone="governance" role="alert" title={t("iiu.ev.reviewfailed")}>
+                        <p>{interviewErrorMessage(review.error, t)}</p>
+                      </Panel>
                     </div>
-                    {/* Three different situations, three different messages.
-                        Reusing the evidence guidance when a level simply had
-                        not been picked told the interviewer to go and find
-                        evidence they already had. */}
-                    {assessHint[qq.id] === "level" && (
-                      <p role="alert" className="text-xs text-destructive">
-                        {evidenceCount === 0
-                          ? t("iiu.ev.needevidence.body")
-                          : t("iiu.ev.hint.level")}
-                      </p>
-                    )}
-                    {assessHint[qq.id] === "rationale" && (
-                      <p role="alert" className="text-xs text-destructive">
-                        {t("iiu.ev.rationale.missing")}
-                      </p>
-                    )}
-                    <button type="submit" className={BUTTON} disabled={assess.isPending}>
-                      {t("iiu.ev.save")}
-                    </button>
-                  </form>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  )}
+                </section>
 
-        {assess.isError && (
-          <div className="mt-3">
-            <Panel tone="governance" role="alert" title={t("iiu.ev.savefailed")}>
-              <p className="whitespace-pre-line">{interviewErrorMessage(assess.error, t)}</p>
-            </Panel>
+                {/* ---- the handoff ----
+                    Review ends here. The assessment workflow is NOT repeated on
+                    this page: deciding what the material is and deciding what it
+                    means are different jobs, and running them together is what
+                    the separation exists to prevent. */}
+                <div className="mt-8 rounded-lg border border-border bg-muted/30 p-5">
+                  <p className="max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+                    {t("iiu.rv.handoff")}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    <Link
+                      to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
+                      params={{ employerSlug, caseId }}
+                      className={PRIMARY_BUTTON}
+                    >
+                      {t("iiu.ev.toassess")}
+                    </Link>
+                    <Link
+                      to="/employer/$employerSlug/interview-intelligence/$caseId/panel"
+                      params={{ employerSlug, caseId }}
+                      className={BUTTON}
+                    >
+                      {t("iiu.pl.title")}
+                    </Link>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <Nothing>{t("iiu.empty")}</Nothing>
+            )}
           </div>
-        )}
 
-        {d.status === "evidence_review" && d.assessments.length === d.questions.length && (
-          <button
-            type="button"
-            className={`${PRIMARY_BUTTON} mt-4`}
-            onClick={() => finishAssessing.mutate()}
-            disabled={finishAssessing.isPending}
-          >
-            {t("iiu.ev.done")}
-          </button>
-        )}
-      </section>
-
-      {/* Panel Review sits between the individual assessments and the report:
-          it is where several reviewers reconcile what they each concluded. Not
-          every interview needs one, so the link is always available rather than
-          gated -- the panel screen itself explains when a panel is appropriate
-          and refuses to open one for a single reviewer. */}
-      <Link
-        to="/employer/$employerSlug/interview-intelligence/$caseId/panel"
-        params={{ employerSlug, caseId }}
-        className={`${BUTTON} mt-8 mr-2`}
-      >
-        {t("iiu.pl.title")}
-      </Link>
-
-      {["assessed", "reported"].includes(d.status) && (
-        <Link
-          to="/employer/$employerSlug/interview-intelligence/$caseId/report"
-          params={{ employerSlug, caseId }}
-          className={`${PRIMARY_BUTTON} mt-8`}
-        >
-          Till rapporten
-        </Link>
-      )}
+          <div className="min-w-0">{context}</div>
+        </div>
+      </Section>
     </>,
   );
 }

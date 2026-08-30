@@ -1,6 +1,13 @@
 // The guided Interview Workspace.
 //
-// Three properties matter more than anything else on this screen:
+// This is the screen a recruiter has open, on a laptop, while a person sits
+// opposite them for an hour. Everything about its shape follows from that: one
+// question at a time, in type large enough to read while looking up; a notes
+// field sized for a real conversation rather than for a form; and a support
+// column that answers "what do I ask next" without the recruiter having to
+// look away and hunt.
+//
+// Three properties matter more than anything else here:
 //
 //   Q1-Q8 ARE THE PACK'S. The wording is rendered verbatim from the pinned
 //   version and there is no code path here that edits it. AI does not appear in
@@ -10,8 +17,14 @@
 //   what a human later confirms, on a different screen, into a different table.
 //
 //   NO VERDICT DURING THE INTERVIEW. There is no rating control here. Anchors
-//   are shown as descriptions of behaviour to listen for, and the assessment
-//   happens after the account is complete.
+//   are shown as descriptions of behaviour to listen for, one disclosure away,
+//   and the assessment happens after the account is complete.
+//
+// The save behaviour is unchanged and deliberately fussy: a debounced autosave,
+// an explicit flush before any action that moves away from the current
+// question, a rollback if a question-state write fails, and a beforeunload
+// warning for the one exit the handlers cannot intercept. A note lost mid
+// interview cannot be recovered by anybody.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -25,25 +38,22 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
-  CaseSteps,
+  WorkflowNav,
   Chip,
   LevelZeroNote,
-  NextStep,
   Panel,
   PEACE_LABEL,
   State,
-  TrustStageBanner,
   GovernedGuidance,
   interviewErrorMessage,
-  PRACTICE_KIND_LABEL,
   uiLabel,
   BUTTON,
   FIELD,
   PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
+import { Disclosure, Eyebrow } from "@/components/employer/interview/InterviewLayout";
 import {
   getInterviewCase,
-  getTrustStage,
   saveInterviewNote,
   setQuestionState,
   setSessionState,
@@ -62,6 +72,12 @@ const STATE_LABEL: Record<string, TranslationKey> = {
   skipped: "iiu.iv.state.skipped",
 };
 
+/** Probe purposes that read as "ask this to get the account", versus the two
+ *  that read as "check you have understood". Both are governed rows from the
+ *  pack; splitting them is presentation, so a recruiter mid-sentence can find
+ *  the right one without reading eight. */
+const CLARIFY_PURPOSES = ["neutral_check", "correction"];
+
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
@@ -69,8 +85,6 @@ function Page() {
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
-
-  const trustFn = useServerFn(getTrustStage);
   const noteFn = useServerFn(saveInterviewNote);
   const qStateFn = useServerFn(setQuestionState);
   const sStateFn = useServerFn(setSessionState);
@@ -80,20 +94,13 @@ function Page() {
     queryFn: () => getFn({ data: { caseId } }),
     retry: false,
   });
-  // Which CQrity TRUST stage this case is in. Derived in the database from
-  // the case status and the session's PEACE stage, so it cannot disagree
-  // with the workflow the rest of the screen shows.
-  const trustQ = useQuery({
-    queryKey: ["ii", "trust-stage", caseId],
-    queryFn: () => trustFn({ data: { caseId } }),
-    retry: false,
-  });
   const refresh = () => qc.invalidateQueries({ queryKey: ["ii", "case", caseId] });
 
   const [active, setActive] = useState(0);
   const [draft, setDraft] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [reflection, setReflection] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [noteError, setNoteError] = useState(false);
   const [blockedNotice, setBlockedNotice] = useState(false);
@@ -127,8 +134,8 @@ function Page() {
     },
     onError: () => setNoteError(true),
   });
-  // Optimistic question state. The chip used to wait for a refetch, so
-  // "Markera besvarad" looked like it had done nothing for a beat -- exactly
+  // Optimistic question state. The chip used to wait for a refetch, so marking
+  // a question covered looked like it had done nothing for a beat -- exactly
   // the doubt the owner reported.
   const [pendingState, setPendingState] = useState<Record<string, string>>({});
   const [qStateError, setQStateError] = useState<{
@@ -158,7 +165,7 @@ function Page() {
       });
     },
     // Roll the chip BACK. An optimistic update with no failure path is a lie
-    // told confidently: the chip would keep saying "Besvarad" after the write
+    // told confidently: the chip would keep saying "covered" after the write
     // had failed, which is worse than never showing it early at all.
     onError: (_err, vars) => {
       setPendingState((st) => {
@@ -319,6 +326,7 @@ function Page() {
       status={ws.workspace!.employerStatus}
       activeSection="interviewIntelligence"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
+      wide
     >
       {children}
     </EmployerAppShell>
@@ -339,8 +347,11 @@ function Page() {
   if (!session) {
     return shell(
       <>
-        <h1 className="text-2xl font-semibold text-foreground">{d.title}</h1>
-        <div className="mt-4 max-w-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          {d.candidateDisplayName}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
+        <div className="mt-5 max-w-3xl">
           <State kind="empty">{t("iiu.iv.nosession")}</State>
         </div>
         <Link
@@ -356,24 +367,120 @@ function Page() {
 
   const qState = (id: string) =>
     pendingState[id] ?? session.questions.find((s) => s.questionId === id)?.state ?? "not_started";
+  const isCovered = (id: string) => ["answered", "skipped"].includes(qState(id));
   const stagePractices = d.methodPractices.filter((p) => p.peaceStage === session.peaceStage);
+
+  const requirementOf = (qq: (typeof d.questions)[number]) =>
+    d.competencies.find((c) => c.code === qq.competencyCodes[0]) ?? null;
+  const reqName = (c: { nameSv: string; nameEn: string | null }) =>
+    (lang === "en" ? c.nameEn : c.nameSv) ?? c.nameSv;
+  const reqMeaning = (c: { definitionSv: string | null; definitionEn: string | null }) =>
+    (lang === "en" ? c.definitionEn : c.definitionSv) ?? c.definitionSv;
+
+  const toCover = d.questions.filter((qq) => !isCovered(qq.id));
+  const followUps = question
+    ? [
+        ...question.probes.filter((p) => !CLARIFY_PURPOSES.includes(p.purpose)),
+        ...d.generalProbes.filter((p) => !CLARIFY_PURPOSES.includes(p.purpose)),
+      ]
+    : [];
+  const clarifiers = [
+    ...(question?.probes ?? []).filter((p) => CLARIFY_PURPOSES.includes(p.purpose)),
+    ...d.generalProbes.filter((p) => CLARIFY_PURPOSES.includes(p.purpose)),
+  ];
+
+  /* ------------------------------------------------------------------ */
+  /* Left · the questions                                                */
+  /* ------------------------------------------------------------------ */
+  const navigator = (
+    <nav aria-label={t("iiu.lv.nav")}>
+      <Eyebrow>{t("iiu.lv.nav")}</Eyebrow>
+      <ol className="mt-2 space-y-1">
+        {d.questions.map((qq, i) => {
+          const isCurrent = i === active;
+          const covered = isCovered(qq.id);
+          return (
+            <li key={qq.id}>
+              <button
+                type="button"
+                aria-current={isCurrent ? "true" : undefined}
+                onClick={() =>
+                  void guarded(() => {
+                    setActive(i);
+                    setNavOpen(false);
+                  })
+                }
+                className={`flex w-full items-start gap-2 rounded-md border px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  isCurrent
+                    ? "border-accent bg-accent/5"
+                    : "border-transparent hover:border-border hover:bg-muted/50"
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`mt-px inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold tabular-nums ${
+                    isCurrent
+                      ? "border-accent bg-accent text-accent-foreground"
+                      : covered
+                        ? "border-teal-700/40 bg-teal-700/10 text-teal-800 dark:text-teal-200"
+                        : "border-border text-muted-foreground"
+                  }`}
+                >
+                  {covered && !isCurrent ? "✓" : i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block truncate text-xs leading-snug ${
+                      isCurrent ? "font-semibold text-foreground" : "text-foreground"
+                    }`}
+                  >
+                    {qq.code} · {qq.promptSv}
+                  </span>
+                  {/* Workflow state as WORDS, from the same source as the
+                      chip beside the question -- the list said "in progress"
+                      for the selected question while the question itself said
+                      "answered", because being SELECTED is not a state. Which
+                      one is selected is carried by the accent and by
+                      aria-current, where it belongs. */}
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                    {uiLabel(STATE_LABEL, qState(qq.id), t)}
+                    {pendingState[qq.id] !== undefined && ` · ${t("iiu.iv.qstate.pending")}`}
+                    {isCurrent && <span className="sr-only"> ({t("iiu.lv.state.current")})</span>}
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
 
   return shell(
     <>
       <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
-          to="/employer/$employerSlug/interview-intelligence"
-          params={{ employerSlug }}
+          to="/employer/$employerSlug/interview-intelligence/$caseId"
+          params={{ employerSlug, caseId }}
           className="text-accent underline-offset-2 hover:underline"
         >
-          Interview Intelligence
+          {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
-      <header className="mt-3">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{d.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{d.candidateDisplayName}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+      {/* Compact candidate context. It stays compact deliberately: the person
+          is in the room, and the screen's job is the question, not the file. */}
+      <header className="mt-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        {/* The person, then the case. Every one of these screens led with
+            the case title -- internal bookkeeping -- and put the candidate
+            underneath it in muted grey. */}
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {d.candidateDisplayName}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <CaseStatusChip status={d.status} />
           <Chip
             tone={session.status === "paused" ? "attention" : "work"}
@@ -388,25 +495,20 @@ function Page() {
           <Chip tone="work" srPrefix={t("iiu.iv.peacestep")}>
             {uiLabel(PEACE_LABEL, session.peaceStage, t)}
           </Chip>
-          {savedAt && (
-            <Chip tone="confirmed">
-              {t("iiu.iv.saved")} {savedAt}
-            </Chip>
-          )}
         </div>
       </header>
 
-      <div className="mt-6 max-w-4xl">
-        <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
-      </div>
-
-      <div className="mt-6">
-        <CaseSteps current={d.status} />
-        <NextStep status={d.status} />
+      <div className="mt-5">
+        <WorkflowNav
+          status={d.status}
+          current="interview"
+          employerSlug={employerSlug}
+          caseId={caseId}
+        />
       </div>
 
       {session.status === "paused" && (
-        <div className="mt-6 max-w-3xl">
+        <div className="mt-5 max-w-3xl">
           <Panel tone="attention" role="status" title={t("iiu.iv.paused.title")}>
             <p>{t("iiu.iv.paused.body")}</p>
             <button
@@ -420,111 +522,8 @@ function Page() {
         </div>
       )}
 
-      {/* Owner UAT: the interview page worked but did not tell the
-          interviewer how to actually run it. Seven lines, collapsed by
-          default so it does not sit between them and the candidate. */}
-      <details className="mt-6 max-w-3xl rounded-lg border border-border p-4" open>
-        <summary className="cursor-pointer text-sm font-semibold text-foreground">
-          {t("iiu.iv.howto.title")}
-        </summary>
-        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-relaxed text-muted-foreground">
-          <li>{t("iiu.iv.howto.1")}</li>
-          <li>{t("iiu.iv.howto.2")}</li>
-          <li>{t("iiu.iv.howto.3")}</li>
-          <li>{t("iiu.iv.howto.4")}</li>
-          <li>{t("iiu.iv.howto.5")}</li>
-          <li>{t("iiu.iv.howto.6")}</li>
-          <li className="font-medium text-foreground">{t("iiu.iv.howto.7")}</li>
-        </ol>
-      </details>
-
-      {/* PEACE stage control */}
-      <section className="mt-6" aria-labelledby="s-peace">
-        <h2 id="s-peace" className="text-sm font-semibold text-foreground">
-          {t("iiu.iv.peacestep")}
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">{t("iiu.iv.peace.note")}</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {(["planning", "engage_explain", "account", "closure", "evaluation"] as const).map(
-            (stage) => (
-              <button
-                key={stage}
-                type="button"
-                aria-current={session.peaceStage === stage ? "step" : undefined}
-                className={`${BUTTON} ${session.peaceStage === stage ? "border-accent font-semibold" : ""}`}
-                onClick={() => setSState.mutate({ sessionId: session.id, peaceStage: stage })}
-              >
-                {uiLabel(PEACE_LABEL, stage, t)}
-              </button>
-            ),
-          )}
-        </div>
-        {stagePractices.length > 0 && (
-          <ul className="mt-3 space-y-1.5">
-            {stagePractices.map((p) => (
-              <li key={p.id} className="rounded-md border border-border p-2.5 text-sm">
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <Chip tone={p.practiceKind === "warning" ? "attention" : "work"}>
-                    {uiLabel(PRACTICE_KIND_LABEL, p.practiceKind, t)}
-                  </Chip>
-                  <span className="text-foreground">
-                    {(lang === "en" ? p.statementEn : p.statementSv) ?? p.statementSv}
-                  </span>
-                </div>
-                {/*
-                  scp_interview_method_practices.rationale is NOT rendered.
-                  It is the internal, English-language justification for why a
-                  practice is in the method library — written for whoever
-                  reviews the library, not for a recruiter mid-interview. It was
-                  reaching this screen verbatim, so a Swedish interview page
-                  carried lines like "Process fidelity is measurable and is
-                  about the interviewer." Half-translated is worse than absent,
-                  and the provenance line below already tells the recruiter what
-                  backs the practice. If this rationale is ever meant for
-                  customers it needs authoring in Swedish as customer copy,
-                  which is content work rather than a rendering fix.
-                */}
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {p.hasResearchClaim ? t("iiu.iv.practice.claim") : t("iiu.iv.practice.craft")}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Question navigation — buttons, never drag-and-drop, order is fixed */}
-      <section className="mt-8" aria-labelledby="s-questions">
-        <h2 id="s-questions" className="text-lg font-semibold text-foreground">
-          {t("iiu.iv.questions")}{" "}
-          <span className="text-sm font-normal text-muted-foreground">
-            ({d.questions.length} {t("iiu.iv.fixedorder")})
-          </span>
-        </h2>
-        <nav aria-label={t("iiu.iv.questions")} className="mt-3 flex flex-wrap gap-2">
-          {d.questions.map((qq, i) => {
-            const st = qState(qq.id);
-            return (
-              <button
-                key={qq.id}
-                type="button"
-                onClick={() => void guarded(() => setActive(i))}
-                aria-current={i === active ? "true" : undefined}
-                className={`${BUTTON} ${i === active ? "border-accent font-semibold" : ""}`}
-              >
-                {qq.code}
-                <span className="ml-1.5 text-xs text-muted-foreground">
-                  {uiLabel(STATE_LABEL, st, t)}
-                  {pendingState[qq.id] !== undefined && ` · ${t("iiu.iv.qstate.pending")}`}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
-      </section>
-
       {qStateError && (
-        <div className="mt-3 max-w-3xl">
+        <div className="mt-5 max-w-3xl">
           <Panel tone="governance" role="alert" title={t("iiu.iv.qstate.failed")}>
             <p>
               <button
@@ -540,32 +539,60 @@ function Page() {
         </div>
       )}
 
-      {question && (
-        <section className="mt-6 max-w-6xl" aria-labelledby="s-current">
-          <h3 id="s-current" className="sr-only">
-            {t("iiu.iv.current")}
-          </h3>
+      {/* The workspace. Navigator, conversation, support. */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[14rem_minmax(0,1fr)_21rem] xl:gap-7">
+        {/* ---- left: the questions, as a column at xl and a drawer below ---- */}
+        <div className="hidden min-w-0 xl:block">
+          <div className="xl:sticky xl:top-6">{navigator}</div>
+        </div>
 
-          {/* Where the interviewer is in the fixed set. A count, never a
-              percentage or a score: this measures the conversation's progress
-              through eight governed questions, not the candidate. */}
-          {/* Q1-Q8 are governed content locked to the package version and must
-              never be rewritten — including by translation. An English-reading
-              interviewer needs to know that is deliberate, not a gap. */}
-          {lang === "en" && (
-            <p className="mb-2 max-w-[68ch] text-xs text-muted-foreground">
-              {t("iiu.iv.packlocale")}
-            </p>
-          )}
+        <div className="min-w-0">
+          {/* At tablet and phone the list is behind one control rather than
+              squeezed into a third column nobody can read. */}
+          <div className="mb-4 xl:hidden">
+            <button
+              type="button"
+              className={BUTTON}
+              aria-expanded={navOpen}
+              aria-controls="q-drawer"
+              onClick={() => setNavOpen((v) => !v)}
+            >
+              {t("iiu.lv.nav.open")} ({active + 1}/{d.questions.length})
+            </button>
+            {navOpen && (
+              <div id="q-drawer" className="mt-3 rounded-lg border border-border bg-card p-3">
+                {navigator}
+              </div>
+            )}
+          </div>
 
-          <p className="mb-2 text-sm font-medium text-muted-foreground" aria-live="polite">
-            {t("iiu.iv.progress.question")} {active + 1} {t("iiu.iv.progress.of")}{" "}
-            {d.questions.length}
-          </p>
+          {question && (
+            <>
+              {/* Where the interviewer is in the fixed set. A count, never a
+                  percentage or a score: this measures the conversation's
+                  progress through eight governed questions, not the candidate. */}
+              <p
+                className="text-sm font-medium tabular-nums text-muted-foreground"
+                aria-live="polite"
+              >
+                {t("iiu.lv.progress")} {active + 1} {t("iiu.lv.progress.of")} {d.questions.length}
+              </p>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-            <div className="rounded-lg border border-border p-4">
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Q1-Q8 are governed content locked to the package version and
+                  must never be rewritten — including by translation. An
+                  English-reading interviewer needs to know that is deliberate. */}
+              {lang === "en" && (
+                <p className="mt-1 max-w-[68ch] text-xs text-muted-foreground">
+                  {t("iiu.iv.packlocale")}
+                </p>
+              )}
+
+              {/* The question itself. The single most important thing on the
+                  screen, and sized like it. */}
+              <h2 className="mt-2 max-w-[46ch] text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
+                {question.promptSv}
+              </h2>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <Chip tone="work">{question.code}</Chip>
                 <Chip>
                   {question.questionType === "behavioural"
@@ -573,95 +600,60 @@ function Page() {
                     : t("iiu.iv.type.situational")}
                 </Chip>
                 <Chip
-                  tone={qState(question.id) === "answered" ? "confirmed" : "neutral"}
+                  tone={isCovered(question.id) ? "confirmed" : "neutral"}
                   srPrefix={t("iiu.iv.questionstatus")}
                 >
                   {uiLabel(STATE_LABEL, qState(question.id), t)}
                 </Chip>
+                <span className="text-xs text-muted-foreground">{t("iiu.iv.verbatim")}</span>
               </div>
 
-              <blockquote className="mt-3 border-l-2 border-accent pl-3 text-base leading-relaxed text-foreground">
-                {question.promptSv}
-              </blockquote>
-              <p className="mt-1 text-xs text-muted-foreground">{t("iiu.iv.verbatim")}</p>
+              {/* Why this matters, in role terms. Not methodology prose. */}
+              {(() => {
+                const req = requirementOf(question);
+                if (!req) return null;
+                return (
+                  <div className="mt-4 border-l-2 border-accent/40 pl-3.5">
+                    <Eyebrow>{t("iiu.lv.why")}</Eyebrow>
+                    <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-foreground">
+                      <span className="font-medium">{reqName(req)}</span>
+                      {reqMeaning(req) ? ` — ${reqMeaning(req)}` : ""}
+                    </p>
+                  </div>
+                );
+              })()}
 
-              {question.probes.length > 0 && (
-                <>
-                  <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t("iiu.iv.approvedprobes")}
-                  </h4>
-                  <ul className="mt-2 space-y-1">
-                    {question.probes.map((p) => (
-                      <li key={p.id} className="text-sm text-foreground">
-                        · {p.wordingSv}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-
-              {d.generalProbes.length > 0 && (
-                <>
-                  <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t("iiu.iv.generalprobes")}
-                  </h4>
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {d.generalProbes.map((p) => (
-                      <li key={p.id}>
-                        <Chip tone="work">{p.wordingSv}</Chip>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-
-              {question.dimensions.length > 0 && (
-                <>
-                  <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t("iiu.iv.evidencetoseek")}
-                  </h4>
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {question.dimensions.map((dim) => (
-                      <li key={dim.id}>
-                        <Chip>{(lang === "en" ? dim.labelEn : dim.labelSv) ?? dim.labelSv}</Chip>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-
-              {/* Notes. A SOURCE, and labelled as one. */}
-              <div className="mt-5">
-                <label htmlFor="note" className="text-sm font-medium text-foreground">
-                  {t("iiu.iv.notes")}
-                </label>
-                <p id="note-hint" className="mt-0.5 text-xs text-muted-foreground">
-                  {t("iiu.iv.notes.hint")}
-                </p>
-                {/* Owner UAT: the interviewer could not tell whether what they
-                    had typed was actually stored. The timestamp existed but sat
-                    far away in the header, so it read as page furniture rather
-                    than as an answer to "did that save?". */}
-                {/* A pending or failed save is never reported as saved. The
-                    three states are distinct on purpose: "saving", "not saved
-                    yet" and "saved at HH:MM" mean different things to somebody
-                    about to press Next. */}
-                <p
-                  role="status"
-                  aria-live="polite"
-                  className={`mt-1 text-xs font-medium ${
-                    noteError ? "text-destructive" : "text-muted-foreground"
-                  }`}
-                >
-                  {saveNote.isPending
-                    ? t("iiu.iv.saving")
-                    : noteError
-                      ? t("iiu.iv.note.unsaved")
-                      : noteDirty
-                        ? t("iiu.iv.note.unsaved")
-                        : savedAt
-                          ? `${t("iiu.iv.saved.notes")} · ${savedAt}`
-                          : "\u00a0"}
+              {/* ---- Notes. A SOURCE, and labelled as one. ---- */}
+              <div className="mt-6">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <label htmlFor="note" className="text-sm font-semibold text-foreground">
+                    {t("iiu.lv.notes")}
+                  </label>
+                  {/* Owner UAT: the interviewer could not tell whether what they
+                      had typed was actually stored. The three states are
+                      distinct on purpose -- "saving", "not saved yet" and
+                      "saved at HH:MM" mean different things to somebody about
+                      to press Next. Quiet, and never absent. */}
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className={`text-xs font-medium tabular-nums ${
+                      noteError ? "text-destructive" : "text-muted-foreground"
+                    }`}
+                  >
+                    {saveNote.isPending
+                      ? t("iiu.lv.saving")
+                      : noteError
+                        ? t("iiu.lv.unsaved")
+                        : noteDirty
+                          ? t("iiu.iv.note.unsaved")
+                          : savedAt
+                            ? `${t("iiu.lv.saved")} · ${savedAt}`
+                            : " "}
+                  </p>
+                </div>
+                <p id="note-hint" className="mt-1 max-w-[70ch] text-xs text-muted-foreground">
+                  {t("iiu.lv.notes.hint")}
                 </p>
 
                 {noteError && (
@@ -683,20 +675,23 @@ function Page() {
                     </Panel>
                   </div>
                 )}
+
+                {/* Sized for forty-five minutes of conversation, not for a
+                    form field. */}
                 <textarea
                   id="note"
-                  rows={8}
+                  rows={16}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   aria-describedby="note-hint"
-                  className={FIELD}
+                  className={`${FIELD} min-h-[22rem] resize-y leading-relaxed`}
                 />
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className={BUTTON}
+                  className={PRIMARY_BUTTON}
                   onClick={() =>
                     setQState.mutate({
                       sessionId: session.id,
@@ -705,7 +700,7 @@ function Page() {
                     })
                   }
                 >
-                  {t("iiu.iv.markanswered")}
+                  {t("iiu.lv.mark")}
                 </button>
                 <button
                   type="button"
@@ -733,77 +728,230 @@ function Page() {
                 >
                   {t("iiu.iv.state.revisit")}
                 </button>
-                <button
-                  type="button"
-                  className={BUTTON}
-                  disabled={active === 0}
-                  onClick={() => void guarded(() => setActive((i) => Math.max(0, i - 1)))}
-                >
-                  {t("iiu.iv.previous")}
-                </button>
-                <button
-                  type="button"
-                  className={BUTTON}
-                  disabled={active >= d.questions.length - 1}
-                  onClick={() =>
-                    void guarded(() => setActive((i) => Math.min(d.questions.length - 1, i + 1)))
-                  }
-                >
-                  {t("iiu.iv.next")}
-                </button>
+                <span className="ml-auto flex gap-2">
+                  <button
+                    type="button"
+                    className={BUTTON}
+                    disabled={active === 0}
+                    onClick={() => void guarded(() => setActive((i) => Math.max(0, i - 1)))}
+                  >
+                    {t("iiu.iv.previous")}
+                  </button>
+                  <button
+                    type="button"
+                    className={BUTTON}
+                    disabled={active >= d.questions.length - 1}
+                    onClick={() =>
+                      void guarded(() => setActive((i) => Math.min(d.questions.length - 1, i + 1)))
+                    }
+                  >
+                    {t("iiu.iv.next")}
+                  </button>
+                </span>
               </div>
-            </div>
 
-            {/* ---- CQrity Copilot ----
-                Live support during the interview, and deliberately NOT a model.
-                TRUST permits zero AI tasks in Understand, so nothing on this
-                panel is generated: it is the approved pack content and the
-                method, arranged so the interviewer can use it without looking
-                away from the candidate. The panel says so in its own words,
-                because a surface called "copilot" that stayed silent about it
-                would be read as one that is listening. */}
-            <aside className="lg:sticky lg:top-4 lg:self-start" aria-labelledby="s-copilot">
-              <div className="rounded-lg border border-border p-4">
-                <h4 id="s-copilot" className="text-sm font-semibold text-foreground">
-                  {t("iiu.iv.copilot.title")}
-                </h4>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {t("iiu.iv.copilot.noai")}
-                </p>
+              {/* ---- Secondary reading, all of it one click away ---- */}
+              <div className="mt-6 space-y-3">
+                <Disclosure summary={t("iiu.lv.howto")}>
+                  <ol className="list-decimal space-y-1 pl-5 text-sm leading-relaxed text-muted-foreground">
+                    <li>{t("iiu.iv.howto.1")}</li>
+                    <li>{t("iiu.iv.howto.2")}</li>
+                    <li>{t("iiu.iv.howto.3")}</li>
+                    <li>{t("iiu.iv.howto.4")}</li>
+                    <li>{t("iiu.iv.howto.5")}</li>
+                    <li>{t("iiu.iv.howto.6")}</li>
+                    <li className="font-medium text-foreground">{t("iiu.iv.howto.7")}</li>
+                  </ol>
+                </Disclosure>
 
-                {/* The conduct sequence. Governed rows, in their pinned order,
-                    during a stage that permits zero model calls. */}
-                <GovernedGuidance
-                  title={t("iiu.cd.sequence")}
-                  rows={d.conductSteps.map((c) => ({
-                    id: c.id,
-                    surface: "conduct_step",
-                    statementSv: `${c.labelSv}: ${c.guidanceSv}`,
-                    statementEn: `${c.labelEn}: ${c.guidanceEn}`,
-                  }))}
-                  ordered
-                  note={t("iiu.cd.sequence.note")}
-                />
+                {/* Anchors shown as behaviour to listen for -- never as a
+                    control. There is no rating on this screen. */}
+                <Disclosure summary={t("iiu.lv.anchors")}>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {t("iiu.iv.anchors.note")}
+                  </p>
+                  <dl className="mt-3 space-y-2.5">
+                    {[...question.anchors]
+                      .sort((a, b) => a.level - b.level)
+                      .map((a) => (
+                        <div
+                          key={a.id}
+                          className={
+                            a.level === 0
+                              ? "rounded-md border border-amber-600/40 bg-amber-500/5 p-3"
+                              : "rounded-md border border-border p-3"
+                          }
+                        >
+                          <dt className="text-sm font-semibold text-foreground">
+                            {a.level} — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
+                          </dt>
+                          <dd className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                            {(lang === "en" ? a.anchorEn : a.anchorSv) ?? a.anchorSv}
+                          </dd>
+                          {a.level === 0 && (
+                            <dd className="mt-1.5">
+                              <LevelZeroNote />
+                            </dd>
+                          )}
+                        </div>
+                      ))}
+                  </dl>
+                </Disclosure>
 
-                {/* Prohibited TECHNIQUES, which is a different list from the
-                    prohibited SUBJECTS below. Both are needed: a permitted
-                    subject asked with an interrogation technique is still the
-                    thing this product must not do. */}
-                <GovernedGuidance
-                  title={t("iiu.cd.never")}
-                  rows={d.conductProhibitions.map((c) => ({
-                    id: c.id,
-                    surface: "conduct_prohibition",
-                    statementSv: c.statementSv,
-                    statementEn: c.statementEn,
-                  }))}
-                  note={t("iiu.cd.never.note")}
-                />
+                {d.prohibitedAreas.length > 0 && (
+                  <Disclosure summary={t("iiu.iv.prohibited")}>
+                    <ul className="space-y-1.5 text-sm leading-relaxed text-foreground">
+                      {d.prohibitedAreas.map((a) => (
+                        <li key={a.id}>
+                          {(lang === "en" ? a.statementEn : a.statementSv) ?? a.statementSv}
+                        </li>
+                      ))}
+                    </ul>
+                  </Disclosure>
+                )}
 
-                <h5 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("iiu.iv.copilot.listen")}
-                </h5>
-                <ol className="mt-2 space-y-1 text-xs text-foreground">
+                {/* The PEACE stage control. It is a stage of the METHOD, so it
+                    sits with the method rather than above the conversation. */}
+                <Disclosure summary={t("iiu.iv.peacestep")}>
+                  <p className="text-xs text-muted-foreground">{t("iiu.iv.peace.note")}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(
+                      ["planning", "engage_explain", "account", "closure", "evaluation"] as const
+                    ).map((stage) => (
+                      <button
+                        key={stage}
+                        type="button"
+                        aria-current={session.peaceStage === stage ? "step" : undefined}
+                        className={`${BUTTON} ${session.peaceStage === stage ? "border-accent font-semibold" : ""}`}
+                        onClick={() =>
+                          setSState.mutate({ sessionId: session.id, peaceStage: stage })
+                        }
+                      >
+                        {uiLabel(PEACE_LABEL, stage, t)}
+                      </button>
+                    ))}
+                  </div>
+                  {stagePractices.length > 0 && (
+                    <ul className="mt-3 space-y-1.5">
+                      {stagePractices.map((p) => (
+                        <li key={p.id} className="rounded-md border border-border p-2.5 text-sm">
+                          <span className="text-foreground">
+                            {(lang === "en" ? p.statementEn : p.statementSv) ?? p.statementSv}
+                          </span>
+                          {/*
+                            scp_interview_method_practices.rationale is NOT
+                            rendered. It is the internal, English-language
+                            justification for why a practice is in the method
+                            library -- written for whoever reviews the library,
+                            not for a recruiter mid-interview. It was reaching
+                            this screen verbatim, so a Swedish interview page
+                            carried lines like "Process fidelity is measurable
+                            and is about the interviewer." Half-translated is
+                            worse than absent, and the provenance line below
+                            already tells the recruiter what backs the practice.
+                          */}
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {p.hasResearchClaim
+                              ? t("iiu.iv.practice.claim")
+                              : t("iiu.iv.practice.craft")}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Disclosure>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ---- right: interview support ----
+            Live support during the interview, and deliberately NOT a model.
+            TRUST permits zero AI tasks in Understand, so nothing on this panel
+            is generated: it is the approved pack content and the method,
+            arranged into four bounded categories so the interviewer can use it
+            without looking away from the candidate. The panel says so in its
+            own words, because a surface called "copilot" that stayed silent
+            about it would be read as one that is listening.
+
+            There is no chat here, no transcript, no recording control and no
+            confidence figure, because none of those exist in this product. */}
+        <aside className="min-w-0" aria-labelledby="s-copilot">
+          <div className="rounded-lg border border-border bg-card p-4 xl:sticky xl:top-6">
+            <h2 id="s-copilot" className="text-sm font-semibold text-foreground">
+              {t("iiu.iv.copilot.title")}
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {t("iiu.iv.copilot.noai")}
+            </p>
+
+            <div className="mt-4 space-y-4">
+              {/* 1 · what is left */}
+              <SupportGroup title={t("iiu.lv.cat.tocover")}>
+                {toCover.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t("iiu.lv.cat.tocover.none")}</p>
+                ) : (
+                  <ul className="flex flex-wrap gap-1">
+                    {toCover.map((qq) => (
+                      <li key={qq.id}>
+                        <Chip tone={qq.id === question?.id ? "work" : "neutral"}>{qq.code}</Chip>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </SupportGroup>
+
+              {/* 2 · the pack's own follow-ups for this question */}
+              <SupportGroup title={t("iiu.lv.cat.followup")}>
+                {followUps.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t("iiu.lv.cat.followup.none")}</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {followUps.map((p) => (
+                      <li key={p.id} className="text-xs leading-relaxed text-foreground">
+                        {p.wordingSv}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </SupportGroup>
+
+              {/* 3 · checking you understood, not challenging the person */}
+              {clarifiers.length > 0 && (
+                <SupportGroup title={t("iiu.lv.cat.clarify")}>
+                  <ul className="space-y-1.5">
+                    {clarifiers.map((p) => (
+                      <li key={p.id} className="text-xs leading-relaxed text-foreground">
+                        {p.wordingSv}
+                      </li>
+                    ))}
+                  </ul>
+                </SupportGroup>
+              )}
+
+              {/* 4 · what a conversation cannot settle */}
+              {d.verificationRules.length > 0 && (
+                <SupportGroup title={t("iiu.lv.cat.verify")}>
+                  <ul className="space-y-2">
+                    {d.verificationRules.map((v) => (
+                      <li key={v.id} className="text-xs leading-relaxed">
+                        <span className="font-medium text-foreground">{v.requirementSv}</span>
+                        {v.interviewActionSv && (
+                          <span className="block text-muted-foreground">{v.interviewActionSv}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                    {t("iiu.lv.cat.verify.note")}
+                  </p>
+                </SupportGroup>
+              )}
+
+              {/* The 5E shape of a complete account. A description of what to
+                  listen for, never a count of what was heard. */}
+              <SupportGroup title={t("iiu.iv.copilot.listen")}>
+                <ol className="space-y-1 text-xs text-foreground">
                   <li>1. {t("iiu.ev.5e.1")}</li>
                   <li>2. {t("iiu.ev.5e.2")}</li>
                   <li>3. {t("iiu.ev.5e.3")}</li>
@@ -813,102 +961,62 @@ function Page() {
                 <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
                   {t("iiu.iv.copilot.5enote")}
                 </p>
-
-                {d.prohibitedAreas.length > 0 && (
-                  <>
-                    <h5 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {t("iiu.iv.copilot.donot")}
-                    </h5>
-                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                      {d.prohibitedAreas.slice(0, 4).map((a) => (
-                        <li key={a.id}>
-                          · {(lang === "en" ? a.statementEn : a.statementSv) ?? a.statementSv}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-
-                <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
-                  {t("iiu.iv.copilot.notes")}
-                </p>
-              </div>
-            </aside>
-          </div>
-
-          {/* Anchors shown as behaviour to listen for — never as a control */}
-          <div className="mt-4 rounded-lg border border-border p-4">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("iiu.iv.anchors.title")}
-            </h4>
-            <p className="mt-1 text-xs text-muted-foreground">{t("iiu.iv.anchors.note")}</p>
-            <div className="mt-3 space-y-2">
-              {question.anchors
-                .filter((a) => a.level === 0)
-                .map((a) => (
-                  <div
-                    key={a.id}
-                    className="rounded-md border border-amber-600/40 bg-amber-500/5 p-3"
-                  >
-                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                      0 — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
-                    </p>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      {(lang === "en" ? a.anchorEn : a.anchorSv) ?? a.anchorSv}
-                    </p>
-                    <div className="mt-1.5">
-                      <LevelZeroNote />
-                    </div>
-                  </div>
-                ))}
-              {question.anchors
-                .filter((a) => a.level > 0)
-                .sort((a, b) => a.level - b.level)
-                .map((a) => (
-                  <div key={a.id} className="rounded-md border border-border p-3">
-                    <p className="text-sm font-semibold text-foreground">
-                      {a.level} — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
-                    </p>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      {(lang === "en" ? a.anchorEn : a.anchorSv) ?? a.anchorSv}
-                    </p>
-                  </div>
-                ))}
+              </SupportGroup>
             </div>
+
+            {/* The governed conduct rows: a sequence and a set of prohibited
+                TECHNIQUES, which is a different list from the prohibited
+                SUBJECTS above. Both are needed -- a permitted subject asked
+                with an interrogation technique is still the thing this product
+                must not do. Collapsed, because a recruiter mid-question needs
+                the follow-ups first. */}
+            <details className="group mt-4 border-t border-border pt-3">
+              <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                {t("iiu.cd.sequence")}
+              </summary>
+              <GovernedGuidance
+                title={t("iiu.cd.sequence")}
+                rows={d.conductSteps.map((c) => ({
+                  id: c.id,
+                  surface: "conduct_step",
+                  statementSv: `${c.labelSv}: ${c.guidanceSv}`,
+                  statementEn: `${c.labelEn}: ${c.guidanceEn}`,
+                }))}
+                ordered
+                level={3}
+                note={t("iiu.cd.sequence.note")}
+              />
+              <GovernedGuidance
+                title={t("iiu.cd.never")}
+                rows={d.conductProhibitions.map((c) => ({
+                  id: c.id,
+                  surface: "conduct_prohibition",
+                  statementSv: c.statementSv,
+                  statementEn: c.statementEn,
+                }))}
+                level={3}
+                note={t("iiu.cd.never.note")}
+              />
+            </details>
+
+            <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+              {t("iiu.iv.copilot.notes")}
+            </p>
           </div>
-        </section>
-      )}
+        </aside>
+      </div>
 
-      {/* Prohibited areas — always visible during the interview */}
-      {d.prohibitedAreas.length > 0 && (
-        <section className="mt-8 max-w-4xl" aria-labelledby="s-prohibited">
-          <h2 id="s-prohibited" className="text-lg font-semibold text-foreground">
-            {t("iiu.iv.prohibited")}
-          </h2>
-          <ul className="mt-3 space-y-1.5">
-            {d.prohibitedAreas.slice(0, 8).map((a) => (
-              <li
-                key={a.id}
-                className="rounded-md border border-border p-2.5 text-sm text-foreground"
-              >
-                {(lang === "en" ? a.statementEn : a.statementSv) ?? a.statementSv}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Session controls */}
-      <section className="mt-10 max-w-3xl" aria-labelledby="s-session">
-        <h2 id="s-session" className="text-lg font-semibold text-foreground">
-          {t("iiu.iv.session")}
+      {/* ---- Closing the conversation ---- */}
+      <section aria-labelledby="s-session" className="mt-9 max-w-3xl border-t border-border pt-6">
+        <h2 id="s-session" className="text-base font-semibold text-foreground">
+          {t("iiu.lv.session")}
         </h2>
         {session.status !== "completed" ? (
           <>
             <label htmlFor="reflect" className="mt-3 block text-sm font-medium text-foreground">
               {t("iiu.iv.reflection.title")}
             </label>
-            <p id="reflect-hint" className="mt-0.5 text-xs text-muted-foreground">
+            <p id="reflect-hint" className="mt-0.5 max-w-[70ch] text-xs text-muted-foreground">
               {t("iiu.iv.reflection.note")}
             </p>
             <textarea
@@ -917,7 +1025,7 @@ function Page() {
               value={reflection}
               onChange={(e) => setReflection(e.target.value)}
               aria-describedby="reflect-hint"
-              className={FIELD}
+              className={`${FIELD} max-w-3xl`}
             />
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -948,7 +1056,7 @@ function Page() {
             </div>
           </>
         ) : (
-          <div className="mt-3">
+          <div className="mt-3 max-w-3xl">
             <Panel tone="confirmed" title={t("iiu.iv.completed.title")}>
               <p>{t(d.aiAvailable ? "iiu.iv.completed.body" : "iiu.iv.completed.body.manual")}</p>
             </Panel>
@@ -963,5 +1071,18 @@ function Page() {
         )}
       </section>
     </>,
+  );
+}
+
+/** One bounded category on the support column. Bounded is the point: four
+ *  named kinds of help, not an open field a model could fill. */
+function SupportGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {title}
+      </h3>
+      <div className="mt-1.5">{children}</div>
+    </section>
   );
 }

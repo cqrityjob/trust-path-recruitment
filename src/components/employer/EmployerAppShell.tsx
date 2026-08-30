@@ -86,6 +86,10 @@ export interface EmployerAppShellProps {
   status: EmployerStatus;
   activeSection: EmployerNavSection;
   hasMultipleWorkspaces: boolean;
+  /** A three-zone work surface needs more room than a form or a list. The
+   *  default reading width stays 6xl everywhere else, so widening one screen
+   *  never widens the rest of the portal. */
+  wide?: boolean;
   children: React.ReactNode;
 }
 
@@ -247,6 +251,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
     status,
     activeSection,
     hasMultipleWorkspaces,
+    wide = false,
     children,
   } = props;
   const { t } = useT();
@@ -330,7 +335,13 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
           <LanguageSwitcher />
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <main
+          className={
+            wide
+              ? "mx-auto w-full max-w-[96rem] flex-1 px-4 py-6 sm:px-6 sm:py-8"
+              : "mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8"
+          }
+        >
           {children}
         </main>
       </div>
@@ -355,7 +366,12 @@ function SidebarHeader({
         {t("employer.workspace.label")}
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-        <h1 className="min-w-0 truncate text-base font-semibold text-foreground">{employerName}</h1>
+        {/* Not an h1. This is the workspace the user is inside, shown in the
+            sidebar chrome; the page's own subject -- a candidate, a job, a
+            report -- is the document heading. Two h1s on every employer page
+            gave screen-reader users two competing answers to "what is this
+            page about", and the sidebar always won because it comes first. */}
+        <p className="min-w-0 truncate text-base font-semibold text-foreground">{employerName}</p>
         <Badge variant={STATUS_BADGE_VARIANT[status]}>{t(STATUS_LABEL_KEY[status])}</Badge>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">

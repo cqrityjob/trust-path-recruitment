@@ -1,11 +1,19 @@
-// The immutable Candidate Interview Report, its blockers, its audit trail and
-// the interview's process quality.
+// The Candidate Interview Report: a document an employer can keep in the
+// recruitment record, and — underneath it, collapsed — everything an auditor
+// needs to prove how it was made.
 //
 // The report is built ONLY from confirmed evidence and recorded human
 // assessments. It states that the employment decision belongs to the employer
 // and records no outcome, because this engine does not make or store one.
+//
+// The separation is the whole design of this screen. A hiring manager reading
+// six sections of plain prose is reading the product. A checksum, a model id,
+// a run identifier and an event ledger belong to a different reader with a
+// different question, and every one of them used to sit between the manager
+// and the candidate's own material.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -15,14 +23,16 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
-  CaseSteps,
+  WorkflowNav,
   Chip,
   LevelZeroNote,
-  NextStep,
+  MaterialBadge,
   Panel,
+  ShortDate,
   State,
   blockerMessage,
   interviewErrorMessage,
+  uiLabel,
   GovernedGuidance,
   ProviderModeChip,
   ProviderModeNote,
@@ -30,6 +40,16 @@ import {
   BUTTON,
   PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
+import {
+  Disclosure,
+  Eyebrow,
+  Field,
+  FactRow,
+  Nothing,
+  Section,
+  Surface,
+  Tally,
+} from "@/components/employer/interview/InterviewLayout";
 import {
   finaliseReport,
   getInterviewCase,
@@ -41,10 +61,17 @@ export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/report",
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
 
+const FINDING_LABEL: Record<string, TranslationKey> = {
+  gap: "iiu.find.gap",
+  unclear: "iiu.find.unclear",
+  contradiction: "iiu.find.contradiction",
+  verification: "iiu.find.verification",
+};
+
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { t } = useT();
+  const { t, lang } = useT();
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
@@ -120,21 +147,81 @@ function Page() {
   const payload = (report?.payload ?? null) as null | Record<string, unknown>;
   const qual = quality.data?.quality ?? null;
 
+  // Header facts, taken from the record rather than invented. The session
+  // itself carries when the conversation happened and who held it; the ledger
+  // is the fallback, because a fixture can be seeded without events. Neither
+  // field is printed unless the record actually holds it -- a report saying
+  // "Interviewer: —" claims to know something it does not.
+  const unassessed = d.blockers
+    .filter((b) => b.code === "QUESTION_NOT_ASSESSED")
+    .map((b) => /\b(Q\d+)\b/.exec(b.message)?.[1])
+    .filter((c): c is string => Boolean(c));
+
+  const eventAt = (name: string) => d.events.find((e) => e.event === name)?.at ?? null;
+  const interviewDate =
+    d.session?.completedAt ??
+    d.session?.startedAt ??
+    eventAt("interview_completed") ??
+    eventAt("interview_started");
+  const interviewers = (d.session?.interviewerNames ?? "").trim();
+
+  const questionByCode = new Map(d.questions.map((qq) => [qq.code, qq]));
+  const requirementByCode = new Map(d.competencies.map((c) => [c.code, c]));
+  const reqName = (c: { nameSv: string; nameEn: string | null }) =>
+    (lang === "en" ? c.nameEn : c.nameSv) ?? c.nameSv;
+
+  const payloadQuestions = Array.isArray(payload?.questions)
+    ? (payload.questions as Array<Record<string, unknown>>)
+    : [];
+  const unresolved = Array.isArray(payload?.unresolved)
+    ? (payload.unresolved as Array<Record<string, unknown>>)
+    : [];
+  const followUp = unresolved.filter((u) => String(u.kind) !== "verification");
+  const toVerify = unresolved.filter((u) => String(u.kind) === "verification");
+  // The interviewer's own words, from the interview record. Not part of the
+  // frozen payload, and not presented as if it were: this is the interview's
+  // own note trail, which a human wrote and nothing generated.
+  const comments = (d.session?.notes ?? []).filter(
+    (n) => n.noteKind === "closing_summary" || n.noteKind === "process",
+  );
+
+  /** Every assessed question, grouped under the role requirement it explores.
+   *  The assessment is recorded per question; the requirement is what the
+   *  question is FOR, and grouping by it is what makes the section an
+   *  assessment against requirements rather than a list of questions. */
+  const byRequirement = d.competencies
+    .map((c) => ({
+      requirement: c,
+      entries: payloadQuestions.filter(
+        (pq) => questionByCode.get(String(pq.code))?.competencyCodes[0] === c.code,
+      ),
+    }))
+    .filter((g) => g.entries.length > 0);
+  const ungrouped = payloadQuestions.filter((pq) => {
+    const code = questionByCode.get(String(pq.code))?.competencyCodes[0];
+    return !code || !requirementByCode.has(code);
+  });
+
   return shell(
     <>
       <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
-          to="/employer/$employerSlug/interview-intelligence"
-          params={{ employerSlug }}
+          to="/employer/$employerSlug/interview-intelligence/$caseId"
+          params={{ employerSlug, caseId }}
           className="text-accent underline-offset-2 hover:underline"
         >
-          Interview Intelligence
+          {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
       <header className="mt-3">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{d.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{d.candidateDisplayName}</p>
+        {/* The person, then the case. Every one of these screens led with
+            the case title -- internal bookkeeping -- and put the candidate
+            underneath it in muted grey. */}
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          {d.candidateDisplayName}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CaseStatusChip status={d.status} />
           {isFinal && (
@@ -142,61 +229,65 @@ function Page() {
               {t("iiu.rp.final")}
             </Chip>
           )}
-          {report?.contentHash && (
-            <Chip srPrefix={t("iiu.rp.hash")}>
-              <code className="font-mono text-[11px]">{report.contentHash.slice(0, 12)}</code>
-            </Chip>
-          )}
         </div>
       </header>
 
-      <div className="mt-6">
-        <CaseSteps current={d.status} />
-        <NextStep status={d.status} />
+      <div className="mt-5">
+        <WorkflowNav
+          status={d.status}
+          current="report"
+          employerSlug={employerSlug}
+          caseId={caseId}
+        />
       </div>
 
-      {/* ---- TRUST conduct, Trace ----
-           The interviewer reviews their OWN conduct before the record closes.
-           Nothing here is stored as an assessment of the candidate, and
-           nothing here is generated. */}
-      <section className="mt-8 max-w-4xl" aria-labelledby="s-selfreview">
-        <h2 id="s-selfreview" className="text-lg font-semibold text-foreground">
-          {t("iiu.cd.trace.selfreview")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.cd.governed")}</p>
-        <GovernedGuidance
-          title={t("iiu.cd.trace.selfreview")}
-          rows={d.conductGuidance.filter((g) => g.surface === "trace_self_review")}
-          note={t("iiu.cd.trace.selfreview.note")}
-        />
-        <GovernedGuidance
-          title={t("iiu.cd.trace.closure")}
-          rows={d.conductGuidance.filter((g) => g.surface === "trace_closure")}
-        />
-      </section>
-
-      {/* ---- Blockers ---- */}
-      {!isFinal && (
-        <section className="mt-8 max-w-4xl" aria-labelledby="s-block">
-          <h2 id="s-block" className="text-lg font-semibold text-foreground">
-            {t("iiu.rp.remaining")}
+      {/* ---- Before the record closes ----
+           The interviewer reviews their OWN conduct. Nothing here is stored as
+           an assessment of the candidate, and nothing here is generated. Once
+           the report is final it is a disclosure rather than a task. */}
+      {isFinal ? (
+        // A <summary> cannot be a heading, so the disclosure carries one of its
+        // own. Without it the page jumped h1 -> h3 for anyone navigating by
+        // headings, which is the same defect as a missing landmark.
+        <section aria-labelledby="s-selfreview" className="mt-7 max-w-4xl">
+          <h2 id="s-selfreview" className="sr-only">
+            {t("iiu.cd.trace.selfreview")}
           </h2>
+          <Disclosure summary={t("iiu.cd.trace.selfreview")}>
+            <SelfReview guidance={d.conductGuidance} t={t} />
+          </Disclosure>
+        </section>
+      ) : (
+        <Section
+          id="s-selfreview"
+          title={t("iiu.cd.trace.selfreview")}
+          description={t("iiu.rp.selfreview.lead")}
+          className="mt-8 max-w-4xl"
+        >
+          <SelfReview guidance={d.conductGuidance} t={t} />
+        </Section>
+      )}
+
+      {/* ---- What remains before it can be locked ---- */}
+      {!isFinal && (
+        <Section
+          id="s-block"
+          title={t("iiu.rp.remaining")}
+          description={t("iiu.rp.notfinal.lead")}
+          className="mt-10 max-w-4xl"
+        >
           {d.blockers.length === 0 ? (
-            <div className="mt-3">
+            <div className="space-y-4">
               <Panel tone="confirmed" title={t("iiu.rp.noblockers.title")}>
                 <p>{t(d.aiAvailable ? "iiu.rp.noblockers" : "iiu.rp.noblockers.manual")}</p>
               </Panel>
               {finalise.isError && (
-                <div className="mt-3">
-                  <Panel tone="governance" role="alert" title={t("iiu.rp.failed")}>
-                    <p className="whitespace-pre-line">
-                      {interviewErrorMessage(finalise.error, t)}
-                    </p>
-                  </Panel>
-                </div>
+                <Panel tone="governance" role="alert" title={t("iiu.rp.failed")}>
+                  <p className="whitespace-pre-line">{interviewErrorMessage(finalise.error, t)}</p>
+                </Panel>
               )}
               {d.aiAvailable && (
-                <div className="mt-3 rounded-lg border border-border p-4">
+                <Surface>
                   <h3 className="text-sm font-semibold text-foreground">
                     {t("iiu.rp.draft.title")}
                   </h3>
@@ -234,11 +325,9 @@ function Page() {
                     </div>
                   )}
                   {draft.data && draft.data.sections.length > 0 && (
-                    <div className="mt-3">
+                    <div className="mt-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t("iiu.rp.draft.result")}
-                        </p>
+                        <Eyebrow>{t("iiu.rp.draft.result")}</Eyebrow>
                         {draft.data.providerMode && (
                           <ProviderModeChip mode={draft.data.providerMode} />
                         )}
@@ -261,10 +350,10 @@ function Page() {
                       </p>
                     </div>
                   )}
-                </div>
+                </Surface>
               )}
 
-              <div className="mt-3 rounded-lg border border-amber-600/40 bg-amber-500/5 p-4">
+              <div className="rounded-lg border border-amber-600/40 bg-amber-500/5 p-4">
                 <p className="text-sm font-semibold text-foreground">{t("iiu.rp.confirm")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{t("iiu.rp.confirm.body")}</p>
                 <button
@@ -278,260 +367,420 @@ function Page() {
               </div>
             </div>
           ) : (
-            <ul className="mt-3 space-y-1.5">
-              {d.blockers.map((b) => (
-                <li
-                  key={`${b.code}-${b.message}`}
-                  className="rounded-md border border-amber-600/40 bg-amber-500/5 p-3 text-sm"
-                >
-                  <p className="text-foreground">{blockerMessage(b.code, b.message, t)}</p>
+            /* Eight identical rows saying "Q1 has no assessment", "Q2 has no
+               assessment" is a wall, not a list of things to do. The
+               per-question blockers collapse into one row that names the
+               questions; everything else keeps its own line. */
+            <ul className="space-y-2">
+              {d.blockers
+                .filter((b) => b.code !== "QUESTION_NOT_ASSESSED")
+                .map((b) => (
+                  <li
+                    key={`${b.code}-${b.message}`}
+                    className="rounded-md border border-amber-600/40 bg-amber-500/5 px-3 py-2.5 text-sm"
+                  >
+                    <p className="text-foreground">{blockerMessage(b.code, b.message, t)}</p>
+                  </li>
+                ))}
+              {unassessed.length > 0 && (
+                <li className="rounded-md border border-amber-600/40 bg-amber-500/5 px-3 py-2.5 text-sm">
+                  <p className="text-foreground">
+                    {unassessed.length} {t("iiu.rp.blk.question_not_assessed.many")}
+                  </p>
+                  <p className="mt-1.5 flex flex-wrap gap-1.5">
+                    {unassessed.map((code) => (
+                      <Chip key={code} tone="attention">
+                        {code}
+                      </Chip>
+                    ))}
+                  </p>
                 </li>
-              ))}
+              )}
             </ul>
           )}
-        </section>
+        </Section>
       )}
 
-      {/* ---- The report ---- */}
+      {/* ---- The document ---- */}
       {isFinal && payload && (
-        <section className="mt-8 max-w-4xl" aria-labelledby="s-report">
-          <h2 id="s-report" className="text-lg font-semibold text-foreground">
-            {t("iiu.rp.candidatereport")}
-          </h2>
+        <article
+          aria-labelledby="s-report"
+          className="mt-10 max-w-4xl rounded-xl border border-border bg-card px-5 py-7 sm:px-9 sm:py-10"
+        >
+          <header className="border-b border-border pb-6">
+            <h2
+              id="s-report"
+              className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+            >
+              {t("iiu.rp.doc.title")}
+            </h2>
+            <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+              {t("iiu.rp.doc.lead")}
+            </p>
+            <div className="mt-6">
+              <FactRow>
+                <Field label={t("iiu.rp.doc.candidate")}>{d.candidateDisplayName}</Field>
+                <Field label={t("iiu.rp.doc.role")}>{d.packName ?? d.title}</Field>
+                <Field label={t("iiu.rp.doc.date")}>
+                  <ShortDate iso={interviewDate} />
+                </Field>
+                {interviewers !== "" && (
+                  <Field label={t("iiu.rp.doc.interviewer")}>{interviewers}</Field>
+                )}
+                <Field label={t("iiu.rp.doc.status")}>
+                  {t("iiu.rp.final")}
+                  {report ? ` · ${t("iiu.rp.doc.version")} ${report.versionNumber}` : ""}
+                </Field>
+              </FactRow>
+            </div>
+          </header>
 
-          <div className="mt-3">
-            <Panel tone="confirmed" title={t("iiu.rp.final")}>
-              <p>{t("iiu.rp.final.body")}</p>
-            </Panel>
-          </div>
-
-          <div className="mt-4 rounded-lg border border-border p-4">
-            <h3 className="text-sm font-semibold text-foreground">{t("iiu.rp.locked")}</h3>
-            <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-xs uppercase text-muted-foreground">{t("iiu.rp.rollpaket")}</dt>
-                <dd className="text-foreground">{d.packName}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase text-muted-foreground">{t("iiu.rp.packhash")}</dt>
-                <dd>
-                  <code className="font-mono text-xs">
-                    {String((payload.pinned as Record<string, unknown>)?.pack_content_hash ?? "—")}
-                  </code>
-                </dd>
-              </div>
+          {/* ---- 1 · Scope ---- */}
+          <DocSection
+            ordinal={1}
+            id="d-scope"
+            title={t("iiu.rp.s.scope")}
+            body={t("iiu.rp.s.scope.body")}
+          >
+            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              <Field label={t("iiu.rp.rollpaket")}>{d.packName ?? "—"}</Field>
+              <Field label={t("iiu.rp.doc.questions")}>{payloadQuestions.length}</Field>
+              <Field label={t("iiu.rp.doc.sources")} wide>
+                {Array.isArray(payload.sources) && (payload.sources as unknown[]).length > 0 ? (
+                  <ul className="space-y-0.5">
+                    {(payload.sources as Array<Record<string, unknown>>).map((src, i) => (
+                      <li key={i}>{String(src.label)}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  "—"
+                )}
+              </Field>
             </dl>
-          </div>
+          </DocSection>
 
-          {Array.isArray(payload.questions) && (
-            <ol className="mt-4 space-y-3">
-              {(payload.questions as Array<Record<string, unknown>>).map((qq) => {
-                const assessment = qq.assessment as Record<string, unknown> | null;
+          {/* ---- 2 · The candidate's own examples ---- */}
+          <DocSection
+            ordinal={2}
+            id="d-examples"
+            title={t("iiu.rp.s.examples")}
+            body={t("iiu.rp.s.examples.body")}
+          >
+            <ol className="space-y-6">
+              {payloadQuestions.map((qq) => {
                 const evidence = (qq.evidence ?? []) as Array<Record<string, unknown>>;
-                const level = assessment ? Number(assessment.level) : null;
                 return (
-                  <li key={String(qq.code)} className="rounded-lg border border-border p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Chip tone="work">{String(qq.code)}</Chip>
-                      {level !== null && (
-                        <Chip
-                          tone={level === 0 ? "attention" : "confirmed"}
-                          srPrefix={t("iiu.rp.humanassessment")}
-                        >
-                          {t("iiu.ev.level")} {level} — {String(assessment?.level_meaning ?? "")}
-                        </Chip>
-                      )}
-                      <Chip>
-                        {evidence.length} {t("iiu.rp.confirmedevidence")}
-                      </Chip>
-                    </div>
-                    <p className="mt-2 text-sm text-foreground">{String(qq.prompt)}</p>
-
-                    {evidence.length > 0 && (
-                      <ul className="mt-3 space-y-1.5">
+                  <li key={`ex-${String(qq.code)}`}>
+                    <p className="text-sm font-medium leading-relaxed text-foreground">
+                      <span className="mr-2 font-mono text-xs text-muted-foreground">
+                        {String(qq.code)}
+                      </span>
+                      {String(qq.prompt)}
+                    </p>
+                    {evidence.length === 0 ? (
+                      <p className="mt-2 text-sm italic text-muted-foreground">
+                        {t("iiu.rp.doc.noexamples")}
+                      </p>
+                    ) : (
+                      <ul className="mt-2.5 space-y-2">
                         {evidence.map((e, i) => (
                           <li
                             key={i}
-                            className="rounded-md border border-teal-700/30 bg-teal-700/5 p-2.5 text-sm text-foreground"
+                            className="border-l-2 border-teal-700/40 pl-4 text-sm leading-relaxed text-foreground"
                           >
                             {String(e.excerpt)}
                             {e.was_corrected === true && (
                               <span className="ml-2 text-xs text-muted-foreground">
-                                (korrigerad av granskare)
+                                {t("iiu.rp.correctedbyreviewer")}
                               </span>
                             )}
                           </li>
                         ))}
                       </ul>
                     )}
-
-                    {assessment && (
-                      <div className="mt-3 text-xs text-muted-foreground">
-                        <p>
-                          <span className="font-medium">{t("iiu.ev.motivering")}</span>
-                          {String(assessment.rationale)}
-                        </p>
-                        {assessment.uncertainty ? (
-                          <p className="mt-0.5">
-                            <span className="font-medium">{t("iiu.ev.uncertainty")}</span>
-                            {String(assessment.uncertainty)}
-                          </p>
-                        ) : null}
-                        <p className="mt-0.5">
-                          <span className="font-medium">{t("iiu.ev.ankare")}</span>
-                          {String(assessment.anchor)}
-                        </p>
-                        {level === 0 && (
-                          <div className="mt-1.5">
-                            <LevelZeroNote />
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </li>
                 );
               })}
             </ol>
-          )}
+            <p className="mt-5 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+              {t("iiu.rp.doc.nomaterial")}
+            </p>
+          </DocSection>
 
-          {Array.isArray(payload.unresolved) && (payload.unresolved as unknown[]).length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-semibold text-foreground">{t("iiu.rp.outstanding")}</h3>
-              <ul className="mt-2 space-y-1.5">
-                {(payload.unresolved as Array<Record<string, unknown>>).map((f, i) => (
-                  <li
-                    key={i}
-                    className="rounded-md border border-amber-600/40 bg-amber-500/5 p-2.5 text-sm"
-                  >
-                    <Chip tone="attention">{String(f.kind)}</Chip>
-                    <span className="ml-2 text-foreground">{String(f.statement)}</span>
+          {/* ---- 3 · What a person concluded, against what the role asks ---- */}
+          <DocSection
+            ordinal={3}
+            id="d-assessment"
+            title={t("iiu.rp.s.assessment")}
+            body={t("iiu.rp.s.assessment.body")}
+          >
+            <div className="space-y-7">
+              {byRequirement.map((group) => (
+                <section key={group.requirement.id}>
+                  <h4 className="flex items-baseline gap-2 text-sm font-semibold text-foreground">
+                    <span aria-hidden="true" className="font-mono text-xs text-muted-foreground">
+                      {group.requirement.code}
+                    </span>
+                    {reqName(group.requirement)}
+                  </h4>
+                  <div className="mt-2.5 space-y-3">
+                    {group.entries.map((qq) => (
+                      <AssessmentEntry key={`as-${String(qq.code)}`} entry={qq} t={t} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+              {ungrouped.map((qq) => (
+                <AssessmentEntry key={`un-${String(qq.code)}`} entry={qq} t={t} />
+              ))}
+            </div>
+            {/* Said once for the section rather than under every level-0 entry.
+                Seven copies of the same amber paragraph is not seven times the
+                emphasis; it is a document that looks like it is shouting. */}
+            {payloadQuestions.some(
+              (qq) => Number((qq.assessment as Record<string, unknown> | null)?.level) === 0,
+            ) && (
+              <div className="mt-5 max-w-[70ch]">
+                <LevelZeroNote />
+              </div>
+            )}
+          </DocSection>
+
+          {/* ---- 4 · Still open ---- */}
+          <DocSection ordinal={4} id="d-followup" title={t("iiu.rp.s.followup")}>
+            {followUp.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("iiu.rp.s.followup.none")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {followUp.map((f, i) => (
+                  <li key={i} className="text-sm leading-relaxed">
+                    {/* The payload stores the enum. "contradiction" is a
+                        database value, not a word an employer reads in a
+                        document about a person. */}
+                    <Chip tone="attention">{uiLabel(FINDING_LABEL, String(f.kind), t)}</Chip>{" "}
+                    <span className="text-foreground">{String(f.statement)}</span>
                   </li>
                 ))}
               </ul>
+            )}
+          </DocSection>
+
+          {/* ---- 5 · Checked elsewhere, never in a conversation ---- */}
+          <DocSection ordinal={5} id="d-verify" title={t("iiu.rp.s.verify")}>
+            {toVerify.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("iiu.rp.s.verify.none")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {toVerify.map((f, i) => (
+                  <li key={i} className="text-sm leading-relaxed">
+                    <MaterialBadge state="verify" />{" "}
+                    <span className="text-foreground">{String(f.statement)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </DocSection>
+
+          {/* ---- 6 · The interviewer's own words ---- */}
+          <DocSection
+            ordinal={6}
+            id="d-comments"
+            title={t("iiu.rp.s.comments")}
+            body={t("iiu.rp.s.comments.body")}
+          >
+            {comments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("iiu.rp.s.comments.none")}</p>
+            ) : (
+              <ul className="space-y-3">
+                {comments.map((n) => (
+                  <li
+                    key={n.id}
+                    className="whitespace-pre-line text-sm leading-relaxed text-foreground"
+                  >
+                    {n.body}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </DocSection>
+
+          {/* ---- The boundary this product exists to hold ----
+               No control, disabled or otherwise. There is no employment-decision
+               data model in the interview domain, and a greyed-out button would
+               claim there is one coming. */}
+          <section aria-labelledby="d-decision" className="mt-9 border-t border-border pt-6">
+            <h3 id="d-decision" className="text-base font-semibold text-foreground">
+              {t("iiu.rp.s.decision")}
+            </h3>
+            <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-foreground">
+              {t("iiu.rp.decision.boundary")}
+            </p>
+            {payload.decision_boundary ? (
+              <div className="mt-4 border-l-2 border-border pl-4">
+                <Eyebrow>{t("iiu.rp.doc.locked.wording")}</Eyebrow>
+                <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+                  {String(payload.decision_boundary)}
+                </p>
+              </div>
+            ) : null}
+          </section>
+
+          <section aria-labelledby="d-ai" className="mt-7 border-t border-border pt-6">
+            <h3 id="d-ai" className="text-base font-semibold text-foreground">
+              {t("iiu.pp.airole.short")}
+            </h3>
+            <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+              {String((payload.ai_disclosure as Record<string, unknown>)?.statement ?? "")}
+            </p>
+          </section>
+        </article>
+      )}
+
+      {/* ---- Audit ----
+           Everything above this line is what an employer reads. Nothing is
+           deleted here; provenance moved to where an auditor looks for it. */}
+      <section aria-labelledby="s-audit" className="mt-10 max-w-4xl">
+        <h2 id="s-audit" className="sr-only">
+          {t("iiu.rp.audit.title")}
+        </h2>
+        <Disclosure summary={t("iiu.rp.audit.title")}>
+          <p className="max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+            {t("iiu.rp.audit.body")}
+          </p>
+
+          {/* Checksums: what proves the published report and the pack text were
+              not altered. Enormously important to an auditor, of no use at all
+              to a hiring manager. */}
+          <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {report?.contentHash && (
+              <Field label={t("iiu.rp.hash")}>
+                <code className="font-mono text-[11px] break-all">{report.contentHash}</code>
+              </Field>
+            )}
+            {isFinal && payload?.pinned ? (
+              <Field label={t("iiu.rp.packhash")}>
+                <code className="font-mono text-[11px] break-all">
+                  {String((payload.pinned as Record<string, unknown>)?.pack_content_hash ?? "—")}
+                </code>
+              </Field>
+            ) : null}
+          </dl>
+
+          {/* Process quality: how the interview was run, never how the
+              candidate did. It sat above the report as eight loud tiles. */}
+          {qual && (
+            <div className="mt-6">
+              <Eyebrow>{t("iiu.rp.quality.title")}</Eyebrow>
+              <p className="mt-1 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+                {t("iiu.rp.quality.note")}
+              </p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                <Tally
+                  label={t("iiu.rp.m.answered")}
+                  value={`${qual.questions_answered}/${qual.questions_in_pack}`}
+                />
+                <Tally
+                  label={t("iiu.rp.m.dimensions")}
+                  value={`${qual.dimensions_with_confirmed_evidence}/${qual.dimensions_in_pack}`}
+                />
+                <Tally
+                  label={t("iiu.rp.m.corrected")}
+                  value={`${qual.proposals_corrected}/${qual.proposals_total}`}
+                />
+                <Tally
+                  label={t("iiu.rp.m.awaiting")}
+                  value={qual.proposals_awaiting_review}
+                  tone={qual.proposals_awaiting_review > 0 ? "attention" : "neutral"}
+                />
+                <Tally
+                  label={t("iiu.rp.m.level0")}
+                  value={qual.insufficient_evidence_count}
+                  tone="attention"
+                />
+                <Tally
+                  label={t("iiu.rp.m.verifications")}
+                  value={qual.verifications_outstanding}
+                  tone={qual.verifications_outstanding > 0 ? "attention" : "neutral"}
+                />
+                <Tally label={t("iiu.rp.m.assessors")} value={qual.assessors_involved} />
+                <Tally
+                  label={t("iiu.rp.m.reflected")}
+                  value={qual.interviewer_reflected ? t("iiu.rp.yes") : t("iiu.rp.no")}
+                />
+              </div>
             </div>
           )}
 
-          <div className="mt-4 space-y-3">
-            <Panel tone="ai" title={t("iiu.pp.airole.short")}>
-              <p>{String((payload.ai_disclosure as Record<string, unknown>)?.statement ?? "")}</p>
-            </Panel>
-            <Panel tone="work" title={t("iiu.rp.decision")}>
-              <p>{String(payload.decision_boundary ?? "")}</p>
-            </Panel>
+          {/* The ledger. Stored reasons are NOT rewritten into the reader's
+              language: doing so would change what the audit trail says
+              happened, so the note explains it instead. */}
+          <div className="mt-6">
+            <Eyebrow>{t("iiu.rp.traceability")}</Eyebrow>
+            <p className="mt-1 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+              {t("iiu.rp.trace.note")}
+            </p>
+            {d.events.length === 0 ? (
+              <div className="mt-3">
+                <Nothing>{t("iiu.rp.nohistory")}</Nothing>
+              </div>
+            ) : (
+              <div className="mt-3 overflow-x-auto rounded-lg border border-border">
+                <table className="w-full min-w-[600px] text-left text-sm">
+                  <caption className="sr-only">{t("iiu.rp.historycaption")}</caption>
+                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th scope="col" className="px-4 py-2">
+                        {t("iiu.rp.event")}
+                      </th>
+                      <th scope="col" className="px-4 py-2">
+                        {t("iiu.rp.actor")}
+                      </th>
+                      <th scope="col" className="px-4 py-2">
+                        {t("iiu.rp.reason")}
+                      </th>
+                      <th scope="col" className="px-4 py-2">
+                        {t("iiu.rp.time")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {d.events.map((e) => (
+                      <tr key={e.seq}>
+                        <th
+                          scope="row"
+                          className="px-4 py-2 font-mono text-xs font-medium text-foreground"
+                        >
+                          {e.event}
+                        </th>
+                        <td className="px-4 py-2">
+                          <Chip
+                            tone={
+                              e.actorKind === "ai"
+                                ? "ai"
+                                : e.actorKind === "system"
+                                  ? "neutral"
+                                  : "confirmed"
+                            }
+                          >
+                            {e.actorKind === "ai"
+                              ? "AI"
+                              : e.actorKind === "system"
+                                ? "System"
+                                : t("iiu.rp.actor.human")}
+                          </Chip>
+                        </td>
+                        <td className="px-4 py-2 text-muted-foreground">{e.reason ?? "—"}</td>
+                        <td className="px-4 py-2 tabular-nums text-muted-foreground">
+                          {new Date(e.at).toISOString().slice(0, 16).replace("T", " ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </section>
-      )}
-
-      {/* ---- Process quality ---- */}
-      {qual && (
-        <section className="mt-10 max-w-4xl" aria-labelledby="s-quality">
-          <h2 id="s-quality" className="text-lg font-semibold text-foreground">
-            Processkvalitet
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("iiu.rp.quality.note")}</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Metric
-              label={t("iiu.rp.m.answered")}
-              value={`${qual.questions_answered}/${qual.questions_in_pack}`}
-            />
-            <Metric
-              label={t("iiu.rp.m.dimensions")}
-              value={`${qual.dimensions_with_confirmed_evidence}/${qual.dimensions_in_pack}`}
-            />
-            <Metric
-              label={t("iiu.rp.m.corrected")}
-              value={`${qual.proposals_corrected}/${qual.proposals_total}`}
-            />
-            <Metric
-              label={t("iiu.rp.m.awaiting")}
-              value={qual.proposals_awaiting_review}
-              tone={qual.proposals_awaiting_review > 0 ? "attention" : "neutral"}
-            />
-            <Metric
-              label={t("iiu.rp.m.level0")}
-              value={qual.insufficient_evidence_count}
-              tone="attention"
-            />
-            <Metric
-              label="Verifieringar kvar"
-              value={qual.verifications_outstanding}
-              tone={qual.verifications_outstanding > 0 ? "attention" : "neutral"}
-            />
-            <Metric label={t("iiu.rp.m.assessors")} value={qual.assessors_involved} />
-            <Metric
-              label="Intervjuaren reflekterade"
-              value={qual.interviewer_reflected ? "Ja" : "Nej"}
-            />
-          </div>
-        </section>
-      )}
-
-      {/* ---- Audit ---- */}
-      <section className="mt-10 max-w-4xl" aria-labelledby="s-audit">
-        <h2 id="s-audit" className="text-lg font-semibold text-foreground">
-          {t("iiu.rp.traceability")}
-        </h2>
-        {/* The ledger is a record, not chrome. Rewriting a stored reason to
-            match the reader's current language would change what the audit
-            trail says happened, so the note explains it instead. */}
-        <p className="mt-1 max-w-[68ch] text-xs text-muted-foreground">{t("iiu.rp.trace.note")}</p>
-        {d.events.length === 0 ? (
-          <div className="mt-3">
-            <State kind="empty">{t("iiu.rp.nohistory")}</State>
-          </div>
-        ) : (
-          <div className="mt-3 overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[600px] text-left text-sm">
-              <caption className="sr-only">{t("iiu.rp.historycaption")}</caption>
-              <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th scope="col" className="px-4 py-2">
-                    {t("iiu.rp.event")}
-                  </th>
-                  <th scope="col" className="px-4 py-2">
-                    {t("iiu.rp.actor")}
-                  </th>
-                  <th scope="col" className="px-4 py-2">
-                    Orsak
-                  </th>
-                  <th scope="col" className="px-4 py-2">
-                    Tid
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {d.events.map((e) => (
-                  <tr key={e.seq}>
-                    <th scope="row" className="px-4 py-2 font-medium text-foreground">
-                      {e.event}
-                    </th>
-                    <td className="px-4 py-2">
-                      <Chip
-                        tone={
-                          e.actorKind === "ai"
-                            ? "ai"
-                            : e.actorKind === "system"
-                              ? "neutral"
-                              : "confirmed"
-                        }
-                      >
-                        {e.actorKind === "ai"
-                          ? "AI"
-                          : e.actorKind === "system"
-                            ? "System"
-                            : t("iiu.rp.actor.human")}
-                      </Chip>
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground">{e.reason ?? "—"}</td>
-                    <td className="px-4 py-2 tabular-nums text-muted-foreground">
-                      {new Date(e.at).toISOString().slice(0, 16).replace("T", " ")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        </Disclosure>
       </section>
 
       <div className="mt-8 flex flex-wrap gap-3">
@@ -540,35 +789,111 @@ function Page() {
           params={{ employerSlug, caseId }}
           className={BUTTON}
         >
-          Evidensgranskning
+          {t("iiu.rp.toreview2")}
         </Link>
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
           className={BUTTON}
         >
-          Alla intervjuer
+          {t("iiu.rp.tolist")}
         </Link>
       </div>
     </>,
   );
 }
 
-function Metric({
-  label,
-  value,
-  tone = "neutral",
+/** The governed self-review rows, used in two places on this screen. */
+function SelfReview({
+  guidance,
+  t,
 }: {
-  label: string;
-  value: string | number;
-  tone?: "neutral" | "attention";
+  guidance: readonly {
+    readonly id: string;
+    readonly surface: string;
+    readonly statementSv: string;
+    readonly statementEn: string;
+  }[];
+  t: (key: Parameters<ReturnType<typeof useT>["t"]>[0]) => string;
 }) {
   return (
-    <div
-      className={`rounded-lg border p-3 ${tone === "attention" ? "border-amber-600/40" : "border-border"} bg-muted/20`}
-    >
-      <p className="text-xl font-semibold tabular-nums text-foreground">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+    <>
+      <p className="text-sm text-muted-foreground">{t("iiu.cd.governed")}</p>
+      <GovernedGuidance
+        title={t("iiu.cd.trace.selfreview")}
+        rows={guidance.filter((g) => g.surface === "trace_self_review")}
+        note={t("iiu.cd.trace.selfreview.note")}
+      />
+      <GovernedGuidance
+        title={t("iiu.cd.trace.closure")}
+        rows={guidance.filter((g) => g.surface === "trace_closure")}
+      />
+    </>
+  );
+}
+
+/** One numbered section of the document. */
+function DocSection({
+  ordinal,
+  id,
+  title,
+  body,
+  children,
+}: {
+  ordinal: number;
+  id: string;
+  title: string;
+  body?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id} className="mt-9 border-t border-border pt-6 first:border-t-0">
+      <h3 id={id} className="flex items-baseline gap-2.5 text-base font-semibold text-foreground">
+        <span aria-hidden="true" className="text-sm tabular-nums text-muted-foreground">
+          {ordinal}.
+        </span>
+        {title}
+      </h3>
+      {body && (
+        <p className="mt-1.5 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">{body}</p>
+      )}
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+/** One recorded human assessment, as the frozen payload holds it. */
+function AssessmentEntry({
+  entry,
+  t,
+}: {
+  entry: Record<string, unknown>;
+  t: (key: Parameters<ReturnType<typeof useT>["t"]>[0]) => string;
+}) {
+  const assessment = entry.assessment as Record<string, unknown> | null;
+  if (!assessment) return null;
+  const level = Number(assessment.level);
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Chip>{String(entry.code)}</Chip>
+        <Chip tone={level === 0 ? "attention" : "confirmed"} srPrefix={t("iiu.rp.humanassessment")}>
+          {t("iiu.ev.level")} {level} — {String(assessment.level_meaning ?? "")}
+        </Chip>
+      </div>
+      <p className="mt-2.5 text-sm leading-relaxed text-foreground">
+        {String(assessment.rationale)}
+      </p>
+      {assessment.uncertainty ? (
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          <span className="font-medium">{t("iiu.ev.uncertainty")}</span>
+          {String(assessment.uncertainty)}
+        </p>
+      ) : null}
+      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+        <span className="font-medium">{t("iiu.ev.ankare")}</span>
+        {String(assessment.anchor)}
+      </p>
     </div>
   );
 }

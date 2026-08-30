@@ -448,6 +448,36 @@ export interface CaseDetail {
       countsTowardAggregation: boolean;
     }[];
     readonly probes: readonly { id: string; purpose: string; wordingSv: string }[];
+    /** The governed role requirements this question is written to explore, most
+     *  important first. Codes rather than objects, so the requirement text is
+     *  held once on `competencies` and can never disagree with itself. */
+    readonly competencyCodes: readonly string[];
+  }[];
+  /** What this role needs checked against a document rather than settled in a
+   *  conversation -- and, for each, what the interview may legitimately ask.
+   *  Governed pack rows that had no reader. */
+  readonly verificationRules: readonly {
+    readonly id: string;
+    readonly code: string;
+    readonly requirementSv: string;
+    readonly interviewActionSv: string | null;
+    readonly subsequentVerificationSv: string | null;
+    readonly passportBoundarySv: string | null;
+  }[];
+  /** The role requirements the pack governs, in their pinned order. These are
+   *  the pack's own rows -- what the role needs, written before anybody met
+   *  this candidate -- which is what makes an assessment against them an
+   *  assessment against a requirement rather than against an impression. */
+  readonly competencies: readonly {
+    readonly id: string;
+    readonly code: string;
+    readonly nameSv: string;
+    readonly nameEn: string | null;
+    readonly definitionSv: string | null;
+    readonly definitionEn: string | null;
+    /** A text[] in the database, not a sentence: four or five short behaviours
+     *  to listen for. Flattened to a string it read as one run-on word. */
+    readonly indicatorsSv: readonly string[];
   }[];
   readonly generalProbes: readonly { id: string; purpose: string; wordingSv: string }[];
   readonly prohibitedAreas: readonly {
@@ -480,6 +510,9 @@ export interface CaseDetail {
     readonly id: string;
     readonly status: string;
     readonly peaceStage: PeaceStage;
+    readonly startedAt: string | null;
+    readonly completedAt: string | null;
+    readonly interviewerNames: string | null;
     readonly questions: readonly {
       readonly questionId: string;
       readonly state: string;
@@ -521,12 +554,20 @@ export interface CaseDetail {
     readonly findingKind: string;
     readonly statement: string;
     readonly resolutionState: string;
+    /** The question the finding came out of. Already stored; nothing read it,
+     *  so the assessment screen could not put "Q4 is unclear about who wrote
+     *  the report" beside Q4. */
+    readonly questionId: string | null;
   }[];
   readonly assessments: readonly {
     readonly id: string;
     readonly questionId: string;
     readonly level: number;
     readonly rationale: string;
+    /** What the assessor said was still missing or unclear. recordAssessment
+     *  has always written it and the report has always published it; it just
+     *  never came back to the screen that records it. */
+    readonly uncertaintyNote: string | null;
   }[];
   readonly report: {
     readonly id: string;
@@ -611,7 +652,7 @@ function fiveE(row: Record<string, unknown>): FiveE {
   return {
     e1Situation: text(row.e1_situation),
     e2OwnRole: text(row.e2_own_role),
-    e3ExactAction: text(row.e3_exact_action),
+    e3ExactAction: text(row.e3_action),
     e4Effect: text(row.e4_effect),
     e5Reflection: text(row.e5_reflection),
   };
@@ -663,6 +704,9 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       conductRes,
       conductProhibitionsRes,
       guidanceRes,
+      competencyRes,
+      questionCompetencyRes,
+      verificationRuleRes,
     ] = await Promise.all([
       db
         .from("scp_interview_case_sources")
@@ -705,32 +749,32 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .limit(1),
       db
         .from("scp_interview_sessions")
-        .select("id, status, peace_stage")
+        .select("id, status, peace_stage, started_at, completed_at, interviewer_names")
         .eq("case_id", caseId)
         .order("started_at", { ascending: false })
         .limit(1),
       db
         .from("scp_interview_evidence_proposals")
         .select(
-          "id, excerpt, question_id, review_state, extraction_confidence, relevance_rationale, uncertainty_note, prohibited_conclusion_note, note_id, e1_situation, e2_own_role, e3_exact_action, e4_effect, e5_reflection",
+          "id, excerpt, question_id, review_state, extraction_confidence, relevance_rationale, uncertainty_note, prohibited_conclusion_note, note_id, e1_situation, e2_own_role, e3_action, e4_effect, e5_reflection",
         )
         .eq("case_id", caseId)
         .order("created_at"),
       db
         .from("scp_interview_evidence")
         .select(
-          "id, excerpt, original_excerpt, question_id, origin, note_id, e1_situation, e2_own_role, e3_exact_action, e4_effect, e5_reflection",
+          "id, excerpt, original_excerpt, question_id, origin, note_id, e1_situation, e2_own_role, e3_action, e4_effect, e5_reflection",
         )
         .eq("case_id", caseId)
         .order("created_at"),
       db
         .from("scp_interview_findings")
-        .select("id, finding_kind, statement, resolution_state")
+        .select("id, finding_kind, statement, resolution_state, question_id")
         .eq("case_id", caseId)
         .order("created_at"),
       db
         .from("scp_interview_assessments")
-        .select("id, question_id, level, rationale, superseded_by")
+        .select("id, question_id, level, rationale, uncertainty_note, superseded_by")
         .eq("case_id", caseId)
         .is("superseded_by", null),
       db
@@ -763,9 +807,46 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .from("scp_interview_conduct_guidance")
         .select("id, trust_stage, surface, guidance_key, statement_sv, statement_en")
         .order("display_order"),
+      db
+        .from("scp_interview_pack_competencies")
+        .select(
+          "id, code, name_sv, name_en, definition_sv, definition_en, observable_indicators_sv",
+        )
+        .eq("pack_version_id", packVersionId)
+        .order("display_order"),
+      db
+        .from("scp_interview_question_competencies")
+        .select("question_id, pack_competency_id, is_primary"),
+      db
+        .from("scp_interview_verification_rules")
+        .select(
+          "id, code, requirement_sv, interview_action_sv, subsequent_verification_sv, passport_boundary_sv",
+        )
+        .eq("pack_version_id", packVersionId)
+        .order("display_order"),
     ]);
 
     if (questionsRes.error) throw new Error(questionsRes.error.message);
+
+    // A failed read must not arrive as an empty list.
+    //
+    // These four selects asked for a column that does not exist -- the 5E
+    // structure is stored as e3_action and the query said e3_exact_action --
+    // so PostgREST refused both of them and `data` came back null. Every
+    // screen then rendered "no confirmed material yet" and "no suggestions",
+    // which on THIS product does not read as a broken query. It reads as a
+    // candidate who said nothing.
+    //
+    // Silence is the most expensive failure mode this domain has, so the reads
+    // whose emptiness carries meaning now raise instead of shrugging.
+    for (const [what, res] of [
+      ["evidence", evidenceRes],
+      ["proposals", proposalsRes],
+      ["findings", findingsRes],
+      ["assessments", assessmentsRes],
+    ] as const) {
+      if (res.error) throw new Error(`INTERVIEW_READ_FAILED (${what}): ${res.error.message}`);
+    }
 
     const sourceRows = (sourcesRes.data ?? []) as Array<Record<string, unknown>>;
     const passageRows = (passagesRes.data ?? []) as Array<{ id: string; source_id: string }>;
@@ -783,6 +864,13 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       qIds.has(a.question_id as string),
     );
     const probes = (probesRes.data ?? []) as Array<Record<string, unknown>>;
+    const competencyRows = (competencyRes.data ?? []) as Array<Record<string, unknown>>;
+    // The map is read across every pack in the tenant, so it is narrowed to
+    // this pack's competencies before it is used.
+    const competencyById = new Map(competencyRows.map((c) => [c.id as string, c]));
+    const questionCompetencies = (
+      (questionCompetencyRes.data ?? []) as Array<Record<string, unknown>>
+    ).filter((m) => competencyById.has(m.pack_competency_id as string));
 
     const planRow = (planRes.data ?? [])[0] ?? null;
     let plan: CaseDetail["plan"] = null;
@@ -833,6 +921,14 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         id: sessionRow.id as string,
         status: sessionRow.status as string,
         peaceStage: sessionRow.peace_stage as PeaceStage,
+        // When the conversation happened and who held it. Both were already
+        // stored on the session; the report had no source for either and
+        // printed a dash where the interview date belongs.
+        startedAt: (sessionRow.started_at as string | null) ?? null,
+        completedAt: (sessionRow.completed_at as string | null) ?? null,
+        // A free-text field, not an array: scp_interview_sessions.interviewer_names
+        // is `text`, and scp_iv_start_session takes one string.
+        interviewerNames: (sessionRow.interviewer_names as string | null) ?? null,
         questions: ((sqRes.data ?? []) as Array<Record<string, unknown>>).map((s) => ({
           questionId: s.question_id as string,
           state: s.state as string,
@@ -910,6 +1006,33 @@ export const getInterviewCase = createServerFn({ method: "GET" })
             purpose: p.purpose as string,
             wordingSv: p.wording_sv as string,
           })),
+        // Primary first: a question explores one requirement principally and
+        // touches others, and a screen that lists them alphabetically loses
+        // the distinction the pack author made.
+        competencyCodes: questionCompetencies
+          .filter((m) => m.question_id === q.id)
+          .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+          .map((m) => competencyById.get(m.pack_competency_id as string)?.code as string)
+          .filter((c): c is string => Boolean(c)),
+      })),
+      verificationRules: ((verificationRuleRes.data ?? []) as Array<Record<string, unknown>>).map(
+        (v) => ({
+          id: v.id as string,
+          code: v.code as string,
+          requirementSv: v.requirement_sv as string,
+          interviewActionSv: (v.interview_action_sv as string | null) ?? null,
+          subsequentVerificationSv: (v.subsequent_verification_sv as string | null) ?? null,
+          passportBoundarySv: (v.passport_boundary_sv as string | null) ?? null,
+        }),
+      ),
+      competencies: competencyRows.map((c) => ({
+        id: c.id as string,
+        code: c.code as string,
+        nameSv: c.name_sv as string,
+        nameEn: (c.name_en as string | null) ?? null,
+        definitionSv: (c.definition_sv as string | null) ?? null,
+        definitionEn: (c.definition_en as string | null) ?? null,
+        indicatorsSv: (c.observable_indicators_sv as string[] | null) ?? [],
       })),
       generalProbes: probes
         .filter((p) => p.question_id === null)
@@ -927,38 +1050,50 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       plan,
       session,
       // Cast via unknown: generated types.ts predates the 5E columns on this table.
-      proposals: ((proposalsRes.data ?? []) as unknown as Array<Record<string, unknown>>).map((p) => ({
-        id: p.id as string,
-        excerpt: p.excerpt as string,
-        questionId: p.question_id as string,
-        reviewState: p.review_state as string,
-        extractionConfidence: (p.extraction_confidence as number) ?? null,
-        relevanceRationale: (p.relevance_rationale as string) ?? "",
-        uncertaintyNote: (p.uncertainty_note as string) ?? null,
-        prohibitedConclusionNote: (p.prohibited_conclusion_note as string) ?? null,
-        noteId: (p.note_id as string) ?? null,
-        fiveE: fiveE(p),
-      })),
-      evidence: ((evidenceRes.data ?? []) as unknown as Array<Record<string, unknown>>).map((e) => ({
-        id: e.id as string,
-        excerpt: e.excerpt as string,
-        originalExcerpt: (e.original_excerpt as string) ?? null,
-        questionId: e.question_id as string,
-        origin: e.origin as string,
-        noteId: (e.note_id as string) ?? null,
-        fiveE: fiveE(e),
-      })),
+      proposals: ((proposalsRes.data ?? []) as unknown as Array<Record<string, unknown>>).map(
+        (p) => ({
+          id: p.id as string,
+          excerpt: p.excerpt as string,
+          questionId: p.question_id as string,
+          reviewState: p.review_state as string,
+          extractionConfidence: (p.extraction_confidence as number) ?? null,
+          relevanceRationale: (p.relevance_rationale as string) ?? "",
+          uncertaintyNote: (p.uncertainty_note as string) ?? null,
+          prohibitedConclusionNote: (p.prohibited_conclusion_note as string) ?? null,
+          noteId: (p.note_id as string) ?? null,
+          fiveE: fiveE(p),
+        }),
+      ),
+      evidence: ((evidenceRes.data ?? []) as unknown as Array<Record<string, unknown>>).map(
+        (e) => ({
+          id: e.id as string,
+          excerpt: e.excerpt as string,
+          originalExcerpt: (e.original_excerpt as string) ?? null,
+          questionId: e.question_id as string,
+          origin: e.origin as string,
+          noteId: (e.note_id as string) ?? null,
+          fiveE: fiveE(e),
+        }),
+      ),
       findings: ((findingsRes.data ?? []) as Array<Record<string, unknown>>).map((f) => ({
         id: f.id as string,
         findingKind: f.finding_kind as string,
         statement: f.statement as string,
         resolutionState: f.resolution_state as string,
+        // Findings already carry the question they came out of. Nothing read
+        // it, so the assessment screen had no way to put "Q4 is unclear about
+        // who wrote the report" next to Q4.
+        questionId: (f.question_id as string | null) ?? null,
       })),
       assessments: ((assessmentsRes.data ?? []) as Array<Record<string, unknown>>).map((a) => ({
         id: a.id as string,
         questionId: a.question_id as string,
         level: a.level as number,
         rationale: a.rationale as string,
+        // Already written by recordAssessment and already published in the
+        // report payload; it simply never came back to the screen that
+        // records it, so an assessor could not see what they had written.
+        uncertaintyNote: (a.uncertainty_note as string | null) ?? null,
       })),
       report: reportRow
         ? {

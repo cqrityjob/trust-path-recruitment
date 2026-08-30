@@ -15,6 +15,7 @@
 //      verdicts. Confirmed evidence is teal, and it describes the EVIDENCE,
 //      not the person.
 
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -584,31 +585,24 @@ export function TrustStageBanner({
   const prohibitions =
     lang === "en" && stage.prohibitionsEn.length > 0 ? stage.prohibitionsEn : stage.prohibitions;
 
+  // Hierarchy, deliberately: what the RECRUITER must do here, and whether AI
+  // is on, stay visible. The method's identity, its stage numbering, its
+  // purpose statement, its prohibitions and its validation disclaimer move
+  // inside a disclosure.
+  //
+  // None of it is removed or softened -- it is governed content and it still
+  // reads in both languages. But it used to occupy the first screenful of
+  // every work surface, so a recruiter opening a candidate met "CQrity TRUST
+  // v1 · step 5 of 5" and a note about scientific validation before they met
+  // their own next task. Operational first, methodology second, audit third.
   return (
     <section aria-labelledby="trust-stage" className="rounded-lg border border-border p-4">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span
-          aria-hidden="true"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-700/40 bg-sky-700/10 font-mono text-sm font-semibold text-sky-900 dark:text-sky-200"
-        >
-          {stage.letter}
-        </span>
-        <h2 id="trust-stage" className="text-sm font-semibold text-foreground">
-          <span className="sr-only">
-            {t("iiu.trust.srstage")} {stage.ordinal} {t("iiu.trust.of5")}:{" "}
-          </span>
-          {name}
-        </h2>
-        <span className="text-xs text-muted-foreground">
-          CQrity TRUST{stage.methodVersion ? ` v${stage.methodVersion}` : ""} ·{" "}
-          {t("iiu.trust.step")} {stage.ordinal} {t("iiu.trust.of5")}
-        </span>
-      </div>
-
-      {purpose && <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">{purpose}</p>}
+      <h2 id="trust-stage" className="sr-only">
+        {t("iiu.trust.srstage")} {stage.ordinal} {t("iiu.trust.of5")}: {name}
+      </h2>
 
       {responsibility && (
-        <p className="mt-2 max-w-[68ch] text-sm text-foreground">
+        <p className="max-w-[68ch] text-sm text-foreground">
           <span className="font-medium">{t("iiu.trust.responsibility")}</span>
           {responsibility}
         </p>
@@ -622,20 +616,42 @@ export function TrustStageBanner({
             : t("iiu.trust.ai.disabled")}
       </p>
 
-      {prohibitions.length > 0 && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
-            {t("iiu.trust.prohibitions")}
-          </summary>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            {prohibitions.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ul>
-        </details>
-      )}
+      <details className="mt-3">
+        <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+          {t("iiu.trust.about")}
+        </summary>
 
-      <p className="mt-3 text-xs text-muted-foreground">{t("iiu.trust.disclaimer")}</p>
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span
+            aria-hidden="true"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-700/40 bg-sky-700/10 font-mono text-sm font-semibold text-sky-900 dark:text-sky-200"
+          >
+            {stage.letter}
+          </span>
+          <span className="text-sm font-semibold text-foreground">{name}</span>
+          <span className="text-xs text-muted-foreground">
+            CQrity TRUST{stage.methodVersion ? ` v${stage.methodVersion}` : ""} ·{" "}
+            {t("iiu.trust.step")} {stage.ordinal} {t("iiu.trust.of5")}
+          </span>
+        </div>
+
+        {purpose && <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">{purpose}</p>}
+
+        {prohibitions.length > 0 && (
+          <>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {t("iiu.trust.prohibitions")}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {prohibitions.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <p className="mt-3 text-xs text-muted-foreground">{t("iiu.trust.disclaimer")}</p>
+      </details>
     </section>
   );
 }
@@ -846,13 +862,19 @@ export function GovernedGuidance({
   rows,
   ordered = false,
   note,
+  level = 3,
 }: {
   title: string;
   rows: readonly GuidanceRow[];
   ordered?: boolean;
   note?: string;
+  /** Where this sits in the page's heading order. It was a fixed h4, which
+   *  meant every panel that introduced it with an h2 produced an h2 → h4 jump
+   *  for anybody navigating by headings. */
+  level?: 3 | 4 | 5;
 }) {
   const { lang } = useT();
+  const Heading = `h${level}` as const satisfies "h3" | "h4" | "h5";
   if (rows.length === 0) return null;
   const text = (r: GuidanceRow) => (lang === "en" ? r.statementEn : r.statementSv) || r.statementSv;
   const items = rows.map((r) => (
@@ -863,9 +885,9 @@ export function GovernedGuidance({
 
   return (
     <div className="mt-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <Heading className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
-      </h4>
+      </Heading>
       {ordered ? (
         <ol className="mt-2 list-decimal space-y-1.5 pl-5">{items}</ol>
       ) : (
@@ -873,5 +895,299 @@ export function GovernedGuidance({
       )}
       {note && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{note}</p>}
     </div>
+  );
+}
+
+/** The six kinds of material a recruiter handles, and the one thing that must
+ *  never happen: two of them looking alike.
+ *
+ *  A candidate's statement, a note, an AI proposal, confirmed material, a
+ *  verification item and a human assessment are six different claims about
+ *  the world. Conflating any two of them is how a product ends up presenting
+ *  something the candidate said as something the employer established.
+ *
+ *  Each therefore carries a GLYPH and a WORD, not a colour. Colour is used as
+ *  reinforcement and never as the signal: a recruiter reading this in
+ *  greyscale, with a screen reader, or with any of the common colour vision
+ *  deficiencies gets exactly the same six distinctions. */
+export type MaterialState = "candidate" | "note" | "ai" | "confirmed" | "verify" | "assessment";
+
+const MATERIAL: Record<
+  MaterialState,
+  { glyph: string; label: TranslationKey; help: TranslationKey; cls: string }
+> = {
+  candidate: {
+    glyph: "❝",
+    label: "iiu.st.candidate",
+    help: "iiu.st.candidate.help",
+    cls: "border-slate-500/40 text-slate-700 dark:text-slate-300",
+  },
+  note: {
+    glyph: "✎",
+    label: "iiu.st.note",
+    help: "iiu.st.note.help",
+    cls: "border-sky-700/40 text-sky-900 dark:text-sky-200",
+  },
+  ai: {
+    glyph: "◇",
+    label: "iiu.st.ai",
+    help: "iiu.st.ai.help",
+    cls: "border-violet-700/40 text-violet-900 dark:text-violet-200",
+  },
+  confirmed: {
+    glyph: "✓",
+    label: "iiu.st.confirmed",
+    help: "iiu.st.confirmed.help",
+    cls: "border-teal-700/40 text-teal-900 dark:text-teal-200",
+  },
+  verify: {
+    glyph: "!",
+    label: "iiu.st.verify",
+    help: "iiu.st.verify.help",
+    cls: "border-amber-600/50 text-amber-800 dark:text-amber-200",
+  },
+  assessment: {
+    glyph: "★",
+    label: "iiu.st.assessment",
+    help: "iiu.st.assessment.help",
+    cls: "border-indigo-700/40 text-indigo-900 dark:text-indigo-200",
+  },
+};
+
+export function MaterialBadge({ state }: { state: MaterialState }) {
+  const { t } = useT();
+  const m = MATERIAL[state];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
+        m.cls,
+      )}
+    >
+      <span aria-hidden="true" className="font-mono">
+        {m.glyph}
+      </span>
+      {t(m.label)}
+    </span>
+  );
+}
+
+/** The legend, shown once where the six first appear together. A distinction
+ *  the product depends on is worth stating plainly rather than hoping it is
+ *  inferred from styling. */
+export function MaterialLegend() {
+  const { t } = useT();
+  const order: MaterialState[] = ["candidate", "note", "ai", "confirmed", "verify", "assessment"];
+  return (
+    <details className="mt-3 rounded-lg border border-border p-4">
+      <summary className="cursor-pointer text-sm font-medium text-foreground">
+        {t("iiu.st.legend")}
+      </summary>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("iiu.st.legend.body")}</p>
+      <dl className="mt-3 space-y-2">
+        {order.map((k) => (
+          <div key={k} className="flex flex-wrap items-baseline gap-2">
+            <dt>
+              <MaterialBadge state={k} />
+            </dt>
+            <dd className="text-sm text-muted-foreground">{t(MATERIAL[k].help)}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
+}
+
+/** What the recruiter does next, given where the case is.
+ *
+ *  One source for the overview's primary button and the list's "Next step"
+ *  column. They were derived separately at first, which meant a status could
+ *  be told two different things about itself — the list saying review and the
+ *  overview saying assess — and nothing would have caught it. */
+export const NEXT_STEP_LABEL: Record<string, TranslationKey> = {
+  draft: "iiu.ov.cta.prepare",
+  sources_ready: "iiu.ov.cta.prepare",
+  prep_generated: "iiu.ov.cta.prepare",
+  prep_approved: "iiu.ov.cta.start",
+  interview_in_progress: "iiu.ov.cta.continue",
+  interview_complete: "iiu.ov.cta.review",
+  evidence_review: "iiu.ov.cta.review",
+  assessed: "iiu.ov.cta.summary",
+  reported: "iiu.ov.cta.openreport",
+};
+
+/** A date a recruiter reads at a glance, in their own locale. */
+export function ShortDate({ iso }: { iso: string | null }) {
+  const { lang } = useT();
+  if (!iso) return <span className="text-muted-foreground">—</span>;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return <span className="text-muted-foreground">—</span>;
+  return (
+    <time dateTime={iso} className="tabular-nums">
+      {d.toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })}
+    </time>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* The workflow shell                                                  */
+/* ------------------------------------------------------------------ */
+
+/** The seven steps of one interview, as the recruiter's own navigation.
+ *
+ *  This replaces a six-item read-only rail whose labels came from the case
+ *  status vocabulary. Two things changed. The steps are now LINKS, so the
+ *  workflow is something you move through rather than a progress indicator you
+ *  read; and they are named for the work, not for the record — Review, not
+ *  Evidence.
+ *
+ *  Workflow state only: done, current, not yet. Nothing here says anything
+ *  about the candidate, and a step is never "passed" or "failed". */
+const WORKFLOW = [
+  { seg: "", label: "iiu.wf.overview" },
+  { seg: "prepare", label: "iiu.wf.prepare" },
+  { seg: "interview", label: "iiu.wf.interview" },
+  { seg: "evidence", label: "iiu.wf.review" },
+  { seg: "assessment", label: "iiu.wf.assess" },
+  { seg: "summary", label: "iiu.wf.summary" },
+  { seg: "report", label: "iiu.wf.report" },
+] as const satisfies ReadonlyArray<{ seg: string; label: TranslationKey }>;
+
+/** How far the case has actually got, as an index into WORKFLOW. */
+const REACHED: Record<string, number> = {
+  draft: 1,
+  sources_ready: 1,
+  prep_generated: 1,
+  prep_approved: 2,
+  interview_in_progress: 2,
+  interview_complete: 3,
+  evidence_review: 3,
+  assessed: 5,
+  reported: 6,
+};
+
+export function WorkflowNav({
+  status,
+  current,
+  employerSlug,
+  caseId,
+}: {
+  status: string;
+  /** Which step this page IS, so it can mark itself rather than guess. */
+  current: "overview" | "prepare" | "interview" | "review" | "assess" | "summary" | "report";
+  employerSlug: string;
+  caseId: string;
+}) {
+  const { t } = useT();
+  const reached = REACHED[status] ?? 0;
+  const currentIdx = [
+    "overview",
+    "prepare",
+    "interview",
+    "review",
+    "assess",
+    "summary",
+    "report",
+  ].indexOf(current);
+
+  return (
+    <nav aria-label={t("iiu.wf.aria")} className="border-b border-border">
+      {/* Which of the seven this is, said in words. On a narrow screen the row
+          below scrolls, so the step a reader is on can be off-screen; this
+          line never is. */}
+      <p className="pb-1.5 text-xs font-medium text-muted-foreground xl:hidden">
+        {t("iiu.wf.step")} {currentIdx + 1} {t("iiu.wf.of")} {WORKFLOW.length}
+      </p>
+      {/* One row, always. A seven-step workflow that wraps onto two lines
+          stops reading as a sequence and starts reading as a pile of links,
+          so it scrolls horizontally instead -- the steps keep their order and
+          their spacing at every width. */}
+      <ol className="-mb-px flex items-stretch gap-x-0.5 overflow-x-auto text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {WORKFLOW.map((step, i) => {
+          const isCurrent = i === currentIdx;
+          const isDone = i < reached;
+          return (
+            <li key={`${step.seg}-${step.label}`} className="shrink-0">
+              <Link
+                to={
+                  step.seg === ""
+                    ? "/employer/$employerSlug/interview-intelligence/$caseId"
+                    : (`/employer/$employerSlug/interview-intelligence/$caseId/${step.seg}` as never)
+                }
+                params={{ employerSlug, caseId }}
+                aria-current={isCurrent ? "step" : undefined}
+                className={cn(
+                  // `relative` is load-bearing. The sr-only spans below are
+                  // position:absolute, and without a positioned ancestor their
+                  // containing block is the page itself -- so a step scrolled
+                  // out of this row parked an invisible 1px box hundreds of
+                  // pixels past the viewport and the whole document scrolled
+                  // sideways at 375px. Nothing was visible; the page was just
+                  // 694px wide.
+                  "relative inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+                  isCurrent
+                    ? "border-accent font-semibold text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
+                )}
+              >
+                {/* The step number, or a tick once the step is behind you.
+                    Workflow completion only -- a tick here says the recruiter
+                    has been through this step, never that anything passed. */}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "inline-flex h-[1.125rem] w-[1.125rem] items-center justify-center rounded-full border text-[10px] font-semibold tabular-nums",
+                    isCurrent
+                      ? "border-accent bg-accent text-accent-foreground"
+                      : isDone
+                        ? "border-teal-700/40 bg-teal-700/10 text-teal-800 dark:text-teal-200"
+                        : "border-border text-muted-foreground",
+                  )}
+                >
+                  {isDone && !isCurrent ? "✓" : i + 1}
+                </span>
+                {t(step.label)}
+                {isCurrent && <span className="sr-only"> ({t("iiu.wf.current")})</span>}
+                {isDone && !isCurrent && <span className="sr-only"> ({t("iiu.wf.done")})</span>}
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/** The header every case screen shares: who, for what, where, and the one
+ *  thing to do next. Composed once so the eight screens cannot drift apart. */
+export function CaseHeader({
+  candidate,
+  role,
+  status,
+  action,
+}: {
+  candidate: string;
+  role: string;
+  status: string;
+  /** The primary action for THIS screen, when it has one. */
+  action?: React.ReactNode;
+}) {
+  return (
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          {candidate}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{role}</p>
+        <div className="mt-2.5">
+          <CaseStatusChip status={status} />
+        </div>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </header>
   );
 }

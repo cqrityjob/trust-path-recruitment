@@ -14,10 +14,12 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
+  NEXT_STEP_LABEL,
+  ShortDate,
+  uiLabel,
   Panel,
   State,
   interviewErrorMessage,
-  ValidationChip,
   BUTTON,
 } from "@/components/employer/interview/InterviewUi";
 import { listInterviewCases } from "@/lib/interview-intelligence/runtime.functions";
@@ -61,8 +63,11 @@ function Page() {
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
       <header>
+        {/* "Interview Intelligence" is what we call the capability; a
+            recruiter opening their week is looking for their interviews. The
+            sidebar already says Intervjuer, and the page disagreed with it. */}
         <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          Interview Intelligence
+          {t("iiu.ix.heading")}
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           {t("iiu.ix.lead")}
@@ -114,28 +119,37 @@ function Page() {
                     <th scope="col" className="px-4 py-3">
                       {t("iiu.ix.col.awaiting")}
                     </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      {t("iiu.ix.col.updated")}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      {t("iiu.ix.col.next")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {cases.map((c) => (
                     <tr key={c.id} className="align-top">
                       <th scope="row" className="px-4 py-3 font-medium text-foreground">
+                        {/* The candidate is the row. The case title is
+                            internal bookkeeping, and leading with it made the
+                            list read as a list of records rather than of
+                            people. The link lands on the overview, so opening
+                            a candidate answers "who and what next" before it
+                            asks for work. */}
                         <Link
-                          to="/employer/$employerSlug/interview-intelligence/$caseId/prepare"
+                          to="/employer/$employerSlug/interview-intelligence/$caseId"
                           params={{ employerSlug, caseId: c.id }}
                           className="text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
-                          {c.title}
+                          {c.candidateDisplayName}
                         </Link>
                         <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                          {c.candidateDisplayName}
+                          {c.title}
                         </span>
                       </th>
                       <td className="px-4 py-3">
                         <span className="text-muted-foreground">{c.packName ?? "—"}</span>
-                        <span className="mt-1 block">
-                          <ValidationChip label={c.validationLabel} />
-                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <CaseStatusChip status={c.status} />
@@ -144,6 +158,16 @@ function Page() {
                         {c.proposalsAwaitingReview > 0
                           ? `${c.proposalsAwaitingReview} ${t("iiu.ix.proposals")}`
                           : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <ShortDate iso={c.updatedAt ?? null} />
+                      </td>
+                      {/* The column that turns a list of records into a work
+                          queue. It is derived from the same NEXT_STEP_LABEL
+                          the overview's primary button uses, so a case cannot
+                          be told one thing here and another when it opens. */}
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {uiLabel(NEXT_STEP_LABEL, c.status, t)}
                       </td>
                     </tr>
                   ))}

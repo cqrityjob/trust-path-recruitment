@@ -215,7 +215,16 @@ ok(
 /* 5 · No ordinary-employer pilot-grant language survives               */
 /* ------------------------------------------------------------------ */
 
-const employerSurfaces = [...interviewRoutes, "src/components/employer/interview/InterviewUi.tsx"];
+/** Every file that can put words in front of a recruiter. The shared layout
+ *  module holds no copy by design -- every string is passed in, already
+ *  resolved -- and it is swept anyway, because "by design" is the part that
+ *  stops being true. */
+const INTERVIEW_COMPONENTS = [
+  "src/components/employer/interview/InterviewUi.tsx",
+  "src/components/employer/interview/InterviewLayout.tsx",
+];
+
+const employerSurfaces = [...interviewRoutes, ...INTERVIEW_COMPONENTS];
 
 for (const file of employerSurfaces) {
   const raw = read(file);
@@ -306,7 +315,7 @@ ok(
 // (dictionaries[lang][key] ?? dictionaries.sv[key] ?? key) and a missing
 // English entry therefore renders SILENTLY as Swedish.
 
-const I18N_SURFACES = [...interviewRoutes, "src/components/employer/interview/InterviewUi.tsx"];
+const I18N_SURFACES = [...interviewRoutes, ...INTERVIEW_COMPONENTS];
 
 /** Blank out block comments while PRESERVING line numbers, so a reported
  *  line points at the real one. */
@@ -344,6 +353,13 @@ const SWEDISH_WORDS = new RegExp(
     "|\\b[A-ZÅÄÖ][a-zåäö]{3,}(ens|arens|erna|orna)\\b",
     // "AI:s", "AI:ts" -- the Swedish genitive colon form
     "|\\bAI:[a-zåäö]{1,2}\\b",
+    // Owner review round 2 found "Processkvalitet" and "Verifieringar kvar"
+    // still hardcoded. Neither has a Swedish glyph and neither ends in the
+    // definite forms above, so both walked past every rule here. These two
+    // endings are high precision: English forms the same nouns as
+    // "verifications" and "quality", never as -ingar or kvalitet.
+    "|\\b[A-ZÅÄÖa-zåäö]{2,}(ingar|ingarna|ningen|heten)\\b",
+    "|\\b[A-ZÅÄÖa-zåäö]*kvalitet[a-zåäö]*\\b",
   ].join(""),
 );
 
@@ -718,6 +734,545 @@ for (const file of [
     });
     ok(bare.length === 0, `the copy asserts "${claim}" without a negation`);
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* 14 · The recruiter's entry point                                     */
+/* ------------------------------------------------------------------ */
+
+// The product failure this fixes: opening a candidate landed the recruiter
+// inside /prepare, whose first screenful was the TRUST stage banner -- the
+// method's name, which of five stages this is, what may not be concluded here,
+// and a note about scientific validation. Who the candidate was, what the role
+// needed and what to do next appeared nowhere.
+//
+// The method still governs every screen underneath. It must not be the first
+// thing between a recruiter and their work.
+{
+  const OV =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
+  const ov = read(OV);
+
+  ok(
+    ov.includes("{d.candidateDisplayName}") &&
+      ov.indexOf("{d.candidateDisplayName}") < ov.indexOf("iiu.ov.whereyouare"),
+    "the overview must lead with the candidate, not with process state",
+  );
+  ok(
+    ov.includes('t("iiu.ov.nextaction")') && ov.includes("NEXT[d.status]"),
+    "the overview must tell the recruiter what to do next, derived from the case status",
+  );
+  ok(
+    !ov.includes("TrustStageBanner"),
+    "the TRUST stage banner is back on the overview — methodology must not be the entry point",
+  );
+  // A progress bar or percentage over an interview reads as a score for the
+  // candidate the moment two candidates are compared.
+  ok(
+    !/(?:progress|width):\s*[`'"]?\$?\{?[^}]*%/i.test(ov) && !ov.includes("toFixed"),
+    "the overview must not express progress as a percentage or a bar",
+  );
+
+  const list = "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.index.tsx";
+  const li = read(list);
+  ok(
+    li.includes('to="/employer/$employerSlug/interview-intelligence/$caseId"'),
+    "the interview list must open the overview, not drop the recruiter inside a work surface",
+  );
+  ok(
+    !li.includes("ValidationChip"),
+    "the pack's validation label is governance metadata and does not belong on every list row",
+  );
+  ok(
+    !/>\s*Interview Intelligence\s*</.test(li),
+    "the list must be titled in the recruiter's language, and match the sidebar",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 15 · The negative product contract                                   */
+/* ------------------------------------------------------------------ */
+
+// The owner's list of things that mean the product has slid back into being
+// research presented as software. Each is cheap to reintroduce by accident and
+// expensive to notice, so each is asserted rather than remembered.
+{
+  const CASE_ROUTES = ["prepare", "interview", "evidence", "report"].map(
+    (r) =>
+      `src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.${r}.tsx`,
+  );
+  const OVERVIEW =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
+  const LIST = "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.index.tsx";
+
+  // A checksum is not information a recruiter can act on. It belongs where an
+  // auditor looks, not in the header above a candidate's name.
+  for (const file of [...CASE_ROUTES, LIST]) {
+    ok(
+      !read(file).includes("packContentHash"),
+      `${file} renders the pack content hash — a raw checksum has no place in the recruiter's working view`,
+    );
+  }
+
+  // Every one of these screens should open with the person being interviewed.
+  for (const file of [...CASE_ROUTES, OVERVIEW]) {
+    const body = read(file);
+    const h1 = body.indexOf("sm:text-3xl");
+    const cand = body.indexOf("{d.candidateDisplayName}");
+    ok(
+      cand > 0 && h1 > 0 && cand - h1 < 200 && cand > h1,
+      `${file} does not lead with the candidate — the case title is internal bookkeeping`,
+    );
+  }
+
+  // Navigation is by the recruiter's task, never by the method's stages.
+  {
+    const rail = read("src/components/employer/interview/InterviewUi.tsx");
+    const steps = rail.slice(rail.indexOf("export function CaseSteps"));
+    for (const stage of ["Target", "Ready", "Understand", "Structure", "Trace"]) {
+      ok(
+        !new RegExp(`label: t\\("[^"]*"\\).*${stage}`).test(steps) && !steps.includes(`"${stage}"`),
+        `the journey rail is labelled with the TRUST stage "${stage}" — navigate by task, not by method`,
+      );
+    }
+  }
+
+  // No score, no ranking, no recommendation, anywhere a recruiter reads.
+  for (const file of [...CASE_ROUTES, OVERVIEW, LIST]) {
+    const body = codeOnly(read(file)).toLowerCase();
+    for (const term of [
+      "suitability",
+      "lämplighet",
+      "rekommenderad kandidat",
+      "recommended candidate",
+      "overall score",
+      "totalpoäng",
+      "candidate score",
+    ]) {
+      ok(
+        !body.includes(term),
+        `${file} contains "${term}" — this engine produces no score, ranking or recommendation`,
+      );
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 16 · The lifecycle is navigable end to end                           */
+/* ------------------------------------------------------------------ */
+
+// Not "the components exist" but "the recruiter can get from one to the next".
+// Every case status must resolve to a real route and a real call to action, so
+// a status the backend can produce can never leave the recruiter on a page
+// with nowhere to go.
+{
+  const OVERVIEW =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
+  const ov = read(OVERVIEW);
+  const STATUSES = [
+    "draft",
+    "sources_ready",
+    "prep_generated",
+    "prep_approved",
+    "interview_in_progress",
+    "interview_complete",
+    "evidence_review",
+    "assessed",
+    "reported",
+  ];
+  const nextBlock = ov.slice(ov.indexOf("const NEXT"), ov.indexOf("function Page"));
+  for (const st of STATUSES) {
+    ok(
+      new RegExp(`\\b${st}:`).test(nextBlock),
+      `case status "${st}" has no next action on the overview — the recruiter would be stranded`,
+    );
+  }
+  for (const seg of ["prepare", "interview", "evidence", "summary", "report"]) {
+    ok(
+      nextBlock.includes(`/${seg}\``),
+      `the overview never routes to /${seg} — the lifecycle is not navigable end to end`,
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 17 · The summary, and the report's audit boundary                    */
+/* ------------------------------------------------------------------ */
+
+// The summary is a projection of records humans already made. If it ever
+// starts calling a model, the one place a plausible paragraph reads as a
+// conclusion has acquired a generator.
+{
+  const SUM =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.summary.tsx";
+  const sum = read(SUM);
+  ok(
+    !/useMutation|runInterviewAnalysis|runReportDraft|\.mutate\(/.test(sum),
+    "the post-interview summary triggers an action — it must project records, not generate them",
+  );
+  for (const key of [
+    "iiu.sm.examples",
+    "iiu.sm.missing",
+    "iiu.sm.followup",
+    "iiu.sm.verify",
+    "iiu.sm.assessments",
+    "iiu.sm.comments",
+  ]) {
+    ok(sum.includes(`t("${key}")`), `the summary no longer renders ${key}`);
+  }
+  // The two sentences that stop an absence and a discrepancy being read as
+  // findings about the person.
+  ok(
+    sum.includes('t("iiu.sm.missing.body")'),
+    "the summary must say that a missing answer is not a missing ability",
+  );
+  ok(
+    sum.includes('t("iiu.find.contradiction.note")'),
+    "the summary must say that a contradiction is not a judgement about honesty",
+  );
+  ok(sum.includes('t("iiu.sm.nodecision")'), "the summary must state that it recommends nothing");
+  // Empty states with a way out, not dead ends.
+  for (const key of ["iiu.sm.examples.none", "iiu.sm.assessments.none", "iiu.sm.comments.none"]) {
+    ok(sum.includes(`t("${key}")`), `the summary has no empty state for ${key}`);
+  }
+}
+
+// Everything above the audit section is what an employer reads. Provenance is
+// not deleted -- it moved to where an auditor looks.
+{
+  const RP =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx";
+  const rp = read(RP);
+  const auditAt = rp.indexOf('aria-labelledby="s-audit"');
+  ok(auditAt > 0, "the report no longer has an audit section to put provenance in");
+  const normal = rp.slice(0, auditAt);
+  for (const term of [
+    "contentHash",
+    "policyVersion",
+    "modelName",
+    "promptVersion",
+    "packContentHash",
+    "taskVersion",
+  ]) {
+    ok(
+      !normal.includes(term),
+      `the normal report view exposes ${term} — that belongs under audit details`,
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 18 · No hash in the report body, no Swedish left in the component    */
+/* ------------------------------------------------------------------ */
+
+// Owner review found two things this file should have been catching. The
+// report body rendered the PACK content hash inside the locked-report block,
+// above the candidate's own content, and section 17's guard missed it because
+// it searched for the camelCase `packContentHash` while the frozen payload is
+// read with the snake_case key it was stored under.
+{
+  const RP =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx";
+  const rp = read(RP);
+  const auditAt = rp.indexOf('aria-labelledby="s-audit"');
+  const normal = rp.slice(0, auditAt);
+  for (const term of ["pack_content_hash", "content_hash", "contentHash", "packContentHash"]) {
+    ok(
+      !normal.includes(term),
+      `the report body renders ${term} — a checksum is an integrity fact for an auditor, not report content`,
+    );
+  }
+  // And it must still exist somewhere, because moving provenance out of sight
+  // is not the same as deleting it.
+  ok(
+    rp.slice(auditAt).includes("pack_content_hash"),
+    "the pack content hash vanished entirely — it belongs under traceability, not nowhere",
+  );
+}
+
+// Every recruiter-facing Interview Intelligence surface, swept for Swedish
+// left in the component rather than in the dictionary. Section 8 checked this
+// per-file against a list; this checks the whole set by shape, so a file added
+// later is covered without anyone remembering to add it.
+{
+  const SURFACES = [
+    ...["prepare", "interview", "evidence", "summary", "report", "panel", "index"].map(
+      (r) =>
+        `src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.${r}.tsx`,
+    ),
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.index.tsx",
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.new.tsx",
+    ...INTERVIEW_COMPONENTS,
+  ];
+  // A JSX text node, a string attribute or a braced literal containing a
+  // Swedish glyph, that is not already a t(...) call.
+  // Reuse customerFacingSwedish rather than a second detector.
+  //
+  // I wrote a glyph-based one here and it failed its own negative control:
+  // "Processkvalitet" and "Verifieringar kvar" are Swedish and contain no
+  // å, ä or ö, so a glyph test says they are fine. That is the exact trap this
+  // file already learned once -- which is why customerFacingSwedish matches
+  // Swedish MORPHOLOGY and a word list, not just the three extra letters.
+  //
+  // Two detectors would have drifted apart. There is now one.
+  for (const file of SURFACES) {
+    let body: string;
+    try {
+      body = read(file);
+    } catch {
+      continue; // a route that does not exist is not a localisation failure
+    }
+    // codeLines blanks comments, so a Swedish word explaining WHY a label
+    // changed does not read as the label itself. Without it this guard fires
+    // on its own commentary.
+    const offending = codeLines(body)
+      .map((line, i) => ({ line, n: i + 1 }))
+      .filter(({ line }) => customerFacingSwedish(line) && !line.includes("{t("));
+    ok(
+      offending.length === 0,
+      `${file} still holds Swedish in the component at line(s) ${offending
+        .slice(0, 3)
+        .map((o) => o.n)
+        .join(", ")} — customer copy belongs in the dictionary`,
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 19 · The information architecture of the six work surfaces          */
+/* ------------------------------------------------------------------ */
+
+// Not "these screens look nice" -- nothing here can tell. These are the
+// STRUCTURAL properties the visual work depends on, each of which would be
+// cheap to lose in a later edit and expensive to notice.
+
+const ASSESS =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.assessment.tsx";
+const REVIEW =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.evidence.tsx";
+const LIVE =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx";
+const PREPARE =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.prepare.tsx";
+const REPORT =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx";
+
+{
+  const assess = read(ASSESS);
+
+  // Requirement, then material, then conclusion. The ORDER is the argument:
+  // you read what the role asks for before you read what the candidate said.
+  // A layout that led with the candidate's words would invite an impression
+  // looking for a requirement to attach itself to.
+  const req = assess.indexOf('t("iiu.as2.col.requirement")');
+  const mat = assess.indexOf('t("iiu.as2.col.material")');
+  const own = assess.indexOf('t("iiu.as2.col.assessment")');
+  ok(
+    req > 0 && mat > req && own > mat,
+    "the assessment zones are out of order — requirement, then material, then your assessment",
+  );
+
+  // The single most important sentence on that screen. An empty material
+  // column is the shape a low score takes when nobody says what it means.
+  ok(
+    assess.includes('t("iiu.as2.nomaterial.body")'),
+    "the empty-material state no longer says that missing information is not poor performance",
+  );
+  ok(
+    /"iiu\.as2\.nomaterial\.body":\s*\n?\s*"Det betyder att information saknas/.test(
+      dictionaryRaw,
+    ) &&
+      /"iiu\.as2\.nomaterial\.body":\s*\n?\s*"This means information is missing/.test(
+        dictionaryRaw,
+      ),
+    "that sentence must read the same in both locales",
+  );
+
+  // Progress is completion of the assessor's work, and says so.
+  ok(
+    assess.includes('t("iiu.as2.overview.note")'),
+    "the assessment overview must say the counts describe the assessment, not the candidate",
+  );
+  // A ring, a bar or a percentage over these counts would be read as a score.
+  ok(
+    !/(?:width|stroke-dasharray):\s*[`'"]?\$?\{?[^}]*%/.test(assess) &&
+      !/toFixed|Math\.round\([^)]*100/.test(assess),
+    "the assessment overview expresses progress as a percentage or a bar",
+  );
+
+  // The uncertainty note is a real column that recordAssessment has always
+  // accepted. It was unreachable from the UI for the life of the feature.
+  ok(
+    assess.includes("uncertaintyNote") && assess.includes('t("iiu.as2.unclear")'),
+    "the assessment form no longer offers the missing/still-unclear field",
+  );
+}
+
+{
+  const review = read(REVIEW);
+
+  // One question at a time. Reviewing eight in one scroll is how a reviewer
+  // starts forming a view of the candidate while still deciding what the
+  // material is.
+  ok(
+    /setActive\(/.test(review) && review.includes('t("iiu.rv.questions")'),
+    "review no longer selects one question at a time",
+  );
+
+  // The kinds of material must stay visually distinct, and the legend that
+  // states the distinction must stay on the page.
+  ok(review.includes("<MaterialLegend />"), "review no longer states how the material differs");
+  for (const state of ["note", "ai", "confirmed", "verify"]) {
+    ok(
+      review.includes(`<MaterialBadge state="${state}" />`),
+      `review no longer labels ${state} material with its own badge`,
+    );
+  }
+
+  // Confirm / edit / reject, and nothing that confirms by itself.
+  for (const key of ["iiu.ev.confirm", "iiu.rv.edit", "iiu.rv.reject"]) {
+    ok(review.includes(`t("${key}")`), `review no longer offers ${key}`);
+  }
+  ok(
+    !/decision:\s*"accept"[^}]*\}\s*\)\s*;?\s*\}\s*,\s*\[/.test(review) &&
+      !/useEffect\([^)]*decision:\s*"accept"/s.test(review),
+    "review confirms a proposal without a person clicking",
+  );
+
+  // Review hands off to assessment; it does not contain one. Two names for one
+  // scroll is exactly what splitting the steps was for.
+  ok(review.includes('t("iiu.ev.toassess")'), "review no longer hands off to the assessment step");
+  ok(
+    !review.includes("recordAssessment") && !review.includes("markAssessed"),
+    "the assessment workflow is back on the review screen — the two steps are one page again",
+  );
+}
+
+{
+  const live = read(LIVE);
+
+  // Bounded support only. Every one of these words describes something this
+  // product does not have, and each is exactly the kind of control a design
+  // reference makes look obligatory.
+  const body = codeOnly(live).toLowerCase();
+  for (const term of [
+    "transcript",
+    "getusermedia",
+    "mediarecorder",
+    "audio",
+    "recording",
+    "webrtc",
+    "chatcompletion",
+    "sendmessage",
+  ]) {
+    ok(
+      !body.includes(term),
+      `the live interview screen contains "${term}" — it has no transcript, no recording and no chat`,
+    );
+  }
+  for (const key of [
+    "iiu.lv.cat.tocover",
+    "iiu.lv.cat.followup",
+    "iiu.lv.cat.clarify",
+    "iiu.lv.cat.verify",
+  ]) {
+    ok(live.includes(`t("${key}")`), `the interview support column lost the ${key} category`);
+  }
+
+  // The save contract. Every one of these is the reason a note typed in the
+  // last second before Next is not silently discarded.
+  for (const [needle, why] of [
+    ["const flushNote = async", "the explicit flush before leaving a question"],
+    ["const guarded = async", "the guard that refuses to move on an unsaved note"],
+    ["beforeunload", "the warning for the exit the handlers cannot intercept"],
+    ["mutateAsync", "the awaited write flushNote depends on"],
+  ] as const) {
+    ok(live.includes(needle), `the live interview lost ${why}`);
+  }
+  // The optimistic question-state write must keep its rollback.
+  ok(
+    /onError:\s*\(_err,\s*vars\)/.test(live),
+    "the optimistic question-state update lost its rollback — the chip would keep claiming a failed write succeeded",
+  );
+
+  // No rating control during the conversation.
+  ok(
+    !live.includes("recordAssessment"),
+    "a rating control reached the live interview screen — the assessment happens after the account is complete",
+  );
+}
+
+{
+  const prepare = read(PREPARE);
+  // The briefing sections a recruiter is meant to arrive with.
+  for (const key of [
+    "iiu.pp.focus.title",
+    "iiu.pp.background.title",
+    "iiu.pp.areas.title",
+    "iiu.pp.clarify.title",
+    "iiu.pp.verify2.title",
+    "iiu.pp.plan.title",
+    "iiu.pp.reqs.title",
+  ]) {
+    ok(prepare.includes(`t("${key}")`), `the preparation briefing lost ${key}`);
+  }
+  // Candidate-supplied information must never be presented as established.
+  ok(
+    prepare.includes('<MaterialBadge state="candidate" />') &&
+      prepare.includes('t("iiu.pp.background.body")'),
+    "candidate background is no longer labelled as the candidate's own unchecked claim",
+  );
+}
+
+{
+  const report = read(REPORT);
+  // The employment decision is a stated boundary, never a control. There is no
+  // employment-decision data model in this domain, and a disabled button would
+  // promise one is coming.
+  ok(
+    report.includes('t("iiu.rp.s.decision")') && report.includes('t("iiu.rp.decision.boundary")'),
+    "the report no longer states that the employment decision is recorded elsewhere",
+  );
+  const decisionBlock = report.slice(
+    report.indexOf('aria-labelledby="d-decision"'),
+    report.indexOf('aria-labelledby="d-ai"'),
+  );
+  ok(
+    decisionBlock.length > 0 && !/<button|<input|<select|disabled/.test(decisionBlock),
+    "the employment-decision section acquired a control — this engine records no decision",
+  );
+  // The six document sections, in order.
+  const order = [
+    "iiu.rp.s.scope",
+    "iiu.rp.s.examples",
+    "iiu.rp.s.assessment",
+    "iiu.rp.s.followup",
+    "iiu.rp.s.verify",
+    "iiu.rp.s.comments",
+  ].map((k) => report.indexOf(`t("${k}")`));
+  ok(
+    order.every((i) => i > 0) && order.every((v, i) => i === 0 || v > order[i - 1]),
+    "the report's six sections are missing or out of order",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 20 · The 5E columns are read by the names the database uses         */
+/* ------------------------------------------------------------------ */
+
+// Both tables store e3_action. The reads asked for e3_exact_action, PostgREST
+// refused them, `data` came back null, and every screen rendered "no confirmed
+// material" -- which on this product reads as a candidate who said nothing
+// rather than as a broken query.
+{
+  ok(
+    !/e3_exact_action/.test(runtimeFns),
+    "a read asks for e3_exact_action; the column is e3_action on both evidence tables",
+  );
+  ok(
+    /INTERVIEW_READ_FAILED/.test(runtimeFns),
+    "the reads whose emptiness means 'the candidate said nothing' must raise, not return an empty list",
+  );
 }
 
 console.log(`\n  assertions passed: ${passes}`);
