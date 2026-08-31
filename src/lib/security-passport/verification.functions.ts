@@ -180,12 +180,32 @@ export const listMyVerificationRequests = createServerFn({ method: "GET" })
     },
   );
 
-const submitInput = z.object({
-  claimId: z.string().uuid().nullable(),
-  periodId: z.string().uuid().nullable(),
-  kind: z.enum(["cqrityjob_review", "employer_attestation"]),
-  employerId: z.string().uuid().nullable(),
-});
+const submitInput = z
+  .object({
+    claimId: z.string().uuid().nullable(),
+    periodId: z.string().uuid().nullable(),
+    kind: z.enum(["cqrityjob_review", "employer_attestation"]),
+    employerId: z.string().uuid().nullable(),
+  })
+  // An employer confirms employment they were party to. They have no standing
+  // to verify a training credential, a licence or an authorisation, and least
+  // of all a regulated qualification such as VU1 — there the state, not a
+  // company, is the authority. Employer attestation is therefore valid only
+  // against an employment period.
+  //
+  // `claimId` must be ABSENT, not merely unused: a request naming both would
+  // satisfy "there is a period", and `sp_verifier_decide` reads `claim_id`
+  // first when it applies an approval, so the credential is what would have
+  // been verified.
+  //
+  // This is not the control. `sp_submit_for_verification` refuses the same
+  // shape, and `sp_verification_requests` refuses the row itself, which is
+  // what a hand-written PostgREST call runs into. This layer exists so the
+  // refusal arrives here, named, instead of as a constraint violation from
+  // inside the database.
+  .refine((v) => v.kind !== "employer_attestation" || (v.periodId !== null && v.claimId === null), {
+    message: "SP_EMPLOYER_ATTESTATION_EMPLOYMENT_ONLY",
+  });
 
 export const submitForVerification = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
