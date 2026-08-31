@@ -2511,6 +2511,50 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Security Passport dedicated reviewer role + least privilege.
+#
+# Registered HERE, next to the other Passport privacy suites and well after
+# the Phase 2 suite, deliberately. This suite creates Passport profiles of
+# its own, and security_passport_phase2_test asserts a GLOBAL
+# `count(*) FROM sp_passport_profiles = 1` -- so a profile-creating suite
+# placed before it fails Phase 2 on a row that is not Phase 2's business.
+# Every Passport suite that creates a holder is registered after it for the
+# same reason.
+#
+# It proves two things a source-level guard structurally cannot. First, that
+# the dedicated `passport_verifier` capability separates reviewing from
+# platform administration in BOTH directions -- the reviewer can decide a
+# real request, and is refused by the admin surfaces -- which the previous
+# model, where sp_is_verifier WAS is_platform_admin, could not express.
+# Second, that the Supabase default-privilege trap is closed on the Passport
+# tables: they arrived granted to authenticated in full, TRUNCATE included,
+# and TRUNCATE is not something RLS constrains, so the suite EXECUTES the
+# statements as the authenticated principal rather than reading the policies.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport reviewer role and least-privilege assertions"
+set +e
+RRL_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_reviewer_role_test.sql 2>&1)"
+RRL_RC=$?
+set -e
+
+echo "$RRL_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+RRL_PASSED="$(echo "$RRL_OUT" | grep -c "ok  " || true)"
+
+if [ "$RRL_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Passport reviewer role suite exited with code ${RRL_RC}." >&2
+  echo "$RRL_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Passport reviewer role and least privilege"
+else
+  echo "    ok  ${RRL_PASSED} Passport reviewer role assertions passed"
+  if [ "$RRL_PASSED" -lt 50 ]; then
+    echo "FAIL: expected at least 50 reviewer-role assertions, only ${RRL_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "Passport reviewer role (assertion shortfall: floor 50)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # The concurrent decision, run as two real processes.
 #
 # This cannot live inside a suite file. One psql session holds one transaction,

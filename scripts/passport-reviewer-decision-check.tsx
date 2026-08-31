@@ -198,7 +198,7 @@ group("GROUP 1 — the reviewer sees the claim, not only its title");
   ck("1.10 the issuer is labelled as candidate-stated", m.includes(sv("vq.issuerStated")));
 
   // The reviewer must be told that a document is not itself a verification.
-  const route = read("src/routes/_authenticated.admin.passport-verification.tsx");
+  const route = read("src/routes/_authenticated.passport-review.tsx");
   ck(
     "1.11 the review page separates evidence from verification",
     route.includes("vq.evidenceNote"),

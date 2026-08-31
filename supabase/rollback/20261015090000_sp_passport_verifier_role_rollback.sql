@@ -1,0 +1,32 @@
+-- Rollback for 20261015090000_sp_passport_verifier_role.sql.
+--
+-- ── THERE IS NOTHING SAFE TO UNDO HERE, AND THAT IS THE POINT ──────────
+--
+-- The forward migration added one value to the public.app_role enum.
+-- PostgreSQL cannot remove an enum value: there is no ALTER TYPE ... DROP
+-- VALUE. Reversing it for real would mean recreating the type and rewriting
+-- every column that uses it -- public.user_roles among them -- which is a
+-- destructive rewrite of the platform's role store to undo an addition that
+-- costs nothing to leave in place.
+--
+-- An unused enum value grants nobody anything. Once 20261016090000 has been
+-- rolled back, sp_is_verifier no longer reads 'passport_verifier' and the
+-- value is inert.
+--
+-- WHAT TO RUN INSTEAD, if reviewer capability must be withdrawn: roll back
+-- 20261016090000 (which restores sp_is_verifier to the platform-admin
+-- definition), and remove the role assignments themselves, which IS
+-- reversible and destroys no history:
+--
+--   DELETE FROM public.user_roles WHERE role = 'passport_verifier';
+--
+-- That statement is deliberately left commented out. It withdraws access
+-- from every Passport reviewer on the platform, and it should be a decision
+-- somebody makes on purpose rather than a side effect of running a file.
+-- Verification decisions those reviewers already made are untouched by it:
+-- they are immutable history and remain valid records of what was true when
+-- they were made.
+
+-- DELETE FROM public.user_roles WHERE role = 'passport_verifier';
+
+SELECT 'enum value passport_verifier is inert once 20261016090000 is rolled back' AS note;

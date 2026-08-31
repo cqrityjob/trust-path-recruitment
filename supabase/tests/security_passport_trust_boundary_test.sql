@@ -52,8 +52,17 @@ END $$;
 -- Comparing this across a refused attempt is the only honest way to assert
 -- "nothing was written": counting rows in one table would miss a decision row
 -- inserted before a later stage failed.
+-- SECURITY DEFINER deliberately: this is the suite's MEASURING INSTRUMENT,
+-- not one of its assertions. It answers "did any trust state change?", and to
+-- answer that honestly it must see every column of the record -- including
+-- `decided_by`, which migration 20261016090000 stopped granting to
+-- `authenticated` because the individual reviewer's user id is internal.
+-- Read as the caller it would raise permission denied halfway through a
+-- refusal test and report a privilege boundary as a broken fingerprint. The
+-- boundary itself is asserted directly, as a boundary, in
+-- security_passport_reviewer_role_test.sql GROUP 8.
 CREATE OR REPLACE FUNCTION pg_temp.trust_fingerprint(_holder uuid)
-RETURNS text LANGUAGE sql STABLE AS $$
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER AS $$
   SELECT md5(concat_ws('|',
     (SELECT coalesce(string_agg(concat_ws(',', id, status, decided_by, decided_at,
                                           verification_method, valid_from, valid_until),

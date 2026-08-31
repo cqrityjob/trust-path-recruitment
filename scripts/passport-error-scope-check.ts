@@ -31,7 +31,7 @@ function expect(condition: boolean, message: string): void {
 }
 
 const root = path.resolve(import.meta.dir, "..");
-const ROUTE = path.join(root, "src/routes/_authenticated.admin.passport-verification.tsx");
+const ROUTE = path.join(root, "src/routes/_authenticated.passport-review.tsx");
 const source = readFileSync(ROUTE, "utf8");
 
 /** Comments legitimately describe the old collapsed `setError` in order to
