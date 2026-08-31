@@ -39,6 +39,21 @@ import {
   computeNextBestActions,
   MAX_PRIMARY_ACTIONS,
 } from "../src/lib/professional-identity/next-best-action";
+import {
+  SECTION_DESTINATIONS,
+  isSectionReachable,
+} from "../src/lib/professional-identity/profile-destinations";
+import {
+  attentionDemandCount,
+  deriveVerificationAttention,
+  VERIFICATION_ATTENTION_UNAVAILABLE,
+} from "../src/lib/professional-identity/verification-attention";
+import type { MyVerificationRequest } from "../src/lib/security-passport/verification.functions";
+import {
+  computeCareerJourney,
+  hasUsableSituation,
+  resolveBaseline,
+} from "../src/lib/career-journey/readiness";
 import { computeCvReadiness } from "../src/lib/professional-identity/cv/readiness";
 import { buildCvSourceBundle, citableIds } from "../src/lib/professional-identity/cv/source-bundle";
 import {
@@ -192,6 +207,10 @@ function employment(over: Partial<ProfessionalIdentityV1["employment"][number]> 
 const ESTABLISHED = identity({
   displayName: "Mostafa Alshawi",
   accountCountry: "SE",
+  // The situation question is asked of everybody and answered by this
+  // person; it is also what reveals the profession and experience follow-ups
+  // they have filled in.
+  currentStatus: "working_in_industry",
   headline: "Säkerhetschef",
   workCountry: "SE",
   hasPassport: true,
@@ -244,8 +263,19 @@ console.log("1 · profile completeness");
 
   const empty = computeProfileCompleteness(EMPTY);
   ck("an empty profile scores 0", empty.score === 0);
-  ck("an empty profile reports every section missing", empty.missingSections.length === 9);
-  ck("an empty profile's next field is the first in order", empty.nextBestField === "identity");
+  // Eight, not ten: the profession and experience follow-ups are not put to
+  // somebody who has not said they work in security, and a question nobody
+  // asked cannot be reported as an unanswered one.
+  ck(
+    "an empty profile reports every applicable section missing",
+    empty.missingSections.length === 8,
+  );
+  ck(
+    "an empty profile is not scored against questions it was never asked",
+    empty.notApplicableSections.includes("profession") &&
+      empty.notApplicableSections.includes("experience"),
+  );
+  ck("an empty profile's next field is the first in order", empty.nextBestField === "situation");
   ck("the score carries its version", empty.version === PROFILE_COMPLETENESS_VERSION);
 
   const full = computeProfileCompleteness(ESTABLISHED);
@@ -2460,6 +2490,650 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
         "Anställningen är bekräftad av Company X",
     );
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* 12 · The candidate dead ends (PR 13)                                */
+/* ------------------------------------------------------------------ */
+
+// ── WHAT THIS SECTION IS DEFENDING ─────────────────────────────────────
+//
+// An independent pilot walked a career-changer into a loop the product had
+// no way out of. "Fyll i din profil" sent them to /my-career/profile; the
+// two sections the recommendation was gated on were a Passport headline,
+// which that page does not edit, and a current profession, which the editor
+// does not even ASK somebody outside the industry -- selecting "career
+// change" actively clears it. They saved what they could, the percentage did
+// not move, and the identical recommendation came back. For ever.
+//
+// The same pilot found the mirror defect on the trust side: an employer
+// answered "we cannot confirm this employment" and wrote the holder a
+// message, and the Passport said nothing was waiting for them, because the
+// attention summary was built only from OPEN reviews and a decision closes
+// one.
+//
+// Each check below is one of those two failures, stated so it cannot come
+// back quietly.
+
+console.log("\n12 · candidate dead ends");
+{
+  /** The persona the pilot actually walked: outside the industry, has taken
+   *  Career Discovery, has an account country, has no Passport. */
+  const CAREER_CHANGER = identity({
+    displayName: "Anna Lindqvist",
+    accountCountry: "SE",
+    currentStatus: "career_change",
+    discovery: {
+      hasCompletedReport: true,
+      snapshotId: "s-cc",
+      generatedAt: "2026-08-20T00:00:00Z",
+      namesCareers: true,
+    },
+  });
+
+  /* ---- A · the completeness half of the loop ----------------------- */
+
+  const changer = computeProfileCompleteness(CAREER_CHANGER);
+
+  ck(
+    "12.1 a career-changer is not scored against the questions they are never asked",
+    changer.notApplicableSections.includes("profession") &&
+      changer.notApplicableSections.includes("experience"),
+  );
+
+  // The precise pilot symptom. Under v1 this person sat near zero with no
+  // reachable way up, because everything they could answer was worth nothing.
+  ck("12.2 a career-changer who answered what was asked is not at 0 %", changer.score > 0);
+
+  // And the situation answer -- the ONE question the editor puts to them --
+  // has to be worth something, or following the recommendation changes no
+  // number and the product looks broken to somebody who did as they were told.
+  const beforeSituation = computeProfileCompleteness(
+    identity({ ...CAREER_CHANGER, currentStatus: null }),
+  );
+  ck(
+    "12.3 answering the situation question raises the score",
+    changer.score > beforeSituation.score,
+  );
+
+  /* ---- B · the recommendation half of the loop --------------------- */
+
+  const changerActions = computeNextBestActions(CAREER_CHANGER, { careerDiscoveryOpen: false });
+
+  // ── THE CORE GUARANTEE ────────────────────────────────────────────
+  //
+  // Swept across a spread of accounts rather than one, and over EVERY action
+  // rather than the first: an action whose destination cannot be reached is
+  // not a smaller problem when it is second on the list. `seen` is asserted
+  // afterwards because a loop over an empty list passes silently, which
+  // would make this the most reassuring check in the file and also the most
+  // worthless.
+  {
+    let seen = 0;
+    const personas: readonly [string, ProfessionalIdentityV1][] = [
+      ["career changer, no Passport", CAREER_CHANGER],
+      ["career changer with a Passport", identity({ ...CAREER_CHANGER, hasPassport: true })],
+      ["brand new account", EMPTY],
+      ["account with a name only", identity({ displayName: "A", hasPassport: true })],
+      [
+        "serving guard, nothing in the Passport",
+        identity({
+          displayName: "Ola Nord",
+          currentStatus: "working_in_industry",
+          hasPassport: true,
+          accountCountry: "SE",
+        }),
+      ],
+      ["established", ESTABLISHED],
+    ];
+    for (const [name, who] of personas) {
+      for (const gate of [undefined, true, false] as const) {
+        for (const action of computeNextBestActions(who, { careerDiscoveryOpen: gate }).all) {
+          if (!action.section) continue;
+          seen += 1;
+          ck(
+            `12.4 reachable: ${name} / ${action.section} (discovery gate ${String(gate)})`,
+            isSectionReachable(action.section, who, { careerDiscoveryOpen: gate }),
+          );
+        }
+      }
+    }
+    ck("12.4b the reachability sweep actually examined something", seen > 0);
+  }
+
+  // A career-changer has no Passport, so no Passport-owned section may be
+  // recommended -- the editor is behind a record that does not exist yet.
+  ck(
+    "12.5 a Passport section is never recommended to somebody with no Passport",
+    changerActions.all.every(
+      (a) => !a.section || SECTION_DESTINATIONS[a.section].owner !== "passport",
+    ),
+  );
+
+  // And the profession question specifically: it is not rendered for this
+  // person, so recommending it is recommending a field that does not exist.
+  ck(
+    "12.6 the profession field is never recommended to somebody it is not shown to",
+    changerActions.all.every((a) => a.section !== "profession" && a.section !== "experience"),
+  );
+
+  // What they SHOULD be told. With the profile answered as far as it goes and
+  // no Passport, opening one is the true next step -- and one they can
+  // complete.
+  ck(
+    "12.7 the honest next step for a career-changer with no Passport is to open one",
+    changerActions.primary[0]?.kind === "start_passport",
+  );
+
+  /* ---- C · following the action retires it ------------------------- */
+
+  // The state transition the loop never reached. Answer the thing the
+  // recommendation named, and the recommendation must change.
+  const noSituation = identity({ ...CAREER_CHANGER, currentStatus: null, hasPassport: true });
+  const situationAction = computeNextBestActions(noSituation).all.find(
+    (a) => a.section === "situation",
+  );
+  ck("12.8 an unanswered situation is recommended", situationAction !== undefined);
+  ck(
+    "12.9 and it points at the editor that actually asks it",
+    situationAction?.href === SECTION_DESTINATIONS.situation.href,
+  );
+
+  const answered = identity({ ...noSituation, currentStatus: "career_change" });
+  ck(
+    "12.10 answering it retires that action",
+    computeNextBestActions(answered).all.every((a) => a.section !== "situation"),
+  );
+
+  /* ---- D · a recommendation is never a self-link ------------------- */
+
+  // The Passport-owned sections, for somebody who HAS a Passport: each must
+  // carry the anchor of the section that owns it rather than a front door.
+  // Everything answered except the employment history, so employment is
+  // genuinely the next thing the ladder should name. A fixture missing an
+  // earlier section would test the ordering rather than the destination.
+  const holder = identity({
+    displayName: "Ola Nord",
+    currentStatus: "working_in_industry",
+    hasPassport: true,
+    headline: "Väktare",
+    accountCountry: "SE",
+    workCountry: "SE",
+    currentProfessionSlug: "vaktare",
+    currentProfessionTitleSv: "Väktare",
+    currentProfessionTitleEn: "Security officer",
+    yearsOfExperience: "3-5",
+  });
+  const holderAction = computeNextBestActions(holder).all.find((a) => a.section === "employment");
+  ck(
+    "12.11 'add your work experience' lands on the employment section, not the Passport's front door",
+    holderAction?.href === "/passport/information#sp-employment",
+  );
+
+  /* ---- E · a read that did not answer decides nothing -------------- */
+
+  // The failure this codebase already calls its worst class of defect,
+  // applied to the new rule: an unreadable profile must not become an
+  // instruction to go and fill it in.
+  const unreadable = identity({ ...CAREER_CHANGER, unavailable: ["profile"] });
+  ck(
+    "12.12 a failed profile read is not turned into 'fill in your profile'",
+    computeNextBestActions(unreadable).all.every((a) => a.kind !== "complete_profile_basics"),
+  );
+  const unreadableEmployment = identity({ ...holder, unavailable: ["employment"] });
+  ck(
+    "12.13 a failed employment read is not turned into 'add your work experience'",
+    computeNextBestActions(unreadableEmployment).all.every((a) => a.section !== "employment"),
+  );
+
+  /* ---- F · already-done work is not offered again ------------------ */
+
+  ck(
+    "12.14 Career Discovery is not offered to somebody who has taken it",
+    computeNextBestActions(ESTABLISHED).all.every((a) => a.kind !== "take_career_discovery"),
+  );
+  ck(
+    "12.15 a complete profile produces no profile action at all",
+    computeNextBestActions(ESTABLISHED).all.every((a) => a.kind !== "complete_profile_basics"),
+  );
+  ck(
+    "12.16 a Career Card is offered when the report names careers",
+    computeNextBestActions(ESTABLISHED).all.some((a) => a.kind === "create_career_card"),
+  );
+
+  /* ---- G · completeness is not a verification score ---------------- */
+
+  // The two must not converge. A profile answered in full by somebody nobody
+  // has reviewed is a COMPLETE profile; saying otherwise would make the
+  // percentage a second, quieter trust signal.
+  const selfDeclaredOnly = computeProfileCompleteness(ESTABLISHED);
+  const verifiedSame = computeProfileCompleteness(
+    identity({
+      ...ESTABLISHED,
+      claims: ESTABLISHED.claims.map((c) => ({ ...c, assertionLevel: "verified" })),
+      employment: ESTABLISHED.employment.map((e) => ({ ...e, assertionLevel: "verified" })),
+    }),
+  );
+  ck(
+    "12.17 verifying everything does not change the completeness score",
+    selfDeclaredOnly.score === verifiedSame.score,
+  );
+  ck("12.18 a fully answered profile reaches 100", selfDeclaredOnly.score === 100);
+
+  /* ---- H · the deep links are real ---------------------------------- */
+
+  // A renamed anchor is a silently dead link: the person still arrives, at
+  // the top of a long page, having been told exactly which section to open.
+  // The Passport's information tab renders some anchors itself and mounts
+  // others as components, so the whole receiving surface is searched rather
+  // than one file -- otherwise the guard passes or fails on where a section
+  // happens to have been extracted to.
+  const passportSurface = [
+    read("src/routes/_authenticated.passport.information.tsx"),
+    read("src/components/security-passport/ProfileBasicsCard.tsx"),
+    read("src/components/security-passport/WorkCountryCard.tsx"),
+  ].join("\n");
+  const profileCard = read("src/components/assessment/SecurityCareerProfileCard.tsx");
+  for (const section of COMPLETENESS_SECTION_ORDER) {
+    const { href, owner } = SECTION_DESTINATIONS[section];
+    const anchor = href.includes("#") ? href.split("#")[1] : null;
+    if (!anchor) continue;
+    const host = owner === "passport" ? passportSurface : profileCard;
+    ck(
+      `12.19 the ${section} destination's anchor exists on its page (#${anchor})`,
+      host.includes(`id="${anchor}"`) || host.includes(`"${anchor}"`),
+    );
+  }
+  // And the intent the profile card reads is the one the contract sends.
+  ck(
+    "12.20 the profile card honours the edit intent the contract sends",
+    /get\("edit"\)\s*===\s*"profession"/.test(profileCard) &&
+      SECTION_DESTINATIONS.situation.href.includes("edit=profession"),
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 13 · Verification outcomes reach the candidate (PR 13)              */
+/* ------------------------------------------------------------------ */
+
+console.log("\n13 · verification attention");
+{
+  const NOW = new Date("2026-08-31T12:00:00Z");
+
+  function request(over: Partial<MyVerificationRequest> = {}): MyVerificationRequest {
+    return {
+      id: "r1",
+      claimId: null,
+      periodId: "e1",
+      kind: "employer_attestation",
+      status: "pending",
+      submittedAt: "2026-08-01T00:00:00Z",
+      decidedAt: null,
+      method: null,
+      holderMessage: null,
+      validFrom: null,
+      validUntil: null,
+      targetEmployerId: "emp-1",
+      ...over,
+    };
+  }
+
+  /* ---- A · pending asks nothing ------------------------------------ */
+
+  const pending = deriveVerificationAttention([request()], NOW);
+  ck("13.1 a pending review asks the holder for nothing", pending.actionRequired.length === 0);
+  ck("13.2 but it is not silent about it", pending.waiting.length === 1);
+  ck("13.3 and the page may not say 'nothing waiting'", pending.clear === false);
+  ck("13.4 a pending review is not a demand", attentionDemandCount(pending) === 0);
+
+  /* ---- B · clarification is actionable ----------------------------- */
+
+  const clarify = deriveVerificationAttention(
+    [
+      request({
+        status: "clarification_requested",
+        holderMessage: "Vi behöver anställningens slutdatum.",
+        decidedAt: "2026-08-20T00:00:00Z",
+      }),
+    ],
+    NOW,
+  );
+  ck("13.5 a clarification is action required", clarify.actionRequired.length === 1);
+  ck(
+    "13.6 and it says what to do about it",
+    clarify.actionRequired[0]?.nextStep === "respond_to_reviewer",
+  );
+  ck(
+    "13.7 and the reviewer's message to the holder is carried",
+    clarify.actionRequired[0]?.holderMessage === "Vi behöver anställningens slutdatum.",
+  );
+
+  /* ---- C · cannot confirm ------------------------------------------ */
+
+  // THE pilot defect. An employer answered, wrote to the holder, and the
+  // holder's own Passport reported that nothing was waiting for them.
+  const cannotConfirm = deriveVerificationAttention(
+    [
+      request({
+        status: "rejected",
+        decidedAt: "2026-08-29T00:00:00Z",
+        holderMessage: "Vi har ingen uppgift om den här anställningen.",
+      }),
+    ],
+    NOW,
+  );
+  ck("13.8 a cannot-confirm decision reaches the holder", cannotConfirm.outcomes.length === 1);
+  ck("13.9 and the page can no longer say nothing is waiting", cannotConfirm.clear === false);
+  ck(
+    "13.10 the employer's message to the holder is shown",
+    cannotConfirm.outcomes[0]?.holderMessage === "Vi har ingen uppgift om den här anställningen.",
+  );
+  ck(
+    "13.11 and a legitimate next route is named, not an invented one",
+    cannotConfirm.outcomes[0]?.nextStep === "try_document_review",
+  );
+  // A refusal by CQrityjob's own review has already looked at the
+  // documentation, so offering that route again would be a dead end.
+  const reviewRefused = deriveVerificationAttention(
+    [request({ kind: "cqrityjob_review", status: "rejected", decidedAt: "2026-08-29T00:00:00Z" })],
+    NOW,
+  );
+  ck(
+    "13.12 a refused document review offers correction rather than the same route again",
+    reviewRefused.outcomes[0]?.nextStep === "correct_and_resubmit",
+  );
+
+  /* ---- D · approval informs, it does not demand -------------------- */
+
+  const approved = deriveVerificationAttention(
+    [request({ status: "approved", decidedAt: "2026-08-29T00:00:00Z" })],
+    NOW,
+  );
+  ck("13.13 an approval is shown", approved.information.length === 1);
+  ck("13.14 an approval demands nothing", attentionDemandCount(approved) === 0);
+  ck("13.15 an approval is not action required", approved.actionRequired.length === 0);
+
+  // And it stops being news. A home page still announcing a credential
+  // verified months ago is the notification centre this product is not.
+  const oldApproval = deriveVerificationAttention(
+    [request({ status: "approved", decidedAt: "2026-01-01T00:00:00Z" })],
+    NOW,
+  );
+  ck("13.16 a long-settled approval is not still being announced", oldApproval.clear === true);
+
+  /* ---- E · superseded requests ------------------------------------- */
+
+  // One entry, two requests: a refusal the holder answered by resubmitting.
+  // Showing both would tell them the same employment was simultaneously
+  // refused and under review.
+  const resubmitted = deriveVerificationAttention(
+    [
+      request({ id: "r-old", status: "rejected", decidedAt: "2026-08-10T00:00:00Z" }),
+      request({ id: "r-new", status: "pending", submittedAt: "2026-08-15T00:00:00Z" }),
+    ],
+    NOW,
+  );
+  ck("13.17 only the current request for an entry is reported", resubmitted.outcomes.length === 0);
+  ck("13.18 and it is the newer one", resubmitted.waiting[0]?.requestId === "r-new");
+
+  /* ---- E2 · a waiting reviewer outranks the product's own wants ---- */
+
+  // The panel presented the clarification and the recommendation above it
+  // still said "create your CV". Band 1 is defined as "somebody else is
+  // waiting on this person", and this is the plainest case of it.
+  {
+    const withClarification = computeNextBestActions(ESTABLISHED, { clarificationCount: 1 });
+    ck(
+      "13.19a a waiting reviewer becomes the recommendation",
+      withClarification.primary[0]?.kind === "respond_to_clarification",
+      withClarification.primary[0]?.kind,
+    );
+    ck(
+      "13.19b and it is counted, so the copy can say how many",
+      withClarification.primary[0]?.count === 1,
+    );
+    // An employer's invitation still outranks it: that one has a deadline.
+    const alsoInvited = computeNextBestActions(
+      identity({
+        ...ESTABLISHED,
+        workload: { ...ESTABLISHED.workload, assessmentAssignmentCount: 1 },
+      }),
+      { clarificationCount: 1 },
+    );
+    ck(
+      "13.19c an employer's assessment invitation still comes first",
+      alsoInvited.primary[0]?.kind === "complete_assessment_assignment",
+    );
+    // And a read that did not answer must not withhold it silently NOR
+    // invent it: undefined means nobody asked.
+    ck(
+      "13.19d an unknown clarification count produces no action",
+      computeNextBestActions(ESTABLISHED, {}).all.every(
+        (a) => a.kind !== "respond_to_clarification",
+      ),
+    );
+  }
+
+  /* ---- F · a withdrawn request is the holder's own doing ----------- */
+
+  const withdrawn = deriveVerificationAttention([request({ status: "withdrawn" })], NOW);
+  ck("13.19 a withdrawn request is not reported back at the holder", withdrawn.clear === true);
+
+  /* ---- G · unknown is not empty ------------------------------------ */
+
+  ck(
+    "13.20 an unreadable verification state does not read as 'nothing waiting'",
+    VERIFICATION_ATTENTION_UNAVAILABLE.clear === false &&
+      VERIFICATION_ATTENTION_UNAVAILABLE.unavailable === true,
+  );
+
+  /* ---- H · the private fields have nowhere to go ------------------- */
+
+  // Held by there being nothing to leak rather than by remembering not to
+  // render it: the type carries no internal note and no reviewer identity,
+  // and the read behind it does not select them.
+  const attentionSrc = read("src/lib/professional-identity/verification-attention.ts");
+  const panelSrc = read("src/components/professional-identity/VerificationOutcomes.tsx");
+  for (const [file, src] of [
+    ["verification-attention.ts", attentionSrc],
+    ["VerificationOutcomes.tsx", panelSrc],
+  ] as const) {
+    const code = src.replace(/^\s*(\/\/|\*|\/\*).*$/gm, "");
+    ck(
+      `13.21 ${file} never reads an internal decision note`,
+      !/decisionNote|decision_note/.test(code),
+    );
+    ck(
+      `13.22 ${file} never reads a reviewer identity`,
+      !/reviewerId|reviewer_user_id|deciderUserId|decider_user_id/.test(code),
+    );
+    ck(
+      `13.23 ${file} never reads an evidence path`,
+      !/evidencePath|evidence_path|storagePath/.test(code),
+    );
+  }
+  // The holder-facing read itself, unchanged from PR 6-9: two fields exist
+  // precisely so one cannot leak as the other.
+  const verificationFns = read("src/lib/security-passport/verification.functions.ts");
+  const listBody = verificationFns.slice(
+    verificationFns.indexOf("listMyVerificationRequests"),
+    verificationFns.indexOf("const submitInput"),
+  );
+  ck(
+    "13.24 the holder's own request read still does not select decision_note",
+    !/decision_note/.test(listBody.replace(/^\s*(\/\/|\*|\/\*).*$/gm, "")),
+  );
+
+  /* ---- I · both surfaces use the one derivation -------------------- */
+
+  // §16: one deterministic attention list, not competing logic per page.
+  for (const route of [
+    "src/routes/_authenticated.passport.index.tsx",
+    "src/routes/_authenticated.my-career.index.tsx",
+  ]) {
+    ck(
+      `13.25 ${path.basename(route)} derives attention from the shared module`,
+      read(route).includes("deriveVerificationAttention"),
+    );
+  }
+  // And neither may quietly reintroduce its own status filter.
+  ck(
+    "13.26 My Career reports an unreadable verification state rather than an empty one",
+    read("src/routes/_authenticated.my-career.index.tsx").includes(
+      "VERIFICATION_ATTENTION_UNAVAILABLE",
+    ),
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 14 · Career Journey uses what the product already knows (PR 13)     */
+/* ------------------------------------------------------------------ */
+
+console.log("\n14 · career journey background");
+{
+  const target = {
+    professionId: "p1",
+    cigProfessionSlug: "sakerhetstekniker",
+    careerAreaId: "technical",
+    titleSv: "Säkerhetstekniker",
+    titleEn: "Security technician",
+    careerStage: "entry" as const,
+    entryRole: true,
+    regulated: false,
+    transitionDifficulty: 3,
+  };
+
+  const noEvidence = {
+    hasPassport: false,
+    verifiedCredentialCount: 0,
+    verifiedExperienceCount: 0,
+    recordedExperienceCount: 0,
+    hasWorkCountry: false,
+  };
+
+  /* ---- A · the pilot defect ---------------------------------------- */
+
+  // Employment, a credential and a work country on record, and an empty
+  // canonical profile row. The journey used to read one table, find nothing,
+  // and tell this person the product did not know enough about their
+  // background -- while holding their employment history.
+  const passportOnly = computeCareerJourney({
+    profile: null,
+    targets: [target],
+    reachableCigSlugs: new Set(),
+    evidence: {
+      hasPassport: true,
+      verifiedCredentialCount: 1,
+      verifiedExperienceCount: 1,
+      recordedExperienceCount: 2,
+      hasWorkCountry: true,
+    },
+  });
+  ck(
+    "14.1 a holder with employment on record is not told their background is unknown",
+    passportOnly.known === true,
+  );
+  ck(
+    "14.2 and no profession is filed under 'not enough information'",
+    passportOnly.professions.every((p) => p.category !== "not_enough_information"),
+  );
+  ck(
+    "14.3 and the report says where that knowledge came from",
+    passportOnly.professions[0]?.reasons.includes("background_known_from_passport"),
+  );
+
+  /* ---- B · but it never invents certainty -------------------------- */
+
+  // Knowing somebody has worked is not knowing how senior they are. The
+  // conservative baseline is unchanged, so this may not promote anybody.
+  ck(
+    "14.4 Passport employment does not place anybody above the entry baseline",
+    resolveBaseline({
+      currentStatus: null,
+      currentProfessionSlug: null,
+      currentProfessionTitleSv: null,
+      currentProfessionTitleEn: null,
+      currentProfessionOther: null,
+      yearsOfExperience: null,
+      currentProfessionStage: null,
+      currentProfessionAreaId: null,
+    }) === 0,
+  );
+
+  /* ---- C · genuine ignorance is still stated ----------------------- */
+
+  const nothingKnown = computeCareerJourney({
+    profile: null,
+    targets: [target],
+    reachableCigSlugs: new Set(),
+    evidence: noEvidence,
+  });
+  ck(
+    "14.5 a person the product genuinely knows nothing about is still told so",
+    nothingKnown.known === false,
+  );
+  ck(
+    "14.6 and every profession is 'not enough information'",
+    nothingKnown.professions.every((p) => p.category === "not_enough_information"),
+  );
+
+  /* ---- D · a stated situation is enough on its own ----------------- */
+
+  const changerProfile = {
+    currentStatus: "career_change" as const,
+    currentProfessionSlug: null,
+    currentProfessionTitleSv: null,
+    currentProfessionTitleEn: null,
+    currentProfessionOther: null,
+    yearsOfExperience: null,
+    currentProfessionStage: null,
+    currentProfessionAreaId: null,
+  };
+  ck(
+    "14.7 a career-changer who stated their situation is known",
+    hasUsableSituation(changerProfile, noEvidence),
+  );
+  // And "other" still names no situation -- unchanged.
+  ck(
+    "14.8 'other' alone still does not place anybody",
+    !hasUsableSituation({ ...changerProfile, currentStatus: "other" }, noEvidence),
+  );
+  ck(
+    "14.9 a credential alone is not knowledge of a working life",
+    !hasUsableSituation(null, {
+      ...noEvidence,
+      hasPassport: true,
+      verifiedCredentialCount: 3,
+      hasWorkCountry: true,
+    }),
+  );
+
+  /* ---- E · the empty-state CTA names the missing thing -------------- */
+
+  const journeySection = read("src/components/career-journey/CareerJourneySection.tsx");
+  ck(
+    "14.10 the 'we do not know enough' CTA points at the question, not at a dashboard",
+    journeySection.includes("SECTION_DESTINATIONS.situation.href"),
+  );
+  ck(
+    "14.11 and it no longer sends the person to /my-career to work it out",
+    !/to="\/my-career"/.test(journeySection),
+  );
+
+  /* ---- F · no second profession model ------------------------------ */
+
+  // The journey reads the canonical profile and the frozen snapshot. It must
+  // not acquire a profession store of its own.
+  const journeyFns = read("src/lib/career-journey/career-journey.functions.ts");
+  const code = journeyFns.replace(/^\s*(\/\/|\*|\/\*).*$/gm, "");
+  ck(
+    "14.12 the journey writes no profession of its own",
+    !/\.(insert|update|upsert)\s*\(/.test(code),
+  );
+  ck(
+    "14.13 and it still reads the canonical profile rather than a copy",
+    code.includes('"security_career_profiles"'),
+  );
 }
 
 /* ------------------------------------------------------------------ */

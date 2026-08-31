@@ -263,6 +263,9 @@ const sv = {
   // ── Overview ─────────────────────────────────────────────────────────
   "att.title": "Behöver din uppmärksamhet",
   "att.clear": "Inget väntar på dig just nu.",
+  // För ett beslut vars uppgift inte längre finns i passet. Att visa
+  // uppgiftens id i stället vore att visa en databasnyckel som rubrik.
+  "att.entryRemoved": "Uppgiften finns inte längre i ditt pass",
   "att.waiting": "Granskas just nu",
   "att.waitingHint": "Någon annan tittar på det här. Du behöver inte göra något.",
   "att.needsHolder": "Väntar på dig",
@@ -1881,6 +1884,7 @@ const en: Record<PassportCopyKey, string> = {
 
   "att.title": "Needs your attention",
   "att.clear": "Nothing is waiting on you right now.",
+  "att.entryRemoved": "This entry is no longer in your Passport",
   "att.waiting": "Being reviewed",
   "att.waitingHint": "Someone else is looking at this. You do not need to do anything.",
   "att.needsHolder": "Waiting on you",

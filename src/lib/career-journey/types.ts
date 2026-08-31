@@ -152,12 +152,37 @@ export interface JourneyTargetInput {
 /** The Passport's contribution: counts and nothing else.
  *
  *  No titles, no issuers, no dates, no identifiers. The Journey needs to
- *  know THAT verified evidence exists, never what it says — anything more
- *  would put Passport content on a surface that is not a disclosure. */
+ *  know THAT evidence exists, never what it says — anything more would put
+ *  Passport content on a surface that is not a disclosure. */
 export interface JourneyEvidenceInput {
   readonly hasPassport: boolean;
   readonly verifiedCredentialCount: number;
   readonly verifiedExperienceCount: number;
+  /**
+   * Employment periods on record, verified or not.
+   *
+   * ── WHY AN UNVERIFIED COUNT EARNS ITS PLACE HERE ───────────────────
+   *
+   * Every other number in this object is about VERIFICATION, and this one
+   * deliberately is not. The pilot found the Journey telling a holder it
+   * did not know enough about their background while that holder had a
+   * dated employment history, a work country and credentials sitting in
+   * their Passport. The claim was false, and it was false because the only
+   * thing the Journey ever asked about a background was whether the
+   * canonical profile's `current_status` was filled in.
+   *
+   * A recorded employment is somebody stating where they have worked. That
+   * is knowledge of their background. It is not, and must not become,
+   * evidence of a career LEVEL: `resolveBaseline` still refuses to place
+   * anybody from it, so knowing this cannot promote a readiness category.
+   * It answers one question only — "do we know anything about this
+   * person's working life" — which is the question the false sentence was
+   * an answer to.
+   */
+  readonly recordedExperienceCount: number;
+  /** The holder's stated work country, where they have given one. Presence
+   *  only; the code itself is never rendered from here. */
+  readonly hasWorkCountry: boolean;
 }
 
 export interface ComputeJourneyInput {
@@ -201,7 +226,11 @@ export type ReadinessReason =
   | "adjacent_within_current_career_area"
   | "entry_role_open_to_newcomers"
   | "not_adjacent_to_current_work"
-  | "verified_evidence_present";
+  | "verified_evidence_present"
+  /** The canonical profile named no situation, but the Passport records a
+   *  working history. The journey proceeds from the conservative baseline
+   *  rather than declaring the person unknown. */
+  | "background_known_from_passport";
 
 /** The whole Career Journey for one report view. */
 export interface CareerJourney {
@@ -226,4 +255,4 @@ export interface CareerJourney {
   readonly readinessVersion: typeof READINESS_VERSION;
 }
 
-export const READINESS_VERSION = "journey-readiness-v1" as const;
+export const READINESS_VERSION = "journey-readiness-v2" as const;

@@ -30,6 +30,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
 import { MarketCredentialSection } from "@/components/security-passport/MarketCredentialSection";
@@ -213,6 +214,34 @@ function PassportInformationRoute() {
   // credentials under a Dubai heading for one render. They are fetched
   // together and set together, so the catalogue on screen always belongs to
   // the country printed above it.
+  // ── WHAT ELSE HAS JUST BECOME WRONG ─────────────────────────────────
+  //
+  // Everything a holder edits on this page is read by surfaces that are not
+  // on this page. My Career computes its completeness, its next best action
+  // and its trust summary from the identity seam; the attention panel reads
+  // the verification list. Neither is written here, and both were cached for
+  // a minute with no reason to re-ask.
+  //
+  // So a holder who followed "Lägg till din arbetslivserfarenhet" from My
+  // Career, added the employment, and came back was met by the same
+  // recommendation to add it -- a stale cache doing a convincing impression
+  // of a save that had not worked. Marking the two read models stale is what
+  // makes "follow the action, then see the action retire" true rather than
+  // true-after-a-minute.
+  //
+  // Named keys rather than a blanket invalidate: this page cannot have
+  // changed the report, the job list or anything an employer owns.
+  const queryClient = useQueryClient();
+  const invalidateCandidateReadModels = useCallback(() => {
+    for (const queryKey of [
+      ["professional-identity"],
+      ["passport", "mine"],
+      ["passport", "my-verification-requests"],
+    ]) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  }, [queryClient]);
+
   const refreshWorkCountry = useCallback(async () => {
     // ── TWO READS, TWO FAILURES ───────────────────────────────────────
     //
@@ -236,6 +265,7 @@ function PassportInformationRoute() {
         professionSlug: snap.profile?.cigProfessionSlug ?? "",
         declaredAccurateAt: snap.profile?.declaredAccurateAt ?? null,
       });
+      invalidateCandidateReadModels();
     } catch (err) {
       // A failure here must not take the rest of the page down with it: the
       // entries below are independent and still editable.
@@ -248,7 +278,7 @@ function PassportInformationRoute() {
       console.error("[passport] market availability load failed", err);
       setAvailability(null);
     }
-  }, [loadProfile, loadAvailability]);
+  }, [loadProfile, loadAvailability, invalidateCandidateReadModels]);
   useEffect(() => {
     void refreshWorkCountry();
   }, [refreshWorkCountry]);
@@ -310,6 +340,7 @@ function PassportInformationRoute() {
       setClaims(data.claims);
       setSkillTypes(types);
       setJurisdictions(jurs);
+      invalidateCandidateReadModels();
       return true;
     } catch (err) {
       console.error("[passport] entries load failed", err);
@@ -318,7 +349,7 @@ function PassportInformationRoute() {
     } finally {
       setLoaded(true);
     }
-  }, [load, loadSkillTypes, loadJurisdictions, failed, pt]);
+  }, [load, loadSkillTypes, loadJurisdictions, failed, pt, invalidateCandidateReadModels]);
 
   useEffect(() => {
     void refresh();
@@ -817,7 +848,14 @@ function PassportInformationRoute() {
           },
         ] as const
       ).map((section) => (
-        <SectionShell key={section.kind} icon={section.icon} title={pt(section.titleKey)}>
+        <SectionShell
+          key={section.kind}
+          icon={section.icon}
+          title={pt(section.titleKey)}
+          // Anchored so a Next Best Action can land on the section that owns
+          // the missing answer rather than at the top of a long page.
+          id={section.kind === "language" ? "sp-languages" : "sp-skills"}
+        >
           <SkillSection
             claimType={section.kind}
             types={skillTypes}
@@ -850,6 +888,7 @@ function PassportInformationRoute() {
             key={section.kind}
             icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
             title={pt(section.titleKey)}
+            id={section.kind === "education" ? "sp-education" : undefined}
           >
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>

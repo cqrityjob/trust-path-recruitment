@@ -35,10 +35,17 @@
 // wants to read their report and leave must be able to.
 
 import { computeCvReadiness } from "./cv/readiness";
-import { computeProfileCompleteness } from "./completeness";
+import { computeProfileCompleteness, type CompletenessSection } from "./completeness";
+import { SECTION_DESTINATIONS, isSectionReachable } from "./profile-destinations";
 import { isPendingClaim, isUnavailable, type ProfessionalIdentityV1 } from "./types";
 
-export const NEXT_BEST_ACTION_VERSION = "next-best-action-v1" as const;
+// v2: actions carry the profile SECTION they resolve, their destination is
+// taken from that section rather than from a constant, an unreachable
+// section can no longer be recommended, and a waiting reviewer entered the
+// blocking band. Same reason completeness.ts carries a version -- "the
+// recommendation changed" and "the rules changed" are different facts and a
+// screenshot has to be explainable later.
+export const NEXT_BEST_ACTION_VERSION = "next-best-action-v2" as const;
 
 /** How many primary actions the home screen may show. */
 export const MAX_PRIMARY_ACTIONS = 3;
@@ -46,6 +53,9 @@ export const MAX_PRIMARY_ACTIONS = 3;
 export type ActionKind =
   | "complete_assessment_assignment"
   | "read_released_report"
+  /** A verifier asked this person for something and is waiting on the
+   *  answer. See the rule for why it sits in the blocking band. */
+  | "respond_to_clarification"
   | "complete_profile_basics"
   | "start_passport"
   | "submit_passport_verification"
@@ -63,12 +73,20 @@ export type ActionPriority = 1 | 2 | 3 | 4 | 5;
 export interface NextBestAction {
   readonly kind: ActionKind;
   readonly priority: ActionPriority;
-  /** In-app destination. Always a path this build actually routes. */
+  /** In-app destination. Always a path this build actually routes, and for
+   *  a profile action always one carrying the intent that opens the right
+   *  editor -- see profile-destinations.ts. */
   readonly href: string;
   /** A count the copy may interpolate ("1 credential waiting"). Null when
    *  the action is not about a quantity — never 0, which reads as "nothing
    *  to do" next to an action asking somebody to do something. */
   readonly count: number | null;
+  /** Which part of the profile this action resolves, when it is a profile
+   *  action. It is what lets the copy say "Add your current profession"
+   *  rather than "Fill in your profile", and it is the thing whose presence
+   *  retires the action. Null for every action that is not about a profile
+   *  section. */
+  readonly section: CompletenessSection | null;
 }
 
 export interface NextBestActions {
@@ -131,7 +149,55 @@ export interface NextBestActionSignals {
    * not a loophole.
    */
   readonly careerDiscoveryOpen?: boolean;
+
+  /**
+   * How many verification requests are waiting on THIS person to answer.
+   *
+   * ── WHY IT ARRIVES AS A SIGNAL ─────────────────────────────────────
+   *
+   * Same reason as `savedCvCount`: the identity seam reads what a person
+   * HAS, and a clarification is a state of a request rather than a fact
+   * about them. It is derived by `deriveVerificationAttention`, which the
+   * candidate surfaces already compute, so this costs no extra read.
+   *
+   * ── WHY IT BELONGS ON THE LADDER AT ALL ────────────────────────────
+   *
+   * The attention panel presents it, and that was not enough. With a
+   * reviewer waiting on an answer, the recommendation at the top of the page
+   * still read "Skapa ditt CV" -- the product's own wants placed above
+   * somebody else's open question about this person's record. Band 1 is
+   * defined as "somebody else is waiting on this person"; a clarification is
+   * the plainest case of it in the product, and it was the one case the
+   * ladder could not see.
+   *
+   * Undefined means "nobody asked", which is every caller that does not
+   * derive attention. It withholds the action rather than inventing one.
+   */
+  readonly clarificationCount?: number;
 }
+
+/**
+ * The sections a recommendation may be ABOUT.
+ *
+ * Deliberately not "every missing section". Education, skills and languages
+ * are enrichment: a profile without them still drives a CV, a Career Card
+ * and a job match, and promoting them to the top of somebody's home page
+ * would turn this surface into the run to 100% that the file header, the
+ * completeness module and the product principle all refuse. Career
+ * direction is excluded because Career Discovery is its own action further
+ * down the ladder — offering it here too would put one errand on the page
+ * twice under two names.
+ *
+ * What is left is the set without which something downstream genuinely does
+ * not work, in the order it is asked.
+ */
+const PROFILE_ACTION_SECTIONS: readonly CompletenessSection[] = [
+  "situation",
+  "identity",
+  "profession",
+  "employment",
+  "location",
+];
 
 export function computeNextBestActions(
   identity: ProfessionalIdentityV1,
@@ -143,7 +209,8 @@ export function computeNextBestActions(
     priority: ActionPriority,
     href: string,
     count: number | null = null,
-  ) => actions.push({ kind, priority, href, count });
+    section: CompletenessSection | null = null,
+  ) => actions.push({ kind, priority, href, count, section });
 
   const { workload, discovery, claims } = identity;
 
@@ -190,21 +257,54 @@ export function computeNextBestActions(
     );
   }
 
+  // A verifier has asked this person a question and is waiting. It is the
+  // same shape as the employer invitation above -- somebody else is blocked
+  // on them -- and it is authored after it because an employer's deadline
+  // outranks a review that will wait.
+  //
+  // Not gated on `known(...)`: the count does not come from the identity
+  // read model at all, and its own caller passes nothing when the
+  // verification read failed rather than passing a zero.
+  if (signals.clarificationCount && signals.clarificationCount > 0) {
+    add("respond_to_clarification", 1, "/passport", signals.clarificationCount);
+  }
+
   /* ---- 2 · Unfinished, high value ------------------------------------ */
 
-  // The profile fields the rest of the product reads. Gated on the two
-  // heavyweight sections rather than on the score, because a person can sit
-  // at a respectable percentage with neither of them answered.
+  // ── THE PROFILE ACTION, AND THE GUARD THAT MAKES IT COMPLETABLE ────
   //
-  // Both gating sections are read from `profiles`, `sp_passport_profiles`
-  // and `security_career_profiles`, so a failure in any of the three makes
-  // "missing" unknowable rather than true.
+  // This rule used to ask one question — "is `identity` or `profession`
+  // missing" — and answer it with one fixed destination, /my-career/profile.
+  // For a career-changer both halves were wrong at once. `identity` needs a
+  // Passport headline, which that page does not edit; `profession` is not
+  // asked of somebody outside the industry at all, and selecting that
+  // situation CLEARS it. The action could therefore never be satisfied from
+  // the place it sent people, so it returned unchanged after every save.
+  //
+  // Now it picks the first missing section this person can actually reach
+  // and go and answer, and takes its destination from the section rather
+  // than from a constant. If nothing is both missing and reachable, no
+  // profile action is offered and the ladder moves on — a person with no
+  // Passport is told to open one (priority 3, below), which is the true
+  // next step and one they can complete.
+  //
+  // `missingSections` is already applicability-filtered by completeness.ts,
+  // so a question this person is never asked cannot appear here. The
+  // reachability check is the second, independent gate: it answers "is the
+  // editor open to them today", which applicability does not.
+  //
+  // The three reads behind these sections are `profiles`,
+  // `sp_passport_profiles` and `security_career_profiles`, so a failure in
+  // any of them makes "missing" unknowable rather than true.
   const completeness = computeProfileCompleteness(identity);
-  const missingCore =
-    completeness.missingSections.includes("identity") ||
-    completeness.missingSections.includes("profession");
-  if (known("account") && known("profile") && known("passport") && missingCore) {
-    add("complete_profile_basics", 2, "/my-career/profile");
+  if (known("account") && known("profile") && known("passport") && known("employment")) {
+    const actionable = completeness.missingSections.find(
+      (section) =>
+        PROFILE_ACTION_SECTIONS.includes(section) && isSectionReachable(section, identity, signals),
+    );
+    if (actionable) {
+      add("complete_profile_basics", 2, SECTION_DESTINATIONS[actionable].href, null, actionable);
+    }
   }
 
   /* ---- 3 · Trust ----------------------------------------------------- */

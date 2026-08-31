@@ -327,7 +327,16 @@ console.log("\nTHE FROZEN RANKING IS AN INPUT, NOT A WORKSPACE");
     }),
     targets,
     reachableCigSlugs: new Set(["tekniker"]),
-    evidence: { hasPassport: true, verifiedCredentialCount: 3, verifiedExperienceCount: 2 },
+    evidence: {
+      hasPassport: true,
+      verifiedCredentialCount: 3,
+      verifiedExperienceCount: 2,
+      // Stated rather than omitted: these cases are about verified
+      // evidence, and a recorded employment would establish a situation
+      // on its own -- which is a different rule, tested separately.
+      recordedExperienceCount: 2,
+      hasWorkCountry: true,
+    },
   });
 
   ck("the ranked professions handed in are not mutated", JSON.stringify(targets) === pristine);
@@ -361,13 +370,31 @@ console.log("\nPASSPORT EVIDENCE -- what it may and may not do");
     profile: p,
     targets: [unregulated],
     reachableCigSlugs: new Set(),
-    evidence: { hasPassport: true, verifiedCredentialCount: 0, verifiedExperienceCount: 0 },
+    evidence: {
+      hasPassport: true,
+      verifiedCredentialCount: 0,
+      verifiedExperienceCount: 0,
+      // Stated rather than omitted: these cases are about verified
+      // evidence, and a recorded employment would establish a situation
+      // on its own -- which is a different rule, tested separately.
+      recordedExperienceCount: 0,
+      hasWorkCountry: true,
+    },
   });
   const with_ = computeCareerJourney({
     profile: p,
     targets: [unregulated],
     reachableCigSlugs: new Set(),
-    evidence: { hasPassport: true, verifiedCredentialCount: 2, verifiedExperienceCount: 1 },
+    evidence: {
+      hasPassport: true,
+      verifiedCredentialCount: 2,
+      verifiedExperienceCount: 1,
+      // Stated rather than omitted: these cases are about verified
+      // evidence, and a recorded employment would establish a situation
+      // on its own -- which is a different rule, tested separately.
+      recordedExperienceCount: 1,
+      hasWorkCountry: true,
+    },
   });
 
   ck(
@@ -404,7 +431,16 @@ console.log("\nPASSPORT EVIDENCE -- what it may and may not do");
     profile: p,
     targets: [regulated],
     reachableCigSlugs: new Set(),
-    evidence: { hasPassport: true, verifiedCredentialCount: 1, verifiedExperienceCount: 0 },
+    evidence: {
+      hasPassport: true,
+      verifiedCredentialCount: 1,
+      verifiedExperienceCount: 0,
+      // Stated rather than omitted: these cases are about verified
+      // evidence, and a recorded employment would establish a situation
+      // on its own -- which is a different rule, tested separately.
+      recordedExperienceCount: 0,
+      hasWorkCountry: true,
+    },
   });
   ck(
     "verified evidence lifts the HEADLINE claim but keeps the regulated flag",
@@ -422,7 +458,16 @@ console.log("\nDETERMINISM");
     profile: profile({ currentProfessionSlug: "vaktare", currentProfessionStage: "developing" }),
     targets: [target(), target({ professionId: "x", careerStage: "senior" })],
     reachableCigSlugs: new Set(["tekniker"]),
-    evidence: { hasPassport: true, verifiedCredentialCount: 1, verifiedExperienceCount: 0 },
+    evidence: {
+      hasPassport: true,
+      verifiedCredentialCount: 1,
+      verifiedExperienceCount: 0,
+      // Stated rather than omitted: these cases are about verified
+      // evidence, and a recorded employment would establish a situation
+      // on its own -- which is a different rule, tested separately.
+      recordedExperienceCount: 0,
+      hasWorkCountry: true,
+    },
   } as const;
   ck(
     "the same inputs produce byte-identical output",
@@ -430,7 +475,7 @@ console.log("\nDETERMINISM");
   );
   ck(
     "the readiness rules are versioned, so a screenshot can be explained later",
-    computeCareerJourney(args).readinessVersion === "journey-readiness-v1",
+    computeCareerJourney(args).readinessVersion === "journey-readiness-v2",
   );
 }
 
@@ -471,9 +516,14 @@ console.log("\nBOUNDARIES");
   // that has nothing to do with what it guards.
   const evidenceBlock =
     /export interface JourneyEvidenceInput \{[\s\S]*?\n\}/.exec(types)?.[0] ?? "";
+  // Comments stripped first. The rule is about the FIELDS this interface
+  // carries, and a doc comment that explains why a count is not a title was
+  // failing a check written to stop the count BEING one -- which teaches the
+  // next person to delete the explanation rather than keep the boundary.
+  const evidenceFields = evidenceBlock.replace(/^\s*(\/\/|\*|\/\*).*$/gm, "");
   ck(
     "the evidence input carries no titles, issuers or identifiers",
-    evidenceBlock !== "" && !/title|issuer|credentialCode|holder|claimId/i.test(evidenceBlock),
+    evidenceBlock !== "" && !/title|issuer|credentialCode|holder|claimId/i.test(evidenceFields),
   );
   ck("and the engine imports no Passport module", !engine.includes("security-passport"));
 
