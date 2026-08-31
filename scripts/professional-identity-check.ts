@@ -103,6 +103,7 @@ import {
   isEmployerConfirmed,
 } from "../src/lib/security-passport/trust-presentation";
 import { buildCvTrustAnnotations } from "../src/lib/professional-identity/cv/trust-annotations";
+import { isCurrentlyVerified } from "../src/lib/security-passport/trust-presentation";
 import { summariseTrust } from "../src/lib/professional-identity/trust-summary";
 import { careerCardTrustLine } from "../src/lib/career-discovery/v31/career-card";
 
@@ -2140,6 +2141,324 @@ console.log("\n10 · verified trust across the career outputs");
         ck(`${f.split("/").pop()} never names ${forbidden}`, !src.includes(forbidden));
       }
     }
+  }
+}
+
+/* ================================================================== */
+console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
+/* ================================================================== */
+//
+// Two defects found in signed-in E2E, both the same mistake in two places:
+// treating "was verified once" as "is verified now".
+//
+//   B1  a SAVED CV froze `CvFactClaim.verified` into its stored bundle, so
+//       it kept printing the Verified chip after the credential behind it
+//       had been revoked — beside a live attribution line that had
+//       correctly disappeared.
+//
+//   B2  the Passport summary counted a revoked credential in VERIFIED
+//       TOTAL, and the entry printed the filled VERIFIED pill beside its
+//       own "Revoked" chip, while My Career correctly counted zero.
+{
+  const VU1_ACTIVE = claim({
+    id: "c-vu1",
+    title: "Väktargrundutbildning VU1",
+    issuerName: "BYA",
+    assertionLevel: "verified",
+    lifecycleState: "active",
+    verifierName: "CQrityjob",
+    verificationMethod: "document_review",
+    verifiedOn: "2026-02-11",
+  });
+  // The SAME credential after revocation. The assertion level does NOT move:
+  // the verification really happened and the record of it is never rewritten
+  // (§14). Only the lifecycle says it no longer stands.
+  const VU1_REVOKED = claim({ ...VU1_ACTIVE, lifecycleState: "revoked" });
+
+  const CONFIRMED_JOB = employment({
+    id: "e-confirmed",
+    employerName: "Company X",
+    roleTitle: "Security Officer",
+    startedOn: "2024-01-01",
+    endedOn: "2025-12-31",
+    assertionLevel: "verified",
+    verifierName: "Company X",
+    verificationMethod: "employer_confirmation",
+    verifiedOn: "2026-02-10",
+  });
+
+  const idActive = identity({
+    displayName: "Amina Rashid",
+    hasPassport: true,
+    employment: [CONFIRMED_JOB],
+    claims: [VU1_ACTIVE],
+  });
+  // After revocation the claim leaves the identity read model entirely --
+  // `identity.functions.ts` selects `lifecycle_state = active` -- which is
+  // itself part of why the saved CV could not notice.
+  const idRevoked = identity({
+    displayName: "Amina Rashid",
+    hasPassport: true,
+    employment: [CONFIRMED_JOB],
+    claims: [],
+  });
+
+  const bundleOf = (id: ReturnType<typeof identity>) =>
+    buildCvSourceBundle({
+      identity: id,
+      locale: "en",
+      includeCareerInsight: false,
+      targetJobText: null,
+    });
+
+  /* ---- 11a · B1: the saved CV ------------------------------------- */
+
+  // The bundle is FROZEN at save time, with `verified: true` baked in. This
+  // is the stored row, unchanged, exactly as the defect had it.
+  const savedBundle = bundleOf(idActive);
+  const savedPresentation = factualStoredPresentation(savedBundle);
+
+  ck(
+    "11.1 the saved bundle really does freeze verified: true",
+    savedBundle.credentials[0]?.verified === true,
+  );
+
+  {
+    // A. Before revocation the saved CV shows current trust.
+    const doc = buildSavedCvDocument(
+      savedBundle,
+      savedPresentation,
+      buildCvTrustAnnotations(idActive),
+    );
+    const t = doc.trust.claims["c-vu1"];
+    ck("11.2 saved CV, claim still active: trust is current", t?.status === "verified");
+    ck("11.3 and the attribution names CQrityjob", t?.labelEn === "Document reviewed by CQrityjob");
+  }
+
+  {
+    // B. THE BLOCKER. Same frozen bundle, same stored presentation, live
+    // annotations rebuilt from a Passport in which the claim is revoked.
+    const doc = buildSavedCvDocument(
+      savedBundle,
+      savedPresentation,
+      buildCvTrustAnnotations(idRevoked),
+    );
+    ck(
+      "11.4 saved CV after revoke: no live trust for the credential",
+      doc.trust.claims["c-vu1"] === undefined,
+    );
+    ck(
+      "11.5 and no attribution line survives anywhere in the document",
+      Object.values(doc.trust.claims).every((x) => x.labelEn === null),
+    );
+    // The frozen FACT is still allowed to be there — content may be frozen,
+    // trust may not (§3). What must be gone is the current-trust claim.
+    ck(
+      "11.6 the credential may remain as frozen CV content",
+      doc.credentials.some((c) => c.id === "c-vu1"),
+    );
+    ck(
+      "11.7 but its frozen verified flag is still true, which is why the",
+      doc.credentials.find((c) => c.id === "c-vu1")?.verified === true,
+    );
+    // The frozen flag must not be READ anywhere in the renderer, in any
+    // form. Matching the old JSX literal alone would pass for any rewrite
+    // that still consulted it, which is precisely the regression to catch.
+    const viewCode = read("src/components/professional-identity/CvDocumentView.tsx").replace(
+      /^\s*(\/\/|\*|\/\*).*$/gm,
+      "",
+    );
+    ck(
+      "11.8   renderer must NOT read the frozen flag anywhere",
+      !/\bclaim\.verified\b/.test(viewCode) && !/\bfact\.verified\b/.test(viewCode),
+    );
+    ck(
+      "11.9   and is gated on the annotation's current status instead",
+      read("src/components/professional-identity/CvDocumentView.tsx").includes(
+        'const currentlyVerified = !trust.unavailable && t?.status === "verified"',
+      ),
+    );
+  }
+
+  {
+    // C. Material correction that resets trust: the claim is still active,
+    // but the assertion level has fallen back. Same saved bundle.
+    const corrected = identity({
+      hasPassport: true,
+      employment: [CONFIRMED_JOB],
+      claims: [
+        claim({
+          ...VU1_ACTIVE,
+          assertionLevel: "document_provided",
+          verifierName: null,
+          verificationMethod: null,
+          verifiedOn: null,
+        }),
+      ],
+    });
+    const doc = buildSavedCvDocument(
+      savedBundle,
+      savedPresentation,
+      buildCvTrustAnnotations(corrected),
+    );
+    const t = doc.trust.claims["c-vu1"];
+    ck(
+      "11.10 saved CV after a correction that resets trust: not verified",
+      t?.status !== "verified",
+    );
+    ck("11.11 and no attribution is printed", t?.labelEn === null);
+  }
+
+  {
+    // D. A FRESH CV after revocation is correct too.
+    const fresh = buildFactualCvDocument(bundleOf(idRevoked), buildCvTrustAnnotations(idRevoked));
+    ck(
+      "11.12 fresh CV after revoke omits the credential entirely",
+      !fresh.credentials.some((c) => c.id === "c-vu1"),
+    );
+  }
+
+  {
+    // E. The AI boundary is untouched by this fix.
+    const serialised = JSON.stringify(bundleOf(idActive));
+    ck(
+      "11.13 the model's input still carries no verifier organisation",
+      !serialised.includes("verifierName") && !serialised.includes("CQrityjob"),
+    );
+    ck(
+      "11.14 and generation still passes only the bundle",
+      read("src/lib/professional-identity/cv/generation.ts").includes(
+        "governedContext: { facts: bundle }",
+      ),
+    );
+  }
+
+  {
+    // F. Candidate text still cannot manufacture a chip, now that the chip
+    //    is driven by annotations rather than a bundle boolean.
+    const hostile = identity({
+      hasPassport: true,
+      claims: [
+        claim({
+          id: "c-adv",
+          title: "VU1",
+          issuerName: "CQrityjob verified",
+          assertionLevel: "self_declared",
+          lifecycleState: "active",
+        }),
+      ],
+    });
+    const ann = buildCvTrustAnnotations(hostile);
+    ck(
+      "11.15 candidate-entered issuer text yields no current verification",
+      ann.claims["c-adv"].status !== "verified" && ann.claims["c-adv"].labelEn === null,
+    );
+  }
+
+  /* ---- 11b · B2: current vs historical verification ---------------- */
+
+  ck("11.16 an active verified claim IS currently verified", isCurrentlyVerified(VU1_ACTIVE));
+  ck("11.17 a revoked one is NOT", !isCurrentlyVerified(VU1_REVOKED));
+  ck(
+    "11.18 nor is a disputed one",
+    !isCurrentlyVerified({ assertionLevel: "verified", lifecycleState: "disputed" }),
+  );
+  ck(
+    "11.19 nor an expired one",
+    !isCurrentlyVerified({ assertionLevel: "verified", lifecycleState: "expired" }),
+  );
+  ck(
+    "11.20 nor superseded or withdrawn",
+    !isCurrentlyVerified({ assertionLevel: "verified", lifecycleState: "superseded" }) &&
+      !isCurrentlyVerified({ assertionLevel: "verified", lifecycleState: "withdrawn" }),
+  );
+  ck(
+    "11.21 nor a draft that was never submitted",
+    !isCurrentlyVerified({ assertionLevel: "verified", lifecycleState: "draft" }),
+  );
+  // An entry with no lifecycle at all is unaffected — employment periods
+  // reach the annotations already filtered to active.
+  ck(
+    "11.22 an entry carrying no lifecycle is judged on its assertion alone",
+    isCurrentlyVerified({ assertionLevel: "verified" }),
+  );
+  ck(
+    "11.23 and the historical verification is NEVER rewritten to achieve this",
+    VU1_REVOKED.assertionLevel === "verified",
+  );
+
+  {
+    // The Passport summary, the entry chip and the card state are the three
+    // places that were asking the wrong question.
+    const summarySrc = read("src/components/security-passport/PassportSummaryCard.tsx");
+    ck(
+      "11.24 the Passport summary counts CURRENTLY verified claims",
+      summarySrc.includes("claims.filter(isCurrentlyVerified)") &&
+        !/claims\.filter\(\(c\) => c\.assertionLevel === "verified"\)/.test(summarySrc),
+    );
+    ck(
+      "11.25 and will not offer sharing on a revoked-only Passport",
+      summarySrc.includes("claims.some(isCurrentlyVerified)"),
+    );
+
+    const chipSrc = read("src/components/security-passport/AssertionChip.tsx");
+    ck(
+      "11.26 the assertion chip takes the lifecycle into account",
+      chipSrc.includes("lifecycleState") && chipSrc.includes("assertion.verified.historical"),
+    );
+    ck(
+      "11.27 and does not strike the past verification through as if erased",
+      !chipSrc.includes("line-through"),
+    );
+    ck(
+      "11.28 the claim row passes the lifecycle to the chip",
+      read("src/components/security-passport/ClaimRow.tsx").includes(
+        "lifecycleState={claim.lifecycleState}",
+      ),
+    );
+
+    const cardSrc = read("src/lib/security-passport/card.ts");
+    ck(
+      "11.29 the Passport Card's own state is a present-tense claim",
+      cardSrc.includes("periods.some(isCurrentlyVerified)") &&
+        cardSrc.includes("periods.every(isCurrentlyVerified)"),
+    );
+  }
+
+  /* ---- 11c · §13 cross-product consistency ------------------------ */
+
+  {
+    // One revoked VU1, four surfaces, one answer.
+    const summary = summariseTrust(idRevoked);
+    const annotations = buildCvTrustAnnotations(idRevoked);
+    const savedDoc = buildSavedCvDocument(savedBundle, savedPresentation, annotations);
+
+    ck("11.30 My Career: 0 currently verified credentials", summary.verifiedClaims === 0);
+    ck("11.31 saved CV: no current trust decoration", savedDoc.trust.claims["c-vu1"] === undefined);
+    ck(
+      "11.32 Career Card: the credential segment is gone",
+      careerCardTrustLine(summary, "en") === "Employment confirmed",
+    );
+    ck(
+      "11.33 Passport: the same predicate answers the same way",
+      !isCurrentlyVerified(VU1_REVOKED),
+    );
+
+    // ── AND THE EMPLOYMENT MUST NOT REGRESS ─────────────────────────
+    ck(
+      "11.34 employment confirmation survives the credential's revocation",
+      summary.employerConfirmedEmployment === 1,
+    );
+    ck(
+      "11.35 and the CV still attributes it to Company X",
+      employmentTrustLine(savedDoc.trust.employment["e-confirmed"], "en") ===
+        "Employment confirmed by Company X",
+    );
+    ck(
+      "11.36 [sv] likewise",
+      employmentTrustLine(savedDoc.trust.employment["e-confirmed"], "sv") ===
+        "Anställningen är bekräftad av Company X",
+    );
   }
 }
 

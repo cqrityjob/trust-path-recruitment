@@ -155,15 +155,21 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
 
   if (provenanceUnavailable) return none("unknown");
 
-  // ── A LAPSED OR WITHDRAWN FACT IS NOT A VERIFIED FACT ────────────────
+  // ── ONLY `active` IS CURRENT TRUST ───────────────────────────────────
   //
   // `expired` and `revoked` are not merely history. A credential that has
   // expired is not currently a verified credential, whatever was decided
   // about it in 2024, and a revoked one is a conclusion actively withdrawn.
-  // The assertion level alone does not always move when the lifecycle does,
-  // so the lifecycle is asked first and the mark is refused on both.
-  const lapsed =
-    lifecycleState != null && lifecycleState !== "active" && lifecycleState !== "draft";
+  // `disputed` is contested, `superseded` replaced, `withdrawn` taken back,
+  // and `draft` was never submitted. The assertion level does not move when
+  // the lifecycle does -- deliberately, since the verification really did
+  // happen -- so the lifecycle is asked first and the mark is refused on
+  // everything except `active`.
+  //
+  // An entry that passes NO lifecycle at all is unaffected: employment
+  // periods arrive already filtered to active by the read model, and
+  // `undefined` is not a state to judge.
+  const lapsed = lifecycleState != null && lifecycleState !== "active";
   if (lapsed) return none("self_reported");
 
   if (assertionLevel !== "verified") {
@@ -242,4 +248,48 @@ export function employmentTrustLine(trust: TrustPresentation, lang: PassportLang
       ? "employment.attribution.employer_confirmation"
       : verifierAttributionKey(trust.method);
   return `${passportT(key, lang)} ${trust.organisation}`;
+}
+
+/**
+ * Is this entry CURRENTLY verified — as opposed to having been verified once?
+ *
+ * ── THE DISTINCTION THIS EXISTS TO KEEP ────────────────────────────────
+ *
+ * `assertion_level = verified` records that a verification HAPPENED. It is
+ * history, it is true forever, and revoking a credential does not un-happen
+ * it — which is exactly why the two fields are separate and why the fix for
+ * a revoked credential is never to rewrite the assertion level.
+ *
+ * `lifecycle_state` says whether that conclusion STILL STANDS. Only `active`
+ * does. A revoked credential's verification is withdrawn; a disputed one is
+ * contested; an expired one has lapsed; a superseded or withdrawn one has
+ * been replaced or taken back. None of them may wear the present-tense word
+ * "Verified", be counted in a current total, or carry a trust decoration.
+ *
+ * ── WHY IT LIVES HERE ──────────────────────────────────────────────────
+ *
+ * Three surfaces were each deciding this for themselves, and two of them
+ * decided it by asking about the assertion level alone. The Passport summary
+ * therefore counted a revoked credential as verified while My Career, using
+ * `isVerifiedClaim`, correctly counted zero — one fact, two answers, on two
+ * cards of the same page.
+ *
+ * This is not a new rule. It is the rule `isVerifiedClaim`, `useCardContent`
+ * (`isCurrent`), `market-profiles.ts` and `linkedin-profile.ts` were each
+ * already applying, written once so the surfaces that were NOT applying it
+ * can share the definition rather than grow a fourth copy of it.
+ *
+ * Implemented through `describeTrust` deliberately: the predicate and the
+ * rendered attribution can then never disagree about the same entry.
+ */
+export function isCurrentlyVerified(entry: {
+  readonly assertionLevel: string;
+  readonly lifecycleState?: string | null;
+}): boolean {
+  return (
+    describeTrust({
+      assertionLevel: entry.assertionLevel,
+      lifecycleState: entry.lifecycleState,
+    }).status === "verified"
+  );
 }

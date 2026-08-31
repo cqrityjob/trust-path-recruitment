@@ -33,6 +33,7 @@ import type {
   LifecycleState,
   PassportHolder,
 } from "./types";
+import { isCurrentlyVerified } from "./trust-presentation";
 
 export type PassportCardState = "empty" | "self_declared_only" | "partially_verified" | "verified";
 
@@ -142,14 +143,21 @@ function deriveState(
 ): PassportCardState {
   if (periods.length === 0 && claims.length === 0) return "empty";
 
-  const anyVerified =
-    periods.some((p) => p.assertionLevel === "verified") ||
-    claims.some((c) => c.assertionLevel === "verified");
+  // ── THE CARD'S STATE IS A PRESENT-TENSE CLAIM ──────────────────────
+  //
+  // This is the word printed on the surface most likely to be screenshotted
+  // and sent to an employer, so it has to mean "verified NOW". Asking only
+  // about the assertion level made a holder whose sole verified credential
+  // had been REVOKED still read as verified or partially verified, because
+  // the assertion level correctly records that the verification happened.
+  //
+  // `isCurrentlyVerified` adds the lifecycle question the individual plate
+  // was already asking (`useCardContent`'s `isCurrent`, which is why the
+  // plate said PREVIOUSLY VERIFIED while the card around it said verified).
+  const anyVerified = periods.some(isCurrentlyVerified) || claims.some(isCurrentlyVerified);
   if (!anyVerified) return "self_declared_only";
 
-  const allVerified =
-    periods.every((p) => p.assertionLevel === "verified") &&
-    claims.every((c) => c.assertionLevel === "verified");
+  const allVerified = periods.every(isCurrentlyVerified) && claims.every(isCurrentlyVerified);
   return allVerified ? "verified" : "partially_verified";
 }
 

@@ -130,10 +130,27 @@ function ClaimList({
     <ul className="mt-2 space-y-1.5">
       {claims.map((claim) => {
         const t: TrustPresentation | undefined = trust.claims[claim.id];
-        // `claim.verified` is the Passport's own `isVerifiedClaim`. The mark
-        // is gated on it and NOT on the attribution being resolvable, so a
-        // verified credential whose decider predates the PR 5 rule still
-        // carries its mark and simply says nothing about who.
+        // ── THE MARK IS LIVE, THE FACT IS FROZEN ────────────────────────
+        //
+        // This was `claim.verified` — a boolean frozen into
+        // `cv_documents.source_bundle` at save time. A saved CV therefore
+        // kept printing "Verified" after the credential behind it had been
+        // revoked: the live attribution line below correctly vanished, and
+        // the chip above it did not, leaving a verification mark with
+        // nothing willing to say who made it.
+        //
+        // A saved CV may freeze career CONTENT — the title, the issuer, the
+        // dates the person reviewed and accepted. It must never freeze TRUST,
+        // which is not a property of the document but the Passport's current
+        // answer about the claim underneath it. So the chip now reads the
+        // same live annotations the attribution does, and the two can no
+        // longer disagree with each other on one line.
+        //
+        // `trust.unavailable` still suppresses BOTH rather than printing a
+        // negative we did not establish (PR 4's rule); `claim.verified`
+        // remains on the fact for the persisted bundle's schema and is no
+        // longer consulted for anything the reader sees.
+        const currentlyVerified = !trust.unavailable && t?.status === "verified";
         return (
           <li key={claim.id} className="text-sm text-foreground">
             <span className="font-medium">{claim.title}</span>
@@ -146,7 +163,7 @@ function ClaimList({
               <span className="text-muted-foreground"> · {claim.issuedOn.slice(0, 4)}</span>
             ) : null}
             {claim.level ? <span className="text-muted-foreground"> · {claim.level}</span> : null}
-            {claim.verified && (
+            {currentlyVerified && (
               <span className="ml-1.5 inline-flex items-center gap-1 align-middle text-xs font-semibold text-[color:var(--gold)]">
                 <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 {L(COPY.verified, lang)}

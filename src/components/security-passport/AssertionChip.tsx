@@ -22,7 +22,7 @@
 // There is no `onChange`, no `editable` prop and no setter anywhere in this
 // tree. The level is a fact about the entry, not a control.
 
-import { CheckCircle2, FileText, PencilLine } from "lucide-react";
+import { CheckCircle2, FileText, History, PencilLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { AssertionLevel } from "@/lib/security-passport/types";
@@ -37,6 +37,14 @@ const SHAPE: Record<AssertionLevel, string> = {
   verified: "rounded-full border border-transparent bg-primary text-primary-foreground",
 };
 
+/** A past verification: outlined and muted, deliberately carrying none of
+ *  the "settled" signals the filled verified pill carries.
+ *
+ *  Explicitly NOT struck through. A strike-through reads as erased, and the
+ *  one thing this product must not imply about a revoked verification is
+ *  that it never happened. It is past, not deleted. */
+const HISTORICAL_SHAPE = "rounded-md border border-muted-foreground/50 text-muted-foreground";
+
 const GLYPH: Record<AssertionLevel, typeof PencilLine> = {
   self_declared: PencilLine,
   document_provided: FileText,
@@ -45,23 +53,49 @@ const GLYPH: Record<AssertionLevel, typeof PencilLine> = {
 
 export function AssertionChip({
   level,
+  lifecycleState,
   className,
   size = "default",
 }: {
   level: AssertionLevel;
+  /** The entry's CURRENT standing. Optional: the legend below renders the
+   *  three levels in the abstract, where no entry and no lifecycle exists. */
+  lifecycleState?: string | null;
   className?: string;
   size?: "default" | "sm";
 }) {
   const { pt } = usePassportCopy();
-  const Glyph = GLYPH[level];
-  const label = pt(`assertion.${level}` as const);
+
+  // ── A REVOKED CREDENTIAL MAY NOT WEAR THE PRESENT TENSE ─────────────
+  //
+  // This chip printed `assertion.${level}` unconditionally, so a revoked
+  // credential rendered the filled VERIFIED pill immediately beside its own
+  // "Revoked" chip. Two chips, one entry, opposite claims — and the filled
+  // pill is the one styled to read as settled.
+  //
+  // The verification is not erased: it really happened, the assertion level
+  // still records it, and the word stays — in the past tense, as the Passport
+  // Card has always said it (`useCardContent`'s `isCurrent`, from which this
+  // rule and this copy key are taken rather than invented).
+  //
+  // The STYLING moves too, and has to. Leaving the filled pill under a past-
+  // tense word would keep the visual claim while softening only the text,
+  // and on this product the shape is a load-bearing channel (see the header):
+  // a reader who cannot see colour, or is looking at a greyscale screenshot,
+  // reads "settled" from the fill alone.
+  const isCurrent = lifecycleState == null || lifecycleState === "active";
+  const historical = !isCurrent && level === "verified";
+  const Glyph = historical ? History : GLYPH[level];
+  const label = historical
+    ? pt("assertion.verified.historical")
+    : pt(`assertion.${level}` as const);
 
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider",
         size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]",
-        SHAPE[level],
+        historical ? HISTORICAL_SHAPE : SHAPE[level],
         className,
       )}
     >
