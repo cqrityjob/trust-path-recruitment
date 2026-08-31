@@ -369,6 +369,12 @@ const sv = {
   "claims.attribution.document_review": "Dokument granskat av",
   "claims.attribution.employer_confirmation": "Bekräftat av",
   "claims.attribution.issuer_confirmation": "Bekräftat av utfärdaren",
+  // Samma faktum som ovan, i anställningsregister. En anställning som en
+  // arbetsgivare har bekräftat förtjänar en mening som säger vad som
+  // bekräftades -- inte bara "Bekräftat av" bredvid ett företagsnamn, som
+  // på ett CV lika gärna kan läsas som att företaget utfärdat något.
+  // Metoden väljer nyckeln precis som ovan; ingen ny nivå tillkommer.
+  "employment.attribution.employer_confirmation": "Anställningen är bekräftad av",
   "claims.verifiedOn": "Verifierat",
   "claims.jurisdiction": "Land",
   "claims.issuedOn": "Utfärdat",
@@ -1969,6 +1975,7 @@ const en: Record<PassportCopyKey, string> = {
   "claims.attribution.document_review": "Document reviewed by",
   "claims.attribution.employer_confirmation": "Confirmed by",
   "claims.attribution.issuer_confirmation": "Confirmed by the issuer",
+  "employment.attribution.employer_confirmation": "Employment confirmed by",
   "claims.verifiedOn": "Verified",
   "claims.jurisdiction": "Country",
   "claims.issuedOn": "Issued",

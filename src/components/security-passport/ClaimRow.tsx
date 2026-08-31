@@ -91,7 +91,11 @@ export function ClaimRow({
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <AssertionChip level={claim.assertionLevel} size="sm" />
+          <AssertionChip
+            level={claim.assertionLevel}
+            lifecycleState={claim.lifecycleState}
+            size="sm"
+          />
           <LifecycleChip state={claim.lifecycleState} />
         </div>
       </div>

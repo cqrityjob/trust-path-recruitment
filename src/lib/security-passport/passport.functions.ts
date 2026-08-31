@@ -44,6 +44,15 @@ import type {
   PassportHolder,
   VerificationMethod,
 } from "./types";
+import {
+  PROVENANCE_DECISION_COLUMNS,
+  PROVENANCE_REQUEST_COLUMNS,
+  buildProvenanceMap,
+  printableProvenance,
+  type ProvenanceDecisionRow,
+  type ProvenanceMap,
+  type ProvenanceRequestRow,
+} from "./provenance";
 
 /** The question set these answers were given against. Bumped when the
  *  authored wording changes, so a stored answer always means what the
@@ -157,19 +166,11 @@ function toProfile(row: ProfileRow | null): PassportProfile | null {
   };
 }
 
-/** Who verified one subject, how, and when -- resolved from the decision
- *  record and from nowhere else.
- *
- *  Keyed by claim id or period id. Absent means exactly what it says: nobody
- *  has verified this. The surfaces then print no attribution, which is the
- *  whole correction -- the alternative they used to reach for was the
- *  candidate's own issuer text. */
-type Provenance = {
-  readonly organisation: string | null;
-  readonly method: VerificationMethod | null;
-  readonly decidedOn: string | null;
-};
-type ProvenanceMap = ReadonlyMap<string, Provenance>;
+// Provenance -- who verified one subject, how and when -- is resolved by
+// `provenance.ts`, which both this read model and the professional-identity
+// read model import. It used to be defined here; it moved so that the CV and
+// the Career Card could attribute verification under exactly the rules the
+// Passport attributes it under, rather than under a second copy of them.
 
 function toPeriod(row: PeriodRow, provenance: ProvenanceMap): ExperiencePeriod {
   // Attribution is gated on the CURRENT assertion level, not on the mere
@@ -177,7 +178,7 @@ function toPeriod(row: PeriodRow, provenance: ProvenanceMap): ExperiencePeriod {
   // real history and stays in the decision log, but printing "Confirmed by
   // Bevakning AB" beside an entry that is no longer verified would restate a
   // withdrawn conclusion as a present fact.
-  const p = row.assertion_level === "verified" ? provenance.get(row.id) : undefined;
+  const p = printableProvenance(row.id, row.assertion_level, provenance);
   return {
     id: row.id,
     employerName: row.employer_name,
@@ -243,6 +244,7 @@ function todayIso(): string {
 }
 
 function toClaim(row: ClaimRow, provenance: ProvenanceMap): Claim {
+  const claimProvenance = printableProvenance(row.id, row.assertion_level, provenance);
   // The prototype carried bilingual titles because its content was authored.
   // A holder types one title, in their own words; showing it unchanged in
   // both languages is more honest than machine-translating a credential name.
@@ -282,12 +284,9 @@ function toClaim(row: ClaimRow, provenance: ProvenanceMap): Claim {
     // read from `sp_verification_decisions`, which is the only record of
     // who actually decided. Gated on `verified` for the same reason as
     // periods above.
-    verifierName:
-      row.assertion_level === "verified" ? (provenance.get(row.id)?.organisation ?? null) : null,
-    verificationMethod:
-      row.assertion_level === "verified" ? (provenance.get(row.id)?.method ?? null) : null,
-    verifiedOn:
-      row.assertion_level === "verified" ? (provenance.get(row.id)?.decidedOn ?? null) : null,
+    verifierName: claimProvenance?.organisation ?? null,
+    verificationMethod: claimProvenance?.method ?? null,
+    verifiedOn: claimProvenance?.decidedOn ?? null,
     limitationSv: null,
     limitationEn: null,
     versionNo: row.version_no,
@@ -360,11 +359,11 @@ export const getMyPassport = createServerFn({ method: "GET" })
       // boundary.
       db
         .from("sp_verification_requests")
-        .select("id, claim_id, period_id")
+        .select(PROVENANCE_REQUEST_COLUMNS)
         .eq("holder_user_id", userId),
       db
         .from("sp_verification_decisions")
-        .select("request_id, decision, decider_organisation, verification_method, decided_at")
+        .select(PROVENANCE_DECISION_COLUMNS)
         .eq("holder_user_id", userId)
         .order("decided_at", { ascending: true }),
     ]);
@@ -413,37 +412,14 @@ export const getMyPassport = createServerFn({ method: "GET" })
 
     // ── SUBJECT -> WHO DECIDED IT ──────────────────────────────────────
     //
-    // Decisions arrive oldest-first, so a later decision on the same subject
-    // overwrites an earlier one and the map ends holding the CURRENT answer.
-    // Only `approved` writes an attribution: a rejection has a decider too,
-    // and naming them beside the entry would read as an endorsement of it.
-    const subjectOf = new Map<string, string>();
-    for (const r of (reqRes.data ?? []) as Array<{
-      id: string;
-      claim_id: string | null;
-      period_id: string | null;
-    }>) {
-      const subject = r.claim_id ?? r.period_id;
-      if (subject) subjectOf.set(r.id, subject);
-    }
-
-    const provenance = new Map<string, Provenance>();
-    for (const d of (decRes.data ?? []) as Array<{
-      request_id: string;
-      decision: string;
-      decider_organisation: string | null;
-      verification_method: string | null;
-      decided_at: string;
-    }>) {
-      if (d.decision !== "approved") continue;
-      const subject = subjectOf.get(d.request_id);
-      if (!subject) continue;
-      provenance.set(subject, {
-        organisation: d.decider_organisation,
-        method: (d.verification_method as VerificationMethod | null) ?? null,
-        decidedOn: d.decided_at.slice(0, 10),
-      });
-    }
+    // The fold, its ordering requirement and the approved-only rule all live
+    // in `provenance.ts` now, because the professional-identity read model
+    // needs the same answer, and a second copy of these rules is how the CV
+    // comes to attribute an employment the Passport no longer attributes.
+    const provenance = buildProvenanceMap(
+      (reqRes.data ?? []) as ProvenanceRequestRow[],
+      (decRes.data ?? []) as ProvenanceDecisionRow[],
+    );
 
     const profile = toProfile((profileRes.data as ProfileRow | null) ?? null);
     const periods = ((periodsRes.data ?? []) as PeriodRow[]).map((r) => toPeriod(r, provenance));

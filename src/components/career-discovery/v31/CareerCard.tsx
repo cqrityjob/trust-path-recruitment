@@ -193,6 +193,13 @@ const STRENGTHS_LABEL: Record<"sv" | "en", string> = {
   sv: "MINA STARKASTE INDIKATORER",
   en: "MY STRONGEST INDICATORS",
 };
+// "VERIFIED IN CQRITYJOB", not "VERIFIED". The qualifier is the whole point:
+// it says who did the checking and confines the claim to this product, so a
+// reader cannot take the line below as a statement by an authority.
+const TRUST_LABEL: Record<"sv" | "en", string> = {
+  sv: "VERIFIERAT I CQRITYJOB",
+  en: "VERIFIED IN CQRITYJOB",
+};
 const DISCOVER_LINE: Record<"sv" | "en", string> = {
   sv: "Upptäck din karriär inom säkerhet",
   en: "Discover your security career",
@@ -374,6 +381,67 @@ function strengthsBlock(
   return { svg: parts.join("\n  "), y: cursor };
 }
 
+/**
+ * The trust line — one muted sentence, or nothing at all.
+ *
+ * ── WHY IT IS DELIBERATELY UNDERPLAYED ─────────────────────────────────
+ *
+ * This is the only block on the card making a claim that a stranger is meant
+ * to rely on, which is exactly why it is set at label size in the muted ink
+ * rather than given a badge, a tick, a panel or the accent colour. A card is
+ * a professional identity, not a certificate, and a verification statement
+ * styled like a seal invites precisely the reading -- "this person is
+ * approved" -- that the trust ladder exists to refuse.
+ *
+ * It sits under the strengths, above the footer rule, and flows like every
+ * other block, so `measureCard` accounts for it and the career-card check
+ * catches it if it ever pushes content into the footer.
+ *
+ * `data.trustLine` is composed upstream by `careerCardTrustLine` and is null
+ * whenever there is nothing verified or the counts could not be read; this
+ * renders nothing in both cases, which is the same card that existed before.
+ */
+function trustBlock(
+  data: CareerCardData,
+  s: FormatSpec,
+  x: number,
+  width: number,
+  y: number,
+): Block {
+  // Returns the INCOMING cursor untouched when there is no line, so a card
+  // without one measures exactly as it did before this block existed. The
+  // leading gap is added inside the guard for the same reason: adding it
+  // outside would make every card in the product very slightly taller,
+  // including the ones that render nothing here.
+  if (!data.trustLine) return { svg: "", y };
+  const parts: string[] = [];
+  let cursor = y + Math.round(s.gap * 0.8);
+
+  parts.push(
+    text(x, cursor, TRUST_LABEL[data.locale], {
+      size: Math.round(s.labelSize * 0.86),
+      fill: FAINT,
+      weight: 600,
+      tracking: 2,
+    }),
+  );
+  cursor += Math.round(s.labelSize * 1.25);
+
+  // Two lines allowed: "3 verifierade intyg · Anställning bekräftad" does not
+  // fit one line on story at label size, and shrinking it further would put
+  // the card's one load-bearing claim below the footer's own text size.
+  const fitted = fitText(data.trustLine, width, Math.round(s.labelSize * 1.02), 2, GLYPH_RATIO);
+  const lineHeight = Math.round(fitted.size * 1.32);
+  for (const [i, line] of fitted.lines.entries()) {
+    parts.push(
+      text(x, cursor + i * lineHeight, line, { size: fitted.size, fill: INK_SOFT, weight: 600 }),
+    );
+  }
+  cursor += (fitted.lines.length - 1) * lineHeight;
+
+  return { svg: parts.join("\n  "), y: cursor };
+}
+
 interface CardLayout {
   readonly svg: string;
   /** The lowest y any content block reached, before the footer. A test
@@ -451,7 +519,12 @@ function layout(
   );
   parts.push(strengths.svg);
 
-  const contentBottom = Math.max(top.y, rest.y, strengths.y);
+  // The trust line follows the strengths in the same column, reserving the
+  // QR gutter exactly as they do.
+  const trust = trustBlock(data, s, restX, strengthsWidth, strengths.y);
+  parts.push(trust.svg);
+
+  const contentBottom = Math.max(top.y, rest.y, strengths.y, trust.y);
 
   // ── Footer ────────────────────────────────────────────────────────────
   parts.push(
@@ -634,6 +707,12 @@ export function cardAltText(data: CareerCardData): string {
   }
   if (data.strengths.length > 0) {
     bits.push((sv ? "Starkast i: " : "Strongest in: ") + data.strengths.join(", ") + ".");
+  }
+  // §34: the exported card is an IMAGE. Everything it claims has to reach a
+  // screen reader too, and the trust line is the one thing on it a reader
+  // might act on, so it is the last thing that may be left in pixels only.
+  if (data.trustLine) {
+    bits.push((sv ? "Verifierat i CQrityjob: " : "Verified in CQrityjob: ") + data.trustLine + ".");
   }
   bits.push(
     sv ? "CQrityjob — där förtroende kommer först." : "CQrityjob — where trust comes first.",

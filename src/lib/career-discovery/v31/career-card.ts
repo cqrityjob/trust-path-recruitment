@@ -108,6 +108,18 @@ export interface CareerCardData {
    *  only, no scores printed. */
   readonly strengths: readonly string[];
   readonly firstName: string | null;
+  // ── THE TRUST LINE ─────────────────────────────────────────────────
+  //
+  // One short, already-composed sentence, or null. Null is the normal case
+  // and renders nothing: a candidate with nothing verified gets a card that
+  // says nothing about verification, not a card that says they have none.
+  //
+  // Composed by `careerCardTrustLine` from the Passport's own counts. The
+  // card never receives claims, periods, decisions, organisations or dates
+  // -- §13: this is a shareable professional identity, not a mini Passport
+  // ledger, and the way to keep it one is to give the renderer a string it
+  // cannot decompose rather than a record it could start itemising.
+  readonly trustLine: string | null;
   readonly locale: Locale;
   readonly definitionVersion: string;
   readonly generatedAt: string;
@@ -128,6 +140,10 @@ export interface BuildCareerCardInput {
   /** Explicit opt-in only (Execution Mandate §9/§26). May be prefilled from
    *  the account's own first name, and must always be removable. */
   readonly firstName?: string | null;
+  /** From `careerCardTrustLine`. Absent on any caller that has no identity
+   *  in hand, which renders a card with no trust line -- the pre-existing
+   *  behaviour, and the safe one. */
+  readonly trustLine?: string | null;
 }
 
 /**
@@ -176,6 +192,7 @@ export function buildCareerCardData(input: BuildCareerCardInput): CareerCardData
     entries,
     strengths: strongestIndicators(dimensions, locale),
     firstName: input.firstName?.trim() ? input.firstName.trim().slice(0, 40) : null,
+    trustLine: input.trustLine ?? null,
     locale,
     definitionVersion,
     generatedAt,
@@ -193,3 +210,74 @@ export const CARD_DIMENSIONS: Readonly<
 };
 
 export const DISCOVER_URL_PATH = "/security-career-assessment";
+
+/* ------------------------------------------------------------------ */
+/* The trust line                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The card's whole statement about verification, in one line — or null.
+ *
+ * ── WHAT IT MAY SAY, AND WHY SO LITTLE ─────────────────────────────────
+ *
+ * A Career Card is the most widely shared thing this product makes. It is
+ * screenshotted, posted, and read by people who will never see the Passport
+ * it came from and cannot click through to check anything. Everything on it
+ * therefore has to be true with no context available to qualify it.
+ *
+ * So the line carries COUNTS and nothing else:
+ *
+ *   "2 verified credentials · Employment confirmed"
+ *
+ * It never names the verifying organisation, never names an employer, never
+ * carries a date, a method, a decision or an id. Partly that is §20's data
+ * minimisation — proving verification does not require publishing who the
+ * candidate worked for. Mostly it is that a name on a shareable asset reads
+ * as an endorsement by that name, and no employer confirming a start and end
+ * date has endorsed anybody.
+ *
+ * ── AND WHAT IT MUST NOT IMPLY ─────────────────────────────────────────
+ *
+ * "Verified" here is a statement about an act of checking, never about where
+ * a credential authorises work. There is deliberately no wording available
+ * to this function that could read as "qualified", "licensed", "approved" or
+ * valid in any particular market: a VU1 verified in Sweden says nothing
+ * about Dubai, and the card has no room to explain the difference, so it
+ * does not raise the subject. Jurisdiction is the Passport's to present,
+ * where the relevance model and the space to be precise both exist.
+ *
+ * Returns null when nothing is verified AND when the counts could not be
+ * read. A card that silently omits this line is the correct failure: it is
+ * simply the card as it was before this line existed.
+ */
+export function careerCardTrustLine(
+  summary: {
+    readonly verifiedClaims: number;
+    readonly employerConfirmedEmployment: number;
+    readonly known: boolean;
+  },
+  locale: Locale,
+): string | null {
+  if (!summary.known) return null;
+
+  const parts: string[] = [];
+
+  if (summary.verifiedClaims > 0) {
+    const n = summary.verifiedClaims;
+    parts.push(
+      locale === "sv"
+        ? `${n} ${n === 1 ? "verifierat intyg" : "verifierade intyg"}`
+        : `${n} ${n === 1 ? "verified credential" : "verified credentials"}`,
+    );
+  }
+
+  if (summary.employerConfirmedEmployment > 0) {
+    // Unnumbered on purpose. "1 employment confirmed" invites the reader to
+    // wonder about the others; "Employment confirmed" states the fact that
+    // an employer has confirmed employment, which is what is true and all
+    // that a card of this size can defend.
+    parts.push(locale === "sv" ? "Anställning bekräftad" : "Employment confirmed");
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : null;
+}

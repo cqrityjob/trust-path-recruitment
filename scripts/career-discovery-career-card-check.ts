@@ -34,6 +34,7 @@ import { readFileSync } from "node:fs";
 
 import { cardAltText, measureCard, renderCareerCardSvg } from "../src/components/career-discovery/v31/CareerCard";
 import {
+  careerCardTrustLine,
   buildCareerCardData,
   CARD_DIMENSIONS,
   CARD_RANK_COUNT,
@@ -351,6 +352,57 @@ for (const locale of ["sv", "en"] as const) {
       ok(
         air < CARD_DIMENSIONS[format].height * 0.45,
         `5.2 ${who}: no vacuum below the content (${air}px of air)`,
+      );
+    }
+  }
+}
+
+// ── THE SAME WORST CASE, CARRYING A TRUST LINE ────────────────────────
+//
+// PR 9 added a verification line under the strengths. It is the block most
+// likely to be missed by a fit test, because it is absent from most cards:
+// a candidate with nothing verified never sees it, so a guard built only on
+// the fixture above measures a card that no longer exists for the people the
+// feature was built for.
+//
+// A separate loop rather than a fourth level of nesting in the one above --
+// the assertions are the same, and re-indenting thirty lines to add a
+// variant would bury this change in whitespace.
+//
+// The line under test is the longest the composer can actually produce: a
+// two-digit credential count plus the confirmed-employment clause, from
+// `careerCardTrustLine` itself, so a copy change that lengthens the sentence
+// fails here rather than on somebody's phone.
+for (const locale of ["sv", "en"] as const) {
+  const trustLine = careerCardTrustLine(
+    { verifiedClaims: 99, employerConfirmedEmployment: 9, known: true },
+    locale,
+  );
+  for (const firstName of [null, "Emmanuelle-Christina"]) {
+    for (const format of FORMATS) {
+      const common = {
+        ranked: worstCase,
+        dimensions: DIMS,
+        locale,
+        definitionVersion: "cd-v3.1.0",
+        generatedAt: "2026-08-29T10:00:00.000Z",
+        firstName,
+      };
+      const who = `${locale}/${format}/${firstName ? "named" : "anon"}`;
+      const m = measureCard(buildCareerCardData({ ...common, trustLine }), format);
+      ok(
+        m.overflow === 0,
+        `5.3 ${who}/verified: content still clears the footer (${m.overflow}px)`,
+      );
+
+      // And a card WITHOUT a trust line must measure exactly as it did
+      // before the block existed -- otherwise every card in the product
+      // silently grew, including every card that renders nothing here.
+      const off = measureCard(buildCareerCardData({ ...common, trustLine: null }), format);
+      const before = measureCard(buildCareerCardData(common), format);
+      ok(
+        off.contentBottom === before.contentBottom,
+        `5.4 ${who}/plain: no trust line costs no height`,
       );
     }
   }

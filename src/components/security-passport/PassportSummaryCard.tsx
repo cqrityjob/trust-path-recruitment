@@ -57,6 +57,7 @@ import { formatWorkLocation, formatJurisdiction } from "@/lib/security-passport/
 import { splitByWorkLocation, countriesOf } from "@/lib/security-passport/jurisdiction-relevance";
 import { deriveMarketProfiles, marketBadges } from "@/lib/security-passport/market-profiles";
 import { MarketBadgeRow } from "@/components/security-passport/MarketBadgeRow";
+import { isCurrentlyVerified } from "@/lib/security-passport/trust-presentation";
 
 /** Presentational. The snapshot is fetched by the route that renders this and
  *  handed down, because a Passport COMPONENT may not reach the server tier —
@@ -92,18 +93,32 @@ export function PassportSummaryCard({
   // The headline figures count the whole Passport — what this person HAS.
   // This is the same set the professional identity header counts, which is
   // what makes the two numbers on one screen agree.
-  const verified = claims.filter((c) => c.assertionLevel === "verified").length;
-  const pending = claims.filter((c) => c.assertionLevel !== "verified").length;
+  //
+  // ── CURRENTLY verified, not EVER verified ──────────────────────────
+  //
+  // These three asked only about the assertion level, so a REVOKED
+  // credential — whose verification really happened and whose assertion
+  // level therefore correctly still says `verified` — was counted here as
+  // though it currently stood. The same page then showed "1 verified" in
+  // this card and "0 verified" in the career journey, which reads the
+  // lifecycle, about one credential.
+  //
+  // `isCurrentlyVerified` is the shared predicate; the comment above about
+  // the two numbers agreeing is now actually true.
+  const verified = claims.filter(isCurrentlyVerified).length;
+  const pending = claims.filter((c) => !isCurrentlyVerified(c)).length;
   // And relevance is its own, separately labelled statement.
-  const verifiedHere = relevant.filter((c) => c.assertionLevel === "verified").length;
+  const verifiedHere = relevant.filter(isCurrentlyVerified).length;
   // Only worth saying when there is a market to say it about AND something
   // verified to be relevant or not. With no stated work location every claim
   // is already "here" (see splitByWorkLocation), so the sentence would be the
   // headline figure restated.
   const showRelevance = Boolean(work.jurisdictionCode) && verified > 0;
   // Sharing sends the public_card package, which is verified content only.
-  // Offering it to a holder with nothing verified is offering an empty envelope.
-  const canShare = claims.some((c) => c.assertionLevel === "verified");
+  // Offering it to a holder with nothing verified is offering an empty
+  // envelope — and a holder whose only verified credential has been revoked
+  // has nothing current to send.
+  const canShare = claims.some(isCurrentlyVerified);
 
   const otherCountries = countriesOf(split.elsewhere);
 

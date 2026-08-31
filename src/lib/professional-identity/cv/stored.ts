@@ -43,6 +43,7 @@
 import { z } from "zod";
 import type { CvDocument } from "./document";
 import { buildFactualCvDocument } from "./document";
+import { emptyCvTrustAnnotations, type CvTrustAnnotations } from "./trust-annotations";
 import type { CvSourceBundle } from "./source-bundle";
 import type { CvPresentation } from "./schema";
 
@@ -184,8 +185,14 @@ export function reconcileStoredPresentation(
 export function buildSavedCvDocument(
   bundle: CvSourceBundle,
   stored: StoredPresentation,
+  trust: CvTrustAnnotations = emptyCvTrustAnnotations(),
 ): CvDocument {
-  const base = buildFactualCvDocument(bundle);
+  // Trust is a PARAMETER, not something read back out of `stored`. A saved
+  // CV records bullets and ids; the verification standing of the facts those
+  // ids point at is re-derived from the live Passport on every open. That is
+  // what makes a revoked confirmation vanish from a CV saved in March
+  // without anything having to go back and rewrite the saved row.
+  const base = buildFactualCvDocument(bundle, trust);
   const byId = new Map(bundle.employment.map((e) => [e.id, e]));
 
   const ordered = stored.experience

@@ -383,15 +383,42 @@ group("GROUP 5 — the issuer never becomes the verifier");
   );
 
   // ── 5.7 THE VERIFIER IS NO LONGER HARDCODED NULL ──────────────────
+  //
+  // The column list moved into `provenance.ts` when the career outputs began
+  // needing the same answer, so the property is now asserted in two halves:
+  // the read model still queries the decision table, and the shared constant
+  // it selects with still asks for the decider. Checking only the literal in
+  // `passport.functions.ts` would have failed on a refactor that changed
+  // nothing about what is read -- and, worse, would have passed if somebody
+  // kept the literal while quietly dropping the query.
   const pf = code(read("src/lib/security-passport/passport.functions.ts"));
+  const prov = code(read("src/lib/security-passport/provenance.ts"));
   ck(
     "5.7 getMyPassport reads provenance from the decision record",
-    pf.includes('.from("sp_verification_decisions")') && pf.includes("decider_organisation"),
+    pf.includes('.from("sp_verification_decisions")') &&
+      pf.includes("PROVENANCE_DECISION_COLUMNS") &&
+      prov.includes("decider_organisation"),
   );
   ck(
     "5.8 and never selects the internal reviewer note while doing it",
-    !pf.includes("decision_note"),
+    !pf.includes("decision_note") && !prov.includes("decision_note"),
   );
+
+  // ── 5.9 THE CAREER OUTPUTS READ THE SAME RECORD, THE SAME WAY ─────
+  //
+  // My Career, the CV and the Career Card attribute verification from the
+  // professional-identity read model. If that model resolved provenance its
+  // own way, a CV could attribute an employment the Passport no longer
+  // attributes. It must use the shared resolver, and it must be held to the
+  // same note-exclusion rule as the Passport itself.
+  const idf = code(read("src/lib/professional-identity/identity.functions.ts"));
+  ck(
+    "5.9 the identity read model resolves provenance through the shared module",
+    idf.includes("buildProvenanceMap") &&
+      idf.includes("printableProvenance") &&
+      idf.includes('.from("sp_verification_decisions")'),
+  );
+  ck("5.10 and never selects the internal reviewer note either", !idf.includes("decision_note"));
 }
 
 /* ================================================================== */
