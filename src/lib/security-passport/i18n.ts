@@ -842,6 +842,11 @@ const sv = {
   "vq.lead":
     "Begäranden om verifiering av Security Passport. Du ser bara det som behövs för granskningen, och bara så länge den är öppen.",
   "vq.notVerifier": "Du har inte behörighet att verifiera.",
+  "vq.workspace.title": "Passgranskning",
+  "vq.denied.heading": "Du har inte behörighet att granska pass",
+  "vq.denied.body":
+    "Den här arbetsytan är för utsedda passgranskare. Om du ska granska pass behöver CQrityjob tilldela dig granskarbehörigheten.",
+  "vq.denied.back": "Tillbaka till Min karriär",
   "vq.empty": "Inget att granska just nu.",
   "vq.filter": "Visa",
   "vq.filter.open": "Öppna",
@@ -2262,6 +2267,11 @@ const en: Record<PassportCopyKey, string> = {
   "vq.lead":
     "Security Passport verification requests. You see only what the review needs, and only while it is open.",
   "vq.notVerifier": "You do not have verification authority.",
+  "vq.workspace.title": "Passport Review",
+  "vq.denied.heading": "You do not have Passport review access",
+  "vq.denied.body":
+    "This workspace is for designated Passport reviewers. If you should be reviewing Passports, CQrityjob needs to grant you the reviewer capability.",
+  "vq.denied.back": "Back to My Career",
   "vq.empty": "Nothing to review right now.",
   "vq.filter": "Show",
   "vq.filter.open": "Open",

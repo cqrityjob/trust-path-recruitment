@@ -459,7 +459,7 @@ group("F4 -- rejection and clarification require a candidate-facing reason");
   }
 
   // ── And the reviewer form asks for it before the refusal happens ──
-  const queue = code(read("src/routes/_authenticated.admin.passport-verification.tsx"));
+  const queue = code(read("src/routes/_authenticated.passport-review.tsx"));
   ck("the reviewer form validates it client-side", /holderMessage\.trim\(\) === ""/.test(queue));
   ck(
     "the obligation is marked on the field, for a screen reader too",

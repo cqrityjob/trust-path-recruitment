@@ -1,0 +1,26 @@
+-- =============================================================================
+-- Security Passport — the `passport_verifier` platform role (EXPAND half)
+-- =============================================================================
+--
+-- Adds ONE value to the existing public.app_role enum. Nothing uses it yet;
+-- 20261016090000 is the half that does.
+--
+-- ── WHY THIS IS ITS OWN MIGRATION ──────────────────────────────────────
+--
+-- PostgreSQL will not let a newly added enum value be USED in the same
+-- transaction that adds it ("unsafe use of new value of enum type"). The
+-- next migration reads `'passport_verifier'::public.app_role` inside
+-- sp_is_verifier and inside the role-management allowlist, so the value has
+-- to be committed first. Splitting is not a style choice here -- a single
+-- file fails to apply.
+--
+-- Safe on its own and in either deploy order: adding an enum value grants
+-- nobody anything. Until a row exists in public.user_roles carrying it, and
+-- until the next migration teaches sp_is_verifier to read it, this value
+-- changes no authorization decision anywhere in the database.
+--
+-- Rewrites no data. Creates no table, no column, no policy, no grant.
+-- =============================================================================
+
+-- Deliberately NOT wrapped in BEGIN/COMMIT: see above.
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'passport_verifier';

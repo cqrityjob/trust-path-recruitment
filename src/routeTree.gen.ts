@@ -42,6 +42,7 @@ import { Route as CandidateRegisterRouteImport } from './routes/candidate.regist
 import { Route as CandidateLoginRouteImport } from './routes/candidate.login'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated.reviews'
+import { Route as AuthenticatedPassportReviewRouteImport } from './routes/_authenticated.passport-review'
 import { Route as AuthenticatedPassportAttestationsRouteImport } from './routes/_authenticated.passport-attestations'
 import { Route as AuthenticatedPassportRouteImport } from './routes/_authenticated.passport'
 import { Route as AuthenticatedMyCareerRouteImport } from './routes/_authenticated.my-career'
@@ -334,6 +335,12 @@ const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
   path: '/reviews',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPassportReviewRoute =
+  AuthenticatedPassportReviewRouteImport.update({
+    id: '/passport-review',
+    path: '/passport-review',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPassportAttestationsRoute =
   AuthenticatedPassportAttestationsRouteImport.update({
     id: '/passport-attestations',
@@ -1130,6 +1137,7 @@ export interface FileRoutesByFullPath {
   '/my-career': typeof AuthenticatedMyCareerRouteWithChildren
   '/passport': typeof AuthenticatedPassportRouteWithChildren
   '/passport-attestations': typeof AuthenticatedPassportAttestationsRoute
+  '/passport-review': typeof AuthenticatedPassportReviewRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
@@ -1282,6 +1290,7 @@ export interface FileRoutesByTo {
   '/feedback': typeof AuthenticatedFeedbackRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/passport-attestations': typeof AuthenticatedPassportAttestationsRoute
+  '/passport-review': typeof AuthenticatedPassportReviewRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
@@ -1429,6 +1438,7 @@ export interface FileRoutesById {
   '/_authenticated/my-career': typeof AuthenticatedMyCareerRouteWithChildren
   '/_authenticated/passport': typeof AuthenticatedPassportRouteWithChildren
   '/_authenticated/passport-attestations': typeof AuthenticatedPassportAttestationsRoute
+  '/_authenticated/passport-review': typeof AuthenticatedPassportReviewRoute
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
@@ -1589,6 +1599,7 @@ export interface FileRouteTypes {
     | '/my-career'
     | '/passport'
     | '/passport-attestations'
+    | '/passport-review'
     | '/reviews'
     | '/admin/login'
     | '/candidate/login'
@@ -1741,6 +1752,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/journey'
     | '/passport-attestations'
+    | '/passport-review'
     | '/reviews'
     | '/admin/login'
     | '/candidate/login'
@@ -1887,6 +1899,7 @@ export interface FileRouteTypes {
     | '/_authenticated/my-career'
     | '/_authenticated/passport'
     | '/_authenticated/passport-attestations'
+    | '/_authenticated/passport-review'
     | '/_authenticated/reviews'
     | '/admin/login'
     | '/candidate/login'
@@ -2284,6 +2297,13 @@ declare module '@tanstack/react-router' {
       path: '/reviews'
       fullPath: '/reviews'
       preLoaderRoute: typeof AuthenticatedReviewsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/passport-review': {
+      id: '/_authenticated/passport-review'
+      path: '/passport-review'
+      fullPath: '/passport-review'
+      preLoaderRoute: typeof AuthenticatedPassportReviewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/passport-attestations': {
@@ -3642,6 +3662,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMyCareerRoute: typeof AuthenticatedMyCareerRouteWithChildren
   AuthenticatedPassportRoute: typeof AuthenticatedPassportRouteWithChildren
   AuthenticatedPassportAttestationsRoute: typeof AuthenticatedPassportAttestationsRoute
+  AuthenticatedPassportReviewRoute: typeof AuthenticatedPassportReviewRoute
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedAcademyAttemptIdRoute: typeof AuthenticatedAcademyAttemptIdRoute
   AuthenticatedDiscoveryHistoryRoute: typeof AuthenticatedDiscoveryHistoryRoute
@@ -3666,6 +3687,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPassportRoute: AuthenticatedPassportRouteWithChildren,
   AuthenticatedPassportAttestationsRoute:
     AuthenticatedPassportAttestationsRoute,
+  AuthenticatedPassportReviewRoute: AuthenticatedPassportReviewRoute,
   AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
   AuthenticatedAcademyAttemptIdRoute: AuthenticatedAcademyAttemptIdRoute,
   AuthenticatedDiscoveryHistoryRoute: AuthenticatedDiscoveryHistoryRoute,
