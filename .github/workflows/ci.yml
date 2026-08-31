@@ -117,6 +117,22 @@ jobs:
       - name: Career Discovery canonical result check
         run: bun run career-discovery-canonical-result:check
 
+      # The anonymous -> account -> saved-result conversion contract. The
+      # pilot audit found the journey the public product advertises ending at
+      # "the assessment isn't open yet", with the finished run discarded:
+      # product availability and result ownership had been collapsed into one
+      # gate, and the wrong one was resolved first. These prove the separation
+      # holds, that a claim is idempotent and unstealable, and that the claim
+      # URL never becomes an open redirect.
+      - name: Career Discovery conversion contract check
+        run: bun run career-discovery-conversion:check
+
+      - name: Career Discovery anonymous claim check
+        run: bun run career-discovery-claim:check
+
+      - name: Public assessment auth and buffer check
+        run: bun run public-assessment-auth:check
+
       # ONE FACT, ONE WRITER, AND A JOURNEY THAT MAY CHANGE. Current
       # profession used to be writable from both "Din karriärprofil" and the
       # Passport's "Mina uppgifter", into two tables, with nothing keeping

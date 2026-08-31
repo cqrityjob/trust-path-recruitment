@@ -50,10 +50,14 @@ const sessionStorage = new MemoryStorage();
 const {
   clearPendingClaim,
   hasPendingClaim,
+  inspectPendingClaim,
   isComplete,
   markComplete,
+  readClaimedResult,
   readPendingClaim,
   recordAnswer,
+  rememberClaimedResult,
+  resolveClaimEntry,
   sessionItemIds,
   stageClaim,
   startBuffer,
@@ -242,6 +246,135 @@ const secondToken = stageClaim(completedBuffer(17), CONTEXT) as string;
 ok(firstToken !== secondToken, "5.1 each staging mints its own token");
 ok(readPendingClaim(firstToken) === null, "5.2 the superseded claim is no longer claimable");
 ok(readPendingClaim(secondToken) !== null, "5.3 the newest finished run is the one that is kept");
+
+// =========================================================================
+group("6 · The reason a claim cannot be read is preserved");
+// =========================================================================
+//
+// readPendingClaim collapses every refusal into null, which is right for the
+// code that replays answers and wrong for the person reading the screen. A
+// claim that expired last week, a link opened in a browser that never held
+// the result, and a token that does not match are three different situations
+// and only one of them is worth trying anything about. They used to be one
+// sentence -- or, worse, a silent fall-through to "answer twenty-eight
+// questions again".
+
+localStorage.clear();
+ok(inspectPendingClaim(null).status === "none", "6.1 no token: none");
+ok(inspectPendingClaim("anything").status === "none", "6.2 nothing staged: none");
+
+const reasonToken = stageClaim(completedBuffer(19), CONTEXT) as string;
+ok(inspectPendingClaim(reasonToken).status === "ok", "6.3 the owner's token: ok");
+ok(inspectPendingClaim("not-the-token").status === "mismatch", "6.4 a foreign token: mismatch");
+
+const reasonRaw = JSON.parse(localStorage.getItem("cqj:discovery:v31:pending-claim:v1") as string);
+localStorage.setItem(
+  "cqj:discovery:v31:pending-claim:v1",
+  JSON.stringify({ ...reasonRaw, expiresAt: new Date(Date.now() - 1000).toISOString() }),
+);
+ok(inspectPendingClaim(reasonToken).status === "expired", "6.5 past its window: expired");
+
+localStorage.clear();
+const staleReasonToken = stageClaim(completedBuffer(23), CONTEXT) as string;
+const staleReasonRaw = JSON.parse(
+  localStorage.getItem("cqj:discovery:v31:pending-claim:v1") as string,
+);
+localStorage.setItem(
+  "cqj:discovery:v31:pending-claim:v1",
+  JSON.stringify({
+    ...staleReasonRaw,
+    buffer: { ...staleReasonRaw.buffer, definitionVersion: "not-a-version" },
+  }),
+);
+ok(
+  inspectPendingClaim(staleReasonToken).status === "stale",
+  "6.6 a different instrument version: stale",
+);
+// The refusal describes the CALLER'S token, never the record it refused to
+// hand over. A mismatch tells a stranger nothing about what is staged.
+const mismatch = inspectPendingClaim("someone-elses-token");
+ok(
+  JSON.stringify(mismatch) === JSON.stringify({ status: "mismatch" }) ||
+    JSON.stringify(mismatch) === JSON.stringify({ status: "stale" }),
+  "6.7 a refusal carries a reason and nothing else -- no buffer, no answers",
+);
+
+// =========================================================================
+group("7 · The claim URL after the claim has been made");
+// =========================================================================
+//
+// A claim is consumed exactly once, which is correct and which is also what
+// turned the claim URL hostile the moment it worked: the candidate lands on
+// their saved report, presses Back, and returns to ?claim=<token> where
+// there is no staged record any more. The honest reading of that state is
+// "this link no longer carries a result" -- told to somebody thirty seconds
+// after their result was saved.
+
+localStorage.clear();
+const doneToken = stageClaim(completedBuffer(29), CONTEXT) as string;
+const entryBefore = resolveClaimEntry(doneToken);
+ok(entryBefore.kind === "claimable", "7.1 before the claim: claimable");
+
+// What the real save path does, in order.
+rememberClaimedResult(doneToken, "11111111-1111-4111-8111-111111111111");
+clearPendingClaim();
+
+const entryAfter = resolveClaimEntry(doneToken);
+ok(entryAfter.kind === "already-saved", "7.2 after the claim: already-saved, not lost");
+ok(
+  entryAfter.kind === "already-saved" &&
+    entryAfter.snapshotId === "11111111-1111-4111-8111-111111111111",
+  "7.3 and it names the report that was actually saved",
+);
+ok(resolveClaimEntry(doneToken).kind === "already-saved", "7.4 idempotent: reading it twice");
+ok(
+  readClaimedResult("a-different-token") === null,
+  "7.5 a different token learns nothing about it",
+);
+ok(resolveClaimEntry(null).kind === "none", "7.6 no token in the URL: the ordinary flow decides");
+ok(
+  resolveClaimEntry("never-seen-this-one").kind === "unclaimable",
+  "7.7 an unknown token is refused, with a reason",
+);
+
+// The memory expires with the claim it replaces, rather than sitting in a
+// browser forever holding a report id.
+const claimedRaw = JSON.parse(
+  localStorage.getItem("cqj:discovery:v31:claimed-result:v1") as string,
+);
+localStorage.setItem(
+  "cqj:discovery:v31:claimed-result:v1",
+  JSON.stringify({ ...claimedRaw, expiresAt: new Date(Date.now() - 1000).toISOString() }),
+);
+ok(readClaimedResult(doneToken) === null, "7.8 an expired memory is not read");
+ok(
+  localStorage.getItem("cqj:discovery:v31:claimed-result:v1") === null,
+  "7.9 and is destroyed by the read that found it",
+);
+
+// =========================================================================
+group("8 · The token is unguessable, in every browser");
+// =========================================================================
+//
+// The token decides who a finished result belongs to. The previous fallback
+// -- reached in any non-secure context, which is exactly where somebody
+// testing a staging build ends up -- was Date.now() plus one Math.random().
+
+localStorage.clear();
+const tokens = new Set<string>();
+for (let i = 0; i < 200; i += 1) {
+  const t = stageClaim(completedBuffer(31), CONTEXT);
+  if (t) tokens.add(t);
+}
+ok(tokens.size === 200, "8.1 two hundred stagings mint two hundred distinct tokens");
+ok(
+  [...tokens].every((t) => t.replace(/-/g, "").length >= 32),
+  "8.2 every token carries at least 128 bits of encoded randomness",
+);
+ok(
+  [...tokens].every((t) => !t.includes(Date.now().toString(36).slice(0, 6))),
+  "8.3 no token embeds the wall clock",
+);
 
 console.log(
   failures === 0
