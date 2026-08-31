@@ -364,6 +364,17 @@ export function V31ReportView({
         journey={journey ?? null}
         locale={snapshot.locale === "en" ? "en" : "sv"}
         mode={mode}
+        // Frozen on the snapshot, in the snapshot's own locale — the same
+        // value the "YOU ARE HERE" panel above renders. Passed so the
+        // journey's empty state cannot tell this reader we do not know what
+        // they do, on a page that has already named it.
+        selfReportedCurrentProfession={
+          snapshot.currentProfession
+            ? snapshot.locale === "en"
+              ? snapshot.currentProfession.titleEn
+              : snapshot.currentProfession.titleSv
+            : null
+        }
       />
 
       {/* 7 · YOUR WORKING STYLE — the deeper Career DNA narrative, moved

@@ -43,7 +43,30 @@ export const listCigProfessionsForPicker = createServerFn({ method: "GET" }).han
  * `supabase` is typed loosely (matches the existing Ctx.supabase pattern in
  * v31-public.functions.ts / v31-owner-preview.functions.ts) because the
  * generated Database type does not yet know this branch's cig_* tables.
+ *
+ * ── A FAILED READ IS NOT "NO EDGES" ─────────────────────────────────────
+ *
+ * These slugs are a RANKING input: they carry CIG_PATHWAY_PRIORITY_BONUS_Z
+ * and they decide which professions are classified as a career pivot
+ * (professions.ts). Both reads used to discard their `error` and return an
+ * empty set, which reads identically to "this profession has no published
+ * transitions" — so a transient failure quietly produced a DIFFERENT Top 3
+ * and different stage labels, with nothing to show it had happened.
+ *
+ * The anonymous preview and the authenticated save are two separate server
+ * calls that each rebuild the canonical snapshot. A failure on one side and
+ * not the other is therefore exactly the anonymous-vs-authenticated
+ * divergence v31-public.functions.ts's header exists to keep closed. So a
+ * failed read throws and the caller retries with the run intact; "the slug
+ * resolves to no rows" stays an empty set, because that is a real fact.
  */
+export class CigReadError extends Error {
+  constructor(readonly detail: string) {
+    super(`cig_read_failed:${detail}`);
+    this.name = "CigReadError";
+  }
+}
+
 export async function fetchCigReachableSlugs(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
@@ -51,18 +74,20 @@ export async function fetchCigReachableSlugs(
 ): Promise<ReadonlySet<string>> {
   if (!currentCigSlug) return new Set();
 
-  const { data: current } = await supabase
+  const { data: current, error: currentError } = await supabase
     .from("cig_professions")
     .select("id")
     .eq("slug", currentCigSlug)
     .maybeSingle();
+  if (currentError) throw new CigReadError("cig_professions");
   if (!current?.id) return new Set();
 
-  const { data: transitions } = await supabase
+  const { data: transitions, error: transitionsError } = await supabase
     .from("cig_career_transitions")
     .select("to_profession_id, content_status, cig_professions!cig_career_transitions_to_profession_id_fkey(slug)")
     .eq("from_profession_id", current.id)
     .eq("content_status", "published");
+  if (transitionsError) throw new CigReadError("cig_career_transitions");
 
   const reachable = new Set<string>();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,6 +106,11 @@ export async function fetchCigReachableSlugs(
  * fetchCigReachableSlugs above. Returns null rather than a fabricated title
  * when the slug does not resolve — the frozen snapshot then correctly omits
  * "YOU ARE HERE" rather than showing a blank or invented name.
+ *
+ * A FAILED read throws, for the same reason as above: "this slug names no
+ * profession" and "we could not ask" are different facts, and only the first
+ * of them justifies dropping the candidate's own current role out of a report
+ * that is then frozen forever.
  */
 export async function fetchCigProfessionTitle(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,12 +119,13 @@ export async function fetchCigProfessionTitle(
 ): Promise<{ sv: string; en: string } | null> {
   if (!currentCigSlug) return null;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("cig_professions")
     .select("title_sv, title_en")
     .eq("slug", currentCigSlug)
     .maybeSingle();
 
+  if (error) throw new CigReadError("cig_professions.title");
   if (!data?.title_sv || !data?.title_en) return null;
   return { sv: data.title_sv, en: data.title_en };
 }

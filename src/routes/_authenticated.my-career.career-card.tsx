@@ -47,6 +47,7 @@ import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.f
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
 import { summariseTrust } from "@/lib/professional-identity/trust-summary";
 import { careerCardTrustLine } from "@/lib/career-discovery/v31/career-card";
+import { DURATION_CLAIM_SENTENCE } from "@/lib/career-discovery/v31/duration";
 
 export const Route = createFileRoute("/_authenticated/my-career/career-card")({
   ssr: false,
@@ -78,8 +79,8 @@ const COPY = {
     "You have not taken Career Discovery yet",
   ),
   noReportBody: c(
-    "Kortet bygger på din Karriäranalys från Career Discovery. Den tar ungefär 15 minuter.",
-    "The card is built on the Career Discovery result. It takes about 15 minutes.",
+    `Kortet bygger på din Karriäranalys från Career Discovery. ${DURATION_CLAIM_SENTENCE.sv}`,
+    `The card is built on the Career Discovery result. ${DURATION_CLAIM_SENTENCE.en}`,
   ),
   startDiscovery: c("Gör Career Discovery", "Take Career Discovery"),
 
@@ -87,11 +88,28 @@ const COPY = {
     "Din rapport namnger inga yrken ännu",
     "Your report does not name any professions yet",
   ),
+  // ── THE REFRESH PATH, NOT A LOOP ────────────────────────────────────
+  //
+  // This state used to say only "your latest report contains no such
+  // ranking" and offer one button: open that same report. The report
+  // names no professions either — that is the whole reason the person is
+  // standing here — so the only route out of the Career Card was back
+  // into the thing that sent them to it. Nothing anywhere said WHY the
+  // older report has no ranking, or what would produce one.
+  //
+  // A report is frozen at the moment it was issued and is never
+  // recomputed (snapshot.ts), so there is no honest way to add a ranking
+  // to an existing one. Taking Discovery again is the only thing that
+  // actually produces the Top 3 this card needs, so it is offered as the
+  // primary action, with the reason stated plainly and the old report
+  // still reachable beside it.
   noRankingBody: c(
-    "Ett Career Card presenterar dina tre främsta yrkesmatchningar. Din senaste rapport innehåller ingen sådan rangordning, så det finns inget att sätta på kortet.",
-    "A Career Card presents your top three profession matches. Your latest report contains no such ranking, so there is nothing to put on the card.",
+    "Ett Career Card presenterar dina tre främsta yrkesmatchningar. Din rapport gjordes innan Career Discovery började namnge yrken, och en sparad rapport räknas aldrig om — den visar exakt vad den visade den dagen. Gör Career Discovery igen för att få en rapport som namnger yrken.",
+    "A Career Card presents your top three profession matches. Your report was produced before Career Discovery started naming professions, and a saved report is never recomputed — it shows exactly what it showed on the day. Take Career Discovery again to get a report that names professions.",
   ),
+  retakeDiscovery: c("Gör Career Discovery igen", "Take Career Discovery again"),
   openReport: c("Öppna rapporten", "Open the report"),
+  openOldReport: c("Öppna den gamla rapporten", "Open the older report"),
 } as const;
 
 function CareerCardPage() {
@@ -201,13 +219,22 @@ function CareerCardPage() {
           <div className="mt-8 max-w-2xl rounded-xl border border-border bg-card p-6">
             <h2 className="text-base font-semibold text-foreground">{L(COPY.noRankingTitle, l)}</h2>
             <p className="mt-2 text-sm text-muted-foreground">{L(COPY.noRankingBody, l)}</p>
-            <Link
-              to="/security-career-assessment/report/$snapshotId"
-              params={{ snapshotId }}
-              className="mt-5 inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
-            >
-              {L(COPY.openReport, l)}
-            </Link>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <Link
+                to="/security-career-assessment"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)]"
+              >
+                {L(COPY.retakeDiscovery, l)}
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+              <Link
+                to="/security-career-assessment/report/$snapshotId"
+                params={{ snapshotId }}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
+              >
+                {L(COPY.openOldReport, l)}
+              </Link>
+            </div>
           </div>
         )}
 

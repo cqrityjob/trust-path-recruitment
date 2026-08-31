@@ -660,7 +660,7 @@ export const dictionaries = {
 
     "sca.meta.title": "Karriärbedömning inom säkerhet — CQrityjob",
     "sca.meta.desc":
-      "Upptäck vilka karriärer inom säkerhet som kan passa dig. Kostnadsfri, cirka 5 minuter, inget konto krävs.",
+      "Upptäck vilka karriärer inom säkerhet som kan passa dig. Kostnadsfri, cirka 12–15 minuter, inget konto krävs.",
     "sca.badge": "Karriärvägledning",
     "sca.landing.title": "Upptäck vilka karriärer inom säkerhet som kan passa dig.",
     // ---- Security Career Discovery v3 (internal test) ----
@@ -974,6 +974,10 @@ export const dictionaries = {
     "cd.public.shellEyebrow": "Din karriär inom säkerhet",
     "cd.public.exit": "Avsluta vägledningen",
     "cd.public.of": "av",
+    // The figure itself is derived (v31/duration.ts) and never typed into
+    // copy; this is only the sentence around it.
+    "cd.public.factTimeBody":
+      "Du kan pausa och fortsätta i samma flik. Det finns ingen tidsgräns per fråga.",
     "cd.public.introEyebrow": "Karriärvägledning",
     "cd.public.introFactsTitle": "Innan du börjar",
     "cd.public.factQuestions": "28 frågor",
@@ -1036,6 +1040,14 @@ export const dictionaries = {
       "Du har verifierad information i ditt Security Passport. Den stärker underlaget nedan -- men vilka uppgifter det gäller delas inte här, och delas aldrig med en arbetsgivare utan att du väljer det.",
     "cj.unknown.body":
       "Vi vet ännu inte tillräckligt om din bakgrund för att säga hur nära du står de här yrkena. Därför visar vi inga nästa steg -- ett nästa steg från en okänd utgångspunkt vore en gissning.",
+    // Used INSTEAD of cj.unknown.body when the report itself carries a
+    // self-reported current profession. Saying "we do not know your
+    // background" on a page that has just printed "YOU ARE HERE" for the
+    // role the same person named is the product contradicting itself. What
+    // is genuinely missing is a saved profile to place them against — so
+    // that is what this says, and no next step is invented either way.
+    "cj.unknown.bodyWithRole":
+      "Du har angett att du arbetar som {0} idag. Vi har ännu ingen sparad karriärprofil att ställa det mot, så vi visar inga nästa steg -- ett nästa steg byggt på en enda uppgift vore en gissning.",
     "cj.unknown.cta": "Fyll i min bakgrund",
     "cj.unknown.anonymousCta":
       "Spara ditt resultat och fyll i din bakgrund, så kan vi visa en mer personlig karriärresa.",
@@ -1122,7 +1134,7 @@ export const dictionaries = {
     "careerDiscovery.dashboard.retry": "Försök igen",
     "sca.landing.lead":
       "En strukturerad karriärbedömning som hjälper dig utforska roller inom säkerhet — baserad på dina intressen, styrkor och sätt att arbeta.",
-    "sca.landing.point.time": "Cirka 5 minuter",
+    "sca.landing.point.time": "Cirka 12–15 minuter",
     "sca.landing.point.free": "Kostnadsfri",
     "sca.landing.point.noaccount": "Inget konto krävs",
     "sca.landing.point.guidance": "Personlig karriärvägledning",
@@ -2772,7 +2784,7 @@ export const dictionaries = {
     "cc.test.body":
       "Frågorna handlar om hur du föredrar att arbeta. Du får en karriärprofil och tydliga yrkesförslag att läsa vidare om. Inga rätta eller felaktiga svar — det är ingen bedömning av din kompetens eller anställningsbarhet.",
     "cc.test.fact.questions": "frågor",
-    "cc.test.fact.time": "Cirka 5 minuter",
+    "cc.test.fact.time": "Cirka 12–15 minuter",
     "cc.test.fact.account": "Inget konto krävs",
     "cc.test.fact.noright": "Inga rätta eller felaktiga svar",
     "cc.test.cta": "Starta karriärtestet",
@@ -2879,7 +2891,7 @@ export const dictionaries = {
     "cc.p.path.next": "Vanliga steg härifrån",
     "cc.p.test.title": "Osäker på om den här rollen passar dig?",
     "cc.p.test.body":
-      "Karriärtestet tar cirka 5 minuter och ger dig en karriärprofil med yrkesförslag att läsa vidare om. Det bedömer inte din kompetens eller anställningsbarhet.",
+      "Karriärtestet tar ungefär 12–15 minuter och ger dig en karriärprofil med yrkesförslag att läsa vidare om. Det bedömer inte din kompetens eller anställningsbarhet.",
     "cc.p.related": "Relaterade yrken",
     "cc.p.faq": "Vanliga frågor",
     "cc.p.sources": "Källor",
@@ -5891,7 +5903,7 @@ export const dictionaries = {
 
     "sca.meta.title": "Security Career Assessment — CQrityjob",
     "sca.meta.desc":
-      "Discover which security careers may suit you. Free, about 5 minutes, no account required.",
+      "Discover which security careers may suit you. Free, about 12–15 minutes, no account required.",
     "sca.badge": "Career guidance",
     "sca.landing.title": "Discover which security careers may suit you.",
     // ---- Security Career Discovery v3 (internal test) ----
@@ -6184,6 +6196,8 @@ export const dictionaries = {
     "cd.public.shellEyebrow": "Security Career Discovery",
     "cd.public.exit": "Exit assessment",
     "cd.public.of": "of",
+    "cd.public.factTimeBody":
+      "You can pause and continue in the same tab. There is no time limit on any question.",
     "cd.public.introEyebrow": "Career guidance",
     "cd.public.introFactsTitle": "Before you begin",
     "cd.public.factQuestions": "28 questions",
@@ -6234,6 +6248,8 @@ export const dictionaries = {
       "You hold verified information in your Security Passport. It strengthens what is below -- which information is not shown here, and is never shared with an employer unless you choose to share it.",
     "cj.unknown.body":
       "We do not yet know enough about your background to say how close you are to these professions. So we are not showing any next steps -- a next step from an unknown starting point would be a guess.",
+    "cj.unknown.bodyWithRole":
+      "You told us you work as a {0} today. We do not have a saved career profile to place that against yet, so we are not showing any next steps -- a next step built on a single fact would be a guess.",
     "cj.unknown.cta": "Add my background",
     "cj.unknown.anonymousCta":
       "Save your result and add your background, and we can show you a more personal career journey.",
@@ -6315,7 +6331,7 @@ export const dictionaries = {
     "careerDiscovery.dashboard.retry": "Try again",
     "sca.landing.lead":
       "A structured career assessment that helps you explore security roles — based on your interests, strengths and preferred ways of working.",
-    "sca.landing.point.time": "About 5 minutes",
+    "sca.landing.point.time": "About 12–15 minutes",
     "sca.landing.point.free": "Free to take",
     "sca.landing.point.noaccount": "No registration required",
     "sca.landing.point.guidance": "Personalized career guidance",
@@ -7920,7 +7936,7 @@ export const dictionaries = {
     "cc.test.body":
       "The questions are about how you prefer to work. You get a career profile and concrete professions to read more about. There are no right or wrong answers — this is not an assessment of your competence or your employability.",
     "cc.test.fact.questions": "questions",
-    "cc.test.fact.time": "About 5 minutes",
+    "cc.test.fact.time": "About 12–15 minutes",
     "cc.test.fact.account": "No account required",
     "cc.test.fact.noright": "No right or wrong answers",
     "cc.test.cta": "Start the career test",
@@ -8027,7 +8043,7 @@ export const dictionaries = {
     "cc.p.path.next": "Common steps from here",
     "cc.p.test.title": "Not sure whether this role suits you?",
     "cc.p.test.body":
-      "The career test takes about 5 minutes and gives you a career profile with professions to read more about. It does not assess your competence or your employability.",
+      "The career test takes approximately 12–15 minutes and gives you a career profile with professions to read more about. It does not assess your competence or your employability.",
     "cc.p.related": "Related professions",
     "cc.p.faq": "Common questions",
     "cc.p.sources": "Sources",

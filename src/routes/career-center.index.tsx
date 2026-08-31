@@ -6,6 +6,7 @@ import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { MVP_QUESTION_COUNT } from "@/lib/career-discovery/v31/personal-layer";
+import { DURATION_CLAIM, DURATION_CLAIM_MINUTES } from "@/lib/career-discovery/v31/duration";
 import {
   ENTRY_LEVEL_SEARCH,
   NEXT_LEVEL_SEARCH,
@@ -61,8 +62,7 @@ export const Route = createFileRoute("/career-center/")({
         { title: "Säkerhetskarriärcenter — yrken, krav och karriärvägar | CQrityjob" },
         {
           name: "description",
-          content:
-            "Källhänvisade yrkesguider för säkerhetsbranschen: vad rollerna innebär, vilka formella krav som gäller och vilka vägar som finns vidare. Kostnadsfritt karriärtest på cirka 5 minuter.",
+          content: `Källhänvisade yrkesguider för säkerhetsbranschen: vad rollerna innebär, vilka formella krav som gäller och vilka vägar som finns vidare. Kostnadsfritt karriärtest på cirka ${DURATION_CLAIM_MINUTES.low}–${DURATION_CLAIM_MINUTES.high} minuter.`,
         },
         {
           property: "og:title",
@@ -221,7 +221,11 @@ function CareerCenterHub() {
               <span className="tabular-nums">{MVP_QUESTION_COUNT}</span>{" "}
               {t("cc.test.fact.questions")}
             </TestFact>
-            <TestFact>{t("cc.test.fact.time")}</TestFact>
+            {/* The duration, like the question count above it, is the
+                instrument's own figure rather than a number typed into copy.
+                This hub advertised "about 5 minutes" for a twenty-eight
+                question assessment; see v31/duration.ts. */}
+            <TestFact>{DURATION_CLAIM[lang === "en" ? "en" : "sv"]}</TestFact>
             <TestFact>{t("cc.test.fact.account")}</TestFact>
             <TestFact>{t("cc.test.fact.noright")}</TestFact>
           </ul>

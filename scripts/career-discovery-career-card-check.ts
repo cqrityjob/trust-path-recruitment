@@ -32,7 +32,11 @@
 
 import { readFileSync } from "node:fs";
 
-import { cardAltText, measureCard, renderCareerCardSvg } from "../src/components/career-discovery/v31/CareerCard";
+import {
+  cardAltText,
+  measureCard,
+  renderCareerCardSvg,
+} from "../src/components/career-discovery/v31/CareerCard";
 import {
   careerCardTrustLine,
   buildCareerCardData,
@@ -68,7 +72,10 @@ function ok(cond: boolean, label: string): void {
 
 function eq<T>(actual: T, expected: T, label: string): void {
   const same = JSON.stringify(actual) === JSON.stringify(expected);
-  ok(same, `${label}${same ? "" : ` (got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)})`}`);
+  ok(
+    same,
+    `${label}${same ? "" : ` (got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)})`}`,
+  );
 }
 
 function group(name: string): void {
@@ -129,10 +136,7 @@ const tiers = read("src/components/career-discovery/v31/ProfessionRecommendation
 const reportView = read("src/components/career-discovery/v31/V31ReportView.tsx");
 const dictionaries = read("src/i18n/dictionaries.ts");
 
-ok(
-  !creator.includes("chooseDirection"),
-  "1.1 the creator has no 'choose a direction' control",
-);
+ok(!creator.includes("chooseDirection"), "1.1 the creator has no 'choose a direction' control");
 ok(
   !dictionaries.includes("card.chooseDirection"),
   "1.2 and the string it used is gone from both dictionaries",
@@ -145,10 +149,7 @@ ok(
   !tiers.includes("onOpenCareerCard"),
   "1.4 a tier card can no longer open a card for its own profession",
 );
-ok(
-  !dictionaries.includes("createCareerCardFor"),
-  "1.5 and its label is gone too",
-);
+ok(!dictionaries.includes("createCareerCardFor"), "1.5 and its label is gone too");
 ok(
   creator.includes("ranked: readonly RankedProfession[]") && !/\bmatches\b:/.test(creator),
   "1.6 the creator takes the canonical `ranked`, not a `matches` list to pick from",
@@ -183,7 +184,11 @@ const card = buildCareerCardData({
   firstName: "Emma",
 });
 
-eq(card.entries.map((e) => e.rank), [1, 2, 3], "2.1 ranks are 1, 2, 3 as stated by the engine");
+eq(
+  card.entries.map((e) => e.rank),
+  [1, 2, 3],
+  "2.1 ranks are 1, 2, 3 as stated by the engine",
+);
 eq(
   card.entries.map((e) => e.professionId),
   ["p1", "p2", "p3"],
@@ -249,13 +254,12 @@ ok(
 // CID15 is excluded from matching by owner decision A-4 and must never be
 // presented as a strength, whatever it scored.
 ok(
-  strongestIndicators(
-    [{ id: "CID15", score: 1, usedForMatching: false }, ...DIMS],
-    "sv",
-  ).length === 3 &&
-    !strongestIndicators([{ id: "CID15", score: 1, usedForMatching: false }, ...DIMS], "sv").includes(
-      DIMENSIONS.CID15.name.sv,
-    ),
+  strongestIndicators([{ id: "CID15", score: 1, usedForMatching: false }, ...DIMS], "sv").length ===
+    3 &&
+    !strongestIndicators(
+      [{ id: "CID15", score: 1, usedForMatching: false }, ...DIMS],
+      "sv",
+    ).includes(DIMENSIONS.CID15.name.sv),
   "3.4 CID15 never appears, even scoring 1.0 (owner decision A-4)",
 );
 eq(
@@ -283,10 +287,7 @@ const cardCode = read("src/lib/career-discovery/v31/career-card.ts")
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .replace(/\/\/.*$/gm, "");
 ok(!/fitScore/.test(cardCode), "4.1 the card module never reads fitScore");
-ok(
-  !/priorityScore|centralZ|coverage/.test(cardCode),
-  "4.1b nor any other internal ranking number",
-);
+ok(!/priorityScore|centralZ|coverage/.test(cardCode), "4.1b nor any other internal ranking number");
 for (const locale of ["sv", "en"] as const) {
   const d = buildCareerCardData({
     ranked: TRIO,
@@ -357,6 +358,48 @@ for (const locale of ["sv", "en"] as const) {
   }
 }
 
+// ── AND A BROKEN WORD IS STILL A BROKEN CARD ──────────────────────────
+//
+// 5.1/5.2 measure geometry, so a title split into two nonsense words passes
+// them perfectly: the content still clears the footer. The catalogue's own
+// longest Swedish title rendered on the #1 line of a real story card as
+// "KRISBEREDSKAPSSAMORDN" / "ARE", and nothing here saw it.
+//
+// Wrapping between WORDS needs no mark and is what the English titles do.
+// A hard break inside one is sometimes unavoidable -- a 24-character
+// unbroken compound cannot share a display line with anything -- but it must
+// never look like a different word, so every line it is split across except
+// the last ends in a hyphen.
+for (const locale of ["sv", "en"] as const) {
+  for (const format of FORMATS) {
+    const d = buildCareerCardData({
+      ranked: worstCase,
+      dimensions: DIMS,
+      locale,
+      definitionVersion: "cd-v3.1.0",
+      generatedAt: "2026-08-29T10:00:00.000Z",
+      firstName: null,
+    });
+    const svg = renderCareerCardSvg(d, format, null);
+    const rendered = [...svg.matchAll(/>([^<>]+)<\/text>/g)].map((m) => m[1]);
+    const upper = d.entries[0].title.toUpperCase();
+    const words = new Set(upper.split(/\s+/));
+    // The fragments of the #1 title, in the order they render.
+    const parts = rendered.filter(
+      (t) => t.length >= 3 && upper.replace(/\s|-/g, "").includes(t.replace(/-/g, "")),
+    );
+    // A fragment made only of whole title words is a word wrap, not a split.
+    const isWholeWords = (line: string) => line.split(/\s+/).every((w) => words.has(w));
+    const offenders = parts
+      .slice(0, Math.max(0, parts.length - 1))
+      .filter((line) => !isWholeWords(line) && !line.endsWith("-"));
+    ok(
+      offenders.length === 0,
+      `5.5 ${locale}/${format}: a mid-word title break is marked (${offenders.join(", ") || "clean"})`,
+    );
+  }
+}
+
 // ── THE SAME WORST CASE, CARRYING A TRUST LINE ────────────────────────
 //
 // PR 9 added a verification line under the strengths. It is the block most
@@ -420,14 +463,21 @@ for (const format of FORMATS) {
     svg.includes(`viewBox="0 0 ${width} ${height}"`),
     `6.2 ${format}: the viewBox matches the declared canvas`,
   );
-  ok(svg.includes("CQrityjob"), `6.3 ${format}: carries the wordmark, so a repost still means something`);
+  ok(
+    svg.includes("CQrityjob"),
+    `6.3 ${format}: carries the wordmark, so a repost still means something`,
+  );
   // No external references: the exported PNG has to render standalone.
   ok(!/href="http/.test(svg), `6.4 ${format}: no external asset reference`);
   ok((svg.match(/<svg/g) ?? []).length === 1, `6.5 ${format}: no nested svg root`);
 }
 {
   const hostile = buildCareerCardData({
-    ranked: ranked([['</text><script>x</script>', '</text><script>x</script>'], ["B", "B"], ["C", "C"]]),
+    ranked: ranked([
+      ["</text><script>x</script>", "</text><script>x</script>"],
+      ["B", "B"],
+      ["C", "C"],
+    ]),
     dimensions: DIMS,
     locale: "sv",
     definitionVersion: "v",
@@ -435,7 +485,10 @@ for (const format of FORMATS) {
     firstName: '"><script>alert(1)</script>',
   });
   const svg = renderCareerCardSvg(hostile, "story", null);
-  ok(!svg.includes("<script>"), "6.6 catalogue and name text are escaped into the SVG, never injected");
+  ok(
+    !svg.includes("<script>"),
+    "6.6 catalogue and name text are escaped into the SVG, never injected",
+  );
 }
 
 // =========================================================================
@@ -444,7 +497,9 @@ group("7 · The exported image is the preview, and the alt text is the card");
 
 ok(
   /const svg = renderCareerCardSvg\(cardData, format, qrDataUrl\);/.test(creator) &&
-    /<CareerCardPreview data=\{cardData\} format=\{format\} qrDataUrl=\{qrDataUrl\} \/>/.test(creator),
+    /<CareerCardPreview data=\{cardData\} format=\{format\} qrDataUrl=\{qrDataUrl\} \/>/.test(
+      creator,
+    ),
   "7.1 export and preview call the same renderer with the same data — what you saw is what you share",
 );
 ok(
@@ -523,14 +578,8 @@ ok(
 group("8 · Nothing but the first name ever leaves the profile");
 // =========================================================================
 
-ok(
-  creator.includes("suggestedFirstName"),
-  "8.1 a known first name may be prefilled",
-);
-ok(
-  /maxLength=\{40\}/.test(creator),
-  "8.2 and is bounded",
-);
+ok(creator.includes("suggestedFirstName"), "8.1 a known first name may be prefilled");
+ok(/maxLength=\{40\}/.test(creator), "8.2 and is bounded");
 eq(
   buildCareerCardData({
     ranked: TRIO,
