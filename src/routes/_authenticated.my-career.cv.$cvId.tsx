@@ -230,7 +230,16 @@ function CvDetailPage() {
   // any reason other than the words.
   const proposalDocument =
     propose.data?.presentation && cv.data
-      ? buildSavedCvDocument(cv.data.bundle, storedFromAiPresentation(propose.data.presentation))
+      ? buildSavedCvDocument(
+          cv.data.bundle,
+          storedFromAiPresentation(propose.data.presentation),
+          // The saved document's own annotations, which the server resolved
+          // from the live Passport. A proposal changes the WORDS, never the
+          // verification standing of the facts underneath them, so previewing
+          // one must not quietly drop the trust lines and make the accepted
+          // version look different from what it will be.
+          cv.data.document.trust,
+        )
       : null;
 
   const proposalRejected = (acceptProposal.data?.violations.length ?? 0) > 0;

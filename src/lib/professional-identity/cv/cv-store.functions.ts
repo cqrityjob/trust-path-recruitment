@@ -40,7 +40,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { readProfessionalIdentity } from "../identity.functions";
+import type { ProfessionalIdentityV1 } from "../types";
 import { buildCvSourceBundle, type CvSourceBundle } from "./source-bundle";
+import { buildCvTrustAnnotations } from "./trust-annotations";
 import { computeCvReadiness } from "./readiness";
 import { cvPresentationOutput } from "./schema";
 import { validateCvPresentation, type CvViolation } from "./validation";
@@ -137,20 +139,29 @@ async function loadOwnRow(supabase: ScopedClient, userId: string, cvId: string):
   return data as Row;
 }
 
-/** Rebuild the bundle as it stands NOW, for drift detection and refresh. */
-async function freshBundle(
+/** Rebuild the bundle as it stands NOW, for drift detection and refresh.
+ *
+ *  Returns the identity alongside it because the caller needs BOTH and this
+ *  is the read that already fetched it. Trust annotations come from the live
+ *  identity, never from the saved bundle -- see below -- and making that a
+ *  second `readProfessionalIdentity` would double the cost of opening a CV
+ *  for information already in hand. */
+async function freshIdentityAndBundle(
   supabase: ScopedClient,
   userId: string,
   locale: "sv" | "en",
   saved: CvSourceBundle,
-): Promise<CvSourceBundle> {
+): Promise<{ identity: ProfessionalIdentityV1; bundle: CvSourceBundle }> {
   const identity = await readProfessionalIdentity(supabase, userId);
-  return buildCvSourceBundle({
+  return {
     identity,
-    locale,
-    includeCareerInsight: saved.careerInsight !== null,
-    targetJobText: saved.targetJobText,
-  });
+    bundle: buildCvSourceBundle({
+      identity,
+      locale,
+      includeCareerInsight: saved.careerInsight !== null,
+      targetJobText: saved.targetJobText,
+    }),
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -190,21 +201,33 @@ export const getMyCv = createServerFn({ method: "POST" })
     const stored = parseStored(row.presentation);
     const locale = (row.locale === "en" ? "en" : "sv") as "sv" | "en";
 
+    // ── FACTS FROM THE SAVED BUNDLE, TRUST FROM TODAY ─────────────────
+    //
+    // A saved CV deliberately freezes its FACTS: the employer names, roles
+    // and dates are the ones the person reviewed and accepted, and drift
+    // against the live profile is reported rather than silently applied.
+    //
+    // Verification standing is the exact opposite, and must be. Trust is not
+    // a property of the document, it is the Passport's current answer about
+    // the underlying claim -- so it is read live on every open, from the
+    // identity `freshIdentityAndBundle` has already fetched. A confirmation
+    // revoked yesterday is gone from this CV today, without anything having
+    // rewritten the saved row, because there was never a copy of it here to
+    // go stale.
+    const fresh = await freshIdentityAndBundle(supabase, userId, locale, bundle);
+
     return {
       cvId: String(row.id),
       title: String(row.title ?? ""),
       purpose: (row.purpose === "targeted" ? "targeted" : "general") as "general" | "targeted",
       locale,
-      document: buildSavedCvDocument(bundle, stored),
+      document: buildSavedCvDocument(bundle, stored, buildCvTrustAnnotations(fresh.identity)),
       bundle,
       presentation: stored,
       providerMode: (row.provider_mode as string | null) ?? null,
       modelId: (row.model_id as string | null) ?? null,
       updatedAt: String(row.updated_at),
-      profileDrift: diffCvSourceBundles(
-        bundle,
-        await freshBundle(supabase, userId, locale, bundle),
-      ),
+      profileDrift: diffCvSourceBundles(bundle, fresh.bundle),
     };
   });
 
@@ -397,7 +420,12 @@ export const refreshMyCvFromProfile = createServerFn({ method: "POST" })
       const row = await loadOwnRow(supabase, userId, data.cvId);
       const locale = (row.locale === "en" ? "en" : "sv") as "sv" | "en";
 
-      const fresh = await freshBundle(supabase, userId, locale, parseBundle(row.source_bundle));
+      const { bundle: fresh } = await freshIdentityAndBundle(
+        supabase,
+        userId,
+        locale,
+        parseBundle(row.source_bundle),
+      );
       const { presentation, droppedIds } = reconcileStoredPresentation(
         parseStored(row.presentation),
         fresh,

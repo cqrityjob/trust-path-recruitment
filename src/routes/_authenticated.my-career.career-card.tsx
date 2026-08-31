@@ -45,6 +45,8 @@ import { useT } from "@/i18n/context";
 import { getActiveCareerReport } from "@/lib/career-discovery/active-report.functions";
 import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
+import { summariseTrust } from "@/lib/professional-identity/trust-summary";
+import { careerCardTrustLine } from "@/lib/career-discovery/v31/career-card";
 
 export const Route = createFileRoute("/_authenticated/my-career/career-card")({
   ssr: false,
@@ -127,6 +129,23 @@ function CareerCardPage() {
   });
   const firstName = (identity.data?.displayName ?? "").trim().split(/\s+/)[0] || null;
 
+  // ── THE TRUST LINE ──────────────────────────────────────────────────
+  //
+  // From the identity query THIS ROUTE ALREADY MAKES for the first name --
+  // no second Passport read, no second query key, no duplicate network
+  // round trip (§24, §25). The counts come from `summariseTrust`, which My
+  // Career's career journey also calls, so the card and the home page cannot
+  // disagree about how many things are verified.
+  //
+  // Null while the query is still loading and null if it failed, so a card
+  // opened during a slow or broken identity read carries no trust claim at
+  // all rather than a claim built on partial data.
+  // A function of locale rather than a value, because the card is rendered
+  // in the SNAPSHOT's language, not the site's, and that is only in scope at
+  // the mount below. Same reason `CareerCardCreator` binds `locale` there.
+  const trustLineFor = (cardLocale: "sv" | "en") =>
+    identity.data ? careerCardTrustLine(summariseTrust(identity.data), cardLocale) : null;
+
   // Narrowed once, so every use below carries the v3.1 branch's own fields
   // (snapshot, generatedAt, versions) rather than the union's.
   const v31 = report.data && report.data.status === "v3.1" ? report.data : null;
@@ -207,6 +226,7 @@ function CareerCardPage() {
               definitionVersion={snapshot.versions.definitionVersion}
               generatedAt={snapshot.completedAt ?? v31.generatedAt}
               suggestedFirstName={firstName}
+              trustLine={trustLineFor(snapshot.locale === "en" ? "en" : "sv")}
             />
 
             <Link

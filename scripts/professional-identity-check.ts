@@ -97,6 +97,15 @@ function sourceFilesUnder(dir: string): string[] {
   return out;
 }
 
+import {
+  describeTrust,
+  employmentTrustLine,
+  isEmployerConfirmed,
+} from "../src/lib/security-passport/trust-presentation";
+import { buildCvTrustAnnotations } from "../src/lib/professional-identity/cv/trust-annotations";
+import { summariseTrust } from "../src/lib/professional-identity/trust-summary";
+import { careerCardTrustLine } from "../src/lib/career-discovery/v31/career-card";
+
 console.log("professional-identity-check\n");
 
 /* ------------------------------------------------------------------ */
@@ -151,6 +160,12 @@ function claim(over: Partial<ProfessionalIdentityV1["claims"][number]> = {}) {
     skillLevel: null,
     assertionLevel: "self_declared",
     lifecycleState: "active",
+    // Provenance defaults to "nobody verified this", which is what a claim
+    // fresh out of a candidate's own typing actually is. A test that wants an
+    // attribution must state it, so no test gets one by accident.
+    verifierName: null,
+    verificationMethod: null,
+    verifiedOn: null,
     ...over,
   };
 }
@@ -165,6 +180,9 @@ function employment(over: Partial<ProfessionalIdentityV1["employment"][number]> 
     employmentType: "employed",
     jurisdictionCode: "SE",
     assertionLevel: "self_declared",
+    verifierName: null,
+    verificationMethod: null,
+    verifiedOn: null,
     ...over,
   };
 }
@@ -1651,6 +1669,478 @@ console.log("\n11 . persistence boundaries");
     storeCode.indexOf("export const saveCvDraft"),
   );
   ck("reading a CV writes nothing", !/\.(insert|update|upsert|delete)\s*\(/.test(readHandlers));
+}
+
+/* ================================================================== */
+console.log("\n10 · verified trust across the career outputs");
+/* ================================================================== */
+//
+// PR 9. The Passport owns the trust truth; My Career, the CV and the Career
+// Card surface it. Everything below exists to keep that one-directional.
+//
+// The failure these guard against is not "a bug in a helper". It is a CV,
+// sent to an employer under a candidate's own name, asserting that a company
+// confirmed something it never confirmed — produced by a helper reading the
+// wrong field, or by a model rephrasing a string it should never have seen,
+// or by a revocation that reached the Passport and not the document.
+{
+  const CONFIRMED = employment({
+    id: "e-confirmed",
+    employerName: "Company X",
+    roleTitle: "Security Officer",
+    startedOn: "2024-01-01",
+    endedOn: "2025-12-31",
+    assertionLevel: "verified",
+    verifierName: "Company X",
+    verificationMethod: "employer_confirmation",
+    verifiedOn: "2026-02-10",
+  });
+
+  const REVIEWED_EMPLOYMENT = employment({
+    id: "e-reviewed",
+    employerName: "Company X",
+    assertionLevel: "verified",
+    verifierName: "CQrityjob",
+    verificationMethod: "document_review",
+    verifiedOn: "2026-02-10",
+  });
+
+  const VU1_APPROVED = claim({
+    id: "c-vu1",
+    title: "Väktargrundutbildning VU1",
+    issuerName: "BYA",
+    assertionLevel: "verified",
+    verifierName: "CQrityjob",
+    verificationMethod: "document_review",
+    verifiedOn: "2026-02-11",
+  });
+
+  /* ---- 10a · employment (§28) ------------------------------------- */
+
+  {
+    const t = describeTrust({ assertionLevel: "self_declared" });
+    ck("10.1 self-reported employment carries no confirmation", t.status === "self_reported");
+    ck("10.2 and names nobody as its confirmer", t.organisation === null);
+    ck("10.3 and produces no line to print", employmentTrustLine(t, "en") === null);
+  }
+
+  {
+    const t = describeTrust({
+      assertionLevel: CONFIRMED.assertionLevel,
+      verifierName: CONFIRMED.verifierName,
+      verificationMethod: CONFIRMED.verificationMethod,
+      verifiedOn: CONFIRMED.verifiedOn,
+    });
+    const en = employmentTrustLine(t, "en") ?? "";
+    const sv = employmentTrustLine(t, "sv") ?? "";
+    ck(
+      "10.4 employer-confirmed employment says Company X confirmed it",
+      en === "Employment confirmed by Company X",
+    );
+    ck("10.5 [sv] and says so in Swedish", sv === "Anställningen är bekräftad av Company X");
+    ck("10.6 the confirmer is recognised as an employer confirmation", isEmployerConfirmed(t));
+  }
+
+  {
+    // §9. Verified is not the same fact as employer-confirmed. An employment
+    // CQrityjob verified by reading a contract must not borrow the
+    // employer's voice for an act the employer never performed.
+    const t = describeTrust({
+      assertionLevel: REVIEWED_EMPLOYMENT.assertionLevel,
+      verifierName: REVIEWED_EMPLOYMENT.verifierName,
+      verificationMethod: REVIEWED_EMPLOYMENT.verificationMethod,
+      verifiedOn: REVIEWED_EMPLOYMENT.verifiedOn,
+    });
+    const en = employmentTrustLine(t, "en") ?? "";
+    ck(
+      "10.7 CQrityjob-reviewed employment says the document was reviewed",
+      en === "Document reviewed by CQrityjob",
+    );
+    ck(
+      "10.8 and does NOT claim the employer confirmed it",
+      !isEmployerConfirmed(t) && !en.includes("Employment confirmed"),
+    );
+    ck("10.9 and never names the employer as the verifier", !en.includes("Company X"));
+  }
+
+  {
+    // §28.4. The two most dangerous strings in the product are the ones the
+    // CANDIDATE types: the employer name on a period and the issuer on a
+    // claim. Neither may ever become an attribution.
+    const hostile = employment({
+      id: "e-hostile",
+      employerName: "CQrityjob VERIFIED SECURITY OFFICER",
+      roleTitle: "Verified by Swedish Police",
+      assertionLevel: "self_declared",
+    });
+    const t = describeTrust({
+      assertionLevel: hostile.assertionLevel,
+      verifierName: hostile.verifierName,
+      verificationMethod: hostile.verificationMethod,
+      verifiedOn: hostile.verifiedOn,
+    });
+    ck(
+      "10.10 candidate-written employer text creates no verification",
+      t.status === "self_reported",
+    );
+    ck(
+      "10.11 and produces no attribution line at all",
+      employmentTrustLine(t, "en") === null && employmentTrustLine(t, "sv") === null,
+    );
+  }
+
+  {
+    // §17 / §28.5-6. Revocation, correction and expiry.
+    const revoked = describeTrust({
+      assertionLevel: "self_declared",
+      verifierName: "Company X",
+      verificationMethod: "employer_confirmation",
+      verifiedOn: "2026-02-10",
+    });
+    ck(
+      "10.12 a correction that resets the level drops the confirmation",
+      revoked.status !== "verified",
+    );
+    ck("10.13 and stops printing Company X entirely", employmentTrustLine(revoked, "en") === null);
+
+    const lapsed = describeTrust({
+      assertionLevel: "verified",
+      lifecycleState: "revoked",
+      verifierName: "CQrityjob",
+      verificationMethod: "document_review",
+      verifiedOn: "2026-02-11",
+    });
+    ck("10.14 a revoked lifecycle removes the verified standing", lapsed.status !== "verified");
+    ck(
+      "10.15 an expired credential is no longer verified",
+      describeTrust({
+        assertionLevel: "verified",
+        lifecycleState: "expired",
+        verifierName: "CQrityjob",
+        verificationMethod: "document_review",
+      }).status !== "verified",
+    );
+  }
+
+  /* ---- 10b · credentials (§29) ------------------------------------ */
+
+  {
+    const declared = describeTrust({ assertionLevel: "self_declared", lifecycleState: "active" });
+    ck(
+      "10.16 a self-declared VU1 gets no verified decoration",
+      declared.status === "self_reported" && declared.labelEn === null,
+    );
+
+    const evidenced = describeTrust({
+      assertionLevel: "document_provided",
+      lifecycleState: "active",
+    });
+    ck(
+      "10.17 attaching a document is not a verification",
+      evidenced.status === "document_provided",
+    );
+    ck(
+      "10.18 and still prints no attribution",
+      evidenced.labelEn === null && evidenced.labelSv === null,
+    );
+  }
+
+  {
+    const t = describeTrust({
+      assertionLevel: VU1_APPROVED.assertionLevel,
+      lifecycleState: VU1_APPROVED.lifecycleState,
+      verifierName: VU1_APPROVED.verifierName,
+      verificationMethod: VU1_APPROVED.verificationMethod,
+      verifiedOn: VU1_APPROVED.verifiedOn,
+    });
+    ck("10.19 an approved VU1 names CQrityjob as the VERIFIER", t.organisation === "CQrityjob");
+    ck("10.20 in the words of the method used", t.labelEn === "Document reviewed by CQrityjob");
+    ck("10.21 [sv] likewise", t.labelSv === "Dokument granskat av CQrityjob");
+    // §29.3 — the issuer survives, separately, and is never the verifier.
+    ck("10.22 BYA remains the ISSUER on the claim itself", VU1_APPROVED.issuerName === "BYA");
+    ck(
+      "10.23 and BYA is never named as the verifier",
+      !(t.labelEn ?? "").includes("BYA") && t.organisation !== "BYA",
+    );
+  }
+
+  {
+    // §29.4. The candidate types the issuer. If that string could reach the
+    // attribution, this is the sentence it would produce.
+    const hostile = claim({
+      id: "c-hostile",
+      title: "VU1",
+      issuerName: "CQrityjob verified",
+      assertionLevel: "self_declared",
+      lifecycleState: "active",
+    });
+    const t = describeTrust({
+      assertionLevel: hostile.assertionLevel,
+      lifecycleState: hostile.lifecycleState,
+      verifierName: hostile.verifierName,
+      verificationMethod: hostile.verificationMethod,
+      verifiedOn: hostile.verifiedOn,
+    });
+    ck(
+      '10.24 a candidate typing "CQrityjob verified" as issuer creates no verification',
+      t.status === "self_reported",
+    );
+    ck(
+      "10.25 and no attribution line is produced from it",
+      t.labelEn === null && t.labelSv === null,
+    );
+    ck("10.26 and the verifier field stays empty", t.organisation === null);
+  }
+
+  /* ---- 10c · the canonical helper is actually canonical (§5) ------ */
+
+  {
+    // The point of one helper is that the surfaces cannot disagree. This
+    // asserts the property directly: identical stored provenance produces
+    // an identical decision, whichever surface asked.
+    const input = {
+      assertionLevel: "verified",
+      verifierName: "Company X",
+      verificationMethod: "employer_confirmation",
+      verifiedOn: "2026-02-10",
+    } as const;
+    const a = describeTrust(input);
+    const b = describeTrust(input);
+    ck(
+      "10.27 the same provenance yields the same status everywhere",
+      a.status === b.status && a.organisation === b.organisation && a.method === b.method,
+    );
+
+    // §30: no surface may contradict another about one current fact.
+    const idn = identity({
+      hasPassport: true,
+      employment: [CONFIRMED],
+      claims: [VU1_APPROVED],
+    });
+    const summary = summariseTrust(idn);
+    const annotations = buildCvTrustAnnotations(idn);
+    const cvEmployment = annotations.employment[CONFIRMED.id];
+    ck(
+      "10.28 My Career counts the employment as employer-confirmed",
+      summary.employerConfirmedEmployment === 1,
+    );
+    ck(
+      "10.29 the CV attributes the SAME employment to Company X",
+      employmentTrustLine(cvEmployment, "en") === "Employment confirmed by Company X",
+    );
+    ck(
+      "10.30 the Career Card says the same thing, compressed",
+      careerCardTrustLine(summary, "en") === "1 verified credential · Employment confirmed",
+    );
+    ck(
+      "10.31 and the card never names the employer",
+      !(careerCardTrustLine(summary, "en") ?? "").includes("Company X"),
+    );
+    ck(
+      "10.32 the CV credential and the card agree it is verified",
+      annotations.claims[VU1_APPROVED.id].status === "verified" && summary.verifiedClaims === 1,
+    );
+  }
+
+  {
+    // §26. unknown is not zero, on every surface.
+    const broken = identity({
+      hasPassport: true,
+      employment: [CONFIRMED],
+      claims: [VU1_APPROVED],
+      unavailable: ["provenance"],
+    });
+    const summary = summariseTrust(broken);
+    const annotations = buildCvTrustAnnotations(broken);
+    ck("10.33 a failed provenance read is reported as unknown, not as zero", !summary.known);
+    ck(
+      "10.34 the CV omits its trust decoration entirely",
+      annotations.unavailable && Object.keys(annotations.employment).length === 0,
+    );
+    ck(
+      "10.35 the Career Card says nothing rather than something false",
+      careerCardTrustLine(summary, "en") === null,
+    );
+    ck(
+      "10.36 and no negative state is invented for the employment",
+      describeTrust({ assertionLevel: "verified", provenanceUnavailable: true }).status ===
+        "unknown",
+    );
+  }
+
+  /* ---- 10d · the model boundary (§6, §23, §27) -------------------- */
+
+  {
+    // THE structural guarantee. If provenance ever appears on the source
+    // bundle, it appears in `governedContext.facts`, and a model is free to
+    // rephrase it into prose. These assertions are the reason the annotations
+    // are a separate object.
+    const idn = identity({
+      displayName: "Amina Rashid",
+      hasPassport: true,
+      employment: [CONFIRMED],
+      claims: [VU1_APPROVED],
+    });
+    const bundle = buildCvSourceBundle({
+      identity: idn,
+      locale: "en",
+      includeCareerInsight: false,
+      targetJobText: null,
+    });
+    const serialised = JSON.stringify(bundle);
+
+    ck(
+      "10.37 the source bundle carries no verifier organisation",
+      !serialised.includes("verifierName") && !serialised.includes("verificationMethod"),
+    );
+    ck(
+      "10.38 and no attribution wording of any kind",
+      !/confirmed by/i.test(serialised) &&
+        !/reviewed by/i.test(serialised) &&
+        !/bekräftad av/i.test(serialised),
+    );
+    // "CQrityjob" must not appear as a value anywhere in the model's input.
+    ck("10.39 CQrityjob is never named in the model's input", !serialised.includes("CQrityjob"));
+    // The employment fact itself still travels — the model needs it.
+    ck("10.40 but the employment fact itself is still present", serialised.includes("Company X"));
+
+    // And the annotations, which the model never sees, do carry it.
+    const annotations = buildCvTrustAnnotations(idn);
+    ck(
+      "10.41 the renderer-only channel does carry the attribution",
+      annotations.employment[CONFIRMED.id].organisation === "Company X",
+    );
+
+    // The two objects are joined only in the document.
+    const doc = buildFactualCvDocument(bundle, annotations);
+    ck(
+      "10.42 the document carries the trust annotations",
+      doc.trust.employment[CONFIRMED.id]?.organisation === "Company X",
+    );
+    ck(
+      "10.43 while its employment facts stay untouched",
+      doc.experience[0]?.fact.employerName === "Company X",
+    );
+  }
+
+  {
+    // §27 adversarial: issuer, verifier and confirmer are three different
+    // parties and must not be swappable. Given a candidate who has typed
+    // trust language into every field they control, nothing they wrote may
+    // end up in an attribution.
+    const idn = identity({
+      hasPassport: true,
+      employment: [
+        employment({
+          id: "e-adv",
+          employerName: "CQrityjob VERIFIED SECURITY OFFICER",
+          roleTitle: "Verified by Swedish Police",
+          assertionLevel: "self_declared",
+        }),
+      ],
+      claims: [
+        claim({
+          id: "c-adv",
+          title: "VU1",
+          issuerName: "Verified by Swedish Police",
+          assertionLevel: "self_declared",
+          lifecycleState: "active",
+        }),
+      ],
+    });
+    const annotations = buildCvTrustAnnotations(idn);
+    const e = annotations.employment["e-adv"];
+    const c = annotations.claims["c-adv"];
+    ck(
+      "10.44 hostile employer text produces no employment attribution",
+      e.status === "self_reported" && e.organisation === null,
+    );
+    ck(
+      "10.45 hostile issuer text produces no credential attribution",
+      c.status === "self_reported" && c.organisation === null,
+    );
+    ck(
+      "10.46 neither yields a printable line",
+      employmentTrustLine(e, "en") === null && c.labelEn === null,
+    );
+
+    const summary = summariseTrust(idn);
+    ck(
+      "10.47 and nothing hostile is counted as verified anywhere",
+      summary.verifiedClaims === 0 && summary.employerConfirmedEmployment === 0,
+    );
+    ck("10.48 so the Career Card stays silent", careerCardTrustLine(summary, "en") === null);
+  }
+
+  /* ---- 10e · source-level boundaries ------------------------------ */
+
+  {
+    const bundleSrc = read("src/lib/professional-identity/cv/source-bundle.ts");
+    ck(
+      "10.49 the source bundle type declares no verifier field",
+      !/verifierName|verificationMethod|deciderOrganisation/.test(bundleSrc),
+    );
+
+    const genSrc = read("src/lib/professional-identity/cv/generation.ts");
+    ck(
+      "10.50 generation still passes only the bundle as governed context",
+      genSrc.includes("governedContext: { facts: bundle }"),
+    );
+    ck(
+      "10.51 and never passes the trust annotations to a provider",
+      !genSrc.includes("trustAnnotations") && !genSrc.includes("buildCvTrustAnnotations"),
+    );
+
+    // The exported CV is the same component as the on-screen one (§12), so a
+    // trust line must not be hidden from print.
+    const viewSrc = read("src/components/professional-identity/CvDocumentView.tsx");
+    const trustLineBlock = viewSrc.slice(
+      viewSrc.indexOf("function TrustLine"),
+      viewSrc.indexOf("function ClaimList"),
+    );
+    ck(
+      "10.52 the CV trust line is not excluded from the printed export",
+      trustLineBlock.length > 0 && !trustLineBlock.includes("no-print"),
+    );
+    ck(
+      "10.53 and carries a screen-reader label, not an icon alone",
+      trustLineBlock.includes("sr-only") && trustLineBlock.includes('aria-hidden="true"'),
+    );
+
+    // §16: outputs consume trust, they never write it.
+    for (const f of [
+      "src/lib/professional-identity/cv/trust-annotations.ts",
+      "src/lib/professional-identity/trust-summary.ts",
+      "src/lib/security-passport/trust-presentation.ts",
+    ]) {
+      const src = read(f);
+      ck(
+        `${f.split("/").pop()} writes no trust state`,
+        !/\.(insert|update|upsert|delete)\s*\(/.test(src),
+      );
+    }
+
+    // §19/§20: nothing internal may reach a shared surface.
+    for (const f of [
+      "src/lib/security-passport/trust-presentation.ts",
+      "src/lib/professional-identity/cv/trust-annotations.ts",
+      "src/lib/professional-identity/trust-summary.ts",
+      "src/lib/career-discovery/v31/career-card.ts",
+      "src/components/career-discovery/v31/CareerCard.tsx",
+    ]) {
+      const src = read(f);
+      for (const forbidden of [
+        "decision_note",
+        "decisionNote",
+        "reviewer_user_id",
+        "reviewerUserId",
+        "evidence_path",
+        "holder_message",
+      ]) {
+        ck(`${f.split("/").pop()} never names ${forbidden}`, !src.includes(forbidden));
+      }
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ */

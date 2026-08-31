@@ -37,6 +37,7 @@ import { readProfessionalIdentity } from "../identity.functions";
 import { buildCvSourceBundle, type CvSourceBundle } from "./source-bundle";
 import { computeCvReadiness, type CvReadiness } from "./readiness";
 import { applyCvPresentation, buildFactualCvDocument, type CvDocument } from "./document";
+import { buildCvTrustAnnotations } from "./trust-annotations";
 import { generateCvPresentation, type CvGenerationStatus } from "./generation";
 import type { CvPresentation } from "./schema";
 import type { QuarantinedPassage } from "@/lib/interview-intelligence/ai/injection";
@@ -124,7 +125,7 @@ export const prepareMyCv = createServerFn({ method: "GET" })
     return {
       readiness: computeCvReadiness(identity),
       bundle,
-      factualDocument: buildFactualCvDocument(bundle),
+      factualDocument: buildFactualCvDocument(bundle, buildCvTrustAnnotations(identity)),
       hasCareerInsight: identity.discovery.hasCompletedReport,
     };
   });
@@ -168,7 +169,12 @@ export const generateMyCv = createServerFn({ method: "POST" })
       };
     }
 
-    const factual = buildFactualCvDocument(bundle);
+    // Built from the identity, NOT from the bundle, and handed to the
+    // document rather than to the generator. `generateCvPresentation` below
+    // receives the bundle alone -- which is the whole point: the provider
+    // is never given a verifier organisation to weave into prose.
+    const trust = buildCvTrustAnnotations(identity);
+    const factual = buildFactualCvDocument(bundle, trust);
     const result = await generateCvPresentation(bundle);
 
     if (result.status !== "succeeded" || !result.presentation) {
@@ -190,7 +196,7 @@ export const generateMyCv = createServerFn({ method: "POST" })
       status: "succeeded",
       readiness,
       presentation: result.presentation,
-      document: applyCvPresentation(bundle, result.presentation),
+      document: applyCvPresentation(bundle, result.presentation, trust),
       providerMode: result.providerMode,
       model: result.model,
       quarantinedPassages: result.quarantinedPassages,

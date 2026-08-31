@@ -42,6 +42,7 @@ import {
   type IdentityFactGroup,
   type ProfessionalIdentityV1,
 } from "@/lib/professional-identity/types";
+import { summariseTrust } from "@/lib/professional-identity/trust-summary";
 import { c, L, Lf, type Copy, type Lang } from "./copy";
 
 const COPY = {
@@ -63,6 +64,11 @@ const COPY = {
   verifyState: c("{0} verifierade", "{0} verified"),
   verifyPending: c("{0} väntar på granskning", "{0} awaiting review"),
   verifyNone: c("Passet är inte öppnat", "Passport not opened"),
+  // Anställningar som en arbetsgivare har bekräftat räknas separat från
+  // verifierade intyg. Det är två olika slags bevis och att slå ihop dem
+  // till en siffra döljer vilket av dem personen faktiskt har.
+  verifyEmployment: c("{0} anställning bekräftad", "{0} employment confirmed"),
+  verifyEmploymentMany: c("{0} anställningar bekräftade", "{0} employments confirmed"),
 
   grow: c("Utveckla", "Grow"),
   growAssigned: c("{0} bedömning tilldelad", "{0} assessment assigned"),
@@ -110,6 +116,15 @@ export function CareerJourney({
   const pending = identity.claims.filter(isPendingClaim).length;
   const { workload } = identity;
 
+  // Employer-confirmed employment, counted by the one summariser the Career
+  // Card also uses. `employerConfirmedEmployment` and not `verifiedEmployment`
+  // on purpose: the word on the page is "confirmed", and an employment
+  // CQrityjob verified by reading a contract has not been confirmed by an
+  // employer. Counting it here would make the page say something the CV,
+  // reading the same decision record, correctly refuses to say.
+  const trust = summariseTrust(identity);
+  const confirmedEmployment = trust.known ? trust.employerConfirmedEmployment : 0;
+
   // Which reads each stage depends on. A stage whose source failed states
   // that instead of a figure derived from a partial read.
   const discoveryKnown = known("discovery");
@@ -148,15 +163,29 @@ export function CareerJourney({
       key: "verify",
       icon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
       label: say(COPY.verify),
+      // Credentials and employment are stated as two facts, joined rather
+      // than summed. "3 verified" already meant credentials and quietly
+      // adding employments to it would change what an existing number means
+      // without saying so.
       state: !passportKnown
         ? say(COPY.unreadable)
         : !identity.hasPassport
           ? say(COPY.verifyNone)
-          : pending > 0 && verified === 0
+          : pending > 0 && verified === 0 && confirmedEmployment === 0
             ? sayf(COPY.verifyPending, pending)
-            : sayf(COPY.verifyState, verified),
+            : [
+                sayf(COPY.verifyState, verified),
+                confirmedEmployment > 0
+                  ? sayf(
+                      confirmedEmployment === 1 ? COPY.verifyEmployment : COPY.verifyEmploymentMany,
+                      confirmedEmployment,
+                    )
+                  : null,
+              ]
+                .filter((part): part is string => part !== null)
+                .join(" · "),
       href: "/passport",
-      active: passportKnown && verified > 0,
+      active: passportKnown && (verified > 0 || confirmedEmployment > 0),
       unknown: !passportKnown,
     },
     {

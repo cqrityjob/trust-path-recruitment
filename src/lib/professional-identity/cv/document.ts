@@ -19,6 +19,10 @@
 //   credential titles, issuers the source bundle. NEVER the model.
 //   the verified mark          `CvFactClaim.verified`, which is
 //                              `isVerifiedClaim` and nothing else.
+//   WHO verified it            `trust`, built from the Passport decision
+//                              record and carried on a channel the model
+//                              never sees. See `trust-annotations.ts` for
+//                              why it is not a field on the bundle.
 //   headline, summary, bullets the model, when a run succeeded — and marked
 //                              as such in `aiWritten` so the review screen
 //                              can show the person which words are theirs
@@ -29,6 +33,7 @@
 
 import type { CvPresentation } from "./schema";
 import type { CvFactClaim, CvFactEmployment, CvSourceBundle } from "./source-bundle";
+import { emptyCvTrustAnnotations, type CvTrustAnnotations } from "./trust-annotations";
 
 export const CV_DOCUMENT_VERSION = "cv-document-v1" as const;
 
@@ -83,11 +88,27 @@ export interface CvDocument {
    *  them back. Silence about an omission is an edit the person did not
    *  make and was not told about. */
   readonly omittedEmployment: readonly CvFactEmployment[];
+
+  // ── WHO VERIFIED WHAT ───────────────────────────────────────────────
+  //
+  // Renderer-only. Keyed by the same fact ids the sections above carry, so
+  // a component drawing an employment looks up that employment's standing
+  // and draws the line the Passport would draw, or draws nothing.
+  //
+  // Deliberately NOT part of `CvSourceBundle`: the bundle is handed to a
+  // language model and this is the one thing on the page that must never
+  // be available for a model to rephrase. `trust-annotations.ts` sets out
+  // the full argument.
+  readonly trust: CvTrustAnnotations;
 }
 
 /** The document anybody can have: their own facts, in order, unembellished. */
-export function buildFactualCvDocument(bundle: CvSourceBundle): CvDocument {
+export function buildFactualCvDocument(
+  bundle: CvSourceBundle,
+  trust: CvTrustAnnotations = emptyCvTrustAnnotations(),
+): CvDocument {
   return {
+    trust,
     documentVersion: CV_DOCUMENT_VERSION,
     origin: "factual",
     locale: bundle.locale,
@@ -127,8 +148,9 @@ export function buildFactualCvDocument(bundle: CvSourceBundle): CvDocument {
 export function applyCvPresentation(
   bundle: CvSourceBundle,
   presentation: CvPresentation,
+  trust: CvTrustAnnotations = emptyCvTrustAnnotations(),
 ): CvDocument {
-  const base = buildFactualCvDocument(bundle);
+  const base = buildFactualCvDocument(bundle, trust);
   const byId = new Map(bundle.employment.map((e) => [e.id, e]));
 
   const ordered: CvExperienceSection[] = [];

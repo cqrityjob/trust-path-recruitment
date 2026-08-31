@@ -37,6 +37,15 @@ import type {
   ProfessionalIdentityV1,
 } from "./types";
 import type { CurrentStatus, YearsOfExperience } from "@/lib/security-career-profile/types";
+import {
+  EMPTY_PROVENANCE,
+  PROVENANCE_DECISION_COLUMNS,
+  PROVENANCE_REQUEST_COLUMNS,
+  buildProvenanceMap,
+  printableProvenance,
+  type ProvenanceDecisionRow,
+  type ProvenanceRequestRow,
+} from "@/lib/security-passport/provenance";
 
 /** The generated `Database` type does not describe every table reached here,
  *  and the codebase's established answer to that is one declared alias with
@@ -90,6 +99,8 @@ export async function readProfessionalIdentity(
     assignments,
     history,
     memberships,
+    verificationRequests,
+    verificationDecisions,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -155,6 +166,27 @@ export async function readProfessionalIdentity(
       .eq("user_id", userId)
       .eq("status", "active")
       .is("removed_at", null),
+    // ── PROVENANCE: WHO VERIFIED WHAT ────────────────────────────────
+    //
+    // Two bounded reads for the WHOLE profile, not one per employment and
+    // not one per credential. Every career output the person can open --
+    // My Career, a CV, the Career Card -- attributes verification from this
+    // pair, so the cost of being able to say "Confirmed by Bevakning AB"
+    // anywhere is two queries in total rather than N.
+    //
+    // The column lists are the Passport's own constants. `decision_note` is
+    // absent from them, as it is from every holder-facing read in this
+    // repository, and importing the constant is what stops a future edit
+    // from adding it back by copying a reviewer query.
+    supabase
+      .from("sp_verification_requests")
+      .select(PROVENANCE_REQUEST_COLUMNS)
+      .eq("holder_user_id", userId),
+    supabase
+      .from("sp_verification_decisions")
+      .select(PROVENANCE_DECISION_COLUMNS)
+      .eq("holder_user_id", userId)
+      .order("decided_at", { ascending: true }),
   ]);
 
   const accountRow = (account?.data ?? null) as Row | null;
@@ -179,6 +211,28 @@ export async function readProfessionalIdentity(
   note("assessments", assignments);
   note("assessments", history);
   note("memberships", memberships);
+  note("provenance", verificationRequests);
+  note("provenance", verificationDecisions);
+
+  // ── A FAILED PROVENANCE READ IS NOT "NOTHING IS VERIFIED" ───────────
+  //
+  // PR 4's rule, applied to the outputs. If these two reads fail, every
+  // verified credential and every confirmed employment the person owns
+  // arrives here with no verifier attached -- which renders, if nobody
+  // says otherwise, as a profile in which nothing was ever verified. That
+  // is a false statement about somebody's professional standing produced
+  // by a query failure, and it is the exact shape of the defect PR 4 was
+  // written to remove.
+  //
+  // So the group is recorded, the empty map stands, and the surfaces ask
+  // `isUnavailable(identity, "provenance")` before saying anything negative.
+  const provenanceUnavailable = unavailable.includes("provenance");
+  const provenance = provenanceUnavailable
+    ? EMPTY_PROVENANCE
+    : buildProvenanceMap(
+        (verificationRequests?.data ?? []) as ProvenanceRequestRow[],
+        (verificationDecisions?.data ?? []) as ProvenanceDecisionRow[],
+      );
 
   // The profession's published title, from the SAME catalogue the picker
   // offers. Sequential rather than part of the Promise.all above because it
@@ -204,6 +258,18 @@ export async function readProfessionalIdentity(
     professionTitleEn = (row?.title_en as string | null) ?? null;
   }
 
+  /** The three attribution fields for one subject, gated exactly as the
+   *  Passport gates them. Spread into both mappers so employment and claims
+   *  cannot drift apart in how they answer "who verified this". */
+  const periodProvenance = (id: string, assertionLevel: string) => {
+    const p = printableProvenance(id, assertionLevel, provenance);
+    return {
+      verifierName: p?.organisation ?? null,
+      verificationMethod: p?.method ?? null,
+      verifiedOn: p?.decidedOn ?? null,
+    };
+  };
+
   const employment: IdentityEmployment[] = ((experience?.data ?? []) as Row[]).map((r) => ({
     id: String(r.id),
     employerName: String(r.employer_name ?? ""),
@@ -213,6 +279,7 @@ export async function readProfessionalIdentity(
     employmentType: String(r.employment_type ?? ""),
     jurisdictionCode: String(r.jurisdiction_code ?? ""),
     assertionLevel: String(r.assertion_level ?? "self_declared"),
+    ...periodProvenance(String(r.id), String(r.assertion_level ?? "self_declared")),
   }));
 
   const claimList: IdentityClaim[] = ((claims?.data ?? []) as Row[]).map((r) => ({
@@ -225,6 +292,7 @@ export async function readProfessionalIdentity(
     skillLevel: (r.skill_level as string | null) ?? null,
     assertionLevel: String(r.assertion_level ?? "self_declared"),
     lifecycleState: String(r.lifecycle_state ?? "active"),
+    ...periodProvenance(String(r.id), String(r.assertion_level ?? "self_declared")),
   }));
 
   // "Does the report NAME careers" is read from the stored payload, not

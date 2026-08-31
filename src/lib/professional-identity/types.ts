@@ -77,6 +77,19 @@ export interface IdentityEmployment {
   readonly jurisdictionCode: string;
   /** `self_declared` unless a verifier moved it. Carried, never computed. */
   readonly assertionLevel: string;
+  // ── WHO CONFIRMED IT, AND HOW ──────────────────────────────────────
+  //
+  // Resolved by the Passport's own `printableProvenance`, which refuses to
+  // answer for anything not currently `verified`. Never `employerName`: the
+  // company a period NAMES and the company that CONFIRMED it are different
+  // facts, and borrowing the first for the second is an attestation nobody
+  // made. Null on every self-declared period, which is most of them.
+  readonly verifierName: string | null;
+  /** Decides whether the CV may say "Confirmed by Company X" or must say
+   *  "Document reviewed by CQrityjob". An employment can reach `verified`
+   *  by either route and they are not the same sentence. */
+  readonly verificationMethod: string | null;
+  readonly verifiedOn: string | null;
 }
 
 /** A Passport claim, with the two fields that decide how it may be shown. */
@@ -93,6 +106,12 @@ export interface IdentityClaim {
   /** `self_declared` | `evidenced` | `verified`. The gate on the tick. */
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+  /** The organisation that DECIDED. `issuerName` above is candidate-entered
+   *  and says who awarded the credential; this says who checked it, and the
+   *  two are never interchangeable on any surface. */
+  readonly verifierName: string | null;
+  readonly verificationMethod: string | null;
+  readonly verifiedOn: string | null;
 }
 
 /** What Career Discovery contributes — insight, never fact. */
@@ -159,7 +178,13 @@ export type IdentityFactGroup =
   /** `scp_my_academy_assignments` / `scp_my_assessment_history`. */
   | "assessments"
   /** `employer_memberships`. */
-  | "memberships";
+  | "memberships"
+  /** `sp_verification_requests` / `sp_verification_decisions` -- WHO
+   *  verified each claim and period. Its own group because a failed
+   *  provenance read is not "nothing is verified": every verified fact the
+   *  person owns would render with no attribution, and the surfaces must be
+   *  able to tell that apart from an honestly unverified profile. */
+  | "provenance";
 
 /** True when the named group's read did not answer. */
 export function isUnavailable(

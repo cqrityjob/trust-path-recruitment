@@ -97,6 +97,7 @@ export function CareerCardCreator({
   definitionVersion,
   generatedAt,
   suggestedFirstName,
+  trustLine,
   onEvent,
 }: {
   open: boolean;
@@ -114,6 +115,15 @@ export function CareerCardCreator({
    *  the field is opt-OUT once prefilled, never a silent disclosure, and
    *  nothing else from the profile reaches the card. */
   suggestedFirstName?: string | null;
+  /** The composed trust line, or null/absent for no trust line at all.
+   *
+   *  A STRING, not a summary object, and composed by the host from the
+   *  Passport's own counts. This component cannot compute it, cannot expand
+   *  it and cannot decide when it applies -- which is what keeps the card
+   *  from growing a verification model of its own. Hosts that have no
+   *  identity in hand (the report view) simply omit it and render exactly
+   *  the card they rendered before. */
+  trustLine?: string | null;
   /** Privacy-safe funnel events (Execution Mandate §34) — the host decides
    *  how/whether to record them; this component never tracks on its own. */
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
@@ -173,8 +183,9 @@ export function CareerCardCreator({
         definitionVersion,
         generatedAt,
         firstName,
+        trustLine,
       }),
-    [ranked, dimensions, locale, definitionVersion, generatedAt, firstName],
+    [ranked, dimensions, locale, definitionVersion, generatedAt, firstName, trustLine],
   );
 
   // Nothing to share without a recommendation. The host already gates on
