@@ -74,6 +74,7 @@ import {
   type EmployerAssessmentCatalogEntry,
 } from "@/lib/job-intelligence/employer-assessment-catalog.functions";
 import { getEmployerWorkforceSummary } from "@/lib/job-intelligence/employer-workforce.functions";
+import { employerVerificationCounts } from "@/lib/security-passport/verification.functions";
 import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-assignments.functions";
 import { listTrainingStatus } from "@/lib/security-competency/academy-employer.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
@@ -241,6 +242,7 @@ function EmployerOverview({
   const loadInterviewWorkload = useServerFn(getInterviewWorkload);
   const loadPipeline = useServerFn(getEmployerAssessmentPipeline);
   const loadReviewBoard = useServerFn(getEmployerReviewBoard);
+  const loadEmploymentVerifications = useServerFn(employerVerificationCounts);
 
   const stats = useQuery({
     queryKey: ["employer", employerId, "dashboard-stats"],
@@ -296,6 +298,18 @@ function EmployerOverview({
     queryKey: ["academy", "review-board", employerId],
     queryFn: () => loadReviewBoard({ data: { employerId } }),
   });
+  // Security Passport — employment confirmation requests addressed to this
+  // organisation. Derived from `sp_employer_attestation_queue`, the same
+  // function the workspace list reads, so the number here and the rows there
+  // cannot disagree and the owner/admin check is not written a second time.
+  //
+  // Returns zeroes rather than throwing for a member who is neither owner nor
+  // admin: they cannot answer these, so for them there is genuinely nothing
+  // waiting, and a card that threw would take down the whole overview.
+  const employmentVerificationQuery = useQuery({
+    queryKey: ["passport", "employment-verification-counts", employerId],
+    queryFn: () => loadEmploymentVerifications({ data: { employerId } }),
+  });
 
   const data: EmployerDashboardStats = stats.data ?? {
     activeJobs: 0,
@@ -349,6 +363,8 @@ function EmployerOverview({
     reported: 0,
   };
 
+  const employmentVerificationsOpen = employmentVerificationQuery.data?.open ?? 0;
+
   const awaitingReviewCount = applications.filter((a) => a.status === "submitted").length;
   const recruitmentAttemptIds = new Set(pipeline.map((r) => r.attemptId));
   const responsesToReview = (reviewBoardQuery.data ?? [])
@@ -395,6 +411,25 @@ function EmployerOverview({
         search: { status: "submitted" as const },
       },
       actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  // Somebody is waiting on this organisation to answer a question only it can
+  // answer. Zero-suppressed like every other row: an employer nobody has asked
+  // never learns this feature exists, which is the correct outcome for a
+  // feature that is occasional by nature.
+  if (employmentVerificationsOpen > 0) {
+    actions.push({
+      key: "employment-verifications",
+      icon: <ShieldCheck className="h-4 w-4" />,
+      count: employmentVerificationsOpen,
+      text: tp("employer.actions.employmentVerifications", employmentVerificationsOpen),
+      linkProps: {
+        to: "/employer/$employerSlug/employment-verifications",
+        params: { employerSlug },
+      },
+      actionLabel: t("employer.actions.review"),
       tone: "todo",
     });
   }

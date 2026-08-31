@@ -2555,6 +2555,68 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Security Passport employer employment verification (PR 8).
+#
+# Registered HERE, after the Phase 2 suite and beside the other Passport
+# privacy suites, for the reason the reviewer-role block above records: this
+# suite creates Passport profiles of its own, and security_passport_phase2_test
+# asserts a GLOBAL `count(*) FROM sp_passport_profiles = 1`.
+#
+# Registered BEFORE the rollback step, like every non-destructive suite.
+#
+# What it proves that a source-level guard structurally cannot: that the
+# employer receives ONE employment period and a name and can reach nothing
+# else -- asserted by EXECUTING the reads as the employer principal, not by
+# reading policies -- that an unrelated organisation is refused rather than
+# shown an empty list, that a candidate who also owns the employer cannot
+# confirm their own employment, and that an employer who says the dates are
+# wrong still cannot change them. The last one is the whole correction model:
+# the employer asks, the candidate edits, and the database is what makes that
+# true rather than a convention the interface follows.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport employer employment verification assertions"
+set +e
+EEV_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_employer_verification_test.sql 2>&1)"
+EEV_RC=$?
+set -e
+
+echo "$EEV_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+EEV_PASSED="$(echo "$EEV_OUT" | grep -c "ok  " || true)"
+
+if [ "$EEV_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the employer employment verification suite exited with code ${EEV_RC}." >&2
+  echo "$EEV_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport employer employment verification"
+else
+  echo "    ok  ${EEV_PASSED} employer employment verification assertions passed"
+
+  # The assertions that are the POINT of the release. A suite that stops
+  # running one of these and still reports a healthy total is the failure mode
+  # a floor alone does not catch.
+  for REQUIRED in \
+    "2.4 the payload is exactly the fourteen employment fields" \
+    "2.5 the employer reads none of the candidate's evidence" \
+    "2.11 an unrelated employer's owner is refused Company X's queue" \
+    "4.2 a candidate who owns the employer cannot confirm their own employment" \
+    "6.5 the employer cannot change the holder's employment period" \
+    "7.3 the decision records the CONFIRMING ORGANISATION by name" \
+    "7.4 and it is not CQrityjob -- CQrityjob decided nothing here" \
+    "8.4 the employment stays self-declared -- a refusal verifies nothing"; do
+    if ! echo "$EEV_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: a mandatory employment-verification assertion did not run: ${REQUIRED}" >&2
+      suite_failed "Security Passport employer employment verification (missing: ${REQUIRED})"
+    fi
+  done
+
+  if [ "$EEV_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 employment verification assertions, only ${EEV_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "Security Passport employer employment verification (assertion shortfall: floor 45)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # The concurrent decision, run as two real processes.
 #
 # This cannot live inside a suite file. One psql session holds one transaction,
@@ -3305,6 +3367,7 @@ echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
 echo "              ${SPRDS_PASSED} rollback data-safety assertions"
 echo "              ${SPBF1_PASSED} pilot bug fix #1 assertions,"
 echo "              ${SPTB_PASSED} trust boundary assertions,"
+echo "              ${EEV_PASSED} employer employment verification assertions,"
 echo "              ${RACE_PASSED} concurrent-decision assertions,"
 echo "              ${SPRC_PASSED} rollback correction assertions"
 echo "===================================================="
