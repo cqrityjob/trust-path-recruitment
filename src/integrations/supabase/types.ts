@@ -15167,6 +15167,7 @@ export type Database = {
         | "content_editor"
         | "assessment_editor"
         | "support"
+        | "passport_verifier"
       cig_alias_kind:
         | "alias"
         | "specialisation"
@@ -15323,6 +15324,7 @@ export const Constants = {
         "content_editor",
         "assessment_editor",
         "support",
+        "passport_verifier",
       ],
       cig_alias_kind: [
         "alias",
