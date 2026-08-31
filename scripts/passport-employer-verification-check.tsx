@@ -673,6 +673,46 @@ group("Employer -- a request nobody in the room may answer");
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   A CORRECTION ALREADY ASKED FOR
+   ══════════════════════════════════════════════════════════════════════ */
+group("Employer -- a correction they have already asked for");
+{
+  const markup = review({
+    status: "clarification_requested",
+    decidedAt: "2026-08-20T11:30:00Z",
+    holderMessage: CORRECTION,
+  });
+
+  // Found in signed-in browser acceptance: this screen came back as an
+  // identical blank first-time form, so the employer had no record of what
+  // they had asked and could send a second, different request blind.
+  ck("the standing request is stated", markup.includes(sv("empv.standingTitle")));
+  ck("with the date it was asked", markup.includes("2026-08-20"));
+  ck("and the exact message they sent", markup.includes(CORRECTION));
+  ck("labelled as their own message", markup.includes(sv("empv.yourMessage")));
+  ck("and what happens next", markup.includes(sv("empv.standingBody")));
+  ck("announced to assistive technology", /role="status"/.test(markup));
+
+  // The form STAYS: clarification_requested is not final, and the same
+  // request is what gets confirmed once the candidate has corrected the entry.
+  ck(
+    "the response form is still available -- this is not a final decision",
+    markup.includes(sv("empv.confirmAction")) && markup.includes(sv("empv.send")),
+  );
+
+  // A pending request has nothing standing behind it.
+  ck(
+    "a first-time request shows no standing-request block",
+    !review().includes(sv("empv.standingTitle")),
+  );
+  // Nor does a self-request, which offers no controls at all.
+  ck(
+    "and neither does a self-request",
+    !review({ status: "clarification_requested", isSelf: true }).includes(sv("empv.standingTitle")),
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    ALREADY ANSWERED
    ══════════════════════════════════════════════════════════════════════ */
 group("Employer -- an answered request");

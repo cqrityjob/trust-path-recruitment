@@ -983,6 +983,10 @@ const sv = {
   "empv.correctionNote":
     "Ni ändrar inte personens uppgifter. Personen rättar dem själv och kan därefter fråga igen.",
   "empv.send": "Skicka svaret",
+  "empv.standingTitle": "Ni har redan begärt en rättelse",
+  "empv.standingBody":
+    "Personen har inte kommit tillbaka med en rättad uppgift ännu. Ni kan svara igen när de har gjort det — ert svar nedan ersätter det ni skrev tidigare.",
+  "empv.askedOn": "Begärd",
   "empv.answered.approved": "Ni bekräftade anställningen",
   "empv.answered.rejected": "Ni kunde inte bekräfta anställningen",
   "empv.answered.clarification_requested": "Ni begärde rättelse eller mer information",
@@ -2487,6 +2491,10 @@ const en: Record<PassportCopyKey, string> = {
   "empv.correctionNote":
     "You do not change the person's entry. They correct it themselves and can then ask again.",
   "empv.send": "Send your answer",
+  "empv.standingTitle": "You have already asked for a correction",
+  "empv.standingBody":
+    "The person has not come back with a corrected entry yet. You can answer again once they do — the answer below replaces what you wrote before.",
+  "empv.askedOn": "Asked",
   "empv.answered.approved": "You confirmed the employment",
   "empv.answered.rejected": "You could not confirm the employment",
   "empv.answered.clarification_requested": "You asked for a correction or more information",

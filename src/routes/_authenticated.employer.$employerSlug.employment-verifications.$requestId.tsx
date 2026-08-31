@@ -173,10 +173,16 @@ function Detail({ employerId, employerSlug }: { employerId: string; employerSlug
 
   return (
     <div className="max-w-3xl">
+      {/* `min-h-11` rather than a bare inline link: measured at 375px during
+          signed-in acceptance this was a 20px-tall tap target, which is under
+          both the 24px WCAG minimum and the 44px this product uses everywhere
+          a control is a control. It is not a link inside a sentence, so the
+          inline-text exception does not apply to it. The visual weight is
+          unchanged; only the hit area grows. */}
       <Link
         to="/employer/$employerSlug/employment-verifications"
         params={{ employerSlug }}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         {pt("empv.back")}

@@ -189,6 +189,56 @@ export function EmploymentVerificationReview({
         </section>
       ) : null}
 
+      {/* ── A correction this employer has ALREADY asked for ─────────────
+          `clarification_requested` is deliberately not a final decision: the
+          candidate corrects the entry and the SAME request is then confirmed,
+          so the response form below must stay available.
+
+          What it must not do is come back blank. Found in signed-in browser
+          acceptance: after asking Amina to fix an end date, the employer's own
+          page showed an identical first-time form -- no record of what they
+          had asked, no copy of the message they sent, and the field reset to
+          "optional" and empty. An employer chasing it up a week later had
+          nothing to go on, and could send a second, different correction
+          request without ever seeing the first.
+
+          The same "silently reset to the first-time state" defect PR 4 closed
+          for the candidate, mirrored onto the employer. `holderMessage` was
+          already in the queue payload; only this block was missing. */}
+      {item.status === "clarification_requested" && !item.isSelf ? (
+        <section
+          role="status"
+          aria-labelledby={`${baseId}-standing`}
+          className="rounded-xl border border-border bg-secondary/40 p-5"
+        >
+          <h2
+            id={`${baseId}-standing`}
+            className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground"
+          >
+            <HelpCircle aria-hidden="true" className="h-4 w-4 shrink-0" />
+            {pt("empv.standingTitle")}
+          </h2>
+          {item.decidedAt ? (
+            <p className="mt-1 text-sm tabular-nums text-muted-foreground">
+              {pt("empv.askedOn")} {item.decidedAt.slice(0, 10)}
+            </p>
+          ) : null}
+          {item.holderMessage ? (
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {pt("empv.yourMessage")}
+              </p>
+              <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                {item.holderMessage}
+              </p>
+            </div>
+          ) : null}
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {pt("empv.standingBody")}
+          </p>
+        </section>
+      ) : null}
+
       {/* ── The answer ─────────────────────────────────────────────── */}
       {open && !item.isSelf ? (
         <section
