@@ -30,6 +30,7 @@ import {
   startDiscoverySession,
 } from "@/lib/career-discovery/discovery.functions";
 import { parseSessionId } from "@/lib/career-discovery/session-id";
+import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 
 type Access = Awaited<ReturnType<typeof getDiscoveryAccess>> | null;
 
@@ -102,7 +103,10 @@ export function DiscoveryLanding({ sessionPath, returnPath, historyPath }: Disco
   };
 
   const points = [
-    { icon: Clock, label: t("careerDiscovery.landing.point.time") },
+    // Derived from the instrument, never typed into copy — see
+    // v31/duration.ts for the five surfaces that used to disagree about how
+    // long this takes, including this page's own meta description.
+    { icon: Clock, label: DURATION_CLAIM[lang === "en" ? "en" : "sv"] },
     { icon: CheckCircle2, label: t("careerDiscovery.landing.point.questions") },
     { icon: Save, label: t("careerDiscovery.landing.point.autosave") },
     { icon: ShieldCheck, label: t("careerDiscovery.landing.point.noPassFail") },

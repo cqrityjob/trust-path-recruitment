@@ -146,10 +146,30 @@ export function CareerJourneySection({
   /** "anonymous" hides links that would 401 — same contract V31ReportView
    *  already uses for the rest of the report. */
   mode = "authenticated",
+  /** The current profession the candidate stated DURING the assessment,
+   *  already localised, straight off the frozen snapshot.
+   *
+   *  ── WHY THE EMPTY STATE NEEDS THIS ─────────────────────────────────
+   *
+   *  The journey is composed from the saved career profile, which an
+   *  anonymous reader does not have — so `journey` is null and this section
+   *  said "we do not yet know enough about your background". On a report
+   *  that had, two screens earlier, printed "YOU ARE HERE — Cyber Security
+   *  Analyst" from an answer the same person had just given, that is the
+   *  product contradicting itself about the one fact the reader is trying
+   *  to establish.
+   *
+   *  The journey genuinely cannot be computed — that part was true, and no
+   *  next step is invented here. What changes is the SENTENCE: it now
+   *  reflects back what they told us and names what is actually missing.
+   *  Presentation only; `known` still decides everything, still comes from
+   *  the engine, and no reader of this component gains a new data source. */
+  selfReportedCurrentProfession = null,
 }: {
   readonly journey: CareerJourney | null;
   readonly locale: Locale;
   readonly mode?: "authenticated" | "anonymous";
+  readonly selfReportedCurrentProfession?: string | null;
 }) {
   const { t } = useT();
 
@@ -251,7 +271,9 @@ export function CareerJourneySection({
           // headings on this branch at all.
           <>
             <p className="mt-3 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-              {t("cj.unknown.body")}
+              {selfReportedCurrentProfession
+                ? t("cj.unknown.bodyWithRole").replace("{0}", selfReportedCurrentProfession)
+                : t("cj.unknown.body")}
             </p>
             {mode === "authenticated" ? (
               <Link

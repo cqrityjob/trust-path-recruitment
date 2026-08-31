@@ -94,12 +94,37 @@ function fitText(
     size = Math.round(size * 0.88);
   }
   // Last resort: a single unbroken word (a Swedish compound, a pasted title)
-  // that still does not fit at the smallest size tried. Break it on
-  // character count rather than letting it run off the canvas — a hyphenless
-  // split is ugly, silently clipping the candidate's own result is worse.
+  // that still does not fit at the smallest size tried.
+  //
+  // ── WHY THE BREAK CARRIES A HYPHEN ──────────────────────────────────
+  //
+  // This used to slice on character count with nothing to mark the split,
+  // and the catalogue's own longest title landed on a real card as
+  //
+  //     KRISBEREDSKAPSSAMORDN
+  //     ARE
+  //
+  // — on the #1 line of the product's flagship shareable asset. Every
+  // measurement passed, because the card checks assert that content clears
+  // the footer, and that is exactly what a nonsense word does. It was found
+  // by looking at one.
+  //
+  // A hyphen is the standard signal that a word continues on the next line,
+  // so a reader parses it as one word rather than two invented ones. It is
+  // not hyphenation in the linguistic sense — no morpheme boundary is known
+  // here and none is guessed, because guessing wrong on a Swedish compound
+  // produces a worse result than an honest typographic break. The hyphen
+  // occupies a column, so it is charged against `perLine`.
+  //
+  // Clipping the candidate's own result remains the one thing not done.
   const perLine = Math.max(6, Math.floor(maxWidth / (size * ratio)));
   const hard: string[] = [];
-  for (let i = 0; i < text.length; i += perLine) hard.push(text.slice(i, i + perLine));
+  let rest = text;
+  while (rest.length > perLine && hard.length < maxLines - 1) {
+    hard.push(`${rest.slice(0, perLine - 1)}-`);
+    rest = rest.slice(perLine - 1);
+  }
+  hard.push(rest);
   return { lines: hard.slice(0, maxLines), size };
 }
 

@@ -117,6 +117,18 @@ jobs:
       - name: Career Discovery canonical result check
         run: bun run career-discovery-canonical-result:check
 
+      # THE PROMISES AROUND THE RANKING. The engine was correct and the report
+      # still failed the candidate three ways: a failed catalogue or CIG read
+      # was indistinguishable from "nothing is approved", so a dropped
+      # connection issued an immutable report saying profession matching is
+      # "not included in this version"; one 28-question instrument was
+      # advertised as 5, 12-15 and 15 minutes on different surfaces, one page
+      # contradicting itself; and the Career Card's no-ranking state offered
+      # only the report that had no ranking. Also pins the fairness contract:
+      # exactly which inputs may move a profession's rank.
+      - name: Career Discovery recommendation integrity check
+        run: bun run career-discovery-recommendation-integrity:check
+
       # The anonymous -> account -> saved-result conversion contract. The
       # pilot audit found the journey the public product advertises ending at
       # "the assessment isn't open yet", with the finished run discarded:

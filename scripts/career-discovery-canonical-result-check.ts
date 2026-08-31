@@ -51,7 +51,8 @@
 // only I/O `buildCanonicalSnapshot` performs, and stubbing it is what lets
 // the real function — not a reimplementation of it — be the thing under test.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import path from "node:path";
 import { createHash } from "node:crypto";
 
 import { CORE_ITEMS } from "../src/lib/career-discovery/v31/core-items";
@@ -87,6 +88,19 @@ function eq<T>(actual: T, expected: T, label: string): void {
     JSON.stringify(actual) === JSON.stringify(expected),
     `${label}${JSON.stringify(actual) === JSON.stringify(expected) ? "" : ` (got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)})`}`,
   );
+}
+
+/** Every .ts/.tsx under a directory. Generated route trees are excluded for
+ *  the same reason release-parity excludes types.ts: they describe the app,
+ *  they do not call anything. */
+function sourceFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = path.join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...sourceFiles(full));
+    else if (/\.(ts|tsx)$/.test(entry) && !entry.endsWith(".gen.ts")) out.push(full);
+  }
+  return out;
 }
 
 function group(name: string): void {
@@ -257,6 +271,45 @@ ok(
     "1.7 both validate the run with the same splitter, so neither can accept what the other rejects",
   );
 }
+
+// ── AND "EXACTLY ONE" MEANS ACROSS THE WHOLE TREE ──────────────────────
+//
+// 1.2-1.6 above check three named files. That was not enough, and the gap
+// was not hypothetical: `v31-completion.functions.ts` held a SECOND writer
+// of cd_report_snapshots (`completeV31Session`) that called
+// `buildValidatedSnapshot` directly with no catalogue, no career context and
+// no CIG edges. Every report it wrote was frozen with `ranked: []` — no
+// primary recommendation, no Top 3, no Career Card — and this guard, which
+// exists precisely to stop that, never looked at the file. It was unrouted
+// and therefore invisible in the product, which is the only reason it never
+// reached a candidate.
+//
+// So the assertion is now about the tree, not about three paths: the raw
+// engine has exactly ONE caller in src/, and that caller is the canonical
+// builder. Anything else is a second result for one attempt.
+{
+  const callers: string[] = [];
+  for (const file of sourceFiles(new URL("../src", import.meta.url).pathname)) {
+    const body = readFileSync(file, "utf8")
+      // Comments discuss it by name constantly; only real calls count.
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    // v31/snapshot.ts is where it is DEFINED; a definition is not a caller.
+    if (file.endsWith("career-discovery/v31/snapshot.ts")) continue;
+    if (/\bbuildValidatedSnapshot\s*\(/.test(body)) {
+      callers.push(file.slice(file.indexOf("/src/") + 1));
+    }
+  }
+  eq(
+    callers.length,
+    1,
+    `1.8 the raw engine has exactly one caller in src (found: ${callers.join(", ") || "none"})`,
+  );
+  ok(
+    callers[0]?.endsWith("career-discovery/v31-public.functions.ts") === true,
+    "1.9 that one caller is buildCanonicalSnapshot, the canonical builder",
+  );
+}
 // Reading `cd_professions` for an anonymous caller has to happen somewhere.
 // It happens server-side, through a dynamic import, so the service-role key
 // cannot reach the browser bundle — *.functions.ts modules ship to the client.
@@ -334,7 +387,10 @@ const topRanks = (s: ReportSnapshot) => (s.professions.ranked ?? []).map((r) => 
 const topConfidence = (s: ReportSnapshot) => (s.professions.ranked ?? []).map((r) => r.confidence);
 const dimScores = (s: ReportSnapshot) => s.outputA.dimensions.map((d) => [d.id, d.score]);
 
-ok((anonymous.professions.ranked ?? []).length > 0, "2.4 the anonymous report NAMES careers at all");
+ok(
+  (anonymous.professions.ranked ?? []).length > 0,
+  "2.4 the anonymous report NAMES careers at all",
+);
 eq(topIds(anonymous), topIds(authenticated), "2.5 Top 3 profession ids are identical, in order");
 eq(topIds(anonymous)[0], topIds(authenticated)[0], "2.6 Top 1 is identical");
 eq(topRanks(anonymous), topRanks(authenticated), "2.7 stated ranks are identical");
@@ -459,11 +515,14 @@ const student = await buildCanonicalSnapshot(stubSupabase({ approvedCatalog: tru
   locale: "sv",
   completedAt: COMPLETED_AT,
 });
-const studentAgain = await buildCanonicalSnapshot(stubSupabase({ approvedCatalog: true }) as never, {
-  run: splitAndValidateRun(studentRun as never),
-  locale: "sv",
-  completedAt: COMPLETED_AT,
-});
+const studentAgain = await buildCanonicalSnapshot(
+  stubSupabase({ approvedCatalog: true }) as never,
+  {
+    run: splitAndValidateRun(studentRun as never),
+    locale: "sv",
+    completedAt: COMPLETED_AT,
+  },
+);
 ok(
   hash(student) === hash(studentAgain),
   "5.3 a run with no career context is equally stable across the login hop",

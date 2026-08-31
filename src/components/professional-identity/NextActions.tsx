@@ -45,6 +45,7 @@ import {
   type NextBestActionSignals,
 } from "@/lib/professional-identity/next-best-action";
 import type { ProfessionalIdentityV1 } from "@/lib/professional-identity/types";
+import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 import { c, cp, L, Lp, type Copy, type Lang, type PluralCopy } from "./copy";
 
 const TITLE: Readonly<Record<ActionKind, Copy>> = {
@@ -162,9 +163,12 @@ const OUTCOME: Readonly<Record<ActionKind, Copy>> = {
     "En behörig granskare avgör, och det som godkänns blir verifierat.",
     "An authorised reviewer decides, and what passes becomes verified.",
   ),
+  // The duration comes from the instrument, not from copy — three surfaces
+  // stated three different figures for the same assessment. See
+  // career-discovery/v31/duration.ts.
   take_career_discovery: c(
-    "Cirka 15 minuter. Ger dig en karriärriktning och underlaget till ditt Career Card.",
-    "About 15 minutes. Gives you a career direction and the basis for your Career Card.",
+    `${DURATION_CLAIM.sv}. Ger dig en karriärriktning och underlaget till ditt Career Card.`,
+    `${DURATION_CLAIM.en}. Gives you a career direction and the basis for your Career Card.`,
   ),
   create_career_card: c(
     "Din profil som ett kort du kan dela.",

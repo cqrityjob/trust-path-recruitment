@@ -34,6 +34,7 @@
     "career-discovery-claim:check": "bun run scripts/career-discovery-claim-check.ts",
     "career-discovery-conversion:check": "bun run scripts/career-discovery-conversion-check.ts",
     "career-discovery-canonical-result:check": "bun run scripts/career-discovery-canonical-result-check.ts",
+    "career-discovery-recommendation-integrity:check": "bun run scripts/career-discovery-recommendation-integrity-check.ts",
     "career-journey:check": "bun run scripts/career-journey-check.ts",
     "career-discovery-career-card:check": "bun run scripts/career-discovery-career-card-check.ts",
     "prepilot-candidate-surface:check": "bun run scripts/prepilot-candidate-surface-check.tsx",

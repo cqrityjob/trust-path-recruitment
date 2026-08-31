@@ -9,6 +9,7 @@
 // until then nothing outside this directory imports from it.
 
 export * from "./version";
+export * from "./duration";
 export * from "./dimensions";
 export * from "./core-items";
 export * from "./option-matrix";

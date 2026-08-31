@@ -117,7 +117,11 @@ import {
   SnapshotValidationError,
   type ReportSnapshot,
 } from "./v31/snapshot";
-import { fetchCigProfessionTitle, fetchCigReachableSlugs } from "./career-context.functions";
+import {
+  CigReadError,
+  fetchCigProfessionTitle,
+  fetchCigReachableSlugs,
+} from "./career-context.functions";
 import type { Answer } from "./v31/scoring";
 import { DEFINITION_VERSION, PATTERN_DEFINITION_VERSION, type Locale } from "./v31/version";
 
@@ -153,19 +157,39 @@ interface ProfessionProfileRow {
  * trigger already guarantees every such row cleared review and has a
  * complete 16-dimension calibration, so this function does not re-check
  * either; it only shapes rows into what ./v31/professions.ts's pure matcher
- * expects. Today this returns an empty catalogue for every candidate, since
- * nothing has been approved yet — that is correct, not a bug, until an owner
- * actually approves a profession through the review lifecycle.
+ * expects. An empty catalogue is a real, meaningful answer — "no profession
+ * is approved for ranking" — and the report says exactly that.
+ *
+ * ── WHICH IS WHY A FAILED READ MUST NOT LOOK LIKE ONE ───────────────────
+ *
+ * Both reads below used to discard their `error` and fall through to `data ??
+ * []`. A dropped connection, a revoked grant or an RPC that no longer exists
+ * therefore produced an EMPTY CATALOGUE, which is indistinguishable from
+ * "nothing is approved yet" — and the candidate was handed a complete-looking
+ * report with no primary recommendation, no Top 3, no Career Card and a note
+ * saying profession matching is not part of this version of the product. That
+ * report is immutable and it is theirs forever; nothing later repairs it.
+ *
+ * Two different facts must not share one representation, so a failed read now
+ * throws. Nothing is written on the preview path and the buffered answers
+ * survive on the save path, so the caller loses nothing: the result screen
+ * already renders an honest "we could not build your result — your answers
+ * are kept" retry (see PublicAssessmentFlow). A visible retry is recoverable;
+ * a permanently degraded report is not.
  */
 async function fetchApprovedProfessionCatalog(
   supabase: Ctx["supabase"],
 ): Promise<{ readonly catalog: ProfessionCatalogEntry[]; readonly calibrationVersion?: string }> {
-  const { data: professions } = await supabase
+  const { data: professions, error: professionsError } = await supabase
     .from("cd_professions")
     .select(
       "profession_id, career_area_id, title_sv, title_en, career_stage, entry_role, regulated, transition_difficulty, inclusion_rationale_sv, inclusion_rationale_en, limitation_note_sv, limitation_note_en, cig_profession_slug",
     )
     .eq("approved_for_ranking", true);
+
+  if (professionsError) {
+    throw new V31PublicError("catalog_unavailable", "cd_professions read failed");
+  }
 
   const rows = (professions ?? []) as ProfessionRow[];
   if (rows.length === 0) return { catalog: [] };
@@ -178,9 +202,14 @@ async function fetchApprovedProfessionCatalog(
   // (profession_id, dimension_id) -- the most recently authored -- and only the
   // seven columns matching consumes. Direct SELECT on the table and the view is
   // revoked from authenticated; see 20260822092000.
-  const { data: profiles } = await supabase.rpc("cd_profession_bands_for_matching", {
-    _profession_ids: rows.map((p) => p.profession_id),
-  });
+  const { data: profiles, error: profilesError } = await supabase.rpc(
+    "cd_profession_bands_for_matching",
+    { _profession_ids: rows.map((p) => p.profession_id) },
+  );
+
+  if (profilesError) {
+    throw new V31PublicError("catalog_unavailable", "cd_profession_bands_for_matching failed");
+  }
 
   const bandsByProfession = new Map<string, ProfessionDimensionBand[]>();
   let calibrationVersion: string | undefined;
@@ -195,6 +224,21 @@ async function fetchApprovedProfessionCatalog(
       weight: Number(row.weight),
     });
     bandsByProfession.set(row.profession_id, list);
+  }
+
+  // A profession approved for ranking but carrying no calibration bands
+  // cannot be scored, so it would silently vanish from the ranking — the
+  // candidate would simply never be shown a profession the owner approved,
+  // with nothing anywhere saying so. The database's own
+  // cd_guard_profession_ranking_approval trigger makes this impossible to
+  // create; a read that produces it means the read is wrong, not the
+  // catalogue, so it is refused for the same reason the two errors above are.
+  const uncalibrated = rows.filter((p) => !bandsByProfession.has(p.profession_id));
+  if (uncalibrated.length > 0) {
+    throw new V31PublicError(
+      "catalog_unavailable",
+      `${uncalibrated.length} approved professions returned no calibration bands`,
+    );
   }
 
   const catalog: ProfessionCatalogEntry[] = rows.map((p) => ({
@@ -234,6 +278,12 @@ export type V31PublicErrorCode =
   // saved, just not to this account, and the candidate needs to be told that
   // rather than invited to retry forever. See resolveSaveGate.
   | "already_claimed"
+  // An input the ranking is computed from could not be read (the approved
+  // profession catalogue, its calibration bands, or the published CIG
+  // transition edges). Its own code because the run is fine and the answers
+  // are intact — retrying is the right advice, and a report must NOT be
+  // issued from a partial input set. See fetchApprovedProfessionCatalog.
+  | "catalog_unavailable"
   | "persist_failed";
 
 export class V31PublicError extends Error {
@@ -252,6 +302,7 @@ const V31_PUBLIC_ERROR_CODES: readonly V31PublicErrorCode[] = [
   "incomplete_buffer",
   "invalid_answers",
   "already_claimed",
+  "catalog_unavailable",
   "persist_failed",
 ];
 
@@ -604,20 +655,40 @@ export async function buildCanonicalSnapshot(
       ? (careerContext.currentProfessionSlug ?? null)
       : null;
 
+  // Every one of these is a ranking or presentation input frozen into an
+  // immutable report. If any of them cannot be READ, the run must fail
+  // visibly rather than produce a report built from a partial input set —
+  // see fetchApprovedProfessionCatalog and CigReadError for the full account.
+  // Normalised to one stable code here so a caller has a single thing to
+  // handle and the browser gets the honest "your answers are kept" retry.
+  let inputs: [
+    { readonly catalog: ProfessionCatalogEntry[]; readonly calibrationVersion?: string },
+    ReadonlySet<string>,
+    { sv: string; en: string } | null,
+  ];
+  try {
+    inputs = await Promise.all([
+      fetchApprovedProfessionCatalog(supabase),
+      // Item 7: real, published CIG transition edges from the candidate's
+      // current profession — never fabricated, empty when current profession is
+      // unknown or has no documented transitions.
+      fetchCigReachableSlugs(supabase, currentProfessionCigSlug),
+      // Item 8: resolved once, at build time, and frozen onto the snapshot —
+      // never re-looked-up when an old report is reopened.
+      fetchCigProfessionTitle(supabase, currentProfessionCigSlug),
+    ]);
+  } catch (err) {
+    if (err instanceof CigReadError) {
+      throw new V31PublicError("catalog_unavailable", err.detail);
+    }
+    throw err;
+  }
+
   const [
     { catalog: professionCatalog, calibrationVersion: professionCalibrationVersion },
     cigReachableSlugs,
     currentProfessionTitle,
-  ] = await Promise.all([
-    fetchApprovedProfessionCatalog(supabase),
-    // Item 7: real, published CIG transition edges from the candidate's
-    // current profession — never fabricated, empty when current profession is
-    // unknown or has no documented transitions.
-    fetchCigReachableSlugs(supabase, currentProfessionCigSlug),
-    // Item 8: resolved once, at build time, and frozen onto the snapshot —
-    // never re-looked-up when an old report is reopened.
-    fetchCigProfessionTitle(supabase, currentProfessionCigSlug),
-  ]);
+  ] = inputs;
 
   try {
     return buildValidatedSnapshot({

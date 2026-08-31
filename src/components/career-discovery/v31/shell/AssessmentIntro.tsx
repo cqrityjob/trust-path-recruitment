@@ -1,9 +1,18 @@
 // The assessment landing screen.
 //
 // Presentation only: every claim on this screen already exists in the approved
-// copy (cd.public.introBody / introNoAccount). Nothing about duration, accuracy
-// or outcomes is invented here, because a career product that oversells its
+// copy (cd.public.introBody / introNoAccount). Nothing about accuracy or
+// outcomes is invented here, because a career product that oversells its
 // first screen has already spent the trust it needs at the last one.
+//
+// The one figure this screen does state is how long the assessment takes, and
+// it is not written here either: it is DERIVED from the instrument's own
+// authored per-item estimates (v31/duration.ts) and rendered. The screen used
+// to say nothing at all about duration, which left the Career Centre — the
+// page that sends most people here — as the only surface making the promise,
+// and it was making the wrong one ("about 5 minutes" for twenty-eight
+// questions). Somebody deciding whether to start deserves the real number on
+// the page where they decide.
 //
 // ── ONE SCREEN, TWO AUDIENCES ──────────────────────────────────────────
 //
@@ -15,8 +24,9 @@
 // not know who it is talking to. Same screen, two honest versions of the same
 // promise, chosen by the one fact that decides which is true.
 
-import { ClipboardList, Layers, ScaleIcon, UserCheck } from "lucide-react";
+import { ClipboardList, Clock, Layers, ScaleIcon, UserCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 
 export function AssessmentIntro({
   onStart,
@@ -25,10 +35,15 @@ export function AssessmentIntro({
   onStart: () => void;
   signedIn?: boolean;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
 
   const facts = [
     { icon: ClipboardList, title: t("cd.public.factQuestions"), body: t("cd.public.factStages") },
+    {
+      icon: Clock,
+      title: DURATION_CLAIM[lang === "en" ? "en" : "sv"],
+      body: t("cd.public.factTimeBody"),
+    },
     {
       icon: ScaleIcon,
       title: t("cd.public.factNoJudgement"),
