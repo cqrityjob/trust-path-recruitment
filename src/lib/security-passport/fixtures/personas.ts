@@ -46,8 +46,19 @@ export const VIEWING_JURISDICTIONS: readonly string[] = ["SE", "NO", "DE"] as co
 const VAKTARE_SV = "Väktare";
 const VAKTARE_EN = "Security Officer (Väktare)";
 
-function period(p: ExperiencePeriod): ExperiencePeriod {
-  return p;
+type PeriodDefaults = "verificationMethod" | "verifiedOn";
+
+function period(
+  p: Omit<ExperiencePeriod, PeriodDefaults> & Partial<ExperiencePeriod>,
+): ExperiencePeriod {
+  return {
+    // Null unless the fixture states otherwise, for the same reason as
+    // `claim` below: a named verifier with no method describes a
+    // verification the decision record could not have produced.
+    verificationMethod: null,
+    verifiedOn: null,
+    ...p,
+  };
 }
 
 /** Phase 11 added `skillCode` and `skillLevel` to every claim; the three-market
@@ -60,7 +71,13 @@ function period(p: ExperiencePeriod): ExperiencePeriod {
  *  The defaults are honest, not merely convenient: a Swedish credential HAS no
  *  sub-jurisdiction, and an unscoped one HAS no scope. Null is the right
  *  answer in both cases, not a placeholder for a value nobody filled in. */
-type ClaimDefaults = "skillCode" | "skillLevel" | "subJurisdictionCode" | "authorisationScope";
+type ClaimDefaults =
+  | "skillCode"
+  | "skillLevel"
+  | "subJurisdictionCode"
+  | "authorisationScope"
+  | "verificationMethod"
+  | "verifiedOn";
 
 function claim(c: Omit<Claim, ClaimDefaults> & Partial<Claim>): Claim {
   return {
@@ -68,6 +85,12 @@ function claim(c: Omit<Claim, ClaimDefaults> & Partial<Claim>): Claim {
     skillLevel: null,
     subJurisdictionCode: null,
     authorisationScope: null,
+    // A fixture that states a verifier but no method or date is describing a
+    // verification the decision record could not produce. Defaulting both to
+    // null keeps the personas honest by omission rather than by invention;
+    // the fixtures that model a real attestation set them explicitly.
+    verificationMethod: null,
+    verifiedOn: null,
     ...c,
   };
 }
@@ -713,6 +736,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Nordvakt Bevakning AB",
+        verificationMethod: "employer_confirmation",
       }),
       period({
         id: "p-bjorn-2",
@@ -775,6 +799,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Nordvakt Bevakning AB",
+        verificationMethod: "employer_confirmation",
       }),
     ],
     claims: [licenceActiveVerified],
@@ -804,6 +829,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Stadsskydd Sverige AB",
+        verificationMethod: "employer_confirmation",
       }),
       period({
         id: "p-otto-2",
@@ -820,6 +846,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Nordvakt Bevakning AB",
+        verificationMethod: "employer_confirmation",
       }),
     ],
     claims: [licenceActiveVerified, grundutbildningSelfDeclared],
@@ -867,6 +894,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Datacenter Syd AB",
+        verificationMethod: "employer_confirmation",
       }),
       period({
         id: "p-vera-3",
@@ -914,6 +942,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Nordvakt Bevakning AB",
+        verificationMethod: "employer_confirmation",
       }),
       period({
         id: "p-elias-2",
@@ -930,6 +959,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Datacenter Syd AB",
+        verificationMethod: "employer_confirmation",
       }),
     ],
     claims: [licenceActiveVerified, controlRoomVerified, asisDocumented, firstAidSelfDeclared],
@@ -958,6 +988,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Stadsskydd Sverige AB",
+        verificationMethod: "employer_confirmation",
       }),
     ],
     claims: [licenceExpiredVerified, grundutbildningSelfDeclared],
@@ -987,6 +1018,7 @@ const PERSONA_SEEDS: readonly PersonaSeed[] = [
         assertionLevel: "verified",
         lifecycleState: "active",
         verifierName: "Nordvakt Bevakning AB",
+        verificationMethod: "employer_confirmation",
       }),
       period({
         id: "p-hugo-2",

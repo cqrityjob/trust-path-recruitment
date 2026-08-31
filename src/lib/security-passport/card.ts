@@ -196,10 +196,31 @@ export function buildPassportCard(
     subJurisdictionCode: holder.subJurisdictionCode ?? null,
   });
 
+  // ── THE ISSUER IS NOT A FALLBACK VERIFIER ──────────────────────────
+  //
+  // This read `c.verifierName ?? c.issuerName`, and `PassportCard` prints the
+  // result under the heading "Verified by". `issuerName` is
+  // `claimed_issuer_name`: text the candidate typed into a form and which
+  // nobody has checked. So a Passport Card could state
+  //
+  //     Verified by
+  //     BYA
+  //
+  // about a credential BYA had never been asked about -- on the surface
+  // designed to be screenshotted and sent to an employer, where it cannot be
+  // corrected afterwards.
+  //
+  // It was not an edge case either: `toClaim` set `verifierName` to null on
+  // every claim, so the fallback was the ONLY branch that ever ran.
+  //
+  // Now only a real decider organisation appears here. A card with nothing
+  // verified on it prints no attribution block at all, which is the truth.
+  // The issuer has its own line on each credential plate, under its own
+  // meaning.
   const attributions = Array.from(
     new Set(
       credentials
-        .map((c) => c.verifierName ?? c.issuerName)
+        .map((c) => c.verifierName)
         .filter((name): name is string => Boolean(name) && name !== "—"),
     ),
   );

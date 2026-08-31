@@ -37,7 +37,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { orNull } from "./rpc";
 import { confirmedWorkLocation, splitWorkCountry } from "./onboarding";
-import type { Claim, ClaimType, ExperiencePeriod, PassportHolder } from "./types";
+import type {
+  Claim,
+  ClaimType,
+  ExperiencePeriod,
+  PassportHolder,
+  VerificationMethod,
+} from "./types";
 
 /** The question set these answers were given against. Bumped when the
  *  authored wording changes, so a stored answer always means what the
@@ -151,7 +157,27 @@ function toProfile(row: ProfileRow | null): PassportProfile | null {
   };
 }
 
-function toPeriod(row: PeriodRow): ExperiencePeriod {
+/** Who verified one subject, how, and when -- resolved from the decision
+ *  record and from nowhere else.
+ *
+ *  Keyed by claim id or period id. Absent means exactly what it says: nobody
+ *  has verified this. The surfaces then print no attribution, which is the
+ *  whole correction -- the alternative they used to reach for was the
+ *  candidate's own issuer text. */
+type Provenance = {
+  readonly organisation: string | null;
+  readonly method: VerificationMethod | null;
+  readonly decidedOn: string | null;
+};
+type ProvenanceMap = ReadonlyMap<string, Provenance>;
+
+function toPeriod(row: PeriodRow, provenance: ProvenanceMap): ExperiencePeriod {
+  // Attribution is gated on the CURRENT assertion level, not on the mere
+  // existence of a past approval. A verification that was later revoked is
+  // real history and stays in the decision log, but printing "Confirmed by
+  // Bevakning AB" beside an entry that is no longer verified would restate a
+  // withdrawn conclusion as a present fact.
+  const p = row.assertion_level === "verified" ? provenance.get(row.id) : undefined;
   return {
     id: row.id,
     employerName: row.employer_name,
@@ -166,10 +192,12 @@ function toPeriod(row: PeriodRow): ExperiencePeriod {
     endedOn: row.ended_on,
     assertionLevel: row.assertion_level as ExperiencePeriod["assertionLevel"],
     lifecycleState: row.lifecycle_state as ExperiencePeriod["lifecycleState"],
-    // Phase 2 never verifies, so there is never a verifier to name. Left
-    // null rather than borrowing the employer name, which would read as an
-    // attestation nobody made.
-    verifierName: null,
+    // Never `row.employer_name`. The company a period NAMES and the company
+    // that CONFIRMED it are different facts, and borrowing the first for the
+    // second would read as an attestation nobody made.
+    verifierName: p?.organisation ?? null,
+    verificationMethod: p?.method ?? null,
+    verifiedOn: p?.decidedOn ?? null,
   };
 }
 
@@ -214,7 +242,7 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function toClaim(row: ClaimRow): Claim {
+function toClaim(row: ClaimRow, provenance: ProvenanceMap): Claim {
   // The prototype carried bilingual titles because its content was authored.
   // A holder types one title, in their own words; showing it unchanged in
   // both languages is more honest than machine-translating a credential name.
@@ -236,7 +264,30 @@ function toClaim(row: ClaimRow): Claim {
     validUntil: row.valid_until,
     assertionLevel: row.assertion_level as Claim["assertionLevel"],
     lifecycleState: row.lifecycle_state as Claim["lifecycleState"],
-    verifierName: null,
+    // ── THE VERIFIER IS THE DECIDER, OR NOBODY ─────────────────────────
+    //
+    // This was `null`, unconditionally, on every claim the holder owns. It
+    // was not merely incomplete: `buildPassportCard` computed its "Verified
+    // by" line as `verifierName ?? issuerName`, so a permanently-null
+    // verifier meant that heading ALWAYS resolved to `claimed_issuer_name`
+    // -- a string the candidate typed. A Passport Card could print
+    //
+    //     Verified by
+    //     BYA
+    //
+    // for a credential nobody had ever verified, on the one surface built
+    // to be screenshotted and sent to an employer.
+    //
+    // Both halves are fixed: the fallback is gone, and the real answer is
+    // read from `sp_verification_decisions`, which is the only record of
+    // who actually decided. Gated on `verified` for the same reason as
+    // periods above.
+    verifierName:
+      row.assertion_level === "verified" ? (provenance.get(row.id)?.organisation ?? null) : null,
+    verificationMethod:
+      row.assertion_level === "verified" ? (provenance.get(row.id)?.method ?? null) : null,
+    verifiedOn:
+      row.assertion_level === "verified" ? (provenance.get(row.id)?.decidedOn ?? null) : null,
     limitationSv: null,
     limitationEn: null,
     versionNo: row.version_no,
@@ -254,7 +305,10 @@ export const getMyPassport = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const db = supabase;
 
-    const [profileRes, periodsRes, claimsRes, eventsRes, rulesRes] = await Promise.all([
+    // Destructured on its own line: seven names do not fit the print width,
+    // and letting the formatter wrap the call would re-indent every read
+    // below it for no reason a reader benefits from.
+    const reads = await Promise.all([
       db
         .from("sp_passport_profiles")
         .select(
@@ -290,7 +344,31 @@ export const getMyPassport = createServerFn({ method: "GET" })
         )
         .eq("is_active", true)
         .order("priority", { ascending: true }),
+      // ── PROVENANCE ──────────────────────────────────────────────────
+      //
+      // Which subject a decision was about lives on the REQUEST; who decided
+      // it, how and when lives on the DECISION. Two reads because that is
+      // two tables, joined by hand below rather than through an embedded
+      // select: the relationship a holder needs runs request -> subject, and
+      // PostgREST embedding would name the decision's own request in a shape
+      // this mapper would have to unpick anyway.
+      //
+      // `decision_note` is absent from both column lists, as it is from
+      // every holder-facing read in this repository. Since migration
+      // 20261014090000 asking for it here would also be REFUSED rather than
+      // merely omitted, which is the difference between a convention and a
+      // boundary.
+      db
+        .from("sp_verification_requests")
+        .select("id, claim_id, period_id")
+        .eq("holder_user_id", userId),
+      db
+        .from("sp_verification_decisions")
+        .select("request_id, decision, decider_organisation, verification_method, decided_at")
+        .eq("holder_user_id", userId)
+        .order("decided_at", { ascending: true }),
     ]);
+    const [profileRes, periodsRes, claimsRes, eventsRes, rulesRes, reqRes, decRes] = reads;
 
     // ── EVERY ESSENTIAL READ FAILS LOUDLY ──────────────────────────────
     //
@@ -321,14 +399,59 @@ export const getMyPassport = createServerFn({ method: "GET" })
     // "nothing has ever happened here", which for a holder with a verified
     // credential is false.
     if (eventsRes.error) throw new Error(eventsRes.error.message);
+    // ── A FAILED PROVENANCE READ IS NOT "NOT VERIFIED" ─────────────────
+    //
+    // Same rule the reads above were given, for the same reason. If these
+    // two are allowed to fall into empty arrays, every verified credential
+    // the holder owns renders with its verifier missing -- "verified", with
+    // nothing willing to say by whom. That is the unfalsifiable claim the
+    // decision record exists to prevent, produced by a query failure nobody
+    // was told about. The callers already distinguish a rejected promise
+    // from an empty Passport.
+    if (reqRes.error) throw new Error(reqRes.error.message);
+    if (decRes.error) throw new Error(decRes.error.message);
+
+    // ── SUBJECT -> WHO DECIDED IT ──────────────────────────────────────
+    //
+    // Decisions arrive oldest-first, so a later decision on the same subject
+    // overwrites an earlier one and the map ends holding the CURRENT answer.
+    // Only `approved` writes an attribution: a rejection has a decider too,
+    // and naming them beside the entry would read as an endorsement of it.
+    const subjectOf = new Map<string, string>();
+    for (const r of (reqRes.data ?? []) as Array<{
+      id: string;
+      claim_id: string | null;
+      period_id: string | null;
+    }>) {
+      const subject = r.claim_id ?? r.period_id;
+      if (subject) subjectOf.set(r.id, subject);
+    }
+
+    const provenance = new Map<string, Provenance>();
+    for (const d of (decRes.data ?? []) as Array<{
+      request_id: string;
+      decision: string;
+      decider_organisation: string | null;
+      verification_method: string | null;
+      decided_at: string;
+    }>) {
+      if (d.decision !== "approved") continue;
+      const subject = subjectOf.get(d.request_id);
+      if (!subject) continue;
+      provenance.set(subject, {
+        organisation: d.decider_organisation,
+        method: (d.verification_method as VerificationMethod | null) ?? null,
+        decidedOn: d.decided_at.slice(0, 10),
+      });
+    }
 
     const profile = toProfile((profileRes.data as ProfileRow | null) ?? null);
-    const periods = ((periodsRes.data ?? []) as PeriodRow[]).map(toPeriod);
+    const periods = ((periodsRes.data ?? []) as PeriodRow[]).map((r) => toPeriod(r, provenance));
     // Superseded and withdrawn entries stay in the database as history but
     // are not part of the current Passport view.
     const claims = ((claimsRes.data ?? []) as ClaimRow[])
       .filter((r) => r.lifecycle_state !== "superseded" && r.lifecycle_state !== "withdrawn")
-      .map(toClaim);
+      .map((r) => toClaim(r, provenance));
 
     // A Passport with no derivation rules would silently show every holder as
     // having no professional identity at all, which is indistinguishable from

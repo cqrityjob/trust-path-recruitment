@@ -17,7 +17,11 @@
 
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatDuration, formatPeriodRange } from "@/lib/security-passport/format";
+import {
+  formatDuration,
+  formatPeriodRange,
+  verifierAttributionKey,
+} from "@/lib/security-passport/format";
 import { toEpochDay, DAYS_PER_MONTH } from "@/lib/security-passport/experience";
 import { countsTowardExperience, type ExperiencePeriod } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
@@ -125,9 +129,15 @@ export function ExperienceTimeline({
                   {!counted ? <Marker>{pt("timeline.excluded")}</Marker> : null}
                 </div>
 
+                {/* An employer confirming that someone worked for them has
+                    done something real and quite unlike CQrityjob reading a
+                    certificate. Printing "Verified by" over both flattened
+                    the distinction; the recorded method now picks the words,
+                    so an attested period reads "Confirmed by Bevakning AB". */}
                 {p.verifierName ? (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {pt("claims.verifier")}: {p.verifierName}
+                    {pt(verifierAttributionKey(p.verificationMethod))}: {p.verifierName}
+                    {p.verifiedOn ? ` · ${p.verifiedOn}` : ""}
                   </p>
                 ) : null}
 

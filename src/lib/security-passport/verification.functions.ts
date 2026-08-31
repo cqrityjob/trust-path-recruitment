@@ -26,6 +26,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { classifyDecisionError, DECISION_ERROR_PREFIX } from "./decision-errors";
 import { orNull } from "./rpc";
+import type { VerificationMethod } from "./types";
 
 export type VerificationStatus =
   | "pending"
@@ -34,10 +35,10 @@ export type VerificationStatus =
   | "clarification_requested"
   | "withdrawn";
 
-export type VerificationMethod =
-  | "document_review"
-  | "employer_confirmation"
-  | "issuer_confirmation";
+/** Re-exported from the domain spine, where it now lives beside
+ *  `AssertionLevel` and `LifecycleState`: the method is part of the trust
+ *  model, not of this transport module, and `Claim` needs it too. */
+export type { VerificationMethod };
 
 export interface MyVerificationRequest {
   readonly id: string;
@@ -342,12 +343,61 @@ export interface VerifierClaimVersion {
   readonly lifecycle: string;
 }
 
+/** The credential AS THE CANDIDATE STATED IT -- never as anyone verified it.
+ *
+ *  Every field here is holder-authored. That is the point: a reviewer's job
+ *  is to compare this against the document, so the claim has to arrive whole.
+ *  `sp_verifier_request_detail` has always carried most of it and the mapper
+ *  below dropped all of it, which left the reviewer deciding on a title. */
+export interface VerifierClaimFacts {
+  readonly id: string;
+  readonly claimType: string | null;
+  readonly title: string | null;
+  /** Candidate-entered. The ISSUER -- never the verifier, and never promoted
+   *  into one. See `card.ts` for the fallback that used to do exactly that. */
+  readonly issuer: string | null;
+  readonly credentialCode: string | null;
+  readonly credentialReference: string | null;
+  readonly jurisdictionCode: string | null;
+  /** Emirate or devolved region. Without it a Dubai licence reads as UAE-wide. */
+  readonly subJurisdictionCode: string | null;
+  readonly authorisationScope: string | null;
+  readonly issuedOn: string | null;
+  readonly validFrom: string | null;
+  readonly validUntil: string | null;
+  readonly assertion: string | null;
+  readonly lifecycle: string | null;
+  readonly versionNo: number | null;
+}
+
+/** An employment period as the candidate stated it. Same rule as above. */
+export interface VerifierPeriodFacts {
+  readonly id: string;
+  readonly employer: string | null;
+  readonly role: string | null;
+  readonly startedOn: string | null;
+  readonly endedOn: string | null;
+  readonly employmentType: string | null;
+  readonly jurisdictionCode: string | null;
+  readonly securityRelevance: string | null;
+  readonly securityFraction: number | null;
+  readonly fteFraction: number | null;
+  readonly versionNo: number | null;
+  readonly assertion: string | null;
+  readonly lifecycle: string | null;
+}
+
 export interface VerifierRequestDetail {
   readonly id: string;
   readonly status: VerificationStatus;
+  readonly submittedAt: string;
+  readonly subjectType: "claim" | "experience";
   readonly holderName: string;
   /** See `VerifierQueueItem.isSelf`. */
   readonly isSelf: boolean;
+  /** Exactly one of these is populated, per `subjectType`. */
+  readonly claim: VerifierClaimFacts | null;
+  readonly period: VerifierPeriodFacts | null;
   readonly evidence: readonly VerifierEvidenceRef[];
   readonly previousVersions: readonly VerifierClaimVersion[];
   readonly priorDecisions: readonly VerifierPriorDecision[];
@@ -403,12 +453,72 @@ export const getVerifierRequestDetail = createServerFn({ method: "POST" })
     const raw = (detail ?? {}) as Record<string, unknown>;
     const list = (key: string): Array<Record<string, unknown>> =>
       Array.isArray(raw[key]) ? (raw[key] as Array<Record<string, unknown>>) : [];
+    const obj = (key: string): Record<string, unknown> | null => {
+      const v = raw[key];
+      return v && typeof v === "object" && !Array.isArray(v)
+        ? (v as Record<string, unknown>)
+        : null;
+    };
+    // An absent field stays null. It must never become "" or an em dash here:
+    // the reviewer page decides how to say "not stated", and a mapper that
+    // invents a placeholder makes a missing credential reference
+    // indistinguishable from one the candidate deliberately left blank.
+    const str = (o: Record<string, unknown>, k: string): string | null => {
+      const v = o[k];
+      return typeof v === "string" && v !== "" ? v : null;
+    };
+    const num = (o: Record<string, unknown>, k: string): number | null => {
+      if (o[k] === null || o[k] === undefined) return null;
+      const v = Number(o[k]);
+      return Number.isNaN(v) ? null : v;
+    };
+
+    const claimRaw = obj("claim");
+    const periodRaw = obj("period");
 
     return {
       id: String(raw.id ?? data.requestId),
       status: (raw.status as VerificationStatus) ?? "pending",
+      submittedAt: String(raw.submitted_at ?? ""),
+      subjectType: raw.subject_type === "experience" ? "experience" : "claim",
       holderName: String(raw.holder_name ?? ""),
       isSelf: raw.is_self === true,
+      claim: claimRaw
+        ? {
+            id: String(claimRaw.id ?? ""),
+            claimType: str(claimRaw, "type"),
+            title: str(claimRaw, "title"),
+            issuer: str(claimRaw, "issuer"),
+            credentialCode: str(claimRaw, "credential_code"),
+            credentialReference: str(claimRaw, "credential_reference"),
+            jurisdictionCode: str(claimRaw, "jurisdiction"),
+            subJurisdictionCode: str(claimRaw, "sub_jurisdiction"),
+            authorisationScope: str(claimRaw, "authorisation_scope"),
+            issuedOn: str(claimRaw, "issued_on"),
+            validFrom: str(claimRaw, "valid_from"),
+            validUntil: str(claimRaw, "valid_until"),
+            assertion: str(claimRaw, "assertion"),
+            lifecycle: str(claimRaw, "lifecycle"),
+            versionNo: num(claimRaw, "version_no"),
+          }
+        : null,
+      period: periodRaw
+        ? {
+            id: String(periodRaw.id ?? ""),
+            employer: str(periodRaw, "employer"),
+            role: str(periodRaw, "role"),
+            startedOn: str(periodRaw, "started_on"),
+            endedOn: str(periodRaw, "ended_on"),
+            employmentType: str(periodRaw, "employment_type"),
+            jurisdictionCode: str(periodRaw, "jurisdiction"),
+            securityRelevance: str(periodRaw, "security_relevance"),
+            securityFraction: num(periodRaw, "security_fraction"),
+            fteFraction: num(periodRaw, "fte_fraction"),
+            versionNo: num(periodRaw, "version_no"),
+            assertion: str(periodRaw, "assertion"),
+            lifecycle: str(periodRaw, "lifecycle"),
+          }
+        : null,
       evidence: list("evidence").map((e) => ({
         id: String(e.id),
         fileName: String(e.file_name ?? ""),

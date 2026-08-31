@@ -618,9 +618,25 @@ BEGIN
     '11.7 a stranger can walk no part of another holder''s version chain');
 END $$;
 
--- The private columns must not reach the verifier's review payload either.
--- The verifier is the one principal with a legitimate reason to look at a
--- claim, and they still see the assertion, not the holder's private note.
+-- The holder's private note must not reach the verifier's review payload.
+--
+-- ── WHAT CHANGED HERE, AND WHY ─────────────────────────────────────────
+--
+-- This block used to assert that `credential_reference` was absent from the
+-- verifier payload too. That was widening Phase 7's rule past its own reason.
+-- The rule exists because to a RECIPIENT the reference is a lookup key into
+-- someone else's register -- and that boundary is untouched and still proved
+-- for all five disclosure packages in GROUP 3 above, which is where it
+-- belongs.
+--
+-- The verifier is not a recipient. Their whole task is to match the number
+-- printed on the certificate against the number on the claim, and a reviewer
+-- who cannot see the claimed reference is comparing a title to a document.
+-- Migration 20261014090000 therefore returns it in the verifier-gated review
+-- payload, and only there.
+--
+-- `holder_note` is a different case and is unchanged: it is the holder's
+-- private words, and nothing is checked against it. 11.9 still holds.
 DO $$
 DECLARE
   _v uuid := 'd7000000-0000-0000-0000-000000000009';
@@ -639,10 +655,13 @@ BEGIN
   _detail := public.sp_verifier_request_detail(_req);
   RESET ROLE;
 
-  PERFORM pg_temp.ok(_detail::text NOT LIKE '%P7-REF-OV-SECRET%',
-    '11.8 the verifier review payload carries no credential_reference');
+  -- The reference IS available to the verifier, by design. Asserted
+  -- positively rather than dropped: silence here would leave nothing saying
+  -- the reviewer can see the field their decision depends on.
+  PERFORM pg_temp.ok(_detail::text LIKE '%P7-REF-OV-SECRET%',
+    '11.8 the verifier review payload carries the claimed credential_reference');
   PERFORM pg_temp.ok(_detail::text NOT LIKE '%privat anteckning%',
-    '11.9 the verifier review payload carries no holder_note');
+    '11.9 the verifier review payload still carries no holder_note');
 END $$;
 
 -- Audit events are read by more principals than the claim itself, so the

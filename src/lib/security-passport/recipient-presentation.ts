@@ -147,7 +147,15 @@ function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number]): Cl
     validUntil: c.valid_until,
     assertionLevel: c.assertion as AssertionLevel,
     lifecycleState: c.lifecycle as LifecycleState,
+    // Provenance travels from the disclosure payload unchanged. The recipient
+    // surface is the one a stranger reads with no way to check anything
+    // behind it, so "who decided, how, and when" arrives as three separate
+    // recorded facts and is never assembled out of the issuer.
     verifierName: c.verifier_organisation,
+    verificationMethod: (c.verification_method as Claim["verificationMethod"]) ?? null,
+    // Sliced to a calendar day: `verifiedOn` is a date across the domain,
+    // and the payload carries a timestamp.
+    verifiedOn: c.verified_at ? c.verified_at.slice(0, 10) : null,
     limitationSv: null,
     limitationEn: null,
     versionNo: 1,
