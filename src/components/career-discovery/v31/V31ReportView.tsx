@@ -203,7 +203,12 @@ export function V31ReportView({
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
           {t("careerDiscovery.report.v31.patternEyebrow")}
         </p>
+        {/* The one line that identifies WHICH result this is. Named for the
+            conversion E2E, which reads it before an account exists and again
+            from the saved report afterwards: same answers, same result, or
+            signing in silently changed what the candidate was told. */}
         <h1
+          data-testid="cd-pattern-name"
           className="mt-4 max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl"
           style={{ fontFamily: "var(--font-display)" }}
         >

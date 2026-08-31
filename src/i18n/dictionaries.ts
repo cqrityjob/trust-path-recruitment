@@ -490,6 +490,10 @@ export const dictionaries = {
     // organisation, which a non-member cannot read anyway.
     "auth.invite.organisationContext":
       "Du har blivit inbjuden till en organisation. Logga in eller skapa ett arbetsgivarkonto — sedan kommer du tillbaka till inbjudan.",
+    // Somebody who finished Career Discovery signed out and came here for
+    // exactly one reason. Says so; never echoes the token.
+    "auth.discoveryClaim.waiting":
+      "Ditt resultat väntar på dig. Skapa kontot eller logga in, så sparas det direkt i Min karriär.",
     "auth.name": "Namn (valfritt)",
     "auth.email": "E-post",
     "auth.password": "Lösenord",
@@ -981,6 +985,40 @@ export const dictionaries = {
     "cd.public.factNoAccountShort": "Inget konto krävs för att börja",
     "cd.public.factNoAccountBody":
       "Dina svar sparas i den här fliken. Du loggar in först när du vill spara resultatet.",
+    // ── SIGNED IN, ON THE SAME SCREEN ───────────────────────────────
+    // "Du behöver inget konto" is true for a signed-out visitor and simply
+    // false for somebody who is already logged in. Same screen, two honest
+    // versions of the same promise — see AssessmentIntro.
+    "cd.public.introSignedIn":
+      "Du är inloggad, så resultatet sparas automatiskt i Min karriär när du är klar. Du kan avbryta och fortsätta senare.",
+    "cd.public.factSavedShort": "Sparas i Min karriär",
+    "cd.public.factSavedBody":
+      "Du är inloggad. Resultatet hamnar i din karriärprofil när du är klar.",
+    // ── ATT HÄMTA HEM ETT RESULTAT ──────────────────────────────────
+    // Fyra tillstånd, fyra meningar. Ett generellt serverfel i deras ställe
+    // är hur någon som kom tillbaka efter sitt sparade resultat i stället
+    // fick veta att något "gick fel" — och började om från fråga ett.
+    "cd.public.claim.expired.title": "Länken har gått ut",
+    "cd.public.claim.expired.body":
+      "Ett sparat resultat ligger kvar i den här webbläsaren i sju dagar. Den tiden har passerat, så resultatet finns inte längre här. Har du redan hunnit spara det hittar du det i Min karriär.",
+    "cd.public.claim.invalid.title": "Länken stämmer inte",
+    "cd.public.claim.invalid.body":
+      "Den här länken hör inte ihop med resultatet som ligger i den här webbläsaren. Öppna länken du fick i ditt eget bekräftelsemejl, eller logga in och titta i Min karriär.",
+    "cd.public.claim.stale.title": "Vägledningen har uppdaterats",
+    "cd.public.claim.stale.body":
+      "Resultatet i den här webbläsaren gjordes med en tidigare version av frågorna och kan därför inte sparas som ett resultat för den nya. Redan sparade rapporter påverkas inte — de ligger kvar i Min karriär precis som de var.",
+    "cd.public.claim.notFound.title": "Vi hittar inget resultat här",
+    "cd.public.claim.notFound.body":
+      "Den här webbläsaren håller inget resultat som väntar på att sparas. Öppnade du länken i en annan webbläsare eller på en annan enhet ligger resultatet kvar där. Har du redan sparat det hittar du det i Min karriär.",
+    "cd.public.claim.alreadyClaimed.title": "Resultatet är redan sparat",
+    "cd.public.claim.alreadyClaimed.body":
+      "Det här resultatet är redan hämtat till ett konto. Logga in med det kontot för att öppna det. Gör du om vägledningen får du ett nytt resultat vid sidan av det gamla.",
+    "cd.public.claim.toMyCareer": "Till Min karriär",
+    "cd.public.claim.signIn": "Logga in",
+    "cd.public.claim.startOver": "Gör vägledningen igen",
+    "cd.public.claim.savedTitle": "Resultatet är sparat i Min karriär",
+    "cd.public.claim.savedBody":
+      "Din rapport hör nu till ditt konto. Du behöver aldrig svara på frågorna igen — den ligger kvar och du når den när du vill.",
     // ── CAREER JOURNEY ──────────────────────────────────────────────
     // Where the four products meet on one page. Every string here has to
     // survive being read by somebody who is about to make a decision, so
@@ -5694,6 +5732,8 @@ export const dictionaries = {
     "auth.or": "or",
     "auth.invite.organisationContext":
       "You have been invited to an organisation. Sign in or create an employer account — you will be returned to the invitation.",
+    "auth.discoveryClaim.waiting":
+      "Your result is waiting for you. Create your account or sign in and it's saved straight to My Career.",
     "auth.name": "Name (optional)",
     "auth.email": "Email",
     "auth.password": "Password",
@@ -6154,6 +6194,32 @@ export const dictionaries = {
     "cd.public.factNoAccountShort": "No account needed to begin",
     "cd.public.factNoAccountBody":
       "Your answers stay in this tab. You only sign in when you want to save the result.",
+    "cd.public.introSignedIn":
+      "You're signed in, so your result is saved to My Career automatically when you finish. You can stop and continue later.",
+    "cd.public.factSavedShort": "Saved to My Career",
+    "cd.public.factSavedBody":
+      "You're signed in. Your result goes to your career profile when you finish.",
+    "cd.public.claim.expired.title": "This link has expired",
+    "cd.public.claim.expired.body":
+      "A finished result waits in this browser for seven days. That window has passed, so the result is no longer here. If you already saved it, you'll find it in My Career.",
+    "cd.public.claim.invalid.title": "This link doesn't match",
+    "cd.public.claim.invalid.body":
+      "This link doesn't belong to the result held in this browser. Open the link from your own confirmation email, or sign in and check My Career.",
+    "cd.public.claim.stale.title": "The assessment has been updated",
+    "cd.public.claim.stale.body":
+      "The result in this browser was produced with an earlier version of the questions, so it can't be saved as a result for the new one. Reports you have already saved are untouched — they're in My Career exactly as they were.",
+    "cd.public.claim.notFound.title": "We can't find a result here",
+    "cd.public.claim.notFound.body":
+      "This browser isn't holding a result waiting to be saved. If you opened the link in a different browser or on another device, the result is still there. If you already saved it, you'll find it in My Career.",
+    "cd.public.claim.alreadyClaimed.title": "This result is already saved",
+    "cd.public.claim.alreadyClaimed.body":
+      "This result has already been saved to an account. Sign in with that account to open it. Retaking the assessment gives you a new result alongside the old one.",
+    "cd.public.claim.toMyCareer": "Go to My Career",
+    "cd.public.claim.signIn": "Sign in",
+    "cd.public.claim.startOver": "Take the assessment again",
+    "cd.public.claim.savedTitle": "Your result is saved in My Career",
+    "cd.public.claim.savedBody":
+      "Your report now belongs to your account. You never have to answer the questions again — it stays here, and you can open it whenever you like.",
     // ── CAREER JOURNEY ──────────────────────────────────────────────
     "cj.title": "Your career journey",
     "cj.doesNotChangeDna":

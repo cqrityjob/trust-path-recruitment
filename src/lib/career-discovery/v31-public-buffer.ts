@@ -364,6 +364,37 @@ function claimStore(): Storage | null {
   }
 }
 
+/** Mints the claim token.
+ *
+ *  `crypto.randomUUID` is the right answer and is used wherever it exists.
+ *  It is absent in more places than it looks, though — most notably any
+ *  non-secure context, which is exactly where a candidate testing a staging
+ *  build ends up — and the previous fallback was `Date.now()` plus one
+ *  `Math.random()`, which is neither unguessable nor unique enough for a
+ *  value that decides who a finished result belongs to.
+ *
+ *  So the fallback now uses `getRandomValues`, which is available in every
+ *  context `randomUUID` is missing from, and only degrades to `Math.random`
+ *  when the platform offers no CSPRNG at all. 128 bits either way. */
+function mintClaimToken(): string {
+  const c = typeof crypto !== "undefined" ? crypto : undefined;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  if (c && typeof c.getRandomValues === "function") {
+    const bytes = c.getRandomValues(new Uint8Array(16));
+    // Written as a loop rather than an Array helper: this module is asserted
+    // never to touch the database, and that assertion recognises a query by
+    // its method call. Spelling the hex encoder out keeps the assertion
+    // meaning what it says instead of being relaxed to accommodate it. See
+    // scripts/public-assessment-auth-check.ts, group 3.
+    let hex = "";
+    for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+    return hex;
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+
 /** Stage a finished result for claiming, and return the token that will be
  *  required to claim it. Overwrites any previous pending claim: there is one
  *  candidate per browser and the newest finished run is the one they asked
@@ -372,10 +403,7 @@ export function stageClaim(buffer: PublicBuffer, careerContext: unknown): string
   const store = claimStore();
   if (!store) return null;
   if (!isComplete(buffer)) return null;
-  const token =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const token = mintClaimToken();
   const record: PendingClaim = {
     claimVersion: CLAIM_VERSION,
     claimToken: token,
@@ -391,39 +419,77 @@ export function stageClaim(buffer: PublicBuffer, careerContext: unknown): string
   return token;
 }
 
-/** The staged result, IF this caller presented the matching token and the
- *  record is still valid.
+/** Why a staged claim could not be read.
  *
- *  Returns null — never a partial or unverified record — for a missing
- *  token, a mismatched token, an expired record, a record from a different
- *  buffer/claim version, or a run that is not actually complete. Replaying
- *  half of somebody's answers, or somebody else's, is worse than asking them
- *  to start again. */
-export function readPendingClaim(token: string | null | undefined): PendingClaim | null {
+ *  ── WHY THIS IS A UNION AND NOT A NULL ──────────────────────────────
+ *
+ *  `readPendingClaim` collapses every failure into `null`, which is the
+ *  right shape for the code that replays answers — it must never act on a
+ *  half-trusted record. It is the wrong shape for the person standing in
+ *  front of the screen. "We could not restore your result" is the same
+ *  sentence for a claim that expired last week, a link opened in a browser
+ *  that never held the result, and a token that does not match — and only
+ *  one of those is worth them trying anything at all.
+ *
+ *  So the reason is preserved HERE, and thrown away by `readPendingClaim`.
+ *  Nothing about the stored record is exposed by it: the reason describes
+ *  the caller's own token, never the contents of a claim they cannot read.
+ */
+export type PendingClaimState =
+  /** Nothing staged in this browser (or no token presented at all). */
+  | { readonly status: "none" }
+  /** Staged, but the seven-day window has passed. The record is destroyed. */
+  | { readonly status: "expired" }
+  /** Staged, but this token is not the one that was minted for it. */
+  | { readonly status: "mismatch" }
+  /** Staged against a different instrument version, or no longer a complete
+   *  run. Replaying it would produce a report the candidate never took. */
+  | { readonly status: "stale" }
+  | { readonly status: "ok"; readonly claim: PendingClaim };
+
+/** The staged result, IF this caller presented the matching token and the
+ *  record is still valid — with the reason attached when it is not.
+ *
+ *  Never returns a partial or unverified record: a missing token, a
+ *  mismatched token, an expired record, a record from a different
+ *  buffer/claim version, or a run that is not actually complete all come
+ *  back as a refusal. Replaying half of somebody's answers, or somebody
+ *  else's, is worse than asking them to start again. */
+export function inspectPendingClaim(token: string | null | undefined): PendingClaimState {
   const store = claimStore();
-  if (!store || !token) return null;
+  if (!store || !token) return { status: "none" };
   try {
     const raw = store.getItem(CLAIM_KEY);
-    if (!raw) return null;
+    if (!raw) return { status: "none" };
     const parsed = JSON.parse(raw) as PendingClaim;
-    if (parsed.claimVersion !== CLAIM_VERSION) return null;
+    if (parsed.claimVersion !== CLAIM_VERSION) return { status: "stale" };
     // Constant-time comparison is not the point here — the token is not a
     // server-side secret and the attacker would already have to be sitting
     // at this browser. What matters is that a mismatch claims nothing.
-    if (typeof parsed.claimToken !== "string" || parsed.claimToken !== token) return null;
+    if (typeof parsed.claimToken !== "string" || parsed.claimToken !== token) {
+      return { status: "mismatch" };
+    }
     if (!parsed.expiresAt || Date.parse(parsed.expiresAt) <= Date.now()) {
       clearPendingClaim();
-      return null;
+      return { status: "expired" };
     }
     const buffer = parsed.buffer;
-    if (!buffer || buffer.bufferVersion !== BUFFER_VERSION) return null;
-    if (buffer.definitionVersion !== DEFINITION_VERSION) return null;
-    if (buffer.contentVersion !== CONTENT_VERSION) return null;
-    if (!isComplete(buffer)) return null;
-    return parsed;
+    if (!buffer || buffer.bufferVersion !== BUFFER_VERSION) return { status: "stale" };
+    if (buffer.definitionVersion !== DEFINITION_VERSION) return { status: "stale" };
+    if (buffer.contentVersion !== CONTENT_VERSION) return { status: "stale" };
+    if (!isComplete(buffer)) return { status: "stale" };
+    return { status: "ok", claim: parsed };
   } catch {
-    return null;
+    return { status: "stale" };
   }
+}
+
+/** The staged result, or null. The replay path's view of
+ *  `inspectPendingClaim` — see that function for why the reason exists and
+ *  why this one deliberately discards it. */
+export function readPendingClaim(token: string | null | undefined): PendingClaim | null {
+  const state = inspectPendingClaim(token);
+  return state.status === "ok" ? state.claim : null;
 }
 
 /** Whether a pending claim exists at all, without needing the token.
@@ -452,4 +518,130 @@ export function clearPendingClaim(): void {
   } catch {
     /* nothing to clear */
   }
+}
+
+// =========================================================================
+// CLAIMED RESULT — what the claim URL means AFTER it has been claimed
+// =========================================================================
+//
+// ── THE DEFECT ─────────────────────────────────────────────────────────
+//
+// A claim is consumed exactly once: the staged record is destroyed the
+// moment the write is confirmed (see clearPendingClaim's call site). That is
+// correct, and it is also why the claim URL turned hostile the second it
+// worked. The candidate lands on their saved report, presses Back, and the
+// browser returns them to /security-career-assessment?claim=<token> — where
+// there is now no staged claim at all. The honest reading of that state is
+// "this link no longer carries a result", and telling somebody that thirty
+// seconds after their result was saved is indistinguishable from losing it.
+//
+// So the token's OUTCOME is remembered where the token itself was: the
+// snapshot the claim produced. Returning to the claim URL then means "you
+// have already saved this — here it is", which is both true and useful.
+//
+// ── WHAT IS STORED ─────────────────────────────────────────────────────
+//
+// The token and the snapshot id it produced. No answers, no report content,
+// no identity. The snapshot id is not a credential: reading that report
+// still requires being signed in as its owner, enforced by RLS, and this
+// record cannot make anybody its owner. Same seven-day window as the claim
+// it replaces, so nothing outlives the journey it belongs to.
+
+const CLAIMED_KEY = "cqj:discovery:v31:claimed-result:v1";
+const CLAIMED_VERSION = 1;
+
+interface ClaimedResult {
+  readonly claimedVersion: number;
+  readonly claimToken: string;
+  readonly snapshotId: string;
+  readonly expiresAt: string;
+}
+
+/** Record that this token has already produced a saved report. Called only
+ *  after a confirmed write, alongside clearPendingClaim. */
+export function rememberClaimedResult(token: string, snapshotId: string): void {
+  const store = claimStore();
+  if (!store || !token || !snapshotId) return;
+  const record: ClaimedResult = {
+    claimedVersion: CLAIMED_VERSION,
+    claimToken: token,
+    snapshotId,
+    expiresAt: new Date(Date.now() + CLAIM_TTL_MS).toISOString(),
+  };
+  try {
+    store.setItem(CLAIMED_KEY, JSON.stringify(record));
+  } catch {
+    // Storage full or disabled. The claim itself already succeeded; the
+    // candidate loses only the Back-button courtesy.
+  }
+}
+
+/** The snapshot this token already produced, if it produced one in this
+ *  browser and the record is still current. Token-matched for the same
+ *  reason the claim itself is: a different token learns nothing. */
+export function readClaimedResult(token: string | null | undefined): string | null {
+  const store = claimStore();
+  if (!store || !token) return null;
+  try {
+    const raw = store.getItem(CLAIMED_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ClaimedResult;
+    if (parsed.claimedVersion !== CLAIMED_VERSION) return null;
+    if (parsed.claimToken !== token) return null;
+    if (!parsed.expiresAt || Date.parse(parsed.expiresAt) <= Date.now()) {
+      try {
+        store.removeItem(CLAIMED_KEY);
+      } catch {
+        /* nothing to clear */
+      }
+      return null;
+    }
+    return typeof parsed.snapshotId === "string" && parsed.snapshotId ? parsed.snapshotId : null;
+  } catch {
+    return null;
+  }
+}
+
+// =========================================================================
+// CLAIM ENTRY — the one decision the claim URL makes on arrival
+// =========================================================================
+//
+// Extracted as a pure function rather than left inline in the flow's boot
+// effect, because it is the decision this whole PR turns on and it has to be
+// testable without a browser, a router or a Supabase session. See
+// scripts/career-discovery-claim-check.ts.
+//
+// The ORDER is the fix. The flow previously resolved the internal-tester
+// allowlist first and returned early on a refusal, so a candidate who had
+// legitimately completed the assessment anonymously and created an account
+// to save it was shown "not open yet" and their finished run was never even
+// looked at. Whether the product is open to a signed-in user STARTING a run
+// and whether this browser is holding a finished run that belongs to
+// whoever just signed in are two different questions; only the second one
+// is asked here.
+
+export type ClaimEntry =
+  /** No claim token in the URL. The ordinary flow decides everything. */
+  | { readonly kind: "none" }
+  /** This token already produced a saved report. Go there. */
+  | { readonly kind: "already-saved"; readonly snapshotId: string }
+  /** A finished run is waiting to be claimed by whoever is signed in. */
+  | { readonly kind: "claimable"; readonly claim: PendingClaim }
+  /** A token was presented and cannot be honoured. `reason` is what to say. */
+  | { readonly kind: "unclaimable"; readonly reason: "expired" | "mismatch" | "stale" | "none" };
+
+/**
+ * What a `?claim=` token means right now, in this browser.
+ *
+ * `already-saved` is deliberately checked FIRST: a token that has already
+ * produced a report is answered by that report, not by the absence of the
+ * staged record it consumed.
+ */
+export function resolveClaimEntry(token: string | null | undefined): ClaimEntry {
+  if (!token) return { kind: "none" };
+  const saved = readClaimedResult(token);
+  if (saved) return { kind: "already-saved", snapshotId: saved };
+  const state = inspectPendingClaim(token);
+  if (state.status === "ok") return { kind: "claimable", claim: state.claim };
+  return { kind: "unclaimable", reason: state.status };
 }

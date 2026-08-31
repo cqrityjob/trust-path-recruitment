@@ -43,6 +43,23 @@
 // answer every question and only then discover their result cannot
 // be saved would still be the worst version of this feature, which is why
 // a signed-in non-tester is stopped here instead of at the save button.
+//
+// ── EXCEPT FOR A CLAIM, WHICH IS NOT AN AVAILABILITY QUESTION ──────────
+//
+// One thing is resolved BEFORE the tester check: a `?claim=` token. It used
+// to be resolved after, and the ordering was the pilot's worst defect. A
+// candidate who completed the assessment anonymously — which the product
+// invites the whole public to do — created an account because the result
+// page told them to, and returned through their own confirmation link was
+// met with "the assessment isn't open yet", and the finished run sitting in
+// this browser was never looked at. They lost it, and the only way onward
+// was twenty-eight questions again.
+//
+// "May this person start a run" and "does this browser hold a finished run
+// belonging to whoever just signed in" are different questions. The claim
+// path asks only the second. See the boot effect below, and resolveSaveGate
+// in v31-public.functions.ts for the server side, which is where it is
+// actually enforced.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -78,6 +95,7 @@ import {
   shareResultText,
 } from "@/lib/career-discovery/v31/career-card-export";
 import { DISCOVER_URL_PATH } from "@/lib/career-discovery/v31/career-card";
+import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import {
   clearCareerContext,
   EMPTY_CAREER_CONTEXT,
@@ -104,8 +122,9 @@ import {
   isComplete,
   markComplete,
   readBuffer,
-  readPendingClaim,
   recordAnswer,
+  rememberClaimedResult,
+  resolveClaimEntry,
   sessionItemIds,
   stageClaim,
   startBuffer,
@@ -116,6 +135,7 @@ import {
   getV31TesterStatus,
   persistPublicV31Run,
   previewPublicV31Run,
+  v31PublicErrorCode,
 } from "@/lib/career-discovery/v31-public.functions";
 import {
   FUNNEL_EVENT_NAMES,
@@ -151,7 +171,17 @@ type Phase =
   | "career-context"
   | "result"
   | "persisting"
+  // A `?claim=` link that cannot be honoured, with the reason. Its own phase
+  // because "we could not restore your result" is a different sentence from
+  // "the assessment is not open" and from "saving failed, try again", and
+  // showing any of the three in place of the others is how a candidate
+  // concludes their answers are gone when they are not.
+  | "claim-notice"
   | "failed";
+
+/** Why a claim link could not be honoured. Each maps to its own sentence —
+ *  see the claim-notice render below. */
+type ClaimNotice = "expired" | "invalid" | "stale" | "notFound" | "alreadyClaimed";
 
 /** Deterministic option order.
  *
@@ -205,6 +235,14 @@ export function PublicAssessmentFlow() {
   const loadProfile = useServerFn(getMySecurityCareerProfile);
   const saveProfession = useServerFn(setMyCurrentProfession);
   const loadJourney = useServerFn(getMyCareerJourney);
+  /** The claim token this run arrived with, when it arrived with one.
+   *
+   *  Held in state rather than re-read from the URL at save time: the URL is
+   *  the one part of this that a language switch, a router replace or a
+   *  candidate editing the address bar can change underneath the run, and the
+   *  token decides which session id the save writes to. */
+  const [claimToken, setClaimToken] = useState<string | null>(null);
+  const [claimNotice, setClaimNotice] = useState<ClaimNotice | null>(null);
   /** In-flight guard for persistence. See onSaveAndSignIn. */
   const persistingRef = useRef(false);
   /** Transient feedback for the share button — see onShareResult. Cleared on
@@ -235,6 +273,84 @@ export function PublicAssessmentFlow() {
           setPhase("unavailable");
           return;
         }
+        // ── THE CLAIM IS RESOLVED BEFORE THE ALLOWLIST ────────────────
+        //
+        // This ORDER is the pilot fix. It used to be the other way round:
+        // the internal-tester allowlist was resolved first and returned early
+        // on a refusal, so a candidate who had answered all twenty-eight
+        // questions anonymously, been told to create an account to keep the
+        // result, and come back through their own confirmation link was shown
+        // "the assessment isn't open yet" — and the finished run sitting in
+        // this browser was never even looked at. They had to start again.
+        //
+        // Whether a signed-in person may START a run here and whether this
+        // browser is holding a finished run belonging to whoever just signed
+        // in are two different questions. Only the second one is asked of a
+        // claim link. See resolveSaveGate in v31-public.functions.ts for the
+        // server side of the same separation, which is where it is enforced.
+        const urlToken = new URLSearchParams(window.location.search).get("claim");
+        const entry = resolveClaimEntry(urlToken);
+
+        // Already saved by this browser. Back button, refresh, or a
+        // confirmation link opened twice — all of which used to land on "your
+        // result is gone" seconds after it had been saved.
+        if (entry.kind === "already-saved") {
+          void navigate({
+            to: "/security-career-assessment/report/$snapshotId",
+            params: { snapshotId: entry.snapshotId },
+            search: { saved: true },
+            replace: true,
+          });
+          return;
+        }
+
+        // ── RECOVER A STAGED CLAIM ────────────────────────────────────
+        //
+        // The candidate finished, asked to save, created an account, and
+        // came back through the confirmation link — which is a DIFFERENT
+        // TAB, so this tab's sessionStorage buffer does not exist. The
+        // staged copy does, and the token in the return URL is what
+        // authorises replaying it here (see v31-public-buffer.ts).
+        //
+        // Ahead of readBuffer() deliberately: a claim token names a
+        // specific finished run, and it must win over whatever half-run
+        // this tab happens to be holding.
+        if (entry.kind === "claimable") {
+          const recoveredContext = parseCareerContext(entry.claim.careerContext);
+          setClaimToken(entry.claim.claimToken);
+          setBuffer(entry.claim.buffer);
+          setCareerContext(recoveredContext);
+          // Mirror it back into this tab's own storage so the rest of the
+          // flow — which reads and writes sessionStorage — sees the same
+          // context the candidate answered, not an empty one.
+          writeCareerContext(recoveredContext);
+          setIndex(sessionItemIds(contextStatusOf(entry.claim.buffer)).length - 1);
+          setPhase("result");
+          return;
+        }
+
+        // A token that cannot be honoured is answered as itself. Silently
+        // falling through to the intro would tell somebody who came back for
+        // a saved result to answer twenty-eight questions again, with no
+        // explanation of what happened to the first set.
+        if (entry.kind === "unclaimable") {
+          setClaimNotice(
+            entry.reason === "expired"
+              ? "expired"
+              : entry.reason === "mismatch"
+                ? "invalid"
+                : entry.reason === "stale"
+                  ? "stale"
+                  : "notFound",
+          );
+          setPhase("claim-notice");
+          return;
+        }
+
+        // No claim in play. Now the two ordinary signed-in questions: may
+        // this person run the assessment at all, and what does the product
+        // already know about them.
+        //
         // A signed-in visitor's eligibility can be checked now; an anonymous
         // one's cannot (see the file header) and is deferred to the save
         // step, same as the rest of this flow already defers persistence.
@@ -263,31 +379,6 @@ export function PublicAssessmentFlow() {
           } catch (err) {
             console.error("[v31] career profile read failed", err);
           }
-        }
-        // ── RECOVER A STAGED CLAIM ────────────────────────────────────
-        //
-        // The candidate finished, asked to save, created an account, and
-        // came back through the confirmation link — which is a DIFFERENT
-        // TAB, so this tab's sessionStorage buffer does not exist. The
-        // staged copy does, and the token in the return URL is what
-        // authorises replaying it here (see v31-public-buffer.ts).
-        //
-        // Ahead of readBuffer() deliberately: a claim token names a
-        // specific finished run, and it must win over whatever half-run
-        // this tab happens to be holding.
-        const claimToken = new URLSearchParams(window.location.search).get("claim");
-        const claimed = readPendingClaim(claimToken);
-        if (claimed) {
-          const recoveredContext = parseCareerContext(claimed.careerContext);
-          setBuffer(claimed.buffer);
-          setCareerContext(recoveredContext);
-          // Mirror it back into this tab's own storage so the rest of the
-          // flow — which reads and writes sessionStorage — sees the same
-          // context the candidate answered, not an empty one.
-          writeCareerContext(recoveredContext);
-          setIndex(sessionItemIds(contextStatusOf(claimed.buffer)).length - 1);
-          setPhase("result");
-          return;
         }
 
         // Resume an in-flight run if this tab has one.
@@ -323,7 +414,7 @@ export function PublicAssessmentFlow() {
     return () => {
       alive = false;
     };
-  }, [checkAvailability, checkTesterStatus, loadProfile]);
+  }, [checkAvailability, checkTesterStatus, loadProfile, navigate, phaseAfterQuestions]);
 
   // The run's own question order: 2 context → 22 Career DNA → 4 Discovery
   // Path. Twenty-two ids until C1 is answered, because the Discovery Path —
@@ -475,12 +566,23 @@ export function PublicAssessmentFlow() {
           // Absent (undefined) when the step was never relevant/shown for
           // this candidate, distinct from an answered "prefer not to say".
           careerContext: careerContext.currentProfessionStatus ? careerContext : undefined,
+          // Present only for a run finished anonymously and now being
+          // attached to this account. It names the run, so the save is
+          // idempotent: a second tab, a double-click or a retry after a
+          // timeout that had in fact succeeded all reach the same report
+          // rather than minting a second one (see v31-claim-id.ts).
+          claimToken: claimToken ?? undefined,
         },
       });
       // ONLY now. Clearing before a confirmed write would destroy the
       // candidate's answers with nothing stored in exchange.
       clearBuffer();
       clearCareerContext();
+      // What the token produced, remembered where the token was, so returning
+      // to the claim URL — Back, refresh, or the confirmation link opened a
+      // second time — lands on the saved report instead of on the absence of
+      // the staged record it just consumed.
+      if (claimToken) rememberClaimedResult(claimToken, result.snapshotId);
       // Claimed exactly once: the staged copy goes at the same moment the
       // buffer does, and only after a confirmed write.
       clearPendingClaim();
@@ -488,6 +590,10 @@ export function PublicAssessmentFlow() {
       navigate({
         to: "/security-career-assessment/report/$snapshotId",
         params: { snapshotId: result.snapshotId },
+        // Says so, once, on arrival. A candidate who created an account for
+        // exactly one reason should be told that reason has been met rather
+        // than left to infer it from a page that looks the same either way.
+        search: { saved: true },
       });
     } catch (err) {
       // Log the real reason. The candidate still sees the calm failure state,
@@ -499,6 +605,14 @@ export function PublicAssessmentFlow() {
       // The buffer is deliberately left intact so the candidate can retry, and
       // the guard is released so the retry is actually possible.
       persistingRef.current = false;
+      // One refusal is not a failure and must not offer a retry: this run
+      // belongs to a different account, and pressing "try again" will refuse
+      // in exactly the same way for exactly the same reason, forever.
+      if (v31PublicErrorCode(err) === "already_claimed") {
+        setClaimNotice("alreadyClaimed");
+        setPhase("claim-notice");
+        return;
+      }
       setPhase("failed");
     }
   }
@@ -710,6 +824,9 @@ export function PublicAssessmentFlow() {
     return (
       <AssessmentShell wide>
         <AssessmentIntro
+          // The intro's "no account required" promise is true for a
+          // signed-out visitor and false for everybody else. See its header.
+          signedIn={signedIn}
           onStart={() => {
             setBuffer(startBuffer(lang === "en" ? "en" : "sv", new Date().toISOString()));
             setIndex(0);
@@ -922,6 +1039,84 @@ export function PublicAssessmentFlow() {
             />
             {t("cd.public.saving")}
           </p>
+        </AssessmentPanel>
+      </AssessmentShell>
+    );
+  }
+
+  // ── A CLAIM LINK THAT CANNOT BE HONOURED ────────────────────────────
+  //
+  // Four distinct states, four distinct sentences. They used to be one
+  // generic "something went wrong" — or, worse, a silent fall-through to the
+  // intro, which invited somebody who had come back for a saved result to
+  // answer twenty-eight questions again without ever being told what became
+  // of the first set.
+  //
+  // None of them says or implies anything about a result belonging to
+  // somebody else. "Already saved to another account" is the honest reading
+  // of a refusal the person is already holding a link for; it names no
+  // account, confirms no email address, and offers no way to probe for one.
+  if (phase === "claim-notice") {
+    const notice = claimNotice ?? "notFound";
+    return (
+      <AssessmentShell>
+        <AssessmentPanel role="status">
+          <h1
+            className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <AlertTriangle className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            {t(`cd.public.claim.${notice}.title` as never)}
+          </h1>
+          <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-muted-foreground">
+            {t(`cd.public.claim.${notice}.body` as never)}
+          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            {/* Where the result actually is, for the two states where it
+                exists: signed in, it is in My Career. Signed out, the way to
+                it is signing in — never "take the assessment again", which is
+                the one instruction that would destroy the thing they came
+                back for. */}
+            {signedIn ? (
+              <Link
+                to="/my-career"
+                className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {t("cd.public.claim.toMyCareer")}
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {t("cd.public.claim.signIn")}
+              </Link>
+            )}
+            {/* Starting over is offered ONLY where there is genuinely nothing
+                left to recover — never beside "already saved to another
+                account", where the result exists and retaking would produce a
+                second, competing one.
+
+                A full navigation rather than a phase change, deliberately.
+                Dropping straight into the intro from here would skip the
+                allowlist question this screen was reached without asking —
+                which is right for a claim and wrong for a fresh run, and
+                would walk a signed-in candidate outside the test group
+                through twenty-eight questions to a refusal at the end. Going
+                back to the route without the token re-asks everything, in
+                order, and lands them wherever they actually belong. */}
+            {notice !== "alreadyClaimed" && (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.assign(CANONICAL_ASSESSMENT_PATH);
+                }}
+                className="inline-flex h-11 items-center justify-center rounded-[10px] border border-border bg-card px-5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {t("cd.public.claim.startOver")}
+              </button>
+            )}
+          </div>
         </AssessmentPanel>
       </AssessmentShell>
     );

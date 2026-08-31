@@ -20,13 +20,19 @@
 // Access is gated independently of lifecycle_status (which is `active` —
 // the content is ready): only platform admins and allowlisted internal
 // testers (cd_internal_testers, granted via cd_grant_internal_tester()) may
-// save and view a real report, enforced server-side in
+// START AND SAVE a run from inside the product, enforced server-side in
 // src/lib/career-discovery/v31-public.functions.ts. Everyone else sees the
 // same "not open yet" state. This keeps the assessment usable by a named
 // test group ahead of the Career Intelligence recommendation layer's
 // completion, without weakening or re-gating the lifecycle machinery
 // itself — corrected 2026-08-14, see that file's header for the full
 // account of why this was previously unenforced despite this comment.
+//
+// AMENDED 2026-08-31: that allowlist does NOT gate claiming a result the
+// candidate completed anonymously. Anonymous completion is open to the whole
+// public today and this page invites it; refusing the save afterwards left
+// "start without an account, create one later to keep the result" as a
+// promise the product broke, and cost the run. See resolveSaveGate.
 
 import { createFileRoute } from "@tanstack/react-router";
 import { PublicAssessmentFlow } from "@/components/career-discovery/v31/PublicAssessmentFlow";

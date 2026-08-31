@@ -67,21 +67,34 @@
 // infrastructure the schema already had for exactly this purpose
 // (cd_internal_testers / cd_is_internal_tester(), built for v3.0's own
 // internal-test phase, never wired into v3.1's UI): a signed-in user may only
-// PERSIST a real run — and therefore only ever see a real report — if they
-// are a platform admin or an internal tester. `cd_internal_testers` starts
-// empty; the owner grants named test-group members access with the existing
-// `cd_grant_internal_tester(_user_id, _note)` RPC. Anonymous visitors can
-// still answer all 26 questions (nothing is written, nothing is shown) —
-// only the save step, immediately after sign-in, is gated. This is the
-// smallest additive change that makes "usable by the selected test group,
-// not a broad public launch" actually true, without touching
-// lifecycle_status or any review-gate machinery.
+// START AND SAVE a run from inside the product if they are a platform admin
+// or an internal tester. `cd_internal_testers` starts empty; the owner grants
+// named test-group members access with the existing
+// `cd_grant_internal_tester(_user_id, _note)` RPC.
+//
+// ── AMENDED 2026-08-31: THE ALLOWLIST IS NOT AN OWNERSHIP CHECK ─────────
+//
+// The sentence above used to read "may only PERSIST a real run". Applied to
+// the CLAIM path, that was wrong, and it broke the journey the public product
+// advertises. An anonymous visitor is allowed to answer all twenty-eight
+// questions and read the full canonical report (nothing is written, and
+// `previewPublicV31Run` serves the same report to `anon` with no gate). The
+// result page then invites them to create an account and keep it. They did —
+// and the allowlist refused the save, told them "not open yet", and dropped
+// the run. Anonymous use permitted, authenticated save forbidden, for the
+// same person and the same answers.
+//
+// Product availability and result ownership are now two questions rather than
+// one, resolved separately. See `resolveSaveGate` for the full account of
+// which control still bites where. Nothing about lifecycle_status, the review
+// gates or the authenticated in-product entrance changes.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabase as publicClient } from "@/integrations/supabase/client";
 
+import { deriveClaimSessionId } from "./v31-claim-id";
 import { CORE_ITEM_BY_ID, CORE_ITEMS } from "./v31/core-items";
 import {
   ADAPTIVE_ITEMS_PER_SESSION,
@@ -216,6 +229,11 @@ export type V31PublicErrorCode =
   | "definition_missing"
   | "incomplete_buffer"
   | "invalid_answers"
+  // The claim token names a run that some OTHER account already owns. Its
+  // own state, not a `persist_failed`, because nothing failed: the run was
+  // saved, just not to this account, and the candidate needs to be told that
+  // rather than invited to retry forever. See resolveSaveGate.
+  | "already_claimed"
   | "persist_failed";
 
 export class V31PublicError extends Error {
@@ -226,6 +244,57 @@ export class V31PublicError extends Error {
     super(code);
     this.name = "V31PublicError";
   }
+}
+
+const V31_PUBLIC_ERROR_CODES: readonly V31PublicErrorCode[] = [
+  "not_available",
+  "definition_missing",
+  "incomplete_buffer",
+  "invalid_answers",
+  "already_claimed",
+  "persist_failed",
+];
+
+/**
+ * The error code behind a failed server call, when there is one.
+ *
+ * A server function's rejection does not arrive at the browser as the class
+ * that was thrown — it arrives serialised, and `V31PublicError` puts the code
+ * in `message` precisely so it survives that. Without this, every distinct
+ * refusal reached the candidate as the same "something went wrong", which is
+ * how "another account already saved this result" came to look identical to a
+ * dropped connection and invited an endless retry.
+ *
+ * EXACT matches only, never a substring sweep of a serialised blob: a code
+ * this function is not sure about must come back as null so the caller falls
+ * back to the honest generic failure rather than confidently saying the
+ * wrong thing.
+ */
+export function v31PublicErrorCode(err: unknown): V31PublicErrorCode | null {
+  if (err instanceof V31PublicError) return err.code;
+  const candidates: unknown[] = [];
+  if (typeof err === "string") candidates.push(err);
+  if (err && typeof err === "object") {
+    const o = err as Record<string, unknown>;
+    candidates.push(o.message, o.code);
+    for (const key of ["body", "data", "error", "cause"]) {
+      const nested = o[key];
+      if (typeof nested === "string") candidates.push(nested);
+      else if (nested && typeof nested === "object") {
+        candidates.push((nested as Record<string, unknown>).message);
+        candidates.push((nested as Record<string, unknown>).code);
+      }
+    }
+  }
+  for (const candidate of candidates) {
+    if (
+      typeof candidate === "string" &&
+      (V31_PUBLIC_ERROR_CODES as readonly string[]).includes(candidate)
+    ) {
+      return candidate as V31PublicErrorCode;
+    }
+  }
+  return null;
 }
 
 export interface V31Availability {
@@ -287,6 +356,66 @@ export const getV31TesterStatus = createServerFn({ method: "GET" })
     ]);
     return { allowed: Boolean(tester.data) || Boolean(admin.data) };
   });
+
+/**
+ * MAY THIS SAVE HAPPEN — the one place the two gates are told apart.
+ *
+ * ── PRODUCT AVAILABILITY IS NOT RESULT OWNERSHIP ───────────────────────
+ *
+ * There are two independent questions, and conflating them is what broke
+ * the single most important journey in the product:
+ *
+ *   A. Is Career Discovery open at all? That is `lifecycle_status`, read by
+ *      `getV31Availability` and enforced by the database on every session
+ *      insert (`CD_VERSION_NOT_ADMINISTRABLE`). It applies to everybody,
+ *      including a claim, and this function does not touch it.
+ *
+ *   B. Does this account own this completed run? That is the claim token,
+ *      and it is answered by whether the run was actually staged in this
+ *      browser — not by an allowlist.
+ *
+ * The internal-tester allowlist sits between them: it decides whether a
+ * SIGNED-IN person may start and save a run from inside the product while
+ * the Career Intelligence layer is mid-build. It was also, until now, the
+ * only check on the claim path — so a visitor who completed all twenty-eight
+ * questions anonymously (which A permits, publicly, today), created an
+ * account precisely because the page told them to, and came back through
+ * their confirmation link was refused with "not open yet" and lost the run.
+ *
+ * That is the contradiction the owner's locked decision removes: while
+ * anonymous completion is open, finishing it and keeping the result is one
+ * journey, not two, and the second half may not require a database grant the
+ * first half never asked for.
+ *
+ * ── WHAT THE ALLOWLIST STILL DOES, AND WHAT IT NO LONGER DOES ──────────
+ *
+ * Still: it gates the authenticated in-product run — signing in, pressing
+ * start, and saving — which is the cohort control the owner actually uses.
+ *
+ * No longer: it does not gate claiming an anonymous result. The claim token
+ * is client-held and cannot be verified server-side, so this is an honest
+ * statement rather than a hidden one — an authenticated caller who supplies
+ * a token reaches the same place a candidate who took the assessment
+ * anonymously reaches. That discloses nothing new: `previewPublicV31Run`
+ * already returns the identical canonical report to `anon`, with no gate at
+ * all, so the report content was never what the allowlist protected. The
+ * control that still bites for everyone, claim included, is A — closing the
+ * lifecycle closes the whole product, anonymous runs first.
+ */
+export type SaveGateDecision = "allow_test_group" | "allow_claim" | "deny";
+
+export function resolveSaveGate(input: {
+  readonly isInternalTester: boolean;
+  readonly isPlatformAdmin: boolean;
+  /** True when the caller presented a claim token — i.e. this is a run that
+   *  was completed anonymously and is being attached to the account that has
+   *  just signed in. */
+  readonly isAnonymousClaim: boolean;
+}): SaveGateDecision {
+  if (input.isInternalTester || input.isPlatformAdmin) return "allow_test_group";
+  if (input.isAnonymousClaim) return "allow_claim";
+  return "deny";
+}
 
 const bufferedAnswerSchema = z.union([
   z.object({
@@ -636,9 +765,11 @@ export interface PreviewResult {
  *   * the response contains nothing but the caller's OWN report, built from
  *     answers the caller supplied in the request.
  *
- * The tester allowlist is unchanged and still gates `persistPublicV31Run`: a
- * non-tester can read their result here exactly as they always could, and
- * still cannot save one.
+ * The tester allowlist still gates `persistPublicV31Run` for a run STARTED
+ * while signed in. It no longer gates claiming a run finished anonymously —
+ * see `resolveSaveGate`, and note that this function is why that costs
+ * nothing: the report a claim saves is the one this function already returned
+ * to the same person, ungated, before any account existed.
  */
 export const previewPublicV31Run = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -698,24 +829,46 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         // when the step was never shown (candidate not yet working in
         // security) or the run predates this field.
         careerContext: careerContextSchema.optional(),
+        // Present when this run was completed ANONYMOUSLY and is now being
+        // attached to the account that has just signed in. It names the run
+        // (see v31-claim-id.ts) and it is what tells the two gates apart
+        // (see resolveSaveGate). Absent for a signed-in candidate saving a
+        // run they took while signed in — that path is byte-for-byte the one
+        // it always was.
+        claimToken: z.string().min(8).max(200).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<PersistResult> => {
     const ctx = context as Ctx;
 
-    // 0. Access gate — see the file header. Checked before any parsing or
-    //    writing so a non-tester never creates a partial session. It gates
-    //    SAVING, not reading: the candidate has already seen this exact
-    //    report via previewPublicV31Run, which is how the result can be the
-    //    same before and after signing in. Nothing new is disclosed here.
+    // 0. Access gate — see resolveSaveGate, which is where the reasoning
+    //    lives and which is unit-tested as a truth table rather than
+    //    inferred from this call site. Checked before any parsing or writing
+    //    so a refusal never creates a partial session.
+    //
+    //    It gates SAVING, not reading: the candidate has already seen this
+    //    exact report via previewPublicV31Run, which is how the result can be
+    //    the same before and after signing in. Nothing new is disclosed here.
+    const isAnonymousClaim = typeof data.claimToken === "string" && data.claimToken.length > 0;
     const [tester, admin] = await Promise.all([
       ctx.supabase.rpc("cd_is_internal_tester", { _user_id: ctx.userId }),
       ctx.supabase.rpc("is_platform_admin", { _user_id: ctx.userId }),
     ]);
-    if (!tester.data && !admin.data) {
+    const decision = resolveSaveGate({
+      isInternalTester: Boolean(tester.data),
+      isPlatformAdmin: Boolean(admin.data),
+      isAnonymousClaim,
+    });
+    if (decision === "deny") {
       throw new V31PublicError("not_available", "test_group_only");
     }
+
+    // The run's identity. Derived from the claim token so the PRIMARY KEY is
+    // the idempotency check — a second claim of the same run collides rather
+    // than minting a second report. Null for a signed-in run, which keeps the
+    // database's own default and is exactly what it was before.
+    const claimSessionId = data.claimToken ? await deriveClaimSessionId(data.claimToken) : null;
 
     // 1. Split and validate — the SAME function the anonymous preview uses,
     //    so a run the candidate already saw a report for is never rejected
@@ -768,6 +921,10 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
     const { data: session, error: sessionError } = await ctx.supabase
       .from("cd_sessions")
       .insert({
+        // Supplied ONLY on the claim path, where it is the run's derived
+        // identity (see v31-claim-id.ts). Omitted otherwise, so a signed-in
+        // run keeps the column default and this insert is unchanged for it.
+        ...(claimSessionId ? { id: claimSessionId } : {}),
         definition_version_id: dv.id,
         user_id: ctx.userId,
         locale: data.locale,
@@ -791,7 +948,31 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       .select("id")
       .single();
 
-    if (sessionError || !session?.id) {
+    // ── ALREADY CLAIMED ────────────────────────────────────────────────
+    //
+    // A unique violation on the derived id means this run has been claimed
+    // before. That is a normal outcome, not a failure: a double-click, a
+    // second tab finishing the same sign-in, a retry after a timeout that had
+    // in fact succeeded, and a reload of the claim URL all land here — and
+    // every one of them wants the SAME report, not a second one.
+    //
+    // Whose report it is decides what happens next, and RLS answers that
+    // without an ownership comparison to get wrong: the select below is
+    // scoped to the caller, so a run claimed by a different account simply is
+    // not there. That is the whole theft defence, and it leaks nothing beyond
+    // "this token does not name a run of yours".
+    let sessionId: string;
+    let resumed = false;
+    if (claimSessionId && sessionError?.code === "23505") {
+      const { data: mine } = await ctx.supabase
+        .from("cd_sessions")
+        .select("id")
+        .eq("id", claimSessionId)
+        .maybeSingle();
+      if (!mine?.id) throw new V31PublicError("already_claimed");
+      sessionId = claimSessionId;
+      resumed = true;
+    } else if (sessionError || !session?.id) {
       // The most likely cause is the lifecycle guard refusing a session against
       // a non-administrable version. Surfaced as not_available so the UI can
       // say "not yet available" rather than "something went wrong".
@@ -812,15 +993,27 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         message: sessionError?.message,
       });
       throw new V31PublicError("persist_failed", "session");
+    } else {
+      sessionId = session.id as string;
     }
 
-    // 5. Evidence — all 26 answers. Metadata (item_version, item_kind,
+    // 5. Evidence — all 28 answers. Metadata (item_version, item_kind,
     //    evidence_class, is_scored, adaptive_path) is derived by the database
     //    from the item registry; only the answer itself is supplied, so a
     //    caller cannot assert that a context answer is scored.
-    const rows = buildEvidenceRows(session.id as string, answers, personal);
+    const rows = buildEvidenceRows(sessionId, answers, personal);
 
-    const { error: evidenceError } = await ctx.supabase.from("cd_evidence").insert(rows);
+    // A resumed claim may already hold some or all of this evidence — a
+    // previous attempt that died between the session write and this one.
+    // Upserting on the (session_id, item_id) key the schema already declares
+    // makes the repeat harmless instead of turning a recoverable half-write
+    // into a permanent one. The rows are identical by construction: they come
+    // from the same staged buffer, replayed through the same validator.
+    const { error: evidenceError } = resumed
+      ? await ctx.supabase
+          .from("cd_evidence")
+          .upsert(rows, { onConflict: "session_id,item_id", ignoreDuplicates: true })
+      : await ctx.supabase.from("cd_evidence").insert(rows);
     if (evidenceError) {
       // The database's own words, not a summary of them.
       //
@@ -838,7 +1031,7 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         details: evidenceError.details,
         hint: evidenceError.hint,
         rowCount: rows.length,
-        sessionId: session.id,
+        sessionId,
       });
       throw new V31PublicError(
         "persist_failed",
@@ -846,11 +1039,14 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       );
     }
 
-    // 6. Atomic completion. Idempotent: a retry returns the same snapshot.
+    // 6. Atomic completion. Idempotent: a retry returns the same snapshot,
+    //    which is what makes a re-claim end where the first claim ended
+    //    rather than anywhere new. It also re-checks ownership itself
+    //    (CD_NOT_SESSION_OWNER), so the claim path is refused twice over.
     const { data: result, error: completeError } = await ctx.supabase.rpc(
       "cd_v31_complete_session",
       {
-        _session_id: session.id,
+        _session_id: sessionId,
         _payload: snapshot,
         _pattern_definition_version: PATTERN_DEFINITION_VERSION,
         _completed_at: completedAt,
@@ -861,6 +1057,14 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         code: completeError.code,
         message: completeError.message,
       });
+      // The RPC's own ownership refusal. Reachable only on a claim whose
+      // session belongs to somebody else, which the RLS-scoped lookup above
+      // already answers — this is the second, independent refusal, and it is
+      // reported as the state it is rather than as a generic failure the
+      // candidate would be invited to retry forever.
+      if (String(completeError.message ?? "").includes("CD_NOT_SESSION_OWNER")) {
+        throw new V31PublicError("already_claimed");
+      }
       throw new V31PublicError("persist_failed", "completion");
     }
 

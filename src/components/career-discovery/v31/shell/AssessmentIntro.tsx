@@ -4,11 +4,27 @@
 // copy (cd.public.introBody / introNoAccount). Nothing about duration, accuracy
 // or outcomes is invented here, because a career product that oversells its
 // first screen has already spent the trust it needs at the last one.
+//
+// ── ONE SCREEN, TWO AUDIENCES ──────────────────────────────────────────
+//
+// "You don't need an account to start. Your answers are only kept in this
+// tab, and you sign in when you want to save the result" is true, and it is
+// the reason somebody signed out will begin. Shown to somebody who is ALREADY
+// SIGNED IN it is simply false — they have an account, their result will be
+// saved to it, and telling them otherwise makes the product look like it does
+// not know who it is talking to. Same screen, two honest versions of the same
+// promise, chosen by the one fact that decides which is true.
 
 import { ClipboardList, Layers, ScaleIcon, UserCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 
-export function AssessmentIntro({ onStart }: { onStart: () => void }) {
+export function AssessmentIntro({
+  onStart,
+  signedIn = false,
+}: {
+  onStart: () => void;
+  signedIn?: boolean;
+}) {
   const { t } = useT();
 
   const facts = [
@@ -20,8 +36,8 @@ export function AssessmentIntro({ onStart }: { onStart: () => void }) {
     },
     {
       icon: UserCheck,
-      title: t("cd.public.factNoAccountShort"),
-      body: t("cd.public.factNoAccountBody"),
+      title: signedIn ? t("cd.public.factSavedShort") : t("cd.public.factNoAccountShort"),
+      body: signedIn ? t("cd.public.factSavedBody") : t("cd.public.factNoAccountBody"),
     },
   ] as const;
 
@@ -41,7 +57,7 @@ export function AssessmentIntro({ onStart }: { onStart: () => void }) {
           {t("cd.public.introBody")}
         </p>
         <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
-          {t("cd.public.introNoAccount")}
+          {signedIn ? t("cd.public.introSignedIn") : t("cd.public.introNoAccount")}
         </p>
         <button
           type="button"

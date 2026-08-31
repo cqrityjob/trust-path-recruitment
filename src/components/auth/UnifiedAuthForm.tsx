@@ -51,6 +51,7 @@ import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { safeReturnPath, splitReturnPath } from "@/lib/auth/safe-redirect";
+import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import {
   clearOAuthReturn,
   consumeOAuthReturn,
@@ -97,8 +98,7 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
   function resolveDestination(): string {
     if (typeof window === "undefined") return DEFAULT_DESTINATION;
     const params = new URLSearchParams(window.location.search);
-    const fallback =
-      isSignup && forOrganisation ? ORGANISATION_DESTINATION : DEFAULT_DESTINATION;
+    const fallback = isSignup && forOrganisation ? ORGANISATION_DESTINATION : DEFAULT_DESTINATION;
     return safeReturnPath(params.get("redirect"), fallback);
   }
 
@@ -109,6 +109,24 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
    *  printing a name out of a URL would be printing the sender's choice. */
   const fromOrganisationInvite =
     typeof window !== "undefined" && resolveDestination().startsWith("/employer/join");
+
+  /** Somebody who finished Career Discovery signed out and is here for one
+   *  reason: to keep the result.
+   *
+   *  Read from the ALREADY VALIDATED return path, same as the invitation
+   *  above, and it changes one sentence of copy and nothing else. Without it
+   *  the most motivated arrival in the product — a person who has answered
+   *  twenty-eight questions and is one form away from keeping the answer —
+   *  is greeted by a generic account-creation screen that says nothing about
+   *  the result, which is the moment they decide it was not worth it. The
+   *  token is never echoed; only the fact that one is present. */
+  const fromDiscoveryClaim = (() => {
+    if (typeof window === "undefined") return false;
+    const destination = resolveDestination();
+    if (!destination.startsWith(CANONICAL_ASSESSMENT_PATH)) return false;
+    const q = destination.indexOf("?");
+    return q !== -1 && new URLSearchParams(destination.slice(q + 1)).has("claim");
+  })();
 
   /** Carry the return path across the sign-in / create-account swap. Losing
    *  it here is how somebody who clicked "I already have an account" ends up
@@ -361,6 +379,15 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
                 </p>
               )}
 
+              {fromDiscoveryClaim && (
+                <p
+                  data-testid="auth-claim-waiting"
+                  className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"
+                >
+                  {t("auth.discoveryClaim.waiting")}
+                </p>
+              )}
+
               {!sessionKnown ? (
                 // Never paint a form we may be about to navigate away from.
                 <p className="mt-8 text-sm text-muted-foreground">{t("auth.redirecting")}</p>
@@ -470,7 +497,10 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
                         className={field}
                       />
                       {isSignup && (
-                        <p id={`${ids}-password-hint`} className="mt-1.5 text-xs text-muted-foreground">
+                        <p
+                          id={`${ids}-password-hint`}
+                          className="mt-1.5 text-xs text-muted-foreground"
+                        >
                           {t("auth.password.hint")}
                         </p>
                       )}

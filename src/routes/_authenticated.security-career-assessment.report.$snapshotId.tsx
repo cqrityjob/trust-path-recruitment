@@ -13,7 +13,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check } from "lucide-react";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { useT } from "@/i18n/context";
@@ -24,6 +24,19 @@ import type { DiscoveryReport } from "@/lib/career-discovery/report";
 export const Route = createFileRoute(
   "/_authenticated/security-career-assessment/report/$snapshotId",
 )({
+  // `saved` marks the ONE arrival that needs a sentence of its own: the
+  // candidate who took this assessment signed out, created an account
+  // specifically to keep the result, and has just landed on it. Without it
+  // that arrival is indistinguishable from opening an old report, and the
+  // account they created for exactly one reason never confirms that the
+  // reason was met.
+  //
+  // Coerced rather than trusted: anything other than a true-ish value is
+  // simply absent, so a hand-edited URL can add a reassurance to a report
+  // that was not just saved but can do nothing else — it changes no read, no
+  // ownership and no content.
+  validateSearch: (search: Record<string, unknown>): { saved?: true } =>
+    search.saved === true || search.saved === "true" || search.saved === "1" ? { saved: true } : {},
   // Client-only: the report is owner-scoped and must not be prerendered,
   // and the Supabase session has to be restored before the read runs.
   ssr: false,
@@ -38,6 +51,7 @@ export const Route = createFileRoute(
 
 function DiscoveryReportRoute() {
   const { snapshotId } = Route.useParams();
+  const { saved } = Route.useSearch();
   const { t, lang } = useT();
   const load = useServerFn(getStoredDiscoveryReport);
 
@@ -116,6 +130,7 @@ function DiscoveryReportRoute() {
   if (data.status === "v3.1") {
     return (
       <AssessmentLayout>
+        {saved && <SavedConfirmation />}
         <V31ReportView
           snapshot={data.snapshot}
           generatedAt={data.generatedAt}
@@ -370,6 +385,33 @@ function DiscoveryReportRoute() {
         </Link>
       </div>
     </AssessmentLayout>
+  );
+}
+
+/**
+ * "Your result is saved in My Career."
+ *
+ * The end of the conversion journey, said once, where it happened. Rendered
+ * only on an arrival that carries `?saved` — never on an ordinary revisit,
+ * where it would be stale reassurance about something that happened months
+ * ago, and never in place of the report itself.
+ */
+function SavedConfirmation() {
+  const { t } = useT();
+  return (
+    <div
+      role="status"
+      data-testid="cd-claim-saved"
+      className="mb-8 flex items-start gap-3 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-4"
+    >
+      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" aria-hidden="true" />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground">{t("cd.public.claim.savedTitle")}</p>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {t("cd.public.claim.savedBody")}
+        </p>
+      </div>
+    </div>
   );
 }
 
