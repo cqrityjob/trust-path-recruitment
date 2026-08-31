@@ -73,8 +73,80 @@ export function consumeOAuthReturn(): string | null {
 export function clearOAuthReturn(): void {
   try {
     window.sessionStorage.removeItem(KEY);
+    window.sessionStorage.removeItem(ORG_KEY);
   } catch {
     /* nothing to clear */
+  }
+}
+
+// ── THE ORGANISATION INTENT, ACROSS THE SAME HOP ───────────────────────
+//
+// Registering with email and password carries the company name into auth
+// user metadata through signUp's `options.data`. Google has no equivalent:
+// `signInWithOAuth` takes no metadata, the browser leaves the application,
+// and the account that comes back knows only what the provider said. So
+// somebody who ticked "I am creating this account for an organisation",
+// typed their company name and then chose Google lost the name entirely
+// and was handed the manual onboarding form to type it again.
+//
+// The destination already survives this hop, by exactly this mechanism.
+// The two strings ride alongside it, under their own key, and are applied
+// to the person's own metadata on return.
+//
+// sessionStorage for the same reason as the return path: the value is
+// meaningless once the tab closes and must not outlive the attempt.
+
+const ORG_KEY = "cqj:auth:oauth-org-intent:v1";
+
+export type PendingOrganisationIntent = {
+  readonly companyName: string;
+  readonly companyCountry: string;
+};
+
+/** Records the organisation intent before leaving for the provider. Both
+ *  values are required, mirroring the server's own predicate: a name with
+ *  no country cannot be provisioned, so storing it would only produce a
+ *  guaranteed failure later. */
+export function rememberOrganisationIntent(intent: PendingOrganisationIntent): void {
+  const companyName = intent.companyName.trim();
+  const companyCountry = intent.companyCountry.trim();
+  if (!companyName || !companyCountry) return;
+  try {
+    window.sessionStorage.setItem(ORG_KEY, JSON.stringify({ companyName, companyCountry }));
+  } catch {
+    // Private browsing, or storage disabled. The person still gets a working
+    // account and the onboarding form; losing a convenience must never block
+    // a sign-in attempt.
+  }
+}
+
+/**
+ * Reads and CLEARS the stored organisation intent.
+ *
+ * Cleared on read for the same reason as the destination: a value left
+ * behind by an abandoned attempt must not attach itself to an unrelated
+ * sign-in later in the same tab.
+ *
+ * Length limits mirror `create_my_employer_company`'s own validation, so a
+ * value that could only be rejected by the database is discarded here
+ * rather than written to metadata first.
+ */
+export function consumeOrganisationIntent(): PendingOrganisationIntent | null {
+  try {
+    const raw = window.sessionStorage.getItem(ORG_KEY);
+    if (!raw) return null;
+    window.sessionStorage.removeItem(ORG_KEY);
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    const { companyName, companyCountry } = parsed as Record<string, unknown>;
+    if (typeof companyName !== "string" || typeof companyCountry !== "string") return null;
+    const name = companyName.trim();
+    const country = companyCountry.trim();
+    if (!name || name.length > 200) return null;
+    if (!country || country.length > 100) return null;
+    return { companyName: name, companyCountry: country };
+  } catch {
+    return null;
   }
 }
 

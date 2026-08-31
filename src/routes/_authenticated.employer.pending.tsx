@@ -19,6 +19,7 @@ import { Clock, RefreshCw, ShieldX } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { SiteLayout } from "@/components/site/SiteLayout";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 
 export const Route = createFileRoute("/_authenticated/employer/pending")({
@@ -71,11 +72,77 @@ function EmployerPendingPage() {
     }
   }, [active, navigate]);
 
+  // Somebody who holds no membership at all is not waiting for anything, and
+  // this page would otherwise tell them their organisation is under review --
+  // a status invented for an organisation that does not exist. /employer owns
+  // the 0/1/2+ decision; hand it back rather than answering it a second time
+  // here. It never returns them, so there is no loop.
+  const noMembership = query.isSuccess && workspaces.length === 0;
+  useEffect(() => {
+    if (noMembership) navigate({ to: "/employer", replace: true });
+  }, [noMembership, navigate]);
+
   if (query.isLoading) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16">
-        <p className="text-sm text-muted-foreground">{t("employer.pending.checking")}</p>
-      </div>
+      <SiteLayout>
+        <div className="mx-auto max-w-xl px-4 py-16">
+          <p className="text-sm text-muted-foreground">{t("employer.pending.checking")}</p>
+        </div>
+      </SiteLayout>
+    );
+  }
+
+  // A failed read reached this page as "your organisation is under review",
+  // with the company name and registration date silently absent -- the page
+  // asserting a status it had not been able to look up. That is the same
+  // untruth as showing a candidate "0 verified" when the claims query broke.
+  // `errorComponent` does not catch it, because a useQuery error is a value,
+  // not a throw. So it is handled here, as a value.
+  if (query.isError) {
+    return (
+      <SiteLayout>
+        <div className="mx-auto max-w-xl px-4 py-16">
+          <span
+            className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+            aria-hidden="true"
+          >
+            <ShieldX className="h-5 w-5" />
+          </span>
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
+            {t("employer.statusUnknown.heading")}
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {t("employer.statusUnknown.body")}
+          </p>
+          <div className="mt-8 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void query.refetch()}
+              disabled={query.isFetching}
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-60"
+            >
+              <RefreshCw
+                className={"h-3.5 w-3.5" + (query.isFetching ? " animate-spin" : "")}
+                aria-hidden="true"
+              />
+              {t("employer.pending.checkStatus")}
+            </button>
+          </div>
+        </div>
+      </SiteLayout>
+    );
+  }
+
+  // The redirect above is in flight. Rendering the review copy for this frame
+  // would flash "your organisation is under review" at somebody who has no
+  // organisation.
+  if (noMembership) {
+    return (
+      <SiteLayout>
+        <div className="mx-auto max-w-xl px-4 py-16">
+          <p className="text-sm text-muted-foreground">{t("employer.pending.checking")}</p>
+        </div>
+      </SiteLayout>
     );
   }
 
@@ -87,107 +154,109 @@ function EmployerPendingPage() {
       : "waiting";
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-16">
-      <span
-        className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-muted-foreground"
-        aria-hidden="true"
-      >
-        {state === "waiting" ? <Clock className="h-5 w-5" /> : <ShieldX className="h-5 w-5" />}
-      </span>
+    <SiteLayout>
+      <div className="mx-auto max-w-xl px-4 py-16">
+        <span
+          className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+          aria-hidden="true"
+        >
+          {state === "waiting" ? <Clock className="h-5 w-5" /> : <ShieldX className="h-5 w-5" />}
+        </span>
 
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-        {t(
-          state === "rejected"
-            ? "employer.rejected.heading"
-            : state === "unavailable"
-              ? "employer.unavailable.heading"
-              : "employer.pending.heading",
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
+          {t(
+            state === "rejected"
+              ? "employer.rejected.heading"
+              : state === "unavailable"
+                ? "employer.unavailable.heading"
+                : "employer.pending.heading",
+          )}
+        </h1>
+
+        {state === "rejected" ? (
+          <>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.rejected.body")}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.rejected.contact")}
+            </p>
+          </>
+        ) : state === "unavailable" ? (
+          <>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.unavailable.body")}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.rejected.contact")}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.pending.thanks")}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.pending.body")}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.pending.access")}
+            </p>
+          </>
         )}
-      </h1>
 
-      {state === "rejected" ? (
-        <>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {t("employer.rejected.body")}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t("employer.rejected.contact")}
-          </p>
-        </>
-      ) : state === "unavailable" ? (
-        <>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {t("employer.unavailable.body")}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t("employer.rejected.contact")}
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {t("employer.pending.thanks")}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t("employer.pending.body")}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t("employer.pending.access")}
-          </p>
-        </>
-      )}
-
-      {/* What we hold about them, so the page is a receipt as well as a
+        {/* What we hold about them, so the page is a receipt as well as a
           message. No status vocabulary from the database -- the heading
           already says where the registration stands. */}
-      {org && (
-        <dl className="mt-6 grid grid-cols-2 gap-4 rounded-xl border border-border p-4 text-sm">
-          <div className="min-w-0">
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("employer.pending.company")}
-            </dt>
-            <dd className="mt-0.5 truncate font-medium text-foreground">{org.employerName}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("employer.pending.registered")}
-            </dt>
-            <dd className="mt-0.5 font-medium text-foreground">
-              {org.employerCreatedAt
-                ? new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "sv-SE").format(
-                    new Date(org.employerCreatedAt),
-                  )
-                : "—"}
-            </dd>
-          </div>
-        </dl>
-      )}
+        {org && (
+          <dl className="mt-6 grid grid-cols-2 gap-4 rounded-xl border border-border p-4 text-sm">
+            <div className="min-w-0">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("employer.pending.company")}
+              </dt>
+              <dd className="mt-0.5 truncate font-medium text-foreground">{org.employerName}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("employer.pending.registered")}
+              </dt>
+              <dd className="mt-0.5 font-medium text-foreground">
+                {org.employerCreatedAt
+                  ? new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "sv-SE").format(
+                      new Date(org.employerCreatedAt),
+                    )
+                  : "—"}
+              </dd>
+            </div>
+          </dl>
+        )}
 
-      <div className="mt-8 flex flex-wrap gap-2">
-        {state === "waiting" && (
+        <div className="mt-8 flex flex-wrap gap-2">
+          {state === "waiting" && (
+            <button
+              type="button"
+              onClick={() => void query.refetch()}
+              disabled={query.isFetching}
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-60"
+            >
+              <RefreshCw
+                className={"h-3.5 w-3.5" + (query.isFetching ? " animate-spin" : "")}
+                aria-hidden="true"
+              />
+              {t("employer.pending.checkStatus")}
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => void query.refetch()}
-            disabled={query.isFetching}
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-60"
+            onClick={() => {
+              void supabase.auth.signOut().then(() => navigate({ to: "/login" }));
+            }}
+            className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50"
           >
-            <RefreshCw
-              className={"h-3.5 w-3.5" + (query.isFetching ? " animate-spin" : "")}
-              aria-hidden="true"
-            />
-            {t("employer.pending.checkStatus")}
+            {t("employer.pending.signOut")}
           </button>
-        )}
-        <button
-          type="button"
-          onClick={() => {
-            void supabase.auth.signOut().then(() => navigate({ to: "/login" }));
-          }}
-          className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50"
-        >
-          {t("employer.pending.signOut")}
-        </button>
+        </div>
       </div>
-    </div>
+    </SiteLayout>
   );
 }

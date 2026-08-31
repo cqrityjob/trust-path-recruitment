@@ -77,6 +77,7 @@
     "review-contribution:check": "bun run scripts/review-contribution-guard-check.ts",
     "employer-recruitment-flow:check": "bun run scripts/employer-recruitment-flow-check.ts",
     "employer-journey:check": "bun run scripts/employer-journey-guard-check.ts",
+    "employer-registration:check": "bun run scripts/employer-registration-check.tsx",
     "employer-library-purpose:check": "bun run scripts/employer-library-purpose-check.ts",
     "employer-decision-error:check": "bun run scripts/employer-decision-error-check.ts",
     "employer-job-lifecycle:check": "bun run scripts/employer-job-lifecycle-check.ts",

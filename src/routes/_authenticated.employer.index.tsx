@@ -48,7 +48,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
-import { ensureMyEmployerCompanyFromSignup } from "@/lib/job-intelligence/employer-onboarding.functions";
+import { useEmployerSignupProvisioning } from "@/lib/job-intelligence/use-employer-signup-provisioning";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slug";
 
@@ -93,24 +93,20 @@ function EmployerWorkspacePicker() {
     queryFn: () => listWorkspaces(),
   });
 
-  // The first authenticated visit after verification is where a registration
-  // becomes an organisation an administrator can review. It runs once, before
-  // any redirect decision, and is a no-op for everybody who already has a
-  // workspace or who never named a company at signup.
-  const ensureCompany = useServerFn(ensureMyEmployerCompanyFromSignup);
-  const provision = useQuery({
-    queryKey: ["employer", "ensure-company-from-signup"],
-    queryFn: () => ensureCompany(),
-    enabled: query.isSuccess && (query.data ?? []).length === 0,
-    retry: false,
-    staleTime: Infinity,
-  });
+  // Where a registration becomes an organisation an administrator can review.
+  //
+  // This route no longer OWNS that step -- the authenticated shell runs it
+  // from wherever the person landed, because binding it to this route is
+  // precisely what made an employer registration depend on guessing a URL.
+  // The hook shares one query key with the shell, so arriving here costs no
+  // second call and this page simply reads the answer.
+  const provision = useEmployerSignupProvisioning();
 
   // A newly created organisation is not in the workspace list yet.
   const refetchWorkspaces = query.refetch;
   useEffect(() => {
-    if (provision.data?.created) void refetchWorkspaces();
-  }, [provision.data, refetchWorkspaces]);
+    if (provision.created) void refetchWorkspaces();
+  }, [provision.created, refetchWorkspaces]);
 
   const workspaces = query.data ?? [];
 
@@ -121,7 +117,14 @@ function EmployerWorkspacePicker() {
       // Wait for provisioning to answer before deciding this person has no
       // company -- otherwise a fresh registration is bounced to the manual
       // onboarding form a moment before its organisation appears.
-      if (provision.isLoading || provision.data?.created) return;
+      if (provision.pending || provision.created) return;
+      // A provisioning FAILURE is not an answer. Sending somebody to the
+      // create-a-company form here would tell a person whose organisation
+      // may well exist that they have none, and invite them to register a
+      // second one -- the exact recovery-by-duplication this flow must not
+      // perform. Unknown is not none: the error state below says so and
+      // offers a retry.
+      if (provision.failed) return;
       navigate({ to: "/employer/onboarding", replace: true });
       return;
     }
@@ -156,7 +159,7 @@ function EmployerWorkspacePicker() {
     }
     // else: fall through and render the picker below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.isSuccess, workspaces.length, provision.isLoading, provision.data]);
+  }, [query.isSuccess, workspaces.length, provision.pending, provision.created, provision.failed]);
 
   if (query.isLoading) {
     return (
@@ -177,6 +180,40 @@ function EmployerWorkspacePicker() {
           </p>
           <div className="mt-6">
             <Link to="/my-career" className="text-sm font-medium text-accent hover:underline">
+              {t("sca.report.backToMyCareer")}
+            </Link>
+          </div>
+        </Section>
+      </SiteLayout>
+    );
+  }
+
+  // A registration that could not be completed says so, here, and offers the
+  // one action that can help. The alternative -- falling through to the
+  // create-a-company form -- states as fact ("you have no organisation") the
+  // one thing this page does not know, and the recovery it invites is a
+  // duplicate registration. A failed read is not an empty result.
+  if (provision.failed && workspaces.length === 0) {
+    return (
+      <SiteLayout>
+        <Section containerClassName="max-w-2xl">
+          <h1 className="text-2xl font-semibold text-foreground">
+            {t("employer.provisionFailed.heading")}
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">{t("employer.provisionFailed.body")}</p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void provision.retry()}
+              disabled={provision.pending}
+              className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-60"
+            >
+              {t("employer.provisionFailed.retry")}
+            </button>
+            <Link
+              to="/my-career"
+              className="inline-flex h-10 items-center text-sm font-medium text-accent hover:underline"
+            >
               {t("sca.report.backToMyCareer")}
             </Link>
           </div>
