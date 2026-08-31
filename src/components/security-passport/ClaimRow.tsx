@@ -13,7 +13,12 @@
 
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatDate, formatExpiry, formatJurisdiction } from "@/lib/security-passport/format";
+import {
+  formatDate,
+  formatExpiry,
+  formatJurisdiction,
+  verifierAttributionKey,
+} from "@/lib/security-passport/format";
 import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
 import type { Claim } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
@@ -101,8 +106,22 @@ export function ClaimRow({
         ) : null}
         <Field label={pt("claims.issuedOn")} value={formatDate(claim.issuedOn, lang)} />
         <Field label={pt("claims.validUntil")} value={formatExpiry(claim.validUntil, lang)} />
+        {/* ── ISSUER AND VERIFIER, SIDE BY SIDE AND NEVER MERGED ────────
+            "Issuer" above is what the candidate typed. This is who made the
+            verification DECISION, read from the decision record, and its
+            label follows the recorded METHOD -- "Document reviewed by
+            CQrityjob" is a different claim from "Confirmed by Bevakning AB"
+            and the reader is owed the difference. Absent when nobody has
+            verified it, which is most claims: the row simply omits the
+            field rather than reaching for the issuer's name. */}
         {claim.verifierName ? (
-          <Field label={pt("claims.verifier")} value={claim.verifierName} />
+          <Field
+            label={pt(verifierAttributionKey(claim.verificationMethod))}
+            value={claim.verifierName}
+          />
+        ) : null}
+        {claim.verifierName && claim.verifiedOn ? (
+          <Field label={pt("claims.verifiedOn")} value={claim.verifiedOn} />
         ) : null}
       </dl>
 

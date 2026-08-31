@@ -151,8 +151,19 @@ export function CredentialVerificationPage({
               {pt("rec.method")}
             </dt>
             <dd className="mt-0.5 text-sm text-foreground">
+              {/* A method this build has no words for prints its own stored
+                  code. The fallback used to be "ver.method.document_review",
+                  which told the reader CQrityjob had examined a document
+                  whenever the recorded method was merely unrecognised -- an
+                  invented provenance claim on the surface a stranger trusts
+                  precisely because they cannot check behind it. Registry and
+                  authority verification arrive as new methods, so an unknown
+                  value here is expected, not exceptional. */}
               {credential.verificationMethod
-                ? pt(METHOD_KEY[credential.verificationMethod] ?? "ver.method.document_review")
+                ? (() => {
+                    const key = METHOD_KEY[credential.verificationMethod];
+                    return key ? pt(key) : credential.verificationMethod;
+                  })()
                 : pt("common.notStated")}
             </dd>
           </div>

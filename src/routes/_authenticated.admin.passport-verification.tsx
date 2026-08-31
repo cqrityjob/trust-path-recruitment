@@ -47,6 +47,12 @@ import {
 } from "@/lib/security-passport/verification.functions";
 import { getEvidenceViewUrl } from "@/lib/security-passport/evidence.functions";
 import {
+  CLAIM_TYPE_KEY,
+  codeLabel,
+  ReviewClaimFacts,
+  ReviewPeriodFacts,
+} from "@/components/security-passport/live/ReviewSubjectFacts";
+import {
   decisionErrorCodeFrom,
   type DecisionErrorCode,
 } from "@/lib/security-passport/decision-errors";
@@ -108,7 +114,7 @@ function PassportVerificationQueueRoute() {
 }
 
 function PassportVerificationQueue() {
-  const { pt } = usePassportCopy();
+  const { pt, lang } = usePassportCopy();
 
   const whoAmI = useServerFn(passportVerifierWhoAmI);
   const loadQueue = useServerFn(listVerifierQueue);
@@ -344,6 +350,17 @@ function PassportVerificationQueue() {
                     {item.issuer ? ` · ${item.issuer}` : ""}
                     {item.employer ? ` · ${item.employer}` : ""}
                   </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {[
+                      // Which market a case belongs to is often the whole
+                      // question, and the queue printed nothing about it --
+                      // through the canonical formatter, never the raw code.
+                      item.jurisdiction ? formatWorkLocation(item.jurisdiction, null, lang) : null,
+                      codeLabel(item.claimType, CLAIM_TYPE_KEY, pt),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
                   <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
                     {pt("vq.submittedAt")} {item.submittedAt.slice(0, 10)} · {pt("vq.evidence")}:{" "}
                     {item.evidenceCount}
@@ -391,7 +408,26 @@ function PassportVerificationQueue() {
 
               {selected === item.id && !detailError ? (
                 <div className="mt-4 space-y-4 border-t border-border pt-4">
-                  {/* Documents — reachable only while this review is open. */}
+                  {/* 1. THE CLAIM — what the candidate states, in their own
+                      words, before any document is opened. The reviewer's eye
+                      then runs claim -> evidence -> history -> decision down
+                      one column, which is the comparison they are making. */}
+                  {detail?.claim ? (
+                    <ReviewClaimFacts
+                      holderName={detail.holderName}
+                      claim={detail.claim}
+                      headingId={`sp-claim-${item.id}`}
+                    />
+                  ) : null}
+                  {detail?.period ? (
+                    <ReviewPeriodFacts
+                      holderName={detail.holderName}
+                      period={detail.period}
+                      headingId={`sp-period-${item.id}`}
+                    />
+                  ) : null}
+
+                  {/* 2. THE EVIDENCE — reachable only while this review is open. */}
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                       {pt("vq.evidence")}
@@ -441,8 +477,30 @@ function PassportVerificationQueue() {
                         ))}
                       </ul>
                     )}
-                    <p className="mt-2 text-xs text-muted-foreground">{pt("vq.accessNote")}</p>
+                    {/* A document is what the claim is JUDGED AGAINST. It is
+                        not itself a verification, and a reviewer who reads the
+                        file list as the verification has skipped the only step
+                        that matters. */}
+                    <p className="mt-2 text-xs text-muted-foreground">{pt("vq.evidenceNote")}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{pt("vq.accessNote")}</p>
                   </div>
+
+                  {/* 3. PRIOR HISTORY.
+                      Silence here used to be ambiguous: a first submission and
+                      a claim rejected twice already rendered identically,
+                      because both simply showed nothing. "First submission"
+                      is a fact the reviewer needs stated, not inferred from an
+                      absence. */}
+                  {previousVersions.length === 0 && priorDecisions.length === 0 ? (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {pt("vq.historyHeading")}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {pt("vq.firstSubmission")}
+                      </p>
+                    </div>
+                  ) : null}
 
                   {previousVersions.length > 0 ? (
                     <div>
@@ -467,7 +525,18 @@ function PassportVerificationQueue() {
                       <ul className="mt-1 space-y-1 text-sm text-muted-foreground">
                         {priorDecisions.map((d, i) => (
                           <li key={`${d.decidedAt}-${i}`} className="tabular-nums">
-                            {d.decidedAt.slice(0, 10)} · {d.decision} · {d.organisation ?? ""}
+                            {[
+                              d.decidedAt.slice(0, 10),
+                              pt(STATUS_KEY[d.decision] ?? "ver.status.pending"),
+                              d.organisation,
+                              // How an earlier decision was reached changes
+                              // what it is worth as precedent. A prior
+                              // employer confirmation and a prior document
+                              // review are not the same signal.
+                              d.method ? pt(`ver.method.${d.method}` as PassportCopyKey) : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </li>
                         ))}
                       </ul>

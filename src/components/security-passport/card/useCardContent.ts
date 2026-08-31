@@ -162,7 +162,12 @@ export function useCardContent(
       fill: ev.fill,
       textTone: ev.text,
       premium: ev.premium,
-      issuer: socialSafe ? null : (c.verifierName ?? c.issuerName),
+      // The plate's issuer line is the ISSUER. It used to prefer
+      // `verifierName`, which put a verification fact under a field
+      // documented as "Issuer text" and, when there was no verifier, fell
+      // back to the issuer anyway -- so the line meant one thing or the
+      // other with nothing on the card to say which.
+      issuer: socialSafe ? null : c.issuerName,
       overlayTone: overlay ? overlay.edge : null,
       symbolCode: c.credentialCode,
       symbolState: credentialPresentation(c.assertionLevel, c.lifecycleState),

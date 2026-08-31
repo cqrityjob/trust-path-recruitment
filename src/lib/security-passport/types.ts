@@ -31,6 +31,20 @@ export type AssertionLevel = "self_declared" | "document_provided" | "verified";
 /** Where a claim sits in its life. Orthogonal to how well it is backed. */
 export type LifecycleState = "draft" | "active" | "expired" | "revoked" | "superseded" | "disputed";
 
+/** HOW a verification was reached. A third axis, and deliberately not folded
+ *  into `AssertionLevel`: "verified" says a decision was made, and this says
+ *  what was actually done to reach it. An employer confirming employment and
+ *  CQrityjob reading a certificate both produce `verified`, and a reader is
+ *  owed the difference.
+ *
+ *  It also holds the shape of every trust source the product is heading for
+ *  without any of them needing a new assertion level: authority and registry
+ *  verification arrive here, as methods, beside these three. */
+export type VerificationMethod =
+  | "document_review"
+  | "employer_confirmation"
+  | "issuer_confirmation";
+
 export const ASSERTION_LEVELS: readonly AssertionLevel[] = [
   "self_declared",
   "document_provided",
@@ -105,8 +119,16 @@ export interface ExperiencePeriod {
   readonly endedOn: IsoDate | null;
   readonly assertionLevel: AssertionLevel;
   readonly lifecycleState: LifecycleState;
-  /** Who confirmed it, when verified. Never settable by the holder. */
+  /** Who confirmed it, when verified. Never settable by the holder, and never
+   *  filled in from `employerName` -- the employer a period NAMES and the
+   *  employer that CONFIRMED it are different facts, and only the second one
+   *  is an attestation. */
   readonly verifierName: string | null;
+  /** How that confirmation was reached, from the decision record. Decides
+   *  which words the attribution uses; see `verifierAttributionKey`. */
+  readonly verificationMethod: VerificationMethod | null;
+  /** When it was confirmed. */
+  readonly verifiedOn: IsoDate | null;
 }
 
 export interface Claim {
@@ -144,7 +166,14 @@ export interface Claim {
   readonly validUntil: IsoDate | null;
   readonly assertionLevel: AssertionLevel;
   readonly lifecycleState: LifecycleState;
+  /** The organisation that made the verification DECISION -- never the
+   *  issuer. `issuerName` above is candidate-entered and says who awarded the
+   *  credential; this says who checked it, and the two are never
+   *  interchangeable. Null when nobody has verified it. */
   readonly verifierName: string | null;
+  /** How the verification was reached, from the decision record. */
+  readonly verificationMethod: VerificationMethod | null;
+  readonly verifiedOn: IsoDate | null;
   /** Mandatory context that travels with the claim into every disclosure.
    *  Cannot be toggled off by the holder (v1.1 §7.3). */
   readonly limitationSv: string | null;

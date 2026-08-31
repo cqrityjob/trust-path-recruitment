@@ -90,6 +90,10 @@ function claim(
     assertionLevel: opts.assertion ?? "verified",
     lifecycleState: opts.lifecycle ?? "active",
     verifierName: "CQrityjob",
+    // CQrityjob verifies credentials by reading the document. Stated
+    // rather than left null: an approval must say how it was reached.
+    verificationMethod: "document_review" as const,
+    verifiedOn: "2026-01-01",
     limitationSv: null,
     limitationEn: null,
     versionNo: 1,

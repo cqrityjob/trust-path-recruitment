@@ -417,6 +417,105 @@ GRANT EXECUTE ON FUNCTION public.sp_correct_claim(
 
 
 -- ---------------------------------------------------------------------------
+-- 3c. Restore the pre-three-market sp_verifier_request_detail
+-- ---------------------------------------------------------------------------
+-- The same failure mode as 3b, on a different function, for the same reason.
+--
+-- 20261014090000 widened the reviewer's payload so a reviewer could see the
+-- fields a certificate is actually checked against -- among them
+-- `c.sub_jurisdiction_code` and `c.authorisation_scope`, the difference
+-- between a Dubai licence and a UAE-wide one and the limit on a scoped
+-- approval. Section 3 above has just dropped `authorisation_scope`, and the
+-- three-market foundation rollback drops `sub_jurisdiction_code` immediately
+-- after this file.
+--
+-- Leaving the widened body in place does not fail here: the columns are named
+-- inside a SELECT that plpgsql does not resolve until execution. It fails
+-- later, the first time a reviewer opens a case, with `column c.
+-- authorisation_scope does not exist` -- which is a verification queue that
+-- cannot be worked, discovered in production rather than in this file.
+--
+-- The body below is the Phase 10 definition, copied from
+-- 20260818090000_sp_phase10_self_review_and_decision_events.sql: the last one
+-- written before either column existed. It reads neither, so it is safe
+-- whichever order the remaining rollbacks run in. Unlike sp_correct_claim
+-- this keeps its signature, so CREATE OR REPLACE genuinely replaces it and no
+-- second overload is created.
+CREATE OR REPLACE FUNCTION public.sp_verifier_request_detail(_request_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE _r public.sp_verification_requests%ROWTYPE; _out jsonb;
+BEGIN
+  IF NOT public.sp_is_verifier(auth.uid()) THEN
+    RAISE EXCEPTION 'SP_NOT_VERIFIER' USING ERRCODE='insufficient_privilege';
+  END IF;
+
+  SELECT * INTO _r FROM public.sp_verification_requests
+   WHERE id = _request_id AND request_kind = 'cqrityjob_review';
+  IF NOT FOUND THEN RAISE EXCEPTION 'SP_REQUEST_NOT_FOUND' USING ERRCODE='no_data_found'; END IF;
+
+  SELECT jsonb_build_object(
+    'id', _r.id,
+    'status', _r.status,
+    'submitted_at', _r.submitted_at,
+    'subject_type', CASE WHEN _r.claim_id IS NOT NULL THEN 'claim' ELSE 'experience' END,
+    'is_self', (_r.holder_user_id = auth.uid()),
+    'holder_name', (SELECT coalesce(display_name,'') FROM public.sp_passport_profiles
+                     WHERE holder_user_id = _r.holder_user_id),
+    'claim', (SELECT jsonb_build_object(
+                'id', c.id, 'type', c.claim_type, 'title', c.title,
+                'issuer', c.claimed_issuer_name, 'jurisdiction', c.jurisdiction_code,
+                'issued_on', c.issued_on, 'valid_until', c.valid_until,
+                'assertion', c.assertion_level, 'lifecycle', c.lifecycle_state,
+                'version_no', c.version_no)
+                FROM public.sp_claims c WHERE c.id = _r.claim_id),
+    'period', (SELECT jsonb_build_object(
+                'id', e.id, 'employer', e.employer_name, 'role', e.role_title,
+                'started_on', e.started_on, 'ended_on', e.ended_on,
+                'employment_type', e.employment_type, 'jurisdiction', e.jurisdiction_code,
+                'assertion', e.assertion_level, 'lifecycle', e.lifecycle_state)
+                FROM public.sp_experience_periods e WHERE e.id = _r.period_id),
+    'previous_versions', coalesce((
+      SELECT jsonb_agg(jsonb_build_object('id', pc.id, 'title', pc.title,
+                                          'version_no', pc.version_no,
+                                          'lifecycle', pc.lifecycle_state)
+                       ORDER BY pc.version_no)
+        FROM public.sp_claims pc
+       WHERE _r.claim_id IS NOT NULL
+         AND pc.holder_user_id = _r.holder_user_id
+         AND pc.id <> _r.claim_id
+         AND pc.id IN (SELECT supersedes_id FROM public.sp_claims WHERE id = _r.claim_id)
+    ), '[]'::jsonb),
+    'evidence', coalesce((
+      SELECT jsonb_agg(jsonb_build_object(
+               'id', ev.id, 'file_name', ev.file_name, 'mime_type', ev.mime_type,
+               'size_bytes', ev.size_bytes, 'storage_path', ev.storage_path,
+               'uploaded_at', ev.uploaded_at) ORDER BY ev.uploaded_at)
+        FROM public.sp_evidence ev
+       WHERE ev.lifecycle_state = 'active'
+         AND ((_r.claim_id IS NOT NULL AND ev.claim_id = _r.claim_id)
+           OR (_r.period_id IS NOT NULL AND ev.period_id = _r.period_id))
+    ), '[]'::jsonb),
+    'prior_decisions', coalesce((
+      SELECT jsonb_agg(jsonb_build_object(
+               'decision', d.decision, 'organisation', d.decider_organisation,
+               'method', d.verification_method, 'decided_at', d.decided_at,
+               'note', d.decision_note) ORDER BY d.decided_at DESC)
+        FROM public.sp_verification_decisions d
+        JOIN public.sp_verification_requests r2 ON r2.id = d.request_id
+       WHERE r2.holder_user_id = _r.holder_user_id
+         AND ((_r.claim_id IS NOT NULL AND r2.claim_id = _r.claim_id)
+           OR (_r.period_id IS NOT NULL AND r2.period_id = _r.period_id))
+    ), '[]'::jsonb)
+  ) INTO _out;
+
+  RETURN _out;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.sp_verifier_request_detail(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sp_verifier_request_detail(uuid) TO authenticated;
+
+
+-- ---------------------------------------------------------------------------
 -- 4. The code-length check
 -- ---------------------------------------------------------------------------
 -- Restoring the 16-character cap is only safe once the long codes are gone,

@@ -362,6 +362,14 @@ const sv = {
   "claims.type.professional_membership": "Yrkesmedlemskap",
   "claims.issuer": "Utfärdare",
   "claims.verifier": "Verifierad av",
+  // ── UTFÄRDARE ÄR INTE VERIFIERARE ────────────────────────────────────
+  // "Utfärdad av BYA" och "Verifierad av BYA" är två skilda påståenden.
+  // Etiketten väljs av METODEN som faktiskt användes, aldrig av vem som
+  // råkar stå som utfärdare. Utan metod används den neutrala frasen ovan.
+  "claims.attribution.document_review": "Dokument granskat av",
+  "claims.attribution.employer_confirmation": "Bekräftat av",
+  "claims.attribution.issuer_confirmation": "Bekräftat av utfärdaren",
+  "claims.verifiedOn": "Verifierat",
   "claims.jurisdiction": "Land",
   "claims.issuedOn": "Utfärdat",
   "claims.validUntil": "Giltigt till",
@@ -874,6 +882,31 @@ const sv = {
   "vq.decided": "Beslutet är sparat.",
   "vq.previousVersions": "Tidigare versioner",
   "vq.priorDecisions": "Tidigare beslut",
+
+  // ── VAD KANDIDATEN UPPGER ────────────────────────────────────────────
+  // Granskarens uppgift är att jämföra påståendet med underlaget. Därför
+  // står påståendet först, med kandidatens egna ord, och underlaget under.
+  "vq.claimHeading": "Vad kandidaten uppger",
+  "vq.periodHeading": "Anställning kandidaten uppger",
+  "vq.claimType": "Typ",
+  "vq.credentialCode": "Utbildningskod",
+  "vq.credentialReference": "Referensnummer",
+  "vq.issuerStated": "Utfärdare (uppgiven)",
+  "vq.jurisdiction": "Giltighetsområde",
+  "vq.authorisationScope": "Begränsning",
+  "vq.currentState": "Nuvarande status",
+  "vq.version": "Version",
+  "vq.employer": "Arbetsgivare",
+  "vq.role": "Roll",
+  "vq.period": "Period",
+  "vq.employmentType": "Anställningsform",
+  "vq.securityRelevance": "Säkerhetsrelevans",
+  "vq.historyHeading": "Tidigare händelser",
+  "vq.firstSubmission": "Första inlämningen. Inga tidigare versioner och inga tidigare beslut.",
+  // Ett dokument verifierar ingenting i sig. Det är det granskaren bedömer
+  // påståendet mot -- skillnaden hela produkten vilar på.
+  "vq.evidenceNote":
+    "Ett bifogat dokument styrker inte uppgiften i sig. Det är underlaget du bedömer uppgiften mot.",
   "vq.revoke": "Återkalla verifiering",
   "vq.revokeReason": "Varför återkallas den?",
   "vq.revokeConfirm":
@@ -1837,6 +1870,10 @@ const en: Record<PassportCopyKey, string> = {
   "claims.type.professional_membership": "Professional membership",
   "claims.issuer": "Issuer",
   "claims.verifier": "Verified by",
+  "claims.attribution.document_review": "Document reviewed by",
+  "claims.attribution.employer_confirmation": "Confirmed by",
+  "claims.attribution.issuer_confirmation": "Confirmed by the issuer",
+  "claims.verifiedOn": "Verified",
   "claims.jurisdiction": "Country",
   "claims.issuedOn": "Issued",
   "claims.validUntil": "Valid until",
@@ -2265,6 +2302,26 @@ const en: Record<PassportCopyKey, string> = {
   "vq.decided": "The decision has been recorded.",
   "vq.previousVersions": "Previous versions",
   "vq.priorDecisions": "Earlier decisions",
+
+  "vq.claimHeading": "What the candidate states",
+  "vq.periodHeading": "Employment the candidate states",
+  "vq.claimType": "Type",
+  "vq.credentialCode": "Credential code",
+  "vq.credentialReference": "Reference number",
+  "vq.issuerStated": "Issuer (as stated)",
+  "vq.jurisdiction": "Jurisdiction",
+  "vq.authorisationScope": "Authorisation scope",
+  "vq.currentState": "Current state",
+  "vq.version": "Version",
+  "vq.employer": "Employer",
+  "vq.role": "Role",
+  "vq.period": "Period",
+  "vq.employmentType": "Employment type",
+  "vq.securityRelevance": "Security relevance",
+  "vq.historyHeading": "Earlier history",
+  "vq.firstSubmission": "First submission. No previous versions and no earlier decisions.",
+  "vq.evidenceNote":
+    "An attached document does not verify the claim by itself. It is what you judge the claim against.",
   "vq.revoke": "Revoke verification",
   "vq.revokeReason": "Why is it being revoked?",
   "vq.revokeConfirm":

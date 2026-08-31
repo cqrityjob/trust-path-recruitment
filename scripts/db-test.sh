@@ -2458,6 +2458,59 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# The internal reviewer note, against a crafted read.
+#
+# `decision_note` is reviewer reasoning; `holder_message` is what the candidate
+# is told. Before 20261014090000 the holder read the note straight off the
+# table over PostgREST -- the RLS policy matched their row and the grant
+# included every column. This suite runs as `authenticated` with a JWT subject
+# set, which is exactly that principal, and never through a TypeScript
+# function: the defect did not need one.
+#
+# Registered BEFORE the rollback chain, like every other Passport suite: the
+# chain drops the tables it reads.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport internal note privacy assertions"
+set +e
+SPNP_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_note_privacy_test.sql 2>&1)"
+SPNP_RC=$?
+set -e
+
+echo "$SPNP_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPNP_PASSED="$(echo "$SPNP_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPNP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the internal note privacy suite exited with code ${SPNP_RC}." >&2
+  echo "$SPNP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport internal note privacy"
+else
+  echo "    ok  ${SPNP_PASSED} internal note privacy assertions passed"
+
+  # Named, not merely counted. Each denial below is paired with a positive
+  # read proving the row was reachable, so a suite that silently lost its
+  # fixtures would fail rather than report a boundary that holds. A run that
+  # skipped exactly these would otherwise pass on count alone.
+  for REQUIRED in \
+    "1.1 the holder reads holder_message" \
+    "2.1 the holder cannot read decision_note on their own REQUEST" \
+    "2.2 the holder cannot read decision_note on their own DECISION" \
+    "2.7 the holder cannot PLANT an internal note on their own request" \
+    "4.1 the reviewer still reads the internal note, through the verifier RPC"; do
+    if ! echo "$SPNP_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: a mandatory note-privacy assertion did not run: ${REQUIRED}" >&2
+      suite_failed "Security Passport internal note privacy (missing: ${REQUIRED})"
+    fi
+  done
+
+  if [ "$SPNP_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 note privacy assertions, only ${SPNP_PASSED} ran." >&2
+    suite_failed "Security Passport internal note privacy (assertion shortfall: floor 30)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # The concurrent decision, run as two real processes.
 #
 # This cannot live inside a suite file. One psql session holds one transaction,

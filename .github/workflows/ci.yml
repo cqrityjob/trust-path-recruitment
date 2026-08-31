@@ -299,6 +299,8 @@ jobs:
       # a person SEES.
       - name: Passport decision truthfulness check
         run: bun run passport-decision-truthfulness:check
+      - name: Passport reviewer decision quality and trust attribution
+        run: bun run passport-reviewer-decision:check
 
       # ── THE EMPLOYER UAT GUARDS ──────────────────────────────────────────
       #

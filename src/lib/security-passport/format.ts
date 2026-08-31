@@ -194,3 +194,63 @@ export function workCountrySupportKey(
   // statement of which markets are open, which is true of every country.
   return bySub ?? byCountry ?? "jurisdiction.marketAvailability";
 }
+
+/**
+ * WHO verified it, said in the words of HOW they verified it.
+ *
+ * ── ISSUER IS NOT VERIFIER ─────────────────────────────────────────────
+ *
+ * "Issued by BYA" and "Verified by BYA" are two different claims about two
+ * different acts, and only one of them may be made on this product's behalf.
+ * The card used to print candidate-entered issuer text under the heading
+ * "Verified by" — because `verifierName ?? issuerName` had no verifier to
+ * find and fell through to a string the candidate typed themselves. That is
+ * a verification claim manufactured out of an unverified field, on the one
+ * surface built to be screenshotted and sent onward.
+ *
+ * ── THE LABEL FOLLOWS THE METHOD, NOT THE OBJECT ───────────────────────
+ *
+ * An employer confirming that someone worked for them has done something
+ * real, and something quite unlike CQrityjob reading a certificate. Calling
+ * both "Verified by" flattens the difference the trust ladder exists to
+ * keep, so the recorded `verification_method` chooses the words:
+ *
+ *   document_review        → "Document reviewed by CQrityjob"
+ *   employer_confirmation  → "Confirmed by Bevakning AB"
+ *   issuer_confirmation    → "Confirmed by the issuer"
+ *
+ * A decision with no recorded method — only rows predating the PR 5 rule
+ * that an approval must state one — gets the neutral "Verified by". It is
+ * the weakest true sentence available, which is the correct fallback when
+ * the stronger one cannot be substantiated.
+ *
+ * Nothing is collapsed in STORAGE: issuer, decider organisation, method and
+ * date stay four separate fields. This composes a sentence for a reader; it
+ * is not a place to put a new trust level, and adding one here rather than
+ * in the decision record is how the ladder would quietly grow a rung.
+ */
+export function verifierAttributionKey(method: string | null): PassportCopyKey {
+  switch (method) {
+    case "document_review":
+      return "claims.attribution.document_review";
+    case "employer_confirmation":
+      return "claims.attribution.employer_confirmation";
+    case "issuer_confirmation":
+      return "claims.attribution.issuer_confirmation";
+    default:
+      return "claims.verifier";
+  }
+}
+
+/** The whole attribution as one reader-facing line, or null when there is
+ *  nothing true to say. Null is a real answer: a credential nobody has
+ *  verified says nothing about a verifier, and the surfaces omit the line
+ *  rather than reaching for the nearest available name. */
+export function formatVerifierAttribution(
+  verifierName: string | null,
+  method: string | null,
+  lang: PassportLang,
+): string | null {
+  if (!verifierName) return null;
+  return `${passportT(verifierAttributionKey(method), lang)} ${verifierName}`;
+}

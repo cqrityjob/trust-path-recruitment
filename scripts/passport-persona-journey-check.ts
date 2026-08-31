@@ -93,6 +93,8 @@ function claim(
     assertionLevel: o.assertion ?? "verified",
     lifecycleState: o.lifecycle ?? "active",
     verifierName: "Fixture verifier",
+    verificationMethod: "document_review" as const,
+    verifiedOn: "2026-01-01",
     limitationSv: null,
     limitationEn: null,
     versionNo: 1,
