@@ -302,6 +302,15 @@ jobs:
       - name: Passport reviewer decision quality and trust attribution
         run: bun run passport-reviewer-decision:check
 
+      # Employment confirmation, rendered for both people in the exchange. The
+      # candidate must read "Bekräftad av Company X" and never "Verifierad av"
+      # for something no reviewer read; the employer must be told the message
+      # is required for the two outcomes the database refuses without one, and
+      # must never be offered a control on their own request that
+      # sp_verifier_decide will refuse.
+      - name: Passport employer employment verification
+        run: bun run passport-employer-verification:check
+
       # ── THE EMPLOYER UAT GUARDS ──────────────────────────────────────────
       #
       # Twelve findings from one customer, closed across five subsystems. Each

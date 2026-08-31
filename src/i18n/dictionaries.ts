@@ -1755,6 +1755,15 @@ export const dictionaries = {
     "employer.actions.testsWithCandidates.one": "test är ute hos en kandidat",
     "employer.actions.testsWithCandidates.other": "tester är ute hos kandidater",
 
+    // Security Passport — employment confirmation. The employer is being
+    // asked whether stated employment facts match their own records; it is
+    // not a reference request, and the wording never suggests one. Only
+    // requests waiting on the EMPLOYER are counted: a correction they have
+    // already asked for is waiting on the candidate and belongs in the
+    // workspace, not in a to-do list.
+    "employer.actions.employmentVerifications.one": "person vill få en anställning bekräftad",
+    "employer.actions.employmentVerifications.other": "personer vill få en anställning bekräftad",
+
     // Interview Intelligence, in the same shape as every other action: process
     // stages only, nothing about a candidate, and nothing shown at zero.
     "employer.actions.interviewPlansToApprove.one": "intervjuplan väntar på godkännande",
@@ -6886,6 +6895,10 @@ export const dictionaries = {
     "employer.actions.draftJobs.other": "draft job ads",
     "employer.actions.testsWithCandidates.one": "test is out with a candidate",
     "employer.actions.testsWithCandidates.other": "tests are out with candidates",
+
+    // Security Passport — employment confirmation. See the Swedish block.
+    "employer.actions.employmentVerifications.one": "person is asking you to confirm employment",
+    "employer.actions.employmentVerifications.other": "people are asking you to confirm employment",
 
     // Interview Intelligence, in the same shape as every other action.
     "employer.actions.interviewPlansToApprove.one": "interview plan needs approval",

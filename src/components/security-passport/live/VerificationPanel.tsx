@@ -21,10 +21,11 @@
 // renders from the decision record rather than from the claim's level.
 
 import { useState } from "react";
-import { AlertTriangle, BadgeCheck, Clock, MessageSquare, RotateCw } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { AlertTriangle, BadgeCheck, Building2, Clock, MessageSquare, RotateCw } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
-import { formatDate } from "@/lib/security-passport/format";
+import { formatDate, verifierAttributionKey } from "@/lib/security-passport/format";
 import type { Validity } from "@/lib/security-passport/validity";
 import { mayRenew } from "@/lib/security-passport/validity";
 import type {
@@ -68,6 +69,16 @@ export interface VerificationPanelProps {
    *  cannot, so the option is absent rather than disabled. */
   readonly canAskEmployer: boolean;
   readonly employers: readonly EmployerOption[];
+  /** The organisation an OPEN employer request is addressed to, resolved by
+   *  the caller from the employer list it already holds.
+   *
+   *  Null is a real answer and is rendered as one: an organisation that has
+   *  since stopped being visible to this holder leaves a request the product
+   *  can honestly describe as "waiting for the employer" and cannot honestly
+   *  name. Guessing at the name from `employerName` on the period would be
+   *  the same mistake `toPeriod` refuses to make -- the company a period
+   *  NAMES and the company being ASKED are different facts. */
+  readonly openRequestEmployerName: string | null;
   readonly onSubmit: (
     kind: "cqrityjob_review" | "employer_attestation",
     employerId: string | null,
@@ -100,6 +111,7 @@ export function VerificationPanel({
   hasEvidence,
   canAskEmployer,
   employers,
+  openRequestEmployerName,
   onSubmit,
   onWithdrawRequest,
   onDispute,
@@ -114,6 +126,45 @@ export function VerificationPanel({
   const latestApproval = decisions.find((d) => d.decision === "approved") ?? null;
   const latestRevocation = decisions.find((d) => d.decision === "revoked") ?? null;
   const renewable = mayRenew(assertionLevel, validity);
+
+  // ── WHO IS BEING WAITED ON, AND WHO ANSWERED ──────────────────────────
+  //
+  // Everything below distinguishes an EMPLOYER CONFIRMATION from a CQrityjob
+  // document review, because they are different acts and the candidate has
+  // different things to do about each. The distinction is read from the
+  // request's own `kind` and from the DECISION RECORD's organisation -- never
+  // from the employer name the candidate typed onto the period, and never
+  // from a flag this component computes for itself.
+  //
+  // `decider_organisation` is the authority for a decided request: it is the
+  // name recorded, by the database, at the moment the decision was made. The
+  // employer list is consulted only for a request nobody has answered yet,
+  // because there is no decision record to read.
+  const isEmployerRequest = (r: MyVerificationRequest | null): boolean =>
+    r !== null && r.kind === "employer_attestation";
+
+  /** The organisation on the most recent decision for one request. Null when
+   *  the decision record has no organisation, which is not a case to paper
+   *  over -- the panel says "the employer" rather than inventing a name. */
+  const deciderFor = (requestId: string): string | null =>
+    decisions.find((d) => d.requestId === requestId)?.organisation ?? null;
+
+  /** `<key> <organisation>`, or the key with a neutral noun when there is no
+   *  name to use. The same composition `formatVerifierAttribution` makes, for
+   *  the same reason: the sentence is translated and the company is not. */
+  const named = (key: PassportCopyKey, organisation: string | null): string =>
+    `${pt(key)} ${organisation ?? pt("ver.employer.unknownOrg")}`;
+
+  const employerOpen = isEmployerRequest(openRequest);
+  const employerRejected = isEmployerRequest(rejectedRequest);
+
+  /** An employer has already confirmed this, and it still stands. Read from
+   *  the CURRENT assertion level as well as from the decision record, for the
+   *  reason `toPeriod` gates attribution the same way: a confirmation that was
+   *  later revoked is real history and stays in the log, but it is not a
+   *  present fact and must not suppress a fresh request. */
+  const employerConfirmed =
+    assertionLevel === "verified" && latestApproval?.method === "employer_confirmation";
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -136,12 +187,44 @@ export function VerificationPanel({
       </h3>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{pt("ver.lead")}</p>
 
-      {/* ── The decision, when there is one ─────────────────────────── */}
+      {/* ── The decision, when there is one ──────────────────────────────
+          The headline sentence for an employer confirmation is written out in
+          full -- "Anställningen är bekräftad av Bevakning AB" -- because
+          "Verifierad av: Bevakning AB" in a definition list is the sentence
+          this product must not say. A company confirming that somebody worked
+          for them has done something real and something quite unlike CQrityjob
+          reading a certificate, and the trust ladder only survives if the two
+          do not share a word.
+
+          Which sentence appears is decided by the recorded verification
+          METHOD, not by anything the page assumes. */}
+      {latestApproval && latestApproval.method === "employer_confirmation" ? (
+        <p className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-4 text-sm font-medium text-foreground">
+          <Building2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <span className="block">
+              {named("ver.employer.confirmedBy", latestApproval.organisation)}
+            </span>
+            {/* Whose statement this is, said next to it. A candidate showing
+                this to a third party must not be able to present it as
+                CQrityjob's finding, and the third party must not read it as
+                one. */}
+            <span className="mt-1 block text-sm font-normal text-muted-foreground">
+              {pt("ver.employer.notCqrityjob")}
+            </span>
+          </span>
+        </p>
+      ) : null}
+
       {latestApproval ? (
         <dl className="mt-4 grid gap-3 rounded-lg border border-border bg-secondary/40 p-4 sm:grid-cols-2">
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("ver.decidedBy")}
+              {/* Was always "Verifierad av", whatever the method. An employer
+                  confirmation and a CQrityjob document review then read
+                  identically, which is exactly the flattening the recorded
+                  method exists to prevent. */}
+              {pt(verifierAttributionKey(latestApproval.method))}
             </dt>
             <dd className="mt-0.5 text-sm font-medium text-foreground">
               {latestApproval.organisation ?? pt("common.notStated")}
@@ -209,11 +292,23 @@ export function VerificationPanel({
           role="status"
           className="mt-4 rounded-lg border border-destructive/40 bg-destructive/5 p-4"
         >
+          {/* An employer who cannot find the employment in their records and a
+              reviewer who read a document and was not satisfied by it have
+              reached completely different conclusions, and the candidate's
+              next step differs accordingly: one checks their dates, the other
+              checks their paperwork. The generic "we could not verify this
+              based on the documentation" was wrong for the first case in every
+              particular -- there was no documentation and CQrityjob was not
+              the "we". */}
           <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-destructive" />
-            {pt("ver.rejected.title")}
+            {employerRejected
+              ? named("ver.employer.rejectedBy", deciderFor(rejectedRequest.id))
+              : pt("ver.rejected.title")}
           </h4>
-          <p className="mt-1 text-sm leading-relaxed text-foreground">{pt("ver.rejected.body")}</p>
+          <p className="mt-1 text-sm leading-relaxed text-foreground">
+            {employerRejected ? pt("ver.employer.rejectedBody") : pt("ver.rejected.body")}
+          </p>
 
           {rejectedRequest.decidedAt ? (
             <p className="mt-2 text-xs tabular-nums text-muted-foreground">
@@ -224,7 +319,7 @@ export function VerificationPanel({
           {rejectedRequest.holderMessage ? (
             <div className="mt-3">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {pt("ver.rejected.reason")}
+                {employerRejected ? pt("ver.employer.messageFrom") : pt("ver.rejected.reason")}
               </p>
               <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground">
                 {rejectedRequest.holderMessage}
@@ -237,11 +332,25 @@ export function VerificationPanel({
             // stated as an absence rather than papered over with a plausible
             // sentence nobody wrote.
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {pt("ver.rejected.noReason")}
+              {employerRejected ? pt("ver.employer.noMessage") : pt("ver.rejected.noReason")}
             </p>
           )}
 
-          <p className="mt-3 text-sm leading-relaxed text-foreground">{pt("ver.rejected.next")}</p>
+          <p className="mt-3 text-sm leading-relaxed text-foreground">
+            {employerRejected ? pt("ver.employer.rejectedNext") : pt("ver.rejected.next")}
+          </p>
+
+          {/* The candidate owns their own record. An employer may say the
+              dates are wrong; only the holder may change them, and the
+              database has no path that would let anybody else. */}
+          {employerRejected ? (
+            <Link
+              to="/passport/information"
+              className="mt-3 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {pt("ver.employer.editEntry")}
+            </Link>
+          ) : null}
         </div>
       ) : null}
 
@@ -258,21 +367,40 @@ export function VerificationPanel({
           {openRequest.status === "clarification_requested" ? (
             <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <MessageSquare aria-hidden="true" className="h-4 w-4 shrink-0" />
-              {pt("ver.clarification.title")}
+              {/* Named, because "Komplettering begärd" does not tell a
+                  candidate who is waiting for what. The name comes from the
+                  DECISION record -- the organisation as the database wrote it
+                  when the request for correction was made. */}
+              {employerOpen
+                ? named("ver.employer.clarificationFrom", deciderFor(openRequest.id))
+                : pt("ver.clarification.title")}
             </h4>
           ) : (
             <p className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Clock aria-hidden="true" className="h-4 w-4" />
-              {pt(STATUS_KEY[openRequest.status] ?? "ver.status.pending")}
+              {/* "Under granskning" is true of a CQrityjob review and
+                  misleading about an employer request: nobody at CQrityjob is
+                  looking at it, and the candidate's own employer is. */}
+              {employerOpen
+                ? named("ver.employer.waitingFor", openRequestEmployerName)
+                : pt(STATUS_KEY[openRequest.status] ?? "ver.status.pending")}
             </p>
           )}
+
+          {employerOpen && openRequest.status === "clarification_requested" ? (
+            <p className="mt-2 text-sm leading-relaxed text-foreground">
+              {pt("ver.employer.clarificationBody")}
+            </p>
+          ) : null}
 
           {openRequest.holderMessage ? (
             <div className="mt-3">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {openRequest.status === "clarification_requested"
-                  ? pt("ver.clarification.whatIsNeeded")
-                  : pt("ver.messageToYou")}
+                {employerOpen
+                  ? pt("ver.employer.messageFrom")
+                  : openRequest.status === "clarification_requested"
+                    ? pt("ver.clarification.whatIsNeeded")
+                    : pt("ver.messageToYou")}
               </p>
               <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground">
                 {openRequest.holderMessage}
@@ -285,13 +413,34 @@ export function VerificationPanel({
             // say that the detail is missing instead of showing the demand
             // alone.
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {pt("ver.clarification.noMessage")}
+              {employerOpen ? pt("ver.employer.noMessage") : pt("ver.clarification.noMessage")}
             </p>
           ) : null}
 
           {openRequest.status === "clarification_requested" ? (
-            <p className="mt-3 text-sm leading-relaxed text-foreground">
-              {pt("ver.clarification.action")}
+            <>
+              <p className="mt-3 text-sm leading-relaxed text-foreground">
+                {/* The correction is the CANDIDATE's to make. An employer
+                    asks; they never write into somebody else's Passport, and
+                    `sp_periods_self_update` gives them no way to. */}
+                {employerOpen
+                  ? pt("ver.employer.clarificationAction")
+                  : pt("ver.clarification.action")}
+              </p>
+              {employerOpen ? (
+                <Link
+                  to="/passport/information"
+                  className="mt-3 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {pt("ver.employer.editEntry")}
+                </Link>
+              ) : null}
+            </>
+          ) : employerOpen ? (
+            // The three CQrityjob review steps describe a document being read
+            // by a reviewer. None of that is happening here.
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {pt("ver.employer.waitingBody")}
             </p>
           ) : (
             <ol className="mt-3 space-y-1 text-sm text-muted-foreground">
@@ -361,10 +510,31 @@ export function VerificationPanel({
             ) : null}
           </div>
 
-          {canAskEmployer ? (
+          {/* ── ASKING AGAIN, WHEN THERE IS SOMETHING TO ASK ──────────────
+              An employer confirmation is a statement about a fixed historical
+              fact: this person worked here, in this role, between these dates.
+              Once Company X has confirmed it there is nothing to ask them a
+              second time, and the entry cannot have changed underneath -- a
+              verified period is refused by `sp_periods_self_update`, which is
+              asserted in the database suite rather than assumed here.
+
+              Left in place, the block came back reading exactly as it had
+              before the candidate ever asked, directly beneath the sentence
+              saying the employment was confirmed. That is an interface saying
+              nothing happened, which is the same defect PR 4 closed for a
+              rejection and is closed here for a confirmation. */}
+          {canAskEmployer && !employerConfirmed ? (
             <div className="rounded-lg border border-border p-4">
               <p className="text-sm font-medium text-foreground">{pt("ver.requestEmployer")}</p>
               <p className="mt-1 text-sm text-muted-foreground">{pt("ver.requestEmployerHelp")}</p>
+              {/* What is being ASKED, distinct from what is being SHARED. A
+                  candidate who thinks they are requesting a reference will
+                  read a factual confirmation as a lukewarm one, and an
+                  employer asked for a reference would be being asked for
+                  something this product has no right to hold. */}
+              <p className="mt-1 text-sm text-muted-foreground">
+                {pt("ver.employer.notReference")}
+              </p>
 
               {employers.length === 0 ? (
                 <p className="mt-2 text-sm text-muted-foreground">{pt("ver.noEmployers")}</p>

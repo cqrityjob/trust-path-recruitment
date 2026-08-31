@@ -657,6 +657,33 @@ export interface EmployerAttestationItem {
   readonly fteFraction: number;
   readonly securityRelevance: string;
   readonly holderMessage: string | null;
+  /** The caller is this request's holder -- a candidate who also owns or
+   *  administers the organisation being asked. `sp_verifier_decide` refuses
+   *  every decision they make on it, so the page states that instead of
+   *  offering a control that cannot work. Answered by the database from
+   *  `auth.uid()`, never inferred here, so the page and the guard cannot
+   *  disagree about who somebody is. */
+  readonly isSelf: boolean;
+}
+
+/**
+ * Which of an employer's requests are WORK, and which are merely on the list.
+ *
+ * The dashboard needs a number and the workspace needs the rows, and they
+ * must never disagree, so both come from `sp_employer_attestation_queue` --
+ * the one function that already carries the owner/admin check. A separate
+ * counting query would be a second place for that authorisation to be got
+ * right, and eventually wrong. Same reasoning, same shape, as
+ * `passportReviewCounts` over the CQrityjob queue.
+ */
+export interface EmployerVerificationCounts {
+  /** Waiting on THIS employer to answer. The only number that belongs in a
+   *  "to do today" list. */
+  readonly open: number;
+  /** The employer asked for a correction and the candidate has not come back
+   *  yet. Real, worth seeing in the workspace, and NOT the employer's work --
+   *  counting it as such would send somebody to a queue with nothing to do. */
+  readonly waitingOnCandidate: number;
 }
 
 /** Employers the holder can address an attestation request to.
@@ -706,7 +733,40 @@ export const listEmployerAttestations = createServerFn({ method: "POST" })
       fteFraction: Number(r.fte_fraction ?? 0),
       securityRelevance: String(r.security_relevance ?? ""),
       holderMessage: (r.holder_message as string | null) ?? null,
+      // Strict equality, not truthiness: a payload from a database that
+      // predates the flag carries `undefined`, and `undefined` must read as
+      // "not the holder" -- the same answer today's page gives -- rather than
+      // as anything the page might treat as a special case.
+      isSelf: r.is_self === true,
     }));
+  });
+
+/**
+ * How much employment confirmation is waiting on one employer.
+ *
+ * Zero, rather than an error, when the caller is not a representative of that
+ * organisation: the caller is a dashboard badge, the workspace behind it has
+ * already refused a non-member, and a badge that throws would take the whole
+ * overview down for a member who simply is not an owner or an admin.
+ *
+ * A request the CALLER submitted about themselves is excluded from `open`.
+ * They are barred from deciding it, so counting it would send them to a list
+ * whose only item is one they must leave for a colleague.
+ */
+export const employerVerificationCounts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ employerId: z.string().uuid() }).parse(data))
+  .handler(async ({ context, data }): Promise<EmployerVerificationCounts> => {
+    const { data: rows, error } = await context.supabase.rpc("sp_employer_attestation_queue", {
+      _employer_id: data.employerId,
+    });
+    if (error) return { open: 0, waitingOnCandidate: 0 };
+
+    const list = ((rows ?? []) as Array<Record<string, unknown>>).filter((r) => r.is_self !== true);
+    return {
+      open: list.filter((r) => r.status === "pending").length,
+      waitingOnCandidate: list.filter((r) => r.status === "clarification_requested").length,
+    };
   });
 
 /* ------------------------------------------------------------------ */

@@ -74,6 +74,14 @@ export type EmployerNavSection =
   | "workforce"
   | "assessments"
   | "interviewIntelligence"
+  // Employment verification. A SECTION but deliberately not a NAV ITEM: only
+  // an owner or an admin may answer these, most organisations have none most
+  // of the time, and a permanent sidebar entry would be a room every member
+  // is invited into and refused at the door. It is reached from the overview's
+  // "to do today" row, which appears only when there is something to do.
+  // Named here so those pages can mark nothing in the sidebar as current
+  // rather than falsely lighting up Översikt.
+  | "employmentVerifications"
   | "competencies"
   | "training"
   | "sites"
@@ -289,12 +297,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
         >
           <NavGroups employerSlug={employerSlug} activeSection={activeSection} t={t} />
         </nav>
-        <SidebarFooter
-          email={email}
-          currentSlug={employerSlug}
-          onSignOut={onSignOut}
-          t={t}
-        />
+        <SidebarFooter email={email} currentSlug={employerSlug} onSignOut={onSignOut} t={t} />
       </aside>
 
       {/* Mobile top bar */}

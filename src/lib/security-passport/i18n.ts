@@ -940,6 +940,93 @@ const sv = {
   "emp.done": "Tack. Ditt svar är registrerat.",
   "emp.decided": "Besvarad",
   "emp.nav": "Passport-förfrågningar",
+
+  // ── PR 8. Employment verification, as work an employer can find ────
+  //
+  // One vocabulary across both sides of the exchange. The candidate reads
+  // "Väntar på Bevakning AB" and the employer reads "Anställningsverifiering";
+  // neither ever reads "referens", because nobody here is being asked for an
+  // opinion about a person.
+  "empv.title": "Anställningsverifiering",
+  "empv.lead":
+    "Personer som uppger att de har arbetat hos er kan be er bekräfta uppgiften. Ni bekräftar fakta — inte personen.",
+  "empv.openHeading": "Väntar på er",
+  "empv.waitingHeading": "Väntar på personen",
+  "empv.answeredHeading": "Besvarade",
+  "empv.emptyTitle": "Inga förfrågningar just nu",
+  "empv.emptyBody": "När någon ber er bekräfta en anställning hos er dyker den upp här.",
+  "empv.review": "Granska",
+  "empv.open": "Öppna",
+  "empv.back": "Tillbaka till anställningsverifieringar",
+  "empv.notFound": "Den här förfrågan finns inte bland era anställningsverifieringar.",
+  "empv.factsTitle": "Anställning att bekräfta",
+  "empv.organisation": "Organisation",
+  "empv.securityRelevance": "Säkerhetsrelevans",
+  "empv.extent": "Omfattning",
+  "empv.submitted": "Inkom",
+  "empv.responseTitle": "Ert svar",
+  "empv.meaningTitle": "Vad en bekräftelse betyder",
+  "empv.meaning1": "Ni bekräftar att de uppgivna anställningsuppgifterna stämmer med era register.",
+  "empv.meaning2":
+    "Ni säger ingenting om hur personen skötte arbetet, och ni rekommenderar inte personen.",
+  "empv.meaning3": "CQrityjob har inte kontrollerat uppgiften — det är er bekräftelse som visas.",
+  "empv.messageRequired": "Meddelande till personen (obligatoriskt)",
+  "empv.messageOptional": "Meddelande till personen (frivilligt)",
+  "empv.messageHelpCorrection":
+    "Skriv vad som behöver rättas, till exempel: ”Våra register visar att anställningen slutade 31 oktober 2025.”",
+  "empv.messageHelpReject":
+    "Skriv varför ni inte kan bekräfta, till exempel: ”Vi hittar inga uppgifter om anställning under den angivna perioden.”",
+  "empv.messageMissing": "Skriv ett meddelande till personen innan ni skickar svaret.",
+  "empv.confirmAction": "Bekräfta anställningen",
+  "empv.correctionAction": "Begär rättelse eller mer information",
+  "empv.rejectAction": "Kan inte bekräfta",
+  "empv.correctionNote":
+    "Ni ändrar inte personens uppgifter. Personen rättar dem själv och kan därefter fråga igen.",
+  "empv.send": "Skicka svaret",
+  "empv.answered.approved": "Ni bekräftade anställningen",
+  "empv.answered.rejected": "Ni kunde inte bekräfta anställningen",
+  "empv.answered.clarification_requested": "Ni begärde rättelse eller mer information",
+  "empv.answered.withdrawn": "Personen drog tillbaka förfrågan",
+  "empv.yourMessage": "Ert meddelande till personen",
+  "empv.selfTitle": "Ni kan inte bekräfta er egen anställning",
+  "empv.selfBody":
+    "Förfrågan gäller ert eget konto. Ingen kan verifiera sig själv, oavsett roll i organisationen. En kollega med behörighet owner eller admin får svara i stället.",
+  "empv.workspaceTitle": "Välj organisation",
+  "empv.workspaceLead": "Anställningsverifieringar hanteras i respektive organisations arbetsyta.",
+  "empv.workspaceNone":
+    "Ni är inte owner eller admin i någon organisation, så det finns inga anställningsverifieringar att hantera.",
+  "empv.workspaceOpen": "väntar på er",
+  "empv.workspaceNoneOpen": "Inget väntar på er",
+
+  // ── PR 8. The candidate's side of the same exchange ────────────────
+  //
+  // Every one of these is composed as `key + " " + organisation`, the same
+  // way `formatVerifierAttribution` composes an attribution line. The
+  // organisation is never baked into a sentence, because the sentence is
+  // translated and the organisation is not.
+  "ver.employer.waitingFor": "Väntar på",
+  "ver.employer.waitingBody":
+    "Arbetsgivaren har fått frågan och ser bara den här anställningen och ditt namn.",
+  "ver.employer.confirmedBy": "Anställningen är bekräftad av",
+  "ver.employer.clarificationFrom": "Behöver kompletteras enligt",
+  "ver.employer.clarificationBody":
+    "Arbetsgivaren behöver mer information eller en rättelse innan de kan bekräfta anställningen.",
+  "ver.employer.clarificationAction":
+    "Rätta uppgiften under Uppgifter i ditt Passport och fråga sedan igen. Arbetsgivaren ändrar aldrig dina uppgifter åt dig.",
+  "ver.employer.rejectedBy": "Kunde inte bekräftas av",
+  "ver.employer.rejectedBody":
+    "Arbetsgivaren hittade inget som stämmer med den anställning du angett. Uppgiften är kvar i ditt Passport som självrapporterad.",
+  "ver.employer.rejectedNext":
+    "Kontrollera datum, roll och organisation. Rätta det som blivit fel och fråga igen, eller be CQrityjob granska underlag i stället.",
+  "ver.employer.messageFrom": "Meddelande från arbetsgivaren",
+  "ver.employer.noMessage":
+    "Arbetsgivaren lämnade inget meddelande. Kontakta dem direkt om du behöver veta varför.",
+  "ver.employer.editEntry": "Rätta uppgiften",
+  "ver.employer.notCqrityjob":
+    "Det är arbetsgivaren som bekräftar, inte CQrityjob. Vi sparar vem som bekräftade, hur och när.",
+  "ver.employer.unknownOrg": "arbetsgivaren",
+  "ver.employer.notReference":
+    "Arbetsgivaren blir ombedd att bekräfta de uppgifter du fyllt i — roll, datum och anställningsform. De blir inte ombedda att lämna ett omdöme om dig.",
   "pkg.public_card.name": "Publikt Passport Card",
   "pkg.public_card.purpose": "Ett kort som visar din yrkesroll och dina verifierade behörigheter.",
   "pkg.verified_qualifications.name": "Verifierade behörigheter",
@@ -2362,6 +2449,83 @@ const en: Record<PassportCopyKey, string> = {
   "emp.done": "Thank you. Your answer has been recorded.",
   "emp.decided": "Answered",
   "emp.nav": "Passport requests",
+
+  // ── PR 8. Employment verification, as work an employer can find ────
+  "empv.title": "Employment verification",
+  "empv.lead":
+    "People who state that they worked for you can ask you to confirm it. You confirm facts — not the person.",
+  "empv.openHeading": "Waiting for you",
+  "empv.waitingHeading": "Waiting for the person",
+  "empv.answeredHeading": "Answered",
+  "empv.emptyTitle": "No requests right now",
+  "empv.emptyBody": "When somebody asks you to confirm employment with you, it appears here.",
+  "empv.review": "Review",
+  "empv.open": "Open",
+  "empv.back": "Back to employment verification",
+  "empv.notFound": "That request is not among your employment verification requests.",
+  "empv.factsTitle": "Employment to confirm",
+  "empv.organisation": "Organisation",
+  "empv.securityRelevance": "Security relevance",
+  "empv.extent": "Extent",
+  "empv.submitted": "Received",
+  "empv.responseTitle": "Your response",
+  "empv.meaningTitle": "What a confirmation means",
+  "empv.meaning1": "You confirm that the stated employment facts match your records.",
+  "empv.meaning2":
+    "You say nothing about how the person performed, and you are not recommending them.",
+  "empv.meaning3": "CQrityjob has not checked this — what is shown is your confirmation.",
+  "empv.messageRequired": "Message to the person (required)",
+  "empv.messageOptional": "Message to the person (optional)",
+  "empv.messageHelpCorrection":
+    "Say what needs correcting, for example: \u201COur records show the employment ended on 31 October 2025.\u201D",
+  "empv.messageHelpReject":
+    "Say why you cannot confirm, for example: \u201CWe could not locate employment records for the period stated.\u201D",
+  "empv.messageMissing": "Write a message to the person before sending your answer.",
+  "empv.confirmAction": "Confirm employment",
+  "empv.correctionAction": "Request correction / more information",
+  "empv.rejectAction": "Cannot confirm",
+  "empv.correctionNote":
+    "You do not change the person's entry. They correct it themselves and can then ask again.",
+  "empv.send": "Send your answer",
+  "empv.answered.approved": "You confirmed the employment",
+  "empv.answered.rejected": "You could not confirm the employment",
+  "empv.answered.clarification_requested": "You asked for a correction or more information",
+  "empv.answered.withdrawn": "The person withdrew the request",
+  "empv.yourMessage": "Your message to the person",
+  "empv.selfTitle": "You cannot confirm your own employment",
+  "empv.selfBody":
+    "This request is about your own account. Nobody can verify themselves, whatever their role in the organisation. A colleague who is an owner or an admin can answer instead.",
+  "empv.workspaceTitle": "Choose an organisation",
+  "empv.workspaceLead": "Employment verification is handled in each organisation's own workspace.",
+  "empv.workspaceNone":
+    "You are not an owner or an admin of any organisation, so there is no employment verification for you to handle.",
+  "empv.workspaceOpen": "waiting for you",
+  "empv.workspaceNoneOpen": "Nothing waiting for you",
+
+  // ── PR 8. The candidate's side of the same exchange ────────────────
+  "ver.employer.waitingFor": "Waiting for",
+  "ver.employer.waitingBody":
+    "The employer has the question and sees only this employment and your name.",
+  "ver.employer.confirmedBy": "Employment confirmed by",
+  "ver.employer.clarificationFrom": "More information needed by",
+  "ver.employer.clarificationBody":
+    "The employer needs more information or a correction before they can confirm the employment.",
+  "ver.employer.clarificationAction":
+    "Correct the entry under Information in your Passport, then ask again. The employer never edits your entry for you.",
+  "ver.employer.rejectedBy": "Could not be confirmed by",
+  "ver.employer.rejectedBody":
+    "The employer found nothing matching the employment you entered. The entry stays in your Passport as self-reported.",
+  "ver.employer.rejectedNext":
+    "Check the dates, the role and the organisation. Correct anything that is wrong and ask again, or ask CQrityjob to review documentation instead.",
+  "ver.employer.messageFrom": "Message from the employer",
+  "ver.employer.noMessage":
+    "The employer left no message. Contact them directly if you need to know why.",
+  "ver.employer.editEntry": "Correct the entry",
+  "ver.employer.notCqrityjob":
+    "The employer confirms this, not CQrityjob. We record who confirmed it, how and when.",
+  "ver.employer.unknownOrg": "the employer",
+  "ver.employer.notReference":
+    "The employer is asked to confirm the facts you entered — role, dates and employment type. They are not asked for a reference or an opinion about you.",
   "pkg.public_card.name": "Public Passport Card",
   "pkg.public_card.purpose":
     "A card showing your professional role and your verified authorisations.",

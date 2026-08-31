@@ -542,6 +542,18 @@ function PassportEntryRoute() {
         hasEvidence={entryEvidence.length > 0}
         canAskEmployer={!isClaim}
         employers={employers}
+        // The organisation an OPEN employer request went to, resolved from the
+        // list the holder chose from. Null when it is no longer in that list --
+        // said as "the employer" rather than substituted with the company name
+        // typed onto the period, which is a different fact and would read as an
+        // attestation nobody made. A DECIDED request does not use this at all:
+        // the panel reads its organisation from the decision record, which is
+        // what the database wrote at the moment the decision was made.
+        openRequestEmployerName={
+          openRequest?.targetEmployerId
+            ? (employers.find((e) => e.id === openRequest.targetEmployerId)?.name ?? null)
+            : null
+        }
         onSubmit={async (requestKind, employerId) => {
           await doSubmit({
             data: {
