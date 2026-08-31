@@ -101,7 +101,18 @@ export function ClaimRow({
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
-        <Field label={pt("claims.issuer")} value={claim.issuerName} />
+        {/* ── "—" IS A SENTINEL, NOT A LABEL ─────────────────────────────
+            `issuerName` is `claimed_issuer_name ?? "—"` in the read model, and
+            that em dash is load-bearing elsewhere: the Passport Card filters
+            attributions on it and the correction form maps it back to an empty
+            input. So it stays in the model and is translated HERE, where a
+            reader sees it. A dash under "Utfärdare" reads as a value nobody
+            can interpret; "Ej angivet" says the one true thing, in the same
+            words `formatDate` already uses two fields to the right. */}
+        <Field
+          label={pt("claims.issuer")}
+          value={claim.issuerName === "—" ? pt("common.notStated") : claim.issuerName}
+        />
         {claim.jurisdictionCode ? (
           <Field
             label={pt("claims.jurisdiction")}

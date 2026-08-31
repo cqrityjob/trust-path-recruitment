@@ -53,9 +53,14 @@ export function DiscoveryV31Pending({ active }: { active: ActiveDiscoveryV31Repo
           <Compass className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
           {t("careerDiscovery.history.type.discovery")}
         </span>
-        <p className="mt-3 text-xs text-muted-foreground">
-          {t("careerDiscovery.dashboard.v31Completed")} {date} ·{" "}
-          <span className="font-mono">{active.definitionVersion}</span>
+        {/* No version string. See DiscoveryCareerSummary: it is kept as a
+            data attribute for developer diagnostics and printed in the
+            report's Method section, not beside a completion date. */}
+        <p
+          className="mt-3 text-xs text-muted-foreground"
+          data-definition-version={active.definitionVersion}
+        >
+          {t("careerDiscovery.dashboard.v31Completed")} {date}
           {active.isInternalTest && ` · ${t("careerDiscovery.history.internalTest")}`}
         </p>
       </div>
@@ -139,14 +144,18 @@ export function DiscoveryReportUnreadable({ active }: { active: ActiveUnreadable
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
         {t("careerDiscovery.dashboard.unreadableBody")}
       </p>
-      <p className="mt-4 text-xs text-muted-foreground">
+      {/* ── THE VERSION IS A DIAGNOSTIC, NOT AN EXPLANATION ─────────────
+          This state means "this build cannot render your report". Printing
+          the definition version at a candidate answered that with a string
+          they cannot act on. The body above already says the thing that
+          matters and is still true: the report itself is intact. The version
+          moves to a data attribute, where support and the guard can read it
+          and the holder does not have to. */}
+      <p
+        className="mt-4 text-xs text-muted-foreground"
+        data-definition-version={active.definitionVersion ?? ""}
+      >
         {date}
-        {active.definitionVersion && (
-          <>
-            {" · "}
-            <span className="font-mono">{active.definitionVersion}</span>
-          </>
-        )}
       </p>
       <Link
         to="/security-career-assessment/history"

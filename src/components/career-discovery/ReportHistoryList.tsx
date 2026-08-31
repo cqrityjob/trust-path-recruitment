@@ -111,15 +111,18 @@ export function ReportHistoryList({ legacyRuns }: { legacyRuns: LegacyRunRow[] }
                   ? t("careerDiscovery.history.type.discovery")
                   : t("careerDiscovery.history.type.legacy")}
               </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              {/* Date and internal-test marker only. The definition version
+                  used to sit between them in a monospace face, which made a
+                  list of the candidate's own reports read like a build log.
+                  It is kept as a data attribute for diagnostics. */}
+              <p
+                className="mt-0.5 text-xs text-muted-foreground"
+                data-definition-version={row.kind === "discovery" ? row.version : undefined}
+              >
                 {fmt.format(new Date(row.at))}
-                {row.kind === "discovery" && (
-                  <>
-                    {" · "}
-                    <span className="font-mono">{row.version}</span>
-                    {row.internalTest && ` · ${t("careerDiscovery.history.internalTest")}`}
-                  </>
-                )}
+                {row.kind === "discovery" &&
+                  row.internalTest &&
+                  ` · ${t("careerDiscovery.history.internalTest")}`}
               </p>
             </div>
           </div>

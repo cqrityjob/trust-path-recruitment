@@ -33,6 +33,7 @@ import {
   type CredentialType,
 } from "../src/lib/security-passport/credentials";
 import { FIXTURE_CREDENTIAL_TYPES } from "../src/lib/security-passport/fixtures/credential-types";
+import { credentialMark } from "../src/lib/security-passport/credentials";
 import { passportCopy } from "../src/lib/security-passport/i18n";
 
 let failures = 0;
@@ -188,6 +189,20 @@ function seededCredentialRows(): Map<
   return out;
 }
 
+/** `code -> symbol_label`, from the INSERT tuples that carry a column list.
+ *
+ *  Same tuple shape as `seededCredentialRows`: the sixth quoted value is
+ *  `symbol_label`. The UK and UAE packs seed through INSERT ... SELECT over a
+ *  derived table, so their labels are not read here — see GROUP 0c for why
+ *  that is safe. */
+function seededSymbolLabels(): Map<string, string> {
+  const out = new Map<string, string>();
+  const row =
+    /\(\s*'([A-Z][A-Z0-9_]*)'\s*,\s*'[a-z_]+'\s*,\s*'(?:qualification|appointment)'\s*,\s*'(?:[^']|'')*'\s*,\s*'(?:[^']|'')*'\s*,\s*'([^']{1,4})'\s*,\s*(?:true|false)\s*,\s*(?:true|false)/g;
+  for (const m of SQL.matchAll(row)) out.set(m[1], m[2]);
+  return out;
+}
+
 /** Attributes turned on by a later UPDATE rather than in the INSERT.
  *
  *  Statement-scoped on purpose. The first attempt matched
@@ -258,6 +273,67 @@ function updatedFlag(flag: string): Set<string> {
     narrow.has("SE_PERSONNEL_APPROVAL"),
     "SE_PERSONNEL_APPROVAL is parsed from the SQL as narrow-result-only",
   );
+}
+
+console.log("\nGROUP 0c -- the symbol plate prints a governed mark, never a code");
+
+/* ── WHY THIS GROUP EXISTS ─────────────────────────────────────────────
+ *
+ * The credential symbol used to default its plate text to the CODE. With
+ * only VU1, VU2, OV and SV that was invisible, because each of those codes
+ * IS its `symbol_label`. The Swedish truth model added four where they
+ * differ, and the plate started printing truncated database enums — "SE_P",
+ * "OV_R", and "OV_T" for BOTH OV_TRAINING and OV_TRANSPORT — on the private
+ * overview, the Passport Card, the recipient page and the exported PNG.
+ *
+ * `credentialMark` is now the only way a code becomes a mark. It is a local
+ * table (§33: no database read to format a label), so this pins it against
+ * the seed the way every other mirror in this repository is pinned. */
+{
+  const sqlMarks = seededSymbolLabels();
+  ok(sqlMarks.size >= 8, `parsed ${sqlMarks.size} symbol labels from the migrations`);
+
+  const wrong: string[] = [];
+  for (const [code, label] of sqlMarks) {
+    // Sweden is the active market; the UK and UAE packs ship inactive and
+    // their rows are seeded through INSERT ... SELECT, which this parser
+    // deliberately does not read. An unparsed code resolves to null and its
+    // plate carries no legend, which is the safe fallback either way.
+    const mark = credentialMark(code);
+    if (mark !== null && mark !== label) wrong.push(`${code}: "${mark}" != seeded "${label}"`);
+  }
+  ok(
+    wrong.length === 0,
+    "every resolved mark equals sp_credential_types.symbol_label" +
+      (wrong.length ? " — " + wrong.join("; ") : ""),
+  );
+
+  const unresolved = [...sqlMarks.keys()].filter((c) => credentialMark(c) === null);
+  ok(
+    unresolved.length === 0,
+    "every credential the parser sees has a governed mark" +
+      (unresolved.length ? " — unresolved: " + unresolved.join(", ") : ""),
+  );
+
+  // The property the whole group is for: a mark is never a slice of a code.
+  const leaks = [...sqlMarks.keys()].filter((c) => {
+    const mark = credentialMark(c);
+    return mark !== null && mark !== c && c.startsWith(mark);
+  });
+  ok(
+    leaks.length === 0,
+    "no mark is a prefix of its own code" + (leaks.length ? " — " + leaks.join(", ") : ""),
+  );
+
+  ok(credentialMark("SE_PERSONNEL_APPROVAL") === "PG", 'SE_PERSONNEL_APPROVAL resolves to "PG"');
+  ok(credentialMark("OV_TRAINING") === "OVU", 'OV_TRAINING resolves to "OVU"');
+  ok(credentialMark("OV_TRANSPORT") === "OVT", 'OV_TRANSPORT resolves to "OVT"');
+  ok(
+    credentialMark("OV_TRAINING") !== credentialMark("OV_TRANSPORT"),
+    "OV_TRAINING and OV_TRANSPORT no longer share one mark",
+  );
+  ok(credentialMark("SOME_UNMAPPED_CREDENTIAL") === null, "an unknown code resolves to no mark");
+  ok(credentialMark(null) === null, "a free-text claim resolves to no mark");
 }
 
 console.log(

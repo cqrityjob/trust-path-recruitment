@@ -122,7 +122,7 @@ function DiscoveryReportRoute() {
       <ReportMessage
         title={t("careerDiscovery.report.unreadable.title")}
         body={t("careerDiscovery.report.unreadable.body")}
-        detail={data.definitionVersion}
+        diagnostic={data.definitionVersion}
       />
     );
   }
@@ -430,12 +430,16 @@ function SavedConfirmation() {
 function ReportMessage({
   title,
   body,
-  detail,
+  diagnostic,
   tone = "info",
 }: {
   title: string;
   body: string;
-  detail?: string | null;
+  /** Developer diagnostic, never rendered. The unreadable state used to
+   *  print the definition version at the candidate in a monospace face,
+   *  which explains nothing to somebody whose report will not open. It rides
+   *  as a data attribute so support and the guards can still read it. */
+  diagnostic?: string | null;
   tone?: "info" | "error";
 }) {
   const { t } = useT();
@@ -452,6 +456,7 @@ function ReportMessage({
       <div
         role={tone === "error" ? "alert" : "status"}
         data-report-state={tone}
+        data-definition-version={diagnostic ?? undefined}
         className="mt-8 rounded-lg border border-border bg-background p-6"
       >
         <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
@@ -459,7 +464,6 @@ function ReportMessage({
           {title}
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
-        {detail && <p className="mt-3 font-mono text-xs text-muted-foreground">{detail}</p>}
       </div>
 
       <div className="mt-8 flex flex-wrap gap-3">

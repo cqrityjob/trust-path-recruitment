@@ -171,6 +171,20 @@ jobs:
       - name: Passport fixture and copy-parity check
         run: bun run passport-fixture:check
 
+      # THE PLUMBING MAY NOT REACH THE TRUST SURFACES. Independent pilot
+      # testing found the trust MODEL sound -- issuer separate from verifier,
+      # current trust separate from withdrawn -- and the implementation
+      # leaking underneath it: the credential symbol printed truncated
+      # database enums ("SE_P", and "OV_T" for two different credentials) on
+      # the private overview, the Passport Card, the recipient page and the
+      # exported PNG; the recognition panel printed "v1-prototype"; Career
+      # Discovery printed its definition version beside a candidate's own
+      # result and baked it into the shareable Career Card. Renders the real
+      # components and asserts the markup, plus a scan scoped to user-facing
+      # components, routes and copy tables.
+      - name: Trust surface check
+        run: bun run trust-surface:check
+
       # The application modal. A centred fixed dialog with no height cap is
       # clipped at BOTH ends once its content outgrows the viewport, and the
       # body scroll lock means no gesture reaches either -- measured at

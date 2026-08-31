@@ -55,6 +55,7 @@ import {
   credentialSymbolMarkup,
   symbolTreatment,
 } from "../src/lib/security-passport/design/credential-symbols";
+import { credentialMark } from "../src/lib/security-passport/credentials";
 
 const errors: string[] = [];
 function expect(condition: boolean, message: string): void {
@@ -781,20 +782,50 @@ for (const pkg of DISCLOSURE_PACKAGES) {
   }
 
   // The markup is self-contained: no external reference can appear in an
-  // exported PNG, and every mark carries its label text.
+  // exported PNG, and every mark carries its GOVERNED label text.
+  //
+  // The label is passed rather than defaulted. It used to fall back to the
+  // code, which is why a credential whose code is not also its mark printed a
+  // truncated database enum -- "SE_P", "OV_T" -- onto the exported card.
   for (const code of SYMBOL_CODES) {
+    const mark = credentialMark(code);
     for (const state of CREDENTIAL_PRESENTATION_STATES) {
-      const svg = credentialSymbolMarkup(code, state);
+      const svg = credentialSymbolMarkup(code, state, mark);
       expect(svg.length > 0, `Symbol markup empty for ${code}/${state}.`);
       expect(
         !svg.includes("http") && !svg.includes("<image"),
         `Symbol markup for ${code}/${state} must be self-contained.`,
       );
       expect(
-        svg.includes(`>${code}</text>`),
-        `Symbol markup for ${code}/${state} must carry its label.`,
+        svg.includes(`>${mark}</text>`),
+        `Symbol markup for ${code}/${state} must carry its governed mark.`,
       );
     }
+  }
+
+  // ── THE PLATE NEVER PRINTS THE CODE ──────────────────────────────────
+  //
+  // Asserted for every seeded credential whose code is NOT its mark, and for
+  // an unknown code, because those are the two cases the old `label ?? code`
+  // default got wrong. An unlabelled plate carries no legend at all; it does
+  // not carry four characters of an identifier.
+  for (const code of [
+    "OV_TRAINING",
+    "OV_REFRESHER",
+    "OV_TRANSPORT",
+    "SE_PERSONNEL_APPROVAL",
+    "SOME_UNMAPPED_CREDENTIAL",
+  ]) {
+    const svg = credentialSymbolMarkup(code, "verified", credentialMark(code));
+    const legend = /<text[^>]*>([^<]*)<\/text>/.exec(svg)?.[1] ?? "";
+    expect(
+      legend === (credentialMark(code) ?? ""),
+      `Symbol plate for ${code} printed "${legend}" rather than its governed mark.`,
+    );
+    expect(
+      !svg.includes(code.slice(0, 4)),
+      `Symbol plate for ${code} leaked a fragment of the raw code.`,
+    );
   }
 
   // ── The overview says who is blocked, and never scores the Passport ────

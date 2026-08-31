@@ -123,9 +123,19 @@ export function RecognitionPanel({
         </dl>
       ) : null}
 
-      <p className="mt-4 text-[11px] text-muted-foreground">
-        {pt("recognition.policy")}: <span className="font-mono">{recognition.policyVersion}</span>
-      </p>
+      {/* ── NO CALCULATION-RULE VERSION HERE ─────────────────────────────
+          This printed "Beräkningsregel: v1-prototype" — the literal from
+          `RECOGNITION_POLICY_VERSION`, whose own comment says "Prototype
+          value — not a production policy version" — under the one badge in
+          the product, on the surface whose entire job is to look
+          trustworthy. A candidate cannot act on a policy version, and this
+          particular one told them their recognition was a prototype.
+
+          The version is not deleted, only unpublished: it is still computed,
+          still stamped onto `sp_passports.recognition_policy_version`, and
+          still the answer to "which policy produced this recognition" for
+          audit. What the holder needs is what the recognition is BASED ON,
+          which the panel already states above in days and years. */}
     </section>
   );
 }

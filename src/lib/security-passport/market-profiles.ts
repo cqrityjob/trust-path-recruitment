@@ -216,7 +216,13 @@ export function marketDisplayName(
   return formatWorkLocation(profile.jurisdictionCode, profile.subJurisdictionCode, lang);
 }
 
-/** The short badge a compact card prints: `SE · 4`, `AE-DU · 2`.
+/** The short badge a compact card prints: `Sverige · 4`, `Dubai · 2`.
+ *
+ *  `marketCode` is the KEY, not the caption. It is what `data-market` and the
+ *  guards key on, and `MarketBadgeRow` resolves it through `formatJurisdiction`
+ *  so the summary says the market's name rather than its code — the same name
+ *  `marketDisplayName` gives the expanded card. A code with no reviewed name
+ *  falls back to itself there, deliberately.
  *
  *  ── WHY THE MARKET CODE AND NOT THE CREDENTIAL ───────────────────────
  *

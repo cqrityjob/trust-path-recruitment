@@ -33,6 +33,7 @@ import {
   type ShareFormat,
 } from "./design/trust-system";
 import { SYMBOL_CODES, SYMBOL_VIEWBOX, credentialSymbolMarkup } from "./design/credential-symbols";
+import { credentialMark } from "./credentials";
 import type { SocialCardModel } from "./social";
 import type { PassportLang } from "./i18n";
 
@@ -197,7 +198,7 @@ export function buildSocialSvg(
       const symY = y - fs(34) + Math.round((rowH - symSize) / 2);
       if (cred.code) {
         body.push(
-          `<g transform="translate(${symX} ${symY}) scale(${(symSize / SYMBOL_VIEWBOX).toFixed(4)})">${credentialSymbolMarkup(cred.code, "verified")}</g>`,
+          `<g transform="translate(${symX} ${symY}) scale(${(symSize / SYMBOL_VIEWBOX).toFixed(4)})">${credentialSymbolMarkup(cred.code, "verified", credentialMark(cred.code))}</g>`,
         );
       }
       const textX = cred.code ? symX + symSize + fs(16) : pad + fs(20);
@@ -310,7 +311,7 @@ export function buildGenericOgSvg(strings: {
   SYMBOL_CODES.forEach((code, i) => {
     const x = pad + i * (symbolSize + 20);
     body.push(
-      `<g transform="translate(${x} ${symbolY}) scale(${(symbolSize / SYMBOL_VIEWBOX).toFixed(4)})">${credentialSymbolMarkup(code, "self_declared")}</g>`,
+      `<g transform="translate(${x} ${symbolY}) scale(${(symbolSize / SYMBOL_VIEWBOX).toFixed(4)})">${credentialSymbolMarkup(code, "self_declared", credentialMark(code))}</g>`,
     );
   });
 
