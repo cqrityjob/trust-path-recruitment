@@ -100,6 +100,8 @@
   "interview-ai-eval:check": "bun run scripts/interview-ai-evaluation.ts",
   "interview-ux-contract:check": "bun run scripts/interview-ux-contract-check.ts",
   "interview-runtime-contract:check": "bun run scripts/interview-runtime-contract-check.ts",
+  "interview-context-bridge:check": "bun run scripts/interview-context-bridge-check.ts",
+  "interview-context-bridge-history:check": "bun run scripts/interview-context-bridge-history-check.ts",
   "interview-ai-provider:check": "bun run scripts/interview-ai-provider-check.ts",
   "interview-gold-independence:check": "bun run scripts/interview-gold-independence-check.ts",
     "recruitment-assessment-ux:check": "bun run scripts/recruitment-assessment-ux-check.ts",

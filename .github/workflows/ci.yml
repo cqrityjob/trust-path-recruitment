@@ -498,6 +498,16 @@ jobs:
       - name: Interview Intelligence runtime contract check
         run: bun run interview-runtime-contract:check
 
+      # The context an interview inherits from its application. Half of it runs
+      # buildInterviewContext against typed fixtures -- released assessment, no
+      # assessment, uploaded CV, no application -- and half of it reads the
+      # source, because the requirements that matter most here are ABSENCES:
+      # no reviewer notes, no Passport material, no service-role client, no
+      # write of any kind, and no wording that ranks or judges a candidate.
+      # An absence cannot be exercised, only inspected.
+      - name: Interview context bridge check
+        run: bun run interview-context-bridge:check
+
       # The real model adapter, proved against a fake transport with no
       # credential and no network. Transport failures retry a bounded number of
       # times; a returned-but-unusable answer is NEVER retried, because

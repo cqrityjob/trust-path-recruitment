@@ -5195,7 +5195,89 @@ export const dictionaries = {
       "Skriv vad panelen kom fram till och varför, inklusive var ni var oense. Det finns inget medelvärde och ingen omröstning — slutsatsen är ett resonemang, inte ett tal.",
     "iiu.pl.humanwritten":
       "Skriven av en människa. De enskilda bedömningarna ovan står kvar oförändrade.",
+
+    // ── INTERVJUUNDERLAG ─────────────────────────────────────────────
+    //
+    // Rekryterarens språk, inte produktens. "Intervjuunderlag", inte
+    // "Interview Intelligence-kontext". "Område att följa upp", inte
+    // "evidence gap".
+    //
+    // Ingen formulering här får läsas som ett omdöme om personen.
+    // "Begränsat underlag" beskriver hur mycket underlag som finns — det
+    // säger ingenting om kandidaten, och hjälptexten säger det rakt ut,
+    // eftersom en läsare annars fyller i den slutsatsen själv.
+    "iic.heading": "Intervjuunderlag",
+    "iic.lede":
+      "Det CQrityjob redan vet om den här ansökan. Hämtat nu från ansökan, annonsen och " +
+      "bedömningen — du behöver inte skriva in det igen.",
+    "iic.loading": "Hämtar underlag …",
+    "iic.error": "Underlaget kunde inte hämtas.",
+    "iic.error.hint":
+      "Intervjun går att förbereda ändå. Att underlaget saknas här betyder inte att " +
+      "kandidaten saknar material — försök igen, eller öppna ansökan direkt.",
+    "iic.unlinked": "Den här intervjun är inte kopplad till någon ansökan.",
+    "iic.unlinked.hint":
+      "Det är i sin ordning: en intervju kan hållas för en roll som inte är utannonserad. " +
+      "Lägg till underlaget nedan så används det i förberedelsen.",
+    "iic.openApplication": "Öppna ansökan",
+
+    "iic.field.candidate": "Kandidat",
+    "iic.field.role": "Roll",
+    "iic.field.noRole": "Ingen annons kopplad",
+    "iic.field.applied": "Ansökte",
+    "iic.field.material": "Inskickat CV",
+
+    "iic.cv.cqrityjob": "CQrityjob-CV",
+    "iic.cv.external": "Uppladdat CV",
+    "iic.cv.unreadable": "Kunde inte läsas",
+    "iic.cv.none": "Inget CV",
+
+    "iic.known": "Det här vet vi redan",
+    "iic.known.none": "Ingen sammanfattning finns att visa här.",
+    "iic.known.none.hint":
+      "Kandidaten kan ändå ha skickat in material. Öppna ansökan för att se allt som lämnats in.",
+    "iic.coverNote": "Personligt brev",
+    "iic.verified": "Verifierad",
+
+    "iic.explore": "Att fördjupa i intervjun",
+    "iic.explore.note":
+      "Områden att täcka, med källan till varför de står här. Det är inte en bedömning av " +
+      "kandidaten och inte en rangordning.",
+    "iic.explore.none": "Inga fördjupningsområden är hämtade för den här ansökan.",
+
+    "iic.reason.assessment": "Följ upp från bedömningen",
+    "iic.reason.limited": "Begränsat underlag",
+    "iic.reason.requirement": "Krav i annonsen",
+    "iic.why": "Varför:",
+    // Underordnad området, aldrig i stället för rollpaketets frågor.
+    "iic.suggestion": "Förslag från bedömningen:",
+    // Sagt rakt ut. En lista som tystnar läses som fullständig.
+    "iic.more": "+ {n} till. Öppna ansökan för allt underlag.",
+
+    "iic.src.application": "Ansökan",
+    "iic.src.job": "Annons",
+    "iic.src.cv": "CQrityjob-CV",
+    "iic.src.assessment": "Bedömning",
+
+    "iic.assessment.released": "Bedömningsunderlag delgivet {date}.",
+    "iic.assessment.pending": "En bedömning pågår och är inte delgiven ännu.",
+    "iic.assessment.pending.hint":
+      "Underlaget blir tillgängligt när bedömningen är granskad och delgiven. Intervjun " +
+      "kan hållas utan det.",
+    "iic.assessment.none": "Inget bedömningsunderlag finns för den här kandidaten.",
+    "iic.assessment.none.hint":
+      "En bedömning är ett underlag bland flera, inte ett krav för att hålla intervjun.",
+
+    "iic.footnote":
+      "Underlaget läses nu och sparas inte i intervjun. Den färdiga intervjurapporten " +
+      "bygger på bekräftad evidens och på det material som lagts till i ärendet, och " +
+      "ändras inte av att kandidatens CV eller profil uppdateras senare.",
+
+    "iiu.new.prefill": "Hämtat från ansökan. Ändra om intervjun ska heta något annat internt.",
+    "iiu.new.fromApplication": "Startas från en ansökan",
+
     "iiu.new.err.title": "Ange en rubrik för intervjun.",
+    "iiu.new.err.candidate": "Ange kandidatens namn eller referens.",
     "iiu.new.err.pack": "Välj ett rollpaket.",
     "iiu.new.lead":
       "Intervjun låses till en exakt version av rollpaketet. En senare ändring av paketet påverkar därför aldrig en pågående intervju eller en färdig rapport.",
@@ -10406,7 +10488,84 @@ export const dictionaries = {
       "Write what the panel concluded and why, including where you disagreed. There is no average and no vote — the conclusion is reasoning, not a number.",
     "iiu.pl.humanwritten":
       "Written by a person. The individual assessments above remain unchanged.",
+
+    // ── INTERVIEW BRIEFING ───────────────────────────────────────────
+    //
+    // A full translation, not a shorter one. The Swedish hint that says a
+    // limited-evidence area is not a statement about the candidate is the
+    // load-bearing sentence in this block, and an English reader needs it
+    // exactly as much.
+    "iic.heading": "Interview briefing",
+    "iic.lede":
+      "What CQrityjob already knows about this application. Read now from the application, " +
+      "the advert and the assessment — you do not need to enter it again.",
+    "iic.loading": "Loading the briefing …",
+    "iic.error": "The briefing could not be loaded.",
+    "iic.error.hint":
+      "You can still prepare the interview. A briefing missing here does not mean the " +
+      "candidate submitted nothing — try again, or open the application directly.",
+    "iic.unlinked": "This interview is not linked to an application.",
+    "iic.unlinked.hint":
+      "That is a normal case: an interview may be held for a role that was never advertised. " +
+      "Add the material below and it will be used in the preparation.",
+    "iic.openApplication": "Open the application",
+
+    "iic.field.candidate": "Candidate",
+    "iic.field.role": "Role",
+    "iic.field.noRole": "No advert linked",
+    "iic.field.applied": "Applied",
+    "iic.field.material": "Submitted CV",
+
+    "iic.cv.cqrityjob": "CQrityjob CV",
+    "iic.cv.external": "Uploaded CV",
+    "iic.cv.unreadable": "Could not be read",
+    "iic.cv.none": "No CV",
+
+    "iic.known": "What we already know",
+    "iic.known.none": "There is no summary to show here.",
+    "iic.known.none.hint":
+      "The candidate may still have submitted material. Open the application to see everything sent in.",
+    "iic.coverNote": "Cover note",
+    "iic.verified": "Verified",
+
+    "iic.explore": "To explore in the interview",
+    "iic.explore.note":
+      "Areas to cover, with the source of why each one is here. This is not an assessment of " +
+      "the candidate and not a ranking.",
+    "iic.explore.none": "No follow-up areas have been loaded for this application.",
+
+    "iic.reason.assessment": "Follow up from the assessment",
+    "iic.reason.limited": "Limited evidence",
+    "iic.reason.requirement": "Requirement in the advert",
+    "iic.why": "Why:",
+    "iic.suggestion": "Suggested by the assessment:",
+    "iic.more": "+ {n} more. Open the application for the full material.",
+
+    "iic.src.application": "Application",
+    "iic.src.job": "Advert",
+    "iic.src.cv": "CQrityjob CV",
+    "iic.src.assessment": "Assessment",
+
+    "iic.assessment.released": "Assessment material released on {date}.",
+    "iic.assessment.pending": "An assessment is under way and has not been released yet.",
+    "iic.assessment.pending.hint":
+      "The material becomes available once the assessment has been reviewed and released. " +
+      "The interview can be held without it.",
+    "iic.assessment.none": "No assessment material is available for this candidate.",
+    "iic.assessment.none.hint":
+      "An assessment is one source among several, not a prerequisite for holding the interview.",
+
+    "iic.footnote":
+      "This briefing is read now and is not stored in the interview. The finished interview " +
+      "report is built from confirmed evidence and from the material attached to this case, " +
+      "and does not change if the candidate updates their CV or profile later.",
+
+    "iiu.new.prefill":
+      "Taken from the application. Change it if the interview needs another internal name.",
+    "iiu.new.fromApplication": "Started from an application",
+
     "iiu.new.err.title": "Enter a title for the interview.",
+    "iiu.new.err.candidate": "Enter the candidate's name or reference.",
     "iiu.new.err.pack": "Choose a role package.",
     "iiu.new.lead":
       "The interview is locked to an exact version of the role package. A later change to the package therefore never affects an interview in progress or a finished report.",
