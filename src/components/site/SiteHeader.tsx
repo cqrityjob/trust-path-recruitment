@@ -21,6 +21,20 @@ export function SiteHeader() {
   const { t } = useT();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  // Sticky-header depth, added only once the page has actually moved.
+  //
+  // The bar carries a hairline at rest and gains a soft shadow on scroll, so
+  // content passing underneath reads as passing UNDER something rather than
+  // colliding with it. Nothing about the box changes -- no height, padding or
+  // border-width transition -- so there is no layout shift, and the only
+  // animated properties are colour and shadow.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // Read off the SAME session this component already subscribes to — no extra
   // request. The account menu has to be able to say who it would sign out.
