@@ -52,8 +52,7 @@ export const Route = createFileRoute("/")({
           "@type": "Organization",
           name: "CQrityjob",
           slogan: "Where trust comes first.",
-          description:
-            "The career, recruitment and assessment platform for the security industry.",
+          description: "The career, recruitment and assessment platform for the security industry.",
           url: "https://www.cqrityjob.com",
         }),
       },
@@ -81,9 +80,7 @@ function Index() {
     };
   }, [navigate]);
 
-  const featuredProfessions = allProfessions
-    .filter((p) => p.status === "researched")
-    .slice(0, 6);
+  const featuredProfessions = allProfessions.filter((p) => p.status === "researched").slice(0, 6);
 
   const pillars = [
     {
@@ -209,10 +206,7 @@ function Index() {
                 at 320px left neither of them a comfortable target. Priority
                 is unambiguous: one solid navy action, one quiet outline. */}
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-              <PrimaryLink
-                to="/security-career-assessment"
-                className="w-full sm:w-auto"
-              >
+              <PrimaryLink to="/security-career-assessment" className="w-full sm:w-auto">
                 {t("cta.assessment")}
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
               </PrimaryLink>
@@ -239,9 +233,7 @@ function Index() {
           {pillars.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="bg-background p-8">
               <Icon className="h-6 w-6 text-accent" strokeWidth={1.5} />
-              <h3 className="mt-6 text-lg font-semibold tracking-tight text-foreground">
-                {title}
-              </h3>
+              <h3 className="mt-6 text-lg font-semibold tracking-tight text-foreground">{title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{desc}</p>
             </div>
           ))}
@@ -474,7 +466,10 @@ function Index() {
             <ul className="mt-8 space-y-3 text-sm text-primary-foreground/90">
               {platformPoints.map((k) => (
                 <li key={k} className="flex items-start gap-3">
-                  <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-foreground" strokeWidth={2} />
+                  <Check
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-foreground"
+                    strokeWidth={2}
+                  />
                   <span>{t(k)}</span>
                 </li>
               ))}
@@ -483,7 +478,10 @@ function Index() {
           <div className="md:col-span-2">
             <div className="rounded-lg border border-primary-foreground/20 bg-primary-foreground/[0.04] p-6">
               <div className="flex items-start gap-3">
-                <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-foreground/80" strokeWidth={1.75} />
+                <Info
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-foreground/80"
+                  strokeWidth={1.75}
+                />
                 <p className="text-sm leading-relaxed text-primary-foreground/85">
                   {t("home.platform.disclaimer")}
                 </p>
