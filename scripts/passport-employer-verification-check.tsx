@@ -175,7 +175,22 @@ function panel(over: Partial<React.ComponentProps<typeof VerificationPanel>> = {
       decisions={[]}
       hasEvidence={false}
       canAskEmployer
-      employers={[{ id: "emp-1", name: ORG }]}
+      // The picker is a controlled component now: the panel is handed a
+      // search RESULT, never a list to sort for itself. `passport-employer-
+      // matching-check` owns what that result may contain; this fixture only
+      // has to be a valid one.
+      employerSearch={{
+        suggestions: [
+          {
+            employer: { id: "emp-1", name: ORG, country: "SE", website: null },
+            reason: "exact_name",
+          },
+        ],
+        truncated: false,
+        loading: false,
+        failed: false,
+      }}
+      onEmployerSearch={() => {}}
       openRequestEmployerName={ORG}
       onSubmit={noopAsync}
       onWithdrawRequest={noopAsync}

@@ -353,6 +353,19 @@ jobs:
       - name: Passport employer employment verification
         run: bun run passport-employer-verification:check
 
+      # The way INTO employment confirmation. A pilot found the exchange itself
+      # working and the picker in front of it offering unrelated organisations,
+      # alphabetically, with the first one already selected -- two clicks from
+      # page load, a company that had never heard of the candidate could be
+      # asked to confirm their employment. This renders the replacement and
+      # asserts that nothing is preselected, that choosing is not sending, that
+      # a failed search and an empty one say different sentences, and that
+      # "my employer is not on CQrityjob" promises no invitation. The
+      # eligibility, duplicate, self-verification and tenant rules are asserted
+      # against the migrations, because a component cannot enforce them.
+      - name: Passport employer matching check
+        run: bun run passport-employer-matching:check
+
       # ── THE EMPLOYER UAT GUARDS ──────────────────────────────────────────
       #
       # Twelve findings from one customer, closed across five subsystems. Each

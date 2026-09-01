@@ -8,6 +8,7 @@
     "passport-error-scope:check": "bun run scripts/passport-error-scope-check.ts", 
     "passport-reviewer-decision:check": "bun run scripts/passport-reviewer-decision-check.tsx",
     "passport-employer-verification:check": "bun run scripts/passport-employer-verification-check.tsx",
+    "passport-employer-matching:check": "bun run scripts/passport-employer-matching-check.tsx",
     "passport-decision-truthfulness:check": "bun run scripts/passport-decision-truthfulness-check.tsx",
     "passport-share-default:check": "bun run scripts/passport-share-default-check.ts", 
     "my-career-gate:check": "bun run scripts/my-career-assessment-gate-check.ts",

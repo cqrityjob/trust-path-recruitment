@@ -27,6 +27,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { classifyDecisionError, DECISION_ERROR_PREFIX } from "./decision-errors";
 import { orNull } from "./rpc";
 import type { VerificationMethod } from "./types";
+import {
+  employerSearchTerms,
+  rankEmployerMatches,
+  type EmployerCandidate,
+  type EmployerSuggestion,
+} from "./employer-matching";
 
 export type VerificationStatus =
   | "pending"
@@ -206,6 +212,23 @@ const submitInput = z
   // inside the database.
   .refine((v) => v.kind !== "employer_attestation" || (v.periodId !== null && v.claimId === null), {
     message: "SP_EMPLOYER_ATTESTATION_EMPLOYMENT_ONLY",
+  })
+  // An employer confirmation with no employer on it is a request nobody can
+  // answer: it lands in no queue, and the holder waits for a company that was
+  // never asked.
+  //
+  // Same standing as the rule above, and for the same reason: NOT the control.
+  // `sp_submit_for_verification` refuses it by name (SP_EMPLOYER_REQUIRED) and
+  // `sp_vr_employer_kind_has_employer` refuses the row, which is what a
+  // hand-written PostgREST call meets. This exists so the refusal arrives at
+  // the caller rather than as a constraint name from inside the database.
+  //
+  // WHICH organisation may be asked is deliberately NOT decided here. That is
+  // eligibility -- a property of the organisation, on a row this layer would
+  // have to go and read -- and it belongs in the one place that can hold it
+  // without a race: the database.
+  .refine((v) => v.kind !== "employer_attestation" || v.employerId !== null, {
+    message: "SP_EMPLOYER_REQUIRED",
   });
 
 export const submitForVerification = createServerFn({ method: "POST" })
@@ -686,28 +709,192 @@ export interface EmployerVerificationCounts {
   readonly waitingOnCandidate: number;
 }
 
-/** Employers the holder can address an attestation request to.
+/* ------------------------------------------------------------------ */
+/* Finding the employer who can confirm an employment                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * WHAT THIS REPLACED, AND WHY IT HAD TO GO.
  *
- *  Deliberately read with the CALLER'S client and no filter of our own: the
- *  existing `employers` RLS decides. A holder therefore sees the employers
- *  this site already shows them — organisations with active job listings,
- *  plus any they are themselves a member of — and no more. Asking the
- *  database rather than inventing a second visibility rule means this list
- *  cannot become a way to enumerate organisations that are otherwise
- *  private. */
-export const listAttestableEmployers = createServerFn({ method: "GET" })
+ * `listAttestableEmployers` read `employers` with no filter of its own,
+ * ordered by name, capped at 200, and handed the lot to a `<select>` that
+ * preselected the first row. Three defects came out of that one query:
+ *
+ *   1. ORGANISATIONS WITH NO CONNECTION TO THE EMPLOYMENT led the list.
+ *      Whatever the candidate had written on the period, the control opened
+ *      on whichever company sorts first alphabetically among everything the
+ *      site shows them.
+ *
+ *   2. AN INELIGIBLE ORGANISATION COULD BE ASKED. `employers_member_select`
+ *      lets a member read their own organisation whatever its status, so a
+ *      candidate who had registered a company that CQrityjob has not
+ *      approved -- `draft`, `pending`, `rejected`, `suspended` -- saw it in
+ *      the picker and could address employment confirmation to it. Status is
+ *      now a condition of the query, and `sp_submit_for_verification` refuses
+ *      the same thing in the database, because a filter in a query is a
+ *      convenience and not a boundary.
+ *
+ *   3. A FAILED READ LOOKED LIKE AN EMPTY WORLD. `if (error) return []` turned
+ *      a refused query into "No connected employer was found", which is a
+ *      different sentence with a different action behind it. It throws now,
+ *      and the picker says the search is unavailable.
+ *
+ * WHAT IS AND IS NOT SENT TO THE BROWSER. Four columns -- id, name, country,
+ * website -- every one of them already public information about an
+ * organisation this candidate can read at all. `status` is used as a filter
+ * and never returned: whether CQrityjob has suspended a company is CQrityjob's
+ * business and the organisation's, not a candidate's. Nothing about members,
+ * administrators, moderation, applications or queue depth is reachable from
+ * here, and the select list names every column so a column added to
+ * `employers` tomorrow is invisible until somebody writes it in.
+ *
+ * VISIBILITY IS STILL THE DATABASE'S ANSWER, NOT OURS. The query adds a
+ * status filter -- it NARROWS. It does not widen, and no service-role client
+ * is used, so `employers_public_active_select` and `employers_member_select`
+ * remain the whole of what this candidate can see. One consequence is worth
+ * writing down rather than discovering: an active organisation with no
+ * currently-published job is invisible to a candidate who is not a member of
+ * it, so a real employer can be genuinely absent from the results. That is
+ * why the "not on CQrityjob" route below is written as "we could not find
+ * them" and offers document review, rather than asserting that the company
+ * has no account.
+ */
+export interface AttestableEmployerSearch {
+  readonly suggestions: readonly EmployerSuggestion[];
+  /** Matches were found and cut to `MAX_SUGGESTIONS`. */
+  readonly truncated: boolean;
+  /** The organisation an earlier request for this employment was addressed
+   *  to, resolved by id so the panel can NAME it.
+   *
+   *  Deliberately NOT status-filtered: this is a lookup of a choice the
+   *  candidate already made, not a candidate for a new one. An organisation
+   *  suspended after being asked keeps its name in the sentence about the
+   *  open request, and is still absent from `suggestions`, which is where
+   *  eligibility matters. */
+  readonly linkedEmployer: EmployerCandidate | null;
+}
+
+/** Company names go into an `ilike` pattern, so what may be in one is stated
+ *  here rather than assumed. Letters, digits, spaces and the punctuation that
+ *  actually occurs in company names; `&` and `,` are dropped because they are
+ *  separators in the query grammar this string is about to become part of,
+ *  and a filter value that can end the filter is not a filter. */
+function safeSearchTerm(term: string): string {
+  return term
+    .replace(/[^\p{L}\p{N}\s.'-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+}
+
+export const searchAttestableEmployers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<readonly { id: string; name: string }[]> => {
-    const { data, error } = await context.supabase
-      .from("employers")
-      .select("id, name")
-      .order("name", { ascending: true })
-      .limit(200);
-    if (error) return [];
-    return ((data ?? []) as Array<{ id: string; name: string }>).map((e) => ({
-      id: e.id,
-      name: e.name,
-    }));
+  .validator((data: unknown) =>
+    z
+      .object({
+        /** The employer name written on the employment period. */
+        employerName: z.string().max(200),
+        /** The country of the employment. */
+        country: z.string().max(8).nullable(),
+        /** What the candidate typed. Empty means they have typed nothing. */
+        query: z.string().max(200),
+        /** An organisation this employment has already been addressed to. */
+        linkedEmployerId: z.string().uuid().nullable(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ context, data }): Promise<AttestableEmployerSearch> => {
+    const columns = "id, name, country, website";
+
+    // One `ilike` per term rather than one `or=(...)` over all of them: the
+    // `or` grammar is a string the candidate's own typing would have to be
+    // spliced into, and the way to not get that escaping wrong is to not do
+    // it. At most four short queries, run together.
+    const terms = employerSearchTerms(data.employerName, data.query)
+      .map(safeSearchTerm)
+      .filter((t) => t.length >= 2);
+
+    const reads = terms.map((t) =>
+      context.supabase
+        .from("employers")
+        .select(columns)
+        // Only an organisation CQrityjob has approved may be asked to confirm
+        // employment. See section 2 of the block comment above.
+        .eq("status", "active")
+        .ilike("name", `%${t}%`)
+        .limit(50),
+    );
+
+    // Resolved separately and without the status filter -- see
+    // `linkedEmployer` above.
+    const linkedRead = data.linkedEmployerId
+      ? context.supabase
+          .from("employers")
+          .select(columns)
+          .eq("id", data.linkedEmployerId)
+          .maybeSingle()
+      : null;
+
+    const [results, linkedResult] = await Promise.all([
+      Promise.all(reads),
+      linkedRead ?? Promise.resolve(null),
+    ]);
+
+    // A refused read is reported as a refused read. Returning `[]` here is
+    // what made a broken query read as "no such employer" -- see section 3.
+    for (const r of results) {
+      if (r.error) {
+        console.error("[passport] employer search failed", r.error);
+        throw new Error("SP_EMPLOYER_SEARCH_FAILED");
+      }
+    }
+
+    const byId = new Map<string, EmployerCandidate>();
+    for (const r of results) {
+      for (const row of (r.data ?? []) as Array<Record<string, unknown>>) {
+        byId.set(String(row.id), {
+          id: String(row.id),
+          name: String(row.name ?? ""),
+          country: (row.country as string | null) ?? null,
+          website: (row.website as string | null) ?? null,
+        });
+      }
+    }
+
+    // A failure to name the already-chosen organisation is NOT a failure of
+    // the search: the panel renders "the employer" for a null, which it has
+    // always done, and taking the whole picker down over it would be worse
+    // than the missing word.
+    let linkedEmployer: EmployerCandidate | null = null;
+    if (linkedResult && !linkedResult.error && linkedResult.data) {
+      const row = linkedResult.data as Record<string, unknown>;
+      linkedEmployer = {
+        id: String(row.id),
+        name: String(row.name ?? ""),
+        country: (row.country as string | null) ?? null,
+        website: (row.website as string | null) ?? null,
+      };
+    } else if (linkedResult?.error) {
+      console.error("[passport] linked employer lookup failed", linkedResult.error);
+    }
+
+    // Ordering happens HERE, on the server, so the browser is never handed
+    // organisations that were not going to be suggested to it. The ranking
+    // itself is the pure function in `employer-matching.ts`: one matcher, no
+    // second opinion, and testable without a database.
+    const ranked = rankEmployerMatches({
+      employmentEmployerName: data.employerName,
+      employmentCountry: data.country,
+      query: data.query,
+      candidates: [...byId.values()],
+      linkedEmployerId: data.linkedEmployerId,
+    });
+
+    return {
+      suggestions: ranked.suggestions,
+      truncated: ranked.truncated,
+      linkedEmployer,
+    };
   });
 
 export const listEmployerAttestations = createServerFn({ method: "POST" })

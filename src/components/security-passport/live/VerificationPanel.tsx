@@ -32,11 +32,7 @@ import type {
   MyVerificationRequest,
   VerificationDecisionRecord,
 } from "@/lib/security-passport/verification.functions";
-
-export interface EmployerOption {
-  readonly id: string;
-  readonly name: string;
-}
+import { EmployerConfirmationPicker, type EmployerSearchState } from "./EmployerConfirmationPicker";
 
 export interface VerificationPanelProps {
   readonly assertionLevel: string;
@@ -68,9 +64,14 @@ export interface VerificationPanelProps {
   /** Employment entries can be attested by an employer; a qualification
    *  cannot, so the option is absent rather than disabled. */
   readonly canAskEmployer: boolean;
-  readonly employers: readonly EmployerOption[];
+  /** The result of the employer search, owned by the caller because the
+   *  search is a server round trip. The panel renders it; it does not decide
+   *  what is in it. */
+  readonly employerSearch: EmployerSearchState;
+  /** Run the employer search for this text. */
+  readonly onEmployerSearch: (query: string) => void;
   /** The organisation an OPEN employer request is addressed to, resolved by
-   *  the caller from the employer list it already holds.
+   *  the caller from the request's own `targetEmployerId`.
    *
    *  Null is a real answer and is rendered as one: an organisation that has
    *  since stopped being visible to this holder leaves a request the product
@@ -110,7 +111,8 @@ export function VerificationPanel({
   decisions,
   hasEvidence,
   canAskEmployer,
-  employers,
+  employerSearch,
+  onEmployerSearch,
   openRequestEmployerName,
   onSubmit,
   onWithdrawRequest,
@@ -119,7 +121,6 @@ export function VerificationPanel({
   const { pt, lang } = usePassportCopy();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [employerId, setEmployerId] = useState<string>(employers[0]?.id ?? "");
   const [disputing, setDisputing] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
 
@@ -138,8 +139,8 @@ export function VerificationPanel({
   //
   // `decider_organisation` is the authority for a decided request: it is the
   // name recorded, by the database, at the moment the decision was made. The
-  // employer list is consulted only for a request nobody has answered yet,
-  // because there is no decision record to read.
+  // organisation is looked up by id only for a request nobody has answered
+  // yet, because there is no decision record to read.
   const isEmployerRequest = (r: MyVerificationRequest | null): boolean =>
     r !== null && r.kind === "employer_attestation";
 
@@ -536,35 +537,19 @@ export function VerificationPanel({
                 {pt("ver.employer.notReference")}
               </p>
 
-              {employers.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">{pt("ver.noEmployers")}</p>
-              ) : (
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <label htmlFor="sp-employer" className="sr-only">
-                    {pt("ver.chooseEmployer")}
-                  </label>
-                  <select
-                    id="sp-employer"
-                    value={employerId}
-                    onChange={(e) => setEmployerId(e.target.value)}
-                    className="h-11 min-w-[12rem] rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    {employers.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    disabled={busy || !employerId}
-                    onClick={() => void run(() => onSubmit("employer_attestation", employerId))}
-                    className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    {busy ? pt("ver.submitting") : pt("ver.request")}
-                  </button>
-                </div>
-              )}
+              {/* ── CHOOSING THE ORGANISATION ────────────────────────
+                  The picker owns the search, the ordering and the
+                  confirmation step. What matters at THIS level is what it
+                  hands back: an organisation id, and only after a person has
+                  read the name and the country and pressed a control that
+                  says it is sending a request. `onSubmit` is reached from
+                  nowhere else on this path. */}
+              <EmployerConfirmationPicker
+                state={employerSearch}
+                onSearch={onEmployerSearch}
+                busy={busy}
+                onConfirm={(id) => run(() => onSubmit("employer_attestation", id))}
+              />
             </div>
           ) : null}
         </div>

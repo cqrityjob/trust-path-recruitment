@@ -13,7 +13,7 @@
 // case, not an edge case.
 
 import { fieldsFor, type CredentialType } from "@/lib/security-passport/credentials";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
@@ -28,9 +28,9 @@ import {
   type EvidenceRecord,
 } from "@/lib/security-passport/evidence.functions";
 import {
-  listAttestableEmployers,
   listMyVerificationRequests,
   raiseDispute,
+  searchAttestableEmployers,
   submitForVerification,
   withdrawVerificationRequest,
   type MyVerificationRequest,
@@ -59,6 +59,7 @@ import { EvidencePanel } from "@/components/security-passport/live/EvidencePanel
 import { CredentialShareActions } from "@/components/security-passport/live/CredentialShareActions";
 import { createCredentialDisclosure } from "@/lib/security-passport/disclosure.functions";
 import { VerificationPanel } from "@/components/security-passport/live/VerificationPanel";
+import type { EmployerSearchState } from "@/components/security-passport/live/EmployerConfirmationPicker";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 /** The lifecycle states `sp_archive_claim` accepts. Mirrored here so the
@@ -85,7 +86,7 @@ function PassportEntryRoute() {
   const loadPassport = useServerFn(getMyPassport);
   const loadEvidence = useServerFn(listMyEvidence);
   const loadRequests = useServerFn(listMyVerificationRequests);
-  const loadEmployers = useServerFn(listAttestableEmployers);
+  const searchEmployers = useServerFn(searchAttestableEmployers);
   const doUpload = useServerFn(uploadEvidence);
   const doOpen = useServerFn(getEvidenceViewUrl);
   const doWithdrawEvidence = useServerFn(withdrawEvidence);
@@ -103,7 +104,6 @@ function PassportEntryRoute() {
   const [evidence, setEvidence] = useState<readonly EvidenceRecord[]>([]);
   const [requests, setRequests] = useState<readonly MyVerificationRequest[]>([]);
   const [decisions, setDecisions] = useState<readonly VerificationDecisionRecord[]>([]);
-  const [employers, setEmployers] = useState<readonly { id: string; name: string }[]>([]);
   const [credentialTypes, setCredentialTypes] = useState<readonly CredentialType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [credentialShareUrl, setCredentialShareUrl] = useState<string | null>(null);
@@ -126,11 +126,10 @@ function PassportEntryRoute() {
     // anyway, which is worse than no retry at all.
     setError(null);
     try {
-      const [snap, ev, reqs, emps, types] = await Promise.all([
+      const [snap, ev, reqs, types] = await Promise.all([
         loadPassport({ data: undefined }),
         loadEvidence({ data: undefined }),
         loadRequests({ data: undefined }),
-        loadEmployers({ data: undefined }),
         // Needed to know whether this credential is scoped. Read from the
         // taxonomy rather than a list here, so a credential that becomes
         // scoped later asks for it without a code change.
@@ -140,7 +139,6 @@ function PassportEntryRoute() {
       setEvidence(ev);
       setRequests(reqs.requests);
       setDecisions(reqs.decisions);
-      setEmployers(emps);
       setCredentialTypes(types);
     } catch (err) {
       // Same reachability change as the Passport index: getMyPassport and
@@ -151,7 +149,7 @@ function PassportEntryRoute() {
       console.error("[passport] entry load failed", err);
       setError(pt("live.readError"));
     }
-  }, [loadPassport, loadEvidence, loadRequests, loadEmployers, loadCredentialTypes, pt]);
+  }, [loadPassport, loadEvidence, loadRequests, loadCredentialTypes, pt]);
 
   useEffect(() => {
     void refresh();
@@ -223,6 +221,110 @@ function PassportEntryRoute() {
     const ids = new Set(entryRequests.map((r) => r.id));
     return decisions.filter((d) => ids.has(d.requestId));
   }, [decisions, entryRequests]);
+
+  // ── FINDING THE EMPLOYER WHO CAN CONFIRM THIS EMPLOYMENT ────────────
+  //
+  // The search lives HERE rather than inside the picker for one reason: the
+  // same result is what lets the panel NAME the organisation an already-open
+  // request went to, and at that moment the picker is not on screen. One
+  // fetch, two readers.
+  //
+  // The old page instead loaded every employer it could see, once, alongside
+  // the Passport itself, and resolved the open request's name out of that
+  // list. That list is what this replaces; see `searchAttestableEmployers`.
+
+  /** The organisation this employment has already been addressed to, if any.
+   *
+   *  Read from the most recent EMPLOYER request for this entry — including a
+   *  decided one, which is the case that matters: a candidate whose request
+   *  came back "we need more detail" and who is asking again should find that
+   *  company at the top rather than hunting for it a second time.
+   *
+   *  It is a RANKING signal and an id to look a name up by. Nothing here
+   *  re-sends anything, and nothing binds a new request to it: the candidate
+   *  still chooses, and still confirms. */
+  const linkedEmployerId =
+    entryRequests.find((r) => r.kind === "employer_attestation" && r.targetEmployerId !== null)
+      ?.targetEmployerId ?? null;
+
+  const [employerSearch, setEmployerSearch] = useState<EmployerSearchState>({
+    suggestions: [],
+    truncated: false,
+    loading: false,
+    failed: false,
+  });
+  const [linkedEmployerName, setLinkedEmployerName] = useState<string | null>(null);
+
+  // Two guards on one async read, and they close different holes.
+  //
+  //   `seq`   the candidate types "nord", then "nordv". If the first query is
+  //           slower than the second, its result arrives last and repaints the
+  //           list for a search nobody is looking at any more. Only the newest
+  //           sequence number may write.
+  //
+  //   `timer` one keystroke is up to four `ilike` queries. Without a delay,
+  //           typing a company name is a query storm and every intermediate
+  //           result is discarded by the guard above anyway.
+  const searchSeq = useRef(0);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const runEmployerSearch = useCallback(
+    (query: string, immediate = false) => {
+      if (isClaim || !period) return;
+      const seq = ++searchSeq.current;
+      setEmployerSearch((prev) => ({ ...prev, loading: true, failed: false }));
+
+      const fire = () => {
+        void searchEmployers({
+          data: {
+            employerName: period.employerName,
+            country: period.jurisdictionCode,
+            query,
+            linkedEmployerId,
+          },
+        })
+          .then((r) => {
+            if (searchSeq.current !== seq) return;
+            setEmployerSearch({
+              suggestions: r.suggestions,
+              truncated: r.truncated,
+              loading: false,
+              failed: false,
+            });
+            setLinkedEmployerName(r.linkedEmployer?.name ?? null);
+          })
+          .catch((err: unknown) => {
+            if (searchSeq.current !== seq) return;
+            // A refused search is reported as a refused search. This branch is
+            // exactly what `if (error) return []` in the old server function
+            // hid, and what made a broken query read to a candidate as "your
+            // employer is not here".
+            console.error("[passport] employer search failed", err);
+            setEmployerSearch({
+              suggestions: [],
+              truncated: false,
+              loading: false,
+              failed: true,
+            });
+          });
+      };
+
+      if (searchTimer.current !== null) clearTimeout(searchTimer.current);
+      if (immediate) fire();
+      else searchTimer.current = setTimeout(fire, 250);
+    },
+    [isClaim, period, linkedEmployerId, searchEmployers],
+  );
+
+  // The first search runs with an empty query, which returns the name and
+  // country signals from the employment itself: what a candidate should be
+  // looking at before they have typed anything.
+  useEffect(() => {
+    runEmployerSearch("", true);
+    return () => {
+      if (searchTimer.current !== null) clearTimeout(searchTimer.current);
+    };
+  }, [runEmployerSearch]);
 
   if (error) {
     return (
@@ -541,17 +643,24 @@ function PassportEntryRoute() {
         decisions={entryDecisions}
         hasEvidence={entryEvidence.length > 0}
         canAskEmployer={!isClaim}
-        employers={employers}
-        // The organisation an OPEN employer request went to, resolved from the
-        // list the holder chose from. Null when it is no longer in that list --
-        // said as "the employer" rather than substituted with the company name
-        // typed onto the period, which is a different fact and would read as an
-        // attestation nobody made. A DECIDED request does not use this at all:
-        // the panel reads its organisation from the decision record, which is
-        // what the database wrote at the moment the decision was made.
+        employerSearch={employerSearch}
+        onEmployerSearch={(q) => runEmployerSearch(q)}
+        // The organisation an OPEN employer request went to, looked up BY ID
+        // rather than found in a list. Null when the lookup could not name it
+        // -- said as "the employer" rather than substituted with the company
+        // name typed onto the period, which is a different fact and would read
+        // as an attestation nobody made. The id equality is not belt and
+        // braces: `linkedEmployerName` is the name of whatever
+        // `linkedEmployerId` resolved to, and printing it beside a DIFFERENT
+        // open request would be naming the wrong company. A DECIDED request
+        // does not use this at all: the panel reads its organisation from the
+        // decision record, which is what the database wrote at the moment the
+        // decision was made.
         openRequestEmployerName={
-          openRequest?.targetEmployerId
-            ? (employers.find((e) => e.id === openRequest.targetEmployerId)?.name ?? null)
+          openRequest?.targetEmployerId &&
+          openRequest.targetEmployerId === linkedEmployerId &&
+          linkedEmployerName !== null
+            ? linkedEmployerName
             : null
         }
         onSubmit={async (requestKind, employerId) => {
