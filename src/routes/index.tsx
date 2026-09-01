@@ -156,41 +156,73 @@ function Index() {
 
   return (
     <SiteLayout>
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border">
+      {/* ── Hero ────────────────────────────────────────────────────────
+          Content and destinations are unchanged. What changed is the
+          typographic ramp and the way the section meets the header.
+
+          The headline used to jump straight from text-5xl to text-7xl, so
+          at 320-390px "Bygg din framtid inom säkerhet." set at 48px filled
+          the viewport and broke into four ragged lines. It now steps
+          through four sizes, is allowed to hyphenate (the document carries
+          `lang`, so the browser breaks where Swedish permits) and is
+          balanced, and the measure is capped so long lines never run past
+          comfortable reading width.
+
+          Depth is CSS only: two restrained radial washes, a faint vertical
+          rule grid masked out before it reaches the fold, and a hairline
+          under the header — no imagery, no glass, no neon. */}
+      <section className="relative overflow-hidden border-b border-border bg-secondary/40">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          className="pointer-events-none absolute inset-0 opacity-[0.4]"
           style={{
             backgroundImage:
-              "radial-gradient(600px 300px at 15% 0%, oklch(0.55 0.09 245 / 0.18), transparent 60%), radial-gradient(500px 250px at 90% 10%, oklch(0.24 0.07 265 / 0.10), transparent 60%)",
+              "radial-gradient(900px 420px at 12% -8%, oklch(0.55 0.09 245 / 0.16), transparent 62%), radial-gradient(700px 360px at 92% 4%, oklch(0.24 0.07 265 / 0.10), transparent 60%)",
           }}
         />
-        <div className="relative mx-auto w-full max-w-6xl px-6 pb-24 pt-20 md:px-8 md:pb-32 md:pt-28">
-          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-700">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5 text-accent" strokeWidth={2} />
-              {t("home.hero.eyebrow")}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.3]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, oklch(0.235 0.055 258 / 0.05) 1px, transparent 1px)",
+            backgroundSize: "56px 100%",
+            maskImage: "linear-gradient(to bottom, black, transparent 88%)",
+          }}
+        />
+        <div className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-14 sm:pt-16 md:px-8 md:pb-28 md:pt-24">
+          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none">
+            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground shadow-xs">
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-accent" strokeWidth={2} />
+              <span className="truncate">{t("home.hero.eyebrow")}</span>
             </div>
             <h1
-              className="mt-6 text-5xl font-semibold tracking-tight text-foreground md:text-7xl"
+              className="mt-6 text-[2rem] font-semibold leading-[1.08] tracking-tight text-balance text-foreground [hyphens:auto] sm:text-5xl md:text-6xl lg:text-[4.25rem]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {t("home.hero.title")}
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
+            <p className="mt-6 max-w-[38ch] text-base leading-relaxed text-muted-foreground sm:max-w-2xl sm:text-lg md:text-xl">
               {t("home.hero.subtitle")}
             </p>
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <PrimaryLink to="/security-career-assessment">
+            {/* Full-width, stacked at phone widths — two side-by-side pills
+                at 320px left neither of them a comfortable target. Priority
+                is unambiguous: one solid navy action, one quiet outline. */}
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+              <PrimaryLink
+                to="/security-career-assessment"
+                className="w-full sm:w-auto"
+              >
                 {t("cta.assessment")}
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
               </PrimaryLink>
-            <PrimaryLink to="/career-center" variant="ghost">
+              <PrimaryLink to="/career-center" variant="ghost" className="w-full sm:w-auto">
                 {t("cta.careers")}
               </PrimaryLink>
             </div>
-            <p className="mt-6 text-xs text-muted-foreground">{t("home.hero.note")}</p>
+            <p className="mt-6 max-w-xl border-l-2 border-border pl-3 text-xs leading-relaxed text-muted-foreground">
+              {t("home.hero.note")}
+            </p>
           </div>
         </div>
       </section>
