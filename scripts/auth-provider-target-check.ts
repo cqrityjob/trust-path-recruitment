@@ -96,9 +96,10 @@ for (const file of files) {
 // -----------------------------------------------------------------------
 // 2. Every OAuth sign-in call is made on the shared Supabase client.
 // -----------------------------------------------------------------------
+const oauthCallPattern = /[A-Za-z_$][\w$.]*\s*\.\s*signInWithOAuth\s*\(/;
 const oauthCallers = files
   .filter((f) => !isGeneratedBroker(f))
-  .filter((f) => readFileSync(f, "utf8").includes("signInWithOAuth"));
+  .filter((f) => oauthCallPattern.test(readFileSync(f, "utf8")));
 expect(
   oauthCallers.length > 0,
   "no signInWithOAuth call found in src/ — the Google sign-in path has disappeared entirely",
