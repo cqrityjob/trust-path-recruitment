@@ -115,6 +115,54 @@ export function controlledTitle(type: CredentialType, lang: "sv" | "en"): string
   return lang === "sv" ? type.nameSv : type.nameEn;
 }
 
+/**
+ * The governed four-character mark a credential's symbol plate carries.
+ *
+ * ── WHY A RESOLVER AND NOT A FALLBACK TO THE CODE ──────────────────────
+ *
+ * The plate used to default to the credential CODE when no caller supplied a
+ * label, truncated to the four characters the plate can hold. That was
+ * invisible while the only credentials were VU1, VU2, OV and SV, whose
+ * `symbol_label` happens to equal their code. The Swedish truth model
+ * (20260907091000) added four whose codes are nothing a reader should see,
+ * and the private overview, the Passport Card, the recipient page and the
+ * exported social frame all render a claim WITHOUT a label in hand:
+ *
+ *     SE_PERSONNEL_APPROVAL -> "SE_P"     OV_TRAINING  -> "OV_T"
+ *     OV_REFRESHER          -> "OV_R"     OV_TRANSPORT -> "OV_T"
+ *
+ * Two separate credentials wearing the identical mark, and every one of them
+ * a database enum fragment printed onto the surface a candidate screenshots
+ * and sends to an employer.
+ *
+ * So the code is never the mark. `symbol_label` is a governed column and this
+ * is the one place a code becomes one without a database read
+ * (`scripts/passport-credential-form-check.ts` pins these against the seed).
+ *
+ * ── WHY NULL RATHER THAN A GUESS ───────────────────────────────────────
+ *
+ * A code with no governed mark returns null, and the symbol renders its
+ * neutral document device with no plate text at all. Deriving four characters
+ * from an unreviewed code is how the leak happened in the first place: the
+ * mark is a designed abbreviation of a credential somebody approved, not a
+ * substring of its identifier. Nothing here invents one.
+ */
+const CREDENTIAL_MARKS: Readonly<Record<string, string>> = {
+  VU1: "VU1",
+  VU2: "VU2",
+  OV: "OV",
+  SV: "SV",
+  OV_TRAINING: "OVU",
+  OV_REFRESHER: "OVF",
+  OV_TRANSPORT: "OVT",
+  SE_PERSONNEL_APPROVAL: "PG",
+};
+
+export function credentialMark(code: string | null | undefined): string | null {
+  if (!code) return null;
+  return CREDENTIAL_MARKS[code] ?? null;
+}
+
 /** Whether the definition owns this credential's title rather than the holder.
  *
  *  A narrow-result credential is controlled regardless of the column, for the

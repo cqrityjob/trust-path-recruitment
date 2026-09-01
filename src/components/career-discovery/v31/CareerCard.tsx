@@ -595,13 +595,17 @@ function layout(
       anchor: "end",
     }),
   );
-  parts.push(
-    text(width - s.padding, footerTop + Math.round(s.footerSize * 3.1), data.definitionVersion, {
-      size: s.footerSize,
-      fill: FAINT,
-      anchor: "end",
-    }),
-  );
+  // ── NO VERSION STRING ON A CARD SOMEBODY SHARES ─────────────────────
+  //
+  // This corner printed `definitionVersion` — "2026-scd-v3.1.0" — into the
+  // exported PNG. The Career Card is the artefact a candidate posts publicly
+  // or sends to a recruiter, and an internal identifier in its footer is
+  // implementation plumbing on the most-shared surface the product has. It
+  // also cannot be corrected once the image has left.
+  //
+  // The version is not lost: it stays on `data.definitionVersion`, which the
+  // alt text and the report's own Method section are built from, so the card
+  // remains attributable to the definition that produced it.
 
   return { svg: parts.filter(Boolean).join("\n  "), contentBottom, footerTop };
 }

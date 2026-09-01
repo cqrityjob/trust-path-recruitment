@@ -18,9 +18,10 @@
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
+  formatDate,
   formatDuration,
   formatPeriodRange,
-  verifierAttributionKey,
+  formatVerifierAttribution,
 } from "@/lib/security-passport/format";
 import { toEpochDay, DAYS_PER_MONTH } from "@/lib/security-passport/experience";
 import { countsTowardExperience, type ExperiencePeriod } from "@/lib/security-passport/types";
@@ -134,10 +135,16 @@ export function ExperienceTimeline({
                     certificate. Printing "Verified by" over both flattened
                     the distinction; the recorded method now picks the words,
                     so an attested period reads "Confirmed by Bevakning AB". */}
-                {p.verifierName ? (
+                {/* Composed by `formatVerifierAttribution`, not assembled
+                    here. The label and the name used to be joined with a
+                    literal colon — "Bekräftat av: Nordvakt Bevakning AB" —
+                    while every other surface renders the same attribution as
+                    the sentence it is written to be. One attribution, two
+                    punctuations, on two panels of one page. */}
+                {formatVerifierAttribution(p.verifierName, p.verificationMethod, lang) ? (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {pt(verifierAttributionKey(p.verificationMethod))}: {p.verifierName}
-                    {p.verifiedOn ? ` · ${p.verifiedOn}` : ""}
+                    {formatVerifierAttribution(p.verifierName, p.verificationMethod, lang)}
+                    {p.verifiedOn ? ` · ${formatDate(p.verifiedOn, lang)}` : ""}
                   </p>
                 ) : null}
 

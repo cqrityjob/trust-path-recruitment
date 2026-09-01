@@ -15,6 +15,7 @@
 // gets less than a sighted reader.
 
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { credentialMark } from "@/lib/security-passport/credentials";
 import {
   SYMBOL_VIEWBOX,
   credentialSymbolMarkup,
@@ -27,8 +28,15 @@ export interface CredentialSymbolProps {
    *  which takes the neutral document device. */
   readonly code: string | null;
   readonly state: CredentialPresentationState;
-  /** Plate text; defaults to the code. Taxonomy rows carry `symbol_label`. */
-  readonly symbolLabel?: string;
+  /** Plate text. Taxonomy rows carry `symbol_label`; callers that hold one
+   *  pass it. Callers that hold only a claim — the private overview, the
+   *  Passport Card, the recipient page, the social frame — pass nothing and
+   *  the governed mark is resolved from the code by `credentialMark`.
+   *
+   *  It is NEVER derived from the code itself. See `credentialSymbolMarkup`:
+   *  the old `label ?? code` default printed "SE_P" and "OV_T" — truncated
+   *  database enums — on the surfaces a candidate shares. */
+  readonly symbolLabel?: string | null;
   /** Accessible subject — the credential's display name. The state word is
    *  appended automatically. */
   readonly name: string;
@@ -52,6 +60,7 @@ export function CredentialSymbol({
 }: CredentialSymbolProps) {
   const { pt } = usePassportCopy();
   const word = pt(presentationWordKey(state));
+  const mark = symbolLabel ?? credentialMark(code);
   return (
     <svg
       role={decorative ? undefined : "img"}
@@ -64,7 +73,7 @@ export function CredentialSymbol({
       // The geometry is a build-time string from our own design module —
       // no user input reaches it. Sharing the string with the PNG exporter
       // is what guarantees the reviewed mark is the shipped mark.
-      dangerouslySetInnerHTML={{ __html: credentialSymbolMarkup(code, state, symbolLabel) }}
+      dangerouslySetInnerHTML={{ __html: credentialSymbolMarkup(code, state, mark) }}
     />
   );
 }

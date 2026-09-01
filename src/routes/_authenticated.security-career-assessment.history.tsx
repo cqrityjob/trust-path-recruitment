@@ -85,6 +85,8 @@ function DiscoveryHistoryRoute() {
                 <Link
                   to="/security-career-assessment/report/$snapshotId"
                   params={{ snapshotId: r.snapshotId }}
+                  data-definition-version={r.definitionVersion}
+                  data-scoring-version={r.scoringVersion}
                   className="flex items-center justify-between gap-4 rounded-lg border border-border bg-background p-5 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <div className="min-w-0">
@@ -94,9 +96,11 @@ function DiscoveryHistoryRoute() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       {dateFmt.format(new Date(r.generatedAt))}
                     </p>
-                    <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                      {r.definitionVersion} · {r.scoringVersion}
-                    </p>
+                    {/* No "2026-scd-v3.1.0 · v3.1-draft-4" line. This was the
+                        one candidate surface that printed the DRAFT scoring
+                        version verbatim, under a list of the candidate's own
+                        results. Both versions stay on the report itself, in
+                        its Method section, where they are labelled. */}
                   </div>
                   <ArrowRight
                     className="h-4 w-4 flex-shrink-0 text-muted-foreground"

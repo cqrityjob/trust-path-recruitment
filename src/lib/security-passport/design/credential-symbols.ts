@@ -406,12 +406,27 @@ function glyphMarkup(glyph: StatusGlyph, tone: string): string {
 export function credentialSymbolMarkup(
   code: string | null,
   state: CredentialPresentationState,
-  /** Text on the plate. Defaults to the code; taxonomy rows carry
-   *  `symbol_label` for this. Max four characters by database CHECK. */
-  label?: string,
+  /** Text on the plate — the credential's GOVERNED mark, from
+   *  `sp_credential_types.symbol_label` (max four characters by database
+   *  CHECK) or from `credentialMark`, which resolves one from a code.
+   *
+   *  ── IT NEVER FALLS BACK TO THE CODE ──────────────────────────────────
+   *
+   *  This used to read `label ?? code ?? "—"`. A credential whose code is not
+   *  also its mark therefore printed the first four characters of a database
+   *  enum — "SE_P" for SE_PERSONNEL_APPROVAL, "OV_T" for both OV_TRAINING and
+   *  OV_TRANSPORT — onto the private overview, the Passport Card, the
+   *  recipient page and the exported social PNG. A truncated identifier is
+   *  not an abbreviation somebody approved, and two credentials sharing one
+   *  mark is worse than no mark at all.
+   *
+   *  So an absent label means an absent plate legend: the device already
+   *  distinguishes the credential and the name is printed beside the symbol
+   *  on every surface that uses it. Nothing is invented from the code. */
+  label?: string | null,
 ): string {
   const t = symbolTreatment(state);
-  const text = (label ?? code ?? "—").slice(0, 4).toUpperCase();
+  const text = (label ?? "").trim().slice(0, 4).toUpperCase();
   const dash = t.dash ? ` stroke-dasharray="${t.dash}"` : "";
 
   const parts: string[] = [
@@ -433,9 +448,11 @@ export function credentialSymbolMarkup(
   // that inherit the group fill, and an unset fill would default to black.
   parts.push(`<g stroke="${t.device}" fill="${t.device}">${devicePath(code)}</g>`);
 
-  parts.push(
-    `<text x="22" y="36.4" text-anchor="middle" font-family="${FONT_STACK}" font-size="8.6" font-weight="700" letter-spacing="1.1" fill="${t.label}">${text}</text>`,
-  );
+  if (text) {
+    parts.push(
+      `<text x="22" y="36.4" text-anchor="middle" font-family="${FONT_STACK}" font-size="8.6" font-weight="700" letter-spacing="1.1" fill="${t.label}">${text}</text>`,
+    );
+  }
 
   if (t.strike) {
     // The void stroke: unmistakable in greyscale, and it crosses the label

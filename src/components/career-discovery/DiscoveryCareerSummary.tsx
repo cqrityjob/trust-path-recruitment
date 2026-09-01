@@ -72,8 +72,17 @@ export function DiscoveryCareerSummary({ active }: { active: ActiveDiscoveryRepo
           <Compass className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
           {t("careerDiscovery.history.type.discovery")}
         </span>
-        <p className="mt-3 text-xs text-muted-foreground">
-          {date} · <span className="font-mono">{active.definitionVersion}</span>
+        {/* The date, and nothing technical. This line carried
+            `definitionVersion` in a monospace face — "2026-scd-v3.1.0" — as
+            the second thing a candidate read about their own result. A
+            version string is governance metadata: it belongs in the report's
+            own Method section, where it is labelled and where somebody has
+            asked for it, not in the header of a dashboard summary. */}
+        <p
+          className="mt-3 text-xs text-muted-foreground"
+          data-definition-version={active.definitionVersion}
+        >
+          {date}
           {active.isInternalTest && ` · ${t("careerDiscovery.history.internalTest")}`}
         </p>
         {active.isInternalTest && (
