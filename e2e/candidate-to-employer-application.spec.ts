@@ -49,6 +49,16 @@ const EMPLOYER_EMAIL = process.env.E2E_EMPLOYER_EMAIL;
 const EMPLOYER_PASSWORD = process.env.E2E_EMPLOYER_PASSWORD;
 const EMPLOYER_SLUG = process.env.E2E_EMPLOYER_SLUG;
 const JOB_SLUG = process.env.E2E_JOB_SLUG;
+// A SECOND published internal job owned by the same employer, for the
+// CQrityjob-CV scenario. It has to be a different advertisement: the
+// duplicate-active-application index means one candidate cannot apply twice
+// to the same job, which is correct and is not what that test is about.
+const JOB_SLUG_CV = process.env.E2E_JOB_SLUG_CV;
+// Set only when E2E_CANDIDATE_EMAIL owns at least one SENDABLE saved CV --
+// one with a name and real professional history on it. The scenario asserts
+// that the option is offered, so it must not run against an account where
+// its absence would be the correct behaviour.
+const CANDIDATE_HAS_CV = process.env.E2E_CANDIDATE_HAS_CQRITYJOB_CV === "1";
 
 const READY =
   LIVE &&
@@ -274,6 +284,118 @@ test.describe("Candidate overview", () => {
     // Horizontal overflow at 375 is the failure this catches: a cover note,
     // a long job title or the status buttons pushing the page wider than the
     // screen. One pixel of tolerance for sub-pixel layout rounding.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Applying with the CV this platform already holds.
+// ---------------------------------------------------------------------------
+//
+// Same live-backend gate as everything above, plus two of its own:
+// E2E_JOB_SLUG_CV (a second published internal job, because a candidate
+// cannot apply twice to one advertisement) and
+// E2E_CANDIDATE_HAS_CQRITYJOB_CV=1 (the candidate account genuinely owns a
+// sendable saved CV -- without that, "the option is not offered" would be the
+// CORRECT behaviour and asserting its presence would be asserting a bug).
+//
+// What a browser can prove is the surface: that the option is there, that
+// choosing it needs no file, that the confirmation says which CV went, and
+// that the employer's page then renders it as a CQrityjob CV rather than
+// offering a download that cannot work.
+//
+// What a browser CANNOT prove is any of the boundaries, and this spec does
+// not pretend to. That one candidate cannot attach another's CV, that one
+// employer cannot read another's application, and -- the reason the
+// application stores a copy at all -- that editing the saved CV afterwards
+// leaves the employer's copy exactly where it was, are proved against a real
+// Postgres with RLS in force, in
+// supabase/tests/job_application_cv_source_test.sql (groups C, E and H).
+const CV_READY = READY && JOB_SLUG_CV && CANDIDATE_HAS_CV;
+
+test.describe("Applying with a CQrityjob CV", () => {
+  test.skip(
+    !CV_READY,
+    "Set E2E_RUN_LIVE=1, the E2E_* fixture vars, E2E_JOB_SLUG_CV and " +
+      "E2E_CANDIDATE_HAS_CQRITYJOB_CV=1 to run this against a real backend.",
+  );
+
+  test("the candidate applies with their saved CV and the employer reads it", async ({ page }) => {
+    await forceEnglish(page);
+
+    // ---- 1. The option is offered, and no upload is required ----
+    await signIn(page, "/candidate/login", CANDIDATE_EMAIL!, CANDIDATE_PASSWORD!);
+    await page.waitForURL(/\/my-career/);
+
+    await page.goto(`/jobs/${JOB_SLUG_CV}`);
+    await page.getByRole("button", { name: "Apply via CQrityjob" }).click();
+
+    const useMyCv = page.getByRole("radio", { name: "Use my CQrityjob CV" });
+    await expect(useMyCv).toBeVisible({ timeout: 15_000 });
+    await useMyCv.check();
+
+    // The external route is still there. It is an alternative, never a
+    // replacement -- a candidate with a PDF must not be forced onto the
+    // platform document.
+    await expect(page.getByRole("radio", { name: "Upload another CV" })).toBeVisible();
+
+    // Selecting a CV is a disclosure, and it is named as one where it is made.
+    await expect(page.getByText(/is sent to .* with your application/i)).toBeVisible();
+
+    // ---- 2. Submitting attaches no file at all ----
+    await page.getByText("I consent to my application and CV being shared").click();
+    await page.getByRole("button", { name: "Submit application" }).click();
+
+    await expect(page.getByText("Application submitted")).toBeVisible({ timeout: 15_000 });
+    // The confirmation reports what the SERVER recorded, not what was ticked.
+    await expect(
+      page.getByText("Your CQrityjob CV was sent with your application."),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close" }).click();
+
+    // ---- 3. The candidate's own history says which CV went ----
+    await page.goto("/my-career/applications");
+    await expect(page.getByText("CQrityjob CV").first()).toBeVisible({ timeout: 15_000 });
+
+    // ---- 4. The employer reads the submitted CV, on the candidate page ----
+    await page.context().clearCookies();
+    await signIn(page, "/employer/login", EMPLOYER_EMAIL!, EMPLOYER_PASSWORD!);
+    await page.waitForURL(/\/employer/);
+
+    await page.goto(`/employer/${EMPLOYER_SLUG}/applications`);
+    const firstCandidate = page.locator("main a[href*='/applications/']").first();
+    await expect(firstCandidate).toBeVisible({ timeout: 15_000 });
+    await firstCandidate.click();
+
+    await expect(page.getByText("Submitted CV")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("CQrityjob CV").first()).toBeVisible();
+    // It is a document, rendered. Not a download that would fail, and not an
+    // identifier a recruiter has to decode.
+    await expect(page.getByRole("button", { name: "Download CV" })).toHaveCount(0);
+    await expect(page.getByText(/cv_document|snapshot|uuid/i)).toHaveCount(0);
+    // And it is labelled as the point-in-time artefact it is.
+    await expect(page.getByText(/as it stood when the application was submitted/i)).toBeVisible();
+  });
+
+  test("the CV choice is usable on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await forceEnglish(page);
+    await signIn(page, "/candidate/login", CANDIDATE_EMAIL!, CANDIDATE_PASSWORD!);
+    await page.goto(`/jobs/${JOB_SLUG_CV}`);
+    await page.getByRole("button", { name: "Apply via CQrityjob" }).click();
+
+    await expect(page.getByRole("radio", { name: "Use my CQrityjob CV" })).toBeVisible({
+      timeout: 15_000,
+    });
+    // The submit control has to be reachable at 375x812 with the CV block on
+    // the page -- the exact regression application-dialog-scroll:check exists
+    // to prevent, observed rather than inferred.
+    await expect(page.getByRole("button", { name: "Submit application" })).toBeVisible();
+
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );

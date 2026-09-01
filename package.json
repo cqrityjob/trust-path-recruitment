@@ -105,6 +105,7 @@
     "recruitment-assessment-ux:check": "bun run scripts/recruitment-assessment-ux-check.ts",
     "career-center:check": "bun run scripts/career-center-check.ts",
     "professional-identity:check": "bun run scripts/professional-identity-check.ts",
+    "cv-application-source:check": "bun run scripts/cv-application-source-check.tsx",
     "candidate-app-navigation:check": "bun run scripts/candidate-app-navigation-check.tsx"
   }, 
   "dependencies": {

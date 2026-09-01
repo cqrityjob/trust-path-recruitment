@@ -1395,10 +1395,21 @@ console.log("\n8 · boundaries");
     "src/routes/_authenticated.my-career.cv.new.tsx",
     "src/routes/_authenticated.my-career.cv.$cvId.tsx",
     "src/routes/_authenticated.my-career.index.tsx",
+    // Added deliberately by 20261018090000: the apply dialog reads the
+    // candidate's saved CVs so they can send one instead of exporting it to
+    // PDF and uploading it back into this same platform. It is a READ of the
+    // CV list and nothing more -- the dialog never sees a document, and the
+    // copy an employer later reads is made by the database.
+    //
+    // The dependency it adds is on cv_documents, which is already applied on
+    // the owner project, so this widens the release gate by nothing. It is
+    // listed here anyway, because that is what this assertion is for: the
+    // surface grows in a diff somebody approves, never quietly.
+    "src/components/jobs/ApplyInternalDialog.tsx",
   ].sort();
   const actual = [...new Set([...importers, ...namingIt])].sort();
   ck(
-    `the gated surface is exactly the five expected files (found ${actual.length})`,
+    `the gated surface is exactly the ${expected.length} expected files (found ${actual.length})`,
     JSON.stringify(actual) === JSON.stringify(expected),
   );
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {

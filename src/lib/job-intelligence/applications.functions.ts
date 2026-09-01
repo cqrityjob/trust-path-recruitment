@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  applicationCvDocument,
+  applicationCvSnapshotSchema,
+} from "@/lib/professional-identity/cv/application-source";
+import type { CvDocument } from "@/lib/professional-identity/cv/document";
 
 // -----------------------------------------------------------------------------
 // Jobs MVP v1 H1 + H3.4A: server functions for job applications.
@@ -38,6 +43,25 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 // - getApplicationCvSignedUrl: unchanged (still service-role, still a
 //   short-lived 5-minute signed URL, still gated on applicant ownership or
 //   active employer membership).
+//
+// 20261018090000 adds the second CV SOURCE. A candidate who has built a CV
+// inside CQrityjob applies with it directly instead of exporting it to PDF
+// and uploading it back into the same product. What changes here is narrow
+// and deliberately so:
+//
+//   * submitJobApplication takes a discriminated union rather than a
+//     required file. `upload` is byte-for-byte the path that existed
+//     before -- same PDF validation, same bucket, same cleanup on failure.
+//   * `cqrityjob_cv` uploads nothing. It passes an ID, and the DATABASE
+//     copies the saved CV onto the application inside the submitting
+//     transaction, under the caller's own RLS. No document ever travels
+//     from a browser into an employer's view.
+//   * getApplicationSubmittedCv is the employer's read, gated by exactly
+//     the membership rule getApplicationCvSignedUrl already uses.
+//
+// cv_documents gains no employer read policy, no share token and no second
+// access path. An employer reads the COPY on the application they are
+// already authorised to read, and nothing else.
 // -----------------------------------------------------------------------------
 
 type Ctx = { supabase: any; userId: string };
@@ -50,13 +74,20 @@ export type ApplicationStatus =
   | "hired"
   | "withdrawn";
 
+/** Which door the submitted CV came through. Mirrors the `cv_source` CHECK
+ *  constraint on job_applications; there is no third value and adding one
+ *  means changing the database first. */
+export type ApplicationCvSource = "upload" | "cqrityjob_cv";
+
 const MAX_CV_BYTES = 5 * 1024 * 1024; // 5MB, matches the DB CHECK constraint
 const PDF_MAGIC = "%PDF-";
 
 async function loadApplication(ctx: Ctx, applicationId: string) {
   const { data, error } = await ctx.supabase
     .from("job_applications")
-    .select("id, job_id, employer_id, applicant_user_id, status, cv_storage_path")
+    .select(
+      "id, job_id, employer_id, applicant_user_id, status, cv_storage_path, cv_source, cv_document_snapshot, created_at",
+    )
     .eq("id", applicationId)
     .maybeSingle();
   if (error) {
@@ -71,6 +102,9 @@ async function loadApplication(ctx: Ctx, applicationId: string) {
     applicant_user_id: string;
     status: ApplicationStatus;
     cv_storage_path: string | null;
+    cv_source: ApplicationCvSource;
+    cv_document_snapshot: unknown;
+    created_at: string;
   };
 }
 
@@ -97,18 +131,41 @@ async function assertEmployerWorkspaceMember(ctx: Ctx, employerId: string): Prom
 
 // -------------------- SUBMIT (candidate) --------------------
 
-const submitApplicationSchema = z.object({
-  jobId: z.string().uuid(),
-  phone: z.string().trim().max(40).optional().nullable(),
-  coverNote: z.string().trim().max(1000).optional().nullable(),
-  consent: z.literal(true),
-  cvFilename: z.string().trim().min(1).max(200),
-  cvBase64: z.string().min(1),
-  /** The candidate's Passport authorisation, recorded by the submit action
-   *  itself. Defaults to false: applying is not consent, and a caller that
-   *  says nothing discloses nothing. */
-  includePassport: z.boolean().optional().default(false),
-});
+// -- ONE CV, ONE SOURCE, SAID IN THE TYPE ---------------------------------
+//
+// A union rather than three optional fields. An application carries exactly
+// one submitted CV, and a payload that could describe two -- a file AND a
+// saved CV -- would push "which one did they mean" out to every reader,
+// including the employer. The database refuses that shape as well
+// (job_applications_cv_source_shape_check); this is the same rule stated
+// where a caller meets it.
+const submitApplicationSchema = z.intersection(
+  z.object({
+    jobId: z.string().uuid(),
+    phone: z.string().trim().max(40).optional().nullable(),
+    coverNote: z.string().trim().max(1000).optional().nullable(),
+    consent: z.literal(true),
+    /** The candidate's Passport authorisation, recorded by the submit action
+     *  itself. Defaults to false: applying is not consent, and a caller that
+     *  says nothing discloses nothing. */
+    includePassport: z.boolean().optional().default(false),
+  }),
+  z.discriminatedUnion("cvSource", [
+    z.object({
+      cvSource: z.literal("upload"),
+      cvFilename: z.string().trim().min(1).max(200),
+      cvBase64: z.string().min(1),
+    }),
+    z.object({
+      cvSource: z.literal("cqrityjob_cv"),
+      /** An ID, and never a document. What gets stored is read out of
+       *  cv_documents by the database, under this caller's own RLS -- see
+       *  sp_submit_application_with_cv_source. A candidate cannot attach
+       *  somebody else's CV and cannot compose one. */
+      cvDocumentId: z.string().uuid(),
+    }),
+  ]),
+);
 
 export const submitJobApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -120,6 +177,9 @@ export const submitJobApplication = createServerFn({ method: "POST" })
     }): Promise<{
       id: string;
       status: ApplicationStatus;
+      /** Which door the CV actually came through, read back from the
+       *  database rather than echoed from the request. */
+      cvSource: ApplicationCvSource;
       /** What the candidate asked for. */
       passportRequested: boolean;
       /** What the database actually did. These differ when the candidate
@@ -159,34 +219,54 @@ export const submitJobApplication = createServerFn({ method: "POST" })
       }
       if (existing) throw new Error("DUPLICATE_APPLICATION");
 
-      // Decode + validate the CV. PDF only (brief: "secure PDF CV upload").
-      let cvBuffer: Buffer;
-      try {
-        cvBuffer = Buffer.from(data.cvBase64, "base64");
-      } catch {
-        throw new Error("CV_INVALID");
-      }
-      if (cvBuffer.length === 0 || cvBuffer.length > MAX_CV_BYTES) {
-        throw new Error("CV_TOO_LARGE");
-      }
-      if (cvBuffer.subarray(0, PDF_MAGIC.length).toString("ascii") !== PDF_MAGIC) {
-        throw new Error("CV_NOT_PDF");
-      }
-
       const applicationId = crypto.randomUUID();
-      const safeFilename = data.cvFilename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "cv.pdf";
-      const storagePath = `${ctx.userId}/${applicationId}/${safeFilename}`;
 
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { error: uploadErr } = await supabaseAdmin.storage
-        .from("job-application-cvs")
-        .upload(storagePath, cvBuffer, {
-          contentType: "application/pdf",
-          upsert: false,
-        });
-      if (uploadErr) {
-        console.error("[applications] CV upload failed", uploadErr);
-        throw new Error("CV_UPLOAD_FAILED");
+      // ---- THE CV -------------------------------------------------------
+      //
+      // Exactly one of these two branches runs. The upload branch is
+      // unchanged: decode, size-check, prove it really is a PDF by its magic
+      // bytes, and put it in the service-role-only bucket BEFORE the row
+      // exists, so a failed insert can take the file with it.
+      //
+      // The CQrityjob branch uploads nothing at all. There is no file, no
+      // bucket object and no signed URL, because there is no file: the
+      // artefact is a copy of the candidate's own saved document, made by
+      // the database inside the same transaction as the application row.
+      let storagePath: string | null = null;
+      let cvBytes: number | null = null;
+      let originalFilename: string | null = null;
+
+      if (data.cvSource === "upload") {
+        let cvBuffer: Buffer;
+        try {
+          cvBuffer = Buffer.from(data.cvBase64, "base64");
+        } catch {
+          throw new Error("CV_INVALID");
+        }
+        if (cvBuffer.length === 0 || cvBuffer.length > MAX_CV_BYTES) {
+          throw new Error("CV_TOO_LARGE");
+        }
+        if (cvBuffer.subarray(0, PDF_MAGIC.length).toString("ascii") !== PDF_MAGIC) {
+          throw new Error("CV_NOT_PDF");
+        }
+
+        const safeFilename =
+          data.cvFilename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "cv.pdf";
+        storagePath = `${ctx.userId}/${applicationId}/${safeFilename}`;
+        cvBytes = cvBuffer.length;
+        originalFilename = data.cvFilename;
+
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { error: uploadErr } = await supabaseAdmin.storage
+          .from("job-application-cvs")
+          .upload(storagePath, cvBuffer, {
+            contentType: "application/pdf",
+            upsert: false,
+          });
+        if (uploadErr) {
+          console.error("[applications] CV upload failed", uploadErr);
+          throw new Error("CV_UPLOAD_FAILED");
+        }
       }
 
       // ── ONE TRANSACTION ────────────────────────────────────────────────
@@ -201,15 +281,17 @@ export const submitJobApplication = createServerFn({ method: "POST" })
       // the duplicate-application index apply exactly as they did when this was
       // a direct insert. `_include_passport` defaults to false in SQL as well.
       const { data: submitted, error: insertErr } = await ctx.supabase.rpc(
-        "sp_submit_application_with_passport",
+        "sp_submit_application_with_cv_source",
         {
           _application_id: applicationId,
           _job_id: data.jobId,
           _phone: data.phone || null,
           _cover_note: data.coverNote || null,
           _cv_storage_path: storagePath,
-          _cv_original_filename: data.cvFilename,
-          _cv_size_bytes: cvBuffer.length,
+          _cv_original_filename: originalFilename,
+          _cv_size_bytes: cvBytes,
+          _cv_source: data.cvSource,
+          _cv_document_id: data.cvSource === "cqrityjob_cv" ? data.cvDocumentId : null,
           _include_passport: data.includePassport,
         },
       );
@@ -218,10 +300,21 @@ export const submitJobApplication = createServerFn({ method: "POST" })
         // Failed submission cleans up the uploaded CV -- never leave an
         // orphaned file for an application that doesn't exist. Because the
         // write was one transaction, there is also no half-submitted
-        // application and no orphan disclosure to clean up.
-        await supabaseAdmin.storage.from("job-application-cvs").remove([storagePath]);
+        // application and no orphan disclosure to clean up. There is nothing
+        // to remove on the CQrityjob path: it never wrote a file.
+        if (storagePath) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          await supabaseAdmin.storage.from("job-application-cvs").remove([storagePath]);
+        }
         console.error("[applications] submitJobApplication failed", insertErr);
         if (insertErr.code === "23505") throw new Error("DUPLICATE_APPLICATION");
+        // The database refused the CV itself. Distinct codes, because
+        // "finish your CV" and "that CV is not yours" are different things
+        // to be told, and neither of them is "could not submit, try again".
+        const message = String(insertErr.message ?? "");
+        if (message.includes("CV_DOCUMENT_NOT_FOUND")) throw new Error("CV_DOCUMENT_NOT_FOUND");
+        if (message.includes("CV_DOCUMENT_NOT_READY")) throw new Error("CV_DOCUMENT_NOT_READY");
+        if (message.includes("CV_DOCUMENT_REQUIRED")) throw new Error("CV_DOCUMENT_NOT_FOUND");
         if (insertErr.code === "23514") throw new Error("JOB_NOT_APPLICABLE");
         throw new Error("SUBMISSION_FAILED");
       }
@@ -229,6 +322,7 @@ export const submitJobApplication = createServerFn({ method: "POST" })
       const result = submitted as unknown as {
         id: string;
         status: ApplicationStatus;
+        cv_source: ApplicationCvSource;
         passport_requested: boolean;
         passport_shared: boolean;
       };
@@ -236,6 +330,9 @@ export const submitJobApplication = createServerFn({ method: "POST" })
       return {
         id: result.id,
         status: result.status,
+        // Read back from the row, not echoed from the request: the
+        // confirmation says what was submitted, not what was asked for.
+        cvSource: result.cv_source,
         passportRequested: result.passport_requested,
         // Reported from what the database did, never from what the form asked
         // for. A candidate with nothing verified applied successfully and was
@@ -255,7 +352,12 @@ export type MyApplicationRow = {
   jobTitleEn: string | null;
   employerName: string | null;
   status: ApplicationStatus;
+  /** Is there a submitted CV on this application at all -- of either kind.
+   *  Reading only cv_storage_path would report "no CV" for an application
+   *  submitted with a CQrityjob CV, which is the exact untruth this release
+   *  exists to remove. */
   hasCv: boolean;
+  cvSource: ApplicationCvSource;
   createdAt: string;
   updatedAt: string;
 };
@@ -270,7 +372,7 @@ export const listMyApplications = createServerFn({ method: "GET" })
     const { data: rows, error } = await ctx.supabase
       .from("job_applications")
       .select(
-        "id, job_id, status, cv_storage_path, created_at, updated_at, jobs(slug, title_sv, title_en, employers(name))",
+        "id, job_id, status, cv_storage_path, cv_source, created_at, updated_at, jobs(slug, title_sv, title_en, employers(name))",
       )
       .eq("applicant_user_id", ctx.userId)
       .order("created_at", { ascending: false })
@@ -295,7 +397,8 @@ export const listMyApplications = createServerFn({ method: "GET" })
         jobTitleEn: (job?.title_en as string | null) ?? null,
         employerName: (employer?.name as string | null) ?? null,
         status: r.status as ApplicationStatus,
-        hasCv: Boolean(r.cv_storage_path),
+        hasCv: Boolean(r.cv_storage_path) || r.cv_source === "cqrityjob_cv",
+        cvSource: (r.cv_source as ApplicationCvSource) ?? "upload",
         createdAt: r.created_at as string,
         updatedAt: r.updated_at as string,
       };
@@ -546,6 +649,11 @@ export const getApplicationCvSignedUrl = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
     const app = await loadApplication(ctx, data.applicationId);
+    // A CQrityjob CV is not a file and has no signed URL. Saying so
+    // precisely matters: "this application has no CV" would be false for an
+    // application that has one, and would send an employer looking for a
+    // document that is already on their screen.
+    if (app.cv_source === "cqrityjob_cv") throw new Error("CV_IS_NOT_A_FILE");
     if (!app.cv_storage_path) throw new Error("No CV attached to this application");
 
     const isApplicant = app.applicant_user_id === ctx.userId;
@@ -562,6 +670,85 @@ export const getApplicationCvSignedUrl = createServerFn({ method: "POST" })
       throw new Error("Could not generate a download link for this CV.");
     }
     return { url: signed.signedUrl, expiresInSeconds: 300 };
+  });
+
+// -------------------- THE SUBMITTED CQRITYJOB CV --------------------
+
+export type SubmittedCv = {
+  readonly source: ApplicationCvSource;
+  /** The submitted document, for `source === "cqrityjob_cv"`. */
+  readonly document: CvDocument | null;
+  /** What the candidate called this CV in their own list. Shown to nobody
+   *  but the candidate -- see below. */
+  readonly title: string | null;
+  /** When the application was submitted. The document is what was sent AT
+   *  that moment, and the surface says so rather than implying it. */
+  readonly submittedAt: string;
+  /** The row says a CQrityjob CV was submitted and we could not turn the
+   *  stored copy into a document. Distinct from "no CV": unknown is not
+   *  none, and an employer must not be told a candidate applied without a
+   *  CV because a read of ours failed. */
+  readonly unreadable: boolean;
+};
+
+/**
+ * The CV an application was submitted with, when it was a CQrityjob CV.
+ *
+ * -- WHO MAY READ IT ---------------------------------------------------
+ *
+ * Exactly the two parties `getApplicationCvSignedUrl` already serves: the
+ * applicant, and an active member of the employer the application belongs
+ * to. `loadApplication` runs on the caller's own RLS-scoped client, so an
+ * application belonging to another organisation is not "forbidden" -- it is
+ * NOT FOUND, and the answer is the same one a nonexistent id gets.
+ *
+ * There is no service-role read here and no path into cv_documents. The
+ * copy on the application is the only thing this returns.
+ *
+ * -- WHAT IT DELIBERATELY OMITS ----------------------------------------
+ *
+ * The candidate's own title for the CV ("CV for Nordic Security") is
+ * returned to the CANDIDATE and withheld from the employer.
+ * 20261011090000 says what that field is: "What the person called this CV,
+ * for their own list. Never shown on the document itself and never sent
+ * anywhere." An employer reading that another employer was named in it
+ * learns something the candidate did not choose to disclose.
+ *
+ * No cv_document_id, no snapshot version, no internal identifier of any
+ * kind reaches the browser. The employer surface says "CQrityjob CV" and a
+ * date, which is what it means.
+ */
+export const getApplicationSubmittedCv = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ applicationId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<SubmittedCv> => {
+    const ctx = context as Ctx;
+    const app = await loadApplication(ctx, data.applicationId);
+
+    const isApplicant = app.applicant_user_id === ctx.userId;
+    if (!isApplicant) {
+      await assertEmployerWorkspaceMember(ctx, app.employer_id);
+    }
+
+    const source: ApplicationCvSource = app.cv_source ?? "upload";
+    if (source !== "cqrityjob_cv") {
+      return { source, document: null, title: null, submittedAt: app.created_at, unreadable: false };
+    }
+
+    const parsed = applicationCvSnapshotSchema.safeParse(app.cv_document_snapshot ?? {});
+    const document = parsed.success ? applicationCvDocument(parsed.data) : null;
+    if (!document) {
+      console.error("[applications] submitted CV snapshot could not be read", {
+        applicationId: data.applicationId,
+      });
+    }
+    return {
+      source,
+      document,
+      title: isApplicant && parsed.success ? parsed.data.title || null : null,
+      submittedAt: app.created_at,
+      unreadable: document === null,
+    };
   });
 
 // -------------------- WHERE A HIRED CANDIDATE WENT --------------------

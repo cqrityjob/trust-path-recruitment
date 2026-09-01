@@ -10,13 +10,28 @@
 //
 // Security: this component only ever decides what to *show*. Every actual
 // authorization/eligibility check (job published+internal, no duplicate
-// active application, CV is really a PDF within the size limit) is
-// re-verified server-side by submitJobApplication() and, beneath that, by
-// the database itself (job_applications_stamp_employer_id trigger +
-// job_applications_active_unique_idx) -- a client bypass of any check here
-// still gets a safe, translated error, never a raw one.
+// active application, CV is really a PDF within the size limit, the chosen
+// saved CV is this person's and is fit to send) is re-verified server-side
+// by submitJobApplication() and, beneath that, by the database itself
+// (job_applications_stamp_employer_id trigger +
+// job_applications_active_unique_idx + sp_submit_application_with_cv_source)
+// -- a client bypass of any check here still gets a safe, translated error,
+// never a raw one.
+//
+// ── TWO CV SOURCES, ONE SUBMITTED CV ────────────────────────────────────
+//
+// A candidate who built a CV inside CQrityjob picks it here. They do not
+// export it to PDF and upload it back into the product that already holds
+// it -- which is what this dialog used to require, and the reason it was
+// the pilot's clearest broken promise.
+//
+// The two sources are a RADIO GROUP, not a checkbox and not a silent
+// preference. Whichever is selected is the one thing that gets sent, the
+// screen says which, and choosing one never quietly discards a file the
+// person deliberately attached: picking a saved CV while a file is
+// selected is a decision they make, not one made for them.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -38,6 +53,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { submitJobApplication } from "@/lib/job-intelligence/applications.functions";
 import { getApplicationPassportOffer } from "@/lib/security-passport/passport.functions";
+import { listMyApplicationCvOptions } from "@/lib/professional-identity/cv/cv-store.functions";
+import type { ApplicationCvOption } from "@/lib/professional-identity/cv/cv-store.functions";
+import type { CvApplicationBlock } from "@/lib/professional-identity/cv/application-source";
+import { formatDate } from "@/lib/job-intelligence/date-format";
 import { ShieldCheck } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -50,9 +69,19 @@ const ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
   CV_NOT_PDF: "jobs.apply.error.cvNotPdf",
   CV_INVALID: "jobs.apply.error.cvNotPdf",
   CV_UPLOAD_FAILED: "jobs.apply.error.generic",
+  // The database refused the chosen saved CV. Two distinct answers, because
+  // "that CV is not yours" and "that CV is not finished" need different
+  // things done about them, and neither of them is "try again".
+  CV_DOCUMENT_NOT_FOUND: "jobs.apply.error.cvDocumentNotFound",
+  CV_DOCUMENT_NOT_READY: "jobs.apply.error.cvDocumentNotReady",
   SUBMISSION_FAILED: "jobs.apply.error.generic",
   JOB_LOOKUP_FAILED: "jobs.apply.error.generic",
   DUPLICATE_CHECK_FAILED: "jobs.apply.error.generic",
+};
+
+const BLOCK_MESSAGE_KEY: Record<CvApplicationBlock, TranslationKey> = {
+  no_name: "jobs.apply.cv.block.noName",
+  no_history: "jobs.apply.cv.block.noHistory",
 };
 
 function translateSubmitError(code: string | undefined, t: (k: TranslationKey) => string): string {
@@ -74,6 +103,19 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+/** What we know about the person's saved CVs.
+ *
+ *  `unavailable` is a state of its own and not an empty list, because they
+ *  do not mean the same thing and only one of them is ever true. Telling
+ *  somebody with three saved CVs that they have none -- and pushing them to
+ *  upload one they already own -- is the failure this shape prevents. */
+type CvOptionsState =
+  | { readonly status: "loading" }
+  | { readonly status: "ready"; readonly options: readonly ApplicationCvOption[] }
+  | { readonly status: "unavailable" };
+
+type CvSource = "upload" | "cqrityjob_cv";
+
 export function ApplyInternalDialog({
   jobId,
   employerName,
@@ -83,7 +125,7 @@ export function ApplyInternalDialog({
   employerName: string | null;
   label: string;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");
@@ -94,6 +136,12 @@ export function ApplyInternalDialog({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [cvSource, setCvSource] = useState<CvSource>("upload");
+  const [selectedCvId, setSelectedCvId] = useState<string | null>(null);
+  const [cvOptions, setCvOptions] = useState<CvOptionsState>({ status: "loading" });
+  // Which source the SERVER recorded, so the confirmation describes the
+  // application that exists rather than the form that was filled in.
+  const [submittedSource, setSubmittedSource] = useState<CvSource>("upload");
   // Enabled by default: a candidate who has verified records almost always
   // wants the employer to see them, and the whole point is that including a
   // Passport costs no extra steps. It is a plain checkbox they can clear
@@ -111,6 +159,7 @@ export function ApplyInternalDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submitFn = useServerFn(submitJobApplication);
   const offerFn = useServerFn(getApplicationPassportOffer);
+  const cvOptionsFn = useServerFn(listMyApplicationCvOptions);
 
   useEffect(() => {
     let alive = true;
@@ -125,6 +174,15 @@ export function ApplyInternalDialog({
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  const usableCvs = useMemo(
+    () => (cvOptions.status === "ready" ? cvOptions.options.filter((c) => c.block === null) : []),
+    [cvOptions],
+  );
+  const blockedCvs = useMemo(
+    () => (cvOptions.status === "ready" ? cvOptions.options.filter((c) => c.block !== null) : []),
+    [cvOptions],
+  );
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
@@ -146,6 +204,10 @@ export function ApplyInternalDialog({
       return;
     }
     setFile(f);
+    // Attaching a file IS choosing the upload source. Leaving the selection
+    // on a saved CV while a freshly picked file sat unused underneath it
+    // would send the wrong document without ever saying so.
+    setCvSource("upload");
   }
 
   function resetForm() {
@@ -156,6 +218,8 @@ export function ApplyInternalDialog({
     setFileError(null);
     setSubmitError(null);
     setSuccess(false);
+    setCvSource("upload");
+    setSelectedCvId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -186,31 +250,79 @@ export function ApplyInternalDialog({
     };
   }, [open, offer, offerFn]);
 
+  // The saved CVs, read on the same terms: only once the dialog is open, and
+  // a failure NEVER becomes "you have no CV". The upload path stays open
+  // whatever this returns, so a broken read costs a convenience and not an
+  // application.
+  useEffect(() => {
+    if (!open || cvOptions.status !== "loading") return;
+    let alive = true;
+    void cvOptionsFn({ data: undefined })
+      .then((rows) => {
+        if (!alive) return;
+        setCvOptions({ status: "ready", options: rows });
+        // §6: a sensible default, only where it is unambiguous. Exactly one
+        // sendable CV and nothing attached yet -- and the screen still shows
+        // which document that is before anything is submitted.
+        const usable = rows.filter((r) => r.block === null);
+        if (usable.length === 1) {
+          setSelectedCvId(usable[0].cvId);
+          setCvSource((current) => (current === "upload" && !file ? "cqrityjob_cv" : current));
+        } else if (usable.length > 1) {
+          setSelectedCvId(usable[0].cvId);
+        }
+      })
+      .catch((err: unknown) => {
+        console.error("[jobs] saved CV list read failed", err);
+        if (alive) setCvOptions({ status: "unavailable" });
+      });
+    return () => {
+      alive = false;
+    };
+    // `file` is read for the default decision only; re-running this on every
+    // file change would re-fetch the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, cvOptions.status, cvOptionsFn]);
+
+  const canSubmit =
+    consent && (cvSource === "upload" ? file !== null : selectedCvId !== null);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError(null);
-    if (!file) {
+    if (cvSource === "upload" && !file) {
       setFileError(t("jobs.apply.error.cvRequired"));
+      return;
+    }
+    if (cvSource === "cqrityjob_cv" && !selectedCvId) {
+      setSubmitError(t("jobs.apply.error.cvSourceRequired"));
       return;
     }
     if (!consent) return;
     setSubmitting(true);
     try {
-      const cvBase64 = await fileToBase64(file);
+      const base = {
+        jobId,
+        phone: phone.trim() || null,
+        coverNote: coverNote.trim() || null,
+        consent: true as const,
+        // Only ever true when the candidate left it on AND has something
+        // verified: the confirmation must not be able to overstate.
+        includePassport: includePassport && (offer?.hasShareableContent ?? false),
+      };
       const res = await submitFn({
-        data: {
-          jobId,
-          phone: phone.trim() || null,
-          coverNote: coverNote.trim() || null,
-          consent: true,
-          cvFilename: file.name,
-          cvBase64,
-          // Only ever true when the candidate left it on AND has something
-          // verified: the confirmation must not be able to overstate.
-          includePassport: includePassport && (offer?.hasShareableContent ?? false),
-        },
+        data:
+          cvSource === "upload"
+            ? {
+                ...base,
+                cvSource: "upload" as const,
+                cvFilename: file!.name,
+                cvBase64: await fileToBase64(file!),
+              }
+            : { ...base, cvSource: "cqrityjob_cv" as const, cvDocumentId: selectedCvId! },
       });
       setPassportShared(res.passportShared);
+      setSubmittedSource(res.cvSource);
       setSuccess(true);
     } catch (err) {
       setSubmitError(translateSubmitError(err instanceof Error ? err.message : undefined, t));
@@ -264,6 +376,13 @@ export function ApplyInternalDialog({
               <DialogTitle>{t("jobs.apply.success.title")}</DialogTitle>
               <DialogDescription>{t("jobs.apply.success.body")}</DialogDescription>
             </DialogHeader>
+            {/* Which CV went, read from the row the server created. */}
+            <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground">
+              <FileText className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              {submittedSource === "cqrityjob_cv"
+                ? t("jobs.apply.success.cvCqrityjob")
+                : t("jobs.apply.success.cvUpload")}
+            </p>
             {/* Read from what the server actually did. A candidate who asked
                 to include a Passport but had nothing verified is told the
                 truth, not a success message the database did not earn. */}
@@ -322,26 +441,186 @@ export function ApplyInternalDialog({
                 />
               </div>
 
-              <div>
-                <Label htmlFor="apply-cv">{t("jobs.apply.field.cv")}</Label>
-                <Input
-                  id="apply-cv"
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={onFileChange}
-                  className="mt-1"
-                />
-                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t("jobs.apply.field.cvHint")}
-                </p>
-                {fileError && (
-                  <p role="alert" className="mt-1 text-xs text-destructive">
-                    {fileError}
+              {/* ── WHICH CV ──────────────────────────────────────────────
+                  A fieldset, because these are two options for one decision
+                  and a screen reader has to hear them that way. The legend
+                  is the question; the radios are the answers; the selected
+                  branch is the only one that expands. */}
+              <fieldset className="rounded-lg border border-border p-4">
+                <legend className="px-1 text-sm font-medium text-foreground">
+                  {t("jobs.apply.cv.legend")}
+                </legend>
+
+                {cvOptions.status === "loading" ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t("jobs.apply.cv.loading")}
                   </p>
-                )}
-              </div>
+                ) : null}
+
+                {/* Unknown is not none. A read that failed says so, and the
+                    upload path below stays exactly where it was. */}
+                {cvOptions.status === "unavailable" ? (
+                  <p role="status" className="mt-1 text-sm text-muted-foreground">
+                    {t("jobs.apply.cv.unavailable")}
+                  </p>
+                ) : null}
+
+                {usableCvs.length > 0 ? (
+                  <div className="mt-1">
+                    <label className="flex items-start gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="apply-cv-source"
+                        value="cqrityjob_cv"
+                        checked={cvSource === "cqrityjob_cv"}
+                        onChange={() => setCvSource("cqrityjob_cv")}
+                        className="mt-1 h-4 w-4 shrink-0 accent-[color:var(--accent)]"
+                        aria-describedby="apply-cv-cqrityjob-detail"
+                      />
+                      <span className="font-medium text-foreground">
+                        {t("jobs.apply.cv.source.cqrityjob")}
+                      </span>
+                    </label>
+
+                    <div id="apply-cv-cqrityjob-detail" className="mt-2 pl-6">
+                      {usableCvs.length === 1 ? (
+                        // Exactly one, so there is nothing to choose between
+                        // -- but the person still SEES what will be sent.
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            {usableCvs[0].title || t("jobs.apply.cv.untitled")}
+                          </span>{" "}
+                          ·{" "}
+                          {t("jobs.apply.cv.updated").replace(
+                            "{date}",
+                            formatDate(usableCvs[0].updatedAt, lang),
+                          )}
+                        </p>
+                      ) : (
+                        <>
+                          <Label htmlFor="apply-cv-choose" className="text-xs text-muted-foreground">
+                            {t("jobs.apply.cv.choose")}
+                          </Label>
+                          <select
+                            id="apply-cv-choose"
+                            value={selectedCvId ?? ""}
+                            onChange={(e) => {
+                              setSelectedCvId(e.target.value || null);
+                              setCvSource("cqrityjob_cv");
+                            }}
+                            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {usableCvs.map((c) => (
+                              <option key={c.cvId} value={c.cvId}>
+                                {(c.title || t("jobs.apply.cv.untitled")) +
+                                  " · " +
+                                  t("jobs.apply.cv.updated").replace(
+                                    "{date}",
+                                    formatDate(c.updatedAt, lang),
+                                  )}
+                              </option>
+                            ))}
+                          </select>
+                        </>
+                      )}
+
+                      {/* Selecting a CV is a disclosure. It is named as one,
+                          next to the control that makes it, and not buried in
+                          the consent line further down. */}
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        {employerName
+                          ? t("jobs.apply.cv.shared").replace("{employer}", employerName)
+                          : t("jobs.apply.cv.sharedGeneric")}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* A saved CV that cannot be sent is NAMED, with the reason
+                    and a way to fix it. Silently hiding it would leave
+                    somebody staring at "you have no CV" with a CV open in
+                    the next tab. */}
+                {blockedCvs.length > 0 ? (
+                  <div className="mt-3 rounded-md border border-dashed border-border p-3">
+                    <p className="text-xs font-medium text-foreground">
+                      {t("jobs.apply.cv.unusableHeading")}
+                    </p>
+                    <ul className="mt-1 space-y-1">
+                      {blockedCvs.map((c) => (
+                        <li key={c.cvId} className="text-xs text-muted-foreground">
+                          {c.title || t("jobs.apply.cv.untitled")} —{" "}
+                          {t(BLOCK_MESSAGE_KEY[c.block as CvApplicationBlock])}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      to="/my-career/cv"
+                      className="mt-1 inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {t("jobs.apply.cv.finish")}
+                    </Link>
+                  </div>
+                ) : null}
+
+                {cvOptions.status === "ready" && cvOptions.options.length === 0 ? (
+                  <div className="mt-1 text-sm">
+                    <p className="text-muted-foreground">{t("jobs.apply.cv.none")}</p>
+                    <Link
+                      to="/my-career/cv"
+                      className="mt-1 inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {t("jobs.apply.cv.create")}
+                    </Link>
+                  </div>
+                ) : null}
+
+                {/* ── UPLOAD ─────────────────────────────────────────────
+                    Always present, always available, unchanged. A candidate
+                    with an external CV, a CV in another format, or simply a
+                    preference is never forced onto the platform document. */}
+                <div className={usableCvs.length > 0 ? "mt-4 border-t border-border pt-3" : "mt-1"}>
+                  {usableCvs.length > 0 ? (
+                    <label className="flex items-start gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="apply-cv-source"
+                        value="upload"
+                        checked={cvSource === "upload"}
+                        onChange={() => setCvSource("upload")}
+                        className="mt-1 h-4 w-4 shrink-0 accent-[color:var(--accent)]"
+                        aria-describedby="apply-cv-upload-detail"
+                      />
+                      <span className="font-medium text-foreground">
+                        {t("jobs.apply.cv.source.upload")}
+                      </span>
+                    </label>
+                  ) : (
+                    <Label htmlFor="apply-cv">{t("jobs.apply.field.cv")}</Label>
+                  )}
+
+                  <div
+                    id="apply-cv-upload-detail"
+                    className={usableCvs.length > 0 ? "mt-2 pl-6" : "mt-1"}
+                  >
+                    <Input
+                      id="apply-cv"
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      onChange={onFileChange}
+                    />
+                    <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                      <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                      {t("jobs.apply.field.cvHint")}
+                    </p>
+                    {fileError && (
+                      <p role="alert" className="mt-1 text-xs text-destructive">
+                        {fileError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </fieldset>
 
               {/* ── Ta med mitt verifierade Security Passport ──────────────
                   The last thing before consent, because it is part of the
@@ -445,7 +724,7 @@ export function ApplyInternalDialog({
             <DialogFooter className="mt-4 shrink-0 border-t border-border pt-4">
               <Button
                 type="submit"
-                disabled={submitting || !consent || !file}
+                disabled={submitting || !canSubmit}
                 className="w-full justify-center sm:w-auto"
               >
                 {submitting ? (
