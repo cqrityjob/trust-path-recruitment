@@ -492,13 +492,9 @@ export function SiteHeader() {
       {/* The sheet scrolls on its own rather than pushing the page: signed in,
           with an organisation and the account block, it is taller than a 320px
           phone in landscape, and the last rows were unreachable. */}
-      <div
-        id="site-menu"
-        className={cn(
-          "max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border bg-background lg:hidden",
-          open ? "block" : "hidden",
-        )}
-      >
+      {/* The breakpoint stays `lg` and is asserted by header-entry:check --
+          six Swedish nav items plus two actions do not fit at 768px. */}
+      <div id="site-menu" className={cn(MENU_SURFACE + " lg:hidden", open ? "block" : "hidden")}>
         <Container className="flex flex-col gap-1 py-4">
           {/* ── Mobile is the same product, not a collapsed website ──────
               The four destinations come from the SAME array the desktop
