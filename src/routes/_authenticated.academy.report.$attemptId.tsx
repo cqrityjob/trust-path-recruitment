@@ -1,9 +1,28 @@
-// The participant's own development report, plus their progress over time.
+// The participant's own report, plus their progress over time.
 //
 // Same maturity components as the employer view, and deliberately so: the
 // person should see exactly what their employer sees about them, in the same
 // words. A participant-facing summary that softened or reworded the employer
 // one would be the beginning of two versions of the truth.
+//
+// ── WHY THE WORDS "DEVELOPMENT" AND "YOUR EMPLOYER" ARE CONDITIONAL ────
+//
+// This page was written for the workforce product and said so throughout: the
+// heading was "My development report" and the reason given was that "your
+// employer asked you to complete an assessment for competence development".
+// The same page is what an APPLICANT reaches. Both sentences are false to
+// them — nobody is developing them, and the organisation that asked is one
+// they do not work for and may never work for.
+//
+// The fork is `personContext`, which the release function already derived from
+// the assignment and froze into the snapshot's own context. It is read here
+// rather than re-derived, for the same reason the employer results page reads
+// it: the report says what it was released as, and a report that changed its
+// purpose after the fact would not be a snapshot.
+//
+// Only the sentences that are FACTUALLY wrong in recruitment are forked.
+// Everything about evidence, limitations and rights is identical for both,
+// which is the point — the same person is owed the same account either way.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -81,6 +100,10 @@ function ParticipantReport() {
   }
 
   const r = report.data;
+  // Read from the snapshot's frozen context, never re-derived. Absent on a
+  // snapshot released before the context carried it, and the workforce wording
+  // is the right default there: that is what those releases actually were.
+  const candidate = r.context?.personContext === "candidate";
   const limitations = lang === "en" ? r.limitationsEn : r.limitationsSv;
   const releaseDates = Array.from(new Set((progress.data ?? []).map((p) => p.releasedAt)));
 
@@ -98,7 +121,7 @@ function ParticipantReport() {
         className="text-[1.75rem] font-semibold leading-tight tracking-tight text-foreground"
         style={{ fontFamily: "var(--font-display)" }}
       >
-        {t("academy.report.title")}
+        {t(candidate ? "academy.report.titleRecruitment" : "academy.report.title")}
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         {t("academy.report.releasedOn")}{" "}
@@ -116,7 +139,7 @@ function ParticipantReport() {
       <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
         <h2 className="text-sm font-semibold text-foreground">{t("academy.report.whyTitle")}</h2>
         <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t("academy.report.whyBody")}
+          {t(candidate ? "academy.report.whyBodyRecruitment" : "academy.report.whyBody")}
         </p>
         <p className="mt-3 max-w-[70ch] text-[13px] leading-relaxed text-foreground">
           {t("academy.report.humanDecides")}
@@ -247,7 +270,9 @@ function ParticipantReport() {
 
       {(recs.data?.length ?? 0) > 0 && (
         <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold text-foreground">{t("academy.report.suggested")}</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            {t(candidate ? "academy.report.suggestedRecruitment" : "academy.report.suggested")}
+          </h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
             {t("academy.report.suggestedLede")}
           </p>

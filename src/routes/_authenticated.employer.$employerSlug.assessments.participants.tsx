@@ -412,6 +412,22 @@ function CandidateCard({
     onError: (e: unknown) => {
       setConfirmRelease(false);
       const code = (e as { code?: string }).code ?? "";
+      // ── ALREADY SHARED IS NOT A FAILURE ────────────────────────────────
+      //
+      // Sharing is one-way and the database says so: a second call raises
+      // SCP_ALREADY_RELEASED. That reached this handler as "the brief could
+      // not be shared", which is false in the one way that matters — it WAS
+      // shared, and the recruiter was being told to go and do it again.
+      //
+      // The button is single-flight, so this is not a double click. It is the
+      // reply that got lost on the way back, the second tab, and the second
+      // admin who pressed it a moment later. All three are the success case
+      // arriving late, and the row is refetched exactly as it would have been.
+      if (code === "SCP_ALREADY_RELEASED") {
+        setNotice(t("academy.participants.releaseAlready"));
+        void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
+        return;
+      }
       setNotice(
         code === "SCP_RELEASE_BEFORE_SCORED"
           ? t("academy.participants.releaseBlocked")

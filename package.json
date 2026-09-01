@@ -50,6 +50,8 @@
     "career-discovery-v32-content:check": "bun run scripts/career-discovery-v32-content-check.ts",
     "career-discovery-v32-equivalence:check": "bun run scripts/career-discovery-v32-equivalence-check.ts",
     "assessment-assignment:check": "bun run scripts/assessment-assignment-check.ts", 
+    "assessment-reliability:check": "bun run scripts/assessment-pilot-reliability-check.ts",
+    "assessment-panels-render:check": "bun run scripts/assessment-panels-render-check.tsx",
     "format": "prettier --write .", 
     "db:test": "bash scripts/db-test.sh", 
     "migrations:check": "bun run scripts/migration-safety-check.ts",

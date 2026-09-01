@@ -406,6 +406,29 @@ jobs:
       - name: Recruitment assessment UX check
         run: bun run recruitment-assessment-ux:check
 
+      # The CLIENT half of the assessment loop. The database half is proven by
+      # supabase/tests/employer_vaktare_journey_test.sql — incomplete submit,
+      # double submit, resume, the release gate and cross-tenant refusal are all
+      # asserted there and are not repeated. What this covers is what no schema
+      # test can reach: that two saves for one answer cannot land out of order
+      # (it RUNS the queue, and asserts the unqueued case still inverts), that
+      # submission drains the writes still in the air, that a submission with
+      # answers missing names them and routes to one instead of offering to
+      # retry a call that will be refused again, that "Saved" is set by the
+      # server's reply, that an already-shared brief is not reported as a
+      # failure, and that recruitment is never addressed in workforce words.
+      - name: Assessment pilot reliability check
+        run: bun run assessment-reliability:check
+
+      # The same run, asserted against RENDERED markup. Every panel it covers
+      # is a state nobody reaches by hand — a save only reports a failure when
+      # the network drops, the missing-answers panel only appears on an
+      # unfinished submission, and the recruitment ending only appears to a
+      # candidate. States like that go wrong quietly, because the only way to
+      # look at one is to break something on purpose first.
+      - name: Assessment participant panels render check
+        run: bun run assessment-panels-render:check
+
       # The source-level half of the security invariants. It replays every
       # migration's grants, policies and function definitions in filename order
       # and reports only what SURVIVES, so it fails on a SECURITY DEFINER
