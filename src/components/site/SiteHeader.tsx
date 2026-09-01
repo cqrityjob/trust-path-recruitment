@@ -551,8 +551,8 @@ export function SiteHeader() {
               )}
             </Link>
           ))}
-          <div className="mt-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+            <div className="flex items-center justify-between gap-3">
               <LanguageSwitcher />
               {/* Same rule as desktop: inside the workspace this would be
                   a second "Min karriär" a few rows under the first. */}
@@ -560,7 +560,10 @@ export function SiteHeader() {
                 <Link
                   to="/my-career"
                   onClick={() => setOpen(false)}
-                  className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+                  className={cn(
+                    "inline-flex min-h-[44px] items-center rounded-md border border-border px-3.5 text-sm font-semibold text-foreground hover:bg-secondary",
+                    focusRing,
+                  )}
                 >
                   {t("nav.my_career")}
                 </Link>
@@ -568,7 +571,10 @@ export function SiteHeader() {
                 <Link
                   to="/login"
                   onClick={() => setOpen(false)}
-                  className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+                  className={cn(
+                    "inline-flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium text-foreground hover:bg-secondary",
+                    focusRing,
+                  )}
                 >
                   {t("nav.signin")}
                 </Link>
@@ -583,7 +589,10 @@ export function SiteHeader() {
               <Link
                 to="/signup"
                 onClick={() => setOpen(false)}
-                className="flex min-h-[44px] items-center justify-center rounded-md bg-primary px-2 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)]"
+                className={cn(
+                  "flex min-h-[44px] items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)] motion-reduce:transition-none",
+                  focusRing,
+                )}
               >
                 {t("nav.createAccount")}
               </Link>
