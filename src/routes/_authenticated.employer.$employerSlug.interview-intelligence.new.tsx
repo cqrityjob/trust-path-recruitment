@@ -9,7 +9,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
@@ -28,6 +28,7 @@ import {
   createInterviewCase,
   listStartableInterviewPacks,
 } from "@/lib/interview-intelligence/runtime.functions";
+import { getApplicationInterviewStart } from "@/lib/interview-intelligence/context.functions";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/new",
@@ -73,6 +74,45 @@ function Page() {
   const [packVersionId, setPackVersionId] = useState("");
   const [errors, setErrors] = useState<readonly { fieldId: string; message: string }[]>([]);
 
+  // ── WHAT THE APPLICATION ALREADY ANSWERS ──────────────────────────────
+  //
+  // Arriving from an application, the recruiter has just read the candidate's
+  // name and the advert's title on the previous screen. Asking them to type
+  // both again is not merely friction: a retyped name produces a case filed
+  // under a slightly different person from the application it is attached to,
+  // and the case is the record that outlives the memory of who was meant.
+  const prefillFn = useServerFn(getApplicationInterviewStart);
+  const prefill = useQuery({
+    queryKey: ["ii", "new-prefill", applicationId],
+    queryFn: () => prefillFn({ data: { applicationId: applicationId! } }),
+    enabled: Boolean(applicationId),
+    // A prefill that fails costs keystrokes. It must never cost the recruiter
+    // the ability to start the interview, so it is never retried into a state
+    // where the form waits on it.
+    retry: false,
+  });
+
+  // Fills the two fields ONCE, and only while they are still untouched. A
+  // recruiter who has started typing owns the field from that moment: a late
+  // response overwriting their words would be the worse bug of the two.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !prefill.data) return;
+    prefilled.current = true;
+    const name = prefill.data.candidateName;
+    const role = prefill.data.roleSv ?? prefill.data.roleEn;
+    setCandidate((current) => (current === "" && name ? name : current));
+    setTitle((current) =>
+      current === "" && (role || name) ? [role, name].filter(Boolean).join(" — ") : current,
+    );
+  }, [prefill.data]);
+
+  // The job comes from the APPLICATION when we could read it, and from the URL
+  // only as a fallback. An application cannot name another employer's job, so
+  // the authoritative value is also the one that cannot be steered by a
+  // hand-edited query string.
+  const effectiveJobId = prefill.data?.jobId ?? jobId ?? null;
+
   const create = useMutation({
     mutationFn: () =>
       createFn({
@@ -85,7 +125,7 @@ function Page() {
           // raises SCP_IV_CROSS_TENANT_* otherwise, so a hand-edited URL cannot
           // attach a case to somebody else's application.
           applicationId: applicationId ?? null,
-          jobId: jobId ?? null,
+          jobId: effectiveJobId,
         },
       }),
     onSuccess: ({ caseId }) =>
@@ -120,7 +160,10 @@ function Page() {
     const next: Array<{ fieldId: string; message: string }> = [];
     if (title.trim() === "") next.push({ fieldId: "ii-title", message: t("iiu.new.err.title") });
     if (candidate.trim() === "")
-      next.push({ fieldId: "ii-candidate", message: "Ange kandidatens namn eller referens." });
+      // Was a hardcoded Swedish string on an otherwise translated form: an
+      // English-language recruiter who left the field empty got the one
+      // message on the screen they could not read.
+      next.push({ fieldId: "ii-candidate", message: t("iiu.new.err.candidate") });
     if (packVersionId === "") next.push({ fieldId: "ii-pack", message: t("iiu.new.err.pack") });
     setErrors(next);
     if (next.length > 0) {
@@ -203,6 +246,13 @@ function Page() {
               aria-describedby={errorFor("ii-title") ? "ii-title-error" : undefined}
               className={FIELD}
             />
+            {/* Said out loud, because a field that filled itself in is
+             *  otherwise indistinguishable from one the recruiter half
+             *  remembers typing — and they need to know it is theirs to
+             *  change. */}
+            {prefill.data?.candidateName && (
+              <p className="mt-1 text-xs text-muted-foreground">{t("iiu.new.prefill")}</p>
+            )}
             {errorFor("ii-title") && (
               <p id="ii-title-error" className="mt-1 text-xs text-destructive">
                 {errorFor("ii-title")}

@@ -53,6 +53,8 @@ import {
   Surface,
   WorkSplit,
 } from "@/components/employer/interview/InterviewLayout";
+import { InterviewContextPanel } from "@/components/employer/interview/InterviewContextPanel";
+import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
 import {
   addCaseSource,
   approvePreparation,
@@ -112,6 +114,19 @@ function Page() {
     queryFn: () => getFn({ data: { caseId } }),
     retry: false,
   });
+  // The recruitment context this case inherits from its application.
+  //
+  // Its OWN query, deliberately, rather than a field on the case read: it
+  // reaches four other records and any of them may be slow or unavailable, and
+  // the preparation screen must not wait on the assessment brief to draw the
+  // interview. A failure here costs the briefing and nothing else.
+  const contextFn = useServerFn(getInterviewCaseContext);
+  const contextQ = useQuery({
+    queryKey: ["ii", "context", caseId],
+    queryFn: () => contextFn({ data: { caseId } }),
+    retry: false,
+  });
+
   // Which CQrity TRUST stage this case is in. Derived in the database from
   // the case status and the session's PEACE stage, so it cannot disagree
   // with the workflow the rest of the screen shows.
@@ -343,6 +358,24 @@ function Page() {
         <WorkSplit
           main={
             <>
+              {/* ---- What CQrityjob already knows ----
+                  FIRST, and above the setup work, because it is the answer to
+                  the question the recruiter arrived with. Before this, a case
+                  created from an application landed here knowing nothing about
+                  it, and the first thing the screen did was ask for material
+                  the product was already holding two clicks away.
+
+                  Read live and stored nowhere: it briefs the interview, it is
+                  not part of its record. */}
+              <InterviewContextPanel
+                context={contextQ.data ?? null}
+                employerSlug={employerSlug}
+                applicationId={d.applicationId}
+                isLoading={contextQ.isLoading}
+                isError={contextQ.isError}
+              />
+              <Rule />
+
               {/* ---- Setting the case up ----
                   Finite work with an end. It is on the page only while it is
                   the recruiter's actual job, and once the plan is approved it

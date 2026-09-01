@@ -44,6 +44,11 @@
     // fixture silently stops matching the type it asserts about is exactly the
     // failure this file exists to prevent.
     "scripts/cv-application-source-check.tsx",
+    // The context bridge guard, on the same terms: new, no pre-existing type
+    // debt, and it CALLS buildInterviewContext with typed fixtures -- a
+    // fixture that silently stops matching the type it asserts about is
+    // exactly the failure this file exists to prevent.
+    "scripts/interview-context-bridge-check.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],
