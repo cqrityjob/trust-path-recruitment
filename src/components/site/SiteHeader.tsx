@@ -17,6 +17,12 @@ import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { AccountMenu, type AccountIdentity } from "./AccountMenu";
 import { workspaceStatusLabelKey } from "./workspace-status";
 
+/** One visible keyboard-focus treatment for every control in the header.
+ *  Several of them previously had none at all, which made the header
+ *  un-navigable by keyboard without guessing where you were. */
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
 export function SiteHeader() {
   const { t } = useT();
   const location = useLocation();
