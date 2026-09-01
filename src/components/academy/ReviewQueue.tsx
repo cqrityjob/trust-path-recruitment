@@ -33,7 +33,7 @@
 // judgement is a form, and the employer's decision is described as something
 // that happens elsewhere, later, by somebody else.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ShieldAlert } from "lucide-react";
@@ -369,6 +369,35 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
 
   const closedTest = review.governanceMode === "closed_test";
 
+  // ── REVIEWER WORK IS NOT DISCARDED WITHOUT SAYING SO ──────────────────
+  //
+  // A review is completed by ONE call: there is no draft, and deliberately so
+  // — a half-written judgement on somebody's competence record is not a thing
+  // the platform should be storing and later showing as if a reviewer had
+  // stood behind it. What was wrong was not the absence of drafts, it was that
+  // reloading or closing the tab took a severity, a set of rubric levels and
+  // several paragraphs of reasoning with no indication that anything was lost.
+  //
+  // Completed reviews are already durable, so partial progress THROUGH an
+  // attempt survives leaving and returning. This covers the one thing that
+  // does not: the card currently being written.
+  const started =
+    !m.isSuccess && (rationale.trim() !== "" || finding !== null || Object.keys(levels).length > 0);
+  const startedRef = useRef(false);
+  useEffect(() => {
+    startedRef.current = started;
+  }, [started]);
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!startedRef.current) return;
+      e.preventDefault();
+      // Browsers render their own wording; only the value has to be set.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   return (
     <article className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
       {/* ── WHAT NEEDS REVIEW, AND WHY ── */}
@@ -605,6 +634,15 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
         {incomplete && (
           <p className="text-[12px] leading-relaxed text-muted-foreground">
             {rubricMissing ? t("academy.reviews.noRubric") : t("academy.reviews.completeBlocked")}
+          </p>
+        )}
+        {/* Said while the reviewer is still here, not only in a browser dialog
+            on the way out. A review reaches the record on one call and there is
+            no draft behind it, so "started" and "recorded" are far apart and
+            the card should not let anyone assume otherwise. */}
+        {started && (
+          <p className="text-[12px] leading-relaxed text-muted-foreground">
+            {t("academy.reviews.unsaved")}
           </p>
         )}
       </form>

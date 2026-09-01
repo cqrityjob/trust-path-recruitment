@@ -45,6 +45,13 @@ import {
   type AcademyItem,
 } from "@/lib/security-competency/academy-delivery.functions";
 import { listAcademyWork } from "@/lib/security-competency/academy-training.functions";
+import { createAnswerQueue } from "@/lib/security-competency/answer-queue";
+import {
+  MissingAnswersPanel,
+  SaveStatus,
+  SubmittedNotice,
+  type SaveState,
+} from "@/components/academy/AttemptPanels";
 
 export const Route = createFileRoute("/_authenticated/academy/$attemptId")({
   component: AcademyAttemptRoute,
@@ -60,7 +67,12 @@ type Phase =
   | "error"
   /** A final submission that did not go through. Deliberately NOT "error":
    *  the run is intact and resumable, and the copy has to say so. */
-  | "submit-failed";
+  | "submit-failed"
+  /** Submit was refused because answers are missing. Deliberately NOT
+   *  "submit-failed": nothing failed, nothing was lost and retrying the same
+   *  call would be refused again for the same reason. The only useful thing to
+   *  show here is WHICH answers are missing and a way to get to them. */
+  | "incomplete";
 
 /** Whether an item already carries a saved answer.
  *
@@ -72,9 +84,29 @@ function isAnswered(i: AcademyItem): boolean {
   return Boolean(i.savedOptionId || (i.savedBestId && i.savedWorstId) || i.savedText);
 }
 
+/** What `scp_save_response` will actually store for a written answer.
+ *
+ *  The function writes `nullif(btrim(text), '')`, so trailing whitespace is
+ *  discarded and a whitespace-only answer becomes NULL. Applying the same
+ *  normalisation locally is what stops the run from showing an answer the
+ *  database threw away — which reads as saved, survives until a reload, and
+ *  then is not there. */
+function asStored(text: string): string | null {
+  return text.trim() === "" ? null : text.trim();
+}
+
+/** How long typing waits before it is sent.
+ *
+ *  Short enough that the unsaved window is a pause in typing rather than a
+ *  policy, and long enough not to post per keystroke. It is deliberately NOT
+ *  the mechanism that gets the answer in: every exit — blur, next, back,
+ *  submit, unmount — flushes it first, so lengthening this would not lose an
+ *  answer and shortening it would not save one. */
+const TEXT_SAVE_DELAY_MS = 800;
+
 function AcademyAttemptRoute() {
   const { attemptId } = Route.useParams();
-  const { t, lang: uiLang } = useT();
+  const { t, tp, lang: uiLang } = useT();
   const loadItems = useServerFn(getAcademyAttemptItems);
   const loadBlocks = useServerFn(getAcademyAttemptBlocks);
   const loadState = useServerFn(getAcademyAttemptState);
@@ -105,24 +137,58 @@ function AcademyAttemptRoute() {
   // read model for one string.
   const [useCase, setUseCase] = useState<"workforce" | "recruitment">("workforce");
   const recruitment = useCase === "recruitment";
+  // Per-item save state, keyed by item version id. Absent means "nothing has
+  // been sent for this item in this sitting" — which is NOT "unsaved": a
+  // resumed run arrives with its answers already on the server.
+  const [saveState, setSaveState] = useState<Record<string, SaveState>>({});
+  // The items the SERVER says have no answer. Established by re-reading at
+  // submit time, never by trusting this component's copy.
+  const [missing, setMissing] = useState<AcademyItem[]>([]);
 
-  // ── FINAL SUBMISSION: SAVES FIRST, ONCE, AND HONESTLY ─────────────────
+  // ── HOW AN ANSWER REACHES THE SERVER ──────────────────────────────────
   //
-  // Every answer is persisted with a fire-and-forget `void persist(...)`,
-  // which is right while the participant is working: it keeps the UI
-  // instant and a lost keystroke is recoverable. It is NOT right at the
-  // moment of submit. Answering the last question and immediately pressing
-  // "Submit" raced that in-flight POST, so scp_submit_attempt saw an
-  // unanswered item and raised SCP_INCOMPLETE_ATTEMPT -- which arrived here
-  // as an unmapped code, rendered the LOAD failure panel ("This assessment
-  // could not be opened"), and left a perfectly good attempt sitting in
-  // progress. That is the observed defect, exactly.
+  // Answers are persisted in the background, which is right while somebody is
+  // working: it keeps the UI instant. Two rules make that safe rather than
+  // merely fast, and both are here because their absence loses answers.
   //
-  // `pending` tracks the writes still in the air so submit can wait for
-  // them; `submittingRef` makes the submit itself single-flight, because a
-  // second click during the round trip would run the RPC twice.
-  const pending = useRef<Set<Promise<unknown>>>(new Set());
+  // ONE WRITE AT A TIME, PER ITEM, and submit waits for all of them. Both
+  // rules live in `createAnswerQueue`, with the reasoning for each — they are
+  // the reliability-critical part of this file and they are testable there
+  // rather than only reachable through a component.
+  //
+  // WHAT IS SENT IS THE WHOLE ANSWER, merged from the item as it stands after
+  // the change rather than from this render's closure — see `answer()`.
+  const queue = useRef(createAnswerQueue());
+  // `submittingRef` makes the submit itself single-flight. A ref, not state:
+  // it updates synchronously, so a second click that lands before React
+  // re-renders still sees it — which is the click that would otherwise run
+  // scp_submit_attempt twice.
   const submittingRef = useRef(false);
+
+  // ── THE WRITTEN ANSWER, WHICH IS THE ONE THAT CAN BE LOST ─────────────
+  //
+  // A chosen option is one click and is saved on that click. A written answer
+  // is eight minutes of typing, and it used to reach the server only on blur.
+  // Everything before the first blur — the whole answer, usually — existed in
+  // one browser tab and nowhere else: a reload, a crash or a sleeping laptop
+  // took it, and the participant came back to an empty box.
+  //
+  // So typing schedules a save, and anything that could end the sitting
+  // flushes it first: moving between questions, submitting, unmounting, and
+  // leaving the page. The debounce is short and is never the thing relied on —
+  // it exists to avoid a request per keystroke, not to be a deadline.
+  const textTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const textDirty = useRef<{ itemId: string; value: string } | null>(null);
+  // The latest items, readable synchronously. Two clicks inside one frame both
+  // read this; reading `items` would give the second one the state from before
+  // the first, and it would send — and store — the answer without it.
+  const itemsRef = useRef<AcademyItem[]>([]);
+  // Set when the participant was SENT to a question rather than walking to it,
+  // so the focus follows them. Routing somebody to question 31 and leaving the
+  // keyboard where it was is a routing that only worked for people using a
+  // mouse.
+  const focusPrompt = useRef(false);
+  const promptRef = useRef<HTMLHeadingElement | null>(null);
 
   const lang = uiLang === "en" ? "en" : "sv";
 
@@ -140,6 +206,7 @@ function AcademyAttemptRoute() {
         ]);
         if (cancelled) return;
         setItems(rows);
+        itemsRef.current = rows;
         setBlocks(blockRows);
         const mine = work.find((w) => w.workId === attemptId);
         if (mine) setUseCase(mine.useCase);
@@ -174,8 +241,119 @@ function AcademyAttemptRoute() {
     };
   }, [attemptId, lang, loadItems, loadBlocks, loadState, loadWork]);
 
+  /** Send one item's complete answer, behind that item's own queue.
+   *
+   *  A failing save no longer ends the run. It used to set phase "error",
+   *  which drew "This assessment could not be opened" over an assessment that
+   *  had opened, was fully answered and was still perfectly resumable — the
+   *  participant's honest reading of that screen is that everything is gone.
+   *  What is true is narrower and is said where it happened: THIS answer is
+   *  not saved. The run continues, the other answers are untouched, and submit
+   *  re-reads from the server anyway, so an answer this failed to store shows
+   *  up there as missing rather than being quietly submitted as blank. */
+  function persist(itemId: string, a: AcademyItem): Promise<void> {
+    return queue.current.enqueue(itemId, async () => {
+      setSaveState((prev) => ({ ...prev, [itemId]: "saving" }));
+      try {
+        await saveResponse({
+          data: {
+            attemptId,
+            itemVersionId: itemId,
+            selectedOptionId: a.savedOptionId,
+            bestOptionId: a.savedBestId,
+            worstOptionId: a.savedWorstId,
+            responseText: a.savedText,
+          },
+        });
+        // Set from the REPLY. This is the whole save contract: the run may not
+        // tell somebody their answer is saved on the strength of having sent
+        // it, because the two are different facts and only one of them
+        // survives a closed laptop.
+        setSaveState((prev) => ({ ...prev, [itemId]: "saved" }));
+      } catch {
+        setSaveState((prev) => ({ ...prev, [itemId]: "failed" }));
+      }
+    });
+  }
+
+  /** Record an answer and persist it.
+   *
+   *  The patch is merged onto the item as it stands NOW — read from `itemsRef`
+   *  and written back to it synchronously — rather than onto the copy this
+   *  render closed over. Best/worst is why: the two halves are two clicks, and
+   *  a second click landing before React re-renders would otherwise send the
+   *  half it remembered and store the pairing without the other one. */
+  const answer = useCallback(
+    (itemId: string, patch: Partial<AcademyItem>) => {
+      const base = itemsRef.current.find((i) => i.itemVersionId === itemId);
+      if (!base) return;
+      const merged: AcademyItem = { ...base, ...patch };
+      itemsRef.current = itemsRef.current.map((i) => (i.itemVersionId === itemId ? merged : i));
+      setItems((prev) => prev.map((i) => (i.itemVersionId === itemId ? merged : i)));
+      void persist(itemId, merged);
+    },
+    // `persist` is redeclared each render and closes only over refs and stable
+    // setters, so it is deliberately not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  /** Send the written answer now, cancelling any save this typing scheduled.
+   *
+   *  Called before anything that could end the sitting. Returns nothing to
+   *  await on purpose: the write it starts is in `chains`, and
+   *  `flushPendingSaves` is what waits for it. */
+  const flushText = useCallback(() => {
+    if (textTimer.current) {
+      clearTimeout(textTimer.current);
+      textTimer.current = null;
+    }
+    const dirty = textDirty.current;
+    if (!dirty) return;
+    textDirty.current = null;
+    answer(dirty.itemId, { savedText: asStored(dirty.value) });
+  }, [answer]);
+
+  /** Wait for every answer still being written. Never rejects — a save that
+   *  failed has already said so on its own question, and must not leave submit
+   *  hanging on it forever. */
+  function flushPendingSaves(): Promise<void> {
+    return queue.current.drain();
+  }
+
+  // ── THE SITTING ENDING WITHOUT A CLICK ────────────────────────────────
+  //
+  // Unmounting (navigating away inside the app) flushes: the save is started
+  // and the browser keeps the request alive. Leaving the page entirely cannot
+  // be made to wait, so the only honest thing is to say so first — and only
+  // when something really is unsaved, because a confirmation dialog that
+  // appears every time is one people learn to dismiss without reading.
+  useEffect(() => {
+    // `textDirty` is set on every keystroke and cleared only by a flush, so
+    // between them it IS the unsaved buffer; the queue holds the writes
+    // already on their way. Nothing else can be outstanding.
+    const unsaved = () => textDirty.current !== null || queue.current.size() > 0;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!unsaved()) return;
+      e.preventDefault();
+      // Browsers show their own wording; the value only has to be set.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      flushText();
+    };
+  }, [flushText]);
+
   const current = items[index];
   const answered = useMemo(() => items.filter(isAnswered).length, [items]);
+
+  useEffect(() => {
+    if (phase !== "running" || !focusPrompt.current) return;
+    focusPrompt.current = false;
+    promptRef.current?.focus();
+  }, [phase, index]);
   const blockOf = useCallback(
     (key: string | undefined) => blocks.find((b) => b.blockKey === key) ?? null,
     [blocks],
@@ -197,6 +375,9 @@ function AcademyAttemptRoute() {
    *  already begun must not re-interrupt. */
   const goTo = useCallback(
     (next: number, direction: "forward" | "back") => {
+      // Leaving the question is the moment the written answer has to be on its
+      // way. Not a delay — the save is started here, and submit waits for it.
+      flushText();
       const target = items[next];
       const targetBlock = target ? blockOf(target.blockKey) : null;
       setIndex(next);
@@ -209,58 +390,49 @@ function AcademyAttemptRoute() {
         setPhase("section");
       }
     },
-    [items, blockOf, current?.blockKey, introsSeen],
+    [items, blockOf, current?.blockKey, introsSeen, flushText],
   );
 
-  // Keep the local copy in step with what was saved, so going back shows the
-  // answer that is actually on the server rather than one this component
-  // remembers having sent.
-  const applyLocal = useCallback((itemId: string, patch: Partial<AcademyItem>) => {
-    setItems((prev) => prev.map((i) => (i.itemVersionId === itemId ? { ...i, ...patch } : i)));
-  }, []);
-
+  // ── LOADING THE WRITTEN ANSWER INTO THE BOX, ONCE PER ITEM ────────────
+  //
+  // Keyed on which item the box is currently holding, not on the saved value.
+  // Reacting to the value as well meant that every save re-ran this and wrote
+  // the stored answer back over the box — so a normalisation as small as a
+  // trimmed trailing space moved the caret while somebody was still typing.
+  const loadedFor = useRef<string | null>(null);
   useEffect(() => {
+    const id = current?.itemVersionId;
+    if (!id || loadedFor.current === id) return;
+    loadedFor.current = id;
     setText(current?.savedText ?? "");
   }, [current?.itemVersionId, current?.savedText]);
 
-  async function persist(patch: {
-    selectedOptionId?: string | null;
-    bestOptionId?: string | null;
-    worstOptionId?: string | null;
-    responseText?: string | null;
-  }) {
-    if (!current) return;
-    const call = saveResponse({
-      data: {
-        attemptId,
-        itemVersionId: current.itemVersionId,
-        selectedOptionId: patch.selectedOptionId ?? null,
-        bestOptionId: patch.bestOptionId ?? null,
-        worstOptionId: patch.worstOptionId ?? null,
-        responseText: patch.responseText ?? null,
-      },
-    });
-    // Registered before it is awaited, so a submit that starts one tick later
-    // already sees it. Removed in `finally` whether it resolved or rejected —
-    // a failed save must not leave submit waiting on it forever.
-    pending.current.add(call);
-    try {
-      await call;
-    } catch (e) {
-      setErrorCode((e as { code?: string }).code ?? "save_failed");
-      setPhase("error");
-    } finally {
-      pending.current.delete(call);
-    }
+  /** Ask the server what it is actually holding, and route to what is missing.
+   *
+   *  ── WHY THIS ASKS RATHER THAN LOOKS ──────────────────────────────────
+   *
+   *  "You are missing an answer" is a sentence that must not be said from this
+   *  component's copy of the run. That copy can be stale — a second tab, a
+   *  save that failed, a resumed sitting — and being wrong in either direction
+   *  is bad: refusing to submit a finished run, or naming a question that is
+   *  in fact answered. The server is asked, once, at the one moment it
+   *  matters, and its answer replaces the local copy.
+   *
+   *  Returns the items with no answer, in form order. */
+  async function readMissing(): Promise<AcademyItem[]> {
+    const fresh = await loadItems({ data: { attemptId, locale: lang } });
+    setItems(fresh);
+    itemsRef.current = fresh;
+    return fresh.filter((i) => !isAnswered(i));
   }
 
-  /** Wait for every answer still being written. Settled, not resolved: a save
-   *  that failed has already put the run into the error phase, and submit must
-   *  not hang on it. */
-  async function flushPendingSaves() {
-    while (pending.current.size > 0) {
-      await Promise.allSettled([...pending.current]);
-    }
+  /** Go to a question that has no answer, and put the focus on it. */
+  function goToMissing(item: AcademyItem) {
+    const at = itemsRef.current.findIndex((i) => i.itemVersionId === item.itemVersionId);
+    if (at >= 0) setIndex(at);
+    setMissing([]);
+    focusPrompt.current = true;
+    setPhase("running");
   }
 
   async function onSubmit() {
@@ -269,13 +441,29 @@ function AcademyAttemptRoute() {
     // state flag would miss, and which would run scp_submit_attempt twice.
     if (submittingRef.current) return;
     submittingRef.current = true;
+    // Anything typed and not yet sent becomes a save before we go any further.
+    flushText();
     setPhase("submitting");
     try {
-      // The fix for the observed defect. The last answer's save may still be
-      // in flight when this runs; submitting past it makes the database
-      // correctly report an incomplete attempt for a run that is, a few
-      // hundred milliseconds later, complete.
+      // The last answer's save may still be in flight when this runs;
+      // submitting past it makes the database correctly report an incomplete
+      // attempt for a run that is, a few hundred milliseconds later, complete.
       await flushPendingSaves();
+
+      // ── WHAT IS MISSING IS SAID BEFORE THE REFUSAL, NOT AFTER IT ──────
+      //
+      // scp_submit_attempt requires an answer to every item and says so in the
+      // aggregate ("3 of 47 items have no answer"). That arrived here as a
+      // panel with a "Submit again" button, which is the one action guaranteed
+      // to fail for exactly the same reason. Asking first turns the same fact
+      // into three named questions and a way to reach the first.
+      const gaps = await readMissing();
+      if (gaps.length > 0) {
+        setMissing(gaps);
+        setPhase("incomplete");
+        return;
+      }
+
       const res = await submitAttempt({ data: { attemptId } });
       setOutcome({ reviewsOpened: res.reviewsOpened });
       setPhase("done");
@@ -305,6 +493,22 @@ function AcademyAttemptRoute() {
         }
       } catch {
         // The state read is a courtesy. Its failure is not new information.
+      }
+      // The server refused for completeness after we had just checked. That
+      // means the run changed underneath this one (a second tab, a save that
+      // landed as blank), so ask again rather than arguing with it — and show
+      // the same named list, never a retry of a call that will be refused.
+      if (code === "incomplete" || code === "incomplete_best_worst") {
+        try {
+          const gaps = await readMissing();
+          if (gaps.length > 0) {
+            setMissing(gaps);
+            setPhase("incomplete");
+            return;
+          }
+        } catch {
+          // Fall through to the general refusal below.
+        }
       }
       // A genuine refusal, with the attempt still open. NOT the load-failure
       // panel: nothing is lost, the answers are all saved, and the run is
@@ -350,11 +554,39 @@ function AcademyAttemptRoute() {
   // above in every way that matters to the person reading it: the title does
   // not claim the assessment could not be opened (it opened; they answered all
   // of it), the body says the answers are saved, and there is a button.
+  // Answers are missing. NOT a failure, and deliberately not the panel above:
+  // there is nothing to retry, so there is no retry button — the only action
+  // that helps is going to a question that has no answer, and it is offered by
+  // name rather than as a number the participant has to go hunting through.
+  // Answers are missing. NOT a failure, and deliberately not the panel below:
+  // there is nothing to retry, so there is no retry button — see
+  // MissingAnswersPanel for why that distinction is the whole point.
+  if (phase === "incomplete") {
+    return (
+      <AssessmentShell showExit>
+        <AssessmentPanel>
+          <MissingAnswersPanel
+            missing={missing.map((m) => ({
+              itemVersionId: m.itemVersionId,
+              // Its number in the run as the participant counts it.
+              position: items.findIndex((i) => i.itemVersionId === m.itemVersionId) + 1,
+              prompt: m.prompt,
+            }))}
+            onGoTo={(m) => {
+              const item = itemsRef.current.find((i) => i.itemVersionId === m.itemVersionId);
+              if (item) goToMissing(item);
+            }}
+            onBack={() => {
+              setMissing([]);
+              setPhase("running");
+            }}
+          />
+        </AssessmentPanel>
+      </AssessmentShell>
+    );
+  }
+
   if (phase === "submit-failed") {
-    const bodyKey =
-      errorCode === "incomplete" || errorCode === "incomplete_best_worst"
-        ? "academy.submitFailed.incomplete"
-        : "academy.submitFailed.body";
     return (
       <AssessmentShell>
         <AssessmentPanel>
@@ -363,7 +595,7 @@ function AcademyAttemptRoute() {
             {t("academy.submitFailed.title")}
           </h1>
           <p className="mt-3 max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
-            {t(bodyKey)}
+            {t("academy.submitFailed.body")}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <button
@@ -497,26 +729,11 @@ function AcademyAttemptRoute() {
     return (
       <AssessmentShell>
         <AssessmentPanel>
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-            <CheckCircle2 className="h-5 w-5 text-accent" aria-hidden="true" />
-            {t(closedStatus ? "academy.done.alreadyTitle" : "academy.done.title")}
-          </h1>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {t(
-              closedStatus === "released"
-                ? "academy.done.releasedBody"
-                : closedStatus
-                  ? "academy.done.alreadyBody"
-                  : "academy.done.body",
-            )}
-          </p>
-          {/* Said plainly, because a result that is not final yet must not look
-              final. */}
-          {outcome && outcome.reviewsOpened > 0 && (
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {t("academy.done.reviewPending")}
-            </p>
-          )}
+          <SubmittedNotice
+            recruitment={recruitment}
+            closedStatus={closedStatus}
+            reviewsOpened={outcome?.reviewsOpened ?? 0}
+          />
         </AssessmentPanel>
       </AssessmentShell>
     );
@@ -550,7 +767,11 @@ function AcademyAttemptRoute() {
           )}
 
           <p className="text-[15px] leading-relaxed text-muted-foreground">{current.scenario}</p>
-          <h2 className="mt-4 text-lg font-semibold leading-snug tracking-tight text-foreground">
+          <h2
+            ref={promptRef}
+            tabIndex={-1}
+            className="mt-4 text-lg font-semibold leading-snug tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4"
+          >
             {current.prompt}
           </h2>
 
@@ -572,10 +793,17 @@ function AcademyAttemptRoute() {
                     name={current.itemVersionId}
                     value={o.optionId}
                     checked={current.savedOptionId === o.optionId}
-                    onSelect={() => {
-                      applyLocal(current.itemVersionId, { savedOptionId: o.optionId });
-                      void persist({ selectedOptionId: o.optionId });
-                    }}
+                    onSelect={() =>
+                      answer(current.itemVersionId, {
+                        savedOptionId: o.optionId,
+                        // One choice replaces the whole answer, because
+                        // scp_save_response replaces the whole row. Saying so
+                        // here keeps what is sent identical to what is shown.
+                        savedBestId: null,
+                        savedWorstId: null,
+                        savedText: null,
+                      })
+                    }
                   >
                     {o.label}
                   </SelectableAnswer>
@@ -604,17 +832,18 @@ function AcademyAttemptRoute() {
                           name={`${current.itemVersionId}-${which}`}
                           value={o.optionId}
                           checked={checked}
-                          onSelect={() => {
-                            const patch =
+                          onSelect={() =>
+                            // Only the half that was clicked. `answer` merges
+                            // it onto the item as it stands now and sends both,
+                            // so choosing "worst" a tick after "best" can no
+                            // longer store the pairing without the "best".
+                            answer(
+                              current.itemVersionId,
                               which === "best"
                                 ? { savedBestId: o.optionId }
-                                : { savedWorstId: o.optionId };
-                            applyLocal(current.itemVersionId, patch);
-                            void persist({
-                              bestOptionId: which === "best" ? o.optionId : current.savedBestId,
-                              worstOptionId: which === "worst" ? o.optionId : current.savedWorstId,
-                            });
-                          }}
+                                : { savedWorstId: o.optionId },
+                            )
+                          }
                         >
                           {o.label}
                         </SelectableAnswer>
@@ -638,11 +867,17 @@ function AcademyAttemptRoute() {
                   value={text}
                   maxLength={4000}
                   rows={7}
-                  onChange={(e) => setText(e.target.value)}
-                  onBlur={() => {
-                    applyLocal(current.itemVersionId, { savedText: text });
-                    void persist({ responseText: text });
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setText(value);
+                    textDirty.current = { itemId: current.itemVersionId, value };
+                    if (textTimer.current) clearTimeout(textTimer.current);
+                    textTimer.current = setTimeout(flushText, TEXT_SAVE_DELAY_MS);
                   }}
+                  // Blur still saves immediately. The debounce above is for
+                  // the minutes BETWEEN blurs, which is where a written answer
+                  // used to live entirely in one browser tab.
+                  onBlur={flushText}
                   className="w-full rounded-[12px] border border-border bg-card px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   placeholder={t("academy.writtenPlaceholder")}
                 />
@@ -650,6 +885,14 @@ function AcademyAttemptRoute() {
               </div>
             )}
           </div>
+
+          <SaveStatus
+            state={saveState[current.itemVersionId]}
+            // An empty patch on purpose: retrying sends the answer exactly as
+            // it stands, which is the answer the participant already gave and
+            // can still see. Nothing about it is re-asked.
+            onRetry={() => answer(current.itemVersionId, {})}
+          />
         </div>
 
         <AssessmentNavigation

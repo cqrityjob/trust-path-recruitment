@@ -33,6 +33,12 @@
     "scripts/backend-target-lock-check.ts",
     "scripts/scripts-env.d.ts",
     "scripts/regulatory-source-monitor.ts",
+    // The assessment reliability guards, added on the same terms: both are new,
+    // neither carries pre-existing type debt, and one of them RUNS the save
+    // queue rather than only reading source — a guard that silently stops
+    // enforcing is exactly the failure this file was written about.
+    "scripts/assessment-pilot-reliability-check.ts",
+    "scripts/assessment-panels-render-check.tsx",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

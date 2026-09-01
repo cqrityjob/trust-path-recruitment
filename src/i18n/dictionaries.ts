@@ -59,7 +59,6 @@ export const dictionaries = {
     "home.pillar.hired.title": "Bli anställd",
     "home.pillar.hired.desc": "Möt arbetsgivare och uppdrag inom hela säkerhetsbranschen.",
 
-
     // The account proposition (2026-08-30). The landing page described six
     // capabilities and never said that ONE account is what holds them
     // together -- a visitor could read the whole page and still believe
@@ -74,8 +73,7 @@ export const dictionaries = {
     "home.account.item.profile.desc":
       "Din yrkesroll, erfarenhet och riktning. Ifylld en gång, återanvänd överallt.",
     "home.account.item.discovery.title": "Karriärutforskning",
-    "home.account.item.discovery.desc":
-      "Var du står och vilka yrken inom säkerhet som passar dig.",
+    "home.account.item.discovery.desc": "Var du står och vilka yrken inom säkerhet som passar dig.",
     "home.account.item.card.title": "Karriärkort",
     "home.account.item.card.desc": "Din yrkesidentitet som ett kort du kan dela.",
     "home.account.item.passport.title": "Säkerhetspass",
@@ -84,8 +82,7 @@ export const dictionaries = {
     "home.account.item.jobs.title": "Jobb och ansökningar",
     "home.account.item.jobs.desc": "Sök och följ dina ansökningar under samma konto.",
     "home.account.item.cv.title": "CV",
-    "home.account.item.cv.desc":
-      "Byggt av dina egna registrerade uppgifter. Ingenting hittas på.",
+    "home.account.item.cv.desc": "Byggt av dina egna registrerade uppgifter. Ingenting hittas på.",
     "home.account.note":
       "Är du också rekryterare byter du till din organisation — utan en andra inloggning.",
     "home.paths.title": "Byggd för individer och organisationer",
@@ -3020,6 +3017,30 @@ export const dictionaries = {
     "academy.submitFailed.retry": "Lämna in igen",
     "academy.submitFailed.review": "Gå tillbaka till frågorna",
     "academy.error.generic": "Något gick fel. Försök igen om en stund.",
+    // Var svaret faktiskt är. "Sparat" sätts av serverns svar, aldrig av
+    // klicket som skickade det.
+    "academy.save.saving": "Sparar …",
+    "academy.save.saved": "Sparat",
+    "academy.save.failed": "Det här svaret är inte sparat.",
+    "academy.save.retry": "Spara igen",
+    // Inlämning som saknar svar är inte ett fel — det finns inget att försöka
+    // igen med. Det enda som hjälper är att komma till frågan.
+    "academy.incomplete.title": "Något saknas innan du kan lämna in",
+    "academy.incomplete.count.one": "fråga saknar svar.",
+    "academy.incomplete.count.other": "frågor saknar svar.",
+    "academy.incomplete.note":
+      "Dina övriga svar är sparade. Ingenting har gått förlorat och bedömningen är öppen.",
+    "academy.incomplete.question": "Fråga",
+    "academy.incomplete.goToFirst": "Gå till första frågan som saknar svar",
+    "academy.incomplete.andMore": "Fler frågor saknar svar. Du ser dem när du går igenom.",
+    // Rekryteringsvarianter av avslutningsskärmen. En sökande får ingen
+    // utvecklingsrapport och har ingen arbetsgivare här.
+    "academy.done.bodyRecruitment":
+      "Svaren har sparats och skickas till organisationen som bad dig göra bedömningen.",
+    "academy.done.alreadyBodyRecruitment":
+      "Den här bedömningen är inlämnad och kan inte ändras. Dina svar finns kvar hos organisationen som bad dig göra den.",
+    "academy.done.releasedBodyRecruitment":
+      "Den här bedömningen är inlämnad och underlaget har delats med organisationen som bad dig göra den.",
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Tester & bedömningar",
     "academy.nav.overview": "Översikt",
@@ -3223,6 +3244,9 @@ export const dictionaries = {
     "academy.participants.releaseBlocked":
       "Underlaget kan inte delas medan ett svar fortfarande väntar på granskning.",
     "academy.participants.releaseFailed": "Underlaget kunde inte delas.",
+    // Delning är enkelriktad. Ett andra försök är inte ett fel — det är
+    // samma lyckade delning som kommer fram en gång till.
+    "academy.participants.releaseAlready": "Underlaget var redan delat.",
     "academy.participants.openReport": "Öppna rapport",
     "academy.participants.releaseRecruitment": "Dela kandidatunderlaget",
     // The release confirmation. releaseExplain has always ended "Steget går
@@ -3333,6 +3357,8 @@ export const dictionaries = {
     "academy.reviews.rationale": "Motivering",
     "academy.reviews.complete": "Slutför granskning",
     "academy.reviews.saving": "Sparar …",
+    "academy.reviews.unsaved":
+      "Din bedömning är inte sparad ännu. Den registreras när du klickar på knappen ovan.",
     "academy.reviews.needRationale": "En granskning måste ange sina skäl.",
     "academy.reviews.notAuthorised": "Du har inte behörighet att slutföra granskningar.",
     "academy.reviews.failed": "Granskningen kunde inte sparas.",
@@ -3503,6 +3529,8 @@ export const dictionaries = {
     "academy.report.whyTitle": "Varför gjordes bedömningen?",
     "academy.report.whyBody":
       "Din arbetsgivare har bett dig genomföra en bedömning för kompetensutveckling. Den används för att välja rätt stöd och för samtal om arbetssätt — inte som prov och inte som besked om anställning.",
+    "academy.report.whyBodyRecruitment":
+      "Organisationen du sökte till bad dig genomföra en bedömning som del av rekryteringen. Den används som underlag för samtal och beslut — inte som prov, och den avgör ingenting på egen hand.",
     "academy.report.humanDecides":
       "En människa fattar arbetsgivarens beslut. Ingen automatisk bedömning avgör något om dig.",
     "academy.report.notInability":
@@ -3614,6 +3642,10 @@ export const dictionaries = {
     "academy.report.competencies": "Kompetenser",
     "academy.report.suggested": "Föreslagen utveckling",
     "academy.report.suggestedLede": "Övningar som tränar det underlaget ännu inte täcker.",
+    // Rekryteringsvarianter. En sökande utvecklas inte av organisationen och
+    // har ingen arbetsgivare här — se sidhuvudet i rapportvyn.
+    "academy.report.titleRecruitment": "Min bedömningsrapport",
+    "academy.report.suggestedRecruitment": "Att träna vidare på",
     "academy.report.progress": "Din utveckling",
     "academy.report.progressNeedsTwo":
       "Utveckling går att visa först när du har minst två frisläppta resultat.",
@@ -5335,7 +5367,6 @@ export const dictionaries = {
     "home.pillar.hired.desc":
       "Connect with employers and opportunities across the security industry.",
 
-
     // The account proposition (2026-08-30). See the Swedish block above.
     "home.account.eyebrow": "One account",
     "home.account.title": "Your security career. One professional identity.",
@@ -5345,8 +5376,7 @@ export const dictionaries = {
     "home.account.item.profile.desc":
       "Your role, experience and direction. Filled in once, reused everywhere.",
     "home.account.item.discovery.title": "Career Discovery",
-    "home.account.item.discovery.desc":
-      "Where you stand, and which security professions suit you.",
+    "home.account.item.discovery.desc": "Where you stand, and which security professions suit you.",
     "home.account.item.card.title": "Career Card",
     "home.account.item.card.desc": "Your professional identity as a card you can share.",
     "home.account.item.passport.title": "Security Passport",
@@ -5355,8 +5385,7 @@ export const dictionaries = {
     "home.account.item.jobs.title": "Jobs and applications",
     "home.account.item.jobs.desc": "Search and track your applications under the same account.",
     "home.account.item.cv.title": "CV",
-    "home.account.item.cv.desc":
-      "Built from your own recorded information. Nothing is invented.",
+    "home.account.item.cv.desc": "Built from your own recorded information. Nothing is invented.",
     "home.account.note":
       "If you are also a recruiter, switch to your organisation — without a second sign-in.",
     "home.paths.title": "Built for individuals and organizations",
@@ -5806,8 +5835,7 @@ export const dictionaries = {
     "footer.betaFeedback": "Beta feedback",
     "auth.privacy_note":
       "By creating an account you accept our privacy policy. You may request export or deletion of your data at any time.",
-    "auth.privacy_note.signin":
-      "You may request export or deletion of your data at any time.",
+    "auth.privacy_note.signin": "You may request export or deletion of your data at any time.",
     "auth.signout": "Sign out",
     "auth.redirecting": "Redirecting…",
 
@@ -8168,6 +8196,31 @@ export const dictionaries = {
     "academy.submitFailed.retry": "Submit again",
     "academy.submitFailed.review": "Back to the questions",
     "academy.error.generic": "Something went wrong. Please try again shortly.",
+    // Where the answer actually is. "Saved" is set by the server's reply,
+    // never by the click that sent it.
+    "academy.save.saving": "Saving …",
+    "academy.save.saved": "Saved",
+    "academy.save.failed": "This answer is not saved.",
+    "academy.save.retry": "Save again",
+    // A submission with answers missing is not a failure — there is nothing to
+    // retry. The only thing that helps is getting to the question.
+    "academy.incomplete.title": "Something is missing before you can submit",
+    "academy.incomplete.count.one": "question has no answer.",
+    "academy.incomplete.count.other": "questions have no answer.",
+    "academy.incomplete.note":
+      "Your other answers are saved. Nothing has been lost and the assessment is still open.",
+    "academy.incomplete.question": "Question",
+    "academy.incomplete.goToFirst": "Go to the first unanswered question",
+    "academy.incomplete.andMore":
+      "More questions have no answer. You will see them as you go through.",
+    // Recruitment wording for the screen the run ends on. An applicant gets no
+    // development report and has no employer here.
+    "academy.done.bodyRecruitment":
+      "Your answers have been saved and go to the organisation that asked you to complete this assessment.",
+    "academy.done.alreadyBodyRecruitment":
+      "This assessment has been submitted and can no longer be changed. Your answers are held by the organisation that asked you to complete it.",
+    "academy.done.releasedBodyRecruitment":
+      "This assessment has been submitted and the summary has been shared with the organisation that asked you to complete it.",
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Tests & assessments",
     "academy.nav.overview": "Overview",
@@ -8369,6 +8422,9 @@ export const dictionaries = {
     "academy.participants.releaseBlocked":
       "The material cannot be shared while an answer is still awaiting review.",
     "academy.participants.releaseFailed": "The material could not be shared.",
+    // Sharing is one-way. A second attempt is not a failure — it is the same
+    // successful share arriving twice.
+    "academy.participants.releaseAlready": "The material was already shared.",
     "academy.participants.openReport": "Open report",
     "academy.participants.releaseRecruitment": "Share the candidate brief",
     "academy.participants.releaseConfirmTitle": "Share the material?",
@@ -8477,6 +8533,8 @@ export const dictionaries = {
     "academy.reviews.rationale": "Reasons",
     "academy.reviews.complete": "Complete review",
     "academy.reviews.saving": "Saving …",
+    "academy.reviews.unsaved":
+      "Your assessment is not saved yet. It is recorded when you press the button above.",
     "academy.reviews.needRationale": "A review must state its reasons.",
     "academy.reviews.notAuthorised": "You are not authorised to complete reviews.",
     "academy.reviews.failed": "The review could not be saved.",
@@ -8648,6 +8706,8 @@ export const dictionaries = {
     "academy.report.whyTitle": "Why was this assessment done?",
     "academy.report.whyBody":
       "Your employer asked you to complete an assessment for competence development. It is used to choose the right support and to structure a conversation about ways of working — not as an exam, and not as a decision about employment.",
+    "academy.report.whyBodyRecruitment":
+      "The organisation you applied to asked you to complete an assessment as part of its recruitment. It is used as a basis for conversation and for a decision — not as an exam, and it decides nothing on its own.",
     "academy.report.humanDecides":
       "A person makes the employer's decision. No automated assessment decides anything about you.",
     "academy.report.notInability":
@@ -8759,6 +8819,10 @@ export const dictionaries = {
     "academy.report.competencies": "Competencies",
     "academy.report.suggested": "Suggested development",
     "academy.report.suggestedLede": "Practice covering what the evidence does not yet reach.",
+    // Recruitment wording. An applicant is not being developed by the
+    // organisation and has no employer here — see the file header.
+    "academy.report.titleRecruitment": "My assessment report",
+    "academy.report.suggestedRecruitment": "Areas to keep practising",
     "academy.report.progress": "Your progress",
     "academy.report.progressNeedsTwo":
       "Progress can be shown once you have at least two released results.",
