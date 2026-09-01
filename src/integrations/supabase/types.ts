@@ -3691,9 +3691,12 @@ export type Database = {
           consent_given_at: string
           cover_note: string | null
           created_at: string
+          cv_document_id: string | null
+          cv_document_snapshot: Json | null
           cv_mime_type: string | null
           cv_original_filename: string | null
           cv_size_bytes: number | null
+          cv_source: string
           cv_storage_path: string | null
           employer_id: string
           employer_note: string | null
@@ -3709,9 +3712,12 @@ export type Database = {
           consent_given_at: string
           cover_note?: string | null
           created_at?: string
+          cv_document_id?: string | null
+          cv_document_snapshot?: Json | null
           cv_mime_type?: string | null
           cv_original_filename?: string | null
           cv_size_bytes?: number | null
+          cv_source?: string
           cv_storage_path?: string | null
           employer_id: string
           employer_note?: string | null
@@ -3727,9 +3733,12 @@ export type Database = {
           consent_given_at?: string
           cover_note?: string | null
           created_at?: string
+          cv_document_id?: string | null
+          cv_document_snapshot?: Json | null
           cv_mime_type?: string | null
           cv_original_filename?: string | null
           cv_size_bytes?: number | null
+          cv_source?: string
           cv_storage_path?: string | null
           employer_id?: string
           employer_note?: string | null
@@ -3741,6 +3750,13 @@ export type Database = {
           withdrawn_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "job_applications_cv_document_id_fkey"
+            columns: ["cv_document_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_applications_employer_id_fkey"
             columns: ["employer_id"]
@@ -15063,6 +15079,21 @@ export type Database = {
           _purpose?: string
         }
         Returns: string
+      }
+      sp_submit_application_with_cv_source: {
+        Args: {
+          _application_id: string
+          _cover_note: string
+          _cv_document_id?: string
+          _cv_original_filename: string
+          _cv_size_bytes: number
+          _cv_source?: string
+          _cv_storage_path: string
+          _include_passport?: boolean
+          _job_id: string
+          _phone: string
+        }
+        Returns: Json
       }
       sp_submit_application_with_passport: {
         Args: {

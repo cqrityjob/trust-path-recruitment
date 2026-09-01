@@ -82,10 +82,7 @@ import {
 export const Route = createFileRoute("/_authenticated/my-career/profile")({
   ssr: false,
   head: () => ({
-    meta: [
-      { title: "Min profil — CQrityjob" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "Min profil — CQrityjob" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: ProfilePage,
 });
@@ -107,10 +104,7 @@ const COPY = {
   openDiscovery: c("Gör Career Discovery", "Take Career Discovery"),
   empty: c("Inte ifyllt ännu", "Not filled in yet"),
   itemCount: c("{0} registrerade", "{0} recorded"),
-  verifiedNote: c(
-    "Verifierat av en behörig granskare.",
-    "Verified by an authorised reviewer.",
-  ),
+  verifiedNote: c("Verifierat av en behörig granskare.", "Verified by an authorised reviewer."),
   declaredNote: c(
     "Självrapporterat. Ingen har granskat det.",
     "Self-reported. Nobody has reviewed it.",
@@ -173,19 +167,20 @@ function summarise(
 ): { text: string; claims: readonly IdentityClaim[] } {
   const count = (types: readonly string[]) => claimsOfType(identity.claims, types);
   switch (section) {
-    case "situation":
+    case "situation": {
       // The stored enum is never printed. `currentStatusOptions` is the same
       // catalogue the editor offers, so the row and the form say the same
       // word -- the rule this page already applies to profession and to the
       // experience band.
+      const status = identity.currentStatus;
+      const statusLabel = status
+        ? currentStatusOptions.find((o) => o.id === status)?.label[lang]
+        : undefined;
       return {
-        text:
-          (identity.currentStatus
-            ? (currentStatusOptions.find((o) => o.id === identity.currentStatus)?.label[lang] ??
-              null)
-            : null) ?? L(COPY.empty, lang),
+        text: statusLabel ?? L(COPY.empty, lang),
         claims: [],
       };
+    }
     case "identity":
       return { text: identity.headline ?? L(COPY.empty, lang), claims: [] };
     case "profession":

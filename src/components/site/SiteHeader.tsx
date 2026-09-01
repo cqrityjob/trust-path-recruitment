@@ -17,10 +17,36 @@ import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { AccountMenu, type AccountIdentity } from "./AccountMenu";
 import { workspaceStatusLabelKey } from "./workspace-status";
 
+/** One visible keyboard-focus treatment for every control in the header.
+ *  Several of them previously had none at all, which made the header
+ *  un-navigable by keyboard without guessing where you were. */
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+/** The compact menu sheet's own surface. It scrolls independently: signed in,
+ *  with an organisation and the account block, the sheet is taller than a
+ *  small phone in landscape and the last rows were unreachable. */
+const MENU_SURFACE =
+  "max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border bg-background";
+
 export function SiteHeader() {
   const { t } = useT();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  // Sticky-header depth, added only once the page has actually moved.
+  //
+  // The bar carries a hairline at rest and gains a soft shadow on scroll, so
+  // content passing underneath reads as passing UNDER something rather than
+  // colliding with it. Nothing about the box changes -- no height, padding or
+  // border-width transition -- so there is no layout shift, and the only
+  // animated properties are colour and shadow.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // Read off the SAME session this component already subscribes to — no extra
   // request. The account menu has to be able to say who it would sign out.
@@ -264,26 +290,37 @@ export function SiteHeader() {
   // breakpoint moves rather than the content.
   return (
     <header className="no-print sticky top-0 z-40 bg-background/90 backdrop-blur">
-      {/* Slim utility bar — the WEBSITE's, desktop only. Small trust
-          signals + secondary access.
+      {/* Slim utility bar — the WEBSITE's, desktop only. The brand principle
+          on the left, and the ONE genuinely global control on the right.
 
-          It does not follow anybody into the workspace. Its "Kontakt" link
-          was the second Kontakt on every signed-in page, and a marketing
-          tagline strip above an application is the single loudest way to
-          tell somebody they are still on a website. */}
+          It does not follow anybody into the workspace. A marketing tagline
+          strip above an application is the single loudest way to tell
+          somebody they are still on a website.
+
+          ── WHY "KONTAKT" IS NO LONGER HERE ─────────────────────────────
+          It was the second "Kontakt" in the same header area: once in this
+          bar, once in the primary nav directly underneath, both pointing at
+          /contact. The route is untouched and remains reachable from the
+          primary nav (desktop and mobile) and from the footer — only the
+          visual duplication is gone.
+
+          The language toggle moved UP here from the crowded action cluster:
+          it is a site-wide preference rather than an action, and the main
+          row now carries only the brand, the navigation and the account
+          controls. Mobile keeps its own toggle inside the menu sheet, since
+          this bar is desktop-only. */}
       <div className={cn("hidden bg-primary text-primary-foreground/85", !appMode && "lg:block")}>
-        <Container className="flex h-8 items-center justify-between text-[11px] font-medium tracking-wide">
-          <span className="inline-flex items-center gap-2">
-            <ShieldCheck className="h-3 w-3 text-[color:var(--gold)]" strokeWidth={2} />
-            <span className="uppercase tracking-[0.14em]">{t("footer.tagline")}</span>
+        <Container className="flex h-9 items-center justify-between text-[11px] font-medium tracking-wide">
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <ShieldCheck
+              className="h-3 w-3 shrink-0 text-[color:var(--gold)]"
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+            <span className="truncate uppercase tracking-[0.14em]">{t("footer.tagline")}</span>
           </span>
-          <div className="flex items-center gap-5">
-            <Link
-              to="/contact"
-              className="text-primary-foreground/75 transition-colors hover:text-primary-foreground"
-            >
-              {t("nav.contact")}
-            </Link>
+          <div className="flex shrink-0 items-center gap-5">
+            <LanguageSwitcher tone="onDark" />
             {/* The employer door used to live here, ungated, for everybody.
                 It is gone: an organisation context is reached from the
                 account menu, which lists only the organisations the database
@@ -296,34 +333,55 @@ export function SiteHeader() {
           </div>
         </Container>
       </div>
-      <div className="border-b border-border bg-background/95 shadow-[0_1px_0_0_var(--color-border)]">
-        <Container className="flex h-16 items-center justify-between gap-6">
+      <div
+        className={cn(
+          "border-b bg-background/95 transition-shadow duration-200 motion-reduce:transition-none",
+          scrolled
+            ? "border-border/80 shadow-[var(--shadow-md)]"
+            : "border-border shadow-[0_1px_0_0_var(--color-border)]",
+        )}
+      >
+        <Container className="flex h-16 items-center justify-between gap-4 xl:gap-8">
           {/* In the workspace the brand mark is the way HOME — to the
               candidate's own home, /my-career, the way it is in every
               application. It used to drop somebody out onto the marketing
               landing page, which is an exit, not a home. */}
           <Link
             to={appMode ? "/my-career" : "/"}
-            className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
+            className={cn(
+              "flex shrink-0 items-center gap-2.5 rounded-md font-semibold tracking-tight text-foreground",
+              focusRing,
+            )}
             style={{ fontFamily: "var(--font-display)" }}
             onClick={() => setOpen(false)}
           >
-            <ShieldCheck className="h-5 w-5 text-accent" strokeWidth={1.75} />
-            <span className="text-base">{t("brand.name")}</span>
+            <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
+            <span className="text-base leading-none">{t("brand.name")}</span>
           </Link>
 
           {appMode ? (
             <CandidateAppNav variant="desktop" activeKey={activeKey} badgeFor={appNavCount} />
           ) : (
-            <nav className="hidden items-center gap-6 lg:flex xl:gap-8" aria-label="Primary">
+            /* The indicator sits on the item itself rather than being hung
+               off the bottom of the header row: a 2px rule at a hardcoded
+               `-bottom-22px` had to be re-guessed every time the row height
+               or the utility bar changed, and it was the only thing in the
+               header that could not survive a spacing edit. */
+            <nav
+              className="hidden min-w-0 items-center gap-1 lg:flex xl:gap-2"
+              aria-label="Primary"
+            >
               {nav.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="relative py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className={cn(
+                    "relative rounded-md px-2.5 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    focusRing,
+                  )}
                   activeProps={{
                     className:
-                      "text-foreground after:absolute after:-bottom-[22px] after:left-0 after:h-[2px] after:w-full after:bg-accent",
+                      "text-foreground after:absolute after:bottom-0 after:left-2.5 after:right-2.5 after:h-[2px] after:rounded-full after:bg-accent",
                   }}
                 >
                   {item.label}
@@ -332,13 +390,18 @@ export function SiteHeader() {
             </nav>
           )}
 
-          <div className="hidden items-center gap-2.5 lg:flex xl:gap-3">
-            <LanguageSwitcher />
+          {/* One control height (h-9) across the whole cluster, so the
+              language toggle, the pills, the two entrances and the account
+              button share a single optical baseline instead of four. */}
+          <div className="hidden shrink-0 items-center gap-2 lg:flex">
             {roleLinks.map((r) => (
               <Link
                 key={r.to}
                 to={r.to}
-                className="inline-flex items-center gap-1.5 rounded-md border border-accent/40 bg-secondary px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/60"
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-md border border-accent/40 bg-secondary px-3 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/60",
+                  focusRing,
+                )}
                 activeProps={{ className: "border-accent bg-secondary" }}
               >
                 {r.label}
@@ -358,7 +421,10 @@ export function SiteHeader() {
                 {!appMode && (
                   <Link
                     to="/my-career"
-                    className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
+                    className={cn(
+                      "inline-flex h-9 items-center rounded-md border border-border bg-background px-3.5 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/40 hover:bg-secondary",
+                      focusRing,
+                    )}
                     activeProps={{ className: "border-accent/50 bg-secondary" }}
                   >
                     {t("nav.my_career")}
@@ -377,16 +443,28 @@ export function SiteHeader() {
               // marketing page in the primary nav and to nothing else --
               // reusing that word for an action is what made this header
               // unreadable in the first place, and that fix is preserved.
+              //
+              // The hierarchy between the two is now unmistakable: signing in
+              // is a quiet text control, creating an account is the one solid
+              // navy button in the row. Two bordered boxes of equal weight
+              // asked a first-time visitor to choose between two things that
+              // looked identically important.
               <>
                 <Link
                   to="/login"
-                  className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
+                  className={cn(
+                    "inline-flex h-9 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    focusRing,
+                  )}
                 >
                   {t("nav.signin")}
                 </Link>
                 <Link
                   to="/signup"
-                  className="inline-flex items-center rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-[color:var(--primary-hover)] hover:shadow-md"
+                  className={cn(
+                    "inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-sm transition-all duration-200 hover:bg-[color:var(--primary-hover)] hover:shadow-md motion-reduce:transition-none",
+                    focusRing,
+                  )}
                 >
                   {t("nav.createAccount")}
                 </Link>
@@ -396,7 +474,11 @@ export function SiteHeader() {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md p-2 text-foreground lg:hidden"
+            className={cn(
+              // 44px touch target, which a p-2 icon button was not.
+              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary lg:hidden",
+              focusRing,
+            )}
             /* Was a hardcoded English "Menu" on a Swedish-first product,
                and said nothing about state beyond aria-expanded. */
             aria-label={open ? t("nav.menu.close") : t("nav.menu.open")}
@@ -404,15 +486,21 @@ export function SiteHeader() {
             aria-controls="site-menu"
             onClick={() => setOpen((o) => !o)}
           >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {open ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
           </button>
         </Container>
       </div>
 
-      <div
-        id="site-menu"
-        className={cn("border-t border-border lg:hidden", open ? "block" : "hidden")}
-      >
+      {/* The sheet scrolls on its own rather than pushing the page: signed in,
+          with an organisation and the account block, it is taller than a 320px
+          phone in landscape, and the last rows were unreachable. */}
+      {/* The breakpoint stays `lg` and is asserted by header-entry:check --
+          six Swedish nav items plus two actions do not fit at 768px. */}
+      <div id="site-menu" className={cn(MENU_SURFACE + " lg:hidden", open ? "block" : "hidden")}>
         <Container className="flex flex-col gap-1 py-4">
           {/* ── Mobile is the same product, not a collapsed website ──────
               The four destinations come from the SAME array the desktop
@@ -427,17 +515,27 @@ export function SiteHeader() {
               onNavigate={() => setOpen(false)}
             />
           ) : (
-            nav.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={() => setOpen(false)}
-                className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-                activeProps={{ className: "text-foreground" }}
-              >
-                {item.label}
-              </Link>
-            ))
+            <nav className="flex flex-col gap-0.5" aria-label="Primary">
+              {nav.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    // 44px, not the old ~36px row: these are the primary
+                    // destinations on the viewport where they are hardest to hit.
+                    "flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    focusRing,
+                  )}
+                  activeProps={{
+                    className:
+                      "bg-secondary text-foreground border-l-2 border-accent rounded-l-none pl-[10px]",
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
           )}
           {roleLinks.map((r) => (
             <Link
@@ -455,8 +553,8 @@ export function SiteHeader() {
               )}
             </Link>
           ))}
-          <div className="mt-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+            <div className="flex items-center justify-between gap-3">
               <LanguageSwitcher />
               {/* Same rule as desktop: inside the workspace this would be
                   a second "Min karriär" a few rows under the first. */}
@@ -464,7 +562,10 @@ export function SiteHeader() {
                 <Link
                   to="/my-career"
                   onClick={() => setOpen(false)}
-                  className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+                  className={cn(
+                    "inline-flex min-h-[44px] items-center rounded-md border border-border px-3.5 text-sm font-semibold text-foreground hover:bg-secondary",
+                    focusRing,
+                  )}
                 >
                   {t("nav.my_career")}
                 </Link>
@@ -472,7 +573,10 @@ export function SiteHeader() {
                 <Link
                   to="/login"
                   onClick={() => setOpen(false)}
-                  className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+                  className={cn(
+                    "inline-flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium text-foreground hover:bg-secondary",
+                    focusRing,
+                  )}
                 >
                   {t("nav.signin")}
                 </Link>
@@ -487,7 +591,10 @@ export function SiteHeader() {
               <Link
                 to="/signup"
                 onClick={() => setOpen(false)}
-                className="flex min-h-[44px] items-center justify-center rounded-md bg-primary px-2 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)]"
+                className={cn(
+                  "flex min-h-[44px] items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)] motion-reduce:transition-none",
+                  focusRing,
+                )}
               >
                 {t("nav.createAccount")}
               </Link>
