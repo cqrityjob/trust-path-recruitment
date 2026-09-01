@@ -291,7 +291,6 @@ test.describe("Candidate overview", () => {
   });
 });
 
-
 // ---------------------------------------------------------------------------
 // Applying with the CV this platform already holds.
 // ---------------------------------------------------------------------------
@@ -352,9 +351,7 @@ test.describe("Applying with a CQrityjob CV", () => {
 
     await expect(page.getByText("Application submitted")).toBeVisible({ timeout: 15_000 });
     // The confirmation reports what the SERVER recorded, not what was ticked.
-    await expect(
-      page.getByText("Your CQrityjob CV was sent with your application."),
-    ).toBeVisible();
+    await expect(page.getByText("Your CQrityjob CV was sent with your application.")).toBeVisible();
     await page.getByRole("button", { name: "Close" }).click();
 
     // ---- 3. The candidate's own history says which CV went ----
