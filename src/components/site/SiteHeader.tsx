@@ -329,33 +329,47 @@ export function SiteHeader() {
             : "border-border shadow-[0_1px_0_0_var(--color-border)]",
         )}
       >
-        <Container className="flex h-16 items-center justify-between gap-6">
+        <Container className="flex h-16 items-center justify-between gap-4 xl:gap-8">
           {/* In the workspace the brand mark is the way HOME — to the
               candidate's own home, /my-career, the way it is in every
               application. It used to drop somebody out onto the marketing
               landing page, which is an exit, not a home. */}
           <Link
             to={appMode ? "/my-career" : "/"}
-            className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
+            className={cn(
+              "flex shrink-0 items-center gap-2.5 rounded-md font-semibold tracking-tight text-foreground",
+              focusRing,
+            )}
             style={{ fontFamily: "var(--font-display)" }}
             onClick={() => setOpen(false)}
           >
-            <ShieldCheck className="h-5 w-5 text-accent" strokeWidth={1.75} />
-            <span className="text-base">{t("brand.name")}</span>
+            <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
+            <span className="text-base leading-none">{t("brand.name")}</span>
           </Link>
 
           {appMode ? (
             <CandidateAppNav variant="desktop" activeKey={activeKey} badgeFor={appNavCount} />
           ) : (
-            <nav className="hidden items-center gap-6 lg:flex xl:gap-8" aria-label="Primary">
+            /* The indicator sits on the item itself rather than being hung
+               off the bottom of the header row: a 2px rule at a hardcoded
+               `-bottom-22px` had to be re-guessed every time the row height
+               or the utility bar changed, and it was the only thing in the
+               header that could not survive a spacing edit. */
+            <nav
+              className="hidden min-w-0 items-center gap-1 lg:flex xl:gap-2"
+              aria-label="Primary"
+            >
               {nav.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="relative py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className={cn(
+                    "relative rounded-md px-2.5 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    focusRing,
+                  )}
                   activeProps={{
                     className:
-                      "text-foreground after:absolute after:-bottom-[22px] after:left-0 after:h-[2px] after:w-full after:bg-accent",
+                      "text-foreground after:absolute after:bottom-0 after:left-2.5 after:right-2.5 after:h-[2px] after:rounded-full after:bg-accent",
                   }}
                 >
                   {item.label}
@@ -364,13 +378,18 @@ export function SiteHeader() {
             </nav>
           )}
 
-          <div className="hidden items-center gap-2.5 lg:flex xl:gap-3">
-            <LanguageSwitcher />
+          {/* One control height (h-9) across the whole cluster, so the
+              language toggle, the pills, the two entrances and the account
+              button share a single optical baseline instead of four. */}
+          <div className="hidden shrink-0 items-center gap-2 lg:flex">
             {roleLinks.map((r) => (
               <Link
                 key={r.to}
                 to={r.to}
-                className="inline-flex items-center gap-1.5 rounded-md border border-accent/40 bg-secondary px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/60"
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-md border border-accent/40 bg-secondary px-3 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/60",
+                  focusRing,
+                )}
                 activeProps={{ className: "border-accent bg-secondary" }}
               >
                 {r.label}
@@ -390,7 +409,10 @@ export function SiteHeader() {
                 {!appMode && (
                   <Link
                     to="/my-career"
-                    className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
+                    className={cn(
+                      "inline-flex h-9 items-center rounded-md border border-border bg-background px-3.5 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/40 hover:bg-secondary",
+                      focusRing,
+                    )}
                     activeProps={{ className: "border-accent/50 bg-secondary" }}
                   >
                     {t("nav.my_career")}
@@ -409,16 +431,28 @@ export function SiteHeader() {
               // marketing page in the primary nav and to nothing else --
               // reusing that word for an action is what made this header
               // unreadable in the first place, and that fix is preserved.
+              //
+              // The hierarchy between the two is now unmistakable: signing in
+              // is a quiet text control, creating an account is the one solid
+              // navy button in the row. Two bordered boxes of equal weight
+              // asked a first-time visitor to choose between two things that
+              // looked identically important.
               <>
                 <Link
                   to="/login"
-                  className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
+                  className={cn(
+                    "inline-flex h-9 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    focusRing,
+                  )}
                 >
                   {t("nav.signin")}
                 </Link>
                 <Link
                   to="/signup"
-                  className="inline-flex items-center rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-[color:var(--primary-hover)] hover:shadow-md"
+                  className={cn(
+                    "inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-sm transition-all duration-200 hover:bg-[color:var(--primary-hover)] hover:shadow-md motion-reduce:transition-none",
+                    focusRing,
+                  )}
                 >
                   {t("nav.createAccount")}
                 </Link>
@@ -428,7 +462,11 @@ export function SiteHeader() {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md p-2 text-foreground lg:hidden"
+            className={cn(
+              // 44px touch target, which a p-2 icon button was not.
+              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary lg:hidden",
+              focusRing,
+            )}
             /* Was a hardcoded English "Menu" on a Swedish-first product,
                and said nothing about state beyond aria-expanded. */
             aria-label={open ? t("nav.menu.close") : t("nav.menu.open")}
@@ -436,7 +474,11 @@ export function SiteHeader() {
             aria-controls="site-menu"
             onClick={() => setOpen((o) => !o)}
           >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {open ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
           </button>
         </Container>
       </div>
