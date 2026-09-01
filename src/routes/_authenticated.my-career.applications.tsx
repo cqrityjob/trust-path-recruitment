@@ -138,14 +138,25 @@ function MyApplicationsPage() {
                       </span>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {r.hasCv && (
-                        <button
-                          type="button"
-                          onClick={() => onDownloadCv(r.id)}
-                          className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                        >
-                          {t("candidate.applications.action.downloadCv")}
-                        </button>
+                      {/* A CQrityjob CV is not a file, so there is nothing to
+                          download -- and offering a button that cannot work
+                          would be worse than saying plainly which CV went. The
+                          document itself lives under Min karriar, where it has
+                          always lived. */}
+                      {r.cvSource === "cqrityjob_cv" ? (
+                        <span className="inline-flex items-center rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground">
+                          {t("candidate.applications.cv.cqrityjob")}
+                        </span>
+                      ) : (
+                        r.hasCv && (
+                          <button
+                            type="button"
+                            onClick={() => onDownloadCv(r.id)}
+                            className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
+                          >
+                            {t("candidate.applications.action.downloadCv")}
+                          </button>
+                        )
                       )}
                       {WITHDRAWABLE.includes(r.status) && (
                         <button

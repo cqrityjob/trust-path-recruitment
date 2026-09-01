@@ -39,6 +39,11 @@
     // enforcing is exactly the failure this file was written about.
     "scripts/assessment-pilot-reliability-check.ts",
     "scripts/assessment-panels-render-check.tsx",
+    // Added on its own terms, like the security guard above: new, no
+    // pre-existing type debt, and it renders real components -- a guard whose
+    // fixture silently stops matching the type it asserts about is exactly the
+    // failure this file exists to prevent.
+    "scripts/cv-application-source-check.tsx",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

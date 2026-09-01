@@ -210,6 +210,27 @@ export const dictionaries = {
     "jobs.apply.field.coverNote": "Personligt meddelande (valfritt)",
     "jobs.apply.field.cv": "CV (PDF)",
     "jobs.apply.field.cvHint": "PDF, max 5 MB.",
+
+    // ── VILKET CV ────────────────────────────────────────────────────
+    // Ett CV som byggts i CQrityjob ska gå att skicka från CQrityjob. Ingen
+    // export till PDF och ingen uppladdning tillbaka till samma plattform.
+    "jobs.apply.cv.legend": "CV",
+    "jobs.apply.cv.loading": "Hämtar dina sparade CV:n …",
+    "jobs.apply.cv.unavailable":
+      "Vi kunde inte läsa dina sparade CV:n just nu. Du kan ladda upp ett CV i stället.",
+    "jobs.apply.cv.source.cqrityjob": "Använd mitt CQrityjob-CV",
+    "jobs.apply.cv.source.upload": "Ladda upp ett annat CV",
+    "jobs.apply.cv.choose": "Välj CV",
+    "jobs.apply.cv.untitled": "CV utan namn",
+    "jobs.apply.cv.updated": "uppdaterat {date}",
+    "jobs.apply.cv.shared": "Det CV du väljer skickas till {employer} med din ansökan.",
+    "jobs.apply.cv.sharedGeneric": "Det CV du väljer skickas till arbetsgivaren med din ansökan.",
+    "jobs.apply.cv.none": "Du har inget sparat CQrityjob-CV ännu.",
+    "jobs.apply.cv.create": "Skapa ditt CQrityjob-CV",
+    "jobs.apply.cv.finish": "Slutför ditt CV",
+    "jobs.apply.cv.unusableHeading": "CV som inte kan skickas ännu",
+    "jobs.apply.cv.block.noName": "saknar namn",
+    "jobs.apply.cv.block.noHistory": "saknar anställningar och utbildning",
     "jobs.apply.field.consent":
       "Jag samtycker till att min ansökan och mitt CV delas med arbetsgivaren.",
     "jobs.apply.error.notApplicable": "Den här tjänsten går inte längre att söka via CQrityjob.",
@@ -217,11 +238,18 @@ export const dictionaries = {
     "jobs.apply.error.cvTooLarge": "CV-filen är för stor (max 5 MB).",
     "jobs.apply.error.cvNotPdf": "CV måste vara en PDF-fil.",
     "jobs.apply.error.cvRequired": "Bifoga ditt CV som PDF.",
+    "jobs.apply.error.cvSourceRequired": "Välj ett CV eller ladda upp en PDF.",
+    "jobs.apply.error.cvDocumentNotFound":
+      "Det CV:t går inte att använda för den här ansökan. Välj ett annat.",
+    "jobs.apply.error.cvDocumentNotReady":
+      "Det CV:t är inte klart att skicka. Slutför det under Min karriär och försök igen.",
     "jobs.apply.error.generic": "Kunde inte skicka ansökan. Försök igen.",
     "jobs.apply.success.title": "Ansökan skickad",
     "jobs.apply.success.body":
       "Din ansökan har skickats till arbetsgivaren. Du kan följa statusen under Mina ansökningar.",
     "jobs.apply.success.close": "Stäng",
+    "jobs.apply.success.cvCqrityjob": "Ditt CQrityjob-CV skickades med ansökan.",
+    "jobs.apply.success.cvUpload": "Det CV du laddade upp skickades med ansökan.",
     "jobs.detail.deadline": "Sista ansökningsdag",
     "jobs.detail.published": "Publicerad",
     "jobs.detail.responsibilities": "Arbetsuppgifter",
@@ -600,6 +628,7 @@ export const dictionaries = {
     "candidate.applications.error.withdraw": "Kunde inte återkalla ansökan.",
     "candidate.applications.error.cvDownload": "Kunde inte hämta CV.",
     "candidate.applications.action.downloadCv": "Ladda ner CV",
+    "candidate.applications.cv.cqrityjob": "CQrityjob-CV",
     "candidate.applications.action.withdraw": "Återkalla ansökan",
     "candidate.applications.status.submitted": "Inskickad",
     "candidate.applications.status.reviewing": "Under granskning",
@@ -2020,6 +2049,15 @@ export const dictionaries = {
     "employer.candidate.fact.updated": "Senast uppdaterad",
     "employer.candidate.fact.phone": "Telefon",
     "employer.candidate.coverNote": "Personligt brev",
+    // Det CV kandidaten faktiskt skickade in. Rubriken säger vad det är med
+    // ord -- aldrig ett id, en ögonblicksbildsversion eller en dokumentreferens.
+    "employer.candidate.cv.heading": "Inskickat CV",
+    "employer.candidate.cv.cqrityjob": "CQrityjob-CV",
+    "employer.candidate.cv.submittedOn": "skickat {date}",
+    "employer.candidate.cv.snapshotNote":
+      "Så här såg CV:t ut när ansökan skickades. Senare ändringar av kandidatens CV påverkar inte den här ansökan.",
+    "employer.candidate.cv.unreadable":
+      "Ansökan innehåller ett CQrityjob-CV, men det gick inte att visa just nu. Försök igen senare.",
     "employer.candidate.assessment.heading": "Tester & bedömningar",
     "employer.candidate.assessment.lede":
       "Skicka en bedömning som hör till den här ansökan och följ hur den fortskrider. Kandidaten hämtas från ansökan – ni behöver aldrig ange någon e-postadress.",
@@ -5513,6 +5551,28 @@ export const dictionaries = {
     "jobs.apply.field.coverNote": "Cover note (optional)",
     "jobs.apply.field.cv": "CV (PDF)",
     "jobs.apply.field.cvHint": "PDF, max 5MB.",
+
+    // ── WHICH CV ─────────────────────────────────────────────────────
+    // A CV built inside CQrityjob must be sendable from CQrityjob. No export
+    // to PDF and no upload back into the same platform.
+    "jobs.apply.cv.legend": "CV",
+    "jobs.apply.cv.loading": "Loading your saved CVs …",
+    "jobs.apply.cv.unavailable":
+      "We could not read your saved CVs just now. You can upload a CV instead.",
+    "jobs.apply.cv.source.cqrityjob": "Use my CQrityjob CV",
+    "jobs.apply.cv.source.upload": "Upload another CV",
+    "jobs.apply.cv.choose": "Choose CV",
+    "jobs.apply.cv.untitled": "Untitled CV",
+    "jobs.apply.cv.updated": "updated {date}",
+    "jobs.apply.cv.shared": "The CV you choose is sent to {employer} with your application.",
+    "jobs.apply.cv.sharedGeneric":
+      "The CV you choose is sent to the employer with your application.",
+    "jobs.apply.cv.none": "You do not have a saved CQrityjob CV yet.",
+    "jobs.apply.cv.create": "Create your CQrityjob CV",
+    "jobs.apply.cv.finish": "Finish your CV",
+    "jobs.apply.cv.unusableHeading": "CVs that cannot be sent yet",
+    "jobs.apply.cv.block.noName": "has no name on it",
+    "jobs.apply.cv.block.noHistory": "has no employment or education on it",
     "jobs.apply.field.consent":
       "I consent to my application and CV being shared with the employer.",
     "jobs.apply.error.notApplicable":
@@ -5521,11 +5581,18 @@ export const dictionaries = {
     "jobs.apply.error.cvTooLarge": "The CV file is too large (max 5MB).",
     "jobs.apply.error.cvNotPdf": "The CV must be a PDF file.",
     "jobs.apply.error.cvRequired": "Attach your CV as a PDF.",
+    "jobs.apply.error.cvSourceRequired": "Choose a CV or upload a PDF.",
+    "jobs.apply.error.cvDocumentNotFound":
+      "That CV cannot be used for this application. Choose another one.",
+    "jobs.apply.error.cvDocumentNotReady":
+      "That CV is not ready to send. Finish it under My Career and try again.",
     "jobs.apply.error.generic": "Could not submit your application. Please try again.",
     "jobs.apply.success.title": "Application submitted",
     "jobs.apply.success.body":
       "Your application has been sent to the employer. You can track its status under My Applications.",
     "jobs.apply.success.close": "Close",
+    "jobs.apply.success.cvCqrityjob": "Your CQrityjob CV was sent with your application.",
+    "jobs.apply.success.cvUpload": "The CV you uploaded was sent with your application.",
     "jobs.detail.deadline": "Application deadline",
     "jobs.detail.published": "Published",
     "jobs.detail.responsibilities": "Responsibilities",
@@ -5888,6 +5955,7 @@ export const dictionaries = {
     "candidate.applications.error.withdraw": "Could not withdraw the application.",
     "candidate.applications.error.cvDownload": "Could not retrieve the CV.",
     "candidate.applications.action.downloadCv": "Download CV",
+    "candidate.applications.cv.cqrityjob": "CQrityjob CV",
     "candidate.applications.action.withdraw": "Withdraw application",
     "candidate.applications.status.submitted": "Submitted",
     "candidate.applications.status.reviewing": "Reviewing",
@@ -7231,6 +7299,15 @@ export const dictionaries = {
     "employer.candidate.fact.updated": "Last updated",
     "employer.candidate.fact.phone": "Phone",
     "employer.candidate.coverNote": "Cover note",
+    // The CV the candidate actually submitted. The heading says what it is in
+    // words -- never an id, a snapshot version or a document reference.
+    "employer.candidate.cv.heading": "Submitted CV",
+    "employer.candidate.cv.cqrityjob": "CQrityjob CV",
+    "employer.candidate.cv.submittedOn": "submitted {date}",
+    "employer.candidate.cv.snapshotNote":
+      "This is the CV as it stood when the application was submitted. Later changes to the candidate's CV do not affect this application.",
+    "employer.candidate.cv.unreadable":
+      "This application includes a CQrityjob CV, but it could not be displayed just now. Please try again later.",
     "employer.candidate.assessment.heading": "Tests & assessments",
     "employer.candidate.assessment.lede":
       "Send an assessment that belongs to this application and follow how it progresses. The candidate is resolved from the application, so you never enter an email address.",

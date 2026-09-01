@@ -64,9 +64,11 @@ import { CaseStatusChip, ValidationChip } from "@/components/employer/interview/
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import {
   getApplicationCvSignedUrl,
+  getApplicationSubmittedCv,
   getHiredEmployeeForApplication,
   updateApplicationStatusAsEmployer,
 } from "@/lib/job-intelligence/applications.functions";
+import { CvDocumentView } from "@/components/professional-identity/CvDocumentView";
 import {
   APPLICATION_ACTION_LABEL_KEY,
   APPLICATION_STATUS_LABEL_KEY,
@@ -120,6 +122,7 @@ function Candidate360({
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
   const hiredEmployeeFn = useServerFn(getHiredEmployeeForApplication);
+  const submittedCvFn = useServerFn(getApplicationSubmittedCv);
   const interviewCasesFn = useServerFn(listInterviewCasesForApplication);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -129,6 +132,30 @@ function Candidate360({
     queryKey: candidateKey,
     queryFn: () => candidateFn({ data: { applicationId } }),
   });
+
+  // ── THE CV THE CANDIDATE ACTUALLY SUBMITTED ────────────────────────
+  //
+  // Reads the COPY stored on this application, never cv_documents -- there
+  // is no employer read policy on that table and this page does not become
+  // the exception. What comes back is the document as it stood when the
+  // application was sent, so an edit the candidate made afterwards does not
+  // change what this employer is looking at.
+  //
+  // Its own query rather than a field on the candidate read: a CV is the
+  // largest payload on this page and the smallest number of people need it,
+  // and scp_application_candidate is shared with surfaces that must not
+  // start carrying one.
+  // `hasCv` is true for an UPLOADED file and only for one, so an application
+  // that has it cannot also carry a CQrityjob CV -- the table forbids both at
+  // once. Skipping the read there is not an optimisation for its own sake: it
+  // keeps the largest payload on this page off every request that could not
+  // possibly need it.
+  const submittedCvQuery = useQuery({
+    queryKey: ["employer", employerId, "application", applicationId, "submitted-cv"],
+    queryFn: () => submittedCvFn({ data: { applicationId } }),
+    enabled: query.data ? !query.data.hasCv : false,
+  });
+  const submittedCv = submittedCvQuery.data ?? null;
 
   // Interview Intelligence cases for THIS application.
   //
@@ -333,6 +360,7 @@ function Candidate360({
           </div>
         )}
 
+        {/* An UPLOADED CV is a file, and a file is downloaded. Unchanged. */}
         {c.hasCv && (
           <button
             type="button"
@@ -342,6 +370,58 @@ function Candidate360({
             <FileText className="h-4 w-4" aria-hidden="true" />
             {t("employer.applications.action.downloadCv")}
           </button>
+        )}
+
+        {/* ── A CQRITYJOB CV IS NOT A FILE ─────────────────────────────
+            So it is not offered as a download. It is rendered, by the same
+            component the candidate saw when they chose it, from the copy
+            this application stored. The heading says what it is in words --
+            "CQrityjob CV" -- and never an id, a snapshot version or a
+            document reference.
+
+            No verifier attribution appears on it, deliberately and by
+            construction: verification provenance is never stored, so this
+            copy has none to show. Verified standing reaches this page the
+            one way it is permitted to, through the Passport section below,
+            which the candidate authorised separately. */}
+        {submittedCv?.source === "cqrityjob_cv" && (
+          <div className="mt-6">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              {t("employer.candidate.cv.heading")}
+            </h3>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+                <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {t("employer.candidate.cv.cqrityjob")}
+              </span>
+              <span>
+                {t("employer.candidate.cv.submittedOn").replace(
+                  "{date}",
+                  formatDate(submittedCv.submittedAt, lang),
+                )}
+              </span>
+            </p>
+            {submittedCv.unreadable ? (
+              // Unknown is not none. The candidate DID send a CV; failing to
+              // render it is our problem to report, never their omission to
+              // imply.
+              <p
+                role="status"
+                className="mt-3 rounded-lg border border-dashed border-border px-4 py-5 text-sm text-muted-foreground"
+              >
+                {t("employer.candidate.cv.unreadable")}
+              </p>
+            ) : submittedCv.document ? (
+              <>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("employer.candidate.cv.snapshotNote")}
+                </p>
+                <div className="mt-3">
+                  <CvDocumentView document={submittedCv.document} />
+                </div>
+              </>
+            ) : null}
+          </div>
         )}
       </section>
 

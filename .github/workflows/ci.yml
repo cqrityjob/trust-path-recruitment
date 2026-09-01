@@ -571,6 +571,22 @@ jobs:
       - name: Professional identity and AI CV contract check
         run: bun run professional-identity:check
 
+      # APPLYING WITH THE CV THIS PLATFORM ALREADY HOLDS. Pilot testing found
+      # a candidate who had built a CQrityjob CV being required, on a
+      # CQrityjob job, to print it to PDF and upload it back. The fix has a
+      # narrow correct shape and several ways to be quietly wrong: an
+      # eligibility rule stated in the interface but not in the database, a
+      # snapshot that carries a target-job advert from a different employer,
+      # a stored copy that keeps claiming a verifier after the confirmation
+      # was revoked, a failed CV read rendered as "you have no CV", or an
+      # upload path narrowed on the way past. Each of those is asserted here,
+      # against the contract and against the rendered markup. The boundaries
+      # themselves -- one candidate's CV against another's, one employer's
+      # application against another's -- are proved by executing them, in
+      # supabase/tests/job_application_cv_source_test.sql.
+      - name: CQrityjob CV as an application source check
+        run: bun run cv-application-source:check
+
       # THE SIGNED-IN CANDIDATE'S CHROME AND VOCABULARY. Until PR 3 the
       # product had one navigation -- the marketing site's -- and served it
       # to people inside their own workspace: six items, none of them the

@@ -47,6 +47,7 @@ import { computeCvReadiness } from "./readiness";
 import { cvPresentationOutput } from "./schema";
 import { validateCvPresentation, type CvViolation } from "./validation";
 import { diffCvSourceBundles, type BundleDiff } from "./bundle-diff";
+import { cvApplicationBlock, type CvApplicationBlock } from "./application-source";
 import {
   applyCvEdit,
   buildSavedCvDocument,
@@ -232,6 +233,70 @@ export const getMyCv = createServerFn({ method: "POST" })
   });
 
 /* ------------------------------------------------------------------ */
+/* Read - for the job application dialog                               */
+/* ------------------------------------------------------------------ */
+
+export interface ApplicationCvOption {
+  readonly cvId: string;
+  readonly title: string;
+  readonly purpose: "general" | "targeted";
+  readonly locale: "sv" | "en";
+  readonly updatedAt: string;
+  /** Why this CV cannot be sent, or null when it can. Never a bare
+   *  boolean: "you cannot use this" without "because there is no
+   *  employment on it" is a dead end, and the dialog turns the reason into
+   *  a route back to My Career. */
+  readonly block: CvApplicationBlock | null;
+}
+
+/**
+ * The saved CVs a candidate could apply with.
+ *
+ * -- WHY THIS IS NOT `listMyCvs` WITH A FLAG --------------------------
+ *
+ * `listMyCvs` answers "what have I saved" for the CV list, and reads only
+ * summary columns. This answers "what could I send", which needs the
+ * snapshot's facts to decide -- a different read for a different question,
+ * rather than one query made expensive for every caller.
+ *
+ * The bundle is read and then DISCARDED. What crosses back to the browser
+ * is a title, a date and a reason; the employment history that decided the
+ * reason never leaves the server, because the apply dialog has no use for
+ * it and a payload nobody needs is a payload that leaks eventually.
+ *
+ * -- AND WHY IT THROWS ------------------------------------------------
+ *
+ * A read failure is NOT an empty list. Returning `[]` here would put "you
+ * have no CQrityjob CV" in front of somebody who has three, and push them
+ * to upload one they already own. The caller renders "we could not load
+ * your CVs" and keeps the upload path open -- section 14 of the brief, and
+ * the same rule `getMyPassport` was corrected for.
+ */
+export const listMyApplicationCvOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ApplicationCvOption[]> => {
+    const { supabase, userId } = context as { supabase: ScopedClient; userId: string };
+    const { data, error } = await supabase
+      .from("cv_documents")
+      .select("id, title, purpose, locale, updated_at, source_bundle")
+      .eq("owner_user_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(MAX_SAVED_CVS);
+    if (error) {
+      console.error("[cv] listMyApplicationCvOptions failed", error);
+      throw new Error("CV_LIST_UNAVAILABLE");
+    }
+    return ((data ?? []) as Row[]).map((r) => ({
+      cvId: String(r.id),
+      title: String(r.title ?? ""),
+      purpose: (r.purpose === "targeted" ? "targeted" : "general") as "general" | "targeted",
+      locale: (r.locale === "en" ? "en" : "sv") as "sv" | "en",
+      updatedAt: String(r.updated_at),
+      block: cvApplicationBlock(parseBundle(r.source_bundle)),
+    }));
+  });
+
+/* ------------------------------------------------------------------ */
 /* Write                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -322,9 +387,7 @@ export const saveCvDraft = createServerFn({ method: "POST" })
       origin = "ai_assisted";
     }
 
-    const title =
-      data.title.trim() ||
-      (data.purpose === "targeted" ? "Anpassat CV" : "Allmänt CV");
+    const title = data.title.trim() || (data.purpose === "targeted" ? "Anpassat CV" : "Allmänt CV");
 
     if (data.cvId) {
       const { data: updated, error } = await supabase
