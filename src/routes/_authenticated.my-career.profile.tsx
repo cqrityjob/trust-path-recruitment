@@ -167,11 +167,11 @@ function summarise(
 ): { text: string; claims: readonly IdentityClaim[] } {
   const count = (types: readonly string[]) => claimsOfType(identity.claims, types);
   switch (section) {
-    case "situation": // The stored enum is never printed. `currentStatusOptions` is the same
-    // catalogue the editor offers, so the row and the form say the same
-    // word -- the rule this page already applies to profession and to the
-    // experience band.
-    {
+    case "situation": {
+      // The stored enum is never printed. `currentStatusOptions` is the same
+      // catalogue the editor offers, so the row and the form say the same
+      // word -- the rule this page already applies to profession and to the
+      // experience band.
       const status = identity.currentStatus;
       const statusLabel = status
         ? currentStatusOptions.find((o) => o.id === status)?.label[lang]
