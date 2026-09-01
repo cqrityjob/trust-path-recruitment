@@ -1529,6 +1529,45 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Applying with a CQrityjob CV.
+#
+# Registered BEFORE the rollback step, like every non-destructive suite: it
+# reads cv_documents, job_applications and jobs, and the rollback drops tables
+# underneath them.
+#
+# It proves what a source guard structurally cannot. The eligibility rule and
+# the rendered document are asserted in TypeScript
+# (scripts/cv-application-source-check.tsx); the BOUNDARIES are asserted here,
+# by executing them: one candidate cannot attach another's CV, one employer
+# cannot read another's application, an application that claims a CV it does
+# not hold is refused by the table itself, and -- the reason the application
+# stores a copy rather than a join -- editing or deleting the saved CV
+# afterwards leaves the employer's copy exactly where it was.
+# ---------------------------------------------------------------------------
+echo "==> Running CQrityjob CV application source assertions"
+set +e
+CVS_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/job_application_cv_source_test.sql 2>&1)"
+CVS_RC=$?
+set -e
+
+echo "$CVS_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CVS_PASSED="$(echo "$CVS_OUT" | grep -c "ok  " || true)"
+
+if [ "$CVS_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the CQrityjob CV application source suite exited with code ${CVS_RC}." >&2
+  echo "$CVS_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "CQrityjob CV application source"
+else
+  echo "    ok  ${CVS_PASSED} CQrityjob CV application source assertions passed"
+  if [ "$CVS_PASSED" -lt 38 ]; then
+    echo "FAIL: expected at least 38 CV application source assertions, only ${CVS_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "CQrityjob CV application source (assertion shortfall: floor 38)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
 set +e
 ROLLBACK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_a_rollback_test.sql 2>&1)"

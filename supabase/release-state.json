@@ -282,6 +282,33 @@
       "rollback": "supabase/rollback/20261017090000_sp_employer_attestation_queue_task_rollback.sql", 
       "hostedState": "pending", 
       "introduces": []
+    }, 
+    {
+      "file": "20261018090000_job_application_cqrityjob_cv.sql", 
+      "hostedState": "pending", 
+      "introduces": [
+        {
+          "table": "job_applications", 
+          "object": "cv_source", 
+          "kind": "column"
+        }, 
+        {
+          "table": "job_applications", 
+          "object": "cv_document_id", 
+          "kind": "column"
+        }, 
+        {
+          "table": "job_applications", 
+          "object": "cv_document_snapshot", 
+          "kind": "column"
+        }, 
+        {
+          "object": "sp_submit_application_with_cv_source", 
+          "kind": "function"
+        }
+      ], 
+      "note": "PR 15 pilot gap: a candidate with a saved CQrityjob CV had to export it to PDF and upload it back into the same platform to apply. Adds cv_source/cv_document_id/cv_document_snapshot to job_applications and the one submission implementation that copies a saved CV onto the application inside the submitting transaction. EXPAND half: sp_submit_application_with_passport keeps its exact signature and becomes a delegate, so a caller deployed before this applies keeps submitting uploads and PostgREST has no ambiguous overload. Additive only -- no data rewrite, no policy change, every existing application reads cv_source='upload' and renders exactly as before. Not applied hosted.", 
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='job_applications' AND column_name IN ('cv_source','cv_document_id','cv_document_snapshot');"
     }
   ], 
   "policyVersion": 2, 
