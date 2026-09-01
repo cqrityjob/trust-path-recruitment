@@ -23,6 +23,13 @@ import { workspaceStatusLabelKey } from "./workspace-status";
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
+/** The compact menu sheet's own surface. It scrolls independently: signed in,
+ *  with an organisation and the account block, the sheet is taller than a
+ *  small phone in landscape and the last rows were unreachable. */
+const MENU_SURFACE =
+  "max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border bg-background";
+
+
 export function SiteHeader() {
   const { t } = useT();
   const location = useLocation();
