@@ -15,6 +15,7 @@ import { countMyReviewQueue } from "@/lib/security-competency/academy-employer.f
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { AccountMenu, type AccountIdentity } from "./AccountMenu";
+import { workspaceStatusLabelKey } from "./workspace-status";
 
 export function SiteHeader() {
   const { t } = useT();
@@ -153,12 +154,20 @@ export function SiteHeader() {
     // strand them.
     retry: 1,
   });
-  // Strictly "the database returned a workspace". Pending and failed both read
-  // as no access, so the switch is hidden rather than offering a door that may
-  // not open -- it appears when the answer arrives.
+  // Strictly "the database returned an organisation this person belongs to".
+  //
+  // A failed read still reads as no context -- there is nothing truthful to
+  // offer until the answer arrives. An organisation UNDER REVIEW, however, is
+  // carried through with its status, because a registrant who cannot find
+  // their own pending organisation from anywhere in the chrome is the defect
+  // this PR exists to fix: the audit's employer had no route to it at all and
+  // had to type /employer. The status decides the label and the destination
+  // in AccountMenu; it grants nothing, and every route re-verifies access
+  // server-side exactly as it does when the URL is typed.
   const myWorkspaces = (workspaces.data ?? []).map((w) => ({
     employerSlug: w.employerSlug,
     employerName: w.employerName,
+    employerStatus: w.employerStatus,
   }));
   const hasEmployerWorkspace = myWorkspaces.length > 0;
 
@@ -509,18 +518,47 @@ export function SiteHeader() {
                   <p className="mt-3 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     {t("account.context.switchTo")}
                   </p>
-                  {myWorkspaces.map((workspace) => (
-                    <Link
-                      key={workspace.employerSlug}
-                      to="/employer/$employerSlug"
-                      params={{ employerSlug: workspace.employerSlug }}
-                      onClick={() => setOpen(false)}
-                      className="mt-1 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                    >
-                      <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      <span className="truncate">{workspace.employerName}</span>
-                    </Link>
-                  ))}
+                  {/* Same rule as the desktop menu, and it has to be the
+                      same rule: an organisation that is discoverable on a
+                      laptop and invisible on a phone is still a registrant
+                      who cannot reach their own registration. Under review
+                      goes to the status page, wearing its status. */}
+                  {myWorkspaces.map((workspace) => {
+                    const statusKey = workspaceStatusLabelKey(workspace.employerStatus);
+                    const rowClass =
+                      "mt-1 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted";
+                    const inner = (
+                      <>
+                        <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span className="min-w-0 flex-1 truncate">{workspace.employerName}</span>
+                        {statusKey && (
+                          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {t(statusKey)}
+                          </span>
+                        )}
+                      </>
+                    );
+                    return statusKey ? (
+                      <Link
+                        key={workspace.employerSlug}
+                        to="/employer/pending"
+                        onClick={() => setOpen(false)}
+                        className={rowClass}
+                      >
+                        {inner}
+                      </Link>
+                    ) : (
+                      <Link
+                        key={workspace.employerSlug}
+                        to="/employer/$employerSlug"
+                        params={{ employerSlug: workspace.employerSlug }}
+                        onClick={() => setOpen(false)}
+                        className={rowClass}
+                      >
+                        {inner}
+                      </Link>
+                    );
+                  })}
                 </>
               )}
 

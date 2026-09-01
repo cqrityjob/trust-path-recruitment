@@ -547,6 +547,22 @@ jobs:
       - name: Public header entry-point check
         run: bun run header-entry:check
 
+      # THE EMPLOYER FRONT DOOR. An independent pilot audit registered an
+      # employer exactly as a customer would, and the organisation was never
+      # created: `ensureMyEmployerCompanyFromSignup` ran as a side effect of
+      # RENDERING /employer, and nothing took the registrant there, so the
+      # admin moderation queue stayed empty until the tester typed the URL by
+      # hand. Everything downstream -- pending status, the queue, the approval
+      # RPC, the workspace -- already worked. This guard holds the one link
+      # that was missing: provisioning is a lifecycle event in the
+      # authenticated shell, one predicate decides who has an organisation
+      # intent, a provisioning FAILURE is never reported as "you have no
+      # organisation", and an organisation under review is discoverable from
+      # the account menu wearing its status. None of it is visible to the type
+      # checker.
+      - name: Employer registration and activation check
+        run: bun run employer-registration:check
+
 
       - name: Production build
         run: bun run build

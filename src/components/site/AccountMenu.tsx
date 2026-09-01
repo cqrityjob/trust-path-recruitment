@@ -34,9 +34,28 @@
 // So there is no second copy of the access rule here to drift out of step
 // with the database, and hiding a link has never been the boundary.
 //
-// A workspace that is still pending, or a read that failed, both render as
-// "no context to switch to" — the switch appears when the answer arrives,
-// rather than offering a door that may not open.
+// A read that failed renders as "no context to switch to" — the switch
+// appears when the answer arrives, rather than offering a door that may not
+// open.
+//
+// ── AN ORGANISATION UNDER REVIEW IS STILL A CONTEXT ────────────────────
+//
+// It did not used to be. This comment claimed a pending organisation read
+// as "no context to switch to"; the code below never filtered on status, so
+// it was in fact listed, indistinguishable from an approved one, pointing
+// at a dashboard that immediately bounced the person back out.
+//
+// Both halves were wrong, in opposite directions, and the honest answer is
+// neither. Somebody who has just registered an organisation and is waiting
+// for it to be approved has to be able to find it — an independent pilot
+// audit found a registrant with no route to their own organisation from
+// anywhere in the interface, who could only reach it by typing /employer.
+// Hiding it is how that happened.
+//
+// So a non-active organisation IS listed, wearing its status, and points at
+// /employer/pending — the page that states where the registration stands —
+// rather than at a workspace that is not open. The status is presentation:
+// it decides a label and a destination, and grants nothing either way.
 
 import { Link } from "@tanstack/react-router";
 import { Building2, Check, ChevronDown, LogOut, UserPen, UserRound } from "lucide-react";
@@ -49,6 +68,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useT } from "@/i18n/context";
+import { workspaceStatusLabelKey } from "./workspace-status";
 
 /** One organisation this person actually belongs to, as the database
  *  returned it. Structurally a subset of `MyEmployerWorkspace` so the
@@ -56,6 +76,10 @@ import { useT } from "@/i18n/context";
 export type AccountWorkspace = {
   readonly employerSlug: string;
   readonly employerName: string;
+  /** The organisation's own lifecycle status, as the database returned it.
+   *  Only `active` opens the workspace; everything else routes to the status
+   *  page instead. Presentation only — never read as permission. */
+  readonly employerStatus: string;
 };
 
 export type AccountIdentity = {
@@ -133,21 +157,50 @@ export function AccountMenu({
             <DropdownMenuLabel className="pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               {t("account.context.switchTo")}
             </DropdownMenuLabel>
-            {identity.workspaces.map((workspace) => (
-              <DropdownMenuItem key={workspace.employerSlug} asChild>
-                <Link
-                  to="/employer/$employerSlug"
-                  params={{ employerSlug: workspace.employerSlug }}
-                  className="cursor-pointer"
-                >
-                  <Building2 className="mr-2 h-4 w-4" aria-hidden="true" />
-                  <span className="flex-1 truncate">{workspace.employerName}</span>
-                  {currentSlug === workspace.employerSlug && (
-                    <Check className="ml-2 h-3.5 w-3.5 text-accent" aria-hidden="true" />
+            {identity.workspaces.map((workspace) => {
+              const statusKey = workspaceStatusLabelKey(workspace.employerStatus);
+              // An organisation still being reviewed is reachable, and says
+              // so, but does not pretend to be a workspace: it goes to the
+              // status page rather than to a dashboard the database will
+              // refuse. The tick marks where the person already is and is
+              // meaningless for a destination they are not in.
+              const inner = (
+                <>
+                  <Building2 className="mr-2 h-4 w-4 flex-none" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate">{workspace.employerName}</span>
+                  {statusKey ? (
+                    <span className="ml-2 flex-none rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {t(statusKey)}
+                    </span>
+                  ) : (
+                    currentSlug === workspace.employerSlug && (
+                      <Check
+                        className="ml-2 h-3.5 w-3.5 flex-none text-accent"
+                        aria-hidden="true"
+                      />
+                    )
                   )}
-                </Link>
-              </DropdownMenuItem>
-            ))}
+                </>
+              );
+
+              return (
+                <DropdownMenuItem key={workspace.employerSlug} asChild>
+                  {statusKey ? (
+                    <Link to="/employer/pending" className="cursor-pointer">
+                      {inner}
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/employer/$employerSlug"
+                      params={{ employerSlug: workspace.employerSlug }}
+                      className="cursor-pointer"
+                    >
+                      {inner}
+                    </Link>
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
           </>
         )}
 

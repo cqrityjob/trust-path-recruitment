@@ -480,6 +480,17 @@ export const dictionaries = {
     "employer.unavailable.body":
       "Företagets tillgång till arbetsgivarytan är för närvarande avstängd.",
     "employer.pending.checkStatus": "Kontrollera status",
+    // A read that failed is not a status. Saying "under review" when the
+    // lookup did not answer invents a fact; these two say only what is true.
+    "employer.statusUnknown.heading": "Vi kunde inte hämta din organisations status",
+    "employer.statusUnknown.body":
+      "Det är ett tillfälligt tekniskt fel — din registrering finns kvar. Försök igen om en stund.",
+    "employer.provisionFailed.heading": "Vi kunde inte slutföra din organisationsregistrering",
+    "employer.provisionFailed.body":
+      "Ditt konto är skapat, men organisationen kunde inte registreras just nu. Försök igen — skapa inte en ny registrering.",
+    "employer.provisionFailed.retry": "Försök igen",
+    "account.context.underReview": "Granskas",
+    "account.context.unavailable": "Inte tillgänglig",
     "employer.pending.checking": "Kontrollerar din registrering …",
     "auth.intro":
       "Ditt konto sparar dina karriärtestresultat säkert. Kontot är valfritt — testet fungerar utan inloggning.",
@@ -5737,6 +5748,15 @@ export const dictionaries = {
     "employer.unavailable.body":
       "This organisation's access to the employer workspace is currently closed.",
     "employer.pending.checkStatus": "Check status",
+    "employer.statusUnknown.heading": "We could not load your organisation's status",
+    "employer.statusUnknown.body":
+      "This is a temporary technical problem — your registration is safe. Please try again in a moment.",
+    "employer.provisionFailed.heading": "We could not complete your organisation registration",
+    "employer.provisionFailed.body":
+      "Your account was created, but the organisation could not be registered just now. Please try again — do not create a second registration.",
+    "employer.provisionFailed.retry": "Try again",
+    "account.context.underReview": "Under review",
+    "account.context.unavailable": "Unavailable",
     "employer.pending.checking": "Checking your registration …",
     "auth.intro":
       "An account keeps your Security Career Assessment results safe. It's optional — the assessment works without signing in.",

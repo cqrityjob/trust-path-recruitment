@@ -55,10 +55,13 @@ import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import {
   clearOAuthReturn,
   consumeOAuthReturn,
+  consumeOrganisationIntent,
   oauthErrorMessage,
   oauthRedirectUri,
   rememberOAuthReturn,
+  rememberOrganisationIntent,
 } from "@/lib/auth/oauth-return";
+import { hasEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-intent";
 
 export type UnifiedAuthMode = "signin" | "signup";
 
@@ -74,6 +77,41 @@ const DEFAULT_DESTINATION = "/my-career";
 const ORGANISATION_DESTINATION = "/employer";
 
 const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Writes a stashed organisation intent onto the account that just came back
+ * from Google, so an OAuth registration reaches the rest of the product
+ * carrying what an email registration would have carried.
+ *
+ * Deliberately narrow:
+ *
+ *   * it consumes the stash unconditionally, so an abandoned attempt cannot
+ *     wait around and attach itself to a later, unrelated sign-in;
+ *   * it refuses to overwrite an account that already names a company,
+ *     because that value came from a real registration and this one may not
+ *     have;
+ *   * it never throws. The account is valid without it, and the onboarding
+ *     form is the fallback — the same one somebody registering before this
+ *     existed would have used.
+ *
+ * It is not a permission. `employer_memberships` decides that, server-side,
+ * and the organisation this eventually produces is created `pending`.
+ */
+async function applyPendingOrganisationIntent(user: {
+  user_metadata?: Record<string, unknown> | null;
+}): Promise<void> {
+  const stashed = consumeOrganisationIntent();
+  if (!stashed) return;
+  if (hasEmployerSignupIntent(user.user_metadata ?? null)) return;
+  try {
+    const { error } = await supabase.auth.updateUser({
+      data: { company_name: stashed.companyName, company_country: stashed.companyCountry },
+    });
+    if (error) throw error;
+  } catch (err) {
+    console.error("[auth] could not carry the organisation intent across Google sign-in", err);
+  }
+}
 
 export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
   const { t, lang } = useT();
@@ -157,17 +195,32 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
         setSessionKnown(true);
         return;
       }
-      // Returning from OAuth onto the auth page means the path in `redirectTo`
-      // was not honoured — with Supabase Auth that happens when the URL is not
-      // in the project's redirect allowlist and it falls back to the Site URL.
-      // The stashed destination is the fallback.
-      const pending = consumeOAuthReturn();
-      if (pending) {
-        const { to, search } = splitReturnPath(pending);
-        navigate({ to, search: search as never });
-        return;
-      }
-      goToDestination();
+      // A Google registration that named an organisation: apply the two
+      // strings signInWithOAuth could not carry, so the rest of the product
+      // sees the same intent an email registration would have produced.
+      //
+      // NEVER overwrites: if this account already carries a company name, the
+      // stored value is stale (an abandoned attempt in the same tab) and the
+      // account's own metadata wins. It grants nothing either way -- metadata
+      // is user-writable by design, and what it buys is a `pending`
+      // organisation awaiting the same approval as any other.
+      //
+      // Failure is not fatal. The account exists and works; the person is
+      // asked for the company name on the onboarding form, which is where
+      // they would have been without this at all.
+      void applyPendingOrganisationIntent(data.session.user).finally(() => {
+        // Returning from OAuth onto the auth page means the path in
+        // `redirectTo` was not honoured — with Supabase Auth that happens when
+        // the URL is not in the project's redirect allowlist and it falls back
+        // to the Site URL. The stashed destination is the fallback.
+        const pending = consumeOAuthReturn();
+        if (pending) {
+          const { to, search } = splitReturnPath(pending);
+          navigate({ to, search: search as never });
+          return;
+        }
+        goToDestination();
+      });
     });
     return () => {
       alive = false;
@@ -214,7 +267,7 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
         // dropping it means the account is created and the report it was
         // created to save is never claimed.
         const returnTo = resolveDestination();
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
@@ -232,6 +285,25 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
           },
         });
         if (error) throw error;
+
+        // Sign-up does not always mean "go and check your email". When the
+        // project does not require confirmation, signUp returns a SESSION and
+        // the person is already signed in -- and this form used to tell them
+        // to check their inbox for a message that was never sent, then leave
+        // them standing on the registration page. Whatever they did next, the
+        // destination they had just earned was gone: an employer registrant
+        // ended up on the personal home, and their organisation was never
+        // created, because the only thing that created it was arriving at
+        // /employer.
+        //
+        // Provisioning no longer depends on that arrival, but the destination
+        // still matters -- being taken somewhere that explains what happens
+        // next is the difference between a product and a form that submitted.
+        if (data.session) {
+          goToDestination();
+          return;
+        }
+
         setInfo(
           t(forOrganisation ? "auth.signup.check_email_employer" : "auth.signup.check_email"),
         );
@@ -260,6 +332,16 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
     // observed, so relying on redirectTo alone would trust the thing that
     // broke.
     const destination = rememberOAuthReturn(resolveDestination(), DEFAULT_DESTINATION);
+    // The company name has to survive the provider round trip too. Without
+    // this it was simply dropped: signInWithOAuth carries no metadata, so a
+    // person who typed their organisation and then chose Google arrived as an
+    // ordinary account and was asked for the name a second time.
+    if (isSignup && forOrganisation) {
+      rememberOrganisationIntent({
+        companyName: companyName.trim(),
+        companyCountry: companyCountry.trim(),
+      });
+    }
     try {
       // Google goes through this project's OWN Supabase Auth, not the Lovable
       // Cloud OAuth broker. The broker resolved its provider configuration

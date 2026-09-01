@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { readEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-intent";
 
 // -----------------------------------------------------------------------------
 // Phase H3.1 — Candidate / Employer Portal Foundation: self-service employer
@@ -410,15 +411,20 @@ export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST"
     const { data: userData, error: userError } = await ctx.supabase.auth.getUser();
     if (userError || !userData?.user) throw new Error("Could not read your account.");
 
+    // One predicate, shared with the client that decides whether to call this
+    // at all. When the two were written separately they disagreed about
+    // whether a country was required, which is the difference between "no
+    // intent, do nothing" and "intent, provision" — see
+    // src/lib/job-intelligence/employer-signup-intent.ts.
     const meta = (userData.user.user_metadata ?? {}) as Record<string, unknown>;
-    const name = typeof meta.company_name === "string" ? meta.company_name.trim() : "";
-    const country = typeof meta.company_country === "string" ? meta.company_country.trim() : "";
+    const intent = readEmployerSignupIntent(meta);
 
     // Somebody who registered before this existed, or through the candidate
     // portal, simply has no company to create. The onboarding form is still
     // there for them.
-    if (!name || !country) return { created: false, reason: "no_company_in_signup" };
+    if (!intent) return { created: false, reason: "no_company_in_signup" };
 
+    const { companyName: name, companyCountry: country } = intent;
     const slugBase = slugify(name) || "company";
     const { data: rows, error } = await ctx.supabase.rpc("create_my_employer_company", {
       _name: name,
