@@ -178,14 +178,16 @@ function summarise(
       // catalogue the editor offers, so the row and the form say the same
       // word -- the rule this page already applies to profession and to the
       // experience band.
-      return {
-        text:
-          (identity.currentStatus
-            ? (currentStatusOptions.find((o) => o.id === identity.currentStatus)?.label[lang] ??
-              null)
-            : null) ?? L(COPY.empty, lang),
-        claims: [],
-      };
+      {
+        const status = identity.currentStatus;
+        const statusLabel = status
+          ? currentStatusOptions.find((o) => o.id === status)?.label[lang]
+          : undefined;
+        return {
+          text: statusLabel ?? L(COPY.empty, lang),
+          claims: [],
+        };
+      }
     case "identity":
       return { text: identity.headline ?? L(COPY.empty, lang), claims: [] };
     case "profession":
