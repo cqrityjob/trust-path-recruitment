@@ -29,7 +29,6 @@ const focusRing =
 const MENU_SURFACE =
   "max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border bg-background";
 
-
 export function SiteHeader() {
   const { t } = useT();
   const location = useLocation();
