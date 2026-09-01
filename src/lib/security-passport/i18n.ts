@@ -744,8 +744,6 @@ const sv = {
   "ver.requestEmployerHelp":
     "Arbetsgivaren ser bara den här anställningsperioden och ditt namn. Inget annat i ditt Passport.",
   "ver.chooseEmployer": "Välj arbetsgivare",
-  "ver.noEmployers":
-    "Ingen ansluten arbetsgivare hittades. Be CQrityjob granska uppgiften i stället.",
   "ver.submitting": "Skickar …",
   "ver.submitted": "Begäran är skickad.",
   "ver.status": "Status",
@@ -1040,6 +1038,43 @@ const sv = {
   "ver.employer.unknownOrg": "arbetsgivaren",
   "ver.employer.notReference":
     "Arbetsgivaren blir ombedd att bekräfta de uppgifter du fyllt i — roll, datum och anställningsform. De blir inte ombedda att lämna ett omdöme om dig.",
+
+  // ── Att hitta rätt arbetsgivare ──────────────────────────────────────
+  //
+  // Etiketterna nedan är ord, aldrig siffror. "Samma namn" är något du kan
+  // kontrollera genom att titta på raden; "87 % träff" är det inte.
+  "ver.employer.searchLabel": "Sök efter arbetsgivaren",
+  "ver.employer.searchPlaceholder": "Skriv företagets namn",
+  "ver.employer.searchHelp":
+    "Vi föreslår organisationer som liknar den arbetsgivare du angett på anställningen. Du väljer själv — CQrityjob avgör aldrig att två företag är samma företag.",
+  "ver.employer.searching": "Söker …",
+  "ver.employer.searchUnavailable":
+    "Arbetsgivarsökningen kunde inte köras just nu. Det betyder inte att arbetsgivaren saknas.",
+  "ver.employer.searchRetry": "Försök igen",
+  "ver.employer.noMatch": "Ingen matchande arbetsgivare hittades.",
+  "ver.employer.noMatchHelp": "Prova en annan stavning eller en kortare del av namnet.",
+  "ver.employer.reason.linked": "Tidigare tillfrågad",
+  "ver.employer.reason.exact_name": "Samma namn",
+  "ver.employer.reason.same_country": "Samma land",
+  "ver.employer.reason.search": "Sökträff",
+  "ver.employer.moreMatches":
+    "Fler organisationer matchar än som visas. Skriv mer av namnet för att smalna av.",
+  "ver.employer.countryUnknown": "Land ej angivet",
+  "ver.employer.select": "Välj",
+  "ver.employer.confirmTitle": "Begär bekräftelse från:",
+  "ver.employer.confirmBody":
+    "Kontrollera att detta är rätt organisation. Den får se den här anställningsperioden och ditt namn, och inget annat i ditt Passport.",
+  "ver.employer.confirmAction": "Ja, skicka begäran",
+  "ver.employer.confirmChange": "Välj en annan organisation",
+  "ver.employer.notOnPlatform": "Min arbetsgivare finns inte på CQrityjob",
+  "ver.employer.notOnPlatformTitle": "Om arbetsgivaren inte finns här",
+  "ver.employer.notOnPlatformBody":
+    "Bekräftelse från arbetsgivare kräver i dag att arbetsgivaren har ett organisationskonto på CQrityjob. Har de inget konto går det inte att begära bekräftelse den vägen.",
+  "ver.employer.notOnPlatformNoInvite":
+    "CQrityjob skickar ingen inbjudan och kontaktar inte arbetsgivaren åt dig.",
+  "ver.employer.notOnPlatformAlt":
+    "Du kan i stället låta CQrityjob granska dokumentation som styrker anställningen — anställningsbevis, arbetsgivarintyg eller lönespecifikation. Alternativet finns ovanför.",
+  "ver.employer.notOnPlatformClose": "Stäng",
   "pkg.public_card.name": "Publikt Passport Card",
   "pkg.public_card.purpose": "Ett kort som visar din yrkesroll och dina verifierade behörigheter.",
   "pkg.verified_qualifications.name": "Verifierade behörigheter",
@@ -2278,7 +2313,6 @@ const en: Record<PassportCopyKey, string> = {
   "ver.requestEmployerHelp":
     "The employer sees only this employment period and your name. Nothing else in your Passport.",
   "ver.chooseEmployer": "Choose employer",
-  "ver.noEmployers": "No connected employer was found. Ask CQrityjob to review the entry instead.",
   "ver.submitting": "Submitting …",
   "ver.submitted": "Your request has been submitted.",
   "ver.status": "Status",
@@ -2545,6 +2579,43 @@ const en: Record<PassportCopyKey, string> = {
   "ver.employer.unknownOrg": "the employer",
   "ver.employer.notReference":
     "The employer is asked to confirm the facts you entered — role, dates and employment type. They are not asked for a reference or an opinion about you.",
+
+  // ── Finding the right employer ───────────────────────────────────────
+  //
+  // The labels below are words, never numbers. "Exact match" is something a
+  // person can check by looking at the row; "87% match" is not.
+  "ver.employer.searchLabel": "Search for the employer",
+  "ver.employer.searchPlaceholder": "Type the company name",
+  "ver.employer.searchHelp":
+    "We suggest organisations that resemble the employer you entered on this employment. You choose — CQrityjob never decides that two companies are the same company.",
+  "ver.employer.searching": "Searching …",
+  "ver.employer.searchUnavailable":
+    "The employer search could not be run just now. That does not mean the employer is missing.",
+  "ver.employer.searchRetry": "Try again",
+  "ver.employer.noMatch": "No matching employer found.",
+  "ver.employer.noMatchHelp": "Try a different spelling, or a shorter part of the name.",
+  "ver.employer.reason.linked": "Asked before",
+  "ver.employer.reason.exact_name": "Exact match",
+  "ver.employer.reason.same_country": "Same country",
+  "ver.employer.reason.search": "Search result",
+  "ver.employer.moreMatches":
+    "More organisations match than are shown. Type more of the name to narrow it down.",
+  "ver.employer.countryUnknown": "Country not stated",
+  "ver.employer.select": "Choose",
+  "ver.employer.confirmTitle": "Request confirmation from:",
+  "ver.employer.confirmBody":
+    "Check that this is the right organisation. It will see this employment period and your name, and nothing else in your Passport.",
+  "ver.employer.confirmAction": "Yes, send the request",
+  "ver.employer.confirmChange": "Choose a different organisation",
+  "ver.employer.notOnPlatform": "My employer is not on CQrityjob",
+  "ver.employer.notOnPlatformTitle": "If the employer is not here",
+  "ver.employer.notOnPlatformBody":
+    "Employer confirmation currently requires the employer to have an organisation account on CQrityjob. If they have no account, confirmation cannot be requested that way.",
+  "ver.employer.notOnPlatformNoInvite":
+    "CQrityjob does not send an invitation and does not contact the employer for you.",
+  "ver.employer.notOnPlatformAlt":
+    "You can instead have CQrityjob review documentation that supports the employment — a contract, an employer certificate or a payslip. That option is above.",
+  "ver.employer.notOnPlatformClose": "Close",
   "pkg.public_card.name": "Public Passport Card",
   "pkg.public_card.purpose":
     "A card showing your professional role and your verified authorisations.",

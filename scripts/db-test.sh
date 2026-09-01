@@ -2656,6 +2656,70 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Which organisation may be asked to confirm an employment (PR 17).
+#
+# Registered HERE, beside the other Passport privacy suites and BEFORE the
+# rollback step, for the reason every one of them records: it creates Passport
+# profiles of its own, and the rollback block drops the sp_ tables a later
+# registration would then be running against.
+#
+# What it proves that a source-level guard structurally cannot: that
+# sp_submit_for_verification REFUSES an employer attestation addressed to an
+# organisation CQrityjob has not approved -- asserted by EXECUTING the call as
+# the candidate for every one of the five ineligible statuses, and by counting
+# the request table before and after, because "it raised an error" and "it
+# wrote nothing" are different claims. It also proves the two halves of the
+# self-verification rule do different jobs: a candidate who owns an unapproved
+# company cannot ASK it, and cannot DECIDE its answer once the company is
+# approved. And it proves the picker's narrowing did not widen anything -- what
+# a candidate can read is still what employers'' own policies return, checked by
+# reading the table as a candidate principal rather than by reading the policy.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport employer matching and eligibility assertions"
+set +e
+EMM_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_employer_matching_test.sql 2>&1)"
+EMM_RC=$?
+set -e
+
+echo "$EMM_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+EMM_PASSED="$(echo "$EMM_OUT" | grep -c "ok  " || true)"
+
+if [ "$EMM_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the employer matching and eligibility suite exited with code ${EMM_RC}." >&2
+  echo "$EMM_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport employer matching and eligibility"
+else
+  echo "    ok  ${EMM_PASSED} employer matching and eligibility assertions passed"
+
+  # The assertions that are the POINT of the release. A suite that stops
+  # running one of these and still reports a healthy total is the failure mode
+  # a floor alone does not catch.
+  for REQUIRED in \
+    "1.1 an approved organisation can still be asked to confirm employment" \
+    "1.2 a pending organisation cannot be asked to confirm employment" \
+    "1.3 a suspended organisation cannot be asked to confirm employment" \
+    "1.9 a CQrityjob document review with no employer is unaffected" \
+    "2.1 a second open request on the same employment is refused" \
+    "2.3 a candidate cannot open a request on somebody else's employment" \
+    "3.2 but cannot ask their own unapproved organisation to confirm their employment" \
+    "3.4 the holder cannot decide their own employment confirmation" \
+    "4.1 a candidate sees no organisation they are unrelated to and that has no live job" \
+    "5.1 a request placed before suspension is still in the employer's queue"; do
+    if ! echo "$EMM_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: a mandatory employer-matching assertion did not run: ${REQUIRED}" >&2
+      suite_failed "Security Passport employer matching and eligibility (missing: ${REQUIRED})"
+    fi
+  done
+
+  if [ "$EMM_PASSED" -lt 25 ]; then
+    echo "FAIL: expected at least 25 employer matching assertions, only ${EMM_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "Security Passport employer matching and eligibility (assertion shortfall: floor 25)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # The concurrent decision, run as two real processes.
 #
 # This cannot live inside a suite file. One psql session holds one transaction,

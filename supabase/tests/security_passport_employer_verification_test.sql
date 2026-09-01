@@ -246,13 +246,19 @@ BEGIN
     'sp_vr_employer_kind_has_employer',
     '1.4 an employer attestation naming no employer is refused by the table');
 
-  -- 1.5 An organisation that does not exist. Refused by the foreign key, which
-  --     is what stops a crafted call from addressing a request into nowhere and
-  --     leaving it permanently unanswerable in the holder's own Passport.
+  -- 1.5 An organisation that does not exist. What stops a crafted call from
+  --     addressing a request into nowhere and leaving it permanently
+  --     unanswerable in the holder's own Passport.
+  --
+  --     The needle changed with 20261019090000 and the property did not. The
+  --     foreign key refused this before and still would; the eligibility check
+  --     added by that migration now reaches it first and refuses it by name,
+  --     which is a refusal a caller can act on rather than a constraint name
+  --     from inside the database. Either way nothing is written.
   --
   --     Asked about a SECOND period on purpose: the first one already carries an
   --     open request, so aiming this at it would be refused by the open-request
-  --     rule before the foreign key was ever consulted, and the assertion would
+  --     rule before the organisation was ever consulted, and the assertion would
   --     pass without testing anything.
   DECLARE _fresh uuid;
   BEGIN
@@ -260,7 +266,7 @@ BEGIN
     PERFORM pg_temp.must_fail(
       format('SELECT public.sp_submit_for_verification(NULL, %L, ''employer_attestation'', %L)',
              _fresh, 'e8000000-0000-0000-0000-0000000000ff'),
-      'foreign key',
+      'SP_EMPLOYER_NOT_FOUND',
       '1.5 an employer id that names no organisation is refused');
   END;
 
