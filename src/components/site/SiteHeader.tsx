@@ -278,26 +278,37 @@ export function SiteHeader() {
   // breakpoint moves rather than the content.
   return (
     <header className="no-print sticky top-0 z-40 bg-background/90 backdrop-blur">
-      {/* Slim utility bar — the WEBSITE's, desktop only. Small trust
-          signals + secondary access.
+      {/* Slim utility bar — the WEBSITE's, desktop only. The brand principle
+          on the left, and the ONE genuinely global control on the right.
 
-          It does not follow anybody into the workspace. Its "Kontakt" link
-          was the second Kontakt on every signed-in page, and a marketing
-          tagline strip above an application is the single loudest way to
-          tell somebody they are still on a website. */}
+          It does not follow anybody into the workspace. A marketing tagline
+          strip above an application is the single loudest way to tell
+          somebody they are still on a website.
+
+          ── WHY "KONTAKT" IS NO LONGER HERE ─────────────────────────────
+          It was the second "Kontakt" in the same header area: once in this
+          bar, once in the primary nav directly underneath, both pointing at
+          /contact. The route is untouched and remains reachable from the
+          primary nav (desktop and mobile) and from the footer — only the
+          visual duplication is gone.
+
+          The language toggle moved UP here from the crowded action cluster:
+          it is a site-wide preference rather than an action, and the main
+          row now carries only the brand, the navigation and the account
+          controls. Mobile keeps its own toggle inside the menu sheet, since
+          this bar is desktop-only. */}
       <div className={cn("hidden bg-primary text-primary-foreground/85", !appMode && "lg:block")}>
-        <Container className="flex h-8 items-center justify-between text-[11px] font-medium tracking-wide">
-          <span className="inline-flex items-center gap-2">
-            <ShieldCheck className="h-3 w-3 text-[color:var(--gold)]" strokeWidth={2} />
-            <span className="uppercase tracking-[0.14em]">{t("footer.tagline")}</span>
+        <Container className="flex h-9 items-center justify-between text-[11px] font-medium tracking-wide">
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <ShieldCheck
+              className="h-3 w-3 shrink-0 text-[color:var(--gold)]"
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+            <span className="truncate uppercase tracking-[0.14em]">{t("footer.tagline")}</span>
           </span>
-          <div className="flex items-center gap-5">
-            <Link
-              to="/contact"
-              className="text-primary-foreground/75 transition-colors hover:text-primary-foreground"
-            >
-              {t("nav.contact")}
-            </Link>
+          <div className="flex shrink-0 items-center gap-5">
+            <LanguageSwitcher tone="onDark" />
             {/* The employer door used to live here, ungated, for everybody.
                 It is gone: an organisation context is reached from the
                 account menu, which lists only the organisations the database
@@ -310,7 +321,14 @@ export function SiteHeader() {
           </div>
         </Container>
       </div>
-      <div className="border-b border-border bg-background/95 shadow-[0_1px_0_0_var(--color-border)]">
+      <div
+        className={cn(
+          "border-b bg-background/95 transition-shadow duration-200 motion-reduce:transition-none",
+          scrolled
+            ? "border-border/80 shadow-[var(--shadow-md)]"
+            : "border-border shadow-[0_1px_0_0_var(--color-border)]",
+        )}
+      >
         <Container className="flex h-16 items-center justify-between gap-6">
           {/* In the workspace the brand mark is the way HOME — to the
               candidate's own home, /my-career, the way it is in every
