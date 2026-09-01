@@ -42,6 +42,12 @@ import { ProfessionalIdentityHeader } from "@/components/professional-identity/P
 import { NextActions } from "@/components/professional-identity/NextActions";
 import { CareerJourney } from "@/components/professional-identity/CareerJourney";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
+import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
+import {
+  deriveVerificationAttention,
+  VERIFICATION_ATTENTION_UNAVAILABLE,
+} from "@/lib/professional-identity/verification-attention";
+import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
 import { listMyCvs } from "@/lib/professional-identity/cv/cv-store.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
@@ -330,6 +336,28 @@ function MyCareerPage() {
     retry: false,
   });
 
+  // ── DECISIONS THE CANDIDATE HAS NOT SEEN ────────────────────────────
+  //
+  // The same read the Passport uses, and deliberately the same derivation:
+  // a candidate should not have to work out which of two surfaces to open to
+  // learn that an employer answered them. `retry: false` matches the other
+  // optional reads on this page -- one unavailable product degrades one
+  // panel, never the dashboard -- and the failure is REPORTED rather than
+  // rendered as "nothing waiting", which is the whole point of
+  // VERIFICATION_ATTENTION_UNAVAILABLE.
+  const fetchVerifications = useServerFn(listMyVerificationRequests);
+  const verificationsQ = useQuery({
+    queryKey: ["passport", "my-verification-requests"],
+    queryFn: () => fetchVerifications(),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const verificationAttention = verificationsQ.data
+    ? deriveVerificationAttention(verificationsQ.data.requests)
+    : verificationsQ.isError
+      ? VERIFICATION_ATTENTION_UNAVAILABLE
+      : null;
+
   const profileState = useCareerProfileForJobs();
   const profile = profileState.status === "ready" ? profileState.data.profile : undefined;
 
@@ -476,9 +504,49 @@ function MyCareerPage() {
               signals={{
                 savedCvCount: cvsQ.data?.length,
                 careerDiscoveryOpen: assessmentOpen,
+                // Left undefined while the verification read has not
+                // answered. Passing 0 there would state that nobody is
+                // waiting on this person, which is the difference between
+                // "nothing to do" and "we could not check".
+                clarificationCount: verificationAttention?.unavailable
+                  ? undefined
+                  : verificationAttention?.actionRequired.length,
               }}
             />
           </div>
+        )}
+
+        {/* ── What somebody else has decided about you ────────────────
+
+            Directly under the recommendation, because a decision on a
+            verification request outranks anything this product wants for
+            its own reasons -- and because the alternative, which is what
+            shipped, was a candidate learning that an employer could not
+            confirm their employment only by remembering which entry to
+            open. Nothing is rendered when there is nothing to say: the
+            "clear" line belongs on the Passport, which is the page that
+            answers for verification as a whole.
+
+            Titles come from the identity seam this page already loaded, so
+            no second Passport read is needed to name an entry. */}
+        {verificationAttention && identityQ.data && (
+          <VerificationOutcomes
+            attention={verificationAttention}
+            titleOf={(item) =>
+              item.subjectKind === "claim"
+                ? (identityQ.data.claims.find((c) => c.id === item.subjectId)?.title ??
+                  L(c("Uppgift i ditt pass", "An entry in your Passport"), lang))
+                : ((p) =>
+                    p
+                      ? `${p.roleTitle} · ${p.employerName}`
+                      : L(c("Uppgift i ditt pass", "An entry in your Passport"), lang))(
+                    identityQ.data.employment.find((e) => e.id === item.subjectId),
+                  )
+            }
+            hrefOf={(item) => `/passport/entry/${item.subjectKind}/${item.subjectId}`}
+            showClear={false}
+            className="mt-10"
+          />
         )}
 
         {/* ---------------- Where am I in the journey ----------------

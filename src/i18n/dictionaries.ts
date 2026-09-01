@@ -1059,7 +1059,7 @@ export const dictionaries = {
     // that is what this says, and no next step is invented either way.
     "cj.unknown.bodyWithRole":
       "Du har angett att du arbetar som {0} idag. Vi har ännu ingen sparad karriärprofil att ställa det mot, så vi visar inga nästa steg -- ett nästa steg byggt på en enda uppgift vore en gissning.",
-    "cj.unknown.cta": "Fyll i min bakgrund",
+    "cj.unknown.cta": "Berätta var du står i dag",
     "cj.unknown.anonymousCta":
       "Spara ditt resultat och fyll i din bakgrund, så kan vi visa en mer personlig karriärresa.",
     "cj.section.exploreNow": "Vad du kan utforska nu",
@@ -1093,6 +1093,12 @@ export const dictionaries = {
     "cj.reason.notAdjacent":
       "Vi ser ingen dokumenterad väg dit från det du gör idag, och det ligger i en annan del av branschen -- det betyder inte att det är stängt, utan att det kräver att du bygger på.",
     "cj.reason.verifiedEvidence": "Du har verifierad information i ditt Security Passport.",
+    // Sagt rakt ut, eftersom slutsatsen annars ser ut att komma från
+    // ingenstans: personen har inte fyllt i sin karriärprofil, men deras
+    // Passport innehåller anställningar. Det placerar dem inte på en
+    // karriärnivå -- det säger bara att vi inte är okunniga om dem.
+    "cj.reason.backgroundFromPassport":
+      "Vi utgår från anställningarna i ditt Security Passport, eftersom du inte har fyllt i din karriärprofil ännu.",
     "cj.whatHelps": "Vad som kan hjälpa dig dit",
     "cj.whatHelps.profile":
       "Håll din karriärprofil uppdaterad. När din roll eller erfarenhet ändras uppdateras din karriärresa -- du behöver inte göra om testet.",
@@ -6270,7 +6276,7 @@ export const dictionaries = {
       "We do not yet know enough about your background to say how close you are to these professions. So we are not showing any next steps -- a next step from an unknown starting point would be a guess.",
     "cj.unknown.bodyWithRole":
       "You told us you work as a {0} today. We do not have a saved career profile to place that against yet, so we are not showing any next steps -- a next step built on a single fact would be a guess.",
-    "cj.unknown.cta": "Add my background",
+    "cj.unknown.cta": "Tell us where you are today",
     "cj.unknown.anonymousCta":
       "Save your result and add your background, and we can show you a more personal career journey.",
     "cj.section.exploreNow": "What you can explore now",
@@ -6304,6 +6310,8 @@ export const dictionaries = {
     "cj.reason.notAdjacent":
       "We see no documented route there from what you do today, and it sits in a different part of the industry -- that does not mean it is closed, it means it takes building up to.",
     "cj.reason.verifiedEvidence": "You hold verified information in your Security Passport.",
+    "cj.reason.backgroundFromPassport":
+      "We are going by the employment recorded in your Security Passport, because you have not filled in your career profile yet.",
     "cj.whatHelps": "What can help you get there",
     "cj.whatHelps.profile":
       "Keep your career profile up to date. When your role or experience changes, your career journey updates -- you do not need to retake the assessment.",

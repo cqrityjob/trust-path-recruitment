@@ -32,6 +32,12 @@ import { needsWorkLocationConfirmation } from "@/lib/security-passport/onboardin
 import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
 import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
+import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
+import {
+  deriveVerificationAttention,
+  VERIFICATION_ATTENTION_UNAVAILABLE,
+  type VerificationAttention,
+} from "@/lib/professional-identity/verification-attention";
 import {
   getRegulatedCredentialAvailability,
   type RegulatedCredentialAvailability,
@@ -62,6 +68,12 @@ function PassportOverviewRoute() {
   // Which entries have a review open. The overview cannot say "waiting on you"
   // without it, and the holder's own requests are the only honest source.
   const [openReviews, setOpenReviews] = useState<OpenReviews>(new Map());
+  // Decided requests, which `openReviews` deliberately drops. A decision is
+  // the single most important thing that happens to a request and it was the
+  // one state this page could not see.
+  const [attention, setAttention] = useState<VerificationAttention>(
+    VERIFICATION_ATTENTION_UNAVAILABLE,
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
@@ -101,6 +113,7 @@ function PassportOverviewRoute() {
         if (subject) open.set(subject, r.status);
       }
       setOpenReviews(open);
+      setAttention(deriveVerificationAttention(reqs.requests));
     } catch (err) {
       // The message is logged, not shown: a raw PostgREST error reads as a
       // crash and can leak schema detail.
@@ -211,6 +224,29 @@ function PassportOverviewRoute() {
         </div>
       </section>
 
+      {/* ── DECISIONS FIRST ────────────────────────────────────────────
+          Somebody has answered a request this holder made. That outranks
+          both the inventory below and the expiry notices, and it is the
+          thing they could previously only find by opening entries one at a
+          time. */}
+      <VerificationOutcomes
+        attention={attention}
+        titleOf={(item) =>
+          item.subjectKind === "claim"
+            ? (snapshot.holder.claims.find((c) => c.id === item.subjectId)?.titleSv ??
+              pt("att.entryRemoved"))
+            : ((p) => (p ? `${p.roleTitle} · ${p.employerName}` : pt("att.entryRemoved")))(
+                snapshot.holder.periods.find((p) => p.id === item.subjectId),
+              )
+        }
+        hrefOf={(item) => `/passport/entry/${item.subjectKind}/${item.subjectId}`}
+        // The panel below already answers "is anything waiting" for the
+        // lifecycle side. Two panels both saying "nothing waiting" is the
+        // page talking to itself.
+        showClear={false}
+        className="mb-5"
+      />
+
       {/* What needs doing comes before the inventory of what exists. A holder
           who opens this page wants to know whether anything is on them. */}
       <AttentionPanel
@@ -226,6 +262,7 @@ function PassportOverviewRoute() {
             params: { kind, entryId: id },
           })
         }
+        otherAttention={!attention.clear}
         className="mb-5"
       />
 

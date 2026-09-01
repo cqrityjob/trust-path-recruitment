@@ -34,12 +34,21 @@ export interface PassportEvidenceProvenance {
   readonly hasPassport: boolean;
   readonly verifiedCredentialCount: number;
   readonly verifiedExperienceCount: number;
+  /** Employment periods on record at any assertion level. The Journey uses
+   *  it to answer "do we know anything about this person's working life",
+   *  never to place them on a career ladder — see JourneyEvidenceInput. */
+  readonly recordedExperienceCount: number;
+  /** Whether the holder has stated a work country. Presence only: the code
+   *  itself never leaves the Passport through this function. */
+  readonly hasWorkCountry: boolean;
 }
 
 const NONE: PassportEvidenceProvenance = {
   hasPassport: false,
   verifiedCredentialCount: 0,
   verifiedExperienceCount: 0,
+  recordedExperienceCount: 0,
+  hasWorkCountry: false,
 };
 
 /**
@@ -57,10 +66,15 @@ export async function readPassportEvidenceProvenance(
   supabase: any,
   userId: string,
 ): Promise<PassportEvidenceProvenance> {
-  const [profileRes, claimRes, expRes] = await Promise.all([
+  const [profileRes, claimRes, expRes, recordedExpRes] = await Promise.all([
     supabase
       .from("sp_passport_profiles")
-      .select("holder_user_id")
+      // `jurisdiction_code` is read as a PRESENCE test and nothing else. The
+      // value is not returned by this function and no caller can reach it;
+      // the Passport's own surfaces render the work location, with the
+      // sub-jurisdiction attached, because a Dubai holder is not a UAE-wide
+      // one and only `formatWorkLocation` keeps that true.
+      .select("holder_user_id, jurisdiction_code")
       .eq("holder_user_id", userId)
       .maybeSingle(),
     supabase
@@ -75,17 +89,27 @@ export async function readPassportEvidenceProvenance(
       .eq("holder_user_id", userId)
       .eq("assertion_level", "verified")
       .eq("lifecycle_state", "active"),
+    // Every active period, at any assertion level. Deliberately separate
+    // from the verified count above rather than replacing it: they answer
+    // different questions and the Journey is allowed to do different things
+    // with them.
+    supabase
+      .from("sp_experience_periods")
+      .select("id", { count: "exact", head: true })
+      .eq("holder_user_id", userId)
+      .eq("lifecycle_state", "active"),
   ]);
 
   // A Passport read failure must never break a career report. The journey
   // then reads as self-reported only, which is TRUE — it is what the
   // journey would have said for a holder with no verified evidence — so
   // the degraded state cannot make a claim the full state would not.
-  if (profileRes.error || claimRes.error || expRes.error) {
+  if (profileRes.error || claimRes.error || expRes.error || recordedExpRes.error) {
     console.error("[passport] journey evidence read failed", {
       profile: profileRes.error?.message,
       claims: claimRes.error?.message,
       experience: expRes.error?.message,
+      recordedExperience: recordedExpRes.error?.message,
     });
     return NONE;
   }
@@ -94,6 +118,8 @@ export async function readPassportEvidenceProvenance(
     hasPassport: profileRes.data !== null,
     verifiedCredentialCount: claimRes.count ?? 0,
     verifiedExperienceCount: expRes.count ?? 0,
+    recordedExperienceCount: recordedExpRes.count ?? 0,
+    hasWorkCountry: typeof profileRes.data?.jurisdiction_code === "string",
   };
 }
 

@@ -50,10 +50,26 @@ import {
   type SecurityCareerProfileDraft,
 } from "@/lib/security-career-profile/types";
 
-function readPassportProfessionIntent(): boolean {
+/**
+ * "Open the editor" and "offer a way back to the Passport" are two different
+ * intents, and they used to be one boolean.
+ *
+ * `edit=profession` is the request to open the canonical editor, and it is
+ * now honoured whoever sent it -- My Career's own next best action links
+ * here for the situation, profession and experience fields, and requiring
+ * `from=passport` meant that link opened a page with the editor closed and
+ * nothing indicating what to do. `from=passport` continues to mean the one
+ * thing it always meant: the holder came from the Passport, so show them
+ * the way back once they have saved.
+ */
+function readEditIntent(): boolean {
   if (typeof window === "undefined") return false;
-  const params = new URLSearchParams(window.location.search);
-  return params.get("edit") === "profession" && params.get("from") === "passport";
+  return new URLSearchParams(window.location.search).get("edit") === "profession";
+}
+
+function readReturnToPassport(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("from") === "passport";
 }
 
 export function SecurityCareerProfileCard() {
@@ -68,7 +84,8 @@ export function SecurityCareerProfileCard() {
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [professions, setProfessions] = useState<CurrentProfessionOption[]>([]);
-  const [passportEditIntent] = useState(readPassportProfessionIntent);
+  const [editIntent] = useState(readEditIntent);
+  const [returnToPassport] = useState(readReturnToPassport);
   const autoOpened = useRef(false);
   const getProfile = useServerFn(getMySecurityCareerProfile);
   const upsertProfile = useServerFn(upsertMySecurityCareerProfile);
@@ -112,7 +129,7 @@ export function SecurityCareerProfileCard() {
   // only after the holder's saved profile has loaded. A normal /my-career visit
   // remains unchanged.
   useEffect(() => {
-    if (!loaded || !passportEditIntent || autoOpened.current) return;
+    if (!loaded || !editIntent || autoOpened.current) return;
     autoOpened.current = true;
     setEditDraft(draft);
     setStatus("idle");
@@ -120,26 +137,26 @@ export function SecurityCareerProfileCard() {
     requestAnimationFrame(() => {
       document.getElementById("career-profile")?.scrollIntoView({ block: "start" });
     });
-  }, [draft, loaded, passportEditIntent]);
+  }, [draft, loaded, editIntent]);
 
   // Once the dialog has mounted, put keyboard focus on the profession picker
   // when it exists. If current status does not expose profession yet, the
   // dialog still opens at the gating status question rather than inventing a
   // profession control.
   useEffect(() => {
-    if (!open || !passportEditIntent) return;
+    if (!open || !editIntent) return;
     requestAnimationFrame(() => {
       const select = document.querySelector<HTMLSelectElement>('[role="dialog"] select');
       select?.focus();
     });
-  }, [open, passportEditIntent]);
+  }, [open, editIntent]);
 
   useEffect(() => {
-    if (status !== "saved" || !passportEditIntent) return;
+    if (status !== "saved" || !returnToPassport) return;
     requestAnimationFrame(() => {
       document.getElementById("scp-return-passport")?.focus();
     });
-  }, [status, passportEditIntent]);
+  }, [status, returnToPassport]);
 
   const save = async () => {
     setStatus("saving");
@@ -222,7 +239,7 @@ export function SecurityCareerProfileCard() {
         <p className="text-sm text-muted-foreground">{t("sca.scp.summary.empty")}</p>
       )}
 
-      {passportEditIntent && status === "saved" ? (
+      {returnToPassport && status === "saved" ? (
         <div className="mt-4 rounded-md border border-border bg-secondary/40 p-3">
           <p role="status" className="text-sm text-foreground">
             {lang === "sv"

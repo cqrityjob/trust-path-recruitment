@@ -105,13 +105,51 @@ const EXPERIENCE_RANK: Readonly<Record<YearsOfExperience, JourneyStageRank>> = {
  * never enough: "8+ years" of unspecified work in an unspecified role
  * places nobody anywhere, and treating it as a baseline is exactly the kind
  * of confident guess this model is built to refuse.
+ *
+ * ── AND THE PASSPORT COUNTS AS AN ANSWER ───────────────────────────────
+ *
+ * This function used to read the canonical profile and nothing else, so a
+ * holder with a dated employment history, credentials and a stated work
+ * country — all of it sitting in their own Passport, all of it read by the
+ * very same server function that calls this one — was told the product did
+ * not know enough about their background. The product knew. It was asking
+ * one table.
+ *
+ * A recorded employment is a statement about somebody's working life, so it
+ * establishes THAT there is a background. It establishes nothing about
+ * seniority: `resolveBaseline` is unchanged and still places such a person
+ * at the conservative floor, which is what it already did for anybody whose
+ * status did not resolve. Knowing a person has worked cannot move them up
+ * the ladder; it can only stop the product claiming ignorance of a fact it
+ * holds.
  */
-export function hasUsableSituation(profile: JourneyProfileInput | null): boolean {
+export function hasUsableSituation(
+  profile: JourneyProfileInput | null,
+  evidence: JourneyEvidenceInput | null = null,
+): boolean {
+  return hasUsableSituationFromProfile(profile) || backgroundKnownFromPassport(evidence);
+}
+
+/** The canonical profile alone answers "where are you today". Split out so
+ *  the engine can tell a profile-stated situation from a Passport-inferred
+ *  one without asking the question twice in two shapes. */
+function hasUsableSituationFromProfile(profile: JourneyProfileInput | null): boolean {
   if (!profile) return false;
   if (profile.currentProfessionSlug !== null) return true;
   if (profile.currentProfessionOther !== null && profile.currentProfessionOther.trim() !== "")
     return true;
   return profile.currentStatus !== null && profile.currentStatus !== "other";
+}
+
+/** The Passport knows something about this person's working life.
+ *
+ *  Employment is the only signal that qualifies. A credential says what
+ *  somebody has been taught and a work country says where they are, and
+ *  neither answers "what have you been doing" — the question the unknown
+ *  branch claims to have no answer for. */
+export function backgroundKnownFromPassport(evidence: JourneyEvidenceInput | null): boolean {
+  if (!evidence) return false;
+  return evidence.recordedExperienceCount > 0 || evidence.verifiedExperienceCount > 0;
 }
 
 /**
@@ -155,7 +193,7 @@ function provenanceFor(
   profile: JourneyProfileInput | null,
   evidence: JourneyEvidenceInput | null,
 ): ReadinessProvenance {
-  if (!hasUsableSituation(profile)) return "unknown";
+  if (!hasUsableSituation(profile, evidence)) return "unknown";
   return hasVerifiedEvidence(evidence) ? "self_reported_with_verified_evidence" : "self_reported";
 }
 
@@ -264,7 +302,7 @@ export function computeCareerJourney(input: ComputeJourneyInput): CareerJourney 
   // placed before any rule that could produce path language. That is what
   // makes "we do not know your situation" and "your possible next step"
   // structurally unable to appear on the same page.
-  if (!profile || !hasUsableSituation(profile)) {
+  if (!hasUsableSituation(profile, evidence)) {
     return {
       known: false,
       provenance,
@@ -285,11 +323,33 @@ export function computeCareerJourney(input: ComputeJourneyInput): CareerJourney 
     };
   }
 
-  const baseline = resolveBaseline(profile);
+  // Past the unknown branch there is a situation, but it may have come from
+  // the Passport rather than from the canonical profile — a holder with
+  // employment on record and an empty profile row. Every field below is then
+  // genuinely null, and an empty profile is the honest way to say so: it
+  // resolves to the conservative baseline, it is adjacent to nothing, and it
+  // claims no career area. What it does NOT do is send the person back to
+  // "we know nothing about you" when the Passport plainly knows something.
+  const situated: JourneyProfileInput = profile ?? {
+    currentStatus: null,
+    currentProfessionSlug: null,
+    currentProfessionTitleSv: null,
+    currentProfessionTitleEn: null,
+    currentProfessionOther: null,
+    yearsOfExperience: null,
+    currentProfessionStage: null,
+    currentProfessionAreaId: null,
+  };
+
+  const baseline = resolveBaseline(situated);
   const verified = hasVerifiedEvidence(evidence);
+  // Stated as a reason so the sentence "we know this from your Passport" is
+  // explainable rather than merely true.
+  const fromPassport =
+    !hasUsableSituationFromProfile(profile) && backgroundKnownFromPassport(evidence);
 
   const professions: JourneyProfession[] = targets.map((t) => {
-    const { category, reasons } = classifyOne(t, profile, baseline, reachableCigSlugs, evidence);
+    const { category, reasons } = classifyOne(t, situated, baseline, reachableCigSlugs, evidence);
     return {
       professionId: t.professionId,
       cigProfessionSlug: t.cigProfessionSlug,
@@ -300,7 +360,11 @@ export function computeCareerJourney(input: ComputeJourneyInput): CareerJourney 
       provenance,
       regulated: t.regulated,
       transitionDifficulty: t.transitionDifficulty,
-      reasons: verified ? [...reasons, "verified_evidence_present"] : reasons,
+      reasons: [
+        ...reasons,
+        ...(fromPassport ? (["background_known_from_passport"] as ReadinessReason[]) : []),
+        ...(verified ? (["verified_evidence_present"] as ReadinessReason[]) : []),
+      ],
     };
   });
 
@@ -308,11 +372,11 @@ export function computeCareerJourney(input: ComputeJourneyInput): CareerJourney 
     known: true,
     provenance,
     whereYouAreToday: {
-      currentStatus: profile.currentStatus,
-      professionTitleSv: profile.currentProfessionTitleSv,
-      professionTitleEn: profile.currentProfessionTitleEn,
-      professionOther: profile.currentProfessionOther,
-      yearsOfExperience: profile.yearsOfExperience,
+      currentStatus: situated.currentStatus,
+      professionTitleSv: situated.currentProfessionTitleSv,
+      professionTitleEn: situated.currentProfessionTitleEn,
+      professionOther: situated.currentProfessionOther,
+      yearsOfExperience: situated.yearsOfExperience,
     },
     professions,
     readinessVersion: READINESS_VERSION,

@@ -80,12 +80,27 @@ export function AttentionPanel({
   summary,
   onOpenEntry,
   className,
+  /**
+   * Something else on this page is already showing the holder something.
+   *
+   * This panel answers for lifecycle and expiry only. The verification
+   * OUTCOMES panel answers for decisions, and it sits directly above. With
+   * a refusal on screen and nothing expiring, this panel would otherwise
+   * print "nothing is waiting on you" underneath it — the page contradicting
+   * itself about the one question the holder came to ask.
+   */
+  otherAttention = false,
 }: {
   summary: AttentionSummary;
   onOpenEntry?: (kind: "claim" | "experience", id: string) => void;
   className?: string;
+  otherAttention?: boolean;
 }) {
   const { pt } = usePassportCopy();
+
+  // Nothing of its own to report, and the outcomes panel above is already
+  // speaking. A heading over four empty buckets is not a calmer page.
+  if (summary.clear && otherAttention) return null;
 
   return (
     <section className={`rounded-xl border border-border bg-card p-5 ${className ?? ""}`}>

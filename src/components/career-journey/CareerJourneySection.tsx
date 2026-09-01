@@ -41,6 +41,10 @@ import {
   yearsOfExperienceOptions,
 } from "@/lib/security-career-profile/options";
 import { pickText } from "@/lib/assessment-content";
+// The one contract that says where each part of the profile is edited. The
+// journey's own "what is missing" CTA and My Career's next best action must
+// send a person to the same place for the same field.
+import { SECTION_DESTINATIONS } from "@/lib/professional-identity/profile-destinations";
 
 /** The Journey renders in the locale of the REPORT it sits inside, not the
  *  live site toggle — same rule V31ReportView follows for frozen content,
@@ -92,6 +96,7 @@ const REASON_KEY: Readonly<Record<string, TranslationKey>> = {
   entry_role_open_to_newcomers: "cj.reason.entryRole",
   not_adjacent_to_current_work: "cj.reason.notAdjacent",
   verified_evidence_present: "cj.reason.verifiedEvidence",
+  background_known_from_passport: "cj.reason.backgroundFromPassport",
 };
 
 function titleOf(p: JourneyProfession, locale: Locale): string {
@@ -276,8 +281,19 @@ export function CareerJourneySection({
                 : t("cj.unknown.body")}
             </p>
             {mode === "authenticated" ? (
+              // ── THE CTA NAMES THE MISSING THING ───────────────────
+              //
+              // It used to say "fill in my background" and land on
+              // /my-career, which is a dashboard: the person arrived with
+              // no indication of which of its several products held the
+              // answer. This branch is reached for exactly one reason --
+              // no stated situation and no employment on record -- so the
+              // link goes to the situation question itself, with the
+              // intent that opens the editor on arrival. One destination
+              // taken from the shared contract, so it cannot drift from
+              // the one the next best action uses for the same field.
               <Link
-                to="/my-career"
+                to={SECTION_DESTINATIONS.situation.href}
                 className="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-sm font-semibold text-accent-foreground no-underline transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {t("cj.unknown.cta")}

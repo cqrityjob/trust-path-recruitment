@@ -53,10 +53,10 @@ import { c, L, Lf, type Copy, type Lang } from "@/components/professional-identi
 import { useT } from "@/i18n/context";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
 import {
-  COMPLETENESS_SECTION_ORDER,
   computeProfileCompleteness,
   type CompletenessSection,
 } from "@/lib/professional-identity/completeness";
+import { SECTION_DESTINATIONS } from "@/lib/professional-identity/profile-destinations";
 import {
   CREDENTIAL_CLAIM_TYPES,
   EDUCATION_CLAIM_TYPES,
@@ -74,7 +74,10 @@ import { formatWorkLocation } from "@/lib/security-passport/format";
 // The experience BAND is a stored enum -- "1-3", "10+", "<1". The catalogue
 // that owns those ids owns their labels too, and it is the same one the
 // editor on this page offers, so the row and the form can never disagree.
-import { yearsOfExperienceOptions } from "@/lib/security-career-profile/options";
+import {
+  currentStatusOptions,
+  yearsOfExperienceOptions,
+} from "@/lib/security-career-profile/options";
 
 export const Route = createFileRoute("/_authenticated/my-career/profile")({
   ssr: false,
@@ -119,6 +122,7 @@ const COPY = {
 } as const;
 
 const SECTION_TITLE: Readonly<Record<CompletenessSection, Copy>> = {
+  situation: c("Din situation", "Your situation"),
   identity: c("Namn och yrkestitel", "Name and professional title"),
   profession: c("Nuvarande yrke", "Current profession"),
   experience: c("Erfarenhet", "Experience"),
@@ -130,22 +134,10 @@ const SECTION_TITLE: Readonly<Record<CompletenessSection, Copy>> = {
   careerDirection: c("Karriärriktning", "Career direction"),
 };
 
-/** Who writes this section. Presentation of an architectural fact, not a
- *  permission: every write still goes through the owning product's own
- *  server function and its own rules. */
-type Owner = "profile" | "passport" | "discovery";
-
-const SECTION_OWNER: Readonly<Record<CompletenessSection, Owner>> = {
-  identity: "passport",
-  profession: "profile",
-  experience: "profile",
-  location: "passport",
-  employment: "passport",
-  education: "passport",
-  skills: "passport",
-  languages: "passport",
-  careerDirection: "discovery",
-};
+// Who writes each section, and where. Read from the shared contract rather
+// than restated here: this page had its own copy of the ownership map, and a
+// second copy is how the page and the recommendation start disagreeing about
+// where a person should be sent for the same missing field.
 
 /** A verification mark, or an explicit statement that there is not one.
  *  Never nothing: silence next to a credential reads as approval. */
@@ -181,6 +173,19 @@ function summarise(
 ): { text: string; claims: readonly IdentityClaim[] } {
   const count = (types: readonly string[]) => claimsOfType(identity.claims, types);
   switch (section) {
+    case "situation":
+      // The stored enum is never printed. `currentStatusOptions` is the same
+      // catalogue the editor offers, so the row and the form say the same
+      // word -- the rule this page already applies to profession and to the
+      // experience band.
+      return {
+        text:
+          (identity.currentStatus
+            ? (currentStatusOptions.find((o) => o.id === identity.currentStatus)?.label[lang] ??
+              null)
+            : null) ?? L(COPY.empty, lang),
+        claims: [],
+      };
     case "identity":
       return { text: identity.headline ?? L(COPY.empty, lang), claims: [] };
     case "profession":
@@ -246,6 +251,9 @@ function ProfilePage() {
   const retry = () => void query.refetch();
 
   const identity = query.data;
+  // Once per render, not once per row: the map below called this for every
+  // section it drew.
+  const completeness = identity ? computeProfileCompleteness(identity) : null;
 
   return (
     <SiteLayout>
@@ -265,7 +273,7 @@ function ProfilePage() {
           </div>
         )}
 
-        {identity && (
+        {identity && completeness && (
           <div className="space-y-8">
             {/* `variant="profile"` is what makes this page announce itself.
                 It used to mount the dashboard's own hero unchanged, so the
@@ -319,12 +327,16 @@ function ProfilePage() {
               </p>
 
               <ul className="mt-5 divide-y divide-border rounded-xl border border-border bg-card">
-                {COMPLETENESS_SECTION_ORDER.map((section) => {
-                  const owner = SECTION_OWNER[section];
+                {/* Only the sections this person is actually asked. The
+                    profession and experience follow-ups are not put to
+                    somebody outside the industry -- the editor does not
+                    render them -- so drawing them here as unfilled rows
+                    would list two permanent failures against a profile that
+                    has answered everything it was asked. */}
+                {completeness.applicableSections.map((section) => {
+                  const { owner, href } = SECTION_DESTINATIONS[section];
                   const { text, claims } = summarise(identity, section, l);
-                  const done = computeProfileCompleteness(identity).completedSections.includes(
-                    section,
-                  );
+                  const done = completeness.completedSections.includes(section);
                   return (
                     <li key={section} className="p-4 md:p-5">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -361,9 +373,15 @@ function ProfilePage() {
                         </p>
                       )}
 
+                      {/* The section's OWN destination, not its product's
+                          front door. "Add your work experience" that lands
+                          at the top of a long Passport page leaves the
+                          person to find the section themselves, which is
+                          the same errand the recommendation was supposed to
+                          have done for them. */}
                       {!done && owner !== "profile" && (
                         <Link
-                          to={owner === "passport" ? "/passport" : "/security-career-assessment"}
+                          to={href}
                           className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent underline-offset-4 hover:underline"
                         >
                           {L(owner === "passport" ? COPY.openPassport : COPY.openDiscovery, l)}
