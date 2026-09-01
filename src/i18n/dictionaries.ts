@@ -5565,7 +5565,8 @@ export const dictionaries = {
     "jobs.apply.cv.untitled": "Untitled CV",
     "jobs.apply.cv.updated": "updated {date}",
     "jobs.apply.cv.shared": "The CV you choose is sent to {employer} with your application.",
-    "jobs.apply.cv.sharedGeneric": "The CV you choose is sent to the employer with your application.",
+    "jobs.apply.cv.sharedGeneric":
+      "The CV you choose is sent to the employer with your application.",
     "jobs.apply.cv.none": "You do not have a saved CQrityjob CV yet.",
     "jobs.apply.cv.create": "Create your CQrityjob CV",
     "jobs.apply.cv.finish": "Finish your CV",

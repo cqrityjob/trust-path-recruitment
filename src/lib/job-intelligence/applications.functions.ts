@@ -83,10 +83,14 @@ const MAX_CV_BYTES = 5 * 1024 * 1024; // 5MB, matches the DB CHECK constraint
 const PDF_MAGIC = "%PDF-";
 
 async function loadApplication(ctx: Ctx, applicationId: string) {
+  // Deliberately narrow, and deliberately WITHOUT cv_document_snapshot. Three
+  // callers use this to authorise an action; none of them renders a CV, and a
+  // submitted CV is the largest payload on the table. getApplicationSubmittedCv
+  // asks for it separately, once, when somebody is actually going to read it.
   const { data, error } = await ctx.supabase
     .from("job_applications")
     .select(
-      "id, job_id, employer_id, applicant_user_id, status, cv_storage_path, cv_source, cv_document_snapshot, created_at",
+      "id, job_id, employer_id, applicant_user_id, status, cv_storage_path, cv_source, created_at",
     )
     .eq("id", applicationId)
     .maybeSingle();
@@ -103,7 +107,6 @@ async function loadApplication(ctx: Ctx, applicationId: string) {
     status: ApplicationStatus;
     cv_storage_path: string | null;
     cv_source: ApplicationCvSource;
-    cv_document_snapshot: unknown;
     created_at: string;
   };
 }
@@ -732,10 +735,31 @@ export const getApplicationSubmittedCv = createServerFn({ method: "POST" })
 
     const source: ApplicationCvSource = app.cv_source ?? "upload";
     if (source !== "cqrityjob_cv") {
-      return { source, document: null, title: null, submittedAt: app.created_at, unreadable: false };
+      return {
+        source,
+        document: null,
+        title: null,
+        submittedAt: app.created_at,
+        unreadable: false,
+      };
     }
 
-    const parsed = applicationCvSnapshotSchema.safeParse(app.cv_document_snapshot ?? {});
+    // Only now, and only for a row this caller has already been authorised
+    // for. Same RLS-scoped client, and the id is the one loadApplication
+    // already resolved -- there is no second chance to name a different row.
+    const { data: snapshotRow, error: snapshotErr } = await ctx.supabase
+      .from("job_applications")
+      .select("cv_document_snapshot")
+      .eq("id", app.id)
+      .maybeSingle();
+    if (snapshotErr) {
+      // Unknown is not none. The row says a CQrityjob CV was submitted, so it
+      // was; failing to read it is ours to report, not theirs to be blamed for.
+      console.error("[applications] submitted CV read failed", snapshotErr);
+      return { source, document: null, title: null, submittedAt: app.created_at, unreadable: true };
+    }
+
+    const parsed = applicationCvSnapshotSchema.safeParse(snapshotRow?.cv_document_snapshot ?? {});
     const document = parsed.success ? applicationCvDocument(parsed.data) : null;
     if (!document) {
       console.error("[applications] submitted CV snapshot could not be read", {

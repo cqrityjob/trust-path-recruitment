@@ -387,9 +387,7 @@ export const saveCvDraft = createServerFn({ method: "POST" })
       origin = "ai_assisted";
     }
 
-    const title =
-      data.title.trim() ||
-      (data.purpose === "targeted" ? "Anpassat CV" : "Allmänt CV");
+    const title = data.title.trim() || (data.purpose === "targeted" ? "Anpassat CV" : "Allmänt CV");
 
     if (data.cvId) {
       const { data: updated, error } = await supabase

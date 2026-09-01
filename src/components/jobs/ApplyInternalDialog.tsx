@@ -210,6 +210,29 @@ export function ApplyInternalDialog({
     setCvSource("upload");
   }
 
+  /** The opening state of the CV choice, from a known list of options.
+   *
+   *  ONE function, used when the list first arrives and again whenever the
+   *  form is reset, so a candidate who closes the dialog and opens it again
+   *  meets the same starting point rather than a quietly different one.
+   *
+   *  §6: preselect only where there is nothing to choose between -- exactly
+   *  one sendable CV, and no file attached. Everything else starts on the
+   *  upload path and waits to be told. `hasFile` is passed rather than read
+   *  from state because the caller knows whether it is about to clear it. */
+  function defaultCvChoice(options: readonly ApplicationCvOption[], hasFile: boolean) {
+    const usable = options.filter((c) => c.block === null);
+    if (usable.length === 0) {
+      setSelectedCvId(null);
+      setCvSource("upload");
+      return;
+    }
+    // The list is newest-first, so this is the most recently updated CV --
+    // and the screen names it before anything is submitted either way.
+    setSelectedCvId(usable[0].cvId);
+    setCvSource(usable.length === 1 && !hasFile ? "cqrityjob_cv" : "upload");
+  }
+
   function resetForm() {
     setPhone("");
     setCoverNote("");
@@ -218,8 +241,11 @@ export function ApplyInternalDialog({
     setFileError(null);
     setSubmitError(null);
     setSuccess(false);
-    setCvSource("upload");
-    setSelectedCvId(null);
+    if (cvOptions.status === "ready") defaultCvChoice(cvOptions.options, false);
+    else {
+      setCvSource("upload");
+      setSelectedCvId(null);
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -261,16 +287,7 @@ export function ApplyInternalDialog({
       .then((rows) => {
         if (!alive) return;
         setCvOptions({ status: "ready", options: rows });
-        // §6: a sensible default, only where it is unambiguous. Exactly one
-        // sendable CV and nothing attached yet -- and the screen still shows
-        // which document that is before anything is submitted.
-        const usable = rows.filter((r) => r.block === null);
-        if (usable.length === 1) {
-          setSelectedCvId(usable[0].cvId);
-          setCvSource((current) => (current === "upload" && !file ? "cqrityjob_cv" : current));
-        } else if (usable.length > 1) {
-          setSelectedCvId(usable[0].cvId);
-        }
+        defaultCvChoice(rows, file !== null);
       })
       .catch((err: unknown) => {
         console.error("[jobs] saved CV list read failed", err);
@@ -284,8 +301,7 @@ export function ApplyInternalDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, cvOptions.status, cvOptionsFn]);
 
-  const canSubmit =
-    consent && (cvSource === "upload" ? file !== null : selectedCvId !== null);
+  const canSubmit = consent && (cvSource === "upload" ? file !== null : selectedCvId !== null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -452,9 +468,7 @@ export function ApplyInternalDialog({
                 </legend>
 
                 {cvOptions.status === "loading" ? (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t("jobs.apply.cv.loading")}
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{t("jobs.apply.cv.loading")}</p>
                 ) : null}
 
                 {/* Unknown is not none. A read that failed says so, and the
@@ -498,7 +512,10 @@ export function ApplyInternalDialog({
                         </p>
                       ) : (
                         <>
-                          <Label htmlFor="apply-cv-choose" className="text-xs text-muted-foreground">
+                          <Label
+                            htmlFor="apply-cv-choose"
+                            className="text-xs text-muted-foreground"
+                          >
                             {t("jobs.apply.cv.choose")}
                           </Label>
                           <select

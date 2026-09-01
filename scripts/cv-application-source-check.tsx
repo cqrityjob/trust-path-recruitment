@@ -51,7 +51,10 @@ function group(name: string): void {
 /** Markup with the tags taken out, so an assertion about what a person reads
  *  is not accidentally satisfied by a class name. */
 function visibleText(markup: string): string {
-  return markup.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return markup
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 const DIALOG = read("src/components/jobs/ApplyInternalDialog.tsx");
@@ -163,9 +166,8 @@ ck(
 );
 ck(
   "a CV with no name is blocked, and says which reason",
-  cvApplicationBlock(
-    bundle({ identity: { ...bundle().identity, displayName: "   " } }),
-  ) === "no_name",
+  cvApplicationBlock(bundle({ identity: { ...bundle().identity, displayName: "   " } })) ===
+    "no_name",
 );
 ck(
   "a CV with no employment and no education is blocked as no_history",
@@ -239,6 +241,16 @@ ck(
   "trust is not reported as UNAVAILABLE either — it is simply not part of this artefact",
   doc !== null && doc.trust.unavailable === false,
 );
+// The fixture's credential carries `verified: true` in the frozen bundle,
+// because that flag is part of the saved document's schema. It must still
+// not put a verification mark in front of an employer: CvDocumentView reads
+// the LIVE annotations for that and the copy has none, so a confirmation
+// revoked after submission cannot survive here. A CV may freeze career
+// content; it must never freeze trust.
+ck(
+  "a frozen `verified` flag does not become a verification mark for the employer",
+  !text.includes("Verifierad") && !text.includes("Verified"),
+);
 
 // No identifier of any kind reaches the page.
 for (const forbidden of [
@@ -295,10 +307,7 @@ ck(
   "multiple usable CVs are chosen from explicitly",
   /jobs\.apply\.cv\.choose/.test(DIALOG) && /<select/.test(DIALOG),
 );
-ck(
-  "the person always sees WHICH CV will be submitted",
-  /jobs\.apply\.cv\.updated/.test(DIALOG),
-);
+ck("the person always sees WHICH CV will be submitted", /jobs\.apply\.cv\.updated/.test(DIALOG));
 ck(
   "selecting a CV is named as a disclosure next to the control",
   /jobs\.apply\.cv\.shared/.test(DIALOG),
@@ -357,8 +366,7 @@ ck(
 // surface is the thing that would open the second access path.
 ck(
   "no surface reads cv_documents on an employer's behalf",
-  !/from\(\s*["'`]cv_documents/.test(EMPLOYER_PAGE) &&
-    !/from\(\s*["'`]cv_documents/.test(SERVERFN),
+  !/from\(\s*["'`]cv_documents/.test(EMPLOYER_PAGE) && !/from\(\s*["'`]cv_documents/.test(SERVERFN),
 );
 ck(
   "the migration adds no employer policy to cv_documents",
@@ -384,7 +392,7 @@ ck(
 ck(
   "the old submission entry point keeps its exact signature",
   /CREATE OR REPLACE FUNCTION public\.sp_submit_application_with_passport\(/.test(MIGRATION) &&
-    /_include_passport      boolean DEFAULT false\)/.test(MIGRATION),
+    /_include_passport\s+boolean DEFAULT false\)/.test(MIGRATION),
 );
 ck(
   "it delegates rather than duplicating the implementation",

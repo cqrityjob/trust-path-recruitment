@@ -145,9 +145,15 @@ function Candidate360({
   // largest payload on this page and the smallest number of people need it,
   // and scp_application_candidate is shared with surfaces that must not
   // start carrying one.
+  // `hasCv` is true for an UPLOADED file and only for one, so an application
+  // that has it cannot also carry a CQrityjob CV -- the table forbids both at
+  // once. Skipping the read there is not an optimisation for its own sake: it
+  // keeps the largest payload on this page off every request that could not
+  // possibly need it.
   const submittedCvQuery = useQuery({
     queryKey: ["employer", employerId, "application", applicationId, "submitted-cv"],
     queryFn: () => submittedCvFn({ data: { applicationId } }),
+    enabled: query.data ? !query.data.hasCv : false,
   });
   const submittedCv = submittedCvQuery.data ?? null;
 
