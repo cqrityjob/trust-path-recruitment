@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
+import { isTestEngineOutput } from "@/lib/interview-intelligence/provider-mode";
 
 export type Tone = "neutral" | "work" | "confirmed" | "attention" | "governance" | "ai";
 
@@ -403,7 +404,10 @@ export function AssuranceChip({ assurance }: { assurance: string }) {
  */
 export function ProviderModeNote({ mode }: { mode: string }) {
   const { t } = useT();
-  if (mode === "synthetic") {
+  // The decision is imported rather than made here: this module holds the
+  // recruiter's vocabulary, and the engine's own mode names are not part of
+  // it -- a guard reads this file for them and refuses the raw value.
+  if (isTestEngineOutput(mode)) {
     return (
       <Panel tone="attention" role="status" title={t("iiu.mode.note.title")}>
         <p>{t("iiu.mode.note.body")}</p>
