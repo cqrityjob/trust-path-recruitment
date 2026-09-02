@@ -85,6 +85,50 @@ jobs:
       - name: Career Discovery v3.2 scoring equivalence check
         run: bun run career-discovery-v32-equivalence:check
 
+      # THE v3.1 ENGINE'S OWN GUARDS. Everything above proves properties of
+      # the instrument and the result; these four prove the engine itself and
+      # ran only on developer machines until now, so a change to a weight, a
+      # threshold or a frozen persona could merge green. The domain check
+      # re-parses the option-matrix migration to prove TypeScript and SQL
+      # agree on every loading, and pins EXPECTED_WEIGHTS and the frozen
+      # persona hashes. The professions check pins Layer 4: determinism, the
+      # inclusion thresholds, stage dominating fit, no percentage ever
+      # reaching a candidate, CID15 never contributing. The golden personas
+      # run the whole pipeline over the 14-profession first-wave catalogue
+      # for sixteen frozen personas. The recommendation check asserts every
+      # persona receives a recommendation and that ordering and eligibility
+      # stay separate. None of these reads the legacy 16-question
+      # career-assessment engine, which stays retired rather than guarded.
+      - name: Career Discovery v3.1 domain model check
+        run: bun run career-discovery-v31:check
+
+      - name: Career Discovery v3.1 profession matching check
+        run: bun run career-discovery-v31-professions:check
+
+      - name: Career Discovery v3.1 golden personas
+        run: bun run career-discovery-v31-golden-personas:check
+
+      - name: Career Discovery recommendation check
+        run: bun run career-discovery-recommendation:check
+
+      # THE REPORT A CANDIDATE READS BACK. A v3.1 snapshot must reach the
+      # v3.1 renderer, the locale the candidate read in is stored with the
+      # report, and completing the same answers twice yields an identical
+      # snapshot. The two guards after it have no package.json alias and are
+      # invoked by path on purpose -- adding one is a package.json change
+      # this PR does not make: the report must render with no AI call at all
+      # and an AI failure must degrade silently to the deterministic
+      # explanation, and a frozen report must never re-render in the live UI
+      # language, because a stored result has to read the same on every visit.
+      - name: Career Discovery report render check
+        run: bun run career-discovery-report:check
+
+      - name: Career Discovery v3.1 AI-explanation fallback check
+        run: bun run scripts/career-discovery-v31-ai-explanation-check.ts
+
+      - name: Career Discovery v3.1 report locale guard
+        run: bun run scripts/career-discovery-v31-locale-guard-check.ts
+
       # Answer-level profession differentiation. Every other Layer 4 guard
       # starts from a hand-written dimension vector, which proves the matcher
       # behaves and proves nothing about the instrument above it. This one
