@@ -127,7 +127,7 @@ async function openInterview(page: Page, slug: string, applicationId: string): P
   await expect(section).toBeVisible({ timeout: 45_000 });
 
   const start = section.getByRole("link", {
-    name: /Skapa en strukturerad intervju|Create a structured interview/i,
+    name: /Planera intervju|Plan an interview/i,
   });
   const open = section.getByRole("link", {
     name: /Öppna intervjun|Öppna rapporten|Open interview|Open report/i,
@@ -150,7 +150,7 @@ async function openInterview(page: Page, slug: string, applicationId: string): P
     await expect(options).not.toHaveCount(1, { timeout: 30_000 });
     await page.locator("#ii-pack").selectOption({ index: 1 });
     await page
-      .getByRole("button", { name: /Skapa intervju|Create interview/i })
+      .getByRole("button", { name: /Planera intervjun|Plan the interview/i })
       .first()
       .click();
   } else {
@@ -233,7 +233,7 @@ test("K · going back and clicking again opens the same case, never a second one
   const section = page.locator("section[aria-labelledby='candidate-structured-interview']");
   await expect(section).toBeVisible({ timeout: 45_000 });
   await expect(
-    section.getByRole("link", { name: /Skapa en strukturerad intervju|Create a structured/i }),
+    section.getByRole("link", { name: /Planera intervju|Plan an interview/i }),
   ).toHaveCount(0);
 });
 

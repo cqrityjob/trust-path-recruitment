@@ -37,7 +37,8 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
-  CaseStatusChip,
+  CaseHeader,
+  NextStepLink,
   WorkflowNav,
   Chip,
   LevelZeroNote,
@@ -58,6 +59,8 @@ import {
   setQuestionState,
   setSessionState,
 } from "@/lib/interview-intelligence/runtime.functions";
+import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
+import type { FollowUpReason } from "@/lib/interview-intelligence/context";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/interview",
@@ -78,6 +81,19 @@ const STATE_LABEL: Record<string, TranslationKey> = {
  *  the right one without reading eight. */
 const CLARIFY_PURPOSES = ["neutral_check", "correction"];
 
+/** Why an area from the application is on the support column, in the
+ *  recruiter's words. The same vocabulary the briefing uses on Prepare. */
+const REASON_LABEL: Record<FollowUpReason, TranslationKey> = {
+  assessment_follow_up: "iic.reason.assessment",
+  limited_evidence: "iic.reason.limited",
+  requirement_to_cover: "iic.reason.requirement",
+};
+
+/** How many of those areas reach the support column. The full list, with its
+ *  reasons and its suggestions, is on Prepare; mid-conversation a recruiter
+ *  needs a reminder, not the briefing again. */
+const CONTEXT_AREAS_SHOWN = 5;
+
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
@@ -95,6 +111,16 @@ function Page() {
     retry: false,
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["ii", "case", caseId] });
+
+  // The areas the application and the released assessment pointed at (PR18).
+  // Its own query, so a slow or failed read costs the reminder and never the
+  // interview. Read live and stored nowhere.
+  const contextFn = useServerFn(getInterviewCaseContext);
+  const contextQ = useQuery({
+    queryKey: ["ii", "context", caseId],
+    queryFn: () => contextFn({ data: { caseId } }),
+    retry: false,
+  });
 
   const [active, setActive] = useState(0);
   const [draft, setDraft] = useState("");
@@ -388,6 +414,9 @@ function Page() {
     ...(question?.probes ?? []).filter((p) => CLARIFY_PURPOSES.includes(p.purpose)),
     ...d.generalProbes.filter((p) => CLARIFY_PURPOSES.includes(p.purpose)),
   ];
+  const contextAreas = contextQ.data?.linked ? contextQ.data.followUps : [];
+  const contextHidden = Math.max(0, contextAreas.length - CONTEXT_AREAS_SHOWN);
+  const completed = session.status === "completed";
 
   /* ------------------------------------------------------------------ */
   /* Left · the questions                                                */
@@ -462,41 +491,28 @@ function Page() {
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId"
           params={{ employerSlug, caseId }}
-          className="text-accent underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
         >
           {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
       {/* Compact candidate context. It stays compact deliberately: the person
-          is in the room, and the screen's job is the question, not the file. */}
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        {/* The person, then the case. Every one of these screens led with
-            the case title -- internal bookkeeping -- and put the candidate
-            underneath it in muted grey. */}
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            {d.candidateDisplayName}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <CaseStatusChip status={d.status} />
-          <Chip
-            tone={session.status === "paused" ? "attention" : "work"}
-            srPrefix={t("iiu.iv.sess.srprefix")}
-          >
-            {session.status === "paused"
-              ? t("iiu.iv.sess.paused")
-              : session.status === "completed"
-                ? t("iiu.iv.sess.completed")
-                : t("iiu.iv.sess.inprogress")}
-          </Chip>
-          <Chip tone="work" srPrefix={t("iiu.iv.peacestep")}>
-            {uiLabel(PEACE_LABEL, session.peaceStage, t)}
-          </Chip>
-        </div>
-      </header>
+          is in the room, and the screen's job is the question, not the file.
+          The method's stage chip used to sit here too; a stage of the method
+          is method support, and lives with it below. */}
+      <div className="mt-3">
+        <CaseHeader
+          candidate={d.candidateDisplayName}
+          role={d.packName ?? d.title}
+          status={d.status}
+          action={
+            completed ? (
+              <NextStepLink status={d.status} employerSlug={employerSlug} caseId={caseId} />
+            ) : undefined
+          }
+        />
+      </div>
 
       <div className="mt-5">
         <WorkflowNav
@@ -506,6 +522,17 @@ function Page() {
           caseId={caseId}
         />
       </div>
+
+      {/* The conversation is over: say so first, and say what is next. The
+          notes below stay readable, but nothing on this screen is the
+          recruiter's job any more. */}
+      {completed && (
+        <div className="mt-5 max-w-3xl">
+          <Panel tone="confirmed" role="status" title={t("iiu.iv.completed.title")}>
+            <p>{t(d.aiAvailable ? "iiu.iv.completed.body" : "iiu.iv.completed.body.manual")}</p>
+          </Panel>
+        </div>
+      )}
 
       {session.status === "paused" && (
         <div className="mt-5 max-w-3xl">
@@ -592,13 +619,12 @@ function Page() {
               <h2 className="mt-2 max-w-[46ch] text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
                 {question.promptSv}
               </h2>
+              {/* The question's number and whether it is covered. Its type
+                  (behavioural, situational) is guide metadata and reads in
+                  the guide on Prepare; beside a live question it was one more
+                  chip between the recruiter and the sentence to ask. */}
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <Chip tone="work">{question.code}</Chip>
-                <Chip>
-                  {question.questionType === "behavioural"
-                    ? t("iiu.iv.type.behavioural")
-                    : t("iiu.iv.type.situational")}
-                </Chip>
                 <Chip
                   tone={isCovered(question.id) ? "confirmed" : "neutral"}
                   srPrefix={t("iiu.iv.questionstatus")}
@@ -688,46 +714,53 @@ function Page() {
                 />
               </div>
 
+              {/* The question-state controls belong to a conversation that is
+                  still going. Once it is complete the notes stay readable
+                  and the one action on the screen is the next stage. */}
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className={PRIMARY_BUTTON}
-                  onClick={() =>
-                    setQState.mutate({
-                      sessionId: session.id,
-                      questionId: question.id,
-                      state: "answered",
-                    })
-                  }
-                >
-                  {t("iiu.lv.mark")}
-                </button>
-                <button
-                  type="button"
-                  className={BUTTON}
-                  onClick={() =>
-                    setQState.mutate({
-                      sessionId: session.id,
-                      questionId: question.id,
-                      state: "incomplete",
-                    })
-                  }
-                >
-                  {t("iiu.iv.state.incomplete")}
-                </button>
-                <button
-                  type="button"
-                  className={BUTTON}
-                  onClick={() =>
-                    setQState.mutate({
-                      sessionId: session.id,
-                      questionId: question.id,
-                      state: "revisit",
-                    })
-                  }
-                >
-                  {t("iiu.iv.state.revisit")}
-                </button>
+                {!completed && (
+                  <>
+                    <button
+                      type="button"
+                      className={PRIMARY_BUTTON}
+                      onClick={() =>
+                        setQState.mutate({
+                          sessionId: session.id,
+                          questionId: question.id,
+                          state: "answered",
+                        })
+                      }
+                    >
+                      {t("iiu.lv.mark")}
+                    </button>
+                    <button
+                      type="button"
+                      className={BUTTON}
+                      onClick={() =>
+                        setQState.mutate({
+                          sessionId: session.id,
+                          questionId: question.id,
+                          state: "incomplete",
+                        })
+                      }
+                    >
+                      {t("iiu.iv.state.incomplete")}
+                    </button>
+                    <button
+                      type="button"
+                      className={BUTTON}
+                      onClick={() =>
+                        setQState.mutate({
+                          sessionId: session.id,
+                          questionId: question.id,
+                          state: "revisit",
+                        })
+                      }
+                    >
+                      {t("iiu.iv.state.revisit")}
+                    </button>
+                  </>
+                )}
                 <span className="ml-auto flex gap-2">
                   <button
                     type="button"
@@ -916,6 +949,34 @@ function Page() {
                 )}
               </SupportGroup>
 
+              {/* 2b · what the application and the assessment already pointed
+                  at. Read live from the recruitment record, never stored
+                  here, and subordinate to the guide: areas to keep in mind,
+                  each with the reason it is here -- never questions to ask,
+                  and never something the candidate has to be asked about. */}
+              {contextAreas.length > 0 && (
+                <SupportGroup title={t("iiu.lv.context.areas")}>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    {t("iiu.lv.context.note")}
+                  </p>
+                  <ul className="mt-1.5 space-y-1.5">
+                    {contextAreas.slice(0, CONTEXT_AREAS_SHOWN).map((a) => (
+                      <li key={a.key} className="text-xs leading-relaxed text-foreground">
+                        {lang === "sv" ? a.sv : a.en}
+                        <span className="block text-[11px] text-muted-foreground">
+                          {t(REASON_LABEL[a.reason])}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {contextHidden > 0 && (
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                      {t("iic.more").replace("{n}", String(contextHidden))}
+                    </p>
+                  )}
+                </SupportGroup>
+              )}
+
               {/* 3 · checking you understood, not challenging the person */}
               {clarifiers.length > 0 && (
                 <SupportGroup title={t("iiu.lv.cat.clarify")}>
@@ -972,7 +1033,7 @@ function Page() {
                 the follow-ups first. */}
             <details className="group mt-4 border-t border-border pt-3">
               <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                {t("iiu.cd.sequence")}
+                {t("iiu.lv.method")}
               </summary>
               <GovernedGuidance
                 title={t("iiu.cd.sequence")}
@@ -1006,70 +1067,61 @@ function Page() {
         </aside>
       </div>
 
-      {/* ---- Closing the conversation ---- */}
-      <section aria-labelledby="s-session" className="mt-9 max-w-3xl border-t border-border pt-6">
-        <h2 id="s-session" className="text-base font-semibold text-foreground">
-          {t("iiu.lv.session")}
-        </h2>
-        {session.status !== "completed" ? (
-          <>
-            <label htmlFor="reflect" className="mt-3 block text-sm font-medium text-foreground">
-              {t("iiu.iv.reflection.title")}
-            </label>
-            <p id="reflect-hint" className="mt-0.5 max-w-[70ch] text-xs text-muted-foreground">
-              {t("iiu.iv.reflection.note")}
-            </p>
-            <textarea
-              id="reflect"
-              rows={3}
-              value={reflection}
-              onChange={(e) => setReflection(e.target.value)}
-              aria-describedby="reflect-hint"
-              className={`${FIELD} max-w-3xl`}
-            />
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={BUTTON}
-                onClick={() =>
-                  void guarded(() => setSState.mutate({ sessionId: session.id, status: "paused" }))
-                }
-              >
-                {t("iiu.iv.pause")}
-              </button>
-              <button
-                type="button"
-                className={PRIMARY_BUTTON}
-                onClick={() =>
-                  void guarded(() =>
-                    setSState.mutate({
-                      sessionId: session.id,
-                      status: "completed",
-                      peaceStage: "evaluation",
-                      processReflection: reflection || undefined,
-                    }),
-                  )
-                }
-              >
-                {t("iiu.iv.finish")}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="mt-3 max-w-3xl">
-            <Panel tone="confirmed" title={t("iiu.iv.completed.title")}>
-              <p>{t(d.aiAvailable ? "iiu.iv.completed.body" : "iiu.iv.completed.body.manual")}</p>
-            </Panel>
-            <Link
-              to="/employer/$employerSlug/interview-intelligence/$caseId/evidence"
-              params={{ employerSlug, caseId }}
-              className={`${PRIMARY_BUTTON} mt-3`}
+      {/* ---- Closing the conversation ----
+           Ending the interview is the one lifecycle move on this screen, and
+           it is drawn as the primary action only once every question is
+           covered. While questions remain, the primary action is covering
+           them, and ending early is possible but not what the screen leads
+           with. Once the session is complete this section is gone: the
+           header already says what is next. */}
+      {!completed && (
+        <section aria-labelledby="s-session" className="mt-9 max-w-3xl border-t border-border pt-6">
+          <h2 id="s-session" className="text-base font-semibold text-foreground">
+            {t("iiu.lv.session")}
+          </h2>
+          <label htmlFor="reflect" className="mt-3 block text-sm font-medium text-foreground">
+            {t("iiu.iv.reflection.title")}
+          </label>
+          <p id="reflect-hint" className="mt-0.5 max-w-[70ch] text-xs text-muted-foreground">
+            {t("iiu.iv.reflection.note")}
+          </p>
+          <textarea
+            id="reflect"
+            rows={3}
+            value={reflection}
+            onChange={(e) => setReflection(e.target.value)}
+            aria-describedby="reflect-hint"
+            className={`${FIELD} max-w-3xl`}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={BUTTON}
+              onClick={() =>
+                void guarded(() => setSState.mutate({ sessionId: session.id, status: "paused" }))
+              }
             >
-              {t("iiu.iv.toevidence")}
-            </Link>
+              {t("iiu.iv.pause")}
+            </button>
+            <button
+              type="button"
+              className={toCover.length === 0 ? PRIMARY_BUTTON : BUTTON}
+              onClick={() =>
+                void guarded(() =>
+                  setSState.mutate({
+                    sessionId: session.id,
+                    status: "completed",
+                    peaceStage: "evaluation",
+                    processReflection: reflection || undefined,
+                  }),
+                )
+              }
+            >
+              {t("iiu.iv.finish")}
+            </button>
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </>,
   );
 }

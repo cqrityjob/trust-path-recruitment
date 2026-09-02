@@ -23,7 +23,8 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
-  CaseStatusChip,
+  CaseHeader,
+  NextStepLink,
   WorkflowNav,
   Chip,
   Panel,
@@ -32,10 +33,8 @@ import {
   interviewErrorMessage,
   GovernedGuidance,
   MaterialBadge,
-  ProviderModeChip,
   ProviderModeNote,
   SOURCE_KIND_LABEL,
-  PURPOSE_LABEL,
   uiLabel,
   WithheldPanel,
   BUTTON,
@@ -167,31 +166,49 @@ function Page() {
       void refresh();
     },
   });
-  const markReady = useMutation({
-    mutationFn: () => readyFn({ data: { caseId } }),
-    onSuccess: refresh,
-  });
+  // "Mark the material as ready" was a button of its own between adding the
+  // material and planning the conversation. The runtime still has the
+  // transition -- draft -> sources_ready, refused when there is nothing to
+  // ground a plan in -- but a recruiter has no reason to press it: it is the
+  // first half of whichever preparation they do next, so it runs there.
+  const readyIfNeeded = async () => {
+    if (q.data?.status === "draft") await readyFn({ data: { caseId } });
+  };
+
   // The manual preparation path. With AI disabled this is how a case reaches
   // an approved plan at all — the questions and probes come from the governed
-  // pack either way, so what the interviewer adds is the conduct plan.
+  // guide either way, so what the interviewer adds is the conduct plan.
+  //
+  // A plan the interviewer wrote themselves is approved as it is saved. The
+  // approval boundary exists so that a DRAFT -- something proposed to the
+  // recruiter -- cannot start an interview until a person has stood behind
+  // it; here the person writing it is the person standing behind it, and
+  // asking them to approve their own words on a second click protected
+  // nothing. An AI draft keeps its separate approval below.
   const [timePlan, setTimePlan] = useState("");
   const [opening, setOpening] = useState("");
   const [closing, setClosing] = useState("");
   const manualPrep = useMutation({
-    mutationFn: () =>
-      manualPrepFn({
+    mutationFn: async () => {
+      await readyIfNeeded();
+      const { planId } = await manualPrepFn({
         data: {
           caseId,
           timePlan: timePlan || undefined,
           openingGuidance: opening || undefined,
           closingGuidance: closing || undefined,
         },
-      }),
+      });
+      await approveFn({ data: { planId } });
+    },
     onSuccess: () => void q.refetch(),
   });
 
   const generate = useMutation({
-    mutationFn: () => prepFn({ data: { caseId } }),
+    mutationFn: async () => {
+      await readyIfNeeded();
+      return prepFn({ data: { caseId } });
+    },
     onSuccess: refresh,
   });
   const approve = useMutation({
@@ -252,6 +269,11 @@ function Page() {
     "reported",
   ].includes(d.status);
 
+  // A plan can be written as soon as there is material to ground it in. The
+  // runtime still moves draft -> sources_ready first; the recruiter does not
+  // see that as a step.
+  const canPlan = d.status === "sources_ready" || (d.status === "draft" && d.sources.length > 0);
+
   const items = d.plan?.items ?? [];
   const openFindings = d.findings.filter((f) => f.resolutionState !== "resolved");
   // Two buckets a recruiter acts on differently: one is asked about in the
@@ -282,7 +304,9 @@ function Page() {
   const packUntranslated =
     lang === "en" && d.competencies.some((c) => !c.nameEn) && d.competencies.length > 0;
 
-  /* ---- the primary action for this screen, given where the case is ---- */
+  /* ---- the ONE primary action for this screen, given where the case is ----
+     Before the plan is approved the primary action is the setup form itself
+     (below), so the header carries nothing that could compete with it. */
   const headerAction =
     d.status === "prep_approved" ? (
       <button
@@ -294,13 +318,7 @@ function Page() {
         {t("iiu.pp.start")}
       </button>
     ) : started ? (
-      <Link
-        to="/employer/$employerSlug/interview-intelligence/$caseId/interview"
-        params={{ employerSlug, caseId }}
-        className={PRIMARY_BUTTON}
-      >
-        {t("iiu.pp.tointerview")}
-      </Link>
+      <NextStepLink status={d.status} employerSlug={employerSlug} caseId={caseId} />
     ) : null;
 
   return shell(
@@ -309,33 +327,25 @@ function Page() {
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId"
           params={{ employerSlug, caseId }}
-          className="text-accent underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
         >
           {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        {/* The person, then the case. Every one of these screens led with
-            the case title -- internal bookkeeping -- and put the candidate
-            underneath it in muted grey. */}
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            {d.candidateDisplayName}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
-          {/* Status and role. The pack's validation label and its content hash
-              used to sit here too: the first is governance metadata and the
-              second is a checksum, and neither is something a recruiter about
-              to meet a candidate can act on. Both remain available on the
-              overview, under the method disclosure, where an auditor looks. */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <CaseStatusChip status={d.status} />
-            <Chip>{d.packName ?? "—"}</Chip>
-          </div>
-        </div>
-        {headerAction && <div className="shrink-0">{headerAction}</div>}
-      </header>
+      {/* The person, then the role, then where the case is. The guide's
+          validation label and its content hash used to sit here too: the
+          first is governance metadata and the second is a checksum, and
+          neither is something a recruiter about to meet a candidate can act
+          on. Both remain under the report's audit details. */}
+      <div className="mt-3">
+        <CaseHeader
+          candidate={d.candidateDisplayName}
+          role={d.packName ?? d.title}
+          status={d.status}
+          action={headerAction}
+        />
+      </div>
 
       <div className="mt-5">
         <WorkflowNav
@@ -392,6 +402,11 @@ function Page() {
                         <Nothing>{t("iiu.pp.nosources")}</Nothing>
                       ) : (
                         <ul className="divide-y divide-border rounded-lg border border-border">
+                          {/* What each piece of material is and what it is
+                              called. How many passages it was split into and
+                              the processing purpose it was filed under are
+                              ingestion facts; they are recorded, and they are
+                              not something a recruiter reads here. */}
                           {d.sources.map((s) => (
                             <li
                               key={s.id}
@@ -399,10 +414,6 @@ function Page() {
                             >
                               <Chip tone="work">{uiLabel(SOURCE_KIND_LABEL, s.kind, t)}</Chip>
                               <span className="text-sm font-medium text-foreground">{s.label}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {s.passageCount} {t("iiu.pp.passages")} · {t("iiu.pp.purpose")}:{" "}
-                                {uiLabel(PURPOSE_LABEL, s.purposeCode, t)}
-                              </span>
                             </li>
                           ))}
                         </ul>
@@ -515,22 +526,15 @@ function Page() {
                         </Surface>
                       )}
 
-                      {d.status === "draft" && d.sources.length > 0 && (
-                        <button
-                          type="button"
-                          className={BUTTON}
-                          onClick={() => markReady.mutate()}
-                          disabled={markReady.isPending}
-                        >
-                          {t("iiu.pp.markready")}
-                        </button>
-                      )}
-
                       {/* An AI control that cannot run must not look like one.
                           The flag used to be OR'd with true, so this button
                           rendered as executable however the governed
-                          configuration was set. */}
-                      {!d.aiAvailable && d.status === "sources_ready" && (
+                          configuration was set.
+
+                          Either form appears as soon as there is material to
+                          ground a plan in; marking the material ready happens
+                          inside the save. */}
+                      {!d.aiAvailable && canPlan && (
                         <Surface>
                           <form
                             className="space-y-4"
@@ -600,18 +604,23 @@ function Page() {
                                 <p>{interviewErrorMessage(manualPrep.error, t)}</p>
                               </Panel>
                             )}
+                            <p className="text-xs leading-relaxed text-muted-foreground">
+                              {t("iiu.pp.plan.saveapprove.note")}
+                            </p>
                             <button
                               type="submit"
                               className={PRIMARY_BUTTON}
                               disabled={manualPrep.isPending}
                             >
-                              {manualPrep.isPending ? t("iiu.pp.saving") : t("iiu.pp.manual.save")}
+                              {manualPrep.isPending
+                                ? t("iiu.pp.saving")
+                                : t("iiu.pp.plan.saveapprove")}
                             </button>
                           </form>
                         </Surface>
                       )}
 
-                      {d.aiAvailable && d.status === "sources_ready" && (
+                      {d.aiAvailable && canPlan && (
                         <div>
                           <button
                             type="button"
@@ -628,7 +637,10 @@ function Page() {
                       {generate.isPending && <State kind="aiRunning" />}
                       {genResult && (
                         <div className="space-y-3">
-                          <ProviderModeChip mode={genResult.providerMode} />
+                          {/* The one provider fact a recruiter must read: that
+                              a rule-based test engine, not a model, wrote
+                              this. Which model, and which environment, is
+                              provenance and stays under the report's audit. */}
                           <ProviderModeNote mode={genResult.providerMode} />
                           {genResult.withheld.length > 0 && (
                             <WithheldPanel withheld={genResult.withheld} />
@@ -931,25 +943,6 @@ function Page() {
                   </ul>
                 </Disclosure>
               )}
-
-              {started && (
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <Link
-                    to="/employer/$employerSlug/interview-intelligence/$caseId/evidence"
-                    params={{ employerSlug, caseId }}
-                    className={BUTTON}
-                  >
-                    {t("iiu.pp.toreview")}
-                  </Link>
-                  <Link
-                    to="/employer/$employerSlug/interview-intelligence/$caseId/report"
-                    params={{ employerSlug, caseId }}
-                    className={BUTTON}
-                  >
-                    {t("iiu.rp.heading")}
-                  </Link>
-                </div>
-              )}
             </>
           }
           rail={
@@ -1011,41 +1004,43 @@ function Page() {
                 )}
               </RailPanel>
 
-              {/* ---- AI, and what it is not ----
-                  With the provider off this is a single sentence rather than
-                  an empty column with a dead button in it. */}
-              <RailPanel id="s-ai" title={t("iiu.pp.ai.title")}>
+              {/* ---- The method, available and not first ----
+                  Method support, in one quiet panel: what the recruiter owes
+                  this step, whether AI did anything, and the governed
+                  guidance behind the preparation. AI is not a selling point
+                  of the operational screen; with the provider off it is one
+                  sentence here rather than a panel of its own with a dead
+                  button in it, and with it on it is the disclosure of what
+                  it wrote. */}
+              <RailPanel id="s-about" title={t("iiu.pp.about.title")}>
                 {!d.aiAvailable && (
-                  <>
-                    <p className="text-sm font-medium text-foreground">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    <span className="font-medium text-foreground">
                       {t("iiu.pp.aidisabled.title")}
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      {t("iiu.pp.aidisabled.body")}
-                    </p>
-                  </>
+                    </span>{" "}
+                    {t("iiu.pp.aidisabled.body")}
+                  </p>
                 )}
                 {d.aiAvailable && d.plan && (
-                  <>
+                  <div className="mt-3">
                     <Eyebrow>{t("iiu.pp.airole.short")}</Eyebrow>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                       {(lang === "en" ? d.plan.aiDisclosureEn : d.plan.aiDisclosure) ??
                         d.plan.aiDisclosure}
                     </p>
-                  </>
+                  </div>
                 )}
-                {d.aiAvailable && !d.plan && (
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    {t("iiu.pp.s2.title")}
-                  </p>
-                )}
-              </RailPanel>
-
-              {/* ---- The method, available and not first ---- */}
-              <RailPanel id="s-about" title={t("iiu.pp.about.title")}>
-                <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
-                <Disclosure summary={t("iiu.pp.brief.method")} className="mt-3">
-                  <p className="text-xs leading-relaxed text-muted-foreground">
+                {/* The method's own stage, its responsibilities and its
+                    prohibitions: one click away, never in the way. Its
+                    heading names the method, and a heading is read aloud
+                    whether or not it is visible, so it sits inside the
+                    disclosure with the rest of the method. */}
+                <Disclosure
+                  summary={t("iiu.pp.brief.method")}
+                  className={d.aiAvailable && !d.plan ? "" : "mt-3"}
+                >
+                  <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
+                  <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
                     {t("iiu.cd.governed")}
                   </p>
                   <GovernedGuidance

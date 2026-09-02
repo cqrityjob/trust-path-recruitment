@@ -40,12 +40,17 @@ export function ReportFinalisation({
   isPending,
   employerSlug,
   caseId,
+  applicationId = null,
 }: {
   canFinalise: boolean;
   onFinalise: () => void;
   isPending: boolean;
   employerSlug: string;
   caseId: string;
+  /** The application this interview belongs to, when it has one. The member's
+   *  way out leads back to the candidate — the hub the interview was started
+   *  from — rather than to the interview's own overview. */
+  applicationId?: string | null;
 }) {
   const { t } = useT();
 
@@ -82,14 +87,25 @@ export function ReportFinalisation({
       <p className="mt-1 max-w-[68ch] text-sm leading-relaxed text-muted-foreground">
         {t("iiu.rp.await.body")}
       </p>
-      {/* Somewhere to go next rather than a dead end. */}
-      <Link
-        to="/employer/$employerSlug/interview-intelligence/$caseId"
-        params={{ employerSlug, caseId }}
-        className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline"
-      >
-        {t("iiu.rp.await.back")}
-      </Link>
+      {/* Somewhere to go next rather than a dead end: the candidate, when the
+          interview was started from an application; the interview otherwise. */}
+      {applicationId ? (
+        <Link
+          to="/employer/$employerSlug/applications/$applicationId"
+          params={{ employerSlug, applicationId }}
+          className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline"
+        >
+          {t("iiu.rp.await.back")}
+        </Link>
+      ) : (
+        <Link
+          to="/employer/$employerSlug/interview-intelligence/$caseId"
+          params={{ employerSlug, caseId }}
+          className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline"
+        >
+          {t("iiu.rp.await.back")}
+        </Link>
+      )}
     </Surface>
   );
 }

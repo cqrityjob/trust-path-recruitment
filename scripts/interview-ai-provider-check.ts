@@ -408,7 +408,7 @@ async function main(): Promise<void> {
     "6.13 no provider credential exists in this environment — production AI is NOT active",
   );
 
-  /* ---- 7. The mode reaches the record, not just the log ------------------ */
+  /* ---- 7. The mode reaches the record, but raw engine vocabulary stays out of the recruiter UI ---- */
   {
     const runtime = await import("node:fs/promises").then((fs) =>
       fs.readFile("src/lib/interview-intelligence/runtime.functions.ts", "utf8"),
@@ -440,13 +440,17 @@ async function main(): Promise<void> {
     const ui = await import("node:fs/promises").then((fs) =>
       fs.readFile("src/components/employer/interview/InterviewUi.tsx", "utf8"),
     );
+    // PR19 deliberately removed provider-mode chips from the ordinary recruiter
+    // workflow. The modes remain distinct in the provider selection and run
+    // record above; exposing their raw enum names in the recruiter shell would
+    // now be a regression, not a safety property.
     for (const mode of ["synthetic", "development_model", "production_model"]) {
-      ok(ui.includes(`"${mode}"`), `7.4 the UI distinguishes ${mode}`);
+      ok(!ui.includes(`"${mode}"`), `7.4 recruiter UI does not expose raw provider mode ${mode}`);
     }
-    // The copy moved into src/i18n/dictionaries.ts when the module was made
-    // bilingual, so the assertion follows it — and now demands BOTH languages.
-    // "This came from a test engine" is exactly the sentence an English-
-    // reading recruiter must not lose.
+    // The synthetic-engine warning remains governed copy in both languages so
+    // any surface that presents synthetic output can disclose it truthfully.
+    // What PR19 removed is the provider-mode CHIP, not the safety distinction
+    // or its copy.
     const dict = await import("node:fs/promises").then((fs) =>
       fs.readFile("src/i18n/dictionaries.ts", "utf8"),
     );
@@ -459,8 +463,8 @@ async function main(): Promise<void> {
       "7.5b and in English, so the same warning survives the language toggle",
     );
     ok(
-      ui.includes("iiu.mode.synthetic"),
-      "7.5c and the provider-mode chip still renders that label",
+      !ui.includes("iiu.mode.synthetic") && !ui.includes("ProviderModeChip"),
+      "7.5c the provider-mode chip stays out of the ordinary recruiter UI while the warning copy remains governed",
     );
   }
 

@@ -45,15 +45,15 @@ import {
   BUTTON,
   PRIMARY_BUTTON,
   FIELD,
-  CaseSteps,
-  CaseStatusChip,
-  NextStep,
+  CaseHeader,
+  WorkflowNav,
   Chip,
   Panel as InfoPanel,
   State,
   TrustStageBanner,
   interviewErrorMessage,
 } from "@/components/employer/interview/InterviewUi";
+import { Disclosure } from "@/components/employer/interview/InterviewLayout";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/panel",
@@ -163,38 +163,49 @@ function Page() {
 
   return shell(
     <div className="px-4 py-8 sm:px-6">
-      <Link
-        to="/employer/$employerSlug/interview-intelligence"
-        params={{ employerSlug }}
-        className="text-sm text-muted-foreground hover:underline"
-      >
-        Interview Intelligence
-      </Link>
+      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
+        <Link
+          to="/employer/$employerSlug/interview-intelligence/$caseId"
+          params={{ employerSlug, caseId }}
+          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
+        >
+          {t("iiu.ov.backtocase")}
+        </Link>
+      </nav>
 
-      <header className="mt-2">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{d.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{d.candidateDisplayName}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <CaseStatusChip status={d.status} />
-          {p?.state && (
-            <Chip tone={p.state === "individual" ? "attention" : "work"} srPrefix="Panelsteg">
-              {p.state === "individual"
-                ? t("iiu.pl.state.individual")
-                : p.state === "revealed"
-                  ? t("iiu.pl.state.revealed")
-                  : t("iiu.pl.state.closed")}
-            </Chip>
-          )}
-        </div>
-      </header>
-
-      <div className="mt-6 max-w-4xl">
-        <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
+      {/* The person, then the role. The case title is internal bookkeeping. */}
+      <div className="mt-3">
+        <CaseHeader
+          candidate={d.candidateDisplayName}
+          role={d.packName ?? d.title}
+          status={d.status}
+        />
       </div>
+      {p?.state && (
+        <div className="mt-2">
+          <Chip
+            tone={p.state === "individual" ? "attention" : "work"}
+            srPrefix={t("iiu.pl.srprefix.stage")}
+          >
+            {p.state === "individual"
+              ? t("iiu.pl.state.individual")
+              : p.state === "revealed"
+                ? t("iiu.pl.state.revealed")
+                : t("iiu.pl.state.closed")}
+          </Chip>
+        </div>
+      )}
 
-      <div className="mt-6">
-        <CaseSteps current={d.status} />
-        <NextStep status={d.status} />
+      {/* Joint review is part of Assess: several people assessing the same
+          material, then comparing. */}
+      <div className="mt-5">
+        <WorkflowNav
+          status={d.status}
+          current="assess"
+          step="assess"
+          employerSlug={employerSlug}
+          caseId={caseId}
+        />
       </div>
 
       <h2 className="mt-8 text-lg font-semibold text-foreground">{t("iiu.pl.title")}</h2>
@@ -237,11 +248,11 @@ function Page() {
                     {m.userId.slice(0, 8)}
                   </span>
                   {m.submittedAt ? (
-                    <Chip tone="confirmed" srPrefix="Status">
+                    <Chip tone="confirmed" srPrefix={t("iiu.chip.status")}>
                       {t("iiu.pl.submitted")}
                     </Chip>
                   ) : (
-                    <Chip tone="attention" srPrefix="Status">
+                    <Chip tone="attention" srPrefix={t("iiu.chip.status")}>
                       {t("iiu.pl.stillassessing")}
                     </Chip>
                   )}
@@ -279,7 +290,7 @@ function Page() {
                           {questionLabel(qid)}
                         </span>
                         {divergent && (
-                          <Chip tone="attention" srPrefix="Panel">
+                          <Chip tone="attention" srPrefix={t("iiu.pl.title")}>
                             {t("iiu.pl.disagree")}
                           </Chip>
                         )}
@@ -289,7 +300,7 @@ function Page() {
                           <li key={r.assessmentId} className="text-sm">
                             <p className="flex flex-wrap items-center gap-2">
                               <span className="font-mono text-xs text-muted-foreground">
-                                {r.isMine ? "Du" : r.assessorId.slice(0, 8)}
+                                {r.isMine ? t("iiu.pl.you") : r.assessorId.slice(0, 8)}
                               </span>
                               <span className="text-foreground">
                                 {t("iiu.ev.level")} {r.level}
@@ -364,7 +375,7 @@ function Page() {
                   onClick={() => conclude.mutate()}
                   disabled={conclude.isPending || conclusion.trim() === ""}
                 >
-                  {conclude.isPending ? "Sparar …" : "Spara panelens slutsats"}
+                  {conclude.isPending ? t("iiu.pl.saving") : t("iiu.pl.conclusion.save")}
                 </button>
               </div>
             )}
@@ -387,8 +398,15 @@ function Page() {
         params={{ employerSlug, caseId }}
         className={`${BUTTON} mt-8`}
       >
-        Till rapporten
+        {t("iiu.as.toreport")}
       </Link>
+
+      {/* The method, available and not first. */}
+      <div className="mt-8 max-w-4xl">
+        <Disclosure summary={t("iiu.pp.about.title")}>
+          <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
+        </Disclosure>
+      </div>
     </div>,
   );
 }

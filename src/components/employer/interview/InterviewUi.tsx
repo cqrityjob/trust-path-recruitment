@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
+import { isTestEngineOutput } from "@/lib/interview-intelligence/provider-mode";
 
 export type Tone = "neutral" | "work" | "confirmed" | "attention" | "governance" | "ai";
 
@@ -388,48 +389,12 @@ export function AssuranceChip({ assurance }: { assurance: string }) {
 }
 
 /**
- * Which engine produced this, said plainly.
- *
- * The four states are distinguished because they mean genuinely different
- * things to the person reading the output, and the difference is invisible
- * otherwise — the deterministic engine produces well-formed, plausible Swedish
- * that looks exactly like a model's. A recruiter who is not told cannot tell.
- *
- * Deliberately NOT colour-only: each carries its own words, and the synthetic
- * case is the one that gets the attention tone, because it is the one where
- * the output describes a rule rather than a reading of the candidate's
- * material.
+ * Which engine produced this, said plainly -- in the one form a recruiter
+ * needs. The four-way chip (synthetic, development model, production model,
+ * unavailable) used to sit beside every AI result; which model and which
+ * environment is provenance and lives under the report's audit details. What a
+ * recruiter must not miss is the synthetic case, and that is a sentence, below.
  */
-export function ProviderModeChip({ mode }: { mode: string }) {
-  const { t } = useT();
-  if (mode === "synthetic") {
-    return (
-      <Chip tone="attention" srPrefix={t("iiu.mode.srprefix")}>
-        {t("iiu.mode.synthetic")}
-      </Chip>
-    );
-  }
-  if (mode === "development_model") {
-    return (
-      <Chip tone="ai" srPrefix={t("iiu.mode.srprefix")}>
-        {t("iiu.mode.development")}
-      </Chip>
-    );
-  }
-  if (mode === "production_model") {
-    return (
-      <Chip tone="ai" srPrefix={t("iiu.mode.srprefix")}>
-        {t("iiu.mode.production")}
-      </Chip>
-    );
-  }
-  return (
-    <Chip tone="neutral" srPrefix={t("iiu.mode.srprefix")}>
-      {t("iiu.mode.unavailable")}
-    </Chip>
-  );
-}
-
 /**
  * The longer form, for the top of a document a recruiter may act on.
  *
@@ -439,7 +404,10 @@ export function ProviderModeChip({ mode }: { mode: string }) {
  */
 export function ProviderModeNote({ mode }: { mode: string }) {
   const { t } = useT();
-  if (mode === "synthetic") {
+  // The decision is imported rather than made here: this module holds the
+  // recruiter's vocabulary, and the engine's own mode names are not part of
+  // it -- a guard reads this file for them and refuses the raw value.
+  if (isTestEngineOutput(mode)) {
     return (
       <Panel tone="attention" role="status" title={t("iiu.mode.note.title")}>
         <p>{t("iiu.mode.note.body")}</p>
@@ -694,90 +662,6 @@ export function blockerMessage(
   }
 }
 
-/**
- * What happens next, said in one line.
- *
- * Owner UAT, finding F: each stage worked, but the product left the reader to
- * infer what to do next from which buttons happened to be on the page. The
- * journey rail shows WHERE you are; this says WHAT TO DO, which is the part a
- * first-time pilot user actually needs.
- */
-export function NextStep({ status }: { status: string }) {
-  const { t } = useT();
-  const KEY: Record<string, TranslationKey> = {
-    draft: "iiu.next.sources",
-    sources_ready: "iiu.next.prep",
-    prep_generated: "iiu.next.prep",
-    prep_approved: "iiu.next.interview",
-    interview_in_progress: "iiu.next.interview",
-    interview_complete: "iiu.next.evidence",
-    evidence_review: "iiu.next.evidence",
-    assessed: "iiu.next.assessed",
-    reported: "iiu.next.reported",
-  };
-  const key = KEY[status];
-  if (!key) return null;
-  return (
-    <p className="mt-3 text-sm text-muted-foreground">
-      <span className="font-medium text-foreground">{t("iiu.next.title")}: </span>
-      {t(key)}
-    </p>
-  );
-}
-
-/** The journey, drawn as steps. Never as a percentage: this is not progress towards a verdict. */
-export function CaseSteps({ current }: { current: string }) {
-  const { t } = useT();
-  const steps: Array<{ key: string; label: string }> = [
-    { key: "draft", label: t("iiu.rail.sources") },
-    { key: "prep_approved", label: t("iiu.rail.prep") },
-    { key: "interview_in_progress", label: t("iiu.rail.interview") },
-    { key: "evidence_review", label: t("iiu.rail.evidence") },
-    { key: "assessed", label: t("iiu.rail.assessment") },
-    { key: "reported", label: t("iiu.rail.report") },
-  ];
-  const order = [
-    "draft",
-    "sources_ready",
-    "prep_generated",
-    "prep_approved",
-    "interview_in_progress",
-    "interview_complete",
-    "evidence_review",
-    "assessed",
-    "reported",
-  ];
-  const currentIdx = order.indexOf(current);
-
-  return (
-    <nav aria-label={t("iiu.rail.aria")} className="border-y border-border py-3">
-      <ol className="flex flex-wrap gap-x-2 gap-y-1 text-sm">
-        {steps.map((s, i) => {
-          const reached = currentIdx >= order.indexOf(s.key);
-          return (
-            <li key={s.key} className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "tabular-nums",
-                  reached ? "font-medium text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {i + 1}. {s.label}
-                {reached && <span className="sr-only">{t("iiu.rail.reached")}</span>}
-              </span>
-              {i < steps.length - 1 && (
-                <span aria-hidden="true" className="text-muted-foreground">
-                  ›
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-}
-
 export const BUTTON =
   "inline-flex items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
@@ -1000,21 +884,71 @@ export function MaterialLegend() {
 
 /** What the recruiter does next, given where the case is.
  *
- *  One source for the overview's primary button and the list's "Next step"
- *  column. They were derived separately at first, which meant a status could
- *  be told two different things about itself — the list saying review and the
- *  overview saying assess — and nothing would have caught it. */
-export const NEXT_STEP_LABEL: Record<string, TranslationKey> = {
-  draft: "iiu.ov.cta.prepare",
-  sources_ready: "iiu.ov.cta.prepare",
-  prep_generated: "iiu.ov.cta.prepare",
-  prep_approved: "iiu.ov.cta.start",
-  interview_in_progress: "iiu.ov.cta.continue",
-  interview_complete: "iiu.ov.cta.review",
-  evidence_review: "iiu.ov.cta.review",
-  assessed: "iiu.ov.cta.summary",
-  reported: "iiu.ov.cta.openreport",
+ *  ONE source: the overview's primary button, the list's "Next step" column
+ *  and every work surface's header action read from this map. They were
+ *  derived separately at first, which meant a status could be told two
+ *  different things about itself — the list saying review and the overview
+ *  saying assess — and nothing would have caught it.
+ *
+ *  One row per case status, and exactly one action per row, because "what do
+ *  I do now" is a property of where the case actually is. The destination is
+ *  always the stage's own work surface, never a screen that would then have
+ *  to explain why it cannot be used yet. */
+export type NextStepRoute =
+  | "/employer/$employerSlug/interview-intelligence/$caseId/prepare"
+  | "/employer/$employerSlug/interview-intelligence/$caseId/interview"
+  | "/employer/$employerSlug/interview-intelligence/$caseId/evidence"
+  | "/employer/$employerSlug/interview-intelligence/$caseId/report";
+
+const P = "/employer/$employerSlug/interview-intelligence/$caseId" as const;
+
+export const NEXT_STEP: Record<
+  string,
+  { readonly to: NextStepRoute; readonly cta: TranslationKey; readonly why: TranslationKey }
+> = {
+  draft: { to: `${P}/prepare`, cta: "iiu.ov.cta.prepare", why: "iiu.ov.why.prepare" },
+  sources_ready: { to: `${P}/prepare`, cta: "iiu.ov.cta.prepare", why: "iiu.ov.why.prepare" },
+  prep_generated: { to: `${P}/prepare`, cta: "iiu.ov.cta.prepare", why: "iiu.ov.why.prepare" },
+  prep_approved: { to: `${P}/interview`, cta: "iiu.ov.cta.start", why: "iiu.ov.why.start" },
+  interview_in_progress: {
+    to: `${P}/interview`,
+    cta: "iiu.ov.cta.continue",
+    why: "iiu.ov.why.continue",
+  },
+  interview_complete: { to: `${P}/evidence`, cta: "iiu.ov.cta.assess", why: "iiu.ov.why.assess" },
+  evidence_review: { to: `${P}/evidence`, cta: "iiu.ov.cta.assess", why: "iiu.ov.why.assess" },
+  // Assessment done goes to the REPORT, which shows the material it will be
+  // built from before anything is locked: a recruiter who has just finished a
+  // dozen small judgements needs to see what they add up to.
+  assessed: { to: `${P}/report`, cta: "iiu.ov.cta.reviewreport", why: "iiu.ov.why.report" },
+  reported: { to: `${P}/report`, cta: "iiu.ov.cta.openreport", why: "iiu.ov.why.reported" },
 };
+
+export const NEXT_STEP_LABEL: Record<string, TranslationKey> = Object.fromEntries(
+  Object.entries(NEXT_STEP).map(([status, step]) => [status, step.cta]),
+);
+
+/** The one primary action for a case, as a link. Every work surface's header
+ *  draws its action through this, so a stage can never offer a second,
+ *  equally weighted destination beside the one the status actually calls for. */
+export function NextStepLink({
+  status,
+  employerSlug,
+  caseId,
+}: {
+  status: string;
+  employerSlug: string;
+  caseId: string;
+}) {
+  const { t } = useT();
+  const next = NEXT_STEP[status];
+  if (!next) return null;
+  return (
+    <Link to={next.to} params={{ employerSlug, caseId }} className={PRIMARY_BUTTON}>
+      {t(next.cta)}
+    </Link>
+  );
+}
 
 /** A date a recruiter reads at a glance, in their own locale. */
 export function ShortDate({ iso }: { iso: string | null }) {
@@ -1037,127 +971,241 @@ export function ShortDate({ iso }: { iso: string | null }) {
 /* The workflow shell                                                  */
 /* ------------------------------------------------------------------ */
 
-/** The seven steps of one interview, as the recruiter's own navigation.
+/** The recruiter's four stages: prepare, interview, assess, report.
  *
- *  This replaces a six-item read-only rail whose labels came from the case
- *  status vocabulary. Two things changed. The steps are now LINKS, so the
- *  workflow is something you move through rather than a progress indicator you
- *  read; and they are named for the work, not for the record — Review, not
- *  Evidence.
+ *  This is the whole visible journey. The runtime underneath has ten case
+ *  statuses, and Assess is two work surfaces (choose the material, then
+ *  assess it against the requirements) -- but a recruiter should never have
+ *  to hold that model in their head. The four stages are what they would tell
+ *  a colleague they are doing; everything else is a detail of one stage.
+ *
+ *  This replaced a seven-step rail (overview, prepare, interview, review,
+ *  assess, summary, report) whose steps were named for the product's internal
+ *  screens. Pilot recruiters read it as seven things to get through.
  *
  *  Workflow state only: done, current, not yet. Nothing here says anything
- *  about the candidate, and a step is never "passed" or "failed". */
-const WORKFLOW = [
-  { seg: "", label: "iiu.wf.overview" },
-  { seg: "prepare", label: "iiu.wf.prepare" },
-  { seg: "interview", label: "iiu.wf.interview" },
-  { seg: "evidence", label: "iiu.wf.review" },
-  { seg: "assessment", label: "iiu.wf.assess" },
-  { seg: "summary", label: "iiu.wf.summary" },
-  { seg: "report", label: "iiu.wf.report" },
-] as const satisfies ReadonlyArray<{ seg: string; label: TranslationKey }>;
+ *  about the candidate, and a stage is never "passed" or "failed". */
+export type Stage = "prepare" | "interview" | "assess" | "report";
 
-/** How far the case has actually got, as an index into WORKFLOW. */
-const REACHED: Record<string, number> = {
-  draft: 1,
-  sources_ready: 1,
-  prep_generated: 1,
-  prep_approved: 2,
-  interview_in_progress: 2,
-  interview_complete: 3,
-  evidence_review: 3,
-  assessed: 5,
-  reported: 6,
+export const STAGES: readonly Stage[] = ["prepare", "interview", "assess", "report"];
+
+const STAGE_LABEL: Record<Stage, TranslationKey> = {
+  prepare: "iiu.wf.prepare",
+  interview: "iiu.wf.interview",
+  assess: "iiu.wf.assess",
+  report: "iiu.wf.report",
 };
+
+/** Where each stage's work is done. Assess opens on the material, because
+ *  that is where the recruiter has to start. */
+const STAGE_ROUTE: Record<
+  Stage,
+  | "/employer/$employerSlug/interview-intelligence/$caseId/prepare"
+  | "/employer/$employerSlug/interview-intelligence/$caseId/interview"
+  | "/employer/$employerSlug/interview-intelligence/$caseId/evidence"
+  | "/employer/$employerSlug/interview-intelligence/$caseId/report"
+> = {
+  prepare: "/employer/$employerSlug/interview-intelligence/$caseId/prepare",
+  interview: "/employer/$employerSlug/interview-intelligence/$caseId/interview",
+  assess: "/employer/$employerSlug/interview-intelligence/$caseId/evidence",
+  report: "/employer/$employerSlug/interview-intelligence/$caseId/report",
+};
+
+/** Which stage a case status puts the recruiter in.
+ *
+ *  The status is the runtime's and is read exactly as it is. This is a
+ *  projection of it, not a second lifecycle: nothing is written from here and
+ *  no screen decides what a case may do by looking at the stage. */
+export const STAGE_OF_STATUS: Record<string, Stage> = {
+  draft: "prepare",
+  sources_ready: "prepare",
+  prep_generated: "prepare",
+  prep_approved: "interview",
+  interview_in_progress: "interview",
+  interview_complete: "assess",
+  evidence_review: "assess",
+  assessed: "report",
+  reported: "report",
+};
+
+/** How many stages are behind the recruiter, per status. */
+const STAGES_DONE: Record<string, number> = {
+  draft: 0,
+  sources_ready: 0,
+  prep_generated: 0,
+  prep_approved: 1,
+  interview_in_progress: 1,
+  interview_complete: 2,
+  evidence_review: 2,
+  assessed: 3,
+  reported: 4,
+};
+
+export function stageOf(status: string): Stage | null {
+  return STAGE_OF_STATUS[status] ?? null;
+}
+
+/** The two halves of Assess. Shown only while the recruiter is inside that
+ *  stage, as a small second row under it -- never as stages of their own. */
+export type AssessStep = "material" | "assess";
+
+const ASSESS_STEPS: ReadonlyArray<{
+  key: AssessStep;
+  label: TranslationKey;
+  to:
+    | "/employer/$employerSlug/interview-intelligence/$caseId/evidence"
+    | "/employer/$employerSlug/interview-intelligence/$caseId/assessment";
+}> = [
+  {
+    key: "material",
+    label: "iiu.wf.assess.material",
+    to: "/employer/$employerSlug/interview-intelligence/$caseId/evidence",
+  },
+  {
+    key: "assess",
+    label: "iiu.wf.assess.judge",
+    to: "/employer/$employerSlug/interview-intelligence/$caseId/assessment",
+  },
+];
 
 export function WorkflowNav({
   status,
   current,
+  step,
   employerSlug,
   caseId,
 }: {
   status: string;
-  /** Which step this page IS, so it can mark itself rather than guess. */
-  current: "overview" | "prepare" | "interview" | "review" | "assess" | "summary" | "report";
+  /** The stage this page belongs to. Omitted on the overview, which is not a
+   *  stage: there the current stage is read from the status. */
+  current?: Stage;
+  /** Which half of Assess this page is, when it is one. */
+  step?: AssessStep;
   employerSlug: string;
   caseId: string;
 }) {
   const { t } = useT();
-  const reached = REACHED[status] ?? 0;
-  const currentIdx = [
-    "overview",
-    "prepare",
-    "interview",
-    "review",
-    "assess",
-    "summary",
-    "report",
-  ].indexOf(current);
+  const done = STAGES_DONE[status] ?? 0;
+  const here = current ?? stageOf(status);
+  const currentIdx = here ? STAGES.indexOf(here) : -1;
 
   return (
     <nav aria-label={t("iiu.wf.aria")} className="border-b border-border">
-      {/* Which of the seven this is, said in words. On a narrow screen the row
-          below scrolls, so the step a reader is on can be off-screen; this
-          line never is. */}
-      <p className="pb-1.5 text-xs font-medium text-muted-foreground xl:hidden">
-        {t("iiu.wf.step")} {currentIdx + 1} {t("iiu.wf.of")} {WORKFLOW.length}
-      </p>
-      {/* One row, always. A seven-step workflow that wraps onto two lines
-          stops reading as a sequence and starts reading as a pile of links,
-          so it scrolls horizontally instead -- the steps keep their order and
-          their spacing at every width. */}
+      {/* Which of the four this is, said in words. On a narrow screen the row
+          below can scroll, so the stage a reader is on can be off-screen;
+          this line never is. */}
+      {currentIdx >= 0 && (
+        <p className="pb-1.5 text-xs font-medium text-muted-foreground sm:hidden">
+          {t("iiu.wf.step")} {currentIdx + 1} {t("iiu.wf.of")} {STAGES.length}
+        </p>
+      )}
+      {/* One row, always. A journey that wraps onto two lines stops reading as
+          a sequence, so it scrolls horizontally instead. */}
       <ol className="-mb-px flex items-stretch gap-x-0.5 overflow-x-auto text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {WORKFLOW.map((step, i) => {
+        {STAGES.map((stage, i) => {
           const isCurrent = i === currentIdx;
-          const isDone = i < reached;
-          return (
-            <li key={`${step.seg}-${step.label}`} className="shrink-0">
-              <Link
-                to={
-                  step.seg === ""
-                    ? "/employer/$employerSlug/interview-intelligence/$caseId"
-                    : (`/employer/$employerSlug/interview-intelligence/$caseId/${step.seg}` as never)
-                }
-                params={{ employerSlug, caseId }}
-                aria-current={isCurrent ? "step" : undefined}
+          const isDone = i < done;
+          // A stage the case has not reached is shown, so the recruiter can
+          // see what is coming, but it is not a link: a page for work that
+          // cannot be done yet is a dead end dressed as a destination.
+          const reachable = i <= done;
+          const face = (
+            <>
+              <span
+                aria-hidden="true"
                 className={cn(
-                  // `relative` is load-bearing. The sr-only spans below are
-                  // position:absolute, and without a positioned ancestor their
-                  // containing block is the page itself -- so a step scrolled
-                  // out of this row parked an invisible 1px box hundreds of
-                  // pixels past the viewport and the whole document scrolled
-                  // sideways at 375px. Nothing was visible; the page was just
-                  // 694px wide.
-                  "relative inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+                  "inline-flex h-[1.125rem] w-[1.125rem] items-center justify-center rounded-full border text-[10px] font-semibold tabular-nums",
                   isCurrent
-                    ? "border-accent font-semibold text-foreground"
-                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
+                    ? "border-accent bg-accent text-accent-foreground"
+                    : isDone
+                      ? "border-teal-700/40 bg-teal-700/10 text-teal-800 dark:text-teal-200"
+                      : "border-border text-muted-foreground",
                 )}
               >
-                {/* The step number, or a tick once the step is behind you.
-                    Workflow completion only -- a tick here says the recruiter
-                    has been through this step, never that anything passed. */}
+                {isDone && !isCurrent ? "✓" : i + 1}
+              </span>
+              {t(STAGE_LABEL[stage])}
+              {isCurrent && <span className="sr-only"> ({t("iiu.wf.current")})</span>}
+              {isDone && !isCurrent && <span className="sr-only"> ({t("iiu.wf.done")})</span>}
+              {!reachable && <span className="sr-only"> ({t("iiu.wf.notyet")})</span>}
+            </>
+          );
+          // `relative` is load-bearing: the sr-only spans are absolutely
+          // positioned, and without a positioned ancestor a step scrolled out
+          // of this row parks an invisible box past the viewport and the whole
+          // document scrolls sideways at 375px.
+          const base =
+            "relative inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition-colors";
+          // The current stage is not a link. It is where the reader already
+          // is, and a router link to the page you are on both says nothing
+          // and takes over aria-current with its own route matching, so the
+          // step marking a screen reader needs would be lost.
+          return (
+            <li key={stage} className="shrink-0">
+              {isCurrent ? (
                 <span
-                  aria-hidden="true"
+                  aria-current="step"
+                  className={cn(base, "border-accent font-semibold text-foreground")}
+                >
+                  {face}
+                </span>
+              ) : reachable ? (
+                <Link
+                  to={STAGE_ROUTE[stage]}
+                  params={{ employerSlug, caseId }}
                   className={cn(
-                    "inline-flex h-[1.125rem] w-[1.125rem] items-center justify-center rounded-full border text-[10px] font-semibold tabular-nums",
-                    isCurrent
-                      ? "border-accent bg-accent text-accent-foreground"
-                      : isDone
-                        ? "border-teal-700/40 bg-teal-700/10 text-teal-800 dark:text-teal-200"
-                        : "border-border text-muted-foreground",
+                    base,
+                    "border-transparent text-muted-foreground hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
                   )}
                 >
-                  {isDone && !isCurrent ? "✓" : i + 1}
+                  {face}
+                </Link>
+              ) : (
+                <span className={cn(base, "border-transparent text-muted-foreground/70")}>
+                  {face}
                 </span>
-                {t(step.label)}
-                {isCurrent && <span className="sr-only"> ({t("iiu.wf.current")})</span>}
-                {isDone && !isCurrent && <span className="sr-only"> ({t("iiu.wf.done")})</span>}
-              </Link>
+              )}
             </li>
           );
         })}
       </ol>
+      {here === "assess" && step && (
+        <ol
+          aria-label={t("iiu.wf.assess.aria")}
+          className="flex flex-wrap gap-x-5 gap-y-1 border-t border-border/60 py-2 text-xs"
+        >
+          {ASSESS_STEPS.map((s, i) => {
+            const isCurrent = s.key === step;
+            const face = (
+              <>
+                <span aria-hidden="true">{i + 1}.</span>
+                {t(s.label)}
+                {isCurrent && <span className="sr-only"> ({t("iiu.wf.current")})</span>}
+              </>
+            );
+            return (
+              <li key={s.key}>
+                {isCurrent ? (
+                  <span
+                    aria-current="step"
+                    className="inline-flex min-h-9 items-center gap-1.5 font-semibold tabular-nums text-foreground"
+                  >
+                    {face}
+                  </span>
+                ) : (
+                  <Link
+                    to={s.to}
+                    params={{ employerSlug, caseId }}
+                    className="inline-flex min-h-9 items-center gap-1.5 tabular-nums text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    {face}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </nav>
   );
 }

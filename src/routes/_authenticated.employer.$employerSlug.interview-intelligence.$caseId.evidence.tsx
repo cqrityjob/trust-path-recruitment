@@ -24,7 +24,7 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
-  CaseStatusChip,
+  CaseHeader,
   WorkflowNav,
   Chip,
   Panel,
@@ -34,7 +34,6 @@ import {
   MaterialLegend,
   FiveEPanel,
   uiLabel,
-  ProviderModeChip,
   ProviderModeNote,
   WithheldPanel,
   BUTTON,
@@ -449,7 +448,6 @@ function Page() {
                   )}
                   {analyse.data.providerMode && (
                     <div className="mt-3 space-y-2">
-                      <ProviderModeChip mode={analyse.data.providerMode} />
                       <ProviderModeNote mode={analyse.data.providerMode} />
                     </div>
                   )}
@@ -473,38 +471,34 @@ function Page() {
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId"
           params={{ employerSlug, caseId }}
-          className="text-accent underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
         >
           {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        {/* The person, then the case. Every one of these screens led with
-            the case title -- internal bookkeeping -- and put the candidate
-            underneath it in muted grey. */}
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            {d.candidateDisplayName}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
-          <div className="mt-3">
-            <CaseStatusChip status={d.status} />
-          </div>
-        </div>
-        <Link
-          to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
-          params={{ employerSlug, caseId }}
-          className={`${PRIMARY_BUTTON} shrink-0`}
-        >
-          {t("iiu.ev.toassess")}
-        </Link>
-      </header>
+      <div className="mt-3">
+        <CaseHeader
+          candidate={d.candidateDisplayName}
+          role={d.packName ?? d.title}
+          status={d.status}
+          action={
+            <Link
+              to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
+              params={{ employerSlug, caseId }}
+              className={PRIMARY_BUTTON}
+            >
+              {t("iiu.ev.toassess")}
+            </Link>
+          }
+        />
+      </div>
 
       <div className="mt-5">
         <WorkflowNav
           status={d.status}
-          current="review"
+          current="assess"
+          step="material"
           employerSlug={employerSlug}
           caseId={caseId}
         />
@@ -683,12 +677,12 @@ function Page() {
                                             ? t("iiu.ev.state.rejected")
                                             : t("iiu.ev.state.unresolved")}
                                   </Chip>
-                                  {p.extractionConfidence !== null && (
-                                    <Chip srPrefix={t("iiu.ev.extraction.srprefix")}>
-                                      {t("iiu.ev.extraction.chip")}{" "}
-                                      {Math.round(p.extractionConfidence * 100)}%
-                                    </Chip>
-                                  )}
+                                  {/* The extraction confidence is NOT shown.
+                                      It is a fact about the model's own
+                                      reading and is kept as provenance; on
+                                      a card about a candidate a percentage
+                                      is read as a measure of the person,
+                                      whatever the label beside it says. */}
                                 </div>
 
                                 {/* The recruiter's own words first, then what the
