@@ -9,7 +9,7 @@
 // Never expose raw score numbers or CIG objects from callers of this
 // module — the UI only presents bands, labels and prose derived here.
 
-import { LEGACY_TO_CIG_SLUG } from "@/lib/career-intelligence-engine/slug-map";
+import { toLegacySlug } from "@/lib/career-intelligence-engine/slug-map";
 import type {
   CareerProfileForJobsV1,
   SlugScoreForJobs,
@@ -19,18 +19,13 @@ import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import { dimensions } from "@/lib/career-assessment/dimensions";
 import type { DimensionId } from "@/lib/career-assessment/types";
 
-// Reverse map — CIG published slug → legacy scoring slug. Built once at
-// module load, deterministic. Legacy slugs that share the same CIG proxy
-// resolve to the first entry; the engine's scoring for either legacy
-// slug is close enough for relevance framing and no raw score is
-// exposed.
-const CIG_TO_LEGACY_SLUG: Record<string, string> = (() => {
-  const out: Record<string, string> = {};
-  for (const [legacy, cig] of Object.entries(LEGACY_TO_CIG_SLUG)) {
-    if (!(cig in out)) out[cig] = legacy;
-  }
-  return out;
-})();
+// Reverse lookup — CIG published slug → legacy scoring slug — comes from
+// the one bridge in slug-map.ts (`toLegacySlug`). The bridge is
+// one-to-one, so a job's profession never resolves to a profession that
+// merely shared a proxy with it: a `sakerhetsutredare` job is framed by the
+// Security Investigator's scores, never the Intelligence Analyst's, and a
+// `flygplatssakerhet` job falls back to its family rather than borrowing
+// data-centre security's profile. No second table is built here.
 
 /**
  * Relevance band. Names are deliberately non-recruitment: no "match
@@ -88,7 +83,7 @@ export function legacySlugForJob(
   const raw = job.profession_slug;
   if (!raw) return null;
   if (profile.slugScores[raw]) return raw;
-  const mapped = CIG_TO_LEGACY_SLUG[raw];
+  const mapped = toLegacySlug(raw);
   if (mapped && profile.slugScores[mapped]) return mapped;
   return null;
 }
@@ -149,10 +144,7 @@ export function relevanceBandLabel(band: RelevanceBand): { sv: string; en: strin
 }
 
 /** Lookup a dimension label by ID. Falls back to the raw ID if unknown. */
-export function dimensionLabel(
-  id: DimensionId,
-  lang: "sv" | "en",
-): string {
+export function dimensionLabel(id: DimensionId, lang: "sv" | "en"): string {
   const dim = dimensions.find((d) => d.id === id);
   if (!dim) return String(id);
   return dim.name[lang];

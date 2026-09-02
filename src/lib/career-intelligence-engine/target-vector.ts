@@ -10,6 +10,7 @@
 // added without changing the engine core.
 
 import { professionProfiles } from "@/lib/career-assessment/profession-profiles";
+import { cieRankingIdentity } from "./ranking-identity";
 import { toCigSlug } from "./slug-map";
 import type { TargetVector } from "./types";
 
@@ -17,7 +18,10 @@ export function buildTargetVectorsFromLegacy(): TargetVector[] {
   return professionProfiles.map((p) => ({
     professionKey: p.professionId,
     legacySlug: p.professionId,
+    // Enrichment bridge only -- undefined when no honest CIG node exists.
     cigSlug: toCigSlug(p.professionId),
+    // Ranked-list dedup identity, frozen independently of the bridge.
+    rankingIdentity: cieRankingIdentity(p.professionId),
     familyKey: p.family,
     targets: p.targets,
     distinguishing: p.distinguishing,

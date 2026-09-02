@@ -36,9 +36,15 @@ answers (AnswerMap)
 - **Enrichment (labels, requirements, transitions, education, certs,
   sources, disclaimers)** — CIG catalogue (`cig_*` tables), published-only,
   read via `serverPublicClient()` in `compute.functions.ts`.
-- **Legacy → CIG slug bridge** — `slug-map.ts::LEGACY_TO_CIG_SLUG`. Missing
-  entries degrade gracefully (empty enrichment, `dataStatus =
-  "cig_enrichment_missing"`).
+- **Legacy → CIG slug bridge** — `slug-map.ts::CAREER_PROFESSION_BRIDGE`
+  (flat view `LEGACY_TO_CIG_SLUG`, reverse `toLegacySlug`). One profession
+  maps to one canonical CIG row or to nothing; proxies are forbidden and
+  listed under `ENRICHMENT_UNAVAILABLE`. Missing entries degrade gracefully
+  (empty enrichment, Career Center title, neutral copy, `dataStatus =
+  "cig_enrichment_missing"`). Ranked-list dedup identity is frozen
+  separately in `ranking-identity.ts` so the bridge can be repaired without
+  changing ranking. Audit: `profession-bridge-audit.md`; guard:
+  `career-profession-bridge:check`.
 
 ## Current Fit vs Potential
 

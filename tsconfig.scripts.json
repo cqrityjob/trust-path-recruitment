@@ -56,6 +56,11 @@
     "scripts/interview-finalisation-capability-check.tsx",
     "scripts/interview-recruiter-workflow-check.tsx",
     "scripts/interview-evidence-reliability-check.tsx",
+    // The profession bridge guard, on the same terms: new, no pre-existing
+    // type debt, and it renders the result view and calls the engine with
+    // typed fixtures -- a fixture that silently stops matching the bridge's
+    // types is exactly the failure this file exists to prevent.
+    "scripts/career-profession-bridge-check.tsx",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

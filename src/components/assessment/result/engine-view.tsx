@@ -62,6 +62,8 @@ import {
   overallEvidenceLabel,
   overallEvidenceLevel,
   pick,
+  professionTitleBi,
+  enrichmentUnavailableCopy,
   potentialBand,
   potentialLabel,
   regulatedLabel,
@@ -74,11 +76,7 @@ import {
 // -------------------- primitives --------------------
 
 function professionTitle(match: Match, lang: Lang): string {
-  const bi: Bi = {
-    sv: match.titleSv ?? match.professionKey,
-    en: match.titleEn ?? match.professionKey,
-  };
-  return pick(bi, lang);
+  return pick(professionTitleBi(match), lang);
 }
 
 function familyLabel(familyKey: string, lang: Lang): string {
@@ -412,6 +410,11 @@ function Hero({
         {result.dataStatus === "cig_enrichment_missing" && (
           <TokenBadge tone="warn">
             {lang === "sv" ? "Innehåll under uppbyggnad" : "Content in progress"}
+          </TokenBadge>
+        )}
+        {!primary.cigSlug && (
+          <TokenBadge>
+            <span data-enrichment-unavailable>{pick(enrichmentUnavailableCopy, lang)}</span>
           </TokenBadge>
         )}
       </div>
@@ -960,6 +963,11 @@ function CompareCard({
         <p className="mt-0.5 text-[11px] uppercase tracking-widest text-muted-foreground">
           {familyLabel(match.family.key, lang)}
         </p>
+        {!match.cigSlug && (
+          <p className="mt-1 text-[11px] text-muted-foreground" data-enrichment-unavailable>
+            {pick(enrichmentUnavailableCopy, lang)}
+          </p>
+        )}
       </header>
 
       <div className="mt-4 flex flex-wrap gap-1.5">

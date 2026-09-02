@@ -23,6 +23,7 @@
     "preview": "vite preview", 
     "career-discovery:check": "bun run scripts/career-discovery-check.ts", 
     "cie:check": "bun run scripts/cie-check.ts", 
+    "career-profession-bridge:check": "bun run scripts/career-profession-bridge-check.tsx",
     "e2e": "playwright test", 
     "e2e:responsive": "playwright test e2e/passport-responsive-a11y.spec.ts --project=chromium --project=mobile-375 --project=mobile-390", 
     "employer-taxonomy:check": "bun run scripts/employer-taxonomy-check.ts", 

@@ -28,12 +28,7 @@ export type ArchetypeKey =
   | "service_communicator"
   | "risk_crisis_responder";
 
-export type MotivationKey =
-  | "service"
-  | "autonomy"
-  | "impact"
-  | "mastery"
-  | "structure";
+export type MotivationKey = "service" | "autonomy" | "impact" | "mastery" | "structure";
 
 export interface ArchetypeStrength {
   key: ArchetypeKey;
@@ -73,7 +68,11 @@ export type ProfessionGate =
 export interface TargetVector {
   professionKey: string; // stable key used for tie-break sorting
   legacySlug: string; // slug used by TS career-center / profile source
-  cigSlug?: string; // slug in cig_professions when known
+  cigSlug?: string; // slug in cig_professions when known (enrichment bridge only)
+  // Dedup identity for the ranked list. Frozen in ranking-identity.ts so the
+  // enrichment bridge can be repaired without changing ranking; when absent
+  // the historical `cigSlug || legacySlug` rule applies.
+  rankingIdentity?: string;
   familyKey: string;
   targets: Partial<Record<DimensionId, { target: number; importance: 1 | 2 | 3 }>>;
   distinguishing: DimensionId[];
@@ -219,10 +218,7 @@ export interface EngineResultV1 {
   familyRanking: FamilyRankingEntry[];
   matches: Match[]; // top-N
   overallEvidenceScore: number; // 0..100
-  dataStatus:
-    | "ok"
-    | "no_matches"
-    | "cig_enrichment_missing"; // engine ran but CIG catalogue is thin
+  dataStatus: "ok" | "no_matches" | "cig_enrichment_missing"; // engine ran but CIG catalogue is thin
   disclaimers: Bi[]; // aggregated across regulated matches
   journeyHooks: JourneyHooks;
 }
