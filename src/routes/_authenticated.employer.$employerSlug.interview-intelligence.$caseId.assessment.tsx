@@ -26,7 +26,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
@@ -58,6 +58,7 @@ import {
   markAssessed,
   recordAssessment,
 } from "@/lib/interview-intelligence/runtime.functions";
+import { singleFlight } from "@/lib/interview-intelligence/single-flight";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 export const Route = createFileRoute(
@@ -125,6 +126,27 @@ function Page() {
   const getFn = useServerFn(getInterviewCase);
   const assessFn = useServerFn(recordAssessment);
   const doneFn = useServerFn(markAssessed);
+  // One click, one request (see single-flight.ts). The database returns the
+  // recorded judgement for an identical repeat; this keeps the browser from
+  // asking twice in the first place.
+  const assessOnce = useMemo(
+    () =>
+      singleFlight(
+        (v: {
+          caseId: string;
+          questionId: string;
+          level: number;
+          rationale: string;
+          uncertaintyNote: string | null;
+          supersedeReason: string | null;
+        }) => assessFn({ data: v }),
+      ),
+    [assessFn],
+  );
+  const doneOnce = useMemo(
+    () => singleFlight((v: { caseId: string }) => doneFn({ data: v })),
+    [doneFn],
+  );
 
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
@@ -200,15 +222,13 @@ function Page() {
        *  changed judgement leaves a trace. */
       supersedeReason: string | null;
     }) =>
-      assessFn({
-        data: {
-          caseId,
-          questionId: v.questionId,
-          level: v.level,
-          rationale: v.rationale,
-          uncertaintyNote: v.uncertaintyNote,
-          supersedeReason: v.supersedeReason,
-        },
+      assessOnce({
+        caseId,
+        questionId: v.questionId,
+        level: v.level,
+        rationale: v.rationale,
+        uncertaintyNote: v.uncertaintyNote,
+        supersedeReason: v.supersedeReason,
       }),
     onSuccess: (_result, v) => {
       // The saved question leaves edit mode and drops its draft; everything
@@ -222,7 +242,7 @@ function Page() {
   // recruiter on the next one: the report, showing what it will be built
   // from. Nothing is locked by arriving there.
   const finishAssessing = useMutation({
-    mutationFn: () => doneFn({ data: { caseId } }),
+    mutationFn: () => doneOnce({ caseId }),
     onSuccess: () => {
       refresh();
       void navigate({
@@ -315,6 +335,12 @@ function Page() {
     const anchors = [...qq.anchors].sort((a, b) => a.level - b.level);
     const chosen = levels[qq.id];
     const blocked = evidence.length === 0;
+    // Material confirmed AFTER the recorded judgement. The judgement stands
+    // exactly as made; it does not cover this material, and the report waits
+    // until the question has been looked at again.
+    const uncovered =
+      existing !== undefined &&
+      evidence.some((e) => Date.parse(e.confirmedAt) > Date.parse(existing.assessedAt));
     const isEditing = editing[qq.id] === true;
     const showForm = !existing || isEditing;
     const highlighted = focusCode !== undefined && focusCode === qq.code;
@@ -475,7 +501,15 @@ function Page() {
                   {existing.level} — {t(LEVEL_LABEL[clampLevel(existing.level)])}
                 </Chip>
                 <Chip tone="confirmed">{t("iiu.as2.recorded")}</Chip>
+                {uncovered && <Chip tone="attention">{t("iiu.ev.stale.chip")}</Chip>}
               </div>
+              {uncovered && !released && (
+                <div className="mt-2.5">
+                  <Panel tone="attention" role="status" title={t("iiu.ev.stale.title")}>
+                    <p>{t("iiu.ev.stale.body")}</p>
+                  </Panel>
+                </div>
+              )}
               <p className="mt-2.5 text-sm leading-relaxed text-foreground">{existing.rationale}</p>
               {existing.uncertaintyNote && (
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">

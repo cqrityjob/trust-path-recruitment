@@ -221,50 +221,65 @@ ok(pendingMarkup.includes(sv["iiu.rp.finalising"]), "· and says so");
 /* E · the backend rule is untouched                                   */
 /* ================================================================== */
 
-const migration = read(RUNTIME_MIGRATION);
-const finaliseFn = migration.slice(
-  migration.indexOf("CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report"),
-);
-
-ok(
-  /has_employer_role\(\s*\n?\s*auth\.uid\(\),\s*_c\.employer_id,\s*ARRAY\['owner','admin'\]\)/.test(
-    finaliseFn.slice(0, 2000),
-  ),
-  "E · scp_iv_finalise_report still requires owner or admin",
-);
-ok(
-  finaliseFn.includes("SCP_IV_FINALISE_ROLE"),
-  "E · and still raises SCP_IV_FINALISE_ROLE when it is not met",
-);
-ok(
-  finaliseFn.slice(0, 2000).includes("insufficient_privilege"),
-  "E · with an insufficient_privilege errcode",
-);
-
-// The role check must come BEFORE the blockers check, so a member cannot learn
-// anything about a case's readiness by probing the finalise call.
-const rolePos = finaliseFn.indexOf("SCP_IV_FINALISE_ROLE");
-const blockPos = finaliseFn.indexOf("SCP_IV_REPORT_BLOCKED");
-ok(rolePos > 0 && blockPos > rolePos, "E · the role check precedes the blocker check");
-
-// ONE definition, across every migration.
+// EVERY definition, across every migration -- and the checks run on the
+// NEWEST one.
 //
 // A later CREATE OR REPLACE somewhere else is how a rule silently loosens: the
 // newest definition is the one that runs, and a guard reading only the
 // original would keep passing while the rule it checks no longer exists. So
-// this counts definitions across the whole migration directory.
-const allMigrations = readdirSync(path.join(root, "supabase/migrations"))
+// this collects every definition in filename (= apply) order, asserts the rule
+// on the LAST of them, and asserts that no definition in the history ever
+// dropped it. 20261020090000 (evidence reliability) legitimately redefines the
+// function to make finalising idempotent; the boundary travelled with it.
+const migrationFiles = readdirSync(path.join(root, "supabase/migrations"))
   .filter((f) => f.endsWith(".sql"))
-  .map((f) => read(path.join("supabase/migrations", f)));
-const definitionCount = allMigrations.reduce(
-  (n, sql) =>
-    n + (sql.match(/CREATE OR REPLACE FUNCTION public\.scp_iv_finalise_report/g) ?? []).length,
-  0,
+  .sort();
+const definitions: Array<{ file: string; body: string }> = [];
+for (const f of migrationFiles) {
+  const sql = read(path.join("supabase/migrations", f));
+  const re = /CREATE OR REPLACE FUNCTION public\.scp_iv_finalise_report/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(sql)) !== null) {
+    definitions.push({ file: f, body: sql.slice(m.index) });
+  }
+}
+ok(
+  definitions.length >= 1 && definitions[0].file === path.basename(RUNTIME_MIGRATION),
+  "E · scp_iv_finalise_report is first defined by the runtime migration",
 );
 ok(
-  definitionCount === 1,
-  `E · scp_iv_finalise_report is defined exactly once (found ${definitionCount})`,
+  definitions.length === 2 &&
+    definitions[1].file === "20261020090000_scp_interview_evidence_reliability.sql",
+  `E · every redefinition of scp_iv_finalise_report is a known, reviewed one (found ${definitions.length})`,
 );
+const finaliseFn = definitions[definitions.length - 1].body;
+
+for (const def of definitions) {
+  const head = def.body.slice(0, 2000);
+  ok(
+    /has_employer_role\(\s*\n?\s*auth\.uid\(\),\s*_c\.employer_id,\s*ARRAY\['owner','admin'\]\)/.test(
+      head,
+    ),
+    `E · ${def.file}: scp_iv_finalise_report requires owner or admin`,
+  );
+  ok(
+    def.body.includes("SCP_IV_FINALISE_ROLE"),
+    `E · ${def.file}: and raises SCP_IV_FINALISE_ROLE when it is not met`,
+  );
+  ok(
+    head.includes("insufficient_privilege"),
+    `E · ${def.file}: with an insufficient_privilege errcode`,
+  );
+  // The role check must come BEFORE the blockers check, so a member cannot
+  // learn anything about a case's readiness by probing the finalise call.
+  const rolePos = def.body.indexOf("SCP_IV_FINALISE_ROLE");
+  const blockPos = def.body.indexOf("SCP_IV_REPORT_BLOCKED");
+  ok(
+    rolePos > 0 && blockPos > rolePos,
+    `E · ${def.file}: the role check precedes the blocker check`,
+  );
+}
+void finaliseFn;
 
 /* ================================================================== */
 /* The route gates on the shared capability                            */

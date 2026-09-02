@@ -17,6 +17,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useMemo } from "react";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
@@ -57,6 +58,7 @@ import {
   getProcessQuality,
   runReportDraft,
 } from "@/lib/interview-intelligence/runtime.functions";
+import { singleFlight } from "@/lib/interview-intelligence/single-flight";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/report",
@@ -79,6 +81,14 @@ function Page() {
   const qualityFn = useServerFn(getProcessQuality);
   const finaliseFn = useServerFn(finaliseReport);
   const draftFn = useServerFn(runReportDraft);
+  // Locking is irreversible and one click. A second click in the same frame
+  // returns the in-flight request; the database, for its part, returns the
+  // report it already made if nothing changed.
+  const finaliseOnce = useMemo(
+    () =>
+      singleFlight((v: { caseId: string; draftRunId: string | null }) => finaliseFn({ data: v })),
+    [finaliseFn],
+  );
 
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
@@ -98,11 +108,9 @@ function Page() {
   // recorded human assessments, exactly as it is without a draft.
   const finalise = useMutation({
     mutationFn: () =>
-      finaliseFn({
-        data: {
-          caseId,
-          draftRunId: draft.data?.status === "succeeded" ? draft.data.runId : null,
-        },
+      finaliseOnce({
+        caseId,
+        draftRunId: draft.data?.status === "succeeded" ? draft.data.runId : null,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["ii"] });

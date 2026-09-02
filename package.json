@@ -106,6 +106,7 @@
   "interview-recruiter-workflow:check": "bun run scripts/interview-recruiter-workflow-check.tsx",
   "interview-finalisation-rpc:check": "bun run scripts/interview-finalisation-rpc-check.ts",
   "interview-ai-provider:check": "bun run scripts/interview-ai-provider-check.ts",
+  "interview-evidence-reliability:check": "bun run scripts/interview-evidence-reliability-check.tsx",
   "interview-gold-independence:check": "bun run scripts/interview-gold-independence-check.ts",
     "recruitment-assessment-ux:check": "bun run scripts/recruitment-assessment-ux-check.ts",
     "career-center:check": "bun run scripts/career-center-check.ts",

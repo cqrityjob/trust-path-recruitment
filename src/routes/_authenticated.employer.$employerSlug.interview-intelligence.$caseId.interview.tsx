@@ -137,28 +137,67 @@ function Page() {
   const storedRef = useRef<{ id: string | null; body: string; questionId: string } | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
+  // Per question, the server's version of the note as THIS tab last saw it:
+  // the id and the updatedAt a save must carry back. Seeded from the loaded
+  // case the first time a question is shown, advanced by every successful
+  // save, and never advanced by a refetch -- a refetch that shows a newer
+  // version than this tab wrote is exactly the conflict the next save has to
+  // surface rather than paper over.
+  //
+  // The BODY travels with the version. When the interviewer leaves a question
+  // and comes straight back, the refetch after the flush may not have landed,
+  // and seeding the box from the cached case would show the text from before
+  // the flush -- which they would then keep typing into and save back over
+  // the newer one, with a matching version. The tab's own last save is the
+  // freshest text it can know, so it is what the box is seeded from.
+  const known = useRef<Record<string, { id: string; updatedAt: string; body: string } | undefined>>(
+    {},
+  );
+  // Saves run one after another, in order. Two saves of one note in quick
+  // succession carry different text and the later must win; letting them run
+  // concurrently is how a note came to be INSERTED twice -- the autosave and
+  // the pre-navigation flush both saw "no note yet".
+  const chain = useRef<Promise<unknown>>(Promise.resolve());
+  // The stored note moved under this tab (another tab, another device). The
+  // draft is kept on screen, unsaved, until the interviewer chooses.
+  const [noteConflict, setNoteConflict] = useState(false);
+
   const saveNote = useMutation({
-    mutationFn: (vars: {
-      sessionId: string;
-      questionId: string;
-      body: string;
-      noteId: string | null;
-    }) =>
-      noteFn({
-        data: {
-          sessionId: vars.sessionId,
-          questionId: vars.questionId,
-          noteKind: "observation",
+    mutationFn: (vars: { sessionId: string; questionId: string; body: string }) => {
+      const run = chain.current.then(async () => {
+        const k = known.current[vars.questionId] ?? null;
+        const res = await noteFn({
+          data: {
+            sessionId: vars.sessionId,
+            questionId: vars.questionId,
+            noteKind: "observation",
+            body: vars.body,
+            noteId: k?.id ?? null,
+            expectedUpdatedAt: k?.updatedAt ?? null,
+          },
+        });
+        known.current[vars.questionId] = {
+          id: res.noteId,
+          updatedAt: res.updatedAt,
           body: vars.body,
-          noteId: vars.noteId,
-        },
-      }),
+        };
+        return res;
+      });
+      chain.current = run.catch(() => undefined);
+      return run;
+    },
     onSuccess: () => {
       setSavedAt(new Date().toLocaleTimeString(lang === "en" ? "en-GB" : "sv-SE"));
       setNoteError(false);
+      setNoteConflict(false);
       void refresh();
     },
-    onError: () => setNoteError(true),
+    onError: (err) => {
+      setNoteError(true);
+      if (/SCP_IV_NOTE_(STALE|EXISTS)/.test(err instanceof Error ? err.message : String(err))) {
+        setNoteConflict(true);
+      }
+    },
   });
   // Optimistic question state. The chip used to wait for a refetch, so marking
   // a question covered looked like it had done nothing for a beat -- exactly
@@ -221,12 +260,47 @@ function Page() {
 
   // Load the stored note whenever the active question changes.
   useEffect(() => {
-    setDraft(existingNote?.body ?? "");
+    const mine = question ? known.current[question.id] : undefined;
+    // The freshest text this tab can know: its own last save when that is
+    // newer than what the cached case shows, the cached case otherwise.
+    const fresher =
+      mine && (!existingNote || Date.parse(mine.updatedAt) > Date.parse(existingNote.updatedAt))
+        ? mine.body
+        : (existingNote?.body ?? "");
+    setDraft(fresher);
     setSavedAt(null);
     setNoteError(false);
+    setNoteConflict(false);
     setBlockedNotice(false);
+    // Seed the known version once. If this tab has already saved this
+    // question, its own record is newer than any refetch that has not landed
+    // yet, and must not be replaced by it.
+    if (question && mine === undefined && existingNote) {
+      known.current[question.id] = {
+        id: existingNote.id,
+        updatedAt: existingNote.updatedAt,
+        body: existingNote.body,
+      };
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question?.id]);
+
+  /** Take the stored version of the note -- the interviewer's explicit
+   *  choice after a conflict. Re-reads the case first, so what lands in the
+   *  box is what the server holds now, not what this tab loaded earlier. */
+  const reloadNote = async () => {
+    const stored = storedRef.current;
+    if (!stored) return;
+    const fresh = await q.refetch();
+    const n = fresh.data?.session?.notes.find((x) => x.questionId === stored.questionId) ?? null;
+    known.current[stored.questionId] = n
+      ? { id: n.id, updatedAt: n.updatedAt, body: n.body }
+      : undefined;
+    setDraft(n?.body ?? "");
+    setNoteConflict(false);
+    setNoteError(false);
+    setBlockedNotice(false);
+  };
 
   // Mirror into refs so flushNote() always sees the live values.
   draftRef.current = draft;
@@ -235,7 +309,15 @@ function Page() {
     : null;
   sessionIdRef.current = session?.id ?? null;
 
-  const noteDirty = storedRef.current !== null && draft !== storedRef.current.body;
+  // "Saved" means saved by THIS tab or shown by the case, whichever is newer
+  // -- the same rule the box is seeded by.
+  const savedBody = (() => {
+    const mine = question ? known.current[question.id] : undefined;
+    if (mine && (!existingNote || Date.parse(mine.updatedAt) > Date.parse(existingNote.updatedAt)))
+      return mine.body;
+    return storedRef.current?.body ?? "";
+  })();
+  const noteDirty = storedRef.current !== null && draft !== savedBody;
 
   /**
    * Write the pending note NOW and report whether it landed.
@@ -263,12 +345,7 @@ function Page() {
     // Nothing stored and nothing typed: there is no note to write.
     if (stored.id === null && body.trim() === "") return true;
     try {
-      await saveNote.mutateAsync({
-        sessionId,
-        questionId: stored.questionId,
-        body,
-        noteId: stored.id,
-      });
+      await saveNote.mutateAsync({ sessionId, questionId: stored.questionId, body });
       return true;
     } catch {
       setNoteError(true);
@@ -297,12 +374,9 @@ function Page() {
       // An empty draft with no stored note is nothing to save; an empty draft
       // OVER a stored note is a clearing, and does save.
       if (draft.trim() === "" && !existingNote?.id) return;
-      saveNote.mutate({
-        sessionId: session.id,
-        questionId: question.id,
-        body: draft,
-        noteId: existingNote?.id ?? null,
-      });
+      // A conflict is resolved by the interviewer, not by the next keystroke.
+      if (noteConflict) return;
+      saveNote.mutate({ sessionId: session.id, questionId: question.id, body: draft });
     }, 1200);
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -326,12 +400,7 @@ function Page() {
       if (!stored || !sessionId) return;
       if (draftRef.current === stored.body) return;
       if (stored.id === null && draftRef.current.trim() === "") return;
-      saveNote.mutate({
-        sessionId,
-        questionId: stored.questionId,
-        body: draftRef.current,
-        noteId: stored.id,
-      });
+      saveNote.mutate({ sessionId, questionId: stored.questionId, body: draftRef.current });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -682,7 +751,29 @@ function Page() {
                   {t("iiu.lv.notes.hint")}
                 </p>
 
-                {noteError && (
+                {noteError && noteConflict && (
+                  /* The stored note moved under this tab. Nothing was
+                     overwritten in either direction: the newer version is on
+                     the server, the interviewer's text is here, and only
+                     they can say which should stand. */
+                  <div className="mt-2">
+                    <Panel tone="governance" role="alert" title={t("iiu.iv.note.conflict.title")}>
+                      <p>{t("iiu.iv.note.conflict.body")}</p>
+                      {blockedNotice && <p className="mt-2">{t("iiu.iv.note.blocked")}</p>}
+                      <p className="mt-2">
+                        <button
+                          type="button"
+                          className={BUTTON}
+                          disabled={q.isFetching}
+                          onClick={() => void reloadNote()}
+                        >
+                          {t("iiu.iv.note.conflict.reload")}
+                        </button>
+                      </p>
+                    </Panel>
+                  </div>
+                )}
+                {noteError && !noteConflict && (
                   <div className="mt-2">
                     <Panel tone="governance" role="alert" title={t("iiu.iv.note.savefailed")}>
                       {blockedNotice && <p>{t("iiu.iv.note.blocked")}</p>}

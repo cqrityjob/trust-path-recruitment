@@ -542,6 +542,13 @@ jobs:
       - name: Interview Intelligence AI provider adapter
         run: bun run interview-ai-provider:check
 
+      # PR20: what the recruiter confirms is exactly what the assessor and the
+      # report rely on -- bound to its case, idempotent under retry, stale-write
+      # safe, honest about failed reads, and neutral about missing material.
+      # The database half runs in the database job.
+      - name: Interview evidence reliability guard
+        run: bun run interview-evidence-reliability:check
+
       # The answer key must not be writable by the thing it grades. This proves
       # the gold dataset imports nothing, computes no expectation, and states
       # its authorship honestly -- currently 0 of 22 cases reviewed by anyone

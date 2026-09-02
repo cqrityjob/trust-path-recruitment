@@ -18,7 +18,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
@@ -55,6 +55,7 @@ import {
   authorEvidence,
   runInterviewAnalysis,
 } from "@/lib/interview-intelligence/runtime.functions";
+import { singleFlight } from "@/lib/interview-intelligence/single-flight";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/evidence",
@@ -108,6 +109,35 @@ function Page() {
   const authorFn = useServerFn(authorEvidence);
   const reviewFn = useServerFn(reviewEvidenceProposal);
   const panelFn = useServerFn(getPanel);
+  // One intention, one request. A second click in the same frame -- before
+  // the button re-renders as disabled -- returns the in-flight promise
+  // instead of starting a twin. The database absorbs a twin too; the point
+  // here is that the recruiter sees one outcome for one action.
+  const authorOnce = useMemo(
+    () =>
+      singleFlight(
+        (v: { caseId: string; questionId: string; excerpt: string; noteId: string | null }) =>
+          authorFn({ data: v }),
+      ),
+    [authorFn],
+  );
+  const analyseOnce = useMemo(
+    () => singleFlight((v: { caseId: string }) => analyseFn({ data: v })),
+    [analyseFn],
+  );
+  const reviewOnce = useMemo(
+    () =>
+      singleFlight(
+        (v: {
+          proposalId: string;
+          decision: "accept" | "edit" | "reject" | "unresolved";
+          editedExcerpt: string | undefined;
+          correctionClass: string | undefined;
+          note: string | undefined;
+        }) => reviewFn({ data: { ...v, correctionClass: v.correctionClass as never } }),
+      ),
+    [reviewFn],
+  );
 
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
@@ -151,9 +181,7 @@ function Page() {
   const [evNoteId, setEvNoteId] = useState<string | null>(null);
   const authorEv = useMutation({
     mutationFn: (v: { questionId: string; excerpt: string; noteId: string | null }) =>
-      authorFn({
-        data: { caseId, questionId: v.questionId, excerpt: v.excerpt, noteId: v.noteId },
-      }),
+      authorOnce({ caseId, questionId: v.questionId, excerpt: v.excerpt, noteId: v.noteId }),
     onSuccess: () => {
       setEvExcerpt("");
       setEvNoteId(null);
@@ -165,7 +193,7 @@ function Page() {
   // stage that permits it. The result reports per-step outcomes, so a later
   // failure shows as partial completion rather than erasing what worked.
   const analyse = useMutation({
-    mutationFn: () => analyseFn({ data: { caseId } }),
+    mutationFn: () => analyseOnce({ caseId }),
     onSuccess: () => void q.refetch(),
   });
   const review = useMutation({
@@ -173,15 +201,12 @@ function Page() {
       proposalId: string;
       decision: "accept" | "edit" | "reject" | "unresolved";
     }) =>
-      reviewFn({
-        data: {
-          proposalId: v.proposalId,
-          decision: v.decision,
-          editedExcerpt: v.decision === "edit" ? editText : undefined,
-          correctionClass:
-            v.decision === "edit" || v.decision === "reject" ? (correction as never) : undefined,
-          note: note || undefined,
-        },
+      reviewOnce({
+        proposalId: v.proposalId,
+        decision: v.decision,
+        editedExcerpt: v.decision === "edit" ? editText : undefined,
+        correctionClass: v.decision === "edit" || v.decision === "reject" ? correction : undefined,
+        note: note || undefined,
       }),
     onSuccess: () => {
       setEditing(null);
