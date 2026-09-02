@@ -953,6 +953,41 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Väktare option-order integrity (PR-V1, 20261021090000).
+#
+# randomise_options was authored true on all 22 scenario items and honoured by
+# nothing; the preferred option is authored first on every one of them. The
+# suite proves the per-attempt permutation is stable within an attempt,
+# differs across attempts, never touches an ordered scale, leaves a NULL-seed
+# attempt in authored order, and that one fixed set of chosen option ids
+# produces a row-for-row identical evidence ledger under three permutations.
+#
+# Runs BEFORE the rollback step: it reads the SCP content spine, which the
+# rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running Väktare option-order integrity assertions"
+set +e
+OOI_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_option_order_integrity_test.sql 2>&1)"
+OOI_RC=$?
+set -e
+
+echo "$OOI_OUT" | grep -E "diag  " | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+OOI_PASSED="$(echo "$OOI_OUT" | grep -c "ok  " || true)"
+
+if [ "$OOI_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the option-order integrity suite exited with code ${OOI_RC}." >&2
+  echo "$OOI_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "option-order integrity"
+else
+  echo "    ok  ${OOI_PASSED} option-order integrity assertions passed"
+  if [ "$OOI_PASSED" -lt 50 ]; then
+    echo "FAIL: expected at least 50 option-order integrity assertions, only ${OOI_PASSED} ran." >&2
+    suite_failed "option-order integrity (assertion shortfall: floor 50)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running content library and maturity-isolation assertions"
 set +e
 LIB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_content_library_test.sql 2>&1)"
@@ -3490,6 +3525,7 @@ echo "              ${ARCH_PASSED} job archive assertions,"
 echo "              ${ACC_PASSED} admin lifecycle assertions,"
 echo "              ${LIFE_PASSED} job lifecycle + notification assertions,"
 echo "              ${STDR_PASSED} standard recruitment availability assertions,"
+echo "              ${OOI_PASSED} option-order integrity assertions,"
 echo "              ${SP3M_PASSED} three-market foundation assertions,"
 echo "              ${SPSE_PASSED} Swedish truth model assertions,"
 echo "              ${SPUK_PASSED} UK market pack assertions,"

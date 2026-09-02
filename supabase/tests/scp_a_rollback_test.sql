@@ -698,6 +698,15 @@ ALTER TABLE public.scp_assessment_versions DROP COLUMN IF EXISTS program_version
 -- delete it -- it has to unpublish first. That friction is the guard working,
 -- not an obstacle to route around, and it is exactly what a real retirement
 -- would encounter. The triggers come off explicitly and go straight back on.
+-- 20261021090000 (option order per attempt): the two trigger functions and the
+-- two pure ordering helpers take no governance type, so the enum cascade below
+-- never reaches them. Their triggers go with scp_attempts; the functions would
+-- otherwise survive a rollback that claims to remove every scp_ object.
+DROP FUNCTION IF EXISTS public.scp_assign_option_order_seed()            CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_option_order_seed_immutable()   CASCADE;
+DROP FUNCTION IF EXISTS public.scp_option_order_key(integer, uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_item_order_is_meaningful(text)        CASCADE;
+
 ALTER TABLE public.scp_item_versions       DISABLE TRIGGER USER;
 ALTER TABLE public.scp_assessment_versions DISABLE TRIGGER USER;
 

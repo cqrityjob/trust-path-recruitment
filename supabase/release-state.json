@@ -331,6 +331,36 @@
       ], 
       "hostedState": "pending", 
       "note": "PR 20 interview evidence reliability. ADDITIVE and function-level only: one new TRIGGER FUNCTION (scp_iv_guard_evidence_origin_in_case, attached to evidence proposals, confirmed evidence and findings) and six CREATE OR REPLACE rewrites with unchanged signatures (scp_iv_author_evidence, scp_iv_confirm_evidence_proposal, scp_iv_record_assessment, scp_iv_mark_assessed, scp_iv_report_blockers, scp_iv_finalise_report). No table, no column, no policy, no grant change, no index, no row rewritten. ONE CHECK CONSTRAINT CORRECTED: scp_interview_reports_final read (status='final') = (finalised_at IS NOT NULL), so a report could never be superseded by a later version -- marking v1 superseded while it kept its finalisation moment violated the check and the whole second finalisation rolled back with a raw constraint error; it now reads (status='draft') = (finalised_at IS NULL), which every existing row already satisfies. THE GAPS: authoring evidence inserted a twin on every retry or double-click and both reached the report; an identical retried assessment save and a retried proposal decision were refused as if they had failed; two clicks on finalise wrote two report versions; nothing bound evidence to the case whose note it cites, so the same candidate's interview for another job could be cited as provenance; and an assessment referenced no evidence state, so material confirmed after a question was assessed appeared under an assessment that never saw it. NOW: the case row is locked and identical repeats return the existing row (evidence, assessment, proposal decision, report); evidence, proposals and findings may cite only their own case, question and pinned pack (SCP_IV_EVIDENCE_ORIGIN_MISMATCH / _DIMENSION_MISMATCH / _COMPETENCY_MISMATCH); and scp_iv_report_blockers reports ASSESSMENT_PREDATES_MATERIAL for any question whose live assessment predates confirmed evidence, so a report waits until the question is assessed again through the existing supersede path. The report payload is UNCHANGED: a report frozen before and after this migration hashes identically. DEPLOY ORDER: safe in either order and safe alone. Applied first, the application keeps working exactly as today and simply stops being able to create twins; applied after the code, the code's own single-flight and compare-and-set guards already cover the browser and the database closes the direct-RPC path. The introduced function is a trigger function: nothing in src/ references it, so the application release does not depend on it. Verified locally on the 54322 stack: forward apply, rollback to the byte-exact prior definitions, forward re-apply, and the copilot, tenant-isolation, integrity and conduct suites unchanged; the new supabase/tests/scp_interview_evidence_reliability_test.sql suite runs in scripts/db-test.sh. Not applied hosted."
+    }, 
+    {
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_attempts' AND column_name='option_order_seed';  -- expect 1 row. Then: SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgname IN ('scp_attempts_assign_option_seed','scp_attempts_option_seed_immutable');  -- expect 2. Then: SELECT prosrc LIKE '%scp_option_order_key%' FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='scp_get_attempt_items';  -- expect t. Then: SELECT p.proname, has_function_privilege('anon', p.oid, 'EXECUTE') anon_x, has_function_privilege('authenticated', p.oid, 'EXECUTE') auth_x FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('scp_option_order_key','scp_item_order_is_meaningful','scp_assign_option_order_seed','scp_guard_option_order_seed_immutable','scp_get_attempt_items');  -- expect anon_x = f on all five and auth_x = t ONLY for scp_get_attempt_items.", 
+      "file": "20261021090000_scp_option_order_per_attempt.sql", 
+      "rollback": "supabase/rollback/20261021090000_scp_option_order_per_attempt_rollback.sql", 
+      "note": "PR-V1 Väktare option-order integrity. ADDITIVE: one nullable integer column (scp_attempts.option_order_seed), one BEFORE INSERT trigger that assigns it when null, one BEFORE UPDATE trigger that refuses any change to it (including NULL -> value), two pure non-definer helpers (scp_option_order_key, scp_item_order_is_meaningful) revoked from anon AND authenticated, and one CREATE OR REPLACE of scp_get_attempt_items with an unchanged signature and return type. No content row, score, option, competency mapping, report, review or response is rewritten; no policy changes; no grant widens. THE DEFECT: scp_form_items.randomise_options was authored true on all 22 Väktare scenario items and honoured by nothing -- delivery ordered by display_order only -- while the preferred option is authored first on all 22, so always choosing the first option scored full marks. NOW: option order is a pure function of (attempt seed, item_version_id, option_id), stable across refresh, resume and language switch, different across attempts, and never applied to biq_frequency / sjt_rate_effectiveness whatever the flag says. Scoring never read a position (scp_submit_attempt reads selected_option_id), so a fixed set of chosen option ids scores identically under any permutation -- asserted row for row in the evidence ledger by supabase/tests/scp_option_order_integrity_test.sql. COMPATIBILITY RULE A: attempts created before this migration have a NULL seed and keep the authored order permanently; no backfill and no lazy seeding, so nobody who has started answering is reordered and every submitted attempt stays reproducible. DEPLOY ORDER: safe alone and safe in either order. Nothing in src/ names the column or the helpers; the application already calls scp_get_attempt_items and consumes whatever order it returns. Applied before the code: attempts created from then on are randomised and the UI renders them as served. Applied after: no difference, there is no dependent code. Verified locally against a fresh replay of main on the 54322 stack: forward apply, the new suite, rollback to the byte-exact 20260830091000 delivery definition, forward re-apply. Not applied hosted.", 
+      "hostedState": "pending", 
+      "introduces": [
+        {
+          "object": "option_order_seed", 
+          "kind": "column", 
+          "table": "scp_attempts"
+        }, 
+        {
+          "object": "scp_assign_option_order_seed", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_guard_option_order_seed_immutable", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_option_order_key", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_item_order_is_meaningful", 
+          "kind": "function"
+        }
+      ]
     }
   ], 
   "policyVersion": 2, 
