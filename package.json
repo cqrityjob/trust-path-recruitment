@@ -103,6 +103,7 @@
   "interview-context-bridge:check": "bun run scripts/interview-context-bridge-check.ts",
   "interview-context-bridge-history:check": "bun run scripts/interview-context-bridge-history-check.ts",
   "interview-finalisation-capability:check": "bun run scripts/interview-finalisation-capability-check.tsx",
+  "interview-recruiter-workflow:check": "bun run scripts/interview-recruiter-workflow-check.tsx",
   "interview-finalisation-rpc:check": "bun run scripts/interview-finalisation-rpc-check.ts",
   "interview-ai-provider:check": "bun run scripts/interview-ai-provider-check.ts",
   "interview-gold-independence:check": "bun run scripts/interview-gold-independence-check.ts",

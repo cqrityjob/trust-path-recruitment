@@ -520,6 +520,19 @@ jobs:
       - name: Interview finalisation capability check
         run: bun run interview-finalisation-capability:check
 
+      # PR19: the recruiter's four-step journey. Pilot recruiters met seven
+      # navigation steps named for screens, TRUST stage banners above their
+      # work, raw enum values and provider modes on customer screens, and no
+      # single obvious next action. This renders the workflow shell, the
+      # status chip and the next-step action and reads them for what they
+      # say -- four stages, driven by the runtime status, one action per
+      # stage -- and reads the source for what a render cannot reach: no raw
+      # identifier on a recruiter screen, TRUST only as method support,
+      # Q1-Q8 still verbatim, follow-ups subordinate, the PR18 context and
+      # the finalisation boundary intact.
+      - name: Interview recruiter workflow check
+        run: bun run interview-recruiter-workflow:check
+
       # The real model adapter, proved against a fake transport with no
       # credential and no network. Transport failures retry a bounded number of
       # times; a returned-but-unusable answer is NEVER retried, because

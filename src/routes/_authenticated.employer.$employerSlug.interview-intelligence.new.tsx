@@ -186,9 +186,9 @@ function Page() {
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
-          className="text-accent underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
         >
-          Interview Intelligence
+          {t("iiu.ov.backtolist")}
         </Link>
       </nav>
 

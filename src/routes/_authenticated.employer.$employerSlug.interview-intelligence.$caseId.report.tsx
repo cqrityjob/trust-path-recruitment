@@ -23,6 +23,7 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import { canFinaliseInterviewReport } from "@/lib/interview-intelligence/capability";
 import { ReportFinalisation } from "@/components/employer/interview/ReportFinalisation";
+import { InterviewOutcome } from "@/components/employer/interview/InterviewOutcome";
 import {
   CaseStatusChip,
   WorkflowNav,
@@ -36,7 +37,6 @@ import {
   interviewErrorMessage,
   uiLabel,
   GovernedGuidance,
-  ProviderModeChip,
   ProviderModeNote,
   WithheldPanel,
   BUTTON,
@@ -217,20 +217,18 @@ function Page() {
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId"
           params={{ employerSlug, caseId }}
-          className="text-accent underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
         >
           {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
       <header className="mt-3">
-        {/* The person, then the case. Every one of these screens led with
-            the case title -- internal bookkeeping -- and put the candidate
-            underneath it in muted grey. */}
+        {/* The person, then the role, then where the case is. */}
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           {d.candidateDisplayName}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{d.packName ?? d.title}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CaseStatusChip status={d.status} />
           {isFinal && (
@@ -250,30 +248,22 @@ function Page() {
         />
       </div>
 
-      {/* ---- Before the record closes ----
-           The interviewer reviews their OWN conduct. Nothing here is stored as
-           an assessment of the candidate, and nothing here is generated. Once
-           the report is final it is a disclosure rather than a task. */}
-      {isFinal ? (
-        // A <summary> cannot be a heading, so the disclosure carries one of its
-        // own. Without it the page jumped h1 -> h3 for anyone navigating by
-        // headings, which is the same defect as a missing landmark.
-        <section aria-labelledby="s-selfreview" className="mt-7 max-w-4xl">
-          <h2 id="s-selfreview" className="sr-only">
-            {t("iiu.cd.trace.selfreview")}
-          </h2>
-          <Disclosure summary={t("iiu.cd.trace.selfreview")}>
-            <SelfReview guidance={d.conductGuidance} t={t} />
-          </Disclosure>
-        </section>
-      ) : (
+      {/* ---- What the report will be built from ----
+           Shown BEFORE anything is locked, so the recruiter reads the material
+           on the screen where they lock it: the candidate's confirmed
+           examples, the assessment against each requirement, what is still
+           open, and their own comments. This used to live on a separate
+           summary screen between Assess and Report; a report screen that
+           showed nothing of the report until it was locked was one of the
+           things pilot recruiters could not read their way through. */}
+      {!isFinal && (
         <Section
-          id="s-selfreview"
-          title={t("iiu.cd.trace.selfreview")}
-          description={t("iiu.rp.selfreview.lead")}
+          id="s-preview"
+          title={t("iiu.rp.preview.title")}
+          description={t("iiu.rp.preview.body")}
           className="mt-8 max-w-4xl"
         >
-          <SelfReview guidance={d.conductGuidance} t={t} />
+          <InterviewOutcome d={d} employerSlug={employerSlug} caseId={caseId} />
         </Section>
       )}
 
@@ -357,9 +347,6 @@ function Page() {
                     <div className="mt-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <Eyebrow>{t("iiu.rp.draft.result")}</Eyebrow>
-                        {draft.data.providerMode && (
-                          <ProviderModeChip mode={draft.data.providerMode} />
-                        )}
                       </div>
                       {draft.data.sections.map((sec) => (
                         <article key={sec.heading} className="mt-3">
@@ -390,6 +377,7 @@ function Page() {
                 isPending={finalise.isPending}
                 employerSlug={employerSlug}
                 caseId={caseId}
+                applicationId={d.applicationId}
               />
             </div>
           ) : (
@@ -661,6 +649,27 @@ function Page() {
           </section>
         </article>
       )}
+
+      {/* ---- Method support: the interviewer's own conduct ----
+           The interviewer reviews their OWN conduct. Nothing here is stored as
+           an assessment of the candidate, and nothing here is generated. It
+           is method support, so it is a disclosure rather than a task that
+           sits between the recruiter and their report. A <summary> cannot be
+           a heading, so the section carries one of its own for anyone
+           navigating by headings. */}
+      <section aria-labelledby="s-selfreview" className="mt-8 max-w-4xl">
+        <h2 id="s-selfreview" className="sr-only">
+          {t("iiu.cd.trace.selfreview")}
+        </h2>
+        <Disclosure summary={t("iiu.cd.trace.selfreview")}>
+          {!isFinal && (
+            <p className="mb-3 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+              {t("iiu.rp.selfreview.lead")}
+            </p>
+          )}
+          <SelfReview guidance={d.conductGuidance} t={t} />
+        </Disclosure>
+      </section>
 
       {/* ---- Audit ----
            Everything above this line is what an employer reads. Nothing is

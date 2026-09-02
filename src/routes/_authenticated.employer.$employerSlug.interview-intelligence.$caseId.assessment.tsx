@@ -22,7 +22,7 @@
 // recordAssessment and already published in the report; it simply had no field
 // on the screen that records it.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -36,6 +36,7 @@ import {
   Chip,
   LevelZeroNote,
   MaterialBadge,
+  NextStepLink,
   Panel,
   State,
   WorkflowNav,
@@ -119,6 +120,7 @@ function Page() {
   const ws = useEmployerWorkspace(employerSlug);
   const { t, lang } = useT();
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const getFn = useServerFn(getInterviewCase);
   const assessFn = useServerFn(recordAssessment);
@@ -216,9 +218,18 @@ function Page() {
       refresh();
     },
   });
+  // Finishing the assessment is the end of the stage, so it lands the
+  // recruiter on the next one: the report, showing what it will be built
+  // from. Nothing is locked by arriving there.
   const finishAssessing = useMutation({
     mutationFn: () => doneFn({ data: { caseId } }),
-    onSuccess: refresh,
+    onSuccess: () => {
+      refresh();
+      void navigate({
+        to: "/employer/$employerSlug/interview-intelligence/$caseId/report",
+        params: { employerSlug, caseId },
+      });
+    },
   });
 
   if (ws.isLoading)
@@ -718,26 +729,24 @@ function Page() {
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId"
           params={{ employerSlug, caseId }}
-          className="text-accent underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
         >
           {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
       <div className="mt-3">
+        {/* While the assessment is the recruiter's job, the primary actions
+            are the per-question saves and the finish button below; the
+            header offers nothing that competes with them. Once the stage is
+            done the header carries the one next step. */}
         <CaseHeader
           candidate={d.candidateDisplayName}
           role={d.packName ?? d.title}
           status={d.status}
           action={
-            done > 0 ? (
-              <Link
-                to="/employer/$employerSlug/interview-intelligence/$caseId/summary"
-                params={{ employerSlug, caseId }}
-                className={PRIMARY_BUTTON}
-              >
-                {t("iiu.as.tosummary")}
-              </Link>
+            d.status === "assessed" || d.status === "reported" ? (
+              <NextStepLink status={d.status} employerSlug={employerSlug} caseId={caseId} />
             ) : undefined
           }
         />
@@ -747,6 +756,7 @@ function Page() {
         <WorkflowNav
           status={d.status}
           current="assess"
+          step="assess"
           employerSlug={employerSlug}
           caseId={caseId}
         />
@@ -899,7 +909,7 @@ function Page() {
                         to="/employer/$employerSlug/interview-intelligence/$caseId/evidence"
                         params={{ employerSlug, caseId }}
                         search={{ q: qq.code }}
-                        className="inline-flex items-center rounded-md border border-amber-600/40 bg-amber-500/5 px-2 py-0.5 text-xs font-medium text-amber-900 underline-offset-2 hover:underline dark:text-amber-200"
+                        className="inline-flex min-h-8 items-center rounded-md border border-amber-600/40 bg-amber-500/5 px-2.5 text-xs font-medium text-amber-900 underline-offset-2 hover:underline dark:text-amber-200"
                       >
                         {qq.code}
                       </Link>

@@ -222,6 +222,8 @@ ok(
 const INTERVIEW_COMPONENTS = [
   "src/components/employer/interview/InterviewUi.tsx",
   "src/components/employer/interview/InterviewLayout.tsx",
+  "src/components/employer/interview/InterviewOutcome.tsx",
+  "src/components/employer/interview/ReportFinalisation.tsx",
 ];
 
 const employerSurfaces = [...interviewRoutes, ...INTERVIEW_COMPONENTS];
@@ -430,10 +432,6 @@ for (const file of I18N_SURFACES) {
     "iiu.chip.status", //          likewise, as a screen-reader prefix
     "iiu.iv.sess.srprefix", //     "Session" — the same word in both
     "iiu.source.candidate_cv_short", // "CV" — the same abbreviation in both
-    "iiu.iv.copilot.title", //     "CQrity Copilot" — a product name, which is
-    //                             not translated in either locale. The panel's
-    //                             body copy beneath it IS translated, and is
-    //                             checked like everything else.
     "iiu.ev.5e.1", //              "Situation" — the same word in both. The
     //                             other four 5E labels differ and are checked.
   ]);
@@ -759,8 +757,8 @@ for (const file of [
     "the overview must lead with the candidate, not with process state",
   );
   ok(
-    ov.includes('t("iiu.ov.nextaction")') && ov.includes("NEXT[d.status]"),
-    "the overview must tell the recruiter what to do next, derived from the case status",
+    ov.includes('t("iiu.ov.nextaction")') && ov.includes("NEXT_STEP[d.status]"),
+    "the overview must tell the recruiter what to do next, derived from the case status through the shared NEXT_STEP map",
   );
   ok(
     !ov.includes("TrustStageBanner"),
@@ -814,13 +812,17 @@ for (const file of [
     );
   }
 
-  // Every one of these screens should open with the person being interviewed.
+  // Every one of these screens should open with the person being interviewed:
+  // either its own h1 or the shared CaseHeader, whose first prop is the
+  // candidate.
   for (const file of [...CASE_ROUTES, OVERVIEW]) {
     const body = read(file);
     const h1 = body.indexOf("sm:text-3xl");
+    const header = body.indexOf("<CaseHeader");
     const cand = body.indexOf("{d.candidateDisplayName}");
+    const leadsWith = (at: number) => at > 0 && cand > at && cand - at < 200;
     ok(
-      cand > 0 && h1 > 0 && cand - h1 < 200 && cand > h1,
+      cand > 0 && (leadsWith(h1) || leadsWith(header)),
       `${file} does not lead with the candidate — the case title is internal bookkeeping`,
     );
   }
@@ -828,11 +830,15 @@ for (const file of [
   // Navigation is by the recruiter's task, never by the method's stages.
   {
     const rail = read("src/components/employer/interview/InterviewUi.tsx");
-    const steps = rail.slice(rail.indexOf("export function CaseSteps"));
+    const steps = rail.slice(
+      rail.indexOf("export type Stage ="),
+      rail.indexOf("export function WorkflowNav"),
+    );
+    ok(steps.length > 0, "the four-stage workflow definition must exist in InterviewUi");
     for (const stage of ["Target", "Ready", "Understand", "Structure", "Trace"]) {
       ok(
-        !new RegExp(`label: t\\("[^"]*"\\).*${stage}`).test(steps) && !steps.includes(`"${stage}"`),
-        `the journey rail is labelled with the TRUST stage "${stage}" — navigate by task, not by method`,
+        !steps.includes(`"${stage}"`) && !steps.toLowerCase().includes(`"${stage.toLowerCase()}"`),
+        `the journey is labelled with the TRUST stage "${stage}" — navigate by task, not by method`,
       );
     }
   }
@@ -866,9 +872,10 @@ for (const file of [
 // a status the backend can produce can never leave the recruiter on a page
 // with nowhere to go.
 {
-  const OVERVIEW =
-    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
-  const ov = read(OVERVIEW);
+  // The map lives in InterviewUi now, because the overview's primary button,
+  // the list's next-step column and every stage header read from the same
+  // rows. It is still asserted status by status.
+  const ui = read("src/components/employer/interview/InterviewUi.tsx");
   const STATUSES = [
     "draft",
     "sources_ready",
@@ -880,17 +887,23 @@ for (const file of [
     "assessed",
     "reported",
   ];
-  const nextBlock = ov.slice(ov.indexOf("const NEXT"), ov.indexOf("function Page"));
+  const nextBlock = ui.slice(
+    ui.indexOf("export const NEXT_STEP:"),
+    ui.indexOf("export const NEXT_STEP_LABEL"),
+  );
+  ok(nextBlock.length > 0, "InterviewUi must define the shared NEXT_STEP map");
   for (const st of STATUSES) {
     ok(
       new RegExp(`\\b${st}:`).test(nextBlock),
-      `case status "${st}" has no next action on the overview — the recruiter would be stranded`,
+      `case status "${st}" has no next action — the recruiter would be stranded`,
     );
   }
-  for (const seg of ["prepare", "interview", "evidence", "summary", "report"]) {
+  // Every stage of the four-step journey is reachable from the map: prepare,
+  // interview, assess (which opens on the material) and report.
+  for (const seg of ["prepare", "interview", "evidence", "report"]) {
     ok(
       nextBlock.includes(`/${seg}\``),
-      `the overview never routes to /${seg} — the lifecycle is not navigable end to end`,
+      `the next-step map never routes to /${seg} — the lifecycle is not navigable end to end`,
     );
   }
 }
@@ -903,9 +916,13 @@ for (const file of [
 // starts calling a model, the one place a plausible paragraph reads as a
 // conclusion has acquired a generator.
 {
+  // The material sections moved into InterviewOutcome, which the summary route
+  // and the report (before it is locked) both render, so the two cannot
+  // drift. The assertions read the pair.
   const SUM =
     "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.summary.tsx";
-  const sum = read(SUM);
+  const OUTCOME = "src/components/employer/interview/InterviewOutcome.tsx";
+  const sum = read(SUM) + read(OUTCOME);
   ok(
     !/useMutation|runInterviewAnalysis|runReportDraft|\.mutate\(/.test(sum),
     "the post-interview summary triggers an action — it must project records, not generate them",

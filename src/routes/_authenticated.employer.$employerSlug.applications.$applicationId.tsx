@@ -60,7 +60,7 @@ import { RecruitmentPage } from "@/components/academy/AcademyWorkspace";
 import { ApplicationAssessmentPanel } from "@/components/academy/ApplicationAssessmentPanel";
 import { ApplicationPassportPanel } from "@/components/employer/ApplicationPassportPanel";
 import { listInterviewCasesForApplication } from "@/lib/interview-intelligence/runtime.functions";
-import { CaseStatusChip, ValidationChip } from "@/components/employer/interview/InterviewUi";
+import { CaseStatusChip } from "@/components/employer/interview/InterviewUi";
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import {
   getApplicationCvSignedUrl,
@@ -555,8 +555,11 @@ function Candidate360({
                   aria-hidden="true"
                 />
                 <span className="text-sm font-medium text-foreground">{ic.title}</span>
+                {/* Workflow status only. The guide's validation label is
+                    governance metadata: it is disclosed where the guide is
+                    chosen and in the report's audit details, not on the row
+                    a recruiter scans to find their next interview. */}
                 <CaseStatusChip status={ic.status} />
-                <ValidationChip label={ic.validationLabel} />
                 {ic.proposalsAwaitingReview > 0 && (
                   <span className="text-xs text-muted-foreground">
                     {tp(

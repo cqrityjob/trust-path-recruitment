@@ -31,87 +31,16 @@ import {
   CaseStatusChip,
   WorkflowNav,
   Chip,
+  NEXT_STEP,
   State,
   interviewErrorMessage,
   PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
 import { getInterviewCase } from "@/lib/interview-intelligence/runtime.functions";
-import type { TranslationKey } from "@/i18n/dictionaries";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/",
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
-
-/** Where the recruiter goes next, in their words rather than the schema's.
- *
- *  One row per case status, because "what do I do now" is a property of where
- *  the case actually is — not something the recruiter should have to work out
- *  from a stage name. `to` is the route segment; `cta` is the button. */
-const P = "/employer/$employerSlug/interview-intelligence/$caseId" as const;
-
-const NEXT: Record<
-  string,
-  {
-    to:
-      | "/employer/$employerSlug/interview-intelligence/$caseId/prepare"
-      | "/employer/$employerSlug/interview-intelligence/$caseId/interview"
-      | "/employer/$employerSlug/interview-intelligence/$caseId/evidence"
-      | "/employer/$employerSlug/interview-intelligence/$caseId/summary"
-      | "/employer/$employerSlug/interview-intelligence/$caseId/assessment"
-      | "/employer/$employerSlug/interview-intelligence/$caseId/report";
-    cta: TranslationKey;
-    why: TranslationKey;
-    step: number;
-  }
-> = {
-  draft: { to: `${P}/prepare`, cta: "iiu.ov.cta.prepare", why: "iiu.ov.why.prepare", step: 1 },
-  sources_ready: {
-    to: `${P}/prepare`,
-    cta: "iiu.ov.cta.prepare",
-    why: "iiu.ov.why.prepare",
-    step: 1,
-  },
-  prep_generated: {
-    to: `${P}/prepare`,
-    cta: "iiu.ov.cta.prepare",
-    why: "iiu.ov.why.prepare",
-    step: 1,
-  },
-  prep_approved: {
-    to: `${P}/interview`,
-    cta: "iiu.ov.cta.start",
-    why: "iiu.ov.why.start",
-    step: 2,
-  },
-  interview_in_progress: {
-    to: `${P}/interview`,
-    cta: "iiu.ov.cta.continue",
-    why: "iiu.ov.why.continue",
-    step: 2,
-  },
-  interview_complete: {
-    to: `${P}/evidence`,
-    cta: "iiu.ov.cta.review",
-    why: "iiu.ov.why.review",
-    step: 3,
-  },
-  evidence_review: {
-    to: `${P}/evidence`,
-    cta: "iiu.ov.cta.review",
-    why: "iiu.ov.why.review",
-    step: 3,
-  },
-  // Assessment done goes to the SUMMARY, not straight to the report: a
-  // recruiter who has just finished a dozen small judgements needs to see
-  // what they add up to before they publish anything.
-  assessed: { to: `${P}/summary`, cta: "iiu.ov.cta.summary", why: "iiu.ov.why.summary", step: 4 },
-  reported: {
-    to: `${P}/report`,
-    cta: "iiu.ov.cta.openreport",
-    why: "iiu.ov.why.reported",
-    step: 5,
-  },
-};
 
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
@@ -159,7 +88,10 @@ function Page() {
   const d = q.data;
   if (!d) return shell(<State kind="loading" />);
 
-  const next = NEXT[d.status] ?? NEXT.draft;
+  // Where the recruiter goes next, in their words rather than the schema's.
+  // Read from the same map every other screen uses, so the overview can never
+  // send someone somewhere the stage header would not.
+  const next = NEXT_STEP[d.status] ?? NEXT_STEP.draft;
 
   // The four numbers a recruiter actually tracks. Counts, never a percentage
   // or a score: this measures how far the WORK has got, not the candidate.
@@ -176,7 +108,7 @@ function Page() {
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
-          className="text-accent underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
         >
           {t("iiu.ov.backtolist")}
         </Link>
@@ -214,12 +146,7 @@ function Page() {
           {t("iiu.ov.whereyouare")}
         </h2>
         <div className="mt-2">
-          <WorkflowNav
-            status={d.status}
-            current="overview"
-            employerSlug={employerSlug}
-            caseId={caseId}
-          />
+          <WorkflowNav status={d.status} employerSlug={employerSlug} caseId={caseId} />
         </div>
 
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -302,10 +229,12 @@ function Page() {
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           {t("iiu.cd.hypothesis")}
         </p>
+        {/* The guide's name, and only its name. Its content hash used to sit
+            beside it: a checksum is an integrity fact for an auditor and lives
+            under the report's audit details, not on the recruiter's overview. */}
         {d.packName && (
           <p className="mt-3 text-xs text-muted-foreground">
             {t("iiu.ov.pack")}: {d.packName}
-            {d.packContentHash ? ` · ${d.packContentHash.slice(0, 10)}` : ""}
           </p>
         )}
       </details>
