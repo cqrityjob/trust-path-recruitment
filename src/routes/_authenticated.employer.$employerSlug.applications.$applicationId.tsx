@@ -525,10 +525,19 @@ function Candidate360({
             <p className="text-sm text-muted-foreground">
               {t("employer.candidate.structuredInterview.empty")}
             </p>
+            {/* The job travels with the application.
+             *
+             *  It was `undefined` here, so a case created from an application
+             *  pinned the application and left job_id NULL -- and the
+             *  preparation screen then had no advert to read requirements
+             *  from. `c.jobId` is this application's own job, so nothing about
+             *  which employer it belongs to is being asserted by the URL;
+             *  scp_iv_create_case re-checks it against the caller's employer
+             *  regardless. */}
             <Link
               to="/employer/$employerSlug/interview-intelligence/new"
               params={{ employerSlug }}
-              search={{ applicationId, jobId: undefined }}
+              search={{ applicationId, jobId: c.jobId ?? undefined }}
               className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline"
             >
               {t("employer.candidate.structuredInterview.start")}

@@ -411,6 +411,15 @@ export interface CaseDetail {
   readonly employerId: string;
   readonly title: string;
   readonly candidateDisplayName: string;
+  /** The recruitment record this interview belongs to, when it has one.
+   *
+   *  Both columns have existed since the runtime migration and neither was
+   *  ever read. That is the whole of the context gap: a case created from an
+   *  application arrived here unable to name it, so the screen could not link
+   *  back to the advert, the cover note or the assessment the recruiter had
+   *  just been looking at, and asked them to type it all in again. */
+  readonly applicationId: string | null;
+  readonly jobId: string | null;
   readonly status: CaseStatus;
   readonly packVersionId: string;
   readonly packName: string | null;
@@ -670,7 +679,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     const caseRes = await db
       .from("scp_interview_cases")
       .select(
-        "id, employer_id, title, candidate_display_name, status, pack_version_id, pack_content_hash, transcript_lawful_basis_confirmed_at, scp_interview_pack_versions(content_status, validation_label, scp_interview_packs(name_sv))",
+        "id, employer_id, title, candidate_display_name, application_id, job_id, status, pack_version_id, pack_content_hash, transcript_lawful_basis_confirmed_at, scp_interview_pack_versions(content_status, validation_label, scp_interview_packs(name_sv))",
       )
       .eq("id", caseId)
       .maybeSingle();
@@ -959,6 +968,8 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       employerId: c.employer_id as string,
       title: c.title as string,
       candidateDisplayName: c.candidate_display_name as string,
+      applicationId: (c.application_id as string | null) ?? null,
+      jobId: (c.job_id as string | null) ?? null,
       status: c.status as CaseStatus,
       packVersionId,
       packName: pack?.name_sv ?? null,
