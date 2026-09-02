@@ -5365,7 +5365,24 @@ export const dictionaries = {
     "iiu.ev.aioriginal": "AI:ts ursprungliga formulering",
     "iiu.pl.title": "Sambedömning",
     "iiu.pl.conclusion.title": "Panelens slutsats",
-    "iiu.rp.noblockers.title": "Inget hindrar rapporten",
+    // ── SLUTGODKÄNNANDE: UNDERLAG vs BEHÖRIGHET ─────────────────────
+    //
+    // "Inget hindrar rapporten" stod direkt ovanför en aktiv knapp och
+    // slog ihop två olika påståenden: att arbetet är klart, och att den
+    // som läser får avsluta ärendet. Det andra var falskt för varje
+    // intervjuare som inte också är ägare eller administratör, och enda
+    // sättet att få veta var att klicka.
+    //
+    // Rubriken säger nu bara det första. Vem som får agera på det står
+    // för sig, i egen text.
+    "iiu.rp.ready.title": "Underlaget är komplett",
+    // Neutralt läge, inte ett fel. Personen har gjort allt rätt och är
+    // klar med sin del.
+    "iiu.rp.await.title": "Rapporten är redo för slutgodkännande",
+    "iiu.rp.await.body":
+      "Intervjun och bedömningen är klara. En ägare eller administratör för " +
+      "organisationen behöver slutgodkänna och låsa rapporten.",
+    "iiu.rp.await.back": "Tillbaka till intervjuöversikten",
     "iiu.pp.airole.short": "AI:s roll",
     "iiu.rp.decision": "Beslutet",
     "iiu.ev.hint.level": "Välj en nivå innan du sparar.",
@@ -10653,7 +10670,12 @@ export const dictionaries = {
     "iiu.ev.aioriginal": "The AI's original wording",
     "iiu.pl.title": "Joint review",
     "iiu.pl.conclusion.title": "The panel's conclusion",
-    "iiu.rp.noblockers.title": "Nothing is blocking the report",
+    "iiu.rp.ready.title": "The material is complete",
+    "iiu.rp.await.title": "The report is ready for final approval",
+    "iiu.rp.await.body":
+      "The interview and the assessment are complete. An owner or administrator " +
+      "of the organisation needs to give final approval and lock the report.",
+    "iiu.rp.await.back": "Back to the interview overview",
     "iiu.pp.airole.short": "The role of AI",
     "iiu.rp.decision": "The decision",
     "iiu.ev.hint.level": "Choose a level before saving.",

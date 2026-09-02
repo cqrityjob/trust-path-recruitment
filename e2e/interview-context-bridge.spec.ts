@@ -357,3 +357,96 @@ for (const [label, width, height] of [
     }
   });
 }
+
+/* ==================================================================== */
+/* FINALISATION CAPABILITY — the pilot defect, walked                    */
+/* ==================================================================== */
+//
+// A pilot walkthrough reached the report screen, was shown an active "Slutför
+// rapporten" button, clicked it, and was refused by the database. The rule was
+// right; the screen was lying.
+//
+// The component guard renders both branches and the RPC guard proves the
+// database still refuses a member. What only a signed-in walk can prove is the
+// WIRING between them: that the role on the caller's own membership reaches
+// the component as `canFinalise` for two different real people looking at the
+// SAME case.
+
+/** A journey case walked to report-ready (zero blockers, not yet locked). */
+const READY_CASE = "047ce788-ea6a-4fe2-9fb1-c08c920926db";
+const INTERVIEWER = "interviewer@local.test";
+
+function reportUrl(caseId: string) {
+  return `/employer/${JOURNEY.slug}/interview-intelligence/${caseId}/report`;
+}
+
+test("owner · a ready report offers the finalise action", async ({ page }) => {
+  await signIn(page, JOURNEY.email);
+  await page.goto(reportUrl(READY_CASE));
+
+  const main = page.locator("main");
+  // Content readiness, stated as a fact about the material.
+  await expect(main).toContainText(/Underlaget är komplett|The material is complete/i, {
+    timeout: 45_000,
+  });
+
+  // And the action, because this person may take it.
+  const finalise = page.getByRole("button", { name: /Slutför rapporten|Complete the report/i });
+  await expect(finalise).toBeVisible();
+  await expect(finalise).toBeEnabled();
+
+  // The owner is NOT shown the waiting state.
+  await expect(main).not.toContainText(/redo för slutgodkännande|ready for final approval/i);
+});
+
+test("member · a ready report shows who must approve, and no button", async ({ page }) => {
+  await signIn(page, INTERVIEWER);
+  await page.goto(reportUrl(READY_CASE));
+
+  const main = page.locator("main");
+
+  // Same case, same completeness — this half is about the material and is true
+  // for everyone.
+  await expect(main).toContainText(/Underlaget är komplett|The material is complete/i, {
+    timeout: 45_000,
+  });
+
+  // The authority half differs, and is stated rather than discovered.
+  await expect(main).toContainText(
+    /Rapporten är redo för slutgodkännande|ready for final approval/i,
+  );
+  await expect(main).toContainText(/ägare eller administratör|owner or administrator/i);
+
+  // THE ASSERTION THIS WHOLE SECTION EXISTS FOR. No button, enabled or
+  // otherwise: a greyed-out control is the same false claim in a quieter
+  // voice, and the interviewer must not have to click to learn this.
+  await expect(
+    page.getByRole("button", { name: /Slutför rapporten|Complete the report/i }),
+  ).toHaveCount(0);
+
+  // And it is not dressed as a failure. This person did everything right.
+  await expect(main.locator('[role="alert"]')).toHaveCount(0);
+});
+
+for (const [label, width, height] of [
+  ["375", 375, 812],
+  ["768", 768, 1024],
+  ["1440", 1440, 900],
+] as const) {
+  test(`viewport ${label} · the member's waiting state is readable and does not overflow`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await signIn(page, INTERVIEWER);
+    await page.goto(reportUrl(READY_CASE));
+
+    await expect(page.locator("main")).toContainText(
+      /Rapporten är redo för slutgodkännande|ready for final approval/i,
+      { timeout: 45_000 },
+    );
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `horizontal overflow at ${label}px`).toBeLessThanOrEqual(1);
+  });
+}

@@ -508,6 +508,18 @@ jobs:
       - name: Interview context bridge check
         run: bun run interview-context-bridge:check
 
+      # Who may LOCK a candidate interview report. A pilot walkthrough was
+      # shown an active "Slutför rapporten" button, clicked it, and was refused
+      # by the database -- the governance rule was right and the screen was
+      # lying. This renders both branches of the finalisation block and asserts
+      # that a member sees no button, no disabled button, and no error state,
+      # while the owner/admin rule in scp_iv_finalise_report is untouched.
+      # The database half of that claim -- a member calling the RPC directly is
+      # still refused with 42501 -- needs a live stack and runs locally via
+      # interview-finalisation-rpc:check.
+      - name: Interview finalisation capability check
+        run: bun run interview-finalisation-capability:check
+
       # The real model adapter, proved against a fake transport with no
       # credential and no network. Transport failures retry a bounded number of
       # times; a returned-but-unusable answer is NEVER retried, because

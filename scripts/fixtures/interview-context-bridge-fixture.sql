@@ -95,10 +95,107 @@ SELECT '11110000-1111-0000-0000-00000000000a', v.id,
  WHERE v.validation_label = 'pilot_hypothesis'
 ON CONFLICT DO NOTHING;
 
+-- ---------------------------------------------------------------------------
+-- 4. An ordinary MEMBER of the journey employer.
+-- ---------------------------------------------------------------------------
+-- The finalisation rule is about the difference between an interviewer and an
+-- owner, and that difference cannot be walked with only owners on the stack.
+-- interview-journey-fixture.sql creates two owners of two different
+-- organisations, which proves cross-tenant denial and says nothing about roles
+-- WITHIN one.
+--
+-- So: a third person, an active member of the journey employer, who may
+-- conduct the whole interview and may not lock the report.
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new,
+  email_change_token_current, email_change, phone_change, phone_change_token,
+  reauthentication_token)
+VALUES
+  ('00000000-0000-0000-0000-000000000000',
+   '9e000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated',
+   'interviewer@local.test', crypt('LocalJourney!2026', gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(),
+   -- GoTrue scans these as non-nullable strings; NULL produces a 500 on
+   -- sign-in reading "Database error querying schema".
+   '', '', '', '', '', '', '', '')
+ON CONFLICT (id) DO UPDATE
+  SET encrypted_password = EXCLUDED.encrypted_password,
+      email_confirmed_at = coalesce(auth.users.email_confirmed_at, now());
+
+INSERT INTO public.employer_memberships (user_id, employer_id, role, status)
+VALUES ('9e000000-0000-4000-8000-000000000003',
+        '9e000000-0000-4000-8000-00000000000a', 'member', 'active')
+ON CONFLICT (user_id, employer_id) DO UPDATE
+  SET role = 'member', status = 'active';
+
+-- ---------------------------------------------------------------------------
+-- 5. One case walked to REPORT-READY.
+-- ---------------------------------------------------------------------------
+-- The finalisation defect only shows itself on a case with no blockers: with
+-- blockers, everyone sees the blocker list and the question of who may lock
+-- the report never arises. So the walk needs one ready case, and the fixture
+-- has to produce it or the browser test is not reproducible.
+--
+-- Walked through the product's OWN governed RPCs -- start session, complete
+-- it, open evidence review, record an assessment per question, mark assessed
+-- -- rather than by writing rows. Hand-written rows would produce a case that
+-- looks ready to a hand-written test and may not be what
+-- scp_iv_report_blockers considers ready, which is the only opinion that
+-- counts.
+--
+-- Level 0 with a rationale, deliberately: it is the honest outcome for an
+-- interview with no confirmed evidence behind it, it is what the product
+-- itself would record, and it needs no fabricated evidence rows. It is not a
+-- judgement of anybody -- the case's candidate is synthetic.
+DO $$
+DECLARE
+  _case  uuid := '047ce788-ea6a-4fe2-9fb1-c08c920926db';
+  _owner uuid := '9e000000-0000-4000-8000-000000000001';
+  _sess  uuid;
+  _q     record;
+  _status text;
+BEGIN
+  SELECT status INTO _status FROM public.scp_interview_cases WHERE id = _case;
+  IF _status IS NULL THEN
+    RAISE NOTICE 'context-bridge fixture: case % not present, skipping the ready-case walk', _case;
+    RETURN;
+  END IF;
+  -- Idempotent: a second run must not try to re-walk a case that is already
+  -- past this point, and must not disturb one that has been reported.
+  IF _status <> 'prep_approved' THEN
+    RAISE NOTICE 'context-bridge fixture: case % is "%", ready-case walk skipped', _case, _status;
+    RETURN;
+  END IF;
+
+  -- The RPCs are SECURITY DEFINER and read auth.uid(); they must be called as
+  -- somebody. The journey owner is the person who would really have done this.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', _owner::text, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+
+  _sess := public.scp_iv_start_session(_case, 'Lokal genomgang');
+  PERFORM public.scp_iv_set_session_state(_sess, 'completed', NULL, NULL, NULL);
+  PERFORM public.scp_iv_begin_evidence_review(_case);
+
+  FOR _q IN
+    SELECT cq.id FROM public.scp_interview_core_questions cq
+     JOIN public.scp_interview_cases c ON c.pack_version_id = cq.pack_version_id
+    WHERE c.id = _case ORDER BY cq.display_order
+  LOOP
+    PERFORM public.scp_iv_record_assessment(_case, _q.id, 0,
+      'Lokalt underlag: otillracklig evidens for att uttala sig.', NULL, NULL);
+  END LOOP;
+
+  PERFORM public.scp_iv_mark_assessed(_case);
+  RESET ROLE;
+END $$;
+
 COMMIT;
 
 DO $$
-DECLARE _released int; _pw int; _reqs int;
+DECLARE _released int; _pw int; _reqs int; _member int; _blockers int; _ready text;
 BEGIN
   SELECT count(*) INTO _pw FROM auth.users
    WHERE email = 'uiowner@local.test' AND encrypted_password IS NOT NULL;
@@ -107,8 +204,30 @@ BEGIN
   SELECT count(*) INTO _released FROM public.scp_report_snapshots
    WHERE audience = 'employer' AND released_at IS NOT NULL
      AND brief -> 'interview_guide' IS NOT NULL;
+  SELECT count(*) INTO _member FROM public.employer_memberships
+   WHERE employer_id = '9e000000-0000-4000-8000-00000000000a'
+     AND role = 'member' AND status = 'active';
+
+  -- Reported rather than assumed: the walk above is the only part of this
+  -- file that can fail quietly, and "the browser test has a ready case" is
+  -- the claim it exists to make.
+  --
+  -- Read AS THE OWNER. scp_iv_report_blockers is membership-scoped and returns
+  -- a single NOT_PERMITTED row to anyone else -- including the postgres
+  -- superuser this file otherwise runs as, whose auth.uid() is NULL. Counting
+  -- that row as a blocker would report a healthy fixture as broken.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', '9e000000-0000-4000-8000-000000000001', 'role', 'authenticated')::text,
+    true);
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _blockers
+    FROM public.scp_iv_report_blockers('047ce788-ea6a-4fe2-9fb1-c08c920926db');
+  RESET ROLE;
+
+  _ready := CASE WHEN _blockers = 0 THEN 'READY (0 blockers)'
+                 ELSE format('NOT READY (%s blockers)', _blockers) END;
 
   RAISE NOTICE
-    'context-bridge fixture ready: % signable owner, % advert requirements, % released brief(s) carrying a governed interview guide',
-    _pw, _reqs, _released;
+    'context-bridge fixture ready: % signable owner, % advert requirements, % released brief(s) carrying a governed interview guide, % ordinary member(s) of the journey employer, finalisation case %',
+    _pw, _reqs, _released, _member, _ready;
 END $$;

@@ -21,6 +21,8 @@ import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
+import { canFinaliseInterviewReport } from "@/lib/interview-intelligence/capability";
+import { ReportFinalisation } from "@/components/employer/interview/ReportFinalisation";
 import {
   CaseStatusChip,
   WorkflowNav,
@@ -38,7 +40,6 @@ import {
   ProviderModeNote,
   WithheldPanel,
   BUTTON,
-  PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
 import {
   Disclosure,
@@ -115,6 +116,14 @@ function Page() {
       </div>
     );
   if (ws.isError || !ws.workspace) return <EmployerAccessDenied workspaces={ws.workspaces} />;
+
+  // Whether THIS person may lock the report, from their own active membership
+  // of this employer — the same row and the same two roles
+  // scp_iv_finalise_report checks. Not inferred from being able to see the
+  // page, from owning the case, or from having done the assessments.
+  //
+  // A courtesy, not a boundary: the database refuses a member either way.
+  const canFinalise = canFinaliseInterviewReport(ws.workspace.role);
 
   const shell = (children: React.ReactNode) => (
     <EmployerAppShell
@@ -278,9 +287,29 @@ function Page() {
         >
           {d.blockers.length === 0 ? (
             <div className="space-y-4">
-              <Panel tone="confirmed" title={t("iiu.rp.noblockers.title")}>
+              {/* CONTENT READINESS. Says only that the interview and
+                  assessment work is complete.
+
+                  It used to say "Inget hindrar rapporten" — nothing is
+                  blocking the report — directly above an active Finalise
+                  button, which merged two different claims into one
+                  sentence: that the material is complete, and that the
+                  person reading it may conclude the matter. The second was
+                  false for every interviewer who is not also an owner or
+                  admin, and the only way they could find out was to click.
+
+                  So this panel now makes the first claim only, and who may
+                  act on it is stated separately below. */}
+              <Panel tone="confirmed" title={t("iiu.rp.ready.title")}>
                 <p>{t(d.aiAvailable ? "iiu.rp.noblockers" : "iiu.rp.noblockers.manual")}</p>
               </Panel>
+              {/* A refusal is only ever rendered AFTER an attempt.
+                  An owner or admin who is shown the button and still gets a
+                  permission error is looking at a real failure and must see
+                  it as one — the backend is the boundary, and swallowing what
+                  it says would hide a genuine disagreement between the two.
+                  A member never reaches here, because they are never given
+                  the button to fail with. */}
               {finalise.isError && (
                 <Panel tone="governance" role="alert" title={t("iiu.rp.failed")}>
                   <p className="whitespace-pre-line">{interviewErrorMessage(finalise.error, t)}</p>
@@ -353,18 +382,15 @@ function Page() {
                 </Surface>
               )}
 
-              <div className="rounded-lg border border-amber-600/40 bg-amber-500/5 p-4">
-                <p className="text-sm font-semibold text-foreground">{t("iiu.rp.confirm")}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{t("iiu.rp.confirm.body")}</p>
-                <button
-                  type="button"
-                  className={`${PRIMARY_BUTTON} mt-3`}
-                  onClick={() => finalise.mutate()}
-                  disabled={finalise.isPending}
-                >
-                  {finalise.isPending ? t("iiu.rp.finalising") : t("iiu.rp.finalise")}
-                </button>
-              </div>
+              {/* AUTHORITY. A separate question from the one above, and
+                  answered from the same membership row the database reads. */}
+              <ReportFinalisation
+                canFinalise={canFinalise}
+                onFinalise={() => finalise.mutate()}
+                isPending={finalise.isPending}
+                employerSlug={employerSlug}
+                caseId={caseId}
+              />
             </div>
           ) : (
             /* Eight identical rows saying "Q1 has no assessment", "Q2 has no

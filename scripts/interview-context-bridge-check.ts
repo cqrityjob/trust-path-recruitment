@@ -683,8 +683,17 @@ for (const lang of ["sv", "en"] as const) {
 }
 
 // The form error that was a hardcoded Swedish string on a translated screen.
+//
+// Read through a string-indexed view of the dictionaries. Indexed directly,
+// TypeScript narrows both sides to their literal types, sees they can never be
+// equal, and reports the comparison as unintentional -- which is fair: as
+// written it was a tautology the compiler could settle, and it would have gone
+// on passing if somebody pasted the Swedish string into the English table,
+// because that edit changes the literal types too.
+const svAll = dictionaries.sv as Record<string, string>;
+const enAll = dictionaries.en as Record<string, string>;
 ok(
-  dictionaries.en["iiu.new.err.candidate"] !== dictionaries.sv["iiu.new.err.candidate"],
+  enAll["iiu.new.err.candidate"] !== svAll["iiu.new.err.candidate"],
   "N · the new-interview candidate error is genuinely translated",
 );
 ok(

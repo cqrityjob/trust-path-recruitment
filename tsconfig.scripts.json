@@ -49,6 +49,11 @@
     // fixture that silently stops matching the type it asserts about is
     // exactly the failure this file exists to prevent.
     "scripts/interview-context-bridge-check.ts",
+    // The finalisation capability guard, on the same terms: new, no
+    // pre-existing type debt, and it RENDERS the component whose two branches
+    // it asserts about -- a guard whose props silently stop matching the
+    // component is exactly the failure this file exists to prevent.
+    "scripts/interview-finalisation-capability-check.tsx",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],
