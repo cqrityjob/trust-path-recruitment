@@ -5,6 +5,7 @@
 // no scoring changes. Everything here is a presentation-layer mapping.
 
 import type { Lang } from "@/i18n/dictionaries";
+import { getProfession } from "@/lib/career-center";
 import type {
   ArchetypeKey,
   CareerProfile,
@@ -13,6 +14,35 @@ import type {
 } from "@/lib/career-intelligence-engine/types";
 
 export type Bi = { sv: string; en: string };
+
+// -------------------- Profession identity --------------------
+
+/**
+ * The name a match is shown under. The canonical CIG title wins when the
+ * profession has a canonical node; otherwise the Career Center guide's own
+ * title. The raw profession key is a last resort for a profession that
+ * exists in neither catalogue -- it must never be what a candidate reads
+ * for a profession whose enrichment is merely unavailable.
+ */
+export function professionTitleBi(
+  match: Pick<Match, "legacySlug" | "professionKey" | "titleSv" | "titleEn">,
+): Bi {
+  const guide = getProfession(match.legacySlug);
+  return {
+    sv: match.titleSv ?? guide?.titleSv ?? match.professionKey,
+    en: match.titleEn ?? guide?.titleEn ?? match.professionKey,
+  };
+}
+
+/**
+ * Neutral state for a profession with no canonical CIG node (see
+ * slug-map.ts::ENRICHMENT_UNAVAILABLE). The profession, its result and its
+ * guide remain; only the supplemental CIG facts are missing.
+ */
+export const enrichmentUnavailableCopy: Bi = {
+  sv: "Yrkesinformationen kompletteras.",
+  en: "Profession information is being completed.",
+};
 
 export function pick(b: Bi | undefined | null, lang: Lang): string {
   if (!b) return "";
@@ -25,10 +55,7 @@ export function pick(b: Bi | undefined | null, lang: Lang): string {
 // the engine's Career Profile. Presented as a career profile, never as a
 // psychological personality type.
 
-const ARCHETYPE_TO_PROFILE: Record<
-  ArchetypeKey,
-  { label: Bi; blurb: Bi }
-> = {
+const ARCHETYPE_TO_PROFILE: Record<ArchetypeKey, { label: Bi; blurb: Bi }> = {
   operational_guardian: {
     label: {
       sv: "Operativ problemlösare",
@@ -119,17 +146,9 @@ export function careerProfileLabel(profile: CareerProfile): {
 // Turns the numeric currentFit + confidence into a plain-language label.
 // The numeric score remains available; the band is presented alongside.
 
-export type MatchStrength =
-  | "very_strong"
-  | "strong"
-  | "relevant"
-  | "possible"
-  | "limited";
+export type MatchStrength = "very_strong" | "strong" | "relevant" | "possible" | "limited";
 
-export function matchStrengthBand(
-  currentFit: number,
-  confidence: ConfidenceLevel,
-): MatchStrength {
+export function matchStrengthBand(currentFit: number, confidence: ConfidenceLevel): MatchStrength {
   if (confidence === "limited") return "limited";
   if (currentFit >= 85 && confidence === "stronger") return "very_strong";
   if (currentFit >= 70) return "strong";
@@ -199,10 +218,7 @@ export const overallEvidenceHelp: Bi = {
 
 export type FitBand = "strong" | "promising" | "exploratory" | "limited";
 
-export function currentFitBand(
-  currentFit: number,
-  confidence: ConfidenceLevel,
-): FitBand {
+export function currentFitBand(currentFit: number, confidence: ConfidenceLevel): FitBand {
   if (confidence === "limited") return "limited";
   if (currentFit >= 70) return "strong";
   if (currentFit >= 55) return "promising";
@@ -224,10 +240,7 @@ export function currentFitLabel(band: FitBand): Bi {
   }
 }
 
-export function potentialBand(
-  potential: number,
-  confidence: ConfidenceLevel,
-): FitBand {
+export function potentialBand(potential: number, confidence: ConfidenceLevel): FitBand {
   if (confidence === "limited") return "limited";
   if (potential >= 70) return "strong";
   if (potential >= 55) return "promising";
@@ -419,15 +432,9 @@ function professionHref(match: Match): string | undefined {
   return match.legacySlug ? `/career-center/${match.legacySlug}` : undefined;
 }
 
-export function buildActionPlan(
-  match: Match,
-  background: BackgroundKey,
-): ActionPlan {
+export function buildActionPlan(match: Match, background: BackgroundKey): ActionPlan {
   const href = professionHref(match);
-  const profTitleBi: Bi = {
-    sv: match.titleSv ?? match.professionKey,
-    en: match.titleEn ?? match.professionKey,
-  };
+  const profTitleBi: Bi = professionTitleBi(match);
   const hasFormal = match.enrichment.formalRequirements.length > 0;
   const hasEducation = match.enrichment.educationPathways.length > 0;
   const hasCerts = match.enrichment.certifications.length > 0;
@@ -563,10 +570,7 @@ export type DimensionBand =
   | "develop" // observed & clearly below neutral
   | "insufficient"; // not observed / neutral fallback
 
-export function dimensionBand(score: {
-  normalized: number;
-  observed: boolean;
-}): DimensionBand {
+export function dimensionBand(score: { normalized: number; observed: boolean }): DimensionBand {
   if (!score.observed) return "insufficient";
   if (score.normalized >= 65) return "prominent";
   if (score.normalized >= 45) return "moderate";

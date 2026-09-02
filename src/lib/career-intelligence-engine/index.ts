@@ -42,7 +42,16 @@ export { rankFamilies, enforceFamilyDiversity } from "./family-ranking";
 export { computeEvidenceScore } from "./evidence-score";
 export { hashInputs } from "./inputs-hash";
 export { buildTargetVectorsFromLegacy } from "./target-vector";
-export { LEGACY_TO_CIG_SLUG, toCigSlug } from "./slug-map";
+export {
+  CAREER_PROFESSION_BRIDGE,
+  ENRICHMENT_UNAVAILABLE,
+  FORBIDDEN_CIG_PROXIES,
+  LEGACY_TO_CIG_SLUG,
+  isEnrichmentUnavailable,
+  toCigSlug,
+  toLegacySlug,
+} from "./slug-map";
+export { cieRankingIdentity } from "./ranking-identity";
 
 function emptyEnrichment(): EnrichmentBundle {
   return {
@@ -111,15 +120,19 @@ export function computeEngineResultV1(input: ComputeInput): EngineResultV1 {
       a.target.professionKey.localeCompare(b.target.professionKey),
   );
 
-  // Canonical-identity dedup. Two legacy profession keys can map to the
-  // same underlying CIG profession (see slug-map.ts), which would surface
-  // the same profession twice in a single report. Canonical identity =
-  // cigSlug || legacySlug || professionKey. Highest-scoring instance wins;
-  // sort order is preserved. See Phase 2 final-pass report section A.
+  // Canonical-identity dedup. Historically two legacy profession keys could
+  // map to the same CIG profession (slug-map.ts) and the identity was
+  // `cigSlug || legacySlug || professionKey`, so the lower-scoring one was
+  // dropped and the family aggregates were computed without it. PR-A moved
+  // that identity to ranking-identity.ts (frozen at the same equivalence
+  // classes) so the enrichment bridge could be repaired without changing
+  // ranking. Highest-scoring instance wins; sort order is preserved. See
+  // Phase 2 final-pass report section A.
   const seenCanonical = new Set<string>();
   const deduped: typeof scored = [];
   for (const s of scored) {
-    const canonical = s.target.cigSlug || s.target.legacySlug || s.target.professionKey;
+    const canonical =
+      s.target.rankingIdentity || s.target.cigSlug || s.target.legacySlug || s.target.professionKey;
     if (seenCanonical.has(canonical)) continue;
     seenCanonical.add(canonical);
     deduped.push(s);

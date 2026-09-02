@@ -14,6 +14,7 @@ import type { EngineResultV1, Match } from "@/lib/career-intelligence-engine/typ
 import { questionMappingById } from "@/lib/career-assessment/question-mappings";
 import { dimensionById } from "@/lib/career-assessment/dimensions";
 import type { Lang } from "@/i18n/dictionaries";
+import { professionTitleBi } from "./labels";
 
 function pick(b: Bi, lang: Lang): string {
   return lang === "sv" ? b.sv : b.en;
@@ -191,8 +192,8 @@ export function EmployerReportView({
             </h2>
             <p className="mt-2 text-muted-foreground">
               {lang === "sv"
-                ? `Starkast matchande profil: ${pick({ sv: top.titleSv ?? top.legacySlug, en: top.titleEn ?? top.legacySlug }, lang)} (konfidensnivå: ${top.confidence}).`
-                : `Strongest matching profile: ${pick({ sv: top.titleSv ?? top.legacySlug, en: top.titleEn ?? top.legacySlug }, lang)} (confidence: ${top.confidence}).`}
+                ? `Starkast matchande profil: ${pick(professionTitleBi(top), lang)} (konfidensnivå: ${top.confidence}).`
+                : `Strongest matching profile: ${pick(professionTitleBi(top), lang)} (confidence: ${top.confidence}).`}
             </p>
             <p className="mt-1 text-muted-foreground">
               {lang === "sv"

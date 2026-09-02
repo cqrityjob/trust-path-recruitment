@@ -48,6 +48,18 @@ jobs:
       - name: CIE deterministic regression check
         run: bun run cie:check
 
+      # The legacy -> CIG profession bridge. Before PR-A it pointed
+      # data-centre security at airport security and fraud investigation at
+      # the police civilian investigator "to avoid an empty state", and two
+      # pairs of distinct professions shared one CIG node. Proves every
+      # active bridge is one-to-one onto a published CIG row, that the
+      # rejected proxies stay out in BOTH directions (enrichment and job
+      # relevance), that a profession without a canonical node renders its
+      # own title and neutral copy rather than a raw id, and that the
+      # engine's ranked output is byte-identical to the pre-repair engine.
+      - name: Career profession bridge check
+        run: bun run career-profession-bridge:check
+
       - name: Knowledge graph integrity check
         run: bun run kg:check
 
