@@ -98,6 +98,10 @@ export function InterviewOutcome({
   const questionBlock = (qq: CaseDetail["questions"][number]) => {
     const evidence = evidenceFor(qq.id);
     const a = assessmentFor(qq.id);
+    // Material confirmed after the judgement was recorded: shown as exactly
+    // that, beside the judgement, so the reader never takes the two together.
+    const uncovered =
+      a !== null && evidence.some((e) => Date.parse(e.confirmedAt) > Date.parse(a.assessedAt));
     return (
       <li key={qq.id} className="py-3">
         <p className="text-sm font-medium leading-relaxed text-foreground">
@@ -129,6 +133,7 @@ export function InterviewOutcome({
               <Chip tone={a.level === 0 ? "attention" : "confirmed"}>
                 {t(LEVEL_LABEL[clampLevel(a.level)])}
               </Chip>
+              {uncovered && <Chip tone="attention">{t("iiu.ev.stale.chip")}</Chip>}
             </div>
             <p className="mt-2 text-sm leading-relaxed text-foreground">{a.rationale}</p>
             {a.uncertaintyNote && (

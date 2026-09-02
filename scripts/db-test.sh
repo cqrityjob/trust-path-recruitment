@@ -1374,6 +1374,37 @@ if [ "$TI_PASSED" -lt 24 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Interview evidence reliability (20261020090000): evidence stays bound to its
+# case, question, application and employer; the writers are idempotent under
+# double-click and retry; an assessment covers the material that existed when
+# it was made and the report waits when newer material arrives; the finalised
+# report is unchanged by everything that happens afterwards; and every
+# cross-tenant and cross-case attempt is refused at the database.
+# ---------------------------------------------------------------------------
+echo "==> Running interview evidence reliability assertions"
+set +e
+ER_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_evidence_reliability_test.sql 2>&1)"
+ER_RC=$?
+set -e
+
+echo "$ER_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+ER_PASSED="$(echo "$ER_OUT" | grep -c "ok  " || true)"
+
+if [ "$ER_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the interview evidence reliability suite exited with code ${ER_RC}." >&2
+  echo "$ER_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "interview evidence reliability"
+fi
+
+echo "    ok  ${ER_PASSED} interview evidence reliability assertions passed"
+
+if [ "$ER_PASSED" -lt 45 ]; then
+  echo "FAIL: expected at least 45 interview evidence reliability assertions, only ${ER_PASSED} ran." >&2
+  suite_failed "interview evidence reliability (assertion shortfall: floor 45)"
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"

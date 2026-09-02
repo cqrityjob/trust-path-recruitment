@@ -4998,6 +4998,10 @@ export const dictionaries = {
     "iiu.ev.rationale": "Motivering (krävs)",
     "iiu.ev.save": "Spara bedömning",
     "iiu.ev.savefailed": "Bedömningen kunde inte sparas",
+    "iiu.ev.stale.chip": "Nytt underlag efter bedömningen",
+    "iiu.ev.stale.title": "Nytt underlag sedan bedömningen gjordes",
+    "iiu.ev.stale.body":
+      "Underlag har bekräftats efter att bedömningen gjordes. Bedömningen står kvar som den gjordes men omfattar inte det nya underlaget. Gå igenom bedömningen igen innan rapporten kan låsas.",
     "iiu.ev.done": "Klar med bedömningen",
     "iiu.ev.manual.title": "Skriv in underlag för hand",
     "iiu.ev.manual.body":
@@ -5334,6 +5338,10 @@ export const dictionaries = {
     "iiu.iv.note.unsaved": "Anteckningen är inte sparad ännu",
     "iiu.iv.note.savefailed": "Anteckningen kunde inte sparas. Den står kvar här — försök igen.",
     "iiu.iv.note.blocked": "Åtgärden stoppades eftersom anteckningen inte är sparad.",
+    "iiu.iv.note.conflict.title": "Anteckningen har ändrats någon annanstans",
+    "iiu.iv.note.conflict.body":
+      "En nyare version av anteckningen är sparad, till exempel från en annan flik. Texten här har inte sparats och står kvar tills du väljer. Läs in den sparade versionen för att fortsätta, eller kopiera din text först.",
+    "iiu.iv.note.conflict.reload": "Läs in sparad version",
     "iiu.iv.note.retry": "Försök spara igen",
     "iiu.iv.note.cleared": "Anteckningen är tömd",
     "iiu.iv.note.savingbefore": "Sparar anteckningen …",
@@ -5391,6 +5399,17 @@ export const dictionaries = {
     "iiu.err.no_anchor":
       "Intervjuguiden definierar inget beteendeexempel för den nivån på den här frågan.",
     "iiu.err.sources_not_ready": "Lägg till underlag innan du planerar samtalet.",
+    "iiu.err.note_stale":
+      "Anteckningen har ändrats någon annanstans sedan den lästes in. Läs in den sparade versionen.",
+    "iiu.err.note_exists":
+      "Det finns redan en sparad anteckning för den här frågan. Läs in den sparade versionen.",
+    "iiu.err.note_not_writable":
+      "Anteckningen kunde inte sparas: den finns inte längre eller får inte ändras.",
+    "iiu.err.evidence_origin": "Underlaget hör till en annan intervju och kan inte användas här.",
+    "iiu.err.proposal_already_reviewed":
+      "Förslaget är redan granskat. Läs in sidan igen för att se resultatet.",
+    "iiu.err.read_failed":
+      "Intervjuns underlag kunde inte läsas in. Inget är förlorat – försök igen.",
     "iiu.iv.howto.title": "Så genomför du intervjun",
     "iiu.iv.howto.1":
       "Ställ kärnfrågorna i ordning, Q1 till Q8. Formuleringen är låst och läses ordagrant.",
@@ -5410,6 +5429,8 @@ export const dictionaries = {
     "iiu.rp.blk.question_not_assessed": "saknar registrerad bedömning.",
     "iiu.rp.blk.question_not_assessed.many": "frågor saknar registrerad bedömning:",
     "iiu.rp.blk.proposals_awaiting": "AI-förslag väntar fortfarande på mänsklig granskning.",
+    "iiu.rp.blk.assessment_predates":
+      "har fått nytt bekräftat underlag efter bedömningen. Gå igenom bedömningen igen.",
     "iiu.rp.blk.not_permitted": "Du saknar behörighet till den här intervjun.",
     "iiu.rp.blk.case_not_found": "Intervjun finns inte.",
     "iiu.rp.blk.generic": "Något återstår innan rapporten kan låsas.",
@@ -10300,6 +10321,10 @@ export const dictionaries = {
     "iiu.ev.rationale": "Reasoning (required)",
     "iiu.ev.save": "Save assessment",
     "iiu.ev.savefailed": "The assessment could not be saved",
+    "iiu.ev.stale.chip": "New material after assessment",
+    "iiu.ev.stale.title": "New material since the assessment was made",
+    "iiu.ev.stale.body":
+      "Material was confirmed after this assessment was made. The assessment stands as it was made but does not cover the new material. Review the assessment again before the report can be locked.",
     "iiu.ev.done": "Finished assessing",
     "iiu.ev.manual.title": "Record material by hand",
     "iiu.ev.manual.body":
@@ -10632,6 +10657,10 @@ export const dictionaries = {
     "iiu.iv.note.unsaved": "Your note is not saved yet",
     "iiu.iv.note.savefailed": "Your note could not be saved. It is still here — try again.",
     "iiu.iv.note.blocked": "The action was stopped because your note is not saved.",
+    "iiu.iv.note.conflict.title": "This note was changed somewhere else",
+    "iiu.iv.note.conflict.body":
+      "A newer version of this note is saved, for example from another tab. The text here has not been saved and stays until you choose. Load the saved version to continue, or copy your text first.",
+    "iiu.iv.note.conflict.reload": "Load the saved version",
     "iiu.iv.note.retry": "Try saving again",
     "iiu.iv.note.cleared": "Your note has been cleared",
     "iiu.iv.note.savingbefore": "Saving your note …",
@@ -10677,6 +10706,17 @@ export const dictionaries = {
     "iiu.err.no_anchor":
       "The interview guide defines no behavioural example for that level on this question.",
     "iiu.err.sources_not_ready": "Add material before planning the conversation.",
+    "iiu.err.note_stale":
+      "This note was changed somewhere else since it was loaded. Load the saved version.",
+    "iiu.err.note_exists": "A saved note already exists for this question. Load the saved version.",
+    "iiu.err.note_not_writable":
+      "The note could not be saved: it no longer exists or may not be changed.",
+    "iiu.err.evidence_origin":
+      "That material belongs to a different interview and cannot be used here.",
+    "iiu.err.proposal_already_reviewed":
+      "This suggestion has already been reviewed. Reload the page to see the outcome.",
+    "iiu.err.read_failed":
+      "The interview material could not be loaded. Nothing is lost – try again.",
     "iiu.iv.howto.title": "How to conduct this interview",
     "iiu.iv.howto.1":
       "Ask the core questions in order, Q1 to Q8. The wording is locked and is read verbatim.",
@@ -10696,6 +10736,8 @@ export const dictionaries = {
     "iiu.rp.blk.question_not_assessed": "has no recorded assessment.",
     "iiu.rp.blk.question_not_assessed.many": "questions have no recorded assessment:",
     "iiu.rp.blk.proposals_awaiting": "AI suggestions are still waiting for human review.",
+    "iiu.rp.blk.assessment_predates":
+      "has new confirmed material since it was assessed. Review the assessment again.",
     "iiu.rp.blk.not_permitted": "You do not have access to this interview.",
     "iiu.rp.blk.case_not_found": "This interview does not exist.",
     "iiu.rp.blk.generic": "Something remains before the report can be locked.",

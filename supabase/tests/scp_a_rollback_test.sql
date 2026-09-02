@@ -240,6 +240,9 @@ DROP FUNCTION IF EXISTS public.scp_iv_panel_reveal(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_panel_conclude(uuid, text);
 DROP FUNCTION IF EXISTS public.scp_iv_panel_visible_assessments(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_guard_panel_preserves_individual();
+-- The origin-in-case guard (20261020090000). Its three triggers go with the
+-- tables above; the function would otherwise survive and fail the zero-count.
+DROP FUNCTION IF EXISTS public.scp_iv_guard_evidence_origin_in_case();
 DROP FUNCTION IF EXISTS public.scp_trust_case_stage(uuid);
 DROP FUNCTION IF EXISTS public.scp_trust_stage_for_case(uuid);
 DROP FUNCTION IF EXISTS public.scp_trust_case_method_version(uuid);

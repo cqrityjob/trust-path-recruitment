@@ -322,6 +322,16 @@ const ERROR_KEY: Record<string, TranslationKey> = {
   SCP_IV_RATIONALE_REQUIRED: "iiu.err.rationale_required",
   SCP_IV_NO_ANCHOR: "iiu.err.no_anchor",
   SCP_IV_SOURCES_NOT_READY: "iiu.err.sources_not_ready",
+  // Evidence reliability (PR20): a save refused because the record moved,
+  // never a save that pretends to have landed.
+  SCP_IV_NOTE_STALE: "iiu.err.note_stale",
+  SCP_IV_NOTE_EXISTS: "iiu.err.note_exists",
+  SCP_IV_NOTE_NOT_WRITABLE: "iiu.err.note_not_writable",
+  SCP_IV_QUESTION_NOT_WRITABLE: "iiu.err.note_not_writable",
+  SCP_IV_EVIDENCE_ORIGIN_MISMATCH: "iiu.err.evidence_origin",
+  SCP_IV_EVIDENCE_DIMENSION_MISMATCH: "iiu.err.evidence_origin",
+  SCP_IV_EVIDENCE_COMPETENCY_MISMATCH: "iiu.err.evidence_origin",
+  SCP_IV_PROPOSAL_ALREADY_REVIEWED: "iiu.err.proposal_already_reviewed",
 };
 
 export function interviewErrorMessage(error: unknown, t: (key: TranslationKey) => string): string {
@@ -333,6 +343,12 @@ export function interviewErrorMessage(error: unknown, t: (key: TranslationKey) =
   // happen, nothing was half-written, and trying again is the right move.
   if (/failed to fetch|networkerror|load failed|err_network|fetch failed/i.test(raw)) {
     return t("iiu.err.network");
+  }
+  // A read that failed is reported as a read that failed. The loader raises
+  // this rather than returning an empty list, because on this product an
+  // empty list reads as "the candidate said nothing".
+  if (/^INTERVIEW_READ_FAILED/.test(raw)) {
+    return t("iiu.err.read_failed");
   }
 
   const code = /\b(SCP_[A-Z0-9_]+)\b/.exec(raw)?.[1];
@@ -651,6 +667,14 @@ export function blockerMessage(
     }
     case "PROPOSALS_AWAITING_REVIEW":
       return t("iiu.rp.blk.proposals_awaiting");
+    case "ASSESSMENT_PREDATES_MATERIAL": {
+      // Material was confirmed after the question was assessed. The
+      // assessment stands; it just does not cover the new material.
+      const q = /\b(Q\d+)\b/.exec(message)?.[1];
+      return q
+        ? `${q} ${t("iiu.rp.blk.assessment_predates")}`
+        : t("iiu.rp.blk.assessment_predates");
+    }
     case "NOT_PERMITTED":
       return t("iiu.rp.blk.not_permitted");
     case "CASE_NOT_FOUND":

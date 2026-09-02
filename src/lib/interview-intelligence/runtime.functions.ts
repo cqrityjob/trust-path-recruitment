@@ -532,6 +532,10 @@ export interface CaseDetail {
       readonly questionId: string | null;
       readonly noteKind: string;
       readonly body: string;
+      /** The server's version of this note. A save carries it back, and a
+       *  save whose version is no longer current is refused rather than
+       *  allowed to overwrite what another tab wrote (SCP_IV_NOTE_STALE). */
+      readonly updatedAt: string;
     }[];
   } | null;
   readonly proposals: readonly {
@@ -557,6 +561,10 @@ export interface CaseDetail {
     readonly origin: string;
     readonly noteId: string | null;
     readonly fiveE: FiveE;
+    /** When a named human confirmed it. Confirmed evidence is append-only, so
+     *  this never changes; an assessment covers exactly the items confirmed at
+     *  or before its own assessedAt. */
+    readonly confirmedAt: string;
   }[];
   readonly findings: readonly {
     readonly id: string;
@@ -577,6 +585,10 @@ export interface CaseDetail {
      *  has always written it and the report has always published it; it just
      *  never came back to the screen that records it. */
     readonly uncertaintyNote: string | null;
+    /** When the judgement was recorded. Material confirmed after this instant
+     *  is not covered by it, and the database blocks the report until the
+     *  question is assessed again. */
+    readonly assessedAt: string;
   }[];
   readonly report: {
     readonly id: string;
@@ -772,7 +784,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       db
         .from("scp_interview_evidence")
         .select(
-          "id, excerpt, original_excerpt, question_id, origin, note_id, e1_situation, e2_own_role, e3_action, e4_effect, e5_reflection",
+          "id, excerpt, original_excerpt, question_id, origin, note_id, confirmed_at, e1_situation, e2_own_role, e3_action, e4_effect, e5_reflection",
         )
         .eq("case_id", caseId)
         .order("created_at"),
@@ -783,7 +795,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("created_at"),
       db
         .from("scp_interview_assessments")
-        .select("id, question_id, level, rationale, uncertainty_note, superseded_by")
+        .select("id, question_id, level, rationale, uncertainty_note, superseded_by, assessed_at")
         .eq("case_id", caseId)
         .is("superseded_by", null),
       db
@@ -848,11 +860,20 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     //
     // Silence is the most expensive failure mode this domain has, so the reads
     // whose emptiness carries meaning now raise instead of shrugging.
+    //
+    // The session, the report and the blocker list joined the list later, for
+    // the same reason: a failed session read rendered as "no notes were
+    // taken", a failed report read as "no report yet", and a failed blocker
+    // read as "nothing blocks the report" -- the last of which offered the
+    // finalise button on the strength of an error.
     for (const [what, res] of [
       ["evidence", evidenceRes],
       ["proposals", proposalsRes],
       ["findings", findingsRes],
       ["assessments", assessmentsRes],
+      ["session", sessionRes],
+      ["report", reportRes],
+      ["blockers", blockersRes],
     ] as const) {
       if (res.error) throw new Error(`INTERVIEW_READ_FAILED (${what}): ${res.error.message}`);
     }
@@ -922,10 +943,15 @@ export const getInterviewCase = createServerFn({ method: "GET" })
           .order("display_order"),
         db
           .from("scp_interview_session_notes")
-          .select("id, question_id, note_kind, body")
+          .select("id, question_id, note_kind, body, updated_at")
           .eq("session_id", sessionRow.id as string)
           .order("created_at"),
       ]);
+      // Notes are the interviewer's own record of what was said. A failed
+      // read of them must not arrive as "nothing was written down".
+      if (sqRes.error) throw new Error(`INTERVIEW_READ_FAILED (questions): ${sqRes.error.message}`);
+      if (notesRes.error)
+        throw new Error(`INTERVIEW_READ_FAILED (notes): ${notesRes.error.message}`);
       session = {
         id: sessionRow.id as string,
         status: sessionRow.status as string,
@@ -948,6 +974,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
           questionId: (n.question_id as string) ?? null,
           noteKind: n.note_kind as string,
           body: n.body as string,
+          updatedAt: n.updated_at as string,
         })),
       };
     }
@@ -1084,6 +1111,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
           origin: e.origin as string,
           noteId: (e.note_id as string) ?? null,
           fiveE: fiveE(e),
+          confirmedAt: e.confirmed_at as string,
         }),
       ),
       findings: ((findingsRes.data ?? []) as Array<Record<string, unknown>>).map((f) => ({
@@ -1105,6 +1133,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         // report payload; it simply never came back to the screen that
         // records it, so an assessor could not see what they had written.
         uncertaintyNote: (a.uncertainty_note as string | null) ?? null,
+        assessedAt: a.assessed_at as string,
       })),
       report: reportRow
         ? {
@@ -1582,35 +1611,82 @@ export const saveInterviewNote = createServerFn({ method: "POST" })
         // not -- creating an empty note means nothing. Enforced below.
         body: z.string().max(20_000),
         noteId: z.string().uuid().nullable().optional(),
+        // The version of the note this text was typed over. An UPDATE is
+        // applied only if the stored row still carries it: a save from a
+        // tab that loaded the note before another tab changed it is refused
+        // (SCP_IV_NOTE_STALE) instead of silently overwriting the newer text.
+        expectedUpdatedAt: z.string().nullable().optional(),
       })
       .parse(d),
   )
-  .handler(async ({ context, data }): Promise<{ readonly noteId: string }> => {
-    const db = context.supabase;
-    if (!data.noteId && data.body.trim() === "") {
-      throw new Error("SCP_IV_NOTE_EMPTY: an empty note is not created.");
-    }
-    if (data.noteId) {
-      const { error } = await db
+  .handler(
+    async ({ context, data }): Promise<{ readonly noteId: string; readonly updatedAt: string }> => {
+      const db = context.supabase;
+      if (!data.noteId && data.body.trim() === "") {
+        throw new Error("SCP_IV_NOTE_EMPTY: an empty note is not created.");
+      }
+      if (data.noteId) {
+        let update = db
+          .from("scp_interview_session_notes")
+          .update({ body: data.body, updated_at: new Date().toISOString() })
+          .eq("id", data.noteId);
+        if (data.expectedUpdatedAt) update = update.eq("updated_at", data.expectedUpdatedAt);
+        const { data: rows, error } = await update.select("id, updated_at");
+        if (error) throw new Error(error.message);
+        if (rows && rows.length === 1) {
+          return { noteId: data.noteId, updatedAt: rows[0].updated_at as string };
+        }
+        // Zero rows updated is not success. Under RLS it is also not an
+        // error, so the reason is established by reading the row back: a
+        // note that is there with a different version was changed elsewhere;
+        // a note that is not there is not this caller's to change.
+        const { data: current, error: readError } = await db
+          .from("scp_interview_session_notes")
+          .select("id, updated_at")
+          .eq("id", data.noteId)
+          .maybeSingle();
+        if (readError) throw new Error(readError.message);
+        if (current) {
+          throw new Error(
+            "SCP_IV_NOTE_STALE: this note was changed elsewhere since it was loaded.",
+          );
+        }
+        throw new Error(
+          "SCP_IV_NOTE_NOT_WRITABLE: this note does not exist or may not be changed.",
+        );
+      }
+      // One note per question per kind is what the interview screen writes,
+      // and it only ever edits the first it finds. A second INSERT for the
+      // same question -- an autosave and a flush racing, a tab that loaded
+      // before the note existed -- would create a twin the screen never shows
+      // and the review screen shows twice. Refuse it; the caller re-reads.
+      if (data.questionId) {
+        const { data: twin, error: twinError } = await db
+          .from("scp_interview_session_notes")
+          .select("id")
+          .eq("session_id", data.sessionId)
+          .eq("question_id", data.questionId)
+          .eq("note_kind", data.noteKind)
+          .limit(1);
+        if (twinError) throw new Error(twinError.message);
+        if (twin && twin.length > 0) {
+          throw new Error("SCP_IV_NOTE_EXISTS: a note for this question already exists.");
+        }
+      }
+      const { data: row, error } = await db
         .from("scp_interview_session_notes")
-        .update({ body: data.body, updated_at: new Date().toISOString() })
-        .eq("id", data.noteId);
+        .insert({
+          session_id: data.sessionId,
+          question_id: data.questionId,
+          note_kind: data.noteKind,
+          body: data.body,
+        })
+        .select("id, updated_at")
+        .single();
       if (error) throw new Error(error.message);
-      return { noteId: data.noteId };
-    }
-    const { data: row, error } = await db
-      .from("scp_interview_session_notes")
-      .insert({
-        session_id: data.sessionId,
-        question_id: data.questionId,
-        note_kind: data.noteKind,
-        body: data.body,
-      })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { noteId: row.id as string };
-  });
+      return { noteId: row.id as string, updatedAt: row.updated_at as string };
+    },
+  );
 
 export const setQuestionState = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -1632,12 +1708,18 @@ export const setQuestionState = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ context, data }): Promise<{ readonly ok: true }> => {
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("scp_interview_session_questions")
       .update({ state: data.state, skip_reason: data.skipReason ?? null })
       .eq("session_id", data.sessionId)
-      .eq("question_id", data.questionId);
+      .eq("question_id", data.questionId)
+      .select("question_id");
     if (error) throw new Error(error.message);
+    // Under RLS a row that is not this caller's to change is simply not
+    // updated, with no error. That must not come back as "marked".
+    if (!rows || rows.length === 0) {
+      throw new Error("SCP_IV_QUESTION_NOT_WRITABLE: this question could not be updated.");
+    }
     return { ok: true };
   });
 
