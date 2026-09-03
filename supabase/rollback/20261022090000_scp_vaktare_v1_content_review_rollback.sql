@@ -1835,7 +1835,12 @@ SELECT $vaktare_content${
    ]
   }
  ],
- "en_adaptation": null
+ "en_adaptation": null,
+ "program": {
+  "slug": "security-officer-recruitment",
+  "purpose_sv": "Rollspecifik bedömning för rekrytering av väktare. Ger strukturerat evidens- och intervjuunderlag om säkerhetsbedömning, observation, rapportering och självrapporterat arbetsbeteende. Resultatet är beslutsstöd inför en intervju. Det fattar inget anställningsbeslut, rangordnar inga kandidater och uttalar sig inte om lämplighet.",
+  "purpose_en": "A role-specific assessment for recruiting security officers. It produces structured evidence and interview preparation covering security judgment, observation, reporting and self-reported work behaviour. The result is decision support ahead of an interview. It makes no employment decision, ranks no candidates and makes no statement about suitability."
+ }
 }$vaktare_content$::jsonb AS doc;
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -1974,6 +1979,19 @@ BEGIN
       IF _n <> 1 THEN RAISE EXCEPTION 'SCP_V3_DIMENSION_MISSING: % %', _r->>'slug', _d->>'key'; END IF;
     END LOOP;
   END LOOP;
+
+  -- The product claim the employer reads in the library, on the draft
+  -- programme version. Purpose text only; does_not_measure, names and
+  -- status are untouched.
+  IF _doc ? 'program' THEN
+    UPDATE public.scp_program_versions pv
+       SET purpose_sv = _doc#>>'{program,purpose_sv}', purpose_en = _doc#>>'{program,purpose_en}'
+      FROM public.scp_programs p
+     WHERE p.id = pv.program_id AND p.slug = _doc#>>'{program,slug}'
+       AND pv.version_number = 1 AND pv.content_status = 'draft';
+    GET DIAGNOSTICS _n = ROW_COUNT;
+    IF _n <> 1 THEN RAISE EXCEPTION 'SCP_V3_PROGRAM_MISSING: % v1 (draft) not found', _doc#>>'{program,slug}'; END IF;
+  END IF;
 
   RAISE NOTICE 'vaktare v1 content rollback: % items, % option labels rewritten in both languages', _items, _opts;
 END $$;
@@ -2116,6 +2134,23 @@ BEGIN
      AND ((o.is_preferred AND o.distractor_error_type IS NOT NULL)
        OR (NOT o.is_preferred AND (o.distractor_error_type IS NULL OR length(trim(o.scoring_rationale_sv)) = 0)));
   IF _n > 0 THEN RAISE EXCEPTION 'SCP_V3_DISTRACTOR_PATTERN: % scenario option(s) lack an error pattern or rationale where one is required.', _n; END IF;
+
+  -- SCC-08 (Samarbete och samordning) has exactly one observed item on this
+  -- form. With the active thresholds, one observation can reach at most
+  -- limited_evidence: developing_evidence needs two. State it, and fail if
+  -- either side of that arithmetic ever moves without this file knowing.
+  SELECT count(*) INTO _n
+    FROM public.scp_form_items fi JOIN public.scp_forms f ON f.id = fi.form_id
+    JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+    JOIN public.scp_competencies c ON c.id = iv.competency_id
+   WHERE f.slug = 'security-officer-recruitment-form-a'
+     AND c.code = 'SCC-08' AND iv.evidence_source_type = 'assessment_response';
+  SELECT min(min_observations) INTO _m FROM public.scp_maturity_thresholds
+   WHERE is_active AND level = 'developing_evidence';
+  IF _n <> 1 OR _m IS NULL OR _m < 2 THEN
+    RAISE EXCEPTION 'SCP_V3_SCC08_CAP: SCC-08 has % observed item(s) and developing_evidence needs % observation(s); the limited-evidence cap this form relies on no longer holds.', _n, _m;
+  END IF;
+  RAISE NOTICE 'vaktare v1 SCC-08: % observed item, developing_evidence needs % -- one attempt caps at limited_evidence', _n, _m;
 
   RAISE NOTICE 'vaktare v1 content proven: identity unchanged, 50 = 22 + 24 + 4, bilingual, gates untouched, preferred-longest sv %/22 en %/22, preferred-shortest sv %/22 en %/22',
     _sv_long, _en_long, _sv_short, _en_short;

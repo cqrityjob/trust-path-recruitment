@@ -8,6 +8,26 @@
 -- scenario items in both languages, and that all 50 English texts were still
 -- adaptation_pending. This migration is the content review: wording only.
 --
+-- ── REVISION 2 (human content review, APPROVE WITH REVISIONS) ───────────
+--
+--   b05's 1-point option no longer restores the extinguisher as a doorstop
+--   (3 = door closed + recorded + handed over, 1 = door closed and nothing
+--   recorded, 0 = the doorstop restored); a03 keeps the employee at a
+--   distance and in the call, nobody confronts; a05's 0-option says the
+--   points are signed off without being visited; a07 states lone response,
+--   back-up not arrived, and that the alarm centre decides on entry; d03
+--   re-orders severity (1 = risk handled now, weak follow-up; 0 = passivity);
+--   d05's key coordinates with the alarm centre or supervisor before
+--   security-sensitive points go unchecked; b02 claims only what is visible;
+--   d06 asks for an authorised request per procedure; b06's poorest option
+--   no longer explains why it is poor; rationalising distractor tails
+--   ("relationen är viktig", "varje minut räknas", ...) removed everywhere
+--   and lengths rebalanced with actions, not explanations; free text adds
+--   the example-source and short-sentence guidance; the programme purpose
+--   carries the product claim. c07 and c19 are NOT touched: their keys
+--   cannot be made defensible without changing score values, which is a
+--   Product Owner / SME decision recorded in the review pack.
+--
 -- ── WHAT CHANGES ────────────────────────────────────────────────────────
 --
 --   * scenario / prompt text and option labels, sv-SE and en-GB, on the 50
@@ -99,7 +119,7 @@ END $$;
 -- ═══════════════════════════════════════════════════════════════════════════
 CREATE TEMP TABLE _v3_doc AS
 SELECT $vaktare_content${
- "review": "vaktare-v1-content-review-2026-09-03",
+ "review": "vaktare-v1-content-review-2026-09-03-r2",
  "items": [
   {
    "slug": "so-rj-a01",
@@ -116,15 +136,15 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Anmäl besöket i receptionen, ring mötesvärden så att hen hämtar personen, och be personen vänta ett par minuter.",
-     "en": "Register the visit at reception, call the host so they can collect the person, and ask the person to wait a couple of minutes.",
+     "sv": "Anmäl besöket, ring mötesvärden och be personen vänta ett par minuter.",
+     "en": "Register the visit, call the host and ask the person to wait a couple of minutes.",
      "rat_sv": "Följer instruktionen men löser personens problem parallellt. Minst ingripande åtgärd som ändå håller kontrollen.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Släpp in personen — kallelsen på telefonen visar att mötet finns — och skriv in besöket i loggen i efterhand så att det finns spårbart.",
-     "en": "Let the person through — the invitation on their phone shows the meeting is real — and enter the visit in the log afterwards so there is a record.",
+     "sv": "Släpp in personen, eftersom kallelsen visar att mötet finns, och skriv in besöket i loggen i efterhand.",
+     "en": "Let the person through, since the invitation shows the meeting is real, and enter the visit in the log afterwards.",
      "rat_sv": "Mejlet visar en kallelse, inte att personen är den som kallats. Behörigheten är fortfarande okontrollerad.",
      "err": "excessive_informal_trust"
     },
@@ -159,15 +179,15 @@ SELECT $vaktare_content${
     },
     {
      "k": "b",
-     "sv": "Säg direkt att returer inte är din sak som väktare och hänvisa personen till centrumledningen, så att du kan fortsätta ditt arbete.",
-     "en": "Say straight away that returns are not a security matter and refer the person to centre management, so that you can get on with your work.",
+     "sv": "Säg direkt att returer inte är din sak som väktare, hänvisa personen till centrumledningen och gå vidare till nästa ärende.",
+     "en": "Say straight away that returns are not a security matter, refer the person to centre management and move on to the next matter.",
      "rat_sv": "Att hänvisa vidare direkt är korrekt i sak men lämnar personen mitt i sin frustration, vilket ofta trappar upp.",
      "err": "weak_communication"
     },
     {
      "k": "c",
-     "sv": "Säg lugnt men bestämt att personen måste sänka rösten — annars får hen lämna centrumet. De som tittar behöver se att du har kontroll.",
-     "en": "Say calmly but firmly that the person has to lower their voice — otherwise they will have to leave the centre. The onlookers need to see you are in control.",
+     "sv": "Säg lugnt men bestämt att personen måste sänka rösten, annars får hen lämna centrumet.",
+     "en": "Say calmly but firmly that the person has to lower their voice, otherwise they will have to leave the centre.",
      "rat_sv": "Avvisning som första åtgärd mot en arg men laglydig kund är oproportionerligt och gör konflikten större.",
      "err": "premature_escalation"
     }
@@ -188,22 +208,22 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Åk till personalutrymmet först, be den anställde stanna kvar i telefon och meddela larmcentralen att dörrlarmet inte är kontrollerat.",
-     "en": "Go to the staff area first, ask the employee to stay on the phone, and tell the alarm centre the door alarm has not been checked.",
-     "rat_sv": "Går till människorna först, håller kvar den andra händelsen genom att be om observation, och lämnar inte något obevakat utan att någon vet om det.",
+     "sv": "Be den anställde hålla avstånd, gå till en säker plats och stanna kvar i samtalet. Åk dit först och meddela larmcentralen att dörrlarmet inte är kontrollerat.",
+     "en": "Ask the employee to keep their distance, move somewhere safe and stay on the call. Go there first and tell the alarm centre the door alarm has not been checked.",
+     "rat_sv": "Människorna först, utan att någon konfronterar: den anställde hålls på avstånd och i samtalet, larmcentralen vet vad som är okontrollerat.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Åk till dörrlarmet först — det är ett bekräftat larm på skalskyddet — och ta personalutrymmet direkt efteråt.",
-     "en": "Go to the door alarm first — it is a confirmed alarm on the perimeter — and take the staff area straight afterwards.",
+     "sv": "Åk till dörrlarmet först, eftersom det är ett bekräftat larm på skalskyddet, kontrollera förrådet och ta sedan personalutrymmet direkt efteråt.",
+     "en": "Go to the door alarm first, since it is a confirmed alarm on the perimeter, check the cold store and then take the staff area straight afterwards.",
      "rat_sv": "Larmet är det tydligaste men inte det mest tidskritiska. En okänd person bland anställda är både en risk och något som hinner försvinna.",
      "err": "tunnel_vision"
     },
     {
      "k": "c",
-     "sv": "Be den anställde fråga personen vad hen gör där och ringa dig igen, medan du kontrollerar dörrlarmet.",
-     "en": "Ask the employee to ask the person what they are doing there and call you back, while you check the door alarm.",
+     "sv": "Be den anställde fråga personen vad hen gör där och ringa dig igen, medan du åker till dörrlarmet, kontrollerar förrådet och rapporterar till larmcentralen.",
+     "en": "Ask the employee to ask the person what they are doing there and call you back, while you go to the door alarm, check the cold store and report to the alarm centre.",
      "rat_sv": "Att be den anställde själv hantera en okänd person lägger uppgiften på fel person och lämnar båda händelserna utan väktare.",
      "err": "delayed_escalation"
     }
@@ -224,22 +244,22 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Gå fram, presentera dig och fråga vad bilderna är till och vem hen arbetar för — och stäm av svaret med terminalansvarig.",
-     "en": "Approach, introduce yourself and ask what the photographs are for and who they work for — then check the answer with the terminal supervisor.",
+     "sv": "Gå fram, presentera dig och fråga vad bilderna är till och vem hen arbetar för, och stäm av svaret med terminalansvarig.",
+     "en": "Approach, introduce yourself, ask what the photographs are for and who they work for, then check the answer with the terminal supervisor.",
      "rat_sv": "Frågar om det som faktiskt avviker — aktiviteten och den saknade brickan — utan att förutsätta ett motiv, och kontrollerar mot den som vet.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Anteckna tid, signalement och vad personen gör, och ta upp det med terminalansvarig efter ronden — hen kan vara en av veckans entreprenörer.",
-     "en": "Note the time, a description and what the person is doing, and raise it with the terminal supervisor after the round — they may be one of this week's contractors.",
+     "sv": "Anteckna tid, signalement och vad personen gör, fortsätt ronden och ta upp det med terminalansvarig efteråt.",
+     "en": "Note the time, a description and what the person is doing, carry on with the round and raise it with the terminal supervisor afterwards.",
      "rat_sv": "Att bara notera lämnar frågan obesvarad medan personen fortsätter, och en notering utan kontroll hjälper ingen.",
      "err": "insufficient_information"
     },
     {
      "k": "c",
-     "sv": "Ring polisen om misstänkt rekognosering — fotografering av portar och lastluckor är ett känt mönster inför inbrott.",
-     "en": "Call the police about suspected reconnaissance — photographing gates and loading doors is a known pattern before a burglary.",
+     "sv": "Ring polisen och rapportera misstänkt rekognosering vid lastkajen, och håll personen under uppsikt på avstånd tills de kommer.",
+     "en": "Call the police and report suspected reconnaissance at the loading bay, and keep the person in sight from a distance until they arrive.",
      "rat_sv": "Att behandla fotograferingen som rekognosering inför ett brott är en slutsats som inte går att dra av det som syns.",
      "err": "unsupported_assumption"
     }
@@ -260,23 +280,23 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Säg till kollegan att du går de två punkterna, gör det, och ta upp med arbetsledaren att kvitteringarna inte stämmer.",
-     "en": "Tell your colleague you are going to the two points, do it, and raise with the supervisor that the sign-offs do not match.",
+     "sv": "Säg till kollegan att du går de två punkterna, gör det, och ta upp kvitteringarna med arbetsledaren.",
+     "en": "Tell your colleague you are going to the two points, do it, and raise the sign-offs with the supervisor.",
      "rat_sv": "Tar upp det direkt med den det gäller, går själv till punkterna, och för vidare det som är ett systematiskt avsteg — inte som en anmälan av personen.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Gå de två punkterna själv utan att göra någon sak av det — det är inte din uppgift att kontrollera kollegan.",
-     "en": "Visit the two points yourself without making an issue of it — it is not your job to check up on your colleague.",
+     "sv": "Gå de två punkterna själv på nästa rond, notera i din egen logg att du gjort det, och låt saken bero.",
+     "en": "Visit the two points yourself on the next round, note in your own log that you did it, and let the matter rest.",
      "rat_sv": "Att bara göra rätt själv låter en felaktig kvittering ligga kvar i systemet, vilket är den egentliga risken.",
      "err": "failure_to_document"
     },
     {
      "k": "c",
-     "sv": "Kvittera de två punkterna i ditt eget namn i stället, så att det inte blir en fråga om hens kvitteringar.",
-     "en": "Sign the two points off in your own name instead, so that their sign-offs are not questioned.",
-     "rat_sv": "Att kvittera i kollegans ställe gör dig till en del av avsteget — loggen är fortfarande osann, nu i ditt namn.",
+     "sv": "Kvittera de två punkterna i ditt eget namn utan att gå dit, och fortsätt ronden tillsammans med kollegan.",
+     "en": "Sign the two points off in your own name without going to them, and continue the round with your colleague.",
+     "rat_sv": "Att kvittera punkter man inte gått gör dig till en del av avsteget — loggen är fortfarande osann, nu i ditt namn.",
      "err": "outside_mandate"
     }
    ]
@@ -296,22 +316,22 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Säg nej, föreslå att platschefen skriver en egen kommentar om åtgärden, och informera din arbetsledare om begäran.",
-     "en": "Say no, suggest the site manager adds a comment of their own about the remedy, and tell your supervisor about the request.",
+     "sv": "Säg nej, föreslå att platschefen skriver en egen kommentar om åtgärden, och informera din arbetsledare.",
+     "en": "Say no, suggest the site manager writes a comment of their own about the remedy, and inform your supervisor.",
      "rat_sv": "Vägrar sakligt, förklarar varför, och tar begäran vidare till den som faktiskt är ens uppdragsgivare i bevakningsledet.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Säg vänligt men bestämt nej till platschefen och låt saken bero — du tänker ändå inte ändra något, och relationen till uppdragsgivaren är viktig.",
-     "en": "Say a polite but firm no to the site manager and leave it there — you are not going to change anything anyway, and the client relationship matters.",
+     "sv": "Säg nej till platschefen, förklara att du inte ändrar i loggen och låt saken bero, eftersom du ändå inte tänker göra det.",
+     "en": "Say no to the site manager, explain that you do not change the log and leave it there, since you are not going to do it anyway.",
      "rat_sv": "Rätt svar till platschefen, men en begäran om att ändra en logg är i sig något arbetsledningen behöver känna till.",
      "err": "delayed_escalation"
     },
     {
      "k": "c",
-     "sv": "Ta bort noteringen — dörren är åtgärdad och platschefen har uttryckligen tagit på sig beslutet.",
-     "en": "Remove the entry — the door has been dealt with and the site manager has explicitly taken on the decision.",
+     "sv": "Ta bort noteringen, eftersom dörren är åtgärdad och platschefen tar ansvar för beslutet, och notera att posten togs bort på platschefens begäran.",
+     "en": "Remove the entry, since the door has been dealt with and the site manager takes responsibility for the decision, and note that it was removed at the site manager's request.",
      "rat_sv": "Att ta bort noteringen på muntligt ansvarsövertagande gör spåret oanvändbart och flyttar ansvaret till fel person.",
      "err": "excessive_informal_trust"
     }
@@ -322,32 +342,32 @@ SELECT $vaktare_content${
    "kind": "scenario",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Du åker på ett inbrottslarm i en fastighet med flera hyresgäster. Larmcentralen kan bara säga att en sektion har löst ut, inte vilken. När du kommer fram står ytterdörren olåst men stängd, och belysningen i trapphuset är släckt trots att den ska vara på nattetid.",
+    "scenario": "Du åker ensam på ett inbrottslarm i en fastighet med flera hyresgäster. Larmcentralen kan bara säga att en sektion har löst ut, inte vilken. Förstärkning finns men är inte framme, och objektsinstruktionen säger att larmcentralen avgör om du går in ensam. När du kommer fram står ytterdörren olåst men stängd, och belysningen i trapphuset är släckt trots att den ska vara på nattetid.",
     "prompt": "Vad gör du först?"
    },
    "en": {
-    "scenario": "You respond to an intruder alarm in a building with several tenants. The alarm centre can only say that one section has triggered, not which. On arrival the main door is unlocked but closed, and the stairwell lighting is off although it should be on at night.",
+    "scenario": "You respond alone to an intruder alarm in a building with several tenants. The alarm centre can only say that one section has triggered, not which. Back-up exists but has not arrived, and the site instruction says the alarm centre decides whether you go in alone. On arrival the main door is unlocked but closed, and the stairwell lighting is off although it should be on at night.",
     "prompt": "What do you do first?"
    },
    "options": [
     {
      "k": "a",
-     "sv": "Gå ett varv runt fastigheten först, meddela larmcentralen vad du ser och be dem ta reda på vilken sektion som löst ut.",
-     "en": "Walk round the building first, tell the alarm centre what you can see, and ask them to find out which section triggered.",
-     "rat_sv": "Bygger en egen bild utifrån, delar den, och går inte in i en okänd situation utan att någon vet var man är.",
+     "sv": "Gör en yttre kontroll, rapportera det du ser till larmcentralen och följ deras besked om fortsatt åtgärd.",
+     "en": "Do an outer check, report what you see to the alarm centre and follow their decision on what to do next.",
+     "rat_sv": "Bygger en egen lägesbild utifrån, delar den, och låter larmcentralen avgöra nästa steg enligt instruktionen — går inte in ensam på egen hand.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Gå in genom ytterdörren och kontrollera trapphuset våning för våning — larmet har troligen löst ut inne i huset och varje minut räknas.",
-     "en": "Go in through the main door and check the stairwell floor by floor — the alarm has probably triggered inside the building and every minute counts.",
-     "rat_sv": "Att gå in direkt är inte orimligt, men att göra det utan att veta sektion, utan ljus och utan att någon vet var man är är att ge bort sina egna marginaler.",
+     "sv": "Gå in genom ytterdörren och kontrollera trapphuset våning för våning, och rapportera till larmcentralen när du är klar.",
+     "en": "Go in through the main door, check the stairwell floor by floor, and report to the alarm centre when you are done.",
+     "rat_sv": "Att gå in ensam utan yttre kontroll, utan ljus, utan känd sektion och innan larmcentralen tagit ställning är att ge bort sina egna marginaler — och att gå förbi instruktionen.",
      "err": "insufficient_information"
     },
     {
      "k": "c",
-     "sv": "Bedöm det som ett troligt tekniskt fel — dörren är stängd och ingen syns till — notera det och låt fastighetsskötaren kontrollera belysningen i morgon.",
-     "en": "Treat it as a probable technical fault — the door is closed and nobody is in sight — note it and leave the lighting for the caretaker to check tomorrow.",
+     "sv": "Meddela larmcentralen att det troligen är ett tekniskt fel, notera det och lämna belysningen till fastighetsskötaren.",
+     "en": "Tell the alarm centre it is probably a technical fault, note it and leave the lighting to the caretaker.",
      "rat_sv": "Släckt belysning och olåst dörr är två avvikelser samtidigt, vilket är precis det som inte ska avfärdas som tekniskt fel.",
      "err": "unsupported_assumption"
     }
@@ -375,15 +395,15 @@ SELECT $vaktare_content${
     },
     {
      "k": "b",
-     "sv": "Hjälp personen upp och in på närmaste kontor så att hen får sitta ner i lugn och ro, och ring sedan efter hjälp därifrån.",
-     "en": "Help the person up and into the nearest office so they can sit down in peace, and then call for help from there.",
+     "sv": "Hjälp personen upp och in på närmaste kontor så att hen får sitta ner, och ring sedan efter hjälp.",
+     "en": "Help the person up and into the nearest office so they can sit down, and then call for help.",
      "rat_sv": "Att flytta någon som inte kan stödja på benet kan förvärra en skada, och gör dessutom platsen svårare att utreda.",
      "err": "poor_proportionality"
     },
     {
      "k": "c",
-     "sv": "Hämta närmaste arbetsledare på företaget så att de själva kan avgöra om ambulans behövs — det är deras anställda och deras lokal.",
-     "en": "Fetch the nearest supervisor at the company so they can decide for themselves whether an ambulance is needed — it is their employee and their premises.",
+     "sv": "Hämta närmaste arbetsledare på företaget, så att de kan avgöra om ambulans behövs.",
+     "en": "Fetch the nearest supervisor at the company, so they can decide whether an ambulance is needed.",
      "rat_sv": "Att söka efter en chef innan hjälp larmas fördröjer det enda som är tidskritiskt.",
      "err": "delayed_escalation"
     }
@@ -404,22 +424,22 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Tidpunkt, vad butikspersonalen sa, vad du själv sa och gjorde i ordning, vilka som var där — och att personen sa att hen skulle anmäla dig.",
-     "en": "The time, what the shop staff said, what you said and did in order, who was there — and that the person said they would report you.",
+     "sv": "Tidpunkt, vad butikspersonalen sa, vad du själv sa och gjorde i tidsordning, vilka som var där — och att personen sa att hen skulle anmäla dig.",
+     "en": "The time, what the shop staff said, what you said and did in chronological order, who was there — and that the person said they would report you.",
      "rat_sv": "Tid, vad som sagts och gjorts i ordning, vem som var där, och personens egen invändning — det sista är det som brukar utelämnas och det som betyder mest efteråt.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Att en person avvisades från entrén på butikspersonalens begäran, med tidpunkt — kort och sakligt, utan onödiga detaljer.",
-     "en": "That a person was removed from the entrance at the request of shop staff, with the time — brief, factual, no unnecessary detail.",
+     "sv": "Att en person avvisades från entrén på butikspersonalens begäran, med tidpunkt, plats och vilka ur personalen som var med.",
+     "en": "That a person was removed from the entrance at the request of shop staff, with the time, the place and which members of staff were involved.",
      "rat_sv": "En korrekt men tunn rapport. Utan förloppet går det inte att bedöma om åtgärden var proportionerlig.",
      "err": "insufficient_information"
     },
     {
      "k": "c",
-     "sv": "Att personen uppträdde hotfullt och sannolikt var påverkad, och att avvisningen därför var befogad.",
-     "en": "That the person behaved threateningly and was probably under the influence, and that the removal was therefore justified.",
+     "sv": "Att personen uppträdde hotfullt och sannolikt var påverkad, att avvisningen därför var befogad, och när det skedde.",
+     "en": "That the person behaved threateningly and was probably under the influence, that the removal was therefore justified, and when it happened.",
      "rat_sv": "En bedömning av personens sinnestillstånd är en slutsats, inte en iakttagelse, och håller inte om rapporten prövas.",
      "err": "unsupported_assumption"
     }
@@ -483,15 +503,15 @@ SELECT $vaktare_content${
     },
     {
      "k": "b",
-     "sv": "\"En nervös man i mörk jacka, kanske 35 år, höll till vid dörren en längre stund och verkade vänta på att någon skulle släppa in honom.\"",
-     "en": "\"A nervous man in a dark jacket, maybe 35, hung around by the door for quite a while and seemed to be waiting for somebody to let him in.\"",
-     "rat_sv": "\"Nervös\" och \"verkade vänta\" är tolkningar av ett beteende. Det som faktiskt syntes borde stå i stället.",
+     "sv": "\"En nervös man i mörk jacka, kanske 35 år, höll till vid dörren en längre stund och verkade vänta på någon.\"",
+     "en": "\"A nervous man in a dark jacket, maybe 35, hung around by the door for quite a while and seemed to be waiting for somebody.\"",
+     "rat_sv": "\"Nervös\" är en tolkning av ett beteende. Det som faktiskt syntes borde stå i stället.",
      "err": "unsupported_assumption"
     },
     {
      "k": "c",
-     "sv": "\"Mannen såg misstänkt ut, hade sannolikt för avsikt att ta sig in obehörigt och bör rapporteras till polisen om han återkommer.\"",
-     "en": "\"The man looked suspicious, probably intended to get in without authorisation, and should be reported to the police if he comes back.\"",
+     "sv": "\"Mannen såg misstänkt ut, hade sannolikt för avsikt att ta sig in obehörigt och bör hållas under uppsikt.\"",
+     "en": "\"The man looked suspicious, probably intended to get in without authorisation and should be kept under observation.\"",
      "rat_sv": "Avsikt går inte att observera, och en rapport som påstår den håller inte om den prövas.",
      "err": "unsupported_assumption"
     }
@@ -512,15 +532,15 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "\"02.40, teknikutrymme plan −1. Vatten på golvet ca 2×3 m, rinner från rörgenomföring i taket. Huvudkran ej åtkomlig. Jour kontaktad 02.48, på plats 03.20. Golvbrunn fri, ingen el i vattnet.\"",
-     "en": "\"02:40, plant room level −1. Water on the floor roughly 2×3 m, running from a pipe penetration in the ceiling. Main stopcock not accessible. On-call contacted 02:48, on site 03:20. Floor drain clear, no electrical equipment in the water.\"",
+     "sv": "\"02.40, teknikutrymme plan −1. Vatten på golvet ca 2×3 m, rinner från rörgenomföring i taket. Huvudkran ej åtkomlig. Jour kontaktad 02.48, på plats 03.20. Golvbrunn fri. Ingen synlig elutrustning i kontakt med vattnet.\"",
+     "en": "\"02:40, plant room level −1. Water on the floor roughly 2×3 m, running from a pipe penetration in the ceiling. Main stopcock not accessible. On-call contacted 02:48, on site 03:20. Floor drain clear. No visible electrical equipment in contact with the water.\"",
      "rat_sv": "Tid, plats, omfattning, vidtagen åtgärd, vem som kontaktats och vad som återstår. En läsare kan fortsätta arbetet.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "\"Under nattronden upptäcktes en vattenläcka i teknikutrymmet. Situationen är under kontroll. Jouren är kontaktad och åtgärder vidtagna i avvaktan på fastighetsskötaren.\"",
-     "en": "\"During the night round a water leak was discovered in the plant room. The situation is under control. On-call has been contacted and measures taken pending the caretaker.\"",
+     "sv": "\"Under nattronden upptäcktes en vattenläcka i teknikutrymmet. Läckan verkade omfattande. Jouren är kontaktad och åtgärder är vidtagna i avvaktan på fastighetsskötaren, som tar över vid ankomst.\"",
+     "en": "\"During the night round a water leak was discovered in the plant room. The leak appeared extensive. On-call has been contacted and steps have been taken while awaiting the caretaker, who takes over on arrival.\"",
      "rat_sv": "Låter komplett men är obrukbar: ingen tid, ingen omfattning, ingen uppgift om vilka åtgärder som vidtagits eller vad som återstår.",
      "err": "insufficient_information"
     },
@@ -555,15 +575,15 @@ SELECT $vaktare_content${
     },
     {
      "k": "b",
-     "sv": "Om hen har skrivit en notering i systemet, så att det finns dokumenterat innan hen lämnar objektet.",
-     "en": "Whether they have written a note in the system, so that it is documented before they leave the site.",
+     "sv": "Om hen har skrivit en notering om det i systemet, och om hen tog några bilder.",
+     "en": "Whether they have written a note about it in the system, and whether they took any photos.",
      "rat_sv": "Rimlig fråga, men den säger inget om huruvida något behöver göras nu.",
      "err": "insufficient_information"
     },
     {
      "k": "c",
-     "sv": "Hur många cyklar som saknas och ungefär vilket värde det rör sig om, så att du vet om det är en polissak.",
-     "en": "How many bikes are missing and roughly what value is involved, so that you know whether it is a police matter.",
+     "sv": "Hur många cyklar som saknas och ungefär vilket värde det rör sig om totalt.",
+     "en": "How many bikes are missing and roughly what value is involved in total.",
      "rat_sv": "Antal och värde är detaljer i en slutsats som ännu inte är dragen; ingen har sagt att något är stulet.",
      "err": "unsupported_assumption"
     }
@@ -591,8 +611,8 @@ SELECT $vaktare_content${
     },
     {
      "k": "b",
-     "sv": "Att det gått ett larm på kylanläggningen och att du ringer enligt instruktionen.",
-     "en": "That an alarm has gone off on the refrigeration unit and that you are calling in line with the instruction.",
+     "sv": "Att det gått ett larm på kylanläggningen, att du ringer enligt instruktionen och att du finns kvar på objektet.",
+     "en": "That an alarm has gone off on the refrigeration unit, that you are calling in line with the instruction and that you are staying on site.",
      "rat_sv": "Korrekt men otillräckligt: personen vet inte var, hur illa det är, eller vad som förväntas av hen.",
      "err": "insufficient_information"
     },
@@ -620,24 +640,24 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Notera avvikelsen i loggen med tid och plats, även om inget hände i kväll.",
-     "en": "Record the deviation in the log with time and place, even though nothing happened tonight.",
-     "rat_sv": "Avvikelsen är värd att notera just för att den upprepas — det är mönstret, inte kvällen, som är risken.",
+     "sv": "Låt dörren vara stängd, notera avvikelsen med tid och plats och nämn den vid överlämningen.",
+     "en": "Leave the door closed, record the deviation with time and place and raise it at the handover.",
+     "rat_sv": "Rätt omedelbar åtgärd, dokumenterad och överlämnad. Avvikelsen är värd att notera just för att den upprepas — det är mönstret, inte kvällen, som är risken.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Ställ tillbaka släckaren och gå hem — dörren är stängd och problemet är löst.",
-     "en": "Put the extinguisher back where it was and go home — the door is closed and the problem is solved.",
-     "rat_sv": "Rätt fysisk åtgärd, men utan notering finns inget mönster att upptäcka nästa gång.",
+     "sv": "Låt dörren vara stängd och gå hem. Problemet är åtgärdat och inget hann inträffa.",
+     "en": "Leave the door closed and go home. The immediate problem has been resolved and nothing happened.",
+     "rat_sv": "Rätt omedelbar åtgärd — dörren är stängd — men utan notering eller överlämning finns inget mönster att upptäcka nästa gång.",
      "err": "failure_to_document"
     },
     {
      "k": "c",
-     "sv": "Nämn det muntligt för nästa pass om du träffar dem vid bytet, så att de kan hålla ett öga på dörren.",
-     "en": "Mention it verbally to the next shift if you see them at the changeover, so that they can keep an eye on the door.",
-     "rat_sv": "Muntligt och villkorat — om ni råkas — är ingen överlämning. Avvikelsen lämnar inget spår som går att följa upp.",
-     "err": "weak_communication"
+     "sv": "Ställ tillbaka släckaren så att dörren står öppen igen, och nämn det för nästa pass när de kommer.",
+     "en": "Put the extinguisher back so the door stays open again, and mention it to the next shift when they arrive.",
+     "rat_sv": "Att återställa uppställningen är att aktivt återskapa brandrisken. Det ligger utanför väktarens mandat att väga bekvämlighet mot brandskydd.",
+     "err": "outside_mandate"
     }
    ]
   },
@@ -656,23 +676,23 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Kronologiskt med klockslag — vad som hände, vad du såg, vad du gjorde — och dina egna bedömningar tydligt avskilda.",
-     "en": "Chronologically with times — what happened, what you saw, what you did — with your own assessments clearly kept separate.",
+     "sv": "Kronologiskt med klockslag: vad som hände, vad du såg, vad du gjorde, med dina egna bedömningar avskilda.",
+     "en": "Chronologically with times: what happened, what you saw, what you did, with your own assessments kept separate.",
      "rat_sv": "Kronologi med tidsangivelser, sedan iakttagelser, sedan åtgärder — och egna bedömningar tydligt avskilda i slutet.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Med din slutsats först, så att läsaren direkt förstår vad det handlar om, och underlaget efter.",
-     "en": "With your conclusion first, so the reader immediately understands what it is about, and the material after.",
+     "sv": "Med din slutsats först och underlaget efter, så att läsaren direkt ser vad det handlar om.",
+     "en": "With your conclusion first and the material after, so the reader sees straight away what it is about.",
      "rat_sv": "Att inleda med slutsatsen färgar allt som följer och gör det svårare att se vad som faktiskt observerades.",
      "err": "weak_communication"
     },
     {
      "k": "c",
-     "sv": "Med det som är relevant för händelsen och inget annat — detaljer som kan verka motsägelsefulla skapar bara oklarhet för läsaren.",
-     "en": "With what is relevant to the incident and nothing else — details that might seem contradictory only create confusion for the reader.",
-     "rat_sv": "Att utelämna det som talar emot den egna versionen är det som gör en redogörelse värdelös när den prövas.",
+     "sv": "Med det som är relevant för händelsen, i den ordning du kommer ihåg det, och utan detaljer som inte tillför något.",
+     "en": "With what is relevant to the incident, in the order you remember it, and without details that add nothing.",
+     "rat_sv": "Att välja bort det som inte \"tillför\" är i praktiken att välja bort det som talar emot den egna versionen — och det är det som gör en redogörelse värdelös när den prövas.",
      "err": "unsupported_assumption"
     }
    ]
@@ -693,21 +713,21 @@ SELECT $vaktare_content${
     {
      "k": "a",
      "sv": "Gör avstämningen vid varje passbyte, säg det till kollegan, och ta upp med arbetsledaren att rutinen tillämpas olika.",
-     "en": "Do the reconciliation at every shift change, tell your colleague you are doing it, and raise with the supervisor that the procedure is applied differently.",
+     "en": "Reconcile at every shift change, tell your colleague you are doing it, and raise with the supervisor that the procedure is applied differently.",
      "rat_sv": "Gör rätt själv, tar upp det med kollegan, och för frågan vidare som en fråga om rutinen snarare än om personen.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Följ kollegans arbetssätt — hen känner objektet, och sex år utan fel talar för sig.",
-     "en": "Follow your colleague's way of working — they know the site, and six years without a fault speaks for itself.",
+     "sv": "Följ kollegans arbetssätt, eftersom hen känner objektet och inget har gått fel på sex år, och gör avstämningen en gång i veckan som hen.",
+     "en": "Follow your colleague's way of working, since they know the site and nothing has gone wrong in six years, and do the reconciliation once a week as they do.",
      "rat_sv": "Sex år utan fel säger något om sannolikheten, inte om konsekvensen. På ett datacenter är det konsekvensen som styr.",
      "err": "excessive_informal_trust"
     },
     {
      "k": "c",
-     "sv": "Gör avstämningen vid varje passbyte själv utan att säga något — kollegan är mer erfaren än du.",
-     "en": "Do the reconciliation at every shift change yourself without saying anything — your colleague is more experienced than you.",
+     "sv": "Gör avstämningen vid varje passbyte själv, utan att säga något till kollegan, och notera att du gjort den.",
+     "en": "Do the reconciliation at every shift change yourself, without saying anything to your colleague, and note that you did it.",
      "rat_sv": "Att bara göra rätt själv i tysthet lämnar avsteget kvar och gör dig till den enda som vet om det.",
      "err": "delayed_escalation"
     }
@@ -735,15 +755,15 @@ SELECT $vaktare_content${
     },
     {
      "k": "b",
-     "sv": "Följ med in och stå kvar medan hen hämtar pärmen, och skriv in det i loggen med tid och namn — då finns det spårbart om någon frågar.",
-     "en": "Go in with them and stand there while they collect the folder, and enter it in the log with time and name — then there is a record if anybody ever asks.",
+     "sv": "Följ med in och stå kvar medan hen hämtar pärmen, notera det i loggen med tid och namn och be hen ordna passerkortet i morgon.",
+     "en": "Go in with them and stay while they collect the folder, note it in the log with time and name, and ask them to sort out the access card tomorrow.",
      "rat_sv": "Att följa med gör inte begäran behörig. Närvaron är en kontroll, inte ett tillstånd.",
      "err": "outside_mandate"
     },
     {
      "k": "c",
-     "sv": "Lås upp — du vet vem personen är, ärendet är rimligt, och att hämta en pärm åt en kollega är knappast en säkerhetsrisk.",
-     "en": "Unlock it — you know who the person is, the errand is reasonable, and collecting a folder for a colleague is hardly a security risk.",
+     "sv": "Lås upp, eftersom du vet vem personen är och ärendet är rimligt.",
+     "en": "Unlock it, since you know who the person is and the errand is reasonable.",
      "rat_sv": "Att öppna på igenkänning är precis det arbetssätt en behörighetsordning finns för att förhindra.",
      "err": "excessive_informal_trust"
     }
@@ -764,24 +784,24 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Ring objektet direkt så att dörren kontrolleras, och skriv en egen avvikelse om att du missade den.",
-     "en": "Call the site straight away so the door gets checked, and write your own deviation report saying you missed it.",
+     "sv": "Ring objektet direkt så att dörren kontrolleras, och skriv en egen avvikelse.",
+     "en": "Call the site straight away so the door gets checked, and write your own deviation report.",
      "rat_sv": "Åtgärdar risken nu och lämnar spår efter sig. Att någon annan kan ha upptäckt det är inte ett skäl att låta bli.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Ta upp det med arbetsledaren nästa gång du är på jobbet, så att det blir sagt och dokumenterat på rätt sätt.",
-     "en": "Raise it with the supervisor the next time you are at work, so that it is said and documented in the proper way.",
-     "rat_sv": "Att vänta till nästa pass innebär att risken står öppen under tiden, av bekvämlighetsskäl.",
-     "err": "delayed_escalation"
+     "sv": "Ring objektet direkt så att dörren kontrolleras, och ta upp missen nästa gång du är på jobbet.",
+     "en": "Call the site straight away so the door gets checked, and raise the miss the next time you are at work.",
+     "rat_sv": "Risken åtgärdas nu, men avvikelsen lämnar inget spår förrän långt senare — och kanske aldrig.",
+     "err": "failure_to_document"
     },
     {
      "k": "c",
-     "sv": "Lita på att nästa väktares rond fångar upp det — förrådet ingår i rondslingan och kontrolleras inom några timmar.",
-     "en": "Trust the next officer's round to catch it — the store room is on the round and will be checked within a few hours.",
-     "rat_sv": "Att lita på nästa rond löser möjligen dörren men lämnar avvikelsen odokumenterad, vilket är den del som betyder något över tid.",
-     "err": "failure_to_document"
+     "sv": "Lita på att nästa väktares rond fångar upp det, eftersom förrådet ingår i rondslingan.",
+     "en": "Trust the next officer's round to catch it, since the store room is on the round.",
+     "rat_sv": "Att inte göra något alls lämnar risken öppen utan att någon vet om den. Ingen kontroll är säkerställd.",
+     "err": "delayed_escalation"
     }
    ]
   },
@@ -807,15 +827,15 @@ SELECT $vaktare_content${
     },
     {
      "k": "b",
-     "sv": "Nämn det muntligt vid genomgången utan att röra rapporten — den är korrekt i sak, och en ändring i efterhand kan se konstig ut.",
-     "en": "Mention it verbally at the review without touching the report — it is correct in substance, and a change afterwards could look odd.",
+     "sv": "Nämn det muntligt vid genomgången utan att röra rapporten, som är korrekt i sak.",
+     "en": "Mention it verbally at the review without touching the report, which is correct in substance.",
      "rat_sv": "Muntligt håller för mötet men inte för någon som läser rapporten om ett år.",
      "err": "insufficient_information"
     },
     {
      "k": "c",
-     "sv": "Redigera rapporten så att bemanningen finns med från början — det var ju så det var.",
-     "en": "Edit the report so that the staffing is there from the start — that is how it was.",
+     "sv": "Redigera rapporten så att bemanningen finns med från början, och skicka den uppdaterade versionen inför genomgången.",
+     "en": "Edit the report so that the staffing is there from the start, and send the updated version ahead of the review.",
      "rat_sv": "Att redigera originalet gör rapporten oanvändbar som spår, oavsett hur riktig den blir.",
      "err": "failure_to_document"
     }
@@ -826,32 +846,32 @@ SELECT $vaktare_content${
    "kind": "scenario",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Ett larm har tagit fyrtio minuter av ditt pass. Du har trettio minuter kvar och en rond som normalt tar femtio. Ronden omfattar tolv kontrollpunkter, varav tre är utrymmen med skyddsvärde och nio är allmänna utrymmen.",
+    "scenario": "Ett larm har tagit fyrtio minuter av ditt pass. Du har trettio minuter kvar och en rond som normalt tar femtio. Ronden omfattar tolv kontrollpunkter, varav tre är säkerhetskänsliga utrymmen och nio är allmänna utrymmen.",
     "prompt": "Vad gör du?"
    },
    "en": {
-    "scenario": "An alarm has taken forty minutes of your shift. You have thirty minutes left and a round that normally takes fifty. The round covers twelve checkpoints, three of which are areas with protective value and nine of which are general areas.",
+    "scenario": "An alarm has taken forty minutes of your shift. You have thirty minutes left and a round that normally takes fifty. The round covers twelve checkpoints, three of which are security-sensitive areas and nine of which are general areas.",
     "prompt": "What do you do?"
    },
    "options": [
     {
      "k": "a",
-     "sv": "Gå de tre skyddsvärda punkterna först och så många övriga du hinner, kvittera bara det du gått och skriv i överlämningen vad som återstår.",
-     "en": "Do the three protected points first and as many of the others as you can, sign off only what you visited, and record in the handover what remains.",
-     "rat_sv": "Prioriterar efter skyddsvärde, kvitterar bara det som faktiskt gjorts, och lämnar över det som inte hanns med.",
+     "sv": "Meddela larmcentralen eller arbetsledaren att ronden inte hinns med, gå de tre säkerhetskänsliga punkterna först och det du hinner av övriga, kvittera bara det du gått och skriv i överlämningen vad som återstår.",
+     "en": "Tell the alarm centre or your supervisor that the round cannot be completed, do the three security-sensitive points first and what you can of the others, sign off only what you visited, and record in the handover what remains.",
+     "rat_sv": "Prioriterar efter skyddsvärde, låter någon med mandat veta det innan punkter lämnas ogjorda, kvitterar bara det som faktiskt gjorts och lämnar över resten.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Gå de tre skyddsvärda punkterna, kvittera dem och avsluta passet — de allmänna utrymmena är lågrisk.",
-     "en": "Do the three protected points, sign them off and end the shift — the general areas are low risk.",
-     "rat_sv": "Rimlig prioritering, men utan överlämning vet nästa pass inte vad som är okontrollerat.",
+     "sv": "Gå de tre säkerhetskänsliga punkterna först och så många övriga du hinner, kvittera bara det du gått och avsluta passet i tid.",
+     "en": "Do the three security-sensitive points first and as many of the others as you can, sign off only what you visited and end the shift on time.",
+     "rat_sv": "Rätt prioritering och ärlig kvittering, men ingen vet att ronden är ofullständig — varken larmcentralen, arbetsledaren eller nästa pass.",
      "err": "insufficient_information"
     },
     {
      "k": "c",
-     "sv": "Gå så många punkter du hinner och kvittera resten, så att ronden ser fullständig ut i systemet.",
-     "en": "Do as many points as you can and sign off the rest, so that the round looks complete in the system.",
+     "sv": "Gå så många punkter du hinner och kvittera resten, så att ronden ser fullständig ut i systemet, och avsluta passet i tid.",
+     "en": "Do as many points as you can and sign off the rest, so that the round looks complete in the system, and end the shift on time.",
      "rat_sv": "Att kvittera det som inte gjorts gör loggen osann, vilket är allvarligare än en ogjord rond.",
      "err": "failure_to_document"
     }
@@ -872,22 +892,22 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Säg nej, förklara att passerdata bara får användas för säkerhetsändamål, och hänvisa frågan till personens chef.",
-     "en": "Say no, explain that access data may only be used for security purposes, and refer the question to the person's manager.",
-     "rat_sv": "Nej med skäl, och en anvisning om var frågan hör hemma. Behovet försvinner inte men vägen dit blir den rätta.",
+     "sv": "Förklara att du inte kan lämna ut uppgiften utan en behörig begäran, och hänvisa till ansvarig chef eller systemägare enligt rutinen.",
+     "en": "Explain that you cannot release the information without an authorised request, and refer them to the responsible manager or system owner.",
+     "rat_sv": "Nej med skäl och en anvisad väg enligt rutin. Behovet försvinner inte men vägen dit blir den rätta.",
      "err": null
     },
     {
      "k": "b",
-     "sv": "Säg att du inte får göra det och gå vidare — du behöver inte förklara dig, och ju mindre du diskuterar det desto bättre.",
-     "en": "Say that you are not allowed to and move on — you do not need to explain yourself, and the less you discuss it the better.",
+     "sv": "Säg att du inte får lämna ut sådana uppgifter och återgå till det du höll på med.",
+     "en": "Say that you are not allowed to release that kind of information and go back to what you were doing.",
      "rat_sv": "Ett nej utan skäl lämnar personen med intrycket att det är godtycke, och frågan kommer tillbaka till nästa väktare.",
      "err": "weak_communication"
     },
     {
      "k": "c",
-     "sv": "Titta efter — uppgiften är harmlös och personen kan ändå fråga sin chef.",
-     "en": "Look it up — the information is harmless and the person could ask their manager anyway.",
+     "sv": "Titta efter och säg vilken tid det var, eftersom personen ändå kan få uppgiften av sin chef.",
+     "en": "Look it up and tell them what time it was, since the person could get it from their manager anyway.",
      "rat_sv": "Att uppgiften är harmlös ändrar inte att den hämtats ur ett system som finns för något annat.",
      "err": "excessive_informal_trust"
     }
@@ -974,13 +994,13 @@ SELECT $vaktare_content${
   {
    "slug": "so-rj-c03",
    "kind": "selfreport",
-   "decision": "KEEP",
+   "decision": "EDIT",
    "sv": {
-    "scenario": "Två sätt att arbeta. Inget av dem är fel.",
+    "scenario": "Två sätt att arbeta.",
     "prompt": "Vilket liknar dig mest?"
    },
    "en": {
-    "scenario": "Two ways of working. Neither is wrong.",
+    "scenario": "Two ways of working.",
     "prompt": "Which is more like you?"
    },
    "options": [
@@ -994,7 +1014,7 @@ SELECT $vaktare_content${
      "k": "b",
      "sv": "Jag kontrollerar hellre uppgiften en gång till innan jag agerar.",
      "en": "I prefer to check the information once more before I act.",
-     "rat_sv": "Beskriver kontroll framför handlingsinriktning. I bevakningsarbete är verifiering det mer hållbara arbetssättet, men båda svaren är rimliga beskrivningar av en person."
+     "rat_sv": "Beskriver kontroll framför handlingsinriktning. I bevakningsarbete är verifiering det mer hållbara arbetssättet, och beskrivningen kodas därför högre; det är en beskrivning av ett arbetssätt, inte ett rätt eller fel svar."
     }
    ]
   },
@@ -1007,7 +1027,7 @@ SELECT $vaktare_content${
     "prompt": "Hur ofta stämmer det?"
    },
    "en": {
-    "scenario": "When I notice something small that is out of place, I settle for remembering it.",
+    "scenario": "When I notice something small that is out of place, I rely on remembering it.",
     "prompt": "How often is that true?"
    },
    "options": [
@@ -1079,13 +1099,13 @@ SELECT $vaktare_content${
   {
    "slug": "so-rj-c06",
    "kind": "selfreport",
-   "decision": "KEEP",
+   "decision": "EDIT",
    "sv": {
-    "scenario": "Två sätt att gå en rond. Inget av dem är fel.",
+    "scenario": "Två sätt att gå igenom ett område du ska kontrollera. Inget av dem är fel.",
     "prompt": "Vilket liknar dig mest?"
    },
    "en": {
-    "scenario": "Two ways of walking a round. Neither is wrong.",
+    "scenario": "Two ways of checking an area you are responsible for. Neither is wrong.",
     "prompt": "Which is more like you?"
    },
    "options": [
@@ -1186,11 +1206,11 @@ SELECT $vaktare_content${
    "kind": "selfreport",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Mot slutet av ett långt pass går jag igenom kontrollpunkterna snabbare än i början av passet.",
+    "scenario": "Mot slutet av ett långt pass gör jag de sista kontrollerna snabbare än de första.",
     "prompt": "Hur ofta stämmer det?"
    },
    "en": {
-    "scenario": "Towards the end of a long shift I go through the checkpoints faster than at the start of the shift.",
+    "scenario": "Towards the end of a long shift I do the last checks faster than the first ones.",
     "prompt": "How often is that true?"
    },
    "options": [
@@ -1301,13 +1321,13 @@ SELECT $vaktare_content${
   {
    "slug": "so-rj-c12",
    "kind": "selfreport",
-   "decision": "KEEP",
+   "decision": "EDIT",
    "sv": {
-    "scenario": "Jag använder min egen telefon för att fotografera eller anteckna sådant jag behöver komma ihåg från passet.",
+    "scenario": "Jag använder min egen telefon för att fotografera eller anteckna sådant jag behöver komma ihåg från ett arbetspass.",
     "prompt": "Hur ofta stämmer det?"
    },
    "en": {
-    "scenario": "I use my own phone to photograph or note things I need to remember from a shift.",
+    "scenario": "I use my own phone to photograph or note things I need to remember from a shift or working day.",
     "prompt": "How often is that true?"
    },
    "options": [
@@ -1381,11 +1401,11 @@ SELECT $vaktare_content${
    "kind": "selfreport",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Om ett misstag inte fick någon konsekvens nöjer jag mig med att rätta till det.",
+    "scenario": "Om jag rättar till ett eget misstag som inte fick någon konsekvens låter jag bli att rapportera det.",
     "prompt": "Hur ofta stämmer det?"
    },
    "en": {
-    "scenario": "If a mistake had no consequence, I settle for putting it right.",
+    "scenario": "If I put right a mistake of my own that had no consequence, I leave it unreported.",
     "prompt": "How often is that true?"
    },
    "options": [
@@ -1603,11 +1623,11 @@ SELECT $vaktare_content${
    "kind": "selfreport",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Om jag larmat i onödan tar jag upp det efteråt i stället för att låta det passera.",
+    "scenario": "Om jag har larmat i onödan tar jag upp det efteråt i stället för att låta det passera.",
     "prompt": "Hur ofta stämmer det?"
    },
    "en": {
-    "scenario": "If I have escalated unnecessarily, I raise it afterwards rather than letting it go.",
+    "scenario": "If I have raised an alarm unnecessarily, I bring it up afterwards rather than letting it go.",
     "prompt": "How often is that true?"
    },
    "options": [
@@ -1640,13 +1660,13 @@ SELECT $vaktare_content${
   {
    "slug": "so-rj-c21",
    "kind": "selfreport",
-   "decision": "KEEP",
+   "decision": "EDIT",
    "sv": {
-    "scenario": "Vid passets slut säger jag uttryckligen vad jag inte hann med, inte bara vad jag gjorde.",
+    "scenario": "När jag slutar för dagen säger jag uttryckligen vad jag inte hann med, inte bara vad jag gjorde.",
     "prompt": "Hur ofta stämmer det?"
    },
    "en": {
-    "scenario": "At the end of a shift I say explicitly what I did not get to, not only what I did.",
+    "scenario": "When I finish for the day I say explicitly what I did not get to, not only what I did.",
     "prompt": "How often is that true?"
    },
    "options": [
@@ -1786,11 +1806,11 @@ SELECT $vaktare_content${
    "kind": "reflection",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta gärna vad som hände, vad som var din uppgift, vad du själv gjorde, hur det slutade och vad du tog med dig. Några meningar räcker.",
+    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad som hände, vad som var din uppgift, vad du själv gjorde, hur det slutade och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
     "prompt": "Beskriv en situation där du gjorde ett misstag på jobbet. Vad gjorde du efteråt?"
    },
    "en": {
-    "scenario": "This question has no right answer, and a person reads what you write. Tell us what happened, what your role was, what you yourself did, how it ended and what you took from it. A few sentences is enough.",
+    "scenario": "This question has no right answer, and a person reads what you write. Tell us what happened, what your role was, what you yourself did, how it ended and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
     "prompt": "Describe a situation where you made a mistake at work. What did you do afterwards?"
    },
    "options": []
@@ -1800,11 +1820,11 @@ SELECT $vaktare_content${
    "kind": "reflection",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta gärna vad som hände, vad som var din uppgift, vad du själv sa och gjorde, hur det slutade och vad du tog med dig. Några meningar räcker.",
+    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad som hände, vad som var din uppgift, vad du själv sa och gjorde, hur det slutade och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
     "prompt": "Beskriv en situation där du behövde säga nej till någon trots att det var socialt obekvämt."
    },
    "en": {
-    "scenario": "This question has no right answer, and a person reads what you write. Tell us what happened, what your role was, what you yourself said and did, how it ended and what you took from it. A few sentences is enough.",
+    "scenario": "This question has no right answer, and a person reads what you write. Tell us what happened, what your role was, what you yourself said and did, how it ended and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
     "prompt": "Describe a situation where you had to say no to somebody even though it was socially uncomfortable."
    },
    "options": []
@@ -1814,11 +1834,11 @@ SELECT $vaktare_content${
    "kind": "reflection",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Arbetet behöver inte ha varit inom säkerhet. Berätta gärna vad arbetet var, vad som var din uppgift, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig. Några meningar räcker.",
+    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad arbetet var, vad som var din uppgift, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
     "prompt": "Beskriv en situation där du behövde hålla koncentrationen uppe under upprepat arbete. Hur gjorde du?"
    },
    "en": {
-    "scenario": "This question has no right answer, and a person reads what you write. The work does not have to have been in security. Tell us what the work was, what your role was, what you did to keep your concentration, how it went and what you took from it. A few sentences is enough.",
+    "scenario": "This question has no right answer, and a person reads what you write. Tell us what the work was, what your role was, what you did to keep your concentration, how it went and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
     "prompt": "Describe a situation where you had to maintain concentration during repetitive work. How did you do it?"
    },
    "options": []
@@ -1828,11 +1848,11 @@ SELECT $vaktare_content${
    "kind": "reflection",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta gärna vad uppgiften gällde, vad som var din roll, hur du upptäckte felet och vad du gjorde, hur det slutade och vad du tog med dig. Några meningar räcker.",
+    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad uppgiften handlade om, vad som var din roll, hur du upptäckte felet och vad du gjorde, hur det slutade och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
     "prompt": "Beskriv en situation där information du fick från början visade sig vara felaktig. Vad gjorde du då?"
    },
    "en": {
-    "scenario": "This question has no right answer, and a person reads what you write. Tell us what the information concerned, what your role was, how you discovered the error and what you did, how it ended and what you took from it. A few sentences is enough.",
+    "scenario": "This question has no right answer, and a person reads what you write. Tell us what the information was about, what your role was, how you discovered the error and what you did, how it ended and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
     "prompt": "Describe a situation where information you were given initially turned out to be wrong. What did you do then?"
    },
    "options": []
@@ -1846,8 +1866,8 @@ SELECT $vaktare_content${
   },
   {
    "key": "e_reflection",
-   "intro_sv": "Fyra frågor om egna erfarenheter. Berätta vad som hände, vad som var din roll, vad du gjorde, hur det slutade och vad du lärde dig. Svaren läses av en människa, inte av en modell. Några meningar räcker.",
-   "intro_en": "Four questions about your own experience. Say what happened, what your role was, what you did, how it ended and what you learned. A person reads these, not a model. A few sentences is enough."
+   "intro_sv": "Fyra frågor om egna erfarenheter. Berätta vad som hände, vad som var din roll, vad du gjorde, hur det slutade och vad du lärde dig. Exemplen kan komma från arbete, praktik, studier eller föreningsliv, och korta meningar eller punktform går bra. Svaren läses av en människa, inte av en modell.",
+   "intro_en": "Four questions about your own experience. Say what happened, what your role was, what you did, how it ended and what you learned. Examples can come from work, a placement, studies or a club or association, and short sentences or bullet points are fine. A person reads these, not a model."
   }
  ],
  "rubrics": [
@@ -1910,6 +1930,11 @@ SELECT $vaktare_content${
  "en_adaptation": {
   "reviewed_by": "PR-V3 content review, AI-assisted (Claude) — not a named human language reviewer",
   "notes": "2026-09-03 content/language review: same scenario, same behavioural demand, same key, same option plausibility and no Swedish-specific idiom that changes difficulty. This is a CONTENT/LANGUAGE review, not validation: no psychometric equivalence is claimed and the 'language' review requirement stays outstanding until a named human reviewer clears it."
+ },
+ "program": {
+  "slug": "security-officer-recruitment",
+  "purpose_sv": "Väktare v1 är ett rollspecifikt bedömnings- och intervjuunderlag som strukturerar scenariorespons, kandidatens egna beskrivningar och fritextsvar inför en mänsklig rekryteringsbedömning. Det fattar inget anställningsbeslut, rangordnar inga kandidater och uttalar sig inte om lämplighet.",
+  "purpose_en": "Väktare v1 is role-specific assessment and interview support that structures scenario responses, the candidate's own descriptions and written answers ahead of a human recruitment judgement. It makes no employment decision, ranks no candidates and makes no statement about suitability."
  }
 }$vaktare_content$::jsonb AS doc;
 
@@ -2049,6 +2074,19 @@ BEGIN
       IF _n <> 1 THEN RAISE EXCEPTION 'SCP_V3_DIMENSION_MISSING: % %', _r->>'slug', _d->>'key'; END IF;
     END LOOP;
   END LOOP;
+
+  -- The product claim the employer reads in the library, on the draft
+  -- programme version. Purpose text only; does_not_measure, names and
+  -- status are untouched.
+  IF _doc ? 'program' THEN
+    UPDATE public.scp_program_versions pv
+       SET purpose_sv = _doc#>>'{program,purpose_sv}', purpose_en = _doc#>>'{program,purpose_en}'
+      FROM public.scp_programs p
+     WHERE p.id = pv.program_id AND p.slug = _doc#>>'{program,slug}'
+       AND pv.version_number = 1 AND pv.content_status = 'draft';
+    GET DIAGNOSTICS _n = ROW_COUNT;
+    IF _n <> 1 THEN RAISE EXCEPTION 'SCP_V3_PROGRAM_MISSING: % v1 (draft) not found', _doc#>>'{program,slug}'; END IF;
+  END IF;
 
   RAISE NOTICE 'vaktare v1 content review: % items, % option labels rewritten in both languages', _items, _opts;
 END $$;
@@ -2191,6 +2229,23 @@ BEGIN
      AND ((o.is_preferred AND o.distractor_error_type IS NOT NULL)
        OR (NOT o.is_preferred AND (o.distractor_error_type IS NULL OR length(trim(o.scoring_rationale_sv)) = 0)));
   IF _n > 0 THEN RAISE EXCEPTION 'SCP_V3_DISTRACTOR_PATTERN: % scenario option(s) lack an error pattern or rationale where one is required.', _n; END IF;
+
+  -- SCC-08 (Samarbete och samordning) has exactly one observed item on this
+  -- form. With the active thresholds, one observation can reach at most
+  -- limited_evidence: developing_evidence needs two. State it, and fail if
+  -- either side of that arithmetic ever moves without this file knowing.
+  SELECT count(*) INTO _n
+    FROM public.scp_form_items fi JOIN public.scp_forms f ON f.id = fi.form_id
+    JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+    JOIN public.scp_competencies c ON c.id = iv.competency_id
+   WHERE f.slug = 'security-officer-recruitment-form-a'
+     AND c.code = 'SCC-08' AND iv.evidence_source_type = 'assessment_response';
+  SELECT min(min_observations) INTO _m FROM public.scp_maturity_thresholds
+   WHERE is_active AND level = 'developing_evidence';
+  IF _n <> 1 OR _m IS NULL OR _m < 2 THEN
+    RAISE EXCEPTION 'SCP_V3_SCC08_CAP: SCC-08 has % observed item(s) and developing_evidence needs % observation(s); the limited-evidence cap this form relies on no longer holds.', _n, _m;
+  END IF;
+  RAISE NOTICE 'vaktare v1 SCC-08: % observed item, developing_evidence needs % -- one attempt caps at limited_evidence', _n, _m;
 
   RAISE NOTICE 'vaktare v1 content proven: identity unchanged, 50 = 22 + 24 + 4, bilingual, gates untouched, preferred-longest sv %/22 en %/22, preferred-shortest sv %/22 en %/22',
     _sv_long, _en_long, _sv_short, _en_short;

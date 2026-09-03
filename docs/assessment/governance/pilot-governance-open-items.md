@@ -95,3 +95,24 @@ no authorised reviewer leaves every attempt stuck at `submitted`.
 - It does not say a recruitment pilot is approved.
 - It does not state a lawful basis, and does not review one.
 - It records no legal conclusion of any kind.
+
+## 6. Self-report keys on c07 and c19 — PRODUCT OWNER / SME SCORING DECISION, OPEN
+
+The human content review (PR-V3 revision 2) found that c07's key (0 / 2 / 3 / 2) may
+conflate autopilot behaviour with self-awareness, and that c19's peak key ("Ibland" = 3)
+is too context-dependent. Neither can be made monotonic, or purely descriptive in the
+product output, without changing score values: the self-report facet pattern
+(`scp_attempt_self_report_pattern`) is a mean of stored contributions, so any score is
+an ordered input to "rarely / mostly / consistently describes working this way".
+
+PR-V3 therefore left both items **exactly as authored** — text and scores — and holds
+them BLOCKED. c03's context was rewritten instead (the pair no longer says "neither is
+wrong"), which leaves its authored 1 / 3 key defensible as a two-point description;
+c06, c18 and c24 keep the authored "Inget av dem är fel" with the same shape and were
+not raised by the reviewers.
+
+- **State:** open. Product Owner + SME. Options: flatten to a constant score
+  (descriptive only), re-key monotonically, or accept the authored keys with the
+  interview prompt as the only interpretation.
+- **Until decided:** the employer brief's self-report pattern for the facets
+  *avvikelseigenkänning* and *eskalering och överlämning* includes these two items.

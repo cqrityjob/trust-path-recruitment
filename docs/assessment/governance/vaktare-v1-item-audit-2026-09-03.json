@@ -1,5 +1,5 @@
 {
-  "$comment": "Väktare Recruitment Assessment v1 — 50-item content audit, PR-V3, 2026-09-03. Prepared by an AI assistant as content preparer against a strict replay of main (SHA 3f2d2ad). Not an SME review. Fields 'competency', 'behaviour' and 'facet' are read from the database resolution and are asserted stable by scripts/vaktare-content-quality-check.ts.",
+  "$comment": "Väktare Recruitment Assessment v1 — 50-item content audit, PR-V3 revision 2 (human content review applied), 2026-09-03. Prepared by an AI assistant as content preparer against a strict replay of main (SHA 3f2d2ad). Not an SME review. Fields 'competency', 'behaviour' and 'facet' are read from the database resolution and are asserted stable by scripts/vaktare-content-quality-check.ts.",
   "audit": "vaktare-v1-item-audit-2026-09-03",
   "form": "security-officer-recruitment-form-a",
   "item_count": 50,
@@ -7,8 +7,8 @@
     "scenario": 22,
     "selfreport": 24,
     "reflection": 4,
-    "KEEP": 18,
-    "EDIT": 32,
+    "KEEP": 14,
+    "EDIT": 36,
     "REPLACE": 0,
     "RETIRE": 0
   },
@@ -48,8 +48,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Anmäl besöket i receptionen, ring mötesvärden så att hen hämtar personen, och be personen vänta ett par minuter.",
-          "en": "Register the visit at reception, call the host so they can collect the person, and ask the person to wait a couple of minutes.",
+          "sv": "Anmäl besöket, ring mötesvärden och be personen vänta ett par minuter.",
+          "en": "Register the visit, call the host and ask the person to wait a couple of minutes.",
           "authored_sv": "Registrera besöket och ring upp mötesvärden direkt så att hen kan komma ner — och säg till personen att det tar ett par minuter.",
           "authored_en": "Register the visit and call the host straight away so they can come down — and tell the person it will take a couple of minutes.",
           "rationale_sv": "Följer instruktionen men löser personens problem parallellt. Minst ingripande åtgärd som ändå håller kontrollen."
@@ -61,8 +61,8 @@
           "reverse_scored": false,
           "error_pattern": "excessive_informal_trust",
           "authored_error_pattern": "excessive_informal_trust",
-          "sv": "Släpp in personen — kallelsen på telefonen visar att mötet finns — och skriv in besöket i loggen i efterhand så att det finns spårbart.",
-          "en": "Let the person through — the invitation on their phone shows the meeting is real — and enter the visit in the log afterwards so there is a record.",
+          "sv": "Släpp in personen, eftersom kallelsen visar att mötet finns, och skriv in besöket i loggen i efterhand.",
+          "en": "Let the person through, since the invitation shows the meeting is real, and enter the visit in the log afterwards.",
           "authored_sv": "Släppa in personen eftersom möteskallelsen styrker ärendet, och notera det i loggen.",
           "authored_en": "Let the person through since the invitation supports their business there, and note it in the log.",
           "rationale_sv": "Mejlet visar en kallelse, inte att personen är den som kallats. Behörigheten är fortfarande okontrollerad."
@@ -88,8 +88,8 @@
         "en": "rank 1 of 3 (128/98/91)"
       },
       "option_length_after": {
-        "sv": "rank 2 of 3 (112/135/77)",
-        "en": "rank 2 of 3 (126/146/94)"
+        "sv": "rank 3 of 3 (70/103/77)",
+        "en": "rank 3 of 3 (81/114/94)"
       },
       "content_relevance": "high — reception access control is daily Väktare work",
       "language_quality": "good; EN natural",
@@ -163,8 +163,8 @@
           "reverse_scored": false,
           "error_pattern": "weak_communication",
           "authored_error_pattern": "weak_communication",
-          "sv": "Säg direkt att returer inte är din sak som väktare och hänvisa personen till centrumledningen, så att du kan fortsätta ditt arbete.",
-          "en": "Say straight away that returns are not a security matter and refer the person to centre management, so that you can get on with your work.",
+          "sv": "Säg direkt att returer inte är din sak som väktare, hänvisa personen till centrumledningen och gå vidare till nästa ärende.",
+          "en": "Say straight away that returns are not a security matter, refer the person to centre management and move on to the next matter.",
           "authored_sv": "Förklara direkt att det inte är din sak och hänvisa till centrumledningen.",
           "authored_en": "Explain straight away that it is not your concern and refer them to centre management.",
           "rationale_sv": "Att hänvisa vidare direkt är korrekt i sak men lämnar personen mitt i sin frustration, vilket ofta trappar upp."
@@ -176,8 +176,8 @@
           "reverse_scored": false,
           "error_pattern": "premature_escalation",
           "authored_error_pattern": "premature_escalation",
-          "sv": "Säg lugnt men bestämt att personen måste sänka rösten — annars får hen lämna centrumet. De som tittar behöver se att du har kontroll.",
-          "en": "Say calmly but firmly that the person has to lower their voice — otherwise they will have to leave the centre. The onlookers need to see you are in control.",
+          "sv": "Säg lugnt men bestämt att personen måste sänka rösten, annars får hen lämna centrumet.",
+          "en": "Say calmly but firmly that the person has to lower their voice, otherwise they will have to leave the centre.",
           "authored_sv": "Säga att om personen inte sänker rösten får hen lämna centrumet.",
           "authored_en": "Say that if they do not lower their voice they will have to leave the centre.",
           "rationale_sv": "Avvisning som första åtgärd mot en arg men laglydig kund är oproportionerligt och gör konflikten större."
@@ -190,8 +190,8 @@
         "en": "rank 1 of 3 (119/86/77)"
       },
       "option_length_after": {
-        "sv": "rank 3 of 3 (101/131/133)",
-        "en": "rank 3 of 3 (111/138/156)"
+        "sv": "rank 2 of 3 (101/123/86)",
+        "en": "rank 2 of 3 (111/127/109)"
       },
       "content_relevance": "high — retail entrance conflict",
       "language_quality": "good",
@@ -203,7 +203,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "defensible; no change",
       "decision": "EDIT",
-      "change": "lengths rebalanced; c given a plausible rationale ('the onlookers need to see you are in control') so premature escalation reads as a real error pattern, not an absurd one",
+      "change": "lengths rebalanced; r2: the 'onlookers need to see you are in control' tail removed — the escalation stands on its own",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -252,11 +252,11 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Åk till personalutrymmet först, be den anställde stanna kvar i telefon och meddela larmcentralen att dörrlarmet inte är kontrollerat.",
-          "en": "Go to the staff area first, ask the employee to stay on the phone, and tell the alarm centre the door alarm has not been checked.",
+          "sv": "Be den anställde hålla avstånd, gå till en säker plats och stanna kvar i samtalet. Åk dit först och meddela larmcentralen att dörrlarmet inte är kontrollerat.",
+          "en": "Ask the employee to keep their distance, move somewhere safe and stay on the call. Go there first and tell the alarm centre the door alarm has not been checked.",
           "authored_sv": "Åk till personalutrymmet först, be den anställde stanna kvar på telefon, och meddela larmcentralen att dörrlarmet inte är kontrollerat än.",
           "authored_en": "Go to the staff area first, ask the employee to stay on the phone, and tell the alarm centre that the door alarm is not yet checked.",
-          "rationale_sv": "Går till människorna först, håller kvar den andra händelsen genom att be om observation, och lämnar inte något obevakat utan att någon vet om det."
+          "rationale_sv": "Människorna först, utan att någon konfronterar: den anställde hålls på avstånd och i samtalet, larmcentralen vet vad som är okontrollerat."
         },
         {
           "key": "b",
@@ -265,8 +265,8 @@
           "reverse_scored": false,
           "error_pattern": "tunnel_vision",
           "authored_error_pattern": "tunnel_vision",
-          "sv": "Åk till dörrlarmet först — det är ett bekräftat larm på skalskyddet — och ta personalutrymmet direkt efteråt.",
-          "en": "Go to the door alarm first — it is a confirmed alarm on the perimeter — and take the staff area straight afterwards.",
+          "sv": "Åk till dörrlarmet först, eftersom det är ett bekräftat larm på skalskyddet, kontrollera förrådet och ta sedan personalutrymmet direkt efteråt.",
+          "en": "Go to the door alarm first, since it is a confirmed alarm on the perimeter, check the cold store and then take the staff area straight afterwards.",
           "authored_sv": "Åk till dörrlarmet först eftersom det är ett bekräftat larm, och ta personalutrymmet direkt efteråt.",
           "authored_en": "Go to the door alarm first since it is a confirmed alarm, and take the staff area straight afterwards.",
           "rationale_sv": "Larmet är det tydligaste men inte det mest tidskritiska. En okänd person bland anställda är både en risk och något som hinner försvinna."
@@ -278,8 +278,8 @@
           "reverse_scored": false,
           "error_pattern": "delayed_escalation",
           "authored_error_pattern": "delayed_escalation",
-          "sv": "Be den anställde fråga personen vad hen gör där och ringa dig igen, medan du kontrollerar dörrlarmet.",
-          "en": "Ask the employee to ask the person what they are doing there and call you back, while you check the door alarm.",
+          "sv": "Be den anställde fråga personen vad hen gör där och ringa dig igen, medan du åker till dörrlarmet, kontrollerar förrådet och rapporterar till larmcentralen.",
+          "en": "Ask the employee to ask the person what they are doing there and call you back, while you go to the door alarm, check the cold store and report to the alarm centre.",
           "authored_sv": "Be den anställde fråga personen vad hen gör där, medan du åker till dörrlarmet.",
           "authored_en": "Ask the employee to question the person themselves while you go to the door alarm.",
           "rationale_sv": "Att be den anställde själv hantera en okänd person lägger uppgiften på fel person och lämnar båda händelserna utan väktare."
@@ -292,8 +292,8 @@
         "en": "rank 1 of 3 (132/102/82)"
       },
       "option_length_after": {
-        "sv": "rank 1 of 3 (133/109/101)",
-        "en": "rank 1 of 3 (129/116/111)"
+        "sv": "rank 1 of 3 (158/143/156)",
+        "en": "rank 2 of 3 (160/146/164)"
       },
       "content_relevance": "high — lone-guard prioritisation",
       "language_quality": "good",
@@ -305,9 +305,9 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "defensible; SME confirm",
       "decision": "EDIT",
-      "change": "lengths rebalanced (preferred now longest, by content); c's 'delayed_escalation' label is a weak fit for delegating a confrontation to an employee but the taxonomy has no closer value — left, flagged",
+      "change": "r2: preferred keeps the employee at a distance, moves them somewhere safe and keeps them in the call ('stanna kvar i samtalet'); nobody confronts; distractors carry actions, not explanations",
       "classification": [
-        "SME REVIEW REQUIRED: is person-first over confirmed alarm the standard on industrial sites?"
+        "SME REVIEW REQUIRED: person-first over confirmed alarm"
       ],
       "sme_question": "Is 'go to the unknown person in the staff area before a confirmed door alarm at the perimeter' the answer a working arbetsledare would key, on a site with no other resource?",
       "review_gates": {
@@ -354,8 +354,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Gå fram, presentera dig och fråga vad bilderna är till och vem hen arbetar för — och stäm av svaret med terminalansvarig.",
-          "en": "Approach, introduce yourself and ask what the photographs are for and who they work for — then check the answer with the terminal supervisor.",
+          "sv": "Gå fram, presentera dig och fråga vad bilderna är till och vem hen arbetar för, och stäm av svaret med terminalansvarig.",
+          "en": "Approach, introduce yourself, ask what the photographs are for and who they work for, then check the answer with the terminal supervisor.",
           "authored_sv": "Gå fram, presentera dig och fråga vad fotograferingen gäller och vem hen arbetar för — och stäm av med terminalansvarig.",
           "authored_en": "Approach, introduce yourself and ask what the photography is for and who they work for — then check with the terminal supervisor.",
           "rationale_sv": "Frågar om det som faktiskt avviker — aktiviteten och den saknade brickan — utan att förutsätta ett motiv, och kontrollerar mot den som vet."
@@ -367,8 +367,8 @@
           "reverse_scored": false,
           "error_pattern": "insufficient_information",
           "authored_error_pattern": "insufficient_information",
-          "sv": "Anteckna tid, signalement och vad personen gör, och ta upp det med terminalansvarig efter ronden — hen kan vara en av veckans entreprenörer.",
-          "en": "Note the time, a description and what the person is doing, and raise it with the terminal supervisor after the round — they may be one of this week's contractors.",
+          "sv": "Anteckna tid, signalement och vad personen gör, fortsätt ronden och ta upp det med terminalansvarig efteråt.",
+          "en": "Note the time, a description and what the person is doing, carry on with the round and raise it with the terminal supervisor afterwards.",
           "authored_sv": "Notera tid, signalement och vad personen gör, och fortsätt ronden.",
           "authored_en": "Note the time, a description and what the person is doing, and continue the round.",
           "rationale_sv": "Att bara notera lämnar frågan obesvarad medan personen fortsätter, och en notering utan kontroll hjälper ingen."
@@ -380,8 +380,8 @@
           "reverse_scored": false,
           "error_pattern": "unsupported_assumption",
           "authored_error_pattern": "unsupported_assumption",
-          "sv": "Ring polisen om misstänkt rekognosering — fotografering av portar och lastluckor är ett känt mönster inför inbrott.",
-          "en": "Call the police about suspected reconnaissance — photographing gates and loading doors is a known pattern before a burglary.",
+          "sv": "Ring polisen och rapportera misstänkt rekognosering vid lastkajen, och håll personen under uppsikt på avstånd tills de kommer.",
+          "en": "Call the police and report suspected reconnaissance at the loading bay, and keep the person in sight from a distance until they arrive.",
           "authored_sv": "Larma polis om misstänkt rekognosering inför inbrott.",
           "authored_en": "Call the police about suspected reconnaissance ahead of a burglary.",
           "rationale_sv": "Att behandla fotograferingen som rekognosering inför ett brott är en slutsats som inte går att dra av det som syns."
@@ -394,8 +394,8 @@
         "en": "rank 1 of 3 (129/82/67)"
       },
       "option_length_after": {
-        "sv": "rank 2 of 3 (121/140/115)",
-        "en": "rank 2 of 3 (141/162/124)"
+        "sv": "rank 2 of 3 (120/108/126)",
+        "en": "rank 1 of 3 (137/136/135)"
       },
       "content_relevance": "high — anomaly at a terminal",
       "language_quality": "good",
@@ -407,7 +407,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "defensible; no change",
       "decision": "EDIT",
-      "change": "lengths rebalanced; b now carries its rationalisation ('may be one of this week's contractors'); c carries the reasoning a police call would rest on",
+      "change": "r2: rationalising tails removed from b and c; distractors are actions with wrong prioritisation",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -456,8 +456,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Säg till kollegan att du går de två punkterna, gör det, och ta upp med arbetsledaren att kvitteringarna inte stämmer.",
-          "en": "Tell your colleague you are going to the two points, do it, and raise with the supervisor that the sign-offs do not match.",
+          "sv": "Säg till kollegan att du går de två punkterna, gör det, och ta upp kvitteringarna med arbetsledaren.",
+          "en": "Tell your colleague you are going to the two points, do it, and raise the sign-offs with the supervisor.",
           "authored_sv": "Säg till kollegan att du går punkterna, gör det, och ta upp med arbetsledaren att kvitteringen inte stämmer med vad som gjorts.",
           "authored_en": "Tell your colleague you are going to those points, do it, and raise with the supervisor that the sign-off does not match what was done.",
           "rationale_sv": "Tar upp det direkt med den det gäller, går själv till punkterna, och för vidare det som är ett systematiskt avsteg — inte som en anmälan av personen."
@@ -469,8 +469,8 @@
           "reverse_scored": false,
           "error_pattern": "failure_to_document",
           "authored_error_pattern": "failure_to_document",
-          "sv": "Gå de två punkterna själv utan att göra någon sak av det — det är inte din uppgift att kontrollera kollegan.",
-          "en": "Visit the two points yourself without making an issue of it — it is not your job to check up on your colleague.",
+          "sv": "Gå de två punkterna själv på nästa rond, notera i din egen logg att du gjort det, och låt saken bero.",
+          "en": "Visit the two points yourself on the next round, note in your own log that you did it, and let the matter rest.",
           "authored_sv": "Gå punkterna själv och låt saken bero eftersom du inte är kollegans chef.",
           "authored_en": "Visit the points yourself and let it rest, since you are not your colleague's manager.",
           "rationale_sv": "Att bara göra rätt själv låter en felaktig kvittering ligga kvar i systemet, vilket är den egentliga risken."
@@ -482,11 +482,11 @@
           "reverse_scored": false,
           "error_pattern": "outside_mandate",
           "authored_error_pattern": "outside_mandate",
-          "sv": "Kvittera de två punkterna i ditt eget namn i stället, så att det inte blir en fråga om hens kvitteringar.",
-          "en": "Sign the two points off in your own name instead, so that their sign-offs are not questioned.",
+          "sv": "Kvittera de två punkterna i ditt eget namn utan att gå dit, och fortsätt ronden tillsammans med kollegan.",
+          "en": "Sign the two points off in your own name without going to them, and continue the round with your colleague.",
           "authored_sv": "Kvittera punkterna i eget namn så att loggen i alla fall blir rätt.",
           "authored_en": "Sign the points off in your own name so that the log at least becomes correct.",
-          "rationale_sv": "Att kvittera i kollegans ställe gör dig till en del av avsteget — loggen är fortfarande osann, nu i ditt namn."
+          "rationale_sv": "Att kvittera punkter man inte gått gör dig till en del av avsteget — loggen är fortfarande osann, nu i ditt namn."
         }
       ],
       "preferred_option": "a",
@@ -496,8 +496,8 @@
         "en": "rank 1 of 3 (135/86/78)"
       },
       "option_length_after": {
-        "sv": "rank 1 of 3 (117/108/105)",
-        "en": "rank 1 of 3 (122/111/93)"
+        "sv": "rank 3 of 3 (100/101/105)",
+        "en": "rank 3 of 3 (104/111/107)"
       },
       "content_relevance": "high — colleague falsifying checkpoint log",
       "language_quality": "good",
@@ -509,12 +509,12 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change; wording of a 0-scored distractor clarified",
       "decision": "EDIT",
-      "change": "c rewritten to say what the rationale always meant — signing in your own name INSTEAD of the colleague's, without visiting; rationale sharpened; lengths rebalanced",
+      "change": "r2: the 0-option now says the two points are signed off in the guard's own name WITHOUT going to them; b and c carry actions, not explanations",
       "classification": [
         "REPO / SOURCE FACT: rationale says 'becomes part of the deviation'",
         "SME REVIEW REQUIRED: confirm the rewritten c is the intended error"
       ],
-      "sme_question": "Does the rewritten option c ('sign the two points off in your own name instead, so their sign-offs are not questioned') describe the error you want scored 0, i.e. participation in the false log?",
+      "sme_question": "Does option c ('sign the two points off in your own name without going to them') describe the error you want scored 0?",
       "review_gates": {
         "security_sme": "outstanding",
         "cognitive_interview": "outstanding",
@@ -559,8 +559,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Säg nej, föreslå att platschefen skriver en egen kommentar om åtgärden, och informera din arbetsledare om begäran.",
-          "en": "Say no, suggest the site manager adds a comment of their own about the remedy, and tell your supervisor about the request.",
+          "sv": "Säg nej, föreslå att platschefen skriver en egen kommentar om åtgärden, och informera din arbetsledare.",
+          "en": "Say no, suggest the site manager writes a comment of their own about the remedy, and inform your supervisor.",
           "authored_sv": "Säg att loggen inte kan ändras i efterhand, erbjud att platschefen får lägga till sin egen kommentar om åtgärden, och rapportera begäran till din arbetsledare.",
           "authored_en": "Say the log cannot be changed after the fact, offer that the site manager add their own comment about the remedy, and report the request to your supervisor.",
           "rationale_sv": "Vägrar sakligt, förklarar varför, och tar begäran vidare till den som faktiskt är ens uppdragsgivare i bevakningsledet."
@@ -572,8 +572,8 @@
           "reverse_scored": false,
           "error_pattern": "delayed_escalation",
           "authored_error_pattern": "delayed_escalation",
-          "sv": "Säg vänligt men bestämt nej till platschefen och låt saken bero — du tänker ändå inte ändra något, och relationen till uppdragsgivaren är viktig.",
-          "en": "Say a polite but firm no to the site manager and leave it there — you are not going to change anything anyway, and the client relationship matters.",
+          "sv": "Säg nej till platschefen, förklara att du inte ändrar i loggen och låt saken bero, eftersom du ändå inte tänker göra det.",
+          "en": "Say no to the site manager, explain that you do not change the log and leave it there, since you are not going to do it anyway.",
           "authored_sv": "Säg nej till platschefen och lämna det därhän eftersom du ändå inte tänker göra det.",
           "authored_en": "Say no to the site manager and leave it there, since you are not going to do it anyway.",
           "rationale_sv": "Rätt svar till platschefen, men en begäran om att ändra en logg är i sig något arbetsledningen behöver känna till."
@@ -585,8 +585,8 @@
           "reverse_scored": false,
           "error_pattern": "excessive_informal_trust",
           "authored_error_pattern": "excessive_informal_trust",
-          "sv": "Ta bort noteringen — dörren är åtgärdad och platschefen har uttryckligen tagit på sig beslutet.",
-          "en": "Remove the entry — the door has been dealt with and the site manager has explicitly taken on the decision.",
+          "sv": "Ta bort noteringen, eftersom dörren är åtgärdad och platschefen tar ansvar för beslutet, och notera att posten togs bort på platschefens begäran.",
+          "en": "Remove the entry, since the door has been dealt with and the site manager takes responsibility for the decision, and note that it was removed at the site manager's request.",
           "authored_sv": "Ta bort noteringen eftersom platschefen är ansvarig på plats och säger sig ta ansvaret.",
           "authored_en": "Remove the entry, since the site manager is responsible on site and says they take responsibility.",
           "rationale_sv": "Att ta bort noteringen på muntligt ansvarsövertagande gör spåret oanvändbart och flyttar ansvaret till fel person."
@@ -599,8 +599,8 @@
         "en": "rank 1 of 3 (156/87/98)"
       },
       "option_length_after": {
-        "sv": "rank 2 of 3 (114/145/95)",
-        "en": "rank 2 of 3 (122/147/106)"
+        "sv": "rank 3 of 3 (103/121/145)",
+        "en": "rank 3 of 3 (108/127/172)"
       },
       "content_relevance": "high — client pressure on the log; safety-critical",
       "language_quality": "good",
@@ -612,7 +612,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "defensible; no change",
       "decision": "EDIT",
-      "change": "lengths rebalanced; b carries the relationship rationalisation; c the authority rationalisation",
+      "change": "r2: 'the client relationship matters' and 'has explicitly taken on the decision' tails removed",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -642,11 +642,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Skaffar tillräcklig egen lägesbild innan hen binder upp sig vid en tolkning.",
       "current_sv": {
-        "scenario": "Du åker på ett inbrottslarm i en fastighet med flera hyresgäster. Larmcentralen kan bara säga att en sektion har löst ut, inte vilken. När du kommer fram står ytterdörren olåst men stängd, och belysningen i trapphuset är släckt trots att den ska vara på nattetid.",
+        "scenario": "Du åker ensam på ett inbrottslarm i en fastighet med flera hyresgäster. Larmcentralen kan bara säga att en sektion har löst ut, inte vilken. Förstärkning finns men är inte framme, och objektsinstruktionen säger att larmcentralen avgör om du går in ensam. När du kommer fram står ytterdörren olåst men stängd, och belysningen i trapphuset är släckt trots att den ska vara på nattetid.",
         "prompt": "Vad gör du först?"
       },
       "current_en": {
-        "scenario": "You respond to an intruder alarm in a building with several tenants. The alarm centre can only say that one section has triggered, not which. On arrival the main door is unlocked but closed, and the stairwell lighting is off although it should be on at night.",
+        "scenario": "You respond alone to an intruder alarm in a building with several tenants. The alarm centre can only say that one section has triggered, not which. Back-up exists but has not arrived, and the site instruction says the alarm centre decides whether you go in alone. On arrival the main door is unlocked but closed, and the stairwell lighting is off although it should be on at night.",
         "prompt": "What do you do first?"
       },
       "authored_sv": {
@@ -661,11 +661,11 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Gå ett varv runt fastigheten först, meddela larmcentralen vad du ser och be dem ta reda på vilken sektion som löst ut.",
-          "en": "Walk round the building first, tell the alarm centre what you can see, and ask them to find out which section triggered.",
+          "sv": "Gör en yttre kontroll, rapportera det du ser till larmcentralen och följ deras besked om fortsatt åtgärd.",
+          "en": "Do an outer check, report what you see to the alarm centre and follow their decision on what to do next.",
           "authored_sv": "Gå ett varv runt fastigheten och kontrollera fönster och baksida, meddela larmcentralen vad du ser och begär vilken sektion det gäller innan du går in.",
           "authored_en": "Walk the perimeter checking windows and the rear, tell the alarm centre what you can see, and ask which section triggered before going in.",
-          "rationale_sv": "Bygger en egen bild utifrån, delar den, och går inte in i en okänd situation utan att någon vet var man är."
+          "rationale_sv": "Bygger en egen lägesbild utifrån, delar den, och låter larmcentralen avgöra nästa steg enligt instruktionen — går inte in ensam på egen hand."
         },
         {
           "key": "b",
@@ -674,11 +674,11 @@
           "reverse_scored": false,
           "error_pattern": "insufficient_information",
           "authored_error_pattern": "insufficient_information",
-          "sv": "Gå in genom ytterdörren och kontrollera trapphuset våning för våning — larmet har troligen löst ut inne i huset och varje minut räknas.",
-          "en": "Go in through the main door and check the stairwell floor by floor — the alarm has probably triggered inside the building and every minute counts.",
+          "sv": "Gå in genom ytterdörren och kontrollera trapphuset våning för våning, och rapportera till larmcentralen när du är klar.",
+          "en": "Go in through the main door, check the stairwell floor by floor, and report to the alarm centre when you are done.",
           "authored_sv": "Gå in genom ytterdörren och kontrollera trapphuset våning för våning.",
           "authored_en": "Go in through the main door and check the stairwell floor by floor.",
-          "rationale_sv": "Att gå in direkt är inte orimligt, men att göra det utan att veta sektion, utan ljus och utan att någon vet var man är är att ge bort sina egna marginaler."
+          "rationale_sv": "Att gå in ensam utan yttre kontroll, utan ljus, utan känd sektion och innan larmcentralen tagit ställning är att ge bort sina egna marginaler — och att gå förbi instruktionen."
         },
         {
           "key": "c",
@@ -687,8 +687,8 @@
           "reverse_scored": false,
           "error_pattern": "unsupported_assumption",
           "authored_error_pattern": "unsupported_assumption",
-          "sv": "Bedöm det som ett troligt tekniskt fel — dörren är stängd och ingen syns till — notera det och låt fastighetsskötaren kontrollera belysningen i morgon.",
-          "en": "Treat it as a probable technical fault — the door is closed and nobody is in sight — note it and leave the lighting for the caretaker to check tomorrow.",
+          "sv": "Meddela larmcentralen att det troligen är ett tekniskt fel, notera det och lämna belysningen till fastighetsskötaren.",
+          "en": "Tell the alarm centre it is probably a technical fault, note it and leave the lighting to the caretaker.",
           "authored_sv": "Utgå från att det är ett tekniskt fel eftersom dörren är stängd, och avsluta med en notering.",
           "authored_en": "Assume it is a technical fault since the door is closed, and close it off with a note.",
           "rationale_sv": "Släckt belysning och olåst dörr är två avvikelser samtidigt, vilket är precis det som inte ska avfärdas som tekniskt fel."
@@ -701,8 +701,8 @@
         "en": "rank 1 of 3 (138/67/86)"
       },
       "option_length_after": {
-        "sv": "rank 3 of 3 (118/135/151)",
-        "en": "rank 3 of 3 (120/146/152)"
+        "sv": "rank 3 of 3 (105/119/117)",
+        "en": "rank 2 of 3 (104/114/104)"
       },
       "content_relevance": "high — alarm response",
       "language_quality": "good",
@@ -714,11 +714,11 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "defensible; SME confirm",
       "decision": "EDIT",
-      "change": "lengths rebalanced (preferred now shortest); b and c carry their own reasoning",
+      "change": "r2: scenario states lone response, back-up not arrived, and that the site instruction leaves entry to the alarm centre; preferred = outer check, report, follow the alarm centre's decision; 'every minute counts' removed; no automatic entry implied",
       "classification": [
         "SME REVIEW REQUIRED: outer check before entry as the keyed norm"
       ],
-      "sme_question": "Is 'walk the perimeter, inform the alarm centre, ask for the section, then enter' the standard first step, or do common instructions require waiting for a second unit / police before entry when two anomalies coincide?",
+      "sme_question": "Is 'outer check, report, follow the alarm centre's decision' the keyed first step on a lone response with back-up not yet arrived?",
       "review_gates": {
         "security_sme": "outstanding",
         "cognitive_interview": "outstanding",
@@ -776,8 +776,8 @@
           "reverse_scored": false,
           "error_pattern": "poor_proportionality",
           "authored_error_pattern": "poor_proportionality",
-          "sv": "Hjälp personen upp och in på närmaste kontor så att hen får sitta ner i lugn och ro, och ring sedan efter hjälp därifrån.",
-          "en": "Help the person up and into the nearest office so they can sit down in peace, and then call for help from there.",
+          "sv": "Hjälp personen upp och in på närmaste kontor så att hen får sitta ner, och ring sedan efter hjälp.",
+          "en": "Help the person up and into the nearest office so they can sit down, and then call for help.",
           "authored_sv": "Hjälpa personen upp och till ett kontor där hen kan sitta ner medan du ringer.",
           "authored_en": "Help the person up and into an office where they can sit down while you call.",
           "rationale_sv": "Att flytta någon som inte kan stödja på benet kan förvärra en skada, och gör dessutom platsen svårare att utreda."
@@ -789,8 +789,8 @@
           "reverse_scored": false,
           "error_pattern": "delayed_escalation",
           "authored_error_pattern": "delayed_escalation",
-          "sv": "Hämta närmaste arbetsledare på företaget så att de själva kan avgöra om ambulans behövs — det är deras anställda och deras lokal.",
-          "en": "Fetch the nearest supervisor at the company so they can decide for themselves whether an ambulance is needed — it is their employee and their premises.",
+          "sv": "Hämta närmaste arbetsledare på företaget, så att de kan avgöra om ambulans behövs.",
+          "en": "Fetch the nearest supervisor at the company, so they can decide whether an ambulance is needed.",
           "authored_sv": "Leta upp närmaste arbetsledare så att företaget själv får avgöra om ambulans behövs.",
           "authored_en": "Find the nearest supervisor so the company can decide for itself whether an ambulance is needed.",
           "rationale_sv": "Att söka efter en chef innan hjälp larmas fördröjer det enda som är tidskritiskt."
@@ -803,8 +803,8 @@
         "en": "rank 1 of 3 (142/77/96)"
       },
       "option_length_after": {
-        "sv": "rank 3 of 3 (80/121/129)",
-        "en": "rank 3 of 3 (91/112/151)"
+        "sv": "rank 3 of 3 (80/98/82)",
+        "en": "rank 3 of 3 (91/92/95)"
       },
       "content_relevance": "high — injury on site; safety-critical",
       "language_quality": "good",
@@ -816,7 +816,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "defensible; no change",
       "decision": "EDIT",
-      "change": "lengths rebalanced (preferred now shortest: 'stay, call an ambulance, keep others away, leave the pallet'); c carries the 'their employee, their premises' rationalisation",
+      "change": "r2: 'their employee and their premises' tail removed",
       "classification": [
         "METHODOLOGY RECOMMENDATION: foundational; borders on first-aid knowledge rather than judgement — flagged, kept"
       ],
@@ -865,8 +865,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Tidpunkt, vad butikspersonalen sa, vad du själv sa och gjorde i ordning, vilka som var där — och att personen sa att hen skulle anmäla dig.",
-          "en": "The time, what the shop staff said, what you said and did in order, who was there — and that the person said they would report you.",
+          "sv": "Tidpunkt, vad butikspersonalen sa, vad du själv sa och gjorde i tidsordning, vilka som var där — och att personen sa att hen skulle anmäla dig.",
+          "en": "The time, what the shop staff said, what you said and did in chronological order, who was there — and that the person said they would report you.",
           "authored_sv": "Tidpunkt, vad butikspersonalen sa, vad du sa och gjorde i tur och ordning, vilka som var närvarande, och att personen sa att hen skulle anmäla dig.",
           "authored_en": "The time, what the shop staff said, what you said and did in sequence, who was present, and that the person said they would report you.",
           "rationale_sv": "Tid, vad som sagts och gjorts i ordning, vem som var där, och personens egen invändning — det sista är det som brukar utelämnas och det som betyder mest efteråt."
@@ -878,8 +878,8 @@
           "reverse_scored": false,
           "error_pattern": "insufficient_information",
           "authored_error_pattern": "insufficient_information",
-          "sv": "Att en person avvisades från entrén på butikspersonalens begäran, med tidpunkt — kort och sakligt, utan onödiga detaljer.",
-          "en": "That a person was removed from the entrance at the request of shop staff, with the time — brief, factual, no unnecessary detail.",
+          "sv": "Att en person avvisades från entrén på butikspersonalens begäran, med tidpunkt, plats och vilka ur personalen som var med.",
+          "en": "That a person was removed from the entrance at the request of shop staff, with the time, the place and which members of staff were involved.",
           "authored_sv": "Att en person avvisats från entrén på begäran av butikspersonal, med tidpunkt.",
           "authored_en": "That a person was removed from the entrance at the request of shop staff, with the time.",
           "rationale_sv": "En korrekt men tunn rapport. Utan förloppet går det inte att bedöma om åtgärden var proportionerlig."
@@ -891,8 +891,8 @@
           "reverse_scored": false,
           "error_pattern": "unsupported_assumption",
           "authored_error_pattern": "unsupported_assumption",
-          "sv": "Att personen uppträdde hotfullt och sannolikt var påverkad, och att avvisningen därför var befogad.",
-          "en": "That the person behaved threateningly and was probably under the influence, and that the removal was therefore justified.",
+          "sv": "Att personen uppträdde hotfullt och sannolikt var påverkad, att avvisningen därför var befogad, och när det skedde.",
+          "en": "That the person behaved threateningly and was probably under the influence, that the removal was therefore justified, and when it happened.",
           "authored_sv": "Att personen uppträdde hotfullt och sannolikt var påverkad, samt att avvisningen därför var befogad.",
           "authored_en": "That the person behaved threateningly and was probably under the influence, and that the removal was therefore justified.",
           "rationale_sv": "En bedömning av personens sinnestillstånd är en slutsats, inte en iakttagelse, och håller inte om rapporten prövas."
@@ -905,8 +905,8 @@
         "en": "rank 1 of 3 (135/88/121)"
       },
       "option_length_after": {
-        "sv": "rank 1 of 3 (139/121/99)",
-        "en": "rank 1 of 3 (131/128/121)"
+        "sv": "rank 1 of 3 (143/122/115)",
+        "en": "rank 1 of 3 (145/140/139)"
       },
       "content_relevance": "high — incident report after a removal",
       "language_quality": "good",
@@ -918,7 +918,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "defensible; no change",
       "decision": "EDIT",
-      "change": "lengths rebalanced; b carries the self-protective omission rationale",
+      "change": "r2: 'i tidsordning' / 'in chronological order'; the self-protective omission tail removed from b",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -1083,11 +1083,11 @@
           "reverse_scored": false,
           "error_pattern": "unsupported_assumption",
           "authored_error_pattern": "unsupported_assumption",
-          "sv": "\"En nervös man i mörk jacka, kanske 35 år, höll till vid dörren en längre stund och verkade vänta på att någon skulle släppa in honom.\"",
-          "en": "\"A nervous man in a dark jacket, maybe 35, hung around by the door for quite a while and seemed to be waiting for somebody to let him in.\"",
+          "sv": "\"En nervös man i mörk jacka, kanske 35 år, höll till vid dörren en längre stund och verkade vänta på någon.\"",
+          "en": "\"A nervous man in a dark jacket, maybe 35, hung around by the door for quite a while and seemed to be waiting for somebody.\"",
           "authored_sv": "\"En nervös man i mörk jacka höll till vid dörren en längre stund.\"",
           "authored_en": "\"A nervous man in a dark jacket hung around by the door for a while.\"",
-          "rationale_sv": "\"Nervös\" och \"verkade vänta\" är tolkningar av ett beteende. Det som faktiskt syntes borde stå i stället."
+          "rationale_sv": "\"Nervös\" är en tolkning av ett beteende. Det som faktiskt syntes borde stå i stället."
         },
         {
           "key": "c",
@@ -1096,8 +1096,8 @@
           "reverse_scored": false,
           "error_pattern": "unsupported_assumption",
           "authored_error_pattern": "unsupported_assumption",
-          "sv": "\"Mannen såg misstänkt ut, hade sannolikt för avsikt att ta sig in obehörigt och bör rapporteras till polisen om han återkommer.\"",
-          "en": "\"The man looked suspicious, probably intended to get in without authorisation, and should be reported to the police if he comes back.\"",
+          "sv": "\"Mannen såg misstänkt ut, hade sannolikt för avsikt att ta sig in obehörigt och bör hållas under uppsikt.\"",
+          "en": "\"The man looked suspicious, probably intended to get in without authorisation and should be kept under observation.\"",
           "authored_sv": "\"Mannen såg misstänkt ut och hade sannolikt för avsikt att ta sig in obehörigt.\"",
           "authored_en": "\"The man looked suspicious and probably intended to get in without authorisation.\"",
           "rationale_sv": "Avsikt går inte att observera, och en rapport som påstår den håller inte om den prövas."
@@ -1110,8 +1110,8 @@
         "en": "rank 1 of 3 (124/69/82)"
       },
       "option_length_after": {
-        "sv": "rank 3 of 3 (118/135/128)",
-        "en": "rank 3 of 3 (121/138/134)"
+        "sv": "rank 1 of 3 (118/108/106)",
+        "en": "rank 2 of 3 (121/124/116)"
       },
       "content_relevance": "high — observation vs conclusion",
       "language_quality": "was WRONG: scenario said 'Fyra formuleringar' / 'Four ways' and offered three",
@@ -1123,7 +1123,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map; recognition item (cognitive_demand = recognition)",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "count corrected to three in both languages; b and c lengthened with interpretive content so the observation is not the longest by form; b rationale names both interpretations",
+      "change": "count corrected to three; r2: interpretive tails trimmed so b and c are one interpretation each, not a story",
       "classification": [
         "REPO / SOURCE FACT: count defect",
         "METHODOLOGY RECOMMENDATION: b and c share unsupported_assumption at two degrees — acceptable for a recognition item, flagged"
@@ -1173,8 +1173,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "\"02.40, teknikutrymme plan −1. Vatten på golvet ca 2×3 m, rinner från rörgenomföring i taket. Huvudkran ej åtkomlig. Jour kontaktad 02.48, på plats 03.20. Golvbrunn fri, ingen el i vattnet.\"",
-          "en": "\"02:40, plant room level −1. Water on the floor roughly 2×3 m, running from a pipe penetration in the ceiling. Main stopcock not accessible. On-call contacted 02:48, on site 03:20. Floor drain clear, no electrical equipment in the water.\"",
+          "sv": "\"02.40, teknikutrymme plan −1. Vatten på golvet ca 2×3 m, rinner från rörgenomföring i taket. Huvudkran ej åtkomlig. Jour kontaktad 02.48, på plats 03.20. Golvbrunn fri. Ingen synlig elutrustning i kontakt med vattnet.\"",
+          "en": "\"02:40, plant room level −1. Water on the floor roughly 2×3 m, running from a pipe penetration in the ceiling. Main stopcock not accessible. On-call contacted 02:48, on site 03:20. Floor drain clear. No visible electrical equipment in contact with the water.\"",
           "authored_sv": "\"02.40, teknikutrymme plan −1. Vatten på golvet cirka 2×3 meter, rinner från rörgenomföring i tak. Huvudkran ej åtkomlig. Jour kontaktad 02.48, på plats 03.20. Golvbrunn fri. Ingen elutrustning i vattnet.\"",
           "authored_en": "\"02:40, plant room level −1. Water on the floor roughly 2×3 metres, running from a pipe penetration in the ceiling. Main stopcock not accessible. On-call contacted 02:48, on site 03:20. Floor drain clear. No electrical equipment in the water.\"",
           "rationale_sv": "Tid, plats, omfattning, vidtagen åtgärd, vem som kontaktats och vad som återstår. En läsare kan fortsätta arbetet."
@@ -1186,8 +1186,8 @@
           "reverse_scored": false,
           "error_pattern": "insufficient_information",
           "authored_error_pattern": "insufficient_information",
-          "sv": "\"Under nattronden upptäcktes en vattenläcka i teknikutrymmet. Situationen är under kontroll. Jouren är kontaktad och åtgärder vidtagna i avvaktan på fastighetsskötaren.\"",
-          "en": "\"During the night round a water leak was discovered in the plant room. The situation is under control. On-call has been contacted and measures taken pending the caretaker.\"",
+          "sv": "\"Under nattronden upptäcktes en vattenläcka i teknikutrymmet. Läckan verkade omfattande. Jouren är kontaktad och åtgärder är vidtagna i avvaktan på fastighetsskötaren, som tar över vid ankomst.\"",
+          "en": "\"During the night round a water leak was discovered in the plant room. The leak appeared extensive. On-call has been contacted and steps have been taken while awaiting the caretaker, who takes over on arrival.\"",
           "authored_sv": "\"Vattenläcka i teknikutrymmet upptäcktes under nattronden. Jouren är kontaktad.\"",
           "authored_en": "\"Water leak in the plant room discovered during the night round. On-call has been contacted.\"",
           "rationale_sv": "Låter komplett men är obrukbar: ingen tid, ingen omfattning, ingen uppgift om vilka åtgärder som vidtagits eller vad som återstår."
@@ -1213,8 +1213,8 @@
         "en": "rank 1 of 3 (243/93/127)"
       },
       "option_length_after": {
-        "sv": "rank 1 of 3 (190/169/185)",
-        "en": "rank 1 of 3 (238/172/188)"
+        "sv": "rank 1 of 3 (219/194/185)",
+        "en": "rank 1 of 3 (259/210/188)"
       },
       "content_relevance": "high — usable report",
       "language_quality": "good; EN uses 'stopcock', 'plant room' (UK)",
@@ -1226,7 +1226,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "b and c lengthened to comparable size with vague / speculative content; a trimmed; the usable report is no longer identifiable by size",
+      "change": "r2: 'ingen el i vattnet' replaced by the observable 'Ingen synlig elutrustning i kontakt med vattnet' / 'No visible electrical equipment in contact with the water'; b says 'steps have been taken while awaiting the caretaker'",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -1288,8 +1288,8 @@
           "reverse_scored": false,
           "error_pattern": "insufficient_information",
           "authored_error_pattern": "insufficient_information",
-          "sv": "Om hen har skrivit en notering i systemet, så att det finns dokumenterat innan hen lämnar objektet.",
-          "en": "Whether they have written a note in the system, so that it is documented before they leave the site.",
+          "sv": "Om hen har skrivit en notering om det i systemet, och om hen tog några bilder.",
+          "en": "Whether they have written a note about it in the system, and whether they took any photos.",
           "authored_sv": "Om hen har skrivit en notering i systemet om det.",
           "authored_en": "Whether they have written a note about it in the system.",
           "rationale_sv": "Rimlig fråga, men den säger inget om huruvida något behöver göras nu."
@@ -1301,8 +1301,8 @@
           "reverse_scored": false,
           "error_pattern": "unsupported_assumption",
           "authored_error_pattern": "unsupported_assumption",
-          "sv": "Hur många cyklar som saknas och ungefär vilket värde det rör sig om, så att du vet om det är en polissak.",
-          "en": "How many bikes are missing and roughly what value is involved, so that you know whether it is a police matter.",
+          "sv": "Hur många cyklar som saknas och ungefär vilket värde det rör sig om totalt.",
+          "en": "How many bikes are missing and roughly what value is involved in total.",
           "authored_sv": "Hur många cyklar som saknas.",
           "authored_en": "How many bikes are missing.",
           "rationale_sv": "Antal och värde är detaljer i en slutsats som ännu inte är dragen; ingen har sagt att något är stulet."
@@ -1315,8 +1315,8 @@
         "en": "rank 1 of 3 (88/56/27)"
       },
       "option_length_after": {
-        "sv": "rank 3 of 3 (77/99/105)",
-        "en": "rank 3 of 3 (88/100/110)"
+        "sv": "rank 2 of 3 (77/78/75)",
+        "en": "rank 2 of 3 (88/90/71)"
       },
       "content_relevance": "high — what is missing",
       "language_quality": "good",
@@ -1328,7 +1328,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "c was a 5-word throwaway ('Hur många cyklar som saknas'); now a plausible jump to conclusion with its own reasoning; lengths rebalanced",
+      "change": "r2: rationalising tails removed from b and c",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -1390,8 +1390,8 @@
           "reverse_scored": false,
           "error_pattern": "insufficient_information",
           "authored_error_pattern": "insufficient_information",
-          "sv": "Att det gått ett larm på kylanläggningen och att du ringer enligt instruktionen.",
-          "en": "That an alarm has gone off on the refrigeration unit and that you are calling in line with the instruction.",
+          "sv": "Att det gått ett larm på kylanläggningen, att du ringer enligt instruktionen och att du finns kvar på objektet.",
+          "en": "That an alarm has gone off on the refrigeration unit, that you are calling in line with the instruction and that you are staying on site.",
           "authored_sv": "Att det gått ett larm på kylanläggningen och att du ringer enligt instruktionen.",
           "authored_en": "That the refrigeration has alarmed and that you are calling in line with the instruction.",
           "rationale_sv": "Korrekt men otillräckligt: personen vet inte var, hur illa det är, eller vad som förväntas av hen."
@@ -1417,8 +1417,8 @@
         "en": "rank 1 of 3 (126/89/88)"
       },
       "option_length_after": {
-        "sv": "rank 1 of 3 (111/80/92)",
-        "en": "rank 1 of 3 (127/107/94)"
+        "sv": "rank 1 of 3 (111/111/92)",
+        "en": "rank 2 of 3 (127/137/94)"
       },
       "content_relevance": "high — night call to on-call",
       "language_quality": "good",
@@ -1479,11 +1479,11 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Notera avvikelsen i loggen med tid och plats, även om inget hände i kväll.",
-          "en": "Record the deviation in the log with time and place, even though nothing happened tonight.",
+          "sv": "Låt dörren vara stängd, notera avvikelsen med tid och plats och nämn den vid överlämningen.",
+          "en": "Leave the door closed, record the deviation with time and place and raise it at the handover.",
           "authored_sv": "Notera avvikelsen med tid och plats även om inget hände, så att det syns om det upprepas.",
           "authored_en": "Record the deviation with time and place even though nothing happened, so it shows up if it recurs.",
-          "rationale_sv": "Avvikelsen är värd att notera just för att den upprepas — det är mönstret, inte kvällen, som är risken."
+          "rationale_sv": "Rätt omedelbar åtgärd, dokumenterad och överlämnad. Avvikelsen är värd att notera just för att den upprepas — det är mönstret, inte kvällen, som är risken."
         },
         {
           "key": "b",
@@ -1492,24 +1492,24 @@
           "reverse_scored": false,
           "error_pattern": "failure_to_document",
           "authored_error_pattern": "failure_to_document",
-          "sv": "Ställ tillbaka släckaren och gå hem — dörren är stängd och problemet är löst.",
-          "en": "Put the extinguisher back where it was and go home — the door is closed and the problem is solved.",
+          "sv": "Låt dörren vara stängd och gå hem. Problemet är åtgärdat och inget hann inträffa.",
+          "en": "Leave the door closed and go home. The immediate problem has been resolved and nothing happened.",
           "authored_sv": "Ta bort släckaren och gå hem — problemet är löst.",
           "authored_en": "Remove the extinguisher and go home — the problem is solved.",
-          "rationale_sv": "Rätt fysisk åtgärd, men utan notering finns inget mönster att upptäcka nästa gång."
+          "rationale_sv": "Rätt omedelbar åtgärd — dörren är stängd — men utan notering eller överlämning finns inget mönster att upptäcka nästa gång."
         },
         {
           "key": "c",
           "score": 0,
           "preferred": false,
           "reverse_scored": false,
-          "error_pattern": "weak_communication",
+          "error_pattern": "outside_mandate",
           "authored_error_pattern": "delayed_escalation",
-          "sv": "Nämn det muntligt för nästa pass om du träffar dem vid bytet, så att de kan hålla ett öga på dörren.",
-          "en": "Mention it verbally to the next shift if you see them at the changeover, so that they can keep an eye on the door.",
+          "sv": "Ställ tillbaka släckaren så att dörren står öppen igen, och nämn det för nästa pass när de kommer.",
+          "en": "Put the extinguisher back so the door stays open again, and mention it to the next shift when they arrive.",
           "authored_sv": "Nämna det muntligt till nästa pass om du råkar träffa dem.",
           "authored_en": "Mention it verbally to the next shift if you happen to run into them.",
-          "rationale_sv": "Muntligt och villkorat — om ni råkas — är ingen överlämning. Avvikelsen lämnar inget spår som går att följa upp."
+          "rationale_sv": "Att återställa uppställningen är att aktivt återskapa brandrisken. Det ligger utanför väktarens mandat att väga bekvämlighet mot brandskydd."
         }
       ],
       "preferred_option": "a",
@@ -1519,8 +1519,8 @@
         "en": "rank 1 of 3 (99/60/69)"
       },
       "option_length_after": {
-        "sv": "rank 3 of 3 (74/77/100)",
-        "en": "rank 3 of 3 (90/98/114)"
+        "sv": "rank 2 of 3 (91/81/98)",
+        "en": "rank 3 of 3 (93/96/106)"
       },
       "content_relevance": "high — near miss with no consequence",
       "language_quality": "good",
@@ -1530,11 +1530,12 @@
       "double_barrelled": "no",
       "multiple_reasonable_answers": "no",
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
-      "keying": "no change",
+      "keying": "no change; 3/1/0 structure now professionally defensible",
       "decision": "EDIT",
-      "change": "c's error pattern corrected delayed_escalation -> weak_communication (a conditional verbal mention is a communication failure, and its authored rationale did not describe the option); rationale rewritten; lengths rebalanced",
+      "change": "r2 BLOCKER FIX: 1-point option no longer restores the extinguisher — 'Låt dörren vara stängd och gå hem. Problemet är åtgärdat och inget hann inträffa.' (door closed, nothing recorded); 0-point option is the doorstop restored (outside_mandate); 3-point option = door closed + recorded + raised at handover. Scores unchanged.",
       "classification": [
-        "REPO / SOURCE FACT: distractor label and rationale mismatch"
+        "REPO / SOURCE FACT: human review blocker",
+        "METHODOLOGY RECOMMENDATION: 3/1/0 = reduce risk + document, reduce risk only, unsafe"
       ],
       "sme_question": null,
       "review_gates": {
@@ -1581,8 +1582,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Kronologiskt med klockslag — vad som hände, vad du såg, vad du gjorde — och dina egna bedömningar tydligt avskilda.",
-          "en": "Chronologically with times — what happened, what you saw, what you did — with your own assessments clearly kept separate.",
+          "sv": "Kronologiskt med klockslag: vad som hände, vad du såg, vad du gjorde, med dina egna bedömningar avskilda.",
+          "en": "Chronologically with times: what happened, what you saw, what you did, with your own assessments kept separate.",
           "authored_sv": "Kronologiskt med klockslag: vad som hände, vad du såg, vad du gjorde — och eventuella egna bedömningar tydligt markerade separat.",
           "authored_en": "Chronologically with times: what happened, what you saw, what you did — with any assessments of your own clearly marked separately.",
           "rationale_sv": "Kronologi med tidsangivelser, sedan iakttagelser, sedan åtgärder — och egna bedömningar tydligt avskilda i slutet."
@@ -1594,8 +1595,8 @@
           "reverse_scored": false,
           "error_pattern": "weak_communication",
           "authored_error_pattern": "weak_communication",
-          "sv": "Med din slutsats först, så att läsaren direkt förstår vad det handlar om, och underlaget efter.",
-          "en": "With your conclusion first, so the reader immediately understands what it is about, and the material after.",
+          "sv": "Med din slutsats först och underlaget efter, så att läsaren direkt ser vad det handlar om.",
+          "en": "With your conclusion first and the material after, so the reader sees straight away what it is about.",
           "authored_sv": "Med din slutsats först, så att läsaren vet vad det handlar om, och underlaget efter.",
           "authored_en": "With your conclusion first so the reader knows what it is about, and the material after.",
           "rationale_sv": "Att inleda med slutsatsen färgar allt som följer och gör det svårare att se vad som faktiskt observerades."
@@ -1607,11 +1608,11 @@
           "reverse_scored": false,
           "error_pattern": "unsupported_assumption",
           "authored_error_pattern": "unsupported_assumption",
-          "sv": "Med det som är relevant för händelsen och inget annat — detaljer som kan verka motsägelsefulla skapar bara oklarhet för läsaren.",
-          "en": "With what is relevant to the incident and nothing else — details that might seem contradictory only create confusion for the reader.",
+          "sv": "Med det som är relevant för händelsen, i den ordning du kommer ihåg det, och utan detaljer som inte tillför något.",
+          "en": "With what is relevant to the incident, in the order you remember it, and without details that add nothing.",
           "authored_sv": "Med det som är relevant för händelsen, och utan detaljer som bara skapar oklarhet.",
           "authored_en": "With what is relevant to the event, leaving out details that only create confusion.",
-          "rationale_sv": "Att utelämna det som talar emot den egna versionen är det som gör en redogörelse värdelös när den prövas."
+          "rationale_sv": "Att välja bort det som inte \"tillför\" är i praktiken att välja bort det som talar emot den egna versionen — och det är det som gör en redogörelse värdelös när den prövas."
         }
       ],
       "preferred_option": "a",
@@ -1621,8 +1622,8 @@
         "en": "rank 1 of 3 (131/88/83)"
       },
       "option_length_after": {
-        "sv": "rank 2 of 3 (115/95/128)",
-        "en": "rank 2 of 3 (121/107/132)"
+        "sv": "rank 2 of 3 (105/90/114)",
+        "en": "rank 1 of 3 (111/101/106)"
       },
       "content_relevance": "medium-high — structuring an account; close to a convention question",
       "language_quality": "good",
@@ -1634,9 +1635,10 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "scenario given a minimal event ('an incident during your shift'); lengths rebalanced",
+      "change": "r2: kept as a recognition-leaning reporting item; poorest option no longer explains why it is poor ('utan detaljer som inte tillför något'); mapping unchanged",
       "classification": [
-        "SME REVIEW REQUIRED: does this test judgement or report-writing knowledge?"
+        "SME REVIEW REQUIRED: judgement vs report-writing knowledge",
+        "METHODOLOGY RECOMMENDATION: treat as recognition/reporting knowledge in interpretation"
       ],
       "sme_question": "Is 'chronological with times, observations, actions, own assessments separate' a judgement a new guard is expected to have, or trained knowledge that belongs in a knowledge test?",
       "review_gates": {
@@ -1882,11 +1884,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Uttrycker en preferens mellan att lösa snabbt och att kontrollera en gång till.",
       "current_sv": {
-        "scenario": "Två sätt att arbeta. Inget av dem är fel.",
+        "scenario": "Två sätt att arbeta.",
         "prompt": "Vilket liknar dig mest?"
       },
       "current_en": {
-        "scenario": "Two ways of working. Neither is wrong.",
+        "scenario": "Two ways of working.",
         "prompt": "Which is more like you?"
       },
       "authored_sv": {
@@ -1918,7 +1920,7 @@
           "en": "I prefer to check the information once more before I act.",
           "authored_sv": "Jag kontrollerar hellre uppgiften en gång till innan jag agerar.",
           "authored_en": "I prefer to check the information once more before I act.",
-          "rationale_sv": "Beskriver kontroll framför handlingsinriktning. I bevakningsarbete är verifiering det mer hållbara arbetssättet, men båda svaren är rimliga beskrivningar av en person."
+          "rationale_sv": "Beskriver kontroll framför handlingsinriktning. I bevakningsarbete är verifiering det mer hållbara arbetssättet, och beskrivningen kodas därför högre; det är en beskrivning av ett arbetssätt, inte ett rätt eller fel svar."
         }
       ],
       "preferred_option": null,
@@ -1933,12 +1935,12 @@
       "double_barrelled": "no",
       "multiple_reasonable_answers": "n/a",
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says",
-      "keying": "no change; flagged",
-      "decision": "KEEP",
-      "change": "",
+      "keying": "no change; context rewritten so the 1/3 key is not contradicted",
+      "decision": "EDIT",
+      "change": "r2: the pair intro no longer says 'neither is wrong' — the authored 1/3 key stands as a monotonic two-point description (verification keyed higher); scores unchanged. NOTE: c06, c18 and c24 keep the authored 'Inget av dem är fel' with the same 1/3 shape and were not raised by the reviewers — flagged.",
       "classification": [
-        "SME REVIEW REQUIRED: 1/3 scoring on a pair introduced as 'neither is wrong'",
-        "PILOT DATA REQUIRED"
+        "METHODOLOGY RECOMMENDATION: defensible monotonic key by context rewrite",
+        "SME REVIEW REQUIRED: c06/c18/c24 carry the same structure"
       ],
       "sme_question": "The pair is introduced as 'neither is wrong' but scored 1 vs 3. Keep the asymmetric score (it only feeds the self-described pattern, never maturity), or make the pair 2/2 and rely on the interview prompt?",
       "review_gates": {
@@ -1970,7 +1972,7 @@
         "prompt": "Hur ofta stämmer det?"
       },
       "current_en": {
-        "scenario": "When I notice something small that is out of place, I settle for remembering it.",
+        "scenario": "When I notice something small that is out of place, I rely on remembering it.",
         "prompt": "How often is that true?"
       },
       "authored_sv": {
@@ -2184,11 +2186,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Uttrycker en preferens mellan helhetsbild och detaljkontroll.",
       "current_sv": {
-        "scenario": "Två sätt att gå en rond. Inget av dem är fel.",
+        "scenario": "Två sätt att gå igenom ett område du ska kontrollera. Inget av dem är fel.",
         "prompt": "Vilket liknar dig mest?"
       },
       "current_en": {
-        "scenario": "Two ways of walking a round. Neither is wrong.",
+        "scenario": "Two ways of checking an area you are responsible for. Neither is wrong.",
         "prompt": "Which is more like you?"
       },
       "authored_sv": {
@@ -2236,8 +2238,8 @@
       "multiple_reasonable_answers": "n/a",
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says",
       "keying": "no change",
-      "decision": "KEEP",
-      "change": "",
+      "decision": "EDIT",
+      "change": "r2: 'gå en rond' -> 'gå igenom ett område du ska kontrollera' so no prior patrol employment is assumed",
       "classification": [
         "PILOT DATA REQUIRED"
       ],
@@ -2344,12 +2346,12 @@
       "double_barrelled": "no",
       "multiple_reasonable_answers": "n/a",
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says; non-monotonic key (0/2/3/2)",
-      "keying": "no change; flagged",
+      "keying": "BLOCKED — Product Owner / SME scoring decision required: the 0/2/3/2 key cannot be made monotonic or descriptive-only without changing score values; text and scores left exactly as authored so the decision is taken on the authored form",
       "decision": "KEEP",
       "change": "",
       "classification": [
-        "SME REVIEW REQUIRED: non-monotonic key",
-        "PILOT DATA REQUIRED"
+        "SME REVIEW REQUIRED",
+        "PRODUCT OWNER / SME DECISION REQUIRED: score values"
       ],
       "sme_question": "'Almost never needing to remind myself' scores 0 on the authored theory that not recognising autopilot is itself a flag. Do you accept that theory for a self-description, or should the scale be monotonic?",
       "review_gates": {
@@ -2486,11 +2488,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Beskriver om sena timmar påverkar det egna arbetssättet.",
       "current_sv": {
-        "scenario": "Mot slutet av ett långt pass går jag igenom kontrollpunkterna snabbare än i början av passet.",
+        "scenario": "Mot slutet av ett långt pass gör jag de sista kontrollerna snabbare än de första.",
         "prompt": "Hur ofta stämmer det?"
       },
       "current_en": {
-        "scenario": "Towards the end of a long shift I go through the checkpoints faster than at the start of the shift.",
+        "scenario": "Towards the end of a long shift I do the last checks faster than the first ones.",
         "prompt": "How often is that true?"
       },
       "authored_sv": {
@@ -2565,7 +2567,7 @@
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says",
       "keying": "no change (reverse-scored)",
       "decision": "EDIT",
-      "change": "'late in a night shift' -> 'towards the end of a long shift'; the section intro now tells non-guards to answer from other work",
+      "change": "r2: 'kontrollpunkterna' -> 'de sista kontrollerna' so no guard employment is assumed; 'long shift' rather than 'night shift'",
       "classification": [
         "METHODOLOGY RECOMMENDATION",
         "FAIRNESS: experience proxy reduced"
@@ -2814,11 +2816,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Beskriver hantering av bilder och anteckningar från arbetsplatsen.",
       "current_sv": {
-        "scenario": "Jag använder min egen telefon för att fotografera eller anteckna sådant jag behöver komma ihåg från passet.",
+        "scenario": "Jag använder min egen telefon för att fotografera eller anteckna sådant jag behöver komma ihåg från ett arbetspass.",
         "prompt": "Hur ofta stämmer det?"
       },
       "current_en": {
-        "scenario": "I use my own phone to photograph or note things I need to remember from a shift.",
+        "scenario": "I use my own phone to photograph or note things I need to remember from a shift or working day.",
         "prompt": "How often is that true?"
       },
       "authored_sv": {
@@ -2892,8 +2894,8 @@
       "multiple_reasonable_answers": "n/a",
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says",
       "keying": "no change (reverse-scored)",
-      "decision": "KEEP",
-      "change": "",
+      "decision": "EDIT",
+      "change": "r2: 'från passet' -> 'från ett arbetspass' / 'from a shift or working day'",
       "classification": [
         "PILOT DATA REQUIRED"
       ],
@@ -3032,11 +3034,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Beskriver den egna tröskeln för vad som räknas som värt att rapportera.",
       "current_sv": {
-        "scenario": "Om ett misstag inte fick någon konsekvens nöjer jag mig med att rätta till det.",
+        "scenario": "Om jag rättar till ett eget misstag som inte fick någon konsekvens låter jag bli att rapportera det.",
         "prompt": "Hur ofta stämmer det?"
       },
       "current_en": {
-        "scenario": "If a mistake had no consequence, I settle for putting it right.",
+        "scenario": "If I put right a mistake of my own that had no consequence, I leave it unreported.",
         "prompt": "How often is that true?"
       },
       "authored_sv": {
@@ -3111,7 +3113,7 @@
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says",
       "keying": "no change (reverse-scored)",
       "decision": "EDIT",
-      "change": "reworded as observable behaviour: 'nöjer jag mig med att rätta till det' / 'I settle for putting it right'",
+      "change": "r2: made concrete and reverse-worded: 'Om jag rättar till ett eget misstag som inte fick någon konsekvens låter jag bli att rapportera det' / 'I leave it unreported'",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -3629,12 +3631,12 @@
       "double_barrelled": "no",
       "multiple_reasonable_answers": "n/a",
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says; peak-scored key (Sometimes = 3)",
-      "keying": "no change; flagged",
+      "keying": "BLOCKED — Product Owner / SME scoring decision required: 'Ibland' = 3 is a peak key whose defensibility is context-dependent; it cannot be made monotonic or descriptive-only without changing score values; text and scores left exactly as authored",
       "decision": "KEEP",
       "change": "",
       "classification": [
-        "SME REVIEW REQUIRED: peak-scored key",
-        "PILOT DATA REQUIRED"
+        "SME REVIEW REQUIRED",
+        "PRODUCT OWNER / SME DECISION REQUIRED: score values"
       ],
       "sme_question": null,
       "review_gates": {
@@ -3662,11 +3664,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Beskriver hur en osäker eskalering hanteras i efterhand.",
       "current_sv": {
-        "scenario": "Om jag larmat i onödan tar jag upp det efteråt i stället för att låta det passera.",
+        "scenario": "Om jag har larmat i onödan tar jag upp det efteråt i stället för att låta det passera.",
         "prompt": "Hur ofta stämmer det?"
       },
       "current_en": {
-        "scenario": "If I have escalated unnecessarily, I raise it afterwards rather than letting it go.",
+        "scenario": "If I have raised an alarm unnecessarily, I bring it up afterwards rather than letting it go.",
         "prompt": "How often is that true?"
       },
       "authored_sv": {
@@ -3741,7 +3743,7 @@
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "EN wording only",
+      "change": "r2: 'larmat i onödan' / 'raised an alarm unnecessarily' harmonised; EN 'letting it go'",
       "classification": [
         "METHODOLOGY RECOMMENDATION",
         "PILOT DATA REQUIRED"
@@ -3772,11 +3774,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Beskriver om det som inte hunnits med förs vidare vid passets slut.",
       "current_sv": {
-        "scenario": "Vid passets slut säger jag uttryckligen vad jag inte hann med, inte bara vad jag gjorde.",
+        "scenario": "När jag slutar för dagen säger jag uttryckligen vad jag inte hann med, inte bara vad jag gjorde.",
         "prompt": "Hur ofta stämmer det?"
       },
       "current_en": {
-        "scenario": "At the end of a shift I say explicitly what I did not get to, not only what I did.",
+        "scenario": "When I finish for the day I say explicitly what I did not get to, not only what I did.",
         "prompt": "How often is that true?"
       },
       "authored_sv": {
@@ -3850,8 +3852,8 @@
       "multiple_reasonable_answers": "n/a",
       "evidence_quality": "self-description; excluded from maturity by evidence_source_type = self_report; reported as what the person says",
       "keying": "no change",
-      "decision": "KEEP",
-      "change": "",
+      "decision": "EDIT",
+      "change": "r2: 'Vid passets slut' -> 'När jag slutar för dagen' / 'When I finish for the day'",
       "classification": [
         "PILOT DATA REQUIRED"
       ],
@@ -4202,7 +4204,7 @@
           "error_pattern": null,
           "authored_error_pattern": null,
           "sv": "Gör avstämningen vid varje passbyte, säg det till kollegan, och ta upp med arbetsledaren att rutinen tillämpas olika.",
-          "en": "Do the reconciliation at every shift change, tell your colleague you are doing it, and raise with the supervisor that the procedure is applied differently.",
+          "en": "Reconcile at every shift change, tell your colleague you are doing it, and raise with the supervisor that the procedure is applied differently.",
           "authored_sv": "Gör avstämningen vid varje passbyte själv, säg till kollegan att du gör det, och ta upp med arbetsledaren att rutinen tillämpas olika.",
           "authored_en": "Do the reconciliation at every shift change yourself, tell your colleague you are doing it, and raise with the supervisor that the procedure is applied differently.",
           "rationale_sv": "Gör rätt själv, tar upp det med kollegan, och för frågan vidare som en fråga om rutinen snarare än om personen."
@@ -4214,8 +4216,8 @@
           "reverse_scored": false,
           "error_pattern": "excessive_informal_trust",
           "authored_error_pattern": "excessive_informal_trust",
-          "sv": "Följ kollegans arbetssätt — hen känner objektet, och sex år utan fel talar för sig.",
-          "en": "Follow your colleague's way of working — they know the site, and six years without a fault speaks for itself.",
+          "sv": "Följ kollegans arbetssätt, eftersom hen känner objektet och inget har gått fel på sex år, och gör avstämningen en gång i veckan som hen.",
+          "en": "Follow your colleague's way of working, since they know the site and nothing has gone wrong in six years, and do the reconciliation once a week as they do.",
           "authored_sv": "Följa kollegans arbetssätt eftersom hen känner objektet och det uppenbarligen fungerar.",
           "authored_en": "Follow your colleague's way of working, since they know the site and it evidently works.",
           "rationale_sv": "Sex år utan fel säger något om sannolikheten, inte om konsekvensen. På ett datacenter är det konsekvensen som styr."
@@ -4227,8 +4229,8 @@
           "reverse_scored": false,
           "error_pattern": "delayed_escalation",
           "authored_error_pattern": "delayed_escalation",
-          "sv": "Gör avstämningen vid varje passbyte själv utan att säga något — kollegan är mer erfaren än du.",
-          "en": "Do the reconciliation at every shift change yourself without saying anything — your colleague is more experienced than you.",
+          "sv": "Gör avstämningen vid varje passbyte själv, utan att säga något till kollegan, och notera att du gjort den.",
+          "en": "Do the reconciliation at every shift change yourself, without saying anything to your colleague, and note that you did it.",
           "authored_sv": "Göra rätt själv och inte säga något, eftersom kollegan är mer erfaren än du.",
           "authored_en": "Do it properly yourself and say nothing, since your colleague is more experienced than you.",
           "rationale_sv": "Att bara göra rätt själv i tysthet lämnar avsteget kvar och gör dig till den enda som vet om det."
@@ -4241,8 +4243,8 @@
         "en": "rank 1 of 3 (164/88/91)"
       },
       "option_length_after": {
-        "sv": "rank 1 of 3 (117/83/94)",
-        "en": "rank 1 of 3 (155/109/123)"
+        "sv": "rank 2 of 3 (117/136/106)",
+        "en": "rank 2 of 3 (143/155/122)"
       },
       "content_relevance": "high",
       "language_quality": "good",
@@ -4254,7 +4256,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "lengths rebalanced; NOTE: near-duplicate of a05 (colleague deviates from procedure; same preferred pattern: do it, tell them, raise it) under a different competency (SCC-01 vs SCC-09)",
+      "change": "r2: 'six years without anything going wrong' as a scenario fact, not a slogan; 'not your place to correct them' removed; distractors carry actions",
       "classification": [
         "SME REVIEW REQUIRED: construct overlap with a05"
       ],
@@ -4316,8 +4318,8 @@
           "reverse_scored": false,
           "error_pattern": "outside_mandate",
           "authored_error_pattern": "outside_mandate",
-          "sv": "Följ med in och stå kvar medan hen hämtar pärmen, och skriv in det i loggen med tid och namn — då finns det spårbart om någon frågar.",
-          "en": "Go in with them and stand there while they collect the folder, and enter it in the log with time and name — then there is a record if anybody ever asks.",
+          "sv": "Följ med in och stå kvar medan hen hämtar pärmen, notera det i loggen med tid och namn och be hen ordna passerkortet i morgon.",
+          "en": "Go in with them and stay while they collect the folder, note it in the log with time and name, and ask them to sort out the access card tomorrow.",
           "authored_sv": "Följa med personen in och stå kvar medan hen hämtar pärmen, och notera det i loggen.",
           "authored_en": "Go in with them and stand there while they collect the folder, and note it in the log.",
           "rationale_sv": "Att följa med gör inte begäran behörig. Närvaron är en kontroll, inte ett tillstånd."
@@ -4329,8 +4331,8 @@
           "reverse_scored": false,
           "error_pattern": "excessive_informal_trust",
           "authored_error_pattern": "excessive_informal_trust",
-          "sv": "Lås upp — du vet vem personen är, ärendet är rimligt, och att hämta en pärm åt en kollega är knappast en säkerhetsrisk.",
-          "en": "Unlock it — you know who the person is, the errand is reasonable, and collecting a folder for a colleague is hardly a security risk.",
+          "sv": "Lås upp, eftersom du vet vem personen är och ärendet är rimligt.",
+          "en": "Unlock it, since you know who the person is and the errand is reasonable.",
           "authored_sv": "Låsa upp, eftersom du känner igen personen och ärendet är rimligt.",
           "authored_en": "Unlock it, since you recognise the person and the errand is reasonable.",
           "rationale_sv": "Att öppna på igenkänning är precis det arbetssätt en behörighetsordning finns för att förhindra."
@@ -4343,8 +4345,8 @@
         "en": "rank 1 of 3 (129/86/71)"
       },
       "option_length_after": {
-        "sv": "rank 2 of 3 (128/133/119)",
-        "en": "rank 2 of 3 (140/152/132)"
+        "sv": "rank 1 of 3 (128/126/64)",
+        "en": "rank 2 of 3 (140/145/73)"
       },
       "content_relevance": "high; safety-critical",
       "language_quality": "good",
@@ -4356,7 +4358,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "lengths rebalanced; b carries the 'traceable in the log' rationalisation, c the familiarity rationalisation",
+      "change": "r2: 'traceable if anybody asks' and 'hardly a security risk' tails removed",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -4405,8 +4407,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Ring objektet direkt så att dörren kontrolleras, och skriv en egen avvikelse om att du missade den.",
-          "en": "Call the site straight away so the door gets checked, and write your own deviation report saying you missed it.",
+          "sv": "Ring objektet direkt så att dörren kontrolleras, och skriv en egen avvikelse.",
+          "en": "Call the site straight away so the door gets checked, and write your own deviation report.",
           "authored_sv": "Ring objektet direkt så att dörren kontrolleras, och skriv en egen avvikelse om att du missat den.",
           "authored_en": "Call the site straight away so the door gets checked, and write your own deviation report saying you missed it.",
           "rationale_sv": "Åtgärdar risken nu och lämnar spår efter sig. Att någon annan kan ha upptäckt det är inte ett skäl att låta bli."
@@ -4416,26 +4418,26 @@
           "score": 1,
           "preferred": false,
           "reverse_scored": false,
-          "error_pattern": "delayed_escalation",
+          "error_pattern": "failure_to_document",
           "authored_error_pattern": "delayed_escalation",
-          "sv": "Ta upp det med arbetsledaren nästa gång du är på jobbet, så att det blir sagt och dokumenterat på rätt sätt.",
-          "en": "Raise it with the supervisor the next time you are at work, so that it is said and documented in the proper way.",
+          "sv": "Ring objektet direkt så att dörren kontrolleras, och ta upp missen nästa gång du är på jobbet.",
+          "en": "Call the site straight away so the door gets checked, and raise the miss the next time you are at work.",
           "authored_sv": "Ta upp det när du kommer på jobbet nästa gång, så att det blir sagt.",
           "authored_en": "Raise it when you next come in, so that it gets said.",
-          "rationale_sv": "Att vänta till nästa pass innebär att risken står öppen under tiden, av bekvämlighetsskäl."
+          "rationale_sv": "Risken åtgärdas nu, men avvikelsen lämnar inget spår förrän långt senare — och kanske aldrig."
         },
         {
           "key": "c",
           "score": 0,
           "preferred": false,
           "reverse_scored": false,
-          "error_pattern": "failure_to_document",
+          "error_pattern": "delayed_escalation",
           "authored_error_pattern": "failure_to_document",
-          "sv": "Lita på att nästa väktares rond fångar upp det — förrådet ingår i rondslingan och kontrolleras inom några timmar.",
-          "en": "Trust the next officer's round to catch it — the store room is on the round and will be checked within a few hours.",
+          "sv": "Lita på att nästa väktares rond fångar upp det, eftersom förrådet ingår i rondslingan.",
+          "en": "Trust the next officer's round to catch it, since the store room is on the round.",
           "authored_sv": "Anta att nästa väktares rond fångar upp det, eftersom förrådet ingår i ronden.",
           "authored_en": "Assume the next officer's round catches it, since the store room is on the round.",
-          "rationale_sv": "Att lita på nästa rond löser möjligen dörren men lämnar avvikelsen odokumenterad, vilket är den del som betyder något över tid."
+          "rationale_sv": "Att inte göra något alls lämnar risken öppen utan att någon vet om den. Ingen kontroll är säkerställd."
         }
       ],
       "preferred_option": "a",
@@ -4445,8 +4447,8 @@
         "en": "rank 1 of 3 (111/53/81)"
       },
       "option_length_after": {
-        "sv": "rank 3 of 3 (99/108/113)",
-        "en": "rank 3 of 3 (111/112/115)"
+        "sv": "rank 3 of 3 (77/94/86)",
+        "en": "rank 2 of 3 (90/103/81)"
       },
       "content_relevance": "high",
       "language_quality": "good",
@@ -4456,11 +4458,11 @@
       "double_barrelled": "no",
       "multiple_reasonable_answers": "no",
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
-      "keying": "no change",
+      "keying": "no change; distractor labels re-assigned to match severity",
       "decision": "EDIT",
-      "change": "lengths rebalanced",
+      "change": "r2: severity re-established — 1 point = call the site now but raise the miss only next time (failure_to_document); 0 points = trust the next round (delayed_escalation, passivity). Scores unchanged; two distractor labels swapped to match.",
       "classification": [
-        "METHODOLOGY RECOMMENDATION"
+        "REPO / SOURCE FACT: human review severity order"
       ],
       "sme_question": null,
       "review_gates": {
@@ -4520,8 +4522,8 @@
           "reverse_scored": false,
           "error_pattern": "insufficient_information",
           "authored_error_pattern": "insufficient_information",
-          "sv": "Nämn det muntligt vid genomgången utan att röra rapporten — den är korrekt i sak, och en ändring i efterhand kan se konstig ut.",
-          "en": "Mention it verbally at the review without touching the report — it is correct in substance, and a change afterwards could look odd.",
+          "sv": "Nämn det muntligt vid genomgången utan att röra rapporten, som är korrekt i sak.",
+          "en": "Mention it verbally at the review without touching the report, which is correct in substance.",
           "authored_sv": "Nämna det muntligt vid genomgången utan att ändra i rapporten.",
           "authored_en": "Mention it verbally at the review without changing the report.",
           "rationale_sv": "Muntligt håller för mötet men inte för någon som läser rapporten om ett år."
@@ -4533,8 +4535,8 @@
           "reverse_scored": false,
           "error_pattern": "failure_to_document",
           "authored_error_pattern": "failure_to_document",
-          "sv": "Redigera rapporten så att bemanningen finns med från början — det var ju så det var.",
-          "en": "Edit the report so that the staffing is there from the start — that is how it was.",
+          "sv": "Redigera rapporten så att bemanningen finns med från början, och skicka den uppdaterade versionen inför genomgången.",
+          "en": "Edit the report so that the staffing is there from the start, and send the updated version ahead of the review.",
           "authored_sv": "Redigera rapporten så att den blir korrekt från början.",
           "authored_en": "Edit the report so that it is correct from the start.",
           "rationale_sv": "Att redigera originalet gör rapporten oanvändbar som spår, oavsett hur riktig den blir."
@@ -4547,8 +4549,8 @@
         "en": "rank 1 of 3 (91/62/53)"
       },
       "option_length_after": {
-        "sv": "rank 2 of 3 (105/127/84)",
-        "en": "rank 2 of 3 (91/131/82)"
+        "sv": "rank 2 of 3 (105/80/116)",
+        "en": "rank 3 of 3 (91/93/111)"
       },
       "content_relevance": "high",
       "language_quality": "good",
@@ -4560,7 +4562,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "lengths rebalanced; c carries the 'it becomes more complete' rationalisation",
+      "change": "r2: 'could look odd' and 'becomes more complete' tails removed",
       "classification": [
         "METHODOLOGY RECOMMENDATION"
       ],
@@ -4590,11 +4592,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Väljer vad som prioriteras bort när tiden inte räcker, och redovisar valet.",
       "current_sv": {
-        "scenario": "Ett larm har tagit fyrtio minuter av ditt pass. Du har trettio minuter kvar och en rond som normalt tar femtio. Ronden omfattar tolv kontrollpunkter, varav tre är utrymmen med skyddsvärde och nio är allmänna utrymmen.",
+        "scenario": "Ett larm har tagit fyrtio minuter av ditt pass. Du har trettio minuter kvar och en rond som normalt tar femtio. Ronden omfattar tolv kontrollpunkter, varav tre är säkerhetskänsliga utrymmen och nio är allmänna utrymmen.",
         "prompt": "Vad gör du?"
       },
       "current_en": {
-        "scenario": "An alarm has taken forty minutes of your shift. You have thirty minutes left and a round that normally takes fifty. The round covers twelve checkpoints, three of which are areas with protective value and nine of which are general areas.",
+        "scenario": "An alarm has taken forty minutes of your shift. You have thirty minutes left and a round that normally takes fifty. The round covers twelve checkpoints, three of which are security-sensitive areas and nine of which are general areas.",
         "prompt": "What do you do?"
       },
       "authored_sv": {
@@ -4609,11 +4611,11 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Gå de tre skyddsvärda punkterna först och så många övriga du hinner, kvittera bara det du gått och skriv i överlämningen vad som återstår.",
-          "en": "Do the three protected points first and as many of the others as you can, sign off only what you visited, and record in the handover what remains.",
+          "sv": "Meddela larmcentralen eller arbetsledaren att ronden inte hinns med, gå de tre säkerhetskänsliga punkterna först och det du hinner av övriga, kvittera bara det du gått och skriv i överlämningen vad som återstår.",
+          "en": "Tell the alarm centre or your supervisor that the round cannot be completed, do the three security-sensitive points first and what you can of the others, sign off only what you visited, and record in the handover what remains.",
           "authored_sv": "Gå de tre skyddsvärda punkterna och så många av de övriga du hinner, kvittera bara de du gått, och skriv i överlämningen vilka som inte hanns med.",
           "authored_en": "Do the three protected points and as many of the others as you can, sign off only the ones you visited, and record in the handover which ones were not covered.",
-          "rationale_sv": "Prioriterar efter skyddsvärde, kvitterar bara det som faktiskt gjorts, och lämnar över det som inte hanns med."
+          "rationale_sv": "Prioriterar efter skyddsvärde, låter någon med mandat veta det innan punkter lämnas ogjorda, kvitterar bara det som faktiskt gjorts och lämnar över resten."
         },
         {
           "key": "b",
@@ -4622,11 +4624,11 @@
           "reverse_scored": false,
           "error_pattern": "insufficient_information",
           "authored_error_pattern": "insufficient_information",
-          "sv": "Gå de tre skyddsvärda punkterna, kvittera dem och avsluta passet — de allmänna utrymmena är lågrisk.",
-          "en": "Do the three protected points, sign them off and end the shift — the general areas are low risk.",
+          "sv": "Gå de tre säkerhetskänsliga punkterna först och så många övriga du hinner, kvittera bara det du gått och avsluta passet i tid.",
+          "en": "Do the three security-sensitive points first and as many of the others as you can, sign off only what you visited and end the shift on time.",
           "authored_sv": "Gå de tre skyddsvärda punkterna och avsluta passet där.",
           "authored_en": "Do the three protected points and end the shift there.",
-          "rationale_sv": "Rimlig prioritering, men utan överlämning vet nästa pass inte vad som är okontrollerat."
+          "rationale_sv": "Rätt prioritering och ärlig kvittering, men ingen vet att ronden är ofullständig — varken larmcentralen, arbetsledaren eller nästa pass."
         },
         {
           "key": "c",
@@ -4635,8 +4637,8 @@
           "reverse_scored": false,
           "error_pattern": "failure_to_document",
           "authored_error_pattern": "failure_to_document",
-          "sv": "Gå så många punkter du hinner och kvittera resten, så att ronden ser fullständig ut i systemet.",
-          "en": "Do as many points as you can and sign off the rest, so that the round looks complete in the system.",
+          "sv": "Gå så många punkter du hinner och kvittera resten, så att ronden ser fullständig ut i systemet, och avsluta passet i tid.",
+          "en": "Do as many points as you can and sign off the rest, so that the round looks complete in the system, and end the shift on time.",
           "authored_sv": "Gå så många punkter du hinner och kvittera resten så att ronden ser fullständig ut.",
           "authored_en": "Do as many points as you can and sign off the rest so the round looks complete.",
           "rationale_sv": "Att kvittera det som inte gjorts gör loggen osann, vilket är allvarligare än en ogjord rond."
@@ -4649,8 +4651,8 @@
         "en": "rank 1 of 3 (159/54/79)"
       },
       "option_length_after": {
-        "sv": "rank 1 of 3 (138/100/95)",
-        "en": "rank 1 of 3 (146/96/99)"
+        "sv": "rank 1 of 3 (211/126/121)",
+        "en": "rank 1 of 3 (226/140/126)"
       },
       "content_relevance": "high — time pressure and log honesty",
       "language_quality": "good; the numbers (40/30/50/12/3/9) are a reading burden, kept because prioritisation needs them",
@@ -4660,9 +4662,9 @@
       "double_barrelled": "no",
       "multiple_reasonable_answers": "no",
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
-      "keying": "no change",
+      "keying": "no change; the preferred option now includes coordination",
       "decision": "EDIT",
-      "change": "lengths rebalanced (preferred longest by content)",
+      "change": "r2: 'säkerhetskänsliga utrymmen' / 'security-sensitive areas'; preferred now tells the alarm centre or supervisor before security-sensitive points go unchecked, prioritises, signs only what was visited and hands over the rest; 1-point option prioritises and signs honestly but coordinates with nobody",
       "classification": [
         "ACCESSIBILITY REVIEW: numeric load"
       ],
@@ -4711,11 +4713,11 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Säg nej, förklara att passerdata bara får användas för säkerhetsändamål, och hänvisa frågan till personens chef.",
-          "en": "Say no, explain that access data may only be used for security purposes, and refer the question to the person's manager.",
+          "sv": "Förklara att du inte kan lämna ut uppgiften utan en behörig begäran, och hänvisa till ansvarig chef eller systemägare enligt rutinen.",
+          "en": "Explain that you cannot release the information without an authorised request, and refer them to the responsible manager or system owner.",
           "authored_sv": "Säg nej och förklara att passerdata bara får användas för säkerhetsändamål — och hänvisa frågan till uppdragsgivarens egen chef.",
           "authored_en": "Say no and explain that access data may only be used for security purposes — and refer the question to the client's own manager.",
-          "rationale_sv": "Nej med skäl, och en anvisning om var frågan hör hemma. Behovet försvinner inte men vägen dit blir den rätta."
+          "rationale_sv": "Nej med skäl och en anvisad väg enligt rutin. Behovet försvinner inte men vägen dit blir den rätta."
         },
         {
           "key": "b",
@@ -4724,8 +4726,8 @@
           "reverse_scored": false,
           "error_pattern": "weak_communication",
           "authored_error_pattern": "insufficient_information",
-          "sv": "Säg att du inte får göra det och gå vidare — du behöver inte förklara dig, och ju mindre du diskuterar det desto bättre.",
-          "en": "Say that you are not allowed to and move on — you do not need to explain yourself, and the less you discuss it the better.",
+          "sv": "Säg att du inte får lämna ut sådana uppgifter och återgå till det du höll på med.",
+          "en": "Say that you are not allowed to release that kind of information and go back to what you were doing.",
           "authored_sv": "Säg att du inte får göra det och gå vidare.",
           "authored_en": "Say that you are not allowed to and move on.",
           "rationale_sv": "Ett nej utan skäl lämnar personen med intrycket att det är godtycke, och frågan kommer tillbaka till nästa väktare."
@@ -4737,8 +4739,8 @@
           "reverse_scored": false,
           "error_pattern": "excessive_informal_trust",
           "authored_error_pattern": "excessive_informal_trust",
-          "sv": "Titta efter — uppgiften är harmlös och personen kan ändå fråga sin chef.",
-          "en": "Look it up — the information is harmless and the person could ask their manager anyway.",
+          "sv": "Titta efter och säg vilken tid det var, eftersom personen ändå kan få uppgiften av sin chef.",
+          "en": "Look it up and tell them what time it was, since the person could get it from their manager anyway.",
           "authored_sv": "Titta efter, eftersom uppgiften är harmlös och personen ändå kan fråga sin chef.",
           "authored_en": "Look it up, since the information is harmless and they could ask their manager anyway.",
           "rationale_sv": "Att uppgiften är harmlös ändrar inte att den hämtats ur ett system som finns för något annat."
@@ -4751,8 +4753,8 @@
         "en": "rank 1 of 3 (128/44/86)"
       },
       "option_length_after": {
-        "sv": "rank 2 of 3 (112/120/72)",
-        "en": "rank 2 of 3 (120/122/87)"
+        "sv": "rank 1 of 3 (133/81/92)",
+        "en": "rank 1 of 3 (137/100/99)"
       },
       "content_relevance": "high — access data misuse",
       "language_quality": "good",
@@ -4764,7 +4766,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "b's error pattern corrected insufficient_information -> weak_communication (a no without a reason is a communication failure, which is what its authored rationale says); lengths rebalanced",
+      "change": "r2: 'cannot release the information without an authorised request; refer to the responsible manager or system owner per procedure' replaces the absolute 'only for security purposes'; tails removed from b and c",
       "classification": [
         "REPO / SOURCE FACT: distractor label mismatch"
       ],
@@ -4794,11 +4796,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Redogör för ett eget misstag och vad som gjordes efteråt.",
       "current_sv": {
-        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta gärna vad som hände, vad som var din uppgift, vad du själv gjorde, hur det slutade och vad du tog med dig. Några meningar räcker.",
+        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad som hände, vad som var din uppgift, vad du själv gjorde, hur det slutade och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
         "prompt": "Beskriv en situation där du gjorde ett misstag på jobbet. Vad gjorde du efteråt?"
       },
       "current_en": {
-        "scenario": "This question has no right answer, and a person reads what you write. Tell us what happened, what your role was, what you yourself did, how it ended and what you took from it. A few sentences is enough.",
+        "scenario": "This question has no right answer, and a person reads what you write. Tell us what happened, what your role was, what you yourself did, how it ended and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
         "prompt": "Describe a situation where you made a mistake at work. What did you do afterwards?"
       },
       "authored_sv": {
@@ -4820,7 +4822,7 @@
       "evidence_quality": "human-read free text against a 4-dimension draft rubric (clarity is style-only); level 0 = no evidence, not negative evidence",
       "keying": "no scoring change; 4 dimensions, 5 levels unchanged",
       "decision": "EDIT",
-      "change": "guidance asks for what happened, own role, what you did, how it ended, what you took from it; rubric criteria for what_was_done and ownership now name outcome and what is done differently now; concrete_situation names own role",
+      "change": "guidance asks for what happened, own role, what you did, how it ended, what you took from it; r2: example may come from work, a placement, studies, a club or association or another situation of responsibility; short sentences or bullet points are fine; what matters is what you did, not how you phrase it; 'A few sentences are enough'",
       "classification": [
         "METHODOLOGY RECOMMENDATION: Structured Behavioural Evidence",
         "PILOT REVIEW REQUIRED: reviewer agreement"
@@ -4851,11 +4853,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Redogör för hur en gräns hållits när det var socialt obekvämt.",
       "current_sv": {
-        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta gärna vad som hände, vad som var din uppgift, vad du själv sa och gjorde, hur det slutade och vad du tog med dig. Några meningar räcker.",
+        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad som hände, vad som var din uppgift, vad du själv sa och gjorde, hur det slutade och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
         "prompt": "Beskriv en situation där du behövde säga nej till någon trots att det var socialt obekvämt."
       },
       "current_en": {
-        "scenario": "This question has no right answer, and a person reads what you write. Tell us what happened, what your role was, what you yourself said and did, how it ended and what you took from it. A few sentences is enough.",
+        "scenario": "This question has no right answer, and a person reads what you write. Tell us what happened, what your role was, what you yourself said and did, how it ended and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
         "prompt": "Describe a situation where you had to say no to somebody even though it was socially uncomfortable."
       },
       "authored_sv": {
@@ -4877,7 +4879,7 @@
       "evidence_quality": "human-read free text against a 4-dimension draft rubric (clarity is style-only); level 0 = no evidence, not negative evidence",
       "keying": "no scoring change",
       "decision": "EDIT",
-      "change": "guidance adds 'what you said and did' and how it ended; held_the_line criterion names the outcome; concrete_situation names own role",
+      "change": "as e01; 'what you said and did'",
       "classification": [
         "METHODOLOGY RECOMMENDATION",
         "PILOT REVIEW REQUIRED"
@@ -4908,11 +4910,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Redogör för hur uppmärksamhet hållits uppe under repetitivt arbete.",
       "current_sv": {
-        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Arbetet behöver inte ha varit inom säkerhet. Berätta gärna vad arbetet var, vad som var din uppgift, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig. Några meningar räcker.",
+        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad arbetet var, vad som var din uppgift, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
         "prompt": "Beskriv en situation där du behövde hålla koncentrationen uppe under upprepat arbete. Hur gjorde du?"
       },
       "current_en": {
-        "scenario": "This question has no right answer, and a person reads what you write. The work does not have to have been in security. Tell us what the work was, what your role was, what you did to keep your concentration, how it went and what you took from it. A few sentences is enough.",
+        "scenario": "This question has no right answer, and a person reads what you write. Tell us what the work was, what your role was, what you did to keep your concentration, how it went and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
         "prompt": "Describe a situation where you had to maintain concentration during repetitive work. How did you do it?"
       },
       "authored_sv": {
@@ -4934,7 +4936,7 @@
       "evidence_quality": "human-read free text against a 4-dimension draft rubric (clarity is style-only); level 0 = no evidence, not negative evidence",
       "keying": "no scoring change",
       "decision": "EDIT",
-      "change": "guidance asks what the work was, own role, what you did to keep concentration, how it went, what you took from it; self_observation criterion adds what was learned",
+      "change": "as e01; 'what the work was … how it went'",
       "classification": [
         "METHODOLOGY RECOMMENDATION",
         "PILOT REVIEW REQUIRED"
@@ -4965,11 +4967,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Redogör för hur en felaktig uppgift upptäcktes och hanterades.",
       "current_sv": {
-        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta gärna vad uppgiften gällde, vad som var din roll, hur du upptäckte felet och vad du gjorde, hur det slutade och vad du tog med dig. Några meningar räcker.",
+        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad uppgiften handlade om, vad som var din roll, hur du upptäckte felet och vad du gjorde, hur det slutade och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
         "prompt": "Beskriv en situation där information du fick från början visade sig vara felaktig. Vad gjorde du då?"
       },
       "current_en": {
-        "scenario": "This question has no right answer, and a person reads what you write. Tell us what the information concerned, what your role was, how you discovered the error and what you did, how it ended and what you took from it. A few sentences is enough.",
+        "scenario": "This question has no right answer, and a person reads what you write. Tell us what the information was about, what your role was, how you discovered the error and what you did, how it ended and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
         "prompt": "Describe a situation where information you were given initially turned out to be wrong. What did you do then?"
       },
       "authored_sv": {
@@ -4991,7 +4993,7 @@
       "evidence_quality": "human-read free text against a 4-dimension draft rubric (clarity is style-only); level 0 = no evidence, not negative evidence",
       "keying": "no scoring change",
       "decision": "EDIT",
-      "change": "guidance asks what the information concerned, own role, how the error was discovered and what was done, how it ended, what you took from it; correction_forward criterion adds what the person takes from it",
+      "change": "as e01; 'what the information was about'",
       "classification": [
         "METHODOLOGY RECOMMENDATION",
         "PILOT REVIEW REQUIRED"

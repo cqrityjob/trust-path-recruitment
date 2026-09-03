@@ -27,8 +27,9 @@
 //      DELETE touches a governed table, and no adaptation status is raised
 //      to approved/source;
 //   C  competency coverage is stable: the authored behaviour/facet
-//      resolution per slug matches the audit's expected competency, and the
-//      eight competencies are exactly the eight;
+//      resolution per slug matches the audit's expected competency, the
+//      eight competencies are exactly the eight, and SCC-08 stays a
+//      single-observation competency capped at limited evidence;
 //   D  both languages on every text and every label, and English is not a
 //      copy of the Swedish;
 //   E  option-length balance on the 22 scenario items, per language: the
@@ -41,12 +42,21 @@
 //   G  self-report statements: no absolutes, no quantifier inside a
 //      frequency-scale statement, scales and pairs keep their authored shape;
 //   H  free text asks for the account shape (what happened, own role, what
-//      you did, how it ended, what you took from it) in both languages and
-//      names no method;
+//      you did, how it ended, what you took from it) in both languages,
+//      tells the candidate where an example may come from and that short
+//      sentences or bullet points are fine, and names no method;
 //   I  no hiring vocabulary in any candidate-facing sentence;
 //   J  the audit is honest: every item has a decision, KEEP means the text
 //      is unchanged, EDIT means it is not, and nothing is REPLACE or RETIRE
-//      while the form still has 50 items.
+//      while the form still has 50 items;
+//   K  the human content review (revision 2) is applied: b05's 3/1/0 is
+//      professionally defensible, a03/a05/a07/d03/d05 reflect safe authority
+//      and coordination, b02/d06 claim only what is defensible, b06's
+//      poorest option no longer announces itself, c07/c19 are held as
+//      BLOCKED with text and scores exactly as authored, c14 is concrete,
+//      the programme purpose carries the product claim;
+//   L  distractor tone: no option label ends in a self-incriminating
+//      rationalisation, and no label stacks justification connectors.
 //
 // It reads files. It cannot prove what the database holds -- the migration's
 // own proof block does that at apply time, and db-test.sh replays it.
@@ -68,6 +78,7 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "u
 
 const BASE = "supabase/migrations/20260830094000_scp_security_officer_recruitment_assessment.sql";
 const REVIEW = "supabase/migrations/20261022090000_scp_vaktare_v1_content_review.sql";
+const THRESHOLDS = "supabase/migrations/20260802090000_scp_phase0_competency_graph.sql";
 const AUDIT = "docs/assessment/governance/vaktare-v1-item-audit-2026-09-03.json";
 const TAG = "$vaktare_content$";
 
@@ -204,6 +215,7 @@ type ReviewDoc = {
   blocks: { key: string; intro_sv: string; intro_en: string }[];
   rubrics: { slug: string; dimensions: { key: string; sv: string; en: string }[] }[];
   en_adaptation: { reviewed_by: string; notes: string } | null;
+  program?: { slug: string; purpose_sv: string; purpose_en: string };
 };
 
 const reviewSql = read(REVIEW);
@@ -226,6 +238,7 @@ type AuditItem = {
   behaviour: string;
   facet: string;
   decision: "KEEP" | "EDIT" | "REPLACE" | "RETIRE";
+  keying: string;
 };
 const audit: { items: AuditItem[] } = JSON.parse(read(AUDIT));
 
@@ -236,6 +249,9 @@ const auditBySlug = new Map(audit.items.map((i) => [i.slug, i]));
 const scenarios = doc.items.filter((i) => i.kind === "scenario");
 const selfReports = doc.items.filter((i) => i.kind === "selfreport");
 const reflections = doc.items.filter((i) => i.kind === "reflection");
+const item = (slug: string) => reviewBySlug.get(slug)!;
+const option = (slug: string, k: string) => item(slug).options.find((o) => o.k === k)!;
+const nonEmpty = (s: unknown) => typeof s === "string" && s.trim().length > 0;
 
 // ── A. Shape ──────────────────────────────────────────────────────────────
 console.log("\nA. Shape: 50 = 22 + 24 + 4, same identities as authored");
@@ -286,10 +302,15 @@ const ALLOWED: Record<string, string[]> = {
   scp_item_option_texts: ["label"],
   scp_form_blocks: ["intro_sv", "intro_en"],
   scp_rubric_dimensions: ["observable_criteria_sv", "observable_criteria_en"],
+  scp_program_versions: ["purpose_sv", "purpose_en"],
 };
-const updates = [...sqlOutsideDoc.matchAll(/UPDATE\s+public\.(\w+)\s+SET\s+([\s\S]*?)\s+WHERE\b/g)];
+const updates = [
+  ...sqlOutsideDoc.matchAll(
+    /UPDATE\s+public\.(\w+)(?:\s+\w+)?\s+SET\s+([\s\S]*?)\s+(?:FROM|WHERE)\b/g,
+  ),
+];
 check(
-  "B1 the migration updates only the five content tables",
+  "B1 the migration updates only the six content tables",
   updates.length > 0 && updates.every((m) => m[1] in ALLOWED),
   updates
     .map((m) => m[1])
@@ -385,10 +406,21 @@ console.log(
     .map(([c, n]) => `${c}=${n}`)
     .join(" ")}`,
 );
+const developingNeeds = Number(
+  read(THRESHOLDS).match(/'developing_evidence',\s*[\d.]+,\s*(\d+)/)?.[1] ?? 0,
+);
+check(
+  "C4 SCC-08 stays limited evidence: exactly one observed item, and developing_evidence needs at least two observations",
+  observedByComp.get("SCC-08") === 1 && developingNeeds >= 2,
+  `observed ${observedByComp.get("SCC-08")}, developing needs ${developingNeeds}`,
+);
+check(
+  "C5 the migration asserts the SCC-08 cap at apply time",
+  /SCP_V3_SCC08_CAP/.test(sqlOutsideDoc),
+);
 
 // ── D. Both languages ─────────────────────────────────────────────────────
 console.log("\nD. Both languages on every text and every label");
-const nonEmpty = (s: unknown) => typeof s === "string" && s.trim().length > 0;
 check(
   "D1 every item has a non-empty sv-SE and en-GB scenario and prompt",
   doc.items.every(
@@ -424,6 +456,15 @@ check(
   !!doc.en_adaptation &&
     /not a named human/i.test(doc.en_adaptation.reviewed_by) &&
     /not validation|no psychometric/i.test(doc.en_adaptation.notes),
+);
+const allEnglish = [
+  ...doc.items.flatMap((i) => [i.en.scenario, i.en.prompt, ...i.options.map((o) => o.en)]),
+  ...doc.blocks.map((b) => b.intro_en),
+  doc.program?.purpose_en ?? "",
+];
+check(
+  "D6 the English agreement error 'sentences is enough' is gone",
+  allEnglish.every((t) => !/sentences is enough/i.test(t)),
 );
 
 // ── E. Option-length balance ──────────────────────────────────────────────
@@ -560,10 +601,15 @@ check(
   doubleQuant.join(", "),
 );
 check(
-  "G5 every forced-choice pair still says neither answer is wrong, both languages",
-  pairItems.every(
-    (i) => /Inget av dem är fel/.test(i.sv.scenario) && /Neither is wrong/.test(i.en.scenario),
-  ),
+  "G5 c03's pair intro no longer contradicts its 1/3 key; the three pairs the reviewers did not raise keep their authored intro",
+  !/Inget av dem är fel|Neither is wrong/.test(
+    item("so-rj-c03").sv.scenario + item("so-rj-c03").en.scenario,
+  ) &&
+    ["so-rj-c06", "so-rj-c18", "so-rj-c24"].every(
+      (s) =>
+        /Inget av dem är fel/.test(item(s).sv.scenario) &&
+        /Neither is wrong/.test(item(s).en.scenario),
+    ),
 );
 check(
   "G6 the self-report section intro tells a candidate without guarding experience how to answer",
@@ -574,18 +620,34 @@ check(
       /not worked in security/i.test(b.intro_en),
   ),
 );
+check(
+  "G7 no self-report statement presupposes guard employment by naming checkpoints, patrols or night shifts",
+  selfReports.every(
+    (i) =>
+      !/kontrollpunkt|nattpass|\brond\b|ronden/i.test(i.sv.scenario) &&
+      !/checkpoint|night shift|\bpatrol/i.test(i.en.scenario),
+  ),
+  selfReports
+    .filter(
+      (i) =>
+        /kontrollpunkt|nattpass|\brond\b|ronden/i.test(i.sv.scenario) ||
+        /checkpoint|night shift|\bpatrol/i.test(i.en.scenario),
+    )
+    .map((i) => i.slug)
+    .join(", "),
+);
 
 // ── H. Free text ──────────────────────────────────────────────────────────
 console.log("\nH. Free text asks for a concrete account in a stated shape, naming no method");
 const SHAPE_SV = [
-  /vad som hände|vad arbetet var|vad uppgiften gällde/i,
+  /vad som hände|vad arbetet var|vad uppgiften (gällde|handlade om)/i,
   /din (uppgift|roll)/i,
   /vad du (själv )?(gjorde|sa och gjorde|gjorde för att)/i,
   /hur det (slutade|gick)/i,
   /tog med dig/i,
 ];
 const SHAPE_EN = [
-  /what happened|what the work was|what the information concerned/i,
+  /what happened|what the work was|what the information was about/i,
   /your role/i,
   /what you (yourself )?(did|said and did)/i,
   /how it (ended|went)/i,
@@ -627,9 +689,11 @@ const allText = [
   ]),
   ...doc.blocks.flatMap((b) => [b.intro_sv, b.intro_en]),
   ...doc.rubrics.flatMap((r) => r.dimensions.flatMap((d) => [d.sv, d.en])),
+  doc.program?.purpose_sv ?? "",
+  doc.program?.purpose_en ?? "",
 ];
 check(
-  "H4 no candidate-facing or rubric text names a method (STAR, AWS)",
+  "H4 no candidate-facing, rubric or product text names a method (STAR, AWS)",
   allText.every((t) => !/\b(STAR|AWS)\b/.test(t)),
 );
 check(
@@ -669,11 +733,34 @@ check(
   ),
 );
 check(
-  "H7 an edited rubric criterion still lets a reviewer record that the account does not show it (states what must be present, never a verdict on the person)",
+  "H7 an edited rubric criterion states what must be present, never a verdict on the person",
   doc.rubrics.every((r) =>
     r.dimensions.every(
       (d) => !/lämplig|olämplig|suitab|unsuitab|personlighet|personality/i.test(d.sv + d.en),
     ),
+  ),
+);
+check(
+  "H8 every free-text item tells the candidate an example may come from work, a placement, studies or an association, and that short sentences or bullet points are fine",
+  reflections.every(
+    (i) =>
+      /praktik, studier, föreningsliv/i.test(i.sv.scenario) &&
+      /punktform/i.test(i.sv.scenario) &&
+      /inte hur du formulerar dig/i.test(i.sv.scenario) &&
+      /placement, studies/i.test(i.en.scenario) &&
+      /bullet points/i.test(i.en.scenario) &&
+      /not how you phrase it/i.test(i.en.scenario),
+  ),
+);
+check(
+  "H9 the reflection section intro carries the example-source and short-form guidance too",
+  doc.blocks.some(
+    (b) =>
+      b.key === "e_reflection" &&
+      /praktik, studier/i.test(b.intro_sv) &&
+      /punktform/i.test(b.intro_sv) &&
+      /placement, studies/i.test(b.intro_en) &&
+      /bullet points/i.test(b.intro_en),
   ),
 );
 
@@ -746,6 +833,196 @@ check(
 check(
   "J4 the review document's own decisions agree with the audit",
   doc.items.every((i) => i.decision === auditBySlug.get(i.slug)!.decision),
+);
+
+// ── K. The human content review is applied ────────────────────────────────
+console.log("\nK. Human content review (revision 2) applied");
+const authoredScore = (slug: string, k: string) =>
+  bySlug.get(slug)!.opts.find((o) => o.k === k)!.score;
+check(
+  "K1 b05: the 1-point option leaves the door closed and records nothing; the 0-point option restores the doorstop; the 3-point option closes, records and hands over",
+  /^Låt dörren vara stängd och gå hem\./.test(option("so-rj-b05", "b").sv) &&
+    /^Leave the door closed and go home\./.test(option("so-rj-b05", "b").en) &&
+    authoredScore("so-rj-b05", "b") === 1 &&
+    option("so-rj-b05", "b").err === "failure_to_document" &&
+    /Ställ tillbaka släckaren/.test(option("so-rj-b05", "c").sv) &&
+    /Put the extinguisher back/.test(option("so-rj-b05", "c").en) &&
+    authoredScore("so-rj-b05", "c") === 0 &&
+    /notera|Notera/.test(option("so-rj-b05", "a").sv) &&
+    /överlämning/.test(option("so-rj-b05", "a").sv) &&
+    authoredScore("so-rj-b05", "a") === 3 &&
+    !/Ställ tillbaka släckaren/.test(option("so-rj-b05", "b").sv),
+);
+check(
+  "K2 a03: the preferred option keeps the employee at a distance, somewhere safe and in the call; nobody is asked to confront by the key",
+  /hålla avstånd/.test(option("so-rj-a03", "a").sv) &&
+    /säker plats/.test(option("so-rj-a03", "a").sv) &&
+    /stanna kvar i samtalet/.test(option("so-rj-a03", "a").sv) &&
+    !/stanna kvar i telefon/.test(option("so-rj-a03", "a").sv) &&
+    /keep their distance/.test(option("so-rj-a03", "a").en) &&
+    /stay on the call/.test(option("so-rj-a03", "a").en),
+);
+check(
+  "K3 a05: the 0-point option says the two points are signed off in the guard's own name without going to them",
+  /i ditt eget namn utan att gå dit/.test(option("so-rj-a05", "c").sv) &&
+    /own name without going to them/.test(option("so-rj-a05", "c").en) &&
+    authoredScore("so-rj-a05", "c") === 0,
+);
+check(
+  "K4 a07: the scenario states lone response, back-up not arrived and that the alarm centre decides on entry; the key follows the alarm centre's decision",
+  /åker ensam/.test(item("so-rj-a07").sv.scenario) &&
+    /Förstärkning finns men är inte framme/.test(item("so-rj-a07").sv.scenario) &&
+    /larmcentralen avgör/.test(item("so-rj-a07").sv.scenario) &&
+    /respond alone/.test(item("so-rj-a07").en.scenario) &&
+    /alarm centre decides/.test(item("so-rj-a07").en.scenario) &&
+    /följ deras besked/.test(option("so-rj-a07", "a").sv) &&
+    /follow their decision/.test(option("so-rj-a07", "a").en),
+);
+check(
+  "K5 d03: 1 point = risk handled now with weak follow-up (failure_to_document); 0 points = passivity (delayed_escalation)",
+  /^Ring objektet direkt/.test(option("so-rj-d03", "b").sv) &&
+    option("so-rj-d03", "b").err === "failure_to_document" &&
+    authoredScore("so-rj-d03", "b") === 1 &&
+    /^Lita på att/.test(option("so-rj-d03", "c").sv) &&
+    option("so-rj-d03", "c").err === "delayed_escalation" &&
+    authoredScore("so-rj-d03", "c") === 0,
+);
+check(
+  "K6 d05: security-sensitive points are named as such and the key coordinates with the alarm centre or supervisor before any go unchecked",
+  /säkerhetskänsliga/.test(item("so-rj-d05").sv.scenario) &&
+    /security-sensitive/.test(item("so-rj-d05").en.scenario) &&
+    /larmcentralen eller arbetsledaren/.test(option("so-rj-d05", "a").sv) &&
+    /alarm centre or your supervisor/.test(option("so-rj-d05", "a").en) &&
+    !/skyddsvärde/.test(item("so-rj-d05").sv.scenario),
+);
+check(
+  "K7 b02: the usable report claims only what is observable about electrical equipment",
+  /Ingen synlig elutrustning i kontakt med vattnet/.test(option("so-rj-b02", "a").sv) &&
+    /No visible electrical equipment in contact with the water/.test(option("so-rj-b02", "a").en) &&
+    !/ingen el i vattnet/i.test(option("so-rj-b02", "a").sv),
+);
+check(
+  "K8 d06: the key asks for an authorised request and refers per procedure, without the absolute 'only for security purposes'",
+  /behörig begäran/.test(option("so-rj-d06", "a").sv) &&
+    /enligt rutinen/.test(option("so-rj-d06", "a").sv) &&
+    /authorised request/.test(option("so-rj-d06", "a").en) &&
+    !/bara får användas för säkerhetsändamål/.test(option("so-rj-d06", "a").sv) &&
+    !/only be used for security purposes/.test(option("so-rj-d06", "a").en),
+);
+check(
+  "K9 b06: the poorest option no longer explains why it is poor",
+  !/oklarhet|confusion|motsägelsefull|contradict/i.test(
+    option("so-rj-b06", "c").sv + option("so-rj-b06", "c").en,
+  ),
+);
+check(
+  "K10 c07 and c19 are held BLOCKED: text and scores exactly as authored, and the audit says so",
+  ["so-rj-c07", "so-rj-c19"].every(
+    (s) =>
+      sameAsAuthored(item(s)) &&
+      auditBySlug.get(s)!.decision === "KEEP" &&
+      /^BLOCKED/.test(auditBySlug.get(s)!.keying),
+  ),
+);
+check(
+  "K11 c14 describes a concrete, reverse-worded behaviour rather than an opinion",
+  /låter jag bli att rapportera det/.test(item("so-rj-c14").sv.scenario) &&
+    /leave it unreported/.test(item("so-rj-c14").en.scenario) &&
+    !/tycker/.test(item("so-rj-c14").sv.scenario),
+);
+check(
+  "K12 the SV/EN corrections the reviewers named are in: a09 'i tidsordning', c04 'rely on remembering', c20 'raised an alarm unnecessarily', d01 'nothing has gone wrong in six years', e04 'what the information was about'",
+  /i tidsordning/.test(option("so-rj-a09", "a").sv) &&
+    /in chronological order/.test(option("so-rj-a09", "a").en) &&
+    /rely on remembering it/.test(item("so-rj-c04").en.scenario) &&
+    /larmat i onödan/.test(item("so-rj-c20").sv.scenario) &&
+    /raised an alarm unnecessarily/.test(item("so-rj-c20").en.scenario) &&
+    /nothing has gone wrong in six years/.test(option("so-rj-d01", "b").en) &&
+    /what the information was about/.test(item("so-rj-e04").en.scenario),
+);
+check(
+  "K13 the programme purpose carries the product claim and never calls the inputs collectively observed evidence",
+  !!doc.program &&
+    doc.program.slug === "security-officer-recruitment" &&
+    /rollspecifikt bedömnings- och intervjuunderlag/.test(doc.program.purpose_sv) &&
+    /scenariorespons, kandidatens egna beskrivningar och fritextsvar/.test(
+      doc.program.purpose_sv,
+    ) &&
+    /mänsklig rekryteringsbedömning/.test(doc.program.purpose_sv) &&
+    /human recruitment judgement/.test(doc.program.purpose_en) &&
+    !/observed evidence|observerad evidens/i.test(
+      doc.program.purpose_sv + doc.program.purpose_en,
+    ) &&
+    /inget anställningsbeslut/.test(doc.program.purpose_sv) &&
+    /no employment decision/.test(doc.program.purpose_en),
+);
+
+// ── L. Distractor tone ────────────────────────────────────────────────────
+console.log("\nL. Distractor tone: plausible actions, not confessions");
+const TONE_SV = [
+  /behöver se att du har kontroll/i,
+  /relationen till uppdragsgivaren/i,
+  /varje minut räknas/i,
+  /talar för sig/i,
+  /knappast en säkerhetsrisk/i,
+  /desto bättre/i,
+  /kan användas mot dig/i,
+  /slipper förklara/i,
+  /bygger goda relationer/i,
+  /behöver inte förklara dig/i,
+  /finns det spårbart/i,
+  /bara skapar oklarhet|skapar bara oklarhet/i,
+  /inte din (sak|uppgift) att/i,
+  /se konstig ut/i,
+  /mer fullständig/i,
+  /sköts som det ska/i,
+];
+const TONE_EN = [
+  /need to see you are in control/i,
+  /client relationship/i,
+  /every minute counts/i,
+  /speaks for itself/i,
+  /hardly a security risk/i,
+  /the less you discuss/i,
+  /used against you/i,
+  /avoid explaining/i,
+  /builds good relations/i,
+  /do not need to explain/i,
+  /record if anybody/i,
+  /only create confusion/i,
+  /not your (job|place) to/i,
+  /look odd/i,
+  /more complete/i,
+  /handled properly/i,
+];
+const toneHits: string[] = [];
+for (const it of scenarios) {
+  for (const o of it.options) {
+    if (TONE_SV.some((r) => r.test(o.sv)) || TONE_EN.some((r) => r.test(o.en)))
+      toneHits.push(`${it.slug} ${o.k}`);
+  }
+}
+check(
+  "L1 no scenario option carries a self-incriminating rationalisation from the reviewers' list",
+  toneHits.length === 0,
+  toneHits.join(", "),
+);
+const stacked: string[] = [];
+for (const it of scenarios) {
+  for (const o of it.options) {
+    const nSv = (o.sv.match(/\b(eftersom|så att|för att)\b/gi) ?? []).length;
+    const nEn = (o.en.match(/\b(since|so that|because)\b/gi) ?? []).length;
+    if (nSv > 1 || nEn > 1) stacked.push(`${it.slug} ${o.k} (${nSv}/${nEn})`);
+  }
+}
+check(
+  "L2 no scenario option stacks more than one justification connector (eftersom / så att / för att; since / so that / because)",
+  stacked.length === 0,
+  stacked.join(", "),
+);
+check(
+  "L3 the reviewers' tone list is kept as a file-level guard, not a one-off: at least twelve patterns per language",
+  TONE_SV.length >= 12 && TONE_EN.length >= 12,
 );
 
 // ── Verdict ───────────────────────────────────────────────────────────────
