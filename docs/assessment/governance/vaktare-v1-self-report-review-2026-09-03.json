@@ -1,0 +1,266 @@
+{
+  "migration": "supabase/migrations/20261023090000_scp_vaktare_v1_self_report_quality.sql", 
+  "cue_position": "The review classified most self-report items as HIGH or MODERATE cue after revision, and none as LOW. Wording cannot eliminate social desirability and this pack does not claim it does. The objective was to reduce obviousness, not to make the self-report objective. A HIGH-CUE item is not a blocker while it is presented explicitly as self-description; it is recorded here for pilot analysis.", 
+  "product_boundary": "Self-report shows how the candidate describes their own working style and behavioural patterns. It is candidate self-description, useful for human review and for structured interview follow-up. It is NOT observed evidence, proof of competence, evidence maturity, suitability, a personality diagnosis or an employment recommendation. No single self-report item may independently establish a competency; self_report carries counts_toward_maturity = false, so no self-report answer can move a measured evidence level.", 
+  "pilot_watch": [
+    "Ceiling effects: the share of candidates choosing the top scale point on each of the 20 frequency items, per item and overall.", 
+    "Socially desirable extremes: candidates whose answers sit at the desirable end on nearly every item, and whether those runs differ from the rest.", 
+    "Item completion time: time per self-report item, and whether the revised stems (c08, c11, c13, c15, c17, c23) read slower than the unchanged ones.", 
+    "Experience-level differences: response distributions for candidates with and without previous guarding employment, on the four generalised items (c09, c12, c20, c21) in particular.", 
+    "c07 and c19 response distribution: whether the non-monotonic keys describe anything the distribution supports, which is the evidence a future keying review needs.", 
+    "Forced-choice behaviour on c03, c06, c18 and c24: split, and whether either option is effectively never chosen.", 
+    "SV/EN response patterns: whether the same item behaves differently in the two languages, which would point at the still-outstanding named human language review.", 
+    "Non-response and change-of-answer rates per item, as a read on whether a stem is being understood."
+  ], 
+  "forced_choice_untouched": [
+    "so-rj-c03", 
+    "so-rj-c06", 
+    "so-rj-c18", 
+    "so-rj-c24"
+  ], 
+  "not_claimed": [
+    "No psychometric threshold, reliability coefficient, validity claim, norm or empirical difficulty is asserted by this review.", 
+    "The named human language gate remains open; the English adaptation is marked adaptation_reviewed, which is not approved.", 
+    "All 250 review gates (50 items x 5) remain outstanding."
+  ], 
+  "blocked": [], 
+  "methodologically_open": [
+    "so-rj-c07", 
+    "so-rj-c19"
+  ], 
+  "guard": "scripts/vaktare-self-report-quality-check.ts", 
+  "scale": {
+    "en": [
+      "Rarely", 
+      "Sometimes", 
+      "Often", 
+      "Almost every time"
+    ], 
+    "sv": [
+      "Sällan", 
+      "Ibland", 
+      "Ofta", 
+      "Nästan varje gång"
+    ]
+  }, 
+  "scale_applies_to": [
+    "so-rj-c01", 
+    "so-rj-c02", 
+    "so-rj-c04", 
+    "so-rj-c05", 
+    "so-rj-c07", 
+    "so-rj-c08", 
+    "so-rj-c09", 
+    "so-rj-c10", 
+    "so-rj-c11", 
+    "so-rj-c12", 
+    "so-rj-c13", 
+    "so-rj-c14", 
+    "so-rj-c15", 
+    "so-rj-c16", 
+    "so-rj-c17", 
+    "so-rj-c19", 
+    "so-rj-c20", 
+    "so-rj-c21", 
+    "so-rj-c22", 
+    "so-rj-c23"
+  ], 
+  "review": "vaktare-v1-self-report-quality-2026-09-03", 
+  "scope": "The 24 existing self-report items of Väktare v1 only. No item added or removed, no score, key, competency or evidence type changed, no scenario or free-text item touched, no report logic redesigned.", 
+  "items": [
+    {
+      "final_class": "FREQUENCY — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c01", 
+      "label_changed": true, 
+      "note": "Stem sound as it stands; only the scale end points changed. Negatively worded, so the reverse key stays monotonic."
+    }, 
+    {
+      "final_class": "FREQUENCY — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c02", 
+      "label_changed": true, 
+      "note": "Stem sound as it stands; only the scale end points changed."
+    }, 
+    {
+      "final_class": "FORCED CHOICE — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c03", 
+      "label_changed": false, 
+      "note": "Forced choice, two options. Not a four-point frequency item; response structure preserved and no frequency label applied."
+    }, 
+    {
+      "final_class": "FREQUENCY — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c04", 
+      "label_changed": true, 
+      "note": "Stem sound as it stands; only the scale end points changed. Relying on memory is not obviously wrong, which keeps the cue moderate."
+    }, 
+    {
+      "final_class": "FREQUENCY — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c05", 
+      "label_changed": true, 
+      "note": "Stem sound as it stands; only the scale end points changed."
+    }, 
+    {
+      "final_class": "FORCED CHOICE — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c06", 
+      "label_changed": false, 
+      "note": "Forced choice, two options. Response structure preserved and no frequency label applied."
+    }, 
+    {
+      "final_class": "DESCRIPTIVE / METHODOLOGICALLY OPEN", 
+      "stem_changed": true, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c07", 
+      "label_changed": true, 
+      "note": "Product Owner wording: neutral, and the frequency word removed from the stem because the scale already supplies it. Keying (0/2/3/2) is non-monotonic and deliberately not changed during the shadow pilot; the limitation is recorded in the option rationale. Self-report only, never observed evidence, and cannot independently establish competence."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c08", 
+      "label_changed": true, 
+      "note": "Was a possession claim ('Jag har ett konkret sätt...') that a frequency scale did not fit. Rewritten as a recurring behaviour with the same intended competency (avvikelseigenkänning) and the same ascending key."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c09", 
+      "label_changed": true, 
+      "note": "Experience bias: 'mot slutet av ett långt pass' assumed shift work. Generalised to a long stretch of work; reverse key unchanged."
+    }, 
+    {
+      "final_class": "FREQUENCY — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c10", 
+      "label_changed": true, 
+      "note": "Stem sound as it stands; only the scale end points changed. 'Från jobbet' already covers any employment."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c11", 
+      "label_changed": true, 
+      "note": "Was a moral proposition ('I explain why'). Rewritten as a two-part observable behaviour: say what can be said, and point the person on. Still high cue."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c12", 
+      "label_changed": true, 
+      "note": "Experience bias: 'från ett arbetspass' assumed shift work. Generalised to 'från arbetet'; reverse key unchanged."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c13", 
+      "label_changed": true, 
+      "note": "Was a moral proposition. Rewritten as a comparison of behaviour: the same recording whether or not anyone else has seen the error. Still high cue."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c14", 
+      "label_changed": true, 
+      "note": "Reworded so the behaviour, not the intention, is the object: putting the mistake right and not mentioning it. Reverse key unchanged."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c15", 
+      "label_changed": true, 
+      "note": "Reworded to name what concretely changes (order, a check step, a note) rather than asserting that something changes."
+    }, 
+    {
+      "final_class": "FREQUENCY — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c16", 
+      "label_changed": true, 
+      "note": "Stem sound as it stands; only the scale end points changed. Admitting the difficulty is normal, which keeps the cue moderate."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c17", 
+      "label_changed": true, 
+      "note": "'Försöker erbjuda' was an intention. Rewritten as the observable act of naming who or what can help."
+    }, 
+    {
+      "final_class": "FORCED CHOICE — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c18", 
+      "label_changed": false, 
+      "note": "Forced choice, two options. Response structure preserved and no frequency label applied."
+    }, 
+    {
+      "final_class": "DESCRIPTIVE / METHODOLOGICALLY OPEN", 
+      "stem_changed": false, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c19", 
+      "label_changed": true, 
+      "note": "Stem NOT changed. Escalation versus independence depends on risk, authority, time and instruction, and no available wording makes the non-monotonic key (2/3/1/0) monotonic without changing score semantics, which this PR may not do. Scale relabelled with the rest; the openness is recorded in the option rationale. Self-report only; used as interview context, not as an ordered measure of competence."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c20", 
+      "label_changed": true, 
+      "note": "Experience bias: 'om jag har larmat' assumed alarm handling. Generalised to bringing somebody in unnecessarily; the competency (eskalering och överlämning) and the ascending key are unchanged."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c21", 
+      "label_changed": true, 
+      "note": "Experience bias: 'när jag slutar för dagen' assumed a shift ending on site. Reframed as handover of responsibility, which is the behaviour the item was always about."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c22", 
+      "label_changed": true, 
+      "note": "Human review noted that 'märker jag' measures self-awareness as much as behaviour. Option A taken: the observation verb is removed and the stem now reports the behaviour itself, which makes the reverse key defensible. Residual limitation: any self-report still requires self-observation to answer."
+    }, 
+    {
+      "final_class": "FREQUENCY — REVISED", 
+      "stem_changed": true, 
+      "cue": "HIGH CUE", 
+      "slug": "so-rj-c23", 
+      "label_changed": true, 
+      "note": "Was a possession claim ('Jag har något jag gör...') that a frequency scale did not fit. Rewritten as a recurring behaviour with the same intended competency (återhämtning) and the same ascending key."
+    }, 
+    {
+      "final_class": "FORCED CHOICE — UNCHANGED", 
+      "stem_changed": false, 
+      "cue": "MODERATE CUE", 
+      "slug": "so-rj-c24", 
+      "label_changed": false, 
+      "note": "Forced choice, two options. Response structure preserved and no frequency label applied."
+    }
+  ], 
+  "response_count": 4, 
+  "pr": "PR-V4"
+}

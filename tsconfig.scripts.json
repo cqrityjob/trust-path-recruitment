@@ -49,6 +49,10 @@
     // migration and measures it; a parser that silently stops matching the
     // document shape is exactly the failure this file exists to prevent.
     "scripts/vaktare-content-quality-check.ts",
+    // PR-V4: the self-report guard composes the final content out of the
+    // authored baseline and both review documents; a parser that silently
+    // stops matching one of them would report a scale it never measured.
+    "scripts/vaktare-self-report-quality-check.ts",
     "scripts/legacy-assessment-route-guard-check.ts",
     // Added on its own terms, like the security guard above: new, no
     // pre-existing type debt, and it renders real components -- a guard whose
