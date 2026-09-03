@@ -42,11 +42,14 @@ mechanism enforcing it. The mechanism enforcing it is the decision.
 
 - **State:** open. Product Owner.
 
-## 3. Language adaptation of the English instrument — OUTSTANDING
+## 3. Language adaptation of the English instrument — CONTENT REVIEWED, NOT VALIDATED
 
-All 50 English item texts are recorded `adaptation_pending`, and the outstanding
-finding "Språklig likvärdighet mellan sv-SE och en-GB" is still open on the item
-versions.
+PR-V3 (`20261022090000`) reviewed all 50 English texts against the Swedish for the
+same scenario, behavioural demand, key and option plausibility, and recorded them
+`adaptation_reviewed` with the reviewer named on the row: an AI assistant acting as
+content preparer, **not a named human language reviewer**. The outstanding finding
+"Språklig likvärdighet mellan sv-SE och en-GB" is therefore still open on all 50 item
+versions, and no text is `approved`.
 
 PR-V2 made delivery *structurally* equivalent and proved it
 (`supabase/tests/scp_language_contract_test.sql`): same items, same option
@@ -54,11 +57,12 @@ identities, same served order, same scoring, whichever language the run is deliv
 in. That is a delivery guarantee. It is **not** a claim of psychometric equivalence,
 and it must not be described as one.
 
-- **State:** open. Content + SME work; see the content-quality proposal in the PR-V2
-  description.
-- **Practical consequence today:** an English shadow-pilot run is a run of an
-  unadapted translation and should be described that way to the participating
-  organisation.
+- **State:** open. A named bilingual reviewer with guarding experience must clear the
+  `language` requirement; the reviewer pack is
+  `docs/assessment/governance/vaktare-content-review-pack-2026-09-03.md`.
+- **Practical consequence today:** an English shadow-pilot run is a run of a
+  content-reviewed but unvalidated translation and should be described that way to
+  the participating organisation.
 
 ## 4. Assignment language is not immutable — KNOWN GAP, NOT CLOSED
 

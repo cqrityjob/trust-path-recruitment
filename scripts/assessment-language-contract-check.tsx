@@ -32,7 +32,8 @@
 // not repeated here.
 //
 // This file makes no claim about psychometric equivalence of the two texts;
-// both Väktare translations are recorded as adaptation_pending.
+// the en-GB Väktare texts are recorded as adaptation_reviewed since PR-V3 (a content
+// review, not SME approval) and the language review requirement stays outstanding.
 
 import { readFileSync } from "node:fs";
 import React from "react";

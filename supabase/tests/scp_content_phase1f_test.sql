@@ -461,7 +461,10 @@ SELECT pg_temp.ok(
            WHERE d.rubric_version_id = rv.id) = 4) = 3,
   'F6.12 every rubric has positive, borderline, contraindication and safety-critical anchors');
 
--- English stays a translation until a bilingual SME says otherwise.
+-- English stays a translation until a bilingual SME says otherwise. A content
+-- review may record a text as adaptation_reviewed (PR-V3 does, on the Väktare
+-- form, with the reviewer named on the row); only approved/source would claim
+-- the SME sign-off that publication requires, and none may.
 --
 -- Scoped to REAL content. A published test fixture legitimately carries
 -- approved English, because Swedish/English parity is exactly one of the
@@ -474,9 +477,9 @@ SELECT pg_temp.ok(
      JOIN public.scp_forms f ON f.id = fi.form_id
      JOIN public.scp_assessment_versions av ON av.id = f.assessment_version_id
      JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
-    WHERE it.adaptation_status <> 'adaptation_pending'
+    WHERE it.adaptation_status NOT IN ('adaptation_pending', 'adaptation_reviewed')
       AND NOT d.is_test_fixture) = 0,
-  'F6.13 all English content in REAL programmes remains adaptation_pending');
+  'F6.13 no English content in a REAL programme claims approved or source status');
 
 -- Learning content is draft too, and nothing became assignable.
 SELECT pg_temp.ok(
