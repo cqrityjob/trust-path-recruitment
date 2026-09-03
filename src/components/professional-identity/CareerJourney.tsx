@@ -46,7 +46,7 @@ import { summariseTrust } from "@/lib/professional-identity/trust-summary";
 import { c, L, Lf, type Copy, type Lang } from "./copy";
 
 const COPY = {
-  heading: c("Din karriärresa", "Your career journey"),
+  heading: c("Din status", "Your status"),
   lede: c(
     "Var du står i dag. Ingen av delarna är obligatorisk och ingen av dem tar slut.",
     "Where you stand today. None of these are required, and none of them ever finish.",
@@ -58,11 +58,17 @@ const COPY = {
   discoverNone: c("Inte genomförd ännu", "Not taken yet"),
 
   profile: c("Profil", "Profile"),
-  profileState: c("{0} % ifyllt", "{0} % filled in"),
+  // Answered sections, in words. Never a percentage: "34 %" reads as a
+  // grade, and a count of answered questions is not one.
+  profileState: c("{0} av {1} delar ifyllda", "{0} of {1} sections filled in"),
+  profileComplete: c("Grundprofil komplett", "Basic profile complete"),
 
   verify: c("Verifiera", "Verify"),
   verifyState: c("{0} verifierade", "{0} verified"),
-  verifyPending: c("{0} väntar på granskning", "{0} awaiting review"),
+  verifyPending: c(
+    "{0} uppgifter granskas – inget krävs av dig",
+    "{0} entries being reviewed – nothing needed from you",
+  ),
   verifyNone: c("Passet är inte öppnat", "Passport not opened"),
   // Anställningar som en arbetsgivare har bekräftat räknas separat från
   // verifierade intyg. Det är två olika slags bevis och att slå ihop dem
@@ -154,7 +160,14 @@ export function CareerJourney({
       // never reaches an employer — `completeness.ts` carries the same warning
       // where the number is computed.
       label: say(COPY.profile),
-      state: !profileKnown ? say(COPY.unreadable) : sayf(COPY.profileState, completeness.score),
+      state: !profileKnown
+        ? say(COPY.unreadable)
+        : completeness.missingSections.length === 0
+          ? say(COPY.profileComplete)
+          : sayf(COPY.profileState, completeness.completedSections.length).replace(
+              "{1}",
+              String(completeness.applicableSections.length),
+            ),
       href: "/my-career/profile",
       active: profileKnown && completeness.score > 0,
       unknown: !profileKnown,
@@ -174,7 +187,10 @@ export function CareerJourney({
           : pending > 0 && verified === 0 && confirmedEmployment === 0
             ? sayf(COPY.verifyPending, pending)
             : [
-                sayf(COPY.verifyState, verified),
+                // "0 verifierade · 1 anställning bekräftad" is two true facts
+                // that read as one contradiction. The zero is stated only
+                // when there is nothing else to state.
+                verified > 0 || confirmedEmployment === 0 ? sayf(COPY.verifyState, verified) : null,
                 confirmedEmployment > 0
                   ? sayf(
                       confirmedEmployment === 1 ? COPY.verifyEmployment : COPY.verifyEmploymentMany,

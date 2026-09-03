@@ -72,6 +72,11 @@
     // typed fixtures -- a fixture that silently stops matching the bridge's
     // types is exactly the failure this file exists to prevent.
     "scripts/career-profession-bridge-check.tsx",
+    // The premium overview guard, on the same terms: new, no pre-existing
+    // type debt, and it BUILDS the presentation model with typed fixtures --
+    // a fixture that silently stops matching the model's input is exactly
+    // the failure this file exists to prevent.
+    "scripts/my-career-premium-overview-check.tsx",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

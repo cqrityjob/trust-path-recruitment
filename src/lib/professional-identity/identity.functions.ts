@@ -333,9 +333,25 @@ export async function readProfessionalIdentity(
   // attempt awaiting review asks nothing of them, and counting it would put
   // a number next to an action they cannot take — the same rule the header
   // badge already follows.
-  const openAssignments = ((assignments?.data ?? []) as Row[]).filter(
+  const openAssignmentRows = ((assignments?.data ?? []) as Row[]).filter(
     (r) => String(r.mode) === "assessment" && String(r.attempt_status) === "in_progress",
-  ).length;
+  );
+  const openAssignments = openAssignmentRows.length;
+
+  // WHICH open assessment to take this person to. The one with the earliest
+  // deadline first -- a deadline is the only thing on the home screen that is
+  // genuinely time-critical -- then the id, so the answer is stable across
+  // loads. Null when nothing is open, which routes to the assessments area
+  // rather than to a run this seam invented.
+  const assessmentAssignmentAttemptId =
+    [...openAssignmentRows]
+      .sort((a, b) => {
+        const da = a.deadline ? String(a.deadline) : "~";
+        const db = b.deadline ? String(b.deadline) : "~";
+        if (da !== db) return da.localeCompare(db);
+        return String(a.attempt_id).localeCompare(String(b.attempt_id));
+      })
+      .map((r) => (r.attempt_id ? String(r.attempt_id) : null))[0] ?? null;
 
   return {
     identityVersion: "professional-identity-v1",
@@ -369,6 +385,7 @@ export async function readProfessionalIdentity(
       assessmentAssignmentCount: openAssignments,
       releasedReportCount,
       releasedReportAttemptId,
+      assessmentAssignmentAttemptId,
       employerWorkspaceCount: memberships?.count ?? 0,
     },
     unavailable,

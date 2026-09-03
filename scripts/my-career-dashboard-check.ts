@@ -1,30 +1,37 @@
-// /my-career — the candidate dashboard's shape.
+// /my-career — the candidate home's shape.
 //
 // ── WHAT THIS DEFENDS ──────────────────────────────────────────────────
 //
-// The dashboard was redesigned around the Passport, jobs and the career
-// profile. Three of the properties that redesign depended on are invisible in
-// the code unless you go looking, and every one of them is a single class or
-// a single component swap away from silently coming back:
+// The home was restructured around ONE most-important next step. Several
+// of the properties that restructure depends on are invisible in the code
+// unless you go looking, and every one of them is a single class or a
+// single component swap away from silently coming back:
 //
 //   1. A COMPLETED Career Discovery report must still be reachable. This is
 //      the hard regression rule: the report is the most valuable thing a
 //      candidate owns on this page and no layout change may cost them access
 //      to it, or to the history behind it.
 //
-//   2. The Career Profile EDITOR must not be expanded on the dashboard. It
+//   2. The Career Profile EDITOR must not be expanded on a dashboard. It
 //      used to be, and because CSS grid items stretch to the tallest sibling
-//      it dragged the Passport and Jobs cards to the editor's height — the
-//      large empty panels the redesign removed. `items-start` and the dialog
-//      are jointly load-bearing; losing either brings the holes back.
+//      it dragged every neighbouring card to the editor's height.
 //
-//   3. Role navigation must stay a question about DATA, never a role literal
-//      in the client. A candidate must never see the reviewer queue.
+//   3. No product panel may stretch to a sibling's height, and the route
+//      itself hosts no product grid at all: the sections are components,
+//      each as tall as what it contains.
+//
+//   4. Sections that are irrelevant self-hide rather than standing empty.
+//
+//   5. Role navigation must stay a question about DATA, never a role literal
+//      in the client -- and a candidate's home must never carry a reviewer
+//      surface: the reviewer view is reached from the account menu.
+//
+//   6. Account chrome belongs to the header, not to the dashboard.
 //
 // Plain TS run with Bun, matching this repository's scripts/*-check.ts
 // convention.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 
 const errors: string[] = [];
@@ -46,80 +53,80 @@ function code(src: string): string {
 
 const routePath = "src/routes/_authenticated.my-career.index.tsx";
 const cardPath = "src/components/assessment/SecurityCareerProfileCard.tsx";
-const academyPath = "src/components/academy/MyAcademyWorkCard.tsx";
+const snapshotPath = "src/components/professional-identity/CareerSnapshot.tsx";
+const workspacePath = "src/components/professional-identity/NextActions.tsx";
+const modelPath = "src/lib/professional-identity/home-presentation.ts";
 const headerPath = "src/components/site/SiteHeader.tsx";
 
 const route = read(routePath);
 const routeCode = code(route);
 const card = read(cardPath);
 const cardCode = code(card);
-const academy = code(read(academyPath));
+const snapshot = code(read(snapshotPath));
+const workspace = code(read(workspacePath));
+const model = code(read(modelPath));
 const header = code(read(headerPath));
 
 // ---------------------------------------------------------------------------
 // 1. A completed Career Discovery report stays reachable
 // ---------------------------------------------------------------------------
-// Each stored report contract reaches its own renderer. A contract that loses
-// its renderer does not error — it renders nothing, and the candidate simply
-// stops seeing a report they completed.
-for (const [kind, renderer] of [
-  ["discovery_v3_0", "DiscoveryCareerSummary"],
-  ["discovery_v3_1", "DiscoveryV31Pending"],
-  ["discovery_unreadable", "DiscoveryReportUnreadable"],
-] as const) {
+// Each stored report contract reaches a named state on the Career Analysis
+// card. A contract that loses its branch does not error — it renders
+// nothing, and the candidate simply stops seeing a report they completed.
+for (const kind of ["discovery_v3_0", "discovery_v3_1", "discovery_unreadable"] as const) {
   expect(
-    routeCode.includes(kind) && routeCode.includes(renderer),
-    `${routePath}: the ${kind} report contract must still reach ${renderer}. ` +
-      "A contract without a renderer costs the candidate a report they completed.",
+    routeCode.includes(kind),
+    `${routePath}: the ${kind} report contract must still be resolved to a card state. ` +
+      "A contract without a branch costs the candidate a report they completed.",
   );
 }
-
-// The renderers must actually offer the report and the history.
-const summary = code(read("src/components/career-discovery/DiscoveryCareerSummary.tsx"));
-const states = code(read("src/components/career-discovery/DiscoveryReportStates.tsx"));
 expect(
-  summary.includes('to="/security-career-assessment/report/$snapshotId"') ||
-    states.includes('to="/security-career-assessment/report/$snapshotId"'),
-  "Career Discovery: a completed report must be openable from the dashboard.",
+  routeCode.includes("/security-career-assessment/report/${activeQ.data.snapshotId}"),
+  `${routePath}: a completed v3 report must be openable from the home.`,
 );
 expect(
-  summary.includes('to="/security-career-assessment/history"') &&
-    states.includes('to="/security-career-assessment/history"'),
-  "Career Discovery: report history must stay reachable from the dashboard.",
+  /kind: "unreadable"/.test(routeCode) && snapshot.includes('analysis.kind === "unreadable"'),
+  `${snapshotPath}: a v3 report this build cannot read must be stated as unreadable, ` +
+    "never degraded into 'no report'.",
 );
-// Legacy runs keep their own history list on the route.
+expect(
+  snapshot.includes('to="/security-career-assessment/history"'),
+  `${snapshotPath}: report history must stay reachable from the home.`,
+);
+// Legacy runs keep their own history list on the route, and the legacy
+// report keeps its own link.
 expect(
   routeCode.includes("ReportHistoryList"),
-  `${routePath}: the legacy report history list must stay on the dashboard.`,
+  `${routePath}: the legacy report history list must stay on the home.`,
 );
-// The no-report state is a real empty state, not a missing branch.
 expect(
-  /\{noAssessment && \(/.test(routeCode),
-  `${routePath}: the dashboard must render an explicit no-report state.`,
+  routeCode.includes("/my-career/reports/${legacyRun.id}"),
+  `${routePath}: a legacy report must stay openable from the home.`,
+);
+// The no-report state is a real state, not a missing branch, and it carries
+// the gate's answer so the card can say why the test is closed.
+expect(
+  /kind: "none", closed: assessmentClosed/.test(routeCode),
+  `${routePath}: the home must resolve an explicit no-report state carrying the gate.`,
 );
 
 // ---------------------------------------------------------------------------
-// 2. The Career Profile editor is not expanded on the dashboard
+// 2. The Career Profile editor is not expanded on a dashboard
 // ---------------------------------------------------------------------------
 // `<Dialog ` with its open binding — NOT a bare "<Dialog" substring, which
-// `<DialogContent` also satisfies. A mutation that swapped the Dialog root for
-// a plain <div> and left DialogContent behind passed the looser check while
-// putting the questionnaire straight back on the page.
+// `<DialogContent` also satisfies.
 const dialogRoot = /<Dialog\s+open=\{/.exec(cardCode);
 expect(
   dialogRoot !== null && cardCode.includes("SecurityCareerProfileForm"),
   `${cardPath}: the editor must live in a real <Dialog open={...}> root, not ` +
     "inline on the dashboard.",
 );
-// The form must be INSIDE the dialog. Rendering it in both places would pass
-// the check above while putting the questionnaire straight back on the page.
 const dialogIdx = dialogRoot ? dialogRoot.index : -1;
 const formIdx = cardCode.indexOf("<SecurityCareerProfileForm");
 expect(
   dialogIdx !== -1 && formIdx > dialogIdx,
   `${cardPath}: the profile form must render inside the dialog, not above it.`,
 );
-// The default view is a summary of what the holder already told us.
 expect(
   /sca\.scp\.summary\.(status|profession|experience)/.test(cardCode),
   `${cardPath}: the default state must summarise the stored profile.`,
@@ -128,17 +135,17 @@ expect(
   cardCode.includes("sca.scp.summary.empty"),
   `${cardPath}: a profile with nothing filled in needs a real empty state.`,
 );
-// No completeness score computed HERE. There is a governed definition now --
-// src/lib/professional-identity/completeness.ts, versioned, weighted to
-// exactly 100 and asserted by scripts/professional-identity-check.ts -- and
-// it is rendered by the identity header. What must never come back is this
-// card growing a second, inline one: two percentages for one profile, and
-// the one nobody versioned is the one that drifts.
+// No completeness score computed HERE. The governed one lives in
+// professional-identity/completeness.ts; the home states "Grundprofil
+// komplett" from it and never a percentage.
 expect(
   !/completion|percentComplete|profileScore|\bcompleteness\b/i.test(cardCode),
-  `${cardPath}: no profile-completion score may be computed here — the ` +
-    "governed one lives in professional-identity/completeness.ts and is " +
-    "rendered by the identity header.",
+  `${cardPath}: no profile-completion score may be computed here.`,
+);
+expect(
+  !/% ifyllt|% filled in/.test(routeCode + workspace + snapshot),
+  `${routePath}: the home must not print a profile percentage — "Grundprofil komplett" is the only ` +
+    "completion statement it makes.",
 );
 // The Career Profile / Security Passport boundary survives the redesign.
 expect(
@@ -147,40 +154,80 @@ expect(
 );
 
 // ---------------------------------------------------------------------------
-// 3. The product rows do not stretch
+// 3. Nothing stretches, and the route hosts no product grid
 // ---------------------------------------------------------------------------
-// This is what turned one tall card into three tall cards.
-const gridMatches = [...routeCode.matchAll(/className=\{?"[^"]*\bgrid\b[^"]*"/g)].map((m) => m[0]);
-const productGrids = gridMatches.filter((g) => /lg:grid-cols/.test(g));
-expect(productGrids.length > 0, `${routePath}: expected the dashboard product grids.`);
-for (const g of productGrids) {
+// Grid items stretch to the tallest sibling by default, which is where the
+// old dashboard's empty panels came from. The workspace grid pins
+// items-start; the route itself composes sections and owns no grid.
+const workspaceGrids = [...workspace.matchAll(/className=\{?[^}]*\bgrid\b[^}]*\}?/g)].map(
+  (m) => m[0],
+);
+expect(
+  workspaceGrids.some((g) => /lg:grid-cols-12/.test(g) && /items-start/.test(g)),
+  `${workspacePath}: the priority workspace grid must set items-start on its 12-column row.`,
+);
+expect(
+  !/lg:grid-cols/.test(routeCode),
+  `${routePath}: the route must not host a product grid — the sections are components.`,
+);
+
+// ---------------------------------------------------------------------------
+// 4. Sections self-hide when they are irrelevant
+// ---------------------------------------------------------------------------
+for (const [file, guard] of [
+  [
+    "src/components/professional-identity/ActiveWork.tsx",
+    /if \(items\.length === 0 && !children\) return null;/,
+  ],
+  [
+    "src/components/professional-identity/RecentActivity.tsx",
+    /if \(activity\.items\.length === 0 && !activity\.partial\) return null;/,
+  ],
+  [
+    "src/components/professional-identity/ExploreAndGrow.tsx",
+    /if \(items\.length === 0 && !children\) return null;/,
+  ],
+] as const) {
   expect(
-    /items-start/.test(g),
-    `${routePath}: every product grid must set items-start. Grid items stretch ` +
-      `to the tallest sibling by default, which is where the dashboard's empty ` +
-      `panels came from. Offending grid: ${g.slice(0, 90)}`,
+    guard.test(code(read(file))),
+    `${file}: an empty section must render nothing — an empty panel on a career home reads ` +
+      "as a broken product.",
+  );
+}
+expect(
+  /presentation\.showJourney && \(/.test(routeCode),
+  `${routePath}: the onboarding journey renders only for an account that has not started.`,
+);
+expect(
+  /linkableTasks\.length > 0 && \(/.test(routeCode),
+  `${routePath}: the link-an-earlier-result strip renders only when there is something to link.`,
+);
+// The retired cards must not come back as mounted surfaces.
+for (const retired of [
+  "src/components/academy/MyAcademyWorkCard.tsx",
+  "src/components/academy/MyReviewQueueCard.tsx",
+  "src/components/security-passport/PassportSummaryCard.tsx",
+]) {
+  expect(
+    !existsSync(path.join(root, retired)),
+    `${retired}: retired — its facts are owned by the presentation model now. A second ` +
+      "surface for the same status is the duplication the home was rebuilt to remove.",
   );
 }
 
 // ---------------------------------------------------------------------------
-// 4. Employer tasks appear only when there is one
-// ---------------------------------------------------------------------------
-expect(
-  /hasEmployerTask\s*=/.test(routeCode) && /\{hasEmployerTask && \(/.test(routeCode),
-  `${routePath}: the tasks area must render only when a task exists — an ` +
-    "empty assessment block on a career dashboard reads as a broken product.",
-);
-
-// ---------------------------------------------------------------------------
 // 5. Assessment wording is purpose-aware
 // ---------------------------------------------------------------------------
-// The card can hold a recruitment assessment and a competence-development one
-// at the same time, so it must not state one purpose for all of them.
+// The primary card can announce a recruitment assessment or a competence-
+// development one, so it must state the row's own governed purpose rather
+// than one purpose for all of them.
 expect(
-  /purposeEn|purposeSv/.test(academy),
-  `${academyPath}: each assessment must name its own governed purpose. The ` +
-    "card used to hardcode competence development, which mislabelled every " +
-    "recruitment assessment on the page.",
+  /purposeSv: row\.purposeSv/.test(model) && /purposeEn: row\.purposeEn/.test(model),
+  `${modelPath}: the primary card's metadata must carry the attempt's own governed purpose.`,
+);
+expect(
+  /primary\.meta\.purposeSv/.test(workspace) && /primary\.meta\.purposeEn/.test(workspace),
+  `${workspacePath}: the primary card must state the attempt's own purpose, per attempt.`,
 );
 {
   const dict = read("src/i18n/dictionaries.ts");
@@ -193,12 +240,8 @@ expect(
 }
 
 // ---------------------------------------------------------------------------
-// 6. Role navigation is decided by data, not by a role literal
+// 6. Role navigation is decided by data, and the home stays personal
 // ---------------------------------------------------------------------------
-// The review queue is a security-invoker read: a non-reviewer gets zero rows
-// and the entry never renders. That is the gate. A client-side role string
-// would be a second copy of the capability rule, free to drift from the one
-// the database enforces.
 expect(
   header.includes("countMyReviewQueue") && /reviewCount > 0/.test(header),
   `${headerPath}: the reviewer entry must be gated on the review-queue count, ` +
@@ -210,20 +253,23 @@ expect(
     "literal — the database capability is the only gate.",
 );
 expect(
-  routeCode.includes("MyReviewQueueCard"),
-  `${routePath}: the self-hiding reviewer queue card must stay on the page.`,
+  !/MyReviewQueueCard|\/reviews|listReviewQueue|countMyReviewQueue/.test(routeCode),
+  `${routePath}: the candidate home carries no reviewer surface — the reviewer view is ` +
+    "reached from the account menu's workspace switch.",
+);
+const accountMenu = code(read("src/components/site/AccountMenu.tsx"));
+expect(
+  /identity\.reviewQueueCount > 0 && \(/.test(accountMenu) && accountMenu.includes('to="/reviews"'),
+  "AccountMenu must expose the reviewer view, gated on the queue the database returned.",
+);
+expect(
+  /reviewQueueCount: reviewCount/.test(header),
+  `${headerPath}: the header hands the queue count to the account menu.`,
 );
 
 // ---------------------------------------------------------------------------
 // 7. Account chrome belongs to the header, not to the dashboard
 // ---------------------------------------------------------------------------
-// /my-career used to end on a strip carrying the whole product's account
-// controls — name, email, workspace switch, sign out — because until the
-// header had an account menu there was nowhere else to sign out. It read as an
-// unfinished footer on an otherwise finished dashboard.
-const accountMenu = code(read("src/components/site/AccountMenu.tsx"));
-
-// The dashboard no longer signs anyone out or renders identity chrome.
 expect(
   !/supabase\.auth\.signOut/.test(routeCode),
   `${routePath}: sign-out belongs to the header account menu, not to a page.`,
@@ -234,32 +280,24 @@ expect(
 );
 expect(
   !/employer\.workspace\.label|account\.context\.switchTo/.test(routeCode),
-  `${routePath}: the context switch belongs to the account menu — a second ` +
+  `${routePath}: the workspace switch belongs to the account menu — a second ` +
     "copy on the dashboard is the duplicate this cleanup removed.",
 );
-
-// The header genuinely provides all three, so nothing was merely deleted.
 expect(
   /supabase\.auth\.signOut/.test(header) && accountMenu.includes("account.signOut"),
-  `${headerPath}: the header must own sign-out. Removing the dashboard row ` +
-    "without this would leave the product with no way to sign out at all.",
+  `${headerPath}: the header must own sign-out.`,
 );
-// The account menu is now the CONTEXT SWITCHER, and each organisation is
-// named. "Arbetsgivaryta" told somebody who belongs to two organisations
-// nothing about which one it would open, so the generic label is gone and
-// the list is rendered from the rows themselves.
+// The account menu is the WORKSPACE SWITCHER, and each organisation is named
+// and typed: "PT-M AB – Arbetsgivare".
 expect(
-  /identity\.workspaces\.map\(/.test(accountMenu) && accountMenu.includes("employerName"),
-  "AccountMenu must list each organisation the person belongs to BY NAME — a " +
-    "single generic 'employer workspace' entry cannot say which workspace it " +
-    "opens for somebody who holds two.",
+  /identity\.workspaces\.map\(/.test(accountMenu) &&
+    accountMenu.includes("employerName") &&
+    accountMenu.includes("account.context.employer"),
+  "AccountMenu must list each organisation the person belongs to BY NAME and as an employer.",
 );
-
-// Gated on DATA — active memberships the database returned — never on a
-// client-side role string, which would be a second copy of the rule.
 expect(
   /identity\.workspaces\.length > 0 && \(/.test(accountMenu),
-  "AccountMenu: the context switch must be conditional on the database having " +
+  "AccountMenu: the organisation list must be conditional on the database having " +
     "returned at least one workspace.",
 );
 expect(
@@ -271,19 +309,11 @@ expect(
   !/isEmployer|hasEmployerRole|role === "employer"/.test(header + accountMenu),
   "Employer access must not be inferred from a client-side role literal.",
 );
-
-// The switcher must never gain a second copy of the access rule. It changes
-// the ROUTE; /employer/$employerSlug re-verifies membership itself.
 expect(
-  !/employer_memberships|has_employer_role|employer_is_active_status/.test(
-    header + accountMenu,
-  ),
-  "The context switcher must not reimplement the membership rule in the " +
+  !/employer_memberships|has_employer_role|employer_is_active_status/.test(header + accountMenu),
+  "The workspace switcher must not reimplement the membership rule in the " +
     "client — it lists what RLS returned and changes a route, nothing more.",
 );
-
-// One switcher, not several: exactly the two account surfaces (the desktop
-// dropdown and the mobile sheet), and never a third copy on the dashboard.
 {
   const surfaces = [
     ["SiteHeader", header],
@@ -296,7 +326,7 @@ expect(
   );
   expect(
     total === 2,
-    `the context switcher must render on exactly the two account surfaces ` +
+    `the workspace switcher must render on exactly the two account surfaces ` +
       `(desktop menu + mobile sheet), found ${total} use(s) of ` +
       "account.context.switchTo across the header, the menu and the dashboard.",
   );
@@ -313,11 +343,11 @@ if (errors.length > 0) {
 
 console.log(
   "my-career-dashboard:check OK " +
-    "(every report contract reaches its renderer; a completed report and the " +
+    "(every report contract reaches a card state; a completed report and the " +
     "history stay openable; the profile editor is behind a dialog with a real " +
-    "summary and no invented score; product grids do not stretch; tasks render " +
-    "only when one exists; assessment wording is purpose-aware; reviewer " +
-    "navigation is gated on the queue, not a role literal; account chrome " +
-    "lives in the header, with the workspace switch gated on holding one and " +
-    "rendered exactly once per viewport)",
+    "summary and no percentage; nothing stretches and the route hosts no grid; " +
+    "empty sections render nothing; assessment wording is purpose-aware; the home " +
+    "carries no reviewer surface and the reviewer view is gated on the queue; " +
+    "account chrome lives in the header, with the workspace switch rendered " +
+    "exactly once per viewport)",
 );

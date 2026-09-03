@@ -80,6 +80,7 @@ import {
 import {
   professionLabel,
   type ProfessionalIdentityV1,
+  isVerifiedClaim,
 } from "../src/lib/professional-identity/types";
 import { readProfessionalIdentity } from "../src/lib/professional-identity/identity.functions";
 // The Passport owns how a jurisdiction is written. Asserting the seam's
@@ -156,6 +157,7 @@ const EMPTY: ProfessionalIdentityV1 = {
     assessmentAssignmentCount: 0,
     releasedReportCount: 0,
     releasedReportAttemptId: null,
+    assessmentAssignmentAttemptId: null,
     employerWorkspaceCount: 0,
   },
   unavailable: [],
@@ -492,6 +494,8 @@ console.log("\n2 · next best action");
         applicationCount: 0,
         assessmentAssignmentCount: 1,
         releasedReportCount: 1,
+        releasedReportAttemptId: null,
+        assessmentAssignmentAttemptId: null,
         employerWorkspaceCount: 0,
       },
     }),
@@ -803,7 +807,7 @@ console.log("\n2c · the /my-career surfaces");
   const profilePage = read("src/routes/_authenticated.my-career.profile.tsx");
   const dashboard = read("src/routes/_authenticated.my-career.index.tsx");
   const profileCard = read("src/components/assessment/SecurityCareerProfileCard.tsx");
-  const passportCard = read("src/components/security-passport/PassportSummaryCard.tsx");
+  const snapshotModel = read("src/lib/professional-identity/home-presentation.ts");
   const seam = read("src/lib/professional-identity/identity.functions.ts");
 
   // ── B3 · no audited heading may fall back to the stored slug ───────
@@ -836,17 +840,18 @@ console.log("\n2c · the /my-career surfaces");
   // the identity header counts. Two cells reading 3 and 0 under the same word
   // "Verifierade" was the contradiction; the jurisdiction split stays, said
   // in its own separately labelled sentence.
+  // The home's Passport figure comes from the ONE trust summariser -- verified
+  // claims AND verified employment -- so it can never contradict the journey
+  // strip or the Career Card, which count from the same function. The
+  // jurisdiction-relevance split stays on the Passport itself.
   ck(
-    "the Passport card's verified total counts every claim",
-    /const verified = claims\.filter/.test(passportCard),
+    "the home's verified figure is counted by summariseTrust",
+    /verified: trust\.known \? trust\.verifiedClaims \+ trust\.verifiedEmployment/.test(snapshotModel),
   );
   ck(
-    "and jurisdiction relevance is stated separately, not under the same label",
-    passportCard.includes("verifiedHere") &&
-      passportCard.includes("home.passport.relevantVerified") &&
-      passportCard.includes("home.passport.verifiedTotal"),
+    "the relevance split itself is unchanged",
+    read("src/lib/security-passport/jurisdiction-relevance.ts").includes("splitByWorkLocation"),
   );
-  ck("the relevance split itself is unchanged", passportCard.includes("splitByWorkLocation"));
 
   // ── B4 · a save refreshes what reads it ────────────────────────────
   ck(
@@ -2429,17 +2434,23 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
   );
 
   {
-    // The Passport summary, the entry chip and the card state are the three
-    // places that were asking the wrong question.
-    const summarySrc = read("src/components/security-passport/PassportSummaryCard.tsx");
+    // The home's Passport pillar, the entry chip and the card state are the
+    // three places that were asking the wrong question. The pillar counts
+    // through summariseTrust, whose claim predicate is the lifecycle-aware
+    // isVerifiedClaim -- a revoked credential is not currently verified.
+    const pillarSrc = read("src/lib/professional-identity/home-presentation.ts");
+    const trustSrc = read("src/lib/professional-identity/trust-summary.ts");
     ck(
-      "11.24 the Passport summary counts CURRENTLY verified claims",
-      summarySrc.includes("claims.filter(isCurrentlyVerified)") &&
-        !/claims\.filter\(\(c\) => c\.assertionLevel === "verified"\)/.test(summarySrc),
+      "11.24 the home's Passport pillar counts CURRENTLY verified claims",
+      pillarSrc.includes("summariseTrust(identity)") &&
+        trustSrc.includes("identity.claims.filter(isVerifiedClaim)") &&
+        read("src/lib/professional-identity/types.ts").includes(
+          'claim.assertionLevel === "verified" && claim.lifecycleState === "active"',
+        ),
     );
     ck(
-      "11.25 and will not offer sharing on a revoked-only Passport",
-      summarySrc.includes("claims.some(isCurrentlyVerified)"),
+      "11.25 and a revoked-only Passport counts as nothing currently verified",
+      !isVerifiedClaim({ assertionLevel: "verified", lifecycleState: "revoked" }),
     );
 
     const chipSrc = read("src/components/security-passport/AssertionChip.tsx");
