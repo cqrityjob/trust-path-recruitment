@@ -29,14 +29,22 @@
 // else. Which link is drawn has never been the boundary and is not the
 // boundary now.
 
-/** The four destinations. Deliberately four.
+/** The five destinations. Deliberately five.
  *
- *  Career Card, My Profile and Career Analysis are NOT here: they belong
- *  inside My Career and the account menu respectively. Premium SaaS is
- *  not more navigation. */
+ *  Career Card, My Profile, the CV and Career Analysis are NOT here: they
+ *  belong inside the overview and the account menu respectively. Premium
+ *  SaaS is not more navigation. Reviewing is not here either: it is a
+ *  separate authorised capability, reached from the account menu's
+ *  workspace switch, and giving it equal billing beside the candidate's
+ *  own products would say otherwise. */
 import type { TranslationKey } from "@/i18n/dictionaries";
 
-export type CandidateNavKey = "myCareer" | "jobs" | "passport" | "assessments";
+export type CandidateNavKey =
+  | "myCareer"
+  | "exploreProfessions"
+  | "jobs"
+  | "passport"
+  | "assessments";
 
 export type CandidateNavItem = {
   readonly key: CandidateNavKey;
@@ -63,7 +71,9 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
   {
     key: "myCareer",
     to: "/my-career",
-    labelKey: "nav.my_career",
+    // "Översikt": the page. "Min karriär" is the WORKSPACE, and is what the
+    // account menu's context switch calls it.
+    labelKey: "nav.overview",
     // Career Discovery, the Career Journey and the saved Career Analysis
     // are all reached from here and all belong to it in the information
     // architecture, so they keep My Career lit rather than lighting
@@ -76,6 +86,17 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
       "/security-career-assessment",
       "/discovery",
     ],
+  },
+  {
+    key: "exploreProfessions",
+    to: "/career-center",
+    labelKey: "nav.exploreProfessions",
+    // The profession explorer is a candidate tool as much as a public page:
+    // "which security roles exist and what do they require" is the question
+    // Career Discovery answers for one person, asked about all of them. It
+    // carries the app chrome for somebody signed in and stays the website's
+    // page for everybody else -- the same route, two chromes, no copy.
+    routeIds: ["/career-center"],
   },
   {
     key: "jobs",

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useMatches } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Menu, X, ShieldCheck, Building2, LogOut, UserPen } from "lucide-react";
+import { Menu, X, ShieldCheck, Building2, Gavel, LogOut, UserPen, UserRound } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
@@ -30,7 +30,7 @@ const MENU_SURFACE =
   "max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border bg-background";
 
 export function SiteHeader() {
-  const { t } = useT();
+  const { t, tp } = useT();
   const location = useLocation();
   const [open, setOpen] = useState(false);
   // Sticky-header depth, added only once the page has actually moved.
@@ -226,14 +226,11 @@ export function SiteHeader() {
    *  re-verifies membership itself. */
   const employerMatch = /^\/employer\/([^/]+)/.exec(location.pathname);
   const currentContext: AccountIdentity["currentContext"] =
-    employerMatch && employerMatch[1] ? { employerSlug: employerMatch[1] } : "personal";
-
-  const identity: AccountIdentity = {
-    name: account.name,
-    email: account.email,
-    workspaces: myWorkspaces,
-    currentContext,
-  };
+    employerMatch && employerMatch[1]
+      ? { employerSlug: employerMatch[1] }
+      : /^\/reviews(\/|$)/.test(location.pathname)
+        ? "reviewer"
+        : "personal";
 
   async function onSignOut() {
     await supabase.auth.signOut();
@@ -247,27 +244,36 @@ export function SiteHeader() {
   // whose only run is submitted and awaiting review is not being asked for
   // anything, and a badge would say otherwise.
   //
-  // In the candidate workspace /academy is no longer a pill at all: it is
-  // "Bedömningar", a standing primary-nav destination, present whether or
-  // not anything is waiting. A destination that appears only once work
-  // arrives is a destination nobody can learn. The COUNT still behaves
-  // exactly as before — it rides on the nav item instead of the pill, and
-  // still only when something is genuinely being asked of somebody.
+  // ── WHERE THE ROLE ENTRIES WENT ─────────────────────────────────────
   //
-  // /reviews stays a pill in both chromes on purpose. Reviewing responses
-  // is a separate authorised capability, not part of the candidate's four
-  // products, and giving it equal billing in the primary nav would say
-  // otherwise. It remains gated on the queue itself.
-  const roleLinks: { to: "/academy" | "/reviews"; label: string; count: number | null }[] = [];
+  // /academy used to be a pill here; inside the candidate workspace it is
+  // "Bedömningar", a standing primary-nav destination, and the COUNT rides
+  // on that item -- still only when something is genuinely being asked.
+  //
+  // /reviews used to be a pill too: "Granskningar · 34", in the primary
+  // navigation of the candidate's own workspace. Reviewing responses is a
+  // separate authorised capability, and giving it equal billing beside
+  // somebody's own career said the opposite of what the product means. It
+  // is reached from the account menu's workspace switch now, on both
+  // viewports, and stays gated on the queue itself: `reviewCount > 0` is
+  // decided by a security-invoker read, never by a role literal here.
+  const identity: AccountIdentity = {
+    name: account.name,
+    email: account.email,
+    workspaces: myWorkspaces,
+    reviewQueueCount: reviewCount,
+    currentContext,
+  };
+  // The public-site chrome keeps the academy pill for somebody signed in
+  // and reading the website, so an employer's invitation is findable from
+  // any page.
+  const roleLinks: { to: "/academy"; label: string; count: number | null }[] = [];
   if (!appMode && academyTotal > 0) {
     roleLinks.push({
       to: "/academy",
       label: t("nav.myAssessments"),
       count: academyActionable > 0 ? academyActionable : null,
     });
-  }
-  if (reviewCount > 0) {
-    roleLinks.push({ to: "/reviews", label: t("nav.reviews"), count: reviewCount });
   }
 
   /** The badge for one app-nav item, or null. Only "this is waiting for
@@ -620,11 +626,20 @@ export function SiteHeader() {
                 <p className="truncate px-2 text-xs text-muted-foreground">{identity.email}</p>
               )}
 
+              <p className="mt-3 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {t("account.context.switchTo")}
+              </p>
+              <Link
+                to="/my-career"
+                onClick={() => setOpen(false)}
+                data-workspace="personal"
+                className="mt-1 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                <UserRound className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate">{t("account.context.personal")}</span>
+              </Link>
               {hasEmployerWorkspace && (
                 <>
-                  <p className="mt-3 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {t("account.context.switchTo")}
-                  </p>
                   {/* Same rule as the desktop menu, and it has to be the
                       same rule: an organisation that is discoverable on a
                       laptop and invisible on a phone is still a registrant
@@ -637,7 +652,9 @@ export function SiteHeader() {
                     const inner = (
                       <>
                         <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        <span className="min-w-0 flex-1 truncate">{workspace.employerName}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {workspace.employerName} – {t("account.context.employer")}
+                        </span>
                         {statusKey && (
                           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                             {t(statusKey)}
@@ -650,6 +667,7 @@ export function SiteHeader() {
                         key={workspace.employerSlug}
                         to="/employer/pending"
                         onClick={() => setOpen(false)}
+                        data-workspace="employer"
                         className={rowClass}
                       >
                         {inner}
@@ -660,6 +678,7 @@ export function SiteHeader() {
                         to="/employer/$employerSlug"
                         params={{ employerSlug: workspace.employerSlug }}
                         onClick={() => setOpen(false)}
+                        data-workspace="employer"
                         className={rowClass}
                       >
                         {inner}
@@ -667,6 +686,24 @@ export function SiteHeader() {
                     );
                   })}
                 </>
+              )}
+
+              {/* The reviewer view, only for somebody with a queue. Same gate
+                  as the desktop menu: the queue read, never a role literal. */}
+              {reviewCount > 0 && (
+                <Link
+                  to="/reviews"
+                  onClick={() => setOpen(false)}
+                  data-workspace="reviewer"
+                  className="mt-1 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  <Gavel className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate">
+                    {t("account.context.reviewer")} ·{" "}
+                    <span className="tabular-nums">{reviewCount}</span>{" "}
+                    {tp("account.context.reviewerPending", reviewCount)}
+                  </span>
+                </Link>
               )}
 
               {/* Parity with the desktop menu. Account settings existed

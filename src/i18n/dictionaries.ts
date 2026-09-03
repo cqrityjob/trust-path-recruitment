@@ -24,6 +24,11 @@ export const dictionaries = {
     // name now, and the marketing item no longer follows anybody into
     // their workspace.
     "nav.my_career": "Min karriär",
+    // The candidate workspace's own first item. "Min karriär" names the
+    // WORKSPACE (the account menu's context switch); "Översikt" names the
+    // page inside it.
+    "nav.overview": "Översikt",
+    "nav.exploreProfessions": "Utforska yrken",
     "nav.passport": "Security Passport",
     "nav.myAssessments": "Bedömningar",
     "nav.reviews": "Granskningar",
@@ -1265,8 +1270,16 @@ export const dictionaries = {
     // The account menu is the context switcher. "Personligt" names the
     // context a person is in, not a kind of account: the same login is
     // also the recruiter's.
-    "account.context.personal": "Personligt",
-    "account.context.switchTo": "Byt till",
+    "account.context.personal": "Min karriär",
+    "account.context.switchTo": "Byt arbetsyta",
+    // Each organisation is named, and what it is: "PT-M AB – Arbetsgivare".
+    "account.context.employer": "Arbetsgivare",
+    // Reviewing is a separate authorised capability, reached from here and
+    // never from the candidate's primary navigation. The number is what is
+    // waiting for the person, not everything they ever reviewed.
+    "account.context.reviewer": "Granskarvy",
+    "account.context.reviewerPending.one": "att hantera",
+    "account.context.reviewerPending.other": "att hantera",
     "employer.loading": "Laddar…",
     "employer.comingSoon.heading": "Under utveckling",
     "employer.comingSoon.body": "Arbetsgivarytan är under utveckling och inte tillgänglig ännu.",
@@ -5524,6 +5537,8 @@ export const dictionaries = {
     "nav.createAccount": "Create account",
     "nav.signin.tooltip": "Coming soon",
     "nav.my_career": "My Career",
+    "nav.overview": "Overview",
+    "nav.exploreProfessions": "Explore professions",
     "nav.passport": "Security Passport",
     "nav.myAssessments": "Assessments",
     "nav.reviews": "Reviews",
@@ -6680,8 +6695,12 @@ export const dictionaries = {
     "account.signOut": "Sign out",
     "account.section": "Account",
     "account.settings": "My Profile",
-    "account.context.personal": "Personal",
-    "account.context.switchTo": "Switch to",
+    "account.context.personal": "My Career",
+    "account.context.switchTo": "Switch workspace",
+    "account.context.employer": "Employer",
+    "account.context.reviewer": "Reviewer view",
+    "account.context.reviewerPending.one": "to handle",
+    "account.context.reviewerPending.other": "to handle",
     "employer.loading": "Loading…",
     "employer.comingSoon.heading": "Under development",
     "employer.comingSoon.body":

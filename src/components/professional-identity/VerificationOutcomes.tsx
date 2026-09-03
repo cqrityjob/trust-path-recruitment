@@ -83,8 +83,11 @@ const COPY = {
     "Granskningen ledde inte till en verifiering.",
     "The review did not result in a verification.",
   ),
-  approved: c("Godkänt.", "Approved."),
-  awaitingReview: c("Inskickat och väntar på granskning.", "Submitted and awaiting review."),
+  approved: c("Uppgiften har verifierats.", "The entry has been verified."),
+  awaitingReview: c(
+    "Inskickat och granskas – inget krävs av dig.",
+    "Submitted and being reviewed – nothing needed from you.",
+  ),
 
   /** What the decider wrote for the holder, introduced so the quoted text is
    *  obviously theirs rather than the product's. */

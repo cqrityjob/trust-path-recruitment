@@ -33,10 +33,7 @@
 // with a verified mark next to it, and the way to make that impossible is
 // to make "verified" unrepresentable unless the Passport said so.
 
-import type {
-  CurrentStatus,
-  YearsOfExperience,
-} from "@/lib/security-career-profile/types";
+import type { CurrentStatus, YearsOfExperience } from "@/lib/security-career-profile/types";
 
 /** Where a displayed fact came from. See docs — DATA SEMANTICS. */
 export type SourceType =
@@ -135,6 +132,11 @@ export interface IdentityWorkload {
    *  document" -- see next-best-action.ts. Never anybody else's attempt: it
    *  comes from `scp_my_assessment_history`, which answers for the caller. */
   readonly releasedReportAttemptId: string | null;
+  /** The assessment attempt that is waiting on this person, when exactly one
+   *  can be named: the open assessment with the earliest deadline, then the
+   *  stable id. Null routes to the assessments area rather than to a run
+   *  this seam guessed at. Same rule as `releasedReportAttemptId`. */
+  readonly assessmentAssignmentAttemptId: string | null;
 }
 
 /* ------------------------------------------------------------------ */

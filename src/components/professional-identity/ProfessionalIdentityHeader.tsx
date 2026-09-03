@@ -65,7 +65,10 @@ import {
 // render it. `formatWorkLocation` keeps the emirate: a Dubai holder is not
 // "a UAE holder", and this header printed the bare code `AE` for both.
 import { formatWorkLocation } from "@/lib/security-passport/format";
+import { yearsOfExperienceOptions } from "@/lib/security-career-profile/options";
+import { SECTION_DESTINATIONS } from "@/lib/professional-identity/profile-destinations";
 import { c, L, Lf, type Lang } from "./copy";
+import { GREETING } from "./home-copy";
 
 const COPY = {
   welcome: c("Välkommen tillbaka, {0}", "Welcome back, {0}"),
@@ -97,14 +100,18 @@ const COPY = {
   trustVerifiedOne: c("1 uppgift", "1 credential"),
   trustVerifiedNone: c("Inget ännu", "Nothing yet"),
   trustPassportNone: c("Passet är inte öppnat", "Passport not opened"),
-  trustPending: c("{0} väntar på granskning", "{0} awaiting review"),
+  trustPending: c(
+    "{0} uppgifter granskas – inget krävs av dig",
+    "{0} entries being reviewed – nothing needed from you",
+  ),
 
   trustDiscovery: c("Karriärriktning", "Career direction"),
   trustDiscoveryDone: c("Utforskning genomförd", "Discovery completed"),
   trustDiscoveryNone: c("Ej genomförd", "Not taken"),
 
   trustProfile: c("Profil", "Profile"),
-  trustProfileFilled: c("{0} % ifyllt", "{0} % filled in"),
+  trustProfileFilled: c("{0} av {1} delar ifyllda", "{0} of {1} sections filled in"),
+  trustProfileComplete: c("Grundprofil komplett", "Basic profile complete"),
 
   verifiedMeaning: c(
     "Verifierat betyder att en behörig granskare har fattat ett beslut — inte att du har fyllt i något.",
@@ -160,11 +167,127 @@ function TrustFact({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* The compact greeting                                                */
+/* ------------------------------------------------------------------ */
+
+// ── WHY THERE IS A COMPACT VARIANT ─────────────────────────────────────
+//
+// The full hero -- a framed panel with the trust grid, the self-reported
+// note and the action row -- occupied most of the first screen and pushed
+// the one thing the page had decided about below the fold. The personal
+// home now opens with two lines and one identity row: who this is, in
+// their own words, and a way to the profile. What the platform has
+// established about them lives where it is actionable -- the Passport card,
+// the priority workspace -- and not in a second grid above them.
+//
+// Same data, same provenance rule: everything on this row is SELF-REPORTED
+// and says so in one short line, and "Grundprofil komplett" is a fact about
+// answered sections, never a percentage and never a judgement of quality.
+
+/** "10+ år" becomes "10+ års erfarenhet"; "10+ years" becomes "10+ years of
+ *  experience". The catalogue label is the input, never the stored band. */
+function experienceSentence(label: string, l: Lang): string {
+  if (l === "sv") return label.endsWith(" år") ? `${label}s erfarenhet` : `${label} erfarenhet`;
+  return /years?$/.test(label) ? `${label} of experience` : `${label} experience`;
+}
+
+function CompactGreeting({
+  identity,
+  profileComplete,
+  onRetry,
+}: {
+  identity: ProfessionalIdentityV1;
+  profileComplete: boolean;
+  onRetry?: () => void;
+}) {
+  const { lang } = useT();
+  const l = lang as Lang;
+  const degraded = identity.unavailable.length > 0;
+  const firstName = (identity.displayName ?? "").trim().split(/\s+/)[0] ?? "";
+  const profession = professionLabel(identity, l);
+  const location = identity.workCountry
+    ? formatWorkLocation(identity.workCountry, identity.workSubJurisdiction, l)
+    : identity.accountCountry
+      ? formatWorkLocation(identity.accountCountry, null, l)
+      : null;
+  // The experience BAND is a stored enum; it reaches the screen only through
+  // the catalogue the editor offers, never as the raw value.
+  const years = identity.yearsOfExperience
+    ? (yearsOfExperienceOptions.find((o) => o.id === identity.yearsOfExperience)?.label[l] ?? null)
+    : null;
+  const title = identity.headline ?? profession ?? L(GREETING.noTitle, l);
+  const row = [title, location, years ? experienceSentence(years, l) : null].filter(
+    (part): part is string => Boolean(part),
+  );
+
+  return (
+    <header data-identity-variant="compact">
+      <h1
+        className="text-2xl font-semibold tracking-tight text-balance text-foreground md:text-3xl"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        {firstName ? Lf(GREETING.welcome, l, firstName) : L(GREETING.welcomeAnon, l)}
+      </h1>
+      <p className="mt-1.5 text-base text-muted-foreground">{L(GREETING.lede, l)}</p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="text-sm font-medium text-foreground" data-identity-row>
+          {row.join(" · ")}
+        </p>
+        {profileComplete && (
+          <p className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-semibold text-accent">
+            <BadgeCheck className="h-3 w-3" aria-hidden="true" />
+            {L(GREETING.basicsComplete, l)}
+          </p>
+        )}
+      </div>
+
+      {degraded ? (
+        <div role="alert" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+            {L(GREETING.degraded, l)}
+          </span>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              {L(GREETING.retry, l)}
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        <Link
+          to="/my-career/profile"
+          className="inline-flex min-h-11 items-center gap-1 font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {L(GREETING.viewProfile, l)}
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+        <Link
+          to={SECTION_DESTINATIONS.profession.href}
+          className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {L(GREETING.editProfile, l)}
+        </Link>
+        <span className="text-xs text-muted-foreground">{L(GREETING.selfReported, l)}</span>
+      </div>
+    </header>
+  );
+}
+
 export function ProfessionalIdentityHeader({
   identity,
   /** Which page this hero is opening. `profile` names the page in the <h1>,
    *  because the profile route used to open with the dashboard's own hero and
-   *  was therefore indistinguishable from it above the fold. */
+   *  was therefore indistinguishable from it above the fold. `compact` is the
+   *  personal home's greeting: two lines and an identity row, no panel. */
   variant = "home",
   /** The profile page shows the same summary without offering itself as a
    *  destination. */
@@ -173,14 +296,24 @@ export function ProfessionalIdentityHeader({
    *  requirement is that a person who was told something failed can act on
    *  it without reloading the page. */
   onRetry,
+  /** Compact only: every basic section is answered. Said in words, never
+   *  as a percentage. */
+  profileComplete = false,
 }: {
   identity: ProfessionalIdentityV1;
-  variant?: "home" | "profile";
+  variant?: "home" | "profile" | "compact";
   showProfileLink?: boolean;
   onRetry?: () => void;
+  profileComplete?: boolean;
 }) {
   const { lang } = useT();
   const l = lang as Lang;
+
+  if (variant === "compact") {
+    return (
+      <CompactGreeting identity={identity} profileComplete={profileComplete} onRetry={onRetry} />
+    );
+  }
 
   // Which facts this render is entitled to state. See IdentityFactGroup.
   const passportKnown = !isUnavailable(identity, "passport") && !isUnavailable(identity, "claims");
@@ -335,7 +468,14 @@ export function ProfessionalIdentityHeader({
         <TrustFact
           label={L(COPY.trustProfile, l)}
           value={
-            degraded ? L(COPY.unreadable, l) : Lf(COPY.trustProfileFilled, l, completeness.score)
+            degraded
+              ? L(COPY.unreadable, l)
+              : completeness.missingSections.length === 0
+                ? L(COPY.trustProfileComplete, l)
+                : Lf(COPY.trustProfileFilled, l, completeness.completedSections.length).replace(
+                    "{1}",
+                    String(completeness.applicableSections.length),
+                  )
           }
           emphasis={!degraded && completeness.score > 0}
         />

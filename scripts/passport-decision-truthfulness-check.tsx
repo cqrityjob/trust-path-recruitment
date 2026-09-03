@@ -325,21 +325,29 @@ group("F2 -- a failed read is not an empty Passport");
 
   // ── And My Career already knows what to do with a rejection ───────
   // The reader can only tell the truth if its caller distinguishes an error
-  // from an empty result. This one does, and must keep doing so.
-  const career = code(read("src/routes/_authenticated.my-career.index.tsx"));
+  // from an empty result. The home's Passport pillar is built by the
+  // presentation model from the identity seam's own `unavailable` list, and
+  // renders "could not be read" -- never a count -- when the Passport or
+  // claims read did not answer.
+  const model = code(read("src/lib/professional-identity/home-presentation.ts"));
   ck(
-    "My Career passes the Passport query's error state to the card",
-    /isError=\{passportQ\.isError\}/.test(career),
+    "the home's Passport pillar is unavailable when the Passport or claims read failed",
+    /!known\("passport"\) \|\| !known\("claims"\)\s*\?\s*\{ state: "unavailable" \}/.test(model),
   );
-  const card = code(read("src/components/security-passport/PassportSummaryCard.tsx"));
+  ck(
+    "and when the trust summary could not be counted",
+    /!trust\.known \? \{ state: "unavailable" \}/.test(model),
+  );
+  const snapshot = code(read("src/components/professional-identity/CareerSnapshot.tsx"));
   ck(
     "and the card renders an unavailable state rather than counting to zero",
-    /isError \?/.test(card) && card.includes("home.passport.unavailable"),
+    /passport\.state === "unavailable"\s*\?\s*L\(SNAPSHOT\.unreadable, l\)/.test(snapshot),
   );
+  const homeCopy = read("src/components/professional-identity/home-copy.ts");
+  const unreadable = /unreadable: c\("([^"]+)", "([^"]+)"\)/.exec(homeCopy);
   ck(
     "the unavailable copy does not contain a credential count",
-    !/\b0\b/.test(passportT("home.passport.unavailable", "sv")) &&
-      !/\b0\b/.test(passportT("home.passport.unavailable", "en")),
+    Boolean(unreadable) && !/\b0\b/.test(unreadable![1]!) && !/\b0\b/.test(unreadable![2]!),
   );
 }
 

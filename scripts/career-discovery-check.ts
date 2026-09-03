@@ -1238,7 +1238,11 @@ expect(
 // ---------------------------------------------------------------------------
 
 const activeFns = read("src/lib/career-discovery/active-report.functions.ts");
-const dashboard = read("src/routes/_authenticated.my-career.index.tsx");
+// The dashboard is the route plus the Career Analysis card it renders: the
+// state is resolved in the route and drawn by CareerSnapshot.
+const dashboard =
+  read("src/routes/_authenticated.my-career.index.tsx") +
+  read("src/components/professional-identity/CareerSnapshot.tsx");
 const v3Summary = read("src/components/career-discovery/DiscoveryCareerSummary.tsx");
 
 // Selection happens ONCE, on the server, before render.
@@ -1445,22 +1449,28 @@ expect(
   "my-career: the unreadable branch must return BEFORE the legacy query is reached",
 );
 
-// 7. The route must send each contract to its own renderer, and must never send
-//    a v3.1 report into the v3.0 summary component.
+// 7. The route must resolve each contract to its own card state, and must
+//    never let a v3.1 report be treated as a v3.0 one or an unreadable one
+//    degrade into "no report". Both renderable v3 contracts open the report
+//    route by snapshot id; the unreadable one is its own named state.
 expect(
-  /kind === "discovery_v3_0"[\s\S]{0,400}<DiscoveryCareerSummary/.test(dashboard),
-  "my-career: DiscoveryCareerSummary must be reached only from the v3.0 discriminant",
+  /kind === "discovery_v3_0" \|\| activeQ\.data\?\.kind === "discovery_v3_1"[\s\S]{0,200}kind: "ready"/.test(
+    dashboard,
+  ),
+  "my-career: both renderable v3 contracts must resolve to the ready state, by discriminant",
 );
 expect(
-  /kind === "discovery_v3_1"[\s\S]{0,400}<DiscoveryV31Pending/.test(dashboard),
-  "my-career: a v3.1 report must reach the v3.1 state, not the v3.0 summary",
+  /kind: "ready",\s*href: `\/security-career-assessment\/report\/\$\{activeQ\.data\.snapshotId\}`/.test(
+    dashboard,
+  ),
+  "my-career: a v3 report must open the report route by its own snapshot id",
 );
 expect(
-  !/discovery_v3_1[\s\S]{0,300}<DiscoveryCareerSummary/.test(dashboard),
-  "my-career: a v3.1 report must never be passed to DiscoveryCareerSummary",
+  !/DiscoveryCareerSummary/.test(dashboard),
+  "my-career: the home no longer embeds the v3.0 summary -- the report is one click away",
 );
 expect(
-  /kind === "discovery_unreadable"[\s\S]{0,400}<DiscoveryReportUnreadable/.test(dashboard),
+  /kind === "discovery_unreadable"[\s\S]{0,200}kind: "unreadable"/.test(dashboard),
   "my-career: an unreadable report must reach its own explicit state",
 );
 

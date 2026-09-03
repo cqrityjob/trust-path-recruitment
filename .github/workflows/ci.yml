@@ -266,6 +266,16 @@ jobs:
       - name: My Career experience check
         run: bun run my-career-experience:check
 
+      # The premium overview: one primary action chosen by the deterministic
+      # ladder in the locked order (interview/deadline > reviewer's question
+      # > new report), "under review" classified as a status and never a
+      # task, a failed read never rendered as zero, one presentation owner
+      # per event, four destinations that resolve, the reviewer view kept out
+      # of the candidate's primary navigation, and sv/en parity -- all
+      # asserted against rendered markup and the presentation model.
+      - name: My Career premium overview check
+        run: bun run my-career-premium-overview:check
+
       # The professional identity engine. Every case is a mutation: hold one
       # credential, assert the title the product must NOT grant is absent. Two
       # are load-bearing — VU1 alone must never produce Väktare, and

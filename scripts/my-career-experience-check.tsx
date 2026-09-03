@@ -2,7 +2,7 @@
 //
 // ── WHAT THIS DEFENDS ──────────────────────────────────────────────────
 //
-// The dashboard had already ranked what somebody should do next and then
+// The home had already ranked what somebody should do next and then
 // declined to say so: the top three actions rendered as three identical
 // cards, each ending in the word "Continue". Every property that fixed it
 // is one careless edit from coming back, and none of them is visible to the
@@ -17,8 +17,8 @@
 //      it — a renderer that sorts by its own idea of importance is a second
 //      recommendation engine nobody versioned.
 //
-//   3. Everything else that qualified stays REACHABLE. Showing one action
-//      must not be implemented by discarding the rest.
+//   3. Everything else that qualified stays REACHABLE — as a secondary
+//      status beside the primary, or as a row under "Bygg vidare".
 //
 //   4. No CTA says merely "Continue"/"Fortsätt". A verb that does not name
 //      what it does is the one word that tells nobody anything.
@@ -26,14 +26,11 @@
 //   5. Career Discovery's gate still withholds the action it cannot honour.
 //
 //   6. The Career Card is offered with ONE verb across the whole page.
-//      The hero said "Visa karriärkort" while the action list said "Skapa
-//      ditt karriärkort", about the same single destination.
 //
 //   7. No raw slug or bare jurisdiction code reaches the rendered output.
 //
-//   8. /my-career/profile names itself. It used to mount the dashboard's
-//      hero unchanged and was indistinguishable from /my-career above the
-//      fold.
+//   8. /my-career/profile names itself, and the compact greeting on the
+//      home greets by first name with exactly one h1.
 //
 //   9. Sections that are irrelevant self-hide rather than standing empty.
 //
@@ -41,10 +38,9 @@
 //
 // Because every one of the above is a property of what a candidate SEES. A
 // rule that holds while the component renders nothing passes a source scan
-// and fixes nothing. Same approach and same constraint as
-// prepilot-candidate-surface-check: I18nProvider starts at "sv" on the
-// server, so Swedish is what is asserted from markup and the English half
-// is asserted from the copy tables directly.
+// and fixes nothing. I18nProvider starts at "sv" on the server, so Swedish
+// is what is asserted from markup and the English half is asserted from
+// the copy tables directly.
 //
 // Run: bun run my-career-experience:check
 
@@ -54,24 +50,21 @@ import { mock } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ProfessionalIdentityV1 } from "../src/lib/professional-identity/types";
+import type { HomePresentationInput } from "../src/lib/professional-identity/home-presentation";
 
 // ── WHY <Link> IS REPLACED BY <a> ──────────────────────────────────────
 //
 // These components are reached through TanStack Router's <Link>, which
 // needs a live router in context and does not render synchronously under
-// renderToStaticMarkup. Standing one up would put a router's loading
-// behaviour between this guard and the markup it is asserting on.
-//
-// The substitute renders the same element with the same resolved href, and
-// it is deliberately faithful about params: `/academy/report/$id` with
-// `{ id: "x" }` must come out as `/academy/report/x`, because "the primary
-// card points at the engine's href" is one of the properties being proven
-// and a stub that dropped params would prove it against a template.
-//
-// The mock has to be installed before the components are imported, which is
-// why they arrive by dynamic import below rather than at the top.
+// renderToStaticMarkup. The substitute renders the same element with the
+// same resolved href, faithfully about params.
 await mock.module("@tanstack/react-router", () => ({
-  Link: ({ to, params, children, ...rest }: Record<string, unknown> & { children?: React.ReactNode }) => {
+  Link: ({
+    to,
+    params,
+    children,
+    ...rest
+  }: Record<string, unknown> & { children?: React.ReactNode }) => {
     let href = String(to ?? "");
     if (params && typeof params === "object") {
       for (const [k, v] of Object.entries(params as Record<string, unknown>)) {
@@ -85,12 +78,18 @@ await mock.module("@tanstack/react-router", () => ({
 
 const { I18nProvider } = await import("../src/i18n/context");
 const { NextActions } = await import("../src/components/professional-identity/NextActions");
+const { ExploreAndGrow } = await import("../src/components/professional-identity/ExploreAndGrow");
+const { ActiveWork } = await import("../src/components/professional-identity/ActiveWork");
+const { RecentActivity } = await import("../src/components/professional-identity/RecentActivity");
 const { CareerJourney } = await import("../src/components/professional-identity/CareerJourney");
 const { ProfessionalIdentityHeader } = await import(
   "../src/components/professional-identity/ProfessionalIdentityHeader"
 );
 const { computeNextBestActions } = await import(
   "../src/lib/professional-identity/next-best-action"
+);
+const { buildHomePresentation } = await import(
+  "../src/lib/professional-identity/home-presentation"
 );
 
 const fails: string[] = [];
@@ -139,6 +138,7 @@ const EMPTY: ProfessionalIdentityV1 = {
     assessmentAssignmentCount: 0,
     releasedReportCount: 0,
     releasedReportAttemptId: null,
+    assessmentAssignmentAttemptId: null,
     employerWorkspaceCount: 0,
   },
   unavailable: [],
@@ -159,6 +159,9 @@ function claim(over: Partial<ProfessionalIdentityV1["claims"][number]> = {}) {
     skillLevel: null,
     assertionLevel: "self_declared",
     lifecycleState: "active",
+    verifierName: null,
+    verificationMethod: null,
+    verifiedOn: null,
     ...over,
   };
 }
@@ -180,10 +183,37 @@ const DUBAI = identity({
   discovery: { hasCompletedReport: true, snapshotId: "s1", generatedAt: "2026-01-01", namesCareers: true },
 });
 
+const NOW = new Date("2026-09-03T12:00:00Z");
+
+/** The presentation model with every optional read still loading — the
+ *  identity alone, which is what the engine ranked on before. */
+function model(id: ProfessionalIdentityV1, over: Partial<HomePresentationInput> = {}) {
+  return buildHomePresentation({
+    identity: id,
+    verificationAttention: null,
+    assignments: { state: "loading" },
+    interviews: { state: "loading" },
+    applications: { state: "loading" },
+    now: NOW,
+    ...over,
+  });
+}
+
 /** I18nProvider starts at "sv" on the server, so Swedish is what is
  *  rendered and therefore what is asserted. */
 function render(node: React.ReactElement): string {
   return renderToStaticMarkup(<I18nProvider>{node}</I18nProvider>);
+}
+
+/** The whole action surface for one state: the workspace plus the explore
+ *  section, which between them must carry every action the engine returned. */
+function renderActions(id: ProfessionalIdentityV1, over: Partial<HomePresentationInput> = {}) {
+  const m = model(id, over);
+  return {
+    m,
+    html:
+      render(<NextActions workspace={m.workspace} />) + render(<ExploreAndGrow items={m.explore} />),
+  };
 }
 
 /** Count non-overlapping occurrences. */
@@ -228,23 +258,24 @@ group("1 · exactly one primary next action");
   ];
 
   for (const [label, id] of cases) {
-    const html = render(<NextActions identity={id} />);
+    const { html } = renderActions(id);
     ck(`${label}: exactly one element is marked primary`, count(html, 'data-next-action="primary"') === 1);
+    ck(`${label}: exactly one primary call to action`, count(html, "data-primary-cta") === 1);
   }
 
   // The primary must BE the engine's top-ranked action — same href, so a
   // renderer that quietly promoted a different one is caught.
   for (const [label, id] of cases) {
-    const expected = computeNextBestActions(id).primary[0];
+    const { m, html } = renderActions(id);
+    const expected = computeNextBestActions(id, m.signals).all[0];
     if (!expected) {
-      ck(`${label}: no action, so no primary card`, !render(<NextActions identity={id} />).includes('data-next-action="primary"'));
+      ck(`${label}: no action, so no primary call to action`, !html.includes("data-primary-cta"));
       continue;
     }
-    const html = render(<NextActions identity={id} />);
     const primaryBlock = html.slice(html.indexOf('data-next-action="primary"'));
     ck(
       `${label}: the primary card links to the engine's top action (${expected.kind})`,
-      primaryBlock.includes(`href="${expected.href}"`),
+      primaryBlock.slice(0, primaryBlock.indexOf("</article>")).includes(`href="${expected.href}"`),
     );
   }
 
@@ -254,18 +285,24 @@ group("1 · exactly one primary next action");
       displayName: "A",
       hasPassport: true,
       claims: [claim()],
-      workload: { ...EMPTY.workload, assessmentAssignmentCount: 1, releasedReportCount: 1, releasedReportAttemptId: "a1" },
+      workload: {
+        ...EMPTY.workload,
+        assessmentAssignmentCount: 1,
+        releasedReportCount: 1,
+        releasedReportAttemptId: "a1",
+      },
     });
-    const engine = computeNextBestActions(many).primary;
-    const html = render(<NextActions identity={many} />);
+    const { m, html } = renderActions(many);
+    const engine = computeNextBestActions(many, m.signals).all;
     ck("more than one action qualified in this state", engine.length > 1);
     ck(
       "every qualifying action is still reachable by href",
       engine.every((a) => html.includes(`href="${a.href}"`)),
     );
     ck(
-      "and the ones that are not the recommendation are marked secondary",
-      count(html, 'data-next-action="secondary"') === engine.length - 1,
+      "and the ones that are not the recommendation are marked secondary or more",
+      count(html, 'data-next-action="secondary"') + count(html, 'data-next-action="more"') ===
+        engine.length - 1,
     );
   }
 }
@@ -276,15 +313,18 @@ group("1 · exactly one primary next action");
 
 group("2 · every call to action names what it does");
 {
-  const src = code(read("src/components/professional-identity/NextActions.tsx"));
+  const src = code(read("src/components/professional-identity/next-action-copy.ts"));
   // The generic verb, in both languages, as a rendered CTA string.
   ck('the renderer authors no "Fortsätt" CTA', !/c\("Fortsätt",\s*"Continue"\)/.test(src));
 
   // Every kind the engine can emit has a verb of its own.
-  const verbBlock = src.slice(src.indexOf("const VERB"), src.indexOf("const HEADING"));
+  const verbBlock = src.slice(src.indexOf("const VERB"), src.indexOf("const SECTION_TITLE"));
   for (const kind of [
     "complete_assessment_assignment",
+    "prepare_interview",
+    "respond_to_clarification",
     "read_released_report",
+    "review_verification_outcome",
     "complete_profile_basics",
     "start_passport",
     "submit_passport_verification",
@@ -298,10 +338,14 @@ group("2 · every call to action names what it does");
   }
 
   // And a reason, which is the half the three-card treatment had nowhere to
-  // put. A recommendation nobody can interrogate is an instruction.
-  const html = render(<NextActions identity={DUBAI} />);
-  const why = computeNextBestActions(DUBAI).primary[0];
-  ck("the recommendation states why it is being made", Boolean(why) && html.includes("Rekommenderat"));
+  // put. A recommendation nobody can interrogate is an instruction. The
+  // classification is said in words beside it.
+  const { html } = renderActions(DUBAI);
+  ck(
+    "the recommendation states what kind of thing it is",
+    /Förslag|Nytt för dig|Kräver din åtgärd/.test(html),
+  );
+  ck("and why it is being made", html.includes("1 uppgift är inlagd men ännu inte granskad."));
 }
 
 /* ------------------------------------------------------------------ */
@@ -310,9 +354,15 @@ group("2 · every call to action names what it does");
 
 group("3 · the Career Discovery gate reaches the rendering");
 {
-  const fresh = identity({ displayName: "A", hasPassport: true, headline: "H", currentProfessionSlug: "vaktare", currentProfessionTitleSv: "Väktare" });
-  const open = render(<NextActions identity={fresh} signals={{ careerDiscoveryOpen: true }} />);
-  const closed = render(<NextActions identity={fresh} signals={{ careerDiscoveryOpen: false }} />);
+  const fresh = identity({
+    displayName: "A",
+    hasPassport: true,
+    headline: "H",
+    currentProfessionSlug: "vaktare",
+    currentProfessionTitleSv: "Väktare",
+  });
+  const open = renderActions(fresh, { careerDiscoveryOpen: true }).html;
+  const closed = renderActions(fresh, { careerDiscoveryOpen: false }).html;
   ck("an admitted candidate is offered the assessment", open.includes('href="/security-career-assessment"'));
   ck(
     "a candidate the gate refuses is NOT offered it",
@@ -327,9 +377,10 @@ group("3 · the Career Discovery gate reaches the rendering");
 group("4 · one Career Card verb across the page");
 {
   const hero = render(<ProfessionalIdentityHeader identity={DUBAI} />);
-  const actions = render(<NextActions identity={DUBAI} />);
+  const actions = renderActions(DUBAI).html;
   const both = hero + actions;
   ck("the hero offers the card", hero.includes('href="/my-career/career-card"'));
+  ck("the workspace offers the card", actions.includes('href="/my-career/career-card"'));
   ck(
     'nothing on the page says "Skapa ditt karriärkort" about a card built from an existing report',
     !both.includes("Skapa ditt karriärkort"),
@@ -347,17 +398,19 @@ group("4 · one Career Card verb across the page");
 group("5 · no identifier reaches the screen");
 {
   const hero = render(<ProfessionalIdentityHeader identity={DUBAI} />);
+  const compact = render(<ProfessionalIdentityHeader identity={DUBAI} variant="compact" />);
   const journey = render(<CareerJourney identity={DUBAI} />);
-  const html = hero + journey;
+  const html = hero + compact + journey;
   ck("the stored profession slug is never printed", !html.includes("vaktare"));
   ck("the sub-jurisdiction code is never printed", !html.includes("AE-DU"));
   // ">AE<" rather than "AE": the string appears inside class names and hrefs.
   ck("the bare country code is never printed as a value", !/>\s*AE\s*</.test(html));
-  ck("the emirate is named", html.includes("Dubai"));
+  ck("the emirate is named", html.includes("Dubai") && compact.includes("Dubai"));
+  // The experience BAND is a stored enum. The compact greeting resolves it
+  // through the same catalogue the editor offers.
+  ck("the compact greeting never prints the stored experience band", !/5-10/.test(compact));
+  ck("and states the experience in words", compact.includes("5–10 års erfarenhet"));
 
-  // The experience BAND is a stored enum too. The profile page printed "1-3"
-  // straight from `years_of_experience` -- same class of leak as a slug, and
-  // invisible to a render check of the hero, which formats it correctly.
   const profilePage = code(read("src/routes/_authenticated.my-career.profile.tsx"));
   ck(
     "the profile page resolves the experience band through its catalogue",
@@ -381,8 +434,10 @@ group("6 · a read that did not answer says so");
     unavailable: ["claims", "passport", "applications"],
   });
   const hero = render(<ProfessionalIdentityHeader identity={broken} />);
+  const compact = render(<ProfessionalIdentityHeader identity={broken} variant="compact" />);
   const journey = render(<CareerJourney identity={broken} />);
   ck("the hero refuses to print a verified count", hero.includes("Kunde inte läsas"));
+  ck("the compact greeting says parts could not be read", compact.includes("kunde inte läsas"));
   ck("the journey refuses to print an application count", journey.includes("Kunde inte läsas"));
   ck(
     "and the completeness percentage is withheld rather than computed from a partial read",
@@ -397,30 +452,39 @@ group("6 · a read that did not answer says so");
 }
 
 /* ------------------------------------------------------------------ */
-/* 7 · The profile page names itself                                   */
+/* 7 · The profile page names itself; the home greets                  */
 /* ------------------------------------------------------------------ */
 
 group("7 · /my-career/profile is not /my-career");
 {
   const home = render(<ProfessionalIdentityHeader identity={DUBAI} />);
+  const compact = render(<ProfessionalIdentityHeader identity={DUBAI} variant="compact" />);
   const profile = render(<ProfessionalIdentityHeader identity={DUBAI} variant="profile" showProfileLink={false} />);
 
   ck("the profile hero carries the page name in its h1", /<h1[^>]*>Min profil<\/h1>/.test(profile));
   ck("the home hero does not", !/<h1[^>]*>Min profil<\/h1>/.test(home));
   ck("the home hero leads with the professional title", /<h1[^>]*>Säkerhetssamordnare<\/h1>/.test(home));
+  ck(
+    "the compact greeting greets by first name",
+    /<h1[^>]*>Välkommen tillbaka, Amina<\/h1>/.test(compact),
+  );
+  ck("and carries the professional title in the identity row", compact.includes("Säkerhetssamordnare"));
   ck("the profile page still shows the professional title", profile.includes("Säkerhetssamordnare"));
   ck("the profile page states its purpose", profile.includes("avsnitt för avsnitt"));
   ck("the profile page does not link to itself", !profile.includes('href="/my-career/profile"'));
   ck("the home hero does", home.includes('href="/my-career/profile"'));
+  ck("the compact greeting does", compact.includes('href="/my-career/profile"'));
 
-  // Exactly one h1 per surface. The profile page adds its own headings below
-  // this hero, so a second h1 here would be two page titles.
+  // Exactly one h1 per surface.
   ck("the home hero renders exactly one h1", count(home, "<h1") === 1);
+  ck("the compact greeting renders exactly one h1", count(compact, "<h1") === 1);
   ck("the profile hero renders exactly one h1", count(profile, "<h1") === 1);
 
   const page = code(read("src/routes/_authenticated.my-career.profile.tsx"));
   ck('the profile route mounts the hero as variant="profile"', /variant="profile"/.test(page));
   ck("and no other h1 is authored on that page", !/<h1/.test(page));
+  const route = code(read("src/routes/_authenticated.my-career.index.tsx"));
+  ck('the home route mounts the greeting as variant="compact"', /variant="compact"/.test(route));
 }
 
 /* ------------------------------------------------------------------ */
@@ -430,10 +494,17 @@ group("7 · /my-career/profile is not /my-career");
 group("8 · nothing stands permanently empty");
 {
   const route = code(read("src/routes/_authenticated.my-career.index.tsx"));
-  ck("employer tasks render only when one exists", /\{hasEmployerTask && \(/.test(route));
-  ck("the interview panel renders only when there is an interview", /\{nextInterview && \(/.test(route));
-  ck("the career journey renders only once the identity read answered", /identityQ\.data && <CareerJourney/.test(route));
-  ck("the self-hiding reviewer queue card stays on the page", route.includes("MyReviewQueueCard"));
+  ck("the onboarding journey renders only for a new account", /presentation\.showJourney && \(/.test(route));
+  ck("relevant roles render only once the read answered", /jobsQ\.isSuccess && \(/.test(route));
+  ck("the candidate home carries no reviewer surface", !/MyReviewQueueCard|\/reviews/.test(route));
+
+  const titleOf = () => "x";
+  ck("an empty active-work section renders nothing", render(<ActiveWork items={[]} titleOf={titleOf} />) === "");
+  ck(
+    "an empty activity feed renders nothing",
+    render(<RecentActivity activity={{ items: [], partial: false, unavailable: false }} />) === "",
+  );
+  ck("an empty explore section renders nothing", render(<ExploreAndGrow items={[]} />) === "");
 
   // The hero's own action row disappears rather than holding open an empty
   // strip for somebody with no card and no profile link.
