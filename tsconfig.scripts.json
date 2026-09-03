@@ -45,6 +45,10 @@
     // it asserts about is exactly the failure this file exists to prevent.
     "scripts/assessment-language-contract-check.tsx",
     "scripts/vaktare-pilot-truth-check.ts",
+    // PR-V3: the content-quality guard parses the content document out of the
+    // migration and measures it; a parser that silently stops matching the
+    // document shape is exactly the failure this file exists to prevent.
+    "scripts/vaktare-content-quality-check.ts",
     "scripts/legacy-assessment-route-guard-check.ts",
     // Added on its own terms, like the security guard above: new, no
     // pre-existing type debt, and it renders real components -- a guard whose

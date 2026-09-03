@@ -56,6 +56,7 @@
     "assessment-panels-render:check": "bun run scripts/assessment-panels-render-check.tsx",
     "assessment-language-contract:check": "bun run scripts/assessment-language-contract-check.tsx",
     "vaktare-pilot-truth:check": "bun run scripts/vaktare-pilot-truth-check.ts",
+    "vaktare-content-quality:check": "bun run scripts/vaktare-content-quality-check.ts",
     "legacy-assessment-routes:check": "bun run scripts/legacy-assessment-route-guard-check.ts",
     "format": "prettier --write .", 
     "db:test": "bash scripts/db-test.sh", 

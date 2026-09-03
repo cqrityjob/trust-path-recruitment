@@ -42,11 +42,14 @@ mechanism enforcing it. The mechanism enforcing it is the decision.
 
 - **State:** open. Product Owner.
 
-## 3. Language adaptation of the English instrument — OUTSTANDING
+## 3. Language adaptation of the English instrument — CONTENT REVIEWED, NOT VALIDATED
 
-All 50 English item texts are recorded `adaptation_pending`, and the outstanding
-finding "Språklig likvärdighet mellan sv-SE och en-GB" is still open on the item
-versions.
+PR-V3 (`20261022090000`) reviewed all 50 English texts against the Swedish for the
+same scenario, behavioural demand, key and option plausibility, and recorded them
+`adaptation_reviewed` with the reviewer named on the row: an AI assistant acting as
+content preparer, **not a named human language reviewer**. The outstanding finding
+"Språklig likvärdighet mellan sv-SE och en-GB" is therefore still open on all 50 item
+versions, and no text is `approved`.
 
 PR-V2 made delivery *structurally* equivalent and proved it
 (`supabase/tests/scp_language_contract_test.sql`): same items, same option
@@ -54,11 +57,12 @@ identities, same served order, same scoring, whichever language the run is deliv
 in. That is a delivery guarantee. It is **not** a claim of psychometric equivalence,
 and it must not be described as one.
 
-- **State:** open. Content + SME work; see the content-quality proposal in the PR-V2
-  description.
-- **Practical consequence today:** an English shadow-pilot run is a run of an
-  unadapted translation and should be described that way to the participating
-  organisation.
+- **State:** open. A named bilingual reviewer with guarding experience must clear the
+  `language` requirement; the reviewer pack is
+  `docs/assessment/governance/vaktare-content-review-pack-2026-09-03.md`.
+- **Practical consequence today:** an English shadow-pilot run is a run of a
+  content-reviewed but unvalidated translation and should be described that way to
+  the participating organisation.
 
 ## 4. Assignment language is not immutable — KNOWN GAP, NOT CLOSED
 
@@ -91,3 +95,32 @@ no authorised reviewer leaves every attempt stuck at `submitted`.
 - It does not say a recruitment pilot is approved.
 - It does not state a lawful basis, and does not review one.
 - It records no legal conclusion of any kind.
+
+## 6. Self-report keys on c07 and c19 — PRODUCT OWNER DECISION TAKEN (2026-09-03), PILOT-DATA REVIEW OPEN
+
+The human content review (PR-V3 revision 2) found that c07's key (0 / 2 / 3 / 2) may
+conflate autopilot behaviour with self-awareness, and that c19's peak key ("Ibland" = 3)
+is too context-dependent. Neither can be made monotonic, or purely descriptive in the
+product output, without changing score values: the self-report facet pattern
+(`scp_attempt_self_report_pattern`) is a mean of stored contributions, so any score is
+an ordered input to "rarely / mostly / consistently describes working this way".
+
+PR-V3 therefore left both items **exactly as authored** — text and scores — and holds
+them BLOCKED. c03's context was rewritten instead (the pair no longer says "neither is
+wrong"), which leaves its authored 1 / 3 key defensible as a two-point description;
+c06, c18 and c24 keep the authored "Inget av dem är fel" with the same shape and were
+not raised by the reviewers.
+
+- **Decision (Product Owner, 2026-09-03, locked):** keep the existing technical keying for
+  c07 and c19 during the shadow pilot and treat both as METHODOLOGICALLY OPEN self-report
+  items: they remain `self_report`, never become observed evidence, never independently
+  support a competency conclusion, and stay subject to pilot-data review before any future
+  scoring or keying change. Migration `20261022090000` proves the first two structurally
+  (`SCP_V3_C07_C19`); the third holds because self-report never reaches maturity.
+- **Known limitation, documented, not changed:** the employer brief's self-report pattern
+  for the facets *avvikelseigenkänning* and *eskalering och överlämning* is a mean over
+  all three items in each facet, so these two items contribute to the facet's
+  "rarely / mostly / consistently describes" sentence. Isolating them would be a report-logic
+  change and is out of scope; the sentence is self-report, labelled as such, and is not a
+  competency level.
+- **State:** pilot-data review open.

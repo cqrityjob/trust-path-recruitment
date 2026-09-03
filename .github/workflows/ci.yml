@@ -517,6 +517,20 @@ jobs:
       - name: Väktare pilot truth check
         run: bun run vaktare-pilot-truth:check
 
+      # The 50 items themselves (PR-V3). Reads the content document embedded in
+      # 20261022090000 and the authored baseline in 20260830094000 and asserts
+      # what a content edit can silently break: 50 = 22 + 24 + 4 with unique
+      # identities, every option key still present, no score / preferred /
+      # reverse / order / competency / evidence-type column in any UPDATE,
+      # both languages on every text and label, the preferred option not
+      # systematically the longest or shortest (and every length rank present)
+      # in either language, every distractor carrying a valid error pattern
+      # and a rationale, self-report statements free of absolutes and double
+      # quantifiers, free-text prompts asking for the account shape without
+      # naming a method, and no hiring vocabulary in candidate copy.
+      - name: Väktare content quality check
+        run: bun run vaktare-content-quality:check
+
       # The retired assessment engine stays retired: its four URL-reachable
       # routes redirect into the Assessment Center (or say the link is no
       # longer in use) and import none of the legacy runner, while the current
