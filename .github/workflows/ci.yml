@@ -498,6 +498,32 @@ jobs:
       - name: Assessment participant panels render check
         run: bun run assessment-panels-render:check
 
+      # The assigned language reaches the candidate. The employer's SV/EN
+      # choice is stored on the assignment; the runner used to read the site
+      # toggle instead, so an English assignment opened in Swedish in a fresh
+      # browser and the released report named a language the run never used.
+      # RUNS the resolver and RENDERS a scoped subtree under a Swedish provider
+      # to prove it comes out in English; reads the runner to prove every load
+      # and every shell inside the run carries the resolved language.
+      - name: Assessment language contract check
+        run: bun run assessment-language-contract:check
+
+      # What the candidate is told is what is true: the reviewer is an
+      # authorised person at the employer (never "a person at CQrityjob"),
+      # the employer's reviewer does read free-text answers, 5 parts and 8
+      # competencies are two words under two headings, counts and duration
+      # come from the form, no candidate sentence affirms a hire/reject/rank/
+      # pass/fail/suitability verdict, and AI stays off.
+      - name: Väktare pilot truth check
+        run: bun run vaktare-pilot-truth:check
+
+      # The retired assessment engine stays retired: its four URL-reachable
+      # routes redirect into the Assessment Center (or say the link is no
+      # longer in use) and import none of the legacy runner, while the current
+      # Väktare routes still call the governed scp_* functions.
+      - name: Legacy assessment route guard
+        run: bun run legacy-assessment-routes:check
+
       # The source-level half of the security invariants. It replays every
       # migration's grants, policies and function definitions in filename order
       # and reports only what SURVIVES, so it fails on a SECURITY DEFINER

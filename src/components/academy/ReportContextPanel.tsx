@@ -222,7 +222,22 @@ export function ReportContextPanel({
               value={`${c.reviewsCompleted ?? 0} / ${c.reviewsTotal}`}
             />
           )}
-          {c.language && <Fact label={t("academy.report.language")} value={c.language} />}
+          {/* The language the run was DELIVERED in. It is the assignment's
+              language, which is also what the runner delivers under -- see
+              attempt-language.ts -- so naming it here is a fact, not the
+              employer's dropdown echoed back. */}
+          {c.language && (
+            <Fact
+              label={t("academy.report.language")}
+              value={
+                c.language === "sv"
+                  ? t("academy.language.name.sv")
+                  : c.language === "en"
+                    ? t("academy.language.name.en")
+                    : c.language
+              }
+            />
+          )}
           {fmt(c.startedAt, lang) && (
             <Fact label={t("academy.report.started")} value={fmt(c.startedAt, lang)!} />
           )}

@@ -64,12 +64,21 @@ export function ConfirmAction({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{consequence}</AlertDialogDescription>
         </AlertDialogHeader>
+        {/* h-11 on both: 44px. The button default is 40px, which is under the
+            practical touch minimum -- and these are the controls that end a
+            job, withdraw an assignment or share a candidate's assessment. The
+            height is set here rather than per caller so every confirmation in
+            the workspace is the same size, which is the same reason there is
+            only one of these dialogs. */}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy} className="h-11">
+            {cancelLabel}
+          </AlertDialogCancel>
           <AlertDialogAction
             disabled={busy}
             onClick={onConfirm}
             className={cn(
+              "h-11",
               tone === "destructive" &&
                 "bg-destructive text-destructive-foreground hover:bg-destructive/90",
             )}

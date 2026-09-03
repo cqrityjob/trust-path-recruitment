@@ -64,7 +64,7 @@
 // an answer, not a person they know, and the queue and the review workspace
 // stay pseudonymous for that reason.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -73,6 +73,7 @@ import { Ban, CalendarClock, ClipboardCheck, Eye, FileText, Send, UserRound } fr
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { ConfirmAction } from "@/components/employer/ConfirmAction";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
@@ -392,7 +393,18 @@ function CandidateCard({
   // so -- but the click ran straight through, so the sentence was a warning
   // nobody had the chance to act on. Cancelling leaves everything exactly as
   // it was: no state beyond this flag is touched until the confirm.
+  //
+  // The confirmation is the product's own ConfirmAction dialog (an alert
+  // dialog): focus moves into it, Escape and the Cancel button close it, the
+  // title and the consequence are its accessible name and description, and
+  // the page behind it cannot be clicked. It replaced an inline panel that
+  // did none of that.
   const [confirmRelease, setConfirmRelease] = useState(false);
+  // Single-flight for the release itself. A ref, not state: it updates
+  // synchronously, so a second activation of the confirm button that lands
+  // before React re-renders still sees it. The state flag alone missed that
+  // window, and the database's SCP_ALREADY_RELEASED was the only backstop.
+  const releasingRef = useRef(false);
 
   const assessment = (lang === "en" ? row.assessmentNameEn : row.assessmentNameSv) ?? "—";
   const state = row.lifecycleState;
@@ -405,6 +417,9 @@ function CandidateCard({
 
   const releaseM = useMutation({
     mutationFn: () => release({ data: { attemptId: row.attemptId } }),
+    onSettled: () => {
+      releasingRef.current = false;
+    },
     onSuccess: () => {
       setConfirmRelease(false);
       void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
@@ -597,7 +612,7 @@ function CandidateCard({
             gives the candidate their own copy and unlocks the identity
             request, and because none of it can be undone, the confirmation
             below says so before anything happens. */}
-        {state === "ready_to_release" && canShare && !confirmRelease && (
+        {state === "ready_to_release" && canShare && (
           <button
             type="button"
             onClick={() => {
@@ -694,7 +709,7 @@ function CandidateCard({
       {/* What sharing actually does, before the click rather than after it.
           The confirmation below repeats it at the moment of the decision; this
           is the sentence that lets somebody decide not to click at all. */}
-      {state === "ready_to_release" && canShare && !confirmRelease && (
+      {state === "ready_to_release" && canShare && (
         <p className="mt-3 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
           {t("academy.participants.releaseExplain")}
         </p>
@@ -708,41 +723,40 @@ function CandidateCard({
 
       {/* The share confirmation. It names the three things that happen at once,
           says plainly that a person -- not the system -- is doing the sharing,
-          and Cancel changes nothing. */}
-      {confirmRelease && (
-        <div className="mt-4 rounded-[10px] border border-accent/40 bg-[color:var(--surface-subtle)] p-4">
-          <p className="text-[13px] font-semibold text-foreground">
-            {t("academy.participants.releaseConfirmTitleRecruitment")}
-          </p>
-          <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
-            {t("academy.participants.releaseConfirmBodyRecruitment")}
-          </p>
-          <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
-            {t("academy.participants.releaseConfirmResponsibility")}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => releaseM.mutate()}
-              disabled={releaseM.isPending}
-              className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <Send className="h-4 w-4" aria-hidden="true" />
-              {releaseM.isPending
-                ? t("academy.participants.releaseConfirmPending")
-                : t("academy.participants.releaseConfirmActionRecruitment")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmRelease(false)}
-              disabled={releaseM.isPending}
-              className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {t("academy.participants.releaseConfirmCancel")}
-            </button>
-          </div>
-        </div>
-      )}
+          and Cancel changes nothing. An alert dialog rather than an inline
+          panel: the decision is irreversible, so it gets the interaction the
+          rest of the employer workspace uses for irreversible things. */}
+      <ConfirmAction
+        open={confirmRelease}
+        onOpenChange={(open) => {
+          // Closing is refused while the release is in flight: the answer to
+          // "did it go through?" is about to arrive, and hiding the dialog
+          // would not stop the call.
+          if (!open && releaseM.isPending) return;
+          setConfirmRelease(open);
+        }}
+        title={t("academy.participants.releaseConfirmTitleRecruitment")}
+        consequence={
+          <>
+            <span className="block">{t("academy.participants.releaseConfirmBodyRecruitment")}</span>
+            <span className="mt-2 block">
+              {t("academy.participants.releaseConfirmResponsibility")}
+            </span>
+          </>
+        }
+        confirmLabel={
+          releaseM.isPending
+            ? t("academy.participants.releaseConfirmPending")
+            : t("academy.participants.releaseConfirmActionRecruitment")
+        }
+        cancelLabel={t("academy.participants.releaseConfirmCancel")}
+        busy={releaseM.isPending}
+        onConfirm={() => {
+          if (releasingRef.current) return;
+          releasingRef.current = true;
+          releaseM.mutate();
+        }}
+      />
 
       {/* Withdrawing an assignment is not destructive, but it does take work
           away from somebody who may already be part-way through it. The

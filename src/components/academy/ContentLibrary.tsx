@@ -388,9 +388,12 @@ function LibraryRow({
       ? `${entry.moduleCount} ${t("academy.library.modules").toLowerCase()}`
       : `${entry.itemCount} ${t("academy.library.items").toLowerCase()}`;
 
-  // How many areas an assessment covers. Zero until 20260902090000 counts the
-  // form blocks, and an assessment genuinely built as one block reports zero
-  // too -- either way the line simply omits it rather than claiming "0 areas".
+  // How many PARTS (form blocks) an assessment is delivered in. Zero until
+  // 20260902090000 counts the form blocks, and an assessment genuinely built as
+  // one block reports zero too -- either way the line simply omits it rather
+  // than claiming "0 parts". Deliberately not the word used for competencies:
+  // the Väktare form has 5 parts and evidences 8 competencies, and one word
+  // for both ("områden") made the two numbers read as a contradiction.
   const areas =
     entry.libraryKind === "assessment" && entry.moduleCount > 0
       ? `${entry.moduleCount} ${t("academy.library.areas").toLowerCase()}`
@@ -605,12 +608,28 @@ function ProgrammeDetail({
         {entry.libraryKind === "training" ? (
           <Field label={t("academy.library.modules")} value={String(entry.moduleCount)} />
         ) : (
-          <Field label={t("academy.library.items")} value={String(entry.itemCount)} />
+          /* TESTETS UPPLÄGG: how the form is delivered -- parts and tasks.
+             Kept apart from DET HÄR BEDÖMS below, which is the competency
+             list, so "5" and "8" are never two answers to one question. */
+          <Field
+            label={t("academy.library.structure")}
+            value={[
+              entry.moduleCount > 0
+                ? `${entry.moduleCount} ${t("academy.library.areas").toLowerCase()}`
+                : null,
+              `${entry.itemCount} ${t("academy.library.items").toLowerCase()}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          />
         )}
         {competencies.length > 0 && (
           <div className="sm:col-span-2 lg:col-span-3">
             <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {t("academy.library.competencies")}
+              {t("academy.library.assessed")}
+              {" · "}
+              <span className="tabular-nums">{competencies.length}</span>{" "}
+              {t("academy.library.competencies").toLowerCase()}
             </dt>
             <dd className="mt-1.5 flex flex-wrap gap-1.5">
               {competencies.map((c) => (

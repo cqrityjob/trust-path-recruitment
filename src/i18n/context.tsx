@@ -93,6 +93,48 @@ export function useT() {
   return ctx;
 }
 
+/** A subtree that renders in ONE fixed language, whatever the site toggle says.
+ *
+ *  ── WHY THIS EXISTS ─────────────────────────────────────────────────
+ *
+ *  An assessment attempt is delivered in the language the employer assigned
+ *  it in (see src/lib/security-competency/attempt-language.ts). Everything
+ *  inside the run -- the intro, the section introductions, the items, the
+ *  navigation, the save status, the closing screen -- has to agree on that
+ *  language, and it has to keep agreeing after the site toggle is pressed
+ *  somewhere else. Passing a locale down through every component would have
+ *  meant a second `t` next to the one they already call; this puts the fixed
+ *  locale where `useT()` already looks.
+ *
+ *  `setLang` still reaches the site-wide provider so a caller that changes the
+ *  preference changes it for the rest of the product -- but the scope itself
+ *  does not move. The wrapper carries the `lang` attribute so assistive
+ *  technology reads the subtree in the right language even though
+ *  `document.documentElement.lang` follows the site preference. */
+export function LanguageScope({ lang, children }: { lang: Lang; children: ReactNode }) {
+  const parent = useT();
+  const t = useCallback(
+    (key: TranslationKey) => dictionaries[lang][key] ?? dictionaries.sv[key] ?? key,
+    [lang],
+  );
+  const tp = useCallback(
+    (key: PluralKey, count: number) =>
+      t(`${key}.${count === 1 ? "one" : "other"}` as TranslationKey),
+    [t],
+  );
+  const value = useMemo(
+    () => ({ lang, setLang: parent.setLang, t, tp }),
+    [lang, parent.setLang, t, tp],
+  );
+  return (
+    <I18nContext.Provider value={value}>
+      <div lang={lang} className="contents">
+        {children}
+      </div>
+    </I18nContext.Provider>
+  );
+}
+
 /** A translator bound to a SPECIFIC locale, independent of the live
  *  site-wide toggle `useT()` reads. For frozen report content (a v3.1
  *  snapshot's own `locale`, a Career Card's `locale` prop, ...): that

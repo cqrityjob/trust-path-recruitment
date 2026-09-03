@@ -109,6 +109,44 @@ the safety classification is discriminating rather than firing on everyone.
   every customer's assessment cycle. The employer report surfaces still carry no
   raw responses.
 
+- **The language a candidate is assessed in is the one the employer assigned.**
+  Added 3 September 2026 (PR-V2), because until then it was not true. The
+  employer picks Swedish or English when assigning; it is stored on
+  `assessment_assignments.language`; and `scp_release_attempt_report` freezes
+  that same value into the released report's context. What was missing was the
+  middle: the candidate's runner read the site-wide language toggle instead, so
+  an English assignment opened in Swedish in a fresh browser and the report then
+  named a language the run had never been delivered in.
+
+  The contract now runs end to end and each hop is the same value:
+
+      ASSIGNED (assessment_assignments.language)
+        → INITIAL RUNNER LANGUAGE
+        → ACTUAL DELIVERY LANGUAGE  (scp_get_attempt_items / _blocks)
+        → REPORT CONTEXT LANGUAGE   (scp_report_snapshots.context ->> 'language')
+
+  Two consequences worth stating to a participating organisation. **The language
+  is chosen once, by the employer, and cannot be switched from inside the run** —
+  the site toggle is not offered there, because nothing records which language an
+  individual answer was given in, and a report naming a language nobody used is
+  the defect this closed. And **the two languages are the same instrument**: the
+  same 50 items, the same option identities and the same served order, with only
+  the words differing, proven row for row by
+  `supabase/tests/scp_language_contract_test.sql`. No migration was needed; the
+  candidate already reads their own assignment row under RLS.
+
+  What is **not** claimed: psychometric equivalence of the Swedish and English
+  texts. All 50 English texts are still recorded `adaptation_pending`, and the
+  suite reports that count as a diagnostic rather than gating on it. An English
+  pilot run is a run of a translation that has not been through language
+  adaptation, and should be described that way.
+
+  One known gap, deliberately not closed here: `language` is not in
+  `assessment_assignments_immutable_guard`'s protected column list, so an
+  employer could in principle change it after a candidate has begun. Nothing in
+  the product offers that, and closing it means a migration; it is recorded in
+  [pilot-governance-open-items.md](./pilot-governance-open-items.md).
+
 - **Authorise a reviewer before the pilot opens.** With no authorisation the
   queue is empty, nothing reaches `scored`, and no report can be released —
   which is exactly the state the hosted project was found in on 2026-08-21. The

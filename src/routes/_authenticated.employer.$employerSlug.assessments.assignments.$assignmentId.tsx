@@ -100,8 +100,10 @@ function ReportBody({
       activeSection="assessments"
       hasMultipleWorkspaces={hasMultipleWorkspaces}
     >
+      {/* Back goes to Kandidater, the current list. The legacy assignment
+          list this used to return to is retired (it redirects there too). */}
       <Link
-        to="/employer/$employerSlug/assessments/assignments"
+        to="/employer/$employerSlug/assessments/participants"
         params={{ employerSlug }}
         className="text-sm font-medium text-accent hover:underline"
       >
