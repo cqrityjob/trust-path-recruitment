@@ -351,7 +351,9 @@ check(
 check(
   "B7 self-report stays self-report: the authored helper declares evidence_source_type self_report and the review never names the column",
   /author_selfreport[\s\S]*?'self_report'/.test(read(BASE)) &&
-    !/evidence_source_type/.test(sqlOutsideDoc.replace(/iv\.evidence_source_type/g, "")),
+    !/evidence_source_type/.test(
+      sqlOutsideDoc.replace(/iv\.evidence_source_type|public\.scp_evidence_source_types/g, ""),
+    ),
 );
 check(
   "B8 the migration asserts the 50 = 22 + 24 + 4 shape at apply time",
@@ -841,8 +843,11 @@ const authoredScore = (slug: string, k: string) =>
   bySlug.get(slug)!.opts.find((o) => o.k === k)!.score;
 check(
   "K1 b05: the 1-point option leaves the door closed and records nothing; the 0-point option restores the doorstop; the 3-point option closes, records and hands over",
-  /^Låt dörren vara stängd och gå hem\./.test(option("so-rj-b05", "b").sv) &&
-    /^Leave the door closed and go home\./.test(option("so-rj-b05", "b").en) &&
+  /^Låt dörren vara stängd/.test(option("so-rj-b05", "b").sv) &&
+    /^Leave the door closed/.test(option("so-rj-b05", "b").en) &&
+    !/inget hann inträffa|Problemet är åtgärdat|nothing happened|has been resolved|problem is solved/i.test(
+      option("so-rj-b05", "b").sv + option("so-rj-b05", "b").en,
+    ) &&
     authoredScore("so-rj-b05", "b") === 1 &&
     option("so-rj-b05", "b").err === "failure_to_document" &&
     /Ställ tillbaka släckaren/.test(option("so-rj-b05", "c").sv) &&
@@ -856,7 +861,16 @@ check(
 check(
   "K2 a03: the preferred option keeps the employee at a distance, somewhere safe and in the call; nobody is asked to confront by the key",
   /hålla avstånd/.test(option("so-rj-a03", "a").sv) &&
-    /säker plats/.test(option("so-rj-a03", "a").sv) &&
+    /^Åk till personalutrymmet först/.test(option("so-rj-a03", "a").sv) &&
+    /^Go to the staff area first/.test(option("so-rj-a03", "a").en) &&
+    !/Åk dit först|Go there first|take the staff area/i.test(
+      item("so-rj-a03")
+        .options.map((o) => o.sv + o.en)
+        .join(" "),
+    ) &&
+    /gå undan/.test(option("so-rj-a03", "a").sv) &&
+    /bara om det känns säkert/.test(option("so-rj-a03", "a").sv) &&
+    /only if it feels safe/.test(option("so-rj-a03", "a").en) &&
     /stanna kvar i samtalet/.test(option("so-rj-a03", "a").sv) &&
     !/stanna kvar i telefon/.test(option("so-rj-a03", "a").sv) &&
     /keep their distance/.test(option("so-rj-a03", "a").en) &&
@@ -876,7 +890,12 @@ check(
     /respond alone/.test(item("so-rj-a07").en.scenario) &&
     /alarm centre decides/.test(item("so-rj-a07").en.scenario) &&
     /följ deras besked/.test(option("so-rj-a07", "a").sv) &&
-    /follow their decision/.test(option("so-rj-a07", "a").en),
+    /follow their decision/.test(option("so-rj-a07", "a").en) &&
+    /Back-up is available but has not yet arrived/.test(item("so-rj-a07").en.scenario) &&
+    /^Check the exterior/.test(option("so-rj-a07", "a").en) &&
+    !/Back-up exists|outer check/i.test(
+      item("so-rj-a07").en.scenario + option("so-rj-a07", "a").en,
+    ),
 );
 check(
   "K5 d03: 1 point = risk handled now with weak follow-up (failure_to_document); 0 points = passivity (delayed_escalation)",
@@ -893,7 +912,16 @@ check(
     /security-sensitive/.test(item("so-rj-d05").en.scenario) &&
     /larmcentralen eller arbetsledaren/.test(option("so-rj-d05", "a").sv) &&
     /alarm centre or your supervisor/.test(option("so-rj-d05", "a").en) &&
-    !/skyddsvärde/.test(item("so-rj-d05").sv.scenario),
+    !/skyddsvärde/.test(item("so-rj-d05").sv.scenario) &&
+    /inte hinns med/.test(option("so-rj-d05", "a").sv) &&
+    /följ deras besked/.test(option("so-rj-d05", "a").sv) &&
+    /cannot be completed/.test(option("so-rj-d05", "a").en) &&
+    /follow their instruction/.test(option("so-rj-d05", "a").en) &&
+    !/gå de tre|do the three/i.test(option("so-rj-d05", "a").sv + option("so-rj-d05", "a").en) &&
+    (["sv", "en"] as const).every((l) => {
+      const lens = item("so-rj-d05").options.map((o) => o[l].length);
+      return lens[0] <= 1.3 * Math.max(lens[1], lens[2]);
+    }),
 );
 check(
   "K7 b02: the usable report claims only what is observable about electrical equipment",
@@ -907,22 +935,47 @@ check(
     /enligt rutinen/.test(option("so-rj-d06", "a").sv) &&
     /authorised request/.test(option("so-rj-d06", "a").en) &&
     !/bara får användas för säkerhetsändamål/.test(option("so-rj-d06", "a").sv) &&
-    !/only be used for security purposes/.test(option("so-rj-d06", "a").en),
+    !/only be used for security purposes/.test(option("so-rj-d06", "a").en) &&
+    /according to the established procedure/.test(option("so-rj-d06", "a").en) &&
+    !/anyway|ändå/i.test(option("so-rj-d06", "c").sv + option("so-rj-d06", "c").en),
 );
 check(
-  "K9 b06: the poorest option no longer explains why it is poor",
-  !/oklarhet|confusion|motsägelsefull|contradict/i.test(
+  "K9 b06: the poorest option is memory order without a timeline and nothing else, and option b's English is natural",
+  !/oklarhet|confusion|motsägelsefull|contradict|relevant|tillför/i.test(
     option("so-rj-b06", "c").sv + option("so-rj-b06", "c").en,
-  ),
+  ) &&
+    /i den ordning du kommer ihåg det/.test(option("so-rj-b06", "c").sv) &&
+    /in the order you remember it/.test(option("so-rj-b06", "c").en) &&
+    /det som hände, det du såg och det du gjorde/.test(option("so-rj-b06", "c").sv) &&
+    option("so-rj-b06", "c").err === "failure_to_document" &&
+    !/the material after/.test(option("so-rj-b06", "b").en),
 );
 check(
-  "K10 c07 and c19 are held BLOCKED: text and scores exactly as authored, and the audit says so",
+  "K10 c07 and c19 keep their technical keying (Product Owner decision): text and scores exactly as authored, self-report kind, and the audit records them as methodologically open",
   ["so-rj-c07", "so-rj-c19"].every(
     (s) =>
       sameAsAuthored(item(s)) &&
       auditBySlug.get(s)!.decision === "KEEP" &&
-      /^BLOCKED/.test(auditBySlug.get(s)!.keying),
+      /^METHODOLOGICALLY OPEN/.test(auditBySlug.get(s)!.keying) &&
+      bySlug.get(s)!.kind === "selfreport" &&
+      item(s).kind === "selfreport",
   ),
+);
+check(
+  "K14 the migration proves c07 and c19 are self_report and outside maturity at apply time",
+  /SCP_V3_C07_C19/.test(sqlOutsideDoc) && /counts_toward_maturity/.test(sqlOutsideDoc),
+);
+check(
+  "K15 e01 asks for a task the candidate was responsible for, not a mistake at work",
+  /ansvar för en uppgift/.test(item("so-rj-e01").sv.prompt) &&
+    /responsible for a task/.test(item("so-rj-e01").en.prompt) &&
+    !/på jobbet|at work/i.test(item("so-rj-e01").sv.prompt + item("so-rj-e01").en.prompt),
+);
+check(
+  "K16 e03 uses natural wording for monotonous or repetitive work in both languages",
+  /enformigt eller återkommande arbete/.test(item("so-rj-e03").sv.prompt) &&
+    /monotonous or repetitive work/.test(item("so-rj-e03").en.prompt) &&
+    !/upprepat arbete/.test(item("so-rj-e03").sv.prompt),
 );
 check(
   "K11 c14 describes a concrete, reverse-worded behaviour rather than an opinion",

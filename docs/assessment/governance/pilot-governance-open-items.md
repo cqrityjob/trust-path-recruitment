@@ -96,7 +96,7 @@ no authorised reviewer leaves every attempt stuck at `submitted`.
 - It does not state a lawful basis, and does not review one.
 - It records no legal conclusion of any kind.
 
-## 6. Self-report keys on c07 and c19 — PRODUCT OWNER / SME SCORING DECISION, OPEN
+## 6. Self-report keys on c07 and c19 — PRODUCT OWNER DECISION TAKEN (2026-09-03), PILOT-DATA REVIEW OPEN
 
 The human content review (PR-V3 revision 2) found that c07's key (0 / 2 / 3 / 2) may
 conflate autopilot behaviour with self-awareness, and that c19's peak key ("Ibland" = 3)
@@ -111,8 +111,16 @@ wrong"), which leaves its authored 1 / 3 key defensible as a two-point descripti
 c06, c18 and c24 keep the authored "Inget av dem är fel" with the same shape and were
 not raised by the reviewers.
 
-- **State:** open. Product Owner + SME. Options: flatten to a constant score
-  (descriptive only), re-key monotonically, or accept the authored keys with the
-  interview prompt as the only interpretation.
-- **Until decided:** the employer brief's self-report pattern for the facets
-  *avvikelseigenkänning* and *eskalering och överlämning* includes these two items.
+- **Decision (Product Owner, 2026-09-03, locked):** keep the existing technical keying for
+  c07 and c19 during the shadow pilot and treat both as METHODOLOGICALLY OPEN self-report
+  items: they remain `self_report`, never become observed evidence, never independently
+  support a competency conclusion, and stay subject to pilot-data review before any future
+  scoring or keying change. Migration `20261022090000` proves the first two structurally
+  (`SCP_V3_C07_C19`); the third holds because self-report never reaches maturity.
+- **Known limitation, documented, not changed:** the employer brief's self-report pattern
+  for the facets *avvikelseigenkänning* and *eskalering och överlämning* is a mean over
+  all three items in each facet, so these two items contribute to the facet's
+  "rarely / mostly / consistently describes" sentence. Isolating them would be a report-logic
+  change and is out of scope; the sentence is self-report, labelled as such, and is not a
+  competency level.
+- **State:** pilot-data review open.

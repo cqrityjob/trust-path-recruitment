@@ -2152,6 +2152,19 @@ BEGIN
   END IF;
   RAISE NOTICE 'vaktare v1 SCC-08: % observed item, developing_evidence needs % -- one attempt caps at limited_evidence', _n, _m;
 
+  -- c07 and c19 (Product Owner decision 2026-09-03: keep the technical keying
+  -- during the shadow pilot, methodologically open) are self-report and stay
+  -- self-report: never an observation, never in maturity.
+  SELECT count(*) INTO _n
+    FROM public.scp_items i JOIN public.scp_item_versions iv ON iv.item_id = i.id AND iv.version_number = 1
+   WHERE i.slug IN ('so-rj-c07', 'so-rj-c19')
+     AND iv.evidence_source_type = 'self_report' AND iv.item_format = 'biq_frequency'
+     AND EXISTS (SELECT 1 FROM public.scp_evidence_source_types t
+                  WHERE t.code = iv.evidence_source_type AND NOT t.counts_toward_maturity);
+  IF _n <> 2 THEN
+    RAISE EXCEPTION 'SCP_V3_C07_C19: expected c07 and c19 to be self_report (non-maturity) frequency items, found %.', _n;
+  END IF;
+
   RAISE NOTICE 'vaktare v1 content proven: identity unchanged, 50 = 22 + 24 + 4, bilingual, gates untouched, preferred-longest sv %/22 en %/22, preferred-shortest sv %/22 en %/22',
     _sv_long, _en_long, _sv_short, _en_short;
 END $$;
