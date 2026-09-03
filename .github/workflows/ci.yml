@@ -531,6 +531,18 @@ jobs:
       - name: Väktare content quality check
         run: bun run vaktare-content-quality:check
 
+      # The 24 self-report items after PR-V4. Composes the final content the
+      # way the database does -- authored baseline, then the PR-V3 review,
+      # then 20261023090000 -- and asserts the approved four-option scale on
+      # the 20 genuine frequency items and nowhere else, c03/c06/c18/c24 still
+      # forced choice and byte-identical, c07/c19 keying intact and documented
+      # as open rather than rescored, no score / key / order / mapping /
+      # evidence-type column in any UPDATE, self_report still out of maturity,
+      # the experience-bias stems generalised, and a complete, honest review
+      # pack with one final class and one cue level per item.
+      - name: Väktare self-report quality check
+        run: bun run vaktare-self-report-quality:check
+
       # The retired assessment engine stays retired: its four URL-reachable
       # routes redirect into the Assessment Center (or say the link is no
       # longer in use) and import none of the legacy runner, while the current
