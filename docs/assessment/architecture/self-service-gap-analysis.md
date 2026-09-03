@@ -43,9 +43,17 @@ employer_id**. The capability is global by construction.
 | employer.owner@closed-test.invalid | no | no | no |
 | participant@closed-test.invalid | no | no | no |
 
+> **SUPERSEDED (3 September 2026).** Everything in this section describes the model
+> **before** #51 (`20260829090000_scp_employer_response_reviewers`) and is kept as the
+> record of the defect, not as a description of the product. Since #51 an employer
+> authorises its own reviewers in `scp_employer_reviewers`, per use case and revocably,
+> and a CQrityjob staff account with no membership in the participating organisation
+> reviews **nothing**. The working model is in
+> [closed-test-runbook.md](../governance/closed-test-runbook.md) §3.
+
 **Three accounts in the entire platform can review, and two are CQrityjob platform
 administrators.** Zero employer-scoped reviewers exist and none can be created — there is no
-table to hold one.
+table to hold one. *(As measured before #51. No longer true.)*
 
 ## 3. Conflation of two different SaaS roles
 

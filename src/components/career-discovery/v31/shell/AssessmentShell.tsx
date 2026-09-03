@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
+import type { Lang } from "@/i18n/dictionaries";
 import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 
@@ -16,11 +17,19 @@ export function AssessmentShell({
   children,
   showExit = false,
   wide = false,
+  deliveryLanguage,
 }: {
   children: ReactNode;
   /** Only shown once a run is in progress — there is nothing to leave before that. */
   showExit?: boolean;
   wide?: boolean;
+  /** Set by an assigned assessment attempt, which is delivered in the language
+   *  the employer chose and is not switchable from inside the run. When set,
+   *  the header shows that language as a fact instead of offering the site
+   *  toggle — a toggle that changed nothing on the page would be worse than
+   *  none. Absent for the public Career Discovery run, which keeps the
+   *  switcher exactly as before. */
+  deliveryLanguage?: Lang;
 }) {
   const { t } = useT();
   return (
@@ -56,7 +65,22 @@ export function AssessmentShell({
                 {t("cd.public.exit")}
               </Link>
             )}
-            <LanguageSwitcher />
+            {deliveryLanguage ? (
+              <span
+                className="inline-flex h-8 items-center rounded-full border border-border bg-background/60 px-3 text-xs font-medium text-foreground"
+                title={t("academy.language.lockedNote")}
+              >
+                <span aria-hidden="true">{t(`academy.language.name.${deliveryLanguage}`)}</span>
+                <span className="sr-only">
+                  {t("academy.language.deliveredIn")}{" "}
+                  {t(`academy.language.name.${deliveryLanguage}`)}
+                  {". "}
+                  {t("academy.language.lockedNote")}
+                </span>
+              </span>
+            ) : (
+              <LanguageSwitcher />
+            )}
           </div>
         </div>
       </header>

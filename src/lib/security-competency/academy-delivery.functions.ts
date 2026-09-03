@@ -17,6 +17,10 @@
 // guard on the function's own signature.
 
 import { createServerFn } from "@tanstack/react-start";
+import {
+  normaliseAssignedLanguage,
+  type AssignedLanguage,
+} from "@/lib/security-competency/attempt-language";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Ctx, RpcRow } from "./rpc-types";
@@ -159,12 +163,27 @@ export const getAcademyAttemptItems = createServerFn({ method: "GET" })
  *  closed, and the participant would only discover it by pressing submit
  *  again.
  *
- *  Deliberately four fields. Not the reviews, not the evidence, not the
- *  scoring state: a participant may know that their answers are in and that a
- *  person still has to read one, and nothing further. */
+ *  Deliberately narrow. Not the reviews, not the evidence, not the scoring
+ *  state: a participant may know that their answers are in, that a person
+ *  still has to read one, which language the run is delivered in and roughly
+ *  how long it takes -- and nothing further. */
 export type AcademyAttemptState = {
   status: "in_progress" | "submitted" | "scored" | "released" | "abandoned";
   isOpen: boolean;
+  /** The language the employer assigned this attempt in, from the assignment
+   *  row the candidate can already read under RLS
+   *  (assignments_recipient_select_own). This is the DELIVERY language of the
+   *  run -- see attempt-language.ts -- and the same column
+   *  scp_release_attempt_report freezes into the report context, so the two
+   *  cannot disagree. Null when the attempt has no assignment or the
+   *  assignment predates the column; the runner then falls back to the site
+   *  language and nothing claims otherwise. */
+  language: AssignedLanguage;
+  /** The form's own target duration, read from the content spine (authenticated
+   *  read). Null when the form does not state one; the intro then says nothing
+   *  about time rather than inventing a figure. */
+  minutesMin: number | null;
+  minutesMax: number | null;
 };
 
 export const getAcademyAttemptState = createServerFn({ method: "GET" })
@@ -172,9 +191,14 @@ export const getAcademyAttemptState = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<AcademyAttemptState | null> => {
     const ctx = context as Ctx;
+    // Status from the attempt; language from ITS assignment; duration from ITS
+    // form. All three joins are the candidate's own RLS view, and each embed is
+    // optional: a missing assignment row yields null language, not an error.
     const { data: row, error } = await ctx.supabase
       .from("scp_attempts")
-      .select("status")
+      .select(
+        "status, assessment_assignments(language), scp_forms(target_minutes_min, target_minutes_max)",
+      )
       .eq("id", data.attemptId)
       .maybeSingle();
     // No row means "not yours, or does not exist" — RLS makes those the same
@@ -183,7 +207,18 @@ export const getAcademyAttemptState = createServerFn({ method: "GET" })
     if (error) throw classify(error.message ?? "", "load_failed");
     if (!row) return null;
     const status = String(row.status) as AcademyAttemptState["status"];
-    return { status, isOpen: status === "in_progress" };
+    const assignment = row.assessment_assignments as { language?: unknown } | null;
+    const form = row.scp_forms as {
+      target_minutes_min?: number | null;
+      target_minutes_max?: number | null;
+    } | null;
+    return {
+      status,
+      isOpen: status === "in_progress",
+      language: normaliseAssignedLanguage(assignment?.language),
+      minutesMin: form?.target_minutes_min ?? null,
+      minutesMax: form?.target_minutes_max ?? null,
+    };
   });
 
 /** Save or replace one answer. Idempotent — the RPC upserts on (attempt, item). */

@@ -436,11 +436,23 @@ console.log("\n8. Sharing a brief twice is not a failure");
     "8.3 it does not fall through to the failure message",
     /code === "SCP_ALREADY_RELEASED"[\s\S]{0,320}return;/.test(candidates),
   );
+  // Single-flight, now by a ref rather than by the disabled attribute alone.
+  // PR-V2 moved the confirmation into ConfirmAction (an alert dialog), and a
+  // second activation of the confirm control can land before React re-renders
+  // -- which is exactly the click a state flag misses and the one that would
+  // run scp_release_attempt_report twice. The ref updates synchronously, and
+  // `busy` still disables both controls in the dialog.
   check(
-    "8.4 the release button is still single-flight",
-    /onClick=\{\(\) => releaseM\.mutate\(\)\}[\s\S]{0,200}disabled=\{releaseM\.isPending\}/.test(
-      candidates,
-    ),
+    "8.4 the release is single-flight against a click React has not re-rendered for",
+    /releasingRef = useRef\(false\)/.test(candidates) &&
+      /if \(releasingRef\.current\) return;\s*releasingRef\.current = true;\s*releaseM\.mutate\(\)/.test(
+        candidates,
+      ) &&
+      /onSettled: \(\) => \{\s*releasingRef\.current = false;/.test(candidates),
+  );
+  check(
+    "8.4b and the dialog's own controls are disabled while it is in flight",
+    /busy=\{releaseM\.isPending\}/.test(candidates),
   );
   for (const [lang, d] of [
     ["sv", sv],

@@ -988,6 +988,45 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# The assessment LANGUAGE contract (PR-V2).
+#
+# The employer picks sv or en when assigning and it is stored on
+# assessment_assignments.language; the candidate runner used to ignore it and
+# read the site-wide toggle instead, while the released report froze the
+# ASSIGNED language into its context -- so a report could name a language the
+# run was never delivered in. This suite proves the database half: both
+# languages are complete (an English run is not a shorter form), delivery is
+# identical in item ids, option ids and served order with only the words
+# differing, no response or scoring path can be told a language, the candidate
+# can read their own assigned language under their own RLS, and a released
+# report never names a language other than the one assigned.
+#
+# Runs BEFORE the rollback step: it reads the SCP content spine, which the
+# rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running assessment language contract assertions"
+set +e
+LANG_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_language_contract_test.sql 2>&1)"
+LANG_RC=$?
+set -e
+
+echo "$LANG_OUT" | grep -E "diag  " | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+LANG_PASSED="$(echo "$LANG_OUT" | grep -c "ok  " || true)"
+
+if [ "$LANG_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the language contract suite exited with code ${LANG_RC}." >&2
+  echo "$LANG_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "assessment language contract"
+else
+  echo "    ok  ${LANG_PASSED} language contract assertions passed"
+  if [ "$LANG_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 language contract assertions, only ${LANG_PASSED} ran." >&2
+    suite_failed "assessment language contract (assertion shortfall: floor 18)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running content library and maturity-isolation assertions"
 set +e
 LIB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_content_library_test.sql 2>&1)"

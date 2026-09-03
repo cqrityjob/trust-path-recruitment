@@ -1608,7 +1608,7 @@ export const dictionaries = {
     "employer.assessments.useCase.heading": "Användningsområden",
     "employer.assessments.useCase.recruitment.title": "Rekrytering",
     "employer.assessments.useCase.recruitment.body":
-      "Bedöm en kandidats lämplighet för en roll inför ett anställningsbeslut.",
+      "Underlag om en kandidats yrkeskompetens som beslutsstöd i en mänsklig rekryteringsprocess.",
     "employer.assessments.useCase.development.title": "Kompetensutveckling",
     "employer.assessments.useCase.development.body":
       "Bedöm och utveckla befintlig personals kompetens och identifiera utvecklingsbehov.",
@@ -2993,6 +2993,34 @@ export const dictionaries = {
     "academy.eyebrowRecruitment": "Rekrytering",
     "academy.intro.purposeRecruitment":
       "Underlaget används som beslutsstöd i rekryteringen hos den arbetsgivare som begärde bedömningen. Det är inte ett prov och ger inget automatiskt godkänt eller underkänt — en person hos arbetsgivaren fattar beslutet.",
+    // ── Delivery language and what to expect (PR-V2) ────────────────────
+    //
+    // An assigned attempt is delivered in the language the employer chose,
+    // for the whole run -- see src/lib/security-competency/attempt-language.ts.
+    // The header names that language as a fact instead of offering the site
+    // toggle. The name keys are read INSIDE the run's language scope, so a
+    // Swedish run shows "Svenska" and an English run shows "English".
+    "academy.language.name.sv": "Svenska",
+    "academy.language.name.en": "Engelska",
+    "academy.language.deliveredIn": "Bedömningen ges på",
+    "academy.language.lockedNote":
+      "Språket valdes av arbetsgivaren när bedömningen tilldelades och kan inte bytas under genomförandet.",
+    // Who reads the answers a person has to read. The reviewer is an
+    // authorised person at the organisation that asked -- never CQrityjob, and
+    // never a model. Said on the intro, before the first task.
+    "academy.intro.review":
+      "Vissa svar granskas av en behörig granskare hos din arbetsgivare. Ingen modell bedömer dina svar, och bedömningen fattar inga beslut på egen hand.",
+    "academy.intro.reviewRecruitment":
+      "Vissa svar, bland annat dina fritextsvar, granskas av en behörig granskare hos arbetsgivaren. Bedömningen används som underlag i en mänsklig rekryteringsprocess. CQrityjob fattar inte beslut om anställning, och ingen modell bedömer dina svar.",
+    // "5 delar · 50 uppgifter · cirka 35–45 minuter". Counted from what was
+    // served and from what the form declares; never typed in here.
+    "academy.intro.structureHeading": "Testets upplägg",
+    "academy.intro.parts.one": "del",
+    "academy.intro.parts.other": "delar",
+    "academy.intro.tasks.one": "uppgift",
+    "academy.intro.tasks.other": "uppgifter",
+    "academy.intro.approx": "cirka",
+    "academy.intro.minutes": "minuter",
     "academy.start": "Börja",
     "academy.resume": "Fortsätt där du slutade",
     "academy.loading": "Hämtar dina frågor …",
@@ -3010,7 +3038,7 @@ export const dictionaries = {
     "academy.done.body":
       "Svaren har sparats. Du får din utvecklingsrapport när den har frisläppts.",
     "academy.done.reviewPending":
-      "Ett eller flera av dina svar ska läsas av en granskare innan rapporten kan tas fram. Det är därför resultatet inte är klart ännu.",
+      "Ett eller flera av dina svar ska läsas av en behörig granskare hos arbetsgivaren innan rapporten kan tas fram. Det är därför resultatet inte är klart ännu.",
     "academy.done.alreadyTitle": "Dina svar är redan inlämnade",
     "academy.done.alreadyBody":
       "Den här bedömningen är inlämnad och kan inte ändras. Dina svar finns kvar. Du får din utvecklingsrapport när den har frisläppts.",
@@ -3076,7 +3104,7 @@ export const dictionaries = {
     "academy.done.bodyRecruitment":
       "Svaren har sparats och skickas till organisationen som bad dig göra bedömningen.",
     "academy.done.alreadyBodyRecruitment":
-      "Den här bedömningen är inlämnad och kan inte ändras. Dina svar finns kvar hos organisationen som bad dig göra den.",
+      "Den här bedömningen är inlämnad och kan inte ändras. Dina svar finns kvar, och underlaget går till organisationen som bad dig göra den.",
     "academy.done.releasedBodyRecruitment":
       "Den här bedömningen är inlämnad och underlaget har delats med organisationen som bad dig göra den.",
     // ── Assessment Center (Academy) — employer + participant ────────────
@@ -3093,7 +3121,7 @@ export const dictionaries = {
     "academy.overview.openParticipants": "Visa alla kandidater",
     "academy.library.title": "Testbibliotek",
     "academy.library.lede": "Välj ett test att tilldela en kandidat.",
-    "academy.library.items": "Frågor",
+    "academy.library.items": "Uppgifter",
     "academy.library.duration": "Tidsåtgång",
     "academy.library.doesNotMeasure": "Mäter inte",
     "academy.library.assign": "Tilldela kandidat",
@@ -3120,7 +3148,7 @@ export const dictionaries = {
     "academy.library.modules": "Moduler",
     "academy.library.languages": "Språk",
     "academy.library.targetRole": "Målroll",
-    "academy.library.competencies": "Kompetensområden",
+    "academy.library.competencies": "Kompetenser",
     "academy.library.version": "Version",
     "academy.library.owner": "Ägare",
     "academy.library.owner.cqrityjob": "CQrityjob",
@@ -3132,7 +3160,13 @@ export const dictionaries = {
     "academy.library.close": "Stäng",
     "academy.library.detailHeading": "Om programmet",
     "academy.library.provides": "Vad detta ger underlag om",
-    "academy.library.areas": "Områden",
+    // "Testdelar", never "områden": the Väktare form is delivered in 5 parts
+    // and evidences 8 competencies, and one word for both numbers read as a
+    // contradiction. `structure` and `assessed` are the two headings that
+    // keep them apart on the detail view.
+    "academy.library.areas": "Testdelar",
+    "academy.library.structure": "Testets upplägg",
+    "academy.library.assessed": "Det här bedöms",
     "academy.library.youReceive": "Det här får ni tillbaka",
     "academy.library.youReceiveBody":
       "Ett kandidatunderlag inför intervjun: vad kandidaten visade i uppgifterna, vad kandidaten själv beskriver om sitt arbetssätt, områden värda att följa upp, och en strukturerad intervjuguide med frågor valda utifrån just de här svaren. Inget omdöme om lämplighet, ingen poäng och ingen rekommendation — beslutet är ert.",
@@ -3645,7 +3679,7 @@ export const dictionaries = {
     "academy.home.purpose": "Syfte och behandling",
     "academy.home.purposeFallback": "Kompetensutveckling.",
     "academy.home.privacy":
-      "Dina svar lagras hos CQrityjob. Arbetsgivaren ser en kompetensprofil när den frisläppts — aldrig dina enskilda svar.",
+      "Dina svar lagras hos CQrityjob. Din arbetsgivare ser en kompetensprofil när den frisläppts. Fritextsvar kan läsas av en behörig granskare hos din arbetsgivare — inte av en modell.",
     // Recruitment variants. See the academy.intro.purposeRecruitment comment
     // for why the employee wording above may not be shown to an applicant.
     "academy.home.titleRecruitment": "Mina bedömningar",
@@ -3655,14 +3689,14 @@ export const dictionaries = {
       "Bedömningar som en arbetsgivare begärt som en del av din ansökan. Resultatet frisläpps till den arbetsgivare som begärde bedömningen.",
     "academy.home.purposeFallbackRecruitment": "Beslutsstöd i rekrytering.",
     "academy.home.privacyRecruitment":
-      "Dina svar lagras hos CQrityjob. Den arbetsgivare som begärde bedömningen ser en kompetensprofil när den frisläppts — aldrig dina enskilda svar.",
+      "Dina svar lagras hos CQrityjob. Den arbetsgivare som begärde bedömningen ser en kompetensprofil när den frisläppts. Fritextsvar kan läsas av en behörig granskare hos arbetsgivaren — inte av en modell. CQrityjob fattar inte beslut om anställning.",
     "academy.home.recruitmentDecision":
       "Bedömningen är ett underlag i rekryteringen. Den avgör ingenting på egen hand — en person hos arbetsgivaren fattar beslutet.",
     "academy.home.noneTitle": "Inget tilldelat just nu",
     "academy.home.noneBody": "När din arbetsgivare tilldelar ett program dyker det upp här.",
     "academy.home.openReport": "Öppna rapport",
     "academy.home.awaitingRelease": "Inlämnad. Rapporten visas när den frisläppts.",
-    "academy.home.nextReview": "Vissa svar granskas av en person hos CQrityjob.",
+    "academy.home.nextReview": "Vissa svar granskas av en behörig granskare hos arbetsgivaren.",
     "academy.home.nextRelease": "Din arbetsgivare frisläpper rapporten när granskningen är klar.",
     "academy.home.nextReport": "Du får då tillgång till din egen rapport här.",
     "academy.home.learning": "Övningsläge",
@@ -3714,7 +3748,7 @@ export const dictionaries = {
     // ── Flagship recruitment assessment ─────────────────────────────────
     // Participant: sections, and what each one asks.
     "academy.section.eyebrow": "Del",
-    "academy.section.questions": "frågor",
+    "academy.section.questions": "uppgifter",
     "academy.section.continue": "Fortsätt",
     "academy.asks.what_you_would_do":
       "Här väljer du vad du skulle göra. Ditt val är något vi faktiskt observerar och redovisar som iakttaget.",
@@ -3944,6 +3978,12 @@ export const dictionaries = {
     "journey.person.empty": "Ingen aktivitet i den här organisationen ännu.",
 
     // Direct invitation.
+    // The retired /invite/<token> address. A link somebody was given should
+    // say it has been superseded, not look broken.
+    "invite.retired.title": "Den här länken används inte längre",
+    "invite.retired.body":
+      "Länken tillhör en tidigare version av bedömningstjänsten. Bedömningar du blivit inbjuden till finns i ditt konto under Bedömningar när du loggat in med den e-postadress inbjudan skickades till. Kontakta organisationen som bjöd in dig om du inte hittar den.",
+    "invite.retired.cta": "Öppna mina bedömningar",
     "invite.title": "Bjud in deltagare",
     "invite.lede":
       "Bjud in någon till en bedömning, oavsett om personen redan har ett CQrityjob-konto. Har hen ett konto tilldelas bedömningen direkt. Annars sparas inbjudan och kopplas till personen när hen skapar sitt konto.",
@@ -6980,7 +7020,7 @@ export const dictionaries = {
     "employer.assessments.useCase.heading": "Use cases",
     "employer.assessments.useCase.recruitment.title": "Recruitment",
     "employer.assessments.useCase.recruitment.body":
-      "Assess a candidate's suitability for a role ahead of a hiring decision.",
+      "Evidence of a candidate's professional competence, as decision support in a human recruitment process.",
     "employer.assessments.useCase.development.title": "Workforce development",
     "employer.assessments.useCase.development.body":
       "Assess and develop existing employees' competence and identify development needs.",
@@ -8332,6 +8372,22 @@ export const dictionaries = {
     "academy.eyebrowRecruitment": "Recruitment",
     "academy.intro.purposeRecruitment":
       "This is used as decision support in recruitment by the organisation that requested it. It is not an exam and produces no automatic pass or fail — a person at the organisation makes the decision.",
+    "academy.language.name.sv": "Swedish",
+    "academy.language.name.en": "English",
+    "academy.language.deliveredIn": "This assessment is delivered in",
+    "academy.language.lockedNote":
+      "The language was chosen by the employer when the assessment was assigned and cannot be changed during the run.",
+    "academy.intro.review":
+      "Some answers are reviewed by an authorised reviewer at your employer. No model assesses your answers, and the assessment makes no decision on its own.",
+    "academy.intro.reviewRecruitment":
+      "Some answers, including your written answers, are reviewed by an authorised reviewer at the employer. The assessment is used as evidence in a human recruitment process. CQrityjob does not make employment decisions, and no model assesses your answers.",
+    "academy.intro.structureHeading": "How the assessment is structured",
+    "academy.intro.parts.one": "part",
+    "academy.intro.parts.other": "parts",
+    "academy.intro.tasks.one": "task",
+    "academy.intro.tasks.other": "tasks",
+    "academy.intro.approx": "approximately",
+    "academy.intro.minutes": "minutes",
     "academy.start": "Begin",
     "academy.resume": "Pick up where you left off",
     "academy.loading": "Loading your questions …",
@@ -8349,7 +8405,7 @@ export const dictionaries = {
     "academy.done.body":
       "Your answers have been saved. You will receive your development report once it has been released.",
     "academy.done.reviewPending":
-      "One or more of your answers will be read by a reviewer before the report can be produced. That is why the result is not ready yet.",
+      "One or more of your answers will be read by an authorised reviewer at the employer before the report can be produced. That is why the result is not ready yet.",
     "academy.done.alreadyTitle": "Your answers are already submitted",
     "academy.done.alreadyBody":
       "This assessment has been submitted and can no longer be changed. Your answers are safe. You will receive your development report once it has been released.",
@@ -8410,7 +8466,7 @@ export const dictionaries = {
     "academy.done.bodyRecruitment":
       "Your answers have been saved and go to the organisation that asked you to complete this assessment.",
     "academy.done.alreadyBodyRecruitment":
-      "This assessment has been submitted and can no longer be changed. Your answers are held by the organisation that asked you to complete it.",
+      "This assessment has been submitted and can no longer be changed. Your answers are safe, and the summary goes to the organisation that asked you to complete it.",
     "academy.done.releasedBodyRecruitment":
       "This assessment has been submitted and the summary has been shared with the organisation that asked you to complete it.",
     // ── Assessment Center (Academy) — employer + participant ────────────
@@ -8427,7 +8483,7 @@ export const dictionaries = {
     "academy.overview.openParticipants": "View all candidates",
     "academy.library.title": "Test library",
     "academy.library.lede": "Choose a test to assign to a candidate.",
-    "academy.library.items": "Questions",
+    "academy.library.items": "Tasks",
     "academy.library.duration": "Time needed",
     "academy.library.doesNotMeasure": "Does not measure",
     "academy.library.assign": "Assign to candidate",
@@ -8454,7 +8510,7 @@ export const dictionaries = {
     "academy.library.modules": "Modules",
     "academy.library.languages": "Languages",
     "academy.library.targetRole": "Target role",
-    "academy.library.competencies": "Competency areas",
+    "academy.library.competencies": "Competencies",
     "academy.library.version": "Version",
     "academy.library.owner": "Owner",
     "academy.library.owner.cqrityjob": "CQrityjob",
@@ -8466,7 +8522,9 @@ export const dictionaries = {
     "academy.library.close": "Close",
     "academy.library.detailHeading": "About this programme",
     "academy.library.provides": "What this provides evidence about",
-    "academy.library.areas": "Areas",
+    "academy.library.areas": "Parts",
+    "academy.library.structure": "Structure of the assessment",
+    "academy.library.assessed": "What is assessed",
     "academy.library.youReceive": "What you get back",
     "academy.library.youReceiveBody":
       "A candidate brief to work from before the interview: what the candidate demonstrated in the tasks, what they say about their own way of working, areas worth following up, and a structured interview guide whose questions are chosen from these particular answers. No verdict on suitability, no score and no recommendation — the decision is yours.",
@@ -8978,7 +9036,7 @@ export const dictionaries = {
     "academy.home.purpose": "Purpose and processing",
     "academy.home.purposeFallback": "Competence development.",
     "academy.home.privacy":
-      "Your answers are stored by CQrityjob. Your employer sees a competency profile once it is released — never your individual answers.",
+      "Your answers are stored by CQrityjob. Your employer sees a competency profile once it is released. Written answers may be read by an authorised reviewer at your employer — not by a model.",
     "academy.home.titleRecruitment": "My assessments",
     "academy.home.ledeRecruitment":
       "Everything you have been asked to complete, and the reports that have been released to you.",
@@ -8986,14 +9044,15 @@ export const dictionaries = {
       "Assessments an organisation requested as part of your application. The result is released to the organisation that requested it.",
     "academy.home.purposeFallbackRecruitment": "Decision support in recruitment.",
     "academy.home.privacyRecruitment":
-      "Your answers are stored by CQrityjob. The organisation that requested the assessment sees a competence profile once it has been released — never your individual answers.",
+      "Your answers are stored by CQrityjob. The organisation that requested the assessment sees a competence profile once it has been released. Written answers may be read by an authorised reviewer at the employer — not by a model. CQrityjob does not make employment decisions.",
     "academy.home.recruitmentDecision":
       "This assessment is evidence used in recruitment. It decides nothing on its own — a person at the organisation makes the decision.",
     "academy.home.noneTitle": "Nothing assigned right now",
     "academy.home.noneBody": "When your employer assigns a programme it will appear here.",
     "academy.home.openReport": "Open report",
     "academy.home.awaitingRelease": "Submitted. Your report appears once it has been released.",
-    "academy.home.nextReview": "Some answers are reviewed by a person at CQrityjob.",
+    "academy.home.nextReview":
+      "Some answers are reviewed by an authorised reviewer at the employer.",
     "academy.home.nextRelease": "Your employer releases the report once the review is complete.",
     "academy.home.nextReport": "You will then be able to open your own report here.",
     "academy.home.learning": "Learning Mode",
@@ -9045,7 +9104,7 @@ export const dictionaries = {
 
     // ── Flagship recruitment assessment ─────────────────────────────────
     "academy.section.eyebrow": "Part",
-    "academy.section.questions": "questions",
+    "academy.section.questions": "tasks",
     "academy.section.continue": "Continue",
     "academy.asks.what_you_would_do":
       "Here you choose what you would do. Your choice is something we actually observe, and it is reported as observed.",
@@ -9262,6 +9321,10 @@ export const dictionaries = {
     "journey.person.interview": "Interview evidence",
     "journey.person.empty": "No activity in this organisation yet.",
 
+    "invite.retired.title": "This link is no longer in use",
+    "invite.retired.body":
+      "The link belongs to an earlier version of the assessment service. Assessments you have been invited to are in your account under Assessments once you sign in with the email address the invitation was sent to. Contact the organisation that invited you if you cannot find it.",
+    "invite.retired.cta": "Open my assessments",
     "invite.title": "Invite a participant",
     "invite.lede":
       "Invite somebody to an assessment whether or not they already have a CQrityjob account. If they do, it is assigned immediately. If they do not, the invitation is kept and binds to them when they create their account.",

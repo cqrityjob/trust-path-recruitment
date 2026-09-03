@@ -1,5 +1,10 @@
 # Employer self-service assessment lifecycle
 
+> **This banner is historical (corrected 3 September 2026).** The change it
+> describes shipped as `20260829090000_scp_employer_response_reviewers`; the
+> employer-authorised reviewer model is the model in force. The line below is the
+> state of this document when it was written and is kept for the record.
+
 **NO MERGE — NO DEPLOY — NO LOVABLE PUBLICATION.** Draft for review only.
 
 ## 1. Problem

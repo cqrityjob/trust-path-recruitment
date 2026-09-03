@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, MessageSquare, ShieldAlert } from "lucide-react";
-import { useT } from "@/i18n/context";
+import { LanguageScope, useT } from "@/i18n/context";
 import {
   AssessmentShell,
   AssessmentPanel,
@@ -45,6 +45,7 @@ import {
   type AcademyItem,
 } from "@/lib/security-competency/academy-delivery.functions";
 import { listAcademyWork } from "@/lib/security-competency/academy-training.functions";
+import { resolveAttemptLanguage } from "@/lib/security-competency/attempt-language";
 import { createAnswerQueue } from "@/lib/security-competency/answer-queue";
 import {
   MissingAnswersPanel,
@@ -104,9 +105,66 @@ function asStored(text: string): string | null {
  *  answer and shortening it would not save one. */
 const TEXT_SAVE_DELAY_MS = 800;
 
+// ── WHICH LANGUAGE THE RUN IS IN ──────────────────────────────────────
+//
+// Resolved BEFORE anything in the run is loaded, from the attempt's own
+// assignment, and then fixed for the whole sitting. The runner used to read
+// the site toggle, so an employer who assigned English saw the candidate open
+// the assessment in Swedish in a fresh browser, and the released report --
+// which freezes the ASSIGNED language into its context -- then named a
+// language the run never used. The contract, and why the site preference is
+// only a fallback, is in src/lib/security-competency/attempt-language.ts.
 function AcademyAttemptRoute() {
   const { attemptId } = Route.useParams();
-  const { t, tp, lang: uiLang } = useT();
+  const { t, lang: siteLang } = useT();
+  const loadState = useServerFn(getAcademyAttemptState);
+  const [resolved, setResolved] = useState<{
+    attemptId: string;
+    state: AcademyAttemptState | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadState({ data: { attemptId } })
+      // A failed state read is not the end of the run: the runner's own loads
+      // will say what is wrong, in the site language, exactly as before.
+      .catch(() => null)
+      .then((state) => {
+        if (!cancelled) setResolved({ attemptId, state });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [attemptId, loadState]);
+
+  if (!resolved || resolved.attemptId !== attemptId) {
+    return (
+      <AssessmentShell>
+        <AssessmentPanel>
+          <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>
+        </AssessmentPanel>
+      </AssessmentShell>
+    );
+  }
+
+  const deliveryLang = resolveAttemptLanguage(resolved.state?.language ?? null, siteLang);
+  return (
+    <LanguageScope lang={deliveryLang}>
+      <AcademyAttemptRunner attemptId={attemptId} initialState={resolved.state} />
+    </LanguageScope>
+  );
+}
+
+function AcademyAttemptRunner({
+  attemptId,
+  initialState,
+}: {
+  attemptId: string;
+  initialState: AcademyAttemptState | null;
+}) {
+  // `lang` is the DELIVERY language, fixed by the LanguageScope above -- not
+  // the site toggle. Every item, section and sentence in this run reads it.
+  const { t, tp, lang } = useT();
   const loadItems = useServerFn(getAcademyAttemptItems);
   const loadBlocks = useServerFn(getAcademyAttemptBlocks);
   const loadState = useServerFn(getAcademyAttemptState);
@@ -190,20 +248,20 @@ function AcademyAttemptRoute() {
   const focusPrompt = useRef(false);
   const promptRef = useRef<HTMLHeadingElement | null>(null);
 
-  const lang = uiLang === "en" ? "en" : "sv";
-
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const [rows, blockRows, state, work] = await Promise.all([
+        const [rows, blockRows, work] = await Promise.all([
           loadItems({ data: { attemptId, locale: lang } }),
           loadBlocks({ data: { attemptId, locale: lang } }),
-          loadState({ data: { attemptId } }),
           // Purpose only. Never allowed to fail the page: if the work list is
           // unavailable the run still opens, under the neutral default.
           loadWork().catch(() => []),
         ]);
+        // The state was read once, by the route, to fix the language before
+        // anything else was fetched. It is the same read this used to make.
+        const state = initialState;
         if (cancelled) return;
         setItems(rows);
         itemsRef.current = rows;
@@ -239,7 +297,7 @@ function AcademyAttemptRoute() {
     return () => {
       cancelled = true;
     };
-  }, [attemptId, lang, loadItems, loadBlocks, loadState, loadWork]);
+  }, [attemptId, lang, initialState, loadItems, loadBlocks, loadWork]);
 
   /** Send one item's complete answer, behind that item's own queue.
    *
@@ -348,6 +406,12 @@ function AcademyAttemptRoute() {
 
   const current = items[index];
   const answered = useMemo(() => items.filter(isAnswered).length, [items]);
+  // "cirka 35–45 minuter": only when the form states a range. No figure is
+  // invented for a form that does not, and there is still no time limit.
+  const duration =
+    initialState?.minutesMin != null && initialState?.minutesMax != null
+      ? `${t("academy.intro.approx")} ${initialState.minutesMin}–${initialState.minutesMax} ${t("academy.intro.minutes")}`
+      : null;
 
   useEffect(() => {
     if (phase !== "running" || !focusPrompt.current) return;
@@ -522,7 +586,7 @@ function AcademyAttemptRoute() {
 
   if (phase === "loading") {
     return (
-      <AssessmentShell>
+      <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>
         </AssessmentPanel>
@@ -538,7 +602,7 @@ function AcademyAttemptRoute() {
           ? "academy.error.notOpen"
           : "academy.error.generic";
     return (
-      <AssessmentShell>
+      <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <AlertTriangle className="h-5 w-5 text-accent" aria-hidden="true" />
@@ -563,7 +627,7 @@ function AcademyAttemptRoute() {
   // MissingAnswersPanel for why that distinction is the whole point.
   if (phase === "incomplete") {
     return (
-      <AssessmentShell showExit>
+      <AssessmentShell showExit deliveryLanguage={lang}>
         <AssessmentPanel>
           <MissingAnswersPanel
             missing={missing.map((m) => ({
@@ -588,7 +652,7 @@ function AcademyAttemptRoute() {
 
   if (phase === "submit-failed") {
     return (
-      <AssessmentShell>
+      <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <AlertTriangle className="h-5 w-5 text-accent" aria-hidden="true" />
@@ -620,7 +684,7 @@ function AcademyAttemptRoute() {
 
   if (phase === "intro") {
     return (
-      <AssessmentShell>
+      <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             {t(recruitment ? "academy.eyebrowRecruitment" : "academy.eyebrow")}
@@ -637,26 +701,55 @@ function AcademyAttemptRoute() {
           <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
             {t(recruitment ? "academy.intro.purposeRecruitment" : "academy.intro.purpose")}
           </p>
-          {/* What the run is made of, before it starts. Fifty questions with no
-              visible structure reads as endless; five named sections reads as
-              a piece of work. */}
+          {/* Who reads the answers that a person has to read. Said here, before
+              the first question, rather than discovered at the free-text box
+              on part five. The reviewer is an authorised person at the
+              organisation that asked -- not CQrityjob, and not a model. */}
+          <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
+            {t(recruitment ? "academy.intro.reviewRecruitment" : "academy.intro.review")}
+          </p>
+          {/* What the run is made of, before it starts. Fifty tasks with no
+              visible structure reads as endless; five named parts, a task
+              count and a rough duration reads as a piece of work. The numbers
+              are the form's own -- parts and tasks are counted from what was
+              served, the duration is what the form declares -- so nothing here
+              can drift from the instrument. */}
           {blocks.length > 0 && (
-            <ol className="mt-7 space-y-2.5">
-              {blocks.map((b, i) => (
-                <li key={b.blockKey} className="flex gap-3 text-[14px] leading-relaxed">
-                  <span className="mt-[2px] flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-[11px] font-semibold tabular-nums text-muted-foreground">
-                    {i + 1}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="font-medium text-foreground">{b.name}</span>
-                    <span className="text-muted-foreground">
-                      {" · "}
-                      {b.itemCount} {t("academy.section.questions")}
+            <>
+              <h2 className="mt-7 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+                {t("academy.intro.structureHeading")}
+              </h2>
+              <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
+                <span className="tabular-nums">{blocks.length}</span>{" "}
+                {tp("academy.intro.parts", blocks.length)}
+                {" · "}
+                <span className="tabular-nums">{items.length}</span>{" "}
+                {tp("academy.intro.tasks", items.length)}
+                {duration && (
+                  <>
+                    {" · "}
+                    {duration}
+                  </>
+                )}
+              </p>
+              <ol className="mt-3 space-y-2.5">
+                {blocks.map((b, i) => (
+                  <li key={b.blockKey} className="flex gap-3 text-[14px] leading-relaxed">
+                    <span className="mt-[2px] flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-[11px] font-semibold tabular-nums text-muted-foreground">
+                      {i + 1}
                     </span>
-                  </span>
-                </li>
-              ))}
-            </ol>
+                    <span className="min-w-0">
+                      <span className="font-medium text-foreground">{b.name}</span>
+                      <span className="text-muted-foreground">
+                        {" · "}
+                        <span className="tabular-nums">{b.itemCount}</span>{" "}
+                        {tp("academy.intro.tasks", b.itemCount)}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </>
           )}
           <button
             type="button"
@@ -680,7 +773,7 @@ function AcademyAttemptRoute() {
   if (phase === "section" && currentBlock) {
     const n = blocks.findIndex((b) => b.blockKey === currentBlock.blockKey) + 1;
     return (
-      <AssessmentShell showExit>
+      <AssessmentShell showExit deliveryLanguage={lang}>
         <AssessmentPanel>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             {t("academy.section.eyebrow")} {n} {t("cd.public.of")} {blocks.length}
@@ -717,7 +810,7 @@ function AcademyAttemptRoute() {
 
   if (phase === "submitting") {
     return (
-      <AssessmentShell showExit>
+      <AssessmentShell showExit deliveryLanguage={lang}>
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.submitting")}</p>
         </AssessmentPanel>
@@ -727,7 +820,7 @@ function AcademyAttemptRoute() {
 
   if (phase === "done") {
     return (
-      <AssessmentShell>
+      <AssessmentShell deliveryLanguage={lang}>
         <AssessmentPanel>
           <SubmittedNotice
             recruitment={recruitment}
@@ -742,7 +835,7 @@ function AcademyAttemptRoute() {
   if (!current) return null;
 
   return (
-    <AssessmentShell showExit>
+    <AssessmentShell showExit deliveryLanguage={lang}>
       <AssessmentCard>
         <AssessmentProgressBar
           stageLabel={currentBlock ? currentBlock.name : t("academy.stage")}
