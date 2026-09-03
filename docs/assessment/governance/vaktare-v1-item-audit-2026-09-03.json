@@ -1,5 +1,5 @@
 {
-  "$comment": "Väktare Recruitment Assessment v1 — 50-item content audit, PR-V3 revision 3 (final human content check applied), 2026-09-03. Prepared by an AI assistant as content preparer against a strict replay of main (SHA 3f2d2ad). Not an SME review. Fields 'competency', 'behaviour' and 'facet' are read from the database resolution and are asserted stable by scripts/vaktare-content-quality-check.ts.",
+  "$comment": "Väktare Recruitment Assessment v1 — 50-item content audit, PR-V3 revision 4 (final copy corrections applied), 2026-09-03. Prepared by an AI assistant as content preparer against a strict replay of main (SHA 3f2d2ad). Not an SME review. Fields 'competency', 'behaviour' and 'facet' are read from the database resolution and are asserted stable by scripts/vaktare-content-quality-check.ts.",
   "audit": "vaktare-v1-item-audit-2026-09-03",
   "form": "security-officer-recruitment-form-a",
   "item_count": 50,
@@ -252,8 +252,8 @@
           "reverse_scored": false,
           "error_pattern": null,
           "authored_error_pattern": null,
-          "sv": "Åk till personalutrymmet först. Be den anställde gå undan, hålla avstånd och stanna kvar i samtalet, hålla uppsikt bara om det känns säkert, och meddela larmcentralen att dörrlarmet inte är kontrollerat.",
-          "en": "Go to the staff area first. Ask the employee to move away, keep their distance and stay on the call, to keep watch only if it feels safe, and tell the alarm centre the door alarm has not been checked.",
+          "sv": "Åk till personalutrymmet först. Be den anställde gå till en säker plats, hålla avstånd och stanna kvar i samtalet. Be personen hålla uppsikt bara om det kan ske säkert och meddela larmcentralen att dörrlarmet inte är kontrollerat.",
+          "en": "Go to the staff area first. Ask the employee to move to a safe place, keep their distance and stay on the call. Ask them to keep watch only if they can do so safely, and tell the alarm centre that the door alarm has not been checked.",
           "authored_sv": "Åk till personalutrymmet först, be den anställde stanna kvar på telefon, och meddela larmcentralen att dörrlarmet inte är kontrollerat än.",
           "authored_en": "Go to the staff area first, ask the employee to stay on the phone, and tell the alarm centre that the door alarm is not yet checked.",
           "rationale_sv": "Människorna först, utan att någon konfronterar: den anställde går undan, håller avstånd och stannar i samtalet, och larmcentralen vet vad som är okontrollerat."
@@ -292,8 +292,8 @@
         "en": "rank 1 of 3 (132/102/82)"
       },
       "option_length_after": {
-        "sv": "rank 1 of 3 (203/169/162)",
-        "en": "rank 1 of 3 (200/163/178)"
+        "sv": "rank 1 of 3 (230/169/162)",
+        "en": "rank 1 of 3 (233/163/178)"
       },
       "content_relevance": "high — lone-guard prioritisation",
       "language_quality": "good",
@@ -305,7 +305,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "defensible; SME confirm",
       "decision": "EDIT",
-      "change": "r3: destination explicit ('Åk till personalutrymmet först' / 'Go to the staff area first'); the employee moves away, keeps distance, stays in the call and keeps watch only if it feels safe; 'take the staff area' replaced by 'go straight on to the staff area'",
+      "change": "r4: key text replaced with the reviewers' exact wording — go to the staff area first; the employee moves to a safe place, keeps their distance and stays on the call; keeps watch only if it can be done safely; alarm centre told the door alarm is unchecked",
       "classification": [
         "SME REVIEW REQUIRED: person-first over confirmed alarm"
       ],
@@ -4727,7 +4727,7 @@
           "error_pattern": "weak_communication",
           "authored_error_pattern": "insufficient_information",
           "sv": "Säg att du inte får lämna ut sådana uppgifter och återgå till det du höll på med.",
-          "en": "Say that you are not allowed to release that kind of information, and go back to the round you were doing.",
+          "en": "Say that you are not allowed to release that kind of information, and return to what you were doing.",
           "authored_sv": "Säg att du inte får göra det och gå vidare.",
           "authored_en": "Say that you are not allowed to and move on.",
           "rationale_sv": "Ett nej utan skäl lämnar personen med intrycket att det är godtycke, och frågan kommer tillbaka till nästa väktare."
@@ -4754,7 +4754,7 @@
       },
       "option_length_after": {
         "sv": "rank 1 of 3 (133/81/101)",
-        "en": "rank 1 of 3 (176/106/122)"
+        "en": "rank 1 of 3 (176/100/122)"
       },
       "content_relevance": "high — access data misuse",
       "language_quality": "good",
@@ -4766,7 +4766,7 @@
       "evidence_quality": "observed choice; one datum per item, scored 3/1/0; reads into the competency ledger via the behaviour map",
       "keying": "no change",
       "decision": "EDIT",
-      "change": "r3: English key carries 'according to the established procedure'; option c is a weaker action without the 'they could get it from their manager anyway' justification",
+      "change": "r3 kept; r4: option b English 'return to what you were doing' (no round wording); Swedish already aligned",
       "classification": [
         "REPO / SOURCE FACT: distractor label mismatch"
       ],
@@ -4910,11 +4910,11 @@
       "is_safety_critical": false,
       "claims_to_elicit": "Redogör för hur uppmärksamhet hållits uppe under repetitivt arbete.",
       "current_sv": {
-        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad arbetet var, vad som var din uppgift, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
+        "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad uppgiften eller aktiviteten handlade om, vad som var din roll, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
         "prompt": "Beskriv en situation där du behövde hålla koncentrationen uppe under enformigt eller återkommande arbete. Hur gjorde du?"
       },
       "current_en": {
-        "scenario": "This question has no right answer, and a person reads what you write. Tell us what the work was, what your role was, what you did to keep your concentration, how it went and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
+        "scenario": "This question has no right answer, and a person reads what you write. Tell us what the task or activity involved, what your role was, what you did to stay focused, how it went and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
         "prompt": "Describe a situation where you had to stay focused during monotonous or repetitive work. How did you do it?"
       },
       "authored_sv": {
@@ -4936,7 +4936,7 @@
       "evidence_quality": "human-read free text against a 4-dimension draft rubric (clarity is style-only); level 0 = no evidence, not negative evidence",
       "keying": "no scoring change",
       "decision": "EDIT",
-      "change": "r3: 'enformigt eller återkommande arbete' / 'monotonous or repetitive work'; 'stay focused'",
+      "change": "r3 kept; r4: guidance 'vad uppgiften eller aktiviteten handlade om … vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig' / 'what the task or activity involved … what you did to stay focused, how it went and what you took from it'",
       "classification": [
         "METHODOLOGY RECOMMENDATION",
         "PILOT REVIEW REQUIRED"

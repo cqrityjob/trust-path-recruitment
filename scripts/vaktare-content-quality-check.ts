@@ -642,14 +642,14 @@ check(
 // ── H. Free text ──────────────────────────────────────────────────────────
 console.log("\nH. Free text asks for a concrete account in a stated shape, naming no method");
 const SHAPE_SV = [
-  /vad som hände|vad arbetet var|vad uppgiften (gällde|handlade om)/i,
+  /vad som hände|vad arbetet var|vad uppgiften (eller aktiviteten )?(gällde|handlade om)/i,
   /din (uppgift|roll)/i,
   /vad du (själv )?(gjorde|sa och gjorde|gjorde för att)/i,
   /hur det (slutade|gick)/i,
   /tog med dig/i,
 ];
 const SHAPE_EN = [
-  /what happened|what the work was|what the information was about/i,
+  /what happened|what the work was|what the information was about|what the task or activity involved/i,
   /your role/i,
   /what you (yourself )?(did|said and did)/i,
   /how it (ended|went)/i,
@@ -859,22 +859,43 @@ check(
     !/Ställ tillbaka släckaren/.test(option("so-rj-b05", "b").sv),
 );
 check(
-  "K2 a03: the preferred option keeps the employee at a distance, somewhere safe and in the call; nobody is asked to confront by the key",
-  /hålla avstånd/.test(option("so-rj-a03", "a").sv) &&
-    /^Åk till personalutrymmet först/.test(option("so-rj-a03", "a").sv) &&
-    /^Go to the staff area first/.test(option("so-rj-a03", "a").en) &&
-    !/Åk dit först|Go there first|take the staff area/i.test(
+  "K2 a03: the key goes to the staff area first, sends the employee to a safe place at a distance and keeps them on the call, and asks them to watch only if it can be done safely; nobody is asked to confront by the key",
+  /^Åk till personalutrymmet först\./.test(option("so-rj-a03", "a").sv) &&
+    /^Go to the staff area first\./.test(option("so-rj-a03", "a").en) &&
+    /gå till en säker plats, hålla avstånd och stanna kvar i samtalet/.test(
+      option("so-rj-a03", "a").sv,
+    ) &&
+    /hålla uppsikt bara om det kan ske säkert/.test(option("so-rj-a03", "a").sv) &&
+    /move to a safe place, keep their distance and stay on the call/.test(
+      option("so-rj-a03", "a").en,
+    ) &&
+    /keep watch only if they can do so safely/.test(option("so-rj-a03", "a").en) &&
+    !/stay on the call, to keep watch/.test(option("so-rj-a03", "a").en) &&
+    !/Åk dit först|Go there first|take the staff area|stanna kvar i telefon/i.test(
       item("so-rj-a03")
         .options.map((o) => o.sv + o.en)
         .join(" "),
+    ),
+);
+check(
+  "K17 d06 option b's English returns to what you were doing, with no patrol or round wording",
+  /^Say that you are not allowed to release that kind of information, and return to what you were doing\.$/.test(
+    option("so-rj-d06", "b").en,
+  ) &&
+    !/patrol|round/i.test(option("so-rj-d06", "b").en) &&
+    /återgå till det du höll på med/.test(option("so-rj-d06", "b").sv),
+);
+check(
+  "K18 e03 guidance uses task-or-activity wording in both languages",
+  /Berätta vad uppgiften eller aktiviteten handlade om, vad som var din roll, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig\./.test(
+    item("so-rj-e03").sv.scenario,
+  ) &&
+    /Tell us what the task or activity involved, what your role was, what you did to stay focused, how it went and what you took from it\./.test(
+      item("so-rj-e03").en.scenario,
     ) &&
-    /gå undan/.test(option("so-rj-a03", "a").sv) &&
-    /bara om det känns säkert/.test(option("so-rj-a03", "a").sv) &&
-    /only if it feels safe/.test(option("so-rj-a03", "a").en) &&
-    /stanna kvar i samtalet/.test(option("so-rj-a03", "a").sv) &&
-    !/stanna kvar i telefon/.test(option("so-rj-a03", "a").sv) &&
-    /keep their distance/.test(option("so-rj-a03", "a").en) &&
-    /stay on the call/.test(option("so-rj-a03", "a").en),
+    !/vad arbetet var|what the work was/.test(
+      item("so-rj-e03").sv.scenario + item("so-rj-e03").en.scenario,
+    ),
 );
 check(
   "K3 a05: the 0-point option says the two points are signed off in the guard's own name without going to them",

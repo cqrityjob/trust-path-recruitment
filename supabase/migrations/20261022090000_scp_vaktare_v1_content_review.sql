@@ -136,7 +136,7 @@ END $$;
 -- ═══════════════════════════════════════════════════════════════════════════
 CREATE TEMP TABLE _v3_doc AS
 SELECT $vaktare_content${
- "review": "vaktare-v1-content-review-2026-09-03-r3",
+ "review": "vaktare-v1-content-review-2026-09-03-r4",
  "items": [
   {
    "slug": "so-rj-a01",
@@ -225,8 +225,8 @@ SELECT $vaktare_content${
    "options": [
     {
      "k": "a",
-     "sv": "Åk till personalutrymmet först. Be den anställde gå undan, hålla avstånd och stanna kvar i samtalet, hålla uppsikt bara om det känns säkert, och meddela larmcentralen att dörrlarmet inte är kontrollerat.",
-     "en": "Go to the staff area first. Ask the employee to move away, keep their distance and stay on the call, to keep watch only if it feels safe, and tell the alarm centre the door alarm has not been checked.",
+     "sv": "Åk till personalutrymmet först. Be den anställde gå till en säker plats, hålla avstånd och stanna kvar i samtalet. Be personen hålla uppsikt bara om det kan ske säkert och meddela larmcentralen att dörrlarmet inte är kontrollerat.",
+     "en": "Go to the staff area first. Ask the employee to move to a safe place, keep their distance and stay on the call. Ask them to keep watch only if they can do so safely, and tell the alarm centre that the door alarm has not been checked.",
      "rat_sv": "Människorna först, utan att någon konfronterar: den anställde går undan, håller avstånd och stannar i samtalet, och larmcentralen vet vad som är okontrollerat.",
      "err": null
     },
@@ -917,7 +917,7 @@ SELECT $vaktare_content${
     {
      "k": "b",
      "sv": "Säg att du inte får lämna ut sådana uppgifter och återgå till det du höll på med.",
-     "en": "Say that you are not allowed to release that kind of information, and go back to the round you were doing.",
+     "en": "Say that you are not allowed to release that kind of information, and return to what you were doing.",
      "rat_sv": "Ett nej utan skäl lämnar personen med intrycket att det är godtycke, och frågan kommer tillbaka till nästa väktare.",
      "err": "weak_communication"
     },
@@ -1851,11 +1851,11 @@ SELECT $vaktare_content${
    "kind": "reflection",
    "decision": "EDIT",
    "sv": {
-    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad arbetet var, vad som var din uppgift, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
+    "scenario": "Den här frågan har inget rätt svar, och en människa läser ditt svar. Berätta vad uppgiften eller aktiviteten handlade om, vad som var din roll, vad du gjorde för att hålla koncentrationen, hur det gick och vad du tog med dig. Du kan använda ett exempel från arbete, praktik, studier, föreningsliv eller en annan situation där du haft ansvar. Du kan skriva med korta meningar eller i punktform. Det viktiga är vad du själv gjorde, inte hur du formulerar dig.",
     "prompt": "Beskriv en situation där du behövde hålla koncentrationen uppe under enformigt eller återkommande arbete. Hur gjorde du?"
    },
    "en": {
-    "scenario": "This question has no right answer, and a person reads what you write. Tell us what the work was, what your role was, what you did to keep your concentration, how it went and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
+    "scenario": "This question has no right answer, and a person reads what you write. Tell us what the task or activity involved, what your role was, what you did to stay focused, how it went and what you took from it. You can use an example from work, a placement, studies, a club or association, or another situation where you had responsibility. Short sentences or bullet points are fine. What matters is what you yourself did, not how you phrase it.",
     "prompt": "Describe a situation where you had to stay focused during monotonous or repetitive work. How did you do it?"
    },
    "options": []
