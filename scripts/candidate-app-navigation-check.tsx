@@ -146,15 +146,24 @@ const ROUTE_IDS: string[] = (() => {
 
 group("1 · one canonical link per product, desktop and mobile");
 {
+  // Five, since the premium overview: "Översikt" names the page (the
+  // workspace is "Min karriär", which is what the account menu's switch
+  // calls it), and the profession explorer is a candidate tool.
   const EXPECTED: { key: string; to: string; sv: string; en: string }[] = [
-    { key: "myCareer", to: "/my-career", sv: "Min karriär", en: "My Career" },
+    { key: "myCareer", to: "/my-career", sv: "Översikt", en: "Overview" },
+    {
+      key: "exploreProfessions",
+      to: "/career-center",
+      sv: "Utforska yrken",
+      en: "Explore professions",
+    },
     { key: "jobs", to: "/jobs", sv: "Jobb", en: "Jobs" },
     { key: "passport", to: "/passport", sv: "Security Passport", en: "Security Passport" },
     { key: "assessments", to: "/academy", sv: "Bedömningar", en: "Assessments" },
   ];
 
   ck(
-    "the navigation is exactly four items, in the agreed order",
+    "the navigation is exactly five items, in the agreed order",
     CANDIDATE_APP_NAV.map((i) => i.key).join(",") === EXPECTED.map((e) => e.key).join(","),
   );
 
@@ -162,9 +171,9 @@ group("1 · one canonical link per product, desktop and mobile");
     const html = render(React.createElement(CandidateAppNav, { variant, activeKey: "myCareer" }));
     const hrefs = Array.from(html.matchAll(/href="([^"]*)"/g)).map((m) => m[1]!);
 
-    ck(`${variant}: exactly four links`, hrefs.length === 4);
+    ck(`${variant}: exactly five links`, hrefs.length === 5);
     ck(
-      `${variant}: the four destinations, in order`,
+      `${variant}: the five destinations, in order`,
       hrefs.join(",") === EXPECTED.map((e) => e.to).join(","),
     );
     for (const e of EXPECTED) {
@@ -194,7 +203,10 @@ group("1 · one canonical link per product, desktop and mobile");
 
 group("2 · the workspace carries no marketing navigation");
 {
-  const MARKETING = ["/contact", "/about", "/employers", "/assessment", "/career-center"];
+  // /career-center is deliberately NOT here any more: as "Utforska yrken"
+  // it is one of the candidate's own destinations. What must not follow
+  // anybody in is the WEBSITE's name for it -- asserted below.
+  const MARKETING = ["/contact", "/about", "/employers", "/assessment"];
   for (const variant of ["desktop", "mobile"] as const) {
     const html = render(React.createElement(CandidateAppNav, { variant, activeKey: null }));
     for (const route of MARKETING) {
@@ -203,6 +215,18 @@ group("2 · the workspace carries no marketing navigation");
         !html.includes(`href="${route}"`),
       );
     }
+  }
+
+  for (const variant of ["desktop", "mobile"] as const) {
+    const html = render(React.createElement(CandidateAppNav, { variant, activeKey: null }));
+    ck(
+      `${variant}: the profession explorer is named as a candidate tool, not as the website's hub`,
+      html.includes(">Utforska yrken<") && !html.includes("Säkerhetskarriärcenter"),
+    );
+    ck(
+      `${variant}: no reviewer entry in the candidate's primary navigation`,
+      !html.includes('href="/reviews"') && !html.includes("Granskningar"),
+    );
   }
 
   // "Kontakt" appeared TWICE on every signed-in desktop page: once in the
@@ -254,6 +278,8 @@ group("3 · current location survives nesting");
     ["/_authenticated/academy/", "assessments"],
     ["/_authenticated/academy/report/$attemptId", "assessments"],
     ["/_authenticated/academy/training/$assignmentId/", "assessments"],
+    ["/career-center/", "exploreProfessions"],
+    ["/career-center/$profession", "exploreProfessions"],
     ["/jobs/", "jobs"],
     ["/jobs/$slug", "jobs"],
     ["/jobs/profession/$professionSlug", "jobs"],
@@ -409,6 +435,7 @@ group("6 · every navigation item resolves");
 {
   const ROUTE_FILES: Record<string, string> = {
     "/my-career": "src/routes/_authenticated.my-career.index.tsx",
+    "/career-center": "src/routes/career-center.index.tsx",
     "/jobs": "src/routes/jobs.index.tsx",
     "/passport": "src/routes/_authenticated.passport.index.tsx",
     "/academy": "src/routes/_authenticated.academy.index.tsx",
@@ -465,6 +492,12 @@ group("7 · one name per product");
     "src/routes/_authenticated.my-career.profile.tsx",
     "src/routes/_authenticated.my-career.career-card.tsx",
     "src/components/professional-identity/NextActions.tsx",
+    "src/components/professional-identity/next-action-copy.ts",
+    "src/components/professional-identity/home-copy.ts",
+    "src/components/professional-identity/CareerSnapshot.tsx",
+    "src/components/professional-identity/RecentActivity.tsx",
+    "src/components/professional-identity/ActiveWork.tsx",
+    "src/components/professional-identity/ExploreAndGrow.tsx",
     "src/components/professional-identity/CareerJourney.tsx",
     "src/components/professional-identity/ProfessionalIdentityHeader.tsx",
     "src/components/professional-identity/cv-copy.ts",
@@ -581,7 +614,7 @@ group("7 · one name per product");
 /* 8 · The account menu owns My Profile, the nav does not              */
 /* ------------------------------------------------------------------ */
 
-group("8 · primary navigation stays four items");
+group("8 · primary navigation stays five items");
 {
   const menu = code(read("src/components/site/AccountMenu.tsx"));
   ck("My Profile is reached from the account menu", menu.includes('to="/my-career/profile"'));
@@ -594,6 +627,18 @@ group("8 · primary navigation stays four items");
     ck(`${to} is NOT a fifth primary navigation item`, !CANDIDATE_APP_NAV.some((i) => i.to === to));
   }
   ck("sign out is still in the account menu", menu.includes('t("account.signOut")'));
+
+  // The reviewer view is reached from the workspace switch, gated on the
+  // queue, and nowhere else in the candidate's chrome.
+  ck(
+    "the reviewer view is in the account menu, gated on the queue",
+    /identity\.reviewQueueCount > 0 && \(/.test(menu) && menu.includes('to="/reviews"'),
+  );
+  ck(
+    "the workspace switch names the candidate's own workspace",
+    dictionaries.sv["account.context.personal"] === "Min karriär" &&
+      dictionaries.sv["account.context.switchTo"] === "Byt arbetsyta",
+  );
 }
 
 /* ------------------------------------------------------------------ */
