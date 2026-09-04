@@ -4769,7 +4769,6 @@ export type Database = {
           issuer_organization_id: string | null
           jurisdiction_id: string | null
           mode: string
-          option_order_seed: number | null
           program_version_id: string | null
           purpose_version_id: string | null
           released_at: string | null
@@ -4798,7 +4797,6 @@ export type Database = {
           issuer_organization_id?: string | null
           jurisdiction_id?: string | null
           mode: string
-          option_order_seed?: number | null
           program_version_id?: string | null
           purpose_version_id?: string | null
           released_at?: string | null
@@ -4827,7 +4825,6 @@ export type Database = {
           issuer_organization_id?: string | null
           jurisdiction_id?: string | null
           mode?: string
-          option_order_seed?: number | null
           program_version_id?: string | null
           purpose_version_id?: string | null
           released_at?: string | null
@@ -13820,6 +13817,7 @@ export type Database = {
           spread: number
         }[]
       }
+      scp_audience_brief: { Args: { _brief: Json }; Returns: Json }
       scp_bind_employee_subject: {
         Args: { _employee_id: string; _user_id: string }
         Returns: string
@@ -14108,6 +14106,22 @@ export type Database = {
           title_en: string
           title_sv: string
           use_case: string
+        }[]
+      }
+      scp_employer_report: {
+        Args: { _attempt_id: string }
+        Returns: {
+          attempt_id: string
+          audience: string
+          brief: Json
+          context: Json
+          id: string
+          limitations_en: string[]
+          limitations_sv: string[]
+          payload: Json
+          released_at: string
+          safety_flags: Json
+          subject_id: string
         }[]
       }
       scp_employer_review_board: {
@@ -14772,6 +14786,22 @@ export type Database = {
           version_number: number
         }[]
       }
+      scp_participant_report: {
+        Args: { _attempt_id: string }
+        Returns: {
+          attempt_id: string
+          audience: string
+          brief: Json
+          context: Json
+          id: string
+          limitations_en: string[]
+          limitations_sv: string[]
+          payload: Json
+          released_at: string
+          safety_flags: Json
+          subject_id: string
+        }[]
+      }
       scp_record_employer_decision: {
         Args: {
           _action: string
@@ -14799,6 +14829,14 @@ export type Database = {
           employer_snapshot: string
           participant_snapshot: string
         }[]
+      }
+      scp_report_snapshot_readable: {
+        Args: {
+          _audience: string
+          _issuer_organization_id: string
+          _subject_id: string
+        }
+        Returns: boolean
       }
       scp_required_purpose_code:
         | {
@@ -15240,12 +15278,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -15269,11 +15307,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -15294,11 +15332,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -15319,11 +15357,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -15336,11 +15374,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

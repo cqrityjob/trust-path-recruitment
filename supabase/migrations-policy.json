@@ -1567,6 +1567,20 @@
       "doNotReExecute": true,
       "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260827112444';"
+    },
+    {
+      "canonicalFile": "20261024090000_scp_trust_evidence_report_r2a_audience_reads.sql",
+      "canonicalVersion": "20261024090000",
+      "hostedVersion": "20260904134520",
+      "hostedName": "ea2e5b1f-6d13-454e-b61b-bac4591ab899",
+      "generatedFileOnMain": null,
+      "doNotReExecute": true,
+      "equivalenceVerified": true,
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version, so the mapping lives here. No generated duplicate file was synced into supabase/migrations for this application.",
+      "appliedAt": "2026-09-04T13:45:20Z",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260904134520';",
+      "sqlEquivalence": "The canonical file was submitted verbatim to supabase--migration; the hosted ledger row 20260904134520 is that same SQL (its statements begin with the canonical file's TRUST Evidence Report header and it is the only ledger row containing SCP_R2A_EXPAND_PROOF, whose apply-time assertions all passed).",
+      "reason": "PR-R2A-1 EXPAND, step 1 of 3, applied hosted on its own under owner approval: additive only -- four read routines, EXECUTE to authenticated on the two audience entry points and the shared predicate, nothing revoked, no policy re-pointed, no row touched. R2A-2 (application cutover) and R2A-3 (CONTRACT) are NOT applied and must follow in order. Must never be executed hosted again."
     }
   ],
   "canonicalProject": {
