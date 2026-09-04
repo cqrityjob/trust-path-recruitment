@@ -149,9 +149,16 @@ PARTIALLY FROZEN row becomes a manifest field.
   `canonical_sha256` on the snapshot), release function writes the manifest,
   suite proves privacy (participant, employer, anon, other org read nothing),
   immutability and hash stability; TR11.3/11.4 are inverted deliberately.
-- PR-R2: audience RPCs/views; column-level revoke of `derivation_input`;
-  ledger disclosure fix; TR10.\*X inverted deliberately; guard G1 pinned to
-  zero direct reads.
+- PR-R2A (done, 20261024090000 / 20261025090000): audience RPCs
+  `scp_participant_report` / `scp_employer_report`; the direct
+  `authenticated` SELECT on the snapshot table is withdrawn entirely rather
+  than column by column, because the employer brief's `mean`/`spread` live
+  inside the `brief` column and a column-level revoke of `derivation_input`
+  alone would not have closed R0-X3; `mean`/`spread` leave the audience
+  document at the read, the stored row keeps them for the manifest.
+- PR-R2 read-path items — audience RPCs, the ledger disclosure fix,
+  TR10.\*X inverted deliberately, guard G1 pinned to zero direct reads — are
+  all delivered by PR-R2A; nothing of that list remains.
 - Self-publication, radar/Evidence Map rendering and any AI narrative
   provider remain out of scope until the product owner lifts them.
 

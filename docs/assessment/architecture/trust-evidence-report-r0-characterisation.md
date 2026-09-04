@@ -150,6 +150,12 @@ subtraction. It must be named in the manifest's `classification_rule`.
 
 ## 7. Audience boundaries and internal derivation exposure
 
+> **Status (PR-R2A, 2026-09-04):** R0-X1, R0-X2 and R0-X3 are closed by
+> 20261024090000 / 20261025090000 — see
+> `trust-evidence-report-r2a-audience-boundary.md`. The table below records
+> what this characterisation found; the pinned assertions it names now carry
+> their closed form under the same numbers.
+
 RLS on `scp_report_snapshots` and `scp_competency_evidence` protects
 **rows**. `GRANT SELECT ON public.scp_report_snapshots TO authenticated`
 covers every column (TR10.13X). The server functions select narrowly; a direct
@@ -218,6 +224,10 @@ reachable through the attempt today and would silently drift if the bank
 were re-versioned in place. That is the PR-R1 manifest's job.
 
 ## 9. Direct client read audit
+
+> **Status (PR-R2A):** both direct readers below now call
+> `scp_participant_report` / `scp_employer_report`; guard G1 pins zero direct
+> reads and `authenticated` holds no privilege on `scp_report_snapshots`.
 
 | File                                                                                  | Read path                                                                                                                                                                              | Audience                                                                       | Fields available to the client                                                                                 | Risk                                                                  |
 | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
