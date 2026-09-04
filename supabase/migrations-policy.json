@@ -473,6 +473,20 @@
       "hostedVersion": "20260818162445",
       "reason": "Production applied closed-test governance through Lovable under the generated UUID version 20260818162445, not under the authored version 20260818090000. The repository file now carries the hosted ledger identity so canonical replay identity and hosted ledger identity agree, and so the 20260818090000 collision with Passport Phase 10 is resolved without inventing a version.",
       "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260818162445';"
+    }, 
+    {
+      "file": "20261025090000_scp_trust_evidence_report_r2a_report_version_continuity.sql", 
+      "hostedVersion": "20260904171840", 
+      "hostedName": "scp_trust_evidence_report_r2a_report_version_continuity", 
+      "reason": "PR-R2A-2 continuity hotfix, applied to production wrygicdfxwjnrugduxnt on 2026-09-04 through DIRECT SUPABASE ACCESS (the management API), not through Lovable and not by the GitHub integration. That mechanism stamps its own ledger identity, so the canonical version 20261025090000 does not appear in supabase_migrations.schema_migrations; the hosted identity is 20260904171840. This entry is the map between the two. THE CANONICAL FILE MUST NOT BE EXECUTED AGAIN: its SQL is already represented in production. Because the canonical version is absent from the hosted ledger, an automated deploy that decides what to run by comparing filenames against that ledger would select it; verify with the query below before any such run. Re-execution would in fact be harmless (the file only does CREATE OR REPLACE of two functions and re-states their grants, and its own proof block would pass again), but it would still be an unintended second execution. Recorded here rather than under appliedThroughLovable because that field names a mechanism this apply did not use, and provenance must not be falsified. release-state.json records the same apply with the full read-only verification.", 
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260904171840';"
+    }, 
+    {
+      "file": "20261026090000_scp_trust_evidence_report_r2a_contract.sql", 
+      "hostedVersion": "20260904174903", 
+      "hostedName": "scp_trust_evidence_report_r2a_contract", 
+      "reason": "PR-R2A-3 CONTRACT, applied to production wrygicdfxwjnrugduxnt on 2026-09-04 through DIRECT SUPABASE ACCESS (the management API), not through Lovable and not by the GitHub integration. Canonical version 20261026090000 is recorded in supabase_migrations.schema_migrations as 20260904174903; this entry is the map between the two. THE CANONICAL FILE MUST NOT BE EXECUTED AGAIN. Same caveat as the continuity entry above: the canonical version is absent from the hosted ledger, so a filename-versus-ledger comparison would select it; verify with the query below first. Re-execution would be harmless in effect (DROP POLICY IF EXISTS / CREATE POLICY / REVOKE / GRANT, with a precondition block that refuses unless the audience contracts are present) but is still unintended. Recorded here rather than under appliedThroughLovable because that field names a mechanism this apply did not use. release-state.json records the same apply with verification blocks A-I.", 
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260904174903';"
     }
   ],
   "appliedThroughLovable": [
