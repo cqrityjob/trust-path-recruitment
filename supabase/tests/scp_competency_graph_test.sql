@@ -501,12 +501,24 @@ DO $$ BEGIN RAISE NOTICE 'GROUP G8 — access control'; END $$;
 -- Group G8 — RLS
 -- =========================================================================
 
+-- Inverted deliberately by PR-R2A (20261024090000). Until then a subject
+-- could select their own ledger rows in full -- contribution, confidence,
+-- the reviewer's rubric basis and safety finding (R0-X2). The ledger is the
+-- working material behind a report; a subject reads their RESULT through
+-- scp_participant_report and never the rows behind it. The rows still exist
+-- (asserted as the owning role first, so an empty ledger cannot pass this).
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+    JOIN public.scp_subject_identities i ON i.subject_id = e.subject_id
+   WHERE i.user_id = 'c0000000-0000-0000-0000-000000000001') > 0,
+  'G8.0 the subject has evidence rows in the ledger');
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'c0000000-0000-0000-0000-000000000001';
 CREATE TEMP TABLE own AS SELECT count(*) AS n FROM public.scp_competency_evidence;
 RESET ROLE;
 RESET request.jwt.claim.sub;
-SELECT pg_temp.ok((SELECT n FROM own) > 0, 'G8.1 a subject can read their own evidence');
+SELECT pg_temp.ok((SELECT n FROM own) = 0,
+  'G8.1 a subject cannot read their own evidence rows directly -- the participant report is the audience document (PR-R2A)');
 
 INSERT INTO auth.users (id, email)
 VALUES ('c0000000-0000-0000-0000-000000000009', 'stranger@graph.test');

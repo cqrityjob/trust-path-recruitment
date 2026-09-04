@@ -332,7 +332,7 @@ SELECT pg_temp.ok(
                            'e2e00000-3333-0000-0000-00000000000a', :'att1'::uuid) = 'result_available',
   'F24 Tester and Person both become result_available');
 SELECT pg_temp.ok(
-  (SELECT rs.audience FROM public.scp_report_snapshots rs
+  (SELECT rs.audience FROM public.scp_employer_report(:'att1'::uuid) rs
     WHERE rs.id = (SELECT employer_snapshot_id FROM public.scp_employer_person_assessments(
                      'e2e00000-1111-0000-0000-00000000000a'::uuid,
                      'e2e00000-3333-0000-0000-00000000000a'::uuid)
@@ -345,7 +345,7 @@ SET LOCAL request.jwt.claim.sub = 'e2e00000-0000-0000-0000-00000000000d';
 SELECT pg_temp.ok(pg_temp.participant_state(:'att1'::uuid) = 'result_available',
   'F26 the participant history becomes result_available');
 SELECT pg_temp.ok(
-  (SELECT rs.audience FROM public.scp_report_snapshots rs
+  (SELECT rs.audience FROM public.scp_participant_report(:'att1'::uuid) rs
     WHERE rs.id = (SELECT participant_snapshot_id FROM public.scp_my_assessment_history()
                     WHERE attempt_id = :'att1'::uuid)) = 'participant',
   'F27 and offers the PARTICIPANT report, never the employer one');

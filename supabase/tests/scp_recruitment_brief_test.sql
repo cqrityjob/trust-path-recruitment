@@ -718,9 +718,9 @@ SELECT pg_temp.ok(
   'RB6.6 another organisation reads no interview note of this one''s');
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots s
-    WHERE s.attempt_id IN (SELECT attempt_id FROM runs)) = 0,
-  'RB6.7 nor any of its briefs — tenant isolation holds on the snapshot itself');
+  (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e) = 0
+  AND (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p) = 0,
+  'RB6.7 nor any of its briefs — tenant isolation holds on the audience read paths');
 
 SELECT pg_temp.must_fail($$
   SELECT public.scp_record_interview_note(
@@ -736,13 +736,13 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'fb000000-0000-0000-0000-00000000000b';
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots s
-    WHERE s.attempt_id IN (SELECT attempt_id FROM runs)) = 1,
-  'RB6.9 a candidate sees exactly one snapshot: their own participant report');
+  (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p) = 1
+  AND (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e) = 0,
+  'RB6.9 a candidate sees exactly one document: their own participant report');
 
 SELECT pg_temp.ok(
-  (SELECT audience FROM public.scp_report_snapshots s
-    WHERE s.attempt_id IN (SELECT attempt_id FROM runs)) = 'participant',
+  (SELECT bool_and(p.audience = 'participant')
+     FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p),
   'RB6.10 and it is the participant one');
 
 SELECT pg_temp.ok(
