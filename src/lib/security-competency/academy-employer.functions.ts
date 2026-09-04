@@ -1346,8 +1346,19 @@ export const getAcademyReport = createServerFn({ method: "GET" })
       data.audience === "participant"
         ? await ctx.supabase.rpc("scp_participant_report", { _attempt_id: data.attemptId })
         : await ctx.supabase.rpc("scp_employer_report", { _attempt_id: data.attemptId });
+    // A FAILED read is not an unreleased report, and collapsing the two is how
+    // a real outage hid in plain sight: when the audience RPC returned nothing
+    // for 16 released reports, every affected candidate was told "your report
+    // is not available yet" while their own history offered them the button.
+    // The employer results route already distinguishes the two and could not,
+    // because this line answered both with null. Throw on failure -- exactly as
+    // getDevelopmentRecommendations below does, and through the same `fail`
+    // helper, which logs the detail server-side and hands the client a code
+    // rather than a database message. null now means one thing only: there is
+    // no released report for you.
+    if (error) throw fail(error.message, "report_read_failed");
     const row = (Array.isArray(rows) ? rows[0] : undefined) as RpcRow | undefined;
-    if (error || !row) return null;
+    if (!row) return null;
 
     return {
       id: String(row.id),

@@ -779,6 +779,37 @@ console.log(
     "src/routes/_authenticated.employer.$employerSlug.assessments.results.$attemptId.tsx",
     "src/routes/_authenticated.academy.report.$attemptId.tsx",
   ].map((f) => stripComments(read(f)));
+  // J. A failed read must not masquerade as an unreleased report. This is the
+  // defect that hid a production outage: 16 released reports were withheld by
+  // the audience RPC and every affected candidate was shown the ordinary
+  // "not available yet" state, while their own history offered them the
+  // report. The server function now throws, and both report routes render a
+  // failure as a failure.
+  check(
+    "J1 getAcademyReport throws on an RPC failure instead of returning null",
+    /if \(error\) throw fail\(/.test(academy) && !/if \(error \|\| !row\)/.test(academy),
+  );
+  check(
+    "J2 and reserves null for the one case that means it: no released report",
+    /if \(!row\) return null;/.test(academy),
+  );
+  {
+    const routes = [
+      "src/routes/_authenticated.academy.report.$attemptId.tsx",
+      "src/routes/_authenticated.employer.$employerSlug.assessments.results.$attemptId.tsx",
+    ].map((f) => stripComments(read(f)));
+    check(
+      "J3 both report routes distinguish a failed read from an unreleased report",
+      routes.every(
+        (c) => /report\.isError/.test(c) && /logAcademyError\(/.test(c) && /!report\.data/.test(c),
+      ),
+    );
+    check(
+      "J4 and neither shows a raw database message to the reader",
+      routes.every((c) => !/report\.error\.message|error\.details|String\(report\.error\)/.test(c)),
+    );
+  }
+
   check(
     "G6 the report layer never computes or submits a contribution, maturity or score of its own",
     !reportLayer.some((c) =>

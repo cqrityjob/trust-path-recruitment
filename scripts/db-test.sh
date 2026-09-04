@@ -1567,6 +1567,54 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# PR-R2A-2 hotfix: report-version continuity (20261025090000).
+#
+# A released snapshot whose scp_report_versions row is missing must still
+# reach its audience. On production 16 released reports were withheld by the
+# INNER JOIN that 20261024090000 used to fetch template limitations, while the
+# candidate's own history still offered them -- the contradiction this suite
+# asserts away. It also proves the other half: a report released TODAY cannot
+# become an orphan, because the release path only stores an id it selected,
+# the foreign key refuses a dangling one, ON DELETE RESTRICT protects the
+# template, and the immutability trigger refuses to repoint a released row.
+# ---------------------------------------------------------------------------
+echo "==> Running PR-R2A-2 report-version continuity assertions"
+set +e
+R2AC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r2a_continuity_test.sql 2>&1)"
+R2AC_RC=$?
+set -e
+
+echo "$R2AC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+R2AC_PASSED="$(echo "$R2AC_OUT" | grep -c "ok  " || true)"
+
+if [ "$R2AC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the R2A continuity suite exited with code ${R2AC_RC}." >&2
+  echo "$R2AC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "R2A report-version continuity"
+else
+  echo "    ok  ${R2AC_PASSED} R2A continuity assertions passed"
+
+  # The two halves of the contract. Losing either one silently would return
+  # the product to the state this hotfix exists to end.
+  for REQUIRED in \
+    "C1.2 (A) the participant still receives their released report with the template row missing" \
+    "C1.3 (B) the employer still receives the released employer report" \
+    "C3.3 the foreign key refuses a snapshot pointing at a template that does not exist" \
+    "C4.2 (I) THE REGRESSION: whenever the history offers the report, the participant contract returns it"; do
+    if ! echo "$R2AC_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: the mandatory R2A continuity assertion did not run: ${REQUIRED}" >&2
+      suite_failed "R2A report-version continuity (missing: ${REQUIRED})"
+    fi
+  done
+
+  if [ "$R2AC_PASSED" -lt 25 ]; then
+    echo "FAIL: expected at least 25 R2A continuity assertions, only ${R2AC_PASSED} ran." >&2
+    suite_failed "R2A report-version continuity (assertion shortfall: floor 25)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"
