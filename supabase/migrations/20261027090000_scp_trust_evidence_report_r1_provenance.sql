@@ -95,6 +95,17 @@ BEGIN
               WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests') THEN
     RAISE EXCEPTION 'SCP_R1_PRECONDITION: scp_report_computation_manifests already exists';
   END IF;
+  -- The manifest pins scp_attempts.option_order_seed (20261021090000). A
+  -- plpgsql %ROWTYPE field is resolved at RUN time, so on a database where
+  -- that migration has not been applied this file installs cleanly and the
+  -- release function then fails on every call with 42703. Found on the
+  -- hosted project on 2026-09-04 (applied, regression, rolled back); refuse
+  -- up front instead.
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema = 'public' AND table_name = 'scp_attempts'
+                    AND column_name = 'option_order_seed') THEN
+    RAISE EXCEPTION 'SCP_R1_PRECONDITION: scp_attempts.option_order_seed is missing -- apply 20261021090000 (option order per attempt) first';
+  END IF;
 END
 $pre$;
 
@@ -216,6 +227,12 @@ BEGIN
     'frozen provenance of a released report.', lower(TG_OP)
     USING ERRCODE = 'check_violation';
 END; $$;
+
+-- A trigger function cannot be called directly ("trigger functions can only
+-- be called as triggers"), but the hosted default privileges still hand anon
+-- EXECUTE on every new function, and the rule here is that no new function
+-- arrives reachable. Observed hosted on 2026-09-04: acl carried anon=X.
+REVOKE ALL ON FUNCTION public.scp_guard_manifest_immutable() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS scp_report_computation_manifests_immutable
   ON public.scp_report_computation_manifests;
@@ -1445,6 +1462,10 @@ BEGIN
   IF has_table_privilege('authenticated', 'public.scp_report_snapshots', 'SELECT')
      OR has_table_privilege('anon', 'public.scp_report_snapshots', 'SELECT') THEN
     RAISE EXCEPTION 'SCP_R1_PROOF: the R2A-3 posture on scp_report_snapshots moved';
+  END IF;
+  IF has_function_privilege('anon', 'public.scp_guard_manifest_immutable()'::regprocedure, 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.scp_guard_manifest_immutable()'::regprocedure, 'EXECUTE') THEN
+    RAISE EXCEPTION 'SCP_R1_PROOF: the manifest guard trigger function is reachable by an audience role';
   END IF;
 
   -- 7.2 The link columns exist, are nullable (legacy provenance), and pair.
