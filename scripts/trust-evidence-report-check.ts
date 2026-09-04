@@ -680,7 +680,9 @@ console.log("\nF. No human finding, no safety panel; a finding is never a number
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-console.log("\nG. Direct client reads of the snapshot are exactly the two that exist today");
+console.log(
+  "\nG. No client reads a report snapshot directly; both consumers use the audience contract",
+);
 // ═══════════════════════════════════════════════════════════════════════════
 {
   const srcFiles = walk(join(ROOT, "src"));
@@ -690,42 +692,74 @@ console.log("\nG. Direct client reads of the snapshot are exactly the two that e
     )
     .map((f) => relative(ROOT, f))
     .sort();
-  const EXPECTED = [
-    "src/lib/interview-intelligence/context.functions.ts",
-    "src/lib/security-competency/academy-employer.functions.ts",
-  ];
+  // PR-R0 pinned exactly two direct readers here; PR-R2A migrated both to the
+  // audience entry points and 20261025090000 revoked the table read, so a
+  // direct read that reappears would not merely be a style problem -- it
+  // would return "permission denied" in production.
   check(
-    "G1 exactly two server functions read scp_report_snapshots directly (PR-R2 replaces them with audience RPCs)",
-    JSON.stringify(readers) === JSON.stringify(EXPECTED),
+    "G1 no src file reads scp_report_snapshots directly (PR-R2A: the audience RPCs are the only path)",
+    readers.length === 0,
     readers.join(", "),
   );
   const academy = stripComments(read("src/lib/security-competency/academy-employer.functions.ts"));
-  const sel = academy.match(/\.from\("scp_report_snapshots"\)\s*\.select\(\s*([\s\S]*?)\)\s*\.eq/);
   check(
-    "G2 getAcademyReport's select does not name derivation_input",
-    !!sel && !/derivation_input/.test(sel[1]),
+    "G2 getAcademyReport reads the participant document through scp_participant_report and the employer one through scp_employer_report",
+    /\.rpc\("scp_participant_report",\s*\{\s*_attempt_id:/.test(academy) &&
+      /\.rpc\("scp_employer_report",\s*\{\s*_attempt_id:/.test(academy),
   );
   check(
-    "G2 and does select payload, brief, safety_flags and context (the audience document)",
-    !!sel &&
-      /payload/.test(sel[1]) &&
-      /brief/.test(sel[1]) &&
-      /safety_flags/.test(sel[1]) &&
-      /context/.test(sel[1]),
+    "G2b and names neither derivation_input nor the snapshot table anywhere",
+    !/derivation_input/.test(academy) && !/scp_report_snapshots/.test(academy),
+  );
+  check(
+    "G2c the client brief types carry no mean and no spread, and the mapper reads none",
+    !/\bmean\??:\s*number/.test(academy) &&
+      !/\bspread\??:\s*number/.test(academy) &&
+      !/\b[or]\.(mean|spread)\b/.test(academy),
   );
   const bridge = stripComments(read("src/lib/interview-intelligence/context.functions.ts"));
   check(
-    "G3 the interview bridge selects only released_at and brief",
-    /\.from\("scp_report_snapshots"\)\s*\.select\("released_at, brief"\)/.test(bridge),
+    "G3 the interview bridge reads the released brief through scp_employer_report",
+    /\.rpc\("scp_employer_report",\s*\{\s*_attempt_id:/.test(bridge) &&
+      !/scp_report_snapshots/.test(bridge),
   );
-  check("G3 and pins the employer audience", /\.eq\("audience", "employer"\)/.test(bridge));
+  check("G3b and never asks for the participant document", !/scp_participant_report/.test(bridge));
+  check(
+    "G3c and still carries only area/signal/behaviour and the guide follow-ups -- no question, no listen-for, no payload, no context",
+    /followupSv:\s*String\(g\.followup_sv/.test(bridge) &&
+      !/questionSv:/.test(bridge) &&
+      !/listenFor/.test(bridge) &&
+      !/snap\.payload|snap\.context|\.payload\b/.test(bridge),
+  );
+  const types = read("src/integrations/supabase/types.ts");
+  const rpcShape = (name: string) => {
+    const m = types.match(new RegExp(`      ${name}: \\{\\n([\\s\\S]*?)\\n      \\}\\n`));
+    return m ? m[1] : "";
+  };
+  const par = rpcShape("scp_participant_report");
+  const emp = rpcShape("scp_employer_report");
+  check(
+    "G7 both audience RPCs are typed, and neither type names derivation_input, threshold_version, scoring_model_version or issuer_organization_id",
+    par.length > 0 &&
+      emp.length > 0 &&
+      [par, emp].every(
+        (t) =>
+          /payload: Json/.test(t) &&
+          /brief: Json/.test(t) &&
+          /safety_flags: Json/.test(t) &&
+          /limitations_sv: string\[\]/.test(t) &&
+          !/derivation_input|threshold_version|scoring_model_version|issuer_organization_id|evidence_state_version|evidence_scope_version/.test(
+            t,
+          ),
+      ),
+  );
   const ledgerReaders = srcFiles.filter((f) =>
-    /\.from\(\s*["'](scp_competency_evidence|scp_human_reviews|scp_review_rubric_scores|scp_report_versions)["']/.test(
+    /\.from\(\s*["'](scp_competency_evidence|scp_human_reviews|scp_review_rubric_scores|scp_report_versions|scp_interview_notes|scp_employer_report_decisions)["']/.test(
       stripComments(readFileSync(f, "utf8")),
     ),
   );
   check(
-    "G4 no client code reads the evidence ledger, reviews, rubric levels or templates directly",
+    "G4 no client code reads the evidence ledger, reviews, rubric levels, templates, interview notes or decisions directly",
     ledgerReaders.length === 0,
     ledgerReaders.map((f) => relative(ROOT, f)).join(", "),
   );

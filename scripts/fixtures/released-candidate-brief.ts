@@ -34,8 +34,6 @@ const area = (
   evidenceType: "observed",
   signal,
   items,
-  mean: 0.5,
-  spread: signal === "mixed" ? 0.83 : 0.2,
   evidenceState: signal === "limited" ? "not_yet_shown" : "follow_up",
   behaviourSv,
   behaviourEn: `EN ${areaCode} behaviour`,

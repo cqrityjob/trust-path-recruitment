@@ -14110,6 +14110,22 @@ export type Database = {
           use_case: string
         }[]
       }
+      scp_employer_report: {
+        Args: { _attempt_id: string }
+        Returns: {
+          attempt_id: string
+          audience: string
+          brief: Json
+          context: Json
+          id: string
+          limitations_en: string[]
+          limitations_sv: string[]
+          payload: Json
+          released_at: string
+          safety_flags: Json
+          subject_id: string
+        }[]
+      }
       scp_employer_review_board: {
         Args: { _employer_id: string }
         Returns: {
@@ -14770,6 +14786,22 @@ export type Database = {
           started_at: string
           status: string
           version_number: number
+        }[]
+      }
+      scp_participant_report: {
+        Args: { _attempt_id: string }
+        Returns: {
+          attempt_id: string
+          audience: string
+          brief: Json
+          context: Json
+          id: string
+          limitations_en: string[]
+          limitations_sv: string[]
+          payload: Json
+          released_at: string
+          safety_flags: Json
+          subject_id: string
         }[]
       }
       scp_record_employer_decision: {

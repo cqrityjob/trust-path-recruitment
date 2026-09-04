@@ -212,11 +212,10 @@ export type ObservedArea = {
   evidenceType: "observed";
   signal: AssessmentSignal;
   items: number;
-  /** Kept so a surface can order strengths by how strongly they were shown.
-   *  Never rendered as a number: it is not a score and there is no scale a
-   *  reader could put it on. */
-  mean: number;
-  spread: number;
+  /** No mean, no spread. The numbers the signal was derived from stay in the
+   *  database: since PR-R2A the employer read contract (scp_employer_report)
+   *  strips them before they leave, and the client contract has no field for
+   *  them. Ordering by strength uses `items` (decision-support byWeight). */
   evidenceState: EvidenceState;
   behaviourSv: string | null;
   behaviourEn: string | null;
@@ -233,8 +232,6 @@ export type SelfReportedArea = {
   pattern: SelfReportPattern;
   consistency: "consistent" | "varied";
   items: number;
-  mean?: number;
-  spread?: number;
   whySv?: string;
   whyEn?: string;
 };
@@ -1270,8 +1267,6 @@ function mapBrief(b: RpcRow | null): ReportBrief | null {
       evidenceType: "observed",
       signal: o.signal as AssessmentSignal,
       items: Number(o.items ?? 0),
-      mean: Number(o.mean ?? 0),
-      spread: Number(o.spread ?? 0),
       evidenceState: o.evidence_state as EvidenceState,
       behaviourSv: o.behaviour_sv ? String(o.behaviour_sv) : null,
       behaviourEn: o.behaviour_en ? String(o.behaviour_en) : null,
@@ -1288,9 +1283,7 @@ function mapBrief(b: RpcRow | null): ReportBrief | null {
       consistency: r.consistency as SelfReportedArea["consistency"],
       items: Number(r.items ?? 0),
       // Absent from the participant brief by construction, so undefined here
-      // rather than 0 — the surface renders what is present and omits the rest.
-      mean: r.mean == null ? undefined : Number(r.mean),
-      spread: r.spread == null ? undefined : Number(r.spread),
+      // rather than "" — the surface renders what is present and omits the rest.
       whySv: r.why_sv == null ? undefined : String(r.why_sv),
       whyEn: r.why_en == null ? undefined : String(r.why_en),
     })),
@@ -1323,11 +1316,17 @@ function mapBrief(b: RpcRow | null): ReportBrief | null {
 }
 
 /**
- * A released report.
+ * A released report, through the audience read contract.
  *
- * Read through RLS on scp_report_snapshots rather than through an RPC — the
- * policy already says exactly who may see which audience, so a definer
- * function here would add a second place for that rule to live and drift.
+ * scp_participant_report / scp_employer_report (20261024090000) are SECURITY
+ * DEFINER projections of exactly the released document for one audience:
+ * payload, the audience brief (no mean/spread), context, released_at and the
+ * template's limitations. The snapshot table itself refuses the signed-in
+ * role (20261025090000), so there is no direct read for this function to
+ * narrow and nothing internal -- derivation_input, the ledger, a finding's
+ * behaviour id -- can reach a client however the query is written. The
+ * audience rule still lives in ONE place: scp_report_snapshot_readable, which
+ * both entry points and both row policies evaluate.
  */
 export const getAcademyReport = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -1341,30 +1340,20 @@ export const getAcademyReport = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }): Promise<ReportSnapshot | null> => {
     const ctx = context as Ctx;
-    const { data: row, error } = await ctx.supabase
-      .from("scp_report_snapshots")
-      .select(
-        // derivation_input is deliberately NOT selected. It holds the internal
-        // maturity the state was derived from, and it exists for reproducibility,
-        // not for a reader.
-        "id, attempt_id, subject_id, audience, released_at, payload, brief, safety_flags, context, " +
-          "scp_report_versions(limitations_sv, limitations_en)",
-      )
-      .eq("attempt_id", data.attemptId)
-      .eq("audience", data.audience)
-      .maybeSingle();
+    // Zero rows means "not released" or "not yours" -- the entry point does
+    // not distinguish them, exactly as the row policy never did.
+    const { data: rows, error } =
+      data.audience === "participant"
+        ? await ctx.supabase.rpc("scp_participant_report", { _attempt_id: data.attemptId })
+        : await ctx.supabase.rpc("scp_employer_report", { _attempt_id: data.attemptId });
+    const row = (Array.isArray(rows) ? rows[0] : undefined) as RpcRow | undefined;
     if (error || !row) return null;
 
-    // The joined template arrives as a nested object PostgREST types loosely.
-    const tmpl = ((row as RpcRow).scp_report_versions ?? {}) as {
-      limitations_sv?: string[];
-      limitations_en?: string[];
-    };
     return {
       id: String(row.id),
       attemptId: String(row.attempt_id),
       subjectId: String(row.subject_id),
-      audience: row.audience,
+      audience: row.audience as ReportSnapshot["audience"],
       releasedAt: String(row.released_at),
       context: mapContext(row.context as RpcRow | null),
       brief: mapBrief(row.brief as RpcRow | null),
@@ -1389,8 +1378,8 @@ export const getAcademyReport = createServerFn({ method: "GET" })
           observedAt: String(f.observed_at),
         }),
       ),
-      limitationsSv: tmpl.limitations_sv ?? [],
-      limitationsEn: tmpl.limitations_en ?? [],
+      limitationsSv: Array.isArray(row.limitations_sv) ? (row.limitations_sv as string[]) : [],
+      limitationsEn: Array.isArray(row.limitations_en) ? (row.limitations_en as string[]) : [],
     };
   });
 

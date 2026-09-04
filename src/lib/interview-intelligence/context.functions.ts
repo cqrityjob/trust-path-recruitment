@@ -332,23 +332,24 @@ async function readAssessment(
   const attemptId = str(released[0]?.attempt_id);
   if (!attemptId) return { brief: null, pending };
 
-  const { data: snap, error: snapErr } = await db
-    .from("scp_report_snapshots")
-    // `brief` and `released_at` only. `payload` carries the full competency
-    // report, `derivation_input` carries the internal maturity it came from,
-    // and `context` carries assessment metadata this briefing has no use for.
-    // Not selecting them is the cheapest possible guarantee they cannot leak.
-    .select("released_at, brief")
-    .eq("attempt_id", attemptId)
-    .eq("audience", "employer")
-    .maybeSingle();
+  // The employer read contract (scp_employer_report, 20261024090000): the
+  // released employer document, already stripped of everything internal --
+  // no derivation_input, no mean/spread on an area, no behaviour id on a
+  // finding. The snapshot table refuses this role outright (20261025090000),
+  // so there is no direct read to narrow. What arrives is the employer's own
+  // report; what is CARRIED from it is still only `released_at` and the
+  // parts of `brief` this briefing has a use for, below.
+  const { data: docs, error: snapErr } = await db.rpc("scp_employer_report", {
+    _attempt_id: attemptId,
+  });
   if (snapErr) {
     console.error("[interview-context] released brief unavailable", snapErr);
     return { brief: null, pending };
   }
-  // RLS returns nothing for a snapshot issued by another organisation, and
-  // "released to somebody else" is correctly indistinguishable from "not
-  // released" here.
+  // The entry point returns nothing for a snapshot issued by another
+  // organisation, and "released to somebody else" is correctly
+  // indistinguishable from "not released" here.
+  const snap = (Array.isArray(docs) ? docs[0] : undefined) as Row | undefined;
   if (!snap) return { brief: null, pending };
 
   const b = ((snap as Row).brief ?? null) as Row | null;

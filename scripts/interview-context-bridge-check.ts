@@ -391,12 +391,15 @@ ok(
 );
 
 // The structural half: release is the gate because an employer-audience
-// snapshot only EXISTS once the report is released. The read must therefore be
-// pinned to audience 'employer', and must select the brief rather than the
-// internal payload.
+// snapshot only EXISTS once the report is released. Since PR-R2A the read is
+// scp_employer_report(attempt_id) -- a SECURITY DEFINER projection of the
+// employer document that is employer-audience by construction, returns
+// nothing for another organisation, and strips everything internal before it
+// leaves the database. The snapshot table itself refuses the signed-in role.
 const fnSource = codeOnly(read(FUNCTIONS));
 ok(
-  /\.eq\(\s*"audience"\s*,\s*"employer"\s*\)/.test(fnSource),
+  /\.rpc\(\s*"scp_employer_report"\s*,\s*\{\s*_attempt_id:/.test(fnSource) &&
+    !/scp_report_snapshots|scp_participant_report/.test(fnSource),
   "G · the snapshot read is pinned to the employer audience",
 );
 ok(
@@ -427,8 +430,15 @@ ok(
   !/scp_review|reviewer_note|internal_note/.test(fnSource),
   "H · the bridge reads no reviewer-facing table",
 );
+// What the bridge CARRIES from the employer document is still only
+// released_at and the brief's areas and guide follow-ups: nothing from
+// payload or context is read, and the document itself has no mean/spread
+// and no derivation_input to read.
 ok(
-  /\.select\(\s*"released_at,\s*brief"\s*\)/.test(fnSource),
+  /released_at/.test(fnSource) &&
+    /observed/.test(fnSource) &&
+    /interview_guide/.test(fnSource) &&
+    !/snap\.payload|snap\.context|\.payload\b|\bmean\b|\bspread\b/.test(fnSource),
   "H · the snapshot read selects only the released brief, by name",
 );
 
