@@ -33,6 +33,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { AssessmentPanel } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { ReportContextPanel } from "@/components/academy/ReportContextPanel";
+import { logAcademyError } from "@/lib/security-competency/rpc-errors";
 import {
   EvidenceCoverage,
   evidenceStateLabelKey,
@@ -81,6 +82,39 @@ function ParticipantReport() {
       <AssessmentLayout>
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>
+        </AssessmentPanel>
+      </AssessmentLayout>
+    );
+  }
+
+  // A failed read and a report that simply is not released yet are different
+  // situations, and the candidate is the person least able to tell them apart.
+  // Saying "not available yet" for a broken read leaves someone waiting for
+  // something that already exists -- which is exactly what happened while the
+  // audience RPC was withholding released reports. getAcademyReport returns
+  // null only for a genuine no-row, so isError is the signal that something
+  // broke. Same handling as the employer results route.
+  if (report.isError) {
+    const { kind } = logAcademyError("academy/report", report.error);
+    return (
+      <AssessmentLayout>
+        <AssessmentPanel>
+          <div role="alert">
+            <p className="text-sm font-semibold text-foreground">
+              {t(
+                kind === "backend_unavailable"
+                  ? "academy.error.unavailableTitle"
+                  : "academy.error.failedTitle",
+              )}
+            </p>
+            <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
+              {t(
+                kind === "backend_unavailable"
+                  ? "academy.error.unavailableBody"
+                  : "academy.error.failedBody",
+              )}
+            </p>
+          </div>
         </AssessmentPanel>
       </AssessmentLayout>
     );
