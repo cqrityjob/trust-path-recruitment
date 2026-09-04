@@ -4769,6 +4769,7 @@ export type Database = {
           issuer_organization_id: string | null
           jurisdiction_id: string | null
           mode: string
+          option_order_seed: number | null
           program_version_id: string | null
           purpose_version_id: string | null
           released_at: string | null
@@ -4797,6 +4798,7 @@ export type Database = {
           issuer_organization_id?: string | null
           jurisdiction_id?: string | null
           mode: string
+          option_order_seed?: number | null
           program_version_id?: string | null
           purpose_version_id?: string | null
           released_at?: string | null
@@ -4825,6 +4827,7 @@ export type Database = {
           issuer_organization_id?: string | null
           jurisdiction_id?: string | null
           mode?: string
+          option_order_seed?: number | null
           program_version_id?: string | null
           purpose_version_id?: string | null
           released_at?: string | null
