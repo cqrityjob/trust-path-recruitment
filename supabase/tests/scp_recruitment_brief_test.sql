@@ -674,22 +674,19 @@ SELECT pg_temp.ok(
 -- Two independent locks, asserted separately because they fail differently and
 -- a test that conflated them would pass while one of them was missing.
 --
--- First: RLS. There is no INSERT/UPDATE/DELETE policy, so an employer's own
--- statement matches nothing at all -- it does not raise, it simply touches
--- no rows, which is what "the application cannot write this table directly"
--- looks like from inside.
+-- First: the grant. Until PR-R2A (20261024090000) the table carried the
+-- default-privilege grant set, so an employer's own UPDATE matched nothing
+-- under RLS rather than being refused. Since then authenticated holds SELECT
+-- and nothing else on this table: the statement is refused before RLS is
+-- even consulted.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'fb000000-0000-0000-0000-000000000002';
 
-CREATE TEMP TABLE rb_rls_write AS
-WITH u AS (
+SELECT pg_temp.must_fail($$
   UPDATE public.scp_interview_notes SET note = 'omskrivet'
-   WHERE attempt_id = (SELECT attempt_id FROM runs WHERE persona='B')
-  RETURNING 1)
-SELECT count(*) AS rows_written FROM u;
-
-SELECT pg_temp.ok((SELECT rows_written FROM rb_rls_write) = 0,
-  'RB6.4 an employer cannot rewrite an interview note through the table — RLS grants no write');
+   WHERE attempt_id = (SELECT attempt_id FROM runs WHERE persona='B')$$,
+  'permission denied',
+  'RB6.4 an employer cannot rewrite an interview note through the table — the role holds no UPDATE privilege at all');
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
@@ -718,9 +715,9 @@ SELECT pg_temp.ok(
   'RB6.6 another organisation reads no interview note of this one''s');
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots s
-    WHERE s.attempt_id IN (SELECT attempt_id FROM runs)) = 0,
-  'RB6.7 nor any of its briefs — tenant isolation holds on the snapshot itself');
+  (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e) = 0
+  AND (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p) = 0,
+  'RB6.7 nor any of its briefs — tenant isolation holds on the audience read paths');
 
 SELECT pg_temp.must_fail($$
   SELECT public.scp_record_interview_note(
@@ -736,13 +733,13 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'fb000000-0000-0000-0000-00000000000b';
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots s
-    WHERE s.attempt_id IN (SELECT attempt_id FROM runs)) = 1,
-  'RB6.9 a candidate sees exactly one snapshot: their own participant report');
+  (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p) = 1
+  AND (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e) = 0,
+  'RB6.9 a candidate sees exactly one document: their own participant report');
 
 SELECT pg_temp.ok(
-  (SELECT audience FROM public.scp_report_snapshots s
-    WHERE s.attempt_id IN (SELECT attempt_id FROM runs)) = 'participant',
+  (SELECT bool_and(p.audience = 'participant')
+     FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p),
   'RB6.10 and it is the participant one');
 
 SELECT pg_temp.ok(

@@ -1492,10 +1492,13 @@ fi
 # can carry a score, rank, match, suitability, pass/fail, hire/reject or radar
 # key or phrase in either language.
 #
-# The assertions suffixed X are PINNED EXPOSURES: audience-boundary gaps that
-# exist today (derivation_input on the audience-readable row, the evidence
-# ledger readable by its subject, mean/spread in the employer brief). They are
-# asserted as they stand so that PR-R2 has to change them on purpose.
+# PR-R0 pinned four audience-boundary EXPOSURES as X-suffixed assertions
+# (derivation_input on the audience-readable row, the evidence ledger readable
+# by its subject, mean/spread in the employer brief, the full-column SELECT).
+# PR-R2A (20261024090000 / 20261025090000) inverted them deliberately -- they
+# now carry their closed form under the same numbers -- and added group TR13:
+# the audience entry points return the audience document and nothing else,
+# and every forbidden path is refused rather than filtered.
 # ---------------------------------------------------------------------------
 echo "==> Running TRUST evidence report R0 characterisation assertions"
 set +e
@@ -1515,9 +1518,97 @@ fi
 
 echo "    ok  ${TR0_PASSED} TRUST evidence report R0 assertions passed"
 
-if [ "$TR0_PASSED" -lt 100 ]; then
-  echo "FAIL: expected at least 100 TRUST evidence report R0 assertions, only ${TR0_PASSED} ran." >&2
-  suite_failed "TRUST evidence report R0 (assertion shortfall: floor 100)"
+if [ "$TR0_PASSED" -lt 135 ]; then
+  echo "FAIL: expected at least 135 TRUST evidence report R0/R2A assertions, only ${TR0_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R0/R2A (assertion shortfall: floor 135)"
+fi
+
+# ---------------------------------------------------------------------------
+# PR-R2A expand/contract release sequence.
+#
+# 20261024090000 (EXPAND) creates the audience entry points and closes the
+# ledger and default-privilege exposures; 20261025090000 (CONTRACT) withdraws
+# the direct authenticated read of scp_report_snapshots. Hosted, the database
+# sits in the post-EXPAND state until the migrated getAcademyReport and
+# interview bridge are live, and a canonical replay never stops there. Same
+# pattern as the 20260916 hardening below: roll CONTRACT back, prove the
+# transitional contract -- main's direct reads still work AND the entry points
+# already work -- then re-apply CONTRACT and assert the end state is back.
+# ---------------------------------------------------------------------------
+echo "==> Verifying the PR-R2A expand/contract release sequence"
+
+set +e
+R2A_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261025090000_scp_trust_evidence_report_r2a_snapshot_read_contract_rollback.sql 2>&1)"
+R2A_BACK_RC=$?
+set -e
+
+if [ "$R2A_BACK_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the R2A contract rollback exited with code ${R2A_BACK_RC}." >&2
+  echo "$R2A_BACK" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "R2A contract rollback (reaching the post-expand state)"
+else
+  echo "    ok  R2A contract rolled back — the database is now in the post-EXPAND state"
+
+  set +e
+  R2A_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r2a_expand_test.sql 2>&1)"
+  R2A_RC=$?
+  set -e
+
+  echo "$R2A_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  R2A_PASSED="$(echo "$R2A_OUT" | grep -c "ok  " || true)"
+
+  if [ "$R2A_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: the R2A expand-phase suite exited with code ${R2A_RC}." >&2
+    echo "$R2A_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    suite_failed "R2A expand phase contract"
+  else
+    echo "    ok  ${R2A_PASSED} R2A expand-phase assertions passed"
+
+    # E1 is "the deployed code still works" and E2 is "the new code already
+    # works". Half of that is indistinguishable from a race.
+    for REQUIRED in \
+      "E1.1 main's direct participant read (getAcademyReport) still returns the participant row after EXPAND" \
+      "E1.2 main's direct employer read (getAcademyReport and the interview bridge) still returns the employer row after EXPAND" \
+      "E2.1 the participant entry point already returns the participant document, and only that one" \
+      "E2.2 the employer entry point already returns the employer document without mean/spread or internal ids"; do
+      if ! echo "$R2A_OUT" | grep -qF "$REQUIRED"; then
+        echo "FAIL: the mandatory R2A expand-phase assertion did not run: ${REQUIRED}" >&2
+        suite_failed "R2A expand phase contract (missing: ${REQUIRED})"
+      fi
+    done
+
+    if [ "$R2A_PASSED" -lt 18 ]; then
+      echo "FAIL: expected at least 18 R2A expand-phase assertions, only ${R2A_PASSED} ran." >&2
+      suite_failed "R2A expand phase contract (assertion shortfall: floor 18)"
+    fi
+  fi
+
+  set +e
+  R2A_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+    -f supabase/migrations/20261025090000_scp_trust_evidence_report_r2a_snapshot_read_contract.sql 2>&1)"
+  R2A_FWD_RC=$?
+  set -e
+
+  if [ "$R2A_FWD_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: re-applying the R2A CONTRACT exited with code ${R2A_FWD_RC}." >&2
+    echo "$R2A_FWD" | grep -iE "ERROR:|FEL:" | head -10 >&2
+    suite_failed "R2A contract re-application"
+  else
+    echo "    ok  R2A contract re-applied — a corrected sequencing mistake rolls forward cleanly"
+  fi
+
+  R2A_LEFT="$(psql -tAq -d "$TEST_DB" -c "
+    SELECT count(*) FROM information_schema.table_privileges
+     WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
+       AND grantee IN ('authenticated', 'anon', 'PUBLIC')")"
+  if [ "$R2A_LEFT" != "0" ]; then
+    echo "FAIL: an audience role still holds ${R2A_LEFT} privilege(s) on scp_report_snapshots after re-applying the R2A CONTRACT." >&2
+    suite_failed "R2A contract re-application (direct read still open)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------

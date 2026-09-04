@@ -1068,30 +1068,50 @@ SELECT pg_temp.ok(
            SIMILAR TO '%(bör anställas|rekommenderar anställning|olämplig|rangordn|percentil|should be hired|recommend hiring|unsuitable|percentile|ranked)%'),
   'TR9.10 the curated follow-up and interview-guide libraries carry no verdict vocabulary');
 
-DO $$ BEGIN RAISE NOTICE 'GROUP TR10 — audience boundaries, as they stand today'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP TR10 — audience boundaries, as PR-R2A closed them'; END $$;
 
 -- =========================================================================
--- Group TR10 — what each audience can read. Contracts first, then the
--- PINNED EXPOSURES that PR-R2 exists to close.
+-- Group TR10 — what each audience can read. Contracts first; the four
+-- assertions that PR-R0 pinned as EXPOSURES (TR10.5X / 6X / 10X / 13X) are
+-- inverted here on purpose by PR-R2A (20261024090000 / 20261025090000) and
+-- carry their closed form under the same numbers. An audience reads its
+-- document through scp_participant_report / scp_employer_report; the table
+-- refuses it.
 -- =========================================================================
+
+-- The participant document, read as the participant.
+CREATE OR REPLACE FUNCTION pg_temp.par_doc(_persona text) RETURNS jsonb
+LANGUAGE sql AS $fn$
+  SELECT to_jsonb(p) FROM runs r, LATERAL public.scp_participant_report(r.attempt_id) p
+   WHERE r.persona = _persona;
+$fn$;
+CREATE OR REPLACE FUNCTION pg_temp.emp_doc(_persona text) RETURNS jsonb
+LANGUAGE sql AS $fn$
+  SELECT to_jsonb(e) FROM runs r, LATERAL public.scp_employer_report(r.attempt_id) e
+   WHERE r.persona = _persona;
+$fn$;
+GRANT EXECUTE ON FUNCTION pg_temp.par_doc(text), pg_temp.emp_doc(text) TO authenticated;
 
 -- The participant.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-00000000000b';
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots) = 1
-  AND (SELECT audience FROM public.scp_report_snapshots) = 'participant',
-  'TR10.1 the participant reads exactly one snapshot: their own participant report');
+  (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p) = 1
+  AND pg_temp.par_doc('P2') ->> 'audience' = 'participant'
+  AND (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e) = 0,
+  'TR10.1 the participant reads exactly one document: their own participant report, and no employer one');
 
 SELECT pg_temp.ok(
-  (SELECT payload::text NOT LIKE '%severity%' AND payload::text NOT LIKE '%followup_sv%'
-      AND payload::text NOT LIKE '%reviewer_rationale%' AND jsonb_array_length(safety_flags) = 0
-      AND NOT (context ? 'scoring_model_version') AND NOT (context ? 'reviews_total')
-      AND NOT (brief ? 'interview_guide') AND NOT (brief ? 'observed')
-      AND NOT (brief ? 'executive_summary')
-     FROM public.scp_report_snapshots),
-  'TR10.2 the participant payload carries no severity, no employer question, no rationale, no guide, no observed signals');
+  (SELECT d ->> 'payload' NOT LIKE '%severity%' AND d ->> 'payload' NOT LIKE '%followup_sv%'
+      AND d ->> 'payload' NOT LIKE '%reviewer_rationale%'
+      AND d -> 'safety_flags' = '[]'::jsonb
+      AND NOT (d -> 'context' ? 'scoring_model_version') AND NOT (d -> 'context' ? 'reviews_total')
+      AND NOT (d -> 'context' ? 'participant_ref')
+      AND NOT (d -> 'brief' ? 'interview_guide') AND NOT (d -> 'brief' ? 'observed')
+      AND NOT (d -> 'brief' ? 'executive_summary')
+     FROM pg_temp.par_doc('P2') d),
+  'TR10.2 the participant document carries no severity, no employer question, no rationale, no guide, no observed signals');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_human_reviews) = 0
@@ -1103,28 +1123,29 @@ SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_candidate_responses) = 50,
   'TR10.4 the participant can read their own 50 answers (their own words, nothing derived)');
 
--- PINNED EXPOSURE R0-X1. RLS protects the ROW, and the row carries the
--- internal maturity derivation. getAcademyReport does not select it, but a
--- direct PostgREST read does. PR-R2 closes this with an audience RPC/view;
--- when it does, this assertion must be inverted deliberately.
+-- R0-X1, closed. The table refuses the participant, and the document the
+-- entry point returns has no derivation_input at all -- not a null, not a
+-- column.
+SELECT pg_temp.must_fail(
+  'SELECT derivation_input FROM public.scp_report_snapshots',
+  'permission denied',
+  'TR10.5 CLOSED (was R0-X1): the participant cannot read derivation_input -- the snapshot table refuses the role outright');
 SELECT pg_temp.ok(
-  (SELECT derivation_input IS NOT NULL AND derivation_input::text LIKE '%maturity_level%'
-     FROM public.scp_report_snapshots),
-  'TR10.5X PINNED EXPOSURE: the participant''s own snapshot row exposes derivation_input (internal maturity) to a direct read -- PR-R2');
+  NOT (pg_temp.par_doc('P2') ? 'derivation_input')
+  AND pg_temp.par_doc('P2')::text NOT LIKE '%maturity_level%'
+  AND pg_temp.par_doc('P2')::text NOT LIKE '%derivation%',
+  'TR10.5b and the participant document carries no derivation, no maturity level');
 
--- PINNED EXPOSURE R0-X2. The evidence ledger is readable by its subject,
--- including per-item contribution, confidence, the reviewer's derivation
--- basis (rubric levels) and the safety finding/severity that the snapshot
--- deliberately withholds. disclosure_class says 'internal_employer' and the
--- policy does not read it. PR-R2.
+-- R0-X2, closed. The subject's ledger policy is gone: the same 50 rows the
+-- participant could read in PR-R0 -- contribution, rubric basis, the
+-- reviewer's finding and severity -- are now zero rows.
 SELECT pg_temp.ok(
-  (SELECT count(*) = 50
-      AND count(*) FILTER (WHERE derivation_basis IS NOT NULL) = 7
-      AND count(*) FILTER (WHERE safety_finding = 'high') = 1
-      AND count(*) FILTER (WHERE safety_severity = 'high') = 1
-      AND bool_and(disclosure_class = 'internal_employer')
-     FROM public.scp_competency_evidence),
-  'TR10.6X PINNED EXPOSURE: the participant reads all 50 of their evidence rows with contribution, rubric basis, safety finding and severity -- PR-R2');
+  (SELECT count(*) FROM public.scp_competency_evidence) = 0,
+  'TR10.6 CLOSED (was R0-X2): the participant reads none of their 50 evidence rows -- no contribution, no rubric basis, no finding, no severity');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence
+    WHERE safety_severity IS NOT NULL OR derivation_basis IS NOT NULL OR contribution IS NOT NULL) = 0,
+  'TR10.6b nor a single internal field by any predicate');
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
@@ -1133,9 +1154,11 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-000000000002';
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots) = 3
-  AND (SELECT bool_and(audience = 'employer') FROM public.scp_report_snapshots),
-  'TR10.7 the employer reads its three employer reports and no participant report');
+  (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e) = 3
+  AND (SELECT bool_and(e.audience = 'employer')
+         FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e)
+  AND (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p) = 0,
+  'TR10.7 the employer reads its three employer documents and no participant one');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence) = 0
@@ -1146,28 +1169,30 @@ SELECT pg_temp.ok(
   'TR10.8 the employer cannot read the ledger, a raw answer, a review, a rubric level or the answer key');
 
 SELECT pg_temp.ok(
-  (SELECT bool_and(payload::text NOT LIKE '%reviewer_rationale%'
-               AND payload::text NOT LIKE '%FRITEXTTOKEN%'
-               AND coalesce(brief::text,'') NOT LIKE '%FRITEXTTOKEN%'
-               AND payload::text NOT LIKE '%score_value%' AND payload::text NOT LIKE '%is_preferred%'
-               AND coalesce(brief::text,'') NOT LIKE '%score_value%')
-     FROM public.scp_report_snapshots),
-  'TR10.9 no employer snapshot quotes a candidate''s words, a reviewer''s reasoning or a scoring key');
+  (SELECT bool_and(d ->> 'payload' NOT LIKE '%reviewer_rationale%'
+               AND d ->> 'payload' NOT LIKE '%FRITEXTTOKEN%'
+               AND coalesce(d ->> 'brief','') NOT LIKE '%FRITEXTTOKEN%'
+               AND d ->> 'payload' NOT LIKE '%score_value%' AND d ->> 'payload' NOT LIKE '%is_preferred%'
+               AND coalesce(d ->> 'brief','') NOT LIKE '%score_value%')
+     FROM (SELECT pg_temp.emp_doc(persona) AS d FROM runs) x),
+  'TR10.9 no employer document quotes a candidate''s words, a reviewer''s reasoning or a scoring key');
 
--- PINNED EXPOSURE R0-X3. Same row rule: the employer row exposes
--- derivation_input; and the employer BRIEF itself carries `mean` and
--- `spread` per observed area and per self-report pattern -- numbers the type
--- says are "never rendered" and which no surface renders, but which reach the
--- client. PR-R2 decides whether they leave the audience payload or move to
--- the private manifest (PR-R1).
+-- R0-X3, closed. The table refuses the employer; the employer document has
+-- no derivation_input; and its brief carries no mean and no spread on any
+-- observed area or self-report pattern. The stored row still has them (PR-R1
+-- moves them to the private manifest) -- asserted as the owning role in TR13.
+SELECT pg_temp.must_fail(
+  'SELECT derivation_input, brief FROM public.scp_report_snapshots',
+  'permission denied',
+  'TR10.10 CLOSED (was R0-X3): the employer cannot read derivation_input or the stored brief from the table');
 SELECT pg_temp.ok(
-  (SELECT bool_and(derivation_input IS NOT NULL
-               AND (SELECT bool_and(o ? 'mean' AND o ? 'spread')
-                      FROM jsonb_array_elements(brief->'observed') o)
-               AND (SELECT bool_and(r ? 'mean' AND r ? 'spread')
-                      FROM jsonb_array_elements(brief->'self_reported') r))
-     FROM public.scp_report_snapshots),
-  'TR10.10X PINNED EXPOSURE: the employer row exposes derivation_input, and the employer brief carries mean/spread per area -- PR-R1/R2');
+  (SELECT bool_and(NOT (d ? 'derivation_input')
+               AND (SELECT bool_and(NOT (o ? 'mean') AND NOT (o ? 'spread') AND o ? 'signal' AND o ? 'why_sv')
+                      FROM jsonb_array_elements(d -> 'brief' -> 'observed') o)
+               AND (SELECT bool_and(NOT (r ? 'mean') AND NOT (r ? 'spread') AND r ? 'pattern')
+                      FROM jsonb_array_elements(d -> 'brief' -> 'self_reported') r))
+     FROM (SELECT pg_temp.emp_doc(persona) AS d FROM runs) x),
+  'TR10.10b and the employer document carries no derivation_input and no mean/spread on any area -- signals and why-lines intact');
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
@@ -1175,31 +1200,36 @@ RESET ROLE; RESET request.jwt.claim.sub;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-000000000012';
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots) = 0
+  (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e) = 0
+  AND (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p) = 0
   AND (SELECT count(*) FROM public.scp_interview_notes) = 0
   AND (SELECT count(*) FROM public.scp_employer_decisions((SELECT attempt_id FROM runs WHERE persona = 'P1'))) = 0,
-  'TR10.11 another organisation reads no snapshot, note or decision of this one');
+  'TR10.11 another organisation reads no document, note or decision of this one');
+SELECT pg_temp.must_fail(
+  'SELECT count(*) FROM public.scp_report_snapshots', 'permission denied',
+  'TR10.11b and the table refuses it like everyone else');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-000000000013';
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots) = 0
+  (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_employer_report(r.attempt_id) e) = 0
+  AND (SELECT count(*) FROM runs r CROSS JOIN LATERAL public.scp_participant_report(r.attempt_id) p) = 0
   AND (SELECT count(*) FROM public.scp_competency_evidence) = 0,
   'TR10.12 a stranger reads nothing');
 RESET ROLE; RESET request.jwt.claim.sub;
 
--- The exact column set the row exposes, pinned so PR-R2 changes it on purpose.
+-- The exact privilege the audience role holds on the snapshot table: none.
+-- PR-R0 pinned the full 17-column SELECT here; PR-R2A withdrew it.
 SELECT pg_temp.ok(
-  (SELECT array_agg(column_name::text ORDER BY column_name)
-     FROM information_schema.column_privileges
-    WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
-      AND grantee = 'authenticated' AND privilege_type = 'SELECT')
-  = ARRAY['attempt_id','audience','brief','context','created_at','derivation_input',
-          'evidence_scope_version','evidence_state_version','id','issuer_organization_id',
-          'payload','released_at','report_version_id','safety_flags','scoring_model_version',
-          'subject_id','threshold_version'],
-  'TR10.13X PINNED EXPOSURE: authenticated SELECT covers every snapshot column, derivation_input included -- PR-R2');
+  NOT EXISTS (SELECT 1 FROM information_schema.table_privileges
+               WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
+                 AND grantee IN ('authenticated', 'anon', 'PUBLIC'))
+  AND NOT EXISTS (SELECT 1 FROM information_schema.column_privileges
+               WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
+                 AND grantee IN ('authenticated', 'anon', 'PUBLIC'))
+  AND has_table_privilege('service_role', 'public.scp_report_snapshots', 'SELECT'),
+  'TR10.13 CLOSED: authenticated and anon hold no privilege on any snapshot column -- derivation_input included; the server role keeps its read');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP TR11 — provenance the snapshot freezes today'; END $$;
 
@@ -1292,5 +1322,225 @@ SELECT pg_temp.ok(
      WHERE n.nspname = 'public' AND p.proname LIKE 'scp_iv_%'
        AND (p.prosrc ILIKE '%scp_competency_evidence%' OR p.prosrc ILIKE '%scp_report_snapshots%')),
   'TR12.3 Interview Intelligence neither writes the ledger nor the assessment snapshot');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP TR13 — PR-R2A audience read contracts and negative security'; END $$;
+
+-- =========================================================================
+-- Group TR13 — the audience entry points return the audience document and
+-- nothing else; the visible report is unchanged; every forbidden path is
+-- refused rather than filtered. Added by PR-R2A.
+-- =========================================================================
+
+-- 13.1–13.3  The participant document, field for field, against the row.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-00000000000b';
+CREATE TEMP TABLE par_p2 AS SELECT pg_temp.par_doc('P2') AS d;
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT array_agg(k ORDER BY k) FROM par_p2, jsonb_object_keys(d) k)
+  = ARRAY['attempt_id','audience','brief','context','id','limitations_en','limitations_sv',
+          'payload','released_at','safety_flags','subject_id'],
+  'TR13.1 the participant document has exactly these eleven keys -- no derivation_input, no threshold, no scoring model, no issuer');
+
+SELECT pg_temp.ok(
+  (SELECT d -> 'payload' = s.payload AND d -> 'context' = s.context
+      AND d ->> 'id' = s.id::text AND d ->> 'subject_id' = s.subject_id::text
+      AND (d ->> 'released_at')::timestamptz = s.released_at
+      AND d -> 'safety_flags' = '[]'::jsonb
+     FROM par_p2, snaps s WHERE s.persona = 'P2' AND s.audience = 'participant'),
+  'TR13.2 payload, context, ids and release time are the row''s own -- the visible participant report is unchanged');
+
+SELECT pg_temp.ok(
+  (SELECT d -> 'brief' = s.brief
+     FROM par_p2, snaps s WHERE s.persona = 'P2' AND s.audience = 'participant')
+  AND (SELECT (d -> 'brief' -> 'self_reported' -> 0) ? 'pattern' FROM par_p2)
+  AND (SELECT jsonb_array_length(d -> 'brief' -> 'modules') > 0 FROM par_p2),
+  'TR13.3 the participant brief is byte-identical to the stored one (it never carried mean/spread) -- modules, patterns and coverage intact');
+
+SELECT pg_temp.ok(
+  (SELECT d -> 'limitations_sv' = to_jsonb(v.limitations_sv) AND d -> 'limitations_en' = to_jsonb(v.limitations_en)
+      AND jsonb_array_length(d -> 'limitations_sv') > 0
+     FROM par_p2, snaps s JOIN public.scp_report_versions v ON v.id = s.report_version_id
+    WHERE s.persona = 'P2' AND s.audience = 'participant'),
+  'TR13.4 the template limitations travel with the document, as the joined read used to carry them');
+
+-- 13.5–13.8  The employer document against the row.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-000000000002';
+CREATE TEMP TABLE emp_docs AS SELECT persona, pg_temp.emp_doc(persona) AS d FROM runs;
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT bool_and((SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d) k)
+     = ARRAY['attempt_id','audience','brief','context','id','limitations_en','limitations_sv',
+             'payload','released_at','safety_flags','subject_id']) FROM emp_docs),
+  'TR13.5 the employer document has the same eleven keys and nothing internal');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(e.d -> 'payload' = s.payload AND e.d -> 'context' = s.context
+                AND e.d ->> 'id' = s.id::text
+                AND e.d -> 'brief' -> 'interview_guide' = s.brief -> 'interview_guide'
+                AND e.d -> 'brief' -> 'modules' = s.brief -> 'modules'
+                AND e.d -> 'brief' -> 'coverage' = s.brief -> 'coverage'
+                AND e.d -> 'brief' -> 'executive_summary' = s.brief -> 'executive_summary'
+                AND e.d -> 'brief' -> 'pace' = s.brief -> 'pace'
+                AND e.d -> 'brief' ->> 'brief_version' = s.brief ->> 'brief_version'
+                AND e.d -> 'brief' ->> 'signal_version' = s.brief ->> 'signal_version')
+     FROM emp_docs e JOIN snaps s ON s.persona = e.persona AND s.audience = 'employer'),
+  'TR13.6 payload, context, guide, modules, coverage, summary, pace and versions are the row''s own -- the visible employer report is unchanged');
+
+-- Independent strip: the same row, minus mean/spread, computed here and not
+-- by the function under test.
+SELECT pg_temp.ok(
+  (SELECT bool_and(
+       e.d -> 'brief' -> 'observed' =
+         (SELECT jsonb_agg(o - 'mean' - 'spread' ORDER BY ord)
+            FROM jsonb_array_elements(s.brief -> 'observed') WITH ORDINALITY t(o, ord))
+   AND e.d -> 'brief' -> 'self_reported' =
+         (SELECT jsonb_agg(r - 'mean' - 'spread' ORDER BY ord)
+            FROM jsonb_array_elements(s.brief -> 'self_reported') WITH ORDINALITY t(r, ord))
+   AND jsonb_array_length(e.d -> 'brief' -> 'observed') = jsonb_array_length(s.brief -> 'observed'))
+     FROM emp_docs e JOIN snaps s ON s.persona = e.persona AND s.audience = 'employer'),
+  'TR13.7 every observed area and self-report pattern is the row''s own minus exactly mean and spread, in the same order');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(o ? 'mean' AND o ? 'spread')
+     FROM snaps s, jsonb_array_elements(s.brief -> 'observed') o WHERE s.audience = 'employer'),
+  'TR13.8 the stored row still carries mean/spread for the private manifest (PR-R1) -- the read path, not the release, changed');
+
+-- 13.9–13.11  Safety flags: the released finding, no internal id.
+SELECT pg_temp.ok(
+  (SELECT jsonb_array_length(d -> 'safety_flags') = 1 FROM emp_docs WHERE persona = 'P2')
+  AND (SELECT jsonb_array_length(d -> 'safety_flags') = 0 FROM emp_docs WHERE persona = 'P1')
+  AND (SELECT (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'safety_flags' -> 0) k)
+              = ARRAY['finding','observed_at','severity']
+         FROM emp_docs WHERE persona = 'P2')
+  AND (SELECT d -> 'safety_flags' -> 0 ->> 'severity' = 'high' FROM emp_docs WHERE persona = 'P2'),
+  'TR13.9 the employer document carries P2''s one human finding as {finding, severity, observed_at} and nothing for P1');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(d::text NOT LIKE '%behaviour_version_id%') FROM emp_docs)
+  AND (SELECT bool_and(f ? 'behaviour_version_id')
+         FROM snaps s, jsonb_array_elements(s.safety_flags) f WHERE s.audience = 'employer' AND s.persona = 'P2'),
+  'TR13.10 behaviour_version_id stays on the row as traceability and never reaches the employer document (decision: internal)');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(e.d ->> 'subject_id' = s.subject_id::text)
+     FROM emp_docs e JOIN snaps s ON s.persona = e.persona AND s.audience = 'employer'),
+  'TR13.11 the employer document names the pseudonymous subject, as the row always did');
+
+-- 13.12–13.14  The bridge''s needs are in the employer document.
+SELECT pg_temp.ok(
+  (SELECT bool_and(
+       (SELECT bool_and(o ? 'area_sv' AND o ? 'area_en' AND o ? 'signal' AND o ? 'behaviour_sv')
+          FROM jsonb_array_elements(d -> 'brief' -> 'observed') o)
+   AND (SELECT bool_and(g ? 'area_code' AND g ? 'focus' AND g ? 'why_sv' AND g ? 'followup_sv')
+          FROM jsonb_array_elements(d -> 'brief' -> 'interview_guide') g)
+   AND (d ->> 'released_at') IS NOT NULL)
+     FROM emp_docs),
+  'TR13.12 the Interview Intelligence bridge finds released_at, observed area/signal/behaviour and the guide follow-ups in the employer document');
+
+-- 13.13  The two row policies and the two entry points evaluate one predicate.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'scp_report_snapshots'
+      AND qual LIKE '%scp_report_snapshot_readable%') = 2
+  AND (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname IN ('scp_participant_report','scp_employer_report')
+          AND p.prosecdef AND p.prosrc LIKE '%scp_report_snapshot_readable%'
+          AND EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=%')) = 2,
+  'TR13.13 the audience rule lives in one function, evaluated by both row policies and both SECURITY DEFINER entry points');
+
+SELECT pg_temp.ok(
+  NOT has_function_privilege('anon', 'public.scp_participant_report(uuid)', 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.scp_employer_report(uuid)', 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.scp_report_snapshot_readable(text,uuid,uuid)', 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.scp_audience_brief(jsonb)', 'EXECUTE')
+  AND NOT has_function_privilege('authenticated', 'public.scp_audience_brief(jsonb)', 'EXECUTE')
+  AND has_function_privilege('authenticated', 'public.scp_participant_report(uuid)', 'EXECUTE')
+  AND has_function_privilege('authenticated', 'public.scp_employer_report(uuid)', 'EXECUTE'),
+  'TR13.14 anon can execute none of the four; authenticated can execute the two entry points and not the projection helper');
+
+-- 13.15–13.18  anon: no document, no table, no write, no TRUNCATE.
+GRANT SELECT ON runs TO anon;
+SET LOCAL ROLE anon;
+SELECT pg_temp.must_fail(
+  format('SELECT count(*) FROM public.scp_participant_report(%L::uuid)', (SELECT attempt_id FROM runs WHERE persona = 'P1')),
+  'permission denied', 'TR13.15 anon cannot execute the participant entry point');
+SELECT pg_temp.must_fail(
+  format('SELECT count(*) FROM public.scp_employer_report(%L::uuid)', (SELECT attempt_id FROM runs WHERE persona = 'P1')),
+  'permission denied', 'TR13.15b nor the employer one');
+SELECT pg_temp.must_fail('SELECT count(*) FROM public.scp_report_snapshots',
+  'permission denied', 'TR13.16 anon cannot read the snapshot table');
+SELECT pg_temp.must_fail('SELECT count(*) FROM public.scp_competency_evidence',
+  'permission denied', 'TR13.16b nor the ledger');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_employer_report_decisions',
+  'permission denied', 'TR13.17 anon cannot TRUNCATE the employer decision log');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_interview_notes',
+  'permission denied', 'TR13.17b nor the interview notes');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_report_snapshots',
+  'permission denied', 'TR13.17c nor the report snapshots');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_competency_evidence',
+  'permission denied', 'TR13.17d nor the evidence ledger');
+SELECT pg_temp.must_fail(
+  $$INSERT INTO public.scp_interview_notes (attempt_id, employer_id, area_code, outcome, recorded_by)
+    SELECT attempt_id, (SELECT employer FROM tr), 'SCC-01', 'additional_context', (SELECT owner_user FROM tr)
+      FROM runs WHERE persona = 'P1'$$,
+  'permission denied', 'TR13.18 anon cannot INSERT an interview note');
+SELECT pg_temp.must_fail(
+  $$INSERT INTO public.scp_employer_report_decisions (attempt_id, employer_id, action, reason_code, decided_by)
+    SELECT attempt_id, (SELECT employer FROM tr), 'proceed_to_interview', 'evidence_sufficient', (SELECT owner_user FROM tr)
+      FROM runs WHERE persona = 'P1'$$,
+  'permission denied', 'TR13.18b nor a decision');
+SELECT pg_temp.must_fail('UPDATE public.scp_interview_notes SET note = NULL',
+  'permission denied', 'TR13.18c nor UPDATE a note');
+SELECT pg_temp.must_fail('DELETE FROM public.scp_employer_report_decisions',
+  'permission denied', 'TR13.18d nor DELETE a decision');
+RESET ROLE;
+
+-- 13.19  A signed-in user, even the owner: SELECT only, TRUNCATE refused
+-- before any trigger could have a say.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-000000000002';
+SELECT pg_temp.must_fail('TRUNCATE public.scp_employer_report_decisions',
+  'permission denied', 'TR13.19 the employer owner cannot TRUNCATE the decision log');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_interview_notes',
+  'permission denied', 'TR13.19b nor the interview notes');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_report_snapshots',
+  'permission denied', 'TR13.19c nor the snapshots');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_competency_evidence',
+  'permission denied', 'TR13.19d nor the ledger');
+SELECT pg_temp.must_fail(
+  $$INSERT INTO public.scp_interview_notes (attempt_id, employer_id, area_code, outcome, recorded_by)
+    SELECT attempt_id, (SELECT employer FROM tr), 'SCC-01', 'additional_context', (SELECT owner_user FROM tr)
+      FROM runs WHERE persona = 'P1'$$,
+  'permission denied', 'TR13.19e and cannot INSERT a note except through scp_record_interview_note');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(privs = 'SELECT') FROM (
+     SELECT table_name, string_agg(privilege_type, ',' ORDER BY privilege_type) AS privs
+       FROM information_schema.table_privileges
+      WHERE table_schema = 'public' AND grantee = 'authenticated'
+        AND table_name IN ('scp_competency_evidence','scp_employer_report_decisions','scp_interview_notes')
+      GROUP BY table_name) x)
+  AND (SELECT count(*) FROM information_schema.table_privileges
+        WHERE table_schema = 'public' AND grantee IN ('anon','PUBLIC')
+          AND table_name IN ('scp_report_snapshots','scp_competency_evidence',
+                             'scp_employer_report_decisions','scp_interview_notes')) = 0,
+  'TR13.20 authenticated holds SELECT and only SELECT on the ledger and the two addendum tables; anon holds nothing on any of the four');
+
+-- 13.21  The recorders still work for the people they are for -- closing the
+-- table did not close the product.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-000000000002';
+SELECT pg_temp.ok(
+  public.scp_record_interview_note((SELECT attempt_id FROM runs WHERE persona = 'P1'),
+    'SCC-01', 'additional_context', 'Berättade om ett konkret exempel.') IS NOT NULL
+  AND (SELECT count(*) FROM public.scp_interview_notes((SELECT attempt_id FROM runs WHERE persona = 'P1'))) = 1
+  AND (SELECT count(*) FROM public.scp_interview_notes) >= 1,
+  'TR13.21 the owner still records and reads an interview note through the governed path after the grants closed');
+RESET ROLE; RESET request.jwt.claim.sub;
 
 ROLLBACK;
