@@ -1515,9 +1515,55 @@ fi
 
 echo "    ok  ${TR0_PASSED} TRUST evidence report R0 assertions passed"
 
-if [ "$TR0_PASSED" -lt 100 ]; then
-  echo "FAIL: expected at least 100 TRUST evidence report R0 assertions, only ${TR0_PASSED} ran." >&2
-  suite_failed "TRUST evidence report R0 (assertion shortfall: floor 100)"
+if [ "$TR0_PASSED" -lt 120 ]; then
+  echo "FAIL: expected at least 120 TRUST evidence report R0/R2A assertions, only ${TR0_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R0/R2A (assertion shortfall: floor 120)"
+fi
+
+# ---------------------------------------------------------------------------
+# PR-R2A-1 (EXPAND, 20261024090000) compatibility contract.
+#
+# The audience entry points exist and the application on main still reads
+# scp_report_snapshots directly. Both must work at once, because this is the
+# state the hosted database sits in from the moment EXPAND is applied until
+# PR-R2A-2 (the application cutover) is live -- and, deliberately, for as long
+# after that as anyone likes. PR-R2A-3 (CONTRACT) is what ends it, and this
+# suite is what R2A-3 has to reach by rolling itself back.
+# ---------------------------------------------------------------------------
+echo "==> Running PR-R2A-1 expand-phase compatibility assertions"
+set +e
+R2A_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r2a_expand_test.sql 2>&1)"
+R2A_RC=$?
+set -e
+
+echo "$R2A_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+R2A_PASSED="$(echo "$R2A_OUT" | grep -c "ok  " || true)"
+
+if [ "$R2A_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the R2A expand-phase suite exited with code ${R2A_RC}." >&2
+  echo "$R2A_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "R2A expand phase compatibility"
+else
+  echo "    ok  ${R2A_PASSED} R2A expand-phase assertions passed"
+
+  # E1 is "the deployed code still works" and E2 is "the new code already
+  # works". Half of that is indistinguishable from a race.
+  for REQUIRED in \
+    "E1.1 main's direct participant read (getAcademyReport) still returns the participant row after EXPAND" \
+    "E1.2 main's direct employer read (getAcademyReport and the interview bridge) still returns the employer row after EXPAND" \
+    "E2.1 the participant entry point already returns the participant document, and only that one" \
+    "E2.2 the employer entry point already returns the employer document without mean/spread or internal ids"; do
+    if ! echo "$R2A_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: the mandatory R2A expand-phase assertion did not run: ${REQUIRED}" >&2
+      suite_failed "R2A expand phase compatibility (missing: ${REQUIRED})"
+    fi
+  done
+
+  if [ "$R2A_PASSED" -lt 14 ]; then
+    echo "FAIL: expected at least 14 R2A expand-phase assertions, only ${R2A_PASSED} ran." >&2
+    suite_failed "R2A expand phase compatibility (assertion shortfall: floor 14)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------

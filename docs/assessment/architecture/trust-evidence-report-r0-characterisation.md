@@ -150,6 +150,13 @@ subtraction. It must be named in the manifest's `classification_rule`.
 
 ## 7. Audience boundaries and internal derivation exposure
 
+> **Status (PR-R2A, 2026-09-04):** closed in three deployable steps — see
+> `trust-evidence-report-r2a-audience-boundary.md`. R2A-1 (`20261024090000`)
+> adds the audience read contracts and removes nothing, so the pinned
+> assertions below still hold after it; R2A-2 moves both consumers to the
+> contracts; R2A-3 (`20261025090000`) withdraws the direct read and the
+> subject's ledger policy and inverts TR10.5X/6X/10X/13X deliberately.
+
 RLS on `scp_report_snapshots` and `scp_competency_evidence` protects
 **rows**. `GRANT SELECT ON public.scp_report_snapshots TO authenticated`
 covers every column (TR10.13X). The server functions select narrowly; a direct

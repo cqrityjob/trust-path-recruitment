@@ -466,6 +466,14 @@ DROP FUNCTION IF EXISTS public.scp_touch_updated_at() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_content_library(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_lifecycle_state(text, timestamptz, boolean) CASCADE;
 DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
+-- PR-R2A-1 (20261024090000): the audience entry points, the brief projection
+-- and the shared read predicate. CASCADE, because PR-R2A-3 makes the two
+-- snapshot row policies evaluate the predicate; the table itself goes with
+-- the Phase 2b unwind further down.
+DROP FUNCTION IF EXISTS public.scp_participant_report(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_report(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_audience_brief(jsonb) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_report_snapshot_readable(text, uuid, uuid) CASCADE;
 -- Part F (20260820120000). The decision table references scp_attempts, so it
 -- has to go before the Phase 2 unwind reaches them.
 DROP FUNCTION IF EXISTS public.scp_record_employer_decision(uuid, text, text, text, text, text, uuid) CASCADE;

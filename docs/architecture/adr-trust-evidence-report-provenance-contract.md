@@ -149,7 +149,16 @@ PARTIALLY FROZEN row becomes a manifest field.
   `canonical_sha256` on the snapshot), release function writes the manifest,
   suite proves privacy (participant, employer, anon, other org read nothing),
   immutability and hash stability; TR11.3/11.4 are inverted deliberately.
-- PR-R2: audience RPCs/views; column-level revoke of `derivation_input`;
+- PR-R2A, packaged as three deployable steps (`trust-evidence-report-r2a-audience-boundary.md`):
+  R2A-1 EXPAND `20261024090000` adds `scp_participant_report` /
+  `scp_employer_report` and removes nothing; R2A-2 moves the two consumers;
+  R2A-3 CONTRACT `20261025090000` withdraws the direct `authenticated` SELECT
+  on the snapshot table entirely rather than column by column, because the
+  employer brief's `mean`/`spread` live inside the `brief` column and a
+  column-level revoke of `derivation_input` alone would not close R0-X3.
+  `mean`/`spread` leave the audience document at the read; the stored row
+  keeps them for the manifest.
+- PR-R2 as originally listed: audience RPCs/views; column-level revoke of `derivation_input`;
   ledger disclosure fix; TR10.\*X inverted deliberately; guard G1 pinned to
   zero direct reads.
 - Self-publication, radar/Evidence Map rendering and any AI narrative
