@@ -186,13 +186,21 @@ export type TrustEvidenceReportV3 = {
   computation_manifest_ref: { manifest_id: string; canonical_sha256: string };
 };
 
-// ── The private computation manifest (PR-R1; NOT created by PR-R0) ─────────
+// ── The private computation manifest (PR-R1, 20261027090000) ─────────────
 //
-// scp_report_computation_manifests. One row per released report version,
+// scp_report_computation_manifests. One row per RELEASE (both audience
+// snapshots point at the same row, because there is one calculation),
 // immutable after insert, private: not readable by a participant, not readable
-// by an employer, reachable only through server / reviewer / internal paths.
-// It is what makes a released report REPRODUCIBLE, which today's
-// derivation_input (maturity level per competency, nothing per item) does not.
+// by an employer, reachable only through server / internal paths. It is what
+// makes a released report REPRODUCIBLE, which derivation_input (maturity level
+// per competency, nothing per item) does not.
+//
+// Shape as IMPLEMENTED: identity (manifest id, snapshot ids, attempt id) and
+// time (calculated_at) are COLUMNS of the row; the hashed `body` holds the
+// frozen inputs, versions and computation only, so the same frozen inputs
+// under the same versions hash the same however often they are recomputed.
+// The types below describe the body; TRUST_MANIFEST_BODY_KEYS lists the keys
+// the migration must write literally (guard H11d).
 
 export type TrustManifestEvidenceRow = {
   evidence_id: string;
@@ -388,4 +396,55 @@ export const TRUST_MANIFEST_AREA_FIELDS = [
   "spread",
   "classification_rule",
   "final_area_signal",
+] as const;
+
+/** The keys the PR-R1 migration writes into the hashed body (top level and
+ *  inside `versions` / `computation`), listed as data so the guard can assert
+ *  the migration still names every one of them. */
+export const TRUST_MANIFEST_BODY_KEYS = [
+  // top level
+  "schema_version",
+  "attempt",
+  "versions",
+  "prompts",
+  "coverage",
+  "computation",
+  // versions
+  "calculation_schema_version",
+  "scoring_model_version",
+  "signal_model_version",
+  "threshold_version",
+  "evidence_state_version",
+  "evidence_scope_version",
+  "brief_version",
+  "competency_mapping_version",
+  "rubric_versions",
+  "trust_question_version",
+  "report_template_version",
+  // computation
+  "classification_rule",
+  "thresholds",
+  "source_types",
+  "competency_mapping",
+  "evidence",
+  "reviews",
+  "areas",
+  "self_report_areas",
+  // evidence row
+  "item_version_id",
+  "option_key_version",
+  "rubric_version_id",
+  "contribution",
+  "confidence",
+  "classification",
+  "included",
+  "exclusion_reason",
+  // area
+  "item_count",
+  "weighted_sum",
+  "denominator",
+  "spread",
+  "final_area_signal",
+  "maturity_level",
+  "evidence_state",
 ] as const;

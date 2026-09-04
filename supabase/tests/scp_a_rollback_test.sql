@@ -143,9 +143,24 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 125,
-    'pre-rollback: 125 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer)');
+        AND table_name LIKE 'scp\_%') = 126,
+    'pre-rollback: 126 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest)');
 END $$;
+
+-- PR-R1 (20261027090000) unwinds first, newest first: the private computation
+-- manifest, its link columns on the snapshots, the builder, the verifier, the
+-- hash rule and the immutability guard. The manifest references
+-- scp_report_snapshots and the snapshots reference it, so both directions
+-- come off here, before any later checkpoint counts tables and long before
+-- the Phase 2b unwind reaches the snapshot table. The release function itself
+-- is dropped with the flagship assessment further down.
+ALTER TABLE public.scp_report_snapshots DROP COLUMN IF EXISTS manifest_id;
+ALTER TABLE public.scp_report_snapshots DROP COLUMN IF EXISTS canonical_sha256;
+DROP FUNCTION IF EXISTS public.scp_verify_report_manifest(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_report_manifest_computation(uuid, timestamptz, text, text) CASCADE;
+DROP TABLE    IF EXISTS public.scp_report_computation_manifests CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_manifest_immutable() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_report_manifest_hash(jsonb) CASCADE;
 
 -- The additive, permissive SELECT policies Phase 2 put on PHASE 1 tables. They
 -- depend on Phase 2 helper functions, so they come off first -- and they are

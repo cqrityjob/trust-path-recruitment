@@ -210,8 +210,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # + 3 TRUST conduct layer: the six-step conduct sequence, the named prohibited
 #   techniques, and the Target/Ready/Trace guidance. Deterministic governed
 #   content read by a human -- the Understand stage still permits zero AI tasks.
-if [ "$SCP_TABLES" -ne 125 ]; then
-  echo "FAIL: expected 125 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 126 ]; then
+  echo "FAIL: expected 126 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -1515,9 +1515,65 @@ fi
 
 echo "    ok  ${TR0_PASSED} TRUST evidence report R0 assertions passed"
 
-if [ "$TR0_PASSED" -lt 135 ]; then
-  echo "FAIL: expected at least 135 TRUST evidence report R0/R2A assertions, only ${TR0_PASSED} ran." >&2
-  suite_failed "TRUST evidence report R0/R2A (assertion shortfall: floor 135)"
+if [ "$TR0_PASSED" -lt 185 ]; then
+  echo "FAIL: expected at least 185 TRUST evidence report R0/R2A/R1 assertions, only ${TR0_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R0/R2A/R1 (assertion shortfall: floor 185)"
+fi
+
+# ---------------------------------------------------------------------------
+# PR-R1 (20261027090000, REPRODUCIBLE PROVENANCE) rollback and re-apply.
+#
+# The R0 suite above released three attempts and rolled its transaction back,
+# so no manifest row exists here and the rollback's data-loss guard does not
+# engage. Roll R1 back, prove the pre-R1 release function and the absence of
+# every R1 object, re-apply R1, prove it is back. That proves the documented
+# rollback works on a database that has the state it reverses, and that R1 is
+# safe to re-apply after a rollback.
+# ---------------------------------------------------------------------------
+echo "==> Rolling PR-R1 provenance back"
+set +e
+R1_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261027090000_scp_trust_evidence_report_r1_provenance_rollback.sql 2>&1)"
+R1_BACK_RC=$?
+set -e
+if [ "$R1_BACK_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the R1 provenance rollback exited with code ${R1_BACK_RC}." >&2
+  echo "$R1_BACK" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "R1 provenance rollback"
+fi
+R1_GONE="$(psql -tAq -d "$TEST_DB" -c \
+  "select (select count(*) from information_schema.tables where table_schema='public' and table_name='scp_report_computation_manifests')
+        + (select count(*) from information_schema.columns where table_schema='public' and table_name='scp_report_snapshots' and column_name in ('manifest_id','canonical_sha256'))
+        + (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('scp_report_manifest_hash','scp_report_manifest_computation','scp_verify_report_manifest','scp_guard_manifest_immutable'))
+        + (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_release_attempt_report' and p.prosrc like '%scp_report_computation_manifests%');")"
+if [ "$R1_GONE" != "0" ]; then
+  echo "FAIL: after the R1 rollback, ${R1_GONE} R1 object(s) or reference(s) survived." >&2
+  suite_failed "R1 provenance rollback (objects survived)"
+else
+  echo "    ok  R1 rolled back -- no manifest table, no link columns, no R1 routine, pre-R1 release function restored"
+fi
+
+echo "==> Re-applying PR-R1 provenance"
+set +e
+R1_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261027090000_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
+R1_FWD_RC=$?
+set -e
+if [ "$R1_FWD_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: re-applying R1 exited with code ${R1_FWD_RC}." >&2
+  echo "$R1_FWD" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "R1 provenance re-application"
+fi
+R1_BACK_AGAIN="$(psql -tAq -d "$TEST_DB" -c \
+  "select (select count(*) from information_schema.tables where table_schema='public' and table_name='scp_report_computation_manifests')
+        + (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_release_attempt_report' and p.prosrc like '%scp_report_computation_manifests%');")"
+if [ "$R1_BACK_AGAIN" != "2" ]; then
+  echo "FAIL: after re-applying R1 the manifest table or the release function is not back (${R1_BACK_AGAIN}/2)." >&2
+  suite_failed "R1 provenance re-application (state not restored)"
+else
+  echo "    ok  R1 re-applied -- manifest table and release function back; apply-time proof passed"
 fi
 
 # ---------------------------------------------------------------------------

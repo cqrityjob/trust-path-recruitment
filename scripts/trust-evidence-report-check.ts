@@ -28,8 +28,9 @@
 //   G  the direct client reads of the snapshot table are exactly the two that
 //      exist today, and neither selects derivation_input -- any new direct
 //      read fails here and belongs to PR-R2;
-//   H  the future V3 report and computation-manifest contracts still name
-//      every field the product owner locked, and none they forbade.
+//   H  the V3 report and computation-manifest contracts still name every
+//      field the product owner locked, and none they forbade; and (PR-R1)
+//      exactly one migration creates the private manifest, privately.
 //
 // Deterministic, offline, no database. Every assertion prints its letter so a
 // failure names the promise it broke.
@@ -46,6 +47,7 @@ import type { ObservedArea } from "../src/lib/security-competency/academy-employ
 import { candidateInput, OBSERVED } from "./fixtures/released-candidate-brief";
 import {
   TRUST_MANIFEST_AREA_FIELDS,
+  TRUST_MANIFEST_BODY_KEYS,
   TRUST_MANIFEST_EVIDENCE_FIELDS,
   TRUST_MANIFEST_REQUIRED_FIELDS,
   TRUST_PROCESS_STEPS,
@@ -943,23 +945,57 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       !("weighted_sum" in v3),
   );
 
-  // PR-R0 must not have created any of it.
+  // PR-R1 (20261027090000) created the manifest, once. H10/H11 were PR-R0's
+  // "not yet" guards and are inverted here deliberately: exactly one
+  // migration creates the table, and only PR-R1's files (migration and
+  // rollback) may name it -- a second creator would be a parallel engine.
+  const R1_MIGRATION = "20261027090000_scp_trust_evidence_report_r1_provenance.sql";
   const migrations = readdirSync(join(ROOT, "supabase/migrations"));
-  const manifestMigration = migrations.filter((f) => /manifest/i.test(f) || /computation/i.test(f));
-  check(
-    "H10 no migration creates the computation manifest yet",
-    manifestMigration.length === 0,
-    manifestMigration.join(", "),
+  const manifestCreators = migrations.filter((f) =>
+    /CREATE TABLE(?: IF NOT EXISTS)? public\.scp_report_computation_manifests/.test(
+      readFileSync(join(ROOT, "supabase/migrations", f), "utf8"),
+    ),
   );
-  const anyMigrationMentions = migrations.filter((f) =>
+  check(
+    "H10 exactly one migration creates the computation manifest, and it is PR-R1's",
+    manifestCreators.length === 1 && manifestCreators[0] === R1_MIGRATION,
+    manifestCreators.join(", "),
+  );
+  const migrationMentions = migrations.filter((f) =>
     /scp_report_computation_manifests/.test(
       readFileSync(join(ROOT, "supabase/migrations", f), "utf8"),
     ),
   );
   check(
-    "H11 no migration names scp_report_computation_manifests",
-    anyMigrationMentions.length === 0,
-    anyMigrationMentions.join(", "),
+    "H11 no migration other than PR-R1's names scp_report_computation_manifests",
+    migrationMentions.length === 1 && migrationMentions[0] === R1_MIGRATION,
+    migrationMentions.join(", "),
+  );
+  const r1 = read(`supabase/migrations/${R1_MIGRATION}`);
+  const r1Body = stripComments(r1);
+  check(
+    "H11b the manifest is private: RLS on, no policy, nothing to PUBLIC/anon/authenticated, service_role only",
+    /ALTER TABLE public\.scp_report_computation_manifests ENABLE ROW LEVEL SECURITY/.test(r1Body) &&
+      /REVOKE ALL ON public\.scp_report_computation_manifests FROM PUBLIC, anon, authenticated/.test(
+        r1Body,
+      ) &&
+      !/CREATE POLICY [a-z_]+ ON public\.scp_report_computation_manifests/.test(r1Body),
+  );
+  check(
+    "H11c the manifest is immutable by trigger and hashed by CHECK",
+    /BEFORE UPDATE OR DELETE ON public\.scp_report_computation_manifests/.test(r1Body) &&
+      /CHECK \(canonical_sha256 = public\.scp_report_manifest_hash\(body\)\)/.test(r1Body),
+  );
+  const missingBodyKeys = TRUST_MANIFEST_BODY_KEYS.filter((k) => !r1Body.includes(`'${k}'`));
+  check(
+    "H11d the migration writes every body key the manifest contract names",
+    missingBodyKeys.length === 0,
+    missingBodyKeys.join(", "),
+  );
+  check(
+    "H11e neither audience contract projects the manifest link (the migration proves it at apply time, and the R2A read contracts are untouched here)",
+    !/CREATE OR REPLACE FUNCTION public\.scp_(participant|employer)_report\(/.test(r1Body) &&
+      /s\.manifest_id%/.test(r1Body),
   );
   const srcMentions = walk(join(ROOT, "src")).filter((f) =>
     /trust-evidence-report-v3-contract|TrustEvidenceReportV3/.test(readFileSync(f, "utf8")),

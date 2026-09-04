@@ -1271,17 +1271,24 @@ SELECT pg_temp.ok(
      FROM snaps),
   'TR11.3 derivation_input freezes the maturity level per competency and NOTHING per item -- the PR-R1 gap, stated');
 
+-- Inverted deliberately by PR-R1 (20261027090000): the manifest exists, the
+-- snapshot links to it by id and hash, and the per-item freeze lives on the
+-- private manifest -- never on the audience-readable row. Group TR15 proves
+-- the content; this line pins the shape.
 SELECT pg_temp.ok(
-  NOT EXISTS (
+  EXISTS (
+    SELECT 1 FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests')
+  AND (SELECT count(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
+          AND column_name IN ('manifest_id', 'canonical_sha256') AND is_nullable = 'YES') = 2
+  AND NOT EXISTS (
     SELECT 1 FROM information_schema.columns
      WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
-       AND column_name IN ('calculated_at','calculation_schema_version','canonical_sha256',
+       AND column_name IN ('calculated_at','calculation_schema_version',
                            'included_evidence','excluded_evidence','rubric_version',
-                           'competency_mapping_version','item_versions'))
-  AND NOT EXISTS (
-    SELECT 1 FROM information_schema.tables
-     WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests'),
-  'TR11.4 no computation manifest, canonical hash or per-item freeze exists yet -- PR-R0 adds none');
+                           'competency_mapping_version','item_versions','body')),
+  'TR11.4 CLOSED (PR-R1): the computation manifest exists and the snapshot links to it by nullable id and hash; the per-item freeze is on the manifest, not on the snapshot row');
 
 SELECT pg_temp.ok(
   (SELECT bool_and(e.scoring_model_version = 'det-v1' AND e.source_snapshot_hash IS NULL)
@@ -1296,12 +1303,29 @@ DO $$ BEGIN RAISE NOTICE 'GROUP TR12 — the report is one product, not two'; EN
 -- Group TR12 — no parallel engine
 -- =========================================================================
 
+-- PR-R1 added the manifest builder, which RECORDS the release function's
+-- derivation (calling the same signal / maturity / state routines) and
+-- raises if its own inputs disagree with them. Two names, pinned; a third
+-- would be a parallel engine.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  (SELECT array_agg(p.proname ORDER BY p.proname)
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname LIKE 'scp_%report%'
       AND p.prosrc ILIKE '%jsonb_build_object%'
-      AND p.prosrc ILIKE '%evidence_state%') = 1,
-  'TR12.1 exactly one routine derives an evidence-state report payload');
+      AND p.prosrc ILIKE '%evidence_state%')
+  = ARRAY['scp_release_attempt_report', 'scp_report_manifest_computation']::name[],
+  'TR12.1 exactly two routines derive an evidence-state payload: the release function and (PR-R1) the manifest builder that records its derivation');
+
+SELECT pg_temp.ok(
+  (SELECT p.prosrc LIKE '%scp_attempt_assessment_signal(%'
+      AND p.prosrc LIKE '%scp_attempt_maturity(%'
+      AND p.prosrc LIKE '%scp_attempt_evidence_state(%'
+      AND p.prosrc LIKE '%scp_attempt_self_report_pattern(%'
+      AND p.prosrc LIKE '%SCP_MANIFEST_DERIVATION_MISMATCH%'
+      AND p.prosrc NOT LIKE '%INSERT INTO%'
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'scp_report_manifest_computation'),
+  'TR12.1b the builder calls the four existing derivation routines, refuses to disagree with them, and writes nothing');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -1582,5 +1606,516 @@ SELECT pg_temp.ok(
         WHERE table_schema = 'public' AND grantee IN ('anon','PUBLIC')
           AND table_name IN ('scp_report_snapshots','scp_competency_evidence')) = 0,
   'TR14.6 authenticated holds SELECT and only SELECT on the ledger and nothing on the snapshots; anon holds nothing on either');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP TR15 — PR-R1 reproducible provenance'; END $$;
+
+-- =========================================================================
+-- Group TR15 — the private computation manifest (20261027090000). One row
+-- per release, frozen inside the release transaction; every number the
+-- report was derived from, and why each row counted or did not; a canonical
+-- hash; no audience reach. Added by PR-R1. The audience assertions above
+-- (TR5-TR10, TR13, TR14) all still hold on the same releases, which is the
+-- proof that the report itself did not change.
+-- =========================================================================
+
+CREATE TEMP TABLE mani AS
+SELECT run.persona, m.*
+  FROM public.scp_report_computation_manifests m
+  JOIN runs run ON run.attempt_id = m.attempt_id;
+GRANT SELECT ON mani TO authenticated, anon, service_role;
+
+-- 15.1–15.5  Identity, one instant, versions, templates, who released.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM mani) = 3
+  AND (SELECT count(DISTINCT attempt_id) FROM mani) = 3
+  AND (SELECT bool_and(s.manifest_id = m.id AND s.canonical_sha256 = m.canonical_sha256
+                       AND s.id IN (m.participant_snapshot_id, m.employer_snapshot_id))
+         FROM snaps s JOIN mani m ON m.attempt_id = s.attempt_id)
+  AND (SELECT bool_and(pa.audience = 'participant' AND em.audience = 'employer')
+         FROM mani m
+         JOIN public.scp_report_snapshots pa ON pa.id = m.participant_snapshot_id
+         JOIN public.scp_report_snapshots em ON em.id = m.employer_snapshot_id),
+  'TR15.1 every release wrote exactly one manifest; both snapshots point at it and carry its hash; it names the right snapshot per audience');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(m.calculated_at = s.released_at AND m.calculated_at = a.released_at)
+     FROM mani m
+     JOIN snaps s ON s.attempt_id = m.attempt_id
+     JOIN public.scp_attempts a ON a.id = m.attempt_id),
+  'TR15.2 one calculated_at per release: the manifest, both snapshots and the attempt carry the same instant');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(calculation_schema_version = 'rcm-v1' AND scoring_model_version = 'det-v1'
+               AND signal_model_version = 'ras-v1' AND threshold_version = 'v1'
+               AND evidence_state_version = 'des-v2' AND evidence_scope_version = 'attempt-v1'
+               AND brief_version = 'rab-v1' AND competency_mapping_version LIKE 'bcm-sha256:%'
+               AND body ->> 'schema_version' = 'rcm-v1'
+               AND body -> 'versions' ->> 'competency_mapping_version' = competency_mapping_version
+               AND body -> 'versions' ->> 'scoring_model_version' = 'det-v1'
+               AND body -> 'versions' ->> 'signal_model_version' = 'ras-v1'
+               AND body -> 'versions' ->> 'threshold_version' = 'v1'
+               AND body -> 'versions' ->> 'evidence_state_version' = 'des-v2'
+               AND (body -> 'attempt' ->> 'attempt_id')::uuid = attempt_id
+               AND (body -> 'attempt' ->> 'form_id')::uuid IS NOT NULL
+               AND (body -> 'attempt' ->> 'assessment_version_id')::uuid IS NOT NULL)
+     FROM mani),
+  'TR15.3 every version is frozen twice -- as a column and inside the hashed body -- and the body pins the attempt, form and assessment version');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(
+       (m.body -> 'versions' -> 'report_template_version' -> 'participant' ->> 'report_version_id')::uuid = pa.report_version_id
+   AND (m.body -> 'versions' -> 'report_template_version' -> 'employer' ->> 'report_version_id')::uuid = em.report_version_id
+   AND m.participant_report_version_id = pa.report_version_id
+   AND m.employer_report_version_id = em.report_version_id
+   AND m.body -> 'versions' -> 'report_template_version' -> 'employer' ->> 'report_key' = em.context ->> 'report_key')
+     FROM mani m
+     JOIN public.scp_report_snapshots pa ON pa.id = m.participant_snapshot_id
+     JOIN public.scp_report_snapshots em ON em.id = m.employer_snapshot_id),
+  'TR15.4 the template row per audience is pinned by id, key and number, and agrees with the snapshots');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(CASE persona
+                     WHEN 'P3' THEN released_by_role = 'admin' AND released_by = (SELECT admin_user FROM tr)
+                     ELSE released_by_role = 'owner' AND released_by = (SELECT owner_user FROM tr) END)
+     FROM mani),
+  'TR15.5 the releasing role and account are frozen: owner for P1/P2, admin for P3');
+
+-- 15.6–15.7  Threshold rows and mapping rows, with their hash.
+SELECT pg_temp.ok(
+  (SELECT bool_and(jsonb_array_length(body -> 'computation' -> 'thresholds') = 4
+      AND body -> 'computation' -> 'thresholds' = (
+            SELECT jsonb_agg(jsonb_build_object(
+                     'level', t.level, 'min_mean_contribution', t.min_mean_contribution,
+                     'min_observations', t.min_observations, 'min_contexts', t.min_contexts,
+                     'min_source_types', t.min_source_types, 'max_age_days', t.max_age_days)
+                   ORDER BY t.min_mean_contribution, t.min_observations)
+              FROM public.scp_maturity_thresholds t
+             WHERE t.threshold_version = 'v1' AND t.is_active))
+     FROM mani),
+  'TR15.6 the four v1 threshold rows are frozen with their values, not only the version string');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(body -> 'computation' -> 'competency_mapping' ->> 'version'
+                     = 'bcm-sha256:' || public.scp_report_manifest_hash(body -> 'computation' -> 'competency_mapping' -> 'rows')
+               AND jsonb_array_length(body -> 'computation' -> 'competency_mapping' -> 'rows') >= 8
+               AND body -> 'computation' -> 'source_types' @> '[{"code": "self_report", "counts_toward_maturity": false}]'::jsonb
+               AND body -> 'computation' -> 'source_types' @> '[{"code": "assessment_response", "counts_toward_maturity": true}]'::jsonb)
+     FROM mani),
+  'TR15.7 the mapping rows are frozen and their canonical hash is the mapping version; the registry rule that makes self-report non-counting is frozen with them');
+
+-- 15.8–15.13  Every response accounted for; what each row freezes.
+SELECT pg_temp.ok(
+  (SELECT bool_and(jsonb_array_length(body -> 'computation' -> 'evidence') = 50) FROM mani)
+  AND (SELECT bool_and(n_incl = CASE persona WHEN 'P3' THEN 25 ELSE 26 END
+                   AND n_self = 24
+                   AND n_disp = CASE persona WHEN 'P3' THEN 1 ELSE 0 END
+                   AND n_other = 0)
+         FROM (SELECT m.persona,
+                      count(*) FILTER (WHERE (e ->> 'included')::boolean) AS n_incl,
+                      count(*) FILTER (WHERE e ->> 'exclusion_reason' = 'self_report_non_counting'
+                                         AND e ->> 'classification' = 'self_report'
+                                         AND NOT (e ->> 'included')::boolean) AS n_self,
+                      count(*) FILTER (WHERE e ->> 'exclusion_reason' = 'review_disputed'
+                                         AND e -> 'evidence_id' = 'null'::jsonb
+                                         AND e ->> 'classification' = 'none') AS n_disp,
+                      count(*) FILTER (WHERE NOT (e ->> 'included')::boolean
+                                         AND e ->> 'exclusion_reason' NOT IN ('self_report_non_counting', 'review_disputed')) AS n_other
+                 FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+                GROUP BY 1) x),
+  'TR15.8 every response is accounted for exactly once: 26 included (25 for P3), 24 self-report excluded by reason, and P3''s overturned review listed as review_disputed with no evidence row');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(e ->> 'item_version_id' IS NOT NULL
+               AND e ->> 'option_key_version' = e ->> 'item_version_id'
+               AND (e ->> 'item_version')::int >= 1
+               AND (e ->> 'contribution')::numeric BETWEEN 0 AND 1
+               AND (e ->> 'confidence')::numeric = 1.000
+               AND e ->> 'classification' = 'observed'
+               AND e ->> 'source_type' = 'assessment_response'
+               AND e ->> 'competency_code' LIKE 'SCC-%'
+               AND e ->> 'competency_mapping_version' = m.competency_mapping_version
+               AND e ->> 'provenance_type' IN ('deterministic', 'human_review')
+               AND e ->> 'scoring_model_version' IS NOT DISTINCT FROM CASE e ->> 'provenance_type' WHEN 'deterministic' THEN 'det-v1' END
+               AND (e ->> 'counted_for_maturity')::boolean)
+     FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+    WHERE (e ->> 'included')::boolean),
+  'TR15.9 every included row freezes item version, option-key version, contribution, confidence, source type, classification, mapping version and provenance');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(e ->> 'selected_option_key' IS NOT NULL
+               AND (e ->> 'selected_score_value')::numeric = (e ->> 'item_max_score')::numeric
+               AND (e ->> 'contribution')::numeric = 1.000)
+     FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+    WHERE e ->> 'provenance_type' = 'deterministic'),
+  'TR15.10 every deterministic row freezes the option key chosen and the score it carried (the fixture chose the best option everywhere, so score = max = contribution 1.000)');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(e ->> 'rubric_version_id' IS NOT NULL
+               AND e -> 'derivation_basis' ->> 'method' = 'governed_rubric_mean'
+               AND e ->> 'review_id' IS NOT NULL AND e ->> 'review_outcome' = 'upheld')
+     FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+    WHERE e ->> 'item_format' = 'constructed_response' AND (e ->> 'included')::boolean)
+  AND (SELECT count(*) FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+        WHERE e ->> 'item_format' = 'constructed_response' AND (e ->> 'included')::boolean) = 11,
+  'TR15.11 every counted free-text row names its rubric version, its review and the governed rubric-mean method (4 + 4 + 3 across the three candidates)');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(jsonb_array_length(body -> 'versions' -> 'rubric_versions') = 4
+               AND body -> 'versions' -> 'rubric_versions' = body -> 'computation' -> 'rubric_versions')
+     FROM mani),
+  'TR15.12 the four rubric versions behind the form''s free-text items are frozen as versions -- for P3 too, whose overturned review keeps its rubric');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+    WHERE e ->> 'safety_finding' IN ('low', 'medium', 'high', 'critical')) = 1
+  AND (SELECT m.persona = 'P2' AND e ->> 'safety_finding' = 'high' AND e ->> 'safety_severity' = 'high'
+              AND (e ->> 'included')::boolean AND (e ->> 'contribution')::numeric = 1.000
+         FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+        WHERE e ->> 'safety_finding' IN ('low', 'medium', 'high', 'critical')),
+  'TR15.13 the one human safety finding (P2, high) is frozen on its row -- still counted, contribution untouched, never subtracted');
+
+-- 15.14  The finding changes one state and nothing numeric.
+SELECT pg_temp.ok(
+  (SELECT bool_and(same) FROM (
+     SELECT (a1 ->> 'weighted_sum') = (a2 ->> 'weighted_sum')
+        AND (a1 ->> 'denominator') = (a2 ->> 'denominator')
+        AND (a1 ->> 'spread') = (a2 ->> 'spread')
+        AND (a1 ->> 'mean') = (a2 ->> 'mean')
+        AND (a1 ->> 'item_count') = (a2 ->> 'item_count')
+        AND (a1 ->> 'final_area_signal') = (a2 ->> 'final_area_signal')
+        AND (a1 ->> 'maturity_level') = (a2 ->> 'maturity_level') AS same
+       FROM mani m1, jsonb_array_elements(m1.body -> 'computation' -> 'areas') a1,
+            mani m2, jsonb_array_elements(m2.body -> 'computation' -> 'areas') a2
+      WHERE m1.persona = 'P1' AND m2.persona = 'P2'
+        AND a1 ->> 'competency_code' = a2 ->> 'competency_code') x)
+  AND (SELECT count(*) FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+        WHERE m.persona = 'P2' AND (a ->> 'safety_finding_present')::boolean
+          AND a ->> 'evidence_state' = 'critical_follow_up') = 1
+  AND (SELECT count(*) FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+        WHERE m.persona = 'P1' AND ((a ->> 'safety_finding_present')::boolean
+                                     OR a ->> 'evidence_state' = 'critical_follow_up')) = 0,
+  'TR15.14 P1 and P2 freeze identical numbers on every area; the finding changes exactly one area''s state and nothing numeric');
+
+-- 15.15–15.20  Areas: agreement with the released documents, arithmetic,
+-- accounting, SCC-08, the disputed review.
+SELECT pg_temp.ok(
+  (SELECT bool_and(jsonb_array_length(body -> 'computation' -> 'areas') = 8) FROM mani)
+  AND (SELECT bool_and(a ->> 'final_area_signal' = o ->> 'signal'
+                   AND (a ->> 'item_count')::int = (o ->> 'items')::int
+                   AND (a ->> 'mean')::numeric = (o ->> 'mean')::numeric
+                   AND (a ->> 'spread')::numeric = (o ->> 'spread')::numeric
+                   AND a ->> 'evidence_state' = o ->> 'evidence_state')
+         FROM mani m JOIN snaps s ON s.id = m.employer_snapshot_id,
+              jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+         JOIN jsonb_array_elements(s.brief -> 'observed') o ON o ->> 'area_code' = a ->> 'competency_code')
+  AND (SELECT count(*)
+         FROM mani m JOIN snaps s ON s.id = m.employer_snapshot_id,
+              jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+         JOIN jsonb_array_elements(s.brief -> 'observed') o ON o ->> 'area_code' = a ->> 'competency_code') = 24,
+  'TR15.15 every area''s frozen signal, item count, mean, spread and state equal the released employer brief (8 areas x 3 candidates)');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(a ->> 'maturity_level' = d ->> 'maturity_level'
+               AND (a ->> 'item_count')::int = (p ->> 'observations')::int
+               AND a ->> 'evidence_state' = p ->> 'evidence_state')
+     FROM mani m JOIN snaps s ON s.id = m.employer_snapshot_id,
+          jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+     JOIN jsonb_array_elements(s.derivation_input) d ON d ->> 'competency_code' = a ->> 'competency_code'
+     JOIN jsonb_array_elements(s.payload) p ON p ->> 'competency_code' = a ->> 'competency_code'),
+  'TR15.16 and its maturity level equals the frozen derivation_input, its count and state the payload line');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(round((a ->> 'weighted_sum')::numeric / (a ->> 'denominator')::numeric, 3) = (a ->> 'mean')::numeric
+               AND (a ->> 'item_count')::int = jsonb_array_length(a -> 'evidence_ids')
+               AND (a ->> 'denominator')::numeric = (a ->> 'item_count')::numeric
+               AND a ->> 'classification_rule' LIKE 'ras-v1: n<3 -> limited;%'
+               AND a ->> 'classification_rule' LIKE '%safety cap%'
+               AND a ->> 'classification_rule' LIKE '%Self-report never enters an area%'
+               AND a ->> 'signal_model_version' = 'ras-v1' AND a ->> 'threshold_version' = 'v1')
+     FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a),
+  'TR15.17 weighted sum over denominator reproduces every mean (w_i = 1, so the denominator is the count); the evidence ids match the count; the rule names the bands, the safety cap and the self-report boundary');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1
+      FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a,
+           jsonb_array_elements_text(a -> 'evidence_ids') AS eid(value)
+      JOIN LATERAL (SELECT e FROM jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+                     WHERE e ->> 'evidence_id' = eid.value) x ON true
+     WHERE NOT (x.e ->> 'included')::boolean OR x.e ->> 'classification' <> 'observed')
+  AND (SELECT sum(jsonb_array_length(a -> 'evidence_ids'))
+         FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a) = 26 + 26 + 25,
+  'TR15.18 no area counts an evidence id that is not an included observed row, and the areas account for every included row');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and((a ->> 'item_count')::int = 1 AND a ->> 'final_area_signal' = 'limited'
+               AND a ->> 'maturity_level' = 'limited_evidence' AND a ->> 'evidence_state' = 'follow_up')
+     FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+    WHERE a ->> 'competency_code' = 'SCC-08')
+  AND (SELECT count(*) FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+        WHERE a ->> 'competency_code' = 'SCC-08') = 3,
+  'TR15.19 SCC-08 is frozen as one item, limited, limited_evidence, follow_up -- for every candidate');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+    WHERE (a ->> 'disputed_review_present')::boolean) = 1
+  AND (SELECT m.persona = 'P3' AND a ->> 'evidence_state' = 'follow_up'
+              AND a ->> 'competency_code' = (SELECT competency_code FROM overturned)
+         FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'areas') a
+        WHERE (a ->> 'disputed_review_present')::boolean),
+  'TR15.20 the overturned review is frozen on its area (P3): disputed, follow_up, no number from it');
+
+-- 15.21–15.22  Reviews frozen; nothing a person wrote is copied.
+SELECT pg_temp.ok(
+  (SELECT bool_and(jsonb_array_length(body -> 'computation' -> 'reviews') = 7) FROM mani)
+  AND (SELECT bool_and(r ->> 'outcome' IN ('upheld', 'overturned') AND r ->> 'review_status' = 'completed'
+                   AND r ->> 'completed_at' IS NOT NULL AND NOT (r ? 'reviewer_rationale'))
+         FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'reviews') r)
+  AND (SELECT bool_and(r ->> 'rubric_version_id' IS NOT NULL AND r -> 'rubric_levels' IS NOT NULL)
+         FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'reviews') r
+        WHERE r ->> 'trigger_reason' <> 'safety_critical_detected')
+  AND (SELECT count(*) FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'reviews') r
+        WHERE r ->> 'outcome' = 'overturned') = 1,
+  'TR15.21 the seven reviews per candidate are frozen with outcome, rubric version and levels -- the overturned one included');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(body::text NOT ILIKE '%FRITEXTTOKEN%'
+               AND body::text NOT ILIKE '%rationale%'
+               AND body::text NOT ILIKE '%response_text%'
+               AND body::text NOT ILIKE '%@trust-r0.test%')
+     FROM mani),
+  'TR15.22 the manifest carries no candidate words, no reviewer reasoning and no e-mail address');
+
+-- 15.23–15.24  Self-report frozen apart.
+SELECT pg_temp.ok(
+  (SELECT bool_and(jsonb_array_length(body -> 'computation' -> 'self_report_areas') = 8) FROM mani)
+  AND (SELECT sum((a ->> 'item_count')::int)
+         FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'self_report_areas') a) = 72
+  AND (SELECT bool_and(a ->> 'classification' = 'self_report'
+                   AND a ->> 'pattern' = r ->> 'pattern' AND a ->> 'consistency' = r ->> 'consistency'
+                   AND (a ->> 'item_count')::int = (r ->> 'items')::int
+                   AND (a ->> 'mean')::numeric = (r ->> 'mean')::numeric
+                   AND (a ->> 'spread')::numeric = (r ->> 'spread')::numeric)
+         FROM mani m JOIN snaps s ON s.id = m.employer_snapshot_id,
+              jsonb_array_elements(m.body -> 'computation' -> 'self_report_areas') a
+         JOIN jsonb_array_elements(s.brief -> 'self_reported') r ON r ->> 'domain_key' = a ->> 'facet_slug')
+  AND NOT EXISTS (
+    SELECT 1 FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'self_report_areas') sa,
+                  jsonb_array_elements_text(sa -> 'evidence_ids') sid
+     WHERE sid IN (SELECT jsonb_array_elements_text(a -> 'evidence_ids')
+                     FROM jsonb_array_elements(m.body -> 'computation' -> 'areas') a)),
+  'TR15.23 self-report is frozen apart: eight facets, 24 items per candidate, patterns equal to the brief, classified self_report, and no self-report id in any area');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM mani m, jsonb_array_elements(m.body -> 'computation' -> 'evidence') e
+    WHERE e ->> 'item_slug' IN ('so-rj-c07', 'so-rj-c19')
+      AND e ->> 'classification' = 'self_report' AND NOT (e ->> 'included')::boolean) = 6
+  AND NOT EXISTS (SELECT 1 FROM mani
+                   WHERE body::text ILIKE '%methodologically_open%' OR body::text ILIKE '%descriptive_only%'
+                      OR body::text ILIKE '%deception%' OR body::text ILIKE '%dishonest%'
+                      OR body::text ILIKE '%lie%detect%'),
+  'TR15.24 c07 and c19 are frozen as self-report rows and nothing else: no interpretation label, no deception reading');
+
+-- 15.25–15.26  The prompt rows behind the guide and the payload lines.
+SELECT pg_temp.ok(
+  (SELECT bool_and(jsonb_array_length(m.body -> 'prompts' -> 'interview_guide')
+                     = jsonb_array_length(s.brief -> 'interview_guide')
+               AND jsonb_array_length(m.body -> 'prompts' -> 'interview_guide') > 0)
+     FROM mani m JOIN snaps s ON s.id = m.employer_snapshot_id)
+  AND (SELECT bool_and(EXISTS (SELECT 1 FROM public.scp_interview_guide_prompts p
+                                WHERE p.id = (g ->> 'prompt_id')::uuid AND p.content_status = 'published'
+                                  AND p.version_number = (g ->> 'prompt_version')::int
+                                  AND p.focus = g ->> 'focus'))
+         FROM mani m, jsonb_array_elements(m.body -> 'prompts' -> 'interview_guide') g)
+  AND (SELECT bool_and(g.value ->> 'area_code' = b.value ->> 'area_code' AND g.value ->> 'focus' = b.value ->> 'focus')
+         FROM mani m JOIN snaps s ON s.id = m.employer_snapshot_id,
+              jsonb_array_elements(m.body -> 'prompts' -> 'interview_guide') WITH ORDINALITY g
+         JOIN jsonb_array_elements(s.brief -> 'interview_guide') WITH ORDINALITY b ON b.ordinality = g.ordinality)
+  AND (SELECT bool_and(NOT (g ? 'prompt_id') AND NOT (g ? 'prompt_version'))
+         FROM snaps s, jsonb_array_elements(s.brief -> 'interview_guide') g WHERE s.audience = 'employer')
+  AND (SELECT bool_and(body -> 'versions' -> 'trust_question_version' -> 'prompts' = body -> 'prompts' -> 'interview_guide')
+         FROM mani),
+  'TR15.25 every guide entry of the released brief is frozen, in order, as a published prompt row id and version -- and the brief itself carries neither');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(jsonb_array_length(m.body -> 'prompts' -> 'followup') = 8) FROM mani m)
+  AND (SELECT bool_and((f ->> 'employer_followup_prompt_id' IS NOT NULL) = (p ->> 'followup_sv' IS NOT NULL))
+         FROM mani m JOIN snaps s ON s.id = m.employer_snapshot_id,
+              jsonb_array_elements(m.body -> 'prompts' -> 'followup') f
+         JOIN jsonb_array_elements(s.payload) p ON p ->> 'competency_code' = f ->> 'competency_code')
+  AND (SELECT bool_and((f ->> 'participant_reflection_prompt_id' IS NOT NULL) = (p ->> 'reflection_sv' IS NOT NULL))
+         FROM mani m JOIN snaps s ON s.id = m.participant_snapshot_id,
+              jsonb_array_elements(m.body -> 'prompts' -> 'followup') f
+         JOIN jsonb_array_elements(s.payload) p ON p ->> 'competency_code' = f ->> 'competency_code'),
+  'TR15.26 the follow-up and reflection prompt rows behind every payload line are frozen by id, exactly where a line carries one');
+
+-- 15.27–15.30  The hash contract.
+SELECT pg_temp.ok(
+  (SELECT bool_and(canonical_sha256 = public.scp_report_manifest_hash(body)
+               AND canonical_sha256 ~ '^[0-9a-f]{64}$'
+               AND NOT (body ? 'calculated_at') AND NOT (body ? 'manifest_id')
+               AND NOT (body ? 'participant_snapshot_id') AND NOT (body ? 'released_by'))
+     FROM mani)
+  AND (SELECT count(DISTINCT canonical_sha256) FROM mani) = 3,
+  'TR15.27 the stored hash is the canonical hash of the stored body; identity and time are columns, not hashed; three releases hash differently');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(v.integrity_ok AND v.reproducible AND v.snapshots_linked
+               AND v.stored_sha256 = v.body_sha256
+               AND v.stored_computation_sha256 = v.recomputed_computation_sha256)
+     FROM mani m CROSS JOIN LATERAL public.scp_verify_report_manifest(m.id) v)
+  AND (SELECT count(*) FROM mani m CROSS JOIN LATERAL public.scp_verify_report_manifest(m.id) v) = 3
+  AND (SELECT count(*) FROM public.scp_verify_report_manifest(gen_random_uuid())) = 0,
+  'TR15.28 the verifier rebuilds the computation from the live ledger under the frozen instant and reproduces it exactly, for all three; an unknown id yields nothing');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(public.scp_report_manifest_computation(m.attempt_id, m.calculated_at, 'v1', 'ras-v1') = m.body -> 'computation'
+               AND public.scp_report_manifest_hash(public.scp_report_manifest_computation(m.attempt_id, m.calculated_at, 'v1', 'ras-v1'))
+                     = public.scp_report_manifest_hash(m.body -> 'computation'))
+     FROM mani m)
+  AND public.scp_report_manifest_hash('{"z": [1, 2], "a": {"y": 1, "x": 2}}'::jsonb)
+        = public.scp_report_manifest_hash('{"a": {"x": 2, "y": 1}, "z": [1, 2]}'::jsonb)
+  AND public.scp_report_manifest_hash('{"z": [1, 2]}'::jsonb) <> public.scp_report_manifest_hash('{"z": [2, 1]}'::jsonb)
+  AND public.scp_report_manifest_hash('{"b": 1, "a": 2}'::jsonb) = '21501dbaf73f5223934d22283f01caff4132bc1de4a9550c1ed0dffeb397a323',
+  'TR15.29 same frozen inputs, same versions, same instant -> the same computation and the same hash; key order is canonical, array order is content, the digest is pinned');
+
+UPDATE public.scp_maturity_thresholds SET min_mean_contribution = 0.401
+ WHERE threshold_version = 'v1' AND level = 'limited_evidence';
+SELECT pg_temp.ok(
+  (SELECT bool_and(v.integrity_ok AND NOT v.reproducible AND v.snapshots_linked)
+     FROM mani m CROSS JOIN LATERAL public.scp_verify_report_manifest(m.id) v)
+  AND (SELECT bool_and(canonical_sha256 = public.scp_report_manifest_hash(body)) FROM mani),
+  'TR15.30 a threshold value re-seeded after release leaves the stored manifest and its hash intact, and the verifier says the live sources no longer reproduce it');
+UPDATE public.scp_maturity_thresholds SET min_mean_contribution = 0.400
+ WHERE threshold_version = 'v1' AND level = 'limited_evidence';
+SELECT pg_temp.ok(
+  (SELECT bool_and(v.reproducible) FROM mani m CROSS JOIN LATERAL public.scp_verify_report_manifest(m.id) v),
+  'TR15.30b and restoring the value restores reproducibility');
+
+-- 15.31–15.32  Immutable, and self-checking.
+SELECT pg_temp.must_fail(
+  'UPDATE public.scp_report_computation_manifests SET body = ''{}''::jsonb',
+  'SCP_MANIFEST_IMMUTABLE',
+  'TR15.31 a manifest cannot be edited, even by the table owner');
+SELECT pg_temp.must_fail(
+  'DELETE FROM public.scp_report_computation_manifests',
+  'SCP_MANIFEST_IMMUTABLE',
+  'TR15.31b nor deleted');
+SELECT pg_temp.must_fail(
+  'INSERT INTO public.scp_report_computation_manifests
+     (attempt_id, subject_id, participant_snapshot_id, employer_snapshot_id,
+      participant_report_version_id, employer_report_version_id, calculated_at,
+      calculation_schema_version, scoring_model_version, signal_model_version,
+      threshold_version, evidence_state_version, evidence_scope_version, brief_version,
+      competency_mapping_version, released_by_role, body, canonical_sha256)
+   SELECT attempt_id, subject_id, participant_snapshot_id, employer_snapshot_id,
+          participant_report_version_id, employer_report_version_id, calculated_at,
+          calculation_schema_version, scoring_model_version, signal_model_version,
+          threshold_version, evidence_state_version, evidence_scope_version, brief_version,
+          competency_mapping_version, released_by_role, body, repeat(''0'', 64)
+     FROM mani WHERE persona = ''P1''',
+  'scp_manifest_hash_matches_body',
+  'TR15.32 a manifest whose hash does not match its body is refused by the table itself');
+SELECT pg_temp.must_fail(
+  'INSERT INTO public.scp_report_snapshots
+     (attempt_id, subject_id, report_version_id, audience, payload, manifest_id)
+   SELECT attempt_id, subject_id, participant_report_version_id, ''participant'', ''[]''::jsonb, id
+     FROM mani WHERE persona = ''P1''',
+  'scp_report_snapshots_manifest_pair',
+  'TR15.32b a snapshot naming a manifest without its hash (or the reverse) is refused');
+
+-- 15.33–15.37  Privacy: refused, not filtered. The participant, the employer
+-- owner, another organisation, a stranger, anon: no table, no routine, and
+-- the audience documents name none of it.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-00000000000a';
+SELECT pg_temp.must_fail('SELECT count(*) FROM public.scp_report_computation_manifests',
+  'permission denied', 'TR15.33 the participant cannot read the manifest table');
+SELECT pg_temp.must_fail(
+  format('SELECT public.scp_report_manifest_computation(%L::uuid, now())', (SELECT attempt_id FROM runs WHERE persona = 'P1')),
+  'permission denied', 'TR15.33b nor execute the builder');
+SELECT pg_temp.must_fail(
+  format('SELECT * FROM public.scp_verify_report_manifest(%L::uuid)', (SELECT id FROM mani WHERE persona = 'P1')),
+  'permission denied', 'TR15.33c nor the verifier');
+SELECT pg_temp.must_fail('SELECT public.scp_report_manifest_hash(''{}''::jsonb)',
+  'permission denied', 'TR15.33d nor the hash rule');
+SELECT pg_temp.ok(
+  (SELECT d::text NOT ILIKE '%manifest%' AND d::text NOT ILIKE '%canonical_sha256%'
+      AND d::text NOT LIKE '%' || (SELECT canonical_sha256 FROM mani WHERE persona = 'P1') || '%'
+      AND d::text NOT ILIKE '%weighted_sum%' AND d::text NOT ILIKE '%denominator%'
+      AND d::text NOT ILIKE '%option_key%' AND d::text NOT ILIKE '%rubric_version%'
+      AND d::text NOT ILIKE '%selected_score%' AND d::text NOT ILIKE '%exclusion_reason%'
+     FROM (SELECT pg_temp.par_doc('P1') AS d) x),
+  'TR15.34 the participant document names no manifest, hash, denominator, option key, score, rubric version or exclusion reason');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-000000000002';
+SELECT pg_temp.must_fail('SELECT count(*) FROM public.scp_report_computation_manifests',
+  'permission denied', 'TR15.35 the employer owner cannot read the manifest table either');
+SELECT pg_temp.must_fail('SELECT manifest_id, canonical_sha256 FROM public.scp_report_snapshots',
+  'permission denied', 'TR15.35b nor the link columns from the snapshot table');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_report_computation_manifests',
+  'permission denied', 'TR15.35c nor TRUNCATE it');
+SELECT pg_temp.must_fail(
+  format('SELECT * FROM public.scp_verify_report_manifest(%L::uuid)', (SELECT id FROM mani WHERE persona = 'P1')),
+  'permission denied', 'TR15.35d nor run the verifier');
+SELECT pg_temp.ok(
+  (SELECT bool_and(d::text NOT ILIKE '%manifest%' AND d::text NOT ILIKE '%canonical_sha256%'
+               AND d::text NOT LIKE '%' || m.canonical_sha256 || '%'
+               AND d::text NOT ILIKE '%weighted_sum%' AND d::text NOT ILIKE '%denominator%'
+               AND d::text NOT ILIKE '%option_key%' AND d::text NOT ILIKE '%rubric_version%'
+               AND d::text NOT ILIKE '%selected_score%' AND d::text NOT ILIKE '%exclusion_reason%'
+               AND d::text NOT ILIKE '%prompt_id%')
+     FROM mani m, LATERAL (SELECT pg_temp.emp_doc(m.persona) AS d) x),
+  'TR15.36 the employer document names no manifest, hash, denominator, option key, score, rubric version, exclusion reason or prompt id');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'fc000000-0000-0000-0000-000000000012';
+SELECT pg_temp.must_fail('SELECT count(*) FROM public.scp_report_computation_manifests',
+  'permission denied', 'TR15.37 another organisation''s owner is refused the table outright');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE anon;
+SELECT pg_temp.must_fail('SELECT count(*) FROM public.scp_report_computation_manifests',
+  'permission denied', 'TR15.37b anon is refused the table');
+SELECT pg_temp.must_fail('SELECT public.scp_report_manifest_hash(''{}''::jsonb)',
+  'permission denied', 'TR15.37c and the hash rule');
+SELECT pg_temp.must_fail('TRUNCATE public.scp_report_computation_manifests',
+  'permission denied', 'TR15.37d and TRUNCATE');
+RESET ROLE;
+
+SET LOCAL ROLE service_role;
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM mani m CROSS JOIN LATERAL public.scp_verify_report_manifest(m.id) v WHERE v.integrity_ok) = 3,
+  'TR15.38 service_role -- the backend -- can run the verifier');
+RESET ROLE;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_report_computation_manifests') = 0
+  AND (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.scp_report_computation_manifests'::regclass)
+  AND NOT EXISTS (SELECT 1 FROM information_schema.table_privileges
+                   WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests'
+                     AND grantee IN ('anon', 'authenticated', 'PUBLIC'))
+  AND NOT EXISTS (SELECT 1 FROM information_schema.column_privileges
+                   WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests'
+                     AND grantee IN ('anon', 'authenticated', 'PUBLIC'))
+  AND (SELECT string_agg(privilege_type, ',' ORDER BY privilege_type)
+         FROM information_schema.table_privileges
+        WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests'
+          AND grantee = 'service_role') LIKE '%INSERT%SELECT%',
+  'TR15.39 posture: RLS on, zero policies, no audience privilege at table or column level, service_role kept');
+
+-- 15.40  Legacy provenance: a snapshot with no manifest is a valid, readable
+-- row. Proven the way the continuity suite reproduces production: replica
+-- mode, on a fresh attempt id, then read through the audience contract.
+SELECT pg_temp.ok(
+  (SELECT is_nullable = 'YES' FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots' AND column_name = 'manifest_id')
+  AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests'
+                     AND column_name IN ('payload', 'brief', 'context')),
+  'TR15.40 manifest_id is nullable (a historical snapshot is legacy provenance, never backfilled), and the manifest holds no audience document of its own');
 
 ROLLBACK;
