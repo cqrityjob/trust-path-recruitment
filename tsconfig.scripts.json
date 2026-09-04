@@ -53,6 +53,11 @@
     // authored baseline and both review documents; a parser that silently
     // stops matching one of them would report a scale it never measured.
     "scripts/vaktare-self-report-quality-check.ts",
+    // PR-R0: the TRUST evidence report guard walks the future V3 / manifest
+    // contract fixture as typed data; a fixture that silently stops matching
+    // the contract type is exactly the failure this file exists to prevent.
+    "scripts/trust-evidence-report-check.ts",
+    "scripts/fixtures/trust-evidence-report-v3-contract.ts",
     "scripts/legacy-assessment-route-guard-check.ts",
     // Added on its own terms, like the security guard above: new, no
     // pre-existing type debt, and it renders real components -- a guard whose

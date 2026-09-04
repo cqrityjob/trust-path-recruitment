@@ -553,6 +553,20 @@ jobs:
       - name: Väktare self-report quality check
         run: bun run vaktare-self-report-quality:check
 
+      # TRUST Evidence Report, PR-R0. Locks the report layer's safety contract
+      # before the report is built on it: no hire/reject, rank, percentile,
+      # total, match, suitability, pass/fail, risk-score, personality or radar
+      # can enter the snapshot types, the rds-v1 builder, the report copy (sv
+      # and en) or the future V3 contract; the next step is always one of four
+      # process steps; self-report is never promoted into an observed bucket;
+      # SCC-08 on one item reads as limited evidence and never as a weakness;
+      # no human finding means no safety panel; the direct snapshot reads are
+      # exactly the two that exist today; and no migration creates the
+      # computation manifest ahead of PR-R1. The database half of the same
+      # contract runs in the database job.
+      - name: TRUST evidence report contract check
+        run: bun run trust-evidence-report:check
+
       # The retired assessment engine stays retired: its four URL-reachable
       # routes redirect into the Assessment Center (or say the link is no
       # longer in use) and import none of the legacy runner, while the current

@@ -59,6 +59,7 @@
     "vaktare-pilot-truth:check": "bun run scripts/vaktare-pilot-truth-check.ts",
     "vaktare-content-quality:check": "bun run scripts/vaktare-content-quality-check.ts",
     "vaktare-self-report-quality:check": "bun run scripts/vaktare-self-report-quality-check.ts",
+    "trust-evidence-report:check": "bun run scripts/trust-evidence-report-check.ts",
     "legacy-assessment-routes:check": "bun run scripts/legacy-assessment-route-guard-check.ts",
     "format": "prettier --write .", 
     "db:test": "bash scripts/db-test.sh", 
