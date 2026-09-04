@@ -1479,6 +1479,48 @@ if [ "$ER_PASSED" -lt 45 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# TRUST Evidence Report -- PR-R0 characterisation and safety contract.
+#
+# Pins what the report chain does TODAY before the TRUST Evidence Report is
+# built on it: self-report never counts as observed evidence (c07/c19
+# included), SCC-08's single observed item reads as limited evidence and never
+# as a weakness, a safety finding changes no number (proven on identical
+# answers with and without the finding), free text becomes evidence only
+# through a completed human rubric review, only owner/admin can release and
+# only one routine can write a snapshot, released snapshots survive item edits,
+# new templates, interview notes and decisions byte-for-byte, and no snapshot
+# can carry a score, rank, match, suitability, pass/fail, hire/reject or radar
+# key or phrase in either language.
+#
+# The assertions suffixed X are PINNED EXPOSURES: audience-boundary gaps that
+# exist today (derivation_input on the audience-readable row, the evidence
+# ledger readable by its subject, mean/spread in the employer brief). They are
+# asserted as they stand so that PR-R2 has to change them on purpose.
+# ---------------------------------------------------------------------------
+echo "==> Running TRUST evidence report R0 characterisation assertions"
+set +e
+TR0_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r0_test.sql 2>&1)"
+TR0_RC=$?
+set -e
+
+echo "$TR0_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+TR0_PASSED="$(echo "$TR0_OUT" | grep -c "ok  " || true)"
+
+if [ "$TR0_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the TRUST evidence report R0 suite exited with code ${TR0_RC}." >&2
+  echo "$TR0_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "TRUST evidence report R0 characterisation"
+fi
+
+echo "    ok  ${TR0_PASSED} TRUST evidence report R0 assertions passed"
+
+if [ "$TR0_PASSED" -lt 100 ]; then
+  echo "FAIL: expected at least 100 TRUST evidence report R0 assertions, only ${TR0_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R0 (assertion shortfall: floor 100)"
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"
