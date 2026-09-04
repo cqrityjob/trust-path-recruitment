@@ -381,6 +381,7 @@
     {
       "file": "20261024090000_scp_trust_evidence_report_r2a_audience_reads.sql", 
       "hostedState": "applied", 
+      "evidenceSource": "Recorded appliedThroughLovable mapping canonical 20261024090000 -> hosted 20260904134520 (name ea2e5b1f-6d13-454e-b61b-bac4591ab899) on wrygicdfxwjnrugduxnt, plus direct read-only hosted verification of all four routines, their ACLs and the untouched EXPAND baseline on 2026-11-24 (details in appliedThroughLovable.evidence below)." 
       "appliedThroughLovable": {
         "canonicalVersion": "20261024090000", 
         "hostedVersion": "20260904134520", 
