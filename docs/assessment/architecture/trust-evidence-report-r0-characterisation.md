@@ -246,6 +246,12 @@ receive the columns above. PR-R2 scope.
 
 ## 10. Reproducibility gap table (PR-R1 input)
 
+> **Status (PR-R1, 2026-09-04):** closed by `20261027090000` — see
+> `trust-evidence-report-r1-provenance.md` §10 for the row-by-row closure.
+> The table below is the baseline PR-R1 was stated against and is kept as
+> such; every NOT FROZEN and PARTIALLY FROZEN row is now a column or a body
+> key of the private computation manifest.
+
 | Provenance element                  | Status today               | Where / why                                                                                                                                                                                  |
 | ----------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | calculated_at                       | PARTIALLY FROZEN           | `released_at` / `context.scored_at`; no separate calculation timestamp; `scp_attempt_maturity(..., now())` is evaluated at release and the instant is not stored                             |
@@ -266,6 +272,16 @@ receive the columns above. PR-R2 scope.
 | canonical hash                      | NOT FROZEN                 | `source_snapshot_hash` exists on the evidence row and is always NULL; nothing hashes the snapshot                                                                                            |
 
 ## 11. PR-R1 input — private immutable computation manifest
+
+> **Status (PR-R1, 2026-09-04):** implemented as
+> `scp_report_computation_manifests` (one row per release, both audiences
+> pointing at it), written by `scp_release_attempt_report` in the same
+> transaction, immutable by trigger, RLS with no policy, no audience
+> privilege. Items 1–6 below are done; item 7 (mean/spread leaving the brief)
+> was done at the read by PR-R2A-1 and the stored row keeps them for the
+> manifest; item 8 (the `interpretation` label) is deliberately **not**
+> done — c07/c19 stay methodologically open by Product Owner decision and
+> the manifest records them as `self_report` rows only.
 
 Create `scp_report_computation_manifests` (one row per snapshot, both
 audiences pointing at the same manifest or one per audience — decision for

@@ -10064,10 +10064,143 @@ export type Database = {
           },
         ]
       }
+      scp_report_computation_manifests: {
+        Row: {
+          attempt_id: string
+          body: Json
+          brief_version: string
+          calculated_at: string
+          calculation_schema_version: string
+          canonical_sha256: string
+          competency_mapping_version: string
+          created_at: string
+          employer_report_version_id: string
+          employer_snapshot_id: string
+          evidence_scope_version: string
+          evidence_state_version: string
+          id: string
+          issuer_organization_id: string | null
+          participant_report_version_id: string
+          participant_snapshot_id: string
+          released_by: string | null
+          released_by_role: string
+          scoring_model_version: string
+          signal_model_version: string
+          subject_id: string
+          threshold_version: string
+        }
+        Insert: {
+          attempt_id: string
+          body: Json
+          brief_version: string
+          calculated_at: string
+          calculation_schema_version: string
+          canonical_sha256: string
+          competency_mapping_version: string
+          created_at?: string
+          employer_report_version_id: string
+          employer_snapshot_id: string
+          evidence_scope_version: string
+          evidence_state_version: string
+          id?: string
+          issuer_organization_id?: string | null
+          participant_report_version_id: string
+          participant_snapshot_id: string
+          released_by?: string | null
+          released_by_role: string
+          scoring_model_version: string
+          signal_model_version: string
+          subject_id: string
+          threshold_version: string
+        }
+        Update: {
+          attempt_id?: string
+          body?: Json
+          brief_version?: string
+          calculated_at?: string
+          calculation_schema_version?: string
+          canonical_sha256?: string
+          competency_mapping_version?: string
+          created_at?: string
+          employer_report_version_id?: string
+          employer_snapshot_id?: string
+          evidence_scope_version?: string
+          evidence_state_version?: string
+          id?: string
+          issuer_organization_id?: string | null
+          participant_report_version_id?: string
+          participant_snapshot_id?: string
+          released_by?: string | null
+          released_by_role?: string
+          scoring_model_version?: string
+          signal_model_version?: string
+          subject_id?: string
+          threshold_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_manifest_employer_snapshot_fkey"
+            columns: ["employer_snapshot_id"]
+            isOneToOne: true
+            referencedRelation: "scp_report_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_manifest_participant_snapshot_fkey"
+            columns: ["participant_snapshot_id"]
+            isOneToOne: true
+            referencedRelation: "scp_report_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_employer_report_version_id_fkey"
+            columns: ["employer_report_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_issuer_organization_id_fkey"
+            columns: ["issuer_organization_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_participant_report_version_id_fkey"
+            columns: ["participant_report_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_report_snapshots: {
         Row: {
           attempt_id: string
           audience: string
+          canonical_sha256: string | null
           brief: Json | null
           context: Json | null
           created_at: string
@@ -10076,6 +10209,7 @@ export type Database = {
           evidence_state_version: string | null
           id: string
           issuer_organization_id: string | null
+          manifest_id: string | null
           payload: Json
           released_at: string
           report_version_id: string
@@ -10087,6 +10221,7 @@ export type Database = {
         Insert: {
           attempt_id: string
           audience: string
+          canonical_sha256?: string | null
           brief?: Json | null
           context?: Json | null
           created_at?: string
@@ -10095,6 +10230,7 @@ export type Database = {
           evidence_state_version?: string | null
           id?: string
           issuer_organization_id?: string | null
+          manifest_id?: string | null
           payload: Json
           released_at?: string
           report_version_id: string
@@ -10106,6 +10242,7 @@ export type Database = {
         Update: {
           attempt_id?: string
           audience?: string
+          canonical_sha256?: string | null
           brief?: Json | null
           context?: Json | null
           created_at?: string
@@ -10114,6 +10251,7 @@ export type Database = {
           evidence_state_version?: string | null
           id?: string
           issuer_organization_id?: string | null
+          manifest_id?: string | null
           payload?: Json
           released_at?: string
           report_version_id?: string
@@ -10142,6 +10280,13 @@ export type Database = {
             columns: ["issuer_organization_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_manifest_id_fkey"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_computation_manifests"
             referencedColumns: ["id"]
           },
           {
@@ -14833,6 +14978,19 @@ export type Database = {
           participant_snapshot: string
         }[]
       }
+      scp_report_manifest_computation: {
+        Args: {
+          _attempt_id: string
+          _calculated_at: string
+          _signal_version?: string
+          _threshold_version?: string
+        }
+        Returns: Json
+      }
+      scp_report_manifest_hash: {
+        Args: { _body: Json }
+        Returns: string
+      }
       scp_report_snapshot_readable: {
         Args: {
           _audience: string
@@ -14991,6 +15149,20 @@ export type Database = {
           purpose_en: string
           purpose_sv: string
           stage_key: string
+        }[]
+      }
+      scp_verify_report_manifest: {
+        Args: { _manifest_id: string }
+        Returns: {
+          attempt_id: string
+          body_sha256: string
+          integrity_ok: boolean
+          manifest_id: string
+          recomputed_computation_sha256: string
+          reproducible: boolean
+          snapshots_linked: boolean
+          stored_computation_sha256: string
+          stored_sha256: string
         }[]
       }
       set_application_status: {

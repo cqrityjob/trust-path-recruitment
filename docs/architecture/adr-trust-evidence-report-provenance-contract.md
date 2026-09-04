@@ -1,8 +1,23 @@
 # ADR — TRUST Evidence Report: canonical report contract and computation manifest
 
-Status: **PROPOSED — contract only.** Nothing in this ADR is implemented.
-PR-R0 documents it; PR-R1 implements the manifest; PR-R2 implements the
-audience read paths; the report itself follows.
+Status: **Decision 1 locked (PR-R0). Decision 3 IMPLEMENTED by PR-R1
+(`20261027090000`, see
+`docs/assessment/architecture/trust-evidence-report-r1-provenance.md`).
+Audience read paths implemented by PR-R2A (20261024090000 – 20261026090000).
+Decision 2 (the V3 audience shape) is still a contract only; PR-R3 builds
+it.**
+
+> **PR-R1 note (2026-09-04).** The manifest as built differs from the table
+> below in three deliberate ways: (1) one row per **release**, both audience
+> snapshots pointing at it (there is one calculation); (2) identity and
+> `calculated_at` are **columns**, not body keys, so the hash covers frozen
+> inputs, versions and computation only and the same inputs hash the same
+> however often they are recomputed; (3) the evidence list is one entry per
+> **response** (with the evidence row or the exclusion reason), rather than
+> two lists, so every response is accounted for exactly once. The mapping
+> version is a canonical hash of the map rows (`bcm-sha256:…`), since the
+> map table carries no version column. The V3 fixture's
+> `TRUST_MANIFEST_BODY_KEYS` names the keys the migration writes.
 
 Date: 2026-09-04. Start SHA 755b9b0. Typed fixture:
 `scripts/fixtures/trust-evidence-report-v3-contract.ts` (type-checked, walked
@@ -145,10 +160,12 @@ PARTIALLY FROZEN row becomes a manifest field.
   phrase enters the report layer or the contract, if a radar is rendered on a
   report surface, if a new direct snapshot read appears, or if a migration
   creates the manifest ahead of PR-R1.
-- PR-R1: EXPAND-only migration (new table, nullable `manifest_id` /
-  `canonical_sha256` on the snapshot), release function writes the manifest,
-  suite proves privacy (participant, employer, anon, other org read nothing),
-  immutability and hash stability; TR11.3/11.4 are inverted deliberately.
+- PR-R1 (done, `20261027090000`): EXPAND-only migration (new table, nullable
+  `manifest_id` / `canonical_sha256` on the snapshot), release function
+  writes the manifest, suite proves privacy (participant, employer, anon,
+  other org read nothing), immutability and hash stability; TR11.4 and
+  TR12.1 are inverted deliberately (TR11.3 still holds: `derivation_input`
+  is unchanged, the per-item freeze lives on the manifest).
 - PR-R2A, packaged as three deployable steps (`trust-evidence-report-r2a-audience-boundary.md`):
   R2A-1 EXPAND `20261024090000` adds `scp_participant_report` /
   `scp_employer_report` and removes nothing; R2A-2 moves the two consumers;
