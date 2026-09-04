@@ -1515,9 +1515,9 @@ fi
 
 echo "    ok  ${TR0_PASSED} TRUST evidence report R0 assertions passed"
 
-if [ "$TR0_PASSED" -lt 120 ]; then
-  echo "FAIL: expected at least 120 TRUST evidence report R0/R2A assertions, only ${TR0_PASSED} ran." >&2
-  suite_failed "TRUST evidence report R0/R2A (assertion shortfall: floor 120)"
+if [ "$TR0_PASSED" -lt 135 ]; then
+  echo "FAIL: expected at least 135 TRUST evidence report R0/R2A assertions, only ${TR0_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R0/R2A (assertion shortfall: floor 135)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -1530,6 +1530,27 @@ fi
 # after that as anyone likes. PR-R2A-3 (CONTRACT) is what ends it, and this
 # suite is what R2A-3 has to reach by rolling itself back.
 # ---------------------------------------------------------------------------
+# PR-R2A-3 (20261026090000, CONTRACT) withdraws the direct read that this
+# suite asserts is still present, so the suite is run in the state it
+# describes: roll CONTRACT back, run it, re-apply CONTRACT. That proves the
+# rollback works on a database that has the state it reverses, and that
+# CONTRACT is safe to re-apply -- which is what happens if a sequencing
+# mistake is corrected by rolling back and rolling forward again.
+echo "==> Rolling PR-R2A-3 CONTRACT back to reach the post-EXPAND state"
+set +e
+R2A3_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261026090000_scp_trust_evidence_report_r2a_contract_rollback.sql 2>&1)"
+R2A3_BACK_RC=$?
+set -e
+if [ "$R2A3_BACK_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the R2A-3 contract rollback exited with code ${R2A3_BACK_RC}." >&2
+  echo "$R2A3_BACK" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "R2A-3 contract rollback (reaching the post-expand state)"
+else
+  echo "    ok  R2A-3 contract rolled back -- the database is now in the post-EXPAND state"
+fi
+
 echo "==> Running PR-R2A-1 expand-phase compatibility assertions"
 set +e
 R2A_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r2a_expand_test.sql 2>&1)"
@@ -1564,6 +1585,29 @@ else
     echo "FAIL: expected at least 14 R2A expand-phase assertions, only ${R2A_PASSED} ran." >&2
     suite_failed "R2A expand phase compatibility (assertion shortfall: floor 14)"
   fi
+fi
+
+echo "==> Re-applying PR-R2A-3 CONTRACT"
+set +e
+R2A3_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261026090000_scp_trust_evidence_report_r2a_contract.sql 2>&1)"
+R2A3_FWD_RC=$?
+set -e
+if [ "$R2A3_FWD_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: re-applying the R2A-3 CONTRACT exited with code ${R2A3_FWD_RC}." >&2
+  echo "$R2A3_FWD" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "R2A-3 contract re-application"
+else
+  echo "    ok  R2A-3 contract re-applied -- a corrected sequencing mistake rolls forward cleanly"
+fi
+R2A3_LEFT="$(psql -tAq -d "$TEST_DB" -c "
+  SELECT count(*) FROM information_schema.table_privileges
+   WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
+     AND grantee IN ('authenticated', 'anon', 'PUBLIC')")"
+if [ "$R2A3_LEFT" != "0" ]; then
+  echo "FAIL: an audience role still holds ${R2A3_LEFT} privilege(s) on scp_report_snapshots after re-applying CONTRACT." >&2
+  suite_failed "R2A-3 contract re-application (direct read still open)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -1611,6 +1655,46 @@ else
   if [ "$R2AC_PASSED" -lt 25 ]; then
     echo "FAIL: expected at least 25 R2A continuity assertions, only ${R2AC_PASSED} ran." >&2
     suite_failed "R2A report-version continuity (assertion shortfall: floor 25)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# PR-R2A-3 CONTRACT (20261026090000): the audience boundary, closed.
+#
+# Every audience reads only through its entry point; the table refuses the
+# role; the subject reads no ledger row; the 16 historical orphans stay
+# readable; the Interview Intelligence bridge still finds what it needs; anon
+# and the wrong tenant get nothing from any path.
+# ---------------------------------------------------------------------------
+echo "==> Running PR-R2A-3 contract assertions"
+set +e
+R2A3_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r2a_contract_test.sql 2>&1)"
+R2A3_RC=$?
+set -e
+
+echo "$R2A3_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+R2A3_PASSED="$(echo "$R2A3_OUT" | grep -c "ok  " || true)"
+
+if [ "$R2A3_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the R2A-3 contract suite exited with code ${R2A3_RC}." >&2
+  echo "$R2A3_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "R2A-3 contract"
+else
+  echo "    ok  ${R2A3_PASSED} R2A-3 contract assertions passed"
+  for REQUIRED in \
+    "K1.3 the participant cannot SELECT the snapshot table at all" \
+    "K1.5 the participant reads zero evidence-ledger rows" \
+    "K2.3 the employer cannot SELECT the snapshot table at all" \
+    "K3.2 the orphaned employer report is still returned through the contract"; do
+    if ! echo "$R2A3_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: the mandatory R2A-3 contract assertion did not run: ${REQUIRED}" >&2
+      suite_failed "R2A-3 contract (missing: ${REQUIRED})"
+    fi
+  done
+  if [ "$R2A3_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 R2A-3 contract assertions, only ${R2A3_PASSED} ran." >&2
+    suite_failed "R2A-3 contract (assertion shortfall: floor 30)"
   fi
 fi
 

@@ -523,11 +523,14 @@ DO $$ BEGIN RAISE NOTICE 'GROUP J6 — what each principal can now see'; END $$;
 -- Group J6 — visibility after release
 -- =========================================================================
 
--- The participant reads their own report.
+-- The participant reads their own report -- through scp_participant_report,
+-- the only read path an audience has had since PR-R2A (20261025090000
+-- withdrew the direct table read). One participant document, no employer one.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
 CREATE TEMP TABLE p_report AS
-SELECT count(*) AS n FROM public.scp_report_snapshots;
+SELECT (SELECT count(*) FROM public.scp_participant_report(:'aid'::uuid))
+     + (SELECT count(*) FROM public.scp_employer_report(:'aid'::uuid)) AS n;
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.ok((SELECT n FROM p_report) = 1,
   'J6.1 the participant sees exactly their own participant report');
@@ -536,7 +539,8 @@ SELECT pg_temp.ok((SELECT n FROM p_report) = 1,
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000004';
 CREATE TEMP TABLE x_report AS
-SELECT count(*) AS n FROM public.scp_report_snapshots;
+SELECT (SELECT count(*) FROM public.scp_participant_report(:'aid'::uuid))
+     + (SELECT count(*) FROM public.scp_employer_report(:'aid'::uuid)) AS n;
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.ok((SELECT n FROM x_report) = 0,
   'J6.2 an unrelated participant sees no report at all');

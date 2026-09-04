@@ -9,7 +9,14 @@ a sequence that is safe wherever deployment stops.
 | ----------- | --------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
 | **R2A-1**   | `feature/trust-evidence-report-r2a-1-expand`        | `20261024090000` | adds the audience read contracts; removes nothing                                                                              | yes — main's code is untouched; the entry points simply exist                       |
 | **R2A-2**   | `feature/trust-evidence-report-r2a-2-app-cutover`   | none             | `getAcademyReport` and the Interview Intelligence bridge read through the contracts; client types lose `mean`/`spread`         | yes — old and new application versions both work while the direct read still exists |
-| **R2A-3**   | `feature/trust-evidence-report-r2a-3-contract`      | `20261025090000` | withdraws the direct snapshot read, drops the subject's ledger policy, re-points the row policies, closes default-privilege leftovers | yes — and only then are R0-X1/X2/X3 closed                                          |
+| **R2A-3**   | `feature/trust-evidence-report-r2a-3-contract`      | `20261026090000` | withdraws the direct snapshot read, drops the subject's ledger policy, re-points the row policies, closes default-privilege leftovers | yes — and only then are R0-X1/X2/X3 closed                                          |
+
+> **Status (2026-09-04):** R2A-1 applied hosted (`20260904134520`), R2A-2 live
+> and verified, the #182 continuity hotfix applied hosted (`20260904171840`,
+> canonical `20261025090000`). R2A-3 CONTRACT is `20261026090000` — the slot
+> named in the table below is superseded — and is prepared on
+> `feature/trust-evidence-report-r2a-3-contract`, pending Product Owner review
+> and a hosted apply that must follow, never precede, the live application.
 
 Mandatory order: merge R2A-1 → apply EXPAND hosted → verify the entry points
 hosted with the current app unchanged → record `applied` in
@@ -131,8 +138,8 @@ are inverted in R2A-3.
 
 ## 4. R2A-3 — CONTRACT (planned; prepare only once R2A-2 is proven live)
 
-Migration `20261025090000`, refusing with `SCP_R2A_EXPAND_MISSING` unless
-R2A-1 is applied:
+Migration `20261026090000`, refusing with `SCP_R2A_CONTRACT_PRECONDITION`
+unless R2A-1 and the #182 continuity contract are applied:
 
 - `REVOKE SELECT ON scp_report_snapshots FROM authenticated` — after this an
   audience reaches a snapshot only through the entry points. Closes R0-X1 and

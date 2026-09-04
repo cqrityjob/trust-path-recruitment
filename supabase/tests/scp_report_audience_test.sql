@@ -368,45 +368,67 @@ DO $$ BEGIN RAISE NOTICE 'GROUP RA6 — who may read which document'; END $$;
 -- Group RA6 — access
 -- =========================================================================
 
+-- Since PR-R2A (20261024090000 / 20261025090000) an audience reads its
+-- document through scp_participant_report / scp_employer_report and has no
+-- privilege on the table at all. Each principal below is asked both entry
+-- points and the table; the table must refuse, not filter.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000003';
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM run) AND audience = 'participant') = 1,
+  (SELECT count(*) FROM public.scp_participant_report((SELECT attempt_id FROM run))) = 1
+  AND (SELECT audience FROM public.scp_participant_report((SELECT attempt_id FROM run))) = 'participant',
   'RA6.1 the participant can read their own participant report');
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM run) AND audience = 'employer') = 0,
+  (SELECT count(*) FROM public.scp_employer_report((SELECT attempt_id FROM run))) = 0,
   'RA6.2 the participant cannot read the employer report at all');
+SELECT pg_temp.must_fail(
+  'SELECT count(*) FROM public.scp_report_snapshots',
+  'permission denied',
+  'RA6.2b the participant cannot read the snapshot table directly -- the entry point is the only path');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000002';
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM run) AND audience = 'employer') = 1,
+  (SELECT count(*) FROM public.scp_employer_report((SELECT attempt_id FROM run))) = 1
+  AND (SELECT audience FROM public.scp_employer_report((SELECT attempt_id FROM run))) = 'employer',
   'RA6.3 the commissioning employer can read the employer report');
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM run) AND audience = 'participant') = 0,
+  (SELECT count(*) FROM public.scp_participant_report((SELECT attempt_id FROM run))) = 0,
   'RA6.4 the employer cannot read the participant''s own report');
+SELECT pg_temp.must_fail(
+  'SELECT count(*) FROM public.scp_report_snapshots',
+  'permission denied',
+  'RA6.4b the employer cannot read the snapshot table directly either');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000005';
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM run)) = 0,
+  (SELECT count(*) FROM public.scp_employer_report((SELECT attempt_id FROM run))) = 0
+  AND (SELECT count(*) FROM public.scp_participant_report((SELECT attempt_id FROM run))) = 0,
   'RA6.5 a second employer reads nothing of the first employer''s run');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000007';
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM run)) = 0,
+  (SELECT count(*) FROM public.scp_employer_report((SELECT attempt_id FROM run))) = 0
+  AND (SELECT count(*) FROM public.scp_participant_report((SELECT attempt_id FROM run))) = 0,
   'RA6.6 an unrelated signed-in account reads nothing');
 RESET ROLE; RESET request.jwt.claim.sub;
+
+GRANT SELECT ON run TO anon;
+SET LOCAL ROLE anon;
+SELECT pg_temp.must_fail(
+  format('SELECT count(*) FROM public.scp_participant_report(%L::uuid)', (SELECT attempt_id FROM run)),
+  'permission denied',
+  'RA6.7 anon cannot execute the participant entry point');
+SELECT pg_temp.must_fail(
+  format('SELECT count(*) FROM public.scp_employer_report(%L::uuid)', (SELECT attempt_id FROM run)),
+  'permission denied',
+  'RA6.8 nor the employer one');
+RESET ROLE;
 
 DO $$ BEGIN RAISE NOTICE 'GROUP RA7 — release stays a one-way door'; END $$;
 
