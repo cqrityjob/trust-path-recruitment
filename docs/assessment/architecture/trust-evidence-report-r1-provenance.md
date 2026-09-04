@@ -208,3 +208,47 @@ that id, version and focus, in order, and that the brief carries neither key.
 | observed / self-report classification | FROZEN — per item (`classification`), and the registry rule that decides it            |
 | denominator / weighted sum / spread   | FROZEN — per area and per self-report facet                                            |
 | canonical hash                        | FROZEN — CHECK-enforced, pinned rule, verifier                                         |
+
+## 11. Hosted apply, 2026-09-04: applied, regression, rolled back
+
+The canonical file (origin/main `c5c08be`, sha256 `e8bf24f8…af446`) was
+applied verbatim to `wrygicdfxwjnrugduxnt` through the Supabase management
+API and stamped as ledger version `20260904190901`. The apply-time proof
+passed; every read-only verification listed in §6 passed on production; the
+five routines were md5-identical to a local strict replay.
+
+A transient, rolled-back release over the eight releasable attempts then
+found a **regression**: `scp_attempts.option_order_seed` does not exist on
+production, because `20261021090000` (option order per attempt) is still
+pending there, and a plpgsql `%ROWTYPE` field is resolved at run time. The
+R1 release function therefore installed cleanly and failed on every call
+with `42703`. Seven of eight attempts hit it. The eighth
+(`890b7968`, the only post-cutover attempt) fails on the pre-R1 function
+too: 48 orphaned `scp_competency_facets` rows from the retired project's
+data restore (created 2026-07-28, competency ids that no longer exist)
+duplicate every facet slug, and the guide-prompt selection's
+`(SELECT f2.id … WHERE f2.slug = g.facet_slug)` returns two rows (`21000`).
+That defect predates R1 and is reported separately.
+
+The documented rollback was executed the same session. Its proof passed;
+the release function is back at md5 `578cfd1432a7351a830a353c6b57ee77`, the
+value observed before the apply; no R1 object remains; the R2A-3 posture and
+the data (16 / 547 / 34) are unchanged; a transient pre-R1 baseline released
+seven of eight attempts again. The ledger keeps row `20260904190901` whose
+objects no longer exist.
+
+Consequences carried into this file's next revision:
+
+- §0 now refuses with `SCP_R1_PRECONDITION` unless
+  `scp_attempts.option_order_seed` exists.
+- `scp_guard_manifest_immutable()` is revoked from PUBLIC/anon/authenticated
+  (hosted default privileges had granted anon EXECUTE; direct calls fail
+  with "trigger functions can only be called as triggers", so the exposure
+  was inert, but the rule is that no new function arrives reachable).
+- Re-apply order is a Product Owner decision: `20261021090000` first, then
+  this file. The re-apply will create a second ledger row; the 2026-09-04
+  row must then be recorded as a no-op.
+- The local strict replay could not have caught this: it applies every
+  migration in order. A migration that reads a column another _pending_
+  migration introduces needs its own precondition, and the hosted ledger
+  frontier must be read before any apply.
