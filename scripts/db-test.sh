@@ -1635,6 +1635,117 @@ if [ "$FR_PASSED" -lt 20 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# PR-R3A (20261029090000): the Report V3 data contract, employer audience.
+# scp_employer_report_v3 is a projection of the released employer document;
+# the suite releases three Väktare attempts and proves the V3 document is
+# the locked shape, equals the frozen document conclusion for conclusion,
+# keeps SCC-08 limited, keeps self-report apart, reaches nothing internal,
+# is NULL for every wrong principal, composes with interview notes without
+# touching the report, and survives the orphaned-template and pre-R1 shapes.
+# Runs BEFORE the rollback step (it reads the SCP content spine).
+# ---------------------------------------------------------------------------
+echo "==> Running TRUST evidence report R3A (Report V3 contract) assertions"
+set +e
+R3A_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r3a_contract_test.sql 2>&1)"
+R3A_RC=$?
+set -e
+
+echo "$R3A_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+R3A_PASSED="$(echo "$R3A_OUT" | grep -c "ok  " || true)"
+
+if [ "$R3A_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the TRUST evidence report R3A suite exited with code ${R3A_RC}." >&2
+  echo "$R3A_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "TRUST evidence report R3A contract"
+fi
+
+echo "    ok  ${R3A_PASSED} TRUST evidence report R3A assertions passed"
+
+if [ "$R3A_PASSED" -lt 75 ]; then
+  echo "FAIL: expected at least 75 TRUST evidence report R3A assertions, only ${R3A_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R3A contract (assertion shortfall: floor 75)"
+fi
+for REQUIRED in \
+  "V3.1 SCC-08 = {observed_pattern not_established, evidence_sufficiency limited" \
+  "V3.4 sufficiency follows the observed count exactly" \
+  "V8.1b TEST E / F: every protected field appears only at its approved path" \
+  "V8.1c TEST H: coverage_status is internal only" \
+  "V9.2b TEST F: with addenda present every path is still allowlisted" \
+  "V11.3 TEST A: after the template text" \
+  "V13.1 TEST D: the shared core holds no safety finding" \
+  "V4.2 no competency lists self_report as a source" \
+  "V7.1 clearest support needs an established consistent pattern AND sufficient evidence" \
+  "V7.6 TEST 1: a consistent pattern on limited evidence is never clearest support" \
+  "V8.1 TEST 8 / E: every key path at every depth of the employer document is on the locked path allowlist" \
+  "V8.2 TEST 8: no author id, no e-mail, no manifest field" \
+  "V8.5 the participant gets NULL from the employer V3 contract" \
+  "V9.3 TEST 6 / G: after the addenda, frozen_report is byte-identical" \
+  "V10.2 TEST 2: with two report-level contexts" \
+  "V11.2 TEST 4: after the rubric editions are retired" \
+  "V12.1 TEST 7: human_review.completed is true" \
+  "V13.2 the core's human-review, provenance and sufficiency-definition blocks"; do
+  if ! echo "$R3A_OUT" | grep -qF "$REQUIRED"; then
+    echo "FAIL: the mandatory R3A contract assertion did not run: ${REQUIRED}" >&2
+    suite_failed "R3A contract (missing: ${REQUIRED})"
+  fi
+done
+
+# ---------------------------------------------------------------------------
+# rds-v1 parity: the TypeScript next-step rule and scp_report_next_step must
+# agree on every point of the state matrix. The TypeScript half generates
+# the SQL assertions; this executes them against the replayed database.
+# ---------------------------------------------------------------------------
+echo "==> Running rds-v1 next-step parity (SQL half)"
+set +e
+PARITY_SQL="$(bun run scripts/trust-next-step-parity-check.ts --sql 2>/dev/null)"
+PARITY_GEN_RC=$?
+set -e
+if [ "$PARITY_GEN_RC" -ne 0 ] || [ -z "$PARITY_SQL" ]; then
+  echo "FAIL: the parity matrix could not be generated (rc ${PARITY_GEN_RC})." >&2
+  suite_failed "rds-v1 parity (generation)"
+else
+  set +e
+  PARITY_OUT="$(echo "$PARITY_SQL" | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+  PARITY_RC=$?
+  set -e
+  if [ "$PARITY_RC" -ne 0 ] || ! echo "$PARITY_OUT" | grep -q "rds-v1 parity"; then
+    echo "FAIL: rds-v1 parity between TypeScript and SQL failed." >&2
+    echo "$PARITY_OUT" | grep -iE "PARITY FAILED|ERROR:|FEL:" | head -5 >&2
+    suite_failed "rds-v1 parity (SQL half)"
+  else
+    echo "$PARITY_OUT" | grep "rds-v1 parity" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /'
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# PR-R3A rollback. The V3 contract stands on PR-R1 (it reads the snapshot's
+# manifest link as a fact), so it is rolled back BEFORE R1 below and
+# re-applied AFTER R1 is back. Its rollback drops one function and must leave
+# the audience contracts, the release function and the snapshots alone.
+# ---------------------------------------------------------------------------
+echo "==> Rolling PR-R3A (Report V3 contract) back"
+set +e
+R3A_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261029090000_scp_trust_evidence_report_r3a_contract_rollback.sql 2>&1)"
+R3A_BACK_RC=$?
+set -e
+if [ "$R3A_BACK_RC" -ne 0 ]; then
+  echo "FAIL: the R3A rollback exited with code ${R3A_BACK_RC}." >&2
+  echo "$R3A_BACK" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "R3A contract rollback"
+fi
+R3A_GONE="$(psql -tAq -d "$TEST_DB" -c \
+  "select (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('scp_employer_report_v3','scp_report_next_step'))
+        + (2 - (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('scp_participant_report','scp_employer_report') and p.prosrc like '%scp_audience_brief%'));")"
+if [ "$R3A_GONE" != "0" ]; then
+  echo "FAIL: after the R3A rollback the V3 contract survived or an audience contract is gone (${R3A_GONE})." >&2
+  suite_failed "R3A contract rollback (state not restored)"
+else
+  echo "    ok  R3A rolled back -- scp_employer_report_v3 gone, audience contracts untouched"
+fi
+
+# ---------------------------------------------------------------------------
 # PR-R1 (20261027090000, REPRODUCIBLE PROVENANCE) rollback and re-apply.
 #
 # The R0 suite above released three attempts and rolled its transaction back,
@@ -1666,6 +1777,20 @@ if [ "$R1_GONE" != "0" ]; then
   suite_failed "R1 provenance rollback (objects survived)"
 else
   echo "    ok  R1 rolled back -- no manifest table, no link columns, no R1 routine, pre-R1 release function restored"
+fi
+
+echo "==> R3A must refuse on a database without PR-R1"
+set +e
+R3A_REFUSE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261029090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
+R3A_REFUSE_RC=$?
+set -e
+if [ "$R3A_REFUSE_RC" -eq 0 ] || ! echo "$R3A_REFUSE" | grep -q "SCP_R3A_PRECONDITION: scp_report_snapshots.manifest_id is missing"; then
+  echo "FAIL: R3A applied (or failed for another reason) without PR-R1 underneath." >&2
+  echo "$R3A_REFUSE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "R3A precondition (PR-R1)"
+else
+  echo "    ok  R3A refused: SCP_R3A_PRECONDITION (PR-R1) -- nothing installed"
 fi
 
 # The restored pre-R1 function must be the CORRECTED one (20261026093000),
@@ -1775,6 +1900,20 @@ if [ "$R1_BACK_AGAIN" != "2" ]; then
   suite_failed "R1 provenance re-application (state not restored)"
 else
   echo "    ok  R1 re-applied -- manifest table and release function back; apply-time proof passed"
+fi
+
+echo "==> Re-applying PR-R3A (Report V3 contract)"
+set +e
+R3A_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261029090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
+R3A_FWD_RC=$?
+set -e
+if [ "$R3A_FWD_RC" -ne 0 ]; then
+  echo "FAIL: re-applying R3A exited with code ${R3A_FWD_RC}." >&2
+  echo "$R3A_FWD" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "R3A contract re-application"
+else
+  echo "    ok  R3A re-applied -- scp_employer_report_v3 back; apply-time proof passed"
 fi
 
 # ---------------------------------------------------------------------------
