@@ -31,7 +31,7 @@
 // level on each read, and the moment that level moves off `verified` the
 // attribution disappears everywhere at once.
 
-import type { VerificationMethod } from "./types";
+import type { AssertionLevel, VerificationMethod } from "./types";
 
 /** The organisation `sp_verifier_decide` records for every `cqrityjob_review`
  *  decision. A string constant rather than a role check because it is what the
@@ -74,6 +74,42 @@ export function isLegacyUnsupportedProvenance(
     SOURCE_CONFIRMATION_METHODS.includes(method) &&
     organisation.trim().toLowerCase() === CQRITYJOB_DECIDER_ORGANISATION.toLowerCase()
   );
+}
+
+/** Anything that carries a stored assertion level and, when verified, the
+ *  decider and method behind it. Claims, periods, card credentials and the
+ *  recipient payload all fit; the provenance fields are optional so a caller
+ *  holding only the level still gets an answer (the stored level). */
+export interface ProvenanceBearing {
+  readonly assertionLevel: string;
+  readonly verifierName?: string | null;
+  readonly verificationMethod?: string | null;
+}
+
+export function isLegacyUnsupportedEntry(entry: ProvenanceBearing): boolean {
+  return isLegacyUnsupportedProvenance(entry.verificationMethod, entry.verifierName);
+}
+
+/**
+ * The assertion level an entry EFFECTIVELY has for every derivation and
+ * every reader: titles, eligibility, tenure, counts, chips, symbols.
+ *
+ * ── ONE RULE, APPLIED ONCE ─────────────────────────────────────────────
+ *
+ * The stored level is history and stays as written. A legacy unsupported
+ * row -- a source-confirmation method that CQrityjob recorded about itself
+ * -- is treated as `document_provided`: CQrityjob looked at something, and
+ * that is the one thing the row can support. It therefore falls below every
+ * rule that asks for `verified`, exactly as the owner decision requires:
+ * no verified title, no regulated eligibility, no present-tense VERIFIED.
+ *
+ * Every predicate that used to compare `assertionLevel === "verified"`
+ * directly now asks this instead. That is the whole mechanism: there is no
+ * second list of surfaces to keep in step.
+ */
+export function effectiveAssertionLevel(entry: ProvenanceBearing): AssertionLevel {
+  if (isLegacyUnsupportedEntry(entry)) return "document_provided";
+  return entry.assertionLevel as AssertionLevel;
 }
 
 /** The columns a provenance read is allowed to ask for.

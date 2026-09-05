@@ -36,7 +36,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, FileText, Inbox, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatWorkLocation } from "@/lib/security-passport/format";
-import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
+import {
+  hasLegacyUnsupportedApproval,
+  methodLabelKey,
+} from "@/lib/security-passport/trust-presentation";
 import {
   decideVerification,
   getVerifierRequestDetail,
@@ -463,6 +466,38 @@ export function PassportReviewWorkspace() {
                       words, before any document is opened. The reviewer's eye
                       then runs claim -> evidence -> history -> decision down
                       one column, which is the comparison they are making. */}
+                  {/* 0. A LEGACY RECORD, SAID FIRST. An approval whose method
+                      claims a source confirmation that CQrityjob recorded
+                      about itself (pre-20261029090000). The stored decision
+                      stays; every reader sees it as Dokumenterad; the
+                      reviewer is told, before the facts, that the record
+                      needs a manual re-review rather than a second look at
+                      the same document. No action is offered here: a
+                      remediation is a decision, not a button. */}
+                  {detail &&
+                  hasLegacyUnsupportedApproval(priorDecisions) &&
+                  (detail.claim?.assertion === "verified" ||
+                    detail.period?.assertion === "verified") ? (
+                    <div
+                      role="status"
+                      data-legacy-record="warning"
+                      className="flex items-start gap-3 rounded-lg border border-border bg-secondary/40 p-4"
+                    >
+                      <AlertTriangle
+                        aria-hidden="true"
+                        className="mt-0.5 h-4 w-4 shrink-0 text-foreground"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {pt("vq.legacy.title")}
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                          {pt("vq.legacy.body")}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
                   {detail?.claim ? (
                     <ReviewClaimFacts
                       holderName={detail.holderName}

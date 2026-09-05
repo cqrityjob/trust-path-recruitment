@@ -35,6 +35,7 @@ import {
   type ExperiencePeriod,
   type IsoDate,
 } from "./types";
+import { effectiveAssertionLevel } from "./provenance";
 
 const MS_PER_DAY = 86_400_000;
 /** Gregorian mean year. Used for both thresholds and display so the two can
@@ -175,7 +176,10 @@ export function totalsByEvidenceLevel(
 ): ExperienceTotals {
   const atLeast = (floor: AssertionLevel) =>
     totalForPeriods(
-      periods.filter((p) => assertionAtLeast(p.assertionLevel, floor)),
+      // The EFFECTIVE level: a period whose approval CQrityjob recorded as an
+      // employer confirmation about itself counts as documented time, not
+      // verified time.
+      periods.filter((p) => assertionAtLeast(effectiveAssertionLevel(p), floor)),
       evaluationOn,
     );
 

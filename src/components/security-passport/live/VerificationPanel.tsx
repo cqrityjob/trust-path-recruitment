@@ -243,7 +243,11 @@ export function VerificationPanel({
           </div>
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("ver.method")}
+              {pt(
+                isLegacyUnsupportedProvenance(latestApproval.method, latestApproval.organisation)
+                  ? "trust.reviewMethod"
+                  : "ver.method",
+              )}
             </dt>
             <dd className="mt-0.5 text-sm text-foreground">
               {latestApproval.method
@@ -271,6 +275,19 @@ export function VerificationPanel({
             </dd>
           </div>
         </dl>
+      ) : null}
+
+      {/* A source method CQrityjob recorded about itself, before
+          20261029090000. The holder keeps the history above -- who decided,
+          when -- and reads why it presents as Dokumenterad. */}
+      {latestApproval &&
+      isLegacyUnsupportedProvenance(latestApproval.method, latestApproval.organisation) ? (
+        <p
+          data-legacy-provenance="note"
+          className="mt-3 text-sm leading-relaxed text-muted-foreground"
+        >
+          {pt("trust.legacy.unsupported")}
+        </p>
       ) : null}
 
       {latestRevocation ? (

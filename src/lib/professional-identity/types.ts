@@ -34,6 +34,7 @@
 // to make "verified" unrepresentable unless the Passport said so.
 
 import type { CurrentStatus, YearsOfExperience } from "@/lib/security-career-profile/types";
+import { effectiveAssertionLevel } from "@/lib/security-passport/provenance";
 
 /** Where a displayed fact came from. See docs — DATA SEMANTICS. */
 export type SourceType =
@@ -305,16 +306,23 @@ export function professionLabel(
 export function isVerifiedClaim(claim: {
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+  readonly verifierName?: string | null;
+  readonly verificationMethod?: string | null;
 }): boolean {
-  return claim.assertionLevel === "verified" && claim.lifecycleState === "active";
+  // The EFFECTIVE level (security-passport/provenance.ts): a legacy
+  // unsupported approval -- a source method CQrityjob recorded about itself
+  // -- is documented, not verified, on every surface that asks.
+  return effectiveAssertionLevel(claim) === "verified" && claim.lifecycleState === "active";
 }
 
 /** Claims the holder has entered but nobody has decided on yet. */
 export function isPendingClaim(claim: {
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+  readonly verifierName?: string | null;
+  readonly verificationMethod?: string | null;
 }): boolean {
-  return claim.lifecycleState === "active" && claim.assertionLevel !== "verified";
+  return claim.lifecycleState === "active" && effectiveAssertionLevel(claim) !== "verified";
 }
 
 /** Claim types that describe formal education. */

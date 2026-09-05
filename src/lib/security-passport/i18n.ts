@@ -377,6 +377,22 @@ const sv = {
   // else. Complete on its own: the decider is named inside it.
   "trust.legacy.unsupported":
     "Granskning registrerad av CQrityjob. Direkt källbekräftelse kan inte visas för denna äldre post.",
+  // The short VALUE for the method cell of such a row; the sentence above is
+  // rendered beside it. Never a method name it cannot support.
+  "trust.legacy.method": "Källmetod utan strukturell källbekräftelse",
+  // Field labels for a record that may not claim verification.
+  "trust.reviewedBy": "Granskad av",
+  "trust.reviewMethod": "Granskningsmetod",
+  "trust.reviewedAt": "Granskad",
+  // The three public trust levels, and the word for a standing that could
+  // not be read. Presentation vocabulary only: nothing stores these.
+  "trust.level.self_declared": "Egen uppgift",
+  "trust.level.documented": "Dokumenterad",
+  // "Bekräftad av källan" in one word. Deliberately not "källverifierad":
+  // the regulatory-claim guard refuses "source … verified", and rightly --
+  // a source CONFIRMS a fact; nobody here verifies the source.
+  "trust.level.source_verified": "Källbekräftad",
+  "trust.level.unknown": "Kunde inte läsas",
   // Samma faktum som ovan, i anställningsregister. En anställning som en
   // arbetsgivare har bekräftat förtjänar en mening som säger vad som
   // bekräftades -- inte bara "Bekräftat av" bredvid ett företagsnamn, som
@@ -881,6 +897,9 @@ const sv = {
   "vq.methodFixed": "Dokumentgranskning av CQrityjob",
   "vq.methodFixed.help":
     "CQrityjob har granskat det underlag som innehavaren lämnat. Detta är inte en direkt bekräftelse från arbetsgivaren eller utfärdaren.",
+  "vq.legacy.title": "Äldre verifieringspost – manuell omprövning krävs",
+  "vq.legacy.body":
+    "Posten registrerades med en källmetod utan strukturell källbekräftelse. Den visas som Dokumenterad tills en behörig källa har bekräftat uppgiften.",
   "vq.methodRequired": "En godkänd verifiering måste ange metod.",
   "vq.noteInternal": "Intern motivering",
   "vq.noteInternalHelp":
@@ -2026,6 +2045,14 @@ const en: Record<PassportCopyKey, string> = {
   "claims.attribution.issuer_confirmation": "Confirmed by the issuer",
   "trust.legacy.unsupported":
     "Review recorded by CQrityjob. Direct source confirmation is not available for this legacy record.",
+  "trust.legacy.method": "Source method without structural source confirmation",
+  "trust.reviewedBy": "Reviewed by",
+  "trust.reviewMethod": "Review method",
+  "trust.reviewedAt": "Reviewed",
+  "trust.level.self_declared": "Self-declared",
+  "trust.level.documented": "Documented",
+  "trust.level.source_verified": "Source-confirmed",
+  "trust.level.unknown": "Could not be loaded",
   "employment.attribution.employer_confirmation": "Employment confirmed by",
   "claims.verifiedOn": "Verified",
   "claims.jurisdiction": "Country",
@@ -2442,6 +2469,9 @@ const en: Record<PassportCopyKey, string> = {
   "vq.methodFixed": "Document review by CQrityjob",
   "vq.methodFixed.help":
     "CQrityjob has reviewed evidence provided by the holder. This is not direct confirmation from the employer or issuer.",
+  "vq.legacy.title": "Legacy verification record – manual re-review required",
+  "vq.legacy.body":
+    "The record was created with a source method without structural source confirmation. It is displayed as Documented until an authorised source confirms it.",
   "vq.methodRequired": "An approved verification must state its method.",
   "vq.noteInternal": "Internal reasoning",
   "vq.noteInternalHelp":

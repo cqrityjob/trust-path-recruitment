@@ -19,7 +19,11 @@ import {
   milestoneStyle,
   type MilestoneStyle,
 } from "@/lib/security-passport/design/trust-system";
-import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
+import {
+  credentialPresentationOf,
+  effectiveAssertionLevel,
+  isLegacyUnsupportedEntry,
+} from "@/lib/security-passport/trust-presentation";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type {
   CardCredential,
@@ -139,7 +143,7 @@ export function useCardContent(
     : null;
 
   const toPlate = (c: CardCredential): CredentialPlateProps => {
-    const ev = evidenceStyle(c.assertionLevel);
+    const ev = evidenceStyle(effectiveAssertionLevel(c));
     const overlay = lifecycleOverlay(c.lifecycleState);
     const isCurrent = c.lifecycleState === "active";
     return {
@@ -148,8 +152,11 @@ export function useCardContent(
       // VERIFIED: on a card, beside a name, that reads as a present fact.
       // The verification is real and is not erased — it is stated as the
       // past event it is, and the lifecycle word leads.
-      evidenceWord:
-        !isCurrent && c.assertionLevel === "verified"
+      evidenceWord: isLegacyUnsupportedEntry(c)
+        ? // A source method CQrityjob recorded about itself: the level word,
+          // never VERIFIED and never "previously verified".
+          pt("trust.level.documented")
+        : !isCurrent && c.assertionLevel === "verified"
           ? pt("assertion.verified.historical")
           : pt(`assertion.${c.assertionLevel}` as const),
       // The lifecycle word appears only when it qualifies the entry.
@@ -170,7 +177,7 @@ export function useCardContent(
       issuer: socialSafe ? null : c.issuerName,
       overlayTone: overlay ? overlay.edge : null,
       symbolCode: c.credentialCode,
-      symbolState: credentialPresentation(c.assertionLevel, c.lifecycleState),
+      symbolState: credentialPresentationOf(c, c.lifecycleState),
     };
   };
 

@@ -28,7 +28,6 @@ import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDuration } from "@/lib/security-passport/format";
 import type { RecipientPresentation } from "@/lib/security-passport/recipient-presentation";
-import { presentationWordKey } from "@/lib/security-passport/design/credential-symbols";
 import { BrandMark, EngravedField, EngravedRule, MicroLabel } from "../card/CardPrimitives";
 import { CredentialSymbol } from "../CredentialSymbol";
 
@@ -180,7 +179,7 @@ export function RecipientPassportCard({
                           className="text-[10px] font-semibold uppercase tracking-[0.16em]"
                           style={{ color: tone }}
                         >
-                          {pt(presentationWordKey(c.presentation))}
+                          {pt(c.statusWordKey)}
                         </span>
                       )}
                     </span>
@@ -189,7 +188,15 @@ export function RecipientPassportCard({
                         className="mt-1 block truncate text-[11px]"
                         style={{ color: TRUST_PALETTE.inkFaint }}
                       >
-                        {pt("rec.verifiedBy")}: {c.verifierOrganisation}
+                        {pt(c.labels.by)}: {c.verifierOrganisation}
+                      </span>
+                    ) : null}
+                    {c.legacyUnsupported ? (
+                      <span
+                        className="mt-1 block text-[11px] leading-snug"
+                        style={{ color: TRUST_PALETTE.inkFaint }}
+                      >
+                        {pt("trust.legacy.unsupported")}
                       </span>
                     ) : null}
                     {/* An approval shown without its limits reads as a general

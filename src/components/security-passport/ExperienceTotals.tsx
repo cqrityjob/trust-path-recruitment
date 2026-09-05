@@ -165,7 +165,7 @@ export function ExperienceTotalsPanel({
                         : ""}
                     </p>
                   </div>
-                  <AssertionChip level={p.assertionLevel} size="sm" />
+                  <AssertionChip level={p.assertionLevel} provenance={p} size="sm" />
                 </li>
               ))}
             </ul>

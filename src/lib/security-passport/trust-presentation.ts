@@ -38,8 +38,21 @@
 
 import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
 import { verifierAttributionKey } from "./format";
-import { isLegacyUnsupportedProvenance } from "./provenance";
-import type { VerificationMethod } from "./types";
+import {
+  effectiveAssertionLevel,
+  isLegacyUnsupportedEntry,
+  isLegacyUnsupportedProvenance,
+  type ProvenanceBearing,
+} from "./provenance";
+import {
+  credentialPresentation,
+  presentationWordKey,
+  type CredentialPresentationState,
+  type OpenReviewStatus,
+} from "./design/credential-symbols";
+import type { LifecycleState, VerificationMethod } from "./types";
+
+export { effectiveAssertionLevel, isLegacyUnsupportedEntry, type ProvenanceBearing };
 
 /**
  * How much the product may claim about a fact, as a presentation grouping.
@@ -201,8 +214,10 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
       date: verifiedOn,
       labelSv: passportT("trust.legacy.unsupported", "sv"),
       labelEn: passportT("trust.legacy.unsupported", "en"),
-      shortSv: SHORT.verified.sv,
-      shortEn: SHORT.verified.en,
+      // The short word is the LEVEL word, not "Verified": a compact surface
+      // or a screen reader gets the same answer the pill gives.
+      shortSv: passportT("trust.level.documented", "sv"),
+      shortEn: passportT("trust.level.documented", "en"),
     };
   }
 
@@ -297,7 +312,9 @@ export function methodLabelKey(
   organisation: string | null | undefined,
 ): PassportCopyKey | null {
   if (!method) return null;
-  if (isLegacyUnsupportedProvenance(method, organisation)) return "trust.legacy.unsupported";
+  // A short VALUE for the method cell. The explanatory sentence
+  // (trust.legacy.unsupported) is rendered beside it, once, by the surface.
+  if (isLegacyUnsupportedProvenance(method, organisation)) return "trust.legacy.method";
   switch (method) {
     case "document_review":
       return "ver.method.document_review";
@@ -345,6 +362,106 @@ export function publicTrustLevel(trust: TrustPresentation): PublicTrustLevel | n
   }
 }
 
+/** The copy key for a public trust level. Three words, and a fourth for a
+ *  standing that could not be read. */
+export function trustLevelWordKey(level: PublicTrustLevel | null): PassportCopyKey {
+  switch (level) {
+    case "self_declared":
+      return "trust.level.self_declared";
+    case "documented":
+      return "trust.level.documented";
+    case "source_verified":
+      return "trust.level.source_verified";
+    default:
+      return "trust.level.unknown";
+  }
+}
+
+/**
+ * Whether a trust presentation may wear the present-tense VERIFIED
+ * decoration -- the gold check, the filled pill, the count.
+ *
+ * `status === "verified"` says an authorised verifier decided. That stays
+ * true for a legacy unsupported row, because it did. What such a row may not
+ * do is PRESENT as verified: its effective level is documented. Every
+ * consumer that used to test the status directly asks this instead.
+ */
+export function presentsAsVerified(trust: TrustPresentation): boolean {
+  return trust.status === "verified" && trust.sourceType !== "legacy_unsupported";
+}
+
+/**
+ * The credential symbol state for an entry, from its EFFECTIVE level.
+ *
+ * The one replacement for `credentialPresentation(entry.assertionLevel, …)`
+ * at every call site. A legacy unsupported entry arrives at the symbol
+ * system as document_provided and takes the documented mark -- the state
+ * that already exists for "CQrityjob has something to look at, and no source
+ * has confirmed it" -- never the approved mark.
+ */
+export function credentialPresentationOf(
+  entry: ProvenanceBearing,
+  effectiveLifecycle: LifecycleState,
+  openReview: OpenReviewStatus = null,
+): CredentialPresentationState {
+  return credentialPresentation(effectiveAssertionLevel(entry), effectiveLifecycle, openReview);
+}
+
+/**
+ * The status WORD beside a credential symbol, for an entry.
+ *
+ * Ordinarily the symbol vocabulary's own word for the state. For a legacy
+ * unsupported entry that has taken the documented state, the level word
+ * "Dokumenterad / Documented" rather than "document provided": CQrityjob did
+ * review it, and saying otherwise would be a different untruth.
+ */
+export function presentationWordKeyOf(
+  entry: ProvenanceBearing,
+  state: CredentialPresentationState,
+): PassportCopyKey {
+  if (state === "documented" && isLegacyUnsupportedEntry(entry)) return "trust.level.documented";
+  return presentationWordKey(state);
+}
+
+/** The three field labels a provenance block carries: who, how, when. */
+export interface ProvenanceLabelKeys {
+  readonly by: PassportCopyKey;
+  readonly method: PassportCopyKey;
+  readonly at: PassportCopyKey;
+}
+
+/**
+ * Field labels that do not themselves claim what the record cannot support.
+ *
+ * "Verified by / Method / Verified" is right for a verification. For a
+ * legacy unsupported row the labels are "Reviewed by / Review method /
+ * Reviewed": a label is a claim too, and a reader takes "Verified by
+ * CQrityjob" at face value however carefully the value beside it is worded.
+ */
+export function provenanceLabelKeys(entry: ProvenanceBearing): ProvenanceLabelKeys {
+  if (isLegacyUnsupportedEntry(entry)) {
+    return { by: "trust.reviewedBy", method: "trust.reviewMethod", at: "trust.reviewedAt" };
+  }
+  return { by: "rec.verifiedBy", method: "rec.method", at: "rec.verifiedAt" };
+}
+
+/**
+ * Whether a subject's decision history holds an approval of the legacy
+ * unsupported shape. Drives the reviewer's re-review warning; decides
+ * nothing and edits nothing.
+ */
+export function hasLegacyUnsupportedApproval(
+  decisions: readonly {
+    readonly decision: string;
+    readonly method: string | null;
+    readonly organisation: string | null;
+  }[],
+): boolean {
+  return decisions.some(
+    (d) => d.decision === "approved" && isLegacyUnsupportedProvenance(d.method, d.organisation),
+  );
+}
+
 /**
  * Is this entry CURRENTLY verified — as opposed to having been verified once?
  *
@@ -377,13 +494,14 @@ export function publicTrustLevel(trust: TrustPresentation): PublicTrustLevel | n
  * Implemented through `describeTrust` deliberately: the predicate and the
  * rendered attribution can then never disagree about the same entry.
  */
-export function isCurrentlyVerified(entry: {
-  readonly assertionLevel: string;
-  readonly lifecycleState?: string | null;
-}): boolean {
+export function isCurrentlyVerified(
+  entry: ProvenanceBearing & { readonly lifecycleState?: string | null },
+): boolean {
   return (
     describeTrust({
-      assertionLevel: entry.assertionLevel,
+      // The EFFECTIVE level: a legacy unsupported entry is not currently
+      // verified, whatever its stored level records about the past.
+      assertionLevel: effectiveAssertionLevel(entry),
       lifecycleState: entry.lifecycleState,
     }).status === "verified"
   );

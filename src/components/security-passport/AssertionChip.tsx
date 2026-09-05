@@ -26,6 +26,7 @@ import { CheckCircle2, FileText, History, PencilLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { AssertionLevel } from "@/lib/security-passport/types";
+import { isLegacyUnsupportedProvenance } from "@/lib/security-passport/provenance";
 
 const SHAPE: Record<AssertionLevel, string> = {
   // Square corners + dashed border reads as "provisional" before any colour
@@ -54,10 +55,20 @@ const GLYPH: Record<AssertionLevel, typeof PencilLine> = {
 export function AssertionChip({
   level,
   lifecycleState,
+  provenance = null,
   className,
   size = "default",
 }: {
   level: AssertionLevel;
+  /** The decider and method behind a verified entry, where the caller has
+   *  them. A source-confirmation method CQrityjob recorded about itself
+   *  (pre-20261029090000) renders as the DOCUMENTED chip with the level word
+   *  "Dokumenterad / Documented" -- never the filled verified pill. The
+   *  stored level is untouched; only what this chip says about it. */
+  provenance?: {
+    readonly verifierName?: string | null;
+    readonly verificationMethod?: string | null;
+  } | null;
   /** The entry's CURRENT standing. Optional: the legend below renders the
    *  three levels in the abstract, where no entry and no lifecycle exists. */
   lifecycleState?: string | null;
@@ -83,19 +94,27 @@ export function AssertionChip({
   // and on this product the shape is a load-bearing channel (see the header):
   // a reader who cannot see colour, or is looking at a greyscale screenshot,
   // reads "settled" from the fill alone.
+  const legacy = isLegacyUnsupportedProvenance(
+    provenance?.verificationMethod,
+    provenance?.verifierName,
+  );
+  // The EFFECTIVE level (provenance.ts): the one thing a legacy row supports.
+  const effective: AssertionLevel = legacy ? "document_provided" : level;
   const isCurrent = lifecycleState == null || lifecycleState === "active";
-  const historical = !isCurrent && level === "verified";
-  const Glyph = historical ? History : GLYPH[level];
+  const historical = !isCurrent && effective === "verified";
+  const Glyph = historical ? History : GLYPH[effective];
   const label = historical
     ? pt("assertion.verified.historical")
-    : pt(`assertion.${level}` as const);
+    : legacy
+      ? pt("trust.level.documented")
+      : pt(`assertion.${effective}` as const);
 
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider",
         size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]",
-        historical ? HISTORICAL_SHAPE : SHAPE[level],
+        historical ? HISTORICAL_SHAPE : SHAPE[effective],
         className,
       )}
     >

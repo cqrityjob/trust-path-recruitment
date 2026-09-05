@@ -19,7 +19,10 @@ import {
   formatJurisdiction,
   verifierAttributionKey,
 } from "@/lib/security-passport/format";
-import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
+import {
+  credentialPresentationOf,
+  isLegacyUnsupportedEntry,
+} from "@/lib/security-passport/trust-presentation";
 import type { Claim } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
 import { CredentialSymbol } from "./CredentialSymbol";
@@ -75,7 +78,7 @@ export function ClaimRow({
           {claim.credentialCode ? (
             <CredentialSymbol
               code={claim.credentialCode}
-              state={credentialPresentation(claim.assertionLevel, claim.lifecycleState)}
+              state={credentialPresentationOf(claim, claim.lifecycleState)}
               name={title}
               size={40}
               className="mt-0.5 shrink-0"
@@ -94,6 +97,7 @@ export function ClaimRow({
           <AssertionChip
             level={claim.assertionLevel}
             lifecycleState={claim.lifecycleState}
+            provenance={claim}
             size="sm"
           />
           <LifecycleChip state={claim.lifecycleState} />
@@ -136,11 +140,23 @@ export function ClaimRow({
           />
         ) : null}
         {claim.verifierName && claim.verifiedOn ? (
-          <Field label={pt("claims.verifiedOn")} value={claim.verifiedOn} />
+          <Field
+            label={pt(isLegacyUnsupportedEntry(claim) ? "trust.reviewedAt" : "claims.verifiedOn")}
+            value={claim.verifiedOn}
+          />
         ) : null}
       </dl>
 
       <LifecycleNote state={claim.lifecycleState} />
+
+      {/* A source method CQrityjob recorded about itself, before
+          20261029090000. The chip above already says Dokumenterad; this says
+          why, in the one sentence every surface uses for it. */}
+      {isLegacyUnsupportedEntry(claim) ? (
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          {pt("trust.legacy.unsupported")}
+        </p>
+      ) : null}
 
       {limitation ? (
         <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">

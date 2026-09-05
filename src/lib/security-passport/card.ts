@@ -20,12 +20,14 @@
 // expired licence is less trustworthy than one that shows it expired.
 
 import { totalsByEvidenceLevel } from "./experience";
+import { effectiveAssertionLevel } from "./provenance";
 import { withoutSelfDeclared } from "./identity/visibility";
 import type { ProfessionalIdentity } from "./identity/types";
 import { recognitionFor, type RecognitionState } from "./recognition";
 import { validityOf } from "./validity";
 import { deriveMarketProfiles, type MarketProfile } from "./market-profiles";
 import type {
+  VerificationMethod,
   AssertionLevel,
   Claim,
   ExperiencePeriod,
@@ -68,6 +70,10 @@ export interface CardCredential {
   readonly subJurisdictionCode: string | null;
   readonly issuerName: string;
   readonly verifierName: string | null;
+  /** How the decision was reached, from the decision record. Carried so the
+   *  card reads the EFFECTIVE level: a legacy unsupported approval ranks and
+   *  presents as documented. */
+  readonly verificationMethod: VerificationMethod | null;
   readonly assertionLevel: AssertionLevel;
   /** Effective on the evaluation date. */
   readonly lifecycleState: LifecycleState;
@@ -125,8 +131,9 @@ export interface PassportCardModel {
 const CARD_CREDENTIAL_LIMIT = 3;
 
 function evidenceRank(claim: CardCredential): number {
-  if (claim.assertionLevel === "verified") return 2;
-  if (claim.assertionLevel === "document_provided") return 1;
+  const level = effectiveAssertionLevel(claim);
+  if (level === "verified") return 2;
+  if (level === "document_provided") return 1;
   return 0;
 }
 
@@ -173,6 +180,7 @@ function toCardCredential(claim: Claim, evaluationOn: IsoDate): CardCredential {
     subJurisdictionCode: claim.subJurisdictionCode,
     issuerName: claim.issuerName,
     verifierName: claim.verifierName,
+    verificationMethod: claim.verificationMethod,
     assertionLevel: claim.assertionLevel,
     lifecycleState: validity.effectiveState,
     lapsed: validity.hasExpired,

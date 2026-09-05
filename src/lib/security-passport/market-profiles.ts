@@ -38,6 +38,7 @@
 // Dubai by changing a dropdown, because no code path exists that would.
 
 import type { PassportLang } from "./i18n";
+import { effectiveAssertionLevel } from "./provenance";
 import { formatWorkLocation } from "./format";
 import type { JurisdictionScoped, WorkLocation } from "./jurisdiction-relevance";
 
@@ -80,6 +81,10 @@ export function isSameMarket(claim: JurisdictionScoped, work: WorkLocation): boo
 export interface MarketScopedClaim extends JurisdictionScoped {
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+  /** Provenance, where the caller has it. Lets the buckets read the EFFECTIVE
+   *  level: a legacy unsupported approval is not a verified credential. */
+  readonly verifierName?: string | null;
+  readonly verificationMethod?: string | null;
 }
 
 export interface MarketProfile<T extends MarketScopedClaim> {
@@ -111,14 +116,15 @@ export interface MarketProfileSplit<T extends MarketScopedClaim> {
 }
 
 function isVerified(c: MarketScopedClaim): boolean {
-  return c.assertionLevel === "verified" && c.lifecycleState === "active";
+  return effectiveAssertionLevel(c) === "verified" && c.lifecycleState === "active";
 }
 
 function isPending(c: MarketScopedClaim): boolean {
+  const level: string = effectiveAssertionLevel(c);
   return (
-    c.assertionLevel !== "verified" &&
+    level !== "verified" &&
     c.lifecycleState === "active" &&
-    (c.assertionLevel === "submitted" || c.assertionLevel === "evidenced")
+    (level === "submitted" || level === "evidenced")
   );
 }
 

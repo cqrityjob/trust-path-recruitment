@@ -32,8 +32,18 @@ import { deriveVerifiedIdentity } from "./identity/visibility";
 import { toPublicEligibility, toPublicTitles } from "./identity/presentation";
 import { MIRRORED_TITLE_RULES } from "./identity/market-rules";
 import type { PublicTitle, TitleRule } from "./identity/types";
-import { credentialPresentation } from "./design/credential-symbols";
 import type { CredentialPresentationState } from "./design/credential-symbols";
+import { effectiveAssertionLevel, isLegacyUnsupportedProvenance } from "./provenance";
+import {
+  credentialPresentationOf,
+  describeTrust,
+  presentationWordKeyOf,
+  provenanceLabelKeys,
+  publicTrustLevel,
+  type ProvenanceLabelKeys,
+  type PublicTrustLevel,
+} from "./trust-presentation";
+import type { PassportCopyKey } from "./i18n";
 import type { RecipientPayloadActive } from "./packages";
 import type { AssertionLevel, Claim, IsoDate, LifecycleState } from "./types";
 import { validityOf } from "./validity";
@@ -64,6 +74,22 @@ export interface RecipientCredential {
   readonly verifiedAt: string | null;
   readonly verifierOrganisation: string | null;
   readonly verificationMethod: string | null;
+  /** True for a source-confirmation method CQrityjob recorded about itself
+   *  (pre-20261029090000). Stored facts above are untouched; everything
+   *  below is derived from them once, here. */
+  readonly legacyUnsupported: boolean;
+  /** The level every derivation and every chip reads. document_provided for
+   *  a legacy unsupported row; the stored level otherwise. */
+  readonly effectiveAssertion: AssertionLevel;
+  /** self_declared · documented · source_verified, or null when the standing
+   *  could not be read. Derived through `describeTrust`, never assembled by
+   *  a route from the raw method and organisation. */
+  readonly level: PublicTrustLevel | null;
+  /** The status word beside the symbol. "Dokumenterad / Documented" for a
+   *  legacy unsupported row; the symbol vocabulary's own word otherwise. */
+  readonly statusWordKey: PassportCopyKey;
+  /** Who / how / when labels that do not claim more than the record can. */
+  readonly labels: ProvenanceLabelKeys;
 }
 
 export interface RecipientExperience {
@@ -145,7 +171,15 @@ function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number]): Cl
     issuedOn: c.issued_on,
     validFrom: null,
     validUntil: c.valid_until,
-    assertionLevel: c.assertion as AssertionLevel,
+    // The EFFECTIVE level, so the identity engine reads a legacy unsupported
+    // credential as documented and derives no title or eligibility from it.
+    // (visibility.ts applies the same projection; this keeps the domain claim
+    // honest for any other reader too.)
+    assertionLevel: effectiveAssertionLevel({
+      assertionLevel: c.assertion,
+      verifierName: c.verifier_organisation,
+      verificationMethod: c.verification_method,
+    }),
     lifecycleState: c.lifecycle as LifecycleState,
     // Provenance travels from the disclosure payload unchanged. The recipient
     // surface is the one a stranger reads with no way to check anything
@@ -174,11 +208,33 @@ export function buildRecipientPresentation(
   const credentials: RecipientCredential[] = payload.verified_claims.map((c) => {
     const assertion = c.assertion as AssertionLevel;
     const validity = validityOf(c.lifecycle as LifecycleState, c.valid_until, evaluationOn);
+    // Interpreted ONCE. Every recipient surface -- the page, the card, the
+    // single-credential page, the downloadable image -- reads these fields
+    // and never re-derives them from the raw method and organisation.
+    const bearing = {
+      assertionLevel: assertion,
+      verifierName: c.verifier_organisation,
+      verificationMethod: c.verification_method,
+    };
+    const legacyUnsupported = isLegacyUnsupportedProvenance(
+      c.verification_method,
+      c.verifier_organisation,
+    );
+    const presentation = credentialPresentationOf(bearing, validity.effectiveState);
+    const level = publicTrustLevel(
+      describeTrust({
+        assertionLevel: assertion,
+        lifecycleState: validity.effectiveState,
+        verifierName: c.verifier_organisation,
+        verificationMethod: c.verification_method,
+        verifiedOn: c.verified_at ? c.verified_at.slice(0, 10) : null,
+      }),
+    );
     return {
       id: c.id,
       title: c.title,
       code: c.credential_code,
-      presentation: credentialPresentation(assertion, validity.effectiveState),
+      presentation,
       lifecycle: validity.effectiveState,
       assertion,
       lapsed: validity.hasExpired,
@@ -192,6 +248,11 @@ export function buildRecipientPresentation(
       verifiedAt: c.verified_at,
       verifierOrganisation: c.verifier_organisation,
       verificationMethod: c.verification_method,
+      legacyUnsupported,
+      effectiveAssertion: effectiveAssertionLevel(bearing),
+      level,
+      statusWordKey: presentationWordKeyOf(bearing, presentation),
+      labels: provenanceLabelKeys(bearing),
     };
   });
 

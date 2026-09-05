@@ -2319,9 +2319,13 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
       !/\bclaim\.verified\b/.test(viewCode) && !/\bfact\.verified\b/.test(viewCode),
     );
     ck(
+      // Gated on the annotation, and through presentsAsVerified() rather than
+      // the raw status: a legacy unsupported approval (a source method
+      // CQrityjob recorded about itself, pre-20261029090000) has status
+      // "verified" -- a verifier did decide -- and still may not wear the mark.
       "11.9   and is gated on the annotation's current status instead",
       read("src/components/professional-identity/CvDocumentView.tsx").includes(
-        'const currentlyVerified = !trust.unavailable && t?.status === "verified"',
+        "const currentlyVerified = !trust.unavailable && !!t && presentsAsVerified(t)",
       ),
     );
   }
@@ -2444,8 +2448,10 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
       "11.24 the home's Passport pillar counts CURRENTLY verified claims",
       pillarSrc.includes("summariseTrust(identity)") &&
         trustSrc.includes("identity.claims.filter(isVerifiedClaim)") &&
+        // The EFFECTIVE level (security-passport/provenance.ts), so a legacy
+        // unsupported approval is not counted as currently verified either.
         read("src/lib/professional-identity/types.ts").includes(
-          'claim.assertionLevel === "verified" && claim.lifecycleState === "active"',
+          'effectiveAssertionLevel(claim) === "verified" && claim.lifecycleState === "active"',
         ),
     );
     ck(

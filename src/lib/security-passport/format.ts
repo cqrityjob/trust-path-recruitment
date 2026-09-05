@@ -237,7 +237,9 @@ export function verifierAttributionKey(
    *  the issuer's or the employer's words -- see `isLegacyUnsupportedProvenance`. */
   organisation: string | null = null,
 ): PassportCopyKey {
-  if (isLegacyUnsupportedProvenance(method, organisation)) return "trust.legacy.unsupported";
+  // A LABEL. "Reviewed by", never "Confirmed by the issuer", and never the
+  // explanatory sentence, which belongs beside the value rather than above it.
+  if (isLegacyUnsupportedProvenance(method, organisation)) return "trust.reviewedBy";
   switch (method) {
     case "document_review":
       return "claims.attribution.document_review";

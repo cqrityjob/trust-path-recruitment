@@ -79,7 +79,7 @@ import {
   type SkillType,
 } from "@/lib/security-passport/entries.functions";
 import { formatPeriodRange, formatWorkLocation } from "@/lib/security-passport/format";
-import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
+import { credentialPresentationOf } from "@/lib/security-passport/trust-presentation";
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
 import { LifecycleChip } from "@/components/security-passport/LifecycleChip";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
@@ -701,10 +701,7 @@ function PassportInformationRoute() {
                   <span className="flex min-w-0 items-center gap-3">
                     <CredentialSymbol
                       code={c.credentialCode}
-                      state={credentialPresentation(
-                        c.assertionLevel as AssertionLevel,
-                        c.lifecycleState as LifecycleState,
-                      )}
+                      state={credentialPresentationOf(c, c.lifecycleState as LifecycleState)}
                       name={c.title}
                       size={36}
                       decorative
@@ -714,7 +711,11 @@ function PassportInformationRoute() {
                         {c.title}
                       </span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-2">
-                        <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
+                        <AssertionChip
+                          level={c.assertionLevel as AssertionLevel}
+                          provenance={c}
+                          size="sm"
+                        />
                         <LifecycleChip state={c.lifecycleState as LifecycleState} />
                       </span>
                     </span>
@@ -764,7 +765,11 @@ function PassportInformationRoute() {
                       {formatPeriodRange(e.startedOn, e.endedOn, lang)}
                     </p>
                     <span className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <AssertionChip level={e.assertionLevel as AssertionLevel} size="sm" />
+                      <AssertionChip
+                        level={e.assertionLevel as AssertionLevel}
+                        provenance={e}
+                        size="sm"
+                      />
                       <LifecycleChip state={e.lifecycleState as LifecycleState} />
                     </span>
                   </div>

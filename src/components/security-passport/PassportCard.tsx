@@ -215,7 +215,7 @@ export function PassportCard({
                               </p>
                             </div>
                             <div className="flex shrink-0 flex-col items-end gap-1">
-                              <AssertionChip level={c.assertionLevel} size="sm" />
+                              <AssertionChip level={c.assertionLevel} provenance={c} size="sm" />
                               <LifecycleChip state={c.lifecycleState} />
                             </div>
                           </li>

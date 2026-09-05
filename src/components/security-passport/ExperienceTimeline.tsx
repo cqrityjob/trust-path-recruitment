@@ -112,7 +112,7 @@ export function ExperienceTimeline({
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <AssertionChip level={p.assertionLevel} size="sm" />
+                    <AssertionChip level={p.assertionLevel} provenance={p} size="sm" />
                     <LifecycleChip state={p.lifecycleState} />
                   </div>
                 </div>
