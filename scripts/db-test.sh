@@ -988,6 +988,90 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Option-order proof scope (20261021090000). The migration's content proof
+# resolves THE Väktare form through definition slug -> version 1 -> (version,
+# form slug), all unique keys. Production carries a second, historical form
+# with the same slug under another assessment version (the retired project's
+# restore), which made the slug-scoped count read 100. Reproduced here with a
+# VALID twin (its own definition, version and form), committed, then:
+#   1. the migration re-applies (idempotent) and its proof passes -- the twin
+#      is ignored; runtime sources and content digests are unchanged;
+#   2. a malformed LIVE form still fails the proof; a malformed TWIN does not;
+#   3. the twin is removed exactly.
+# Runs BEFORE the destructive rollback step.
+# ---------------------------------------------------------------------------
+echo "==> Option-order proof scope: building the historical same-slug twin"
+OOPS_BEFORE="$(psql -tAq -d "$TEST_DB" -c \
+  "select md5((select p.prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_get_attempt_items') || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_item_options t) || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_item_texts t) || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_form_items t join public.scp_forms f on f.id=t.form_id join public.scp_assessment_versions av on av.id=f.assessment_version_id and av.version_number=1 join public.scp_assessment_definitions d on d.id=av.definition_id and d.slug='security-officer-recruitment') || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_attempts t));")"
+set +e
+OOPS_SETUP="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/tests/scp_option_order_proof_scope_setup.sql 2>&1)"
+OOPS_SETUP_RC=$?
+set -e
+if [ "$OOPS_SETUP_RC" -ne 0 ]; then
+  echo "FAIL: the option-order proof-scope setup exited with code ${OOPS_SETUP_RC}." >&2
+  echo "$OOPS_SETUP" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "option-order proof scope (setup)"
+fi
+echo "    ok  two assessment versions carry a form with the Väktare slug (100 items by slug)"
+
+echo "==> Option-order proof scope: the migration re-applies and ignores the twin"
+set +e
+OOPS_APPLY="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20261021090000_scp_option_order_per_attempt.sql 2>&1)"
+OOPS_APPLY_RC=$?
+set -e
+if [ "$OOPS_APPLY_RC" -ne 0 ]; then
+  echo "FAIL: 20261021090000 did not re-apply with a same-slug historical form present." >&2
+  echo "$OOPS_APPLY" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "option-order proof scope (re-apply with twin)"
+else
+  echo "    ok  20261021090000 re-applied: its proof resolved the live form by version and ignored the twin"
+fi
+OOPS_AFTER="$(psql -tAq -d "$TEST_DB" -c \
+  "select md5((select p.prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_get_attempt_items') || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_item_options t) || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_item_texts t) || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_form_items t join public.scp_forms f on f.id=t.form_id join public.scp_assessment_versions av on av.id=f.assessment_version_id and av.version_number=1 join public.scp_assessment_definitions d on d.id=av.definition_id and d.slug='security-officer-recruitment') || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_attempts t));")"
+if [ "$OOPS_BEFORE" != "$OOPS_AFTER" ]; then
+  echo "FAIL: the re-apply changed the delivery function, an option, an item text, the live form or an attempt." >&2
+  suite_failed "option-order proof scope (runtime/content changed)"
+else
+  echo "    ok  delivery function, options, item texts, live form items and attempts are byte-identical after the re-apply"
+fi
+
+echo "==> Option-order proof scope: a malformed live form still fails; a malformed twin does not"
+OOPS_MAL="$(psql -q -d "$TEST_DB" -f supabase/tests/scp_option_order_proof_scope_malformed.sql 2>&1)"
+if ! echo "$OOPS_MAL" | grep -q "SCP_OPTION_ORDER_ITEM_COUNT: expected 50 Väktare items on form .* found 49"; then
+  echo "FAIL: removing one item from the LIVE form did not fail the proof with 'found 49'." >&2
+  echo "$OOPS_MAL" | grep -iE "ERROR:|FEL:|CASE" | head -8 >&2
+  suite_failed "option-order proof scope (malformed live form not refused)"
+else
+  echo "    ok  the live form with 49 items is refused: SCP_OPTION_ORDER_ITEM_COUNT ... found 49"
+fi
+if ! echo "$OOPS_MAL" | grep -q "CASE_B_APPLIED"; then
+  echo "FAIL: removing one item from the historical twin made the proof fail -- it is being counted." >&2
+  echo "$OOPS_MAL" | grep -iE "ERROR:|FEL:|CASE" | head -8 >&2
+  suite_failed "option-order proof scope (twin counted)"
+else
+  echo "    ok  the twin with 49 items is ignored: the migration still applies"
+fi
+OOPS_LIVE_ITEMS="$(psql -tAq -d "$TEST_DB" -c \
+  "select count(*) from public.scp_form_items fi join public.scp_forms f on f.id=fi.form_id join public.scp_assessment_versions av on av.id=f.assessment_version_id and av.version_number=1 join public.scp_assessment_definitions d on d.id=av.definition_id and d.slug='security-officer-recruitment' where f.slug='security-officer-recruitment-form-a';")"
+if [ "$OOPS_LIVE_ITEMS" != "50" ]; then
+  echo "FAIL: the malformed cases did not roll back -- the live form has ${OOPS_LIVE_ITEMS} items." >&2
+  suite_failed "option-order proof scope (rollback of malformed cases)"
+fi
+
+echo "==> Option-order proof scope: removing the twin"
+set +e
+OOPS_CLEAN="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/tests/scp_option_order_proof_scope_cleanup.sql 2>&1)"
+OOPS_CLEAN_RC=$?
+set -e
+if [ "$OOPS_CLEAN_RC" -ne 0 ]; then
+  echo "FAIL: the option-order proof-scope cleanup exited with code ${OOPS_CLEAN_RC}." >&2
+  echo "$OOPS_CLEAN" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "option-order proof scope (cleanup)"
+else
+  echo "    ok  the twin is gone; one Väktare form remains"
+fi
+
+# ---------------------------------------------------------------------------
 # The assessment LANGUAGE contract (PR-V2).
 #
 # The employer picks sv or en when assigning and it is stored on

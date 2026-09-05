@@ -300,3 +300,19 @@ are identical. `db-test.sh` walks R1 rollback → facet rollback → R1 refused
 
 Production data: the 48 orphan facets and the duplicated forms were **not**
 deleted or modified.
+
+### 12.1 Option-order proof rescoped (PR #186 hardening, 2026-09-05)
+
+`20261021090000`'s content proof now resolves the Väktare form by its domain
+keys — `scp_assessment_definitions.slug` (unique) → version
+`(definition_id, version_number = 1)` (unique; the version 20260830094000
+authored) → form `(assessment_version_id, slug)` (unique) — and proves that
+form has 50 items, 22 randomisable scenarios, 24 ordered scales, and that
+the delivery `ORDER BY` leaves every ordered scale in authored order under a
+seed. A historical form sharing the slug under another assessment version
+is neither counted nor required to be well formed. No `LIMIT 1`, no
+`DISTINCT ON`, no `created_at`, no production id. Runtime behaviour is
+untouched. `db-test.sh` builds a committed, valid same-slug twin (own
+definition, version and form, the same 50 items), re-applies the migration
+under it, proves a 49-item live form is still refused while a 49-item twin
+is ignored, and removes the twin.
