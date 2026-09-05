@@ -12,6 +12,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { adminFail, CANCELLATION_REASON_MAX } from "@/lib/admin/admin-error";
 import type { EngineResultV1 } from "@/lib/career-intelligence-engine/types";
 
 type Ctx = { supabase: any; userId: string };
@@ -185,9 +186,12 @@ export const adminGetAssignmentDetail = createServerFn({ method: "POST" })
     };
   });
 
+// The ceiling is CANCELLATION_REASON_MAX, not a literal, because the textarea
+// and admin_cancel_assessment_assignment() enforce the same number and an admin
+// who hits it should be told by the form rather than by a failed round trip.
 const cancelSchema = z.object({
   assignmentId: z.string().uuid(),
-  reason: z.string().trim().min(1).max(2000),
+  reason: z.string().trim().min(1).max(CANCELLATION_REASON_MAX),
 });
 
 export const adminCancelAssignment = createServerFn({ method: "POST" })
@@ -203,11 +207,15 @@ export const adminCancelAssignment = createServerFn({ method: "POST" })
       _assignment_id: data.assignmentId,
       _reason: data.reason,
     });
-    if (error) {
-      console.error("[admin-assessment-assignments] cancel RPC failed", error);
-      if (error.code === "23514") throw new Error("ASSIGNMENT_NOT_CANCELLABLE_OR_REASON_REQUIRED");
-      throw new Error("ASSIGNMENT_CANCEL_FAILED");
-    }
+    // Before 20261028090000 this branched on `error.code === "23514"` and threw
+    // one string for it. Five unrelated conditions raise that SQLSTATE -- three
+    // of the function's own refusals plus two table constraints reached from
+    // inside its UPDATE -- so the string had to name all of them at once and
+    // named none of them usefully. The refusals now carry their own identifiers
+    // and adminFail() forwards whichever one arrived; anything unrecognised is
+    // logged here and replaced, so a constraint name or a row fragment cannot
+    // reach a browser.
+    if (error) throw adminFail("admin-assessment-assignments", error, "ASSIGNMENT_CANCEL_FAILED");
     const row = Array.isArray(result) ? result[0] : result;
     return { id: row.id as string, status: row.new_status as string };
   });

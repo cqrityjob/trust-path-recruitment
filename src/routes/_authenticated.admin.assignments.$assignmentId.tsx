@@ -26,6 +26,8 @@ import {
   adminCancelAssignment,
   adminGetAssignmentDetail,
 } from "@/lib/job-intelligence/admin-assessment-assignments.functions";
+import { CANCELLABLE_ASSIGNMENT_STATUSES, CANCELLATION_REASON_MAX } from "@/lib/admin/admin-error";
+import { AdminActionError } from "@/components/admin/AdminActionError";
 import { formatDateTime } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/admin/assignments/$assignmentId")({
@@ -34,7 +36,12 @@ export const Route = createFileRoute("/_authenticated/admin/assignments/$assignm
   errorComponent: AdminErrorState,
 });
 
-const CANCELLABLE = new Set(["invited", "opened", "started"]);
+// Mirrors admin_cancel_assessment_assignment()'s own status list, imported
+// rather than restated so the button is not offered where the backend would
+// refuse. scripts/admin-error-contract-check.ts asserts the two still agree --
+// the frontend gate and the SQL gate used to be two independent literals with
+// nothing between them.
+const CANCELLABLE = new Set<string>(CANCELLABLE_ASSIGNMENT_STATUSES);
 
 function AdminAssignmentDetailPage() {
   const { assignmentId } = Route.useParams();
@@ -44,7 +51,10 @@ function AdminAssignmentDetailPage() {
   const cancelFn = useServerFn(adminCancelAssignment);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // The thrown error itself, not its message. AdminActionError decides what a
+  // person is told; storing the message here is what put an internal constant
+  // on screen.
+  const [error, setError] = useState<unknown>(null);
 
   const q = useQuery({
     queryKey: ["admin", "assignment-detail", assignmentId],
@@ -60,8 +70,29 @@ function AdminAssignmentDetailPage() {
       qc.invalidateQueries({ queryKey: ["admin", "assignment-detail", assignmentId] });
       qc.invalidateQueries({ queryKey: ["admin", "assignments"] });
     },
-    onError: (e: Error) => setError(e.message),
+    // The dialog stays open and `reason` is left alone, so a refusal the admin
+    // can act on -- "this is too long", "type a reason" -- can be acted on
+    // without retyping it.
+    onError: (e: unknown) => setError(e),
   });
+
+  const trimmedReason = reason.trim();
+  const reasonTooLong = trimmedReason.length > CANCELLATION_REASON_MAX;
+  // Only the backend may decide whether a cancellation is allowed; this decides
+  // whether it is worth asking. Both refusals the form can see for itself --
+  // empty and over-length -- are shown before a request is made rather than
+  // after one comes back.
+  const canSubmit = trimmedReason.length > 0 && !reasonTooLong && !cancel.isPending;
+
+  // Dismissing the dialog discards the attempt. Without this, reopening it
+  // showed the previous failure still sitting under an empty textarea.
+  const onDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setReason("");
+      setError(null);
+    }
+  };
 
   if (q.isLoading) {
     return (
@@ -234,7 +265,7 @@ function AdminAssignmentDetailPage() {
         </div>
       </AdminShellChrome>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={onDialogOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("admin.assignments.detail.cancelDialog.title")}</DialogTitle>
@@ -244,23 +275,34 @@ function AdminAssignmentDetailPage() {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t("admin.assignments.detail.cancelDialog.reasonPlaceholder")}
+            aria-invalid={reasonTooLong || undefined}
+            aria-describedby="cancel-reason-limit"
           />
-          {error && (
-            <p role="alert" className="mt-1 text-xs text-destructive">
-              {error}
-            </p>
-          )}
+          {/* The ceiling was previously known only to the database, so a long
+              reason was rejected by a round trip with nothing said about
+              length. It is shown as the admin approaches it, and as an error
+              once passed. */}
+          <p
+            id="cancel-reason-limit"
+            className={`mt-1 text-xs ${reasonTooLong ? "text-destructive" : "text-muted-foreground"}`}
+          >
+            {reasonTooLong
+              ? t("admin.assignments.detail.cancelDialog.tooLong")
+              : trimmedReason.length > CANCELLATION_REASON_MAX - 200
+                ? t("admin.assignments.detail.cancelDialog.charsLeft").replace(
+                    "{remaining}",
+                    String(CANCELLATION_REASON_MAX - trimmedReason.length),
+                  )
+                : ""}
+          </p>
+          <AdminActionError error={error} />
           <DialogFooter className="mt-4">
             <DialogClose asChild>
               <Button type="button" variant="outline">
                 {t("admin.employers.action.cancel")}
               </Button>
             </DialogClose>
-            <Button
-              type="button"
-              onClick={() => cancel.mutate()}
-              disabled={cancel.isPending || !reason.trim()}
-            >
+            <Button type="button" onClick={() => cancel.mutate()} disabled={!canSubmit}>
               {cancel.isPending
                 ? t("admin.employers.action.submitting")
                 : t("admin.employers.action.confirm")}

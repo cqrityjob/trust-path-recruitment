@@ -804,6 +804,30 @@ jobs:
         run: bun run employer-registration:check
 
 
+      # ── ADMIN PORTAL ────────────────────────────────────────────────────
+      #
+      # These guards were written alongside the Admin Portal and defined in
+      # package.json, and never added here. All of them passed on the day they
+      # were wired in, so nothing had rotted -- but nothing would have noticed
+      # if it had, and the regression coverage for the assignment cancellation
+      # defect would have landed in the same blind spot.
+      #
+      # admin-error-contract is the new one: it fails the build if a refusal
+      # the SQL can raise has no copy the client can show, which is how
+      # ASSIGNMENT_NOT_CANCELLABLE_OR_REASON_REQUIRED reached an admin's screen.
+      - name: Admin Portal error contract check
+        run: bun run admin-error-contract:check
+
+      - name: Admin Portal operational scope check
+        run: bun run admin-portal:check
+
+      - name: Admin Control Center lifecycle check
+        run: bun run admin-lifecycle:check
+
+      - name: Admin employer status guard check
+        run: bun run admin-employer-status-guard:check
+
+
       - name: Production build
         run: bun run build
 
