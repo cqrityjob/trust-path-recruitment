@@ -11,6 +11,7 @@
 
 import { toDuration } from "./experience";
 import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
+import { isCQrityjob, isUnsupportedSourceClaim, type ProvenanceSubjectKind } from "./provenance";
 import type { IsoDate } from "./types";
 
 /** An absent EXPIRY genuinely means "no expiry" — a permanent qualification.
@@ -229,7 +230,27 @@ export function workCountrySupportKey(
  * is not a place to put a new trust level, and adding one here rather than
  * in the decision record is how the ladder would quietly grow a rung.
  */
-export function verifierAttributionKey(method: string | null): PassportCopyKey {
+export function verifierAttributionKey(
+  method: string | null,
+  /** The recorded decider, and what the decision was about. Given both, a
+   *  source method the product cannot structurally support -- any issuer
+   *  confirmation, or an employer confirmation on anything but an employment
+   *  period -- takes the review label rather than the source's words. */
+  organisation: string | null = null,
+  subjectKind: ProvenanceSubjectKind | undefined = undefined,
+): PassportCopyKey {
+  // A LABEL. "Reviewed by", never "Confirmed by the issuer", and never the
+  // explanatory sentence, which belongs beside the value rather than above it.
+  if (
+    isUnsupportedSourceClaim({
+      assertionLevel: "verified",
+      verificationMethod: method,
+      verifierName: organisation,
+      subjectKind,
+    })
+  ) {
+    return "trust.reviewedBy";
+  }
   switch (method) {
     case "document_review":
       return "claims.attribution.document_review";
@@ -250,7 +271,23 @@ export function formatVerifierAttribution(
   verifierName: string | null,
   method: string | null,
   lang: PassportLang,
+  subjectKind: ProvenanceSubjectKind | undefined = undefined,
 ): string | null {
   if (!verifierName) return null;
-  return `${passportT(verifierAttributionKey(method), lang)} ${verifierName}`;
+  // The unsupported-source sentence is complete on its own and already names
+  // the party it can name; appending the decider would print it twice.
+  if (
+    isUnsupportedSourceClaim({
+      assertionLevel: "verified",
+      verificationMethod: method,
+      verifierName,
+      subjectKind,
+    })
+  ) {
+    return passportT(
+      isCQrityjob(verifierName) ? "trust.legacy.unsupported" : "trust.unsupportedSource",
+      lang,
+    );
+  }
+  return `${passportT(verifierAttributionKey(method, verifierName, subjectKind), lang)} ${verifierName}`;
 }

@@ -20,12 +20,14 @@
 // expired licence is less trustworthy than one that shows it expired.
 
 import { totalsByEvidenceLevel } from "./experience";
+import { effectiveAssertionLevel, effectiveTrust } from "./provenance";
 import { withoutSelfDeclared } from "./identity/visibility";
 import type { ProfessionalIdentity } from "./identity/types";
 import { recognitionFor, type RecognitionState } from "./recognition";
 import { validityOf } from "./validity";
 import { deriveMarketProfiles, type MarketProfile } from "./market-profiles";
 import type {
+  VerificationMethod,
   AssertionLevel,
   Claim,
   ExperiencePeriod,
@@ -35,7 +37,14 @@ import type {
 } from "./types";
 import { isCurrentlyVerified } from "./trust-presentation";
 
-export type PassportCardState = "empty" | "self_declared_only" | "partially_verified" | "verified";
+export type PassportCardState =
+  | "empty"
+  | "self_declared_only"
+  /** At least one current entry CQrityjob reviewed, and nothing a source has
+   *  confirmed. The card says Documented -- never "verified", never "nothing". */
+  | "documented"
+  | "partially_verified"
+  | "verified";
 
 export type ShareOverlayState = "none" | "share_expired" | "share_revoked";
 
@@ -68,6 +77,10 @@ export interface CardCredential {
   readonly subJurisdictionCode: string | null;
   readonly issuerName: string;
   readonly verifierName: string | null;
+  /** How the decision was reached, from the decision record. Carried so the
+   *  card reads the EFFECTIVE level: a legacy unsupported approval ranks and
+   *  presents as documented. */
+  readonly verificationMethod: VerificationMethod | null;
   readonly assertionLevel: AssertionLevel;
   /** Effective on the evaluation date. */
   readonly lifecycleState: LifecycleState;
@@ -125,8 +138,9 @@ export interface PassportCardModel {
 const CARD_CREDENTIAL_LIMIT = 3;
 
 function evidenceRank(claim: CardCredential): number {
-  if (claim.assertionLevel === "verified") return 2;
-  if (claim.assertionLevel === "document_provided") return 1;
+  const level = effectiveAssertionLevel(claim);
+  if (level === "verified") return 2;
+  if (level === "document_provided") return 1;
   return 0;
 }
 
@@ -154,10 +168,22 @@ function deriveState(
   // `isCurrentlyVerified` adds the lifecycle question the individual plate
   // was already asking (`useCardContent`'s `isCurrent`, which is why the
   // plate said PREVIOUSLY VERIFIED while the card around it said verified).
-  const anyVerified = periods.some(isCurrentlyVerified) || claims.some(isCurrentlyVerified);
-  if (!anyVerified) return "self_declared_only";
+  // Periods declare their subject: an employer confirming an employment is
+  // the one path to source-confirmed, and a caller that did not say so gets
+  // the credential reading, which cannot be.
+  const asEmployment = periods.map((p) => ({ ...p, subjectKind: "employment" as const }));
+  const anyVerified = asEmployment.some(isCurrentlyVerified) || claims.some(isCurrentlyVerified);
+  if (!anyVerified) {
+    // "Verified" here means SOURCE-CONFIRMED (isCurrentlyVerified reads the
+    // effective level). A card whose entries CQrityjob reviewed is documented,
+    // which is neither "verified" nor "self-declared only".
+    const anyDocumented = [...asEmployment, ...claims].some(
+      (e) => e.lifecycleState === "active" && effectiveTrust(e) === "documented",
+    );
+    return anyDocumented ? "documented" : "self_declared_only";
+  }
 
-  const allVerified = periods.every(isCurrentlyVerified) && claims.every(isCurrentlyVerified);
+  const allVerified = asEmployment.every(isCurrentlyVerified) && claims.every(isCurrentlyVerified);
   return allVerified ? "verified" : "partially_verified";
 }
 
@@ -173,6 +199,7 @@ function toCardCredential(claim: Claim, evaluationOn: IsoDate): CardCredential {
     subJurisdictionCode: claim.subJurisdictionCode,
     issuerName: claim.issuerName,
     verifierName: claim.verifierName,
+    verificationMethod: claim.verificationMethod,
     assertionLevel: claim.assertionLevel,
     lifecycleState: validity.effectiveState,
     lapsed: validity.hasExpired,

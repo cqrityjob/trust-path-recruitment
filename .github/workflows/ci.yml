@@ -409,6 +409,13 @@ jobs:
         run: bun run passport-decision-truthfulness:check
       - name: Passport reviewer decision quality and trust attribution
         run: bun run passport-reviewer-decision:check
+      # The method an approval records must belong to the party deciding. The
+      # reviewer form offers no source-confirmation method, the server function
+      # cannot send issuer_confirmation, and the three legacy hosted rows that
+      # predate the rule render as a CQrityjob review on every surface -- never
+      # as "confirmed by the issuer".
+      - name: Passport trust-source containment
+        run: bun run passport-trust-source:check
 
       # Employment confirmation, rendered for both people in the exchange. The
       # candidate must read "Bekräftad av Company X" and never "Verifierad av"

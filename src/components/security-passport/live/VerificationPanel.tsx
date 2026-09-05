@@ -26,6 +26,16 @@ import { AlertTriangle, BadgeCheck, Building2, Clock, MessageSquare, RotateCw } 
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { formatDate, verifierAttributionKey } from "@/lib/security-passport/format";
+import {
+  CQRITYJOB_DECIDER_ORGANISATION,
+  effectiveTrust,
+  isUnsupportedSourceClaim,
+  type ProvenanceSubjectKind,
+} from "@/lib/security-passport/provenance";
+import {
+  methodLabelKey,
+  unsupportedSourceNoticeKey,
+} from "@/lib/security-passport/trust-presentation";
 import type { Validity } from "@/lib/security-passport/validity";
 import { mayRenew } from "@/lib/security-passport/validity";
 import type {
@@ -36,6 +46,10 @@ import { EmployerConfirmationPicker, type EmployerSearchState } from "./Employer
 
 export interface VerificationPanelProps {
   readonly assertionLevel: string;
+  /** What this entry IS. An employer may source-confirm an employment period
+   *  and nothing else, so the panel says which it is rather than inferring it
+   *  from the decision. Absent means a credential -- the fail-closed reading. */
+  readonly subjectKind?: ProvenanceSubjectKind;
   readonly validity: Validity;
   /** The open request for this entry, if any — `pending` or
    *  `clarification_requested`. */
@@ -96,14 +110,28 @@ const STATUS_KEY: Readonly<Record<string, PassportCopyKey>> = {
   withdrawn: "ver.status.withdrawn",
 };
 
-const METHOD_KEY: Readonly<Record<string, PassportCopyKey>> = {
-  document_review: "ver.method.document_review",
-  employer_confirmation: "ver.method.employer_confirmation",
-  issuer_confirmation: "ver.method.issuer_confirmation",
-};
+/** True only for an employer confirmation the EMPLOYER gave. A legacy row in
+ *  which CQrityjob recorded `employer_confirmation` about itself is a CQrityjob
+ *  review and must not borrow the employer's sentence. */
+function employerGaveConfirmation(
+  d: VerificationDecisionRecord | null,
+  subjectKind: ProvenanceSubjectKind | undefined,
+): boolean {
+  return (
+    d !== null &&
+    d.method === "employer_confirmation" &&
+    !isUnsupportedSourceClaim({
+      assertionLevel: "verified",
+      verificationMethod: d.method,
+      verifierName: d.organisation,
+      subjectKind,
+    })
+  );
+}
 
 export function VerificationPanel({
   assertionLevel,
+  subjectKind,
   validity,
   openRequest,
   rejectedRequest,
@@ -165,7 +193,27 @@ export function VerificationPanel({
    *  later revoked is real history and stays in the log, but it is not a
    *  present fact and must not suppress a fresh request. */
   const employerConfirmed =
-    assertionLevel === "verified" && latestApproval?.method === "employer_confirmation";
+    assertionLevel === "verified" && employerGaveConfirmation(latestApproval, subjectKind);
+  /** The standing approval is a CQrityjob review (genuine or legacy): the
+   *  labels say Reviewed, never Verified. Decided once here for the block. */
+  /** The neutral sentence this approval carries, or null. */
+  const approvalNoticeKey =
+    latestApproval === null
+      ? null
+      : unsupportedSourceNoticeKey({
+          assertionLevel,
+          verifierName: latestApproval.organisation,
+          verificationMethod: latestApproval.method,
+          subjectKind,
+        });
+  const approvalIsReview =
+    latestApproval !== null &&
+    effectiveTrust({
+      assertionLevel,
+      verifierName: latestApproval.organisation,
+      verificationMethod: latestApproval.method,
+      subjectKind,
+    }) === "documented";
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -199,7 +247,7 @@ export function VerificationPanel({
 
           Which sentence appears is decided by the recorded verification
           METHOD, not by anything the page assumes. */}
-      {latestApproval && latestApproval.method === "employer_confirmation" ? (
+      {latestApproval && employerGaveConfirmation(latestApproval, subjectKind) ? (
         <p className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-4 text-sm font-medium text-foreground">
           <Building2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
@@ -225,7 +273,13 @@ export function VerificationPanel({
                   confirmation and a CQrityjob document review then read
                   identically, which is exactly the flattening the recorded
                   method exists to prevent. */}
-              {pt(verifierAttributionKey(latestApproval.method))}
+              {pt(
+                verifierAttributionKey(
+                  latestApproval.method,
+                  latestApproval.organisation,
+                  subjectKind,
+                ),
+              )}
             </dt>
             <dd className="mt-0.5 text-sm font-medium text-foreground">
               {latestApproval.organisation ?? pt("common.notStated")}
@@ -233,17 +287,23 @@ export function VerificationPanel({
           </div>
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("ver.method")}
+              {pt(approvalIsReview ? "trust.reviewMethod" : "ver.method")}
             </dt>
             <dd className="mt-0.5 text-sm text-foreground">
               {latestApproval.method
-                ? pt(METHOD_KEY[latestApproval.method] ?? "common.notStated")
+                ? pt(
+                    methodLabelKey(
+                      latestApproval.method,
+                      latestApproval.organisation,
+                      subjectKind,
+                    ) ?? "common.notStated",
+                  )
                 : pt("common.notStated")}
             </dd>
           </div>
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("ver.decidedAt")}
+              {pt(approvalIsReview ? "trust.reviewedAt" : "ver.decidedAt")}
             </dt>
             <dd className="mt-0.5 text-sm tabular-nums text-foreground">
               {latestApproval.decidedAt.slice(0, 10)}
@@ -258,6 +318,18 @@ export function VerificationPanel({
             </dd>
           </div>
         </dl>
+      ) : null}
+
+      {/* A source method CQrityjob recorded about itself, before
+          20261030090000. The holder keeps the history above -- who decided,
+          when -- and reads why it presents as Dokumenterad. */}
+      {latestApproval && approvalNoticeKey ? (
+        <p
+          data-legacy-provenance="note"
+          className="mt-3 text-sm leading-relaxed text-muted-foreground"
+        >
+          {pt(approvalNoticeKey)}
+        </p>
       ) : null}
 
       {latestRevocation ? (
@@ -628,7 +700,16 @@ export function VerificationPanel({
                 </span>
                 {r.method ? (
                   <span className="text-muted-foreground">
-                    · {pt(METHOD_KEY[r.method] ?? "common.notStated")}
+                    ·{" "}
+                    {pt(
+                      // A request row carries no decider; the kind says who
+                      // decides it, and a CQrityjob review decided by CQrityjob
+                      // is the shape the legacy rule is about.
+                      methodLabelKey(
+                        r.method,
+                        r.kind === "cqrityjob_review" ? CQRITYJOB_DECIDER_ORGANISATION : null,
+                      ) ?? "common.notStated",
+                    )}
                   </span>
                 ) : null}
               </li>

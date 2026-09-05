@@ -29,6 +29,14 @@ import { isMissingPilotLayer, resolveMarketAccess } from "./market-access";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
+import {
+  PROVENANCE_DECISION_COLUMNS,
+  PROVENANCE_REQUEST_COLUMNS,
+  buildProvenanceMap,
+  printableProvenance,
+  type ProvenanceDecisionRow,
+  type ProvenanceRequestRow,
+} from "./provenance";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import {
   CREDENTIAL_CODE_MAX_LENGTH,
@@ -579,6 +587,13 @@ export interface ClaimVersion {
   readonly validUntil: string | null;
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+  /** Who decided this version, and how, from the decision record -- null
+   *  unless it is verified and somebody approved it. Carried so the history
+   *  row reads the same outward level as the header above it: a CQrityjob
+   *  document review is Dokumenterad on both, or the page contradicts
+   *  itself within one screen. */
+  readonly verifierName: string | null;
+  readonly verificationMethod: string | null;
   readonly supersedesId: string | null;
   readonly updatedAt: string;
 }
@@ -596,13 +611,36 @@ export const listClaimVersions = createServerFn({ method: "POST" })
   .validator((data: unknown) => z.object({ claimId: z.string().uuid() }).parse(data))
   .handler(async ({ context, data }): Promise<readonly ClaimVersion[]> => {
     const { supabase, userId } = context;
-    const { data: rows, error } = await supabase
-      .from("sp_claims")
-      .select(
-        "id, version_no, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, supersedes_id, updated_at",
-      )
-      .eq("holder_user_id", userId);
+    const [{ data: rows, error }, reqRes, decRes] = await Promise.all([
+      supabase
+        .from("sp_claims")
+        .select(
+          "id, version_no, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, supersedes_id, updated_at",
+        )
+        .eq("holder_user_id", userId),
+      // Provenance, read exactly as getMyPassport and listMyEntries read it:
+      // the holder's requests and decisions, decisions OLDEST FIRST so the
+      // fold ends on the current answer. Never decision_note.
+      supabase
+        .from("sp_verification_requests")
+        .select(PROVENANCE_REQUEST_COLUMNS)
+        .eq("holder_user_id", userId),
+      supabase
+        .from("sp_verification_decisions")
+        .select(PROVENANCE_DECISION_COLUMNS)
+        .eq("holder_user_id", userId)
+        .order("decided_at", { ascending: true }),
+    ]);
     if (error) throw new Error(error.message);
+    // A failed provenance read is not "not verified" -- the same rule the
+    // other two read models apply, for the same reason.
+    if (reqRes.error) throw new Error(reqRes.error.message);
+    if (decRes.error) throw new Error(decRes.error.message);
+
+    const provenance = buildProvenanceMap(
+      (reqRes.data ?? []) as ProvenanceRequestRow[],
+      (decRes.data ?? []) as ProvenanceDecisionRow[],
+    );
 
     type Row = {
       id: string;
@@ -643,21 +681,28 @@ export const listClaimVersions = createServerFn({ method: "POST" })
     }
 
     return chain
-      .map((r) => ({
-        id: r.id,
-        versionNo: r.version_no,
-        credentialCode: r.credential_code,
-        title: r.title,
-        issuerName: r.claimed_issuer_name,
-        jurisdictionCode: r.jurisdiction_code,
-        issuedOn: r.issued_on,
-        validFrom: r.valid_from,
-        validUntil: r.valid_until,
-        assertionLevel: r.assertion_level,
-        lifecycleState: r.lifecycle_state,
-        supersedesId: r.supersedes_id,
-        updatedAt: r.updated_at,
-      }))
+      .map((r) => {
+        // Resolved once per row: attribution follows the CURRENT level, and
+        // asking twice for one row is two chances to ask differently.
+        const prov = printableProvenance(r.id, r.assertion_level, provenance);
+        return {
+          id: r.id,
+          versionNo: r.version_no,
+          credentialCode: r.credential_code,
+          title: r.title,
+          issuerName: r.claimed_issuer_name,
+          jurisdictionCode: r.jurisdiction_code,
+          issuedOn: r.issued_on,
+          validFrom: r.valid_from,
+          validUntil: r.valid_until,
+          assertionLevel: r.assertion_level,
+          lifecycleState: r.lifecycle_state,
+          verifierName: prov?.organisation ?? null,
+          verificationMethod: prov?.method ?? null,
+          supersedesId: r.supersedes_id,
+          updatedAt: r.updated_at,
+        };
+      })
       .reverse();
   });
 

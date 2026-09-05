@@ -24,7 +24,11 @@
 // somebody's professional standing is the most damaging false statement this
 // product can make about them.
 
-import { describeTrust, isEmployerConfirmed } from "@/lib/security-passport/trust-presentation";
+import {
+  describeTrust,
+  isEmployerConfirmed,
+  presentsAsVerified,
+} from "@/lib/security-passport/trust-presentation";
 import {
   isPendingClaim,
   isUnavailable,
@@ -89,8 +93,11 @@ export function summariseTrust(identity: ProfessionalIdentityV1): TrustSummary {
       verifierName: e.verifierName,
       verificationMethod: e.verificationMethod,
       verifiedOn: e.verifiedOn,
+      // An EMPLOYMENT: the one subject an employer confirmation may
+      // source-confirm. Said explicitly, because the default is a credential.
+      subjectKind: "employment",
     });
-    if (trust.status !== "verified") continue;
+    if (!presentsAsVerified(trust)) continue;
     verifiedEmployment += 1;
     if (isEmployerConfirmed(trust)) employerConfirmedEmployment += 1;
   }

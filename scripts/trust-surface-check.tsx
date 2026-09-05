@@ -249,6 +249,9 @@ group("GROUP 3 -- issuer and verifier stay separate");
     assertionLevel: "verified",
     verifierName: "Bevakning AB",
     verificationMethod: "employer_confirmation",
+    // An EMPLOYMENT. Source-confirmed trust has exactly one shape, and the
+    // subject is half of it: the same method on a credential is documented.
+    subjectKind: "employment",
   });
   ck(
     "sv: an employer confirmation is attributed to the employer",
@@ -331,9 +334,14 @@ group("GROUP 4 -- current trust and historical trust are never both claimed");
   const text = visibleText(render(<ClaimRow claim={revoked} />));
 
   ck("the revoked state is named", text.includes(passportT("lifecycle.revoked", "sv")));
+  // INVERTED (owner decision): a CQrityjob document review is DOCUMENTED, and
+  // revocation does not un-review it. The chip keeps the level word
+  // Dokumenterad beside the lifecycle word Återkallad; "previously verified"
+  // would restate a verification that never was one.
   ck(
-    "the historical word is used",
-    text.includes(passportT("assertion.verified.historical", "sv")),
+    "the level word Dokumenterad is kept, not 'previously verified'",
+    text.includes(passportT("trust.level.documented", "sv")) &&
+      !text.includes(passportT("assertion.verified.historical", "sv")),
   );
   // The historical word CONTAINS the present-tense one ("TIDIGARE
   // VERIFIERAD"), so the assertion is that no OTHER occurrence survives:

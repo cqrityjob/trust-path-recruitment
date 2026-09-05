@@ -38,6 +38,14 @@
 // somebody else is mid-decision on it.
 
 import { createServerFn } from "@tanstack/react-start";
+import {
+  PROVENANCE_DECISION_COLUMNS,
+  PROVENANCE_REQUEST_COLUMNS,
+  buildProvenanceMap,
+  printableProvenance,
+  type ProvenanceDecisionRow,
+  type ProvenanceRequestRow,
+} from "./provenance";
 import { isCalendarDate } from "./dates";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -74,6 +82,11 @@ export interface ExperienceEntry {
   readonly jurisdictionCode: string;
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+  /** Who decided, and how, from the decision record -- null unless verified.
+   *  Carried so a chip can read the EFFECTIVE level: a legacy unsupported
+   *  approval presents as documented on this surface too. */
+  readonly verifierName: string | null;
+  readonly verificationMethod: string | null;
   /** True while the holder may still edit or delete it outright. */
   readonly editable: boolean;
 }
@@ -98,6 +111,8 @@ export interface ClaimEntry {
   readonly validUntil: string | null;
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+  readonly verifierName: string | null;
+  readonly verificationMethod: string | null;
   readonly versionNo: number;
   readonly editable: boolean;
 }
@@ -124,7 +139,7 @@ export const listMyEntries = createServerFn({ method: "GET" })
     }> => {
       const { supabase, userId } = context;
 
-      const [expRes, claimRes] = await Promise.all([
+      const [expRes, claimRes, reqRes, decRes] = await Promise.all([
         supabase
           .from("sp_experience_periods")
           .select(
@@ -143,10 +158,35 @@ export const listMyEntries = createServerFn({ method: "GET" })
           .neq("lifecycle_state", "superseded")
           .neq("lifecycle_state", "withdrawn")
           .order("created_at", { ascending: false }),
+        // Provenance, read exactly as getMyPassport reads it: the holder's
+        // requests and decisions, decisions OLDEST FIRST so the fold ends on
+        // the current answer. Never decision_note.
+        supabase
+          .from("sp_verification_requests")
+          .select(PROVENANCE_REQUEST_COLUMNS)
+          .eq("holder_user_id", userId),
+        supabase
+          .from("sp_verification_decisions")
+          .select(PROVENANCE_DECISION_COLUMNS)
+          .eq("holder_user_id", userId)
+          .order("decided_at", { ascending: true }),
       ]);
 
       if (expRes.error) throw new Error(expRes.error.message);
       if (claimRes.error) throw new Error(claimRes.error.message);
+      // A failed provenance read is not "not verified" -- the same rule
+      // getMyPassport applies, for the same reason.
+      if (reqRes.error) throw new Error(reqRes.error.message);
+      if (decRes.error) throw new Error(decRes.error.message);
+
+      const provenance = buildProvenanceMap(
+        (reqRes.data ?? []) as ProvenanceRequestRow[],
+        (decRes.data ?? []) as ProvenanceDecisionRow[],
+      );
+
+      // Printable provenance only: attribution follows the CURRENT level.
+      const prov = (row: Record<string, unknown>) =>
+        printableProvenance(row.id as string, row.assertion_level as string, provenance);
 
       const experience = (expRes.data ?? []).map((r): ExperienceEntry => {
         const row = r as Record<string, unknown>;
@@ -163,6 +203,8 @@ export const listMyEntries = createServerFn({ method: "GET" })
           jurisdictionCode: row.jurisdiction_code as string,
           assertionLevel: row.assertion_level as string,
           lifecycleState: row.lifecycle_state as string,
+          verifierName: prov(row)?.organisation ?? null,
+          verificationMethod: prov(row)?.method ?? null,
           editable: isEditable(row.assertion_level as string, row.lifecycle_state as string),
         };
       });
@@ -187,6 +229,8 @@ export const listMyEntries = createServerFn({ method: "GET" })
           validUntil: (row.valid_until as string | null) ?? null,
           assertionLevel: row.assertion_level as string,
           lifecycleState: row.lifecycle_state as string,
+          verifierName: prov(row)?.organisation ?? null,
+          verificationMethod: prov(row)?.method ?? null,
           versionNo: Number(row.version_no),
           editable: isEditable(row.assertion_level as string, row.lifecycle_state as string),
         };

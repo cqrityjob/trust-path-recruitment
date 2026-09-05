@@ -269,8 +269,13 @@ BEGIN
   RETURNING id INTO _req;
 
   PERFORM set_config('request.jwt.claim.sub', _v::text, true);
-  PERFORM public.sp_verifier_decide(_req, 'approved', 'employer_confirmation',
-    'confirmed with employer', 'employment confirmed', NULL, NULL);
+  -- document_review, not employer_confirmation: since 20261030090000 a
+  -- cqrityjob_review approval may record only the method its decider can
+  -- truthfully use. A reviewer who telephoned the employer performed a
+  -- CQrityjob review; the employer's own confirmation arrives through the
+  -- employer_attestation path. This group is about approving a PERIOD.
+  PERFORM public.sp_verifier_decide(_req, 'approved', 'document_review',
+    'reviewed the contract', 'employment reviewed', NULL, NULL);
 
   -- 4. approving an experience period
   SELECT * INTO _r FROM public.sp_experience_periods WHERE id = _period;
@@ -393,7 +398,10 @@ BEGIN
   SELECT claim_id INTO _claim FROM public.sp_verification_requests WHERE id = _req;
 
   PERFORM set_config('request.jwt.claim.sub', _v::text, true);
-  PERFORM public.sp_verifier_decide(_req, 'approved', 'issuer_confirmation',
+  -- document_review: the only method a cqrityjob_review approval may record
+  -- since 20261030090000 (issuer_confirmation is refused for every kind until
+  -- an issuer can act). This group is about deciding TWICE, not the method.
+  PERFORM public.sp_verifier_decide(_req, 'approved', 'document_review',
     'first', 'first', DATE '2026-03-01', DATE '2026-10-01');
 
   _before := pg_temp.trust_fingerprint(_h);

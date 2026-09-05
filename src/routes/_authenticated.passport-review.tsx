@@ -37,6 +37,11 @@ import { AlertTriangle, FileText, Inbox, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatWorkLocation } from "@/lib/security-passport/format";
 import {
+  hasCompletedDocumentReview,
+  hasLegacyUnsupportedApproval,
+  methodLabelKey,
+} from "@/lib/security-passport/trust-presentation";
+import {
   decideVerification,
   getVerifierRequestDetail,
   listDisputeQueue,
@@ -123,6 +128,11 @@ function PassportReviewRoute() {
   );
 }
 
+/** The only method a CQrityjob review can record. Not a default -- the form
+ *  has no other value to offer -- and `sp_verifier_decide` refuses every other
+ *  method for this request kind (20261030090000). */
+const REVIEW_METHOD = "document_review" as const;
+
 /** One line of copy per refusal the database can give. Kept as a total map so
  *  adding a code without adding its sentence fails the type check rather than
  *  silently falling back to "try again". */
@@ -132,6 +142,7 @@ const DECLINE_KEY: Record<DecisionErrorCode, PassportCopyKey> = {
   already_decided: "vq.decline.already_decided",
   not_found: "vq.decline.not_found",
   method_required: "vq.decline.method_required",
+  method_not_permitted: "vq.decline.method_not_permitted",
   holder_message_required: "vq.decline.holder_message_required",
   invalid_validity: "vq.decline.invalid_validity",
   issuer_required: "vq.decline.issuer_required",
@@ -193,7 +204,11 @@ export function PassportReviewWorkspace() {
   const [decisionError, setDecisionError] = useState<string | null>(null);
 
   const [decision, setDecision] = useState<Decision>("approved");
-  const [method, setMethod] = useState<string>("document_review");
+  // Not state. A CQrityjob reviewer reads what the holder supplied, and that
+  // is document review whatever was read; the form shows the method rather
+  // than offering it, and sp_verifier_decide refuses anything else for this
+  // request kind (20261030090000).
+  const method = REVIEW_METHOD;
   const [decisionNote, setDecisionNote] = useState("");
   const [holderMessage, setHolderMessage] = useState("");
   const [validFrom, setValidFrom] = useState("");
@@ -261,10 +276,6 @@ export function PassportReviewWorkspace() {
 
   async function submitDecision() {
     if (!selected) return;
-    if (decision === "approved" && !method) {
-      setDecisionError(pt(DECLINE_KEY.method_required));
-      return;
-    }
     // A refusal without a reason is not a decision the holder can act on.
     // Checked here for an immediate answer, in the server function, and in
     // `sp_verifier_decide` — which is the one that actually enforces it. A
@@ -456,6 +467,63 @@ export function PassportReviewWorkspace() {
                       words, before any document is opened. The reviewer's eye
                       then runs claim -> evidence -> history -> decision down
                       one column, which is the comparison they are making. */}
+                  {/* 0. A LEGACY RECORD, SAID FIRST. An approval whose method
+                      claims a source confirmation that CQrityjob recorded
+                      about itself (pre-20261030090000). The stored decision
+                      stays; every reader sees it as Dokumenterad; the
+                      reviewer is told, before the facts, that the record
+                      needs a manual re-review rather than a second look at
+                      the same document. No action is offered here: a
+                      remediation is a decision, not a button. */}
+                  {detail &&
+                  hasLegacyUnsupportedApproval(priorDecisions) &&
+                  (detail.claim?.assertion === "verified" ||
+                    detail.period?.assertion === "verified") ? (
+                    <div
+                      role="status"
+                      data-legacy-record="warning"
+                      className="flex items-start gap-3 rounded-lg border border-border bg-secondary/40 p-4"
+                    >
+                      <AlertTriangle
+                        aria-hidden="true"
+                        className="mt-0.5 h-4 w-4 shrink-0 text-foreground"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {pt("vq.legacy.title")}
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                          {pt("vq.legacy.body")}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* 0b. A COMPLETED DOCUMENT REVIEW, in operational words. The
+                      stored decision says "approved" and the stored level says
+                      "verified"; what the holder and every recipient see is
+                      DOCUMENTED, because a CQrityjob document review is not
+                      the issuer's or the employer's confirmation. Said here so
+                      the reviewer never reads their own approval as one. */}
+                  {detail &&
+                  item.status === "approved" &&
+                  hasCompletedDocumentReview(priorDecisions) &&
+                  !hasLegacyUnsupportedApproval(priorDecisions) ? (
+                    <div
+                      role="status"
+                      data-review-completed="documented"
+                      className="rounded-lg border border-border bg-secondary/40 p-4"
+                    >
+                      <p className="text-sm font-semibold text-foreground">
+                        {pt("vq.review.completed")}
+                      </p>
+                      <p className="mt-1 text-sm text-foreground">{pt("vq.review.holderResult")}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {pt("vq.review.notSource")}
+                      </p>
+                    </div>
+                  ) : null}
+
                   {detail?.claim ? (
                     <ReviewClaimFacts
                       holderName={detail.holderName}
@@ -577,7 +645,10 @@ export function PassportReviewWorkspace() {
                               // what it is worth as precedent. A prior
                               // employer confirmation and a prior document
                               // review are not the same signal.
-                              d.method ? pt(`ver.method.${d.method}` as PassportCopyKey) : null,
+                              (() => {
+                                const key = methodLabelKey(d.method, d.organisation);
+                                return key ? pt(key) : null;
+                              })(),
                             ]
                               .filter(Boolean)
                               .join(" · ")}
@@ -634,29 +705,25 @@ export function PassportReviewWorkspace() {
 
                       {decision === "approved" ? (
                         <>
+                          {/* ── THE METHOD IS NOT A CHOICE ──────────────
+                              The dropdown that stood here offered "confirmed
+                              by employer" and "confirmed by issuer" to a
+                              reviewer who is neither. It is shown, not
+                              selected, and the sentence under it says what a
+                              CQrityjob review is not. */}
                           <div>
-                            <label
-                              htmlFor="sp-method"
-                              className="block text-sm font-medium text-foreground"
-                            >
+                            <p className="block text-sm font-medium text-foreground">
                               {pt("vq.methodLabel")}
-                            </label>
-                            <select
-                              id="sp-method"
-                              value={method}
-                              onChange={(e) => setMethod(e.target.value)}
-                              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-72"
+                            </p>
+                            <p
+                              data-testid="sp-method-fixed"
+                              className="mt-1 text-sm font-medium text-foreground"
                             >
-                              <option value="document_review">
-                                {pt("ver.method.document_review")}
-                              </option>
-                              <option value="issuer_confirmation">
-                                {pt("ver.method.issuer_confirmation")}
-                              </option>
-                              <option value="employer_confirmation">
-                                {pt("ver.method.employer_confirmation")}
-                              </option>
-                            </select>
+                              {pt("vq.methodFixed")}
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                              {pt("vq.methodFixed.help")}
+                            </p>
                           </div>
 
                           <div className="grid gap-3 sm:grid-cols-2">

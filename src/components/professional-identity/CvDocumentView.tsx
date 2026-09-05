@@ -54,6 +54,7 @@ import type { CvDocument } from "@/lib/professional-identity/cv/document";
 import type { CvFactClaim } from "@/lib/professional-identity/cv/source-bundle";
 import type { CvTrustAnnotations } from "@/lib/professional-identity/cv/trust-annotations";
 import {
+  presentsAsVerified,
   employmentTrustLine,
   trustLabel,
   type TrustPresentation,
@@ -68,7 +69,10 @@ const COPY = {
   languages: c("Språk", "Languages"),
   summary: c("Sammanfattning", "Summary"),
   present: c("nu", "present"),
-  aiDrafted: c("Utkast skrivet av AI — granska innan du använder det", "Drafted by AI — review before you use it"),
+  aiDrafted: c(
+    "Utkast skrivet av AI — granska innan du använder det",
+    "Drafted by AI — review before you use it",
+  ),
   verified: c("Verifierad", "Verified"),
   /** Screen-reader prefix so the line is never an icon plus a bare company
    *  name. §34: the meaning must not depend on seeing the symbol. */
@@ -150,7 +154,7 @@ function ClaimList({
         // negative we did not establish (PR 4's rule); `claim.verified`
         // remains on the fact for the persisted bundle's schema and is no
         // longer consulted for anything the reader sees.
-        const currentlyVerified = !trust.unavailable && t?.status === "verified";
+        const currentlyVerified = !trust.unavailable && !!t && presentsAsVerified(t);
         return (
           <li key={claim.id} className="text-sm text-foreground">
             <span className="font-medium">{claim.title}</span>

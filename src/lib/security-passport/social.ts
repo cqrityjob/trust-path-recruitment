@@ -34,6 +34,7 @@
 // the live verification page is the only authoritative current status.
 
 import { withoutSelfDeclared } from "./identity/visibility";
+import { effectiveAssertionLevel } from "./provenance";
 import { toPublicTitles } from "./identity/presentation";
 import type { PublicTitle } from "./identity/types";
 import { totalsByEvidenceLevel } from "./experience";
@@ -179,7 +180,7 @@ export function buildSocialCard(
   const verifiedCredentials = holder.claims
     .filter(
       (c) =>
-        c.assertionLevel === "verified" &&
+        effectiveAssertionLevel(c) === "verified" &&
         validityOf(c.lifecycleState, c.validUntil, evaluationOn).effectiveState === "active",
     )
     .slice(0, options.maxCredentials ?? MAX_SOCIAL_CREDENTIALS)

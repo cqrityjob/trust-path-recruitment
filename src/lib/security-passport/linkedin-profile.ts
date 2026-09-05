@@ -35,6 +35,7 @@
 // and dies with the share.
 
 import type { Claim, ClaimType, PassportHolder } from "./types";
+import { effectiveAssertionLevel } from "./provenance";
 import type { PassportCopyKey, PassportLang } from "./i18n";
 
 /** Which LinkedIn profile section an entry belongs in. */
@@ -144,7 +145,9 @@ export function educationAddUrl(input: {
 }
 
 function eligible(claim: Claim): boolean {
-  return claim.assertionLevel === "verified" && claim.lifecycleState === "active";
+  // The EFFECTIVE level: a legacy unsupported approval is not offered to
+  // LinkedIn as a verified credential.
+  return effectiveAssertionLevel(claim) === "verified" && claim.lifecycleState === "active";
 }
 
 function targetOf(claim: Claim): LinkedInProfileTarget | null {

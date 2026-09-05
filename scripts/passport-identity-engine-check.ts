@@ -32,6 +32,7 @@ import {
   deriveVerifiedIdentity,
   derivePreviewIdentity,
 } from "../src/lib/security-passport/identity/visibility";
+import { deriveProfessionalIdentity } from "../src/lib/security-passport/identity/derive";
 import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
 import {
   headlineIsSelfDeclared,
@@ -101,10 +102,24 @@ function claim(
   };
 }
 
+// ── WHY THE RAW ENGINE, AND NOT THE AUDIENCE GATE ────────────────────
+//
+// This file tests the RULES: which credentials, held together and current,
+// support which outcome. It therefore calls the engine directly, where
+// "verified" means the stored assertion level.
+//
+// The AUDIENCE GATE (deriveVerifiedIdentity / derivePreviewIdentity) applies
+// a second question on top -- what does the recorded METHOD actually prove --
+// and since the owner decision of 2026-09-05 no credential passes it: a
+// CQrityjob document review is documented, and issuer confirmation has no
+// structure behind it until the Issuer Foundation release. That is asserted
+// as its own group at the end of this file, and in
+// scripts/passport-trust-source-check.tsx. Testing the rules through the gate
+// would assert nothing about the rules -- every answer would be empty.
 const verified = (claims: readonly Claim[]) =>
-  deriveVerifiedIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
+  deriveProfessionalIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
 const preview = (claims: readonly Claim[]) =>
-  derivePreviewIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
+  deriveProfessionalIdentity(claims, MIRRORED_TITLE_RULES, TODAY, { includeSelfDeclared: true });
 
 /** The four keys that actually hold derived titles.
  *
@@ -372,9 +387,14 @@ console.log("\nGROUP 5c -- B1: a previewed title is marked, and never travels");
     "PassportCard carries the same guard, for the artefact people screenshot",
   );
 
-  // A mixed holder: the verified appointment stands, the self-declared one is
-  // absent from what a recipient would see.
-  const mixed = deriveVerifiedIdentity(
+  // A mixed holder: the appointment that meets the bar stands, the
+  // self-declared one is absent from what a recipient would see. Read at the
+  // ENGINE, where "verified" is the stored level -- the audience gate adds
+  // the METHOD question on top and is asserted in GROUP 9.
+  // deriveProfessionalIdentity by name, not the module-level helper: this
+  // block shadows it with a local const of the same name (the gate reading
+  // used two assertions above).
+  const mixed = deriveProfessionalIdentity(
     [
       claim("OV", { validUntil: FUTURE }),
       claim("SV", { validUntil: FUTURE, assertion: "self_declared" }),
@@ -415,11 +435,7 @@ assert(
 );
 assert(sv !== en, "the two languages genuinely differ");
 
-const svId = deriveVerifiedIdentity(
-  [claim("OV", { validUntil: FUTURE })],
-  MIRRORED_TITLE_RULES,
-  TODAY,
-);
+const svId = verified([claim("OV", { validUntil: FUTURE })]);
 assert(
   JSON.stringify(rules(svId, "activeTitles")) === JSON.stringify(rules(ov, "activeTitles")),
   "MUTATION: the derivation is identical regardless of the reader's language",
@@ -504,6 +520,69 @@ assert(
 );
 
 /* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+console.log("");
+console.log("GROUP 9 -- the audience gate: what the recorded METHOD proves");
+// The rules above are unchanged. What changed on 2026-09-05 is the bar in
+// front of them: a title, a licence, an eligibility or an authority
+// recognition may rest only on a SOURCE confirmation, and no credential can
+// carry one today. The gate is where that is applied, once, for every
+// audience -- so a rule that fires on the raw engine derives nothing through
+// it, and will derive again, unchanged, when the Issuer Foundation release
+// gives an issuer a structural identity.
+{
+  const gate = (claims: readonly Claim[]) =>
+    deriveVerifiedIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
+  const withProvenance = (code: string, org: string | null, method: string | null): Claim => ({
+    ...claim(code),
+    verifierName: org,
+    verificationMethod: method as Claim["verificationMethod"],
+  });
+
+  assert(
+    rules(verified([claim("VU1"), claim("VU2")]), "professionalCompetence").length > 0,
+    "9.1 the rule still fires on the raw engine -- VU1 + VU2 support the competence",
+  );
+  for (const [label, c] of [
+    ["a CQrityjob document review", withProvenance("VU1", "CQrityjob", "document_review")],
+    [
+      "a legacy issuer confirmation by CQrityjob",
+      withProvenance("VU1", "CQrityjob", "issuer_confirmation"),
+    ],
+    [
+      "an issuer confirmation naming an authority",
+      withProvenance("VU1", "Polismyndigheten", "issuer_confirmation"),
+    ],
+    [
+      "an employer confirmation on a credential",
+      withProvenance("VU1", "Bevakning AB", "employer_confirmation"),
+    ],
+    ["a verified level with no recorded method", withProvenance("VU1", null, null)],
+  ] as const) {
+    const id = gate([c]);
+    assert(
+      (
+        [
+          "educationCompleted",
+          "professionalCompetence",
+          "localEligibility",
+          "activeTitles",
+        ] as const
+      ).every((k) => rules(id, k).length === 0),
+      `9.2 ${label} derives no education, competence, eligibility or title`,
+    );
+  }
+  assert(
+    gate([withProvenance("SE_PERSONNEL_APPROVAL", "Länsstyrelsen", "issuer_confirmation")])
+      .localEligibility.length === 0,
+    "9.3 an issuer-confirmed personnel approval derives no local eligibility either",
+  );
+  assert(
+    rules(verified([claim("SE_PERSONNEL_APPROVAL")]), "localEligibility").length > 0,
+    "9.4 and the same rule DOES fire on the raw engine -- the gate is the bar, not a broken rule",
+  );
+}
 
 console.log("");
 if (failures.length > 0) {

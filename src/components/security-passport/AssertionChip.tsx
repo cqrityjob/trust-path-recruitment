@@ -26,6 +26,11 @@ import { CheckCircle2, FileText, History, PencilLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { AssertionLevel } from "@/lib/security-passport/types";
+import {
+  effectiveAssertionLevel,
+  effectiveTrust,
+  type ProvenanceSubjectKind,
+} from "@/lib/security-passport/provenance";
 
 const SHAPE: Record<AssertionLevel, string> = {
   // Square corners + dashed border reads as "provisional" before any colour
@@ -54,10 +59,23 @@ const GLYPH: Record<AssertionLevel, typeof PencilLine> = {
 export function AssertionChip({
   level,
   lifecycleState,
+  provenance = null,
   className,
   size = "default",
 }: {
   level: AssertionLevel;
+  /** The decider and method behind a verified entry, where the caller has
+   *  them. A source-confirmation method CQrityjob recorded about itself
+   *  (pre-20261030090000) renders as the DOCUMENTED chip with the level word
+   *  "Dokumenterad / Documented" -- never the filled verified pill. The
+   *  stored level is untouched; only what this chip says about it. */
+  provenance?: {
+    readonly verifierName?: string | null;
+    readonly verificationMethod?: string | null;
+    /** Absent means a credential: only an employment period may carry an
+     *  employer's source confirmation. */
+    readonly subjectKind?: ProvenanceSubjectKind;
+  } | null;
   /** The entry's CURRENT standing. Optional: the legend below renders the
    *  three levels in the abstract, where no entry and no lifecycle exists. */
   lifecycleState?: string | null;
@@ -83,19 +101,37 @@ export function AssertionChip({
   // and on this product the shape is a load-bearing channel (see the header):
   // a reader who cannot see colour, or is looking at a greyscale screenshot,
   // reads "settled" from the fill alone.
+  // With provenance in hand the chip renders the OUTWARD level (provenance.ts):
+  // a CQrityjob review is Documented in the documented shape, an employer's or
+  // issuer's own confirmation is Source-confirmed in the settled pill. Without
+  // provenance -- the legend, an abstract level -- the stored vocabulary stands.
+  const bearing = provenance
+    ? {
+        assertionLevel: level,
+        verifierName: provenance.verifierName,
+        verificationMethod: provenance.verificationMethod,
+        subjectKind: provenance.subjectKind,
+      }
+    : null;
+  const trust = bearing ? effectiveTrust(bearing) : null;
+  const effective: AssertionLevel = bearing ? effectiveAssertionLevel(bearing) : level;
   const isCurrent = lifecycleState == null || lifecycleState === "active";
-  const historical = !isCurrent && level === "verified";
-  const Glyph = historical ? History : GLYPH[level];
+  const historical = !isCurrent && effective === "verified";
+  const Glyph = historical ? History : GLYPH[effective];
   const label = historical
     ? pt("assertion.verified.historical")
-    : pt(`assertion.${level}` as const);
+    : trust === "documented"
+      ? pt("trust.level.documented")
+      : trust === "source_confirmed"
+        ? pt("trust.level.source_verified")
+        : pt(`assertion.${effective}` as const);
 
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider",
         size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]",
-        historical ? HISTORICAL_SHAPE : SHAPE[level],
+        historical ? HISTORICAL_SHAPE : SHAPE[effective],
         className,
       )}
     >

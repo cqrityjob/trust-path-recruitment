@@ -41,6 +41,15 @@ export const DECISION_ERROR_CODES = [
   "not_found",
   /** An approval was submitted without a verification method. */
   "method_required",
+  /** An approval named a method the deciding party has no standing to use:
+   *  a CQrityjob review recorded as an employer or issuer confirmation, an
+   *  employer attestation recorded as anything but employer_confirmation, or
+   *  issuer_confirmation anywhere -- `SP_ISSUER_CONFIRMATION_NOT_AVAILABLE`,
+   *  `SP_CQRITYJOB_REVIEW_REQUIRES_DOCUMENT_REVIEW`,
+   *  `SP_EMPLOYER_ATTESTATION_REQUIRES_EMPLOYER_CONFIRMATION` (20261030090000).
+   *  Never retry as-is: the form no longer offers the combination, so reaching
+   *  this means a stale bundle or a crafted call. */
+  "method_not_permitted",
   /** A rejection or a clarification request was submitted with no
    *  candidate-facing reason.
    *
@@ -88,6 +97,12 @@ const RULES: readonly { readonly needle: string; readonly code: DecisionErrorCod
   { needle: "SP_REQUEST_ALREADY_DECIDED", code: "already_decided" },
   { needle: "SP_REQUEST_NOT_FOUND", code: "not_found" },
   { needle: "SP_APPROVAL_REQUIRES_METHOD", code: "method_required" },
+  { needle: "SP_ISSUER_CONFIRMATION_NOT_AVAILABLE", code: "method_not_permitted" },
+  { needle: "SP_CQRITYJOB_REVIEW_REQUIRES_DOCUMENT_REVIEW", code: "method_not_permitted" },
+  {
+    needle: "SP_EMPLOYER_ATTESTATION_REQUIRES_EMPLOYER_CONFIRMATION",
+    code: "method_not_permitted",
+  },
   { needle: "SP_DECISION_REQUIRES_HOLDER_MESSAGE", code: "holder_message_required" },
   { needle: "SP_CREDENTIAL_REQUIRES_VALID_UNTIL", code: "invalid_validity" },
   { needle: "sp_claim_validity_ordered", code: "invalid_validity" },
