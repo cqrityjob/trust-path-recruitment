@@ -1521,6 +1521,36 @@ if [ "$TR0_PASSED" -lt 185 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Facet resolution (20261026093000, carried into R1): the guide facet resolves
+# by (competency_id, slug) bound to the prompt. Valid relational fixtures:
+# a second real competency receives the form's facet slugs with wrong-facet
+# prompts, and the released documents must equal the clean control.
+# Runs BEFORE the rollback step (it reads the SCP content spine).
+# ---------------------------------------------------------------------------
+echo "==> Running facet-resolution assertions"
+set +e
+FR_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_release_facet_resolution_test.sql 2>&1)"
+FR_RC=$?
+set -e
+
+echo "$FR_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+FR_PASSED="$(echo "$FR_OUT" | grep -c "ok  " || true)"
+
+if [ "$FR_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the facet-resolution suite exited with code ${FR_RC}." >&2
+  echo "$FR_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "facet resolution"
+fi
+
+echo "    ok  ${FR_PASSED} facet-resolution assertions passed"
+
+if [ "$FR_PASSED" -lt 20 ]; then
+  echo "FAIL: expected at least 20 facet-resolution assertions, only ${FR_PASSED} ran." >&2
+  suite_failed "facet resolution (assertion shortfall: floor 20)"
+fi
+
+# ---------------------------------------------------------------------------
 # PR-R1 (20261027090000, REPRODUCIBLE PROVENANCE) rollback and re-apply.
 #
 # The R0 suite above released three attempts and rolled its transaction back,
@@ -1552,6 +1582,93 @@ if [ "$R1_GONE" != "0" ]; then
   suite_failed "R1 provenance rollback (objects survived)"
 else
   echo "    ok  R1 rolled back -- no manifest table, no link columns, no R1 routine, pre-R1 release function restored"
+fi
+
+# The restored pre-R1 function must be the CORRECTED one (20261026093000),
+# never the slug-only 20260830093000 body.
+R1_RESTORED_SCOPED="$(psql -tAq -d "$TEST_DB" -c \
+  "select (p.prosrc ~ 'EXISTS \\(SELECT 1 FROM public\\.scp_competency_facets f2\\s+WHERE f2\\.id = p\\.facet_id\\s+AND f2\\.competency_id = c\\.id\\s+AND f2\\.slug = g\\.facet_slug\\)' and p.prosrc !~ 'WHERE f2\\.slug = g\\.facet_slug')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_release_attempt_report';")"
+if [ "$R1_RESTORED_SCOPED" != "true" ]; then
+  echo "FAIL: the R1 rollback restored a release function without the competency-scoped facet lookup." >&2
+  suite_failed "R1 provenance rollback (restored the slug-only release function)"
+else
+  echo "    ok  the R1 rollback restored the corrected pre-R1 release function (facet by competency + slug)"
+fi
+
+# ── The facet prerequisite: rollback, R1 must refuse, re-apply ────────────
+echo "==> Rolling the facet-resolution prerequisite (20261026093000) back"
+set +e
+FR_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261026093000_scp_release_facet_resolution_rollback.sql 2>&1)"
+FR_BACK_RC=$?
+set -e
+if [ "$FR_BACK_RC" -ne 0 ]; then
+  echo "FAIL: the facet-resolution rollback exited with code ${FR_BACK_RC}." >&2
+  echo "$FR_BACK" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "facet-resolution rollback"
+fi
+FR_SLUG_ONLY="$(psql -tAq -d "$TEST_DB" -c \
+  "select (p.prosrc ~ 'WHERE f2\\.slug = g\\.facet_slug' and p.prosrc !~ 'f2\\.competency_id = c\\.id')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_release_attempt_report';")"
+if [ "$FR_SLUG_ONLY" != "true" ]; then
+  echo "FAIL: after the facet rollback the release function is not the 20260830093000 body." >&2
+  suite_failed "facet-resolution rollback (state not restored)"
+else
+  echo "    ok  facet prerequisite rolled back -- the 20260830093000 slug-only body is back (the defect, by design)"
+fi
+
+echo "==> R1 must refuse while the release function resolves facets by slug alone"
+set +e
+R1_REFUSE_FACET="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261027090000_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
+R1_REFUSE_FACET_RC=$?
+set -e
+if [ "$R1_REFUSE_FACET_RC" -eq 0 ] || ! echo "$R1_REFUSE_FACET" | grep -q "SCP_R1_PRECONDITION: scp_release_attempt_report still resolves guide facets by slug alone"; then
+  echo "FAIL: R1 applied (or failed for another reason) on top of the slug-only release function." >&2
+  echo "$R1_REFUSE_FACET" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "R1 precondition (facet resolution)"
+else
+  echo "    ok  R1 refused: SCP_R1_PRECONDITION (facet resolution) -- nothing installed"
+fi
+
+echo "==> Re-applying the facet-resolution prerequisite"
+set +e
+FR_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261026093000_scp_release_facet_resolution.sql 2>&1)"
+FR_FWD_RC=$?
+set -e
+if [ "$FR_FWD_RC" -ne 0 ]; then
+  echo "FAIL: re-applying the facet-resolution prerequisite exited with code ${FR_FWD_RC}." >&2
+  echo "$FR_FWD" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "facet-resolution re-application"
+else
+  echo "    ok  facet prerequisite re-applied; its apply-time proof passed"
+fi
+
+# ── Hosted-shaped refusal: no option_order_seed, R1 must refuse ───────────
+# The column is renamed, not dropped, so nothing that depends on it is lost;
+# a plpgsql body is resolved at run time and sees only the current name.
+echo "==> R1 must refuse on a database without scp_attempts.option_order_seed"
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c \
+  "ALTER TABLE public.scp_attempts RENAME COLUMN option_order_seed TO option_order_seed_hidden_for_test;" >/dev/null
+set +e
+R1_REFUSE_SEED="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261027090000_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
+R1_REFUSE_SEED_RC=$?
+set -e
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c \
+  "ALTER TABLE public.scp_attempts RENAME COLUMN option_order_seed_hidden_for_test TO option_order_seed;" >/dev/null
+if [ "$R1_REFUSE_SEED_RC" -eq 0 ] || ! echo "$R1_REFUSE_SEED" | grep -q "SCP_R1_PRECONDITION: scp_attempts.option_order_seed is missing"; then
+  echo "FAIL: R1 applied (or failed for another reason) on a schema without option_order_seed." >&2
+  echo "$R1_REFUSE_SEED" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "R1 precondition (option_order_seed)"
+else
+  echo "    ok  R1 refused: SCP_R1_PRECONDITION (option_order_seed) -- nothing installed"
+fi
+R1_NOTHING="$(psql -tAq -d "$TEST_DB" -c \
+  "select count(*) from information_schema.tables where table_schema='public' and table_name='scp_report_computation_manifests';")"
+if [ "$R1_NOTHING" != "0" ]; then
+  echo "FAIL: a refused R1 apply left the manifest table behind." >&2
+  suite_failed "R1 precondition (partial apply)"
 fi
 
 echo "==> Re-applying PR-R1 provenance"

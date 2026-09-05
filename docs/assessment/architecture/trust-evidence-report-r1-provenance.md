@@ -252,3 +252,51 @@ Consequences carried into this file's next revision:
   migration in order. A migration that reads a column another _pending_
   migration introduces needs its own precondition, and the hosted ledger
   frontier must be read before any apply.
+
+## 12. RUN 1 prerequisites (2026-09-04/05): option order refused, facet resolution corrected
+
+**Option order (`20261021090000`).** Reviewed against the merged canonical
+file: nullable `scp_attempts.option_order_seed`, no default, no backfill,
+NULL stays NULL forever (the BEFORE UPDATE trigger refuses NULL → value),
+only new attempts get a seed, only `sjt_best_response` / `sjt_best_worst`
+are shuffled, `biq_frequency` / `sjt_rate_effectiveness` keep their authored
+order structurally, answers stay option-id based, scoring untouched, every
+new function revoked from anon/authenticated. Verdict on the file: safe.
+The hosted apply on 2026-09-04T19:40Z was nevertheless **refused by the
+file's own proof** (`SCP_OPTION_ORDER_ITEM_COUNT: expected 50 Väktare
+items, found 100`) and rolled back whole: production carries two
+`scp_forms` rows with the Väktare slug — `b1c2ca5e` (2026-08-21, items on
+the 48 orphaned facets, 12 attempts) and `ed74e29f` (2026-08-28, the replay,
+1 attempt) — because the uniqueness is `(assessment_version_id, slug)` and
+the retired project's restore left its form beside the replayed one; 16
+other form slugs are duplicated the same way. Nothing was written; digests
+before and after are identical. Re-apply needs a Product Owner decision:
+retire the historical form rows, or scope the proof's count to the form the
+live assessment version references.
+
+**Facet resolution (`20261026093000`, new, between R2A-3 and R1).** The
+release function resolved a guide facet with a slug-only scalar subquery;
+the facet's identity is `(competency_id, slug)`. The prerequisite replaces
+the subquery, in the 20260830093000 body verbatim, with
+
+```
+EXISTS (SELECT 1 FROM public.scp_competency_facets f2
+         WHERE f2.id = p.facet_id
+           AND f2.competency_id = c.id
+           AND f2.slug = g.facet_slug)
+```
+
+No `LIMIT 1`, no `DISTINCT ON`, no row deleted or updated, no FK weakened.
+The same predicate is in the R1 forward function and in the function the R1
+rollback restores; R1's §0 refuses unless the pre-R1 function carries it,
+and R1's §7 asserts it structurally (exactly one facet reference binding
+all three, no slug-only form, no `LIMIT`/`DISTINCT ON`). Proven by
+`scp_release_facet_resolution_test.sql` on valid relational fixtures: a
+second real competency receives the form's facet slugs with wrong-facet
+prompts; the release under duplicates is byte-equal to the clean control,
+wrong prompts are never selected, contributions / signals / classification
+are identical. `db-test.sh` walks R1 rollback → facet rollback → R1 refused
+→ facet re-apply → seed hidden → R1 refused → R1 re-apply.
+
+Production data: the 48 orphan facets and the duplicated forms were **not**
+deleted or modified.

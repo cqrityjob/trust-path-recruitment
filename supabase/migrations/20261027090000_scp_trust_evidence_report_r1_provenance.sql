@@ -64,6 +64,9 @@
 -- by Product Owner decision and the manifest records them as self_report
 -- rows, nothing more.
 --
+-- Requires 20261021090000 (scp_attempts.option_order_seed) and 20261026093000
+-- (guide facets resolved by (competency_id, slug)); §0 refuses otherwise.
+--
 -- Rollback: supabase/rollback/20261027090000_scp_trust_evidence_report_r1_provenance_rollback.sql
 -- =============================================================================
 
@@ -105,6 +108,16 @@ BEGIN
                   WHERE table_schema = 'public' AND table_name = 'scp_attempts'
                     AND column_name = 'option_order_seed') THEN
     RAISE EXCEPTION 'SCP_R1_PRECONDITION: scp_attempts.option_order_seed is missing -- apply 20261021090000 (option order per attempt) first';
+  END IF;
+  -- The pre-R1 function must already resolve guide facets by (competency_id,
+  -- slug) bound to the prompt (20261026093000). A slug-only lookup fails with
+  -- 21000 wherever two facets share a slug (production does), and R1 must
+  -- never build on -- or reintroduce -- it.
+  IF NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                  WHERE n.nspname = 'public' AND p.proname = 'scp_release_attempt_report'
+                    AND p.prosrc ~ 'EXISTS \(SELECT 1 FROM public\.scp_competency_facets f2\s+WHERE f2\.id = p\.facet_id\s+AND f2\.competency_id = c\.id\s+AND f2\.slug = g\.facet_slug\)'
+                    AND p.prosrc !~ 'WHERE f2\.slug = g\.facet_slug') THEN
+    RAISE EXCEPTION 'SCP_R1_PRECONDITION: scp_release_attempt_report still resolves guide facets by slug alone -- apply 20261026093000 (facet resolution) first';
   END IF;
 END
 $pre$;
@@ -1108,8 +1121,15 @@ BEGIN
          AND p.content_status = 'published'
          AND ((g.facet_slug IS NULL AND p.facet_id IS NULL)
            OR (g.facet_slug IS NOT NULL
-               AND p.facet_id = (SELECT f2.id FROM public.scp_competency_facets f2
-                                  WHERE f2.slug = g.facet_slug)))
+               -- The facet is identified by its DOMAIN key, (competency, slug):
+               -- UNIQUE (competency_id, slug). A slug alone is not an identity
+               -- and resolves to more than one row wherever a second competency
+               -- (or a historical row) carries the same slug. Bound relationally,
+               -- never LIMIT 1, never DISTINCT ON.
+               AND EXISTS (SELECT 1 FROM public.scp_competency_facets f2
+                            WHERE f2.id = p.facet_id
+                              AND f2.competency_id = c.id
+                              AND f2.slug = g.facet_slug)))
     ) q;
 
   SELECT coalesce(jsonb_agg(jsonb_build_object(
@@ -1555,6 +1575,27 @@ BEGIN
     RAISE EXCEPTION
       'SCP_OBSERVED_BOUNDARY_MISSING: the release function no longer separates '
       'observed evidence from self-report. That separation is the product.';
+  END IF;
+
+  -- 7.6b The guide facet lookup is structural: exactly one facet reference,
+  -- binding the prompt's facet, the area's competency and the slug together;
+  -- no slug-only scalar subquery, no LIMIT 1, no DISTINCT ON. The same
+  -- predicate 20261026093000 installs, so R1 can never reintroduce the bug.
+  _def := (SELECT p.prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public' AND p.proname = 'scp_release_attempt_report');
+  IF regexp_count(_def, 'scp_competency_facets f2') <> 1
+     OR _def !~ 'EXISTS \(SELECT 1 FROM public\.scp_competency_facets f2\s+WHERE f2\.id = p\.facet_id\s+AND f2\.competency_id = c\.id\s+AND f2\.slug = g\.facet_slug\)'
+     OR _def ~ 'WHERE f2\.slug = g\.facet_slug'
+     OR _def ~ '\(SELECT f2\.id FROM public\.scp_competency_facets'
+     OR _def ~* 'scp_competency_facets[^;]*LIMIT 1'
+     OR _def ~* 'DISTINCT ON \(f2'
+     OR _def !~ 'JOIN public\.scp_competencies c ON c\.code = g\.area_code' THEN
+    RAISE EXCEPTION 'SCP_R1_PROOF: the release function does not resolve the guide facet by (competency_id, slug) bound to the prompt''s facet_id';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+              WHERE n.nspname = 'public' AND p.proname = 'scp_report_manifest_computation'
+                AND p.prosrc ILIKE '%scp_competency_facets f2%') THEN
+    RAISE EXCEPTION 'SCP_R1_PROOF: the manifest builder resolves facets by slug';
   END IF;
 
   -- 7.7 Neither audience contract projects the manifest link or reads the
