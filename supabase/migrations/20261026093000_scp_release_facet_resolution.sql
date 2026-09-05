@@ -1,43 +1,76 @@
--- Rollback for 20261027090000_scp_trust_evidence_report_r1_provenance.sql
--- (PR-R1, REPRODUCIBLE PROVENANCE).
+-- =============================================================================
+-- TRUST Evidence Report — pre-R1 prerequisite: facet resolution by domain key
 --
--- Restores the pre-R1 state exactly: the 20260830093000 release function
--- WITH the 20261026093000 facet correction (verbatim below -- never the
--- slug-only lookup), no manifest table, no link columns on the snapshots, no
--- hash / builder / verifier routines. Nothing an audience reads changes in
--- either direction, because PR-R1 changed no audience document.
+-- ── THE DEFECT ──────────────────────────────────────────────────────────────
 --
--- ── REFUSES WHILE MANIFESTS EXIST ──────────────────────────────────────────
+-- scp_release_attempt_report (20260830093000) selects the interview-guide
+-- prompt for a self-report entry with
 --
--- Dropping the table discards the frozen provenance of every report released
--- since PR-R1 was applied. That is a data loss a rollback must not perform
--- silently. If the loss is intended and approved, run in the same session:
+--     p.facet_id = (SELECT f2.id FROM public.scp_competency_facets f2
+--                    WHERE f2.slug = g.facet_slug)
 --
---     SET scp.discard_manifests = 'yes';
+-- A facet's identity is (competency_id, slug) -- that is the table's UNIQUE
+-- constraint -- and a slug alone is not an identity. Wherever two facets share
+-- a slug the scalar subquery returns two rows and the release fails with
+-- 21000 "more than one row returned by a subquery used as an expression".
+-- Production (wrygicdfxwjnrugduxnt, 2026-09-04) carries 48 historical facet
+-- rows from the retired project's data restore whose competency ids no
+-- longer exist, so every Väktare facet slug exists twice there and the
+-- newest attempt cannot be released. Nothing in the bank, the scoring, the
+-- signal or the report is wrong; the lookup is.
 --
--- The released snapshots themselves are untouched either way: only their
--- manifest_id / canonical_sha256 columns go, and they keep everything else.
+-- ── WHAT THIS FILE DOES ───────────────────────────────────────────────────
 --
--- Immutability: the manifest trigger refuses UPDATE and DELETE by row; DROP
--- TABLE is not a row operation and is not refused, which is why the guard
--- above exists.
+-- One CREATE OR REPLACE of scp_release_attempt_report: the 20260830093000
+-- body, byte-for-byte, except that the guide's facet lookup binds the
+-- prompt's facet to the area's competency AND the slug:
+--
+--     EXISTS (SELECT 1 FROM public.scp_competency_facets f2
+--              WHERE f2.id = p.facet_id
+--                AND f2.competency_id = c.id
+--                AND f2.slug = g.facet_slug)
+--
+-- No LIMIT 1, no DISTINCT ON, no ORDER BY to pick one, no row deleted or
+-- updated, no foreign key weakened. Grants, SECURITY DEFINER posture, pinned
+-- search_path, the audience contracts and the report output contract are
+-- unchanged: for a database where every slug is unique the released
+-- documents are identical before and after (proven in
+-- supabase/tests/scp_release_facet_resolution_test.sql).
+--
+-- ── ORDER ─────────────────────────────────────────────────────────────────
+--
+-- Sits between R2A-3 CONTRACT (20261026090000) and R1 provenance
+-- (20261027090000). R1 refuses unless this correction is in place, and R1's
+-- rollback restores THIS function, never the slug-only one.
+--
+-- Rollback: supabase/rollback/20261026093000_scp_release_facet_resolution_rollback.sql
+-- (restores the 20260830093000 body verbatim; refuses while R1 is applied).
+-- =============================================================================
 
-DO $guard$
-DECLARE _n bigint;
+-- ═══════════════════════════════════════════════════════════════════════════
+-- §0  Refuse unless this is the pre-R1 function this file corrects
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DO $pre$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables
-                  WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests') THEN
-    RAISE NOTICE 'PR-R1 rollback: the manifest table is already absent; continuing to restore the rest';
-    RETURN;
+  IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+              WHERE n.nspname = 'public' AND p.proname = 'scp_report_manifest_computation') THEN
+    RAISE EXCEPTION 'SCP_FACET_PRECONDITION: R1 provenance is applied; this correction belongs before it. Roll R1 back first, or apply the corrected R1.';
   END IF;
-  SELECT count(*) INTO _n FROM public.scp_report_computation_manifests;
-  IF _n > 0 AND current_setting('scp.discard_manifests', true) IS DISTINCT FROM 'yes' THEN
-    RAISE EXCEPTION 'ROLLBACK BLOCKED: % computation manifest(s) exist. Rolling PR-R1 back discards the frozen provenance of every report released since it was applied. If that is approved, SET scp.discard_manifests = ''yes'' in this session and run again.', _n;
+  IF NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                  WHERE n.nspname = 'public' AND p.proname = 'scp_release_attempt_report' AND p.prosecdef
+                    AND p.prosrc LIKE '%_observed_scope%'
+                    AND p.prosrc LIKE '%scp_interview_guide_prompts%'
+                    AND p.prosrc NOT LIKE '%_calculated_at%') THEN
+    RAISE EXCEPTION 'SCP_FACET_PRECONDITION: scp_release_attempt_report is not the 20260830093000 definition this file corrects';
   END IF;
 END
-$guard$;
+$pre$;
 
--- ── 1. The release function, as 20260830093000 + 20261026093000 define it ──
+-- ═══════════════════════════════════════════════════════════════════════════
+-- §1  The release function, corrected
+-- ═══════════════════════════════════════════════════════════════════════════
+
 CREATE OR REPLACE FUNCTION public.scp_release_attempt_report(_attempt_id uuid)
 RETURNS TABLE(participant_snapshot uuid, employer_snapshot uuid)
 LANGUAGE plpgsql
@@ -568,58 +601,64 @@ BEGIN
 END;
 $function$;
 
+COMMENT ON FUNCTION public.scp_release_attempt_report(uuid) IS
+  'Freezes one attempt into two immutable snapshots and their briefs. The '
+  'observed lines are built from counting evidence source types only, so a '
+  'self-description can never be rendered as an observation; self-reported '
+  'patterns occupy their own key. Neither brief contains a total, a percentage, '
+  'a ranking, a suitability statement or an employment recommendation -- those '
+  'are absent from the derivation rather than filtered from it. Guide facets '
+  'resolve by (competency_id, slug) bound to the prompt''s facet (20261026093000).';
+
 REVOKE ALL     ON FUNCTION public.scp_release_attempt_report(uuid) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION public.scp_release_attempt_report(uuid) TO authenticated;
 
--- ── 2. The link columns ────────────────────────────────────────────────────
--- ALTER TABLE does not fire the row-level immutability trigger; no snapshot
--- row is updated or deleted here.
-ALTER TABLE public.scp_report_snapshots
-  DROP CONSTRAINT IF EXISTS scp_report_snapshots_manifest_pair;
-DROP INDEX IF EXISTS public.scp_report_snapshots_manifest_idx;
-ALTER TABLE public.scp_report_snapshots
-  DROP COLUMN IF EXISTS manifest_id,
-  DROP COLUMN IF EXISTS canonical_sha256;
+-- ═══════════════════════════════════════════════════════════════════════════
+-- §2  Proof, at apply time: the predicate is structural, not a text fragment
+-- ═══════════════════════════════════════════════════════════════════════════
 
--- ── 3. The routines, the table, the hash rule ──────────────────────────────
-DROP FUNCTION IF EXISTS public.scp_verify_report_manifest(uuid);
-DROP FUNCTION IF EXISTS public.scp_report_manifest_computation(uuid, timestamptz, text, text);
-DROP TABLE    IF EXISTS public.scp_report_computation_manifests;
-DROP FUNCTION IF EXISTS public.scp_guard_manifest_immutable();
-DROP FUNCTION IF EXISTS public.scp_report_manifest_hash(jsonb);
-
--- ── 4. Proof ───────────────────────────────────────────────────────────────
 DO $proof$
-DECLARE _def text; _bad text;
+DECLARE _src text; _def text; _bad text;
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables
-              WHERE table_schema = 'public' AND table_name = 'scp_report_computation_manifests')
-     OR EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
-                   AND column_name IN ('manifest_id', 'canonical_sha256'))
-     OR EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-                 WHERE n.nspname = 'public'
-                   AND p.proname IN ('scp_verify_report_manifest', 'scp_report_manifest_computation',
-                                     'scp_guard_manifest_immutable', 'scp_report_manifest_hash')) THEN
-    RAISE EXCEPTION 'SCP_R1_ROLLBACK: a PR-R1 object survived';
+  SELECT p.prosrc INTO _src FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'scp_release_attempt_report' AND p.prosecdef
+     AND EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=%');
+  IF _src IS NULL THEN
+    RAISE EXCEPTION 'SCP_FACET_PROOF: the release function is not a pinned SECURITY DEFINER';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-                  WHERE n.nspname = 'public' AND p.proname = 'scp_release_attempt_report' AND p.prosecdef
-                    AND p.prosrc LIKE '%INSERT INTO public.scp_report_snapshots%'
-                    AND p.prosrc NOT LIKE '%scp_report_computation_manifests%'
-                    AND p.prosrc NOT LIKE '%_calculated_at%'
-                    AND p.prosrc ~ 'EXISTS \(SELECT 1 FROM public\.scp_competency_facets f2\s+WHERE f2\.id = p\.facet_id\s+AND f2\.competency_id = c\.id\s+AND f2\.slug = g\.facet_slug\)'
-                    AND p.prosrc !~ 'WHERE f2\.slug = g\.facet_slug') THEN
-    RAISE EXCEPTION 'SCP_R1_ROLLBACK: the release function is not the corrected pre-R1 definition';
+  -- Exactly one facet lookup, and it binds all three: the prompt's facet, the
+  -- area's competency and the slug. No slug-only scalar subquery anywhere.
+  IF regexp_count(_src, 'scp_competency_facets f2') <> 1
+     OR _src !~ 'EXISTS \(SELECT 1 FROM public\.scp_competency_facets f2\s+WHERE f2\.id = p\.facet_id\s+AND f2\.competency_id = c\.id\s+AND f2\.slug = g\.facet_slug\)'
+     OR _src ~ 'WHERE f2\.slug = g\.facet_slug'
+     OR _src ~ '\(SELECT f2\.id FROM public\.scp_competency_facets'
+     OR _src ~* 'scp_competency_facets[^;]*LIMIT 1'
+     OR _src ~* 'DISTINCT ON \(f2' THEN
+    RAISE EXCEPTION 'SCP_FACET_PROOF: the release function does not resolve the guide facet by (competency_id, slug) bound to the prompt''s facet_id';
   END IF;
+  -- The lookup still names the competency the area was joined on.
+  IF _src !~ 'JOIN public\.scp_competencies c ON c\.code = g\.area_code' THEN
+    RAISE EXCEPTION 'SCP_FACET_PROOF: the guide no longer joins the area''s competency as c';
+  END IF;
+  -- Output contract untouched: the same keys the brief and payload have
+  -- carried since 20260830093000, and no new one.
+  IF _src NOT LIKE '%''interview_guide'', _guide%' OR _src NOT LIKE '%''listen_for_en'', to_jsonb(p.listen_for_en)%'
+     OR _src LIKE '%prompt_id%' OR _src LIKE '%_calculated_at%' OR _src LIKE '%scp_report_manifest_computation%' THEN
+    RAISE EXCEPTION 'SCP_FACET_PROOF: the release function output contract moved';
+  END IF;
+  -- Grants exactly as before.
   IF has_function_privilege('anon', 'public.scp_release_attempt_report(uuid)'::regprocedure, 'EXECUTE')
+     OR has_function_privilege('service_role', 'public.scp_release_attempt_report(uuid)'::regprocedure, 'EXECUTE')
      OR NOT has_function_privilege('authenticated', 'public.scp_release_attempt_report(uuid)'::regprocedure, 'EXECUTE') THEN
-    RAISE EXCEPTION 'SCP_R1_ROLLBACK: the release function grants moved';
+    RAISE EXCEPTION 'SCP_FACET_PROOF: the release function grants moved';
   END IF;
-  -- The R2A-3 posture is untouched by this rollback.
-  IF has_table_privilege('authenticated', 'public.scp_report_snapshots', 'SELECT') THEN
-    RAISE EXCEPTION 'SCP_R1_ROLLBACK: the direct snapshot read must still be withdrawn';
+  -- The audience contracts are not touched by this file and never resolve a facet.
+  IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+              WHERE n.nspname = 'public' AND p.proname IN ('scp_participant_report', 'scp_employer_report')
+                AND p.prosrc ILIKE '%scp_competency_facets%') THEN
+    RAISE EXCEPTION 'SCP_FACET_PROOF: an audience contract resolves facets';
   END IF;
+  -- The 20260830093000 vocabulary proof, re-run over the corrected body.
   _def := lower(pg_get_functiondef('public.scp_release_attempt_report(uuid)'::regprocedure));
   FOREACH _bad IN ARRAY ARRAY[
     'hire', 'reject', 'suitab', 'unsuitab', 'recommend', 'rank',
@@ -627,9 +666,18 @@ BEGIN
     'trust_score', 'integrity_score', 'personality'
   ] LOOP
     IF position(_bad IN _def) > 0 THEN
-      RAISE EXCEPTION 'SCP_FORBIDDEN_REPORT_VOCABULARY: the restored release function contains "%"', _bad;
+      RAISE EXCEPTION 'SCP_FORBIDDEN_REPORT_VOCABULARY: the release function contains "%"', _bad;
     END IF;
   END LOOP;
-  RAISE NOTICE 'PR-R1 rolled back: pre-R1 release function restored, manifest objects gone, R2A-3 posture intact';
+  IF position('counts_toward_maturity' IN _def) = 0 THEN
+    RAISE EXCEPTION 'SCP_OBSERVED_BOUNDARY_MISSING: the release function no longer separates observed evidence from self-report';
+  END IF;
+  -- The domain key this file relies on is still the schema's rule.
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conrelid = 'public.scp_competency_facets'::regclass AND contype = 'u'
+                    AND pg_get_constraintdef(oid) = 'UNIQUE (competency_id, slug)') THEN
+    RAISE EXCEPTION 'SCP_FACET_PROOF: scp_competency_facets no longer carries UNIQUE (competency_id, slug)';
+  END IF;
+  RAISE NOTICE 'facet resolution proven: guide facets resolve by (competency_id, slug) bound to the prompt; output contract and grants unchanged';
 END
 $proof$;

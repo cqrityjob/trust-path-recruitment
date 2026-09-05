@@ -68,6 +68,12 @@
 -- through every existing creation path (scp_employer_assign,
 -- scp_start_training_module and the fixtures), none of which is changed.
 --
+-- Proof scope (2026-09-05): the content proof at the end resolves THE Väktare
+-- form through definition slug -> version 1 -> (version, form slug), all
+-- unique keys, so a historical form that shares the slug under another
+-- assessment version is neither counted nor required to be well formed.
+-- The runtime is unchanged by that revision.
+--
 -- Reversible: supabase/rollback/20261021090000_scp_option_order_per_attempt_rollback.sql
 -- drops the column, the two triggers and the four functions, and restores
 -- scp_get_attempt_items byte-for-byte from 20260830091000.
@@ -305,7 +311,7 @@ GRANT  EXECUTE ON FUNCTION public.scp_get_attempt_items(uuid, text) TO authentic
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $$
-DECLARE _n int; _iv uuid; _o uuid;
+DECLARE _n int; _iv uuid; _o uuid; _def uuid; _ver uuid; _form uuid;
 BEGIN
   -- The delivery projection still exposes no answer key. Same predicate as
   -- 20260830091000: block_key names a section of the form, not an answer,
@@ -371,26 +377,72 @@ BEGIN
   END IF;
 
   -- Nothing about the content moved: the Väktare form still carries exactly
-  -- 50 items and 22 randomisable scenario items. Only asserted when the form
-  -- exists (it always does on the canonical path; this keeps the file
-  -- replayable on a bare schema).
-  IF EXISTS (SELECT 1 FROM public.scp_forms WHERE slug = 'security-officer-recruitment-form-a') THEN
-    SELECT count(*) INTO _n
-      FROM public.scp_form_items fi
-      JOIN public.scp_forms f ON f.id = fi.form_id
-     WHERE f.slug = 'security-officer-recruitment-form-a';
+  -- 50 items and 22 randomisable scenario items, and its 24 ordered scales
+  -- keep their authored order under a seed.
+  --
+  -- THE form is resolved by its domain keys, never by slug alone:
+  --   definition   scp_assessment_definitions.slug             UNIQUE (slug)
+  --   version      (definition_id, version_number = 1)         UNIQUE -- the
+  --                version 20260830094000 authored
+  --   form         (assessment_version_id, slug)               UNIQUE
+  -- A form with the same slug under ANOTHER assessment version -- the domain
+  -- allows that, and a historical restore left one on production -- is not
+  -- this form and is not counted. Only asserted when the definition exists
+  -- (it always does on the canonical path; this keeps the file replayable
+  -- on a bare schema); once it exists, the version and the form must too.
+  SELECT d.id INTO _def FROM public.scp_assessment_definitions d
+   WHERE d.slug = 'security-officer-recruitment';
+  IF _def IS NOT NULL THEN
+    SELECT av.id INTO _ver FROM public.scp_assessment_versions av
+     WHERE av.definition_id = _def AND av.version_number = 1;
+    IF _ver IS NULL THEN
+      RAISE EXCEPTION 'SCP_OPTION_ORDER_VERSION_MISSING: security-officer-recruitment has no version 1';
+    END IF;
+    SELECT f.id INTO _form FROM public.scp_forms f
+     WHERE f.assessment_version_id = _ver AND f.slug = 'security-officer-recruitment-form-a';
+    IF _form IS NULL THEN
+      RAISE EXCEPTION 'SCP_OPTION_ORDER_FORM_MISSING: version 1 of security-officer-recruitment has no form security-officer-recruitment-form-a';
+    END IF;
+
+    SELECT count(*) INTO _n FROM public.scp_form_items fi WHERE fi.form_id = _form;
     IF _n <> 50 THEN
-      RAISE EXCEPTION 'SCP_OPTION_ORDER_ITEM_COUNT: expected 50 Väktare items, found %', _n;
+      RAISE EXCEPTION 'SCP_OPTION_ORDER_ITEM_COUNT: expected 50 Väktare items on form %, found %', _form, _n;
     END IF;
     SELECT count(*) INTO _n
       FROM public.scp_form_items fi
-      JOIN public.scp_forms f ON f.id = fi.form_id
       JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
-     WHERE f.slug = 'security-officer-recruitment-form-a'
+     WHERE fi.form_id = _form
        AND fi.randomise_options
        AND NOT public.scp_item_order_is_meaningful(iv.item_format);
     IF _n <> 22 THEN
       RAISE EXCEPTION 'SCP_OPTION_ORDER_SCENARIO_COUNT: expected 22 randomisable scenario items, found %', _n;
+    END IF;
+    SELECT count(*) INTO _n
+      FROM public.scp_form_items fi
+      JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+     WHERE fi.form_id = _form
+       AND public.scp_item_order_is_meaningful(iv.item_format);
+    IF _n <> 24 THEN
+      RAISE EXCEPTION 'SCP_OPTION_ORDER_SCALE_COUNT: expected 24 ordered-scale items, found %', _n;
+    END IF;
+    -- The delivery ORDER BY, evaluated over the live form under a seed: every
+    -- ordered scale comes out in its authored order, whatever its flag says.
+    SELECT count(*) INTO _n
+      FROM public.scp_form_items fi
+      JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+     WHERE fi.form_id = _form
+       AND public.scp_item_order_is_meaningful(iv.item_format)
+       AND (SELECT array_agg(o.id ORDER BY
+                     CASE WHEN fi.randomise_options
+                           AND NOT public.scp_item_order_is_meaningful(iv.item_format)
+                          THEN public.scp_option_order_key(42, iv.id, o.id) END NULLS FIRST,
+                     o.display_order)
+              FROM public.scp_item_options o WHERE o.item_version_id = iv.id)
+           IS DISTINCT FROM
+           (SELECT array_agg(o.id ORDER BY o.display_order)
+              FROM public.scp_item_options o WHERE o.item_version_id = iv.id);
+    IF _n <> 0 THEN
+      RAISE EXCEPTION 'SCP_OPTION_ORDER_SCALE_SHUFFLED: % ordered-scale item(s) would not be delivered in authored order', _n;
     END IF;
   END IF;
 END $$;

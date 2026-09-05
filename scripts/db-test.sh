@@ -988,6 +988,90 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Option-order proof scope (20261021090000). The migration's content proof
+# resolves THE Väktare form through definition slug -> version 1 -> (version,
+# form slug), all unique keys. Production carries a second, historical form
+# with the same slug under another assessment version (the retired project's
+# restore), which made the slug-scoped count read 100. Reproduced here with a
+# VALID twin (its own definition, version and form), committed, then:
+#   1. the migration re-applies (idempotent) and its proof passes -- the twin
+#      is ignored; runtime sources and content digests are unchanged;
+#   2. a malformed LIVE form still fails the proof; a malformed TWIN does not;
+#   3. the twin is removed exactly.
+# Runs BEFORE the destructive rollback step.
+# ---------------------------------------------------------------------------
+echo "==> Option-order proof scope: building the historical same-slug twin"
+OOPS_BEFORE="$(psql -tAq -d "$TEST_DB" -c \
+  "select md5((select p.prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_get_attempt_items') || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_item_options t) || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_item_texts t) || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_form_items t join public.scp_forms f on f.id=t.form_id join public.scp_assessment_versions av on av.id=f.assessment_version_id and av.version_number=1 join public.scp_assessment_definitions d on d.id=av.definition_id and d.slug='security-officer-recruitment') || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_attempts t));")"
+set +e
+OOPS_SETUP="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/tests/scp_option_order_proof_scope_setup.sql 2>&1)"
+OOPS_SETUP_RC=$?
+set -e
+if [ "$OOPS_SETUP_RC" -ne 0 ]; then
+  echo "FAIL: the option-order proof-scope setup exited with code ${OOPS_SETUP_RC}." >&2
+  echo "$OOPS_SETUP" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "option-order proof scope (setup)"
+fi
+echo "    ok  two assessment versions carry a form with the Väktare slug (100 items by slug)"
+
+echo "==> Option-order proof scope: the migration re-applies and ignores the twin"
+set +e
+OOPS_APPLY="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20261021090000_scp_option_order_per_attempt.sql 2>&1)"
+OOPS_APPLY_RC=$?
+set -e
+if [ "$OOPS_APPLY_RC" -ne 0 ]; then
+  echo "FAIL: 20261021090000 did not re-apply with a same-slug historical form present." >&2
+  echo "$OOPS_APPLY" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "option-order proof scope (re-apply with twin)"
+else
+  echo "    ok  20261021090000 re-applied: its proof resolved the live form by version and ignored the twin"
+fi
+OOPS_AFTER="$(psql -tAq -d "$TEST_DB" -c \
+  "select md5((select p.prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_get_attempt_items') || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_item_options t) || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_item_texts t) || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_form_items t join public.scp_forms f on f.id=t.form_id join public.scp_assessment_versions av on av.id=f.assessment_version_id and av.version_number=1 join public.scp_assessment_definitions d on d.id=av.definition_id and d.slug='security-officer-recruitment') || '|' || (select md5(string_agg(t::text, '|' order by t.id)) from public.scp_attempts t));")"
+if [ "$OOPS_BEFORE" != "$OOPS_AFTER" ]; then
+  echo "FAIL: the re-apply changed the delivery function, an option, an item text, the live form or an attempt." >&2
+  suite_failed "option-order proof scope (runtime/content changed)"
+else
+  echo "    ok  delivery function, options, item texts, live form items and attempts are byte-identical after the re-apply"
+fi
+
+echo "==> Option-order proof scope: a malformed live form still fails; a malformed twin does not"
+OOPS_MAL="$(psql -q -d "$TEST_DB" -f supabase/tests/scp_option_order_proof_scope_malformed.sql 2>&1)"
+if ! echo "$OOPS_MAL" | grep -q "SCP_OPTION_ORDER_ITEM_COUNT: expected 50 Väktare items on form .* found 49"; then
+  echo "FAIL: removing one item from the LIVE form did not fail the proof with 'found 49'." >&2
+  echo "$OOPS_MAL" | grep -iE "ERROR:|FEL:|CASE" | head -8 >&2
+  suite_failed "option-order proof scope (malformed live form not refused)"
+else
+  echo "    ok  the live form with 49 items is refused: SCP_OPTION_ORDER_ITEM_COUNT ... found 49"
+fi
+if ! echo "$OOPS_MAL" | grep -q "CASE_B_APPLIED"; then
+  echo "FAIL: removing one item from the historical twin made the proof fail -- it is being counted." >&2
+  echo "$OOPS_MAL" | grep -iE "ERROR:|FEL:|CASE" | head -8 >&2
+  suite_failed "option-order proof scope (twin counted)"
+else
+  echo "    ok  the twin with 49 items is ignored: the migration still applies"
+fi
+OOPS_LIVE_ITEMS="$(psql -tAq -d "$TEST_DB" -c \
+  "select count(*) from public.scp_form_items fi join public.scp_forms f on f.id=fi.form_id join public.scp_assessment_versions av on av.id=f.assessment_version_id and av.version_number=1 join public.scp_assessment_definitions d on d.id=av.definition_id and d.slug='security-officer-recruitment' where f.slug='security-officer-recruitment-form-a';")"
+if [ "$OOPS_LIVE_ITEMS" != "50" ]; then
+  echo "FAIL: the malformed cases did not roll back -- the live form has ${OOPS_LIVE_ITEMS} items." >&2
+  suite_failed "option-order proof scope (rollback of malformed cases)"
+fi
+
+echo "==> Option-order proof scope: removing the twin"
+set +e
+OOPS_CLEAN="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/tests/scp_option_order_proof_scope_cleanup.sql 2>&1)"
+OOPS_CLEAN_RC=$?
+set -e
+if [ "$OOPS_CLEAN_RC" -ne 0 ]; then
+  echo "FAIL: the option-order proof-scope cleanup exited with code ${OOPS_CLEAN_RC}." >&2
+  echo "$OOPS_CLEAN" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "option-order proof scope (cleanup)"
+else
+  echo "    ok  the twin is gone; one Väktare form remains"
+fi
+
+# ---------------------------------------------------------------------------
 # The assessment LANGUAGE contract (PR-V2).
 #
 # The employer picks sv or en when assigning and it is stored on
@@ -1521,6 +1605,36 @@ if [ "$TR0_PASSED" -lt 185 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Facet resolution (20261026093000, carried into R1): the guide facet resolves
+# by (competency_id, slug) bound to the prompt. Valid relational fixtures:
+# a second real competency receives the form's facet slugs with wrong-facet
+# prompts, and the released documents must equal the clean control.
+# Runs BEFORE the rollback step (it reads the SCP content spine).
+# ---------------------------------------------------------------------------
+echo "==> Running facet-resolution assertions"
+set +e
+FR_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_release_facet_resolution_test.sql 2>&1)"
+FR_RC=$?
+set -e
+
+echo "$FR_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+FR_PASSED="$(echo "$FR_OUT" | grep -c "ok  " || true)"
+
+if [ "$FR_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the facet-resolution suite exited with code ${FR_RC}." >&2
+  echo "$FR_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "facet resolution"
+fi
+
+echo "    ok  ${FR_PASSED} facet-resolution assertions passed"
+
+if [ "$FR_PASSED" -lt 20 ]; then
+  echo "FAIL: expected at least 20 facet-resolution assertions, only ${FR_PASSED} ran." >&2
+  suite_failed "facet resolution (assertion shortfall: floor 20)"
+fi
+
+# ---------------------------------------------------------------------------
 # PR-R1 (20261027090000, REPRODUCIBLE PROVENANCE) rollback and re-apply.
 #
 # The R0 suite above released three attempts and rolled its transaction back,
@@ -1552,6 +1666,93 @@ if [ "$R1_GONE" != "0" ]; then
   suite_failed "R1 provenance rollback (objects survived)"
 else
   echo "    ok  R1 rolled back -- no manifest table, no link columns, no R1 routine, pre-R1 release function restored"
+fi
+
+# The restored pre-R1 function must be the CORRECTED one (20261026093000),
+# never the slug-only 20260830093000 body.
+R1_RESTORED_SCOPED="$(psql -tAq -d "$TEST_DB" -c \
+  "select (p.prosrc ~ 'EXISTS \\(SELECT 1 FROM public\\.scp_competency_facets f2\\s+WHERE f2\\.id = p\\.facet_id\\s+AND f2\\.competency_id = c\\.id\\s+AND f2\\.slug = g\\.facet_slug\\)' and p.prosrc !~ 'WHERE f2\\.slug = g\\.facet_slug')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_release_attempt_report';")"
+if [ "$R1_RESTORED_SCOPED" != "true" ]; then
+  echo "FAIL: the R1 rollback restored a release function without the competency-scoped facet lookup." >&2
+  suite_failed "R1 provenance rollback (restored the slug-only release function)"
+else
+  echo "    ok  the R1 rollback restored the corrected pre-R1 release function (facet by competency + slug)"
+fi
+
+# ── The facet prerequisite: rollback, R1 must refuse, re-apply ────────────
+echo "==> Rolling the facet-resolution prerequisite (20261026093000) back"
+set +e
+FR_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261026093000_scp_release_facet_resolution_rollback.sql 2>&1)"
+FR_BACK_RC=$?
+set -e
+if [ "$FR_BACK_RC" -ne 0 ]; then
+  echo "FAIL: the facet-resolution rollback exited with code ${FR_BACK_RC}." >&2
+  echo "$FR_BACK" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "facet-resolution rollback"
+fi
+FR_SLUG_ONLY="$(psql -tAq -d "$TEST_DB" -c \
+  "select (p.prosrc ~ 'WHERE f2\\.slug = g\\.facet_slug' and p.prosrc !~ 'f2\\.competency_id = c\\.id')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_release_attempt_report';")"
+if [ "$FR_SLUG_ONLY" != "true" ]; then
+  echo "FAIL: after the facet rollback the release function is not the 20260830093000 body." >&2
+  suite_failed "facet-resolution rollback (state not restored)"
+else
+  echo "    ok  facet prerequisite rolled back -- the 20260830093000 slug-only body is back (the defect, by design)"
+fi
+
+echo "==> R1 must refuse while the release function resolves facets by slug alone"
+set +e
+R1_REFUSE_FACET="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261027090000_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
+R1_REFUSE_FACET_RC=$?
+set -e
+if [ "$R1_REFUSE_FACET_RC" -eq 0 ] || ! echo "$R1_REFUSE_FACET" | grep -q "SCP_R1_PRECONDITION: scp_release_attempt_report still resolves guide facets by slug alone"; then
+  echo "FAIL: R1 applied (or failed for another reason) on top of the slug-only release function." >&2
+  echo "$R1_REFUSE_FACET" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "R1 precondition (facet resolution)"
+else
+  echo "    ok  R1 refused: SCP_R1_PRECONDITION (facet resolution) -- nothing installed"
+fi
+
+echo "==> Re-applying the facet-resolution prerequisite"
+set +e
+FR_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261026093000_scp_release_facet_resolution.sql 2>&1)"
+FR_FWD_RC=$?
+set -e
+if [ "$FR_FWD_RC" -ne 0 ]; then
+  echo "FAIL: re-applying the facet-resolution prerequisite exited with code ${FR_FWD_RC}." >&2
+  echo "$FR_FWD" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "facet-resolution re-application"
+else
+  echo "    ok  facet prerequisite re-applied; its apply-time proof passed"
+fi
+
+# ── Hosted-shaped refusal: no option_order_seed, R1 must refuse ───────────
+# The column is renamed, not dropped, so nothing that depends on it is lost;
+# a plpgsql body is resolved at run time and sees only the current name.
+echo "==> R1 must refuse on a database without scp_attempts.option_order_seed"
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c \
+  "ALTER TABLE public.scp_attempts RENAME COLUMN option_order_seed TO option_order_seed_hidden_for_test;" >/dev/null
+set +e
+R1_REFUSE_SEED="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261027090000_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
+R1_REFUSE_SEED_RC=$?
+set -e
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c \
+  "ALTER TABLE public.scp_attempts RENAME COLUMN option_order_seed_hidden_for_test TO option_order_seed;" >/dev/null
+if [ "$R1_REFUSE_SEED_RC" -eq 0 ] || ! echo "$R1_REFUSE_SEED" | grep -q "SCP_R1_PRECONDITION: scp_attempts.option_order_seed is missing"; then
+  echo "FAIL: R1 applied (or failed for another reason) on a schema without option_order_seed." >&2
+  echo "$R1_REFUSE_SEED" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "R1 precondition (option_order_seed)"
+else
+  echo "    ok  R1 refused: SCP_R1_PRECONDITION (option_order_seed) -- nothing installed"
+fi
+R1_NOTHING="$(psql -tAq -d "$TEST_DB" -c \
+  "select count(*) from information_schema.tables where table_schema='public' and table_name='scp_report_computation_manifests';")"
+if [ "$R1_NOTHING" != "0" ]; then
+  echo "FAIL: a refused R1 apply left the manifest table behind." >&2
+  suite_failed "R1 precondition (partial apply)"
 fi
 
 echo "==> Re-applying PR-R1 provenance"

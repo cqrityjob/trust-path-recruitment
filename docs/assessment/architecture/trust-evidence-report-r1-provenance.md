@@ -208,3 +208,111 @@ that id, version and focus, in order, and that the brief carries neither key.
 | observed / self-report classification | FROZEN — per item (`classification`), and the registry rule that decides it            |
 | denominator / weighted sum / spread   | FROZEN — per area and per self-report facet                                            |
 | canonical hash                        | FROZEN — CHECK-enforced, pinned rule, verifier                                         |
+
+## 11. Hosted apply, 2026-09-04: applied, regression, rolled back
+
+The canonical file (origin/main `c5c08be`, sha256 `e8bf24f8…af446`) was
+applied verbatim to `wrygicdfxwjnrugduxnt` through the Supabase management
+API and stamped as ledger version `20260904190901`. The apply-time proof
+passed; every read-only verification listed in §6 passed on production; the
+five routines were md5-identical to a local strict replay.
+
+A transient, rolled-back release over the eight releasable attempts then
+found a **regression**: `scp_attempts.option_order_seed` does not exist on
+production, because `20261021090000` (option order per attempt) is still
+pending there, and a plpgsql `%ROWTYPE` field is resolved at run time. The
+R1 release function therefore installed cleanly and failed on every call
+with `42703`. Seven of eight attempts hit it. The eighth
+(`890b7968`, the only post-cutover attempt) fails on the pre-R1 function
+too: 48 orphaned `scp_competency_facets` rows from the retired project's
+data restore (created 2026-07-28, competency ids that no longer exist)
+duplicate every facet slug, and the guide-prompt selection's
+`(SELECT f2.id … WHERE f2.slug = g.facet_slug)` returns two rows (`21000`).
+That defect predates R1 and is reported separately.
+
+The documented rollback was executed the same session. Its proof passed;
+the release function is back at md5 `578cfd1432a7351a830a353c6b57ee77`, the
+value observed before the apply; no R1 object remains; the R2A-3 posture and
+the data (16 / 547 / 34) are unchanged; a transient pre-R1 baseline released
+seven of eight attempts again. The ledger keeps row `20260904190901` whose
+objects no longer exist.
+
+Consequences carried into this file's next revision:
+
+- §0 now refuses with `SCP_R1_PRECONDITION` unless
+  `scp_attempts.option_order_seed` exists.
+- `scp_guard_manifest_immutable()` is revoked from PUBLIC/anon/authenticated
+  (hosted default privileges had granted anon EXECUTE; direct calls fail
+  with "trigger functions can only be called as triggers", so the exposure
+  was inert, but the rule is that no new function arrives reachable).
+- Re-apply order is a Product Owner decision: `20261021090000` first, then
+  this file. The re-apply will create a second ledger row; the 2026-09-04
+  row must then be recorded as a no-op.
+- The local strict replay could not have caught this: it applies every
+  migration in order. A migration that reads a column another _pending_
+  migration introduces needs its own precondition, and the hosted ledger
+  frontier must be read before any apply.
+
+## 12. RUN 1 prerequisites (2026-09-04/05): option order refused, facet resolution corrected
+
+**Option order (`20261021090000`).** Reviewed against the merged canonical
+file: nullable `scp_attempts.option_order_seed`, no default, no backfill,
+NULL stays NULL forever (the BEFORE UPDATE trigger refuses NULL → value),
+only new attempts get a seed, only `sjt_best_response` / `sjt_best_worst`
+are shuffled, `biq_frequency` / `sjt_rate_effectiveness` keep their authored
+order structurally, answers stay option-id based, scoring untouched, every
+new function revoked from anon/authenticated. Verdict on the file: safe.
+The hosted apply on 2026-09-04T19:40Z was nevertheless **refused by the
+file's own proof** (`SCP_OPTION_ORDER_ITEM_COUNT: expected 50 Väktare
+items, found 100`) and rolled back whole: production carries two
+`scp_forms` rows with the Väktare slug — `b1c2ca5e` (2026-08-21, items on
+the 48 orphaned facets, 12 attempts) and `ed74e29f` (2026-08-28, the replay,
+1 attempt) — because the uniqueness is `(assessment_version_id, slug)` and
+the retired project's restore left its form beside the replayed one; 16
+other form slugs are duplicated the same way. Nothing was written; digests
+before and after are identical. Re-apply needs a Product Owner decision:
+retire the historical form rows, or scope the proof's count to the form the
+live assessment version references.
+
+**Facet resolution (`20261026093000`, new, between R2A-3 and R1).** The
+release function resolved a guide facet with a slug-only scalar subquery;
+the facet's identity is `(competency_id, slug)`. The prerequisite replaces
+the subquery, in the 20260830093000 body verbatim, with
+
+```
+EXISTS (SELECT 1 FROM public.scp_competency_facets f2
+         WHERE f2.id = p.facet_id
+           AND f2.competency_id = c.id
+           AND f2.slug = g.facet_slug)
+```
+
+No `LIMIT 1`, no `DISTINCT ON`, no row deleted or updated, no FK weakened.
+The same predicate is in the R1 forward function and in the function the R1
+rollback restores; R1's §0 refuses unless the pre-R1 function carries it,
+and R1's §7 asserts it structurally (exactly one facet reference binding
+all three, no slug-only form, no `LIMIT`/`DISTINCT ON`). Proven by
+`scp_release_facet_resolution_test.sql` on valid relational fixtures: a
+second real competency receives the form's facet slugs with wrong-facet
+prompts; the release under duplicates is byte-equal to the clean control,
+wrong prompts are never selected, contributions / signals / classification
+are identical. `db-test.sh` walks R1 rollback → facet rollback → R1 refused
+→ facet re-apply → seed hidden → R1 refused → R1 re-apply.
+
+Production data: the 48 orphan facets and the duplicated forms were **not**
+deleted or modified.
+
+### 12.1 Option-order proof rescoped (PR #186 hardening, 2026-09-05)
+
+`20261021090000`'s content proof now resolves the Väktare form by its domain
+keys — `scp_assessment_definitions.slug` (unique) → version
+`(definition_id, version_number = 1)` (unique; the version 20260830094000
+authored) → form `(assessment_version_id, slug)` (unique) — and proves that
+form has 50 items, 22 randomisable scenarios, 24 ordered scales, and that
+the delivery `ORDER BY` leaves every ordered scale in authored order under a
+seed. A historical form sharing the slug under another assessment version
+is neither counted nor required to be well formed. No `LIMIT 1`, no
+`DISTINCT ON`, no `created_at`, no production id. Runtime behaviour is
+untouched. `db-test.sh` builds a committed, valid same-slug twin (own
+definition, version and form, the same 50 items), re-applies the migration
+under it, proves a 49-item live form is still refused while a 49-item twin
+is ignored, and removes the twin.
