@@ -29,7 +29,14 @@
 // else. Which link is drawn has never been the boundary and is not the
 // boundary now.
 
-/** The five destinations. Deliberately five.
+/** The five destinations, in the candidate's own order.
+ *
+ *  Min karriär · Mitt Security Passport · Hitta jobb · Yrken och
+ *  karriärvägar · Tester och resultat. The Passport is second because it is
+ *  the durable thing this product builds for a person; jobs, professions and
+ *  tests are what happens around it.
+ *
+ *  Deliberately five.
  *
  *  Career Card, My Profile, the CV and Career Analysis are NOT here: they
  *  belong inside the overview and the account menu respectively. Premium
@@ -71,9 +78,10 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
   {
     key: "myCareer",
     to: "/my-career",
-    // "Översikt": the page. "Min karriär" is the WORKSPACE, and is what the
-    // account menu's context switch calls it.
-    labelKey: "nav.overview",
+    // "Min karriär" — the candidate's own words for this place, and the
+    // same words the account menu's workspace switch uses. "Översikt" named
+    // a page rather than the thing the person came for.
+    labelKey: "nav.my_career",
     // Career Discovery, the Career Journey and the saved Career Analysis
     // are all reached from here and all belong to it in the information
     // architecture, so they keep My Career lit rather than lighting
@@ -88,20 +96,19 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
     ],
   },
   {
-    key: "exploreProfessions",
-    to: "/career-center",
-    labelKey: "nav.exploreProfessions",
-    // The profession explorer is a candidate tool as much as a public page:
-    // "which security roles exist and what do they require" is the question
-    // Career Discovery answers for one person, asked about all of them. It
-    // carries the app chrome for somebody signed in and stays the website's
-    // page for everybody else -- the same route, two chromes, no copy.
-    routeIds: ["/career-center"],
+    key: "passport",
+    to: "/passport",
+    labelKey: "nav.myPassport",
+    // NOT /passport-attestations. That surface lives under the Passport's
+    // name but is authorised by has_employer_role(owner|admin) — it is an
+    // employer's attestation desk, not the holder's Passport, and the
+    // segment-boundary rule in matchesRouteId keeps it out.
+    routeIds: ["/_authenticated/passport"],
   },
   {
     key: "jobs",
     to: "/jobs",
-    labelKey: "nav.jobs",
+    labelKey: "nav.findJobs",
     // Opportunities AND applications — the two halves of the same thing
     // in the candidate's head. /my-career/applications lives under the
     // My Career URL for ownership reasons, and is longer than the
@@ -110,19 +117,20 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
     routeIds: ["/jobs", "/_authenticated/my-career/applications"],
   },
   {
-    key: "passport",
-    to: "/passport",
-    labelKey: "nav.passport",
-    // NOT /passport-attestations. That surface lives under the Passport's
-    // name but is authorised by has_employer_role(owner|admin) — it is an
-    // employer's attestation desk, not the holder's Passport, and the
-    // segment-boundary rule in matchesRouteId keeps it out.
-    routeIds: ["/_authenticated/passport"],
+    key: "exploreProfessions",
+    to: "/career-center",
+    labelKey: "nav.professionsAndPaths",
+    // The profession explorer is a candidate tool as much as a public page:
+    // "which security roles exist and what do they require" is the question
+    // Career Discovery answers for one person, asked about all of them. It
+    // carries the app chrome for somebody signed in and stays the website's
+    // page for everybody else -- the same route, two chromes, no copy.
+    routeIds: ["/career-center"],
   },
   {
     key: "assessments",
     to: "/academy",
-    labelKey: "nav.myAssessments",
+    labelKey: "nav.testsAndResults",
     // The URL says "academy" for historical reasons and stays that way —
     // renaming a route to fix a label is how link rot starts. The label
     // is the product name; the path is an implementation detail nobody is

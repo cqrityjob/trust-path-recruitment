@@ -1,9 +1,23 @@
 // The words for every next-best action — one table per sentence, keyed by
 // the engine's kinds so a kind cannot ship without its copy.
 //
-// Split out of NextActions.tsx so the component file exports only
-// components (fast refresh) and so the explore section can speak about a
-// lower-ranked action in exactly the words the workspace would have used.
+// Split out of NextBestAction.tsx so the component file exports only
+// components (fast refresh) and so other sections can speak about a
+// lower-ranked action in exactly the words the primary card would have used.
+//
+// ── TWO RULES THE COPY OBEYS ───────────────────────────────────────────
+//
+// 1. Never a vague object. "Din rapport är klar" names nothing: which
+//    report, from whom, and what is "klar"? Every title here names the
+//    thing it is about, and every counted sentence is authored in both
+//    grammatical numbers rather than templated — Swedish inflects the noun
+//    AND the participle, and "2 rapport har gjorts tillgänglig" is the kind
+//    of sentence a Swedish reader reads as "this was not built for me".
+//
+// 2. No product name the Swedish page does not use. The candidate-facing
+//    Swedish name for the assessment is "karriäranalysen"; "Career
+//    Discovery" is an internal name and does not appear on this surface.
+//    "Security Passport" stays, because it is the registered product name.
 
 import type { CompletenessSection } from "@/lib/professional-identity/completeness";
 import type { ActionKind, NextBestAction } from "@/lib/professional-identity/next-best-action";
@@ -14,19 +28,48 @@ const TITLE: Readonly<Record<ActionKind, Copy>> = {
   complete_assessment_assignment: c("Slutför din bedömning", "Complete your assessment"),
   prepare_interview: c("Förbered din intervju", "Prepare for your interview"),
   respond_to_clarification: c("Svara granskaren", "Respond to the reviewer"),
-  read_released_report: c("Din nya rapport är klar", "Your new report is ready"),
-  review_verification_outcome: c("Ett beslut om din uppgift", "A decision about your entry"),
-  complete_profile_basics: c("Fyll i din profil", "Fill in your profile"),
+  // Never "Din rapport är klar": that names no object and no sender, and it
+  // was singular on a page that could be about two reports at once. The
+  // counted title below replaces it whenever a count exists.
+  read_released_report: c(
+    "Ett nytt resultat har delats med dig",
+    "A new result has been shared with you",
+  ),
+  review_verification_outcome: c(
+    "Beslut om en merit i ditt Security Passport",
+    "A decision about a merit in your Security Passport",
+  ),
+  complete_profile_basics: c("Komplettera dina uppgifter", "Complete your details"),
   start_passport: c("Öppna ditt Security Passport", "Open your Security Passport"),
-  submit_passport_verification: c("Skicka in för verifiering", "Submit for verification"),
-  take_career_discovery: c("Gör Career Discovery", "Take Career Discovery"),
+  resume_draft_merits: c("Slutför dina påbörjade meriter", "Finish the merits you started"),
+  submit_passport_verification: c("Verifiera dina meriter", "Get your merits verified"),
+  take_career_discovery: c("Gör din karriäranalys", "Take your career analysis"),
   // "Visa", not "Skapa". The card is rendered from the report on arrival and
   // this action fires only when the report NAMES careers, so the card already
   // exists in every sense the holder cares about.
   create_career_card: c("Ditt Career Card", "Your Career Card"),
-  create_cv: c("Skapa ditt CV", "Create your CV"),
+  create_cv: c("Skapa CV från dina meriter", "Create a CV from your merits"),
   open_cv: c("Ditt CV", "Your CV"),
-  explore_jobs: c("Utforska jobb inom säkerhet", "Explore security jobs"),
+  explore_jobs: c("Lediga jobb som matchar din inriktning", "Open roles matching your direction"),
+};
+
+/** The counted titles, where a count changes the noun. Swedish inflects, so
+ *  both forms are authored rather than produced from one string. */
+const TITLE_COUNTED: Readonly<Partial<Record<ActionKind, PluralCopy>>> = {
+  read_released_report: cp(
+    c("Ett nytt resultat har delats med dig", "A new result has been shared with you"),
+    c("{0} nya resultat har delats med dig", "{0} new results have been shared with you"),
+  ),
+  review_verification_outcome: cp(
+    c(
+      "Beslut om en merit i ditt Security Passport",
+      "A decision about a merit in your Security Passport",
+    ),
+    c(
+      "Beslut om {0} meriter i ditt Security Passport",
+      "Decisions about {0} merits in your Security Passport",
+    ),
+  ),
 };
 
 /**
@@ -49,8 +92,8 @@ const WHY: Readonly<Record<ActionKind, Copy>> = {
     "A reviewer is waiting for an answer from you.",
   ),
   read_released_report: c(
-    "En rapport har gjorts tillgänglig för dig.",
-    "A report has been made available to you.",
+    "En arbetsgivare har delat ett bedömningsresultat med dig.",
+    "An employer has shared an assessment result with you.",
   ),
   review_verification_outcome: c(
     "Granskningen ledde inte till en verifiering.",
@@ -61,31 +104,37 @@ const WHY: Readonly<Record<ActionKind, Copy>> = {
     "Your professional title or profession is missing.",
   ),
   start_passport: c(
-    "Du har inget Security Passport ännu.",
-    "You do not have a Security Passport yet.",
+    "Ditt Security Passport innehåller inga meriter ännu.",
+    "Your Security Passport holds no merits yet.",
+  ),
+  resume_draft_merits: c(
+    "Du har påbörjade meriter som inte är färdiga.",
+    "You have merits you started and did not finish.",
   ),
   submit_passport_verification: c(
-    "Du har uppgifter som ingen har granskat.",
-    "You have entries nobody has reviewed.",
+    "Du har registrerade meriter som ännu inte är verifierade.",
+    "You have recorded merits that are not verified yet.",
   ),
   take_career_discovery: c(
-    "Du har inte gjort Career Discovery.",
-    "You have not taken Career Discovery.",
+    "Du har inte gjort karriäranalysen ännu.",
+    "You have not taken the career analysis yet.",
   ),
   create_career_card: c(
-    "Din rapport namnger yrken som kan sättas på ett kort.",
-    "Your report names professions that a card can present.",
+    "Din karriäranalys namnger yrken som kan sättas på ett kort.",
+    "Your career analysis names professions that a card can present.",
   ),
   create_cv: c(
     "Du har tillräckligt registrerat för att bygga ett CV.",
     "You have enough recorded to build a CV.",
   ),
   open_cv: c("Du har ett sparat CV.", "You have a saved CV."),
-  explore_jobs: c("Du har inte sökt något jobb ännu.", "You have not applied for anything yet."),
+  explore_jobs: c(
+    "Det finns lediga jobb inom din inriktning.",
+    "There are open roles within your direction.",
+  ),
 };
 
-/** The counted reasons, in both grammatical forms. Swedish inflects the noun
- *  and the participles, so both are authored rather than templated. */
+/** The counted reasons, in both grammatical forms. */
 const WHY_COUNTED: Readonly<Partial<Record<ActionKind, PluralCopy>>> = {
   complete_assessment_assignment: cp(
     c(
@@ -102,20 +151,23 @@ const WHY_COUNTED: Readonly<Partial<Record<ActionKind, PluralCopy>>> = {
     c("{0} intervjuer väntar på dig.", "{0} interviews are waiting for you."),
   ),
   read_released_report: cp(
-    c("{0} rapport har gjorts tillgänglig för dig.", "{0} report has been made available to you."),
     c(
-      "{0} rapporter har gjorts tillgängliga för dig.",
-      "{0} reports have been made available to you.",
+      "En arbetsgivare har delat {0} bedömningsresultat med dig.",
+      "An employer has shared {0} assessment result with you.",
+    ),
+    c(
+      "Arbetsgivare har delat {0} bedömningsresultat med dig.",
+      "Employers have shared {0} assessment results with you.",
     ),
   ),
   review_verification_outcome: cp(
     c(
-      "{0} uppgift fick ett beslut som inte blev en verifiering.",
-      "{0} entry received a decision that did not become a verification.",
+      "{0} merit fick ett beslut som inte blev en verifiering.",
+      "{0} merit received a decision that did not become a verification.",
     ),
     c(
-      "{0} uppgifter fick beslut som inte blev verifieringar.",
-      "{0} entries received decisions that did not become verifications.",
+      "{0} meriter fick beslut som inte blev verifieringar.",
+      "{0} merits received decisions that did not become verifications.",
     ),
   ),
   respond_to_clarification: cp(
@@ -125,14 +177,35 @@ const WHY_COUNTED: Readonly<Partial<Record<ActionKind, PluralCopy>>> = {
     ),
     c("{0} granskare väntar på svar från dig.", "{0} reviewers are waiting for answers from you."),
   ),
-  submit_passport_verification: cp(
+  resume_draft_merits: cp(
     c(
-      "{0} uppgift är inlagd men ännu inte granskad.",
-      "{0} entry is recorded but not yet reviewed.",
+      "Du har {0} påbörjad merit som inte är färdig.",
+      "You have {0} unfinished merit you started.",
     ),
     c(
-      "{0} uppgifter är inlagda men ännu inte granskade.",
-      "{0} entries are recorded but not yet reviewed.",
+      "Du har {0} påbörjade meriter som inte är färdiga.",
+      "You have {0} unfinished merits you started.",
+    ),
+  ),
+  // The brief's exact sentence for the eight-unverified-merits state.
+  submit_passport_verification: cp(
+    c(
+      "Du har {0} registrerad merit som ännu inte är verifierad.",
+      "You have {0} recorded merit that is not verified yet.",
+    ),
+    c(
+      "Du har {0} registrerade meriter som ännu inte är verifierade.",
+      "You have {0} recorded merits that are not verified yet.",
+    ),
+  ),
+  explore_jobs: cp(
+    c(
+      "{0} ledigt jobb matchar din inriktning just nu.",
+      "{0} open role matches your direction right now.",
+    ),
+    c(
+      "{0} lediga jobb matchar din inriktning just nu.",
+      "{0} open roles match your direction right now.",
     ),
   ),
 };
@@ -153,12 +226,12 @@ const OUTCOME: Readonly<Record<ActionKind, Copy>> = {
     "The review is on hold until you answer.",
   ),
   read_released_report: c(
-    "Se vilket underlag arbetsgivaren har valt att dela.",
+    "Se vilket underlag arbetsgivaren har valt att dela med dig.",
     "See what the employer has chosen to share with you.",
   ),
   review_verification_outcome: c(
-    "Du kan rätta uppgiften eller skicka in den igen.",
-    "You can correct the entry or submit it again.",
+    "Du kan rätta meriten eller skicka in den igen.",
+    "You can correct the merit or submit it again.",
   ),
   complete_profile_basics: c(
     "Yrkestiteln och yrket används av allt annat i CQrityjob.",
@@ -168,23 +241,28 @@ const OUTCOME: Readonly<Record<ActionKind, Copy>> = {
     "Passet skiljer på vad du uppger och vad som faktiskt har verifierats.",
     "The Passport keeps what you state separate from what has actually been verified.",
   ),
+  resume_draft_merits: c(
+    "En påbörjad merit syns bara för dig och kan inte granskas.",
+    "An unfinished merit is visible only to you and cannot be reviewed.",
+  ),
+  // The brief's exact sentence.
   submit_passport_verification: c(
-    "En behörig granskare avgör, och det som godkänns blir verifierat.",
-    "An authorised reviewer decides, and what passes becomes verified.",
+    "Verifierade meriter stärker ditt Security Passport när du delar det med arbetsgivare.",
+    "Verified merits strengthen your Security Passport when you share it with employers.",
   ),
   // The duration comes from the instrument, not from copy — three surfaces
   // stated three different figures for the same assessment.
   take_career_discovery: c(
-    `${DURATION_CLAIM.sv}. Ger dig en karriärriktning och underlaget till ditt Career Card.`,
-    `${DURATION_CLAIM.en}. Gives you a career direction and the basis for your Career Card.`,
+    `${DURATION_CLAIM.sv}. Du får en karriärriktning och underlaget till ditt Career Card.`,
+    `${DURATION_CLAIM.en}. You get a career direction and the basis for your Career Card.`,
   ),
   create_career_card: c(
     "Din profil som ett kort du kan dela.",
     "Your profile as a card you can share.",
   ),
   create_cv: c(
-    "Byggt av det du redan har registrerat. Inget hittas på.",
-    "Built from what you have already recorded. Nothing is invented.",
+    "Byggt av de meriter du redan har registrerat. Ingenting läggs till som du inte själv har fyllt i.",
+    "Built from the merits you have already recorded. Nothing is added that you did not fill in yourself.",
   ),
   open_cv: c(
     "Öppna, redigera eller exportera det du har sparat.",
@@ -202,17 +280,53 @@ const VERB: Readonly<Record<ActionKind, Copy>> = {
   complete_assessment_assignment: c("Öppna bedömningen", "Open the assessment"),
   prepare_interview: c("Om intervjun", "About the interview"),
   respond_to_clarification: c("Öppna granskningen", "Open the review"),
-  read_released_report: c("Läs rapporten", "Read the report"),
+  read_released_report: c("Läs resultatet", "Read the result"),
   review_verification_outcome: c("Se beslutet", "See the decision"),
-  complete_profile_basics: c("Fyll i profilen", "Complete your profile"),
+  complete_profile_basics: c("Fyll i uppgiften", "Fill in the detail"),
   start_passport: c("Öppna Security Passport", "Open the Security Passport"),
-  submit_passport_verification: c("Skicka in för granskning", "Submit for review"),
-  take_career_discovery: c("Starta Career Discovery", "Start Career Discovery"),
+  resume_draft_merits: c("Slutför meriten", "Finish the merit"),
+  submit_passport_verification: c("Välj meriter att verifiera", "Choose merits to verify"),
+  take_career_discovery: c("Starta karriäranalysen", "Start the career analysis"),
   create_career_card: c("Visa Career Card", "View Career Card"),
   create_cv: c("Skapa CV", "Create CV"),
   open_cv: c("Öppna ditt CV", "Open your CV"),
-  explore_jobs: c("Utforska jobb", "Browse jobs"),
+  explore_jobs: c("Se lediga jobb", "See open roles"),
 };
+
+/**
+ * One quiet alternative beside the primary button.
+ *
+ * A text link, never a second button: the page shows exactly one visually
+ * primary call to action, and the way to offer a second option without
+ * breaking that is to make it obviously secondary. Null for every action
+ * with no meaningful alternative — an empty link is worse than none.
+ */
+const SECONDARY_LINK: Readonly<Partial<Record<ActionKind, { label: Copy; href: string }>>> = {
+  submit_passport_verification: {
+    label: c("Lägg till en merit", "Add a merit"),
+    href: "/passport/credentials/new",
+  },
+  start_passport: {
+    label: c("Lägg till en merit", "Add a merit"),
+    href: "/passport/credentials/new",
+  },
+  resume_draft_merits: {
+    label: c("Lägg till en merit", "Add a merit"),
+    href: "/passport/credentials/new",
+  },
+  take_career_discovery: {
+    label: c("Utforska yrken och karriärvägar", "Explore professions and career paths"),
+    href: "/career-center",
+  },
+  explore_jobs: {
+    label: c("Följ mina ansökningar", "Track my applications"),
+    href: "/my-career/applications",
+  },
+};
+
+export function secondaryLinkFor(kind: ActionKind): { label: Copy; href: string } | null {
+  return SECONDARY_LINK[kind] ?? null;
+}
 
 /* ------------------------------------------------------------------ */
 /* The profile action, said in the words of the thing it asks for       */
@@ -233,7 +347,7 @@ const SECTION_TITLE: Readonly<Record<CompletenessSection, Copy>> = {
   education: c("Lägg till din utbildning", "Add your education"),
   skills: c("Lägg till dina färdigheter", "Add your skills"),
   languages: c("Lägg till dina språk", "Add your languages"),
-  careerDirection: c("Gör Career Discovery", "Take Career Discovery"),
+  careerDirection: c("Gör din karriäranalys", "Take your career analysis"),
 };
 
 const SECTION_WHY: Readonly<Record<CompletenessSection, Copy>> = {
@@ -249,7 +363,10 @@ const SECTION_WHY: Readonly<Record<CompletenessSection, Copy>> = {
   education: c("Du har ingen utbildning registrerad.", "You have no education recorded."),
   skills: c("Du har inga färdigheter registrerade.", "You have no skills recorded."),
   languages: c("Du har inga språk registrerade.", "You have no languages recorded."),
-  careerDirection: c("Du har inte gjort Career Discovery.", "You have not taken Career Discovery."),
+  careerDirection: c(
+    "Du har inte gjort karriäranalysen ännu.",
+    "You have not taken the career analysis yet.",
+  ),
 };
 
 const SECTION_OUTCOME: Readonly<Record<CompletenessSection, Copy>> = {
@@ -290,8 +407,8 @@ const SECTION_OUTCOME: Readonly<Record<CompletenessSection, Copy>> = {
     "Languages appear to employers on your CV.",
   ),
   careerDirection: c(
-    "Ger dig en karriärriktning och underlaget till ditt Career Card.",
-    "Gives you a career direction and the basis for your Career Card.",
+    "Du får en karriärriktning och underlaget till ditt Career Card.",
+    "You get a career direction and the basis for your Career Card.",
   ),
 };
 
@@ -305,7 +422,7 @@ const SECTION_VERB: Readonly<Record<CompletenessSection, Copy>> = {
   education: c("Lägg till utbildning", "Add education"),
   skills: c("Lägg till färdighet", "Add a skill"),
   languages: c("Lägg till språk", "Add a language"),
-  careerDirection: c("Starta Career Discovery", "Start Career Discovery"),
+  careerDirection: c("Starta karriäranalysen", "Start the career analysis"),
 };
 
 /** The action's words, specialised by section where it has one. Falls back
@@ -324,6 +441,14 @@ export function wordsFor(
     };
   }
   return { title: TITLE[kind], why: WHY[kind], outcome: OUTCOME[kind], verb: VERB[kind] };
+}
+
+/** The title, counted where a count changes the noun. */
+export function titleFor(action: NextBestAction, l: Lang): string {
+  const { title } = wordsFor(action.kind, action.section);
+  if (action.section || action.count === null) return L(title, l);
+  const counted = TITLE_COUNTED[action.kind];
+  return counted ? Lp(counted, l, action.count) : L(title, l);
 }
 
 /** The reason line, counted or not. */

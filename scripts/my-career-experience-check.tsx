@@ -77,24 +77,32 @@ await mock.module("@tanstack/react-router", () => ({
 }));
 
 const { I18nProvider } = await import("../src/i18n/context");
-const { NextActions } = await import("../src/components/professional-identity/NextActions");
-const { ExploreAndGrow } = await import("../src/components/professional-identity/ExploreAndGrow");
-const { ActiveWork } = await import("../src/components/professional-identity/ActiveWork");
+const { NextBestAction } = await import("../src/components/professional-identity/NextBestAction");
+const { CareerTools } = await import("../src/components/professional-identity/CareerTools");
 const { RecentActivity } = await import("../src/components/professional-identity/RecentActivity");
-const { CareerJourney } = await import("../src/components/professional-identity/CareerJourney");
-const { ProfessionalIdentityHeader } = await import(
-  "../src/components/professional-identity/ProfessionalIdentityHeader"
-);
-const { computeNextBestActions } = await import(
-  "../src/lib/professional-identity/next-best-action"
-);
-const { buildHomePresentation } = await import(
-  "../src/lib/professional-identity/home-presentation"
-);
+const { PassportSummary } = await import("../src/components/professional-identity/PassportSummary");
+const { CareerPageHeader } =
+  await import("../src/components/professional-identity/CareerPageHeader");
+const { CareerDirectionSection } =
+  await import("../src/components/professional-identity/CareerDirectionSection");
+const { JobRecommendations } =
+  await import("../src/components/professional-identity/JobRecommendations");
+const { ApplicationsAndResults } =
+  await import("../src/components/professional-identity/ApplicationsAndResults");
+const { ProfessionalIdentityHeader } =
+  await import("../src/components/professional-identity/ProfessionalIdentityHeader");
+const { computeNextBestActions } =
+  await import("../src/lib/professional-identity/next-best-action");
+const { deriveVerificationAttention } =
+  await import("../src/lib/professional-identity/verification-attention");
+const { buildCareerHomeViewModel } =
+  await import("../src/lib/professional-identity/home-presentation");
 
 const fails: string[] = [];
-function ck(name: string, ok: boolean): void {
-  console.log(`  ${ok ? "ok  " : "FAIL"} ${name}`);
+function ck(name: string, ok: boolean, detail?: unknown): void {
+  console.log(
+    `  ${ok ? "ok  " : "FAIL"} ${name}${ok || detail === undefined ? "" : ` — ${String(detail)}`}`,
+  );
   if (!ok) fails.push(name);
 }
 function group(name: string): void {
@@ -132,7 +140,12 @@ const EMPTY: ProfessionalIdentityV1 = {
   workSubJurisdiction: null,
   employment: [],
   claims: [],
-  discovery: { hasCompletedReport: false, snapshotId: null, generatedAt: null, namesCareers: false },
+  discovery: {
+    hasCompletedReport: false,
+    snapshotId: null,
+    generatedAt: null,
+    namesCareers: false,
+  },
   workload: {
     applicationCount: 0,
     assessmentAssignmentCount: 0,
@@ -180,7 +193,12 @@ const DUBAI = identity({
   yearsOfExperience: "5-10",
   hasPassport: true,
   claims: [claim({ assertionLevel: "verified" }), claim({ id: "c2" })],
-  discovery: { hasCompletedReport: true, snapshotId: "s1", generatedAt: "2026-01-01", namesCareers: true },
+  discovery: {
+    hasCompletedReport: true,
+    snapshotId: "s1",
+    generatedAt: "2026-01-01",
+    namesCareers: true,
+  },
 });
 
 const NOW = new Date("2026-09-03T12:00:00Z");
@@ -188,12 +206,13 @@ const NOW = new Date("2026-09-03T12:00:00Z");
 /** The presentation model with every optional read still loading — the
  *  identity alone, which is what the engine ranked on before. */
 function model(id: ProfessionalIdentityV1, over: Partial<HomePresentationInput> = {}) {
-  return buildHomePresentation({
+  return buildCareerHomeViewModel({
     identity: id,
     verificationAttention: null,
     assignments: { state: "loading" },
     interviews: { state: "loading" },
     applications: { state: "loading" },
+    jobs: { state: "loading" },
     now: NOW,
     ...over,
   });
@@ -205,14 +224,38 @@ function render(node: React.ReactElement): string {
   return renderToStaticMarkup(<I18nProvider>{node}</I18nProvider>);
 }
 
-/** The whole action surface for one state: the workspace plus the explore
- *  section, which between them must carry every action the engine returned. */
+/** The whole action surface for one state: the ONE recommended next step
+ *  plus the career tools, which between them carry every destination the
+ *  home offers. */
 function renderActions(id: ProfessionalIdentityV1, over: Partial<HomePresentationInput> = {}) {
   const m = model(id, over);
   return {
     m,
     html:
-      render(<NextActions workspace={m.workspace} />) + render(<ExploreAndGrow items={m.explore} />),
+      render(<NextBestAction next={m.nextAction} calm={m.calm} />) +
+      render(<CareerTools tools={m.tools} />),
+  };
+}
+
+/** Every section of the redesigned home, for the properties that are about
+ *  the PAGE rather than about one component — "exactly one primary CTA" and
+ *  "every action the engine returned is still reachable" are both of those.
+ *  The sections own their own facts now: a released result is a row under
+ *  Tests and results, an open role is a row under Open roles, and neither is
+ *  a second card competing with the recommendation. */
+function renderPage(id: ProfessionalIdentityV1, over: Partial<HomePresentationInput> = {}) {
+  const m = model(id, over);
+  return {
+    m,
+    html:
+      render(<CareerPageHeader profile={m.profile} />) +
+      render(<NextBestAction next={m.nextAction} calm={m.calm} />) +
+      render(<PassportSummary passport={m.passport} />) +
+      render(<CareerDirectionSection career={m.career} />) +
+      render(<JobRecommendations jobs={m.jobs} />) +
+      render(<ApplicationsAndResults assessments={m.assessments} jobs={m.jobs} />) +
+      render(<CareerTools tools={m.tools} />) +
+      render(<RecentActivity activity={m.activity} now={NOW} />),
   };
 }
 
@@ -259,7 +302,10 @@ group("1 · exactly one primary next action");
 
   for (const [label, id] of cases) {
     const { html } = renderActions(id);
-    ck(`${label}: exactly one element is marked primary`, count(html, 'data-next-action="primary"') === 1);
+    ck(
+      `${label}: exactly one element is marked primary`,
+      count(html, 'data-next-action="primary"') === 1,
+    );
     ck(`${label}: exactly one primary call to action`, count(html, "data-primary-cta") === 1);
   }
 
@@ -292,18 +338,46 @@ group("1 · exactly one primary next action");
         releasedReportAttemptId: "a1",
       },
     });
-    const { m, html } = renderActions(many);
-    const engine = computeNextBestActions(many, m.signals).all;
+    const { m, html } = renderPage(many, {
+      // Every read ANSWERED: reachability is a property of the rendered
+      // page, and a section that has not loaded yet legitimately links to
+      // nothing.
+      verificationAttention: deriveVerificationAttention([], NOW),
+      activeReport: { kind: "none" },
+      applications: { state: "ready", rows: [] },
+      jobs: { state: "ready", rows: [] },
+      assignments: {
+        state: "ready",
+        rows: [
+          {
+            attemptId: "a1",
+            mode: "assessment",
+            programmeNameSv: "P",
+            programmeNameEn: "P",
+            employerName: "E",
+            attemptStatus: "released",
+            answered: 1,
+            totalItems: 1,
+            deadline: null,
+            releasedAt: "2026-09-01T09:00:00Z",
+            purposeSv: null,
+            purposeEn: null,
+          },
+        ],
+      },
+    });
+    const engine = computeNextBestActions(many, m.signals, NOW).all;
     ck("more than one action qualified in this state", engine.length > 1);
     ck(
-      "every qualifying action is still reachable by href",
+      "every qualifying action is still reachable somewhere on the page",
       engine.every((a) => html.includes(`href="${a.href}"`)),
+      engine.filter((a) => !html.includes(`href="${a.href}"`)).map((a) => a.kind),
     );
-    ck(
-      "and the ones that are not the recommendation are marked secondary or more",
-      count(html, 'data-next-action="secondary"') + count(html, 'data-next-action="more"') ===
-        engine.length - 1,
-    );
+    // And exactly one of them wears the primary treatment. The rest are rows
+    // in the section that owns them, never a second card asking for
+    // attention.
+    ck("still exactly one primary call to action", count(html, "data-primary-cta") === 1);
+    ck("no second card is marked as a next action", count(html, 'data-next-action="') === 1);
   }
 }
 
@@ -340,12 +414,17 @@ group("2 · every call to action names what it does");
   // And a reason, which is the half the three-card treatment had nowhere to
   // put. A recommendation nobody can interrogate is an instruction. The
   // classification is said in words beside it.
-  const { html } = renderActions(DUBAI);
+  const { html } = renderActions(DUBAI, {
+    verificationAttention: deriveVerificationAttention([], NOW),
+  });
   ck(
     "the recommendation states what kind of thing it is",
-    /Förslag|Nytt för dig|Kräver din åtgärd/.test(html),
+    /Rekommenderat nästa steg|Nytt för dig|Kräver din åtgärd|Pågår/.test(html),
   );
-  ck("and why it is being made", html.includes("1 uppgift är inlagd men ännu inte granskad."));
+  ck(
+    "and why it is being made",
+    html.includes("Du har 1 registrerad merit som ännu inte är verifierad."),
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -363,7 +442,10 @@ group("3 · the Career Discovery gate reaches the rendering");
   });
   const open = renderActions(fresh, { careerDiscoveryOpen: true }).html;
   const closed = renderActions(fresh, { careerDiscoveryOpen: false }).html;
-  ck("an admitted candidate is offered the assessment", open.includes('href="/security-career-assessment"'));
+  ck(
+    "an admitted candidate is offered the assessment",
+    open.includes('href="/security-career-assessment"'),
+  );
   ck(
     "a candidate the gate refuses is NOT offered it",
     !closed.includes('href="/security-career-assessment"'),
@@ -398,18 +480,20 @@ group("4 · one Career Card verb across the page");
 group("5 · no identifier reaches the screen");
 {
   const hero = render(<ProfessionalIdentityHeader identity={DUBAI} />);
-  const compact = render(<ProfessionalIdentityHeader identity={DUBAI} variant="compact" />);
-  const journey = render(<CareerJourney identity={DUBAI} />);
-  const html = hero + compact + journey;
+  // The home's own header, which is where the profession and the work
+  // location now reach a candidate.
+  const compact = render(<CareerPageHeader profile={model(DUBAI).profile} />);
+  const html = hero + compact;
   ck("the stored profession slug is never printed", !html.includes("vaktare"));
   ck("the sub-jurisdiction code is never printed", !html.includes("AE-DU"));
   // ">AE<" rather than "AE": the string appears inside class names and hrefs.
   ck("the bare country code is never printed as a value", !/>\s*AE\s*</.test(html));
   ck("the emirate is named", html.includes("Dubai") && compact.includes("Dubai"));
-  // The experience BAND is a stored enum. The compact greeting resolves it
-  // through the same catalogue the editor offers.
-  ck("the compact greeting never prints the stored experience band", !/5-10/.test(compact));
-  ck("and states the experience in words", compact.includes("5–10 års erfarenhet"));
+  // The experience BAND is a stored enum and never reaches the home header
+  // at all: the brief's identity row is role, country and the way to edit
+  // them. The profile page, below, still resolves the band through the same
+  // catalogue the editor offers.
+  ck("the career header never prints the stored experience band", !/5-10/.test(compact));
 
   const profilePage = code(read("src/routes/_authenticated.my-career.profile.tsx"));
   ck(
@@ -434,21 +518,29 @@ group("6 · a read that did not answer says so");
     unavailable: ["claims", "passport", "applications"],
   });
   const hero = render(<ProfessionalIdentityHeader identity={broken} />);
-  const compact = render(<ProfessionalIdentityHeader identity={broken} variant="compact" />);
-  const journey = render(<CareerJourney identity={broken} />);
+  const header = render(<CareerPageHeader profile={model(broken).profile} />);
+  const summary = render(<PassportSummary passport={model(broken).passport} />);
   ck("the hero refuses to print a verified count", hero.includes("Kunde inte läsas"));
-  ck("the compact greeting says parts could not be read", compact.includes("kunde inte läsas"));
-  ck("the journey refuses to print an application count", journey.includes("Kunde inte läsas"));
+  ck("the career header says parts could not be read", header.includes("kunde inte läsas"));
+  ck(
+    "the Passport summary refuses to print a merit count",
+    summary.includes("kunde inte läsas") && !/>0</.test(summary),
+  );
   ck(
     "and the completeness percentage is withheld rather than computed from a partial read",
     !/\d+\s*% ifyllt/.test(hero),
   );
 
   // A genuine zero is still a zero — the guard must not be satisfied by a
-  // component that says "could not be read" about everything.
-  const genuine = render(<CareerJourney identity={identity({ displayName: "A" })} />);
-  ck("a real empty state is still stated as empty", genuine.includes("Inga ansökningar ännu"));
-  ck("and is not disguised as a failure", !genuine.includes("Kunde inte läsas"));
+  // component that says "could not be read" about everything. A holder with
+  // a Passport and nothing in it gets three real zeroes and no failure
+  // language.
+  const genuineModel = model(identity({ displayName: "A", hasPassport: true }), {
+    verificationAttention: deriveVerificationAttention([], NOW),
+  });
+  const genuine = render(<PassportSummary passport={genuineModel.passport} />);
+  ck("a real empty state is still stated as a real count", genuine.includes(">0</p>"));
+  ck("and is not disguised as a failure", !genuine.includes("kunde inte läsas"));
 }
 
 /* ------------------------------------------------------------------ */
@@ -459,17 +551,28 @@ group("7 · /my-career/profile is not /my-career");
 {
   const home = render(<ProfessionalIdentityHeader identity={DUBAI} />);
   const compact = render(<ProfessionalIdentityHeader identity={DUBAI} variant="compact" />);
-  const profile = render(<ProfessionalIdentityHeader identity={DUBAI} variant="profile" showProfileLink={false} />);
+  const profile = render(
+    <ProfessionalIdentityHeader identity={DUBAI} variant="profile" showProfileLink={false} />,
+  );
 
   ck("the profile hero carries the page name in its h1", /<h1[^>]*>Min profil<\/h1>/.test(profile));
   ck("the home hero does not", !/<h1[^>]*>Min profil<\/h1>/.test(home));
-  ck("the home hero leads with the professional title", /<h1[^>]*>Säkerhetssamordnare<\/h1>/.test(home));
+  ck(
+    "the home hero leads with the professional title",
+    /<h1[^>]*>Säkerhetssamordnare<\/h1>/.test(home),
+  );
   ck(
     "the compact greeting greets by first name",
     /<h1[^>]*>Välkommen tillbaka, Amina<\/h1>/.test(compact),
   );
-  ck("and carries the professional title in the identity row", compact.includes("Säkerhetssamordnare"));
-  ck("the profile page still shows the professional title", profile.includes("Säkerhetssamordnare"));
+  ck(
+    "and carries the professional title in the identity row",
+    compact.includes("Säkerhetssamordnare"),
+  );
+  ck(
+    "the profile page still shows the professional title",
+    profile.includes("Säkerhetssamordnare"),
+  );
   ck("the profile page states its purpose", profile.includes("avsnitt för avsnitt"));
   ck("the profile page does not link to itself", !profile.includes('href="/my-career/profile"'));
   ck("the home hero does", home.includes('href="/my-career/profile"'));
@@ -484,7 +587,7 @@ group("7 · /my-career/profile is not /my-career");
   ck('the profile route mounts the hero as variant="profile"', /variant="profile"/.test(page));
   ck("and no other h1 is authored on that page", !/<h1/.test(page));
   const route = code(read("src/routes/_authenticated.my-career.index.tsx"));
-  ck('the home route mounts the greeting as variant="compact"', /variant="compact"/.test(route));
+  ck("the home route mounts its own header", /<CareerPageHeader/.test(route));
 }
 
 /* ------------------------------------------------------------------ */
@@ -494,22 +597,33 @@ group("7 · /my-career/profile is not /my-career");
 group("8 · nothing stands permanently empty");
 {
   const route = code(read("src/routes/_authenticated.my-career.index.tsx"));
-  ck("the onboarding journey renders only for a new account", /presentation\.showJourney && \(/.test(route));
-  ck("relevant roles render only once the read answered", /jobsQ\.isSuccess && \(/.test(route));
+  ck(
+    "the lifecycle is the page ORDER, never a rendered checklist",
+    !/showJourney|CareerJourney/.test(route),
+  );
+  ck(
+    "earlier analyses render only when there are any",
+    /runsQ\.data\.length > 1 && \(/.test(route),
+  );
   ck("the candidate home carries no reviewer surface", !/MyReviewQueueCard|\/reviews/.test(route));
 
-  const titleOf = () => "x";
-  ck("an empty active-work section renders nothing", render(<ActiveWork items={[]} titleOf={titleOf} />) === "");
   ck(
     "an empty activity feed renders nothing",
-    render(<RecentActivity activity={{ items: [], partial: false, unavailable: false }} />) === "",
+    render(
+      <RecentActivity
+        activity={{ items: [], all: [], partial: false, unavailable: false, hasMore: false }}
+      />,
+    ) === "",
   );
-  ck("an empty explore section renders nothing", render(<ExploreAndGrow items={[]} />) === "");
+  ck("an empty tools section renders nothing", render(<CareerTools tools={[]} />) === "");
 
   // The hero's own action row disappears rather than holding open an empty
   // strip for somebody with no card and no profile link.
   const bare = render(
-    <ProfessionalIdentityHeader identity={identity({ displayName: "A" })} showProfileLink={false} />,
+    <ProfessionalIdentityHeader
+      identity={identity({ displayName: "A" })}
+      showProfileLink={false}
+    />,
   );
   ck("the hero's action row is hidden when it would be empty", bare.includes('class="hidden"'));
 }

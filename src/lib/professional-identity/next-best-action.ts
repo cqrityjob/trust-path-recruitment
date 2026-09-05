@@ -13,62 +13,72 @@
 // already follows — `career-journey/readiness.ts` states it directly: the
 // product has to be able to answer "why does it say that".
 //
-// ── THE PRIORITY LADDER ────────────────────────────────────────────────
+// ── THE PRIORITY LADDER (v4 — the personal career home) ────────────────
 //
-// The locked order, from the personal-home brief, is:
+// The Security Passport is the candidate's long-term evidence layer;
+// assessments, reports and applications are temporary processes around it.
+// The ladder says so:
 //
-//   1 time-critical security or account action
-//   2 an assessment, interview or completion with a deadline
-//   3 a verification that needs the candidate's own answer
-//   4 a NEW report, or a NEW verification outcome
-//   5 something started and unfinished
-//   6 a missing foundation — Career Discovery, the profile
-//   7 jobs, CV, Career Card
-//   8 calm: nothing needs attention
+//   P0  a required candidate action, deadline first, then the employer's
+//       assessment, then an interview, then a reviewer's open question
+//   P1  a newly released candidate result
+//   P2  the career analysis has not been completed
+//   P3  the Security Passport holds no merits
+//   P4  the Passport holds incomplete draft merits
+//   P5  merits are ready to be sent to the correct verifier
+//   P6  relevant jobs exist for somebody who is looking
+//   P7  otherwise: maintain the Passport, or keep developing
 //
-// Bands 2-4 are all "somebody else is waiting on, or has decided about,
-// this person", and they share priority 1 here; their ORDER is the
-// authoring order below, which is what makes "an interview beats a new
-// report" and "a reviewer's question beats a new report" product decisions
-// that a test can read rather than a sort's accident. Band 1 has no signal
-// in the product today and is deliberately not invented.
+// `ActionPriority` is that number. The first rule that matches supplies the
+// primary action, which is what `primary[0]` means to every surface.
 //
-//   priority 1  BLOCKING / INVITED / RELEASED   bands 2, 3 and 4
-//   priority 2  UNFINISHED HIGH VALUE           band 5
-//   priority 3  TRUST                           band 6 (the Passport)
-//   priority 4  CAREER DEVELOPMENT              band 6 (Career Discovery)
-//   priority 5  OPTIONAL                        band 7
+// ── WHERE THE PROFILE WENT ─────────────────────────────────────────────
+//
+// "Fill in your profile" is not on this ladder. It is real work and it is
+// still offered — in Career Tools, and as a lower-ranked action — but a
+// person whose profession field is blank and whose eight credentials are
+// unverified should be asked to get their credentials verified. Merits are
+// the thing this product exists to establish; a profile field is how a
+// merit gets described. So the profile action sits at P7 with the other
+// standing suggestions rather than ahead of the Passport.
+//
+// ── A DEADLINE IS THE ONLY TIME-CRITICAL THING ─────────────────────────
+//
+// P0 is authored so a required action that carries a DATE is emitted before
+// one that does not. A required action without a deadline is still required
+// and still outranks P1-P7 — dropping it below "you have not taken the
+// career analysis" would be the ladder forgetting that somebody is waiting.
 //
 // ── WHAT THIS MUST NOT BECOME ──────────────────────────────────────────
 //
 // Not a nag list. At most three actions are returned and the screen shows
-// ONE as the thing that matters now, with the rest reachable underneath at
-// obviously lower weight. There is no streak, no countdown, no red badge
-// for an action nobody asked for, and no action that exists only to raise a
-// number this product tracks. A person who wants to read their report and
-// leave must be able to.
+// ONE as the thing that matters now. There is no streak, no countdown, no
+// red badge for an action nobody asked for, and no action that exists only
+// to raise a number this product tracks. A person who wants to read their
+// report and leave must be able to.
 //
 // ── A STATUS IS NOT A TASK ─────────────────────────────────────────────
 //
-// "9 items awaiting review" asks nothing of the holder. It used to become
-// "Submit for verification (9)" here, because the ladder counted every
-// claim that was not yet verified and could not see that a review was
-// already open on each of them. The `underReviewSubjectIds` signal is what
-// lets it tell the two apart, and `classifyAction` is what lets a surface
-// say which of the three kinds of thing it is showing.
+// "9 items awaiting review" asks nothing of the holder. It must never
+// become "Submit for verification (9)": `underReviewSubjectIds` is what
+// lets the ladder tell an open review from an unsubmitted entry, and
+// `classifyAction` is what lets a surface say which of the three kinds of
+// thing it is showing. A passive state can never be the primary action,
+// because no rule on this ladder emits one.
 
 import { computeCvReadiness } from "./cv/readiness";
 import { computeProfileCompleteness, type CompletenessSection } from "./completeness";
 import { SECTION_DESTINATIONS, isSectionReachable } from "./profile-destinations";
-import { isPendingClaim, isUnavailable, type ProfessionalIdentityV1 } from "./types";
+import { countReadyForVerification } from "./passport-merits";
+import { isUnavailable, type ProfessionalIdentityV1 } from "./types";
 
-// v3: an interview and a verification outcome joined the blocking band, a
-// reviewer's question moved ahead of a new report, a claim already under
-// review stopped counting as something to submit, and every kind carries a
-// classification. Same reason completeness.ts carries a version -- "the
-// recommendation changed" and "the rules changed" are different facts and a
-// screenshot has to be explainable later.
-export const NEXT_BEST_ACTION_VERSION = "next-best-action-v3" as const;
+// v4: the ladder was re-authored against the personal-career-home brief —
+// the career analysis and the Passport moved above the profile, drafts
+// became their own rung, and job recommendations became a rung rather than
+// a standing suggestion. Same reason completeness.ts carries a version:
+// "the recommendation changed" and "the rules changed" are different facts
+// and a screenshot has to be explainable later.
+export const NEXT_BEST_ACTION_VERSION = "next-best-action-v4" as const;
 
 /** How many primary actions the home screen may show. */
 export const MAX_PRIMARY_ACTIONS = 3;
@@ -76,17 +86,22 @@ export const MAX_PRIMARY_ACTIONS = 3;
 export type ActionKind =
   | "complete_assessment_assignment"
   /** An employer has offered, or is holding, an interview with this person.
-   *  Band 2 of the locked order: it has a date attached. */
+   *  P0: it has a date attached. */
   | "prepare_interview"
   /** A verifier asked this person for something and is waiting on the
-   *  answer. Band 3: the review is on hold until they act. */
+   *  answer. P0: the review is on hold until they act. */
   | "respond_to_clarification"
   | "read_released_report"
   /** A verifier decided, not in the holder's favour, and the entry is still
-   *  unresolved. Band 4: news that carries a choice. */
+   *  unresolved. P1: news that carries a choice. */
   | "review_verification_outcome"
   | "complete_profile_basics"
   | "start_passport"
+  /** The Passport holds entries the holder began and never finished. P4.
+   *  Distinct from `submit_passport_verification` because an unfinished
+   *  draft cannot be submitted to anybody — the next step is the form, not
+   *  a verifier. */
+  | "resume_draft_merits"
   | "submit_passport_verification"
   | "take_career_discovery"
   | "create_career_card"
@@ -97,14 +112,15 @@ export type ActionKind =
   | "open_cv"
   | "explore_jobs";
 
-export type ActionPriority = 1 | 2 | 3 | 4 | 5;
+/** P0 … P7, as authored in the ladder above. */
+export type ActionPriority = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /**
  * What kind of thing a surface is showing.
  *
  * The brief's three classes, plus one for the product's own suggestions:
- * "take Career Discovery" is not something anybody requires of this person
- * and must not wear the same label as a reviewer's open question.
+ * "take the career analysis" is not something anybody requires of this
+ * person and must not wear the same label as a reviewer's open question.
  */
 export type StatusClassification =
   /** Somebody, or a deadline, is waiting on this person. */
@@ -126,6 +142,7 @@ export const ACTION_CLASSIFICATION: Readonly<Record<ActionKind, StatusClassifica
   review_verification_outcome: "new_for_you",
   complete_profile_basics: "suggestion",
   start_passport: "suggestion",
+  resume_draft_merits: "suggestion",
   submit_passport_verification: "suggestion",
   take_career_discovery: "suggestion",
   create_career_card: "suggestion",
@@ -136,6 +153,19 @@ export const ACTION_CLASSIFICATION: Readonly<Record<ActionKind, StatusClassifica
 
 export function classifyAction(kind: ActionKind): StatusClassification {
   return ACTION_CLASSIFICATION[kind];
+}
+
+/**
+ * A stable identifier for WHY this action is on screen.
+ *
+ * Analytics records this and nothing else about the state: it names the
+ * rung and the kind, and carries no count, no employer, no credential and
+ * no assessment content. See next-action-analytics.ts.
+ */
+export type NextActionStateKey = `p${ActionPriority}:${ActionKind}`;
+
+export function stateKeyOf(action: Pick<NextBestAction, "priority" | "kind">): NextActionStateKey {
+  return `p${action.priority}:${action.kind}`;
 }
 
 export interface NextBestAction {
@@ -158,6 +188,8 @@ export interface NextBestAction {
   /** How a surface should label it. Derived from the kind, carried so a
    *  renderer never has to import the table. */
   readonly classification: StatusClassification;
+  /** The rung plus the kind, for analytics and for tests. */
+  readonly stateKey: NextActionStateKey;
 }
 
 export interface NextBestActions {
@@ -192,7 +224,7 @@ export interface NextBestActionSignals {
   readonly savedCvCount?: number;
 
   /**
-   * Whether Career Discovery would actually admit THIS person.
+   * Whether the career analysis would actually admit THIS person.
    *
    * `hasCompletedReport === false` answers "have they done it", which is a
    * fact about the person. Whether they MAY do it is a fact about the
@@ -216,8 +248,7 @@ export interface NextBestActionSignals {
   /**
    * How many verification requests were decided against the holder and are
    * still unresolved. `deriveVerificationAttention`'s `outcomes.length`.
-   * News that carries a choice, so it sits in the blocking band after a
-   * released report.
+   * News that carries a choice, so it sits at P1 after a released result.
    */
   readonly verificationOutcomeCount?: number;
 
@@ -245,6 +276,24 @@ export interface NextBestActionSignals {
   readonly interviewCaseId?: string | null;
   /** How many such interviews. Zero or undefined withholds the action. */
   readonly interviewCount?: number;
+
+  /**
+   * How many jobs the existing family filter actually returned for this
+   * person. P6 exists only when there is something to show: "relevant jobs
+   * are available" is a claim, and a claim with an empty list behind it is
+   * the promise of personalised matching this product does not make.
+   *
+   * Undefined means the jobs read has not answered, which withholds P6.
+   */
+  readonly recommendedJobCount?: number;
+
+  /**
+   * Whether the assessment assignment that produced
+   * `assessmentAssignmentAttemptId` carries a deadline. P0 is authored
+   * deadline-first, and this is the only place the ladder can learn it:
+   * the identity seam counts open assignments, it does not carry dates.
+   */
+  readonly assessmentDeadline?: string | null;
 }
 
 /**
@@ -255,9 +304,9 @@ export interface NextBestActionSignals {
  * and a job match, and promoting them to the top of somebody's home page
  * would turn this surface into the run to 100% that the file header, the
  * completeness module and the product principle all refuse. Career
- * direction is excluded because Career Discovery is its own action further
- * down the ladder — offering it here too would put one errand on the page
- * twice under two names.
+ * direction is excluded because the career analysis is its own rung — P2 —
+ * and offering it here too would put one errand on the page twice under two
+ * names.
  */
 const PROFILE_ACTION_SECTIONS: readonly CompletenessSection[] = [
   "situation",
@@ -266,6 +315,35 @@ const PROFILE_ACTION_SECTIONS: readonly CompletenessSection[] = [
   "employment",
   "location",
 ];
+
+/**
+ * Is this person looking for work?
+ *
+ * There is no "job seeking" column anywhere in this product, and inventing
+ * one in the database to answer a home-page question would be the wrong
+ * order of operations. So it is DERIVED, from two facts the person already
+ * gave: the situation they chose for themselves, and whether they have
+ * actually applied for anything.
+ *
+ * `working_in_industry` alone is deliberately not enough. Somebody settled
+ * in a job did not ask for job recommendations, and putting three vacancies
+ * at the top of their home page is the product assuming something about
+ * their employment it was never told. An application changes that: a person
+ * who has applied for a job is looking for a job.
+ *
+ * Exported so the assumption is testable and reviewable in one place rather
+ * than being a condition buried in the ladder.
+ */
+export function isJobSeeking(identity: ProfessionalIdentityV1): boolean {
+  const seekingStatuses: readonly (typeof identity.currentStatus)[] = [
+    "new_to_industry",
+    "student",
+    "career_change",
+    "changing_role",
+  ];
+  if (seekingStatuses.includes(identity.currentStatus)) return true;
+  return !isUnavailable(identity, "applications") && identity.workload.applicationCount > 0;
+}
 
 /**
  * Evaluate every rule, then take the top few.
@@ -279,6 +357,10 @@ const PROFILE_ACTION_SECTIONS: readonly CompletenessSection[] = [
 export function computeNextBestActions(
   identity: ProfessionalIdentityV1,
   signals: NextBestActionSignals = {},
+  /** The clock. A merit whose validity has lapsed is not a verified merit,
+   *  and "has it lapsed" is a question about a moment — passed in so the
+   *  answer is testable rather than whatever the machine says today. */
+  now: Date = new Date(),
 ): NextBestActions {
   const actions: NextBestAction[] = [];
   const add = (
@@ -295,9 +377,10 @@ export function computeNextBestActions(
       count,
       section,
       classification: ACTION_CLASSIFICATION[kind],
+      stateKey: `p${priority}:${kind}`,
     });
 
-  const { workload, discovery, claims } = identity;
+  const { workload, discovery } = identity;
 
   // A read that did not answer decides nothing. Every empty array in this
   // model can mean "nothing yet" or "we could not tell", and only the first
@@ -306,15 +389,20 @@ export function computeNextBestActions(
   // to load is the read failure escalated into an instruction.
   const known = (group: Parameters<typeof isUnavailable>[1]) => !isUnavailable(identity, group);
 
-  /* ---- 1 · Blocking, invited, released --------------------------------- */
+  /* ---- P0 · a required candidate action, deadline first --------------- */
 
-  // Band 2 · An employer asked for this, and it has a deadline. Somebody
-  // else is waiting, so it is first. Straight to the run when the seam
-  // could name one; otherwise the area that lists them.
-  if (known("assessments") && workload.assessmentAssignmentCount > 0) {
+  // An employer asked for this. Straight to the run when the seam could
+  // name one; otherwise the area that lists them. Authored FIRST inside P0
+  // because it is the only required action in this product that carries a
+  // date.
+  const hasDeadlinedAssignment =
+    known("assessments") &&
+    workload.assessmentAssignmentCount > 0 &&
+    Boolean(signals.assessmentDeadline);
+  if (hasDeadlinedAssignment) {
     add(
       "complete_assessment_assignment",
-      1,
+      0,
       workload.assessmentAssignmentAttemptId
         ? `/academy/${workload.assessmentAssignmentAttemptId}`
         : "/academy",
@@ -322,14 +410,29 @@ export function computeNextBestActions(
     );
   }
 
-  // Band 2 · An interview is being held for this person. It links to the
-  // interview INFORMATION, not to the interview: there is nothing for a
-  // candidate to do in the employer's workspace, and a link that leads to a
-  // permission error is worse than no link.
+  // The same assignment WITHOUT a date. Still required, still P0, and still
+  // ahead of everything below it: an employer's hiring process waiting on
+  // this person is the plainest case of "somebody else is blocked". The only
+  // thing that outranks it is the same errand carrying a deadline.
+  if (known("assessments") && workload.assessmentAssignmentCount > 0 && !hasDeadlinedAssignment) {
+    add(
+      "complete_assessment_assignment",
+      0,
+      workload.assessmentAssignmentAttemptId
+        ? `/academy/${workload.assessmentAssignmentAttemptId}`
+        : "/academy",
+      workload.assessmentAssignmentCount,
+    );
+  }
+
+  // An interview is being held for this person. It links to the interview
+  // INFORMATION, not to the interview: there is nothing for a candidate to
+  // do in the employer's workspace, and a link that leads to a permission
+  // error is worse than no link.
   if (signals.interviewCount && signals.interviewCount > 0) {
     add(
       "prepare_interview",
-      1,
+      0,
       signals.interviewCaseId
         ? `/my-career/interviews/${signals.interviewCaseId}`
         : "/my-career/applications",
@@ -337,26 +440,33 @@ export function computeNextBestActions(
     );
   }
 
-  // Band 3 · A verifier has asked this person a question and is waiting.
-  // Authored AHEAD of the released report: a review on hold until they
-  // answer outranks something that will still be there tomorrow.
+  // A verifier has asked this person a question and is waiting. Last inside
+  // P0, and that ordering is a product decision rather than an accident: an
+  // employer's process has a third party's timetable attached to it, a
+  // review does not.
   //
   // Not gated on `known(...)`: the count does not come from the identity
   // read model at all, and its own caller passes nothing when the
   // verification read failed rather than passing a zero.
   if (signals.clarificationCount && signals.clarificationCount > 0) {
-    add("respond_to_clarification", 1, "/passport", signals.clarificationCount);
+    add("respond_to_clarification", 0, "/passport", signals.clarificationCount);
   }
 
-  // Band 4 · A report has been released TO this person. Not showing it
-  // would be withholding something already decided to be theirs.
+  /* ---- P1 · a newly released candidate result ------------------------- */
+
+  // A report has been released TO this person. Not showing it would be
+  // withholding something already decided to be theirs.
   //
   // The report itself when the seam could name one — the same
   // lifecycle-plus-snapshot condition the assessment history applies before
   // IT offers the link, so this can never open a document that surface
   // would refuse to. Otherwise the assessments area, which lists every
-  // released report with its own link. Never a self-link, and never a
-  // report id this product invented.
+  // released report with its own link.
+  //
+  // NOTE ON "UNREAD": this product records no read receipt for a released
+  // report, so the ladder says "released", never "unread". See
+  // docs/../delivery notes — asserting unread would be a claim about the
+  // person that no stored fact supports.
   if (known("assessments") && workload.releasedReportCount > 0) {
     add(
       "read_released_report",
@@ -368,56 +478,14 @@ export function computeNextBestActions(
     );
   }
 
-  // Band 4 · A verifier decided against an entry and the holder has a
-  // choice to make about it. After the report because a report is the
-  // larger thing to have been handed.
+  // A verifier decided against an entry and the holder has a choice to make
+  // about it. After the report because a report is the larger thing to have
+  // been handed.
   if (signals.verificationOutcomeCount && signals.verificationOutcomeCount > 0) {
     add("review_verification_outcome", 1, "/passport", signals.verificationOutcomeCount);
   }
 
-  /* ---- 2 · Unfinished, high value ------------------------------------ */
-
-  // The first missing section this person can actually reach and answer,
-  // with its destination taken from the section rather than a constant.
-  // `missingSections` is already applicability-filtered by completeness.ts,
-  // so a question this person is never asked cannot appear here; the
-  // reachability check is the second, independent gate.
-  //
-  // The three reads behind these sections are `profiles`,
-  // `sp_passport_profiles` and `security_career_profiles`, so a failure in
-  // any of them makes "missing" unknowable rather than true.
-  const completeness = computeProfileCompleteness(identity);
-  if (known("account") && known("profile") && known("passport") && known("employment")) {
-    const actionable = completeness.missingSections.find(
-      (section) =>
-        PROFILE_ACTION_SECTIONS.includes(section) && isSectionReachable(section, identity, signals),
-    );
-    if (actionable) {
-      add("complete_profile_basics", 2, SECTION_DESTINATIONS[actionable].href, null, actionable);
-    }
-  }
-
-  /* ---- 3 · Trust ----------------------------------------------------- */
-
-  // Pending means "not verified AND not already being looked at". An entry
-  // with an open review is a status, not a task — see the file header.
-  const underReview = new Set(signals.underReviewSubjectIds ?? []);
-  const pending = claims.filter((c) => isPendingClaim(c) && !underReview.has(c.id)).length;
-  if (!known("passport") || !known("claims")) {
-    // Neither branch below can be decided honestly: "you have no Passport"
-    // and "your claims did not load" are the same empty object here.
-  } else if (!identity.hasPassport) {
-    add("start_passport", 3, "/passport");
-  } else if (pending > 0 && !signals.verificationStateUnavailable) {
-    // Only when there is something to submit. A holder with nothing pending
-    // is not behind on anything, and telling them otherwise is the dark
-    // pattern this list exists without. And only when the review state is
-    // known: with it unreadable, "submit these" may be asking for what is
-    // already in hand.
-    add("submit_passport_verification", 3, "/passport", pending);
-  }
-
-  /* ---- 4 · Career development ---------------------------------------- */
+  /* ---- P2 · the career analysis has not been completed ---------------- */
 
   // Withheld when the gate has ANSWERED no. See `careerDiscoveryOpen`: this
   // is the difference between a suggestion and a dead end.
@@ -426,16 +494,80 @@ export function computeNextBestActions(
     !discovery.hasCompletedReport &&
     signals.careerDiscoveryOpen !== false
   ) {
-    add("take_career_discovery", 4, "/security-career-assessment");
+    add("take_career_discovery", 2, "/security-career-assessment");
   }
 
-  /* ---- 5 · Optional -------------------------------------------------- */
+  /* ---- P3 · the Passport holds no merits ------------------------------ */
+  /* ---- P4 · the Passport holds incomplete drafts ---------------------- */
+  /* ---- P5 · merits are ready to be sent to a verifier ------------------ */
+
+  // Ready means "recorded, not verified, not lapsed, and nobody is already
+  // looking at it". Counted by `countReadyForVerification`, which the
+  // Passport summary also uses — two derivations of one number is how the
+  // page came to state two different totals for the same merits.
+  const pending = countReadyForVerification(identity, signals.underReviewSubjectIds ?? [], now);
+  const drafts = known("claims") ? workload.draftClaimCount : 0;
+
+  // Every branch below is a statement about what the Passport holds, so it
+  // needs the reads that produce those counts. `provenance` is in the list
+  // because without it "verified" cannot be told from "recorded", and a
+  // recommendation to verify eight merits beside a Passport panel saying
+  // the merits could not be read is the page contradicting itself.
+  const meritsKnown =
+    known("passport") && known("claims") && known("employment") && known("provenance");
+
+  if (!meritsKnown) {
+    // Nothing below can be decided honestly: "you have no Passport" and
+    // "your merits did not load" are the same empty object here.
+  } else if (!identity.hasPassport) {
+    add("start_passport", 3, "/passport");
+  } else if (identity.claims.length === 0 && identity.employment.length === 0 && drafts === 0) {
+    // A Passport that was opened and never filled in. Same rung as not
+    // having one: there is nothing in it either way.
+    add("start_passport", 3, "/passport");
+  } else if (drafts > 0) {
+    add("resume_draft_merits", 4, "/passport", drafts);
+  } else if (pending > 0 && !signals.verificationStateUnavailable) {
+    // Only when there is something to submit. A holder with nothing pending
+    // is not behind on anything, and telling them otherwise is the dark
+    // pattern this list exists without. And only when the review state is
+    // known: with it unreadable, "submit these" may be asking for what is
+    // already in hand.
+    add("submit_passport_verification", 5, "/passport", pending);
+  }
+
+  /* ---- P6 · relevant jobs, for somebody who is looking ---------------- */
+
+  // Only when the jobs read ANSWERED with rows. "Relevant jobs are
+  // available" with nothing behind it is the personalised-matching promise
+  // this product does not make.
+  if ((signals.recommendedJobCount ?? 0) > 0 && isJobSeeking(identity)) {
+    add("explore_jobs", 6, "/jobs", signals.recommendedJobCount ?? null);
+  }
+
+  /* ---- P7 · keep the Passport current, keep developing ---------------- */
+
+  // The first missing section this person can actually reach and answer,
+  // with its destination taken from the section rather than a constant.
+  // `missingSections` is already applicability-filtered by completeness.ts,
+  // so a question this person is never asked cannot appear here; the
+  // reachability check is the second, independent gate.
+  const completeness = computeProfileCompleteness(identity);
+  if (known("account") && known("profile") && known("passport") && known("employment")) {
+    const actionable = completeness.missingSections.find(
+      (section) =>
+        PROFILE_ACTION_SECTIONS.includes(section) && isSectionReachable(section, identity, signals),
+    );
+    if (actionable) {
+      add("complete_profile_basics", 7, SECTION_DESTINATIONS[actionable].href, null, actionable);
+    }
+  }
 
   // The card exists only when the report NAMES careers — the same condition
   // the report view itself applies. Offering it otherwise is a door onto an
   // empty room.
   if (known("discovery") && discovery.hasCompletedReport && discovery.namesCareers) {
-    add("create_career_card", 5, "/my-career/career-card");
+    add("create_career_card", 7, "/my-career/career-card");
   }
 
   // Only offered when the facts are actually there. A CV invitation to
@@ -446,12 +578,19 @@ export function computeNextBestActions(
   // last week is the product not looking at their account.
   if (computeCvReadiness(identity).state === "ready") {
     const saved = signals.savedCvCount ?? 0;
-    if (saved > 0) add("open_cv", 5, "/my-career/cv", saved);
-    else add("create_cv", 5, "/my-career/cv");
+    if (saved > 0) add("open_cv", 7, "/my-career/cv", saved);
+    else add("create_cv", 7, "/my-career/cv");
   }
 
-  if (known("applications") && workload.applicationCount === 0) {
-    add("explore_jobs", 5, "/jobs");
+  // The standing invitation to look at jobs, for somebody who has applied
+  // for nothing. Distinct from P6: that one says relevant roles EXIST, this
+  // one only says the door is there.
+  if (
+    known("applications") &&
+    workload.applicationCount === 0 &&
+    !actions.some((a) => a.kind === "explore_jobs")
+  ) {
+    add("explore_jobs", 7, "/jobs");
   }
 
   // Stable sort: Array.prototype.sort is specified as stable, so equal

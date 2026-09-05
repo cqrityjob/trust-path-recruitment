@@ -1,5 +1,4 @@
-// The personal home's presentation model — one owner per status, one
-// most-important thing, decided once.
+// The personal career home's ONE view model.
 //
 // ── WHY THIS MODULE EXISTS ─────────────────────────────────────────────
 //
@@ -7,27 +6,36 @@
 // the Passport card, the journey strip, the attention panel and the next
 // action each announced the same released report, the same nine entries
 // under review, the same verified credential — in five places, in five
-// tones, with the Passport's navy surface outshouting the one thing the
+// tones, with the employer report's surface outshouting the one thing the
 // ranking engine had actually chosen. A person had to read the whole page
-// to find out what the page wanted them to do.
+// to find out what the page wanted them to do, and two sections could
+// disagree about the same fact because two derivations produced it.
 //
-// So the page is now assembled from THIS object. `computeNextBestActions`
-// still decides what matters most; this module decides where each fact is
-// SHOWN, and shows it once. Every event has an id, the primary card claims
-// the ids it is about, and every other section filters those ids out.
+// So the page is assembled from THIS object, and only from this object.
+// `computeNextBestActions` decides what matters most; `countMerits` decides
+// what the Passport holds; `deriveCareerDirection` reads the frozen report.
+// This module composes those three and decides where each fact is SHOWN —
+// once. Every event has an id, the primary action claims the ids it is
+// about, and every other section filters those ids out.
 //
 // ── WHAT IT DOES NOT DO ────────────────────────────────────────────────
 //
-// It does not rank. The engine ranks and this file reads `primary[0]`. It
-// does not read anything: every input is a query result the route already
-// holds, passed in as data, so the same inputs give the same page and a
-// guard can prove it without a database. And it does not turn a failed
-// read into a zero: each source carries whether it answered, and the
+// It does not rank. It does not read: every input is a query result the
+// route already holds, passed in as data, so the same inputs give the same
+// page and a guard can prove it without a database. It creates no second
+// store, no parallel count and no new scoring. And it does not turn a
+// failed read into a zero: each source carries whether it answered, and the
 // sections say "could not be read" rather than "nothing".
 
 import type { CandidateInterviewRow } from "@/lib/interview-intelligence/candidate.functions";
-import type { MyApplicationRow } from "@/lib/job-intelligence/applications.functions";
+import type {
+  MyApplicationRow,
+  ApplicationStatus,
+} from "@/lib/job-intelligence/applications.functions";
+import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import type { MyAssignment } from "@/lib/security-competency/academy-learning.functions";
+import type { ActiveReport } from "@/lib/career-discovery/active-report.functions";
+import type { StoredReportResult } from "@/lib/career-discovery/stored-report.functions";
 import {
   computeNextBestActions,
   type NextBestAction,
@@ -35,16 +43,18 @@ import {
   type StatusClassification,
 } from "./next-best-action";
 import { computeProfileCompleteness, type CompletenessSection } from "./completeness";
-import { summariseTrust } from "./trust-summary";
-import { isUnavailable, type ProfessionalIdentityV1 } from "./types";
+import { countMerits, type MeritCounts } from "./passport-merits";
+import { deriveCareerDirection, type CareerDirection } from "./career-direction";
+import { computeCvReadiness } from "./cv/readiness";
+import { isUnavailable, professionLabel, type ProfessionalIdentityV1 } from "./types";
 import type { VerificationAttention } from "./verification-attention";
 
-export const HOME_PRESENTATION_VERSION = "home-presentation-v1" as const;
+export const HOME_PRESENTATION_VERSION = "career-home-view-model-v1" as const;
 
-/** Maximum secondary statuses beside the primary action. */
-export const MAX_SECONDARY_STATUSES = 2;
 /** Maximum recent-activity rows on the home. */
 export const MAX_RECENT_ACTIVITY = 3;
+/** Maximum job recommendations on the home. */
+export const MAX_RECOMMENDED_JOBS = 3;
 
 /* ------------------------------------------------------------------ */
 /* Inputs                                                              */
@@ -72,9 +82,23 @@ export interface HomePresentationInput {
   readonly assignments: Source<MyAssignment>;
   readonly interviews: Source<CandidateInterviewRow>;
   readonly applications: Source<MyApplicationRow>;
+  /** Jobs from the existing profile-driven family filter. */
+  readonly jobs: Source<PublicJobCard>;
+  /** Which report is the CURRENT one, resolved on the server by
+   *  `getActiveCareerReport`. It is the only thing that can tell a v3 report
+   *  from a v2.1 one from none at all, and the home must never tell somebody
+   *  whose only assessment is legacy that they have not taken one. */
+  readonly activeReport?: ActiveReport;
+  readonly activeReportError?: boolean;
+  /** The frozen career-analysis snapshot, when one has been loaded. */
+  readonly storedReport?: StoredReportResult;
+  readonly storedReportError?: boolean;
+  /** The name the account holder set for themselves, when they set one.
+   *  Never an email local part — see `profile.preferredName`. */
+  readonly preferredName?: string | null;
   /** Saved CVs. Undefined when not known. */
   readonly savedCvCount?: number;
-  /** Whether Career Discovery would admit this person. Undefined: not asked. */
+  /** Whether the career analysis would admit this person. Undefined: not asked. */
   readonly careerDiscoveryOpen?: boolean;
   /** The clock, so recency is testable. */
   readonly now: Date;
@@ -85,7 +109,7 @@ export interface HomePresentationInput {
 /* ------------------------------------------------------------------ */
 
 /** A stable id for one thing that happened to this person. The primary
- *  card claims the ids it is about; nothing else may render them. */
+ *  action claims the ids it is about; nothing else may render them. */
 export type HomeEventId = string;
 
 /** Who asked, what for, by when — the metadata the primary card may state
@@ -106,75 +130,134 @@ export interface PrimaryAction {
   readonly meta: PrimaryMeta | null;
 }
 
-export type SecondaryStatusKind =
-  /** A lower-ranked engine action from the blocking band. */
-  | "engine_action"
-  /** Entries under review. Explicitly nothing to do. */
-  | "passport_under_review"
-  /** A submitted assessment the employer has not released yet. */
-  | "assessment_awaiting_release"
-  /** An interview is done and the employer is deciding. */
-  | "interview_process_continuing"
-  /** The report names careers, so the card can be opened. */
-  | "career_card_available";
+/* ---- who this person is ------------------------------------------- */
 
-export interface SecondaryStatus {
-  readonly id: string;
-  readonly kind: SecondaryStatusKind;
-  readonly classification: StatusClassification;
-  readonly count: number | null;
-  readonly href: string;
-  /** Present when `kind === "engine_action"`. */
-  readonly action: NextBestAction | null;
-  readonly eventIds: readonly HomeEventId[];
+export interface HomeProfile {
+  /**
+   * The name the person chose for themselves, and only that.
+   *
+   * Deliberately NOT the local part of an email address. "Din karriär,
+   * sandleradam191" is the product addressing somebody by a string they
+   * never offered as a name, and the brief's rule — preferred name when
+   * explicitly available, otherwise the account first name, otherwise no
+   * name at all — exists to stop exactly that.
+   */
+  readonly preferredName: string | null;
+  /** The first name on the account record (`profiles.display_name`). */
+  readonly accountFirstName: string | null;
+  /** Whichever of the two the heading may use, already decided. Null means
+   *  the heading omits the name rather than inventing one. */
+  readonly greetingName: string | null;
+  readonly headline: string | null;
+  readonly professionTitleSv: string | null;
+  readonly professionTitleEn: string | null;
+  readonly workCountry: string | null;
+  readonly workSubJurisdiction: string | null;
+  /** Every applicable BASIC section answered. Never a percentage. */
+  readonly complete: boolean;
+  /** At least one read behind this profile did not answer. */
+  readonly degraded: boolean;
 }
 
-export interface PriorityWorkspaceModel {
-  /** The engine's top action, or null when nothing at all qualified. */
-  readonly primary: PrimaryAction | null;
-  /** True when nothing needs attention: the primary, if any, is the
-   *  product's own suggestion rather than something waiting on the person. */
-  readonly calm: boolean;
-  readonly secondary: readonly SecondaryStatus[];
-}
+/* ---- the Passport -------------------------------------------------- */
 
-export type PassportPillar =
+export type PassportSummaryModel =
+  /** The reads did not answer. Never rendered as zeroes. */
   | { readonly state: "unavailable" }
+  /** The review state has not come back yet. Distinct from `unavailable`
+   *  because "we could not read your merits" is a false sentence to show
+   *  somebody for the 300ms before the answer arrives. */
+  | { readonly state: "loading" }
+  /** No Passport exists yet. */
   | { readonly state: "not_opened" }
-  | {
-      readonly state: "counts";
-      /** Verified claims AND verified employment, from the one summariser
-       *  every trust surface uses. A header that counted claims alone said
-       *  "nothing verified" beside a confirmed employment. */
-      readonly verified: number;
-      /** Open reviews, when the verification read answered. Null when it
-       *  did not — never 0. */
-      readonly underReview: number | null;
-      readonly actionRequired: number;
-    };
+  | { readonly state: "counts"; readonly counts: MeritCounts };
 
-export type AssessmentsPillar =
-  | { readonly state: "unavailable" }
-  | {
-      readonly state: "counts";
-      readonly open: number;
-      readonly released: number;
-      readonly awaitingRelease: number;
-    };
+/* ---- tests and results --------------------------------------------- */
 
-export type JobsPillar =
-  | { readonly state: "unavailable" }
-  | {
-      readonly state: "counts";
-      readonly activeApplications: number;
-      readonly interviews: number;
-    };
-
-export interface SnapshotModel {
-  readonly passport: PassportPillar;
-  readonly assessments: AssessmentsPillar;
-  readonly jobs: JobsPillar;
+/** An assessment that is waiting on THIS person. */
+export interface AssessmentAction {
+  readonly id: HomeEventId;
+  readonly attemptId: string;
+  readonly employerName: string | null;
+  readonly titleSv: string | null;
+  readonly titleEn: string | null;
+  readonly purposeSv: string | null;
+  readonly purposeEn: string | null;
+  readonly deadline: string | null;
+  readonly answered: number;
+  readonly totalItems: number;
+  readonly href: string;
 }
+
+/** A result the employer has released to this person. */
+export interface ReportSummary {
+  readonly id: HomeEventId;
+  readonly attemptId: string;
+  readonly employerName: string | null;
+  readonly titleSv: string | null;
+  readonly titleEn: string | null;
+  readonly releasedAt: string;
+  readonly href: string;
+}
+
+export type AssessmentsModel =
+  | { readonly state: "unavailable" }
+  | {
+      readonly state: "ready";
+      readonly actionRequired: readonly AssessmentAction[];
+      /**
+       * Results released to this person, newest first.
+       *
+       * NOT "unread": this product records no read receipt for a released
+       * report, so nothing here may claim one. See the delivery notes —
+       * asserting "unread" would be a statement about the person that no
+       * stored fact supports.
+       */
+      readonly released: readonly ReportSummary[];
+      /** Submitted, and the employer has not released a result. Passive by
+       *  definition: it asks nothing of the candidate and is rendered last. */
+      readonly waitingCount: number;
+    };
+
+/* ---- jobs and applications ----------------------------------------- */
+
+export interface JobSummary {
+  readonly id: string;
+  readonly slug: string;
+  readonly titleSv: string | null;
+  readonly titleEn: string | null;
+  readonly location: string | null;
+  readonly employerName: string | null;
+}
+
+export type JobsModel =
+  | { readonly state: "unavailable" }
+  | {
+      readonly state: "ready";
+      /** At most three, from the SAME family filter the jobs surface uses.
+       *  Empty is a real answer and gets the compact empty state. */
+      readonly recommended: readonly JobSummary[];
+      /** Null when the applications read did not answer. */
+      readonly activeApplicationCount: number | null;
+      /** The most recent application's status, when there is one. */
+      readonly latestStatus: ApplicationStatus | null;
+      readonly latestAt: string | null;
+      readonly interviewCount: number;
+    };
+
+/* ---- career tools --------------------------------------------------- */
+
+export type ToolKey = "cv" | "career_card" | "professions" | "profile";
+
+export interface ToolItem {
+  readonly key: ToolKey;
+  readonly href: string;
+  /** True when the person already has one of these. Lets the copy say
+   *  "open" rather than "create". */
+  readonly existing: boolean;
+}
+
+/* ---- activity ------------------------------------------------------- */
 
 export type ActivityKind =
   | "report_released"
@@ -196,64 +279,41 @@ export interface ActivityItem {
   readonly href: string;
 }
 
+/** How many rows the expanded activity list may hold. Bounded: this is a
+ *  recent-activity feed, not an audit log. */
+export const MAX_ALL_ACTIVITY = 12;
+
 export interface ActivityModel {
   readonly items: readonly ActivityItem[];
+  /** Everything the model could show, for the in-place "show all"
+   *  disclosure. There is no all-activity ROUTE in this product, and
+   *  linking to one that does not exist is worse than not offering it, so
+   *  the extra rows are revealed here instead. */
+  readonly all: readonly ActivityItem[];
   /** At least one source did not answer. The list is a floor, not a fact. */
   readonly partial: boolean;
   /** Every source failed. Nothing can be said. */
   readonly unavailable: boolean;
+  /** More happened than is shown. */
+  readonly hasMore: boolean;
 }
 
-export type ActiveWorkKind =
-  | "assessment_in_progress"
-  | "interview"
-  | "verification_action_required"
-  | "verification_outcome";
+/* ---- the whole thing ------------------------------------------------ */
 
-export interface ActiveWorkItem {
-  readonly id: HomeEventId;
-  readonly kind: ActiveWorkKind;
-  readonly href: string;
-  readonly employerName: string | null;
-  readonly titleSv: string | null;
-  readonly titleEn: string | null;
-  readonly deadline: string | null;
-  /** answered / total, for an assessment in progress. */
-  readonly progress: { readonly answered: number; readonly total: number } | null;
-  readonly interviewStatus: CandidateInterviewRow["status"] | null;
-  /** For verification items: which Passport entry. */
-  readonly subject: { readonly kind: "claim" | "experience"; readonly id: string } | null;
-}
-
-export type ExploreDestination =
-  | "career_discovery"
-  | "career_card"
-  | "cv"
-  | "professions"
-  | "profile"
-  | "jobs";
-
-export interface ExploreItem {
-  readonly id: string;
-  readonly destination: ExploreDestination;
-  readonly href: string;
-  /** The engine action this row stands for, when there is one. */
-  readonly action: NextBestAction | null;
-}
-
-export interface HomePresentation {
+export interface CareerHomeViewModel {
   readonly version: typeof HOME_PRESENTATION_VERSION;
-  readonly workspace: PriorityWorkspaceModel;
-  readonly snapshot: SnapshotModel;
+  readonly profile: HomeProfile;
+  /** The ONE visually primary action, or null when nothing qualified. */
+  readonly nextAction: PrimaryAction | null;
+  /** True when the primary, if any, is the product's own suggestion rather
+   *  than something waiting on the person. Decides the calm treatment. */
+  readonly calm: boolean;
+  readonly passport: PassportSummaryModel;
+  readonly career: CareerDirection;
+  readonly jobs: JobsModel;
+  readonly assessments: AssessmentsModel;
+  readonly tools: readonly ToolItem[];
   readonly activity: ActivityModel;
-  readonly activeWork: readonly ActiveWorkItem[];
-  readonly explore: readonly ExploreItem[];
-  /** The onboarding journey strip is for an account that has not started
-   *  anything. An established account has moved past it. */
-  readonly showJourney: boolean;
-  /** "Grundprofil komplett" — every applicable section answered, and the
-   *  reads behind them answered. Never a percentage. */
-  readonly profileComplete: boolean;
   /** The signals handed to the engine, exposed so a guard can see them. */
   readonly signals: NextBestActionSignals;
 }
@@ -262,9 +322,8 @@ export interface HomePresentation {
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-/** The sections that make up the basic profile. Mirrors the set the engine
- *  may recommend (PROFILE_ACTION_SECTIONS): situation, title, profession,
- *  employment and country. Education, skills and languages are enrichment. */
+/** The sections that make up the basic profile. Education, skills and
+ *  languages are enrichment and never gate "complete". */
 export const BASIC_SECTIONS: readonly CompletenessSection[] = [
   "situation",
   "identity",
@@ -278,7 +337,7 @@ const rowsOf = <T>(s: Source<T>): readonly T[] => (s.state === "ready" ? s.rows 
 /** An interview that is still asking something of the candidate. */
 const isLiveInterview = (i: CandidateInterviewRow) => i.status !== "employer_process_continuing";
 
-const ACTIVE_APPLICATION_STATUSES: ReadonlySet<MyApplicationRow["status"]> = new Set([
+const ACTIVE_APPLICATION_STATUSES: ReadonlySet<ApplicationStatus> = new Set([
   "submitted",
   "reviewing",
   "interview",
@@ -286,6 +345,17 @@ const ACTIVE_APPLICATION_STATUSES: ReadonlySet<MyApplicationRow["status"]> = new
 
 function assessmentRows(assignments: Source<MyAssignment>): readonly MyAssignment[] {
   return rowsOf(assignments).filter((r) => r.mode === "assessment");
+}
+
+/** A trimmed name, or null. Blank strings are not names. */
+function trimmed(value: string | null | undefined): string | null {
+  const v = (value ?? "").trim();
+  return v.length > 0 ? v : null;
+}
+
+function firstNameOf(value: string | null | undefined): string | null {
+  const full = trimmed(value);
+  return full ? (full.split(/\s+/)[0] ?? null) : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -297,6 +367,9 @@ function assessmentRows(assignments: Source<MyAssignment>): readonly MyAssignmen
 export function deriveSignals(input: HomePresentationInput): NextBestActionSignals {
   const attention = input.verificationAttention;
   const live = rowsOf(input.interviews).filter(isLiveInterview);
+  const open = assessmentRows(input.assignments).filter((r) => r.attemptStatus === "in_progress");
+  const named = input.identity.workload.assessmentAssignmentAttemptId;
+  const deadlineRow = named ? open.find((r) => r.attemptId === named) : open[0];
   return {
     savedCvCount: input.savedCvCount,
     careerDiscoveryOpen: input.careerDiscoveryOpen,
@@ -310,11 +383,21 @@ export function deriveSignals(input: HomePresentationInput): NextBestActionSigna
       attention && !attention.unavailable ? attention.outcomes.length : undefined,
     underReviewSubjectIds:
       attention && !attention.unavailable ? attention.waiting.map((w) => w.subjectId) : undefined,
-    verificationStateUnavailable: attention?.unavailable === true,
+    // "Not known" rather than "failed": a review state that has not answered
+    // YET is just as unable to say whether these merits are already in
+    // somebody's hands. Recommending "submit these eight" beside a panel
+    // that says the review state could not be read is the page contradicting
+    // itself, and both halves of that came from this one flag.
+    verificationStateUnavailable: attention === null || attention.unavailable === true,
     // Only when the interview read answered: an unanswered read is not
     // "no interview".
     interviewCaseId: input.interviews.state === "ready" ? (live[0]?.caseId ?? null) : null,
     interviewCount: input.interviews.state === "ready" ? live.length : undefined,
+    // Undefined while the jobs read has not answered. P6 claims that
+    // relevant jobs EXIST, and a claim needs an answer behind it.
+    recommendedJobCount: input.jobs.state === "ready" ? input.jobs.rows.length : undefined,
+    assessmentDeadline:
+      input.assignments.state === "ready" ? (deadlineRow?.deadline ?? null) : null,
   };
 }
 
@@ -332,7 +415,7 @@ function metaFromAssignment(row: MyAssignment | undefined): PrimaryMeta | null {
     purposeEn: row.purposeEn,
     // A deadline is a fact about work still to do. A released report's row
     // still carries the date the attempt had to be done by, and stating it
-    // beside "read your report" is a deadline for nothing.
+    // beside "read your result" is a deadline for nothing.
     deadline: row.attemptStatus === "in_progress" ? row.deadline : null,
   };
 }
@@ -400,10 +483,10 @@ function claimAction(
 /* Build                                                               */
 /* ------------------------------------------------------------------ */
 
-export function buildHomePresentation(input: HomePresentationInput): HomePresentation {
+export function buildCareerHomeViewModel(input: HomePresentationInput): CareerHomeViewModel {
   const { identity } = input;
   const signals = deriveSignals(input);
-  const engine = computeNextBestActions(identity, signals);
+  const engine = computeNextBestActions(identity, signals, input.now);
   const attention = input.verificationAttention;
   const attentionKnown = Boolean(attention) && !attention!.unavailable;
   const assessments = assessmentRows(input.assignments);
@@ -411,145 +494,178 @@ export function buildHomePresentation(input: HomePresentationInput): HomePresent
   const applications = rowsOf(input.applications);
   const known = (group: Parameters<typeof isUnavailable>[1]) => !isUnavailable(identity, group);
 
-  /* ---- the primary --------------------------------------------------- */
+  /* ---- who this person is -------------------------------------------- */
+
+  const preferredName = firstNameOf(input.preferredName);
+  const accountFirstName = firstNameOf(identity.displayName);
+  const completeness = computeProfileCompleteness(identity);
+  const basicsMissing = completeness.missingSections.some((s) => BASIC_SECTIONS.includes(s));
+  const basicsKnown =
+    known("account") && known("profile") && known("passport") && known("employment");
+
+  const profile: HomeProfile = {
+    preferredName,
+    accountFirstName,
+    // Preferred name first, the account's first name second, and NO name
+    // third. There is no email fallback: an address is not a name.
+    greetingName: preferredName ?? accountFirstName,
+    headline: trimmed(identity.headline),
+    professionTitleSv: identity.currentProfessionTitleSv,
+    professionTitleEn: identity.currentProfessionTitleEn,
+    workCountry: identity.workCountry ?? identity.accountCountry,
+    workSubJurisdiction: identity.workCountry ? identity.workSubJurisdiction : null,
+    complete: basicsKnown && !basicsMissing,
+    degraded: identity.unavailable.length > 0,
+  };
+
+  /* ---- the ONE primary action ---------------------------------------- */
 
   const top = engine.all[0] ?? null;
-  const primary: PrimaryAction | null = top
+  const nextAction: PrimaryAction | null = top
     ? { action: top, classification: top.classification, ...claimAction(top, input) }
     : null;
-  const claimed = new Set<HomeEventId>(primary?.eventIds ?? []);
-  const calm = !primary || primary.classification === "suggestion";
+  const claimed = new Set<HomeEventId>(nextAction?.eventIds ?? []);
+  const calm = !nextAction || nextAction.classification === "suggestion";
 
-  /* ---- secondary statuses -------------------------------------------- */
+  /* ---- the Passport --------------------------------------------------- */
 
-  const candidates: SecondaryStatus[] = [];
-  const usedActions = new Set<NextBestAction["kind"]>(top ? [top.kind] : []);
-
-  // 1 · lower-ranked blocking actions: somebody else is still waiting.
-  for (const action of engine.all) {
-    if (action === top || action.priority !== 1) continue;
-    const { eventIds } = claimAction(action, input);
-    candidates.push({
-      id: `action:${action.kind}`,
-      kind: "engine_action",
-      classification: action.classification,
-      count: action.count,
-      href: action.href,
-      action,
-      eventIds,
-    });
-    usedActions.add(action.kind);
-  }
-
-  // 2 · under review: the status this page most often mistook for a task.
-  if (attentionKnown && attention!.waiting.length > 0) {
-    candidates.push({
-      id: "status:under_review",
-      kind: "passport_under_review",
-      classification: "in_progress_no_action",
-      count: attention!.waiting.length,
-      href: "/passport",
-      action: null,
-      eventIds: attention!.waiting.map((w) => `waiting:${w.requestId}`),
-    });
-  }
-
-  // 3 · submitted, not yet released.
-  const awaitingRelease = assessments.filter(
-    (r) => !r.releasedAt && r.attemptStatus !== "in_progress",
-  );
-  if (awaitingRelease.length > 0) {
-    candidates.push({
-      id: "status:awaiting_release",
-      kind: "assessment_awaiting_release",
-      classification: "in_progress_no_action",
-      count: awaitingRelease.length,
-      href: "/academy",
-      action: null,
-      eventIds: awaitingRelease.map((r) => `assignment:${r.attemptId}`),
-    });
-  }
-
-  // 4 · interview done, employer deciding.
-  const continuing = interviews.filter((i) => !isLiveInterview(i));
-  if (continuing.length > 0) {
-    candidates.push({
-      id: "status:interview_continuing",
-      kind: "interview_process_continuing",
-      classification: "in_progress_no_action",
-      count: continuing.length,
-      href:
-        continuing.length === 1
-          ? `/my-career/interviews/${continuing[0]!.caseId}`
-          : "/my-career/applications",
-      action: null,
-      eventIds: continuing.map((i) => `interview:${i.caseId}`),
-    });
-  }
-
-  // 5 · the Career Card, when the engine offers it and it is not the primary.
-  const cardAction = engine.all.find((a) => a.kind === "create_career_card");
-  if (cardAction && cardAction !== top) {
-    candidates.push({
-      id: "status:career_card",
-      kind: "career_card_available",
-      classification: "suggestion",
-      count: null,
-      href: cardAction.href,
-      action: cardAction,
-      eventIds: [],
-    });
-  }
-
-  const secondary = candidates
-    .filter((s) => !s.eventIds.some((id) => claimed.has(id)))
-    .slice(0, MAX_SECONDARY_STATUSES);
-  for (const s of secondary) {
-    if (s.action) usedActions.add(s.action.kind);
-    for (const id of s.eventIds) claimed.add(id);
-  }
-
-  /* ---- snapshot ------------------------------------------------------ */
-
-  const trust = summariseTrust(identity);
-  const passport: PassportPillar =
-    !known("passport") || !known("claims")
+  const counts = countMerits(identity, attention, input.now);
+  const passport: PassportSummaryModel =
+    !known("passport") || !known("claims") || !counts.known
       ? { state: "unavailable" }
       : !identity.hasPassport
         ? { state: "not_opened" }
-        : {
-            state: "counts",
-            verified: trust.known ? trust.verifiedClaims + trust.verifiedEmployment : 0,
-            underReview: attentionKnown ? attention!.waiting.length : null,
-            actionRequired: attentionKnown
-              ? attention!.actionRequired.length + attention!.outcomes.length
-              : 0,
-          };
-  // A trust summary that could not be counted must not print a zero.
-  const passportPillar: PassportPillar =
-    passport.state === "counts" && !trust.known ? { state: "unavailable" } : passport;
+        : // The merits are counted, but "how many are being verified" is not
+          // in yet. A skeleton rather than three numbers one of which would
+          // have to say "could not be read" about a read that is simply in
+          // flight.
+          attention === null
+          ? { state: "loading" }
+          : { state: "counts", counts };
 
-  const assessmentsPillar: AssessmentsPillar =
+  /* ---- the career picture --------------------------------------------- */
+
+  // WHICH report is current is a server decision (`getActiveCareerReport`),
+  // and it is the only read that can tell a v3 report from a v2.1 one. The
+  // identity seam only knows about `cd_report_snapshots`, so a candidate
+  // whose sole assessment is legacy looks report-less to it -- which is how
+  // a completed candidate came to be shown "not taken yet".
+  const active = input.activeReport;
+  const career: CareerDirection = input.activeReportError
+    ? { state: "unavailable" }
+    : !active
+      ? { state: "loading" }
+      : active.kind === "none"
+        ? { state: "none" }
+        : active.kind === "legacy_v21"
+          ? {
+              state: "legacy",
+              completedAt: active.completedAt,
+              reportHref: `/my-career/reports/${active.runId}`,
+            }
+          : active.kind === "discovery_unreadable"
+            ? { state: "unreadable", completedAt: active.generatedAt }
+            : deriveCareerDirection(input.storedReport, { isError: input.storedReportError });
+
+  /* ---- tests and results ---------------------------------------------- */
+
+  const openAssessments = assessments.filter((r) => r.attemptStatus === "in_progress");
+  const releasedAssessments = assessments
+    .filter((r) => Boolean(r.releasedAt))
+    .sort((a, b) => String(b.releasedAt).localeCompare(String(a.releasedAt)));
+  const awaitingRelease = assessments.filter(
+    (r) => !r.releasedAt && r.attemptStatus !== "in_progress",
+  );
+
+  const assessmentsModel: AssessmentsModel =
     input.assignments.state !== "ready" || !known("assessments")
       ? { state: "unavailable" }
       : {
-          state: "counts",
-          open: assessments.filter((r) => r.attemptStatus === "in_progress").length,
-          released: assessments.filter((r) => Boolean(r.releasedAt)).length,
-          awaitingRelease: awaitingRelease.length,
+          state: "ready",
+          // Filtered by what the primary action already claimed. A released
+          // result announced at the top of the page must not also be a row
+          // here: the same thing twice, in two weights, is the duplication
+          // the redesign exists to remove.
+          actionRequired: openAssessments
+            .filter((r) => !claimed.has(`assignment:${r.attemptId}`))
+            .map((r) => ({
+              id: `assignment:${r.attemptId}`,
+              attemptId: r.attemptId,
+              employerName: r.employerName,
+              titleSv: r.programmeNameSv,
+              titleEn: r.programmeNameEn,
+              purposeSv: r.purposeSv,
+              purposeEn: r.purposeEn,
+              deadline: r.deadline,
+              answered: r.answered,
+              totalItems: r.totalItems,
+              href: `/academy/${r.attemptId}`,
+            })),
+          released: releasedAssessments
+            .filter((r) => !claimed.has(`report:${r.attemptId}`))
+            .map((r) => ({
+              id: `report:${r.attemptId}`,
+              attemptId: r.attemptId,
+              employerName: r.employerName,
+              titleSv: r.programmeNameSv,
+              titleEn: r.programmeNameEn,
+              releasedAt: r.releasedAt!,
+              href: `/academy/report/${r.attemptId}`,
+            })),
+          waitingCount: awaitingRelease.length,
         };
 
-  const jobsPillar: JobsPillar =
-    input.applications.state !== "ready"
+  /* ---- jobs and applications ------------------------------------------ */
+
+  const sortedApplications = [...applications].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
+  const jobs: JobsModel =
+    input.jobs.state !== "ready" && input.applications.state !== "ready"
       ? { state: "unavailable" }
       : {
-          state: "counts",
-          activeApplications: applications.filter((a) => ACTIVE_APPLICATION_STATUSES.has(a.status))
-            .length,
-          interviews: interviews.filter(isLiveInterview).length,
+          state: "ready",
+          recommended: rowsOf(input.jobs)
+            .slice(0, MAX_RECOMMENDED_JOBS)
+            .map((j) => ({
+              id: j.id,
+              slug: j.slug,
+              titleSv: j.title_sv,
+              titleEn: j.title_en,
+              location: [j.location_text, j.city, j.country].filter(Boolean).join(", ") || null,
+              employerName: j.employer?.name ?? null,
+            })),
+          activeApplicationCount:
+            input.applications.state === "ready"
+              ? applications.filter((a) => ACTIVE_APPLICATION_STATUSES.has(a.status)).length
+              : null,
+          latestStatus: sortedApplications[0]?.status ?? null,
+          latestAt: sortedApplications[0]?.updatedAt ?? null,
+          interviewCount: interviews.filter(isLiveInterview).length,
         };
 
-  /* ---- recent activity ---------------------------------------------- */
+  /* ---- career tools ---------------------------------------------------- */
+
+  // A tool is offered only when it can produce something. The CV is the
+  // one that used to break this rule: it was a standing card that said
+  // "built from what you have already recorded" to somebody with no
+  // employment and no education, whose CV builder would then refuse. So it
+  // is gated on the SAME readiness function the builder itself applies.
+  const tools: ToolItem[] = [];
+  if (computeCvReadiness(identity).state === "ready") {
+    tools.push({ key: "cv", href: "/my-career/cv", existing: (input.savedCvCount ?? 0) > 0 });
+  }
+  if (
+    known("discovery") &&
+    identity.discovery.hasCompletedReport &&
+    identity.discovery.namesCareers
+  ) {
+    tools.push({ key: "career_card", href: "/my-career/career-card", existing: true });
+  }
+  tools.push({ key: "professions", href: "/career-center", existing: false });
+  tools.push({ key: "profile", href: "/my-career/profile", existing: false });
+
+  /* ---- recent activity ------------------------------------------------- */
 
   const events: ActivityItem[] = [];
   for (const r of assessments) {
@@ -624,170 +740,46 @@ export function buildHomePresentation(input: HomePresentationInput): HomePresent
     input.applications.state,
     attention === null ? "loading" : attention.unavailable ? "error" : "ready",
   ];
+  const visible = events
+    .filter((e) => !claimed.has(e.id))
+    .sort((a, b) => b.at.localeCompare(a.at) || a.id.localeCompare(b.id));
   const activity: ActivityModel = {
-    items: events
-      .filter((e) => !claimed.has(e.id))
-      .sort((a, b) => b.at.localeCompare(a.at) || a.id.localeCompare(b.id))
-      .slice(0, MAX_RECENT_ACTIVITY),
+    items: visible.slice(0, MAX_RECENT_ACTIVITY),
+    all: visible.slice(0, MAX_ALL_ACTIVITY),
     partial: sourceStates.some((s) => s === "error"),
     unavailable: sourceStates.every((s) => s === "error"),
+    hasMore: visible.length > MAX_RECENT_ACTIVITY,
   };
-
-  /* ---- active work --------------------------------------------------- */
-
-  const work: ActiveWorkItem[] = [];
-  for (const r of assessments) {
-    if (r.attemptStatus !== "in_progress") continue;
-    work.push({
-      id: `assignment:${r.attemptId}`,
-      kind: "assessment_in_progress",
-      href: `/academy/${r.attemptId}`,
-      employerName: r.employerName,
-      titleSv: r.programmeNameSv,
-      titleEn: r.programmeNameEn,
-      deadline: r.deadline,
-      progress: { answered: r.answered, total: r.totalItems },
-      interviewStatus: null,
-      subject: null,
-    });
-  }
-  for (const i of interviews) {
-    if (!isLiveInterview(i)) continue;
-    work.push({
-      id: `interview:${i.caseId}`,
-      kind: "interview",
-      href: `/my-career/interviews/${i.caseId}`,
-      employerName: i.employerName,
-      titleSv: i.roleTitle,
-      titleEn: i.roleTitle,
-      deadline: null,
-      progress: null,
-      interviewStatus: i.status,
-      subject: null,
-    });
-  }
-  if (attentionKnown) {
-    for (const i of attention!.actionRequired) {
-      work.push({
-        id: `clarification:${i.requestId}`,
-        kind: "verification_action_required",
-        href: `/passport/entry/${i.subjectKind}/${i.subjectId}`,
-        employerName: null,
-        titleSv: null,
-        titleEn: null,
-        deadline: null,
-        progress: null,
-        interviewStatus: null,
-        subject: { kind: i.subjectKind, id: i.subjectId },
-      });
-    }
-    for (const i of attention!.outcomes) {
-      work.push({
-        id: `outcome:${i.requestId}`,
-        kind: "verification_outcome",
-        href: `/passport/entry/${i.subjectKind}/${i.subjectId}`,
-        employerName: null,
-        titleSv: null,
-        titleEn: null,
-        deadline: null,
-        progress: null,
-        interviewStatus: null,
-        subject: { kind: i.subjectKind, id: i.subjectId },
-      });
-    }
-  }
-  const activeWork = work.filter((w) => !claimed.has(w.id));
-
-  /* ---- explore and grow ---------------------------------------------- */
-
-  const DESTINATION_OF: Partial<Record<NextBestAction["kind"], ExploreDestination>> = {
-    take_career_discovery: "career_discovery",
-    create_career_card: "career_card",
-    create_cv: "cv",
-    open_cv: "cv",
-    explore_jobs: "jobs",
-    complete_profile_basics: "profile",
-  };
-  const explore: ExploreItem[] = [];
-  const covered = new Set<ExploreDestination>();
-  // The engine's remaining suggestions first, in its order.
-  for (const action of engine.all) {
-    if (usedActions.has(action.kind)) continue;
-    const destination = DESTINATION_OF[action.kind];
-    if (!destination) {
-      // A blocking action that found no slot above still has to be
-      // reachable. It is listed here rather than dropped.
-      explore.push({
-        id: `action:${action.kind}`,
-        destination: "profile",
-        href: action.href,
-        action,
-      });
-      continue;
-    }
-    if (covered.has(destination)) continue;
-    covered.add(destination);
-    explore.push({ id: `action:${action.kind}`, destination, href: action.href, action });
-  }
-  // Then the standing destinations the engine had nothing to say about.
-  const standing: readonly { destination: ExploreDestination; href: string; when: boolean }[] = [
-    {
-      destination: "career_discovery",
-      href: "/security-career-assessment",
-      // A retake is offered only to somebody who has a report and whom the
-      // gate would admit. Somebody without a report was already offered
-      // the assessment by the engine, or refused by the gate.
-      when:
-        known("discovery") &&
-        identity.discovery.hasCompletedReport &&
-        input.careerDiscoveryOpen === true,
-    },
-    { destination: "professions", href: "/career-center", when: true },
-    { destination: "cv", href: "/my-career/cv", when: true },
-    { destination: "profile", href: "/my-career/profile", when: true },
-  ];
-  for (const s of standing) {
-    if (!s.when || covered.has(s.destination)) continue;
-    // The Career Card is offered by the engine or by a secondary status,
-    // never by a standing row: the engine already knows whether it exists.
-    covered.add(s.destination);
-    explore.push({
-      id: `standing:${s.destination}`,
-      destination: s.destination,
-      href: s.href,
-      action: null,
-    });
-  }
-
-  /* ---- onboarding and the profile line ------------------------------- */
-
-  // "Grundprofil komplett" is about the BASICS -- the sections without which
-  // nothing downstream works -- never a run to 100% across enrichment
-  // sections. The same set the engine is allowed to recommend.
-  const completeness = computeProfileCompleteness(identity);
-  const basicsMissing = completeness.missingSections.some((s) => BASIC_SECTIONS.includes(s));
-  const basicsKnown =
-    known("account") && known("profile") && known("passport") && known("employment");
-  const showJourney =
-    basicsKnown &&
-    known("discovery") &&
-    known("assessments") &&
-    known("applications") &&
-    !identity.hasPassport &&
-    !identity.discovery.hasCompletedReport &&
-    identity.workload.releasedReportCount === 0 &&
-    identity.workload.assessmentAssignmentCount === 0 &&
-    identity.workload.applicationCount === 0;
 
   return {
     version: HOME_PRESENTATION_VERSION,
-    workspace: { primary, calm, secondary },
-    snapshot: { passport: passportPillar, assessments: assessmentsPillar, jobs: jobsPillar },
+    profile,
+    nextAction,
+    calm,
+    passport,
+    career,
+    jobs,
+    assessments: assessmentsModel,
+    tools,
     activity,
-    activeWork,
-    explore,
-    showJourney,
-    profileComplete: basicsKnown && !basicsMissing,
     signals,
   };
+}
+
+/** The professional title a surface may print for this person, in one
+ *  language. Headline first — it is what they wrote about themselves —
+ *  then the catalogue profession. Null when neither exists, so the surface
+ *  can say "not filled in" rather than printing a slug. */
+export function homeRoleTitle(profile: HomeProfile, lang: "sv" | "en"): string | null {
+  return (
+    profile.headline ??
+    professionLabel(
+      {
+        currentProfessionOther: null,
+        currentProfessionTitleSv: profile.professionTitleSv,
+        currentProfessionTitleEn: profile.professionTitleEn,
+      },
+      lang,
+    )
+  );
 }

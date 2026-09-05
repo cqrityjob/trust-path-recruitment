@@ -31,6 +31,19 @@ export const dictionaries = {
     "nav.exploreProfessions": "Utforska yrken",
     "nav.passport": "Security Passport",
     "nav.myAssessments": "Bedömningar",
+    // ── The candidate workspace's own five labels ──────────────────────
+    //
+    // "Översikt", "Security Passport", "Jobb", "Utforska yrken" and
+    // "Bedömningar" named the SYSTEM. These name what the candidate came
+    // for. "Bedömningar" in particular is the employer's word for the
+    // instrument; "Tester och resultat" is what a candidate is actually
+    // looking at, and the underlying assessment domain model is unchanged.
+    // "Security Passport" keeps its registered product name inside
+    // "Mitt Security Passport".
+    "nav.myPassport": "Mitt Security Passport",
+    "nav.findJobs": "Hitta jobb",
+    "nav.professionsAndPaths": "Yrken och karriärvägar",
+    "nav.testsAndResults": "Tester och resultat",
     "nav.reviews": "Granskningar",
     "appnav.aria": "Primär navigering",
     "nav.menu.open": "Öppna menyn",
@@ -5570,6 +5583,10 @@ export const dictionaries = {
     "nav.exploreProfessions": "Explore professions",
     "nav.passport": "Security Passport",
     "nav.myAssessments": "Assessments",
+    "nav.myPassport": "My Security Passport",
+    "nav.findJobs": "Find jobs",
+    "nav.professionsAndPaths": "Professions and career paths",
+    "nav.testsAndResults": "Tests and results",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",
     "nav.menu.open": "Open menu",

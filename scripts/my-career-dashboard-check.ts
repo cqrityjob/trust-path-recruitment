@@ -53,9 +53,10 @@ function code(src: string): string {
 
 const routePath = "src/routes/_authenticated.my-career.index.tsx";
 const cardPath = "src/components/assessment/SecurityCareerProfileCard.tsx";
-const snapshotPath = "src/components/professional-identity/CareerSnapshot.tsx";
-const workspacePath = "src/components/professional-identity/NextActions.tsx";
+const snapshotPath = "src/components/professional-identity/CareerDirectionSection.tsx";
+const workspacePath = "src/components/professional-identity/NextBestAction.tsx";
 const modelPath = "src/lib/professional-identity/home-presentation.ts";
+const directionPath = "src/lib/professional-identity/career-direction.ts";
 const headerPath = "src/components/site/SiteHeader.tsx";
 
 const route = read(routePath);
@@ -65,27 +66,44 @@ const cardCode = code(card);
 const snapshot = code(read(snapshotPath));
 const workspace = code(read(workspacePath));
 const model = code(read(modelPath));
+const direction = code(read(directionPath));
 const header = code(read(headerPath));
 
 // ---------------------------------------------------------------------------
-// 1. A completed Career Discovery report stays reachable
+// 1. A completed career analysis stays reachable, whichever instrument
+//    produced it
 // ---------------------------------------------------------------------------
-// Each stored report contract reaches a named state on the Career Analysis
-// card. A contract that loses its branch does not error — it renders
-// nothing, and the candidate simply stops seeing a report they completed.
-for (const kind of ["discovery_v3_0", "discovery_v3_1", "discovery_unreadable"] as const) {
+// Every stored report contract reaches a NAMED state on the career section.
+// A contract that loses its branch does not error — it renders nothing, and
+// the candidate simply stops seeing a result they completed. Worse, the
+// identity seam only knows about cd_report_snapshots, so a candidate whose
+// only assessment is v2.1 looks report-less to it: `legacy_v21` is the
+// branch that stops the home telling them they never took one.
+for (const kind of ["legacy_v21", "discovery_unreadable"] as const) {
   expect(
-    routeCode.includes(kind),
-    `${routePath}: the ${kind} report contract must still be resolved to a card state. ` +
-      "A contract without a branch costs the candidate a report they completed.",
+    model.includes(kind),
+    `${modelPath}: the ${kind} report contract must still reach a named career state. ` +
+      "A contract without a branch costs the candidate a result they completed.",
   );
 }
+// v3.0 stores career AREAS and axis strengths; v3.1 stores the ranked
+// occupational recommendation. They share no field name, so each is read by
+// its own branch and neither may quietly answer for the other.
 expect(
-  routeCode.includes("/security-career-assessment/report/${activeQ.data.snapshotId}"),
-  `${routePath}: a completed v3 report must be openable from the home.`,
+  direction.includes('result.status === "v3.0"'),
+  `${directionPath}: the v3.0 report contract must still be read on its own terms.`,
 );
 expect(
-  /kind: "unreadable"/.test(routeCode) && snapshot.includes('analysis.kind === "unreadable"'),
+  /snapshot\?\.professions\?\.ranked/.test(direction),
+  `${directionPath}: the v3.1 recommendation must be READ from the frozen snapshot, ` +
+    "never recomputed — a dashboard that recomputes eventually disagrees with the report.",
+);
+expect(
+  direction.includes("/security-career-assessment/report/${result.snapshotId}"),
+  `${directionPath}: a completed v3 report must be openable from the home.`,
+);
+expect(
+  /state: "unreadable"/.test(model) && snapshot.includes('career.state === "unreadable"'),
   `${snapshotPath}: a v3 report this build cannot read must be stated as unreadable, ` +
     "never degraded into 'no report'.",
 );
@@ -93,20 +111,21 @@ expect(
   snapshot.includes('to="/security-career-assessment/history"'),
   `${snapshotPath}: report history must stay reachable from the home.`,
 );
-// Legacy runs keep their own history list on the route, and the legacy
-// report keeps its own link.
+// Legacy runs keep their own history list, now inside the career section
+// rather than as a full-width panel that rendered empty for everybody with a
+// single report.
 expect(
-  routeCode.includes("ReportHistoryList"),
-  `${routePath}: the legacy report history list must stay on the home.`,
+  routeCode.includes("ReportHistoryList") && /runsQ\.data\.length > 1 && \(/.test(routeCode),
+  `${routePath}: earlier legacy reports must stay reachable, and only when there are any.`,
 );
 expect(
-  routeCode.includes("/my-career/reports/${legacyRun.id}"),
-  `${routePath}: a legacy report must stay openable from the home.`,
+  model.includes("/my-career/reports/${active.runId}"),
+  `${modelPath}: a legacy report must stay openable from the home.`,
 );
-// The no-report state is a real state, not a missing branch, and it carries
-// the gate's answer so the card can say why the test is closed.
+// The no-report state is a real state, not a missing branch, and the section
+// carries the gate's answer so it can say why the analysis is closed.
 expect(
-  /kind: "none", closed: assessmentClosed/.test(routeCode),
+  /state: "none"/.test(model) && /closed=\{assessmentClosed\}/.test(routeCode),
   `${routePath}: the home must resolve an explicit no-report state carrying the gate.`,
 );
 
@@ -154,38 +173,45 @@ expect(
 );
 
 // ---------------------------------------------------------------------------
-// 3. Nothing stretches, and the route hosts no product grid
+// 3. One layout row, and it is the one above the fold
 // ---------------------------------------------------------------------------
-// Grid items stretch to the tallest sibling by default, which is where the
-// old dashboard's empty panels came from. The workspace grid pins
-// items-start; the route itself composes sections and owns no grid.
-const workspaceGrids = [...workspace.matchAll(/className=\{?[^}]*\bgrid\b[^}]*\}?/g)].map(
-  (m) => m[0],
+// The recommended next step and the Security Passport share the top of the
+// page on desktop, and that ONE row is the only grid the route owns. Every
+// other section is a component that lays itself out, which is what stopped
+// the route growing a product grid full of half-empty panels.
+const routeGrids = [...routeCode.matchAll(/lg:grid-cols-12/g)];
+expect(
+  routeGrids.length === 1,
+  `${routePath}: exactly one 12-column row — the above-the-fold pair. Found ${routeGrids.length}.`,
 );
 expect(
-  workspaceGrids.some((g) => /lg:grid-cols-12/.test(g) && /items-start/.test(g)),
-  `${workspacePath}: the priority workspace grid must set items-start on its 12-column row.`,
+  /grid items-stretch gap-4 lg:grid-cols-12/.test(routeCode),
+  `${routePath}: the above-the-fold pair must stretch to equal height rather than ` +
+    "leaving one card floating beside a taller sibling.",
+);
+// Source order IS mobile order: one column at 375, the recommendation first
+// and the Passport second. A CSS reordering would make the two disagree.
+expect(
+  routeCode.indexOf("<NextBestAction") < routeCode.indexOf("<PassportSummary"),
+  `${routePath}: the recommended next step must precede the Passport in source order, ` +
+    "so the single mobile column shows it first.",
 );
 expect(
-  !/lg:grid-cols/.test(routeCode),
-  `${routePath}: the route must not host a product grid — the sections are components.`,
+  !/order-\d|lg:order-/.test(routeCode),
+  `${routePath}: no CSS reordering — source order and reading order must agree.`,
 );
 
 // ---------------------------------------------------------------------------
-// 4. Sections self-hide when they are irrelevant
+// 4. Sections self-hide, and no empty container is rendered
 // ---------------------------------------------------------------------------
 for (const [file, guard] of [
-  [
-    "src/components/professional-identity/ActiveWork.tsx",
-    /if \(items\.length === 0 && !children\) return null;/,
-  ],
   [
     "src/components/professional-identity/RecentActivity.tsx",
     /if \(activity\.items\.length === 0 && !activity\.partial\) return null;/,
   ],
   [
-    "src/components/professional-identity/ExploreAndGrow.tsx",
-    /if \(items\.length === 0 && !children\) return null;/,
+    "src/components/professional-identity/CareerTools.tsx",
+    /if \(tools\.length === 0\) return null;/,
   ],
 ] as const) {
   expect(
@@ -194,9 +220,20 @@ for (const [file, guard] of [
       "as a broken product.",
   );
 }
+// The full-width "Alla mina rapporter" panel rendered as a large empty box on
+// every account with a single report. It is gone; earlier analyses are a
+// compact disclosure inside the section that is about them.
 expect(
-  /presentation\.showJourney && \(/.test(routeCode),
-  `${routePath}: the onboarding journey renders only for an account that has not started.`,
+  !/EXPLORE\.allReports|Alla mina rapporter/.test(
+    routeCode + code(read("src/components/professional-identity/home-copy.ts")),
+  ),
+  `${routePath}: the standalone "all my reports" panel must not come back.`,
+);
+// The five-stage onboarding strip is gone: the lifecycle is preserved as the
+// page's ORDER, not rendered as a checklist.
+expect(
+  !/showJourney|CareerJourney/.test(routeCode),
+  `${routePath}: the lifecycle must not be rendered as a linear checklist.`,
 );
 expect(
   /linkableTasks\.length > 0 && \(/.test(routeCode),
@@ -210,7 +247,7 @@ for (const retired of [
 ]) {
   expect(
     !existsSync(path.join(root, retired)),
-    `${retired}: retired — its facts are owned by the presentation model now. A second ` +
+    `${retired}: retired — its facts are owned by the view model now. A second ` +
       "surface for the same status is the duplication the home was rebuilt to remove.",
   );
 }
@@ -226,7 +263,7 @@ expect(
   `${modelPath}: the primary card's metadata must carry the attempt's own governed purpose.`,
 );
 expect(
-  /primary\.meta\.purposeSv/.test(workspace) && /primary\.meta\.purposeEn/.test(workspace),
+  /next\.meta\.purposeSv/.test(workspace) && /next\.meta\.purposeEn/.test(workspace),
   `${workspacePath}: the primary card must state the attempt's own purpose, per attempt.`,
 );
 {
@@ -343,10 +380,11 @@ if (errors.length > 0) {
 
 console.log(
   "my-career-dashboard:check OK " +
-    "(every report contract reaches a card state; a completed report and the " +
-    "history stay openable; the profile editor is behind a dialog with a real " +
-    "summary and no percentage; nothing stretches and the route hosts no grid; " +
-    "empty sections render nothing; assessment wording is purpose-aware; the home " +
+    "(every report contract reaches a named career state, legacy included; a " +
+    "completed report and the history stay openable; the profile editor is behind " +
+    "a dialog with a real summary and no percentage; the route owns one layout row " +
+    "and source order is mobile order; empty sections render nothing and the " +
+    "all-reports panel is gone; assessment wording is purpose-aware; the home " +
     "carries no reviewer surface and the reviewer view is gated on the queue; " +
     "account chrome lives in the header, with the workspace switch rendered " +
     "exactly once per viewport)",

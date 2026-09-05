@@ -146,20 +146,28 @@ const ROUTE_IDS: string[] = (() => {
 
 group("1 · one canonical link per product, desktop and mobile");
 {
-  // Five, since the premium overview: "Översikt" names the page (the
-  // workspace is "Min karriär", which is what the account menu's switch
-  // calls it), and the profession explorer is a candidate tool.
+  // Five, in the candidate's own order and the candidate's own words. The
+  // Passport is SECOND because it is the durable thing this product builds
+  // for a person; jobs, professions and tests are what happens around it.
+  // "Bedömningar" was the employer's word for the instrument -- "Tester och
+  // resultat" is what the candidate is actually looking at, and the
+  // assessment domain model is unchanged underneath it.
   const EXPECTED: { key: string; to: string; sv: string; en: string }[] = [
-    { key: "myCareer", to: "/my-career", sv: "Översikt", en: "Overview" },
+    { key: "myCareer", to: "/my-career", sv: "Min karriär", en: "My Career" },
+    {
+      key: "passport",
+      to: "/passport",
+      sv: "Mitt Security Passport",
+      en: "My Security Passport",
+    },
+    { key: "jobs", to: "/jobs", sv: "Hitta jobb", en: "Find jobs" },
     {
       key: "exploreProfessions",
       to: "/career-center",
-      sv: "Utforska yrken",
-      en: "Explore professions",
+      sv: "Yrken och karriärvägar",
+      en: "Professions and career paths",
     },
-    { key: "jobs", to: "/jobs", sv: "Jobb", en: "Jobs" },
-    { key: "passport", to: "/passport", sv: "Security Passport", en: "Security Passport" },
-    { key: "assessments", to: "/academy", sv: "Bedömningar", en: "Assessments" },
+    { key: "assessments", to: "/academy", sv: "Tester och resultat", en: "Tests and results" },
   ];
 
   ck(
@@ -203,9 +211,9 @@ group("1 · one canonical link per product, desktop and mobile");
 
 group("2 · the workspace carries no marketing navigation");
 {
-  // /career-center is deliberately NOT here any more: as "Utforska yrken"
-  // it is one of the candidate's own destinations. What must not follow
-  // anybody in is the WEBSITE's name for it -- asserted below.
+  // /career-center is deliberately NOT here any more: as "Yrken och
+  // karriärvägar" it is one of the candidate's own destinations. What must
+  // not follow anybody in is the WEBSITE's name for it -- asserted below.
   const MARKETING = ["/contact", "/about", "/employers", "/assessment"];
   for (const variant of ["desktop", "mobile"] as const) {
     const html = render(React.createElement(CandidateAppNav, { variant, activeKey: null }));
@@ -221,7 +229,7 @@ group("2 · the workspace carries no marketing navigation");
     const html = render(React.createElement(CandidateAppNav, { variant, activeKey: null }));
     ck(
       `${variant}: the profession explorer is named as a candidate tool, not as the website's hub`,
-      html.includes(">Utforska yrken<") && !html.includes("Säkerhetskarriärcenter"),
+      html.includes(">Yrken och karriärvägar<") && !html.includes("Säkerhetskarriärcenter"),
     );
     ck(
       `${variant}: no reviewer entry in the candidate's primary navigation`,
@@ -491,14 +499,16 @@ group("7 · one name per product");
     "src/routes/_authenticated.my-career.index.tsx",
     "src/routes/_authenticated.my-career.profile.tsx",
     "src/routes/_authenticated.my-career.career-card.tsx",
-    "src/components/professional-identity/NextActions.tsx",
+    "src/components/professional-identity/CareerPageHeader.tsx",
+    "src/components/professional-identity/NextBestAction.tsx",
     "src/components/professional-identity/next-action-copy.ts",
     "src/components/professional-identity/home-copy.ts",
-    "src/components/professional-identity/CareerSnapshot.tsx",
+    "src/components/professional-identity/PassportSummary.tsx",
+    "src/components/professional-identity/CareerDirectionSection.tsx",
+    "src/components/professional-identity/JobRecommendations.tsx",
+    "src/components/professional-identity/ApplicationsAndResults.tsx",
+    "src/components/professional-identity/CareerTools.tsx",
     "src/components/professional-identity/RecentActivity.tsx",
-    "src/components/professional-identity/ActiveWork.tsx",
-    "src/components/professional-identity/ExploreAndGrow.tsx",
-    "src/components/professional-identity/CareerJourney.tsx",
     "src/components/professional-identity/ProfessionalIdentityHeader.tsx",
     "src/components/professional-identity/cv-copy.ts",
     "src/components/professional-identity/CvDocumentView.tsx",

@@ -20,6 +20,7 @@
 // so, because "no activity" and "we could not check" are not the same
 // sentence about somebody's week.
 
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import type { ActivityItem, ActivityModel } from "@/lib/professional-identity/home-presentation";
@@ -62,8 +63,14 @@ export function RecentActivity({
 }) {
   const { lang } = useT();
   const l = lang as Lang;
+  // "Show all activity" reveals the rest IN PLACE. There is no
+  // all-activity route in this product, and a link to a page that does not
+  // exist is worse than not offering one at all.
+  const [showAll, setShowAll] = useState(false);
 
   if (activity.items.length === 0 && !activity.partial) return null;
+
+  const rows = showAll ? activity.all : activity.items;
 
   return (
     <section aria-labelledby="activity-heading" className={className} data-recent-activity>
@@ -73,9 +80,9 @@ export function RecentActivity({
       >
         {L(ACTIVITY.heading, l)}
       </h2>
-      {activity.items.length > 0 && (
+      {rows.length > 0 && (
         <ul className="mt-2 divide-y divide-border border-t border-border">
-          {activity.items.map((item) => (
+          {rows.map((item) => (
             <li key={item.id}>
               <Link
                 to={item.href}
@@ -92,6 +99,17 @@ export function RecentActivity({
             </li>
           ))}
         </ul>
+      )}
+      {activity.hasMore && !showAll && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          data-show-all-activity
+          aria-expanded={false}
+          className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {L(ACTIVITY.all, l)}
+        </button>
       )}
       {activity.partial && (
         <p role="status" className="mt-2 text-xs text-muted-foreground">

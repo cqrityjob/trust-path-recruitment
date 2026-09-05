@@ -331,22 +331,30 @@ group("F2 -- a failed read is not an empty Passport");
   // claims read did not answer.
   const model = code(read("src/lib/professional-identity/home-presentation.ts"));
   ck(
-    "the home's Passport pillar is unavailable when the Passport or claims read failed",
-    /!known\("passport"\) \|\| !known\("claims"\)\s*\?\s*\{ state: "unavailable" \}/.test(model),
+    "the home's Passport summary is unavailable when the Passport or claims read failed",
+    /!known\("passport"\) \|\| !known\("claims"\) \|\| !counts\.known/.test(model),
   );
   ck(
-    "and when the trust summary could not be counted",
-    /!trust\.known \? \{ state: "unavailable" \}/.test(model),
+    "and when the merit counts could not be established",
+    /counts\.known/.test(model) &&
+      code(read("src/lib/professional-identity/passport-merits.ts")).includes(
+        "if (!known) return UNKNOWN;",
+      ),
   );
-  const snapshot = code(read("src/components/professional-identity/CareerSnapshot.tsx"));
+  const summary = code(read("src/components/professional-identity/PassportSummary.tsx"));
   ck(
     "and the card renders an unavailable state rather than counting to zero",
-    /passport\.state === "unavailable"\s*\?\s*L\(SNAPSHOT\.unreadable, l\)/.test(snapshot),
+    /passport\.state === "unavailable" \? \(/.test(summary) &&
+      summary.includes("L(PASSPORT.unreadable, l)"),
+  );
+  ck(
+    "an unanswered review read renders as a skeleton, not as a zero and not as a failure",
+    /passport\.state === "loading" \? \(/.test(summary),
   );
   const homeCopy = read("src/components/professional-identity/home-copy.ts");
-  const unreadable = /unreadable: c\("([^"]+)", "([^"]+)"\)/.exec(homeCopy);
+  const unreadable = /unreadable: c\(\s*"([^"]+)",\s*"([^"]+)",/.exec(homeCopy);
   ck(
-    "the unavailable copy does not contain a credential count",
+    "the unavailable copy does not contain a merit count",
     Boolean(unreadable) && !/\b0\b/.test(unreadable![1]!) && !/\b0\b/.test(unreadable![2]!),
   );
 }

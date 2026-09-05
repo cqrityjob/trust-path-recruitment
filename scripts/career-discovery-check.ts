@@ -1238,11 +1238,13 @@ expect(
 // ---------------------------------------------------------------------------
 
 const activeFns = read("src/lib/career-discovery/active-report.functions.ts");
-// The dashboard is the route plus the Career Analysis card it renders: the
-// state is resolved in the route and drawn by CareerSnapshot.
+// The home is the route, the ONE view model that resolves the report state,
+// and the section that draws it. Selection stays a server decision; the model
+// turns it into a named state; the section renders that state.
 const dashboard =
   read("src/routes/_authenticated.my-career.index.tsx") +
-  read("src/components/professional-identity/CareerSnapshot.tsx");
+  read("src/lib/professional-identity/home-presentation.ts") +
+  read("src/components/professional-identity/CareerDirectionSection.tsx");
 const v3Summary = read("src/components/career-discovery/DiscoveryCareerSummary.tsx");
 
 // Selection happens ONCE, on the server, before render.
@@ -1268,24 +1270,25 @@ expect(
 // The dashboard must gate legacy behind the discriminator, and must not fall
 // back to legacy while v3 is loading or has failed.
 expect(
-  dashboard.includes("activeIsDiscovery") && dashboard.includes("activeIsLegacy"),
-  "my-career: the dashboard must branch on the active report type",
+  /active\.kind === "none"/.test(dashboard) && /active\.kind === "legacy_v21"/.test(dashboard),
+  "my-career: the home must branch on the active report type",
 );
 // The owner-approved dashboard removed the legacy career-profile block and
 // the "Recommended professions" list; the legacy renderer that survives is the
 // assessment summary. The INVARIANT is unchanged and is what is asserted:
 // legacy content appears only when legacy is genuinely the active report.
 expect(
-  /activeIsLegacy && latestRun &&/.test(dashboard),
-  "my-career: the legacy assessment summary must render only when legacy is active",
+  /active\.kind === "legacy_v21"\s*\?\s*\{\s*state: "legacy"/.test(dashboard),
+  "my-career: the legacy report must be presented only when legacy is genuinely active",
 );
 expect(
-  dashboard.includes("activeQ.isLoading") && dashboard.includes("animate-pulse"),
+  /!active\s*\?\s*\{ state: "loading" \}/.test(dashboard) && dashboard.includes("animate-pulse"),
   "my-career: a neutral skeleton must show while selection resolves, preventing a legacy flash",
 );
 expect(
-  dashboard.includes("activeQ.isError") && dashboard.includes("careerDiscovery.dashboard.error"),
-  "my-career: a v3 load failure must show a sanitised error, not an older legacy report",
+  /input\.activeReportError\s*\?\s*\{ state: "unavailable" \}/.test(dashboard) &&
+    dashboard.includes("CAREER.unavailable"),
+  "my-career: a v3 load failure must say so, not fall back to an older legacy report",
 );
 
 // Career journey must not let legacy state overwrite a newer v3 completion.
@@ -1293,13 +1296,17 @@ expect(
 // it protected against — legacy state overwriting a newer v3 completion — now
 // lives in `noAssessment`, which decides whether the candidate is offered the
 // test at all. It must lead with the v3 signal, not a legacy run.
+// Stronger than the old `noAssessment` derivation: "no report" is now
+// reachable ONLY from the server's own discriminator. There is no path by
+// which a legacy signal, or an identity read that knows nothing about
+// assessment_runs, can produce it.
 expect(
-  /const noAssessment =\s*!activeIsDiscovery/.test(dashboard),
-  "my-career: a v3 completion must not be treated as 'no assessment'",
+  /active\.kind === "none"\s*\?\s*\{ state: "none" \}/.test(dashboard),
+  "my-career: 'no career analysis' must come from the server's discriminator alone",
 );
 expect(
-  /const noAssessment =\s*\n\s*!activeIsDiscovery/.test(dashboard),
-  "my-career: a v3 completion must not be treated as 'no assessment'",
+  !/identity\.discovery\.hasCompletedReport\s*\n?\s*\?\s*\{ state: "none"/.test(dashboard),
+  "my-career: a v3 or legacy completion must not be treated as 'no assessment'",
 );
 
 // The v3 summary must render only from the stored snapshot.
@@ -1453,15 +1460,23 @@ expect(
 //    never let a v3.1 report be treated as a v3.0 one or an unreadable one
 //    degrade into "no report". Both renderable v3 contracts open the report
 //    route by snapshot id; the unreadable one is its own named state.
+// The two renderable v3 contracts reach the ready state through
+// `isRenderableDiscovery`, which is the discriminant test itself, and the
+// stored payload is then read by career-direction.ts — never guessed from
+// the shape of the object.
+const directionSrc = read("src/lib/professional-identity/career-direction.ts");
 expect(
-  /kind === "discovery_v3_0" \|\| activeQ\.data\?\.kind === "discovery_v3_1"[\s\S]{0,200}kind: "ready"/.test(
-    dashboard,
-  ),
+  dashboard.includes("isRenderableDiscovery(activeQ.data)") &&
+    /deriveCareerDirection\(input\.storedReport/.test(dashboard),
   "my-career: both renderable v3 contracts must resolve to the ready state, by discriminant",
 );
 expect(
-  /kind: "ready",\s*href: `\/security-career-assessment\/report\/\$\{activeQ\.data\.snapshotId\}`/.test(
-    dashboard,
+  directionSrc.includes('result.status === "v3.0"') && /state: "ready"/.test(directionSrc),
+  "my-career: each v3 contract must be read on its own terms",
+);
+expect(
+  directionSrc.includes(
+    "const reportHref = `/security-career-assessment/report/${result.snapshotId}`",
   ),
   "my-career: a v3 report must open the report route by its own snapshot id",
 );
@@ -1470,7 +1485,7 @@ expect(
   "my-career: the home no longer embeds the v3.0 summary -- the report is one click away",
 );
 expect(
-  /kind === "discovery_unreadable"[\s\S]{0,200}kind: "unreadable"/.test(dashboard),
+  /active\.kind === "discovery_unreadable"[\s\S]{0,200}state: "unreadable"/.test(dashboard),
   "my-career: an unreadable report must reach its own explicit state",
 );
 

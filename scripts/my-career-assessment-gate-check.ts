@@ -41,14 +41,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
-// The page is the route plus the three modules it hands the gate to: the
-// Career Analysis card (CareerSnapshot), the presentation model that decides
-// whether a retake is offered, and the copy the closed state is said in.
+// The page is the route plus the four modules it hands the gate to: the
+// career direction section, the view model, the ladder that withholds the
+// action, and the copy the closed state is said in.
 const PAGE = join(ROOT, "src/routes/_authenticated.my-career.index.tsx");
 const src = [
   PAGE,
-  join(ROOT, "src/components/professional-identity/CareerSnapshot.tsx"),
+  join(ROOT, "src/components/professional-identity/CareerDirectionSection.tsx"),
   join(ROOT, "src/lib/professional-identity/home-presentation.ts"),
+  join(ROOT, "src/lib/professional-identity/next-best-action.ts"),
   join(ROOT, "src/components/professional-identity/home-copy.ts"),
 ]
   .map((f) => readFileSync(f, "utf8"))
@@ -106,7 +107,7 @@ const ctaBlocks = src.split("/security-career-assessment");
 // First element is the text before the first occurrence — not a CTA.
 assert(ctaBlocks.length - 1 >= 3, "the page still has the assessment CTAs to gate");
 assert(
-  /closed: assessmentClosed/.test(src) && /analysis\.closed\s*\?/.test(src),
+  /closed=\{assessmentClosed\}/.test(src) && /closed\s*\?/.test(src),
   "the CTAs branch on the gate rather than rendering unconditionally",
 );
 // The no-report state must branch on the gate rather than always offering the
@@ -116,18 +117,20 @@ assert(
 // unchanged and is asserted here against the surfaces that replaced them: the
 // Career Discovery card's no-report state, and its optional retake link.
 assert(
-  /analysis\.closed \? \(/.test(src),
+  /to=\{closed \? "\/career-center" : "\/security-career-assessment"\}/.test(src),
   "the no-report state branches on the gate rather than always offering the test",
 );
-// Stronger than the old `unavailable={...}` badge: the retake link is not
-// rendered at all unless the candidate has a report AND the gate would admit
-// them, so there is no dead link to dress up as unavailable.
-// The retake is a standing row in "Bygg vidare", decided by the presentation
-// model: only for somebody with a completed report, and only when the gate
-// ANSWERED yes -- undefined (not yet asked) does not offer it either.
+// The redesigned home offers NO retake at all: "redo the career analysis"
+// was a dashboard feature card of the same weight as taking it for the first
+// time, which put a completed candidate one click from replacing their
+// result. It belongs on the result page. So the dead-link failure mode is
+// settled outright rather than by gating a link -- and the ladder itself
+// still refuses to offer the assessment to somebody the gate would turn
+// away, which is the condition that actually protects a first-timer.
+assert(!/Gör om|Retake/.test(src), "the home offers no retake of the career analysis at all");
 assert(
-  /identity\.discovery\.hasCompletedReport &&\s*input\.careerDiscoveryOpen === true/.test(src),
-  "the optional retake link renders only when the gate would admit the candidate",
+  /signals\.careerDiscoveryOpen !== false/.test(src),
+  "the ladder withholds the assessment when the gate has answered no",
 );
 
 console.log("\nGROUP 3b -- a completed v3 assessment is not judged by legacy signals");

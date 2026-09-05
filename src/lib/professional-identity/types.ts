@@ -137,6 +137,15 @@ export interface IdentityWorkload {
    *  stable id. Null routes to the assessments area rather than to a run
    *  this seam guessed at. Same rule as `releasedReportAttemptId`. */
   readonly assessmentAssignmentAttemptId: string | null;
+  /** Passport entries the holder began and never finished — sp_claims rows
+   *  whose lifecycle_state is `draft`.
+   *
+   *  Counted SEPARATELY rather than folded into `claims`, and that is the
+   *  whole point: a draft is unfinished private work, the Passport itself
+   *  keeps it out of its lists, and letting one into the identity read
+   *  model would put an unfinished entry on a CV. The home needs to know it
+   *  EXISTS so it can offer to finish it; nothing else needs to see it. */
+  readonly draftClaimCount: number;
 }
 
 /* ------------------------------------------------------------------ */

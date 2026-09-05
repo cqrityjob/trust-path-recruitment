@@ -318,9 +318,18 @@ console.log("\n2 · next best action");
     "a new account is offered at most three actions",
     brandNew.primary.length <= MAX_PRIMARY_ACTIONS,
   );
+  // v4 of the ladder: the career analysis outranks the profile. A profile
+  // field is how a merit gets DESCRIBED; the analysis and the Passport are
+  // what this product actually builds for a person, and a brand-new account
+  // has neither. The profile action is still offered, at P7.
   ck(
-    "a new account is asked to complete the profile first",
-    brandNew.primary[0]?.kind === "complete_profile_basics",
+    "a new account is asked to take the career analysis first",
+    brandNew.primary[0]?.kind === "take_career_discovery",
+    brandNew.primary[0]?.kind,
+  );
+  ck(
+    "and the profile action is still offered, lower down",
+    brandNew.all.some((a) => a.kind === "complete_profile_basics" && a.priority === 7),
   );
 
   // The rule the whole ladder exists for.
@@ -844,9 +853,26 @@ console.log("\n2c · the /my-career surfaces");
   // claims AND verified employment -- so it can never contradict the journey
   // strip or the Career Card, which count from the same function. The
   // jurisdiction-relevance split stays on the Passport itself.
+  // The home's Passport figures come from the ONE merit counter -- claims AND
+  // employment, labelled by the Passport's own trust interpretation -- so
+  // they can never contradict the Passport, the journey strip or the Career
+  // Card. The ladder asks the same module for "how many are ready to send",
+  // which is what stopped the recommendation stating a different total from
+  // the panel beside it.
+  const meritsSrc = read("src/lib/professional-identity/passport-merits.ts");
   ck(
-    "the home's verified figure is counted by summariseTrust",
-    /verified: trust\.known \? trust\.verifiedClaims \+ trust\.verifiedEmployment/.test(snapshotModel),
+    "the home's Passport figures are counted by countMerits",
+    /const counts = countMerits\(identity, attention, input\.now\)/.test(snapshotModel),
+  );
+  ck(
+    "and the ladder counts what is ready to send from the same module",
+    read("src/lib/professional-identity/next-best-action.ts").includes(
+      "countReadyForVerification(identity",
+    ) && meritsSrc.includes("export function countReadyForVerification("),
+  );
+  ck(
+    "the merit counter interprets trust through describeTrust, never its own strings",
+    meritsSrc.includes("describeTrust({") && !/assertionLevel === "verified"/.test(meritsSrc),
   );
   ck(
     "the relevance split itself is unchanged",
@@ -2440,13 +2466,21 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
     // isVerifiedClaim -- a revoked credential is not currently verified.
     const pillarSrc = read("src/lib/professional-identity/home-presentation.ts");
     const trustSrc = read("src/lib/professional-identity/trust-summary.ts");
+    const meritSrc = read("src/lib/professional-identity/passport-merits.ts");
     ck(
-      "11.24 the home's Passport pillar counts CURRENTLY verified claims",
-      pillarSrc.includes("summariseTrust(identity)") &&
+      "11.24 the home's Passport summary counts CURRENTLY verified merits",
+      pillarSrc.includes("countMerits(identity, attention, input.now)") &&
+        // labelMerit hands the lifecycle to describeTrust, which refuses the
+        // mark on anything not currently active.
+        meritSrc.includes("lifecycleState: merit.lifecycleState ?? null") &&
         trustSrc.includes("identity.claims.filter(isVerifiedClaim)") &&
         read("src/lib/professional-identity/types.ts").includes(
           'claim.assertionLevel === "verified" && claim.lifecycleState === "active"',
         ),
+    );
+    ck(
+      "11.24b and a merit whose own validity has lapsed is counted apart from it",
+      meritSrc.includes('return hasLapsed(merit.validUntil ?? null, now) ? "expired" : "verified"'),
     );
     ck(
       "11.25 and a revoked-only Passport counts as nothing currently verified",
