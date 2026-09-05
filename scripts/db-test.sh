@@ -1635,6 +1635,78 @@ if [ "$FR_PASSED" -lt 20 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# PR-R3A (20261028090000): the Report V3 data contract, employer audience.
+# scp_employer_report_v3 is a projection of the released employer document;
+# the suite releases three Väktare attempts and proves the V3 document is
+# the locked shape, equals the frozen document conclusion for conclusion,
+# keeps SCC-08 limited, keeps self-report apart, reaches nothing internal,
+# is NULL for every wrong principal, composes with interview notes without
+# touching the report, and survives the orphaned-template and pre-R1 shapes.
+# Runs BEFORE the rollback step (it reads the SCP content spine).
+# ---------------------------------------------------------------------------
+echo "==> Running TRUST evidence report R3A (Report V3 contract) assertions"
+set +e
+R3A_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r3a_contract_test.sql 2>&1)"
+R3A_RC=$?
+set -e
+
+echo "$R3A_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+R3A_PASSED="$(echo "$R3A_OUT" | grep -c "ok  " || true)"
+
+if [ "$R3A_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the TRUST evidence report R3A suite exited with code ${R3A_RC}." >&2
+  echo "$R3A_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "TRUST evidence report R3A contract"
+fi
+
+echo "    ok  ${R3A_PASSED} TRUST evidence report R3A assertions passed"
+
+if [ "$R3A_PASSED" -lt 60 ]; then
+  echo "FAIL: expected at least 60 TRUST evidence report R3A assertions, only ${R3A_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R3A contract (assertion shortfall: floor 60)"
+fi
+for REQUIRED in \
+  "V3.1 SCC-08 reads as limited evidence on one item" \
+  "V3.4 no area with fewer than three observed items reads as a confident pattern" \
+  "V4.2 no area lists self_report as a source" \
+  "V8.1 no mean, spread, derivation input, behaviour id, manifest id, hash" \
+  "V8.4 the participant gets NULL from the employer V3 contract" \
+  "V9.3 the addenda are the only thing that changed"; do
+  if ! echo "$R3A_OUT" | grep -qF "$REQUIRED"; then
+    echo "FAIL: the mandatory R3A contract assertion did not run: ${REQUIRED}" >&2
+    suite_failed "R3A contract (missing: ${REQUIRED})"
+  fi
+done
+
+# ---------------------------------------------------------------------------
+# PR-R3A rollback. The V3 contract stands on PR-R1 (it reads the snapshot's
+# manifest link as a fact), so it is rolled back BEFORE R1 below and
+# re-applied AFTER R1 is back. Its rollback drops one function and must leave
+# the audience contracts, the release function and the snapshots alone.
+# ---------------------------------------------------------------------------
+echo "==> Rolling PR-R3A (Report V3 contract) back"
+set +e
+R3A_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261028090000_scp_trust_evidence_report_r3a_contract_rollback.sql 2>&1)"
+R3A_BACK_RC=$?
+set -e
+if [ "$R3A_BACK_RC" -ne 0 ]; then
+  echo "FAIL: the R3A rollback exited with code ${R3A_BACK_RC}." >&2
+  echo "$R3A_BACK" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "R3A contract rollback"
+fi
+R3A_GONE="$(psql -tAq -d "$TEST_DB" -c \
+  "select (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_employer_report_v3')
+        + (2 - (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('scp_participant_report','scp_employer_report') and p.prosrc like '%scp_audience_brief%'));")"
+if [ "$R3A_GONE" != "0" ]; then
+  echo "FAIL: after the R3A rollback the V3 contract survived or an audience contract is gone (${R3A_GONE})." >&2
+  suite_failed "R3A contract rollback (state not restored)"
+else
+  echo "    ok  R3A rolled back -- scp_employer_report_v3 gone, audience contracts untouched"
+fi
+
+# ---------------------------------------------------------------------------
 # PR-R1 (20261027090000, REPRODUCIBLE PROVENANCE) rollback and re-apply.
 #
 # The R0 suite above released three attempts and rolled its transaction back,
@@ -1666,6 +1738,20 @@ if [ "$R1_GONE" != "0" ]; then
   suite_failed "R1 provenance rollback (objects survived)"
 else
   echo "    ok  R1 rolled back -- no manifest table, no link columns, no R1 routine, pre-R1 release function restored"
+fi
+
+echo "==> R3A must refuse on a database without PR-R1"
+set +e
+R3A_REFUSE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261028090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
+R3A_REFUSE_RC=$?
+set -e
+if [ "$R3A_REFUSE_RC" -eq 0 ] || ! echo "$R3A_REFUSE" | grep -q "SCP_R3A_PRECONDITION: scp_report_snapshots.manifest_id is missing"; then
+  echo "FAIL: R3A applied (or failed for another reason) without PR-R1 underneath." >&2
+  echo "$R3A_REFUSE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "R3A precondition (PR-R1)"
+else
+  echo "    ok  R3A refused: SCP_R3A_PRECONDITION (PR-R1) -- nothing installed"
 fi
 
 # The restored pre-R1 function must be the CORRECTED one (20261026093000),
@@ -1775,6 +1861,20 @@ if [ "$R1_BACK_AGAIN" != "2" ]; then
   suite_failed "R1 provenance re-application (state not restored)"
 else
   echo "    ok  R1 re-applied -- manifest table and release function back; apply-time proof passed"
+fi
+
+echo "==> Re-applying PR-R3A (Report V3 contract)"
+set +e
+R3A_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261028090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
+R3A_FWD_RC=$?
+set -e
+if [ "$R3A_FWD_RC" -ne 0 ]; then
+  echo "FAIL: re-applying R3A exited with code ${R3A_FWD_RC}." >&2
+  echo "$R3A_FWD" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "R3A contract re-application"
+else
+  echo "    ok  R3A re-applied -- scp_employer_report_v3 back; apply-time proof passed"
 fi
 
 # ---------------------------------------------------------------------------

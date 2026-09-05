@@ -156,6 +156,9 @@ END $$;
 -- is dropped with the flagship assessment further down.
 ALTER TABLE public.scp_report_snapshots DROP COLUMN IF EXISTS manifest_id;
 ALTER TABLE public.scp_report_snapshots DROP COLUMN IF EXISTS canonical_sha256;
+-- PR-R3A (20261028090000) unwinds before PR-R1: the Report V3 projection
+-- reads the snapshot's manifest link, which R1's rollback removes.
+DROP FUNCTION IF EXISTS public.scp_employer_report_v3(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_verify_report_manifest(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_report_manifest_computation(uuid, timestamptz, text, text) CASCADE;
 DROP TABLE    IF EXISTS public.scp_report_computation_manifests CASCADE;

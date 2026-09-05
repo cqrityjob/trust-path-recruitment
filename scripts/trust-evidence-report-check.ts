@@ -51,7 +51,9 @@ import {
   TRUST_MANIFEST_EVIDENCE_FIELDS,
   TRUST_MANIFEST_REQUIRED_FIELDS,
   TRUST_PROCESS_STEPS,
+  TRUST_V3_AREA_KEYS,
   TRUST_V3_EXAMPLE,
+  TRUST_V3_TOP_LEVEL_KEYS,
   type TrustComputationManifest,
   type TrustEvidenceArea,
   type TrustEvidenceReportV3,
@@ -634,11 +636,13 @@ console.log("\nE. SCC-08 on one item is limited evidence, never a weakness");
     (a) => a.competency_code === "SCC-08",
   )!;
   check(
-    "E7 the V3 example states SCC-08 as observed_limited on one item with a first-priority follow-up",
+    "E7 the V3 example states SCC-08 as observed_limited on one item, labelled limited, with an interview follow-up priority",
     v3area?.evidence_state === "observed_limited" &&
+      v3area.response_pattern === "limited" &&
       v3area.observed_item_count === 1 &&
-      v3area.follow_up_priority === "first" &&
-      v3area.methodological_flags.includes("single_item"),
+      (v3area.follow_up_priority === "first" || v3area.follow_up_priority === "next") &&
+      v3area.methodological_flags.includes("single_item") &&
+      v3area.limitation?.code === "single_item",
   );
 }
 
@@ -939,10 +943,16 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     TRUST_MANIFEST_AREA_FIELDS.every((k) => k in area),
   );
   check(
-    "H9 the manifest is where the numbers live, and the audience document only references it by id and hash",
-    "canonical_sha256" in v3.computation_manifest_ref &&
+    "H9 the manifest is where the numbers live; the audience document names neither its id nor its hash, only whether the chain is verified",
+    !("computation_manifest_ref" in v3) &&
       !("included_evidence" in v3) &&
-      !("weighted_sum" in v3),
+      !("weighted_sum" in v3) &&
+      !("manifest_id" in v3.provenance_summary) &&
+      !("canonical_sha256" in v3.provenance_summary) &&
+      (v3.provenance_summary.computation_chain === "verified" ||
+        v3.provenance_summary.computation_chain === "legacy") &&
+      !JSON.stringify(v3).includes("canonical_sha256") &&
+      !JSON.stringify(v3).includes("manifest_id"),
   );
 
   // PR-R1 (20261027090000) created the manifest, once. H10/H11 were PR-R0's
@@ -1004,6 +1014,73 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     "H12 nothing in src/ imports or renders the V3 contract",
     srcMentions.length === 0,
     srcMentions.map((f) => relative(ROOT, f)).join(", "),
+  );
+
+  // PR-R3A (20261028090000): the server produces the V3 document. Exactly
+  // one migration creates scp_employer_report_v3; it names every top-level
+  // and area key this contract locks; it reads the document through the
+  // audience contract and never the snapshot's internals; and it never names
+  // the manifest table (H11 already holds it to that).
+  const R3A_MIGRATION = "20261028090000_scp_trust_evidence_report_r3a_contract.sql";
+  const v3Creators = migrations.filter((f) =>
+    /CREATE OR REPLACE FUNCTION public\.scp_employer_report_v3\(/.test(
+      readFileSync(join(ROOT, "supabase/migrations", f), "utf8"),
+    ),
+  );
+  check(
+    "H14 exactly one migration creates scp_employer_report_v3, and it is PR-R3A's",
+    v3Creators.length === 1 && v3Creators[0] === R3A_MIGRATION,
+    v3Creators.join(", "),
+  );
+  const r3a = stripComments(read(`supabase/migrations/${R3A_MIGRATION}`));
+  const missingTop = TRUST_V3_TOP_LEVEL_KEYS.filter((k) => !r3a.includes(`'${k}'`));
+  check(
+    "H14b the R3A migration writes every top-level key the V3 contract names",
+    missingTop.length === 0,
+    missingTop.join(", "),
+  );
+  const missingArea = TRUST_V3_AREA_KEYS.filter((k) => !r3a.includes(`'${k}'`));
+  check(
+    "H14c the R3A migration writes every area key the V3 contract names",
+    missingArea.length === 0,
+    missingArea.join(", "),
+  );
+  // The migration's own proof block names the forbidden column references
+  // inside LIKE literals; drop string literals before looking for real ones.
+  const r3aCode = r3a.replace(/^\s*--.*$/gm, "").replace(/'(?:[^']|'')*'/g, "''");
+  check(
+    "H14d the R3A migration reads the document through scp_employer_report and never selects payload, brief, derivation_input or the hash from the snapshot",
+    /FROM public\.scp_employer_report\(_attempt_id\)/.test(r3a) &&
+      !/\bs\.(payload|brief|derivation_input|canonical_sha256)\b/.test(r3aCode) &&
+      !/scp_report_manifest_computation|scp_verify_report_manifest|scp_attempt_assessment_signal|scp_attempt_maturity|scp_attempt_evidence_state|scp_attempt_self_report_pattern/.test(
+        r3aCode,
+      ),
+  );
+  check(
+    "H14e the R3A migration grants the V3 contract to authenticated only and revokes anon",
+    /REVOKE ALL\s+ON FUNCTION public\.scp_employer_report_v3\(uuid\) FROM PUBLIC, anon;/.test(
+      r3a,
+    ) &&
+      /GRANT\s+EXECUTE ON FUNCTION public\.scp_employer_report_v3\(uuid\) TO authenticated;/.test(
+        r3a,
+      ),
+  );
+  check(
+    "H14f the R3A migration does not touch the audience contracts or the release function",
+    !/CREATE OR REPLACE FUNCTION public\.scp_(participant|employer)_report\(/.test(r3a) &&
+      !/CREATE OR REPLACE FUNCTION public\.scp_release_attempt_report\(/.test(r3a),
+  );
+  check(
+    "H14g the V3 contract's process step and priority sets are the locked ones",
+    TRUST_V3_EXAMPLE.primary_next_step.step === "structured_interview" &&
+      TRUST_PROCESS_STEPS.includes(TRUST_V3_EXAMPLE.primary_next_step.step) &&
+      TRUST_V3_EXAMPLE.trust_plan.priorities.length <= 3 &&
+      TRUST_V3_EXAMPLE.trust_plan.question_count <= 5 &&
+      TRUST_V3_EXAMPLE.trust_plan.priorities.every(
+        (p) =>
+          p.structure.steps.map((s) => s.key).join() ===
+          "situation,own_role,action,result,reflection",
+      ),
   );
 
   // The characterisation document lists every reproducibility row.

@@ -118,6 +118,23 @@ completed_disputed` and `evidence_state` unchanged, a pending review →
 plus `follow_up_priority = first` on the area — never a state that reads as a
 risk level.
 
+**Amendment, PR-R3A (20261028090000).** The shape is now produced server
+side by `scp_employer_report_v3(attempt_id)` for the employer audience;
+`scripts/fixtures/trust-evidence-report-v3-contract.ts` is the typed
+contract and guard H14 holds the migration to every key it names. Three
+changes to the shape above, each a product-owner decision recorded in
+`docs/assessment/architecture/trust-evidence-report-r3a-contract.md`:
+(1) `computation_manifest_ref` is NOT in the audience document — the private
+manifest is referenced only as `provenance_summary.computation_chain =
+verified | legacy`, never by id or hash; (2) `recommended_process_step` is
+`primary_next_step { step, reason_code, reason, interview_handoff }`, the same
+four steps; (3) the `developing` signal, which the mapping above left
+without a value, maps to a seventh state `observed_follow_up` ("a person
+should ask"), and every area also carries `response_pattern`, the six-word
+card label. Added beside the locked fields: `overview`, `safety_followup`,
+`trust_plan`, `coverage.composition`, `interview_addenda`; `released_by_role`
+stays in the manifest and is not an audience fact.
+
 ## Decision 3 — private computation manifest (PR-R1, not created here)
 
 Table `public.scp_report_computation_manifests`. One row per released
