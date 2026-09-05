@@ -316,3 +316,67 @@ untouched. `db-test.sh` builds a committed, valid same-slug twin (own
 definition, version and form, the same 50 items), re-applies the migration
 under it, proves a 49-item live form is still refused while a 49-item twin
 is ignored, and removes the twin.
+
+## 13. RUN 2 (2026-09-05): prerequisites applied, frozen release proof, R1 active hosted
+
+All three applies went through direct Supabase access (the management API)
+against `wrygicdfxwjnrugduxnt` from origin/main
+`e750743e781d9ec8a93e4b30aaf01e1d01621c4e`, each submitted verbatim; every
+ledger row's statement text hashes to its canonical file. They are mapped in
+`migrations-policy.json` under `hostedLedgerOverrides`, never as
+`appliedThroughLovable`.
+
+| Canonical | Hosted version | Canonical sha256 | Applied (UTC) |
+|---|---|---|---|
+| `20261021090000` option order | `20260905053344` | `fe1cbbd6…6a8d8` | 05:33:44 |
+| `20261026093000` facet resolution | `20260905053809` | `1390d8f7…7adbc5` | 05:38:09 |
+| `20261027090000` R1 provenance | `20260905054603` | `48e5e9dd…a77a2` | 05:46:03 |
+
+The ledger row `20260904190901` for R1 is unchanged and is recorded as:
+Applied, verified, then rolled back. Historical deployment record; no longer
+represents the current schema.
+
+**Option order.** Seed column present, nullable, no default; all 34 existing
+attempts NULL; every table digest identical before and after (attempts
+compared without the new trailing column: `a949993c…`); the 16 audience
+documents and 30 attempts' item presentations md5-identical to the pre-apply
+reads. A transient, rolled-back new attempt got a positive seed, refused
+update and NULL-ing (23514), read identically twice, returned the 22
+scenarios in seed-key order (19 permuted) and the 24 ordered scales in
+authored order.
+
+**Facet resolution.** Release function `e8c4fa18…` carries exactly one
+competency-scoped `f2` reference, no slug-only form, no `LIMIT 1`, no
+`DISTINCT ON`; scoring routines and audience contracts md5-unchanged; the 96
+facet rows (48 orphans, 48 duplicated slugs) untouched.
+
+**Frozen cohort and pre-R1 proof.** Cohort frozen 2026-09-05T05:38:57Z: 8
+releasable attempts (`0985aab7`, `1c7acd21`, `86644990`, `890b7968`,
+`9605482a`, `c03c2770`, `c58a3af9`, `e0311a74`; `f60976f4` excluded, NULL
+issuer). One transaction per attempt: release, capture SQLSTATE, require
+`00000` and exactly 2 snapshots, roll back. 8/8 PASS, including `890b7968`,
+which the slug-only lookup had failed with 21000. Separate post-check: counts
+and every digest identical, 8 still unreleased.
+
+**R1 active.** Posture as §6 on production: manifest table RLS on, no policy,
+no audience privilege, service_role only, immutable trigger, 0 rows; the
+four new routines unreachable by anon/authenticated; release function the
+sole snapshot and manifest writer (`b46c8196…`); hash pinned `21501dba…`;
+link columns nullable, paired, NULL on all 16 historical snapshots; R2A-3
+posture and both audience contracts unchanged. Impersonated: participant,
+employer owner, an unrelated user and anon all get 42501 on the manifest
+table, builder, verifier and hash rule; the unrelated user reads 0 rows via
+the RPCs; all 16 historical documents md5-identical to the pre-RUN-2 reads
+and name no manifest.
+
+**Post-R1 proof.** Same 8 attempts, one transaction each as the issuing
+owner: 2 snapshots, 1 manifest, both linked to it with one `canonical_sha256`,
+one `released_at` equal to `calculated_at`, verifier `integrity_ok` /
+`reproducible` / `snapshots_linked` all true, an independent rebuild under
+the frozen instant hashing identically, then rolled back. 8/8 PASS. Seven
+cohort attempts carry no responses (empty computations); `890b7968` froze 50
+responses, 26 included rows, 8 areas, 8 self-report areas, 15 guide prompts.
+Post-rollback: 34 / 8 / 16 / 547 / 637 / 147, 0 manifests, 0 linked
+snapshots, every digest identical to the frozen baseline.
+
+No production row was created, deleted or updated. Report V3 not started.
