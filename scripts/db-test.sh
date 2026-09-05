@@ -1662,22 +1662,57 @@ fi
 
 echo "    ok  ${R3A_PASSED} TRUST evidence report R3A assertions passed"
 
-if [ "$R3A_PASSED" -lt 60 ]; then
-  echo "FAIL: expected at least 60 TRUST evidence report R3A assertions, only ${R3A_PASSED} ran." >&2
-  suite_failed "TRUST evidence report R3A contract (assertion shortfall: floor 60)"
+if [ "$R3A_PASSED" -lt 65 ]; then
+  echo "FAIL: expected at least 65 TRUST evidence report R3A assertions, only ${R3A_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R3A contract (assertion shortfall: floor 65)"
 fi
 for REQUIRED in \
-  "V3.1 SCC-08 reads as limited evidence on one item" \
-  "V3.4 no area with fewer than three observed items reads as a confident pattern" \
-  "V4.2 no area lists self_report as a source" \
-  "V8.1 no mean, spread, derivation input, behaviour id, manifest id, hash" \
-  "V8.4 the participant gets NULL from the employer V3 contract" \
-  "V9.3 the addenda are the only thing that changed"; do
+  "V3.1 SCC-08 = {observed_pattern not_established, evidence_sufficiency limited" \
+  "V3.4 sufficiency follows the observed count exactly" \
+  "V4.2 no competency lists self_report as a source" \
+  "V7.1 clearest support needs an established consistent pattern AND sufficient evidence" \
+  "V7.6 TEST 1: a consistent pattern on limited evidence is never clearest support" \
+  "V8.1 TEST 8: every key at every depth of the employer document is on the locked allowlist" \
+  "V8.2 TEST 8: no author id, no e-mail, no manifest field" \
+  "V8.5 the participant gets NULL from the employer V3 contract" \
+  "V9.3 TEST 6: after the addenda, frozen_report is byte-identical" \
+  "V10.2 TEST 2: with two report-level contexts" \
+  "V11.1 TEST 3: after newer competency versions are published, the frozen core is byte-identical" \
+  "V11.2 TEST 4: after the rubric editions are retired" \
+  "V12.1 TEST 7: human_review.completed is true" \
+  "V13.1 the core names no process step"; do
   if ! echo "$R3A_OUT" | grep -qF "$REQUIRED"; then
     echo "FAIL: the mandatory R3A contract assertion did not run: ${REQUIRED}" >&2
     suite_failed "R3A contract (missing: ${REQUIRED})"
   fi
 done
+
+# ---------------------------------------------------------------------------
+# rds-v1 parity: the TypeScript next-step rule and scp_report_next_step must
+# agree on every point of the state matrix. The TypeScript half generates
+# the SQL assertions; this executes them against the replayed database.
+# ---------------------------------------------------------------------------
+echo "==> Running rds-v1 next-step parity (SQL half)"
+set +e
+PARITY_SQL="$(bun run scripts/trust-next-step-parity-check.ts --sql 2>/dev/null)"
+PARITY_GEN_RC=$?
+set -e
+if [ "$PARITY_GEN_RC" -ne 0 ] || [ -z "$PARITY_SQL" ]; then
+  echo "FAIL: the parity matrix could not be generated (rc ${PARITY_GEN_RC})." >&2
+  suite_failed "rds-v1 parity (generation)"
+else
+  set +e
+  PARITY_OUT="$(echo "$PARITY_SQL" | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+  PARITY_RC=$?
+  set -e
+  if [ "$PARITY_RC" -ne 0 ] || ! echo "$PARITY_OUT" | grep -q "rds-v1 parity"; then
+    echo "FAIL: rds-v1 parity between TypeScript and SQL failed." >&2
+    echo "$PARITY_OUT" | grep -iE "PARITY FAILED|ERROR:|FEL:" | head -5 >&2
+    suite_failed "rds-v1 parity (SQL half)"
+  else
+    echo "$PARITY_OUT" | grep "rds-v1 parity" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /'
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # PR-R3A rollback. The V3 contract stands on PR-R1 (it reads the snapshot's
@@ -1697,7 +1732,7 @@ if [ "$R3A_BACK_RC" -ne 0 ]; then
   suite_failed "R3A contract rollback"
 fi
 R3A_GONE="$(psql -tAq -d "$TEST_DB" -c \
-  "select (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='scp_employer_report_v3')
+  "select (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('scp_employer_report_v3','scp_report_next_step'))
         + (2 - (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('scp_participant_report','scp_employer_report') and p.prosrc like '%scp_audience_brief%'));")"
 if [ "$R3A_GONE" != "0" ]; then
   echo "FAIL: after the R3A rollback the V3 contract survived or an audience contract is gone (${R3A_GONE})." >&2

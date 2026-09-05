@@ -2,184 +2,215 @@
 
 *Från evidens till en bättre intervju.*
 
-PR-R3A adds one server-side read contract, `scp_employer_report_v3(attempt_id)`
-(migration `20261028090000`), returning the employer's Report V3 document as a
-single jsonb. It is the smallest safe projection the approved Report V3 UI
-(PR-R3B) needs. No UI, no application code and no scoring, release, template,
-policy or grant on an existing object changes in this PR.
+PR-R3A (migration `20261028090000`) adds two routines and no UI:
 
-## 1. What it is, in one sentence
+- `scp_report_next_step(safety_findings_present, observed_items, areas_sufficient, areas_limited)`
+  — the ONE rds-v1 process-step rule, IMMUTABLE, internal. The TypeScript
+  rds-v1 layer is proven identical to it over the full state matrix in CI.
+- `scp_employer_report_v3(attempt_id)` — the employer's Report V3 document as
+  one jsonb: a **frozen report** (a shared audience-neutral **core** and the
+  **employer projection**) beside a live **addenda overlay**.
 
-A rearranged reading of the frozen employer document — read through
-`scp_employer_report`, the only audience path a client has had to a snapshot
-since PR-R2A — laid out the way the approved information architecture reads
-it, with the form's composition and the review states added as structural
-facts and the interview notes composed beside it.
+It is the smallest safe projection the approved Report V3 UI (PR-R3B) needs.
+No scoring, release, template, policy or grant on an existing object changes.
 
-## 2. Reuse, not a second engine
+## 1. The semantic model
 
-| Existing thing | How V3 uses it |
-|---|---|
-| `scp_employer_report(uuid)` (R2A audience contract) | The V3 function calls it first. Zero rows there (not released, wrong organisation, not a member) is `NULL` here. Every conclusion — signal, why-line, behaviour, self-report pattern, guide entry, safety finding, coverage count, version — is taken from that document and never recomputed. |
-| `scp_report_snapshot_readable` | Inherited through the call above; the V3 function evaluates no audience rule of its own. |
-| rds-v1 (`decision-support.ts`) | Its next-step rule is stated once more, server side, verbatim: human finding → `request_clarification`; no observed evidence → `gather_more_evidence`; more limited than usable areas → `additional_assessment`; else `structured_interview`. The four steps are the same closed set (guard B4 / H14g). |
-| Frozen `interview_guide` | Becomes `trust_followups` verbatim, and the TRUST Interview Plan is selected from it deterministically (first three distinct areas in the guide's own order; the first two carry their authored follow-up: 2 + 2 + 1 = 5 questions at most). |
-| `scp_interview_notes` (append-only, 20260830093000) | Becomes `interview_addenda`: `evidence_confirmed → supported_in_interview`, `evidence_not_confirmed → not_supported_in_interview`, `additional_context` unchanged, with note, timestamp and author. The released report is never rewritten. |
-| PR-R1 manifest link | Read as one boolean: `provenance_summary.computation_chain = verified \| legacy`. No manifest id, no hash, no body. The migration never names the manifest table (guard H11). |
+Three dimensions, kept apart everywhere (JSON, SQL, TypeScript, copy, tests):
 
-The apply-time proof and guard H14d refuse the function if it ever names a
-signal, maturity, state or self-report routine, the evidence ledger, the
-rubric levels, the option table or the snapshot's payload / brief /
-derivation_input / hash columns directly.
-
-## 3. Frozen versus structural
-
-Every **conclusion** comes from the frozen snapshot. Three **structural
-facts** are read from immutable rows because the snapshot does not carry
-them and the layout needs them:
-
-- the composition of the form the attempt was assigned
-  (`scp_form_items × scp_item_versions`: how many scenario, free-text and
-  self-description items each competency has, and which are safety-critical);
-- which of those the person answered (`scp_candidate_responses`, counted
-  only: no option id, no text);
-- the state of the human reviews (`scp_human_reviews`: status and outcome
-  counts; never rationale, never a rubric level, never a finding beyond what
-  the snapshot froze).
-
-A completed review is immutable and a report is released only after every
-review is closed, so these counts cannot drift under a released report. The
-suite proves it (V9.3: after two interview notes, every other line of the
-document is byte-identical).
-
-## 4. The document
-
-Top level: `schema_version` (`trust-evidence-report/v3`), `report_id`,
-`attempt_id`, `subject_id`, `released_at`, `audience`, `context`,
-`primary_next_step`, `overview`, `safety_followup`, `coverage`, `areas`,
-`self_reported_patterns`, `trust_followups`, `trust_plan`, `limitations`,
-`human_review`, `provenance_summary`, `interview_addenda`. The typed shape is
-`scripts/fixtures/trust-evidence-report-v3-contract.ts`; guard H14b/H14c hold
-the migration to every key it names.
-
-**Areas** — one per competency of the form (eight on Väktare v1), in the
-catalogue's order. Every number is a count. `response_pattern` is the card
-label from the frozen ras-v1 signal:
-
-| signal | `response_pattern` | `evidence_state` | sv label |
+| dimension | says | values | lives on |
 |---|---|---|---|
-| strong | `clearly_consistent` | `observed_consistent` | Tydligt sammanhållet svarsmönster |
-| consistent | `consistent` | `observed_consistent` | Sammanhållet svarsmönster |
-| mixed | `mixed` | `observed_mixed` | Blandat svarsmönster |
-| developing | `follow_up` | `observed_follow_up` | Behöver följas upp |
-| limited | `limited` | `observed_limited` | Begränsat underlag |
-| (none) | `none` | `self_reported_only` / `not_covered` | Inget observerat underlag |
+| `observed_pattern` | what the observed responses look like | clearly_consistent · consistent · mixed · developing · not_established | core competency line |
+| `evidence_sufficiency` | how much observed evidence exists | sufficient · limited · none | core competency line |
+| `follow_up_priority` | what the recruiter should do | first · next · if_time_allows · none | employer area line |
 
-`observed_follow_up` is an amendment to ADR Decision 2, which had no value
-for the `developing` signal; it reads as "a person should ask", never as a
-level. A pending review gives `human_review_pending`; a disputed review gives
-`review_status = completed_disputed` with the state unchanged. The
-`critical_follow_up` state of the frozen document becomes
-`safety_critical_follow_up = true` and `follow_up_priority = first`, and the
-area is named in `safety_followup.areas_flagged_for_follow_up`.
+From the frozen ras-v1 signal: strong → clearly_consistent, consistent →
+consistent, mixed → mixed, developing → developing. `limited` (the governed
+rule computes no pattern under three tasks) and no evidence both map to
+`not_established`; sufficiency follows the observed count exactly: 0 →
+none, 1–2 → limited, ≥ 3 → sufficient. Nothing invents a stronger pattern
+than the evidence supports.
 
-`coverage_status`, `methodological_flags` (`single_item`, `single_context`,
-`self_report_not_observed`, `unvalidated_content`, `closed_test`), the one
-`limitation` a card states, `evidence_basis` (item and review counts per
-channel), `behaviour`, the authored `interview_prompt`, the
-`trust_followup_codes` the guide selected, and `traceability.available`.
+`evidence_state` (ADR Decision 2's closed set, with `observed_follow_up` for
+`developing`) is kept as a composite presentation field **derived** from the
+dimensions and the review state; it never replaces them.
 
-**SCC-08.** One observed item, no self-report item. It reads `limited` /
-`observed_limited` / `coverage_status = limited`, flagged `single_item`, with
-the limitation "Endast en uppgift … följ upp i intervju", an
-`explore_limited_evidence` follow-up and an interview priority. The suite's
-regression rule V3.4 is stated over every area of every document: fewer than
-three observed items can never read as a confident pattern, a full coverage
-or a consistent state.
+**SCC-08** on one observed item is exactly:
+`{ observed_pattern: not_established, evidence_sufficiency: limited,
+observed_item_count: 1, methodological_flags: [single_item, …],
+follow_up_priority: next }` with the card limitation *Det finns ett
+observerat svar, men underlaget räcker inte för att fastställa ett stabilt
+svarsmönster. Följ upp området i intervju.* / *There is one observed answer,
+but the evidence is not enough to establish a stable response pattern.
+Follow up the area in interview.* Suite V3 pins it; V3.4 states the rule
+over every competency of every document.
 
-**Self-report** stays in `self_reported_patterns` (domain, competency,
-pattern, consistency, count, `interpretation`, why-line). A card names only
-`self_description_domain_keys`; no area ever lists `self_report` as a source.
-`interpretation` is `descriptive_only` for every domain: the schema still has
-no per-domain column for `methodologically_open`, so c07 / c19 remain a
-content decision (gap recorded in R0 §3, unchanged).
+## 2. The document
 
-**Free text** is its own channel: `evidence_basis.free_text_*` on the card,
-`human_reviewed_free_text` among the sources only when a person read the
-text and let it stand, and `human_review.free_text` at document level. An
-overturned reading is `completed_disputed` and adds no source.
+```
+{ schema_version: "trust-evidence-report/v3", report_id,
+  frozen_report: {
+    core:     { core_version, assessment, timestamps, competencies[],
+                self_reported_patterns[], coverage, human_review,
+                limitations, provenance },
+    employer: { context, primary_next_step, overview, safety_followup,
+                areas[], trust_followups[], trust_plan } },
+  addenda_overlay: { as_of, source, items[] } }
+```
 
-**Coverage** carries the frozen counts and the truthful composition of the
-form: on Väktare v1, 22 scenario answers, 24 self-descriptions, 4 free-text
-answers read by a person, 3 safety-critical answers checked — read from the
-rows, never hard-coded.
+The typed contract is `scripts/fixtures/trust-evidence-report-v3-contract.ts`.
+Guard H14 holds the migration to every key it names; guard H15 holds the
+**employer field allowlist** (every key at any depth) to the one the database
+suite enforces (V8.1); guard H16 holds the core to the participant boundary.
 
-**Safety.** `safety_followup` exists only from the frozen `safety_flags`,
-which the release function writes from reviewer findings alone (no
-deterministic path sets a finding; a cleared item is `no_concern` and never
-a flag). Findings are `{finding, severity, observed_at}`; nothing is inferred
-from a signal, a count or a self-description. With and without a finding,
-every card reads the same apart from the follow-up marks (V5.8).
+### 2.1 The shared frozen core (`trust-evidence-core/v1`)
 
-**Limitations**: the closed code set (`one_assessment_occasion`,
-`single_evidence_context`, `self_report_not_observed`,
-`unvalidated_content`, `closed_test_pilot`, `no_norm_group`,
-`no_predictive_claim`) stated in both languages without the words the
-vocabulary guards forbid, the template's own limitation lines beside them,
-and the standing statement: *Detta visar hur kandidaten svarade i just dessa
-uppgifter. Det fastställer inte lämplighet eller framtida arbetsprestation.
-Beslutet är arbetsgivarens.*
+Audience-neutral by construction: competency identity, `observed_pattern`,
+`evidence_sufficiency`, the derived `evidence_state`, counts, source types,
+coverage status, the mandatory-review state (`not_required | pending |
+completed`), methodological flags, the frozen why-line, the one card
+limitation, `evidence_basis` counts, behaviour, the self-report domain keys;
+`self_reported_patterns` as its own evidence type; `coverage` (report-level
+counts, sufficiency counts, the frozen composition, modules); `human_review`
+(counts, `completed`, and a `meaning` that is a denial); `limitations`
+(standing statement and the closed code set); `provenance`. It names no
+process step, priority, safety detail, interview material, addendum,
+author, organisation, attempt or subject (suite V13, guard H16). A
+participant projection may later be built on it; it is not built here.
 
-**Provenance summary**: every version the snapshot froze, the template key
-and version, the rubric editions bound to the form's free-text items, the
-release instant (which is the calculation instant since PR-R1), and
-`computation_chain`. Nothing private.
+### 2.2 The employer projection
 
-## 5. Not exposed
+`context` (attempt, pseudonymous subject, participant reference,
+organisation, the standing limitation, the audience contract's template
+lines), `primary_next_step` (the rds-v1 rule over the document's own
+aggregates, with `rule_version` and a handoff naming the attempt and at
+most three focus areas), `overview`, `safety_followup` (only ever from the
+frozen human findings), `areas` (priority, `safety_critical_follow_up`,
+`clearest_support_eligible`, `verify_reasons`, the authored prompt, the
+guide codes, traceability), `trust_followups` (the frozen guide verbatim),
+`trust_plan` (at most three areas, at most five authored questions,
+T-R-U-S-T with the five-step structure, never called STAR).
 
-`derivation_input`, mean, spread, contribution, confidence, option keys,
-score values, rubric levels, reviewer rationale, `behaviour_version_id`, the
-manifest body, the manifest id, the hash, the reviewer's identity, the
-released-by role, any total, ranking or verdict. Suite V8.1 scans the whole
-document for each; V8.2 scans it for every forbidden claim in both languages
-outside the template's own denial lines; the apply-time proof scans the
-function for the 14-word list every report routine is held to, plus the V3
-keys and the Swedish claims.
+### 2.3 The thirty-second overview, from the separated dimensions
 
-## 6. Audience safety
+- **clearest_support**: `observed_pattern ∈ {clearly_consistent, consistent}`
+  AND `evidence_sufficiency = sufficient` AND no verify reason (no safety
+  finding, no pending review, no human review that changed a reading). A
+  consistent pattern on limited evidence can never appear here (V7.6).
+- **limited_evidence**: `evidence_sufficiency ∈ {limited, none}`, whatever
+  pattern is visible.
+- **verify_in_interview**: every area with a governed `verify_reason`
+  (`safety_finding`, `developing_pattern`, `mixed_pattern`,
+  `limited_evidence`, `pending_review`, `human_review_adjusted`). It may
+  overlap limited_evidence; it never overlaps clearest_support.
 
-The participant, a second organisation and an unrelated account receive
-`NULL`; anon cannot execute the function. The snapshot table stays closed,
-`scp_participant_report` and `scp_employer_report` are untouched (the R2A
-proofs still hold), and Report V3 is employer-only: nothing about a
-participant document changes in this PR.
+### 2.4 The live addenda overlay
 
-## 7. Historical compatibility
+`scp_interview_notes` projected: status (`supported_in_interview |
+not_supported_in_interview | additional_context`), note, `recorded_at`,
+`author_display_name` (from `profiles`, or *Kollega*), with its own `as_of`.
+Adding an addendum changes nothing in `frozen_report`, `report_id` or
+provenance — the suite proves it byte for byte (V9.3).
 
-Two shapes production holds are walked by the suite: a snapshot whose
-template row is missing (the sixteen orphans) renders fully with empty
-template lines; a snapshot released before PR-R1 renders fully with
-`computation_chain = legacy` and no traceability offered, and nothing else
-in the document differs.
+## 3. Version lock
+
+Every **conclusion** comes from the frozen employer snapshot as
+`scp_employer_report` returns it. Every **structural fact** the snapshot does
+not carry comes from the PR-R1 computation manifest the snapshot is linked
+to — the frozen, hashed record of the release — as counts and version
+identities only: the composition of what the person answered per
+competency (item formats, self-descriptions, safety-critical items), which
+free-text and safety-critical answers a person read, the per-competency
+context count, the competency version, the rubric editions. No option key,
+score, contribution, rubric level, finding or rationale is read; nothing of
+the body is projected; the manifest stays private (no grant moves).
+
+No read resolves "latest" or "currently active":
+
+| need | source | why stable |
+|---|---|---|
+| competency name/version | frozen line; else the version published at the release instant; version from the manifest | a later publication has a later `published_at` |
+| rubric editions | manifest ids → `scp_rubric_versions.version_number` | retirement changes neither |
+| composition, answers, review states | manifest | frozen and hashed at release |
+| context count per competency | manifest `areas[].context_count` | frozen; the report-level count is separate |
+| prompts, guide, why-lines, behaviours | frozen brief/payload | frozen |
+| template limitation lines | the R2A audience contract's live template row | carried outside the frozen core and stated as such (V11.4) |
+
+A report released before PR-R1 has no manifest: every such fact is an
+explicit `null`, `provenance.evidence_basis_available = false`,
+`computation_chain = legacy`; its competencies are the frozen lines. Nothing
+is fabricated (V10.4/V10.5).
+
+Suite V11 publishes a newer version of all eight competencies, retires the
+rubric editions used, reorders the catalogue, edits the authored prompts and
+guide questions, and proves the frozen core and the employer projection
+byte-identical (outside the template lines, which are the audience
+contract's).
+
+## 4. The one rds-v1 rule
+
+`scp_report_next_step` states rds-v1 once: a human safety finding →
+`request_clarification`; no observed evidence → `gather_more_evidence`;
+no sufficient area, or more limited than sufficient areas →
+`additional_assessment`; else `structured_interview`, with the reason codes
+`safety_follow_up | no_observed_evidence | thin_coverage |
+ready_for_interview`. `scripts/trust-next-step-parity-check.ts` walks the
+full matrix (finding × sufficient areas × limited areas × evidence-free
+areas × review status × disputed state × priority × item-count boundaries;
+2,304 points) through the TypeScript `recommendNextStep` and emits the SQL
+assertions `db-test.sh` executes against the database rule. Review status,
+disputed state and priority are walked and proven inert. The projection's
+`primary_next_step` is proven to equal the rule over the document's own
+aggregates (V7.4).
+
+## 5. Employer field allowlist decisions
+
+| field | decision | reason |
+|---|---|---|
+| `reviews_disputed`, `completed_disputed`, `disputed_readings`, review `outcome` | INTERNAL ONLY | reviewer workflow state; the governed effect is carried as `verify_reasons: human_review_adjusted` and the frozen conclusions |
+| `review_status` (`not_required · pending · completed`) | KEEP | the mandatory-review state that "Mänskligt granskat" rests on |
+| `rubric_versions` (edition numbers) | KEEP | the PO header names the rubric version; numbers only, never ids |
+| `human_review` counts (`reviews_total`, `reviews_completed`, `free_text`, `safety_critical`, `completed`, `required`) | KEEP | what "Mänskligt granskat" means, in counts |
+| `evidence_basis` per competency (items and reviewed counts) | KEEP | what the card's evidence is built on; no `reviews_completed`/`reviews_disputed` |
+| addendum author `user_id`, `email` | REMOVE | `author_display_name` only |
+| `released_by_role`, manifest id/hash, `planned_item_count`, `response_pattern` | REMOVE | private, or a blurred dimension |
+
+## 6. "Mänskligt granskat"
+
+`human_review.completed` is true exactly when the mandatory reviews for
+release are all completed; `human_review.meaning` states, in both languages,
+that this does not mean approved, validated, right for the role, or endorsed.
+Suite V12.1 asserts the document contains no such wording outside its own
+denials; guard H16b asserts the meaning is a denial.
+
+## 7. Not exposed, security, compatibility
+
+No derivation_input, mean, spread, contribution, option key, score value,
+rubric level, reviewer rationale, reviewer outcome, behaviour id, manifest
+body, manifest id, hash, author user id, author e-mail, total, ranking or
+verdict (V8.1–V8.4, apply-time proof 3.3, guard H14e). Participant, other
+organisation and stranger get NULL; anon is refused; the rule is internal;
+the snapshot table and the manifest stay closed; both audience contracts and
+the release function are untouched (V8.5–V8.9). Historical readability, the
+R1 link, the R2A contracts and the Interview Intelligence handoff (through
+the application page, as today) are preserved.
 
 ## 8. Rollback and replay
 
-The rollback drops the one function. It runs in `db-test.sh` before the R1
-rollback (V3 stands on the manifest link), the migration is proven to refuse
-while R1 is absent (`SCP_R3A_PRECONDITION`), and it is re-applied after R1
-is back. The suite (`scp_trust_evidence_report_r3a_contract_test.sql`, 67
-assertions, floor 60, six mandatory labels) runs before the destructive
-rollback block.
+The rollback drops the two routines. In `db-test.sh` the suite (77
+assertions, floor 65, fourteen mandatory labels) runs before the R1
+rollback; the V3 rollback runs before R1's, R3A is proven to refuse without
+R1, and both are re-applied after R1. The destructive platform rollback
+drops both routines before the R1 unwind.
 
-## 9. Left for PR-R3B and later
+## 9. Left for later
 
-- The UI: labels for the closed sets above live in the dictionary, not here.
-- The `Starta strukturerad intervju` handoff: `primary_next_step.interview_handoff`
-  carries the attempt and the focus areas; the route still goes through the
-  application page, which is where Interview Intelligence starts a case
-  today. A durable `attempt → case` link does not exist and is a separate
-  decision.
-- A `source` column on `scp_interview_notes` (today the addendum's source is
-  the constant `interview_note`), and a per-domain interpretation label.
-- The `pace` block of the employer brief is not carried into V3: it is not
-  in the approved information architecture.
+- PR-R3B: the UI, print/PDF, dictionary copy for the closed sets.
+- A participant projection on the shared core (not built).
+- `methodologically_open` per self-report domain (no column; every pattern
+  is `descriptive_only`).
+- A durable attempt → interview-case link and a `source` column on
+  `scp_interview_notes` (today the overlay's source is the constant
+  `interview_note`).
+- The `pace` block of the employer brief is not carried: not in the approved
+  information architecture.

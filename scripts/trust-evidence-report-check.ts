@@ -46,16 +46,21 @@ import {
 import type { ObservedArea } from "../src/lib/security-competency/academy-employer.functions";
 import { candidateInput, OBSERVED } from "./fixtures/released-candidate-brief";
 import {
+  TRUST_CORE_FORBIDDEN_KEYS,
   TRUST_MANIFEST_AREA_FIELDS,
   TRUST_MANIFEST_BODY_KEYS,
   TRUST_MANIFEST_EVIDENCE_FIELDS,
   TRUST_MANIFEST_REQUIRED_FIELDS,
   TRUST_PROCESS_STEPS,
-  TRUST_V3_AREA_KEYS,
+  TRUST_V3_CORE_COMPETENCY_KEYS,
+  TRUST_V3_CORE_KEYS,
+  TRUST_V3_EMPLOYER_AREA_KEYS,
+  TRUST_V3_EMPLOYER_KEY_ALLOWLIST,
+  TRUST_V3_EMPLOYER_KEYS,
   TRUST_V3_EXAMPLE,
   TRUST_V3_TOP_LEVEL_KEYS,
   type TrustComputationManifest,
-  type TrustEvidenceArea,
+  type TrustCoreCompetency,
   type TrustEvidenceReportV3,
   type TrustManifestAreaComputation,
   type TrustManifestEvidenceRow,
@@ -352,9 +357,30 @@ console.log("\nA. The forbidden vocabulary cannot enter the report layer");
   const v3Keys = walkKeys(TRUST_V3_EXAMPLE);
   const badV3 = v3Keys.filter((k) => (FORBIDDEN_KEYS as readonly string[]).includes(k));
   check("A5 the V3 example carries no forbidden key", badV3.length === 0, badV3.join(", "));
-  const v3Strings = walkStrings(TRUST_V3_EXAMPLE).map((s) => s.toLowerCase());
+  // The document's own denials -- what "human reviewed" does NOT mean, the
+  // limitations, the standing statements -- must be allowed to name what
+  // they deny, and are asserted to be denials.
+  const v3Core = TRUST_V3_EXAMPLE.frozen_report.core;
+  const v3Denials = [
+    v3Core.human_review.meaning,
+    v3Core.limitations.standing_statement,
+    ...v3Core.limitations.items.map((l) => l.statement),
+    TRUST_V3_EXAMPLE.frozen_report.employer.context.standing_limitation,
+  ];
   check(
-    "A5 the V3 example carries no forbidden phrase in either language",
+    "A5 every denial line in the V3 example is a denial in words, in both languages",
+    v3Denials.every(
+      (d) =>
+        /inte|aldrig|ingen|inget|endast|ett bedömningstillfälle/.test(d.sv) &&
+        /not|never|no |only|one assessment occasion/.test(d.en),
+    ),
+  );
+  const denialStrings = new Set(walkStrings(v3Denials).map((s) => s.toLowerCase()));
+  const v3Strings = walkStrings(TRUST_V3_EXAMPLE)
+    .map((s) => s.toLowerCase())
+    .filter((s) => !denialStrings.has(s));
+  check(
+    "A5 the V3 example carries no forbidden phrase in either language outside its own denials",
     !v3Strings.some(
       (s) =>
         FORBIDDEN_PROSE_SV.some((w) => s.includes(w)) ||
@@ -538,19 +564,18 @@ console.log("\nD. Self-report is never promoted into observed evidence");
   );
   // The V3 contract keeps the separation structural.
   const v3: TrustEvidenceReportV3 = TRUST_V3_EXAMPLE;
+  const core = v3.frozen_report.core;
   check(
     "D7 the V3 contract holds self-report in its own array with an interpretation label",
-    Array.isArray(v3.self_reported_patterns) &&
-      v3.self_reported_patterns.every(
+    Array.isArray(core.self_reported_patterns) &&
+      core.self_reported_patterns.every(
         (p) =>
           p.interpretation === "descriptive_only" || p.interpretation === "methodologically_open",
       ),
   );
   check(
-    "D8 no V3 area carries self_report as an observed source under an observed state",
-    v3.areas.every(
-      (a) => !(a.evidence_state.startsWith("observed_") && a.source_types.includes("self_report")),
-    ),
+    "D8 no V3 competency carries self_report as a source",
+    core.competencies.every((a) => !a.source_types.includes("self_report")),
   );
 }
 
@@ -632,17 +657,21 @@ console.log("\nE. SCC-08 on one item is limited evidence, never a weakness");
     "E6 the limited line is framed as being about the assessment, not the person",
     /inget om kandidaten/.test(sv["decision.panel.uncertainBody"] ?? ""),
   );
-  const v3area: TrustEvidenceArea = TRUST_V3_EXAMPLE.areas.find(
+  const v3area: TrustCoreCompetency = TRUST_V3_EXAMPLE.frozen_report.core.competencies.find(
+    (a) => a.competency_code === "SCC-08",
+  )!;
+  const v3emp = TRUST_V3_EXAMPLE.frozen_report.employer.areas.find(
     (a) => a.competency_code === "SCC-08",
   )!;
   check(
-    "E7 the V3 example states SCC-08 as observed_limited on one item, labelled limited, with an interview follow-up priority",
-    v3area?.evidence_state === "observed_limited" &&
-      v3area.response_pattern === "limited" &&
+    "E7 the V3 example states SCC-08 as not_established / limited on one item, flagged single_item, with a next-priority follow-up",
+    v3area?.observed_pattern === "not_established" &&
+      v3area.evidence_sufficiency === "limited" &&
       v3area.observed_item_count === 1 &&
-      (v3area.follow_up_priority === "first" || v3area.follow_up_priority === "next") &&
       v3area.methodological_flags.includes("single_item") &&
-      v3area.limitation?.code === "single_item",
+      v3area.limitation?.code === "single_item" &&
+      v3emp?.follow_up_priority === "next" &&
+      !v3emp.clearest_support_eligible,
   );
 }
 
@@ -680,8 +709,8 @@ console.log("\nF. No human finding, no safety panel; a finding is never a number
   );
   check(
     "F6 the V3 contract carries safety as a boolean fact of human review, not a score",
-    typeof TRUST_V3_EXAMPLE.human_review.safety_findings_present === "boolean" &&
-      !("safety_score" in TRUST_V3_EXAMPLE.human_review),
+    typeof TRUST_V3_EXAMPLE.frozen_report.core.human_review.safety_findings_present === "boolean" &&
+      !("safety_score" in TRUST_V3_EXAMPLE.frozen_report.core.human_review),
   );
 }
 
@@ -829,57 +858,49 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
 // ═══════════════════════════════════════════════════════════════════════════
 {
   const v3 = TRUST_V3_EXAMPLE;
-  const top = [
-    "schema_version",
-    "report_id",
-    "released_at",
-    "audience",
-    "context",
-    "coverage",
-    "areas",
-    "self_reported_patterns",
-    "trust_followups",
-    "limitations",
-    "human_review",
-  ];
+  const core = v3.frozen_report.core;
+  const employer = v3.frozen_report.employer;
   check(
-    "H1 the V3 report carries every top-level field the owner locked",
-    top.every((k) => k in v3),
-    top.filter((k) => !(k in v3)).join(", "),
+    "H1 the V3 document is exactly {schema_version, report_id, frozen_report {core, employer}, addenda_overlay}",
+    Object.keys(v3).sort().join() === [...TRUST_V3_TOP_LEVEL_KEYS].sort().join() &&
+      Object.keys(v3.frozen_report).sort().join() === "core,employer" &&
+      Object.keys(core).sort().join() === [...TRUST_V3_CORE_KEYS].sort().join() &&
+      Object.keys(employer).sort().join() === [...TRUST_V3_EMPLOYER_KEYS].sort().join() &&
+      Object.keys(v3.addenda_overlay).sort().join() === "as_of,items,source",
   );
-  const areaFields = [
-    "competency_code",
-    "competency_version",
-    "evidence_state",
-    "observed_item_count",
-    "planned_item_count",
-    "context_count",
-    "source_types",
-    "coverage_status",
-    "review_status",
-    "methodological_flags",
-    "factual_explanation",
-    "follow_up_priority",
-  ];
   check(
-    "H2 every V3 area carries the twelve locked fields",
-    v3.areas.every((a) => areaFields.every((k) => k in a)),
+    "H2 every core competency carries the locked fields, and the three dimensions are apart: pattern and sufficiency on the core line, priority on the employer line",
+    core.competencies.every((a) => TRUST_V3_CORE_COMPETENCY_KEYS.every((k) => k in a)) &&
+      employer.areas.every((a) => TRUST_V3_EMPLOYER_AREA_KEYS.every((k) => k in a)) &&
+      core.competencies.every((a) => !("follow_up_priority" in a) && !("response_pattern" in a)) &&
+      employer.areas.every((a) => !("observed_pattern" in a) && !("evidence_sufficiency" in a)),
   );
-  const numericAreaKeys = v3.areas.flatMap((a) =>
+  const numericAreaKeys = core.competencies.flatMap((a) =>
     Object.entries(a)
       .filter(([, v]) => typeof v === "number")
       .map(([k]) => k),
   );
   check(
-    "H3 the only numbers on a V3 area are counts",
-    numericAreaKeys.every((k) => /_count$/.test(k)),
+    "H3 the only numbers on a V3 competency are counts",
+    numericAreaKeys.every((k) => /_count$/.test(k)) &&
+      core.competencies.every((a) =>
+        Object.entries(a.evidence_basis ?? {}).every(
+          ([k, v]) => typeof v === "number" && /_(items|reviewed)$/.test(k),
+        ),
+      ),
     numericAreaKeys.join(", "),
   );
   check(
     "H4 the V3 report has no top-level score, total, rank or verdict",
-    !["score", "total", "rank", "verdict", "decision", "recommendation"].some((k) => k in v3),
+    !["score", "total", "rank", "verdict", "decision", "recommendation"].some(
+      (k) => k in v3 || k in core || k in employer,
+    ),
   );
-  check("H5 the V3 schema version is named", v3.schema_version === "trust-evidence-report/v3");
+  check(
+    "H5 the V3 schema and core versions are named",
+    v3.schema_version === "trust-evidence-report/v3" &&
+      core.core_version === "trust-evidence-core/v1",
+  );
 
   // The manifest contract: assert the TYPE still names every field, by
   // constructing a value that must satisfy it.
@@ -947,10 +968,10 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     !("computation_manifest_ref" in v3) &&
       !("included_evidence" in v3) &&
       !("weighted_sum" in v3) &&
-      !("manifest_id" in v3.provenance_summary) &&
-      !("canonical_sha256" in v3.provenance_summary) &&
-      (v3.provenance_summary.computation_chain === "verified" ||
-        v3.provenance_summary.computation_chain === "legacy") &&
+      !("manifest_id" in core.provenance) &&
+      !("canonical_sha256" in core.provenance) &&
+      (core.provenance.computation_chain === "verified" ||
+        core.provenance.computation_chain === "legacy") &&
       !JSON.stringify(v3).includes("canonical_sha256") &&
       !JSON.stringify(v3).includes("manifest_id"),
   );
@@ -976,9 +997,12 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       readFileSync(join(ROOT, "supabase/migrations", f), "utf8"),
     ),
   );
+  const R3A_MIGRATION = "20261028090000_scp_trust_evidence_report_r3a_contract.sql";
   check(
-    "H11 no migration other than PR-R1's names scp_report_computation_manifests",
-    migrationMentions.length === 1 && migrationMentions[0] === R1_MIGRATION,
+    "H11 exactly two migrations name scp_report_computation_manifests: PR-R1 (creates it) and PR-R3A (reads counts from it)",
+    migrationMentions.length === 2 &&
+      migrationMentions.includes(R1_MIGRATION) &&
+      migrationMentions.includes(R3A_MIGRATION),
     migrationMentions.join(", "),
   );
   const r1 = read(`supabase/migrations/${R1_MIGRATION}`);
@@ -1017,11 +1041,10 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
   );
 
   // PR-R3A (20261028090000): the server produces the V3 document. Exactly
-  // one migration creates scp_employer_report_v3; it names every top-level
-  // and area key this contract locks; it reads the document through the
-  // audience contract and never the snapshot's internals; and it never names
-  // the manifest table (H11 already holds it to that).
-  const R3A_MIGRATION = "20261028090000_scp_trust_evidence_report_r3a_contract.sql";
+  // one migration creates scp_employer_report_v3 and scp_report_next_step; it
+  // names every key this contract locks; it reads the document through the
+  // audience contract, takes counts from the frozen manifest and never its
+  // numbers, keys or levels; and it grants nothing to anon.
   const v3Creators = migrations.filter((f) =>
     /CREATE OR REPLACE FUNCTION public\.scp_employer_report_v3\(/.test(
       readFileSync(join(ROOT, "supabase/migrations", f), "utf8"),
@@ -1033,23 +1056,28 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     v3Creators.join(", "),
   );
   const r3a = stripComments(read(`supabase/migrations/${R3A_MIGRATION}`));
-  const missingTop = TRUST_V3_TOP_LEVEL_KEYS.filter((k) => !r3a.includes(`'${k}'`));
+  const lockedKeys = [
+    ...TRUST_V3_TOP_LEVEL_KEYS,
+    ...TRUST_V3_CORE_KEYS,
+    ...TRUST_V3_EMPLOYER_KEYS,
+    ...TRUST_V3_CORE_COMPETENCY_KEYS,
+    ...TRUST_V3_EMPLOYER_AREA_KEYS,
+  ];
+  const missingKeys = lockedKeys.filter((k) => !r3a.includes(`'${k}'`));
   check(
-    "H14b the R3A migration writes every top-level key the V3 contract names",
-    missingTop.length === 0,
-    missingTop.join(", "),
-  );
-  const missingArea = TRUST_V3_AREA_KEYS.filter((k) => !r3a.includes(`'${k}'`));
-  check(
-    "H14c the R3A migration writes every area key the V3 contract names",
-    missingArea.length === 0,
-    missingArea.join(", "),
+    "H14b the R3A migration writes every top-level, core, employer, competency and area key the V3 contract names",
+    missingKeys.length === 0,
+    missingKeys.join(", "),
   );
   // The migration's own proof block names the forbidden column references
-  // inside LIKE literals; drop string literals before looking for real ones.
+  // inside LIKE literals; drop SQL line comments and string literals before
+  // looking for real ones.
   const r3aCode = r3a.replace(/^\s*--.*$/gm, "").replace(/'(?:[^']|'')*'/g, "''");
+  // The projection's body alone (the preconditions and the proof legitimately
+  // name schema columns such as manifest_id while checking they exist).
+  const r3aFn = r3a.slice(r3a.indexOf("AS $function$"), r3a.lastIndexOf("$function$;"));
   check(
-    "H14d the R3A migration reads the document through scp_employer_report and never selects payload, brief, derivation_input or the hash from the snapshot",
+    "H14c the R3A migration reads the document through scp_employer_report and never selects payload, brief, derivation_input or the hash from the snapshot",
     /FROM public\.scp_employer_report\(_attempt_id\)/.test(r3a) &&
       !/\bs\.(payload|brief|derivation_input|canonical_sha256)\b/.test(r3aCode) &&
       !/scp_report_manifest_computation|scp_verify_report_manifest|scp_attempt_assessment_signal|scp_attempt_maturity|scp_attempt_evidence_state|scp_attempt_self_report_pattern/.test(
@@ -1057,30 +1085,111 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       ),
   );
   check(
-    "H14e the R3A migration grants the V3 contract to authenticated only and revokes anon",
+    "H14d the R3A migration reads no live response, review, form or ledger row, and no 'latest' or 'currently active' catalogue version",
+    !/scp_candidate_responses|scp_human_reviews|scp_form_items|scp_competency_evidence|scp_item_options/.test(
+      r3aCode,
+    ) && !/content_status\s*=\s*''\)\s*DESC|is_active|retired_at IS NULL/i.test(r3aCode),
+  );
+  check(
+    "H14e the R3A migration takes counts and version identities from the manifest and never its answer keys, numbers, levels, findings or hash",
+    !/selected_option_key|best_option_key|worst_option_key|selected_score_value|item_max_score|rubric_levels|derivation_basis|weighted_sum|denominator|m\.canonical_sha256/.test(
+      r3aCode,
+    ) &&
+      !/(^|[^'])'(contribution|confidence|safety_finding|safety_severity|manifest_id|canonical_sha256|behaviour_version_id|mean|spread|user_id|email|body|reviews_disputed|completed_disputed|disputed_readings)'(?!')/.test(
+        r3aFn,
+      ),
+  );
+  check(
+    "H14f the R3A migration grants the V3 contract to authenticated only, keeps the rule internal, and revokes anon",
     /REVOKE ALL\s+ON FUNCTION public\.scp_employer_report_v3\(uuid\) FROM PUBLIC, anon;/.test(
       r3a,
     ) &&
       /GRANT\s+EXECUTE ON FUNCTION public\.scp_employer_report_v3\(uuid\) TO authenticated;/.test(
         r3a,
+      ) &&
+      /REVOKE ALL ON FUNCTION public\.scp_report_next_step\(boolean, integer, integer, integer\) FROM PUBLIC, anon, authenticated;/.test(
+        r3a,
       ),
   );
   check(
-    "H14f the R3A migration does not touch the audience contracts or the release function",
+    "H14g the R3A migration does not touch the audience contracts, the release function or the manifest table",
     !/CREATE OR REPLACE FUNCTION public\.scp_(participant|employer)_report\(/.test(r3a) &&
-      !/CREATE OR REPLACE FUNCTION public\.scp_release_attempt_report\(/.test(r3a),
+      !/CREATE OR REPLACE FUNCTION public\.scp_release_attempt_report\(/.test(r3a) &&
+      !/(ALTER|CREATE|DROP) TABLE[^;]*scp_report_computation_manifests/.test(r3aCode) &&
+      !/(INSERT INTO|UPDATE|DELETE FROM)[^;]*scp_report_computation_manifests/.test(r3aCode),
   );
   check(
-    "H14g the V3 contract's process step and priority sets are the locked ones",
-    TRUST_V3_EXAMPLE.primary_next_step.step === "structured_interview" &&
-      TRUST_PROCESS_STEPS.includes(TRUST_V3_EXAMPLE.primary_next_step.step) &&
-      TRUST_V3_EXAMPLE.trust_plan.priorities.length <= 3 &&
-      TRUST_V3_EXAMPLE.trust_plan.question_count <= 5 &&
-      TRUST_V3_EXAMPLE.trust_plan.priorities.every(
+    "H14h the V3 contract's process step, priority and plan limits are the locked ones",
+    TRUST_PROCESS_STEPS.includes(employer.primary_next_step.step) &&
+      employer.primary_next_step.rule_version === "rds-v1" &&
+      employer.trust_plan.priorities.length <= 3 &&
+      employer.trust_plan.question_count <= 5 &&
+      employer.trust_plan.priorities.every(
         (p) =>
           p.structure.steps.map((s) => s.key).join() ===
           "situation,own_role,action,result,reflection",
       ),
+  );
+
+  // H15: the employer field allowlist is one list, locked in two places.
+  const suite = read("supabase/tests/scp_trust_evidence_report_r3a_contract_test.sql");
+  const block = suite.match(/-- ALLOWLIST BEGIN([\s\S]*?)-- ALLOWLIST END/);
+  const sqlAllow = (
+    block ? Array.from(block[1].matchAll(/'([a-z_]+)'/g)).map((m) => m[1]) : []
+  ).sort();
+  const tsAllow = [...TRUST_V3_EMPLOYER_KEY_ALLOWLIST].sort();
+  check(
+    "H15 the employer field allowlist in the database suite equals the one in this contract",
+    sqlAllow.length > 100 && sqlAllow.join() === tsAllow.join(),
+    `sql=${sqlAllow.length} ts=${tsAllow.length}`,
+  );
+  const exampleKeys = new Set(walkKeys(v3));
+  const offAllow = [...exampleKeys].filter((k) => !(tsAllow as string[]).includes(k));
+  check(
+    "H15b every key of the V3 example is on the allowlist",
+    offAllow.length === 0,
+    offAllow.join(", "),
+  );
+  check(
+    "H15c the allowlist carries no author id, e-mail, manifest field, answer key, rationale or review workflow field",
+    ![
+      "user_id",
+      "email",
+      "recorded_by",
+      "manifest_id",
+      "canonical_sha256",
+      "body",
+      "selected_option_key",
+      "contribution",
+      "confidence",
+      "rubric_levels",
+      "reviewer_rationale",
+      "reviews_disputed",
+      "completed_disputed",
+      "disputed_readings",
+      "outcome",
+      "derivation_input",
+      "mean",
+      "spread",
+      "behaviour_version_id",
+      "released_by_role",
+      "response_pattern",
+    ].some((k) => (tsAllow as string[]).includes(k)),
+  );
+
+  // H16: the shared core carries nothing employer-only.
+  const coreKeys = new Set(walkKeys(core));
+  const coreLeaks = TRUST_CORE_FORBIDDEN_KEYS.filter((k) => coreKeys.has(k));
+  check(
+    "H16 the shared frozen core names no process step, priority, safety detail, interview material, addendum, author, organisation, attempt or subject",
+    coreLeaks.length === 0,
+    coreLeaks.join(", "),
+  );
+  check(
+    "H16b human_review.completed is a fact of mandatory reviews, stated as a denial",
+    core.human_review.completed === true &&
+      /inte/.test(core.human_review.meaning.sv) &&
+      /does not mean/.test(core.human_review.meaning.en),
   );
 
   // The characterisation document lists every reproducibility row.

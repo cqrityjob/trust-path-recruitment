@@ -118,22 +118,43 @@ completed_disputed` and `evidence_state` unchanged, a pending review →
 plus `follow_up_priority = first` on the area — never a state that reads as a
 risk level.
 
-**Amendment, PR-R3A (20261028090000).** The shape is now produced server
-side by `scp_employer_report_v3(attempt_id)` for the employer audience;
+**Amendment, PR-R3A (20261028090000), revised after the working-group
+review.** The shape is now produced server side by
+`scp_employer_report_v3(attempt_id)` for the employer audience;
 `scripts/fixtures/trust-evidence-report-v3-contract.ts` is the typed
-contract and guard H14 holds the migration to every key it names. Three
-changes to the shape above, each a product-owner decision recorded in
+contract and guards H14–H16 hold the migration and the suite to it. What
+changed against the shape above, each recorded in
 `docs/assessment/architecture/trust-evidence-report-r3a-contract.md`:
-(1) `computation_manifest_ref` is NOT in the audience document — the private
-manifest is referenced only as `provenance_summary.computation_chain =
-verified | legacy`, never by id or hash; (2) `recommended_process_step` is
-`primary_next_step { step, reason_code, reason, interview_handoff }`, the same
-four steps; (3) the `developing` signal, which the mapping above left
-without a value, maps to a seventh state `observed_follow_up` ("a person
-should ask"), and every area also carries `response_pattern`, the six-word
-card label. Added beside the locked fields: `overview`, `safety_followup`,
-`trust_plan`, `coverage.composition`, `interview_addenda`; `released_by_role`
-stays in the manifest and is not an audience fact.
+
+1. **Three dimensions, apart.** A competency line carries
+   `observed_pattern` (clearly_consistent | consistent | mixed | developing |
+   not_established: what the responses look like) and
+   `evidence_sufficiency` (sufficient | limited | none: how much evidence
+   exists); the employer line carries `follow_up_priority` (what to do).
+   `evidence_state` stays as a composite presentation field DERIVED from
+   them (`observed_follow_up` added for `developing`); `limited` and
+   `follow_up` are not pattern values. The ras-v1 `limited` signal is
+   `not_established` + `limited`.
+2. **Frozen report / live overlay.** The document is `{ schema_version,
+   report_id, frozen_report { core, employer }, addenda_overlay }`. The core
+   (`trust-evidence-core/v1`) is the shared, audience-neutral frozen core; the
+   employer projection adds context, `primary_next_step` (the one rds-v1
+   rule, `scp_report_next_step`, proven identical to the TypeScript rule),
+   overview, safety follow-up, per-area priorities, TRUST follow-ups and
+   plan. The overlay is `scp_interview_notes`, live, with its own `as_of`,
+   never part of identity or provenance.
+3. **No manifest reference in the audience document.** The private manifest
+   is referenced only as `provenance.computation_chain = verified | legacy`;
+   the projection reads it server side for counts and version identities
+   (composition, review states, per-competency context count, competency
+   version, rubric editions), so every structural fact is version-locked at
+   the release instant, and is an explicit null on a pre-R1 report.
+4. **Minimisation.** `context_count` is the competency's own frozen count or
+   null, never the report's; `review_status` is `not_required | pending |
+   completed` (the reviewer's outcome is internal; a changed reading surfaces
+   only as the governed reason `human_review_adjusted`); addenda carry
+   `author_display_name` only; `released_by_role`, `planned_item_count` and
+   `response_pattern` are gone.
 
 ## Decision 3 — private computation manifest (PR-R1, not created here)
 
