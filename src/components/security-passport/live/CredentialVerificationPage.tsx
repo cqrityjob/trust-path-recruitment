@@ -23,21 +23,9 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatExpiry } from "@/lib/security-passport/format";
 import { presentationWordKey } from "@/lib/security-passport/design/credential-symbols";
 import type { RecipientCredential } from "@/lib/security-passport/recipient-presentation";
+import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
 import { BrandMark, EngravedField, EngravedRule } from "../card/CardPrimitives";
 import { CredentialSymbol } from "../CredentialSymbol";
-
-const METHOD_KEY: Readonly<
-  Record<
-    string,
-    | "ver.method.document_review"
-    | "ver.method.employer_confirmation"
-    | "ver.method.issuer_confirmation"
-  >
-> = {
-  document_review: "ver.method.document_review",
-  employer_confirmation: "ver.method.employer_confirmation",
-  issuer_confirmation: "ver.method.issuer_confirmation",
-};
 
 export function CredentialVerificationPage({
   credential,
@@ -161,7 +149,10 @@ export function CredentialVerificationPage({
                   value here is expected, not exceptional. */}
               {credential.verificationMethod
                 ? (() => {
-                    const key = METHOD_KEY[credential.verificationMethod];
+                    const key = methodLabelKey(
+                      credential.verificationMethod,
+                      credential.verifierOrganisation,
+                    );
                     return key ? pt(key) : credential.verificationMethod;
                   })()
                 : pt("common.notStated")}

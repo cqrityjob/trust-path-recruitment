@@ -372,6 +372,11 @@ const sv = {
   "claims.attribution.document_review": "Dokument granskat av",
   "claims.attribution.employer_confirmation": "Bekräftat av",
   "claims.attribution.issuer_confirmation": "Bekräftat av utfärdaren",
+  // A source-confirmation method CQrityjob recorded about itself, before
+  // 20261029090000. Rendered by every surface for that shape, and nowhere
+  // else. Complete on its own: the decider is named inside it.
+  "trust.legacy.unsupported":
+    "Granskning registrerad av CQrityjob. Direkt källbekräftelse kan inte visas för denna äldre post.",
   // Samma faktum som ovan, i anställningsregister. En anställning som en
   // arbetsgivare har bekräftat förtjänar en mening som säger vad som
   // bekräftades -- inte bara "Bekräftat av" bredvid ett företagsnamn, som
@@ -873,6 +878,9 @@ const sv = {
   "vq.reject": "Avslå",
   "vq.requestClarification": "Begär komplettering",
   "vq.methodLabel": "Hur avgjordes det?",
+  "vq.methodFixed": "Dokumentgranskning av CQrityjob",
+  "vq.methodFixed.help":
+    "CQrityjob har granskat det underlag som innehavaren lämnat. Detta är inte en direkt bekräftelse från arbetsgivaren eller utfärdaren.",
   "vq.methodRequired": "En godkänd verifiering måste ange metod.",
   "vq.noteInternal": "Intern motivering",
   "vq.noteInternalHelp":
@@ -1485,6 +1493,8 @@ const sv = {
   "vq.decline.already_decided": "Ärendet är redan avgjort. Ladda om sidan för att se beslutet.",
   "vq.decline.not_found": "Ärendet finns inte längre.",
   "vq.decline.method_required": "Ett godkännande måste ange en verifieringsmetod.",
+  "vq.decline.method_not_permitted":
+    "Den verifieringsmetoden är inte tillåten för den här typen av ärende. En CQrityjob-granskning registreras som dokumentgranskning, och en arbetsgivarbekräftelse kan bara lämnas av arbetsgivaren.",
   "vq.decline.holder_message_required":
     "Avslag och komplettering måste ha ett meddelande till innehavaren. Skriv vad som saknas eller varför underlaget inte räcker.",
   "vq.decline.invalid_validity":
@@ -2014,6 +2024,8 @@ const en: Record<PassportCopyKey, string> = {
   "claims.attribution.document_review": "Document reviewed by",
   "claims.attribution.employer_confirmation": "Confirmed by",
   "claims.attribution.issuer_confirmation": "Confirmed by the issuer",
+  "trust.legacy.unsupported":
+    "Review recorded by CQrityjob. Direct source confirmation is not available for this legacy record.",
   "employment.attribution.employer_confirmation": "Employment confirmed by",
   "claims.verifiedOn": "Verified",
   "claims.jurisdiction": "Country",
@@ -2427,6 +2439,9 @@ const en: Record<PassportCopyKey, string> = {
   "vq.reject": "Reject",
   "vq.requestClarification": "Request clarification",
   "vq.methodLabel": "How was this decided?",
+  "vq.methodFixed": "Document review by CQrityjob",
+  "vq.methodFixed.help":
+    "CQrityjob has reviewed evidence provided by the holder. This is not direct confirmation from the employer or issuer.",
   "vq.methodRequired": "An approved verification must state its method.",
   "vq.noteInternal": "Internal reasoning",
   "vq.noteInternalHelp":
@@ -2964,6 +2979,8 @@ const en: Record<PassportCopyKey, string> = {
     "This review has already been decided. Reload the page to see the decision.",
   "vq.decline.not_found": "This review no longer exists.",
   "vq.decline.method_required": "An approval must state a verification method.",
+  "vq.decline.method_not_permitted":
+    "That verification method is not permitted for this kind of request. A CQrityjob review is recorded as document review, and an employer confirmation can only be given by the employer.",
   "vq.decline.holder_message_required":
     "A rejection or a clarification must include a message to the holder. Write what is missing, or why the evidence is not enough.",
   "vq.decline.invalid_validity":

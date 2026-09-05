@@ -33,6 +33,49 @@
 
 import type { VerificationMethod } from "./types";
 
+/** The organisation `sp_verifier_decide` records for every `cqrityjob_review`
+ *  decision. A string constant rather than a role check because it is what the
+ *  DECISION ROW says, and the decision row is what every surface reads. */
+export const CQRITYJOB_DECIDER_ORGANISATION = "CQrityjob";
+
+/** The methods that assert a SOURCE -- the employer or the issuer -- confirmed
+ *  the fact. Anything CQrityjob can record about a document it read, a call it
+ *  made or an email it received is `document_review`. */
+export const SOURCE_CONFIRMATION_METHODS: readonly string[] = [
+  "employer_confirmation",
+  "issuer_confirmation",
+];
+
+/**
+ * A decision whose METHOD claims a source confirmed the fact, while the
+ * recorded DECIDER is CQrityjob.
+ *
+ * ── WHY THIS SHAPE IS UNSUPPORTED ──────────────────────────────────────
+ *
+ * Before migration 20261029090000, a CQrityjob reviewer answering a
+ * `cqrityjob_review` request could record `issuer_confirmation` or
+ * `employer_confirmation`. No issuer or employer took part in that decision:
+ * there was no issuer request kind, no issuer membership, no source receipt,
+ * and the employer path writes the EMPLOYER's name as decider, never
+ * CQrityjob's. So a row of this shape is a CQrityjob review that was labelled
+ * as something stronger. The database now refuses to write another; the rows
+ * that exist are history and stay as written.
+ *
+ * Every surface that turns a method into words asks this first, so the label
+ * such a row wears is decided once. "Confirmed by the issuer CQrityjob" is the
+ * sentence this exists to make unprintable.
+ */
+export function isLegacyUnsupportedProvenance(
+  method: string | null | undefined,
+  organisation: string | null | undefined,
+): boolean {
+  if (!method || !organisation) return false;
+  return (
+    SOURCE_CONFIRMATION_METHODS.includes(method) &&
+    organisation.trim().toLowerCase() === CQRITYJOB_DECIDER_ORGANISATION.toLowerCase()
+  );
+}
+
 /** The columns a provenance read is allowed to ask for.
  *
  *  Named constants rather than inline strings because the thing that must

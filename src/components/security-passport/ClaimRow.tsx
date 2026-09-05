@@ -131,7 +131,7 @@ export function ClaimRow({
             field rather than reaching for the issuer's name. */}
         {claim.verifierName ? (
           <Field
-            label={pt(verifierAttributionKey(claim.verificationMethod))}
+            label={pt(verifierAttributionKey(claim.verificationMethod, claim.verifierName))}
             value={claim.verifierName}
           />
         ) : null}

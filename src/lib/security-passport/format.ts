@@ -11,6 +11,7 @@
 
 import { toDuration } from "./experience";
 import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
+import { isLegacyUnsupportedProvenance } from "./provenance";
 import type { IsoDate } from "./types";
 
 /** An absent EXPIRY genuinely means "no expiry" — a permanent qualification.
@@ -229,7 +230,14 @@ export function workCountrySupportKey(
  * is not a place to put a new trust level, and adding one here rather than
  * in the decision record is how the ladder would quietly grow a rung.
  */
-export function verifierAttributionKey(method: string | null): PassportCopyKey {
+export function verifierAttributionKey(
+  method: string | null,
+  /** The recorded decider. When given, a source-confirmation method that
+   *  CQrityjob recorded about itself takes the legacy fallback rather than
+   *  the issuer's or the employer's words -- see `isLegacyUnsupportedProvenance`. */
+  organisation: string | null = null,
+): PassportCopyKey {
+  if (isLegacyUnsupportedProvenance(method, organisation)) return "trust.legacy.unsupported";
   switch (method) {
     case "document_review":
       return "claims.attribution.document_review";
@@ -252,5 +260,10 @@ export function formatVerifierAttribution(
   lang: PassportLang,
 ): string | null {
   if (!verifierName) return null;
-  return `${passportT(verifierAttributionKey(method), lang)} ${verifierName}`;
+  // The legacy sentence already names CQrityjob and states what it is not;
+  // appending the decider would print "… CQrityjob CQrityjob".
+  if (isLegacyUnsupportedProvenance(method, verifierName)) {
+    return passportT("trust.legacy.unsupported", lang);
+  }
+  return `${passportT(verifierAttributionKey(method, verifierName), lang)} ${verifierName}`;
 }

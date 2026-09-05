@@ -3116,6 +3116,56 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Trust-source containment: the METHOD an approval records must belong to the
+# party deciding (20261029090000). A CQrityjob review is document_review and
+# nothing else; an employer attestation is employer_confirmation and nothing
+# else; issuer_confirmation is refused everywhere until an issuer can act.
+# The suite also RE-APPLIES the migration over manufactured legacy rows to
+# prove it is prospective and rewrites nothing.
+#
+# Registered BEFORE the rollback chain, like every other Passport suite.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport trust-source containment assertions"
+set +e
+SPTSC_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_trust_source_containment_test.sql 2>&1)"
+SPTSC_RC=$?
+set -e
+
+echo "$SPTSC_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPTSC_PASSED="$(echo "$SPTSC_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPTSC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the trust-source containment suite exited with code ${SPTSC_RC}." >&2
+  echo "$SPTSC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport trust-source containment"
+else
+  echo "    ok  ${SPTSC_PASSED} trust-source containment assertions passed"
+
+  # Named explicitly, not merely counted: the six method/kind combinations the
+  # owner decision fixes, and the re-apply over legacy rows.
+  for REQUIRED in \
+    "1.1 a CQrityjob review cannot be approved as employer_confirmation" \
+    "1.2 a CQrityjob review cannot be approved as issuer_confirmation" \
+    "1.5 cqrityjob_review + document_review reaches VERIFIED for an authorised verifier" \
+    "2.1 an employer attestation cannot be approved as document_review" \
+    "2.2 an employer attestation cannot be approved as issuer_confirmation" \
+    "2.5 employer_attestation + employer_confirmation reaches VERIFIED for the employer's owner" \
+    "7.3 the legacy holder's record is byte-for-byte unchanged by the migration"; do
+    if ! echo "$SPTSC_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: a mandatory trust-source containment assertion did not run: ${REQUIRED}" >&2
+      suite_failed "Security Passport trust-source containment (missing: ${REQUIRED})"
+    fi
+  done
+
+  if [ "$SPTSC_PASSED" -lt 34 ]; then
+    echo "FAIL: expected at least 34 trust-source containment assertions, only ${SPTSC_PASSED} ran." >&2
+    suite_failed "Security Passport trust-source containment (assertion shortfall: floor 34)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # The internal reviewer note, against a crafted read.
 #
 # `decision_note` is reviewer reasoning; `holder_message` is what the candidate
@@ -4091,6 +4141,7 @@ echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
 echo "              ${SPRDS_PASSED} rollback data-safety assertions"
 echo "              ${SPBF1_PASSED} pilot bug fix #1 assertions,"
 echo "              ${SPTB_PASSED} trust boundary assertions,"
+echo "              ${SPTSC_PASSED} trust-source containment assertions,"
 echo "              ${EEV_PASSED} employer employment verification assertions,"
 echo "              ${RACE_PASSED} concurrent-decision assertions,"
 echo "              ${SPRC_PASSED} rollback correction assertions"

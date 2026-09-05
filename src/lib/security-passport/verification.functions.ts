@@ -566,7 +566,13 @@ export const getVerifierRequestDetail = createServerFn({ method: "POST" })
 const decideInput = z.object({
   requestId: z.string().uuid(),
   decision: z.enum(["approved", "rejected", "clarification_requested"]),
-  method: z.enum(["document_review", "employer_confirmation", "issuer_confirmation"]).nullable(),
+  // The two methods a caller of this function can truthfully record: a
+  // CQrityjob reviewer reads documents, an employer confirms employment.
+  // `issuer_confirmation` is deliberately absent -- no issuer answers a
+  // request yet, and sp_verifier_decide refuses it for every request kind
+  // (20261029090000). Which of the two is permitted for WHICH request kind
+  // is decided by the database, not here.
+  method: z.enum(["document_review", "employer_confirmation"]).nullable(),
   /** Internal reasoning. Never disclosed to a recipient, never shown on a card. */
   decisionNote: z.string().max(2000).nullable(),
   /** What the holder reads. */

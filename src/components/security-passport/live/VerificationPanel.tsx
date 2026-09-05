@@ -26,6 +26,11 @@ import { AlertTriangle, BadgeCheck, Building2, Clock, MessageSquare, RotateCw } 
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { formatDate, verifierAttributionKey } from "@/lib/security-passport/format";
+import {
+  CQRITYJOB_DECIDER_ORGANISATION,
+  isLegacyUnsupportedProvenance,
+} from "@/lib/security-passport/provenance";
+import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
 import type { Validity } from "@/lib/security-passport/validity";
 import { mayRenew } from "@/lib/security-passport/validity";
 import type {
@@ -96,11 +101,16 @@ const STATUS_KEY: Readonly<Record<string, PassportCopyKey>> = {
   withdrawn: "ver.status.withdrawn",
 };
 
-const METHOD_KEY: Readonly<Record<string, PassportCopyKey>> = {
-  document_review: "ver.method.document_review",
-  employer_confirmation: "ver.method.employer_confirmation",
-  issuer_confirmation: "ver.method.issuer_confirmation",
-};
+/** True only for an employer confirmation the EMPLOYER gave. A legacy row in
+ *  which CQrityjob recorded `employer_confirmation` about itself is a CQrityjob
+ *  review and must not borrow the employer's sentence. */
+function employerGaveConfirmation(d: VerificationDecisionRecord | null): boolean {
+  return (
+    d !== null &&
+    d.method === "employer_confirmation" &&
+    !isLegacyUnsupportedProvenance(d.method, d.organisation)
+  );
+}
 
 export function VerificationPanel({
   assertionLevel,
@@ -165,7 +175,7 @@ export function VerificationPanel({
    *  later revoked is real history and stays in the log, but it is not a
    *  present fact and must not suppress a fresh request. */
   const employerConfirmed =
-    assertionLevel === "verified" && latestApproval?.method === "employer_confirmation";
+    assertionLevel === "verified" && employerGaveConfirmation(latestApproval);
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -199,7 +209,7 @@ export function VerificationPanel({
 
           Which sentence appears is decided by the recorded verification
           METHOD, not by anything the page assumes. */}
-      {latestApproval && latestApproval.method === "employer_confirmation" ? (
+      {latestApproval && employerGaveConfirmation(latestApproval) ? (
         <p className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-4 text-sm font-medium text-foreground">
           <Building2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
@@ -225,7 +235,7 @@ export function VerificationPanel({
                   confirmation and a CQrityjob document review then read
                   identically, which is exactly the flattening the recorded
                   method exists to prevent. */}
-              {pt(verifierAttributionKey(latestApproval.method))}
+              {pt(verifierAttributionKey(latestApproval.method, latestApproval.organisation))}
             </dt>
             <dd className="mt-0.5 text-sm font-medium text-foreground">
               {latestApproval.organisation ?? pt("common.notStated")}
@@ -237,7 +247,10 @@ export function VerificationPanel({
             </dt>
             <dd className="mt-0.5 text-sm text-foreground">
               {latestApproval.method
-                ? pt(METHOD_KEY[latestApproval.method] ?? "common.notStated")
+                ? pt(
+                    methodLabelKey(latestApproval.method, latestApproval.organisation) ??
+                      "common.notStated",
+                  )
                 : pt("common.notStated")}
             </dd>
           </div>
@@ -628,7 +641,16 @@ export function VerificationPanel({
                 </span>
                 {r.method ? (
                   <span className="text-muted-foreground">
-                    · {pt(METHOD_KEY[r.method] ?? "common.notStated")}
+                    ·{" "}
+                    {pt(
+                      // A request row carries no decider; the kind says who
+                      // decides it, and a CQrityjob review decided by CQrityjob
+                      // is the shape the legacy rule is about.
+                      methodLabelKey(
+                        r.method,
+                        r.kind === "cqrityjob_review" ? CQRITYJOB_DECIDER_ORGANISATION : null,
+                      ) ?? "common.notStated",
+                    )}
                   </span>
                 ) : null}
               </li>

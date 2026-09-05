@@ -38,6 +38,7 @@
 
 import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
 import { verifierAttributionKey } from "./format";
+import { isLegacyUnsupportedProvenance } from "./provenance";
 import type { VerificationMethod } from "./types";
 
 /**
@@ -68,7 +69,14 @@ export type TrustStatus =
  * every surface starts distinguishing it at once. Nothing here is inferred —
  * the value is the recorded `verification_method` or null.
  */
-export type TrustSourceType = VerificationMethod | "unattributed";
+export type TrustSourceType =
+  | VerificationMethod
+  | "unattributed"
+  /** A source-confirmation method that CQrityjob recorded about itself,
+   *  before 20261029090000 made that unwritable. Verified -- an authorised
+   *  verifier really decided -- but by CQrityjob reading something, not by
+   *  the employer or the issuer, so it wears no source attribution. */
+  | "legacy_unsupported";
 
 export interface TrustPresentation {
   readonly status: TrustStatus;
@@ -176,6 +184,28 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
     return none(assertionLevel === "document_provided" ? "document_provided" : "self_reported");
   }
 
+  // ── A SOURCE METHOD CQRITYJOB RECORDED ABOUT ITSELF ──────────────────
+  //
+  // Three hosted rows predate the rule that a method must belong to the
+  // deciding party. They stay as written; what they may SAY is decided here,
+  // once, and it is the neutral sentence: a review was recorded, and a direct
+  // source confirmation cannot be shown. `method` is null on purpose --
+  // `isEmployerConfirmed` and every "confirmed by" branch downstream key on
+  // it, and none of them may fire for a confirmation nobody gave.
+  if (isLegacyUnsupportedProvenance(verificationMethod, verifierName)) {
+    return {
+      status: "verified",
+      sourceType: "legacy_unsupported",
+      organisation: verifierName,
+      method: null,
+      date: verifiedOn,
+      labelSv: passportT("trust.legacy.unsupported", "sv"),
+      labelEn: passportT("trust.legacy.unsupported", "en"),
+      shortSv: SHORT.verified.sv,
+      shortEn: SHORT.verified.en,
+    };
+  }
+
   // Verified, but the decision record does not name a decider. That happens
   // only for rows predating the PR 5 rule that an approval must state one.
   // The status stays `verified` -- an authorised verifier really did decide
@@ -243,11 +273,76 @@ export function isEmployerConfirmed(trust: TrustPresentation): boolean {
  */
 export function employmentTrustLine(trust: TrustPresentation, lang: PassportLang): string | null {
   if (trust.status !== "verified" || !trust.organisation) return null;
+  // The legacy sentence is already complete and already names the decider.
+  if (trust.sourceType === "legacy_unsupported") return trustLabel(trust, lang);
   const key: PassportCopyKey =
     trust.method === "employer_confirmation"
       ? "employment.attribution.employer_confirmation"
       : verifierAttributionKey(trust.method);
   return `${passportT(key, lang)} ${trust.organisation}`;
+}
+
+/**
+ * The copy key for a recorded verification METHOD, as a reader should see it.
+ *
+ * The single replacement for the per-surface `METHOD_KEY` tables that used
+ * to sit in the recipient page, the credential page and the holder's panel.
+ * Four copies of one mapping were four places to forget the legacy rule; this
+ * is the one place it is applied. Null for a method this build has no words
+ * for -- registry and authority verification arrive as new methods -- so a
+ * caller prints the stored code or "not stated" rather than a guess.
+ */
+export function methodLabelKey(
+  method: string | null | undefined,
+  organisation: string | null | undefined,
+): PassportCopyKey | null {
+  if (!method) return null;
+  if (isLegacyUnsupportedProvenance(method, organisation)) return "trust.legacy.unsupported";
+  switch (method) {
+    case "document_review":
+      return "ver.method.document_review";
+    case "employer_confirmation":
+      return "ver.method.employer_confirmation";
+    case "issuer_confirmation":
+      return "ver.method.issuer_confirmation";
+    default:
+      return null;
+  }
+}
+
+/**
+ * The three words a reader outside the product is given, derived from what
+ * the record actually supports.
+ *
+ * ── NOT A FOURTH TRUST STATE ───────────────────────────────────────────
+ *
+ * A presentation grouping over the stored axes, exactly like `TrustStatus`.
+ * It stores nothing and promotes nothing:
+ *
+ *   self_declared    the holder said so, or attached a file nobody assessed
+ *   documented       an authorised CQrityjob verifier decided, having read
+ *                    evidence -- INCLUDING a legacy row whose stored method
+ *                    claims more than a CQrityjob decision can support
+ *   source_verified  the employer confirmed employment they were party to,
+ *                    or (in a later release) the issuer confirmed
+ *
+ * Null when the standing could not be read: `unknown` is not a level.
+ */
+export type PublicTrustLevel = "self_declared" | "documented" | "source_verified";
+
+export function publicTrustLevel(trust: TrustPresentation): PublicTrustLevel | null {
+  switch (trust.status) {
+    case "unknown":
+      return null;
+    case "self_reported":
+    case "document_provided":
+      return "self_declared";
+    case "verified":
+      return trust.sourceType === "employer_confirmation" ||
+        trust.sourceType === "issuer_confirmation"
+        ? "source_verified"
+        : "documented";
+  }
 }
 
 /**

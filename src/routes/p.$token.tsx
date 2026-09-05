@@ -44,6 +44,7 @@ import {
   formatWorkLocation,
 } from "@/lib/security-passport/format";
 import { buildRecipientPresentation } from "@/lib/security-passport/recipient-presentation";
+import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
 import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
@@ -94,12 +95,6 @@ export const Route = createFileRoute("/p/$token")({
   }),
   component: RecipientRoute,
 });
-
-const METHOD_KEY: Readonly<Record<string, PassportCopyKey>> = {
-  document_review: "ver.method.document_review",
-  employer_confirmation: "ver.method.employer_confirmation",
-  issuer_confirmation: "ver.method.issuer_confirmation",
-};
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -405,7 +400,10 @@ function RecipientRoute() {
                     label={pt("rec.method")}
                     value={
                       c.verificationMethod
-                        ? pt(METHOD_KEY[c.verificationMethod] ?? "common.notStated")
+                        ? pt(
+                            methodLabelKey(c.verificationMethod, c.verifierOrganisation) ??
+                              "common.notStated",
+                          )
                         : pt("common.notStated")
                     }
                   />

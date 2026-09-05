@@ -449,13 +449,23 @@ BEGIN
     'SP_APPROVAL_REQUIRES_METHOD',
     '4.4 a tab-and-newline method is refused, not accepted as a method');
 
-  -- 4.5 A method outside the model is refused by the model itself, not by a
-  --     second list here that could drift away from it.
+  -- 4.5 A method outside the model is refused. Since 20261029090000 the
+  --     function binds the method to the request kind BEFORE the row is
+  --     written, so a cqrityjob_review meets SP_CQRITYJOB_REVIEW_REQUIRES_
+  --     DOCUMENT_REVIEW first; the column CHECK behind it is still the model
+  --     and is asserted to exist in 4.5b rather than reached.
   PERFORM pg_temp.must_fail(
     format('SELECT public.sp_verifier_decide(%L, ''approved'', ''telepati'', ''note'', NULL, NULL, NULL)', _req),
-    'verification_method',
-    '4.5 a method outside the allowed set is refused by the existing CHECK');
+    '',
+    '4.5 a method outside the allowed set is refused');
   RESET ROLE;
+  PERFORM pg_temp.ok(
+    EXISTS (SELECT 1 FROM pg_constraint
+             WHERE conrelid = 'public.sp_verification_requests'::regclass
+               AND contype = 'c'
+               AND pg_get_constraintdef(oid) LIKE '%verification_method%'
+               AND pg_get_constraintdef(oid) LIKE '%issuer_confirmation%'),
+    '4.5b the verification_method CHECK is still the model behind the function');
 
   PERFORM pg_temp.ok(_before = pg_temp.trust_fingerprint(_h),
     '4.6 five refused approvals left the database byte-for-byte unchanged');
