@@ -970,34 +970,26 @@ console.log("\n4 · CV source bundle");
   );
 
   // "Verified" for the bundle means SOURCE-CONFIRMED (owner decision): the
-  // issuer or employer confirmed it. A CQrityjob document review is
-  // documented and is NOT marked verified; a verified level with no recorded
-  // method fails closed the same way.
-  const verifiedBundle = buildCvSourceBundle({
+  // employer confirmed an employment through the authorised attestation
+  // path, or -- once the Issuer Foundation release exists -- an identified
+  // issuer confirmed a credential. NO CREDENTIAL CAN REACH IT TODAY: a
+  // CQrityjob document review is documented, an issuer confirmation has no
+  // structure behind it whatever organisation is named, and a verified level
+  // with no recorded method fails closed the same way.
+  const credentialBundle = buildCvSourceBundle({
     identity: identity({
       claims: [
         claim({
-          assertionLevel: "verified",
-          verifierName: "BYA",
-          verificationMethod: "issuer_confirmation",
-        }),
-      ],
-    }),
-    locale: "sv",
-    includeCareerInsight: false,
-    targetJobText: null,
-  });
-  ck(
-    "a source-confirmed claim IS marked verified",
-    verifiedBundle.credentials[0]?.verified === true,
-  );
-  const reviewedBundle = buildCvSourceBundle({
-    identity: identity({
-      claims: [
-        claim({
+          id: "c-review",
           assertionLevel: "verified",
           verifierName: "CQrityjob",
           verificationMethod: "document_review",
+        }),
+        claim({
+          id: "c-issuer",
+          assertionLevel: "verified",
+          verifierName: "BYA",
+          verificationMethod: "issuer_confirmation",
         }),
         claim({ id: "c-nomethod", assertionLevel: "verified" }),
       ],
@@ -1007,8 +999,9 @@ console.log("\n4 · CV source bundle");
     targetJobText: null,
   });
   ck(
-    "a CQrityjob document review is NOT marked verified (documented), nor is a verified level with no method",
-    reviewedBundle.credentials.every((c) => c.verified === false),
+    "no credential is marked verified today: a review, an issuer confirmation and a methodless approval all fail closed",
+    credentialBundle.credentials.length === 3 &&
+      credentialBundle.credentials.every((c) => c.verified === false),
   );
 
   // "evidenced" is the holder attaching a document to their own claim. A
@@ -1814,6 +1807,7 @@ console.log("\n10 · verified trust across the career outputs");
       verifierName: CONFIRMED.verifierName,
       verificationMethod: CONFIRMED.verificationMethod,
       verifiedOn: CONFIRMED.verifiedOn,
+      subjectKind: "employment",
     });
     const en = employmentTrustLine(t, "en") ?? "";
     const sv = employmentTrustLine(t, "sv") ?? "";
@@ -1834,6 +1828,7 @@ console.log("\n10 · verified trust across the career outputs");
       verifierName: REVIEWED_EMPLOYMENT.verifierName,
       verificationMethod: REVIEWED_EMPLOYMENT.verificationMethod,
       verifiedOn: REVIEWED_EMPLOYMENT.verifiedOn,
+      subjectKind: "employment",
     });
     const en = employmentTrustLine(t, "en") ?? "";
     ck(
@@ -2248,19 +2243,14 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
 //       TOTAL, and the entry printed the filled VERIFIED pill beside its
 //       own "Revoked" chip, while My Career correctly counted zero.
 {
-  // SOURCE-CONFIRMED (owner decision, 2026-09-05): this block is about the
-  // FROZEN verified flag and current-vs-historical trust, which only a
-  // credential that presents as verified can exercise. A CQrityjob document
-  // review is documented and never freezes verified: true -- that is
-  // asserted in section 9 above and in passport-trust-source-check.
   const VU1_ACTIVE = claim({
     id: "c-vu1",
     title: "Väktargrundutbildning VU1",
     issuerName: "BYA",
     assertionLevel: "verified",
     lifecycleState: "active",
-    verifierName: "BYA",
-    verificationMethod: "issuer_confirmation",
+    verifierName: "CQrityjob",
+    verificationMethod: "document_review",
     verifiedOn: "2026-02-11",
   });
   // The SAME credential after revocation. The assertion level does NOT move:
@@ -2307,8 +2297,17 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
   /* ---- 11a · B1: the saved CV ------------------------------------- */
 
   // The bundle is FROZEN at save time, with `verified: true` baked in. This
-  // is the stored row, unchanged, exactly as the defect had it.
-  const savedBundle = bundleOf(idActive);
+  // is the stored row, unchanged, exactly as the defect had it -- a CV saved
+  // BEFORE 2026-09-05, when a CQrityjob document review still froze
+  // `verified: true`. It is written out here rather than produced by
+  // today's builder, because today's builder correctly writes `false`: the
+  // point of this section is that a bundle frozen with the old flag must
+  // still not be read as current trust.
+  const freshBundle = bundleOf(idActive);
+  const savedBundle = {
+    ...freshBundle,
+    credentials: freshBundle.credentials.map((c) => ({ ...c, verified: true })),
+  };
   const savedPresentation = factualStoredPresentation(savedBundle);
 
   ck(
@@ -2325,7 +2324,7 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
     );
     const t = doc.trust.claims["c-vu1"];
     ck("11.2 saved CV, claim still active: trust is current", t?.status === "verified");
-    ck("11.3 and the attribution names the issuer", t?.labelEn === "Confirmed by the issuer BYA");
+    ck("11.3 and the attribution names CQrityjob", t?.labelEn === "Document reviewed by CQrityjob");
   }
 
   {
@@ -2454,7 +2453,25 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
 
   /* ---- 11b · B2: current vs historical verification ---------------- */
 
-  ck("11.16 an active verified claim IS currently verified", isCurrentlyVerified(VU1_ACTIVE));
+  // INVERTED (owner decision, 2026-09-05): "currently verified" means
+  // source-confirmed, and a CQrityjob document review is documented. The
+  // credential is still there and its decision is still recorded; what it may
+  // not do is present as a current verification. An employment an employer
+  // confirmed through the attestation path still can.
+  ck(
+    "11.16 an active document-reviewed claim is NOT currently verified -- it is documented",
+    !isCurrentlyVerified(VU1_ACTIVE),
+  );
+  ck(
+    "11.16b but an employer-confirmed employment still is",
+    isCurrentlyVerified({
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      verifierName: "Company X",
+      verificationMethod: "employer_confirmation",
+      subjectKind: "employment",
+    }),
+  );
   ck("11.17 a revoked one is NOT", !isCurrentlyVerified(VU1_REVOKED));
   ck(
     "11.18 nor is a disputed one",
@@ -2484,6 +2501,7 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
       assertionLevel: "verified",
       verifierName: "Company X",
       verificationMethod: "employer_confirmation",
+      subjectKind: "employment",
     }) && !isCurrentlyVerified({ assertionLevel: "verified" }),
   );
   ck(
@@ -2532,8 +2550,12 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
     const cardSrc = read("src/lib/security-passport/card.ts");
     ck(
       "11.29 the Passport Card's own state is a present-tense claim",
-      cardSrc.includes("periods.some(isCurrentlyVerified)") &&
-        cardSrc.includes("periods.every(isCurrentlyVerified)"),
+      // The periods are mapped to declare their subject first -- an employer
+      // confirmation source-confirms an employment and nothing else -- and
+      // the lifecycle-aware predicate is what the state is built from.
+      cardSrc.includes('subjectKind: "employment" as const') &&
+        cardSrc.includes("asEmployment.some(isCurrentlyVerified)") &&
+        cardSrc.includes("asEmployment.every(isCurrentlyVerified)"),
     );
   }
 

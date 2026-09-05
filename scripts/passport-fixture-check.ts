@@ -1047,7 +1047,11 @@ for (const pkg of DISCLOSURE_PACKAGES) {
       !social.verifiedCredentials.some((c) => c.code === "OV"),
       "A CQrityjob-reviewed OV appointment is documented and must NOT be published to the social image.",
     );
-    const sourced = {
+    // Nor is it carried when the recorded method names an issuer: issuer
+    // confirmation has no issuer identity, membership, receipt or revocation
+    // authority behind it until the Issuer Foundation release, so it fails
+    // closed to documented whatever organisation is named.
+    const namedIssuer = {
       ...ovCurrent,
       claims: ovCurrent.claims.map((c) =>
         c.credentialCode === "OV"
@@ -1059,13 +1063,13 @@ for (const pkg of DISCLOSURE_PACKAGES) {
           : c,
       ),
     };
-    const socialSourced = buildSocialCard(sourced, EVAL, {
+    const socialNamedIssuer = buildSocialCard(namedIssuer, EVAL, {
       privacyMode: "full_name",
       anonymousLabel: "Innehavare av Security Passport",
     });
     expect(
-      socialSourced.verifiedCredentials.some((c) => c.code === "OV"),
-      "The same OV appointment, source-confirmed, IS carried on the social image.",
+      socialNamedIssuer.verifiedCredentials.length === 0,
+      "An issuer confirmation naming an authority is still documented and must NOT be published to the social image.",
     );
   }
   const ovExpired = PERSONAS.find((p) => p.id === "cred-ov-expired");

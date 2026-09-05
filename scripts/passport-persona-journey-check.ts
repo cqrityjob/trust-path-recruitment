@@ -30,6 +30,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { deriveVerifiedIdentity } from "../src/lib/security-passport/identity/visibility";
+import { deriveProfessionalIdentity } from "../src/lib/security-passport/identity/derive";
 import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
 import {
   eligibilityTitles,
@@ -92,12 +93,8 @@ function claim(
     validUntil: o.validUntil === undefined ? "2028-01-01" : o.validUntil,
     assertionLevel: o.assertion ?? "verified",
     lifecycleState: o.lifecycle ?? "active",
-    // SOURCE-CONFIRMED by default (owner decision, 2026-09-05): the journeys
-    // below are about what confirmed credentials support. A CQrityjob
-    // document review is DOCUMENTED and supports no title or eligibility --
-    // asserted explicitly at the end of this file.
-    verifierName: "Fixture issuer",
-    verificationMethod: "issuer_confirmation" as const,
+    verifierName: "Fixture verifier",
+    verificationMethod: "document_review" as const,
     verifiedOn: "2026-01-01",
     limitationSv: null,
     limitationEn: null,
@@ -106,8 +103,13 @@ function claim(
   };
 }
 
+// The RULES, at the engine. What the recorded METHOD proves is a second
+// question, applied by the audience gate and asserted at the end of this
+// file: since 2026-09-05 no credential reaches source-confirmed, so every
+// journey below would be empty if it were read through the gate -- which
+// would assert nothing about the journeys themselves.
 const derive = (claims: readonly Claim[]) =>
-  deriveVerifiedIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
+  deriveProfessionalIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
 
 /** The words that may only ever appear because an APPOINTMENT or LICENCE was
  *  derived — never because a course was completed. Checked as whole words so
@@ -817,23 +819,32 @@ console.log("\nWRITE PATH -- the save payload cannot desync from the schema");
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\nINVERTED -- a CQrityjob document review is documented, never a title");
+console.log("\nTHE GATE -- what the recorded METHOD proves, on the same journeys");
 {
-  const reviewed = derive([
-    { ...claim("VU1"), verifierName: "CQrityjob", verificationMethod: "document_review" },
-    { ...claim("VU2"), verifierName: "CQrityjob", verificationMethod: "document_review" },
-    {
-      ...claim("SE_PERSONNEL_APPROVAL"),
-      verifierName: "CQrityjob",
-      verificationMethod: "document_review",
-    },
-  ]);
+  const gate = (claims: readonly Claim[]) =>
+    deriveVerifiedIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
+  const withProvenance = (code: string, org: string | null, method: string | null): Claim => ({
+    ...claim(code),
+    verifierName: org,
+    verificationMethod: method as Claim["verificationMethod"],
+  });
+  const full = [
+    withProvenance("VU1", "CQrityjob", "document_review"),
+    withProvenance("VU2", "CQrityjob", "document_review"),
+    withProvenance("SE_PERSONNEL_APPROVAL", "Länsstyrelsen", "issuer_confirmation"),
+  ];
+  const raw = derive(full);
   assert(
-    reviewed.activeTitles.length === 0 &&
-      reviewed.localEligibility.length === 0 &&
-      reviewed.professionalCompetence.length === 0 &&
-      reviewed.educationCompleted.length === 0,
-    "INV-1 VU1+VU2+personnel approval, all CQrityjob-reviewed, derive no title, competence, education or eligibility",
+    raw.professionalCompetence.length > 0 && raw.localEligibility.length > 0,
+    "GATE-1 the journey still derives on the raw engine -- the rules are intact",
+  );
+  const gated = gate(full);
+  assert(
+    gated.activeTitles.length === 0 &&
+      gated.localEligibility.length === 0 &&
+      gated.professionalCompetence.length === 0 &&
+      gated.educationCompleted.length === 0,
+    "GATE-2 and derives NOTHING through the audience gate: a document review is documented, and an issuer confirmation has no structure behind it",
   );
 }
 

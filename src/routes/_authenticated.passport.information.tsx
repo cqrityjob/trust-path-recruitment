@@ -767,7 +767,9 @@ function PassportInformationRoute() {
                     <span className="mt-1.5 flex flex-wrap items-center gap-2">
                       <AssertionChip
                         level={e.assertionLevel as AssertionLevel}
-                        provenance={e}
+                        // An EMPLOYMENT: the one subject an employer
+                        // confirmation may source-confirm.
+                        provenance={{ ...e, subjectKind: "employment" }}
                         size="sm"
                       />
                       <LifecycleChip state={e.lifecycleState as LifecycleState} />

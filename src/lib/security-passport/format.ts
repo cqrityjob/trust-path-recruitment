@@ -11,7 +11,7 @@
 
 import { toDuration } from "./experience";
 import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
-import { isLegacyUnsupportedProvenance } from "./provenance";
+import { isCQrityjob, isUnsupportedSourceClaim, type ProvenanceSubjectKind } from "./provenance";
 import type { IsoDate } from "./types";
 
 /** An absent EXPIRY genuinely means "no expiry" — a permanent qualification.
@@ -232,14 +232,25 @@ export function workCountrySupportKey(
  */
 export function verifierAttributionKey(
   method: string | null,
-  /** The recorded decider. When given, a source-confirmation method that
-   *  CQrityjob recorded about itself takes the legacy fallback rather than
-   *  the issuer's or the employer's words -- see `isLegacyUnsupportedProvenance`. */
+  /** The recorded decider, and what the decision was about. Given both, a
+   *  source method the product cannot structurally support -- any issuer
+   *  confirmation, or an employer confirmation on anything but an employment
+   *  period -- takes the review label rather than the source's words. */
   organisation: string | null = null,
+  subjectKind: ProvenanceSubjectKind | undefined = undefined,
 ): PassportCopyKey {
   // A LABEL. "Reviewed by", never "Confirmed by the issuer", and never the
   // explanatory sentence, which belongs beside the value rather than above it.
-  if (isLegacyUnsupportedProvenance(method, organisation)) return "trust.reviewedBy";
+  if (
+    isUnsupportedSourceClaim({
+      assertionLevel: "verified",
+      verificationMethod: method,
+      verifierName: organisation,
+      subjectKind,
+    })
+  ) {
+    return "trust.reviewedBy";
+  }
   switch (method) {
     case "document_review":
       return "claims.attribution.document_review";
@@ -260,12 +271,23 @@ export function formatVerifierAttribution(
   verifierName: string | null,
   method: string | null,
   lang: PassportLang,
+  subjectKind: ProvenanceSubjectKind | undefined = undefined,
 ): string | null {
   if (!verifierName) return null;
-  // The legacy sentence already names CQrityjob and states what it is not;
-  // appending the decider would print "… CQrityjob CQrityjob".
-  if (isLegacyUnsupportedProvenance(method, verifierName)) {
-    return passportT("trust.legacy.unsupported", lang);
+  // The unsupported-source sentence is complete on its own and already names
+  // the party it can name; appending the decider would print it twice.
+  if (
+    isUnsupportedSourceClaim({
+      assertionLevel: "verified",
+      verificationMethod: method,
+      verifierName,
+      subjectKind,
+    })
+  ) {
+    return passportT(
+      isCQrityjob(verifierName) ? "trust.legacy.unsupported" : "trust.unsupportedSource",
+      lang,
+    );
   }
-  return `${passportT(verifierAttributionKey(method, verifierName), lang)} ${verifierName}`;
+  return `${passportT(verifierAttributionKey(method, verifierName, subjectKind), lang)} ${verifierName}`;
 }

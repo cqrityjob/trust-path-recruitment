@@ -80,10 +80,17 @@ export function isLegacyUnsupportedProvenance(
  *  decider and method behind it. Claims, periods, card credentials and the
  *  recipient payload all fit; the provenance fields are optional so a caller
  *  holding only the level still gets an answer (the stored level). */
+/** WHAT a decision was about. An employer confirms an EMPLOYMENT; nothing
+ *  else is within their standing. Absent means a credential -- the
+ *  fail-closed reading, so a caller that forgets to say cannot manufacture
+ *  source-confirmed trust by omission. */
+export type ProvenanceSubjectKind = "employment" | "credential";
+
 export interface ProvenanceBearing {
   readonly assertionLevel: string;
   readonly verifierName?: string | null;
   readonly verificationMethod?: string | null;
+  readonly subjectKind?: ProvenanceSubjectKind;
 }
 
 export function isLegacyUnsupportedEntry(entry: ProvenanceBearing): boolean {
@@ -152,12 +159,67 @@ export function effectiveTrust(entry: ProvenanceBearing): EffectiveTrust {
   if (entry.assertionLevel === "self_declared") return "self_declared";
   if (entry.assertionLevel === "document_provided") return "document_provided";
   if (entry.assertionLevel !== "verified") return "self_declared";
+
+  // -- ONE WAY TO REACH SOURCE-CONFIRMED, AND IT IS STRUCTURAL ---------
+  //
+  // An employer confirming an EMPLOYMENT PERIOD through the authorised
+  // employer-attestation path. That path is structural, not nominal: the
+  // database proves the caller represents the target employer
+  // (has_employer_role), refuses the holder deciding their own request, and
+  // refuses employer attestation aimed at anything but an employment period
+  // (sp_vr_employer_attestation_is_employment_only). The organisation NAME is
+  // never the authority -- it is read here only to exclude the legacy rows
+  // CQrityjob recorded about itself.
+  //
+  // ISSUER CONFIRMATION REACHES SOURCE-CONFIRMED THROUGH NO NAME. The product
+  // has no issuer organisation identity, no issuer membership, no
+  // issuer-specific request, no source receipt, no signature and no issuer
+  // revocation authority, so an organisation name in that column is a string
+  // somebody typed. Until the Issuer Foundation release introduces an
+  // explicit structural signal -- an issuer organisation id and a
+  // verification receipt -- every issuer confirmation, current or historical,
+  // is DOCUMENTED. This function must never learn to recognise an issuer by
+  // name; that promotion belongs to that release, keyed on the structure.
   const method = entry.verificationMethod ?? null;
   const organisation = entry.verifierName ?? null;
-  if (!method || method === "document_review") return "documented";
-  if (isLegacyUnsupportedProvenance(method, organisation)) return "documented";
-  if (SOURCE_CONFIRMATION_METHODS.includes(method) && organisation) return "source_confirmed";
+  if (
+    method === "employer_confirmation" &&
+    entry.subjectKind === "employment" &&
+    organisation !== null &&
+    organisation.trim() !== "" &&
+    !isLegacyUnsupportedProvenance(method, organisation)
+  ) {
+    return "source_confirmed";
+  }
+
+  // Everything else: a CQrityjob document review, an issuer confirmation by
+  // any name, an employer confirmation attached to a credential or to a
+  // subject nobody identified, and a verified level with no recorded method.
   return "documented";
+}
+
+/**
+ * A verified record whose recorded METHOD claims a source confirmed it, and
+ * which the product cannot structurally support.
+ *
+ * Two shapes reach it today: a source method CQrityjob recorded about itself
+ * (the legacy rows), and any issuer confirmation at all. Both are documented;
+ * this only decides which SENTENCE a surface may print, because "Confirmed by
+ * the issuer" is exactly the claim that is not supported.
+ */
+export function isUnsupportedSourceClaim(entry: ProvenanceBearing): boolean {
+  if (entry.assertionLevel !== "verified") return false;
+  const method = entry.verificationMethod ?? null;
+  if (!method || !SOURCE_CONFIRMATION_METHODS.includes(method)) return false;
+  return effectiveTrust(entry) !== "source_confirmed";
+}
+
+/** True when a decider name is CQrityjob itself. */
+export function isCQrityjob(organisation: string | null | undefined): boolean {
+  return (
+    typeof organisation === "string" &&
+    organisation.trim().toLowerCase() === CQRITYJOB_DECIDER_ORGANISATION.toLowerCase()
+  );
 }
 
 /** True for a CQrityjob review that stands: documented, and not a legacy row. */

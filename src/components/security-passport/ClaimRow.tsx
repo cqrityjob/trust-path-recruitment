@@ -21,8 +21,8 @@ import {
 } from "@/lib/security-passport/format";
 import {
   credentialPresentationOf,
-  isLegacyUnsupportedEntry,
   provenanceLabelKeys,
+  unsupportedSourceNoticeKey,
 } from "@/lib/security-passport/trust-presentation";
 import type { Claim } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
@@ -60,6 +60,7 @@ export function ClaimRow({
 }) {
   const { pt, lang } = usePassportCopy();
   const title = lang === "sv" ? claim.titleSv : claim.titleEn;
+  const noticeKey = unsupportedSourceNoticeKey(claim);
   const limitation = lang === "sv" ? claim.limitationSv : claim.limitationEn;
 
   return (
@@ -147,13 +148,12 @@ export function ClaimRow({
 
       <LifecycleNote state={claim.lifecycleState} />
 
-      {/* A source method CQrityjob recorded about itself, before
-          20261030090000. The chip above already says Dokumenterad; this says
-          why, in the one sentence every surface uses for it. */}
-      {isLegacyUnsupportedEntry(claim) ? (
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          {pt("trust.legacy.unsupported")}
-        </p>
+      {/* A recorded source method the product cannot structurally support --
+          a legacy CQrityjob row, or any issuer confirmation. The chip above
+          already says Dokumenterad; this says why, in the sentence the record
+          itself supports. */}
+      {noticeKey ? (
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{pt(noticeKey)}</p>
       ) : null}
 
       {limitation ? (

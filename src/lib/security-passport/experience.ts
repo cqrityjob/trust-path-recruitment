@@ -179,7 +179,9 @@ export function totalsByEvidenceLevel(
       // The EFFECTIVE level: a period whose approval CQrityjob recorded as an
       // employer confirmation about itself counts as documented time, not
       // verified time.
-      periods.filter((p) => assertionAtLeast(effectiveAssertionLevel(p), floor)),
+      periods.filter((p) =>
+        assertionAtLeast(effectiveAssertionLevel({ ...p, subjectKind: "employment" }), floor),
+      ),
       evaluationOn,
     );
 

@@ -40,6 +40,7 @@ import {
   presentationWordKeyOf,
   provenanceLabelKeys,
   publicTrustLevel,
+  unsupportedSourceNoticeKey,
   type ProvenanceLabelKeys,
   type PublicTrustLevel,
 } from "./trust-presentation";
@@ -78,6 +79,10 @@ export interface RecipientCredential {
    *  (pre-20261030090000). Stored facts above are untouched; everything
    *  below is derived from them once, here. */
   readonly legacyUnsupported: boolean;
+  /** The neutral sentence this record carries, or null when it needs none.
+   *  Any recorded source method the product cannot structurally support has
+   *  one -- the legacy rows and every issuer confirmation. */
+  readonly noticeKey: PassportCopyKey | null;
   /** The level every derivation and every chip reads. document_provided for
    *  a legacy unsupported row; the stored level otherwise. */
   readonly effectiveAssertion: AssertionLevel;
@@ -249,6 +254,7 @@ export function buildRecipientPresentation(
       verifierOrganisation: c.verifier_organisation,
       verificationMethod: c.verification_method,
       legacyUnsupported,
+      noticeKey: unsupportedSourceNoticeKey(bearing),
       effectiveAssertion: effectiveAssertionLevel(bearing),
       level,
       statusWordKey: presentationWordKeyOf(bearing, presentation),

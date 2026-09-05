@@ -41,10 +41,13 @@ import { verifierAttributionKey } from "./format";
 import {
   effectiveAssertionLevel,
   effectiveTrust,
+  isCQrityjob,
   isLegacyUnsupportedEntry,
   isLegacyUnsupportedProvenance,
+  isUnsupportedSourceClaim,
   type EffectiveTrust,
   type ProvenanceBearing,
+  type ProvenanceSubjectKind,
 } from "./provenance";
 import {
   credentialPresentation,
@@ -58,8 +61,10 @@ export {
   effectiveAssertionLevel,
   effectiveTrust,
   isLegacyUnsupportedEntry,
+  isUnsupportedSourceClaim,
   type EffectiveTrust,
   type ProvenanceBearing,
+  type ProvenanceSubjectKind,
 };
 
 /**
@@ -93,11 +98,13 @@ export type TrustStatus =
 export type TrustSourceType =
   | VerificationMethod
   | "unattributed"
-  /** A source-confirmation method that CQrityjob recorded about itself,
-   *  before 20261030090000 made that unwritable. Verified -- an authorised
-   *  verifier really decided -- but by CQrityjob reading something, not by
-   *  the employer or the issuer, so it wears no source attribution. */
-  | "legacy_unsupported";
+  /** A recorded source method the product cannot structurally support: a
+   *  source method CQrityjob recorded about itself (the legacy rows), or any
+   *  issuer confirmation, which has no issuer identity, membership, receipt
+   *  or revocation authority behind it until the Issuer Foundation release.
+   *  Verified -- an authorised verifier really decided -- but not by a
+   *  source, so it wears no source attribution. */
+  | "unsupported_source";
 
 export interface TrustPresentation {
   readonly status: TrustStatus;
@@ -130,6 +137,9 @@ export interface DescribeTrustInput {
   readonly verifierName?: string | null;
   readonly verificationMethod?: VerificationMethod | string | null;
   readonly verifiedOn?: string | null;
+  /** What the decision was ABOUT. Absent means a credential; see
+   *  ProvenanceBearing in provenance.ts. */
+  readonly subjectKind?: ProvenanceSubjectKind;
   /** True when the provenance read did not answer. Overrides everything:
    *  a fact whose trust could not be read has an unknown standing, not a
    *  negative one. */
@@ -167,6 +177,7 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
     verifierName = null,
     verificationMethod = null,
     verifiedOn = null,
+    subjectKind,
     provenanceUnavailable = false,
   } = input;
 
@@ -213,15 +224,21 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
   // source confirmation cannot be shown. `method` is null on purpose --
   // `isEmployerConfirmed` and every "confirmed by" branch downstream key on
   // it, and none of them may fire for a confirmation nobody gave.
-  if (isLegacyUnsupportedProvenance(verificationMethod, verifierName)) {
+  if (isUnsupportedSourceClaim({ assertionLevel, verificationMethod, verifierName, subjectKind })) {
+    // WHICH sentence depends on who is named: the legacy rows name CQrityjob
+    // and take the pinned legacy wording; anything else takes the general
+    // one, because naming CQrityjob there would name the wrong party.
+    const key: PassportCopyKey = isCQrityjob(verifierName)
+      ? "trust.legacy.unsupported"
+      : "trust.unsupportedSource";
     return {
       status: "verified",
-      sourceType: "legacy_unsupported",
+      sourceType: "unsupported_source",
       organisation: verifierName,
       method: null,
       date: verifiedOn,
-      labelSv: passportT("trust.legacy.unsupported", "sv"),
-      labelEn: passportT("trust.legacy.unsupported", "en"),
+      labelSv: passportT(key, "sv"),
+      labelEn: passportT(key, "en"),
       // The short word is the LEVEL word, not "Verified": a compact surface
       // or a screen reader gets the same answer the pill gives.
       shortSv: passportT("trust.level.documented", "sv"),
@@ -235,16 +252,17 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
   // -- and the attribution line is simply absent, because there is nobody
   // this product may name.
   const method = (verificationMethod as VerificationMethod | null) ?? null;
-  const key = verifierAttributionKey(method);
+  const key = verifierAttributionKey(method, verifierName, subjectKind);
 
   // The short word is the OUTWARD LEVEL, never "Verified": a CQrityjob
   // document review is Documented; only an employer's or issuer's own
   // confirmation is Source-confirmed. The attribution line beside it still
   // says exactly what happened ("Document reviewed by CQrityjob").
-  const source = method === "employer_confirmation" || method === "issuer_confirmation";
-  const shortKey: PassportCopyKey = source
-    ? "trust.level.source_verified"
-    : "trust.level.documented";
+  const shortKey: PassportCopyKey =
+    effectiveTrust({ assertionLevel, verificationMethod, verifierName, subjectKind }) ===
+    "source_confirmed"
+      ? "trust.level.source_verified"
+      : "trust.level.documented";
 
   return {
     status: "verified",
@@ -306,7 +324,7 @@ export function isEmployerConfirmed(trust: TrustPresentation): boolean {
 export function employmentTrustLine(trust: TrustPresentation, lang: PassportLang): string | null {
   if (trust.status !== "verified" || !trust.organisation) return null;
   // The legacy sentence is already complete and already names the decider.
-  if (trust.sourceType === "legacy_unsupported") return trustLabel(trust, lang);
+  if (trust.sourceType === "unsupported_source") return trustLabel(trust, lang);
   const key: PassportCopyKey =
     trust.method === "employer_confirmation"
       ? "employment.attribution.employer_confirmation"
@@ -327,11 +345,21 @@ export function employmentTrustLine(trust: TrustPresentation, lang: PassportLang
 export function methodLabelKey(
   method: string | null | undefined,
   organisation: string | null | undefined,
+  subjectKind: ProvenanceSubjectKind | undefined = undefined,
 ): PassportCopyKey | null {
   if (!method) return null;
   // A short VALUE for the method cell. The explanatory sentence
   // (trust.legacy.unsupported) is rendered beside it, once, by the surface.
-  if (isLegacyUnsupportedProvenance(method, organisation)) return "trust.legacy.method";
+  if (
+    isUnsupportedSourceClaim({
+      assertionLevel: "verified",
+      verificationMethod: method,
+      verifierName: organisation,
+      subjectKind,
+    })
+  ) {
+    return "trust.legacy.method";
+  }
   switch (method) {
     case "document_review":
       return "ver.method.document_review";
@@ -440,6 +468,19 @@ export function presentationWordKeyOf(
   if (state === "documented" && trust === "documented") return "trust.level.documented";
   if (state === "verified" && trust === "source_confirmed") return "trust.level.source_verified";
   return presentationWordKey(state);
+}
+
+/**
+ * The neutral sentence an unsupported source claim carries, or null.
+ *
+ * The pinned legacy wording when CQrityjob recorded the source method about
+ * itself; the general one otherwise, because naming CQrityjob in a row that
+ * names somebody else would name the wrong party. Decided here so a surface
+ * renders what the record supports rather than the only sentence it knew.
+ */
+export function unsupportedSourceNoticeKey(entry: ProvenanceBearing): PassportCopyKey | null {
+  if (!isUnsupportedSourceClaim(entry)) return null;
+  return isCQrityjob(entry.verifierName) ? "trust.legacy.unsupported" : "trust.unsupportedSource";
 }
 
 /** The three field labels a provenance block carries: who, how, when. */

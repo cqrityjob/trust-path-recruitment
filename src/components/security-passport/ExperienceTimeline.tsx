@@ -112,7 +112,11 @@ export function ExperienceTimeline({
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <AssertionChip level={p.assertionLevel} provenance={p} size="sm" />
+                    <AssertionChip
+                      level={p.assertionLevel}
+                      provenance={{ ...p, subjectKind: "employment" }}
+                      size="sm"
+                    />
                     <LifecycleChip state={p.lifecycleState} />
                   </div>
                 </div>
@@ -141,9 +145,19 @@ export function ExperienceTimeline({
                     while every other surface renders the same attribution as
                     the sentence it is written to be. One attribution, two
                     punctuations, on two panels of one page. */}
-                {formatVerifierAttribution(p.verifierName, p.verificationMethod, lang) ? (
+                {formatVerifierAttribution(
+                  p.verifierName,
+                  p.verificationMethod,
+                  lang,
+                  "employment",
+                ) ? (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {formatVerifierAttribution(p.verifierName, p.verificationMethod, lang)}
+                    {formatVerifierAttribution(
+                      p.verifierName,
+                      p.verificationMethod,
+                      lang,
+                      "employment",
+                    )}
                     {p.verifiedOn ? ` · ${formatDate(p.verifiedOn, lang)}` : ""}
                   </p>
                 ) : null}

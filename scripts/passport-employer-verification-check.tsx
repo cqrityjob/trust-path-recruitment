@@ -161,6 +161,7 @@ function panel(over: Partial<React.ComponentProps<typeof VerificationPanel>> = {
   return html(
     <VerificationPanel
       assertionLevel="self_declared"
+      subjectKind="employment"
       validity={
         {
           effectiveState: "active",

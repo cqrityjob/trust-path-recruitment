@@ -196,9 +196,9 @@ export function CredentialVerificationPage({
             </div>
           ) : null}
         </dl>
-        {credential.legacyUnsupported ? (
+        {credential.noticeKey ? (
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            {pt("trust.legacy.unsupported")}
+            {pt(credential.noticeKey)}
           </p>
         ) : null}
       </section>

@@ -379,6 +379,11 @@ const sv = {
     "Granskning registrerad av CQrityjob. Direkt källbekräftelse kan inte visas för denna äldre post.",
   // The short VALUE for the method cell of such a row; the sentence above is
   // rendered beside it. Never a method name it cannot support.
+  // The same shape, where the recorded decider is somebody other than
+  // CQrityjob -- today only a hypothetical issuer confirmation, since the
+  // database refuses to write another. Names no party it cannot support.
+  "trust.unsupportedSource":
+    "En källbekräftelse är registrerad, men CQrityjob kan ännu inte visa den som styrkt av källan. Uppgiften visas som Dokumenterad.",
   "trust.legacy.method": "Källmetod utan strukturell källbekräftelse",
   // Field labels for a record that may not claim verification.
   "trust.reviewedBy": "Granskad av",
@@ -2052,6 +2057,8 @@ const en: Record<PassportCopyKey, string> = {
   "claims.attribution.issuer_confirmation": "Confirmed by the issuer",
   "trust.legacy.unsupported":
     "Review recorded by CQrityjob. Direct source confirmation is not available for this legacy record.",
+  "trust.unsupportedSource":
+    "A source confirmation is recorded, but CQrityjob cannot yet show it as substantiated by the source. The record is shown as Documented.",
   "trust.legacy.method": "Source method without structural source confirmation",
   "trust.reviewedBy": "Reviewed by",
   "trust.reviewMethod": "Review method",

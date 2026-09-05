@@ -26,7 +26,11 @@ import { CheckCircle2, FileText, History, PencilLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { AssertionLevel } from "@/lib/security-passport/types";
-import { effectiveAssertionLevel, effectiveTrust } from "@/lib/security-passport/provenance";
+import {
+  effectiveAssertionLevel,
+  effectiveTrust,
+  type ProvenanceSubjectKind,
+} from "@/lib/security-passport/provenance";
 
 const SHAPE: Record<AssertionLevel, string> = {
   // Square corners + dashed border reads as "provisional" before any colour
@@ -68,6 +72,9 @@ export function AssertionChip({
   provenance?: {
     readonly verifierName?: string | null;
     readonly verificationMethod?: string | null;
+    /** Absent means a credential: only an employment period may carry an
+     *  employer's source confirmation. */
+    readonly subjectKind?: ProvenanceSubjectKind;
   } | null;
   /** The entry's CURRENT standing. Optional: the legend below renders the
    *  three levels in the abstract, where no entry and no lifecycle exists. */
@@ -103,6 +110,7 @@ export function AssertionChip({
         assertionLevel: level,
         verifierName: provenance.verifierName,
         verificationMethod: provenance.verificationMethod,
+        subjectKind: provenance.subjectKind,
       }
     : null;
   const trust = bearing ? effectiveTrust(bearing) : null;

@@ -168,18 +168,22 @@ function deriveState(
   // `isCurrentlyVerified` adds the lifecycle question the individual plate
   // was already asking (`useCardContent`'s `isCurrent`, which is why the
   // plate said PREVIOUSLY VERIFIED while the card around it said verified).
-  const anyVerified = periods.some(isCurrentlyVerified) || claims.some(isCurrentlyVerified);
+  // Periods declare their subject: an employer confirming an employment is
+  // the one path to source-confirmed, and a caller that did not say so gets
+  // the credential reading, which cannot be.
+  const asEmployment = periods.map((p) => ({ ...p, subjectKind: "employment" as const }));
+  const anyVerified = asEmployment.some(isCurrentlyVerified) || claims.some(isCurrentlyVerified);
   if (!anyVerified) {
     // "Verified" here means SOURCE-CONFIRMED (isCurrentlyVerified reads the
     // effective level). A card whose entries CQrityjob reviewed is documented,
     // which is neither "verified" nor "self-declared only".
-    const anyDocumented = [...periods, ...claims].some(
+    const anyDocumented = [...asEmployment, ...claims].some(
       (e) => e.lifecycleState === "active" && effectiveTrust(e) === "documented",
     );
     return anyDocumented ? "documented" : "self_declared_only";
   }
 
-  const allVerified = periods.every(isCurrentlyVerified) && claims.every(isCurrentlyVerified);
+  const allVerified = asEmployment.every(isCurrentlyVerified) && claims.every(isCurrentlyVerified);
   return allVerified ? "verified" : "partially_verified";
 }
 

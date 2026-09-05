@@ -191,12 +191,12 @@ export function RecipientPassportCard({
                         {pt(c.labels.by)}: {c.verifierOrganisation}
                       </span>
                     ) : null}
-                    {c.legacyUnsupported ? (
+                    {c.noticeKey ? (
                       <span
                         className="mt-1 block text-[11px] leading-snug"
                         style={{ color: TRUST_PALETTE.inkFaint }}
                       >
-                        {pt("trust.legacy.unsupported")}
+                        {pt(c.noticeKey)}
                       </span>
                     ) : null}
                     {/* An approval shown without its limits reads as a general

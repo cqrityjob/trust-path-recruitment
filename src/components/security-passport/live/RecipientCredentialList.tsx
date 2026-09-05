@@ -151,9 +151,9 @@ export function RecipientCredentialList({
               ) : null}
             </dl>
 
-            {c.legacyUnsupported ? (
+            {c.noticeKey ? (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                {pt("trust.legacy.unsupported")}
+                {pt(c.noticeKey)}
               </p>
             ) : null}
           </li>

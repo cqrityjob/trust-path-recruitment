@@ -249,6 +249,9 @@ group("GROUP 3 -- issuer and verifier stay separate");
     assertionLevel: "verified",
     verifierName: "Bevakning AB",
     verificationMethod: "employer_confirmation",
+    // An EMPLOYMENT. Source-confirmed trust has exactly one shape, and the
+    // subject is half of it: the same method on a credential is documented.
+    subjectKind: "employment",
   });
   ck(
     "sv: an employer confirmation is attributed to the employer",

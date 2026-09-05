@@ -93,6 +93,9 @@ export function summariseTrust(identity: ProfessionalIdentityV1): TrustSummary {
       verifierName: e.verifierName,
       verificationMethod: e.verificationMethod,
       verifiedOn: e.verifiedOn,
+      // An EMPLOYMENT: the one subject an employer confirmation may
+      // source-confirm. Said explicitly, because the default is a credential.
+      subjectKind: "employment",
     });
     if (!presentsAsVerified(trust)) continue;
     verifiedEmployment += 1;
