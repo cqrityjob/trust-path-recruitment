@@ -37,6 +37,7 @@ import { AlertTriangle, FileText, Inbox, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatWorkLocation } from "@/lib/security-passport/format";
 import {
+  hasCompletedDocumentReview,
   hasLegacyUnsupportedApproval,
   methodLabelKey,
 } from "@/lib/security-passport/trust-presentation";
@@ -129,7 +130,7 @@ function PassportReviewRoute() {
 
 /** The only method a CQrityjob review can record. Not a default -- the form
  *  has no other value to offer -- and `sp_verifier_decide` refuses every other
- *  method for this request kind (20261029090000). */
+ *  method for this request kind (20261030090000). */
 const REVIEW_METHOD = "document_review" as const;
 
 /** One line of copy per refusal the database can give. Kept as a total map so
@@ -206,7 +207,7 @@ export function PassportReviewWorkspace() {
   // Not state. A CQrityjob reviewer reads what the holder supplied, and that
   // is document review whatever was read; the form shows the method rather
   // than offering it, and sp_verifier_decide refuses anything else for this
-  // request kind (20261029090000).
+  // request kind (20261030090000).
   const method = REVIEW_METHOD;
   const [decisionNote, setDecisionNote] = useState("");
   const [holderMessage, setHolderMessage] = useState("");
@@ -468,7 +469,7 @@ export function PassportReviewWorkspace() {
                       one column, which is the comparison they are making. */}
                   {/* 0. A LEGACY RECORD, SAID FIRST. An approval whose method
                       claims a source confirmation that CQrityjob recorded
-                      about itself (pre-20261029090000). The stored decision
+                      about itself (pre-20261030090000). The stored decision
                       stays; every reader sees it as Dokumenterad; the
                       reviewer is told, before the facts, that the record
                       needs a manual re-review rather than a second look at
@@ -495,6 +496,31 @@ export function PassportReviewWorkspace() {
                           {pt("vq.legacy.body")}
                         </p>
                       </div>
+                    </div>
+                  ) : null}
+
+                  {/* 0b. A COMPLETED DOCUMENT REVIEW, in operational words. The
+                      stored decision says "approved" and the stored level says
+                      "verified"; what the holder and every recipient see is
+                      DOCUMENTED, because a CQrityjob document review is not
+                      the issuer's or the employer's confirmation. Said here so
+                      the reviewer never reads their own approval as one. */}
+                  {detail &&
+                  item.status === "approved" &&
+                  hasCompletedDocumentReview(priorDecisions) &&
+                  !hasLegacyUnsupportedApproval(priorDecisions) ? (
+                    <div
+                      role="status"
+                      data-review-completed="documented"
+                      className="rounded-lg border border-border bg-secondary/40 p-4"
+                    >
+                      <p className="text-sm font-semibold text-foreground">
+                        {pt("vq.review.completed")}
+                      </p>
+                      <p className="mt-1 text-sm text-foreground">{pt("vq.review.holderResult")}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {pt("vq.review.notSource")}
+                      </p>
                     </div>
                   ) : null}
 

@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Security Passport — trust-source containment assertions
 --
--- The rule under test (20261029090000): the verification METHOD an approval
+-- The rule under test (20261030090000): the verification METHOD an approval
 -- records must belong to the party deciding.
 --
 --     cqrityjob_review      ⇒ document_review, and nothing else
@@ -479,7 +479,7 @@ END $$;
 
 -- Re-apply the migration with the legacy rows present. It must succeed (no
 -- preflight refuses on the past) and it must change none of it.
-\i supabase/migrations/20261029090000_sp_trust_source_containment.sql
+\i supabase/migrations/20261030090000_sp_trust_source_containment.sql
 
 DO $$
 DECLARE _h uuid := 'd6000000-0000-0000-0000-000000000004';

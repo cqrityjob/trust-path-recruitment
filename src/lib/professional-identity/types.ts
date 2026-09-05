@@ -34,7 +34,7 @@
 // to make "verified" unrepresentable unless the Passport said so.
 
 import type { CurrentStatus, YearsOfExperience } from "@/lib/security-career-profile/types";
-import { effectiveAssertionLevel } from "@/lib/security-passport/provenance";
+import { effectiveAssertionLevel, effectiveTrust } from "@/lib/security-passport/provenance";
 
 /** Where a displayed fact came from. See docs — DATA SEMANTICS. */
 export type SourceType =
@@ -322,7 +322,14 @@ export function isPendingClaim(claim: {
   readonly verifierName?: string | null;
   readonly verificationMethod?: string | null;
 }): boolean {
-  return claim.lifecycleState === "active" && effectiveAssertionLevel(claim) !== "verified";
+  // Pending means NOBODY HAS DECIDED: the holder's own statement, or a file
+  // attached and not yet assessed. A CQrityjob review is a decision -- the
+  // claim is documented, not pending -- and a source confirmation is one too.
+  const trust = effectiveTrust(claim);
+  return (
+    claim.lifecycleState === "active" &&
+    (trust === "self_declared" || trust === "document_provided")
+  );
 }
 
 /** Claim types that describe formal education. */

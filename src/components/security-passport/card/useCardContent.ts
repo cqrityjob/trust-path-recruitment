@@ -22,7 +22,7 @@ import {
 import {
   credentialPresentationOf,
   effectiveAssertionLevel,
-  isLegacyUnsupportedEntry,
+  effectiveTrust,
 } from "@/lib/security-passport/trust-presentation";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type {
@@ -152,13 +152,17 @@ export function useCardContent(
       // VERIFIED: on a card, beside a name, that reads as a present fact.
       // The verification is real and is not erased — it is stated as the
       // past event it is, and the lifecycle word leads.
-      evidenceWord: isLegacyUnsupportedEntry(c)
-        ? // A source method CQrityjob recorded about itself: the level word,
-          // never VERIFIED and never "previously verified".
-          pt("trust.level.documented")
-        : !isCurrent && c.assertionLevel === "verified"
-          ? pt("assertion.verified.historical")
-          : pt(`assertion.${c.assertionLevel}` as const),
+      evidenceWord:
+        // The OUTWARD level word. A CQrityjob review is Documented, current or
+        // not; a source confirmation is Source-confirmed while current and
+        // "previously verified" once it has lapsed.
+        effectiveTrust(c) === "documented"
+          ? pt("trust.level.documented")
+          : effectiveTrust(c) === "source_confirmed"
+            ? isCurrent
+              ? pt("trust.level.source_verified")
+              : pt("assertion.verified.historical")
+            : pt(`assertion.${c.assertionLevel}` as const),
       // The lifecycle word appears only when it qualifies the entry.
       // "Active" beside every plate is noise; "Expired" is the point.
       lifecycleWord: isCurrent ? null : pt(`lifecycle.${c.lifecycleState}` as const),
@@ -245,7 +249,10 @@ export function useCardContent(
     // The empty milestone slot must not contradict a VERIFIED plate below
     // it: with verified credentials present, the missing thing is verified
     // EXPERIENCE, and the label says so.
-    noVerifiedYet: card.credentials.some((c) => c.assertionLevel === "verified")
+    noVerifiedYet: card.credentials.some((c) => {
+      const t = effectiveTrust(c);
+      return t === "documented" || t === "source_confirmed";
+    })
       ? pt("card.noVerifiedExperience")
       : pt("card.noVerifiedYet"),
     experience: {

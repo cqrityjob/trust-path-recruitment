@@ -449,7 +449,7 @@ BEGIN
     'SP_APPROVAL_REQUIRES_METHOD',
     '4.4 a tab-and-newline method is refused, not accepted as a method');
 
-  -- 4.5 A method outside the model is refused. Since 20261029090000 the
+  -- 4.5 A method outside the model is refused. Since 20261030090000 the
   --     function binds the method to the request kind BEFORE the row is
   --     written, so a cqrityjob_review meets SP_CQRITYJOB_REVIEW_REQUIRES_
   --     DOCUMENT_REVIEW first; the column CHECK behind it is still the model

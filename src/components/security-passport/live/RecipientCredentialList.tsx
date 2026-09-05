@@ -83,11 +83,16 @@ export function RecipientCredentialList({
                     className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
                   >
                     <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5" />
-                    {pt("assertion.verified")}
+                    {pt(c.statusWordKey)}
                   </span>
                 ) : (
                   <AssertionChip
-                    level={c.lifecycle === "active" ? c.effectiveAssertion : c.assertion}
+                    // The STORED level plus the provenance: the chip derives the
+                    // outward level itself, so a review reads Dokumenterad, not
+                    // "document provided". Passing the effective level would
+                    // hand it a file-attached credential it never was.
+                    level={c.assertion}
+                    lifecycleState={c.lifecycle}
                     provenance={{
                       verifierName: c.verifierOrganisation,
                       verificationMethod: c.verificationMethod,

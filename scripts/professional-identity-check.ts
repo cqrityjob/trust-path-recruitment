@@ -114,6 +114,7 @@ function sourceFilesUnder(dir: string): string[] {
 }
 
 import {
+  presentsAsVerified,
   describeTrust,
   employmentTrustLine,
   isEmployerConfirmed,
@@ -846,7 +847,9 @@ console.log("\n2c · the /my-career surfaces");
   // jurisdiction-relevance split stays on the Passport itself.
   ck(
     "the home's verified figure is counted by summariseTrust",
-    /verified: trust\.known \? trust\.verifiedClaims \+ trust\.verifiedEmployment/.test(snapshotModel),
+    /verified: trust\.known \? trust\.verifiedClaims \+ trust\.verifiedEmployment/.test(
+      snapshotModel,
+    ),
   );
   ck(
     "the relevance split itself is unchanged",
@@ -966,13 +969,47 @@ console.log("\n4 · CV source bundle");
     bundle.credentials.every((c) => c.verified === false),
   );
 
+  // "Verified" for the bundle means SOURCE-CONFIRMED (owner decision): the
+  // issuer or employer confirmed it. A CQrityjob document review is
+  // documented and is NOT marked verified; a verified level with no recorded
+  // method fails closed the same way.
   const verifiedBundle = buildCvSourceBundle({
-    identity: identity({ claims: [claim({ assertionLevel: "verified" })] }),
+    identity: identity({
+      claims: [
+        claim({
+          assertionLevel: "verified",
+          verifierName: "BYA",
+          verificationMethod: "issuer_confirmation",
+        }),
+      ],
+    }),
     locale: "sv",
     includeCareerInsight: false,
     targetJobText: null,
   });
-  ck("a verified claim IS marked verified", verifiedBundle.credentials[0]?.verified === true);
+  ck(
+    "a source-confirmed claim IS marked verified",
+    verifiedBundle.credentials[0]?.verified === true,
+  );
+  const reviewedBundle = buildCvSourceBundle({
+    identity: identity({
+      claims: [
+        claim({
+          assertionLevel: "verified",
+          verifierName: "CQrityjob",
+          verificationMethod: "document_review",
+        }),
+        claim({ id: "c-nomethod", assertionLevel: "verified" }),
+      ],
+    }),
+    locale: "sv",
+    includeCareerInsight: false,
+    targetJobText: null,
+  });
+  ck(
+    "a CQrityjob document review is NOT marked verified (documented), nor is a verified level with no method",
+    reviewedBundle.credentials.every((c) => c.verified === false),
+  );
 
   // "evidenced" is the holder attaching a document to their own claim. A
   // holder cannot verify themselves.
@@ -1975,17 +2012,22 @@ console.log("\n10 · verified trust across the career outputs");
       "10.29 the CV attributes the SAME employment to Company X",
       employmentTrustLine(cvEmployment, "en") === "Employment confirmed by Company X",
     );
+    // INVERTED (owner decision): the document-reviewed VU1 is documented, so
+    // the card counts NO verified credential; only the employer's own
+    // confirmation of employment survives compression.
     ck(
-      "10.30 the Career Card says the same thing, compressed",
-      careerCardTrustLine(summary, "en") === "1 verified credential · Employment confirmed",
+      "10.30 the Career Card says the same thing, compressed -- and counts the review as documented",
+      careerCardTrustLine(summary, "en") === "Employment confirmed",
     );
     ck(
       "10.31 and the card never names the employer",
       !(careerCardTrustLine(summary, "en") ?? "").includes("Company X"),
     );
     ck(
-      "10.32 the CV credential and the card agree it is verified",
-      annotations.claims[VU1_APPROVED.id].status === "verified" && summary.verifiedClaims === 1,
+      "10.32 the CV credential records the decision, and the card agrees it is documented, not verified",
+      annotations.claims[VU1_APPROVED.id].status === "verified" &&
+        !presentsAsVerified(annotations.claims[VU1_APPROVED.id]) &&
+        summary.verifiedClaims === 0,
     );
   }
 
@@ -2206,14 +2248,19 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
 //       TOTAL, and the entry printed the filled VERIFIED pill beside its
 //       own "Revoked" chip, while My Career correctly counted zero.
 {
+  // SOURCE-CONFIRMED (owner decision, 2026-09-05): this block is about the
+  // FROZEN verified flag and current-vs-historical trust, which only a
+  // credential that presents as verified can exercise. A CQrityjob document
+  // review is documented and never freezes verified: true -- that is
+  // asserted in section 9 above and in passport-trust-source-check.
   const VU1_ACTIVE = claim({
     id: "c-vu1",
     title: "Väktargrundutbildning VU1",
     issuerName: "BYA",
     assertionLevel: "verified",
     lifecycleState: "active",
-    verifierName: "CQrityjob",
-    verificationMethod: "document_review",
+    verifierName: "BYA",
+    verificationMethod: "issuer_confirmation",
     verifiedOn: "2026-02-11",
   });
   // The SAME credential after revocation. The assertion level does NOT move:
@@ -2278,7 +2325,7 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
     );
     const t = doc.trust.claims["c-vu1"];
     ck("11.2 saved CV, claim still active: trust is current", t?.status === "verified");
-    ck("11.3 and the attribution names CQrityjob", t?.labelEn === "Document reviewed by CQrityjob");
+    ck("11.3 and the attribution names the issuer", t?.labelEn === "Confirmed by the issuer BYA");
   }
 
   {
@@ -2321,7 +2368,7 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
     ck(
       // Gated on the annotation, and through presentsAsVerified() rather than
       // the raw status: a legacy unsupported approval (a source method
-      // CQrityjob recorded about itself, pre-20261029090000) has status
+      // CQrityjob recorded about itself, pre-20261030090000) has status
       // "verified" -- a verifier did decide -- and still may not wear the mark.
       "11.9   and is gated on the annotation's current status instead",
       read("src/components/professional-identity/CvDocumentView.tsx").includes(
@@ -2428,9 +2475,16 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
   );
   // An entry with no lifecycle at all is unaffected — employment periods
   // reach the annotations already filtered to active.
+  // ... on its assertion AND its provenance: a source-confirmed entry with no
+  // lifecycle is currently verified; a verified level with no recorded method
+  // fails closed to documented (owner decision) and is not.
   ck(
-    "11.22 an entry carrying no lifecycle is judged on its assertion alone",
-    isCurrentlyVerified({ assertionLevel: "verified" }),
+    "11.22 an entry carrying no lifecycle is judged on its assertion and provenance alone",
+    isCurrentlyVerified({
+      assertionLevel: "verified",
+      verifierName: "Company X",
+      verificationMethod: "employer_confirmation",
+    }) && !isCurrentlyVerified({ assertionLevel: "verified" }),
   );
   ck(
     "11.23 and the historical verification is NEVER rewritten to achieve this",

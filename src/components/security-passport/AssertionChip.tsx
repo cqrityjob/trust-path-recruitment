@@ -26,7 +26,7 @@ import { CheckCircle2, FileText, History, PencilLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { AssertionLevel } from "@/lib/security-passport/types";
-import { isLegacyUnsupportedProvenance } from "@/lib/security-passport/provenance";
+import { effectiveAssertionLevel, effectiveTrust } from "@/lib/security-passport/provenance";
 
 const SHAPE: Record<AssertionLevel, string> = {
   // Square corners + dashed border reads as "provisional" before any colour
@@ -62,7 +62,7 @@ export function AssertionChip({
   level: AssertionLevel;
   /** The decider and method behind a verified entry, where the caller has
    *  them. A source-confirmation method CQrityjob recorded about itself
-   *  (pre-20261029090000) renders as the DOCUMENTED chip with the level word
+   *  (pre-20261030090000) renders as the DOCUMENTED chip with the level word
    *  "Dokumenterad / Documented" -- never the filled verified pill. The
    *  stored level is untouched; only what this chip says about it. */
   provenance?: {
@@ -94,20 +94,29 @@ export function AssertionChip({
   // and on this product the shape is a load-bearing channel (see the header):
   // a reader who cannot see colour, or is looking at a greyscale screenshot,
   // reads "settled" from the fill alone.
-  const legacy = isLegacyUnsupportedProvenance(
-    provenance?.verificationMethod,
-    provenance?.verifierName,
-  );
-  // The EFFECTIVE level (provenance.ts): the one thing a legacy row supports.
-  const effective: AssertionLevel = legacy ? "document_provided" : level;
+  // With provenance in hand the chip renders the OUTWARD level (provenance.ts):
+  // a CQrityjob review is Documented in the documented shape, an employer's or
+  // issuer's own confirmation is Source-confirmed in the settled pill. Without
+  // provenance -- the legend, an abstract level -- the stored vocabulary stands.
+  const bearing = provenance
+    ? {
+        assertionLevel: level,
+        verifierName: provenance.verifierName,
+        verificationMethod: provenance.verificationMethod,
+      }
+    : null;
+  const trust = bearing ? effectiveTrust(bearing) : null;
+  const effective: AssertionLevel = bearing ? effectiveAssertionLevel(bearing) : level;
   const isCurrent = lifecycleState == null || lifecycleState === "active";
   const historical = !isCurrent && effective === "verified";
   const Glyph = historical ? History : GLYPH[effective];
   const label = historical
     ? pt("assertion.verified.historical")
-    : legacy
+    : trust === "documented"
       ? pt("trust.level.documented")
-      : pt(`assertion.${effective}` as const);
+      : trust === "source_confirmed"
+        ? pt("trust.level.source_verified")
+        : pt(`assertion.${effective}` as const);
 
   return (
     <span

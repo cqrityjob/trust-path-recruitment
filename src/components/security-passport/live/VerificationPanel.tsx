@@ -28,6 +28,7 @@ import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { formatDate, verifierAttributionKey } from "@/lib/security-passport/format";
 import {
   CQRITYJOB_DECIDER_ORGANISATION,
+  effectiveTrust,
   isLegacyUnsupportedProvenance,
 } from "@/lib/security-passport/provenance";
 import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
@@ -176,6 +177,15 @@ export function VerificationPanel({
    *  present fact and must not suppress a fresh request. */
   const employerConfirmed =
     assertionLevel === "verified" && employerGaveConfirmation(latestApproval);
+  /** The standing approval is a CQrityjob review (genuine or legacy): the
+   *  labels say Reviewed, never Verified. Decided once here for the block. */
+  const approvalIsReview =
+    latestApproval !== null &&
+    effectiveTrust({
+      assertionLevel,
+      verifierName: latestApproval.organisation,
+      verificationMethod: latestApproval.method,
+    }) === "documented";
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -243,11 +253,7 @@ export function VerificationPanel({
           </div>
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt(
-                isLegacyUnsupportedProvenance(latestApproval.method, latestApproval.organisation)
-                  ? "trust.reviewMethod"
-                  : "ver.method",
-              )}
+              {pt(approvalIsReview ? "trust.reviewMethod" : "ver.method")}
             </dt>
             <dd className="mt-0.5 text-sm text-foreground">
               {latestApproval.method
@@ -260,7 +266,7 @@ export function VerificationPanel({
           </div>
           <div>
             <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("ver.decidedAt")}
+              {pt(approvalIsReview ? "trust.reviewedAt" : "ver.decidedAt")}
             </dt>
             <dd className="mt-0.5 text-sm tabular-nums text-foreground">
               {latestApproval.decidedAt.slice(0, 10)}
@@ -278,7 +284,7 @@ export function VerificationPanel({
       ) : null}
 
       {/* A source method CQrityjob recorded about itself, before
-          20261029090000. The holder keeps the history above -- who decided,
+          20261030090000. The holder keeps the history above -- who decided,
           when -- and reads why it presents as Dokumenterad. */}
       {latestApproval &&
       isLegacyUnsupportedProvenance(latestApproval.method, latestApproval.organisation) ? (

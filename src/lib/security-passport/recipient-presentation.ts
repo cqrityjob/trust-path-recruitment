@@ -75,7 +75,7 @@ export interface RecipientCredential {
   readonly verifierOrganisation: string | null;
   readonly verificationMethod: string | null;
   /** True for a source-confirmation method CQrityjob recorded about itself
-   *  (pre-20261029090000). Stored facts above are untouched; everything
+   *  (pre-20261030090000). Stored facts above are untouched; everything
    *  below is derived from them once, here. */
   readonly legacyUnsupported: boolean;
   /** The level every derivation and every chip reads. document_provided for

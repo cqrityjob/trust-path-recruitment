@@ -22,6 +22,7 @@ import {
 import {
   credentialPresentationOf,
   isLegacyUnsupportedEntry,
+  provenanceLabelKeys,
 } from "@/lib/security-passport/trust-presentation";
 import type { Claim } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
@@ -140,17 +141,14 @@ export function ClaimRow({
           />
         ) : null}
         {claim.verifierName && claim.verifiedOn ? (
-          <Field
-            label={pt(isLegacyUnsupportedEntry(claim) ? "trust.reviewedAt" : "claims.verifiedOn")}
-            value={claim.verifiedOn}
-          />
+          <Field label={pt(provenanceLabelKeys(claim).at)} value={claim.verifiedOn} />
         ) : null}
       </dl>
 
       <LifecycleNote state={claim.lifecycleState} />
 
       {/* A source method CQrityjob recorded about itself, before
-          20261029090000. The chip above already says Dokumenterad; this says
+          20261030090000. The chip above already says Dokumenterad; this says
           why, in the one sentence every surface uses for it. */}
       {isLegacyUnsupportedEntry(claim) ? (
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">

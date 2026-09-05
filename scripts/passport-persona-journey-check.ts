@@ -92,8 +92,12 @@ function claim(
     validUntil: o.validUntil === undefined ? "2028-01-01" : o.validUntil,
     assertionLevel: o.assertion ?? "verified",
     lifecycleState: o.lifecycle ?? "active",
-    verifierName: "Fixture verifier",
-    verificationMethod: "document_review" as const,
+    // SOURCE-CONFIRMED by default (owner decision, 2026-09-05): the journeys
+    // below are about what confirmed credentials support. A CQrityjob
+    // document review is DOCUMENTED and supports no title or eligibility --
+    // asserted explicitly at the end of this file.
+    verifierName: "Fixture issuer",
+    verificationMethod: "issuer_confirmation" as const,
     verifiedOn: "2026-01-01",
     limitationSv: null,
     limitationEn: null,
@@ -809,6 +813,27 @@ console.log("\nWRITE PATH -- the save payload cannot desync from the schema");
     "and does not re-enumerate draft fields by hand (found: " +
       (enumerated.join(", ") || "none") +
       ")",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+console.log("\nINVERTED -- a CQrityjob document review is documented, never a title");
+{
+  const reviewed = derive([
+    { ...claim("VU1"), verifierName: "CQrityjob", verificationMethod: "document_review" },
+    { ...claim("VU2"), verifierName: "CQrityjob", verificationMethod: "document_review" },
+    {
+      ...claim("SE_PERSONNEL_APPROVAL"),
+      verifierName: "CQrityjob",
+      verificationMethod: "document_review",
+    },
+  ]);
+  assert(
+    reviewed.activeTitles.length === 0 &&
+      reviewed.localEligibility.length === 0 &&
+      reviewed.professionalCompetence.length === 0 &&
+      reviewed.educationCompleted.length === 0,
+    "INV-1 VU1+VU2+personnel approval, all CQrityjob-reviewed, derive no title, competence, education or eligibility",
   );
 }
 

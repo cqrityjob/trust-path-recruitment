@@ -52,7 +52,7 @@ export const SOURCE_CONFIRMATION_METHODS: readonly string[] = [
  *
  * ── WHY THIS SHAPE IS UNSUPPORTED ──────────────────────────────────────
  *
- * Before migration 20261029090000, a CQrityjob reviewer answering a
+ * Before migration 20261030090000, a CQrityjob reviewer answering a
  * `cqrityjob_review` request could record `issuer_confirmation` or
  * `employer_confirmation`. No issuer or employer took part in that decision:
  * there was no issuer request kind, no issuer membership, no source receipt,
@@ -108,8 +108,61 @@ export function isLegacyUnsupportedEntry(entry: ProvenanceBearing): boolean {
  * second list of surfaces to keep in step.
  */
 export function effectiveAssertionLevel(entry: ProvenanceBearing): AssertionLevel {
-  if (isLegacyUnsupportedEntry(entry)) return "document_provided";
-  return entry.assertionLevel as AssertionLevel;
+  switch (effectiveTrust(entry)) {
+    case "source_confirmed":
+      return "verified";
+    case "documented":
+    case "document_provided":
+      return "document_provided";
+    default:
+      return "self_declared";
+  }
+}
+
+/**
+ * The OUTWARD trust level of an entry -- what the product may say about it.
+ *
+ *   self_declared     the holder supplied and attested it
+ *   document_provided the holder attached a file nobody has assessed (outwardly
+ *                     still the holder's own statement; the holder's own
+ *                     surfaces name the file so they can see it arrived)
+ *   documented        CQrityjob reviewed evidence the holder supplied --
+ *                     `document_review`, and any legacy row whose source
+ *                     method CQrityjob recorded about itself
+ *   source_confirmed  the employer, or (when structurally supported) the
+ *                     issuer, directly confirmed the fact
+ *
+ * The stored assertion level says an authorised verifier DECIDED. This says
+ * what that decision PROVES, and it is the only thing a chip, a symbol, a
+ * title rule, a tenure tier, a count or a label is allowed to read. Owner
+ * decision: a CQrityjob document review means documented -- it is not source
+ * confirmation and establishes no regulated title, licence, eligibility or
+ * authority recognition on its own.
+ *
+ * Fail closed: a verified entry whose method is unknown or absent is
+ * documented. Nothing becomes source-confirmed by omission.
+ */
+export type EffectiveTrust =
+  | "self_declared"
+  | "document_provided"
+  | "documented"
+  | "source_confirmed";
+
+export function effectiveTrust(entry: ProvenanceBearing): EffectiveTrust {
+  if (entry.assertionLevel === "self_declared") return "self_declared";
+  if (entry.assertionLevel === "document_provided") return "document_provided";
+  if (entry.assertionLevel !== "verified") return "self_declared";
+  const method = entry.verificationMethod ?? null;
+  const organisation = entry.verifierName ?? null;
+  if (!method || method === "document_review") return "documented";
+  if (isLegacyUnsupportedProvenance(method, organisation)) return "documented";
+  if (SOURCE_CONFIRMATION_METHODS.includes(method) && organisation) return "source_confirmed";
+  return "documented";
+}
+
+/** True for a CQrityjob review that stands: documented, and not a legacy row. */
+export function isDocumentedByReview(entry: ProvenanceBearing): boolean {
+  return effectiveTrust(entry) === "documented" && !isLegacyUnsupportedEntry(entry);
 }
 
 /** The columns a provenance read is allowed to ask for.

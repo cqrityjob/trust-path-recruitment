@@ -269,7 +269,7 @@ BEGIN
   RETURNING id INTO _req;
 
   PERFORM set_config('request.jwt.claim.sub', _v::text, true);
-  -- document_review, not employer_confirmation: since 20261029090000 a
+  -- document_review, not employer_confirmation: since 20261030090000 a
   -- cqrityjob_review approval may record only the method its decider can
   -- truthfully use. A reviewer who telephoned the employer performed a
   -- CQrityjob review; the employer's own confirmation arrives through the
@@ -399,7 +399,7 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', _v::text, true);
   -- document_review: the only method a cqrityjob_review approval may record
-  -- since 20261029090000 (issuer_confirmation is refused for every kind until
+  -- since 20261030090000 (issuer_confirmation is refused for every kind until
   -- an issuer can act). This group is about deciding TWICE, not the method.
   PERFORM public.sp_verifier_decide(_req, 'approved', 'document_review',
     'first', 'first', DATE '2026-03-01', DATE '2026-10-01');

@@ -279,6 +279,7 @@ export function PassportCardStateLabel({
 
   if (card.state === "empty") parts.push(pt("card.emptyState"));
   if (card.state === "self_declared_only") parts.push(pt("assertion.self_declared"));
+  if (card.state === "documented") parts.push(pt("trust.level.documented"));
   if (card.state === "partially_verified")
     parts.push(`${pt("assertion.verified")} (${pt("totals.documented")})`);
   if (card.state === "verified") parts.push(pt("assertion.verified"));

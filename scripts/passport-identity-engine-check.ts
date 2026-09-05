@@ -89,10 +89,13 @@ function claim(
     validUntil: opts.validUntil === undefined ? null : opts.validUntil,
     assertionLevel: opts.assertion ?? "verified",
     lifecycleState: opts.lifecycle ?? "active",
-    verifierName: "CQrityjob",
-    // CQrityjob verifies credentials by reading the document. Stated
-    // rather than left null: an approval must say how it was reached.
-    verificationMethod: "document_review" as const,
+    // SOURCE-CONFIRMED by default (owner decision, 2026-09-05): the engine's
+    // "verified" bar means the issuing source confirmed the credential. A
+    // CQrityjob document review is DOCUMENTED and derives nothing -- asserted
+    // explicitly in GROUP 1 below. Issuer confirmation is not yet writable
+    // in production; this is the engine's contract, not today's data.
+    verifierName: "Testutbildarna AB",
+    verificationMethod: "issuer_confirmation" as const,
     verifiedOn: "2026-01-01",
     limitationSv: null,
     limitationEn: null,
@@ -134,6 +137,28 @@ assert(
   rules(vu1, "educationCompleted").join(",") === "SE_VU1_COMPLETED",
   "VU1 alone produces exactly one completed-education row",
 );
+// INVERTED (owner decision): the same VU1, reviewed by CQrityjob rather than
+// confirmed by its source, is DOCUMENTED and derives no completed education,
+// no competence, no title and no eligibility. The stored level is still
+// "verified"; the engine reads the effective level.
+{
+  const reviewedVu1 = verified([
+    { ...claim("VU1"), verifierName: "CQrityjob", verificationMethod: "document_review" },
+  ]);
+  assert(
+    (
+      ["educationCompleted", "professionalCompetence", "localEligibility", "activeTitles"] as const
+    ).every((k) => rules(reviewedVu1, k).length === 0),
+    "a CQrityjob document review of VU1 derives NOTHING -- documented, not source-confirmed",
+  );
+  const legacyVu1 = verified([
+    { ...claim("VU1"), verifierName: "CQrityjob", verificationMethod: "issuer_confirmation" },
+  ]);
+  assert(
+    rules(legacyVu1, "educationCompleted").length === 0,
+    "a legacy issuer_confirmation recorded by CQrityjob derives nothing either",
+  );
+}
 // THE mutation test. If this ever passes wrongly, a course has become a
 // professional competence claim.
 assert(

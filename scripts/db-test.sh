@@ -3256,7 +3256,7 @@ fi
 
 # ---------------------------------------------------------------------------
 # Trust-source containment: the METHOD an approval records must belong to the
-# party deciding (20261029090000). A CQrityjob review is document_review and
+# party deciding (20261030090000). A CQrityjob review is document_review and
 # nothing else; an employer attestation is employer_confirmation and nothing
 # else; issuer_confirmation is refused everywhere until an issuer can act.
 # The suite also RE-APPLIES the migration over manufactured legacy rows to

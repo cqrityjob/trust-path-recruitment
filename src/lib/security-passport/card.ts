@@ -20,7 +20,7 @@
 // expired licence is less trustworthy than one that shows it expired.
 
 import { totalsByEvidenceLevel } from "./experience";
-import { effectiveAssertionLevel } from "./provenance";
+import { effectiveAssertionLevel, effectiveTrust } from "./provenance";
 import { withoutSelfDeclared } from "./identity/visibility";
 import type { ProfessionalIdentity } from "./identity/types";
 import { recognitionFor, type RecognitionState } from "./recognition";
@@ -37,7 +37,14 @@ import type {
 } from "./types";
 import { isCurrentlyVerified } from "./trust-presentation";
 
-export type PassportCardState = "empty" | "self_declared_only" | "partially_verified" | "verified";
+export type PassportCardState =
+  | "empty"
+  | "self_declared_only"
+  /** At least one current entry CQrityjob reviewed, and nothing a source has
+   *  confirmed. The card says Documented -- never "verified", never "nothing". */
+  | "documented"
+  | "partially_verified"
+  | "verified";
 
 export type ShareOverlayState = "none" | "share_expired" | "share_revoked";
 
@@ -162,7 +169,15 @@ function deriveState(
   // was already asking (`useCardContent`'s `isCurrent`, which is why the
   // plate said PREVIOUSLY VERIFIED while the card around it said verified).
   const anyVerified = periods.some(isCurrentlyVerified) || claims.some(isCurrentlyVerified);
-  if (!anyVerified) return "self_declared_only";
+  if (!anyVerified) {
+    // "Verified" here means SOURCE-CONFIRMED (isCurrentlyVerified reads the
+    // effective level). A card whose entries CQrityjob reviewed is documented,
+    // which is neither "verified" nor "self-declared only".
+    const anyDocumented = [...periods, ...claims].some(
+      (e) => e.lifecycleState === "active" && effectiveTrust(e) === "documented",
+    );
+    return anyDocumented ? "documented" : "self_declared_only";
+  }
 
   const allVerified = periods.every(isCurrentlyVerified) && claims.every(isCurrentlyVerified);
   return allVerified ? "verified" : "partially_verified";

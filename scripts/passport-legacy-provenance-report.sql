@@ -5,7 +5,7 @@
 -- Lists every approved verification decision whose recorded method claims a
 -- SOURCE confirmation (employer_confirmation, issuer_confirmation) while the
 -- recorded decider is CQrityjob -- rows written before migration
--- 20261029090000 bound the method to the request kind. No structurally
+-- 20261030090000 bound the method to the request kind. No structurally
 -- identified employer or issuer acted as the source for these decisions, so
 -- the application renders them as a CQrityjob review ("Review recorded by
 -- CQrityjob. Direct source confirmation is not available for this legacy

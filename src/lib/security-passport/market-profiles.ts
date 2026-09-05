@@ -38,7 +38,7 @@
 // Dubai by changing a dropdown, because no code path exists that would.
 
 import type { PassportLang } from "./i18n";
-import { effectiveAssertionLevel } from "./provenance";
+import { effectiveTrust } from "./provenance";
 import { formatWorkLocation } from "./format";
 import type { JurisdictionScoped, WorkLocation } from "./jurisdiction-relevance";
 
@@ -97,8 +97,10 @@ export interface MarketProfile<T extends MarketScopedClaim> {
    *  has just moved to Dubai has no Dubai profile until they record something
    *  there, and the Dubai market is reported separately by the caller. */
   readonly isCurrentWorkMarket: boolean;
-  /** Verified by a reviewer and still current. The only bucket that may be
-   *  counted in a "4 verified" badge. */
+  /** Reviewed by CQrityjob or confirmed by a source, and still current --
+   *  the DOCUMENTED-or-better bucket. Counted beside the market name under
+   *  the word "documented"; never presented as a verified count. The field
+   *  keeps its historical name so every consumer reads the same bucket. */
   readonly verifiedCredentials: readonly T[];
   /** Submitted or evidenced, not yet verified. */
   readonly pendingCredentials: readonly T[];
@@ -116,13 +118,15 @@ export interface MarketProfileSplit<T extends MarketScopedClaim> {
 }
 
 function isVerified(c: MarketScopedClaim): boolean {
-  return effectiveAssertionLevel(c) === "verified" && c.lifecycleState === "active";
+  const t = effectiveTrust(c);
+  return (t === "documented" || t === "source_confirmed") && c.lifecycleState === "active";
 }
 
 function isPending(c: MarketScopedClaim): boolean {
-  const level: string = effectiveAssertionLevel(c);
+  const level: string = c.assertionLevel;
   return (
-    level !== "verified" &&
+    effectiveTrust(c) !== "documented" &&
+    effectiveTrust(c) !== "source_confirmed" &&
     c.lifecycleState === "active" &&
     (level === "submitted" || level === "evidenced")
   );

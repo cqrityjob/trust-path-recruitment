@@ -1,4 +1,4 @@
--- Rollback for 20261029090000_sp_trust_source_containment.sql
+-- Rollback for 20261030090000_sp_trust_source_containment.sql
 --
 -- Restores public.sp_verifier_decide(uuid,text,text,text,text,date,date) to the
 -- definition it had in 20261013090000, byte for byte, with its grants restated.

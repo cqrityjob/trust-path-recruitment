@@ -46,7 +46,7 @@ export const DECISION_ERROR_CODES = [
    *  employer attestation recorded as anything but employer_confirmation, or
    *  issuer_confirmation anywhere -- `SP_ISSUER_CONFIRMATION_NOT_AVAILABLE`,
    *  `SP_CQRITYJOB_REVIEW_REQUIRES_DOCUMENT_REVIEW`,
-   *  `SP_EMPLOYER_ATTESTATION_REQUIRES_EMPLOYER_CONFIRMATION` (20261029090000).
+   *  `SP_EMPLOYER_ATTESTATION_REQUIRES_EMPLOYER_CONFIRMATION` (20261030090000).
    *  Never retry as-is: the form no longer offers the combination, so reaching
    *  this means a stale bundle or a crafted call. */
   "method_not_permitted",

@@ -373,7 +373,7 @@ const sv = {
   "claims.attribution.employer_confirmation": "Bekräftat av",
   "claims.attribution.issuer_confirmation": "Bekräftat av utfärdaren",
   // A source-confirmation method CQrityjob recorded about itself, before
-  // 20261029090000. Rendered by every surface for that shape, and nowhere
+  // 20261030090000. Rendered by every surface for that shape, and nowhere
   // else. Complete on its own: the decider is named inside it.
   "trust.legacy.unsupported":
     "Granskning registrerad av CQrityjob. Direkt källbekräftelse kan inte visas för denna äldre post.",
@@ -675,7 +675,7 @@ const sv = {
   "card.cta.verify": "Verifiera detta Security Passport",
   "card.cta.viewCredentials": "Visa verifierade uppgifter",
   "card.cta.create": "Skapa ditt Security Passport med CQrityjob",
-  "card.noVerifiedYet": "Inga verifierade uppgifter ännu",
+  "card.noVerifiedYet": "Inga granskade uppgifter ännu",
   "card.noVerifiedExperience": "Ingen verifierad yrkeserfarenhet ännu",
   "card.selfDeclaredHeading": "Egenrapporterad yrkesprofil",
 
@@ -691,7 +691,7 @@ const sv = {
   "share.privacy.full_name": "Fullständigt namn",
   "share.privacy.initials": "Initialer",
   "share.privacy.anonymous": "Utan namn",
-  "share.anonymousLabel": "Verifierad väktare",
+  "share.anonymousLabel": "Innehavare av Security Passport",
   "share.channels": "Dela till",
   "share.channel.linkedin": "LinkedIn",
   "share.channel.facebook": "Facebook",
@@ -890,13 +890,17 @@ const sv = {
     "Du kan öppna dokumenten så länge granskningen är öppen. Sedan upphör åtkomsten.",
   "vq.open": "Öppna ärendet",
   "vq.decision": "Beslut",
-  "vq.approve": "Godkänn",
+  "vq.approve": "Godkänn dokumentgranskning",
   "vq.reject": "Avslå",
   "vq.requestClarification": "Begär komplettering",
   "vq.methodLabel": "Hur avgjordes det?",
   "vq.methodFixed": "Dokumentgranskning av CQrityjob",
   "vq.methodFixed.help":
     "CQrityjob har granskat det underlag som innehavaren lämnat. Detta är inte en direkt bekräftelse från arbetsgivaren eller utfärdaren.",
+  "vq.review.completed": "Dokumentgranskning slutförd",
+  "vq.review.holderResult": "Resultat för användaren: Dokumenterad",
+  "vq.review.notSource":
+    "Godkännandet är CQrityjobs dokumentgranskning. Det är inte en direkt bekräftelse från utfärdaren eller arbetsgivaren, och ger i sig ingen behörighet eller giltig auktorisation.",
   "vq.legacy.title": "Äldre verifieringspost – manuell omprövning krävs",
   "vq.legacy.body":
     "Posten registrerades med en källmetod utan strukturell källbekräftelse. Den visas som Dokumenterad tills en behörig källa har bekräftat uppgiften.",
@@ -913,7 +917,7 @@ const sv = {
   "vq.validUntil": "Giltig till",
   "vq.confirmTitle": "Bekräfta beslutet",
   "vq.confirmApprove":
-    "Uppgiften blir Verifierad och kan delas som verifierad. Beslutet sparas permanent med ditt namn.",
+    "Uppgiften visas som Dokumenterad – granskad av CQrityjob, inte bekräftad av utfärdaren eller arbetsgivaren. Beslutet sparas permanent med ditt namn.",
   "vq.confirmReject": "Uppgiften förblir egenrapporterad. Beslutet sparas permanent.",
   "vq.confirmClarify": "Innehavaren ombeds komplettera. Ärendet förblir öppet.",
   "vq.confirmYes": "Ja, spara beslutet",
@@ -1103,21 +1107,21 @@ const sv = {
     "Du kan i stället låta CQrityjob granska dokumentation som styrker anställningen — anställningsbevis, arbetsgivarintyg eller lönespecifikation. Alternativet finns ovanför.",
   "ver.employer.notOnPlatformClose": "Stäng",
   "pkg.public_card.name": "Publikt Passport Card",
-  "pkg.public_card.purpose": "Ett kort som visar din yrkesroll och dina verifierade behörigheter.",
-  "pkg.verified_qualifications.name": "Verifierade behörigheter",
+  "pkg.public_card.purpose": "Ett kort som visar din yrkesroll och dina granskade behörigheter.",
+  "pkg.verified_qualifications.name": "Granskade behörigheter",
   "pkg.verified_qualifications.purpose":
     "För den som behöver kontrollera utbildning, certifikat och behörigheter.",
-  "pkg.verified_experience.name": "Verifierad erfarenhet",
+  "pkg.verified_experience.name": "Granskad erfarenhet",
   "pkg.verified_experience.purpose": "För den som behöver kontrollera din yrkeserfarenhet.",
   "pkg.employer_review.name": "Arbetsgivargranskning",
   "pkg.employer_review.purpose": "Det en arbetsgivare normalt behöver inför ett samtal.",
-  "pkg.full_verification.name": "Fullständigt verifieringspaket",
+  "pkg.full_verification.name": "Fullständigt granskningspaket",
   "pkg.full_verification.purpose": "Allt som är verifierat, med fullständig attribution.",
   "pkg.inc.identity": "Ditt namn på den nivå du valt",
   "pkg.inc.professionJurisdiction": "Yrke och jurisdiktion",
-  "pkg.inc.verifiedQualifications": "Verifierade behörigheter och utbildningar",
-  "pkg.inc.verifiedEmployment": "Verifierade anställningar med arbetsgivare",
-  "pkg.inc.verifiedTenureTotal": "Summerad verifierad tid i yrket",
+  "pkg.inc.verifiedQualifications": "Granskade behörigheter och utbildningar",
+  "pkg.inc.verifiedEmployment": "Granskade anställningar med arbetsgivare",
+  "pkg.inc.verifiedTenureTotal": "Summerad granskad tid i yrket",
   "pkg.inc.attribution": "Vem som verifierat, hur och när",
   "pkg.inc.validity": "Giltighetstid och nuvarande status",
   "pkg.exc.employers": "Arbetsgivares namn",
@@ -1214,7 +1218,10 @@ const sv = {
   "rec.expiredNotice":
     "En eller flera uppgifter är inte längre gällande. De visas med sitt nuvarande läge, inte som aktuella.",
   "rec.jurisdiction": "Jurisdiktion",
-  "rec.qualifications": "Verifierade behörigheter",
+  // Section headings on the recipient page name what the section HOLDS, not a
+  // level: a documented credential and a source-confirmed one sit side by
+  // side, each wearing its own word.
+  "rec.qualifications": "Behörigheter och intyg",
   // A scope shown to a reader who may see it, and the honest placeholder for
   // one who may not. Saying "limited, details withheld" is narrower than
   // saying nothing and letting the reader assume the approval is unlimited.
@@ -1227,8 +1234,8 @@ const sv = {
   // employer read a flat list of authorisations under one work location and
   // had nothing to tell them a Swedish appointment was Swedish.
   "rec.credentialMarket": "Gäller i",
-  "rec.experience": "Verifierad anställning",
-  "rec.tenure": "Verifierad tid i yrket",
+  "rec.experience": "Anställning",
+  "rec.tenure": "Granskad tid i yrket",
   "rec.verifiedBy": "Verifierad av",
   "rec.method": "Metod",
   "rec.verifiedAt": "Verifierad",
@@ -1412,12 +1419,12 @@ const sv = {
   "market.other.lead":
     "Uppgifter du har verifierat i andra marknader. De hör till sitt eget land och redigeras där, inte härifrån.",
   "market.other.none": "Du har inga verifierade uppgifter i andra marknader ännu.",
-  "market.verified.one": "verifierad",
-  "market.verified.many": "verifierade",
+  "market.verified.one": "dokumenterad",
+  "market.verified.many": "dokumenterade",
   "market.details.show": "Visa detaljer",
   "market.details.hide": "Dölj detaljer",
-  "market.currentMarket.none": "Inga verifierade uppgifter i denna marknad ännu.",
-  "card.verifiedMarkets": "Verifierade marknader",
+  "market.currentMarket.none": "Inga dokumenterade uppgifter i denna marknad ännu.",
+  "card.verifiedMarkets": "Dokumenterade marknader",
   "card.currentWorkMarket": "Aktuell arbetsmarknad",
   "cred.field.credentialCountry": "Behörighetens land",
   "cred.field.credentialCountryHelp":
@@ -2267,7 +2274,7 @@ const en: Record<PassportCopyKey, string> = {
   "card.cta.verify": "Verify this Security Passport",
   "card.cta.viewCredentials": "View verified credentials",
   "card.cta.create": "Create your Security Passport with CQrityjob",
-  "card.noVerifiedYet": "No verified entries yet",
+  "card.noVerifiedYet": "No reviewed entries yet",
   "card.noVerifiedExperience": "No verified professional experience yet",
   "card.selfDeclaredHeading": "Self-reported professional profile",
 
@@ -2283,7 +2290,7 @@ const en: Record<PassportCopyKey, string> = {
   "share.privacy.full_name": "Full name",
   "share.privacy.initials": "Initials",
   "share.privacy.anonymous": "No name",
-  "share.anonymousLabel": "Verified security officer",
+  "share.anonymousLabel": "Security Passport holder",
   "share.channels": "Share to",
   "share.channel.linkedin": "LinkedIn",
   "share.channel.facebook": "Facebook",
@@ -2462,13 +2469,17 @@ const en: Record<PassportCopyKey, string> = {
     "You can open the documents while the review is open. Access ends when it is decided.",
   "vq.open": "Open request",
   "vq.decision": "Decision",
-  "vq.approve": "Approve",
+  "vq.approve": "Approve document review",
   "vq.reject": "Reject",
   "vq.requestClarification": "Request clarification",
   "vq.methodLabel": "How was this decided?",
   "vq.methodFixed": "Document review by CQrityjob",
   "vq.methodFixed.help":
     "CQrityjob has reviewed evidence provided by the holder. This is not direct confirmation from the employer or issuer.",
+  "vq.review.completed": "Document review completed",
+  "vq.review.holderResult": "Holder-facing result: Documented",
+  "vq.review.notSource":
+    "The approval is CQrityjob's document review. It is not direct confirmation from the issuer or employer, and on its own establishes no eligibility or valid authorisation.",
   "vq.legacy.title": "Legacy verification record – manual re-review required",
   "vq.legacy.body":
     "The record was created with a source method without structural source confirmation. It is displayed as Documented until an authorised source confirms it.",
@@ -2485,7 +2496,7 @@ const en: Record<PassportCopyKey, string> = {
   "vq.validUntil": "Valid until",
   "vq.confirmTitle": "Confirm the decision",
   "vq.confirmApprove":
-    "The entry becomes Verified and can be shared as verified. The decision is stored permanently with your name.",
+    "The entry will show as Documented – reviewed by CQrityjob, not confirmed by the issuer or employer. The decision is stored permanently with your name.",
   "vq.confirmReject": "The entry stays self-declared. The decision is stored permanently.",
   "vq.confirmClarify": "The holder is asked to add something. The request stays open.",
   "vq.confirmYes": "Yes, record the decision",
@@ -2664,21 +2675,21 @@ const en: Record<PassportCopyKey, string> = {
   "pkg.public_card.name": "Public Passport Card",
   "pkg.public_card.purpose":
     "A card showing your professional role and your verified authorisations.",
-  "pkg.verified_qualifications.name": "Verified qualifications",
+  "pkg.verified_qualifications.name": "Reviewed qualifications",
   "pkg.verified_qualifications.purpose":
     "For someone who needs to check training, certificates and authorisations.",
-  "pkg.verified_experience.name": "Verified experience",
+  "pkg.verified_experience.name": "Reviewed experience",
   "pkg.verified_experience.purpose": "For someone who needs to check your professional experience.",
   "pkg.employer_review.name": "Employer review",
   "pkg.employer_review.purpose": "What an employer normally needs ahead of a conversation.",
-  "pkg.full_verification.name": "Full verification package",
-  "pkg.full_verification.purpose": "Everything that is verified, with full attribution.",
+  "pkg.full_verification.name": "Full review package",
+  "pkg.full_verification.purpose": "Everything that is reviewed, with full attribution.",
   "pkg.inc.identity": "Your name at the level you chose",
   "pkg.inc.professionJurisdiction": "Profession and jurisdiction",
-  "pkg.inc.verifiedQualifications": "Verified authorisations and training",
-  "pkg.inc.verifiedEmployment": "Verified employment, including employer names",
-  "pkg.inc.verifiedTenureTotal": "Total verified time in the profession",
-  "pkg.inc.attribution": "Who verified, how and when",
+  "pkg.inc.verifiedQualifications": "Reviewed authorisations and training",
+  "pkg.inc.verifiedEmployment": "Reviewed employment, including employer names",
+  "pkg.inc.verifiedTenureTotal": "Total reviewed time in the profession",
+  "pkg.inc.attribution": "Who reviewed, how and when",
   "pkg.inc.validity": "Validity period and current status",
   "pkg.exc.employers": "Employer names",
   "pkg.exc.qualifications": "Training and authorisations",
@@ -2765,14 +2776,14 @@ const en: Record<PassportCopyKey, string> = {
   "rec.expiredNotice":
     "One or more entries are no longer current. They are shown with their present state, not as current.",
   "rec.jurisdiction": "Jurisdiction",
-  "rec.qualifications": "Verified authorisations",
+  "rec.qualifications": "Qualifications and credentials",
   "rec.scopeLimited": "Limited approval",
   "rec.scopeWithheld":
     "The approval applies to a stated protected object, employer or principal. The scope is not shown in this view.",
   "rec.subJurisdiction": "Region",
   "rec.credentialMarket": "Valid in",
-  "rec.experience": "Verified employment",
-  "rec.tenure": "Verified time in the profession",
+  "rec.experience": "Employment",
+  "rec.tenure": "Reviewed time in the profession",
   "rec.verifiedBy": "Verified by",
   "rec.method": "Method",
   "rec.verifiedAt": "Verified",
@@ -2912,12 +2923,12 @@ const en: Record<PassportCopyKey, string> = {
   "market.other.lead":
     "Records you have verified in other markets. They belong to their own country and are edited there, not from here.",
   "market.other.none": "You have no verified records in other markets yet.",
-  "market.verified.one": "verified",
-  "market.verified.many": "verified",
+  "market.verified.one": "documented",
+  "market.verified.many": "documented",
   "market.details.show": "View details",
   "market.details.hide": "Hide details",
-  "market.currentMarket.none": "No verified records in this market yet.",
-  "card.verifiedMarkets": "Verified markets",
+  "market.currentMarket.none": "No documented records in this market yet.",
+  "card.verifiedMarkets": "Documented markets",
   "card.currentWorkMarket": "Current work market",
   "cred.field.credentialCountry": "Credential's country",
   "cred.field.credentialCountryHelp":

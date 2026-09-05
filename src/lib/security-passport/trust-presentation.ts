@@ -40,8 +40,10 @@ import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
 import { verifierAttributionKey } from "./format";
 import {
   effectiveAssertionLevel,
+  effectiveTrust,
   isLegacyUnsupportedEntry,
   isLegacyUnsupportedProvenance,
+  type EffectiveTrust,
   type ProvenanceBearing,
 } from "./provenance";
 import {
@@ -52,7 +54,13 @@ import {
 } from "./design/credential-symbols";
 import type { LifecycleState, VerificationMethod } from "./types";
 
-export { effectiveAssertionLevel, isLegacyUnsupportedEntry, type ProvenanceBearing };
+export {
+  effectiveAssertionLevel,
+  effectiveTrust,
+  isLegacyUnsupportedEntry,
+  type EffectiveTrust,
+  type ProvenanceBearing,
+};
 
 /**
  * How much the product may claim about a fact, as a presentation grouping.
@@ -86,7 +94,7 @@ export type TrustSourceType =
   | VerificationMethod
   | "unattributed"
   /** A source-confirmation method that CQrityjob recorded about itself,
-   *  before 20261029090000 made that unwritable. Verified -- an authorised
+   *  before 20261030090000 made that unwritable. Verified -- an authorised
    *  verifier really decided -- but by CQrityjob reading something, not by
    *  the employer or the issuer, so it wears no source attribution. */
   | "legacy_unsupported";
@@ -229,6 +237,15 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
   const method = (verificationMethod as VerificationMethod | null) ?? null;
   const key = verifierAttributionKey(method);
 
+  // The short word is the OUTWARD LEVEL, never "Verified": a CQrityjob
+  // document review is Documented; only an employer's or issuer's own
+  // confirmation is Source-confirmed. The attribution line beside it still
+  // says exactly what happened ("Document reviewed by CQrityjob").
+  const source = method === "employer_confirmation" || method === "issuer_confirmation";
+  const shortKey: PassportCopyKey = source
+    ? "trust.level.source_verified"
+    : "trust.level.documented";
+
   return {
     status: "verified",
     sourceType: method ?? "unattributed",
@@ -237,8 +254,8 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
     date: verifiedOn,
     labelSv: line(key, verifierName, "sv"),
     labelEn: line(key, verifierName, "en"),
-    shortSv: SHORT.verified.sv,
-    shortEn: SHORT.verified.en,
+    shortSv: passportT(shortKey, "sv"),
+    shortEn: passportT(shortKey, "en"),
   };
 }
 
@@ -387,7 +404,7 @@ export function trustLevelWordKey(level: PublicTrustLevel | null): PassportCopyK
  * consumer that used to test the status directly asks this instead.
  */
 export function presentsAsVerified(trust: TrustPresentation): boolean {
-  return trust.status === "verified" && trust.sourceType !== "legacy_unsupported";
+  return publicTrustLevel(trust) === "source_verified";
 }
 
 /**
@@ -419,7 +436,9 @@ export function presentationWordKeyOf(
   entry: ProvenanceBearing,
   state: CredentialPresentationState,
 ): PassportCopyKey {
-  if (state === "documented" && isLegacyUnsupportedEntry(entry)) return "trust.level.documented";
+  const trust = effectiveTrust(entry);
+  if (state === "documented" && trust === "documented") return "trust.level.documented";
+  if (state === "verified" && trust === "source_confirmed") return "trust.level.source_verified";
   return presentationWordKey(state);
 }
 
@@ -439,10 +458,32 @@ export interface ProvenanceLabelKeys {
  * CQrityjob" at face value however carefully the value beside it is worded.
  */
 export function provenanceLabelKeys(entry: ProvenanceBearing): ProvenanceLabelKeys {
-  if (isLegacyUnsupportedEntry(entry)) {
+  // Documented -- a CQrityjob review, genuine or legacy -- is REVIEWED, in the
+  // label as well as in the value. Only a source confirmation is "Verified by".
+  if (effectiveTrust(entry) === "documented") {
     return { by: "trust.reviewedBy", method: "trust.reviewMethod", at: "trust.reviewedAt" };
   }
   return { by: "rec.verifiedBy", method: "rec.method", at: "rec.verifiedAt" };
+}
+
+/**
+ * Whether a subject's decision history holds a standing CQrityjob document
+ * review. Drives the reviewer's "Document review completed -- holder-facing
+ * result: Documented" block; decides nothing.
+ */
+export function hasCompletedDocumentReview(
+  decisions: readonly {
+    readonly decision: string;
+    readonly method: string | null;
+    readonly organisation: string | null;
+  }[],
+): boolean {
+  return decisions.some(
+    (d) =>
+      d.decision === "approved" &&
+      d.method === "document_review" &&
+      !isLegacyUnsupportedProvenance(d.method, d.organisation),
+  );
 }
 
 /**
