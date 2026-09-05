@@ -344,6 +344,29 @@ for (const code of ADMIN_ERROR_CODES) {
     /const canSubmit =[^;]*cancel\.isPending/.test(route),
     `${ROUTE}'s canSubmit must include cancel.isPending -- otherwise a second click fires a second mutation`,
   );
+
+  // `disabled` alone is not duplicate-submit protection. It is applied on the
+  // NEXT render, so clicks delivered inside one tick all read the pre-render
+  // state. The browser acceptance walk fired three rapid clicks at the confirm
+  // button and got three requests: the first cancelled the assignment and the
+  // other two came back ADMIN_CANCEL_NOT_CANCELLABLE against the row the first
+  // had just cancelled. A ref is set synchronously and closes that window.
+  expect(
+    /const submitting = useRef\(false\)/.test(route),
+    `${ROUTE} must hold a synchronous submit latch (useRef) -- a disabled attribute alone does not stop clicks delivered in the same tick`,
+  );
+  expect(
+    /if \(submitting\.current \|\| !canSubmit\) return;\s*submitting\.current = true;/.test(route),
+    `${ROUTE}'s confirm handler must check and set the latch before calling mutate()`,
+  );
+  expect(
+    /onSettled:\s*\(\)\s*=>\s*\{\s*submitting\.current = false;/.test(route),
+    `${ROUTE} must release the submit latch in onSettled, or a failed cancellation can never be retried`,
+  );
+  expect(
+    !/onClick=\{\(\) => cancel\.mutate\(\)\}/.test(route),
+    `${ROUTE}'s confirm button must call the latched handler, not cancel.mutate() directly`,
+  );
   expect(
     /const canSubmit =[^;]*trimmedReason\.length > 0/.test(route),
     `${ROUTE}'s canSubmit must require a non-empty trimmed reason, so an empty one never reaches the server`,

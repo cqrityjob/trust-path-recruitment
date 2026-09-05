@@ -5,7 +5,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
 import { AdminErrorState } from "@/components/admin/AdminErrorState";
@@ -61,6 +61,20 @@ function AdminAssignmentDetailPage() {
     queryFn: () => getFn({ data: { assignmentId } }),
   });
 
+  // ── WHY A REF AND NOT `disabled` ──────────────────────────────────────
+  //
+  // The confirm button is disabled while the mutation is pending, and that is
+  // still true -- but `disabled` is applied on the next render, and three
+  // clicks delivered inside one tick all read the pre-render state. The
+  // browser acceptance walk fired three rapid clicks and got THREE requests:
+  // the first cancelled the assignment, and the other two came back
+  // ADMIN_CANCEL_NOT_CANCELLABLE against the row the first one had just
+  // cancelled, leaving a refusal in state under a dialog that had already
+  // closed on success.
+  //
+  // A ref is set synchronously, so the second click in the same tick sees it.
+  const submitting = useRef(false);
+
   const cancel = useMutation({
     mutationFn: () => cancelFn({ data: { assignmentId, reason: reason.trim() } }),
     onSuccess: () => {
@@ -74,6 +88,9 @@ function AdminAssignmentDetailPage() {
     // can act on -- "this is too long", "type a reason" -- can be acted on
     // without retyping it.
     onError: (e: unknown) => setError(e),
+    onSettled: () => {
+      submitting.current = false;
+    },
   });
 
   const trimmedReason = reason.trim();
@@ -83,6 +100,14 @@ function AdminAssignmentDetailPage() {
   // empty and over-length -- are shown before a request is made rather than
   // after one comes back.
   const canSubmit = trimmedReason.length > 0 && !reasonTooLong && !cancel.isPending;
+
+  // The only path to the mutation. Both gates are re-read here rather than
+  // trusted from the button's rendered state.
+  const onConfirm = () => {
+    if (submitting.current || !canSubmit) return;
+    submitting.current = true;
+    cancel.mutate();
+  };
 
   // Dismissing the dialog discards the attempt. Without this, reopening it
   // showed the previous failure still sitting under an empty textarea.
@@ -302,7 +327,7 @@ function AdminAssignmentDetailPage() {
                 {t("admin.employers.action.cancel")}
               </Button>
             </DialogClose>
-            <Button type="button" onClick={() => cancel.mutate()} disabled={!canSubmit}>
+            <Button type="button" onClick={onConfirm} disabled={!canSubmit}>
               {cancel.isPending
                 ? t("admin.employers.action.submitting")
                 : t("admin.employers.action.confirm")}
