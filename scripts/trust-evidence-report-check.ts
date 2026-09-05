@@ -997,7 +997,7 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       readFileSync(join(ROOT, "supabase/migrations", f), "utf8"),
     ),
   );
-  const R3A_MIGRATION = "20261028090000_scp_trust_evidence_report_r3a_contract.sql";
+  const R3A_MIGRATION = "20261029090000_scp_trust_evidence_report_r3a_contract.sql";
   check(
     "H11 exactly two migrations name scp_report_computation_manifests: PR-R1 (creates it) and PR-R3A (reads counts from it)",
     migrationMentions.length === 2 &&
@@ -1040,7 +1040,7 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     srcMentions.map((f) => relative(ROOT, f)).join(", "),
   );
 
-  // PR-R3A (20261028090000): the server produces the V3 document. Exactly
+  // PR-R3A (20261029090000): the server produces the V3 document. Exactly
   // one migration creates scp_employer_report_v3 and scp_report_next_step; it
   // names every key this contract locks; it reads the document through the
   // audience contract, takes counts from the frozen manifest and never its

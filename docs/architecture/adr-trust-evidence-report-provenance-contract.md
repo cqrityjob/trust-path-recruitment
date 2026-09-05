@@ -118,7 +118,7 @@ completed_disputed` and `evidence_state` unchanged, a pending review →
 plus `follow_up_priority = first` on the area — never a state that reads as a
 risk level.
 
-**Amendment, PR-R3A (20261028090000), revised after the working-group
+**Amendment, PR-R3A (20261029090000), revised after the working-group
 review.** The shape is now produced server side by
 `scp_employer_report_v3(attempt_id)` for the employer audience;
 `scripts/fixtures/trust-evidence-report-v3-contract.ts` is the typed

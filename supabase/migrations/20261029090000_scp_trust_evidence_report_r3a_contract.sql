@@ -90,7 +90,7 @@
 --
 -- Requires 20261027090000 (PR-R1). §0 refuses otherwise.
 --
--- Rollback: supabase/rollback/20261028090000_scp_trust_evidence_report_r3a_contract_rollback.sql
+-- Rollback: supabase/rollback/20261029090000_scp_trust_evidence_report_r3a_contract_rollback.sql
 -- =============================================================================
 
 -- ═══════════════════════════════════════════════════════════════════════════

@@ -6,7 +6,7 @@
 //
 // There is ONE rds-v1 process-step rule. It is stated in the database as
 // public.scp_report_next_step(safety_findings_present, observed_items,
-// areas_sufficient, areas_limited) (PR-R3A, 20261028090000) and in the client
+// areas_sufficient, areas_limited) (PR-R3A, 20261029090000) and in the client
 // as recommendNextStep() in src/lib/security-competency/decision-support.ts.
 // This script walks the full state matrix through the TypeScript rule and
 // emits, for every point, the step and reason code the SQL function must

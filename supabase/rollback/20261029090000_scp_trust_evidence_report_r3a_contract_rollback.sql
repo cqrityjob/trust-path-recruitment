@@ -1,4 +1,4 @@
--- Rollback for 20261028090000_scp_trust_evidence_report_r3a_contract.sql
+-- Rollback for 20261029090000_scp_trust_evidence_report_r3a_contract.sql
 -- (PR-R3A, REPORT V3 DATA CONTRACT, employer audience).
 --
 -- Drops the two routines the migration created (the V3 document and the

@@ -2517,6 +2517,35 @@ export const dictionaries = {
     "admin.assignments.detail.action.viewResult": "Visa resultat",
     "admin.assignments.detail.cancelDialog.title": "Avbryt testtilldelning",
     "admin.assignments.detail.cancelDialog.reasonPlaceholder": "Ange en orsak (krävs)…",
+    // Teckenräknaren visas först när det börjar bli aktuellt. {remaining}
+    // ersätts i komponenten.
+    "admin.assignments.detail.cancelDialog.charsLeft": "{remaining} tecken kvar",
+    "admin.assignments.detail.cancelDialog.tooLong":
+      "Orsaken är för lång. Korta ner den till högst 2000 tecken.",
+
+    // ── FELMEDDELANDEN FÖR ADMINÅTGÄRDER ─────────────────────────────
+    //
+    // En administratör läste en gång "ASSIGNMENT_NOT_CANCELLABLE_OR_
+    // REASON_REQUIRED" i det här formuläret. Konstanten sa inte vilket av
+    // de fem villkoren som faktiskt inträffade, så varken administratören
+    // eller supporten kunde göra något åt det.
+    //
+    // Varje nyckel här motsvarar exakt en sak som gick fel och exakt en sak
+    // att göra åt den. Ingen av dem innehåller tekniska termer, tabellnamn
+    // eller felkoder — utom "unknown", som medvetet citerar koden så att den
+    // som ringer supporten har något att uppge.
+    "admin.actionError.cancellationReasonRequired": "Ange varför testtilldelningen ska avbrytas.",
+    "admin.actionError.cancellationReasonTooLong":
+      "Orsaken är för lång. Korta ner den till högst 2000 tecken.",
+    "admin.actionError.assignmentNotCancellable":
+      "Testtilldelningen kan inte avbrytas i sitt nuvarande läge.",
+    "admin.actionError.assignmentStateInconsistent":
+      "Den här testtilldelningen behöver ses över innan den kan avbrytas. Kontakta teknisk support och uppge tilldelningens länk.",
+    "admin.actionError.notFound": "Objektet finns inte längre eller har redan ändrats.",
+    "admin.actionError.permissionDenied": "Du har inte behörighet att utföra den här åtgärden.",
+    "admin.actionError.networkError":
+      "Åtgärden nådde aldrig servern. Kontrollera anslutningen och försök igen.",
+    "admin.actionError.unknown": "Åtgärden kunde inte genomföras. Försök igen. ({code})",
     "admin.results.list.heading": "Testresultat",
     "admin.results.list.empty": "Inga slutförda testtilldelningar ännu.",
     "admin.results.detail.backToList": "← Tillbaka till testresultat",
@@ -7919,6 +7948,27 @@ export const dictionaries = {
     "admin.assignments.detail.action.viewResult": "View result",
     "admin.assignments.detail.cancelDialog.title": "Cancel assignment",
     "admin.assignments.detail.cancelDialog.reasonPlaceholder": "Enter a reason (required)…",
+    "admin.assignments.detail.cancelDialog.charsLeft": "{remaining} characters left",
+    "admin.assignments.detail.cancelDialog.tooLong":
+      "That reason is too long. Shorten it to 2000 characters or fewer.",
+
+    // ── ADMIN ACTION ERRORS ──────────────────────────────────────────
+    // See the Swedish block for why these exist. One key per thing that
+    // went wrong, each naming what to do about it; no identifiers except
+    // in "unknown", which quotes the code on purpose.
+    "admin.actionError.cancellationReasonRequired":
+      "Enter a reason for cancelling the test assignment.",
+    "admin.actionError.cancellationReasonTooLong":
+      "That reason is too long. Shorten it to 2000 characters or fewer.",
+    "admin.actionError.assignmentNotCancellable":
+      "This test assignment can no longer be cancelled.",
+    "admin.actionError.assignmentStateInconsistent":
+      "This test assignment needs to be reviewed before it can be cancelled. Contact technical support and include the link to this assignment.",
+    "admin.actionError.notFound": "This item no longer exists, or has already changed.",
+    "admin.actionError.permissionDenied": "You do not have permission to perform this action.",
+    "admin.actionError.networkError":
+      "The action never reached the server. Check your connection and try again.",
+    "admin.actionError.unknown": "The action could not be completed. Try again. ({code})",
     "admin.results.list.heading": "Assessment Results",
     "admin.results.list.empty": "No completed assignments yet.",
     "admin.results.detail.backToList": "← Back to results",

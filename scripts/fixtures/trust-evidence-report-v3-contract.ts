@@ -5,7 +5,7 @@
 // This file is the versioned technical contract for two things:
 //
 //   1. the canonical Report V3 document (employer audience), which PR-R3A
-//      (20261028090000) produces server-side as scp_employer_report_v3(), and
+//      (20261029090000) produces server-side as scp_employer_report_v3(), and
 //   2. the private, immutable computation manifest behind it (PR-R1,
 //      20261027090000).
 //

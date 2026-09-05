@@ -87,6 +87,7 @@
     "mcp-exposure:check": "bun run scripts/mcp-exposure-check.ts",
     "admin-portal:check": "bun run scripts/admin-portal-guard-check.ts",
     "admin-lifecycle:check": "bun run scripts/admin-lifecycle-guard-check.ts",
+    "admin-error-contract:check": "bun run scripts/admin-error-contract-check.tsx",
     "review-contribution:check": "bun run scripts/review-contribution-guard-check.ts",
     "employer-recruitment-flow:check": "bun run scripts/employer-recruitment-flow-check.ts",
     "employer-journey:check": "bun run scripts/employer-journey-guard-check.ts",

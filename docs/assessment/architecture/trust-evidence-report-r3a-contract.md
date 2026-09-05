@@ -2,7 +2,7 @@
 
 *Från evidens till en bättre intervju.*
 
-PR-R3A (migration `20261028090000`) adds two routines and no UI:
+PR-R3A (migration `20261029090000`) adds two routines and no UI:
 
 - `scp_report_next_step(safety_findings_present, observed_items, areas_sufficient, areas_limited)`
   — the ONE rds-v1 process-step rule, IMMUTABLE, internal. The TypeScript

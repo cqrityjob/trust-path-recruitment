@@ -1635,7 +1635,7 @@ if [ "$FR_PASSED" -lt 20 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# PR-R3A (20261028090000): the Report V3 data contract, employer audience.
+# PR-R3A (20261029090000): the Report V3 data contract, employer audience.
 # scp_employer_report_v3 is a projection of the released employer document;
 # the suite releases three Väktare attempts and proves the V3 document is
 # the locked shape, equals the frozen document conclusion for conclusion,
@@ -1723,7 +1723,7 @@ fi
 echo "==> Rolling PR-R3A (Report V3 contract) back"
 set +e
 R3A_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20261028090000_scp_trust_evidence_report_r3a_contract_rollback.sql 2>&1)"
+  -f supabase/rollback/20261029090000_scp_trust_evidence_report_r3a_contract_rollback.sql 2>&1)"
 R3A_BACK_RC=$?
 set -e
 if [ "$R3A_BACK_RC" -ne 0 ]; then
@@ -1778,7 +1778,7 @@ fi
 echo "==> R3A must refuse on a database without PR-R1"
 set +e
 R3A_REFUSE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261028090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
+  -f supabase/migrations/20261029090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
 R3A_REFUSE_RC=$?
 set -e
 if [ "$R3A_REFUSE_RC" -eq 0 ] || ! echo "$R3A_REFUSE" | grep -q "SCP_R3A_PRECONDITION: scp_report_snapshots.manifest_id is missing"; then
@@ -1901,7 +1901,7 @@ fi
 echo "==> Re-applying PR-R3A (Report V3 contract)"
 set +e
 R3A_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261028090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
+  -f supabase/migrations/20261029090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
 R3A_FWD_RC=$?
 set -e
 if [ "$R3A_FWD_RC" -ne 0 ]; then
@@ -2281,6 +2281,43 @@ else
     echo "FAIL: expected at least 38 CV application source assertions, only ${CVS_PASSED} ran." >&2
     echo "      A suite that silently stops running assertions is worse than one that fails." >&2
     suite_failed "CQrityjob CV application source (assertion shortfall: floor 38)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Admin assignment cancellation — the refusal contract.
+#
+# Runs BEFORE the rollback step: it assigns a legacy assessment version and
+# reads assessment_assignments, and the rollback drops content the fixture
+# depends on.
+#
+# The suite exists because five unrelated conditions inside
+# admin_cancel_assessment_assignment() all raised SQLSTATE 23514, so the wrapper
+# collapsed them into one constant that an admin was then shown verbatim. The
+# TypeScript guard (admin-error-contract:check) proves the client can NAME every
+# identifier; only this suite proves the database RAISES them, and that a
+# refusal leaves the row and the audit log untouched.
+# ---------------------------------------------------------------------------
+echo "==> Running admin assignment cancellation contract assertions"
+set +e
+ACX_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/admin_assignment_cancellation_test.sql 2>&1)"
+ACX_RC=$?
+set -e
+
+echo "$ACX_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+ACX_PASSED="$(echo "$ACX_OUT" | grep -c "ok  " || true)"
+
+if [ "$ACX_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the admin assignment cancellation suite exited with code ${ACX_RC}." >&2
+  echo "$ACX_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "admin assignment cancellation"
+else
+  echo "    ok  ${ACX_PASSED} admin assignment cancellation assertions passed"
+  if [ "$ACX_PASSED" -lt 27 ]; then
+    echo "FAIL: expected at least 27 admin assignment cancellation assertions, only ${ACX_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "admin assignment cancellation (assertion shortfall: floor 27)"
   fi
 fi
 
@@ -4174,6 +4211,7 @@ echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions,"
 echo "              ${ACC_PASSED} admin lifecycle assertions,"
+echo "              ${ACX_PASSED} admin assignment cancellation assertions,"
 echo "              ${LIFE_PASSED} job lifecycle + notification assertions,"
 echo "              ${STDR_PASSED} standard recruitment availability assertions,"
 echo "              ${OOI_PASSED} option-order integrity assertions,"
