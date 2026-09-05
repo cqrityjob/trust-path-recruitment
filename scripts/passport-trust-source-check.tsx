@@ -48,6 +48,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../src/i18n/context";
 import { AssertionChip } from "../src/components/security-passport/AssertionChip";
 import { ClaimRow } from "../src/components/security-passport/ClaimRow";
+import { CredentialVersionHistory } from "../src/components/security-passport/CredentialVersionHistory";
 import { ExperienceTimeline } from "../src/components/security-passport/ExperienceTimeline";
 import { CredentialVerificationPage } from "../src/components/security-passport/live/CredentialVerificationPage";
 import { RecipientCredentialList } from "../src/components/security-passport/live/RecipientCredentialList";
@@ -1056,6 +1057,58 @@ const namedIssuerClaim = claimOf("issuer_confirmation", "Polismyndigheten (fikti
     employmentPanel.includes("Anställningen är bekräftad av Bevakning AB") &&
       !employmentPanel.includes(UNSUPPORTED_SV),
   );
+  // The version history sits on the SAME page as the header chip above. It
+  // printed the present-tense VERIFIERAD for every stored-verified version --
+  // superseded ones included -- while the header said Dokumenterad: one page,
+  // two answers about one credential.
+  const versionOf = (lifecycleState: string, versionNo: number, id: string) => ({
+    id,
+    versionNo,
+    credentialCode: "VU1",
+    title: "Väktarutbildning del 1 (fiktiv)",
+    issuerName: "Fiktiv utbildningsanordnare",
+    issuedOn: "2025-01-01",
+    validUntil: "2027-12-31",
+    assertionLevel: "verified",
+    lifecycleState,
+    verifierName: "CQrityjob",
+    verificationMethod: "document_review",
+    updatedAt: "2026-08-21",
+  });
+  const history = sv(
+    <CredentialVersionHistory
+      versions={[versionOf("superseded", 1, "v1"), versionOf("active", 2, "v2")]}
+      currentId="v2"
+    />,
+  );
+  const historyText = text(history);
+  ck(
+    "10.13 the version history says Dokumenterad, never a present-tense Verifierad",
+    historyText.includes(DOCUMENTED_SV) && !wearsCurrentVerified(historyText, "sv"),
+  );
+  ck(
+    "10.14 and it passes both the lifecycle and the provenance, so a superseded version is past",
+    (() => {
+      const vh = code("src/components/security-passport/CredentialVersionHistory.tsx");
+      return (
+        vh.includes("lifecycleState={v.lifecycleState}") &&
+        vh.includes("provenance={v}") &&
+        vh.includes("credentialPresentationOf(v,")
+      );
+    })(),
+  );
+  ck(
+    "10.15 the version read model carries the decider and the method",
+    (() => {
+      const cf = code("src/lib/security-passport/credentials.functions.ts");
+      return (
+        cf.includes("printableProvenance(r.id, r.assertion_level, provenance)") &&
+        cf.includes("verifierName: prov?.organisation") &&
+        cf.includes("PROVENANCE_DECISION_COLUMNS")
+      );
+    })(),
+  );
+
   const timeline = text(
     sv(
       <ExperienceTimeline
