@@ -1305,16 +1305,29 @@ DO $$ BEGIN RAISE NOTICE 'GROUP TR12 — the report is one product, not two'; EN
 
 -- PR-R1 added the manifest builder, which RECORDS the release function's
 -- derivation (calling the same signal / maturity / state routines) and
--- raises if its own inputs disagree with them. Two names, pinned; a third
--- would be a parallel engine.
+-- raises if its own inputs disagree with them. PR-R3A added the Report V3
+-- projection, which only RE-STATES the frozen employer document (it calls
+-- no signal, maturity or state routine -- asserted next). Three names,
+-- pinned; a fourth would be a parallel engine.
 SELECT pg_temp.ok(
   (SELECT array_agg(p.proname ORDER BY p.proname)
      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname LIKE 'scp_%report%'
       AND p.prosrc ILIKE '%jsonb_build_object%'
       AND p.prosrc ILIKE '%evidence_state%')
-  = ARRAY['scp_release_attempt_report', 'scp_report_manifest_computation']::name[],
-  'TR12.1 exactly two routines derive an evidence-state payload: the release function and (PR-R1) the manifest builder that records its derivation');
+  = ARRAY['scp_employer_report_v3', 'scp_release_attempt_report', 'scp_report_manifest_computation']::name[],
+  'TR12.1 exactly three routines build an evidence-state payload: the release function, (PR-R1) the manifest builder that records its derivation, and (PR-R3A) the V3 projection that re-states the frozen document');
+
+SELECT pg_temp.ok(
+  (SELECT p.prosrc NOT ILIKE '%scp_attempt_assessment_signal%'
+      AND p.prosrc NOT ILIKE '%scp_attempt_maturity%'
+      AND p.prosrc NOT ILIKE '%scp_attempt_evidence_state%'
+      AND p.prosrc NOT ILIKE '%scp_attempt_self_report_pattern%'
+      AND p.prosrc NOT ILIKE '%scp_competency_evidence%'
+      AND p.prosrc LIKE '%FROM public.scp_employer_report(_attempt_id)%'
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'scp_employer_report_v3'),
+  'TR12.1b the V3 projection derives nothing: no signal, maturity, state or self-report routine, no ledger read, only the audience contract');
 
 SELECT pg_temp.ok(
   (SELECT p.prosrc LIKE '%scp_attempt_assessment_signal(%'

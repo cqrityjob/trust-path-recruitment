@@ -574,6 +574,13 @@ jobs:
       - name: TRUST evidence report contract check
         run: bun run trust-evidence-report:check
 
+      # rds-v1 has ONE process-step rule, stated in SQL (scp_report_next_step,
+      # PR-R3A) and in TypeScript (recommendNextStep). This walks the full
+      # state matrix through the TypeScript rule; the database job executes
+      # the same matrix against the SQL rule (db-test.sh), so drift fails CI.
+      - name: rds-v1 next-step parity (TypeScript half)
+        run: bun run trust-next-step-parity:check
+
       # The retired assessment engine stays retired: its four URL-reachable
       # routes redirect into the Assessment Center (or say the link is no
       # longer in use) and import none of the legacy runner, while the current

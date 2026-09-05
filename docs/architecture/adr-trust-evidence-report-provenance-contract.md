@@ -118,6 +118,57 @@ completed_disputed` and `evidence_state` unchanged, a pending review →
 plus `follow_up_priority = first` on the area — never a state that reads as a
 risk level.
 
+**Amendment, PR-R3A (20261029090000), revised after the working-group
+review.** The shape is now produced server side by
+`scp_employer_report_v3(attempt_id)` for the employer audience;
+`scripts/fixtures/trust-evidence-report-v3-contract.ts` is the typed
+contract and guards H14–H16 hold the migration and the suite to it. What
+changed against the shape above, each recorded in
+`docs/assessment/architecture/trust-evidence-report-r3a-contract.md`:
+
+1. **Three dimensions, apart.** A competency line carries
+   `observed_pattern` (clearly_consistent | consistent | mixed | developing |
+   not_established: what the responses look like) and
+   `evidence_sufficiency` (sufficient | limited | none: how much evidence
+   exists); the employer line carries `follow_up_priority` (what to do).
+   `evidence_state` stays as a composite presentation field DERIVED from
+   them (`observed_follow_up` added for `developing`); `limited` and
+   `follow_up` are not pattern values. The ras-v1 `limited` signal is
+   `not_established` + `limited`.
+2. **Frozen report / live overlays.** The document is `{ schema_version,
+   report_id, frozen_report { core, employer }, template_overlay,
+   addenda_overlay }`. `frozen_report` is immutable and `report_id` and
+   provenance describe all of it; the template's limitation lines (a live
+   row) and the addenda are overlays with their own `as_of`. The core
+   (`trust-evidence-core/v1`) is the shared, audience-neutral frozen core; the
+   employer projection adds context, `primary_next_step` (the one rds-v1
+   rule, `scp_report_next_step`, proven identical to the TypeScript rule),
+   overview, safety follow-up, per-area priorities, TRUST follow-ups and
+   plan. The overlay is `scp_interview_notes`, live, with its own `as_of`,
+   never part of identity or provenance.
+3. **No manifest reference in the audience document.** The private manifest
+   is referenced only as `provenance.computation_chain = verified | legacy`;
+   the projection reads it server side for counts and version identities
+   (composition, review states, per-competency context count, competency
+   version, rubric editions), so every structural fact is version-locked at
+   the release instant, and is an explicit null on a pre-R1 report.
+4. **Minimisation.** `context_count` is the competency's own frozen count or
+   null, never the report's; `review_status` is `not_required | pending |
+   completed` (the reviewer's outcome is internal; a changed reading surfaces
+   only as the governed reason `human_review_adjusted`); every safety
+   finding, flag and safety-critical count lives in the employer projection
+   and never in the core; `coverage_status` is internal only; addenda carry
+   `author_display_name` only, in the employer addenda overlay only (Product
+   Owner decision); `released_by_role`, `planned_item_count`,
+   `response_pattern` and `safety_findings_present` are gone. The employer
+   contract is a path allowlist with exact placements for the protected
+   fields (guards H15–H17).
+5. **The two axes are independent.** A visible `observed_pattern` may coexist
+   with `limited` evidence; limited evidence bars clearest support and a
+   consistent state. `sufficient` is defined in the document as shadow-pilot
+   coverage under the governed rule, never validation, competence, prediction
+   or a trait.
+
 ## Decision 3 — private computation manifest (PR-R1, not created here)
 
 Table `public.scp_report_computation_manifests`. One row per released
