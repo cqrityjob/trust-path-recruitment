@@ -30,8 +30,12 @@
 //
 //   frozen_report.core      the shared, audience-neutral frozen core
 //   frozen_report.employer  what only the commissioning organisation gets
-//   addenda_overlay         the live post-interview addenda, own as_of;
-//                           never part of the report's identity or provenance
+//   template_overlay        the live limitation lines of the pinned report
+//                           template (the R2A audience contract's row), own as_of
+//   addenda_overlay         the live post-interview addenda, own as_of
+//
+// frozen_report is immutable: report_id and provenance describe all of it,
+// without exception. Only the two overlays may move after release.
 //
 // ── PRODUCT BOUNDARY (negative contract, locked) ──────────────────────────
 //
@@ -58,9 +62,11 @@ export const TRUST_PROCESS_STEPS = [
 export type TrustProcessStep = (typeof TRUST_PROCESS_STEPS)[number];
 
 /** Dimension 1: what the observed responses look like. Never encodes an
- *  amount of evidence, a follow-up or a safety state. `not_established` is
- *  what a too-small basis (or none) yields: the governed rule computes no
- *  pattern under three tasks, and nothing invents a stronger one. */
+ *  amount of evidence, a follow-up or a safety state. A visible pattern may
+ *  coexist with limited evidence; limited evidence keeps it from becoming a
+ *  stable conclusion or clearest support. `not_established` is what the
+ *  frozen `limited` signal (the rule's own word for a basis it computed no
+ *  pattern on) and no evidence yield; nothing invents a stronger one. */
 export type TrustObservedPattern =
   | "clearly_consistent"
   | "consistent"
@@ -68,7 +74,11 @@ export type TrustObservedPattern =
   | "developing"
   | "not_established";
 
-/** Dimension 2: how much observed evidence exists. */
+/** Dimension 2: how much observed evidence exists. `sufficient` means
+ *  shadow-pilot evidence coverage under the current governed rule (ras-v1:
+ *  at least three counted observed tasks) and nothing more: not psychometric
+ *  validation, not demonstrated competence, not evidence about future
+ *  performance, not a stable trait. The core states this in `definitions`. */
 export type TrustEvidenceSufficiency = "sufficient" | "limited" | "none";
 
 /** Dimension 3 (employer only): what the recruiter should do next. */
@@ -84,8 +94,6 @@ export type TrustEvidenceState =
   | "self_reported_only"
   | "not_covered"
   | "human_review_pending";
-
-export type TrustCoverageStatus = "covered" | "partially_covered" | "limited" | "not_covered";
 
 /** The mandatory-review state of a competency: whether a person had to read
  *  something here and whether that is done. Never the reviewer's outcome. */
@@ -144,20 +152,20 @@ export type TrustCoreCompetency = {
   /** This competency's own frozen context count -- never the report's. */
   context_count: number | null;
   source_types: TrustSourceType[];
-  coverage_status: TrustCoverageStatus;
+  /** coverage_status is INTERNAL ONLY (Product Owner decision): the employer
+   *  contract has one sufficiency concept, evidence_sufficiency. */
   review_status: TrustReviewStatus | null;
   methodological_flags: TrustMethodologicalFlag[];
   factual_explanation: TrustBilingual;
   /** The one limitation the card states, or null. */
   limitation: { code: string; sv: string; en: string } | null;
-  /** What the evidence is built on: item and review COUNTS per channel. */
+  /** What the evidence is built on: item and review COUNTS per channel.
+   *  Safety-critical counts are employer-only and live on the employer line. */
   evidence_basis: {
     scenario_items: number;
     free_text_items: number;
     free_text_reviewed: number;
     self_description_items: number;
-    safety_critical_items: number;
-    safety_critical_reviewed: number;
   } | null;
   behaviour: TrustBilingual;
   /** The candidate's own descriptions live in self_reported_patterns; a line
@@ -172,6 +180,9 @@ export type TrustEmployerArea = {
   safety_critical_follow_up: boolean;
   clearest_support_eligible: boolean;
   verify_reasons: TrustVerifyReason[];
+  /** The safety-critical answers of this competency and how many a person
+   *  checked. Employer-only; null on a pre-R1 report. */
+  safety_critical: { items: number; reviewed: number } | null;
   /** The authored employer follow-up prompt for the competency, or null. */
   interview_prompt: TrustBilingual | null;
   trust_followup_codes: TrustFollowUp["focus"][];
@@ -276,9 +287,7 @@ export type TrustHumanReview = {
   reviews_total: number;
   reviews_completed: number;
   completed: boolean;
-  safety_findings_present: boolean; // a person found something; never a score
   free_text: { items: number; reviewed: number } | null;
-  safety_critical: { items: number; reviewed: number } | null;
   meaning: TrustBilingual;
 };
 
@@ -355,12 +364,19 @@ export type TrustFrozenCore = {
       self_description_items: number;
       free_text_items: number;
       free_text_reviewed: number;
-      safety_critical_items: number;
-      safety_critical_reviewed: number;
     } | null;
     modules: unknown[];
   };
   human_review: TrustHumanReview;
+  /** What the words mean, stated in the document itself. */
+  definitions: {
+    evidence_sufficiency: {
+      rule_version: string;
+      minimum_observed_items: number;
+      sv: string;
+      en: string;
+    };
+  };
   limitations: { standing_statement: TrustBilingual; items: TrustLimitation[] };
   provenance: TrustProvenance;
 };
@@ -375,9 +391,6 @@ export type TrustEmployerProjection = {
     organisation_name: string;
     purpose_code: string;
     standing_limitation: TrustBilingual;
-    /** The audience contract's template lines: the one thing that follows
-     *  the live template row, carried outside the frozen core. */
-    template_limitations: { sv: string[]; en: string[] };
   };
   primary_next_step: {
     step: TrustProcessStep;
@@ -401,6 +414,9 @@ export type TrustEmployerProjection = {
     findings: { finding: string; severity: string; observed_at: string }[];
     finding_count: number;
     areas_flagged_for_follow_up: string[];
+    /** The safety-critical answers of the assessment and how many a person
+     *  checked. Employer-only; null on a pre-R1 report. */
+    safety_critical: { items: number; reviewed: number } | null;
     statement: TrustBilingual;
   };
   areas: TrustEmployerArea[];
@@ -411,8 +427,10 @@ export type TrustEmployerProjection = {
 /** A post-interview addendum: what a person found in the interview, against
  *  one competency. A separate append-only record (scp_interview_notes)
  *  composed with the report; the released report is never rewritten.
- *  Attribution is the minimum display field: never a user id, never an
- *  e-mail. */
+ *  Attribution (Product Owner decision): author_display_name = KEEP, in the
+ *  employer addenda overlay only; never a user id, an e-mail, a membership
+ *  id or an authentication identity; never in the shared core, a participant
+ *  projection or the report's identity/provenance. Personal data, minimal. */
 export type TrustInterviewAddendum = {
   id: string;
   competency_code: string;
@@ -430,6 +448,15 @@ export type TrustEvidenceReportV3 = {
     core: TrustFrozenCore;
     employer: TrustEmployerProjection;
   };
+  /** LIVE: the limitation lines of the report template the release pinned,
+   *  read through the R2A audience contract. Outside frozen_report because it
+   *  follows a live row. */
+  template_overlay: {
+    as_of: string;
+    source: "scp_report_versions";
+    report_template: { report_key: string; version: number };
+    limitations: { sv: string[]; en: string[] };
+  };
   addenda_overlay: {
     as_of: string;
     source: "interview_note";
@@ -442,6 +469,7 @@ export const TRUST_V3_TOP_LEVEL_KEYS = [
   "schema_version",
   "report_id",
   "frozen_report",
+  "template_overlay",
   "addenda_overlay",
 ] as const;
 export const TRUST_V3_CORE_KEYS = [
@@ -452,6 +480,7 @@ export const TRUST_V3_CORE_KEYS = [
   "self_reported_patterns",
   "coverage",
   "human_review",
+  "definitions",
   "limitations",
   "provenance",
 ] as const;
@@ -476,7 +505,6 @@ export const TRUST_V3_CORE_COMPETENCY_KEYS = [
   "answered_item_count",
   "context_count",
   "source_types",
-  "coverage_status",
   "review_status",
   "methodological_flags",
   "factual_explanation",
@@ -491,191 +519,355 @@ export const TRUST_V3_EMPLOYER_AREA_KEYS = [
   "safety_critical_follow_up",
   "clearest_support_eligible",
   "verify_reasons",
+  "safety_critical",
   "interview_prompt",
   "trust_followup_codes",
   "traceability",
 ] as const;
 
-/** The employer-visible field allowlist: every key that may appear at any
- *  depth of the document. Locked here and in the database suite
- *  (scp_trust_evidence_report_r3a_contract_test.sql, ALLOWLIST block);
- *  guard H15 refuses if the two differ. Default is minimisation. */
-export const TRUST_V3_EMPLOYER_KEY_ALLOWLIST = [
+/** The employer-visible PATH allowlist: every object-key path that may
+ *  appear in the document, array elements as `*`. A key is allowed only where
+ *  it is listed. Locked here and in the database suite
+ *  (scp_trust_evidence_report_r3a_contract_test.sql, ALLOWLIST block); guard
+ *  H15 refuses if the two differ. Default is minimisation. */
+export const TRUST_V3_EMPLOYER_PATH_ALLOWLIST = [
   "addenda_overlay",
-  "answered",
-  "answered_item_count",
-  "area_en",
-  "area_limit",
-  "area_sv",
-  "areas",
-  "areas_flagged_for_follow_up",
-  "areas_limited",
-  "areas_none",
-  "areas_sufficient",
-  "as_of",
-  "asks",
-  "assessment",
-  "assessment_name_en",
-  "assessment_name_sv",
-  "assessment_slug",
-  "assessment_version",
-  "attempt_id",
-  "author_display_name",
-  "available",
-  "behaviour",
-  "block_key",
-  "brief_version",
-  "calculated_at",
-  "clearest_support",
-  "clearest_support_eligible",
-  "code",
-  "competencies",
-  "competency_code",
-  "competency_name_en",
-  "competency_name_sv",
-  "competency_version",
-  "completed",
-  "composition",
-  "computation_chain",
-  "consistency",
-  "content_status",
-  "context",
-  "context_count",
-  "core",
-  "core_version",
-  "coverage",
-  "coverage_status",
-  "document",
-  "domain_en",
-  "domain_key",
-  "domain_sv",
-  "employer",
-  "en",
-  "evidence_basis",
-  "evidence_basis_available",
-  "evidence_contexts",
-  "evidence_scope_version",
-  "evidence_state",
-  "evidence_state_version",
-  "evidence_sufficiency",
-  "evidence_type",
-  "existing_evidence",
-  "factual_explanation",
-  "finding",
-  "finding_count",
-  "findings",
-  "focus",
-  "focus_area_codes",
-  "follow_up_priority",
-  "followup",
-  "free_text",
-  "free_text_items",
-  "free_text_reviewed",
+  "addenda_overlay/as_of",
+  "addenda_overlay/items",
+  "addenda_overlay/items/*/author_display_name",
+  "addenda_overlay/items/*/competency_code",
+  "addenda_overlay/items/*/id",
+  "addenda_overlay/items/*/note",
+  "addenda_overlay/items/*/recorded_at",
+  "addenda_overlay/items/*/status",
+  "addenda_overlay/source",
   "frozen_report",
-  "governance_mode",
-  "heading",
-  "human_review",
-  "id",
-  "interpretation",
-  "interview_handoff",
-  "interview_prompt",
-  "item_count",
-  "items",
-  "key",
-  "language",
-  "limitation",
-  "limitations",
-  "limited_evidence",
-  "line",
-  "listen_for",
-  "meaning",
-  "methodological_flags",
-  "modules",
-  "name_en",
-  "name_sv",
-  "note",
-  "observed_at",
-  "observed_item_count",
-  "observed_items",
-  "observed_pattern",
-  "order",
-  "organisation_name",
-  "overview",
-  "participant_ref",
-  "pattern",
-  "person_context",
-  "present",
-  "primary_next_step",
-  "priorities",
-  "priority",
-  "provenance",
-  "purpose_code",
-  "question",
-  "question_count",
-  "question_limit",
-  "ready",
-  "reason",
-  "reason_code",
-  "recorded_at",
-  "released_at",
+  "frozen_report/core",
+  "frozen_report/core/assessment",
+  "frozen_report/core/assessment/assessment_name_en",
+  "frozen_report/core/assessment/assessment_name_sv",
+  "frozen_report/core/assessment/assessment_slug",
+  "frozen_report/core/assessment/assessment_version",
+  "frozen_report/core/assessment/content_status",
+  "frozen_report/core/assessment/governance_mode",
+  "frozen_report/core/assessment/language",
+  "frozen_report/core/assessment/validation_status",
+  "frozen_report/core/competencies",
+  "frozen_report/core/competencies/*/answered_item_count",
+  "frozen_report/core/competencies/*/behaviour",
+  "frozen_report/core/competencies/*/behaviour/en",
+  "frozen_report/core/competencies/*/behaviour/sv",
+  "frozen_report/core/competencies/*/competency_code",
+  "frozen_report/core/competencies/*/competency_name_en",
+  "frozen_report/core/competencies/*/competency_name_sv",
+  "frozen_report/core/competencies/*/competency_version",
+  "frozen_report/core/competencies/*/context_count",
+  "frozen_report/core/competencies/*/evidence_basis",
+  "frozen_report/core/competencies/*/evidence_basis/free_text_items",
+  "frozen_report/core/competencies/*/evidence_basis/free_text_reviewed",
+  "frozen_report/core/competencies/*/evidence_basis/scenario_items",
+  "frozen_report/core/competencies/*/evidence_basis/self_description_items",
+  "frozen_report/core/competencies/*/evidence_state",
+  "frozen_report/core/competencies/*/evidence_sufficiency",
+  "frozen_report/core/competencies/*/factual_explanation",
+  "frozen_report/core/competencies/*/factual_explanation/en",
+  "frozen_report/core/competencies/*/factual_explanation/sv",
+  "frozen_report/core/competencies/*/limitation",
+  "frozen_report/core/competencies/*/limitation/code",
+  "frozen_report/core/competencies/*/limitation/en",
+  "frozen_report/core/competencies/*/limitation/sv",
+  "frozen_report/core/competencies/*/methodological_flags",
+  "frozen_report/core/competencies/*/observed_item_count",
+  "frozen_report/core/competencies/*/observed_pattern",
+  "frozen_report/core/competencies/*/review_status",
+  "frozen_report/core/competencies/*/self_description_domain_keys",
+  "frozen_report/core/competencies/*/source_types",
+  "frozen_report/core/core_version",
+  "frozen_report/core/coverage",
+  "frozen_report/core/coverage/areas_limited",
+  "frozen_report/core/coverage/areas_none",
+  "frozen_report/core/coverage/areas_sufficient",
+  "frozen_report/core/coverage/composition",
+  "frozen_report/core/coverage/composition/free_text_items",
+  "frozen_report/core/coverage/composition/free_text_reviewed",
+  "frozen_report/core/coverage/composition/scenario_items",
+  "frozen_report/core/coverage/composition/self_description_items",
+  "frozen_report/core/coverage/evidence_contexts",
+  "frozen_report/core/coverage/modules",
+  "frozen_report/core/coverage/modules/*/answered",
+  "frozen_report/core/coverage/modules/*/asks",
+  "frozen_report/core/coverage/modules/*/block_key",
+  "frozen_report/core/coverage/modules/*/items",
+  "frozen_report/core/coverage/modules/*/name_en",
+  "frozen_report/core/coverage/modules/*/name_sv",
+  "frozen_report/core/coverage/observed_items",
+  "frozen_report/core/coverage/self_report_items",
+  "frozen_report/core/definitions",
+  "frozen_report/core/definitions/evidence_sufficiency",
+  "frozen_report/core/definitions/evidence_sufficiency/en",
+  "frozen_report/core/definitions/evidence_sufficiency/minimum_observed_items",
+  "frozen_report/core/definitions/evidence_sufficiency/rule_version",
+  "frozen_report/core/definitions/evidence_sufficiency/sv",
+  "frozen_report/core/human_review",
+  "frozen_report/core/human_review/completed",
+  "frozen_report/core/human_review/free_text",
+  "frozen_report/core/human_review/free_text/items",
+  "frozen_report/core/human_review/free_text/reviewed",
+  "frozen_report/core/human_review/meaning",
+  "frozen_report/core/human_review/meaning/en",
+  "frozen_report/core/human_review/meaning/sv",
+  "frozen_report/core/human_review/required",
+  "frozen_report/core/human_review/reviews_completed",
+  "frozen_report/core/human_review/reviews_total",
+  "frozen_report/core/limitations",
+  "frozen_report/core/limitations/items",
+  "frozen_report/core/limitations/items/*/code",
+  "frozen_report/core/limitations/items/*/statement",
+  "frozen_report/core/limitations/items/*/statement/en",
+  "frozen_report/core/limitations/items/*/statement/sv",
+  "frozen_report/core/limitations/standing_statement",
+  "frozen_report/core/limitations/standing_statement/en",
+  "frozen_report/core/limitations/standing_statement/sv",
+  "frozen_report/core/provenance",
+  "frozen_report/core/provenance/brief_version",
+  "frozen_report/core/provenance/calculated_at",
+  "frozen_report/core/provenance/computation_chain",
+  "frozen_report/core/provenance/evidence_basis_available",
+  "frozen_report/core/provenance/evidence_scope_version",
+  "frozen_report/core/provenance/evidence_state_version",
+  "frozen_report/core/provenance/released_at",
+  "frozen_report/core/provenance/report_id",
+  "frozen_report/core/provenance/report_template",
+  "frozen_report/core/provenance/report_template/report_key",
+  "frozen_report/core/provenance/report_template/version",
+  "frozen_report/core/provenance/rubric_versions",
+  "frozen_report/core/provenance/scoring_model_version",
+  "frozen_report/core/provenance/signal_version",
+  "frozen_report/core/provenance/threshold_version",
+  "frozen_report/core/provenance/traceability_available",
+  "frozen_report/core/self_reported_patterns",
+  "frozen_report/core/self_reported_patterns/*/competency_code",
+  "frozen_report/core/self_reported_patterns/*/consistency",
+  "frozen_report/core/self_reported_patterns/*/domain_en",
+  "frozen_report/core/self_reported_patterns/*/domain_key",
+  "frozen_report/core/self_reported_patterns/*/domain_sv",
+  "frozen_report/core/self_reported_patterns/*/evidence_type",
+  "frozen_report/core/self_reported_patterns/*/factual_explanation",
+  "frozen_report/core/self_reported_patterns/*/factual_explanation/en",
+  "frozen_report/core/self_reported_patterns/*/factual_explanation/sv",
+  "frozen_report/core/self_reported_patterns/*/interpretation",
+  "frozen_report/core/self_reported_patterns/*/item_count",
+  "frozen_report/core/self_reported_patterns/*/pattern",
+  "frozen_report/core/timestamps",
+  "frozen_report/core/timestamps/calculated_at",
+  "frozen_report/core/timestamps/released_at",
+  "frozen_report/core/timestamps/scored_at",
+  "frozen_report/core/timestamps/started_at",
+  "frozen_report/core/timestamps/submitted_at",
+  "frozen_report/employer",
+  "frozen_report/employer/areas",
+  "frozen_report/employer/areas/*/clearest_support_eligible",
+  "frozen_report/employer/areas/*/competency_code",
+  "frozen_report/employer/areas/*/follow_up_priority",
+  "frozen_report/employer/areas/*/interview_prompt",
+  "frozen_report/employer/areas/*/interview_prompt/en",
+  "frozen_report/employer/areas/*/interview_prompt/sv",
+  "frozen_report/employer/areas/*/safety_critical",
+  "frozen_report/employer/areas/*/safety_critical/items",
+  "frozen_report/employer/areas/*/safety_critical/reviewed",
+  "frozen_report/employer/areas/*/safety_critical_follow_up",
+  "frozen_report/employer/areas/*/traceability",
+  "frozen_report/employer/areas/*/traceability/available",
+  "frozen_report/employer/areas/*/trust_followup_codes",
+  "frozen_report/employer/areas/*/verify_reasons",
+  "frozen_report/employer/context",
+  "frozen_report/employer/context/attempt_id",
+  "frozen_report/employer/context/organisation_name",
+  "frozen_report/employer/context/participant_ref",
+  "frozen_report/employer/context/person_context",
+  "frozen_report/employer/context/purpose_code",
+  "frozen_report/employer/context/standing_limitation",
+  "frozen_report/employer/context/standing_limitation/en",
+  "frozen_report/employer/context/standing_limitation/sv",
+  "frozen_report/employer/context/subject_id",
+  "frozen_report/employer/overview",
+  "frozen_report/employer/overview/clearest_support",
+  "frozen_report/employer/overview/clearest_support/*/competency_code",
+  "frozen_report/employer/overview/clearest_support/*/competency_name_en",
+  "frozen_report/employer/overview/clearest_support/*/competency_name_sv",
+  "frozen_report/employer/overview/clearest_support/*/evidence_sufficiency",
+  "frozen_report/employer/overview/clearest_support/*/follow_up_priority",
+  "frozen_report/employer/overview/clearest_support/*/line",
+  "frozen_report/employer/overview/clearest_support/*/line/en",
+  "frozen_report/employer/overview/clearest_support/*/line/sv",
+  "frozen_report/employer/overview/clearest_support/*/observed_item_count",
+  "frozen_report/employer/overview/clearest_support/*/observed_pattern",
+  "frozen_report/employer/overview/clearest_support/*/safety_critical_follow_up",
+  "frozen_report/employer/overview/clearest_support/*/verify_reasons",
+  "frozen_report/employer/overview/limited_evidence",
+  "frozen_report/employer/overview/limited_evidence/*/competency_code",
+  "frozen_report/employer/overview/limited_evidence/*/competency_name_en",
+  "frozen_report/employer/overview/limited_evidence/*/competency_name_sv",
+  "frozen_report/employer/overview/limited_evidence/*/evidence_sufficiency",
+  "frozen_report/employer/overview/limited_evidence/*/follow_up_priority",
+  "frozen_report/employer/overview/limited_evidence/*/line",
+  "frozen_report/employer/overview/limited_evidence/*/line/en",
+  "frozen_report/employer/overview/limited_evidence/*/line/sv",
+  "frozen_report/employer/overview/limited_evidence/*/observed_item_count",
+  "frozen_report/employer/overview/limited_evidence/*/observed_pattern",
+  "frozen_report/employer/overview/limited_evidence/*/safety_critical_follow_up",
+  "frozen_report/employer/overview/limited_evidence/*/verify_reasons",
+  "frozen_report/employer/overview/verify_in_interview",
+  "frozen_report/employer/overview/verify_in_interview/*/competency_code",
+  "frozen_report/employer/overview/verify_in_interview/*/competency_name_en",
+  "frozen_report/employer/overview/verify_in_interview/*/competency_name_sv",
+  "frozen_report/employer/overview/verify_in_interview/*/evidence_sufficiency",
+  "frozen_report/employer/overview/verify_in_interview/*/follow_up_priority",
+  "frozen_report/employer/overview/verify_in_interview/*/line",
+  "frozen_report/employer/overview/verify_in_interview/*/line/en",
+  "frozen_report/employer/overview/verify_in_interview/*/line/sv",
+  "frozen_report/employer/overview/verify_in_interview/*/observed_item_count",
+  "frozen_report/employer/overview/verify_in_interview/*/observed_pattern",
+  "frozen_report/employer/overview/verify_in_interview/*/safety_critical_follow_up",
+  "frozen_report/employer/overview/verify_in_interview/*/verify_reasons",
+  "frozen_report/employer/primary_next_step",
+  "frozen_report/employer/primary_next_step/interview_handoff",
+  "frozen_report/employer/primary_next_step/interview_handoff/attempt_id",
+  "frozen_report/employer/primary_next_step/interview_handoff/focus_area_codes",
+  "frozen_report/employer/primary_next_step/reason",
+  "frozen_report/employer/primary_next_step/reason/en",
+  "frozen_report/employer/primary_next_step/reason/sv",
+  "frozen_report/employer/primary_next_step/reason_code",
+  "frozen_report/employer/primary_next_step/rule_version",
+  "frozen_report/employer/primary_next_step/step",
+  "frozen_report/employer/safety_followup",
+  "frozen_report/employer/safety_followup/areas_flagged_for_follow_up",
+  "frozen_report/employer/safety_followup/finding_count",
+  "frozen_report/employer/safety_followup/findings",
+  "frozen_report/employer/safety_followup/findings/*/finding",
+  "frozen_report/employer/safety_followup/findings/*/observed_at",
+  "frozen_report/employer/safety_followup/findings/*/severity",
+  "frozen_report/employer/safety_followup/present",
+  "frozen_report/employer/safety_followup/safety_critical",
+  "frozen_report/employer/safety_followup/safety_critical/items",
+  "frozen_report/employer/safety_followup/safety_critical/reviewed",
+  "frozen_report/employer/safety_followup/source",
+  "frozen_report/employer/safety_followup/statement",
+  "frozen_report/employer/safety_followup/statement/en",
+  "frozen_report/employer/safety_followup/statement/sv",
+  "frozen_report/employer/trust_followups",
+  "frozen_report/employer/trust_followups/*/area_en",
+  "frozen_report/employer/trust_followups/*/area_sv",
+  "frozen_report/employer/trust_followups/*/competency_code",
+  "frozen_report/employer/trust_followups/*/evidence_type",
+  "frozen_report/employer/trust_followups/*/focus",
+  "frozen_report/employer/trust_followups/*/followup",
+  "frozen_report/employer/trust_followups/*/followup/en",
+  "frozen_report/employer/trust_followups/*/followup/sv",
+  "frozen_report/employer/trust_followups/*/listen_for",
+  "frozen_report/employer/trust_followups/*/listen_for/en",
+  "frozen_report/employer/trust_followups/*/listen_for/sv",
+  "frozen_report/employer/trust_followups/*/priority",
+  "frozen_report/employer/trust_followups/*/question",
+  "frozen_report/employer/trust_followups/*/question/en",
+  "frozen_report/employer/trust_followups/*/question/sv",
+  "frozen_report/employer/trust_followups/*/trust_question_version",
+  "frozen_report/employer/trust_followups/*/why",
+  "frozen_report/employer/trust_followups/*/why/en",
+  "frozen_report/employer/trust_followups/*/why/sv",
+  "frozen_report/employer/trust_plan",
+  "frozen_report/employer/trust_plan/area_limit",
+  "frozen_report/employer/trust_plan/heading",
+  "frozen_report/employer/trust_plan/heading/en",
+  "frozen_report/employer/trust_plan/heading/sv",
+  "frozen_report/employer/trust_plan/priorities",
+  "frozen_report/employer/trust_plan/priorities/*/competency_code",
+  "frozen_report/employer/trust_plan/priorities/*/order",
+  "frozen_report/employer/trust_plan/priorities/*/ready",
+  "frozen_report/employer/trust_plan/priorities/*/ready/evidence_sufficiency",
+  "frozen_report/employer/trust_plan/priorities/*/ready/existing_evidence",
+  "frozen_report/employer/trust_plan/priorities/*/ready/existing_evidence/en",
+  "frozen_report/employer/trust_plan/priorities/*/ready/existing_evidence/sv",
+  "frozen_report/employer/trust_plan/priorities/*/ready/limitation",
+  "frozen_report/employer/trust_plan/priorities/*/ready/limitation/code",
+  "frozen_report/employer/trust_plan/priorities/*/ready/limitation/en",
+  "frozen_report/employer/trust_plan/priorities/*/ready/limitation/sv",
+  "frozen_report/employer/trust_plan/priorities/*/ready/observed_item_count",
+  "frozen_report/employer/trust_plan/priorities/*/ready/observed_pattern",
+  "frozen_report/employer/trust_plan/priorities/*/structure",
+  "frozen_report/employer/trust_plan/priorities/*/structure/followup",
+  "frozen_report/employer/trust_plan/priorities/*/structure/followup/en",
+  "frozen_report/employer/trust_plan/priorities/*/structure/followup/sv",
+  "frozen_report/employer/trust_plan/priorities/*/structure/steps",
+  "frozen_report/employer/trust_plan/priorities/*/structure/steps/*/en",
+  "frozen_report/employer/trust_plan/priorities/*/structure/steps/*/key",
+  "frozen_report/employer/trust_plan/priorities/*/structure/steps/*/sv",
+  "frozen_report/employer/trust_plan/priorities/*/target",
+  "frozen_report/employer/trust_plan/priorities/*/target/area_en",
+  "frozen_report/employer/trust_plan/priorities/*/target/area_sv",
+  "frozen_report/employer/trust_plan/priorities/*/target/competency_code",
+  "frozen_report/employer/trust_plan/priorities/*/target/evidence_type",
+  "frozen_report/employer/trust_plan/priorities/*/target/focus",
+  "frozen_report/employer/trust_plan/priorities/*/tell",
+  "frozen_report/employer/trust_plan/priorities/*/tell/document",
+  "frozen_report/employer/trust_plan/priorities/*/tell/document/en",
+  "frozen_report/employer/trust_plan/priorities/*/tell/document/sv",
+  "frozen_report/employer/trust_plan/priorities/*/tell/listen_for",
+  "frozen_report/employer/trust_plan/priorities/*/tell/listen_for/en",
+  "frozen_report/employer/trust_plan/priorities/*/tell/listen_for/sv",
+  "frozen_report/employer/trust_plan/priorities/*/understand",
+  "frozen_report/employer/trust_plan/priorities/*/understand/question",
+  "frozen_report/employer/trust_plan/priorities/*/understand/question/en",
+  "frozen_report/employer/trust_plan/priorities/*/understand/question/sv",
+  "frozen_report/employer/trust_plan/question_count",
+  "frozen_report/employer/trust_plan/question_limit",
+  "frozen_report/employer/trust_plan/subheading",
+  "frozen_report/employer/trust_plan/subheading/en",
+  "frozen_report/employer/trust_plan/subheading/sv",
   "report_id",
-  "report_key",
-  "report_template",
-  "required",
-  "review_status",
-  "reviewed",
-  "reviews_completed",
-  "reviews_total",
-  "rubric_versions",
-  "rule_version",
-  "safety_critical",
-  "safety_critical_follow_up",
-  "safety_critical_items",
-  "safety_critical_reviewed",
-  "safety_findings_present",
-  "safety_followup",
-  "scenario_items",
   "schema_version",
-  "scored_at",
-  "scoring_model_version",
-  "self_description_domain_keys",
-  "self_description_items",
-  "self_report_items",
-  "self_reported_patterns",
-  "severity",
-  "signal_version",
-  "source",
-  "source_types",
-  "standing_limitation",
-  "standing_statement",
-  "started_at",
-  "statement",
-  "status",
-  "step",
-  "steps",
-  "structure",
-  "subheading",
-  "subject_id",
-  "submitted_at",
-  "sv",
-  "target",
-  "tell",
-  "template_limitations",
-  "threshold_version",
-  "timestamps",
-  "traceability",
-  "traceability_available",
-  "trust_followup_codes",
-  "trust_followups",
-  "trust_plan",
-  "trust_question_version",
-  "understand",
-  "validation_status",
-  "verify_in_interview",
-  "verify_reasons",
-  "version",
-  "why",
+  "template_overlay",
+  "template_overlay/as_of",
+  "template_overlay/limitations",
+  "template_overlay/limitations/en",
+  "template_overlay/limitations/sv",
+  "template_overlay/report_template",
+  "template_overlay/report_template/report_key",
+  "template_overlay/report_template/version",
+  "template_overlay/source",
 ] as const;
+
+/** Protected fields and the ONLY paths they may occupy (guard H17, suite
+ *  V8.1b). author_display_name: employer addenda overlay only (Product Owner
+ *  decision). coverage_status: internal only, no path at all. */
+export const TRUST_V3_PROTECTED_PLACEMENTS: Record<string, readonly string[]> = {
+  subject_id: ["frozen_report/employer/context/subject_id"],
+  attempt_id: [
+    "frozen_report/employer/context/attempt_id",
+    "frozen_report/employer/primary_next_step/interview_handoff/attempt_id",
+  ],
+  participant_ref: ["frozen_report/employer/context/participant_ref"],
+  person_context: ["frozen_report/employer/context/person_context"],
+  organisation_name: ["frozen_report/employer/context/organisation_name"],
+  finding: ["frozen_report/employer/safety_followup/findings/*/finding"],
+  severity: ["frozen_report/employer/safety_followup/findings/*/severity"],
+  findings: ["frozen_report/employer/safety_followup/findings"],
+  safety_critical: [
+    "frozen_report/employer/safety_followup/safety_critical",
+    "frozen_report/employer/areas/*/safety_critical",
+  ],
+  note: ["addenda_overlay/items/*/note"],
+  author_display_name: ["addenda_overlay/items/*/author_display_name"],
+  human_review: ["frozen_report/core/human_review"],
+  trust_plan: ["frozen_report/employer/trust_plan"],
+  primary_next_step: ["frozen_report/employer/primary_next_step"],
+  step: ["frozen_report/employer/primary_next_step/step"],
+  coverage_status: [],
+  safety_findings_present: [],
+  template_limitations: [],
+  user_id: [],
+  email: [],
+};
 
 /** Keys the shared core must never carry (guard H16): the participant
  *  boundary, stated as data. */
@@ -857,7 +1049,6 @@ export const TRUST_V3_EXAMPLE: TrustEvidenceReportV3 = {
           answered_item_count: 1,
           context_count: 1,
           source_types: ["assessment_response"],
-          coverage_status: "limited",
           review_status: "not_required",
           methodological_flags: [
             "single_item",
@@ -872,8 +1063,6 @@ export const TRUST_V3_EXAMPLE: TrustEvidenceReportV3 = {
             free_text_items: 0,
             free_text_reviewed: 0,
             self_description_items: 0,
-            safety_critical_items: 0,
-            safety_critical_reviewed: 0,
           },
           behaviour: {
             sv: "Samordnar egna åtgärder med kollegor och andra funktioner.",
@@ -911,8 +1100,6 @@ export const TRUST_V3_EXAMPLE: TrustEvidenceReportV3 = {
           self_description_items: 24,
           free_text_items: 4,
           free_text_reviewed: 4,
-          safety_critical_items: 3,
-          safety_critical_reviewed: 3,
         },
         modules: [],
       },
@@ -921,12 +1108,18 @@ export const TRUST_V3_EXAMPLE: TrustEvidenceReportV3 = {
         reviews_total: 7,
         reviews_completed: 7,
         completed: true,
-        safety_findings_present: false,
         free_text: { items: 4, reviewed: 4 },
-        safety_critical: { items: 3, reviewed: 3 },
         meaning: {
           sv: "Mänskligt granskat betyder att de obligatoriska mänskliga granskningarna inför frisläppning är slutförda. Det betyder inte att svaren är godkända, validerade eller lämpliga, och det är inte ett omdöme från granskaren.",
           en: "Human-reviewed means that the mandatory human reviews required for release were completed. It does not mean the answers are approved or validated, it does not say the person is right for the role, and it is not an endorsement by the reviewer.",
+        },
+      },
+      definitions: {
+        evidence_sufficiency: {
+          rule_version: "ras-v1",
+          minimum_observed_items: 3,
+          sv: "Tillräckligt underlag betyder att tillräckligt många observerade uppgifter berörde området enligt den nuvarande regeln i skuggpiloten. Det betyder inte psykometrisk validering, inte visad kompetens, inte något om framtida arbetsprestation och inte en stabil egenskap.",
+          en: "Sufficient evidence means that enough observed tasks touched the area under the current shadow-pilot rule. It does not mean psychometric validation, demonstrated competence, anything about future work performance, or a stable trait.",
         },
       },
       limitations: {
@@ -973,7 +1166,6 @@ export const TRUST_V3_EXAMPLE: TrustEvidenceReportV3 = {
           sv: "Underlag för fortsatt mänsklig bedömning -- inte ett anställningsbeslut.",
           en: "Evidence for continued human judgement -- not an employment decision.",
         },
-        template_limitations: { sv: [], en: [] },
       },
       primary_next_step: {
         step: "structured_interview",
@@ -1025,6 +1217,7 @@ export const TRUST_V3_EXAMPLE: TrustEvidenceReportV3 = {
         findings: [],
         finding_count: 0,
         areas_flagged_for_follow_up: [],
+        safety_critical: { items: 3, reviewed: 3 },
         statement: {
           sv: "Ett säkerhetskritiskt svar har granskats av en person och behöver följas upp i samtal.",
           en: "A safety-critical answer has been reviewed by a person and needs to be followed up in conversation.",
@@ -1037,6 +1230,7 @@ export const TRUST_V3_EXAMPLE: TrustEvidenceReportV3 = {
           safety_critical_follow_up: false,
           clearest_support_eligible: false,
           verify_reasons: ["limited_evidence"],
+          safety_critical: { items: 0, reviewed: 0 },
           interview_prompt: {
             sv: "Be personen beskriva en överlämning som gick fel. Vad saknades, och vad gör hen annorlunda nu?",
             en: "Ask the person about a handover that went wrong. What was missing, and what do they do differently now?",
@@ -1109,6 +1303,12 @@ export const TRUST_V3_EXAMPLE: TrustEvidenceReportV3 = {
         area_limit: 3,
       },
     },
+  },
+  template_overlay: {
+    as_of: "2026-09-05T09:00:00Z",
+    source: "scp_report_versions",
+    report_template: { report_key: "closed-test-employer", version: 1 },
+    limitations: { sv: [], en: [] },
   },
   addenda_overlay: {
     as_of: "2026-09-05T09:00:00Z",

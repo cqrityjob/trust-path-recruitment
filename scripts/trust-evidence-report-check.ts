@@ -55,8 +55,9 @@ import {
   TRUST_V3_CORE_COMPETENCY_KEYS,
   TRUST_V3_CORE_KEYS,
   TRUST_V3_EMPLOYER_AREA_KEYS,
-  TRUST_V3_EMPLOYER_KEY_ALLOWLIST,
   TRUST_V3_EMPLOYER_KEYS,
+  TRUST_V3_EMPLOYER_PATH_ALLOWLIST,
+  TRUST_V3_PROTECTED_PLACEMENTS,
   TRUST_V3_EXAMPLE,
   TRUST_V3_TOP_LEVEL_KEYS,
   type TrustComputationManifest,
@@ -708,9 +709,11 @@ console.log("\nF. No human finding, no safety panel; a finding is never a number
       ),
   );
   check(
-    "F6 the V3 contract carries safety as a boolean fact of human review, not a score",
-    typeof TRUST_V3_EXAMPLE.frozen_report.core.human_review.safety_findings_present === "boolean" &&
-      !("safety_score" in TRUST_V3_EXAMPLE.frozen_report.core.human_review),
+    "F6 the V3 contract carries safety as a boolean fact of human review in the employer projection only, never a score, and never in the shared core",
+    typeof TRUST_V3_EXAMPLE.frozen_report.employer.safety_followup.present === "boolean" &&
+      !("safety_score" in TRUST_V3_EXAMPLE.frozen_report.employer.safety_followup) &&
+      !("safety_findings_present" in TRUST_V3_EXAMPLE.frozen_report.core.human_review) &&
+      !JSON.stringify(TRUST_V3_EXAMPLE.frozen_report.core).includes("safety"),
   );
 }
 
@@ -861,9 +864,11 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
   const core = v3.frozen_report.core;
   const employer = v3.frozen_report.employer;
   check(
-    "H1 the V3 document is exactly {schema_version, report_id, frozen_report {core, employer}, addenda_overlay}",
+    "H1 the V3 document is exactly {schema_version, report_id, frozen_report {core, employer}, template_overlay, addenda_overlay}",
     Object.keys(v3).sort().join() === [...TRUST_V3_TOP_LEVEL_KEYS].sort().join() &&
       Object.keys(v3.frozen_report).sort().join() === "core,employer" &&
+      Object.keys(v3.template_overlay).sort().join() ===
+        "as_of,limitations,report_template,source" &&
       Object.keys(core).sort().join() === [...TRUST_V3_CORE_KEYS].sort().join() &&
       Object.keys(employer).sort().join() === [...TRUST_V3_EMPLOYER_KEYS].sort().join() &&
       Object.keys(v3.addenda_overlay).sort().join() === "as_of,items,source",
@@ -1131,27 +1136,37 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       ),
   );
 
-  // H15: the employer field allowlist is one list, locked in two places.
+  // H15: the employer PATH allowlist is one list, locked in two places.
+  const walkPaths = (v: unknown, p = "", out: string[] = []): string[] => {
+    if (Array.isArray(v)) v.forEach((x) => walkPaths(x, `${p}/*`, out));
+    else if (v && typeof v === "object")
+      for (const [k, x] of Object.entries(v)) {
+        const path = p ? `${p}/${k}` : k;
+        out.push(path);
+        walkPaths(x, path, out);
+      }
+    return out;
+  };
   const suite = read("supabase/tests/scp_trust_evidence_report_r3a_contract_test.sql");
   const block = suite.match(/-- ALLOWLIST BEGIN([\s\S]*?)-- ALLOWLIST END/);
   const sqlAllow = (
-    block ? Array.from(block[1].matchAll(/'([a-z_]+)'/g)).map((m) => m[1]) : []
+    block ? Array.from(block[1].matchAll(/'([a-z_/*]+)'/g)).map((m) => m[1]) : []
   ).sort();
-  const tsAllow = [...TRUST_V3_EMPLOYER_KEY_ALLOWLIST].sort();
+  const tsAllow = [...TRUST_V3_EMPLOYER_PATH_ALLOWLIST].sort();
   check(
-    "H15 the employer field allowlist in the database suite equals the one in this contract",
-    sqlAllow.length > 100 && sqlAllow.join() === tsAllow.join(),
+    "H15 the employer path allowlist in the database suite equals the one in this contract",
+    sqlAllow.length > 250 && sqlAllow.join() === tsAllow.join(),
     `sql=${sqlAllow.length} ts=${tsAllow.length}`,
   );
-  const exampleKeys = new Set(walkKeys(v3));
-  const offAllow = [...exampleKeys].filter((k) => !(tsAllow as string[]).includes(k));
+  const examplePaths = new Set(walkPaths(v3));
+  const offAllow = [...examplePaths].filter((p) => !(tsAllow as string[]).includes(p));
   check(
-    "H15b every key of the V3 example is on the allowlist",
+    "H15b every path of the V3 example is on the path allowlist",
     offAllow.length === 0,
     offAllow.join(", "),
   );
   check(
-    "H15c the allowlist carries no author id, e-mail, manifest field, answer key, rationale or review workflow field",
+    "H15c the allowlist carries no author id, e-mail, manifest field, answer key, rationale, review workflow field, coverage_status or core safety field",
     ![
       "user_id",
       "email",
@@ -1174,16 +1189,45 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       "behaviour_version_id",
       "released_by_role",
       "response_pattern",
-    ].some((k) => (tsAllow as string[]).includes(k)),
+      "coverage_status",
+      "safety_findings_present",
+      "template_limitations",
+    ].some((k) => (tsAllow as string[]).some((p) => p === k || p.endsWith(`/${k}`))),
+  );
+  // H17: protected fields only at their approved paths -- in the allowlist
+  // and in the example.
+  const placementLeaks = Object.entries(TRUST_V3_PROTECTED_PLACEMENTS).flatMap(([k, allowed]) =>
+    [...tsAllow, ...examplePaths]
+      .filter((p) => p === k || p.endsWith(`/${k}`))
+      .filter((p) => !allowed.includes(p))
+      .map((p) => `${k}@${p}`),
+  );
+  check(
+    "H17 every protected field (subject/attempt ids, participant reference, findings, notes, author display name, human review, plan, next step) appears only at its approved path; coverage_status, safety_findings_present, user_id and email at none",
+    placementLeaks.length === 0 &&
+      TRUST_V3_PROTECTED_PLACEMENTS.author_display_name.join() ===
+        "addenda_overlay/items/*/author_display_name",
+    placementLeaks.join(", "),
   );
 
   // H16: the shared core carries nothing employer-only.
-  const coreKeys = new Set(walkKeys(core));
-  const coreLeaks = TRUST_CORE_FORBIDDEN_KEYS.filter((k) => coreKeys.has(k));
+  const corePaths = walkPaths(core);
+  const coreLeaks = corePaths.filter((p) =>
+    (TRUST_CORE_FORBIDDEN_KEYS as readonly string[]).includes(p.replace(/^.*\//, "")),
+  );
   check(
-    "H16 the shared frozen core names no process step, priority, safety detail, interview material, addendum, author, organisation, attempt or subject",
-    coreLeaks.length === 0,
+    "H16 the shared frozen core names no safety finding, flag or safety-review detail, no process step, priority or interview material, no addendum or author, no organisation, attempt, subject or participant reference, no answer key, rationale or scoring input (path-aware)",
+    coreLeaks.length === 0 &&
+      !("safety_findings_present" in core.human_review) &&
+      !("safety_critical" in core.human_review),
     coreLeaks.join(", "),
+  );
+  check(
+    "H16c sufficient is defined in the document as shadow-pilot coverage under the governed rule, never validation, competence, prediction or a trait",
+    core.definitions.evidence_sufficiency.minimum_observed_items === 3 &&
+      /inte/.test(core.definitions.evidence_sufficiency.sv) &&
+      /does not mean/.test(core.definitions.evidence_sufficiency.en) &&
+      !/suitab|predict/i.test(core.definitions.evidence_sufficiency.en),
   );
   check(
     "H16b human_review.completed is a fact of mandatory reviews, stated as a denial",

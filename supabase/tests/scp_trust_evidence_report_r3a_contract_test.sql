@@ -13,12 +13,13 @@
 --   V5  human review, free text and the safety finding
 --   V6  the TRUST Interview Plan
 --   V7  the overview from the separated dimensions; the one next-step rule
---   V8  nothing internal, the employer field allowlist, no wrong principal
---   V9  frozen report versus live addenda overlay
+--   V8  nothing internal, the path-aware employer allowlist, exact placements, no wrong principal
+--   V9  frozen report versus the live overlays
 --   V10 provenance, historical shapes, the truthful context count
---   V11 version lock: catalogue changes after release cannot alter the report
+--   V11 immutability: template, catalogue, competency-version, rubric and
+--       metadata changes after release cannot alter frozen_report
 --   V12 "human reviewed" means the mandatory reviews were completed
---   V13 the shared core carries nothing employer-only
+--   V13 the participant-safe shared core, path-aware
 --
 -- One transaction, ends in ROLLBACK.
 
@@ -79,6 +80,23 @@ LANGUAGE sql AS $fn$
      WHERE jsonb_typeof(w.v) IN ('object', 'array')
   )
   SELECT DISTINCT k FROM walk, jsonb_object_keys(CASE WHEN jsonb_typeof(v) = 'object' THEN v ELSE '{}'::jsonb END) k;
+$fn$;
+-- Every object-key PATH at any depth of a document, array elements as '*'.
+CREATE OR REPLACE FUNCTION pg_temp.all_paths(_d jsonb) RETURNS SETOF text
+LANGUAGE sql AS $fn$
+  WITH RECURSIVE walk(p, v) AS (
+    SELECT ''::text, _d
+    UNION ALL
+    SELECT CASE jsonb_typeof(w.v)
+             WHEN 'object' THEN CASE WHEN w.p = '' THEN x.key ELSE w.p || '/' || x.key END
+             WHEN 'array'  THEN w.p || '/*' END,
+           CASE jsonb_typeof(w.v) WHEN 'object' THEN x.value WHEN 'array' THEN y.value END
+      FROM walk w
+      LEFT JOIN LATERAL jsonb_each(CASE WHEN jsonb_typeof(w.v) = 'object' THEN w.v ELSE '{}'::jsonb END) x ON true
+      LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(w.v) = 'array' THEN w.v ELSE '[]'::jsonb END) y ON true
+     WHERE jsonb_typeof(w.v) IN ('object', 'array')
+  )
+  SELECT DISTINCT p FROM walk WHERE p <> '' AND p NOT LIKE '%*';
 $fn$;
 
 DO $$ BEGIN RAISE NOTICE 'GROUP V0 — fixture and state'; END $$;
@@ -277,16 +295,19 @@ DO $$ BEGIN RAISE NOTICE 'GROUP V1 — the locked shape: three dimensions apart'
 
 SELECT pg_temp.ok(
   (SELECT bool_and(d ->> 'schema_version' = 'trust-evidence-report/v3'
-      AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d) k) = ARRAY['addenda_overlay','frozen_report','report_id','schema_version']
+      AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d) k) = ARRAY['addenda_overlay','frozen_report','report_id','schema_version','template_overlay']
       AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'frozen_report') k) = ARRAY['core','employer']
       AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'frozen_report' -> 'core') k)
-          = ARRAY['assessment','competencies','core_version','coverage','human_review','limitations','provenance','self_reported_patterns','timestamps']
+          = ARRAY['assessment','competencies','core_version','coverage','definitions','human_review','limitations','provenance','self_reported_patterns','timestamps']
       AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'frozen_report' -> 'employer') k)
           = ARRAY['areas','context','overview','primary_next_step','safety_followup','trust_followups','trust_plan']
       AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'addenda_overlay') k) = ARRAY['as_of','items','source']
+      AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'template_overlay') k) = ARRAY['as_of','limitations','report_template','source']
+      AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'frozen_report' -> 'employer' -> 'context') k)
+          = ARRAY['attempt_id','organisation_name','participant_ref','person_context','purpose_code','standing_limitation','subject_id']
       AND d -> 'frozen_report' -> 'core' ->> 'core_version' = 'trust-evidence-core/v1')
      FROM v3),
-  'V1.1 the document is exactly {schema_version, report_id, frozen_report {core, employer}, addenda_overlay {as_of, source, items}}');
+  'V1.1 the document is exactly {schema_version, report_id, frozen_report {core, employer}, template_overlay, addenda_overlay}; nothing live inside frozen_report');
 
 SELECT pg_temp.ok(
   (SELECT bool_and(jsonb_array_length(d -> 'frozen_report' -> 'core' -> 'competencies') = 8
@@ -302,18 +323,17 @@ SELECT pg_temp.ok(
   (SELECT bool_and(
      (SELECT bool_and(
         ARRAY['competency_code','competency_version','competency_name_sv','competency_name_en','observed_pattern','evidence_sufficiency',
-              'evidence_state','observed_item_count','answered_item_count','context_count','source_types','coverage_status','review_status',
+              'evidence_state','observed_item_count','answered_item_count','context_count','source_types','review_status',
               'methodological_flags','factual_explanation','limitation','evidence_basis','behaviour','self_description_domain_keys']
           <@ (SELECT array_agg(k) FROM jsonb_object_keys(a) k)
         AND a ->> 'observed_pattern' IN ('clearly_consistent','consistent','mixed','developing','not_established')
         AND a ->> 'evidence_sufficiency' IN ('sufficient','limited','none')
         AND a ->> 'evidence_state' IN ('observed_consistent','observed_mixed','observed_follow_up','observed_limited','self_reported_only','not_covered','human_review_pending')
-        AND a ->> 'coverage_status' IN ('covered','partially_covered','limited','not_covered')
         AND a ->> 'review_status' IN ('not_required','pending','completed')
-        AND NOT (a ? 'follow_up_priority') AND NOT (a ? 'response_pattern'))
+        AND NOT (a ? 'follow_up_priority') AND NOT (a ? 'response_pattern') AND NOT (a ? 'coverage_status'))
         FROM jsonb_array_elements(d -> 'frozen_report' -> 'core' -> 'competencies') a)
      AND (SELECT bool_and(
-        ARRAY['competency_code','follow_up_priority','safety_critical_follow_up','clearest_support_eligible','verify_reasons','interview_prompt','trust_followup_codes','traceability']
+        ARRAY['competency_code','follow_up_priority','safety_critical_follow_up','clearest_support_eligible','verify_reasons','safety_critical','interview_prompt','trust_followup_codes','traceability']
           <@ (SELECT array_agg(k) FROM jsonb_object_keys(a) k)
         AND a ->> 'follow_up_priority' IN ('first','next','if_time_allows','none')
         AND NOT (a ? 'observed_pattern') AND NOT (a ? 'evidence_sufficiency'))
@@ -405,9 +425,9 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT bool_and(v.d -> 'frozen_report' -> 'employer' -> 'safety_followup' -> 'findings' = e.d -> 'safety_flags'
                AND (v.d -> 'frozen_report' -> 'employer' -> 'safety_followup' ->> 'present')::boolean = (jsonb_array_length(e.d -> 'safety_flags') > 0)
-               AND (v.d -> 'frozen_report' -> 'core' -> 'human_review' ->> 'safety_findings_present')::boolean = (jsonb_array_length(e.d -> 'safety_flags') > 0))
+               AND NOT (v.d -> 'frozen_report' -> 'core' -> 'human_review' ? 'safety_findings_present'))
      FROM v3 v JOIN emp e ON e.persona = v.persona),
-  'V2.6 the safety findings are the frozen findings, nothing more and nothing inferred');
+  'V2.6 the safety findings are the frozen findings, in the employer projection only, nothing more and nothing inferred');
 
 SELECT pg_temp.ok(
   (SELECT bool_and(
@@ -442,7 +462,7 @@ SELECT pg_temp.ok(
     AND pg_temp.comp(d, 'SCC-08') -> 'methodological_flags' ? 'single_item'
     AND pg_temp.emp(d, 'SCC-08') ->> 'follow_up_priority' = 'next'
     AND pg_temp.comp(d, 'SCC-08') ->> 'evidence_state' = 'observed_limited'
-    AND pg_temp.comp(d, 'SCC-08') ->> 'coverage_status' = 'limited')
+    AND NOT (pg_temp.comp(d, 'SCC-08') ? 'coverage_status'))
      FROM v3),
   'V3.1 SCC-08 = {observed_pattern not_established, evidence_sufficiency limited, observed_item_count 1, single_item, follow_up_priority next} on every document');
 
@@ -467,19 +487,19 @@ SELECT pg_temp.ok(
   'V3.3 SCC-08 sits under limited evidence in the overview and never under clearest support');
 
 -- The regression rule over every competency of every document: sufficiency
--- follows the count, and fewer than three observed items never establish a
--- pattern, a full coverage or a consistent state.
+-- follows the count and only the count; the pattern is the frozen signal's
+-- and may coexist with limited evidence; limited evidence keeps a pattern
+-- from reading as a consistent state and from clearest support (V7).
 SELECT pg_temp.ok(
   NOT EXISTS (
     SELECT 1 FROM v3, jsonb_array_elements(d -> 'frozen_report' -> 'core' -> 'competencies') a
      WHERE ((a ->> 'observed_item_count')::int = 0 AND a ->> 'evidence_sufficiency' <> 'none')
         OR ((a ->> 'observed_item_count')::int BETWEEN 1 AND 2 AND a ->> 'evidence_sufficiency' <> 'limited')
         OR ((a ->> 'observed_item_count')::int >= 3 AND a ->> 'evidence_sufficiency' <> 'sufficient')
-        OR ((a ->> 'observed_item_count')::int < 3
-            AND (a ->> 'observed_pattern' <> 'not_established'
-                 OR a ->> 'evidence_state' IN ('observed_consistent','observed_mixed','observed_follow_up')
-                 OR a ->> 'coverage_status' = 'covered'))),
-  'V3.4 sufficiency follows the observed count exactly, and no competency under three items reads as an established pattern, a full coverage or a consistent state');
+        OR (a ->> 'evidence_sufficiency' <> 'sufficient'
+            AND a ->> 'evidence_state' IN ('observed_consistent','observed_mixed','observed_follow_up'))
+        OR (a ->> 'evidence_sufficiency' = 'none' AND a ->> 'observed_pattern' <> 'not_established')),
+  'V3.4 sufficiency follows the observed count exactly; no competency without sufficient evidence reads as a consistent state, and no pattern is stated on no evidence');
 
 SELECT pg_temp.ok(
   (SELECT bool_and(lower(pg_temp.comp(d, 'SCC-08')::text || pg_temp.emp(d, 'SCC-08')::text) NOT SIMILAR TO
@@ -537,11 +557,12 @@ SELECT pg_temp.ok(
     AND (d -> 'frozen_report' -> 'core' -> 'coverage' -> 'composition' ->> 'self_description_items')::int = 24
     AND (d -> 'frozen_report' -> 'core' -> 'coverage' -> 'composition' ->> 'free_text_items')::int = 4
     AND (d -> 'frozen_report' -> 'core' -> 'coverage' -> 'composition' ->> 'free_text_reviewed')::int = 4
-    AND (d -> 'frozen_report' -> 'core' -> 'coverage' -> 'composition' ->> 'safety_critical_items')::int = 3
-    AND (d -> 'frozen_report' -> 'core' -> 'coverage' -> 'composition' ->> 'safety_critical_reviewed')::int = 3
-    AND (SELECT sum((a ->> 'answered_item_count')::int) FROM jsonb_array_elements(d -> 'frozen_report' -> 'core' -> 'competencies') a) = 50)
+    AND NOT (d -> 'frozen_report' -> 'core' -> 'coverage' -> 'composition' ? 'safety_critical_items')
+    AND d -> 'frozen_report' -> 'employer' -> 'safety_followup' -> 'safety_critical' = '{"items": 3, "reviewed": 3}'::jsonb
+    AND (SELECT sum((a ->> 'answered_item_count')::int) FROM jsonb_array_elements(d -> 'frozen_report' -> 'core' -> 'competencies') a) = 50
+    AND (SELECT sum((a -> 'safety_critical' ->> 'items')::int) FROM jsonb_array_elements(d -> 'frozen_report' -> 'employer' -> 'areas') a) = 3)
      FROM v3),
-  'V5.1 the composition is truthful and frozen: 22 scenario, 24 self-description, 4 free-text answers all read, 3 safety-critical answers all checked, 50 answers');
+  'V5.1 the composition is truthful and frozen: 22 scenario, 24 self-description, 4 free-text answers all read, 50 answers; the 3 safety-critical answers all checked, stated in the employer projection only');
 
 SELECT pg_temp.ok(
   (SELECT bool_and((d -> 'frozen_report' -> 'core' -> 'human_review' ->> 'reviews_total')::int = 7
@@ -549,7 +570,7 @@ SELECT pg_temp.ok(
                AND (d -> 'frozen_report' -> 'core' -> 'human_review' ->> 'required')::boolean
                AND (d -> 'frozen_report' -> 'core' -> 'human_review' ->> 'completed')::boolean
                AND d -> 'frozen_report' -> 'core' -> 'human_review' -> 'free_text' = '{"items": 4, "reviewed": 4}'::jsonb
-               AND d -> 'frozen_report' -> 'core' -> 'human_review' -> 'safety_critical' = '{"items": 3, "reviewed": 3}'::jsonb)
+               AND NOT (d -> 'frozen_report' -> 'core' -> 'human_review' ? 'safety_critical'))
      FROM v3),
   'V5.2 seven mandatory reviews, seven completed: the report is human-reviewed and says so in counts');
 
@@ -598,9 +619,9 @@ SELECT pg_temp.ok(
   'V5.6 the finding is stated as {finding, severity, observed_at} and never as a number');
 
 SELECT pg_temp.ok(
-  (SELECT p1.d -> 'frozen_report' -> 'core' -> 'competencies' = p2.d -> 'frozen_report' -> 'core' -> 'competencies'
+  (SELECT (p1.d -> 'frozen_report' -> 'core') - 'timestamps' - 'provenance' = (p2.d -> 'frozen_report' -> 'core') - 'timestamps' - 'provenance'
      FROM v3 p1, v3 p2 WHERE p1.persona = 'P1' AND p2.persona = 'P2'),
-  'V5.7 with and without the finding, every core competency line reads the same: the finding lives in the employer projection only');
+  'V5.7 with and without the finding, the whole shared core reads the same apart from its own timestamps and identity: safety lives in the employer projection only');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP V6 — the TRUST Interview Plan'; END $$;
 
@@ -698,7 +719,7 @@ SELECT pg_temp.ok(
   (SELECT bool_and(
      (d -> 'frozen_report' -> 'employer' -> 'primary_next_step' ->> 'step', d -> 'frozen_report' -> 'employer' -> 'primary_next_step' ->> 'reason_code')
      = (SELECT r.step, r.reason_code FROM public.scp_report_next_step(
-          (d -> 'frozen_report' -> 'core' -> 'human_review' ->> 'safety_findings_present')::boolean,
+          (d -> 'frozen_report' -> 'employer' -> 'safety_followup' ->> 'present')::boolean,
           (d -> 'frozen_report' -> 'core' -> 'coverage' ->> 'observed_items')::int,
           (d -> 'frozen_report' -> 'core' -> 'coverage' ->> 'areas_sufficient')::int,
           (d -> 'frozen_report' -> 'core' -> 'coverage' ->> 'areas_limited')::int) r)
@@ -749,41 +770,254 @@ SELECT pg_temp.ok(
 
 DO $$ BEGIN RAISE NOTICE 'GROUP V8 — nothing internal, the employer allowlist, no wrong principal'; END $$;
 
--- The employer-visible field allowlist. Locked here and in
--- scripts/fixtures/trust-evidence-report-v3-contract.ts; the TypeScript guard
--- reads this block and refuses if the two lists differ.
+-- The employer-visible PATH allowlist: every object-key path at any depth
+-- of the document, array elements as '*'. A key is allowed only where it
+-- is listed. Locked here and in scripts/fixtures/trust-evidence-report-v3-
+-- contract.ts; the TypeScript guard reads this block and refuses if the two
+-- lists differ.
 -- ALLOWLIST BEGIN
 CREATE TEMP TABLE allowlist AS SELECT unnest(ARRAY[
-  'addenda_overlay','answered','answered_item_count','area_en','area_limit','area_sv','areas','areas_flagged_for_follow_up',
-  'areas_limited','areas_none','areas_sufficient','as_of','asks','assessment','assessment_name_en','assessment_name_sv',
-  'assessment_slug','assessment_version','attempt_id','author_display_name','available','behaviour','block_key','brief_version',
-  'calculated_at','clearest_support','clearest_support_eligible','code','competencies','competency_code','competency_name_en',
-  'competency_name_sv','competency_version','completed','composition','computation_chain','consistency','content_status',
-  'context','context_count','core','core_version','coverage','coverage_status','document','domain_en','domain_key','domain_sv',
-  'employer','en','evidence_basis','evidence_basis_available','evidence_contexts','evidence_scope_version','evidence_state',
-  'evidence_state_version','evidence_sufficiency','evidence_type','existing_evidence','factual_explanation','finding',
-  'finding_count','findings','focus','focus_area_codes','follow_up_priority','followup','free_text','free_text_items',
-  'free_text_reviewed','frozen_report','governance_mode','heading','human_review','id','interpretation','interview_handoff',
-  'interview_prompt','item_count','items','key','language','limitation','limitations','limited_evidence','line','listen_for',
-  'meaning','methodological_flags','modules','name_en','name_sv','note','observed_at','observed_item_count','observed_items',
-  'observed_pattern','order','organisation_name','overview','participant_ref','pattern','person_context','present',
-  'primary_next_step','priorities','priority','provenance','purpose_code','question','question_count','question_limit','ready',
-  'reason','reason_code','recorded_at','released_at','report_id','report_key','report_template','required','review_status',
-  'reviewed','reviews_completed','reviews_total','rubric_versions','rule_version','safety_critical','safety_critical_follow_up',
-  'safety_critical_items','safety_critical_reviewed','safety_findings_present','safety_followup','scenario_items',
-  'schema_version','scored_at','scoring_model_version','self_description_domain_keys','self_description_items',
-  'self_report_items','self_reported_patterns','severity','signal_version','source','source_types','standing_limitation',
-  'standing_statement','started_at','statement','status','step','steps','structure','subheading','subject_id','submitted_at',
-  'sv','target','tell','template_limitations','threshold_version','timestamps','traceability','traceability_available',
-  'trust_followup_codes','trust_followups','trust_plan','trust_question_version','understand','validation_status',
-  'verify_in_interview','verify_reasons','version','why'
-]) AS k;
+  'addenda_overlay','addenda_overlay/as_of','addenda_overlay/items','addenda_overlay/items/*/author_display_name',
+  'addenda_overlay/items/*/competency_code','addenda_overlay/items/*/id','addenda_overlay/items/*/note',
+  'addenda_overlay/items/*/recorded_at','addenda_overlay/items/*/status','addenda_overlay/source','frozen_report',
+  'frozen_report/core','frozen_report/core/assessment','frozen_report/core/assessment/assessment_name_en',
+  'frozen_report/core/assessment/assessment_name_sv','frozen_report/core/assessment/assessment_slug',
+  'frozen_report/core/assessment/assessment_version','frozen_report/core/assessment/content_status',
+  'frozen_report/core/assessment/governance_mode','frozen_report/core/assessment/language',
+  'frozen_report/core/assessment/validation_status','frozen_report/core/competencies',
+  'frozen_report/core/competencies/*/answered_item_count','frozen_report/core/competencies/*/behaviour',
+  'frozen_report/core/competencies/*/behaviour/en','frozen_report/core/competencies/*/behaviour/sv',
+  'frozen_report/core/competencies/*/competency_code','frozen_report/core/competencies/*/competency_name_en',
+  'frozen_report/core/competencies/*/competency_name_sv','frozen_report/core/competencies/*/competency_version',
+  'frozen_report/core/competencies/*/context_count','frozen_report/core/competencies/*/evidence_basis',
+  'frozen_report/core/competencies/*/evidence_basis/free_text_items',
+  'frozen_report/core/competencies/*/evidence_basis/free_text_reviewed',
+  'frozen_report/core/competencies/*/evidence_basis/scenario_items',
+  'frozen_report/core/competencies/*/evidence_basis/self_description_items',
+  'frozen_report/core/competencies/*/evidence_state','frozen_report/core/competencies/*/evidence_sufficiency',
+  'frozen_report/core/competencies/*/factual_explanation','frozen_report/core/competencies/*/factual_explanation/en',
+  'frozen_report/core/competencies/*/factual_explanation/sv','frozen_report/core/competencies/*/limitation',
+  'frozen_report/core/competencies/*/limitation/code','frozen_report/core/competencies/*/limitation/en',
+  'frozen_report/core/competencies/*/limitation/sv','frozen_report/core/competencies/*/methodological_flags',
+  'frozen_report/core/competencies/*/observed_item_count','frozen_report/core/competencies/*/observed_pattern',
+  'frozen_report/core/competencies/*/review_status','frozen_report/core/competencies/*/self_description_domain_keys',
+  'frozen_report/core/competencies/*/source_types','frozen_report/core/core_version','frozen_report/core/coverage',
+  'frozen_report/core/coverage/areas_limited','frozen_report/core/coverage/areas_none',
+  'frozen_report/core/coverage/areas_sufficient','frozen_report/core/coverage/composition',
+  'frozen_report/core/coverage/composition/free_text_items',
+  'frozen_report/core/coverage/composition/free_text_reviewed',
+  'frozen_report/core/coverage/composition/scenario_items',
+  'frozen_report/core/coverage/composition/self_description_items','frozen_report/core/coverage/evidence_contexts',
+  'frozen_report/core/coverage/modules','frozen_report/core/coverage/modules/*/answered',
+  'frozen_report/core/coverage/modules/*/asks','frozen_report/core/coverage/modules/*/block_key',
+  'frozen_report/core/coverage/modules/*/items','frozen_report/core/coverage/modules/*/name_en',
+  'frozen_report/core/coverage/modules/*/name_sv','frozen_report/core/coverage/observed_items',
+  'frozen_report/core/coverage/self_report_items','frozen_report/core/definitions',
+  'frozen_report/core/definitions/evidence_sufficiency','frozen_report/core/definitions/evidence_sufficiency/en',
+  'frozen_report/core/definitions/evidence_sufficiency/minimum_observed_items',
+  'frozen_report/core/definitions/evidence_sufficiency/rule_version',
+  'frozen_report/core/definitions/evidence_sufficiency/sv','frozen_report/core/human_review',
+  'frozen_report/core/human_review/completed','frozen_report/core/human_review/free_text',
+  'frozen_report/core/human_review/free_text/items','frozen_report/core/human_review/free_text/reviewed',
+  'frozen_report/core/human_review/meaning','frozen_report/core/human_review/meaning/en',
+  'frozen_report/core/human_review/meaning/sv','frozen_report/core/human_review/required',
+  'frozen_report/core/human_review/reviews_completed','frozen_report/core/human_review/reviews_total',
+  'frozen_report/core/limitations','frozen_report/core/limitations/items',
+  'frozen_report/core/limitations/items/*/code','frozen_report/core/limitations/items/*/statement',
+  'frozen_report/core/limitations/items/*/statement/en','frozen_report/core/limitations/items/*/statement/sv',
+  'frozen_report/core/limitations/standing_statement','frozen_report/core/limitations/standing_statement/en',
+  'frozen_report/core/limitations/standing_statement/sv','frozen_report/core/provenance',
+  'frozen_report/core/provenance/brief_version','frozen_report/core/provenance/calculated_at',
+  'frozen_report/core/provenance/computation_chain','frozen_report/core/provenance/evidence_basis_available',
+  'frozen_report/core/provenance/evidence_scope_version','frozen_report/core/provenance/evidence_state_version',
+  'frozen_report/core/provenance/released_at','frozen_report/core/provenance/report_id',
+  'frozen_report/core/provenance/report_template','frozen_report/core/provenance/report_template/report_key',
+  'frozen_report/core/provenance/report_template/version','frozen_report/core/provenance/rubric_versions',
+  'frozen_report/core/provenance/scoring_model_version','frozen_report/core/provenance/signal_version',
+  'frozen_report/core/provenance/threshold_version','frozen_report/core/provenance/traceability_available',
+  'frozen_report/core/self_reported_patterns','frozen_report/core/self_reported_patterns/*/competency_code',
+  'frozen_report/core/self_reported_patterns/*/consistency','frozen_report/core/self_reported_patterns/*/domain_en',
+  'frozen_report/core/self_reported_patterns/*/domain_key','frozen_report/core/self_reported_patterns/*/domain_sv',
+  'frozen_report/core/self_reported_patterns/*/evidence_type',
+  'frozen_report/core/self_reported_patterns/*/factual_explanation',
+  'frozen_report/core/self_reported_patterns/*/factual_explanation/en',
+  'frozen_report/core/self_reported_patterns/*/factual_explanation/sv',
+  'frozen_report/core/self_reported_patterns/*/interpretation',
+  'frozen_report/core/self_reported_patterns/*/item_count','frozen_report/core/self_reported_patterns/*/pattern',
+  'frozen_report/core/timestamps','frozen_report/core/timestamps/calculated_at',
+  'frozen_report/core/timestamps/released_at','frozen_report/core/timestamps/scored_at',
+  'frozen_report/core/timestamps/started_at','frozen_report/core/timestamps/submitted_at','frozen_report/employer',
+  'frozen_report/employer/areas','frozen_report/employer/areas/*/clearest_support_eligible',
+  'frozen_report/employer/areas/*/competency_code','frozen_report/employer/areas/*/follow_up_priority',
+  'frozen_report/employer/areas/*/interview_prompt','frozen_report/employer/areas/*/interview_prompt/en',
+  'frozen_report/employer/areas/*/interview_prompt/sv','frozen_report/employer/areas/*/safety_critical',
+  'frozen_report/employer/areas/*/safety_critical/items','frozen_report/employer/areas/*/safety_critical/reviewed',
+  'frozen_report/employer/areas/*/safety_critical_follow_up','frozen_report/employer/areas/*/traceability',
+  'frozen_report/employer/areas/*/traceability/available','frozen_report/employer/areas/*/trust_followup_codes',
+  'frozen_report/employer/areas/*/verify_reasons','frozen_report/employer/context',
+  'frozen_report/employer/context/attempt_id','frozen_report/employer/context/organisation_name',
+  'frozen_report/employer/context/participant_ref','frozen_report/employer/context/person_context',
+  'frozen_report/employer/context/purpose_code','frozen_report/employer/context/standing_limitation',
+  'frozen_report/employer/context/standing_limitation/en','frozen_report/employer/context/standing_limitation/sv',
+  'frozen_report/employer/context/subject_id','frozen_report/employer/overview',
+  'frozen_report/employer/overview/clearest_support',
+  'frozen_report/employer/overview/clearest_support/*/competency_code',
+  'frozen_report/employer/overview/clearest_support/*/competency_name_en',
+  'frozen_report/employer/overview/clearest_support/*/competency_name_sv',
+  'frozen_report/employer/overview/clearest_support/*/evidence_sufficiency',
+  'frozen_report/employer/overview/clearest_support/*/follow_up_priority',
+  'frozen_report/employer/overview/clearest_support/*/line',
+  'frozen_report/employer/overview/clearest_support/*/line/en',
+  'frozen_report/employer/overview/clearest_support/*/line/sv',
+  'frozen_report/employer/overview/clearest_support/*/observed_item_count',
+  'frozen_report/employer/overview/clearest_support/*/observed_pattern',
+  'frozen_report/employer/overview/clearest_support/*/safety_critical_follow_up',
+  'frozen_report/employer/overview/clearest_support/*/verify_reasons',
+  'frozen_report/employer/overview/limited_evidence',
+  'frozen_report/employer/overview/limited_evidence/*/competency_code',
+  'frozen_report/employer/overview/limited_evidence/*/competency_name_en',
+  'frozen_report/employer/overview/limited_evidence/*/competency_name_sv',
+  'frozen_report/employer/overview/limited_evidence/*/evidence_sufficiency',
+  'frozen_report/employer/overview/limited_evidence/*/follow_up_priority',
+  'frozen_report/employer/overview/limited_evidence/*/line',
+  'frozen_report/employer/overview/limited_evidence/*/line/en',
+  'frozen_report/employer/overview/limited_evidence/*/line/sv',
+  'frozen_report/employer/overview/limited_evidence/*/observed_item_count',
+  'frozen_report/employer/overview/limited_evidence/*/observed_pattern',
+  'frozen_report/employer/overview/limited_evidence/*/safety_critical_follow_up',
+  'frozen_report/employer/overview/limited_evidence/*/verify_reasons',
+  'frozen_report/employer/overview/verify_in_interview',
+  'frozen_report/employer/overview/verify_in_interview/*/competency_code',
+  'frozen_report/employer/overview/verify_in_interview/*/competency_name_en',
+  'frozen_report/employer/overview/verify_in_interview/*/competency_name_sv',
+  'frozen_report/employer/overview/verify_in_interview/*/evidence_sufficiency',
+  'frozen_report/employer/overview/verify_in_interview/*/follow_up_priority',
+  'frozen_report/employer/overview/verify_in_interview/*/line',
+  'frozen_report/employer/overview/verify_in_interview/*/line/en',
+  'frozen_report/employer/overview/verify_in_interview/*/line/sv',
+  'frozen_report/employer/overview/verify_in_interview/*/observed_item_count',
+  'frozen_report/employer/overview/verify_in_interview/*/observed_pattern',
+  'frozen_report/employer/overview/verify_in_interview/*/safety_critical_follow_up',
+  'frozen_report/employer/overview/verify_in_interview/*/verify_reasons','frozen_report/employer/primary_next_step',
+  'frozen_report/employer/primary_next_step/interview_handoff',
+  'frozen_report/employer/primary_next_step/interview_handoff/attempt_id',
+  'frozen_report/employer/primary_next_step/interview_handoff/focus_area_codes',
+  'frozen_report/employer/primary_next_step/reason','frozen_report/employer/primary_next_step/reason/en',
+  'frozen_report/employer/primary_next_step/reason/sv','frozen_report/employer/primary_next_step/reason_code',
+  'frozen_report/employer/primary_next_step/rule_version','frozen_report/employer/primary_next_step/step',
+  'frozen_report/employer/safety_followup','frozen_report/employer/safety_followup/areas_flagged_for_follow_up',
+  'frozen_report/employer/safety_followup/finding_count','frozen_report/employer/safety_followup/findings',
+  'frozen_report/employer/safety_followup/findings/*/finding',
+  'frozen_report/employer/safety_followup/findings/*/observed_at',
+  'frozen_report/employer/safety_followup/findings/*/severity','frozen_report/employer/safety_followup/present',
+  'frozen_report/employer/safety_followup/safety_critical',
+  'frozen_report/employer/safety_followup/safety_critical/items',
+  'frozen_report/employer/safety_followup/safety_critical/reviewed','frozen_report/employer/safety_followup/source',
+  'frozen_report/employer/safety_followup/statement','frozen_report/employer/safety_followup/statement/en',
+  'frozen_report/employer/safety_followup/statement/sv','frozen_report/employer/trust_followups',
+  'frozen_report/employer/trust_followups/*/area_en','frozen_report/employer/trust_followups/*/area_sv',
+  'frozen_report/employer/trust_followups/*/competency_code','frozen_report/employer/trust_followups/*/evidence_type',
+  'frozen_report/employer/trust_followups/*/focus','frozen_report/employer/trust_followups/*/followup',
+  'frozen_report/employer/trust_followups/*/followup/en','frozen_report/employer/trust_followups/*/followup/sv',
+  'frozen_report/employer/trust_followups/*/listen_for','frozen_report/employer/trust_followups/*/listen_for/en',
+  'frozen_report/employer/trust_followups/*/listen_for/sv','frozen_report/employer/trust_followups/*/priority',
+  'frozen_report/employer/trust_followups/*/question','frozen_report/employer/trust_followups/*/question/en',
+  'frozen_report/employer/trust_followups/*/question/sv',
+  'frozen_report/employer/trust_followups/*/trust_question_version','frozen_report/employer/trust_followups/*/why',
+  'frozen_report/employer/trust_followups/*/why/en','frozen_report/employer/trust_followups/*/why/sv',
+  'frozen_report/employer/trust_plan','frozen_report/employer/trust_plan/area_limit',
+  'frozen_report/employer/trust_plan/heading','frozen_report/employer/trust_plan/heading/en',
+  'frozen_report/employer/trust_plan/heading/sv','frozen_report/employer/trust_plan/priorities',
+  'frozen_report/employer/trust_plan/priorities/*/competency_code',
+  'frozen_report/employer/trust_plan/priorities/*/order','frozen_report/employer/trust_plan/priorities/*/ready',
+  'frozen_report/employer/trust_plan/priorities/*/ready/evidence_sufficiency',
+  'frozen_report/employer/trust_plan/priorities/*/ready/existing_evidence',
+  'frozen_report/employer/trust_plan/priorities/*/ready/existing_evidence/en',
+  'frozen_report/employer/trust_plan/priorities/*/ready/existing_evidence/sv',
+  'frozen_report/employer/trust_plan/priorities/*/ready/limitation',
+  'frozen_report/employer/trust_plan/priorities/*/ready/limitation/code',
+  'frozen_report/employer/trust_plan/priorities/*/ready/limitation/en',
+  'frozen_report/employer/trust_plan/priorities/*/ready/limitation/sv',
+  'frozen_report/employer/trust_plan/priorities/*/ready/observed_item_count',
+  'frozen_report/employer/trust_plan/priorities/*/ready/observed_pattern',
+  'frozen_report/employer/trust_plan/priorities/*/structure',
+  'frozen_report/employer/trust_plan/priorities/*/structure/followup',
+  'frozen_report/employer/trust_plan/priorities/*/structure/followup/en',
+  'frozen_report/employer/trust_plan/priorities/*/structure/followup/sv',
+  'frozen_report/employer/trust_plan/priorities/*/structure/steps',
+  'frozen_report/employer/trust_plan/priorities/*/structure/steps/*/en',
+  'frozen_report/employer/trust_plan/priorities/*/structure/steps/*/key',
+  'frozen_report/employer/trust_plan/priorities/*/structure/steps/*/sv',
+  'frozen_report/employer/trust_plan/priorities/*/target',
+  'frozen_report/employer/trust_plan/priorities/*/target/area_en',
+  'frozen_report/employer/trust_plan/priorities/*/target/area_sv',
+  'frozen_report/employer/trust_plan/priorities/*/target/competency_code',
+  'frozen_report/employer/trust_plan/priorities/*/target/evidence_type',
+  'frozen_report/employer/trust_plan/priorities/*/target/focus','frozen_report/employer/trust_plan/priorities/*/tell',
+  'frozen_report/employer/trust_plan/priorities/*/tell/document',
+  'frozen_report/employer/trust_plan/priorities/*/tell/document/en',
+  'frozen_report/employer/trust_plan/priorities/*/tell/document/sv',
+  'frozen_report/employer/trust_plan/priorities/*/tell/listen_for',
+  'frozen_report/employer/trust_plan/priorities/*/tell/listen_for/en',
+  'frozen_report/employer/trust_plan/priorities/*/tell/listen_for/sv',
+  'frozen_report/employer/trust_plan/priorities/*/understand',
+  'frozen_report/employer/trust_plan/priorities/*/understand/question',
+  'frozen_report/employer/trust_plan/priorities/*/understand/question/en',
+  'frozen_report/employer/trust_plan/priorities/*/understand/question/sv',
+  'frozen_report/employer/trust_plan/question_count','frozen_report/employer/trust_plan/question_limit',
+  'frozen_report/employer/trust_plan/subheading','frozen_report/employer/trust_plan/subheading/en',
+  'frozen_report/employer/trust_plan/subheading/sv','report_id','schema_version','template_overlay',
+  'template_overlay/as_of','template_overlay/limitations','template_overlay/limitations/en',
+  'template_overlay/limitations/sv','template_overlay/report_template','template_overlay/report_template/report_key',
+  'template_overlay/report_template/version','template_overlay/source'
+]) AS p;
 -- ALLOWLIST END
 
 SELECT pg_temp.ok(
-  NOT EXISTS (SELECT 1 FROM v3, pg_temp.all_keys(d) k WHERE k NOT IN (SELECT k FROM allowlist))
-  AND NOT EXISTS (SELECT 1 FROM v3_t1, pg_temp.all_keys(d) k WHERE k NOT IN (SELECT k FROM allowlist)),
-  'V8.1 TEST 8: every key at every depth of the employer document is on the locked allowlist');
+  NOT EXISTS (SELECT 1 FROM v3, pg_temp.all_paths(d) p WHERE p NOT IN (SELECT p FROM allowlist))
+  AND NOT EXISTS (SELECT 1 FROM v3_t1, pg_temp.all_paths(d) p WHERE p NOT IN (SELECT p FROM allowlist)),
+  'V8.1 TEST 8 / E: every key path at every depth of the employer document is on the locked path allowlist');
+
+-- Exact placement of the protected fields: allowed at these paths and nowhere else.
+CREATE TEMP TABLE protected AS SELECT * FROM (VALUES
+  ('subject_id',              ARRAY['frozen_report/employer/context/subject_id']),
+  ('attempt_id',              ARRAY['frozen_report/employer/context/attempt_id','frozen_report/employer/primary_next_step/interview_handoff/attempt_id']),
+  ('participant_ref',         ARRAY['frozen_report/employer/context/participant_ref']),
+  ('person_context',          ARRAY['frozen_report/employer/context/person_context']),
+  ('organisation_name',       ARRAY['frozen_report/employer/context/organisation_name']),
+  ('finding',                 ARRAY['frozen_report/employer/safety_followup/findings/*/finding']),
+  ('severity',                ARRAY['frozen_report/employer/safety_followup/findings/*/severity']),
+  ('findings',                ARRAY['frozen_report/employer/safety_followup/findings']),
+  ('safety_critical',         ARRAY['frozen_report/employer/safety_followup/safety_critical','frozen_report/employer/areas/*/safety_critical']),
+  ('note',                    ARRAY['addenda_overlay/items/*/note']),
+  ('author_display_name',     ARRAY['addenda_overlay/items/*/author_display_name']),
+  ('human_review',            ARRAY['frozen_report/core/human_review']),
+  ('trust_plan',              ARRAY['frozen_report/employer/trust_plan']),
+  ('primary_next_step',       ARRAY['frozen_report/employer/primary_next_step']),
+  ('step',                    ARRAY['frozen_report/employer/primary_next_step/step']),
+  ('question',                ARRAY['frozen_report/employer/trust_followups/*/question','frozen_report/employer/trust_plan/priorities/*/understand/question']),
+  ('follow_up_priority',      ARRAY['frozen_report/employer/areas/*/follow_up_priority','frozen_report/employer/overview/clearest_support/*/follow_up_priority',
+                                    'frozen_report/employer/overview/verify_in_interview/*/follow_up_priority','frozen_report/employer/overview/limited_evidence/*/follow_up_priority']),
+  ('observed_pattern',        ARRAY['frozen_report/core/competencies/*/observed_pattern','frozen_report/employer/overview/clearest_support/*/observed_pattern',
+                                    'frozen_report/employer/overview/verify_in_interview/*/observed_pattern','frozen_report/employer/overview/limited_evidence/*/observed_pattern',
+                                    'frozen_report/employer/trust_plan/priorities/*/ready/observed_pattern']),
+  ('evidence_sufficiency',    ARRAY['frozen_report/core/competencies/*/evidence_sufficiency','frozen_report/core/definitions/evidence_sufficiency',
+                                    'frozen_report/employer/overview/clearest_support/*/evidence_sufficiency','frozen_report/employer/overview/verify_in_interview/*/evidence_sufficiency',
+                                    'frozen_report/employer/overview/limited_evidence/*/evidence_sufficiency','frozen_report/employer/trust_plan/priorities/*/ready/evidence_sufficiency']),
+  ('limitations',             ARRAY['frozen_report/core/limitations','template_overlay/limitations']),
+  ('report_id',               ARRAY['report_id','frozen_report/core/provenance/report_id'])
+) AS x(k, paths);
+
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM v3, pg_temp.all_paths(d) p, protected pr
+     WHERE (p = pr.k OR p LIKE '%/' || pr.k) AND NOT (p = ANY (pr.paths)))
+  AND (SELECT count(*) FROM protected) >= 20,
+  'V8.1b TEST E / F: every protected field appears only at its approved path -- subject and attempt ids, participant reference, person context, organisation, findings, notes, author display name, human review, plan, next step, the two dimensions');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM v3, pg_temp.all_keys(d) k WHERE k IN ('coverage_status','template_limitations','safety_findings_present')),
+  'V8.1c TEST H: coverage_status is internal only and appears nowhere; template lines and safety flags are not in the shared core');
 
 SELECT pg_temp.ok(
   NOT EXISTS (
@@ -798,6 +1032,7 @@ SELECT pg_temp.ok(
                  'potential_score','personality','radar','traffic_light')),
   'V8.2 TEST 8: no author id, no e-mail, no manifest field, no answer key, no rationale, no review workflow field, no forbidden key');
 
+
 SELECT pg_temp.ok(
   (SELECT bool_and(lower(d::text) NOT SIMILAR TO
      '%("mean"|"spread"|derivation_input|behaviour_version_id|manifest_id|canonical_sha256|score_value|reviewer_rationale|option_key|is_preferred|rubric_level|derivation_basis|weighted_sum|denominator|maturity_level|@trust-r3a.test)%'
@@ -807,9 +1042,9 @@ SELECT pg_temp.ok(
   'V8.3 no mean, spread, derivation input, behaviour id, manifest id, hash, option key, rubric level, rationale, free-text body, e-mail or author id anywhere in the text');
 
 SELECT pg_temp.ok(
-  (SELECT bool_and(lower((d #- '{frozen_report,employer,context,template_limitations}')::text) NOT SIMILAR TO
+  (SELECT bool_and(lower((d - 'template_overlay')::text) NOT SIMILAR TO
      '%(bör anställas|rekommenderar anställning|rekommenderas för anställning|olämplig|lämplig för tjänsten|rangordn|percentil|totalpoäng|sammanlagd poäng|slutpoäng|riskpoäng|riskprofil|personlighet|matchprocent|normgrupp|spindeldiagram|radardiagram|svag kompetens|svagt område|låg poäng|förutsäger|topp 3|topp 5)%'
-     AND lower((d #- '{frozen_report,employer,context,template_limitations}')::text) NOT SIMILAR TO
+     AND lower((d - 'template_overlay')::text) NOT SIMILAR TO
      '%(should be hired|recommend hiring|recommended for hire|unsuitable|suitable for the role|ranked|ranking|percentile|total score|overall score|final score|weighted score|risk score|risk profile|personality|match percentage|job fit|fit score|norm group|top candidate|top 3|top 5|radar chart|spider chart|weak competency|weak area|low score|predicts|bias-free|unbiased|pass/fail|traffic light)%')
      FROM v3),
   'V8.4 no forbidden claim, in either language, anywhere in the document outside the template''s own denials');
@@ -817,8 +1052,8 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT bool_and(
      (SELECT bool_and(lower(l) NOT SIMILAR TO '%(rangordn|rank)%' OR lower(l) SIMILAR TO '%(inte|ingen|not |no )%')
-        FROM jsonb_array_elements_text((d -> 'frozen_report' -> 'employer' -> 'context' -> 'template_limitations' -> 'sv')
-                                       || (d -> 'frozen_report' -> 'employer' -> 'context' -> 'template_limitations' -> 'en')) l))
+        FROM jsonb_array_elements_text((d -> 'template_overlay' -> 'limitations' -> 'sv')
+                                       || (d -> 'template_overlay' -> 'limitations' -> 'en')) l))
      FROM v3),
   'V8.4b and where a template line names a ranking it does so only to deny one');
 
@@ -911,15 +1146,26 @@ SELECT pg_temp.ok(
   'V9.2 two addenda, newest first, each with status, note, timestamp and a display name only -- no user id, no e-mail');
 
 SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM v3_after, pg_temp.all_paths(d) p WHERE p NOT IN (SELECT p FROM allowlist))
+  AND NOT EXISTS (SELECT 1 FROM v3_after, pg_temp.all_paths(d) p, protected pr
+                   WHERE (p = pr.k OR p LIKE '%/' || pr.k) AND NOT (p = ANY (pr.paths)))
+  AND (SELECT array_agg(p ORDER BY p) FROM v3_after, pg_temp.all_paths(d) p WHERE p LIKE '%author_display_name')
+      = ARRAY['addenda_overlay/items/*/author_display_name']
+  AND NOT EXISTS (SELECT 1 FROM v3_after, pg_temp.all_keys(d) k
+                   WHERE k IN ('user_id','email','recorded_by','membership_id','auth_id','identity')),
+  'V9.2b TEST F: with addenda present every path is still allowlisted, author_display_name exists only in the employer addenda overlay, and no author uuid, e-mail, membership id or authentication identity appears anywhere');
+
+SELECT pg_temp.ok(
   (SELECT a.d -> 'frozen_report' = b.d -> 'frozen_report'
       AND (a.d -> 'frozen_report')::text = (b.d -> 'frozen_report')::text
       AND a.d ->> 'report_id' = b.d ->> 'report_id'
       AND a.d -> 'frozen_report' -> 'core' -> 'provenance' = b.d -> 'frozen_report' -> 'core' -> 'provenance'
       AND a.d -> 'addenda_overlay' <> b.d -> 'addenda_overlay'
-      AND (a.d -> 'addenda_overlay' ->> 'as_of')::timestamptz >= (b.d -> 'addenda_overlay' ->> 'as_of')::timestamptz
+      AND (a.d -> 'addenda_overlay' ->> 'as_of')::timestamptz > (b.d -> 'addenda_overlay' ->> 'as_of')::timestamptz
+      AND ((a.d -> 'template_overlay') - 'as_of') = ((b.d -> 'template_overlay') - 'as_of')
      FROM v3_after a, (SELECT d FROM v3 WHERE persona = 'P1') b)
   AND (SELECT a.d = b.d FROM emp_after a, (SELECT d FROM emp WHERE persona = 'P1') b),
-  'V9.3 TEST 6: after the addenda, frozen_report is byte-identical, report_id and provenance unchanged, only the overlay differs, and the frozen employer document is untouched');
+  'V9.3 TEST 6 / G: after the addenda, frozen_report is byte-identical, report_id and provenance unchanged, only the addenda overlay and its as_of differ, and the frozen employer document is untouched');
 
 SELECT pg_temp.ok(
   (SELECT pg_temp.comp(d, 'SCC-08') ->> 'observed_pattern' = 'not_established'
@@ -982,10 +1228,10 @@ RESET ROLE; RESET request.jwt.claim.sub;
 
 SELECT pg_temp.ok(
   (SELECT d IS NOT NULL AND jsonb_array_length(d -> 'frozen_report' -> 'core' -> 'competencies') = 8
-      AND d -> 'frozen_report' -> 'employer' -> 'context' -> 'template_limitations' -> 'sv' = '[]'::jsonb
+      AND d -> 'template_overlay' -> 'limitations' -> 'sv' = '[]'::jsonb
       AND jsonb_array_length(d -> 'frozen_report' -> 'core' -> 'limitations' -> 'items') >= 6
      FROM v3_hist WHERE persona = 'P3'),
-  'V10.3 an orphaned historical report still renders fully; only the template lines are empty');
+  'V10.3 an orphaned historical report still renders fully; only the live template overlay is empty');
 
 SELECT pg_temp.ok(
   (SELECT d IS NOT NULL
@@ -1015,7 +1261,7 @@ SELECT pg_temp.ok(
      FROM v3_hist h JOIN v3 v ON v.persona = h.persona WHERE h.persona = 'P2'),
   'V10.5 legacy provenance changes only the structural facts that were never frozen; every conclusion, pattern, sufficiency and follow-up is the same');
 
-DO $$ BEGIN RAISE NOTICE 'GROUP V11 — version lock: catalogue changes after release cannot alter the report'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP V11 — immutability: nothing after release can alter frozen_report'; END $$;
 
 -- The frozen report of P1, byte for byte, before any catalogue change (the
 -- context-count edit above is part of that snapshot now).
@@ -1070,21 +1316,22 @@ SELECT pg_temp.ok(
   'V11.2 TEST 4: after the rubric editions are retired, the provenance still names edition 1 and is unchanged');
 
 SELECT pg_temp.ok(
-  (SELECT ((l.d -> 'frozen_report' -> 'employer') - 'context')::text = ((b.d -> 'frozen_report' -> 'employer') - 'context')::text
-      AND ((l.d -> 'frozen_report' -> 'employer' -> 'context') - 'template_limitations')
-        = ((b.d -> 'frozen_report' -> 'employer' -> 'context') - 'template_limitations')
-      AND (l.d -> 'frozen_report' -> 'employer' -> 'trust_followups')::text NOT LIKE '%[ändrad]%'
-      AND (l.d -> 'frozen_report' -> 'employer' -> 'areas')::text NOT LIKE '%[ändrad]%'
-     FROM v3_locked l, v3_ctx b),
-  'V11.3 TEST C: after the catalogue order, the follow-up prompts and the guide questions change, the employer projection is byte-identical outside the template lines');
+  (SELECT (l.d -> 'frozen_report')::text = f.t
+      AND (l.d -> 'frozen_report')::text = (b.d -> 'frozen_report')::text
+      AND l.d ->> 'report_id' = f.rid
+      AND (l.d -> 'frozen_report')::text NOT LIKE '%[ändrad]%'
+      AND (l.d -> 'frozen_report')::text NOT LIKE '%Ny begränsning%'
+     FROM v3_locked l, v3_ctx b, frozen_before f),
+  'V11.3 TEST A: after the template text, the catalogue order, the follow-up prompts, the guide questions, the competency versions and the rubric editions all change, the ENTIRE frozen_report is byte-identical and report_id is unchanged');
 
--- The template lines are the one thing that follows the live template row,
--- and they do so through the R2A audience contract, not through this
--- projection. Stated, not hidden.
+-- The template lines follow the live template row through the R2A audience
+-- contract; they live in the live template overlay, outside frozen_report.
 SELECT pg_temp.ok(
-  (SELECT l.d -> 'frozen_report' -> 'employer' -> 'context' -> 'template_limitations' -> 'sv' ? 'Ny begränsning.'
-     FROM v3_locked l),
-  'V11.4 the template limitation lines are the audience contract''s live template text, carried outside the frozen core');
+  (SELECT l.d -> 'template_overlay' -> 'limitations' -> 'sv' ? 'Ny begränsning.'
+      AND NOT (b.d -> 'template_overlay' -> 'limitations' -> 'sv' ? 'Ny begränsning.')
+      AND l.d -> 'template_overlay' ->> 'source' = 'scp_report_versions'
+     FROM v3_locked l, v3_ctx b),
+  'V11.4 the changed template line reaches only the live template overlay, which names its source');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP V12 — human reviewed means the mandatory reviews were completed'; END $$;
 
@@ -1094,34 +1341,46 @@ SELECT pg_temp.ok(
     AND d -> 'frozen_report' -> 'core' -> 'human_review' -> 'meaning' ->> 'sv' LIKE 'Mänskligt granskat betyder att de obligatoriska%'
     AND lower(d -> 'frozen_report' -> 'core' -> 'human_review' -> 'meaning' ->> 'sv') LIKE '%inte%'
     AND lower(d -> 'frozen_report' -> 'core' -> 'human_review' -> 'meaning' ->> 'en') LIKE '%does not mean%'
-    AND replace(lower((d #- '{frozen_report,core,human_review,meaning}'
-                 #- '{frozen_report,core,limitations}'
-                 #- '{frozen_report,employer,context,standing_limitation}'
-                 #- '{frozen_report,employer,context,template_limitations}')::text), 'unvalidated_content', '')
+    AND replace(lower((((((d #- '{frozen_report,core,human_review,meaning}'::text[])
+                 #- '{frozen_report,core,limitations}'::text[])
+                 #- '{frozen_report,employer,context,standing_limitation}'::text[])
+                 #- '{frozen_report,core,definitions}'::text[])
+                 - 'template_overlay'::text)::text), 'unvalidated_content', '')
         NOT SIMILAR TO '%(godkän|validerad|lämplig|approved|validated|endorse|suitab|verified by|scientific)%')
      FROM v3),
   'V12.1 TEST 7: human_review.completed is true, its meaning is stated as a denial, and no other line reads as approved, validated, suitable or endorsed');
 
-DO $$ BEGIN RAISE NOTICE 'GROUP V13 — the shared core carries nothing employer-only'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP V13 — the participant-safe shared core, path-aware'; END $$;
 
+-- TEST D: every key at every depth of the core, checked by name against the
+-- employer-only, safety, identity and internal vocabularies.
 SELECT pg_temp.ok(
   NOT EXISTS (
-    SELECT 1 FROM v3, pg_temp.all_keys(d -> 'frozen_report' -> 'core') k
-     WHERE k IN ('attempt_id','subject_id','participant_ref','organisation_name','purpose_code','primary_next_step','step','reason_code',
-                 'follow_up_priority','safety_followup','findings','severity','finding','observed_at','interview_prompt','trust_followups',
-                 'trust_plan','question','listen_for','addenda_overlay','author_display_name','note','recorded_at','clearest_support',
-                 'verify_in_interview','limited_evidence','interview_handoff','template_limitations','standing_limitation'))
-  AND NOT EXISTS (SELECT 1 FROM v3 WHERE (d -> 'frozen_report' -> 'core')::text LIKE '%fd300000-0000-0000-0000-00000000000%'),
-  'V13.1 the core names no process step, priority, safety detail, interview material, addendum, author, organisation, attempt or subject');
+    SELECT 1 FROM v3, pg_temp.all_paths(d -> 'frozen_report' -> 'core') p
+     WHERE regexp_replace(p, '^.*/', '') IN (
+       'attempt_id','subject_id','participant_ref','organisation_name','purpose_code','primary_next_step','step','reason_code',
+       'follow_up_priority','safety_followup','safety_findings_present','safety_critical','safety_critical_items','safety_critical_reviewed',
+       'safety_critical_follow_up','findings','finding','severity','observed_at','interview_prompt','trust_followups','trust_plan',
+       'question','followup','listen_for','addenda_overlay','author_display_name','note','recorded_at','clearest_support',
+       'verify_in_interview','limited_evidence','verify_reasons','clearest_support_eligible','interview_handoff','template_limitations',
+       'standing_limitation','template_overlay','selected_option_key','contribution','confidence','reviewer_rationale','rationale',
+       'email','user_id','recorded_by','manifest_id','canonical_sha256','score_value','rubric_levels','derivation_input','mean','spread'))
+  AND NOT EXISTS (SELECT 1 FROM v3 WHERE (d -> 'frozen_report' -> 'core')::text LIKE '%fd300000-0000-0000-0000-00000000000%')
+  AND NOT EXISTS (SELECT 1 FROM v3 WHERE lower((d -> 'frozen_report' -> 'core')::text) LIKE '%trust bevakning%'),
+  'V13.1 TEST D: the shared core holds no safety finding, flag or safety-review detail, no process step, priority or interview material, no addendum or author, no organisation, subject, attempt or participant reference, no answer key, rationale or scoring input');
 
 SELECT pg_temp.ok(
   (SELECT bool_and(
      (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'frozen_report' -> 'core' -> 'human_review') k)
-       = ARRAY['completed','free_text','meaning','required','reviews_completed','reviews_total','safety_critical','safety_findings_present']
+       = ARRAY['completed','free_text','meaning','required','reviews_completed','reviews_total']
      AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'frozen_report' -> 'core' -> 'provenance') k)
        = ARRAY['brief_version','calculated_at','computation_chain','evidence_basis_available','evidence_scope_version','evidence_state_version',
-               'released_at','report_id','report_template','rubric_versions','scoring_model_version','signal_version','threshold_version','traceability_available'])
+               'released_at','report_id','report_template','rubric_versions','scoring_model_version','signal_version','threshold_version','traceability_available']
+     AND (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(d -> 'frozen_report' -> 'core' -> 'definitions' -> 'evidence_sufficiency') k)
+       = ARRAY['en','minimum_observed_items','rule_version','sv']
+     AND lower(d -> 'frozen_report' -> 'core' -> 'definitions' -> 'evidence_sufficiency' ->> 'sv') LIKE '%inte%'
+     AND lower(d -> 'frozen_report' -> 'core' -> 'definitions' -> 'evidence_sufficiency' ->> 'en') LIKE '%does not mean%')
      FROM v3),
-  'V13.2 the core''s human-review and provenance blocks are exactly the locked fields');
+  'V13.2 the core''s human-review, provenance and sufficiency-definition blocks are exactly the locked fields, and sufficient is defined as shadow-pilot coverage under the governed rule, never validation, competence, prediction or a trait');
 
 ROLLBACK;

@@ -135,8 +135,11 @@ changed against the shape above, each recorded in
    them (`observed_follow_up` added for `developing`); `limited` and
    `follow_up` are not pattern values. The ras-v1 `limited` signal is
    `not_established` + `limited`.
-2. **Frozen report / live overlay.** The document is `{ schema_version,
-   report_id, frozen_report { core, employer }, addenda_overlay }`. The core
+2. **Frozen report / live overlays.** The document is `{ schema_version,
+   report_id, frozen_report { core, employer }, template_overlay,
+   addenda_overlay }`. `frozen_report` is immutable and `report_id` and
+   provenance describe all of it; the template's limitation lines (a live
+   row) and the addenda are overlays with their own `as_of`. The core
    (`trust-evidence-core/v1`) is the shared, audience-neutral frozen core; the
    employer projection adds context, `primary_next_step` (the one rds-v1
    rule, `scp_report_next_step`, proven identical to the TypeScript rule),
@@ -152,9 +155,19 @@ changed against the shape above, each recorded in
 4. **Minimisation.** `context_count` is the competency's own frozen count or
    null, never the report's; `review_status` is `not_required | pending |
    completed` (the reviewer's outcome is internal; a changed reading surfaces
-   only as the governed reason `human_review_adjusted`); addenda carry
-   `author_display_name` only; `released_by_role`, `planned_item_count` and
-   `response_pattern` are gone.
+   only as the governed reason `human_review_adjusted`); every safety
+   finding, flag and safety-critical count lives in the employer projection
+   and never in the core; `coverage_status` is internal only; addenda carry
+   `author_display_name` only, in the employer addenda overlay only (Product
+   Owner decision); `released_by_role`, `planned_item_count`,
+   `response_pattern` and `safety_findings_present` are gone. The employer
+   contract is a path allowlist with exact placements for the protected
+   fields (guards H15–H17).
+5. **The two axes are independent.** A visible `observed_pattern` may coexist
+   with `limited` evidence; limited evidence bars clearest support and a
+   consistent state. `sufficient` is defined in the document as shadow-pilot
+   coverage under the governed rule, never validation, competence, prediction
+   or a trait.
 
 ## Decision 3 — private computation manifest (PR-R1, not created here)
 

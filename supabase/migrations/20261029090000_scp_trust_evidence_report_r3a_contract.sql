@@ -28,10 +28,17 @@
 --                   priorities, the TRUST follow-ups and the TRUST Interview
 --                   Plan.
 --       },
---       addenda_overlay: the LIVE post-interview addenda (scp_interview_notes),
---                        with their own as_of. Never part of the frozen
---                        report, its identity or its provenance.
+--       template_overlay: the LIVE limitation lines of the report template
+--                         the release pinned (the R2A audience contract's
+--                         template row), with their own as_of. Live by
+--                         construction, so outside the frozen report.
+--       addenda_overlay:  the LIVE post-interview addenda (scp_interview_notes),
+--                         with their own as_of.
 --     }
+--
+-- frozen_report is IMMUTABLE: every value in it is the release's, and
+-- report_id and provenance describe all of it without exception. The two
+-- overlays are the only things that may move after release.
 --
 -- ── THREE DIMENSIONS, KEPT APART ──────────────────────────────────────────
 --
@@ -43,12 +50,18 @@
 --   follow_up_priority    what the recruiter should DO (employer only):
 --                         first | next | if_time_allows | none
 --
--- Nothing encodes one of these in another. The ras-v1 signal the release
--- froze maps to the first two: n < 3 is `limited` sufficiency and a pattern
--- that is `not_established` (the governed rule computes no pattern under
--- three tasks); n = 0 is `none`. `evidence_state` (ADR Decision 2) is kept
--- as a composite PRESENTATION field derived from the dimensions; it never
--- replaces them.
+-- Nothing encodes one of these in another. The two axes are independent: a
+-- visible pattern may coexist with limited evidence; limited evidence keeps
+-- the pattern from becoming a stable conclusion or clearest support. The
+-- ras-v1 signal the release froze maps to both: strong/consistent/mixed/
+-- developing are patterns; `limited` (the rule's own word for n < 3, which
+-- carries no pattern) is `not_established`; sufficiency follows the count
+-- (0 none, 1-2 limited, 3+ sufficient). `sufficient` means shadow-pilot
+-- evidence coverage under the current governed rule and nothing more: not
+-- psychometric validation, not demonstrated competence, not evidence about
+-- future performance, not a stable trait. `evidence_state` (ADR Decision 2)
+-- is kept as a composite PRESENTATION field derived from the dimensions; it
+-- never replaces them.
 --
 -- ── VERSION-LOCKED: WHAT IS FROZEN AND WHAT IS STRUCTURAL ────────────────
 --
@@ -327,9 +340,10 @@ BEGIN
     SELECT coalesce(jsonb_agg(g ORDER BY (g ->> 'guide_order')::int, g ->> 'focus'), '[]'::jsonb) INTO _guide_for
       FROM jsonb_array_elements(_guide) g WHERE g ->> 'area_code' = _c;
 
-    -- Dimension 1: what the observed responses look like. The governed rule
-    -- computes no pattern under three tasks, so `limited` and no evidence are
-    -- both not_established -- never a stronger pattern than the evidence.
+    -- Dimension 1: what the observed responses look like. The frozen signal
+    -- `limited` is the rule's own word for a basis it computed no pattern
+    -- on, so it and no evidence are both not_established; a pattern the
+    -- rule did state is kept whatever the count -- the count is dimension 2.
     _pattern := CASE _signal
       WHEN 'strong'     THEN 'clearly_consistent'
       WHEN 'consistent' THEN 'consistent'
@@ -436,9 +450,7 @@ BEGIN
       'scenario_items',           _scen_items,
       'free_text_items',          _ft_items,
       'free_text_reviewed',       _ft_reviewed,
-      'self_description_items',   _self_items,
-      'safety_critical_items',    _sc_items,
-      'safety_critical_reviewed', _sc_reviewed) ELSE NULL END;
+      'self_description_items',   _self_items) ELSE NULL END;
 
     -- Why the area belongs in the interview, as governed reasons (employer
     -- only): a human safety finding, a mixed or developing pattern, limited
@@ -469,7 +481,6 @@ BEGIN
       'answered_item_count',  _answered,
       'context_count',        _ctx_n,
       'source_types',         _sources,
-      'coverage_status',      _coverage,
       'review_status',        _review,
       'methodological_flags', _flagsarr,
       'factual_explanation',  jsonb_build_object('sv', _why_sv, 'en', _why_en),
@@ -485,6 +496,7 @@ BEGIN
       'safety_critical_follow_up',  (_state = 'critical_follow_up'),
       'clearest_support_eligible',  _clearest_ok,
       'verify_reasons',             _reasons,
+      'safety_critical',            CASE WHEN _verified THEN jsonb_build_object('items', _sc_items, 'reviewed', _sc_reviewed) ELSE NULL END,
       'interview_prompt',           CASE WHEN _p ? 'followup_sv' THEN jsonb_build_object('sv', _p ->> 'followup_sv', 'en', _p ->> 'followup_en') ELSE NULL END,
       'trust_followup_codes',       (SELECT coalesce(jsonb_agg(g ->> 'focus'), '[]'::jsonb) FROM jsonb_array_elements(_guide_for) g),
       'traceability',               jsonb_build_object('available', _verified));
@@ -675,6 +687,7 @@ BEGIN
     'findings',       _flags,
     'finding_count',  jsonb_array_length(_flags),
     'areas_flagged_for_follow_up', _critical_codes,
+    'safety_critical', CASE WHEN _verified THEN jsonb_build_object('items', _tot_sc_items, 'reviewed', _tot_sc_reviewed) ELSE NULL END,
     'statement', jsonb_build_object(
       'sv', 'Ett säkerhetskritiskt svar har granskats av en person och behöver följas upp i samtal. Det är en uppföljningspunkt, inte en slutsats om personen.',
       'en', 'A safety-critical answer has been reviewed by a person and needs to be followed up in conversation. It is a follow-up point, not a conclusion about the person.'));
@@ -719,9 +732,7 @@ BEGIN
     'reviews_total',     _rt,
     'reviews_completed', _rc,
     'completed',         (_rt = _rc AND NOT _any_pending),
-    'safety_findings_present', _has_finding,
     'free_text',         CASE WHEN _verified THEN jsonb_build_object('items', _tot_ft_items, 'reviewed', _tot_ft_reviewed) ELSE NULL END,
-    'safety_critical',   CASE WHEN _verified THEN jsonb_build_object('items', _tot_sc_items, 'reviewed', _tot_sc_reviewed) ELSE NULL END,
     'meaning', jsonb_build_object(
       'sv', 'Mänskligt granskat betyder att de obligatoriska mänskliga granskningarna inför frisläppning är slutförda. Det betyder inte att svaren är godkända, validerade eller lämpliga, och det är inte ett omdöme från granskaren.',
       'en', 'Human-reviewed means that the mandatory human reviews required for release were completed. It does not mean the answers are approved or validated, it does not say the person is right for the role, and it is not an endorsement by the reviewer.'));
@@ -730,9 +741,7 @@ BEGIN
     'scenario_items',           _tot_scen,
     'self_description_items',   _tot_self,
     'free_text_items',          _tot_ft_items,
-    'free_text_reviewed',       _tot_ft_reviewed,
-    'safety_critical_items',    _tot_sc_items,
-    'safety_critical_reviewed', _tot_sc_reviewed) ELSE NULL END;
+    'free_text_reviewed',       _tot_ft_reviewed) ELSE NULL END;
 
   _prov := jsonb_build_object(
     'report_id',              _d.id,
@@ -753,9 +762,11 @@ BEGIN
 
   -- ── The live addenda overlay: the append-only interview notes ──────────
   -- Composed beside the frozen report, never inside it. Attribution is the
-  -- minimum display field: a display name, never a user id or an e-mail.
+  -- minimum display field (Product Owner decision): a display name, in the
+  -- employer addenda overlay only; never a user id, an e-mail, a membership
+  -- id or an authentication identity.
   SELECT jsonb_build_object(
-    'as_of',  now(),
+    'as_of',  clock_timestamp(),
     'source', 'interview_note',
     'items',  coalesce(jsonb_agg(jsonb_build_object(
       'id',                  n.id,
@@ -807,6 +818,12 @@ BEGIN
           'composition',         _composition,
           'modules',             _modules),
         'human_review',  _hr,
+        'definitions', jsonb_build_object(
+          'evidence_sufficiency', jsonb_build_object(
+            'rule_version',           _ctx ->> 'signal_version',
+            'minimum_observed_items', 3,
+            'sv', 'Tillräckligt underlag betyder att tillräckligt många observerade uppgifter berörde området enligt den nuvarande regeln i skuggpiloten. Det betyder inte psykometrisk validering, inte visad kompetens, inte något om framtida arbetsprestation och inte en stabil egenskap.',
+            'en', 'Sufficient evidence means that enough observed tasks touched the area under the current shadow-pilot rule. It does not mean psychometric validation, demonstrated competence, anything about future work performance, or a stable trait.')),
         'limitations', jsonb_build_object(
           'standing_statement', jsonb_build_object(
             'sv', 'Detta visar hur kandidaten svarade i just dessa uppgifter. Det fastställer inte lämplighet eller framtida arbetsprestation. Beslutet är arbetsgivarens.',
@@ -823,15 +840,23 @@ BEGIN
           'purpose_code',       _ctx ->> 'purpose_code',
           'standing_limitation', jsonb_build_object(
             'sv', 'Underlag för fortsatt mänsklig bedömning -- inte ett anställningsbeslut.',
-            'en', 'Evidence for continued human judgement -- not an employment decision.'),
-          'template_limitations', jsonb_build_object('sv', to_jsonb(coalesce(_d.limitations_sv, ARRAY[]::text[])),
-                                                     'en', to_jsonb(coalesce(_d.limitations_en, ARRAY[]::text[])))),
+            'en', 'Evidence for continued human judgement -- not an employment decision.')),
         'primary_next_step', _next,
         'overview',          _overview,
         'safety_followup',   _safety,
         'areas',             _emp_areas,
         'trust_followups',   _followups,
         'trust_plan',        _plan)),
+    -- The template's limitation lines follow the live template row through
+    -- the R2A audience contract; they are therefore an overlay, never part of
+    -- the frozen report.
+    'template_overlay', jsonb_build_object(
+      'as_of',           clock_timestamp(),
+      'source',          'scp_report_versions',
+      'report_template', jsonb_build_object('report_key', _ctx ->> 'report_key',
+                                            'version', (_ctx ->> 'report_version')::int),
+      'limitations',     jsonb_build_object('sv', to_jsonb(coalesce(_d.limitations_sv, ARRAY[]::text[])),
+                                            'en', to_jsonb(coalesce(_d.limitations_en, ARRAY[]::text[])))),
     'addenda_overlay', _overlay);
 END;
 $function$;
@@ -958,7 +983,8 @@ BEGIN
   IF position('self_reported_patterns' IN _def) = 0 OR position('''descriptive_only''' IN _def) = 0
      OR position('''observed_pattern''' IN _def) = 0 OR position('''evidence_sufficiency''' IN _def) = 0
      OR position('''follow_up_priority''' IN _def) = 0 OR position('''addenda_overlay''' IN _def) = 0
-     OR position('''frozen_report''' IN _def) = 0 THEN
+     OR position('''template_overlay''' IN _def) = 0 OR position('''frozen_report''' IN _def) = 0
+     OR position('''coverage_status''' IN _def) > 0 OR position('''safety_findings_present''' IN _def) > 0 THEN
     RAISE EXCEPTION 'SCP_R3A_PROOF: the three dimensions, the self-report array or the frozen/overlay boundary are missing';
   END IF;
 

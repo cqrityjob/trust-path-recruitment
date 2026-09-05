@@ -1662,25 +1662,29 @@ fi
 
 echo "    ok  ${R3A_PASSED} TRUST evidence report R3A assertions passed"
 
-if [ "$R3A_PASSED" -lt 65 ]; then
-  echo "FAIL: expected at least 65 TRUST evidence report R3A assertions, only ${R3A_PASSED} ran." >&2
-  suite_failed "TRUST evidence report R3A contract (assertion shortfall: floor 65)"
+if [ "$R3A_PASSED" -lt 75 ]; then
+  echo "FAIL: expected at least 75 TRUST evidence report R3A assertions, only ${R3A_PASSED} ran." >&2
+  suite_failed "TRUST evidence report R3A contract (assertion shortfall: floor 75)"
 fi
 for REQUIRED in \
   "V3.1 SCC-08 = {observed_pattern not_established, evidence_sufficiency limited" \
   "V3.4 sufficiency follows the observed count exactly" \
+  "V8.1b TEST E / F: every protected field appears only at its approved path" \
+  "V8.1c TEST H: coverage_status is internal only" \
+  "V9.2b TEST F: with addenda present every path is still allowlisted" \
+  "V11.3 TEST A: after the template text" \
+  "V13.1 TEST D: the shared core holds no safety finding" \
   "V4.2 no competency lists self_report as a source" \
   "V7.1 clearest support needs an established consistent pattern AND sufficient evidence" \
   "V7.6 TEST 1: a consistent pattern on limited evidence is never clearest support" \
-  "V8.1 TEST 8: every key at every depth of the employer document is on the locked allowlist" \
+  "V8.1 TEST 8 / E: every key path at every depth of the employer document is on the locked path allowlist" \
   "V8.2 TEST 8: no author id, no e-mail, no manifest field" \
   "V8.5 the participant gets NULL from the employer V3 contract" \
-  "V9.3 TEST 6: after the addenda, frozen_report is byte-identical" \
+  "V9.3 TEST 6 / G: after the addenda, frozen_report is byte-identical" \
   "V10.2 TEST 2: with two report-level contexts" \
-  "V11.1 TEST 3: after newer competency versions are published, the frozen core is byte-identical" \
   "V11.2 TEST 4: after the rubric editions are retired" \
   "V12.1 TEST 7: human_review.completed is true" \
-  "V13.1 the core names no process step"; do
+  "V13.2 the core's human-review, provenance and sufficiency-definition blocks"; do
   if ! echo "$R3A_OUT" | grep -qF "$REQUIRED"; then
     echo "FAIL: the mandatory R3A contract assertion did not run: ${REQUIRED}" >&2
     suite_failed "R3A contract (missing: ${REQUIRED})"

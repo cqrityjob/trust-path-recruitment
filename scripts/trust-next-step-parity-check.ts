@@ -8,7 +8,10 @@
 // public.scp_report_next_step(safety_findings_present, observed_items,
 // areas_sufficient, areas_limited) (PR-R3A, 20261029090000) and in the client
 // as recommendNextStep() in src/lib/security-competency/decision-support.ts.
-// This script walks the full state matrix through the TypeScript rule and
+// This script walks the COMPLETE AGGREGATE-INPUT MATRIX for rds-v1 -- every
+// combination of the aggregates the rule consumes, with the inert review,
+// disputed and priority dimensions walked beside them; not the complete
+// semantic state space of a report -- through the TypeScript rule and
 // emits, for every point, the step and reason code the SQL function must
 // return for the same inputs. db-test.sh executes that SQL against the
 // replayed database, so any drift between the two fails the database job;
@@ -166,7 +169,7 @@ BEGIN
   IF _n > 0 THEN
     RAISE EXCEPTION 'RDS-V1 PARITY FAILED: % matrix point(s) differ between TypeScript and SQL; first: %', _n, _bad;
   END IF;
-  RAISE NOTICE 'ok  rds-v1 parity: % matrix points, TypeScript and SQL agree on step and reason code', ${points.length};
+  RAISE NOTICE 'ok  rds-v1 parity: % aggregate-input matrix points, TypeScript and SQL agree on step and reason code', ${points.length};
 END $$;
 `,
   );
@@ -229,4 +232,4 @@ if (failures > 0) {
   console.error(`trust-next-step-parity:check: FAIL (${failures})`);
   process.exit(1);
 }
-console.log(`trust-next-step-parity:check: PASS (${points.length} matrix points)`);
+console.log(`trust-next-step-parity:check: PASS (${points.length} aggregate-input matrix points)`);
