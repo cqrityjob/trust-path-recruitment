@@ -80,26 +80,67 @@ transaction. Its guarantees, in the order the brief asks for them:
 
 | # | Property | Where it lives |
 | - | -------- | -------------- |
-| 1 | a stable idempotency key exists before the first attempt | the client mints `operationId` on screen 3 and autosaves it into the draft |
-| 2 | a retry returns the same merit id | the creation event carries `operation_id`; the function reads it and returns early |
-| 3 | parallel identical requests cannot duplicate | `sp_events_one_per_operation`; the loser's subtransaction rolls its own merit row back |
-| 4 | Passport creation is idempotent | `INSERT … ON CONFLICT (holder_user_id) DO NOTHING`, both in the function and in `ensureMyPassport` |
+| 1 | a stable idempotency key exists before the first attempt | the client mints `operationId` on screen 3, **persists it and waits for the confirmation** before any completion is attempted |
+| 2 | a retry returns the same merit id | `sp_passport_operations`, checked and re-proved before it is answered |
+| 3 | parallel identical requests cannot duplicate | the receipt's primary key; the loser blocks, then replays |
+| 4 | Passport creation is idempotent **and atomic** | `sp_passport_ensure` — profile, receipt and event in one transaction |
 | 5 | merit + creation event + onboarding transition are atomic | one function, one transaction |
-| 6 | one creation event and one completion event per operation | the same partial unique index |
+| 6 | one creation event and one completion event per operation | `sp_events_one_per_operation`, plus the receipt |
 | 7 | required values validated on the server | eight named refusals before any write |
 | 8 | the declaration is validated before `declared_accurate_at` | `SP_DECLARATION_REQUIRED`, the first refusal in the body |
-| 9 | *Save and exit* saves a draft and stays `in_progress` | it writes only `onboarding_answers` / `onboarding_step` |
+| 9 | *Save and exit* saves a draft and stays `in_progress` | it writes only `onboarding_answers` / `onboarding_step` / `onboarding_draft_revision`, and **navigates only after the server confirms** |
 | 10 | single-flight completion | a ref-guarded in-flight promise in the route |
-| 11 | pending debounced saves flushed and awaited | the completion flushes the draft timer, then sends the **current** field values as arguments |
+| 11 | pending debounced saves flushed and awaited | the completion flushes the draft chain, then sends the **current** field values as arguments |
 | 12 | "Saved" only after confirmed server success | screen 4 is reached only from a confirmed readback |
-| 13 | the client reads the exact subject back and checks it | `readBackFirstMerit`, compared field by field in the browser |
+| 13 | the client reads the exact subject back and checks it | `readBackFirstMerit`, compared **field by field including dates and country** |
 | 14 | an unknown readback is neither success nor failure | a third outcome, with its own copy and its own link |
 | 15 | audit-event errors are never ignored | an event insert failure aborts the whole transaction |
 
-The idempotency record is the audit log itself rather than a side table. The
-creation event already names the subject, the holder and the moment; carrying
-the operation id in its `detail` means there is exactly one place that can
-answer "has this operation happened, and what did it produce".
+### Why the idempotency record is a private table
+
+The first draft of this used `sp_passport_events.detail->>'operation_id'` as
+the record, and independent review found the hole. `sp_passport_events` is
+directly insertable by `authenticated`, and its RLS only checks holder and
+actor — so a signed-in holder could mint an `experience_created` event
+carrying any operation id, and the function would answer a replay without ever
+proving the subject existed, belonged to them, matched the facts they had just
+submitted, or that onboarding and the declaration had happened.
+
+An idempotency key is a security boundary. `sp_passport_operations`:
+
+- has **no grant of any kind** for `anon` or `authenticated` — TRUNCATE
+  included, which RLS does not cover — and RLS enabled *and forced* with **no
+  policies**, so the Data API cannot reach it;
+- binds the operation to `auth.uid()`, so replaying somebody else's id is
+  refused (`SP_OPERATION_ID_CONFLICT`);
+- binds it to a sha256 **fingerprint of the submitted facts**, so the same id
+  over different facts is refused (`SP_OPERATION_FACTS_CHANGED`) rather than
+  answered with an earlier submission;
+- records the subject, which is **re-checked** — it must still exist and still
+  belong to the holder — before any replay is answered
+  (`SP_OPERATION_SUBJECT_MISSING`).
+
+`sp_passport_events` is hardened in the same migration: its INSERT policy now
+refuses a client-written event whose `detail` carries `operation_id` or
+`first_merit`, so the forgeable shape cannot be written at all.
+
+### It is not a general merit API
+
+A **new** first-merit operation is refused once the holder holds a current
+merit (`SP_FIRST_MERIT_ALREADY_EXISTS`), because a second one would mint a
+second declaration and a second `onboarding_completed` into an append-only
+log. The **original** operation still replays, so a holder whose response was
+lost can still learn what happened. The confirmation screen's "add another
+merit" action leaves first-run and opens the ordinary editor.
+
+### Ordered drafts
+
+`sp_passport_profiles.onboarding_draft_revision` makes each save a single
+conditional UPDATE: `revision < :revision AND onboarding_state <> 'completed'`.
+Two saves in flight therefore land in order whatever the network does, and a
+save that was in flight when the completion committed cannot put a finished
+Passport back into progress. Two tabs are two Reacts, so the rule lives where
+the row is.
 
 ---
 
@@ -110,6 +151,13 @@ A merit created here is:
 - `assertion_level = 'self_declared'`
 - `lifecycle_state = 'active'`
 - no verifying organisation, no verification method, no verification date
+
+The declaration is stamped with the time it was **made**. The first draft wrote
+`coalesce(declared_accurate_at, now())`, which for the supported legacy shape —
+a profile marked `completed` in the past, carrying an old declaration, holding
+no merit — gave a merit created today an affirmation dated before it existed. A
+replay never reaches that write, so a re-submission still preserves the
+original time.
 
 The function does not *set* those values — it never names the columns at all,
 so the row takes the table defaults. The migration's own postflight and

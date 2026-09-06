@@ -3703,7 +3703,7 @@ else
     "1.6 the first merit is self_declared" \
     "1.9 the country is the one the holder stated, not the column default" \
     "2.1 the retry returns the SAME merit id" \
-    "2.7 a second completion event for one operation is refused by the index" \
+    "2.8 the same operation id carrying different facts is refused" \
     "3.1 completion without an explicit declaration is refused" \
     "3.5 the refusal created no audit event" \
     "4.3 an employment with no stated country is refused, not defaulted" \
@@ -3712,18 +3712,27 @@ else
     "5.3 certification can be the first merit" \
     "5.4 licence can be the first merit" \
     "6.1 a legacy completed profile can still record its first merit" \
-    "8.4 the body names no trust column, so the merit takes the defaults" \
-    "9.1 NEGATIVE CONTROL: without the index, one operation gains a second completion" \
-    "9.4 NEGATIVE CONTROL: without the refusal, declared=false still records a declaration"; do
+    "12.4 the body names no trust column, so the merit takes the defaults" \
+    "2.12 NEGATIVE CONTROL: a planted audit event cannot impersonate a completed operation" \
+    "2.15 a replay whose subject no longer exists is refused, not reported as saved" \
+    "6.2 the NEW declaration is stamped now, not with the legacy timestamp" \
+    "8.2 a SECOND first-merit operation is refused once a current merit exists" \
+    "9.5 a failing creation event aborts the whole call" \
+    "9.8 a legacy profile with no receipt is repaired, not re-created" \
+    "10.4 nor TRUNCATE the table" \
+    "11.2 the older save matches nothing" \
+    "12.5 idempotency reads the private receipts, not the client-writable log" \
+    "13.1 NEGATIVE CONTROL: reading the audit log returns a subject the holder invented" \
+    "13.2 NEGATIVE CONTROL: without the tightened policy a holder can mint an operation event"; do
     if ! echo "$SPFM_OUT" | grep -qF "$REQUIRED"; then
       echo "FAIL: a mandatory first-merit assertion did not run: ${REQUIRED}" >&2
       suite_failed "Security Passport first merit (missing: ${REQUIRED})"
     fi
   done
 
-  if [ "$SPFM_PASSED" -lt 70 ]; then
-    echo "FAIL: expected at least 70 first-merit assertions, only ${SPFM_PASSED} ran." >&2
-    suite_failed "Security Passport first merit (assertion shortfall: floor 70)"
+  if [ "$SPFM_PASSED" -lt 110 ]; then
+    echo "FAIL: expected at least 110 first-merit assertions, only ${SPFM_PASSED} ran." >&2
+    suite_failed "Security Passport first merit (assertion shortfall: floor 110)"
   fi
 fi
 
@@ -3778,7 +3787,7 @@ SQL
   # Wait until A actually holds a write lock, so B starts into real contention.
   FMR_HELD=0
   for _ in $(seq 1 200); do
-    FMR_HELD="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_locks l join pg_class c on c.oid = l.relation where c.relname = 'sp_passport_events' and l.mode = 'RowExclusiveLock' and l.granted;" 2>/dev/null || echo 0)"
+    FMR_HELD="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_locks l join pg_class c on c.oid = l.relation where c.relname = 'sp_passport_operations' and l.mode = 'RowExclusiveLock' and l.granted;" 2>/dev/null || echo 0)"
     [ "${FMR_HELD:-0}" -gt 0 ] && break
     sleep 0.05
   done
@@ -3802,7 +3811,7 @@ SQL
   wait "$FMR_A_PID" || true
 
   if [ "${FMR_HELD:-0}" -eq 0 ]; then
-    echo "FAIL: session A never took a write lock on sp_passport_events, so the two" >&2
+    echo "FAIL: session A never took a write lock on sp_passport_operations, so the two" >&2
     echo "      sessions were never concurrent and this run proves nothing." >&2
     FMR_FAILED=1
   else
@@ -3854,8 +3863,8 @@ SQL
     echo "FAIL: the concurrent first-merit verification exited with code ${FMR_RC}." >&2
     echo "$FMR_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
     FMR_FAILED=1
-  elif [ "$FMR_PASSED" -lt 8 ]; then
-    echo "FAIL: expected at least 8 concurrent first-merit assertions, only ${FMR_PASSED} ran." >&2
+  elif [ "$FMR_PASSED" -lt 11 ]; then
+    echo "FAIL: expected at least 11 concurrent first-merit assertions, only ${FMR_PASSED} ran." >&2
     FMR_FAILED=1
   else
     echo "    ok  ${FMR_PASSED} concurrent first-merit assertions passed"
