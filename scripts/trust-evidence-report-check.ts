@@ -1016,7 +1016,7 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
   // English, and the release function is what writes the manifest -- so its
   // migration necessarily names the table. It is admitted here by name, and
   // held to touching nothing about the manifest itself below.
-  const R3B_COPY_MIGRATION = "20261030090000_scp_competency_display_label_and_report_plurals.sql";
+  const R3B_COPY_MIGRATION = "20261031090000_scp_competency_display_label_and_report_plurals.sql";
   check(
     "H11 exactly three migrations name scp_report_computation_manifests: PR-R1 (creates it), PR-R3A (reads counts from it) and PR-R3B (rewrites the release function that writes it)",
     migrationMentions.length === 3 &&

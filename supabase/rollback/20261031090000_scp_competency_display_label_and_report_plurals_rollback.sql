@@ -1,4 +1,4 @@
--- ROLLBACK for 20261030090000_scp_competency_display_label_and_report_plurals.
+-- ROLLBACK for 20261031090000_scp_competency_display_label_and_report_plurals.
 --
 -- Puts SCC-07 back on its version 1 wording and restores the PR-R1 definition
 -- of scp_release_attempt_report, exactly as it stood before the copy

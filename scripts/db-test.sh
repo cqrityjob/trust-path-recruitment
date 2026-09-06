@@ -1719,7 +1719,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# PR-R3B copy decisions (20261030090000): the SCC-07 display label moves to a
+# PR-R3B copy decisions (20261031090000): the SCC-07 display label moves to a
 # new published competency version, and the release function stops writing
 # "uppgift(er)" / "task(s)". The suite releases a report and proves the new
 # label reaches it, that a report already released keeps the label and the
