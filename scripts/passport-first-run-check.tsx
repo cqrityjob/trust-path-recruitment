@@ -944,6 +944,46 @@ for (const refusal of [
   ck(`the function refuses with ${refusal}`, sql.includes(refusal));
 }
 ck("it is idempotent on an operation id", sql.includes("sp_events_one_per_operation"));
+// ── TWO DIFFERENT IDS, ONE HOLDER, AT ONCE ──────────────────────────────
+//
+// Different operation ids never conflict on the receipt's primary key, so
+// without a per-holder lock each would see no committed merit and each would
+// create one. The lock must exist, be keyed to auth.uid(), and be taken
+// BEFORE the receipt is claimed and before the current-merit check. Proved
+// with two processes in db-test.sh; pinned here so the fast job notices a
+// rewrite that moves or drops it.
+const fnBody = sql.slice(
+  sql.indexOf("CREATE OR REPLACE FUNCTION public.sp_passport_complete_first_merit"),
+  sql.indexOf("REVOKE ALL ON FUNCTION public.sp_passport_complete_first_merit"),
+);
+ck(
+  "the first-merit decision is serialised per holder with a transaction-scoped advisory lock",
+  /PERFORM pg_advisory_xact_lock\(\s*hashtextextended\('sp_passport_first_merit:' \|\| _uid::text, 0\)\)/.test(
+    fnBody,
+  ),
+);
+ck(
+  "taken before the receipt is claimed and before the current-merit refusal",
+  fnBody.indexOf("pg_advisory_xact_lock") <
+    fnBody.indexOf("INSERT INTO public.sp_passport_operations") &&
+    fnBody.indexOf("pg_advisory_xact_lock") <
+      fnBody.indexOf("RAISE EXCEPTION 'SP_FIRST_MERIT_ALREADY_EXISTS'"),
+);
+ck(
+  "and it is a transaction lock, never a session lock that could outlive the request",
+  !/pg_advisory_lock\(/.test(fnBody) && !/pg_try_advisory_lock\(/.test(fnBody),
+);
+ck(
+  "the two-operation race has its own two-process suite",
+  existsSync(
+    path.join(root, "supabase/tests/security_passport_first_merit_two_ops_race_test.sql"),
+  ) && read("scripts/db-test.sh").includes("security_passport_first_merit_two_ops_race_test.sql"),
+);
+ck(
+  "with a permanent negative control that strips the lock from the live definition",
+  /regexp_replace\(_def,[\s\S]{0,200}pg_advisory_xact_lock/.test(read("scripts/db-test.sh")) &&
+    read("scripts/db-test.sh").includes("NEGATIVE CONTROL: without the holder lock"),
+);
 ck(
   "the index is UNIQUE and partial",
   /CREATE UNIQUE INDEX[\s\S]{0,240}WHERE detail \? 'operation_id'/.test(sql),
