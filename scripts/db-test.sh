@@ -3722,6 +3722,7 @@ else
     "10.4 nor TRUNCATE the table" \
     "11.2 the older save matches nothing" \
     "12.5 idempotency reads the private receipts, not the client-writable log" \
+    "12.8 and the lock is taken before the receipt is claimed and before the current-merit check" \
     "13.1 NEGATIVE CONTROL: reading the audit log returns a subject the holder invented" \
     "13.2 NEGATIVE CONTROL: without the tightened policy a holder can mint an operation event"; do
     if ! echo "$SPFM_OUT" | grep -qF "$REQUIRED"; then
@@ -3730,9 +3731,9 @@ else
     fi
   done
 
-  if [ "$SPFM_PASSED" -lt 110 ]; then
-    echo "FAIL: expected at least 110 first-merit assertions, only ${SPFM_PASSED} ran." >&2
-    suite_failed "Security Passport first merit (assertion shortfall: floor 110)"
+  if [ "$SPFM_PASSED" -lt 115 ]; then
+    echo "FAIL: expected at least 115 first-merit assertions, only ${SPFM_PASSED} ran." >&2
+    suite_failed "Security Passport first merit (assertion shortfall: floor 115)"
   fi
 fi
 
@@ -3872,6 +3873,226 @@ SQL
 
   if [ "$FMR_FAILED" -ne 0 ]; then
     suite_failed "Security Passport concurrent first merit"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Two DIFFERENT first-merit operations for one holder, genuinely at once.
+#
+# The same-id race above proves one canonical answer for one operation. This
+# proves the other property: two operations with different ids -- two tabs,
+# or a retry that minted a fresh key -- produce ONE first merit and ONE
+# refusal. Without the per-holder advisory lock in
+# sp_passport_complete_first_merit, each inserts its own receipt, each sees
+# no committed merit, and each creates one.
+#
+# Run TWICE: once against the real function (B must WAIT, then be refused),
+# and once as a NEGATIVE CONTROL against a copy of the function with the lock
+# stripped out (B must NOT be refused, and two merits must exist). The control
+# copy is derived from the live definition in pg_proc rather than kept as a
+# second file, so it cannot drift from the thing it is a control for. The real
+# migration is re-applied afterwards and the lock's presence asserted.
+# ---------------------------------------------------------------------------
+run_two_ops_race() {
+  local MODE="$1" HOLDER="$2" LABEL="$3"
+  local OP_A OP_B A_LOG B_LOG A_PID HELD B_START B_RC B_WAITED SETUP SETUP_RC FAILED=0
+  # Operation ids in a prefix space nothing else in the suite uses. `fb...`
+  # collided with the main suite's merit-kind loop: B was then refused as a
+  # cross-holder replay (SP_OPERATION_ID_CONFLICT) -- correct behaviour, wrong
+  # proof.
+  OP_A="$(echo "$HOLDER" | sed 's/^........-/fe100000-/')"
+  OP_B="$(echo "$HOLDER" | sed 's/^........-/fe200000-/')"
+
+  set +e
+  SETUP="$(psql -q -v ON_ERROR_STOP=1 -v phase=setup -v holder="$HOLDER" -d "$TEST_DB" \
+    -f supabase/tests/security_passport_first_merit_two_ops_race_test.sql 2>&1)"
+  SETUP_RC=$?
+  set -e
+  if [ "$SETUP_RC" -ne 0 ]; then
+    echo "FAIL: the two-ops race setup phase failed (${LABEL})." >&2
+    echo "$SETUP" | grep -iE "ERROR:|FEL:|FAIL" | head -10 >&2
+    return 1
+  fi
+
+  A_LOG="$(mktemp)"; B_LOG="$(mktemp)"
+
+  # A: operation A, an employment. Then hold the transaction open for 3s.
+  (
+    psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$A_LOG" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${HOLDER}', true);
+INSERT INTO public.sp_first_merit_two_ops_out (session, subject_kind, subject_id, created, refused_with)
+SELECT 'A', subject_kind, subject_id, created, NULL
+  FROM public.sp_passport_complete_first_merit(
+    '${OP_A}'::uuid, 'employment', 'Vaktare', 'Forsta Bolaget AB (fiktiv)', 'SE',
+    DATE '2024-03-01', NULL, true);
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+    echo "RC=$?" >>"$A_LOG"
+  ) &
+  A_PID=$!
+
+  # Wait until A holds its locks: the holder advisory lock (real function) or,
+  # for the control, at least its write lock on the receipts table.
+  HELD=0
+  for _ in $(seq 1 200); do
+    HELD="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_locks l left join pg_class c on c.oid = l.relation where l.granted and ((l.locktype = 'advisory') or (c.relname = 'sp_passport_operations' and l.mode = 'RowExclusiveLock'));" 2>/dev/null || echo 0)"
+    [ "${HELD:-0}" -gt 0 ] && break
+    sleep 0.05
+  done
+
+  # B: operation B, a DIFFERENT id and DIFFERENT facts. Its own refusal is
+  # caught and recorded so the verify phase can read it -- and the exception
+  # block is a subtransaction, so a refused B leaves no receipt behind.
+  B_START="$(date +%s)"
+  set +e
+  psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$B_LOG" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${HOLDER}', true);
+DO \$\$
+BEGIN
+  INSERT INTO public.sp_first_merit_two_ops_out (session, subject_kind, subject_id, created, refused_with)
+  SELECT 'B', subject_kind, subject_id, created, NULL
+    FROM public.sp_passport_complete_first_merit(
+      '${OP_B}'::uuid, 'course', 'Kurs B', 'Andra Utbildaren (fiktiv)', NULL,
+      DATE '2023-01-01', NULL, true);
+EXCEPTION WHEN OTHERS THEN
+  INSERT INTO public.sp_first_merit_two_ops_out (session, subject_kind, subject_id, created, refused_with)
+  VALUES ('B', NULL, NULL, false, SQLERRM);
+END \$\$;
+COMMIT;
+SQL
+  B_RC=$?
+  set -e
+  B_WAITED=$(( $(date +%s) - B_START ))
+  wait "$A_PID" || true
+
+  if [ "${HELD:-0}" -eq 0 ]; then
+    echo "FAIL: session A never took a lock, so the two sessions were never concurrent (${LABEL})." >&2
+    FAILED=1
+  else
+    echo "    ok  session A held its transaction open while B submitted a different operation (${LABEL})"
+  fi
+  if ! grep -q "^RC=0" "$A_LOG"; then
+    echo "FAIL: the first operation did not succeed (${LABEL})." >&2
+    cat "$A_LOG" >&2
+    FAILED=1
+  fi
+  if [ "$B_RC" -ne 0 ]; then
+    echo "FAIL: session B's transaction itself errored (${LABEL}); the refusal should have been caught." >&2
+    grep -iE "ERROR:|FEL:" "$B_LOG" | head -5 >&2
+    FAILED=1
+  fi
+  rm -f "$A_LOG" "$B_LOG"
+
+  local MERITS
+  MERITS="$(psql -tAq -d "$TEST_DB" -c "select (select count(*) from public.sp_experience_periods where holder_user_id='${HOLDER}') + (select count(*) from public.sp_claims where holder_user_id='${HOLDER}');")"
+  # What each session actually recorded. Printed always: when this proof
+  # fails, the answer B got is the whole diagnosis.
+  psql -tAq -d "$TEST_DB" -c "select '      ' || session || ' -> subject=' || coalesce(subject_id::text, '(none)') || ' created=' || coalesce(created::text, '?') || ' refused_with=' || coalesce(refused_with, '(none)') from public.sp_first_merit_two_ops_out order by session;" 2>/dev/null || true
+  local REFUSED
+  REFUSED="$(psql -tAq -d "$TEST_DB" -c "select coalesce(refused_with,'') from public.sp_first_merit_two_ops_out where session='B';")"
+
+  if [ "$MODE" = "real" ]; then
+    # B must have WAITED for A's lock. A B that returned at once never met it.
+    if [ "$B_WAITED" -lt 2 ]; then
+      echo "FAIL: the second operation returned after ${B_WAITED}s without waiting on the holder lock (${LABEL})." >&2
+      FAILED=1
+    else
+      echo "    ok  the second operation WAITED ${B_WAITED}s on the holder lock"
+    fi
+    set +e
+    local OUT RC
+    OUT="$(psql -v ON_ERROR_STOP=1 -q -v phase=verify -v holder="$HOLDER" -d "$TEST_DB" \
+      -f supabase/tests/security_passport_first_merit_two_ops_race_test.sql 2>&1)"
+    RC=$?
+    set -e
+    echo "$OUT" | grep -E "ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+    TWO_OPS_PASSED="$(echo "$OUT" | grep -c "ok  " || true)"
+    if [ "$RC" -ne 0 ]; then
+      echo "FAIL: the two-ops race verification exited with code ${RC}." >&2
+      echo "$OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+      FAILED=1
+    elif [ "$TWO_OPS_PASSED" -lt 14 ]; then
+      echo "FAIL: expected at least 14 two-ops race assertions, only ${TWO_OPS_PASSED} ran." >&2
+      FAILED=1
+    else
+      echo "    ok  ${TWO_OPS_PASSED} two-ops race assertions passed"
+    fi
+  else
+    # NEGATIVE CONTROL: with the lock gone the defect must come back, visibly.
+    if [ "${MERITS:-0}" -ne 2 ]; then
+      echo "FAIL: NEGATIVE CONTROL did not reproduce the defect -- ${MERITS} merit(s), expected 2 (${LABEL})." >&2
+      echo "      The two-ops race test would then pass without the lock, and proves nothing." >&2
+      FAILED=1
+    elif echo "$REFUSED" | grep -q "SP_FIRST_MERIT_ALREADY_EXISTS"; then
+      echo "FAIL: NEGATIVE CONTROL still refused the second operation (${LABEL})." >&2
+      FAILED=1
+    else
+      echo "    ok  NEGATIVE CONTROL: without the holder lock, two operations made ${MERITS} first merits"
+    fi
+  fi
+  return $FAILED
+}
+
+echo "==> Running Security Passport two-operation first-merit race"
+TWO_OPS_PASSED=0
+if ! run_two_ops_race real "fe000000-0000-0000-0000-000000000002" "real function"; then
+  suite_failed "Security Passport two-operation first-merit race"
+fi
+
+# --- the negative control: strip the lock out of the LIVE definition --------
+echo "==> Running Security Passport two-operation race NEGATIVE CONTROL (lock removed)"
+set +e
+CTL_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" 2>&1 <<'SQL'
+DO $$
+DECLARE _def text;
+BEGIN
+  SELECT pg_get_functiondef(p.oid) INTO _def
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'sp_passport_complete_first_merit';
+  _def := regexp_replace(_def,
+    'PERFORM pg_advisory_xact_lock\(\s*hashtextextended\([^;]*\);',
+    '-- NEGATIVE CONTROL: per-holder lock removed', 'g');
+  IF _def LIKE '%pg_advisory_xact_lock%' THEN
+    RAISE EXCEPTION 'CONTROL_SETUP: the lock statement was not stripped';
+  END IF;
+  EXECUTE _def;
+END $$;
+SQL
+)"
+CTL_RC=$?
+set -e
+if [ "$CTL_RC" -ne 0 ]; then
+  echo "FAIL: could not build the unlocked control function." >&2
+  echo "$CTL_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "Security Passport two-operation race (control setup)"
+else
+  if ! run_two_ops_race control "fe000000-0000-0000-0000-000000000003" "lock removed"; then
+    suite_failed "Security Passport two-operation first-merit race (negative control)"
+  fi
+fi
+
+# --- restore the real function and prove the lock is back -------------------
+set +e
+RESTORE_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261031090000_sp_passport_first_merit.sql 2>&1)"
+RESTORE_RC=$?
+set -e
+if [ "$RESTORE_RC" -ne 0 ]; then
+  echo "FAIL: the migration could not be re-applied after the negative control." >&2
+  echo "$RESTORE_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "Security Passport two-operation race (restore)"
+else
+  LOCK_BACK="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='sp_passport_complete_first_merit' and p.prosrc like '%pg_advisory_xact_lock%';")"
+  if [ "${LOCK_BACK:-0}" -ne 1 ]; then
+    echo "FAIL: the real function was not restored after the negative control." >&2
+    suite_failed "Security Passport two-operation race (restore)"
+  else
+    echo "    ok  the real function is back, with the holder lock"
   fi
 fi
 
@@ -4556,5 +4777,6 @@ echo "              ${EEV_PASSED} employer employment verification assertions,"
 echo "              ${RACE_PASSED} concurrent-decision assertions,"
 echo "              ${SPFM_PASSED} first-merit assertions,"
 echo "              ${FMR_PASSED} concurrent first-merit assertions,"
+echo "              ${TWO_OPS_PASSED} two-operation first-merit race assertions,"
 echo "              ${SPRC_PASSED} rollback correction assertions"
 echo "===================================================="

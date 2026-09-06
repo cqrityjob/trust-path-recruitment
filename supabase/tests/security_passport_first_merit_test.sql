@@ -993,6 +993,21 @@ BEGIN
        FROM pg_indexes
       WHERE schemaname = 'public' AND indexname = 'sp_events_one_per_operation'),
     '12.6 the one-event-per-operation index is unique and keyed on the operation');
+
+  -- The per-holder serialisation, and its position. Two DIFFERENT operation
+  -- ids do not conflict on the receipt's primary key, so without this lock
+  -- each would reach the current-merit check, see nothing committed, and
+  -- create a merit. Proved with two processes in
+  -- security_passport_first_merit_two_ops_race_test.sql; pinned here so the
+  -- fast path notices if it is ever moved or removed.
+  PERFORM pg_temp.ok(_src LIKE '%pg_advisory_xact_lock%',
+    '12.7 the first-merit decision is serialised per holder with an advisory lock');
+  PERFORM pg_temp.ok(
+    position('pg_advisory_xact_lock' IN _src) < position('INSERT INTO public.sp_passport_operations' IN _src)
+    AND position('pg_advisory_xact_lock' IN _src) < position($q$RAISE EXCEPTION 'SP_FIRST_MERIT_ALREADY_EXISTS'$q$ IN _src),
+    '12.8 and the lock is taken before the receipt is claimed and before the current-merit check');
+  PERFORM pg_temp.ok(_src LIKE '%hashtextextended(''sp_passport_first_merit:'' || _uid::text%',
+    '12.9 keyed to auth.uid(), which no parameter can supply');
 END $$;
 
 
