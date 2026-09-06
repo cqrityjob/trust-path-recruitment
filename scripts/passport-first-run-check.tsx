@@ -33,15 +33,19 @@ import { I18nProvider } from "../src/i18n/context";
 import {
   ChooseMeritScreen,
   CreatePassportScreen,
+  FirstRunLoadError,
   MeritDetailsScreen,
   MeritSavedScreen,
   MeritUnconfirmedScreen,
 } from "../src/components/security-passport/FirstRunJourney";
 import {
+  COMPLETION_REFUSALS,
   EMPTY_DRAFT,
   FIRST_MERIT_KINDS,
-  confirmReadback,
+  checkReadback,
+  classifyCompletionFailure,
   deriveFirstRunState,
+  expectedPersisted,
   fieldsFor,
   readDraft,
   validateDraft,
@@ -110,9 +114,12 @@ ck(
   emptyProfile.screen === "choose",
 );
 
-const savedDraft = writeDraft({}, draftOf({ kind: "course", title: "VU1", operationId: "op-1" }));
+const storedDraftAnswers = writeDraft(
+  {},
+  draftOf({ kind: "course", title: "VU1", operationId: "op-1" }),
+);
 const resumed = deriveFirstRunState({
-  profile: { onboardingState: "in_progress", onboardingAnswers: savedDraft },
+  profile: { onboardingState: "in_progress", onboardingAnswers: storedDraftAnswers },
   meritLifecycleStates: [],
 });
 ck("a saved draft resumes on the details screen", resumed.screen === "details");
@@ -257,11 +264,22 @@ ck(
   text(EN_DETAILS).includes("Save to my Passport"),
 );
 
+const savedDraft = draftOf({
+  kind: "employment",
+  title: "Väktare",
+  organisation: "Bevakning AB",
+  country: "SE",
+  startedOn: "2024-03-01",
+  ongoing: true,
+});
 const savedMerit: PersistedMerit = {
   id: "11111111-1111-4111-8111-111111111111",
   kind: "experience",
   title: "Väktare",
   organisation: "Bevakning AB",
+  country: "SE",
+  startedOn: "2024-03-01",
+  endedOn: null,
   assertionLevel: "self_declared",
   lifecycleState: "active",
 };
@@ -419,27 +437,14 @@ ck(
 );
 
 // The readback checks the two trust facts on the client too.
+const readExpect = { id: savedMerit.id, kind: "experience" as const, draft: savedDraft };
 ck(
   "a readback that is not self_declared is refused",
-  confirmReadback(
-    {
-      id: savedMerit.id,
-      kind: "experience",
-      draft: draftOf({ title: "Väktare", organisation: "Bevakning AB" }),
-    },
-    { ...savedMerit, assertionLevel: "verified" },
-  ) === "mismatch",
+  checkReadback(readExpect, { ...savedMerit, assertionLevel: "verified" }).outcome === "mismatch",
 );
 ck(
   "a readback that is not a current merit is refused",
-  confirmReadback(
-    {
-      id: savedMerit.id,
-      kind: "experience",
-      draft: draftOf({ title: "Väktare", organisation: "Bevakning AB" }),
-    },
-    { ...savedMerit, lifecycleState: "draft" },
-  ) === "mismatch",
+  checkReadback(readExpect, { ...savedMerit, lifecycleState: "draft" }).outcome === "mismatch",
 );
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -447,25 +452,74 @@ ck(
    ══════════════════════════════════════════════════════════════════════ */
 group("T4 · saved is said only when the row came back saying so");
 
-const expected = {
-  id: savedMerit.id,
-  kind: "experience" as const,
-  draft: draftOf({ title: "Väktare", organisation: "Bevakning AB" }),
-};
-ck("a matching row confirms", confirmReadback(expected, savedMerit) === "confirmed");
-ck("no row at all is UNKNOWN, not a failure", confirmReadback(expected, null) === "unknown");
+ck("a matching row confirms", checkReadback(readExpect, savedMerit).outcome === "confirmed");
 ck(
-  "a different id is a mismatch",
-  confirmReadback(expected, { ...savedMerit, id: "22222222-2222-4222-8222-222222222222" }) ===
-    "mismatch",
+  "no row at all is UNKNOWN, not a failure",
+  checkReadback(readExpect, null).outcome === "unknown",
+);
+
+// ── EVERY SUBMITTED FACT, NOT ONLY THE EASY ONES ────────────────────────
+//
+// The first version compared id, kind, title, organisation and the two trust
+// columns. A merit stored in the wrong COUNTRY or dated to the wrong YEAR
+// therefore still rendered "your merit is saved" — vouching for facts it had
+// never looked at.
+for (const [field, bad] of [
+  ["id", { ...savedMerit, id: "22222222-2222-4222-8222-222222222222" }],
+  ["kind", { ...savedMerit, kind: "claim" as const }],
+  ["title", { ...savedMerit, title: "Something else" }],
+  ["organisation", { ...savedMerit, organisation: "Another AB" }],
+  ["country", { ...savedMerit, country: "GB" }],
+  ["country (dropped)", { ...savedMerit, country: null }],
+  ["startedOn", { ...savedMerit, startedOn: "2020-01-01" }],
+  ["startedOn (dropped)", { ...savedMerit, startedOn: null }],
+  ["endedOn", { ...savedMerit, endedOn: "2025-01-01" }],
+  ["assertionLevel", { ...savedMerit, assertionLevel: "document_provided" }],
+  ["lifecycleState", { ...savedMerit, lifecycleState: "expired" }],
+] as const) {
+  ck(`a different ${field} is a mismatch`, checkReadback(readExpect, bad).outcome === "mismatch");
+}
+ck(
+  "and the mismatch says WHICH field",
+  checkReadback(readExpect, { ...savedMerit, country: "GB" }).mismatched.includes("country"),
+);
+
+// A claim is compared against what the SERVER stores for a claim, not against
+// what was typed: a country entered on a course is deliberately not filed, so
+// expecting the typed value would fail a save that was correct.
+const claimDraft = draftOf({
+  kind: "course",
+  title: "VU1",
+  organisation: "BYA",
+  country: "SE",
+  startedOn: "2023-05-01",
+});
+ck(
+  "a claim expects NO country however one was typed",
+  expectedPersisted(claimDraft).country === null,
 );
 ck(
-  "a different title is a mismatch",
-  confirmReadback(expected, { ...savedMerit, title: "Something else" }) === "mismatch",
+  "and a claim readback with no country confirms",
+  checkReadback(
+    { id: savedMerit.id, kind: "claim", draft: claimDraft },
+    {
+      id: savedMerit.id,
+      kind: "claim",
+      title: "VU1",
+      organisation: "BYA",
+      country: null,
+      startedOn: "2023-05-01",
+      endedOn: null,
+      assertionLevel: "self_declared",
+      lifecycleState: "active",
+    },
+  ).outcome === "confirmed",
 );
+ck("an ongoing employment expects no end date", expectedPersisted(savedDraft).endedOn === null);
 ck(
-  "a different organisation is a mismatch",
-  confirmReadback(expected, { ...savedMerit, organisation: "Another AB" }) === "mismatch",
+  "and an ended one expects the date given",
+  expectedPersisted(draftOf({ ...savedDraft, ongoing: false, endedOn: "2025-06-30" })).endedOn ===
+    "2025-06-30",
 );
 
 // The route must render the unconfirmed screen for anything that is not a
@@ -473,8 +527,7 @@ ck(
 const routeSrc = code(read("src/routes/_authenticated.passport.onboarding.tsx"));
 ck(
   "the route shows success only on 'confirmed'",
-  /outcome === "confirmed"/.test(routeSrc) &&
-    routeSrc.includes('setPhase({ kind: "unconfirmed" })'),
+  /outcome === "confirmed"/.test(routeSrc) && routeSrc.includes('setPhase({ kind: "unconfirmed"'),
 );
 ck(
   "a thrown readback becomes 'unknown' rather than a failure",
@@ -489,9 +542,100 @@ ck("and does not say the merit was saved", !SV_UNKNOWN.includes("Meriten är spa
 ck("and does not say it failed", !SV_UNKNOWN.includes("sparades inte"));
 
 /* ══════════════════════════════════════════════════════════════════════
+   T4b · A LOST RESPONSE IS NOT A FAILURE
+   ══════════════════════════════════════════════════════════════════════ */
+group("T4b · refused, or merely unanswered");
+
+for (const refusal of COMPLETION_REFUSALS) {
+  ck(
+    `${refusal} is a confirmed refusal`,
+    classifyCompletionFailure(new Error(refusal)) === "refused",
+  );
+}
+for (const lost of [
+  "Failed to fetch",
+  "NetworkError when attempting to fetch resource",
+  "504 Gateway Timeout",
+  "Unexpected end of JSON input",
+  "",
+]) {
+  ck(
+    `"${lost || "(empty)"}" is INDETERMINATE, never a refusal`,
+    classifyCompletionFailure(new Error(lost)) === "indeterminate",
+  );
+}
+ck(
+  "every refusal in the list is one the database raises before it writes",
+  COMPLETION_REFUSALS.every(
+    (code_) =>
+      read("supabase/migrations/20261031090000_sp_passport_first_merit.sql").includes(code_) ||
+      code_ === "SP_INVALID_DATE",
+  ),
+);
+// The three sentences must be different, and only one of them may claim that
+// nothing changed.
+const svCopy = read("src/lib/security-passport/i18n.ts");
+ck(
+  "the refusal copy says nothing changed",
+  /"fr\.error\.saveRefused"[\s\S]{0,200}Ingenting har ändrats/.test(svCopy),
+);
+ck(
+  "the indeterminate copy does NOT",
+  /"fr\.error\.saveIndeterminate"[\s\S]{0,320}Vi vet inte om meriten sparades/.test(svCopy) &&
+    !/"fr\.error\.saveIndeterminate"[\s\S]{0,320}Ingenting har ändrats/.test(svCopy),
+);
+ck(
+  "and the Passport-creation failure has its own sentence",
+  /"fr\.error\.createFailed"[\s\S]{0,220}Security Passport kunde inte skapas/.test(svCopy),
+);
+ck(
+  "the route classifies before it speaks",
+  routeSrc.includes('classifyCompletionFailure(err) === "refused"') &&
+    routeSrc.includes('{ kind: "indeterminate" }'),
+);
+ck(
+  "and a retry BUTTON appears only where it is a different action from the primary CTA",
+  /onRetry=\{error\?\.kind === "draft_failed"/.test(routeSrc),
+);
+ck(
+  "the indeterminate copy names the primary button instead of duplicating it",
+  /"fr\.error\.saveIndeterminate"[\s\S]{0,400}Spara i mitt Passport/.test(svCopy),
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   T4c · AN UNREADABLE PASSPORT IS NOT AN ABSENT ONE
+   ══════════════════════════════════════════════════════════════════════ */
+group("T4c · the load-error state");
+
+ck(
+  "a failed read reaches its own phase, never 'create'",
+  /catch[\s\S]{0,300}setPhase\(\{ kind: "load_error" \}\)/.test(routeSrc) &&
+    !/catch[\s\S]{0,300}setPhase\(\{ kind: "create" \}\)/.test(routeSrc),
+);
+const SV_LOAD_ERR = text(html(<FirstRunLoadError onRetry={noop} />, "sv"));
+const EN_LOAD_ERR = text(html(<FirstRunLoadError onRetry={noop} />, "en"));
+ck(
+  "it says the Passport could not be loaded",
+  SV_LOAD_ERR.includes("Vi kunde inte hämta ditt Security Passport"),
+);
+ck(
+  "it reassures that nothing changed",
+  SV_LOAD_ERR.includes("Ingenting i ditt Passport har ändrats"),
+);
+ck("it offers a retry", SV_LOAD_ERR.includes("Försök igen"));
+ck(
+  "and it offers NO create action",
+  !SV_LOAD_ERR.includes("Skapa mitt Security Passport") &&
+    !EN_LOAD_ERR.includes("Create my Security Passport"),
+);
+ck("the English half is English", EN_LOAD_ERR.includes("We could not load your Security Passport"));
+
+/* ══════════════════════════════════════════════════════════════════════
    T5 · PERSISTENCE — the properties the browser is responsible for
    ══════════════════════════════════════════════════════════════════════ */
 group("T5 · idempotency, single flight, flush, and a save that is not a draft");
+
+const serverSrc = code(read("src/lib/security-passport/first-run.functions.ts"));
 
 ck(
   "the operation id is minted when the kind is chosen, before any attempt",
@@ -513,11 +657,71 @@ ck(
 );
 ck(
   "'Save and exit' writes a draft and never completes",
-  /onSaveAndExit[\s\S]{0,400}await writeNow\(draft\)/.test(routeSrc) &&
-    !/onSaveAndExit[\s\S]{0,400}complete\(/.test(routeSrc),
+  /onSaveAndExit[\s\S]{0,500}await enqueue\(draft\)/.test(routeSrc) &&
+    !/onSaveAndExit[\s\S]{0,500}complete\(\{/.test(routeSrc),
+);
+// ── DEFECT 4 ────────────────────────────────────────────────────────
+//
+// It used to navigate from a `finally`, so a FAILED draft save still took the
+// person away and told them nothing. The navigation is now after the try, and
+// the catch returns.
+ck(
+  "and navigates only after the save resolved",
+  /onSaveAndExit[\s\S]{0,700}catch[\s\S]{0,260}setError\(\{ kind: "draft_failed" \}\)[\s\S]{0,120}return;[\s\S]{0,120}navigate\(\{ to: "\/my-career" \}\)/.test(
+    routeSrc,
+  ),
+);
+ck("there is no navigation inside a finally", !/finally[\s\S]{0,200}navigate\(/.test(routeSrc));
+ck(
+  "and the destination is stated before the button is pressed",
+  journeySrc.includes('pt("fr.saveExit.hint")'),
 );
 
-const serverSrc = code(read("src/lib/security-passport/first-run.functions.ts"));
+/* ---- ordered draft persistence, and the durable operation id ------- */
+
+ck(
+  "draft writes are chained, so two saves never overlap",
+  routeSrc.includes("chain.current.then(() => writeNow(next))"),
+);
+ck(
+  "each save carries a strictly increasing revision",
+  /revision\.current \+= 1;[\s\S]{0,120}saveDraft\(\{ data: \{ step, answers, revision: rev \} \}\)/.test(
+    routeSrc,
+  ),
+);
+ck(
+  "the revision is seeded from what the server already holds",
+  routeSrc.includes("Math.max(revision.current, profile?.onboardingDraftRevision ?? 0)"),
+);
+ck(
+  "the server refuses a stale revision and a completed onboarding, in ONE update",
+  /\.lt\("onboarding_draft_revision", data\.revision\)[\s\S]{0,120}\.neq\("onboarding_state", "completed"\)/.test(
+    serverSrc,
+  ),
+);
+ck(
+  "and says WHICH rule refused, so a finished tab is not reported as a failure",
+  serverSrc.includes("DRAFT_COMPLETED") && serverSrc.includes("DRAFT_STALE"),
+);
+ck(
+  "a missing operation id is minted, persisted and AWAITED before any completion",
+  /ensureOperationId[\s\S]{0,600}await enqueue\(withId\)/.test(routeSrc) &&
+    /runCompletion[\s\S]{0,300}await ensureOperationId\(submitted\)/.test(routeSrc),
+);
+ck(
+  "and the completion uses that exact id rather than making one inline",
+  routeSrc.includes("operationId: current.operationId as string") &&
+    !/complete\(\{[\s\S]{0,300}newOperationId\(\)/.test(routeSrc),
+);
+ck(
+  "leaving the page flushes what is pending",
+  /removeEventListener\("beforeunload"[\s\S]{0,320}void flushDraft\(\)/.test(routeSrc),
+);
+ck(
+  "and an unsaved form warns before the browser unloads it",
+  routeSrc.includes('addEventListener("beforeunload"') && routeSrc.includes("unsaved.current"),
+);
+
 ck(
   "the draft writer leaves onboarding in_progress",
   serverSrc.includes('onboarding_state: "in_progress"'),
@@ -632,6 +836,35 @@ for (const file of WRITE_PATH) {
     !/default\("SE"\)/.test(src) && !/\?\?\s*"SE"/.test(src) && !/\|\|\s*"SE"/.test(src),
   );
 }
+
+// ── AND NO COUNTRY IS INFERRED FOR A FREE-TEXT CLAIM ──────────────────
+//
+// A correction to the Sweden default briefly seeded the ordinary claim form
+// from the holder's confirmed WORK country. The claim form shows no country
+// field, so the value would have been recorded without the holder ever seeing
+// it -- and where somebody works is not the jurisdiction of their education,
+// their course or their certificate.
+const entryForms = code(read("src/components/security-passport/EntryForms.tsx"));
+ck(
+  "emptyClaimDraft takes no country at all",
+  /export function emptyClaimDraft\(kind: FreeClaimKind\)/.test(entryForms),
+);
+ck("and opens with none", /emptyClaimDraft[\s\S]{0,400}jurisdictionCode: "",/.test(entryForms));
+ck(
+  "a stored NULL claim country reads back as not stated, never as Sweden",
+  /claimToDraft[\s\S]{0,400}jurisdictionCode: c\.jurisdictionCode \?\? "",/.test(entryForms),
+);
+const infoRoute = code(read("src/routes/_authenticated.passport.information.tsx"));
+ck(
+  "and the entry page seeds no country into a claim",
+  !/emptyClaimDraft\([\s\S]{0,160}workCountry/.test(infoRoute),
+);
+ck(
+  "while an EMPLOYMENT, which does show the field, may be seeded from a CONFIRMED work country",
+  /emptyExperienceDraft\(\s*workCountry\?\.confirmed \? workCountry\.jurisdictionCode : null,?\s*\)/.test(
+    infoRoute,
+  ),
+);
 
 // And no employer is required to exist. "Do not require a current employer"
 // means employment must not be the only way in.
@@ -835,11 +1068,13 @@ ck(
 );
 ck(
   "the route invalidates after a completion",
-  /finished\.current = true;[\s\S]{0,200}await invalidatePassportAndCareer\(qc\)/.test(routeSrc),
+  /finished\.current = true;[\s\S]{0,1600}await invalidatePassportAndCareer\(qc\)/.test(routeSrc),
 );
 ck(
   "and after creating the Passport",
-  /await create\([\s\S]{0,160}invalidatePassportAndCareer\(qc\)/.test(routeSrc),
+  /await createPassport\(\{ data: undefined \}\);\s*await invalidatePassportAndCareer\(qc\)/.test(
+    routeSrc,
+  ),
 );
 
 // The home reads these keys. If it stops, the list above is stale and this

@@ -398,15 +398,27 @@ export interface ClaimDraft {
   expires: boolean;
 }
 
-/** A blank free-text claim. Same rule as the employment above: a country is
- *  the holder's stated provenance, never a value this function supplies. */
-export function emptyClaimDraft(kind: FreeClaimKind, defaultCountry?: string | null): ClaimDraft {
+/** A blank free-text claim.
+ *
+ *  ── AND NO COUNTRY AT ALL ──────────────────────────────────────────
+ *
+ *  It used to open with a literal "SE"; a correction then seeded it from the
+ *  holder's confirmed WORK country, which independent review rightly rejected.
+ *  This form shows no country field, so whatever is seeded here is recorded
+ *  without the holder ever seeing it — and where somebody works is not the
+ *  jurisdiction of their education, their course or their certificate. A
+ *  Swedish-based holder's German diploma is not a Swedish diploma.
+ *
+ *  Empty, therefore, and `saveClaimEntry` stores NULL: not stated, which is
+ *  the truth until somebody states it. An explicit field can be added later;
+ *  an inferred value cannot be un-asserted. */
+export function emptyClaimDraft(kind: FreeClaimKind): ClaimDraft {
   return {
     id: null,
     claimType: kind,
     title: "",
     issuerName: "",
-    jurisdictionCode: (defaultCountry ?? "").trim().toUpperCase(),
+    jurisdictionCode: "",
     issuedOn: null,
     validUntil: null,
     expires: false,

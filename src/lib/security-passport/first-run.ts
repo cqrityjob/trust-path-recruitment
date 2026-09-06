@@ -294,14 +294,55 @@ export function validateDraft(draft: FirstMeritDraft, today: string): FirstMerit
 /* Readback                                                            */
 /* ------------------------------------------------------------------ */
 
-/** One persisted merit, read back after a save. */
+/**
+ * One persisted merit, read back after a save.
+ *
+ * EVERY fact the first-run form can submit is here, because every one of them
+ * is a fact the confirmation screen implicitly vouches for. The first version
+ * returned only the identity, title, organisation and trust columns, so a
+ * merit stored with the wrong country or the wrong start date still rendered
+ * "your merit is saved".
+ *
+ * `country` is null for the four non-employment kinds, which is the value the
+ * server writes for them and therefore the value the comparison expects.
+ */
 export interface PersistedMerit {
   readonly id: string;
   readonly kind: "experience" | "claim";
   readonly title: string;
   readonly organisation: string | null;
+  /** `jurisdiction_code`. Null means "not stated", never Sweden. */
+  readonly country: string | null;
+  /** `started_on` for an employment, `issued_on` for a claim. */
+  readonly startedOn: string | null;
+  /** `ended_on` for an employment, `valid_until` for a claim. Null is ongoing
+   *  (employment) or no expiry (claim), which is a fact in itself. */
+  readonly endedOn: string | null;
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+}
+
+/** What a submitted draft SHOULD look like once stored, so the comparison is
+ *  written once and cannot drift from what the server was asked to write. */
+export function expectedPersisted(draft: FirstMeritDraft): {
+  readonly title: string;
+  readonly organisation: string;
+  readonly country: string | null;
+  readonly startedOn: string | null;
+  readonly endedOn: string | null;
+} {
+  const started = draft.startedOn.trim();
+  const ended = draft.endedOn.trim();
+  return {
+    title: draft.title.trim(),
+    organisation: draft.organisation.trim(),
+    // Only an employment files a country. A country typed against any other
+    // kind is deliberately not stored, so the readback must expect null --
+    // expecting the typed value would fail a save that was correct.
+    country: draft.kind === "employment" ? draft.country.trim().toUpperCase() || null : null,
+    startedOn: started === "" ? null : started,
+    endedOn: draft.ongoing || ended === "" ? null : ended,
+  };
 }
 
 /**
@@ -318,26 +359,112 @@ export interface PersistedMerit {
  */
 export type ReadbackOutcome = "confirmed" | "mismatch" | "unknown";
 
-export function confirmReadback(
+/** Which fields disagreed. Returned alongside the outcome so a mismatch can be
+ *  logged precisely rather than as a shrug. */
+export type ReadbackMismatchField =
+  | "id"
+  | "kind"
+  | "title"
+  | "organisation"
+  | "country"
+  | "startedOn"
+  | "endedOn"
+  | "assertionLevel"
+  | "lifecycleState";
+
+export interface ReadbackResult {
+  readonly outcome: ReadbackOutcome;
+  readonly mismatched: readonly ReadbackMismatchField[];
+}
+
+export function checkReadback(
   expected: {
     readonly id: string;
     readonly kind: "experience" | "claim";
     readonly draft: FirstMeritDraft;
   },
   persisted: PersistedMerit | null,
-): ReadbackOutcome {
-  if (!persisted) return "unknown";
-  if (persisted.id !== expected.id || persisted.kind !== expected.kind) return "mismatch";
-  if (persisted.title.trim() !== expected.draft.title.trim()) return "mismatch";
-  if ((persisted.organisation ?? "").trim() !== expected.draft.organisation.trim())
-    return "mismatch";
+): ReadbackResult {
+  if (!persisted) return { outcome: "unknown", mismatched: [] };
+
+  const want = expectedPersisted(expected.draft);
+  const bad: ReadbackMismatchField[] = [];
+
+  if (persisted.id !== expected.id) bad.push("id");
+  if (persisted.kind !== expected.kind) bad.push("kind");
+  if (persisted.title.trim() !== want.title) bad.push("title");
+  if ((persisted.organisation ?? "").trim() !== want.organisation) bad.push("organisation");
+  // EVERY SUBMITTED FACT, not only the ones that were easy to compare. A merit
+  // filed in the wrong country or dated to the wrong year is not the merit the
+  // person entered, and the confirmation screen must not vouch for it.
+  if ((persisted.country ?? null) !== want.country) bad.push("country");
+  if ((persisted.startedOn ?? null) !== want.startedOn) bad.push("startedOn");
+  if ((persisted.endedOn ?? null) !== want.endedOn) bad.push("endedOn");
   // THE TRUST ASSERTION, CHECKED BY THE CLIENT TOO.
   //
   // The function cannot raise trust and the database suite proves it. This is
   // the second lock: if a merit ever came back as anything but a holder's own
   // active statement, the confirmation screen — which says "information
   // provided by you" — would be describing something else.
-  if (persisted.assertionLevel !== "self_declared") return "mismatch";
-  if (!isCurrentMerit(persisted.lifecycleState)) return "mismatch";
-  return "confirmed";
+  if (persisted.assertionLevel !== "self_declared") bad.push("assertionLevel");
+  if (!isCurrentMerit(persisted.lifecycleState)) bad.push("lifecycleState");
+
+  return { outcome: bad.length === 0 ? "confirmed" : "mismatch", mismatched: bad };
 }
+
+/* ------------------------------------------------------------------ */
+/* Telling a refusal from a lost response                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The refusals the server raises BEFORE it writes anything.
+ *
+ * Every one of these is checked in `sp_passport_complete_first_merit` ahead of
+ * the first INSERT, so seeing one is proof that nothing changed. Anything else
+ * — a dropped connection, a gateway timeout, a 500 — is NOT proof of that: the
+ * transaction may well have committed and the response been lost on the way
+ * back.
+ *
+ * The distinction is the whole of defect 5. Saying "the merit was not saved,
+ * nothing has changed" after a lost response is a statement the product cannot
+ * support, about the one thing the person is trying to establish.
+ */
+export const COMPLETION_REFUSALS: readonly string[] = [
+  "SP_DECLARATION_REQUIRED",
+  "SP_OPERATION_ID_REQUIRED",
+  "SP_MERIT_KIND_UNKNOWN",
+  "SP_TITLE_REQUIRED",
+  "SP_ORGANISATION_REQUIRED",
+  "SP_WORK_COUNTRY_REQUIRED",
+  "SP_START_DATE_REQUIRED",
+  "SP_START_DATE_IN_FUTURE",
+  "SP_PERIOD_END_BEFORE_START",
+  "SP_CLAIM_END_BEFORE_START",
+  "SP_OPERATION_ID_CONFLICT",
+  "SP_OPERATION_FACTS_CHANGED",
+  "SP_FIRST_MERIT_ALREADY_EXISTS",
+  "SP_NOT_AUTHENTICATED",
+  // The zod validator's own refusals, raised before the request leaves the
+  // server function at all.
+  "SP_INVALID_DATE",
+];
+
+export type CompletionOutcome =
+  /** The server refused before writing. Nothing changed, and it is safe to
+   *  say so. */
+  | "refused"
+  /** Anything else. The write may have landed; only a retry carrying the same
+   *  operation id can establish which. */
+  | "indeterminate";
+
+export function classifyCompletionFailure(error: unknown): CompletionOutcome {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return COMPLETION_REFUSALS.some((code) => message.includes(code)) ? "refused" : "indeterminate";
+}
+
+/** Server-side draft refusals, which the route distinguishes for the same
+ *  reason: one of them means the holder finished in another tab, and telling
+ *  them their draft failed would be wrong. */
+export const DRAFT_COMPLETED = "SP_ONBOARDING_ALREADY_COMPLETED";
+export const DRAFT_STALE = "SP_DRAFT_REVISION_STALE";
+export const DRAFT_NO_PASSPORT = "SP_PASSPORT_MISSING";

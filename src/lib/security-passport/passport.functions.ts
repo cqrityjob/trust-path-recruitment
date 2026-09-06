@@ -77,6 +77,10 @@ export interface PassportProfile {
   readonly onboardingState: OnboardingState;
   readonly onboardingStep: number;
   readonly onboardingAnswers: Readonly<Record<string, string>>;
+  /** Monotonic revision of the first-run draft. A save must carry a strictly
+   *  greater one, which is what makes two autosaves in flight land in order
+   *  rather than in whichever order the network delivers them. */
+  readonly onboardingDraftRevision: number;
   readonly questionVersion: string;
   readonly declaredAccurateAt: string | null;
   readonly recognitionPolicyVersion: string;
@@ -104,6 +108,7 @@ type ProfileRow = {
   onboarding_state: string;
   onboarding_step: number;
   onboarding_answers: Record<string, string> | null;
+  onboarding_draft_revision: number;
   question_version: string;
   declared_accurate_at: string | null;
   recognition_policy_version: string;
@@ -159,6 +164,7 @@ function toProfile(row: ProfileRow | null): PassportProfile | null {
     onboardingState: row.onboarding_state as OnboardingState,
     onboardingStep: row.onboarding_step,
     onboardingAnswers: row.onboarding_answers ?? {},
+    onboardingDraftRevision: row.onboarding_draft_revision ?? 0,
     questionVersion: row.question_version,
     declaredAccurateAt: row.declared_accurate_at,
     recognitionPolicyVersion: row.recognition_policy_version,
@@ -311,7 +317,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
       db
         .from("sp_passport_profiles")
         .select(
-          "display_name, headline, cig_profession_slug, jurisdiction_code, sub_jurisdiction_code, work_location_confirmed_at, privacy_mode, onboarding_state, onboarding_step, onboarding_answers, question_version, declared_accurate_at, recognition_policy_version, updated_at",
+          "display_name, headline, cig_profession_slug, jurisdiction_code, sub_jurisdiction_code, work_location_confirmed_at, privacy_mode, onboarding_state, onboarding_step, onboarding_answers, onboarding_draft_revision, question_version, declared_accurate_at, recognition_policy_version, updated_at",
         )
         .eq("holder_user_id", userId)
         .maybeSingle(),

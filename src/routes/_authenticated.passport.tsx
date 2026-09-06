@@ -59,33 +59,51 @@ function PassportShell() {
   const { pt } = usePassportCopy();
   const { pathname } = useLocation();
 
+  // ── THE FIRST RUN GETS A FOCUSED SHELL ──────────────────────────────
+  //
+  // /passport/onboarding is a short guided flow with unsaved answers in it,
+  // and the four tabs above it were both a distraction and a data-loss path:
+  // one click on "Mina uppgifter" mid-form and the draft was whatever the
+  // last debounce had managed. The route flushes on unmount and guards the
+  // browser's own unload, but the better fix is not to put the door there.
+  //
+  // The tabs come back the moment the first run is over, which is the moment
+  // there is something to navigate between.
+  const firstRun = pathname === "/passport/onboarding";
+
   return (
     <SiteLayout>
-      <Section>
-        <nav aria-label={pt("card.brand")} className="mb-6 border-b border-border">
-          <ul className="-mb-px flex flex-wrap gap-1">
-            {NAV.map((item) => {
-              const active =
-                item.to === "/passport" ? pathname === "/passport" : pathname.startsWith(item.to);
-              return (
-                <li key={item.to}>
-                  <Link
-                    to={item.to}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "inline-flex h-11 items-center border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                      active
-                        ? "border-accent text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {pt(item.labelKey)}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+      {/* `py-20 md:py-28` is right for a marketing section and wrong for a
+          four-field form: it pushed the heading a third of the way down a
+          1440px window and made the journey feel further from the reader than
+          it is. The first run gets its own, tighter rhythm. */}
+      <Section className={firstRun ? "py-10 md:py-14" : undefined}>
+        {firstRun ? null : (
+          <nav aria-label={pt("card.brand")} className="mb-6 border-b border-border">
+            <ul className="-mb-px flex flex-wrap gap-1">
+              {NAV.map((item) => {
+                const active =
+                  item.to === "/passport" ? pathname === "/passport" : pathname.startsWith(item.to);
+                return (
+                  <li key={item.to}>
+                    <Link
+                      to={item.to}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "inline-flex h-11 items-center border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                        active
+                          ? "border-accent text-foreground"
+                          : "border-transparent text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {pt(item.labelKey)}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        )}
 
         <Outlet />
       </Section>

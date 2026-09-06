@@ -231,7 +231,7 @@ const sv = {
   "fr.field.country": "Land där du arbetade",
   "fr.field.countryPlaceholder": "Välj land",
   "fr.field.countryHelp":
-    "Vi anger aldrig ett land åt dig. Listan är de länder ditt Passport kan registrera i dag.",
+    "Vi anger aldrig ett land åt dig. Ditt Passport kan i dag registrera arbete i Sverige, Storbritannien och Förenade Arabemiraten. Fler länder tillkommer.",
   "fr.field.startedOn": "Startdatum",
   "fr.field.ongoing": "Jag arbetar kvar här",
   "fr.field.endedOn": "Slutdatum",
@@ -255,7 +255,24 @@ const sv = {
   "fr.error.futureDate": "Datumet kan inte ligga i framtiden.",
   "fr.error.endBeforeStart": "Slutdatumet måste ligga efter startdatumet.",
   "fr.error.declaration": "Kryssa i intyget innan du sparar.",
-  "fr.error.saveFailed": "Meriten sparades inte. Ingenting har ändrats i ditt Passport.",
+  "fr.saveExit.hint":
+    "Vi sparar det du har fyllt i och tar dig till Min karriär. Du hittar tillbaka hit från ditt Security Passport.",
+  "fr.error.createFailed":
+    "Ditt Security Passport kunde inte skapas. Ingenting har lagts till på ditt konto \u2014 försök igen.",
+  "fr.error.saveRefused":
+    "Meriten sparades inte. Ingenting har ändrats i ditt Passport \u2014 se över fälten ovan och försök igen.",
+  "fr.error.saveIndeterminate":
+    "Vi vet inte om meriten sparades. Svaret från servern kom aldrig fram, så den kan finnas. Tryck på \u201dSpara i mitt Passport\u201d igen \u2014 vi använder samma sparning, så du kan inte råka lägga till den två gånger.",
+  "fr.error.draftFailed":
+    "Utkastet kunde inte sparas, så vi stannar kvar här. Dina uppgifter finns kvar i formuläret.",
+  "fr.unknown.reconcile": "Försök spara igen",
+  "fr.loadError.title": "Vi kunde inte hämta ditt Security Passport",
+  "fr.loadError.body":
+    "Något gick fel när vi läste ditt Passport. Det betyder inte att du saknar ett \u2014 vi kunde bara inte läsa det just nu.",
+  "fr.loadError.reassurance": "Ingenting i ditt Passport har ändrats.",
+  "fr.loadError.retry": "Försök igen",
+  "fr.done.completeProfileHint":
+    "En längre sida där du kan fylla i fler uppgifter, i din egen takt.",
   "fr.error.retry": "Försök igen",
 
   // Screen 4
@@ -2019,7 +2036,7 @@ const en: Record<PassportCopyKey, string> = {
   "fr.field.country": "Country where you worked",
   "fr.field.countryPlaceholder": "Select a country",
   "fr.field.countryHelp":
-    "We never state a country for you. The list is the countries your Passport can record today.",
+    "We never state a country for you. Your Passport can currently record work in Sweden, the United Kingdom and the United Arab Emirates. More countries will follow.",
   "fr.field.startedOn": "Start date",
   "fr.field.ongoing": "I still work here",
   "fr.field.endedOn": "End date",
@@ -2043,7 +2060,24 @@ const en: Record<PassportCopyKey, string> = {
   "fr.error.futureDate": "The date cannot be in the future.",
   "fr.error.endBeforeStart": "The end date must be after the start date.",
   "fr.error.declaration": "Tick the confirmation before saving.",
-  "fr.error.saveFailed": "The merit was not saved. Nothing in your Passport has changed.",
+  "fr.saveExit.hint":
+    "We save what you have filled in and take you to My Career. You can get back here from your Security Passport.",
+  "fr.error.createFailed":
+    "Your Security Passport could not be created. Nothing has been added to your account \u2014 please try again.",
+  "fr.error.saveRefused":
+    "The merit was not saved. Nothing in your Passport has changed \u2014 check the fields above and try again.",
+  "fr.error.saveIndeterminate":
+    "We do not know whether the merit was saved. The server\u2019s answer never reached us, so it may exist. Press \u201cSave to my Passport\u201d again \u2014 we reuse the same save, so you cannot add it twice by accident.",
+  "fr.error.draftFailed":
+    "The draft could not be saved, so we have stayed here. Your details are still in the form.",
+  "fr.unknown.reconcile": "Try saving again",
+  "fr.loadError.title": "We could not load your Security Passport",
+  "fr.loadError.body":
+    "Something went wrong while reading your Passport. That does not mean you do not have one \u2014 we just could not read it right now.",
+  "fr.loadError.reassurance": "Nothing in your Passport has changed.",
+  "fr.loadError.retry": "Try again",
+  "fr.done.completeProfileHint":
+    "A longer page where you can fill in more details, at your own pace.",
   "fr.error.retry": "Try again",
 
   // Screen 4

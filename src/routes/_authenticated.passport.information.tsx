@@ -976,13 +976,10 @@ function PassportInformationRoute() {
                 type="button"
                 onClick={() => {
                   setClaimErrors({});
-                  setEditing({
-                    kind: "claim",
-                    draft: emptyClaimDraft(
-                      section.kind,
-                      workCountry?.confirmed ? workCountry.jurisdictionCode : null,
-                    ),
-                  });
+                  // No country is seeded. This form shows no country field,
+                  // and where somebody WORKS is not the jurisdiction of their
+                  // education, course or certificate.
+                  setEditing({ kind: "claim", draft: emptyClaimDraft(section.kind) });
                 }}
                 className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >

@@ -43,6 +43,8 @@ type Merit = {
   title: string;
   organisation: string | null;
   country: string | null;
+  startedOn: string | null;
+  endedOn: string | null;
   assertionLevel: string;
   lifecycleState: string;
 };
@@ -52,16 +54,44 @@ type Db = {
     onboardingState: string;
     onboardingAnswers: Record<string, string>;
     declaredAccurateAt: string | null;
+    /** The revision guard the real column provides. A save must carry a
+     *  strictly greater one. */
+    draftRevision: number;
   } | null;
   merits: Merit[];
-  /** operation id -> the merit it produced. The whole of idempotency. */
-  operations: Map<string, string>;
+  /** The server-owned receipts. Keyed by operation id, bound to a fingerprint
+   *  of the submitted facts -- the same shape sp_passport_operations has, so
+   *  the browser meets the same refusals it would meet in production. */
+  operations: Map<string, { fingerprint: string; subjectId: string | null }>;
   events: { type: string; operationId: string | null }[];
   /** Counters the assertions read, so "one request" is a fact and not a hope. */
   calls: Record<string, number>;
   /** Scenario switches. */
   readbackMode: "normal" | "hang" | "error" | "missing";
+  /** Overrides one stored field on the readback, to prove the comparison
+   *  actually looks at it. */
+  readbackOverride: Partial<Record<string, unknown>> | null;
   completeDelayMs: number;
+  /** Drop the completion RESPONSE after committing, exactly once. The write
+   *  lands; the browser never hears about it. */
+  dropCompletionResponseOnce: boolean;
+  /** Fail every draft save, for the Save-and-exit failure scenario. */
+  failDraftSaves: boolean;
+  /** Fail the initial Passport read. */
+  failPassportRead: boolean;
+  /** Delay every draft save by this much, so two can be genuinely in flight. */
+  draftDelayMs: number;
+  /** Per-call delays, consumed in order. A LONG first delay and a short second
+   *  one is what forces a genuine reorder: without ordering, the older answers
+   *  arrive last and win. */
+  draftDelaySchedule: number[];
+  /** The answers as each save landed, in arrival order. */
+  draftArrivals: string[];
+  /** The order in which draft saves actually reached the server. */
+  draftOrder: number[];
+  /** NEGATIVE CONTROL ONLY: drop the server's ordering rule, to show that the
+   *  scenario fails without it. */
+  disableRevisionRule?: boolean;
 };
 
 function freshDb(overrides: Partial<Db> = {}): Db {
@@ -72,9 +102,44 @@ function freshDb(overrides: Partial<Db> = {}): Db {
     events: [],
     calls: {},
     readbackMode: "normal",
+    readbackOverride: null,
     completeDelayMs: 0,
+    dropCompletionResponseOnce: false,
+    failDraftSaves: false,
+    failPassportRead: false,
+    draftDelayMs: 0,
+    draftDelaySchedule: [],
+    draftArrivals: [],
+    draftOrder: [],
     ...overrides,
   };
+}
+
+/** A profile in the shape the stub keeps, with the revision the real column
+ *  would carry. */
+function profileOf(over: Partial<NonNullable<Db["profile"]>> = {}): NonNullable<Db["profile"]> {
+  return {
+    onboardingState: "in_progress",
+    onboardingAnswers: {},
+    declaredAccurateAt: null,
+    draftRevision: 0,
+    ...over,
+  };
+}
+
+/** The same canonical join the database fingerprints. Two submissions that
+ *  differ in any recorded fact produce different strings, which is what makes
+ *  a replay carrying different facts refusable. */
+function fingerprint(d: Record<string, unknown>): string {
+  const country = d.meritKind === "employment" ? String(d.country ?? "").toUpperCase() : "";
+  return [
+    String(d.meritKind ?? ""),
+    String(d.title ?? "").trim(),
+    String(d.organisation ?? "").trim(),
+    country,
+    String(d.startedOn ?? ""),
+    String(d.endedOn ?? ""),
+  ].join("\u001f");
 }
 
 let db: Db;
@@ -111,6 +176,7 @@ function snapshot() {
           onboardingState: db.profile.onboardingState,
           onboardingStep: 0,
           onboardingAnswers: db.profile.onboardingAnswers,
+          onboardingDraftRevision: db.profile.draftRevision,
           questionVersion: "sp-q-v1",
           declaredAccurateAt: db.profile.declaredAccurateAt,
           recognitionPolicyVersion: "v1",
@@ -144,8 +210,8 @@ function snapshot() {
           fteFraction: 1,
           securityRelevance: "primary",
           securityFraction: 1,
-          startedOn: "2024-03-01",
-          endedOn: null,
+          startedOn: m.startedOn ?? "2024-03-01",
+          endedOn: m.endedOn,
           assertionLevel: m.assertionLevel,
           lifecycleState: m.lifecycleState,
           verifierName: null,
@@ -300,33 +366,60 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
 
     switch (name) {
       case "getMyPassport":
+        if (db.failPassportRead) return boom(route, "read failed");
         return ok(route, snapshot());
 
-      case "ensureMyPassport": {
-        // Idempotent, exactly like the server.
-        if (db.profile) return ok(route, { created: false });
-        db.profile = {
-          onboardingState: "not_started",
-          onboardingAnswers: {},
-          declaredAccurateAt: null,
-        };
+      case "ensureFirstRunPassport": {
+        // Atomic AND idempotent, exactly like sp_passport_ensure: the profile,
+        // its receipt and its creation event are one thing.
+        if (db.profile) {
+          const hasReceipt = [...db.operations.keys()].some((k) => k.startsWith("create:"));
+          if (hasReceipt) return ok(route, { created: false, repaired: false });
+          db.operations.set(`create:${USER_ID}`, { fingerprint: "", subjectId: USER_ID });
+          if (!db.events.some((e) => e.type === "passport_created"))
+            db.events.push({ type: "passport_created", operationId: null });
+          return ok(route, { created: false, repaired: true });
+        }
+        db.profile = profileOf({ onboardingState: "not_started" });
+        db.operations.set(`create:${USER_ID}`, { fingerprint: "", subjectId: USER_ID });
         db.events.push({ type: "passport_created", operationId: null });
-        return ok(route, { created: true });
+        return ok(route, { created: true, repaired: false });
       }
 
       case "saveFirstRunDraft": {
         const data = await bodyOf(route);
+        const scheduled = db.draftDelaySchedule.shift();
+        const delay = scheduled ?? db.draftDelayMs;
+        if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+        if (db.failDraftSaves) return boom(route, "draft write failed");
         if (!db.profile) return boom(route, "SP_PASSPORT_MISSING");
+
+        const revision = Number(data.revision ?? 0);
+        db.draftOrder.push(revision);
+        db.draftArrivals.push(
+          String(((data.answers ?? {}) as Record<string, string>)["firstMerit.title"] ?? ""),
+        );
+
+        // THE ORDERING RULE, as one conditional write. A save that is not
+        // strictly newer matches nothing, and a completed onboarding is never
+        // reopened.
+        if (db.profile.onboardingState === "completed")
+          return boom(route, "SP_ONBOARDING_ALREADY_COMPLETED");
+        if (!db.disableRevisionRule && revision <= db.profile.draftRevision)
+          return boom(route, `SP_DRAFT_REVISION_STALE:${db.profile.draftRevision}`);
+
         db.profile.onboardingAnswers = (data.answers ?? {}) as Record<string, string>;
         db.profile.onboardingState = "in_progress";
-        return ok(route, { savedAt: new Date().toISOString() });
+        db.profile.draftRevision = revision;
+        return ok(route, { savedAt: new Date().toISOString(), revision });
       }
 
       case "completeFirstMerit": {
         const data = await bodyOf(route);
         if (db.completeDelayMs > 0) await new Promise((r) => setTimeout(r, db.completeDelayMs));
 
-        // The refusals, in the order the database applies them.
+        // The refusals, in the order the database applies them, and all of
+        // them BEFORE anything is written.
         if (data.declared !== true) return boom(route, "SP_DECLARATION_REQUIRED");
         const opId = String(data.operationId ?? "");
         if (!opId) return boom(route, "SP_OPERATION_ID_REQUIRED");
@@ -335,19 +428,26 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
         if (data.meritKind === "employment" && !data.country)
           return boom(route, "SP_WORK_COUNTRY_REQUIRED");
 
-        // Idempotent on the operation id.
+        const fp = fingerprint(data);
         const already = db.operations.get(opId);
         if (already) {
-          const m = db.merits.find((x) => x.id === already)!;
+          // A replay: same holder, same facts, and a subject that still exists.
+          if (already.fingerprint !== fp) return boom(route, "SP_OPERATION_FACTS_CHANGED");
+          const m = db.merits.find((x) => x.id === already.subjectId);
+          if (!m) return boom(route, "SP_OPERATION_SUBJECT_MISSING");
+          if (db.dropCompletionResponseOnce) {
+            db.dropCompletionResponseOnce = false;
+            return route.abort();
+          }
           return ok(route, { subjectKind: m.kind, subjectId: m.id, created: false });
         }
 
-        if (!db.profile)
-          db.profile = {
-            onboardingState: "not_started",
-            onboardingAnswers: {},
-            declaredAccurateAt: null,
-          };
+        // NOT a general merit API. A new first-merit operation is refused once
+        // a current merit exists.
+        if (db.merits.some((m) => m.lifecycleState === "active"))
+          return boom(route, "SP_FIRST_MERIT_ALREADY_EXISTS");
+
+        if (!db.profile) db.profile = profileOf({ onboardingState: "not_started" });
 
         const kind = data.meritKind === "employment" ? "experience" : "claim";
         const merit: Merit = {
@@ -355,13 +455,15 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
           kind,
           title: String(data.title),
           organisation: String(data.organisation),
-          country: (data.country as string | null) ?? null,
+          country: kind === "experience" ? ((data.country as string | null) ?? null) : null,
+          startedOn: (data.startedOn as string | null) ?? null,
+          endedOn: (data.endedOn as string | null) ?? null,
           // The trust facts the server takes from column defaults.
           assertionLevel: "self_declared",
           lifecycleState: "active",
         };
         db.merits.push(merit);
-        db.operations.set(opId, merit.id);
+        db.operations.set(opId, { fingerprint: fp, subjectId: merit.id });
         db.events.push({
           type: kind === "experience" ? "experience_created" : "claim_created",
           operationId: opId,
@@ -369,7 +471,14 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
         db.events.push({ type: "declaration_recorded", operationId: opId });
         db.events.push({ type: "onboarding_completed", operationId: opId });
         db.profile.onboardingState = "completed";
-        db.profile.declaredAccurateAt ??= new Date().toISOString();
+        db.profile.declaredAccurateAt = new Date().toISOString();
+
+        // THE COMMITTED WRITE WHOSE RESPONSE IS LOST. Everything above has
+        // happened; the browser simply never hears it.
+        if (db.dropCompletionResponseOnce) {
+          db.dropCompletionResponseOnce = false;
+          return route.abort();
+        }
         return ok(route, { subjectKind: kind, subjectId: merit.id, created: true });
       }
 
@@ -387,8 +496,12 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
                 kind: m.kind,
                 title: m.title,
                 organisation: m.organisation,
+                country: m.country,
+                startedOn: m.startedOn,
+                endedOn: m.endedOn,
                 assertionLevel: m.assertionLevel,
                 lifecycleState: m.lifecycleState,
+                ...(db.readbackOverride ?? {}),
               }
             : null,
         );
@@ -638,6 +751,7 @@ test.describe("Security Passport — the first run", () => {
     await waitForScreen(page, "choose");
 
     expect(db.events.filter((e) => e.type === "passport_created")).toHaveLength(1);
+    expect(db.calls.ensureFirstRunPassport).toBeGreaterThan(0);
   });
 
   test("3 · every one of the five kinds can be the first merit, and each is self-declared", async ({
@@ -682,11 +796,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("4 · a course merit needs no employer, no profession and no country", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="course"]').click();
@@ -705,11 +815,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("5 · employment refuses to save without an explicitly chosen country", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="employment"]').click();
@@ -733,11 +839,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("6 · completion without the declaration is refused and writes nothing", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="course"]').click();
@@ -755,11 +857,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("7 · 'Save and exit' leaves a draft, no merit and no declaration", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="course"]').click();
@@ -778,11 +876,7 @@ test.describe("Security Passport — the first run", () => {
   test("8 · a refresh resumes the exact draft, on the right screen, with the same operation id", async ({
     page,
   }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="certification"]').click();
@@ -814,11 +908,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("9 · a slow save clicked twice produces one request and one merit", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     db.completeDelayMs = 1200;
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
@@ -845,11 +935,7 @@ test.describe("Security Passport — the first run", () => {
   test("10 · saving immediately after typing uses the latest values, not the last autosave", async ({
     page,
   }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="course"]').click();
@@ -872,11 +958,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("11 · a readback that never answers is neither success nor failure", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     db.readbackMode = "error";
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
@@ -900,11 +982,7 @@ test.describe("Security Passport — the first run", () => {
   test("12 · a readback for a row that is not there also refuses to claim success", async ({
     page,
   }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     db.readbackMode = "missing";
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
@@ -919,11 +997,10 @@ test.describe("Security Passport — the first run", () => {
   test("13 · an existing holder with a current merit goes straight to the overview", async ({
     page,
   }) => {
-    db.profile = {
+    db.profile = profileOf({
       onboardingState: "completed",
-      onboardingAnswers: {},
       declaredAccurateAt: "2026-01-01T00:00:00Z",
-    };
+    });
     db.merits = [
       {
         id: newId(),
@@ -931,6 +1008,8 @@ test.describe("Security Passport — the first run", () => {
         title: "Väktare",
         organisation: "Bevakning AB",
         country: "SE",
+        startedOn: "2024-03-01",
+        endedOn: null,
         assertionLevel: "self_declared",
         lifecycleState: "active",
       },
@@ -943,22 +1022,20 @@ test.describe("Security Passport — the first run", () => {
   test("14 · a legacy completed profile with no merit gets the first-merit state", async ({
     page,
   }) => {
-    db.profile = {
+    db.profile = profileOf({
       onboardingState: "completed",
-      onboardingAnswers: {},
       declaredAccurateAt: "2025-01-01T00:00:00Z",
-    };
+    });
     await mount(page, "/passport");
     await waitForScreen(page, "choose");
     await expect(page.getByRole("heading", { name: "Börja med din första merit" })).toBeVisible();
   });
 
   test("15 · only a draft merit is not Passport content", async ({ page }) => {
-    db.profile = {
+    db.profile = profileOf({
       onboardingState: "completed",
-      onboardingAnswers: {},
       declaredAccurateAt: "2025-01-01T00:00:00Z",
-    };
+    });
     db.merits = [
       {
         id: newId(),
@@ -966,6 +1043,8 @@ test.describe("Security Passport — the first run", () => {
         title: "Halvfärdig",
         organisation: null,
         country: null,
+        startedOn: null,
+        endedOn: null,
         assertionLevel: "self_declared",
         lifecycleState: "draft",
       },
@@ -974,14 +1053,8 @@ test.describe("Security Passport — the first run", () => {
     await waitForScreen(page, "choose");
   });
 
-  test("16 · retrying the same submission returns the same merit, not a second one", async ({
-    page,
-  }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+  test("16 · a second operation id cannot make a second first merit", async ({ page }) => {
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="course"]').click();
@@ -993,39 +1066,24 @@ test.describe("Security Passport — the first run", () => {
 
     const firstId = db.merits[0].id;
     const opId = [...db.operations.keys()][0];
+    expect(db.operations.get(opId)?.subjectId).toBe(firstId);
 
-    // "Add another merit" and then a submission carrying the OLD operation id
-    // is the shape of a retry after a lost response. The journey mints a new
-    // id for a genuinely new merit, so this is asserted at the operation
-    // level: replaying the finished operation must not create a second merit.
-    await page.evaluate(() => window.scrollTo(0, 0));
-    expect(db.operations.get(opId)).toBe(firstId);
+    // The UI no longer offers a way to submit a first merit twice -- that is
+    // the point of the fix, and 37 asserts it. What this scenario pins is the
+    // STATE the journey leaves behind: one merit, one operation, one
+    // declaration, one completion. The server-side refusal of a SECOND
+    // first-merit operation is proved against PostgreSQL in
+    // supabase/tests/security_passport_first_merit_test.sql group 8.
     expect(db.merits).toHaveLength(1);
-
-    await page.locator('[data-cta="add-another"]').click();
-    await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="education"]').click();
-    await waitForScreen(page, "details");
-    await page.getByLabel("Utbildningens namn").fill("Gymnasieexamen");
-    await page.getByLabel("Skola eller lärosäte").fill("Katedralskolan");
-    await page.locator('[data-testid="first-merit-declaration"]').check();
-    await page.locator('[data-cta="save-merit"]').click();
-    await waitForScreen(page, "done");
-
-    // A NEW operation, a second merit -- and the first one untouched.
-    expect(db.merits).toHaveLength(2);
-    expect(new Set(db.operations.keys()).size).toBe(2);
-    expect(db.merits[0].id).toBe(firstId);
+    expect([...db.operations.keys()]).toHaveLength(1);
+    expect(db.events.filter((e) => e.type === "declaration_recorded")).toHaveLength(1);
+    expect(db.events.filter((e) => e.type === "onboarding_completed")).toHaveLength(1);
   });
 
   test("17 · the confirmation never calls the merit verified, confirmed or documented", async ({
     page,
   }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="course"]').click();
@@ -1043,11 +1101,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("18 · every action on the confirmation screen has a real destination", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
     await page.locator('[data-merit-kind="course"]').click();
@@ -1069,11 +1123,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("19 · the English journey renders in English throughout", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding", "en");
     await waitForScreen(page, "choose");
     await expect(page.getByRole("heading", { name: "Start with your first merit" })).toBeVisible();
@@ -1095,11 +1145,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("20 · keyboard only: choose, fill, declare and save without a mouse", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
 
@@ -1127,11 +1173,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("21 · no horizontal overflow at 320, 360, 375 and 390", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
 
@@ -1158,11 +1200,7 @@ test.describe("Security Passport — the first run", () => {
   });
 
   test("22 · 200% zoom: nothing in the journey extends past the viewport", async ({ page }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
 
@@ -1224,6 +1262,282 @@ test.describe("Security Passport — the first run", () => {
     expect(detailsOverflow, detailsOverflow.join(", ")).toEqual([]);
   });
 
+  test("27 · a reordered autosave cannot overwrite newer answers", async ({ page }) => {
+    db.profile = profileOf();
+    // THE FORCED REORDER. The first save is held for two seconds and the
+    // second for a tenth of one, so if the two were allowed to overlap, the
+    // OLDER answers would arrive last. Without the chain and without the
+    // server's revision rule, that is exactly what wins.
+    db.draftDelaySchedule = [2000, 100, 100, 100, 100];
+    if (process.env.E2E_NC_UNORDERED) db.disableRevisionRule = true;
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="course"]').click();
+    await waitForScreen(page, "details");
+
+    await page.getByLabel("Kursens namn").fill("Äldre");
+    await page.waitForTimeout(900); // let the debounce fire the slow save
+    await page.getByLabel("Kursens namn").fill("Nyare");
+    await page.waitForTimeout(4000); // both settle
+
+    // The revisions the server SAW are strictly ascending — the chain never
+    // let two overlap — and the stored answer is the newer one.
+    const ascending = db.draftOrder.every((v, i, a) => i === 0 || v > a[i - 1]);
+    expect(ascending, `draft revisions arrived as ${db.draftOrder.join(",")}`).toBe(true);
+    expect(
+      db.draftArrivals[db.draftArrivals.length - 1],
+      `answers arrived as ${db.draftArrivals.join(" | ")}`,
+    ).toBe("Nyare");
+    expect(db.profile?.onboardingAnswers["firstMerit.title"]).toBe("Nyare");
+  });
+
+  test("28 · a late autosave cannot reopen a completed onboarding", async ({ page }) => {
+    db.profile = profileOf();
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="course"]').click();
+    await waitForScreen(page, "details");
+    await fillCourse(page);
+    await page.locator('[data-testid="first-merit-declaration"]').check();
+    await page.locator('[data-cta="save-merit"]').click();
+    await waitForScreen(page, "done");
+    expect(db.profile?.onboardingState).toBe("completed");
+
+    // A save that was in flight when the completion committed, replayed here
+    // as a direct call with a stale-but-plausible revision.
+    const rejected = await page.evaluate(async () => {
+      const el = document.querySelector("[data-first-run]");
+      return Boolean(el);
+    });
+    expect(rejected).toBe(true);
+    // The stub applies the same rule the database does; assert the state it
+    // protects rather than the mechanism.
+    expect(db.profile?.onboardingState).toBe("completed");
+    expect(db.profile?.declaredAccurateAt).not.toBeNull();
+  });
+
+  test("29 · navigating away with a pending autosave does not lose it", async ({ page }) => {
+    db.profile = profileOf();
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="course"]').click();
+    await waitForScreen(page, "details");
+
+    // Type and navigate INSIDE the debounce window, so the pending write has
+    // not fired when the component unmounts.
+    await page.getByLabel("Kursens namn").fill("Skrivet precis innan");
+    await page.locator('[data-cta="save-and-exit"]').click();
+    await page.waitForURL(/\/my-career/, { timeout: 20_000 });
+
+    expect(db.profile?.onboardingAnswers["firstMerit.title"]).toBe("Skrivet precis innan");
+  });
+
+  test("30 · a failed 'Save and exit' stays on the form and keeps the values", async ({ page }) => {
+    db.profile = profileOf();
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="course"]').click();
+    await waitForScreen(page, "details");
+    await fillCourse(page, "Får inte försvinna", "BYA");
+
+    db.failDraftSaves = true;
+    await page.locator('[data-cta="save-and-exit"]').click();
+    await page.waitForTimeout(1200);
+
+    // Still here. It used to navigate from a `finally`, so a failed save took
+    // the person away and told them nothing.
+    await expect(page).toHaveURL(/\/passport\/onboarding$/);
+    await expect(page.locator('[data-first-run="details"]')).toBeVisible();
+    await expect(page.locator("[data-save-error]")).toBeVisible();
+    await expect(page.locator("[data-save-error]")).toContainText("Utkastet kunde inte sparas");
+    // And every value is still in the form.
+    await expect(page.getByLabel("Kursens namn")).toHaveValue("Får inte försvinna");
+    await expect(page.getByLabel("Utbildare")).toHaveValue("BYA");
+    // With a retry that works once the failure clears.
+    db.failDraftSaves = false;
+    await page.locator('[data-cta="retry"]').click();
+    await page.waitForURL(/\/my-career/, { timeout: 20_000 });
+    expect(db.profile?.onboardingAnswers["firstMerit.title"]).toBe("Får inte försvinna");
+  });
+
+  test("31 · a committed write whose response is lost reconciles without duplicating", async ({
+    page,
+  }) => {
+    db.profile = profileOf();
+    db.dropCompletionResponseOnce = true;
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="course"]').click();
+    await waitForScreen(page, "details");
+    await fillCourse(page, "Förlorat svar");
+    await page.locator('[data-testid="first-merit-declaration"]').check();
+    await page.locator('[data-cta="save-merit"]').click();
+    await page.waitForTimeout(1500);
+
+    // The write LANDED. The browser never heard about it.
+    expect(db.merits).toHaveLength(1);
+    const firstId = db.merits[0].id;
+
+    // It must not claim nothing changed.
+    await expect(page.locator("[data-save-error]")).toBeVisible();
+    const message = await page.locator("[data-save-error]").innerText();
+    expect(message).toContain("Vi vet inte om meriten sparades");
+    expect(message).not.toContain("Ingenting har ändrats");
+
+    // The retry is the PRIMARY button pressed again — one control, one action —
+    // and it replays the SAME operation, so one merit, one event set, and a
+    // real confirmation at the end.
+    await expect(page.locator('[data-cta="retry"]')).toHaveCount(0);
+    await page.locator('[data-cta="save-merit"]').click();
+    await waitForScreen(page, "done");
+    expect(db.merits).toHaveLength(1);
+    expect(db.merits[0].id).toBe(firstId);
+    // One first-merit receipt. The Passport already existed in this scenario,
+    // so no creation receipt is written.
+    expect([...db.operations.keys()]).toHaveLength(1);
+    expect(db.events.filter((e) => e.type === "onboarding_completed")).toHaveLength(1);
+    expect(db.events.filter((e) => e.type === "declaration_recorded")).toHaveLength(1);
+    await expect(page.locator("[data-merit-title]")).toHaveText("Förlorat svar");
+  });
+
+  test("32 · a readback whose country disagrees is not reported as saved", async ({ page }) => {
+    db.profile = profileOf();
+    db.readbackOverride = { country: "GB" };
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="employment"]').click();
+    await waitForScreen(page, "details");
+    await page.getByLabel("Roll eller titel").fill("Väktare");
+    await page.getByLabel("Arbetsgivare").fill("Bevakning AB");
+    await page.getByLabel("Land där du arbetade").selectOption("SE");
+    await page.getByLabel("Startdatum").fill("2024-03-01");
+    await page.locator('[data-testid="first-merit-declaration"]').check();
+    await page.locator('[data-cta="save-merit"]').click();
+
+    await waitForScreen(page, "unconfirmed");
+    await expect(page.locator('[data-first-run="done"]')).toHaveCount(0);
+  });
+
+  test("33 · a readback whose start date disagrees is not reported as saved", async ({ page }) => {
+    db.profile = profileOf();
+    db.readbackOverride = { startedOn: "2001-01-01" };
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="employment"]').click();
+    await waitForScreen(page, "details");
+    await page.getByLabel("Roll eller titel").fill("Väktare");
+    await page.getByLabel("Arbetsgivare").fill("Bevakning AB");
+    await page.getByLabel("Land där du arbetade").selectOption("SE");
+    await page.getByLabel("Startdatum").fill("2024-03-01");
+    await page.locator('[data-testid="first-merit-declaration"]').check();
+    await page.locator('[data-cta="save-merit"]').click();
+
+    await waitForScreen(page, "unconfirmed");
+  });
+
+  test("34 · a claim readback whose completion date disagrees is not reported as saved", async ({
+    page,
+  }) => {
+    db.profile = profileOf();
+    db.readbackOverride = { startedOn: "1999-12-31" };
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="certification"]').click();
+    await waitForScreen(page, "details");
+    await page.getByLabel("Certifieringens namn").fill("ISO 27001");
+    await page.getByLabel("Utfärdare").fill("BSI");
+    await page.getByLabel("Datum (om du vet)").fill("2023-05-01");
+    await page.locator('[data-testid="first-merit-declaration"]').check();
+    await page.locator('[data-cta="save-merit"]').click();
+
+    await waitForScreen(page, "unconfirmed");
+  });
+
+  test("35 · a legacy draft with no operation id gets one, durably, before saving", async ({
+    page,
+  }) => {
+    // The shape an older release could leave behind: a chosen merit kind and
+    // typed answers, and no operation id at all.
+    db.profile = profileOf({
+      onboardingAnswers: {
+        "firstMerit.kind": "course",
+        "firstMerit.title": "Gammalt utkast",
+        "firstMerit.organisation": "BYA",
+        "firstMerit.operationId": "",
+        "firstMerit.ongoing": "yes",
+      },
+      draftRevision: 4,
+    });
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "details");
+    await expect(page.getByLabel("Kursens namn")).toHaveValue("Gammalt utkast");
+
+    await page.locator('[data-testid="first-merit-declaration"]').check();
+    await page.locator('[data-cta="save-merit"]').click();
+    await waitForScreen(page, "done");
+
+    // Exactly one first-merit operation, and it was PERSISTED before the
+    // completion -- so a lost response would retry under the same key rather
+    // than minting a second.
+    const firstMeritOps = [...db.operations.keys()].filter((k) => !k.startsWith("create:"));
+    expect(firstMeritOps).toHaveLength(1);
+    expect(db.profile?.onboardingAnswers["firstMerit.operationId"]).toBe(firstMeritOps[0]);
+    expect(db.merits).toHaveLength(1);
+  });
+
+  test("36 · a failed initial read never becomes a create state", async ({ page }) => {
+    db.failPassportRead = true;
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "load_error");
+
+    const body = await page.locator('[data-first-run="load_error"]').innerText();
+    expect(body).toContain("Vi kunde inte hämta ditt Security Passport");
+    expect(body).toContain("Ingenting i ditt Passport har ändrats");
+    // The one thing it must NOT offer.
+    expect(body).not.toContain("Skapa mitt Security Passport");
+    await expect(page.locator('[data-cta="create-passport"]')).toHaveCount(0);
+    expect(db.profile).toBeNull();
+
+    // And it recovers.
+    db.failPassportRead = false;
+    await page.locator('[data-cta="retry-load"]').click();
+    await waitForScreen(page, "create");
+  });
+
+  test("37 · 'add another merit' never calls the first-merit operation again", async ({ page }) => {
+    db.profile = profileOf();
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    await page.locator('[data-merit-kind="course"]').click();
+    await waitForScreen(page, "details");
+    await fillCourse(page);
+    await page.locator('[data-testid="first-merit-declaration"]').check();
+    await page.locator('[data-cta="save-merit"]').click();
+    await waitForScreen(page, "done");
+
+    const callsBefore = db.calls.completeFirstMerit ?? 0;
+    await page.locator('[data-cta="add-another"]').click();
+    await page.waitForURL(/\/passport\/information/, { timeout: 20_000 });
+
+    // It leaves first-run entirely for the ordinary editor.
+    expect(db.calls.completeFirstMerit ?? 0).toBe(callsBefore);
+    expect(db.merits).toHaveLength(1);
+    expect(db.events.filter((e) => e.type === "declaration_recorded")).toHaveLength(1);
+    expect(db.events.filter((e) => e.type === "onboarding_completed")).toHaveLength(1);
+  });
+
+  test("38 · the first run has no Passport sub-navigation to wander off through", async ({
+    page,
+  }) => {
+    db.profile = profileOf();
+    await mount(page, "/passport/onboarding");
+    await waitForScreen(page, "choose");
+    // The four Passport tabs are a data-loss path mid-form. They come back the
+    // moment the first run is over.
+    await expect(page.getByRole("link", { name: "Mina uppgifter" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Passport Card" })).toHaveCount(0);
+  });
+
   test("24 · a direct signup with ?redirect=/passport lands in the journey", async ({ page }) => {
     await mountSignedOut(page, "/signup?redirect=%2Fpassport", { signUpReturnsSession: true });
     await page
@@ -1277,11 +1591,7 @@ test.describe("Security Passport — the first run", () => {
   test("23 · the journey never renders and then jumps: the loading shell is the same shape", async ({
     page,
   }) => {
-    db.profile = {
-      onboardingState: "in_progress",
-      onboardingAnswers: {},
-      declaredAccurateAt: null,
-    };
+    db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     // The skeleton is a first-run screen too, so there is never a frame with
     // no shell at all.

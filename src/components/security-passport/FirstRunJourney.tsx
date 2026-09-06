@@ -181,7 +181,7 @@ export function CreatePassportScreen({
           </div>
         </div>
 
-        {error ? <SaveError message={error} /> : null}
+        {error ? <SaveError message={error} retryLabel={pt("fr.error.retry")} /> : null}
 
         <div className="mt-7">
           <button
@@ -345,14 +345,42 @@ const COUNTRIES: readonly { value: string; labelKey: PassportCopyKey }[] = [
   { value: "AE", labelKey: "jurisdiction.AE" },
 ];
 
-function SaveError({ message }: { message: string }) {
+/** A failure the reader can act on.
+ *
+ *  The message says WHICH thing did not happen and whether anything changed;
+ *  the retry appears only where retrying is meaningful. A refusal is fixed by
+ *  correcting a field, so it gets no button — an "again" that cannot help is
+ *  an invitation to press it repeatedly. */
+function SaveError({
+  message,
+  onRetry,
+  retryLabel,
+  busy,
+}: {
+  message: string;
+  onRetry?: () => void;
+  retryLabel: string;
+  busy?: boolean;
+}) {
   return (
-    <p
+    <div
       role="alert"
-      className="mt-5 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm leading-relaxed text-foreground"
+      data-save-error
+      className="mt-5 rounded-lg border border-destructive/40 bg-destructive/5 p-4"
     >
-      {message}
-    </p>
+      <p className="text-sm leading-relaxed text-foreground">{message}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          data-cta="retry"
+          onClick={onRetry}
+          disabled={busy}
+          className="mt-3 inline-flex h-11 items-center rounded-lg border border-input bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {retryLabel}
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -366,6 +394,7 @@ export function MeritDetailsScreen({
   onBack,
   busy,
   error,
+  onRetry,
 }: {
   kind: FirstMeritKind;
   draft: FirstMeritDraft;
@@ -379,6 +408,9 @@ export function MeritDetailsScreen({
   onBack: () => void;
   busy: boolean;
   error: string | null;
+  /** Present only when trying the same thing again could change the answer:
+   *  a lost response, or a draft save that did not land. */
+  onRetry?: () => void;
 }) {
   const { pt } = usePassportCopy();
   const heading = useScreenHeading("details");
@@ -559,7 +591,14 @@ export function MeritDetailsScreen({
             </div>
           </div>
 
-          {error ? <SaveError message={error} /> : null}
+          {error ? (
+            <SaveError
+              message={error}
+              onRetry={onRetry}
+              retryLabel={pt("fr.error.retry")}
+              busy={busy}
+            />
+          ) : null}
 
           <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
             <button type="submit" data-cta="save-merit" disabled={busy} className={PRIMARY}>
@@ -575,6 +614,12 @@ export function MeritDetailsScreen({
               {pt("fr.saveExit")}
             </button>
           </div>
+
+          {/* WHERE IT TAKES YOU, said before you press it. "Save and exit" is
+              the one control on this screen whose destination is not obvious
+              from its label, and leaving that to be discovered is how a
+              person loses their place. */}
+          <p className="text-xs leading-relaxed text-muted-foreground">{pt("fr.saveExit.hint")}</p>
         </form>
       </Card>
 
@@ -672,20 +717,37 @@ export function MeritSavedScreen({
             {pt("fr.done.completeProfile")}
           </button>
         </div>
+        {/* /passport/information is a long page. Sending somebody there with a
+            three-word link and no warning is how a person who wanted one more
+            small thing meets a wall of sections. */}
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          {pt("fr.done.completeProfileHint")}
+        </p>
       </Card>
     </div>
   );
 }
 
 /**
- * The readback that did not answer.
+ * The write may have landed, and the product will not guess.
  *
  * A save whose confirmation could not be read is neither a success nor a
  * failure, and saying either would be a guess about somebody's own record.
- * The merit may well be there; the honest thing is to say so and hand them
- * the place to look, rather than inviting them to add it a second time.
+ * What it CAN offer is the thing that settles the question: the same
+ * submission again, under the same operation id, which the server answers by
+ * replaying the merit it already made rather than making a second one.
  */
-export function MeritUnconfirmedScreen({ onGoToPassport }: { onGoToPassport: () => void }) {
+export function MeritUnconfirmedScreen({
+  onGoToPassport,
+  onReconcile,
+  busy,
+}: {
+  onGoToPassport: () => void;
+  /** Absent when the operation id is not available, in which case retrying
+   *  would be a NEW operation and is therefore not offered. */
+  onReconcile?: () => void;
+  busy?: boolean;
+}) {
   const { pt } = usePassportCopy();
   const heading = useScreenHeading("done");
 
@@ -704,14 +766,68 @@ export function MeritUnconfirmedScreen({ onGoToPassport }: { onGoToPassport: () 
         <p className="mt-3 text-base leading-relaxed text-muted-foreground">
           {pt("fr.unknown.body")}
         </p>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          {onReconcile ? (
+            <button
+              type="button"
+              data-cta="reconcile"
+              onClick={onReconcile}
+              disabled={busy}
+              className={PRIMARY}
+            >
+              {busy ? pt("fr.saving") : pt("fr.unknown.reconcile")}
+            </button>
+          ) : null}
           <button
             type="button"
             data-cta="go-to-passport"
             onClick={onGoToPassport}
-            className={PRIMARY}
+            className={onReconcile ? SECONDARY : PRIMARY}
           >
             {pt("fr.unknown.action")}
+          </button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/**
+ * The Passport could not be READ.
+ *
+ * Deliberately NOT the create screen. An unreadable Passport and an absent one
+ * look identical from a failed request, and the first version treated them the
+ * same — offering somebody whose record could not be loaded a button to make a
+ * new one on top of it. The copy is neutral, says nothing was changed, and
+ * offers only the action that can help.
+ */
+export function FirstRunLoadError({ onRetry }: { onRetry: () => void }) {
+  const { pt } = usePassportCopy();
+  const heading = useScreenHeading("create");
+
+  return (
+    <div className="mx-auto w-full max-w-2xl" data-first-run="load_error">
+      <Card>
+        <h1
+          ref={heading}
+          tabIndex={-1}
+          className={HEADING}
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {pt("fr.loadError.title")}
+        </h1>
+        <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+          {pt("fr.loadError.body")}
+        </p>
+        {/* The reassurance is its own sentence and is not destructive-red:
+            "we could not read this" is not a warning about the holder's data,
+            and colouring it as one says the opposite of what it means. */}
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {pt("fr.loadError.reassurance")}
+        </p>
+        <div className="mt-6">
+          <button type="button" data-cta="retry-load" onClick={onRetry} className={PRIMARY}>
+            {pt("fr.loadError.retry")}
           </button>
         </div>
       </Card>
