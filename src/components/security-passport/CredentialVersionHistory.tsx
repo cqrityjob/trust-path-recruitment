@@ -8,7 +8,7 @@
 
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDate, formatExpiry } from "@/lib/security-passport/format";
-import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
+import { credentialPresentationOf } from "@/lib/security-passport/trust-presentation";
 import type { AssertionLevel, LifecycleState } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
 import { CredentialSymbol } from "./CredentialSymbol";
@@ -24,6 +24,11 @@ export interface VersionEntry {
   readonly validUntil: string | null;
   readonly assertionLevel: string;
   readonly lifecycleState: string;
+  /** Who decided this version, and how. Optional so the fixture prototype
+   *  can omit them; absent reads as a credential nobody has attributed,
+   *  which is the fail-closed answer. */
+  readonly verifierName?: string | null;
+  readonly verificationMethod?: string | null;
   readonly updatedAt: string;
 }
 
@@ -63,10 +68,7 @@ export function CredentialVersionHistory({
                 <span className="flex min-w-0 items-center gap-3">
                   <CredentialSymbol
                     code={v.credentialCode}
-                    state={credentialPresentation(
-                      v.assertionLevel as AssertionLevel,
-                      v.lifecycleState as LifecycleState,
-                    )}
+                    state={credentialPresentationOf(v, v.lifecycleState as LifecycleState)}
                     name={v.title}
                     size={36}
                     className="shrink-0"
@@ -89,7 +91,16 @@ export function CredentialVersionHistory({
                   </span>
                 </span>
                 <span className="flex shrink-0 flex-col items-end gap-1.5">
-                  <AssertionChip level={v.assertionLevel as AssertionLevel} size="sm" />
+                  {/* The lifecycle AND the provenance: a superseded version is
+                      past, and a version CQrityjob reviewed is documented. Without
+                      both, this list printed the present-tense VERIFIERAD beside
+                      "Ersatt" and beside a header that said Dokumenterad. */}
+                  <AssertionChip
+                    level={v.assertionLevel as AssertionLevel}
+                    lifecycleState={v.lifecycleState}
+                    provenance={v}
+                    size="sm"
+                  />
                   <LifecycleChip state={v.lifecycleState as LifecycleState} />
                 </span>
               </div>

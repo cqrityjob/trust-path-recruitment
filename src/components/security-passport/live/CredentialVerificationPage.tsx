@@ -21,23 +21,10 @@
 import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatExpiry } from "@/lib/security-passport/format";
-import { presentationWordKey } from "@/lib/security-passport/design/credential-symbols";
 import type { RecipientCredential } from "@/lib/security-passport/recipient-presentation";
+import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
 import { BrandMark, EngravedField, EngravedRule } from "../card/CardPrimitives";
 import { CredentialSymbol } from "../CredentialSymbol";
-
-const METHOD_KEY: Readonly<
-  Record<
-    string,
-    | "ver.method.document_review"
-    | "ver.method.employer_confirmation"
-    | "ver.method.issuer_confirmation"
-  >
-> = {
-  document_review: "ver.method.document_review",
-  employer_confirmation: "ver.method.employer_confirmation",
-  issuer_confirmation: "ver.method.issuer_confirmation",
-};
 
 export function CredentialVerificationPage({
   credential,
@@ -52,6 +39,9 @@ export function CredentialVerificationPage({
 }) {
   const { pt, lang } = usePassportCopy();
   const isCurrent = credential.lifecycle === "active";
+  // Gold -- the approved treatment -- only for a derived VERIFIED presentation.
+  // A documented credential, legacy or otherwise, wears the ink outline.
+  const looksVerified = isCurrent && credential.presentation === "verified";
 
   return (
     <div className="space-y-5">
@@ -95,13 +85,24 @@ export function CredentialVerificationPage({
           {/* Trust state in word, shape and glyph — never colour alone. */}
           <p
             className="mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]"
+            data-trust-pill={looksVerified ? "verified" : isCurrent ? "current" : "historical"}
             style={{
-              color: isCurrent ? TRUST_PALETTE.goldBright : TRUST_PALETTE.amber,
-              border: `1px ${isCurrent ? "solid" : "dashed"} ${isCurrent ? TRUST_PALETTE.gold : TRUST_PALETTE.amber}`,
+              color: looksVerified
+                ? TRUST_PALETTE.goldBright
+                : isCurrent
+                  ? TRUST_PALETTE.ink
+                  : TRUST_PALETTE.amber,
+              border: `1px ${isCurrent ? "solid" : "dashed"} ${
+                looksVerified
+                  ? TRUST_PALETTE.gold
+                  : isCurrent
+                    ? TRUST_PALETTE.inkMuted
+                    : TRUST_PALETTE.amber
+              }`,
             }}
           >
             {isCurrent
-              ? pt(presentationWordKey(credential.presentation))
+              ? pt(credential.statusWordKey)
               : `${pt(`lifecycle.${credential.lifecycle}` as const)} · ${pt("assertion.verified.historical")}`}
           </p>
 
@@ -140,7 +141,7 @@ export function CredentialVerificationPage({
           </div>
           <div>
             <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("rec.verifiedBy")}
+              {pt(credential.labels.by)}
             </dt>
             <dd className="mt-0.5 text-sm text-foreground">
               {credential.verifierOrganisation ?? pt("common.notStated")}
@@ -148,7 +149,7 @@ export function CredentialVerificationPage({
           </div>
           <div>
             <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("rec.method")}
+              {pt(credential.labels.method)}
             </dt>
             <dd className="mt-0.5 text-sm text-foreground">
               {/* A method this build has no words for prints its own stored
@@ -161,7 +162,10 @@ export function CredentialVerificationPage({
                   value here is expected, not exceptional. */}
               {credential.verificationMethod
                 ? (() => {
-                    const key = METHOD_KEY[credential.verificationMethod];
+                    const key = methodLabelKey(
+                      credential.verificationMethod,
+                      credential.verifierOrganisation,
+                    );
                     return key ? pt(key) : credential.verificationMethod;
                   })()
                 : pt("common.notStated")}
@@ -169,7 +173,7 @@ export function CredentialVerificationPage({
           </div>
           <div>
             <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("rec.verifiedAt")}
+              {pt(credential.labels.at)}
             </dt>
             <dd className="mt-0.5 text-sm tabular-nums text-foreground">
               {credential.verifiedAt ? credential.verifiedAt.slice(0, 10) : pt("common.notStated")}
@@ -192,6 +196,11 @@ export function CredentialVerificationPage({
             </div>
           ) : null}
         </dl>
+        {credential.noticeKey ? (
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            {pt(credential.noticeKey)}
+          </p>
+        ) : null}
       </section>
     </div>
   );

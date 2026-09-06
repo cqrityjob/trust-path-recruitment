@@ -30,6 +30,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { deriveVerifiedIdentity } from "../src/lib/security-passport/identity/visibility";
+import { deriveProfessionalIdentity } from "../src/lib/security-passport/identity/derive";
 import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
 import {
   eligibilityTitles,
@@ -102,8 +103,13 @@ function claim(
   };
 }
 
+// The RULES, at the engine. What the recorded METHOD proves is a second
+// question, applied by the audience gate and asserted at the end of this
+// file: since 2026-09-05 no credential reaches source-confirmed, so every
+// journey below would be empty if it were read through the gate -- which
+// would assert nothing about the journeys themselves.
 const derive = (claims: readonly Claim[]) =>
-  deriveVerifiedIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
+  deriveProfessionalIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
 
 /** The words that may only ever appear because an APPOINTMENT or LICENCE was
  *  derived — never because a course was completed. Checked as whole words so
@@ -809,6 +815,36 @@ console.log("\nWRITE PATH -- the save payload cannot desync from the schema");
     "and does not re-enumerate draft fields by hand (found: " +
       (enumerated.join(", ") || "none") +
       ")",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+console.log("\nTHE GATE -- what the recorded METHOD proves, on the same journeys");
+{
+  const gate = (claims: readonly Claim[]) =>
+    deriveVerifiedIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
+  const withProvenance = (code: string, org: string | null, method: string | null): Claim => ({
+    ...claim(code),
+    verifierName: org,
+    verificationMethod: method as Claim["verificationMethod"],
+  });
+  const full = [
+    withProvenance("VU1", "CQrityjob", "document_review"),
+    withProvenance("VU2", "CQrityjob", "document_review"),
+    withProvenance("SE_PERSONNEL_APPROVAL", "Länsstyrelsen", "issuer_confirmation"),
+  ];
+  const raw = derive(full);
+  assert(
+    raw.professionalCompetence.length > 0 && raw.localEligibility.length > 0,
+    "GATE-1 the journey still derives on the raw engine -- the rules are intact",
+  );
+  const gated = gate(full);
+  assert(
+    gated.activeTitles.length === 0 &&
+      gated.localEligibility.length === 0 &&
+      gated.professionalCompetence.length === 0 &&
+      gated.educationCompleted.length === 0,
+    "GATE-2 and derives NOTHING through the audience gate: a document review is documented, and an issuer confirmation has no structure behind it",
   );
 }
 

@@ -13,6 +13,7 @@
 // typing the word `Preview`, in a call that reads as what it is.
 
 import { deriveProfessionalIdentity } from "./derive";
+import { effectiveAssertionLevel } from "../provenance";
 import type { Claim, IsoDate } from "../types";
 import type { DerivedTitle, ProfessionalIdentity, TitleRule } from "./types";
 
@@ -28,7 +29,25 @@ export function deriveVerifiedIdentity(
   rules: readonly TitleRule[],
   evaluationOn: IsoDate,
 ): ProfessionalIdentity {
-  return deriveProfessionalIdentity(claims, rules, evaluationOn);
+  return deriveProfessionalIdentity(withEffectiveAssertion(claims), rules, evaluationOn);
+}
+
+/**
+ * Claims as the ENGINE may read them.
+ *
+ * The stored assertion level is not rewritten anywhere; this is a projection
+ * for derivation only. A legacy unsupported claim -- a source-confirmation
+ * method CQrityjob recorded about itself -- arrives as document_provided and
+ * therefore satisfies no rule that asks for verified: it contributes no
+ * verified title, no regulated eligibility and no authority recognition.
+ * Applied here, at the audience gate, so that every derivation -- public,
+ * private preview, CV -- reads the same claim the same way.
+ */
+export function withEffectiveAssertion(claims: readonly Claim[]): readonly Claim[] {
+  return claims.map((c) => {
+    const level = effectiveAssertionLevel(c);
+    return level === c.assertionLevel ? c : { ...c, assertionLevel: level };
+  });
 }
 
 /**
@@ -45,7 +64,9 @@ export function derivePreviewIdentity(
   rules: readonly TitleRule[],
   evaluationOn: IsoDate,
 ): ProfessionalIdentity {
-  return deriveProfessionalIdentity(claims, rules, evaluationOn, { includeSelfDeclared: true });
+  return deriveProfessionalIdentity(withEffectiveAssertion(claims), rules, evaluationOn, {
+    includeSelfDeclared: true,
+  });
 }
 
 /**

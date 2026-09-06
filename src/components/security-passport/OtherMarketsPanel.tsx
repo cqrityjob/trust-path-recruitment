@@ -126,7 +126,7 @@ function MarketRow({
           {all.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-2 py-1.5">
               <span className="min-w-0 flex-1 truncate text-sm text-foreground">{c.title}</span>
-              <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
+              <AssertionChip level={c.assertionLevel as AssertionLevel} provenance={c} size="sm" />
               {c.lifecycleState === "active" ? null : (
                 <LifecycleChip state={c.lifecycleState as LifecycleState} />
               )}

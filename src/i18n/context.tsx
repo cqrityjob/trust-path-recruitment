@@ -41,9 +41,19 @@ export type PluralKey = PairedBase<TranslationKey, TranslationKey>;
 const I18nContext = createContext<I18nContextValue | null>(null);
 const STORAGE_KEY = "cqrityjob.lang";
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  // SSR default is always "sv" to avoid hydration mismatch.
-  const [lang, setLangState] = useState<Lang>("sv");
+export function I18nProvider({
+  children,
+  /** The locale to start in. Swedish by default -- the SSR default is always
+   *  "sv" to avoid a hydration mismatch, and the application never passes
+   *  anything else. A render proof that must show the English half of a
+   *  sentence passes "en". A stored preference still wins once the effect
+   *  below has run. */
+  initialLang = "sv",
+}: {
+  children: ReactNode;
+  initialLang?: Lang;
+}) {
+  const [lang, setLangState] = useState<Lang>(initialLang);
 
   useEffect(() => {
     try {
