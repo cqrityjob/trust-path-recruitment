@@ -602,8 +602,8 @@ group("8 · nothing stands permanently empty");
     !/showJourney|CareerJourney/.test(route),
   );
   ck(
-    "earlier analyses render only when there are any",
-    /runsQ\.data\.length > 1 && \(/.test(route),
+    "earlier analyses render only when there is a result to have earlier ones of",
+    /model\.career\.state === "ready" \|\|\s*model\.career\.state === "legacy" \|\|/.test(route),
   );
   ck("the candidate home carries no reviewer surface", !/MyReviewQueueCard|\/reviews/.test(route));
 

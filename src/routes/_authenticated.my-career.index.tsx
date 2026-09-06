@@ -417,11 +417,14 @@ function MyCareerPage() {
               closed={assessmentClosed}
               className="mt-8"
             >
-              {/* Earlier analyses, as a compact disclosure inside the section
-                  that is about them. Rendered only when there ARE earlier
-                  ones — the panel it replaces was a full-width empty box on
-                  every account that had a single report. */}
-              {runsQ.data && runsQ.data.length > 1 && (
+              {/* Every analysis this person has, as a compact disclosure
+                  inside the section that is about them — v3 reports and
+                  legacy v2.1 runs in one chronological list. Rendered only
+                  when there IS a result; the panel it replaces was a
+                  full-width empty box on every account, result or not. */}
+              {(model.career.state === "ready" ||
+                model.career.state === "legacy" ||
+                (runsQ.data?.length ?? 0) > 1) && (
                 <details className="mt-5 border-t border-border pt-3">
                   <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     {say(CAREER.earlier)}

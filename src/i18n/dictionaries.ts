@@ -939,6 +939,11 @@ export const dictionaries = {
       "Intern testversion. Innehållet är framtaget men ännu inte granskat av sakkunniga. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov, inte ett besked om anställningsbarhet och inte en psykologisk bedömning. Resultatet speglar de svar du gav vid det här tillfället.",
     "careerDiscovery.report.actions.myCareer": "Till Min karriär",
     "careerDiscovery.report.actions.allReports": "Alla mina rapporter",
+    // The retake belongs to the RESULT, not to the personal home: it is a
+    // decision somebody makes after reading their analysis, and a card of
+    // equal weight on the home put a completed candidate one click from
+    // replacing it.
+    "careerDiscovery.report.actions.retake": "Gör om karriäranalysen",
     "careerDiscovery.report.method.definition": "Definition",
     "careerDiscovery.report.method.content": "Innehåll",
     "careerDiscovery.report.method.scoring": "Beräkning",
@@ -6453,6 +6458,7 @@ export const dictionaries = {
       "Internal test version. The content is authored but not yet reviewed by specialists. This is guidance to support a conversation and your own decisions — not a test, not a judgement about employability, and not a psychological assessment. The result reflects the answers you gave on this occasion.",
     "careerDiscovery.report.actions.myCareer": "Go to My Career",
     "careerDiscovery.report.actions.allReports": "All my reports",
+    "careerDiscovery.report.actions.retake": "Retake the career analysis",
     "careerDiscovery.report.method.definition": "Definition",
     "careerDiscovery.report.method.content": "Content",
     "careerDiscovery.report.method.scoring": "Scoring",

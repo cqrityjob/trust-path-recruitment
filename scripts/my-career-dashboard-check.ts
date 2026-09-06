@@ -111,12 +111,16 @@ expect(
   snapshot.includes('to="/security-career-assessment/history"'),
   `${snapshotPath}: report history must stay reachable from the home.`,
 );
-// Legacy runs keep their own history list, now inside the career section
-// rather than as a full-width panel that rendered empty for everybody with a
-// single report.
+// Every analysis this person has -- v3 reports and legacy v2.1 runs, in one
+// chronological list -- stays reachable, now inside the career section
+// rather than as a full-width panel that rendered empty for everybody,
+// result or not. The disclosure is conditional on there BEING a result.
 expect(
-  routeCode.includes("ReportHistoryList") && /runsQ\.data\.length > 1 && \(/.test(routeCode),
-  `${routePath}: earlier legacy reports must stay reachable, and only when there are any.`,
+  routeCode.includes("ReportHistoryList") &&
+    /model\.career\.state === "ready" \|\|\s*model\.career\.state === "legacy" \|\|/.test(
+      routeCode,
+    ),
+  `${routePath}: earlier analyses must stay reachable, and only when there is a result.`,
 );
 expect(
   model.includes("/my-career/reports/${active.runId}"),

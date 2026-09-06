@@ -16,6 +16,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft, Check } from "lucide-react";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
+import { RetakeAnalysisLink } from "@/components/career-discovery/RetakeAnalysisLink";
 import { useT } from "@/i18n/context";
 import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
 import { getMyCareerJourney } from "@/lib/career-journey/career-journey.functions";
@@ -383,6 +384,8 @@ function DiscoveryReportRoute() {
         >
           {t("careerDiscovery.report.actions.allReports")}
         </Link>
+        {/* Quiet, and only when the gate would admit them. */}
+        <RetakeAnalysisLink />
       </div>
     </AssessmentLayout>
   );
