@@ -31,8 +31,11 @@
 --
 -- The expected outcome is NOT that B is refused. Both callers submitted the
 -- same operation, so both must be told the same thing: one merit, one id,
--- twice. B's insert loses on sp_events_one_per_operation, its subtransaction
--- takes its own merit row down with it, and it returns A's subject.
+-- twice. B blocks on the primary key of `sp_passport_operations` -- the
+-- server-owned receipt, which is claimed FIRST and in the same transaction as
+-- the merit -- and once A commits, B falls into the replay branch, proves the
+-- receipt is its own and carries the same fingerprint, checks that A's subject
+-- exists and belongs to it, and answers with A's merit.
 -- =============================================================================
 
 \set ON_ERROR_STOP on
@@ -130,6 +133,20 @@ BEGIN
          AND NOT EXISTS (SELECT 1 FROM public.sp_passport_events e
                           WHERE e.subject_id = p.id AND e.event_type = 'experience_created')),
     'R.8 no merit exists without its creation event');
+
+  -- And exactly one receipt, pointing at the surviving merit. The receipt is
+  -- the authority, so two of them would mean two operations wearing one id.
+  SELECT count(*) INTO _n FROM public.sp_passport_operations
+   WHERE holder_user_id = _h AND operation_kind = 'first_merit';
+  PERFORM pg_temp.ok(_n = 1, 'R.9 exactly one first-merit receipt');
+  PERFORM pg_temp.ok(
+    (SELECT subject_id FROM public.sp_passport_operations
+      WHERE holder_user_id = _h AND operation_kind = 'first_merit') = _a.subject_id,
+    'R.10 and it points at the merit both callers were given');
+  PERFORM pg_temp.ok(
+    (SELECT completed_at IS NOT NULL FROM public.sp_passport_operations
+      WHERE holder_user_id = _h AND operation_kind = 'first_merit'),
+    'R.11 marked complete, in the same transaction that made the merit');
 END $$;
 
 \endif
