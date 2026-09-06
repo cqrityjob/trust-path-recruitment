@@ -22,12 +22,22 @@ export const PrimaryButton = forwardRef<
 
 export function PrimaryLink({
   to,
+  search,
   variant = "primary",
   className,
   children,
   onClick,
 }: {
   to: string;
+  /** Query parameters for the destination.
+   *
+   *  `to` alone cannot carry them: the router does not parse a query string
+   *  out of `to`, so "/signup?redirect=/passport" navigates to a literal
+   *  path containing "?" and silently loses the parameter — the same defect
+   *  splitReturnPath() exists to prevent on the way back. The homepage's
+   *  primary action needs it, because "?redirect=" is how the intent to
+   *  build a Passport survives account creation. */
+  search?: Record<string, string>;
   variant?: Variant;
   className?: string;
   children: ReactNode;
@@ -36,7 +46,12 @@ export function PrimaryLink({
   onClick?: () => void;
 }) {
   return (
-    <Link to={to} className={cn(styles[variant], className)} onClick={onClick}>
+    <Link
+      to={to}
+      search={search as never}
+      className={cn(styles[variant], className)}
+      onClick={onClick}
+    >
       {children}
     </Link>
   );

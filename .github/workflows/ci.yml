@@ -841,6 +841,26 @@ jobs:
       - name: Admin employer status guard check
         run: bun run admin-employer-status-guard:check
 
+      # ── PUBLIC HOMEPAGE ─────────────────────────────────────────────────
+      #
+      # The homepage is the one page most people see and the one nobody owns,
+      # which is how it grew to eight sections, 437 words and 5,511px saying
+      # the same few things repeatedly. This guard holds its shape: four
+      # sections, one h1, three h2, ONE visually primary action, the copy
+      # budget, sv/en parity, and — the part that is not cosmetic — that the
+      # Passport trust levels stay named and separated, that only
+      # source-confirmed reads as confirmed, and that nothing on a public
+      # page claims a credential is recognised anywhere or replaces a
+      # licence, a permit or a background check.
+      #
+      # The layout half (height, overflow at 320-1440, focus rings, target
+      # sizes, and every CTA clicked through to a destination that renders)
+      # lives in e2e/public-homepage.spec.ts, which needs a browser and a dev
+      # server and so runs locally rather than here -- the same arrangement
+      # as e2e/my-career-home.spec.ts.
+      - name: Public homepage check
+        run: bun run public-homepage:check
+
 
       - name: Production build
         run: bun run build
