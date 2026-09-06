@@ -133,6 +133,28 @@ log. The **original** operation still replays, so a holder whose response was
 lost can still learn what happened. The confirmation screen's "add another
 merit" action leaves first-run and opens the ordinary editor.
 
+### …and that decision is serialised per holder
+
+Two requests carrying the **same** operation id serialise on the receipt's
+primary key. Two requests carrying **different** ids — two tabs, or a retry
+that minted a fresh key — do not: each would insert its own receipt, reach
+the current-merit check, see nothing committed, and create a merit.
+
+So the decision is taken under `pg_advisory_xact_lock(hashtextextended(
+'sp_passport_first_merit:' || auth.uid(), 0))`, acquired before the receipt is
+claimed and before anything is read. An advisory lock rather than a row lock
+because there is not always a row — the Passport may be created inside the
+operation. It is transaction-scoped, so it is not a permanent constraint: a
+holder whose only merit is later archived returns to the first run, exactly as
+the persisted-state rule says. A legitimate replay of the original id waits
+behind an in-flight attempt and then answers with its merit.
+
+Proven two ways in `scripts/db-test.sh`: two psql processes with different
+ids (the second waited the full 3 s and was refused; one merit, one receipt,
+one event set, no half-written loser), and a **permanent negative control**
+that derives an unlocked copy of the live function from `pg_proc`, runs the
+same race, watches two first merits appear, and re-applies the migration.
+
 ### Ordered drafts
 
 `sp_passport_profiles.onboarding_draft_revision` makes each save a single

@@ -515,12 +515,42 @@ BEGIN
     CASE WHEN _merit_kind = 'employment' THEN _country_t ELSE NULL END,
     _started_on, _ended_on);
 
+  -- ── 0. ONE FIRST-RUN DECISION PER HOLDER AT A TIME ─────────────────
+  --
+  -- Two requests carrying the SAME operation id serialise on the receipt's
+  -- primary key below. Two requests carrying DIFFERENT operation ids do not:
+  -- each inserts its own receipt without conflict, each reaches the
+  -- current-merit check, each sees no committed merit, and each creates one
+  -- -- two first merits, two declarations, two completions, for one person
+  -- who pressed Save in two tabs.
+  --
+  -- So the decision "does this holder already hold a current merit" is
+  -- serialised per holder, HERE, before anything is read or written. A
+  -- transaction-scoped advisory lock rather than a row lock because there is
+  -- not always a row: the Passport may not exist yet, and a lock on a row
+  -- that is about to be created protects nothing. It is:
+  --
+  --   * keyed to auth.uid(), which no parameter can supply;
+  --   * released at commit or rollback, so it is not a permanent constraint
+  --     -- a holder whose only merit is later archived returns to the first
+  --     run and may take it again, exactly as the persisted-state rule says;
+  --   * held across the replay branch too, so a legitimate retry of the
+  --     original id WAITS behind an in-flight attempt and then answers with
+  --     its merit, rather than racing it.
+  --
+  -- The concurrent loser wakes up inside its own transaction, sees the
+  -- winner's committed merit, raises SP_FIRST_MERIT_ALREADY_EXISTS, and its
+  -- own receipt rolls back with it. Two processes prove exactly that in
+  -- supabase/tests/security_passport_first_merit_two_ops_race_test.sql.
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('sp_passport_first_merit:' || _uid::text, 0));
+
   -- ── 1. CLAIM THE OPERATION ─────────────────────────────────────────
   --
   -- The receipt is written FIRST and in the same transaction as everything
   -- below it, so a committed receipt and a committed merit are the same fact.
-  -- A concurrent caller with the same id blocks on this insert until we
-  -- commit, then falls into the replay branch and is answered with our merit.
+  -- A concurrent caller with the same id waits on the holder lock above,
+  -- then finds the receipt here and falls into the replay branch.
   INSERT INTO public.sp_passport_operations
     (operation_id, holder_user_id, operation_kind, request_fingerprint)
   VALUES (_operation_id, _uid, 'first_merit', _fp)
@@ -694,9 +724,12 @@ COMMENT ON FUNCTION public.sp_passport_complete_first_merit(uuid, text, text, te
   'before writing anything (SP_DECLARATION_REQUIRED), refuses an employment '
   'period with no stated country (SP_WORK_COUNTRY_REQUIRED, never a default), '
   'refuses a NEW first-merit operation once a current merit exists '
-  '(SP_FIRST_MERIT_ALREADY_EXISTS -- this is not a general merit API), and '
-  'writes no assertion or lifecycle value at all, so the merit takes the '
-  'self_declared / active column defaults like every other holder-written row.';
+  '(SP_FIRST_MERIT_ALREADY_EXISTS -- this is not a general merit API), serialises '
+  'that decision per holder with a transaction-scoped advisory lock keyed to '
+  'auth.uid() so two concurrent requests with different operation ids produce '
+  'one merit and one refusal, and writes no assertion or lifecycle value at all, '
+  'so the merit takes the self_declared / active column defaults like every other '
+  'holder-written row.';
 
 
 -- =============================================================================
@@ -730,6 +763,19 @@ BEGIN
      OR _src NOT LIKE '%SP_FIRST_MERIT_ALREADY_EXISTS%'
      OR _src NOT LIKE '%SP_NOT_AUTHENTICATED%' THEN
     RAISE EXCEPTION 'SP_FIRST_MERIT_POSTFLIGHT: a named refusal is missing from the body.';
+  END IF;
+
+  -- The per-holder serialisation, and its position: BEFORE the receipt is
+  -- claimed and BEFORE the current-merit check. A lock taken after either is
+  -- a lock taken after the race.
+  IF position('pg_advisory_xact_lock' IN _src) = 0 THEN
+    RAISE EXCEPTION 'SP_FIRST_MERIT_POSTFLIGHT: the per-holder advisory lock is missing.';
+  END IF;
+  -- Positions are measured against the STATEMENTS, not the comments that
+  -- explain them: the lock's own comment names the refusal it prevents.
+  IF position('pg_advisory_xact_lock' IN _src) > position('INSERT INTO public.sp_passport_operations' IN _src)
+     OR position('pg_advisory_xact_lock' IN _src) > position($q$RAISE EXCEPTION 'SP_FIRST_MERIT_ALREADY_EXISTS'$q$ IN _src) THEN
+    RAISE EXCEPTION 'SP_FIRST_MERIT_POSTFLIGHT: the advisory lock is taken too late to serialise the first-merit decision.';
   END IF;
 
   -- Idempotency must rest on the private table, not on the audit log.
