@@ -508,27 +508,41 @@ type HolderDb = SupabaseClient<Database>;
  *  exactly as the overview's own create button does.
  */
 async function ensureProfileRow(db: HolderDb, userId: string): Promise<boolean> {
-  const existing = await db
+  // ── ONE STATEMENT, NOT READ-THEN-WRITE ─────────────────────────────
+  //
+  // This used to SELECT and then INSERT. Two clicks a few milliseconds apart
+  // both passed the read, and the second INSERT failed on the primary key --
+  // so a person creating their Passport for the first time, on a slow
+  // connection, double-tapping the way people do, was shown an error while
+  // their Passport was in fact created.
+  //
+  // `ON CONFLICT DO NOTHING` (which is what upsert + ignoreDuplicates sends)
+  // makes the whole thing one statement the database serialises. The returned
+  // rows say whether THIS call created it, which is what the event below
+  // needs -- an empty array means somebody else won, and a second
+  // `passport_created` event for one Passport would be a lie in an
+  // append-only log.
+  const { data: inserted, error } = await db
     .from("sp_passport_profiles")
-    .select("holder_user_id")
-    .eq("holder_user_id", userId)
-    .maybeSingle();
-  if (existing.error) throw new Error(existing.error.message);
-  if (existing.data) return false;
-
-  const { error } = await db.from("sp_passport_profiles").insert({
-    holder_user_id: userId,
-    question_version: PASSPORT_QUESTION_VERSION,
-  });
+    .upsert(
+      { holder_user_id: userId, question_version: PASSPORT_QUESTION_VERSION },
+      { onConflict: "holder_user_id", ignoreDuplicates: true },
+    )
+    .select("holder_user_id");
   if (error) throw new Error(error.message);
+  if ((inserted ?? []).length === 0) return false;
 
-  await db.from("sp_passport_events").insert({
+  // The creation event's error is READ. It used to be discarded, which meant
+  // a Passport could come into existence with no record of its creation -- in
+  // the one table whose entire purpose is to record what happened.
+  const { error: eventError } = await db.from("sp_passport_events").insert({
     holder_user_id: userId,
     actor_user_id: userId,
     event_type: "passport_created",
     subject_type: "profile",
     detail: { question_version: PASSPORT_QUESTION_VERSION },
   });
+  if (eventError) throw new Error(eventError.message);
   return true;
 }
 
@@ -540,179 +554,41 @@ export const ensureMyPassport = createServerFn({ method: "POST" })
     return { created: await ensureProfileRow(supabase, userId) };
   });
 
-const onboardingInput = z.object({
-  step: z.number().int().min(0).max(50),
-  answers: z.record(z.string(), z.string().max(400)),
-  displayName: z.string().max(120).nullable().optional(),
-  headline: z.string().max(200).nullable().optional(),
-  // No `professionSlug`, for the same reason it left profileBasicsInput: the
-  // canonical Professional Profile owns current profession, and a second
-  // writer here is what let the two answers drift apart. The onboarding
-  // ROUTE writes it through setMyCurrentProfession instead, so a holder who
-  // answers the wizard's profession question fills in the canonical row —
-  // one home, reached from two doors, rather than two homes.
-  // The WORK COUNTRY answer, which may be a country ("SE") or a
-  // sub-jurisdiction ("AE-DU"). Split by `splitWorkCountry` below into the two
-  // columns the profile keeps apart; `length(2)` would have refused Dubai.
-  jurisdictionCode: z.string().max(6).optional(),
-});
-
-/** Autosave. Called on every answer; writes the whole step state, so a
- *  resumed session lands exactly where the holder left off. */
-export const saveOnboardingProgress = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => onboardingInput.parse(data))
-  .handler(async ({ context, data }): Promise<{ savedAt: string }> => {
-    const { supabase, userId } = context;
-    const db = supabase;
-
-    // Typed against the generated Update shape rather than
-    // Record<string, unknown>. That is not cosmetic: the loose record let a
-    // misspelled column compile, and PostgREST would have accepted the write
-    // and silently ignored the field. Every key here is now checked.
-    //
-    // `assertion_level`, `lifecycle_state`, `verified_by_user_id` and
-    // `verified_at` are absent, as everywhere else in this file. There is no
-    // branch that could add one.
-    type ProfileUpdate = Database["public"]["Tables"]["sp_passport_profiles"]["Update"];
-
-    const patch: ProfileUpdate = {
-      onboarding_step: data.step,
-      onboarding_answers: data.answers,
-      onboarding_state: "in_progress",
-      question_version: PASSPORT_QUESTION_VERSION,
-    };
-    if (data.displayName !== undefined) patch.display_name = data.displayName;
-    if (data.headline !== undefined) patch.headline = data.headline;
-    // One answer, three columns, split in exactly one place. An empty answer
-    // clears ALL of them rather than leaving a stale emirate beside a new
-    // country, or a confirmation standing over a value nobody gave.
-    //
-    // The timestamp is what turns a stored code into a stated fact. It is set
-    // ONLY here, on a real answer from a list with real alternatives — never
-    // back-filled, because a legacy 'SE' that nobody chose is exactly what it
-    // exists to keep apart from a Sweden somebody did.
-    if (data.jurisdictionCode !== undefined) {
-      const work = splitWorkCountry(data.jurisdictionCode);
-      patch.jurisdiction_code = work.jurisdictionCode;
-      patch.sub_jurisdiction_code = work.subJurisdictionCode;
-      patch.work_location_confirmed_at = work.jurisdictionCode ? new Date().toISOString() : null;
-    }
-
-    const { data: row, error } = await db
-      .from("sp_passport_profiles")
-      .update(patch)
-      .eq("holder_user_id", userId)
-      .select("updated_at")
-      .single();
-    if (error) throw new Error(error.message);
-
-    return { savedAt: (row as { updated_at: string }).updated_at };
-  });
-
-/** Records the truthfulness declaration and closes onboarding. The database
- *  refuses a completed profile with no declaration, so the two cannot drift. */
-/**
- * Closes onboarding, and — new in Phase 8 — turns the current-role answers
- * into a real employment period.
+/* ── THE OLD ONBOARDING WRITES ARE GONE ───────────────────────────────
  *
- * Until Phase 8 every onboarding answer went into `onboarding_answers` and
- * stopped there, so a holder who told us where they work still had an empty
- * Passport. The wizard asks for employer, role and start date; those three
- * are exactly an `sp_experience_periods` row, and this is where the answer
- * becomes the record.
+ * `saveOnboardingProgress` and `completeOnboarding` lived here until PR #192.
+ * Both are deleted rather than deprecated, because both were defective in
+ * ways a comment could not contain:
  *
- * It is deliberately idempotent-ish: the insert is skipped when the holder
- * already has any period, so completing onboarding twice — or completing it
- * after adding employment on /passport/information — cannot duplicate a job.
- * The period is written with no assertion or lifecycle argument, so it takes
- * the `self_declared` / `active` column defaults like every other holder
- * write.
+ *   * `completeOnboarding` wrote `declared_accurate_at = now()`
+ *     UNCONDITIONALLY. The truthfulness tick-box lived only in React state,
+ *     so any caller -- a stale bundle, a retry, a curl -- could record an
+ *     affirmation the holder never made, of the one field whose entire value
+ *     is that a human really did affirm it.
+ *
+ *   * It then performed the merit insert, the profile update and two event
+ *     inserts as four independent requests, discarding the events' error.
+ *     Every seam was a state somebody reached: a merit with onboarding still
+ *     "in progress" that could never be finished (the next attempt SKIPPED
+ *     the insert because a period now existed), or a completed profile whose
+ *     audit events were silently lost.
+ *
+ *   * Running it twice wrote two declarations and two completions into an
+ *     append-only log.
+ *
+ *   * `saveOnboardingProgress` was also what "Save and exit" and "Finish"
+ *     BOTH called, so leaving the flow closed onboarding and recorded a
+ *     declaration on an empty Passport.
+ *
+ * Their replacements are in first-run.functions.ts: `saveFirstRunDraft`,
+ * which writes answers and a step and nothing else, and `completeFirstMerit`,
+ * which is one database transaction that either commits the merit, its
+ * creation event, the onboarding transition and the declaration together, or
+ * writes nothing at all. Leaving a second, weaker completion path in the
+ * codebase would leave the defect one import away.
+ *
+ * The work country keeps its own writer below, for the reason stated there.
  */
-export const completeOnboarding = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ completedAt: string; createdPeriod: boolean }> => {
-    const { supabase, userId } = context;
-    const db = supabase;
-    const now = new Date().toISOString();
-
-    const profileRes = await db
-      .from("sp_passport_profiles")
-      .select("onboarding_answers, jurisdiction_code, work_location_confirmed_at")
-      .eq("holder_user_id", userId)
-      .maybeSingle();
-
-    const answers = ((profileRes.data as { onboarding_answers: Record<string, string> } | null)
-      ?.onboarding_answers ?? {}) as Record<string, string>;
-    // The country the holder STATED, with no fallback.
-    //
-    // This used to be `?? "SE"`, and it wrote that Sweden onto the experience
-    // period created from the onboarding answers — so a holder's first job
-    // record could be stamped with a country they never gave. The country step
-    // is `required: true`, so the wizard cannot reach here without one; if it
-    // somehow does, refusing is correct. An employment record in a country
-    // nobody named is not a record, it is a guess.
-    // Confirmed, not merely stored: a legacy 'SE' nobody chose must not become
-    // the country on a new employment record either.
-    const profileRow = profileRes.data as {
-      jurisdiction_code?: string | null;
-      work_location_confirmed_at?: string | null;
-    } | null;
-    const jurisdiction = profileRow?.work_location_confirmed_at
-      ? (profileRow.jurisdiction_code ?? null)
-      : null;
-    if (!jurisdiction) throw new Error("SP_WORK_COUNTRY_REQUIRED");
-
-    const employer = (answers["currentRole.employer"] ?? "").trim();
-    const role = (answers["currentRole.role"] ?? "").trim();
-    const startedOn = (answers["currentRole.startedOn"] ?? "").trim();
-
-    let createdPeriod = false;
-    if (employer && role && isCalendarDate(startedOn)) {
-      const existing = await db
-        .from("sp_experience_periods")
-        .select("id")
-        .eq("holder_user_id", userId)
-        .limit(1);
-      if ((existing.data ?? []).length === 0) {
-        const { error: periodError } = await db.from("sp_experience_periods").insert({
-          holder_user_id: userId,
-          employer_name: employer,
-          role_title: role,
-          jurisdiction_code: jurisdiction,
-          started_on: startedOn,
-          ended_on: null,
-        });
-        if (periodError) throw new Error(periodError.message);
-        createdPeriod = true;
-      }
-    }
-
-    const { error } = await db
-      .from("sp_passport_profiles")
-      .update({ onboarding_state: "completed", declared_accurate_at: now })
-      .eq("holder_user_id", userId);
-    if (error) throw new Error(error.message);
-
-    await db.from("sp_passport_events").insert([
-      {
-        holder_user_id: userId,
-        actor_user_id: userId,
-        event_type: "declaration_recorded",
-        subject_type: "profile",
-        detail: { declared_at: now, question_version: PASSPORT_QUESTION_VERSION },
-      },
-      {
-        holder_user_id: userId,
-        actor_user_id: userId,
-        event_type: "onboarding_completed",
-        subject_type: "profile",
-        detail: {},
-      },
-    ]);
-
-    return { completedAt: now, createdPeriod };
-  });
 
 /**
  * Set the holder's work country, from anywhere in the Passport.
@@ -896,7 +772,12 @@ const experienceInput = z.object({
   employerName: z.string().min(1).max(160),
   roleTitle: z.string().min(1).max(160),
   professionSlug: z.string().max(80).nullable().optional(),
-  jurisdictionCode: z.string().length(2).default("SE"),
+  // NO DEFAULT. A country is a factual claim about where somebody worked,
+  // and the server may not supply one -- the caller states it or the write
+  // is refused. `sp_experience_periods.jurisdiction_code` carries its own
+  // `DEFAULT 'SE'`, so a schema default here was the second place the same
+  // guess could be made.
+  jurisdictionCode: z.string().length(2),
   employmentType: z.enum(["full_time", "part_time", "hourly", "temporary"]),
   fteFraction: z.number().min(0.01).max(1),
   securityRelevance: z.enum(["primary", "partial", "none"]),

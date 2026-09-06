@@ -91,7 +91,21 @@ export interface ExperienceDraft {
   jurisdictionCode: string;
 }
 
-export function emptyExperienceDraft(): ExperienceDraft {
+/** A blank employment.
+ *
+ *  ── NO COUNTRY IS INVENTED HERE ────────────────────────────────────
+ *
+ *  This used to open with `jurisdictionCode: "SE"` and the form has never
+ *  shown the field, so every employment added on this page was filed in
+ *  Sweden -- including one added by somebody who had told the product they
+ *  work in Dubai. The same defect as the profile column's `DEFAULT 'SE'`,
+ *  one layer up and out of sight.
+ *
+ *  `defaultCountry` is the holder's own CONFIRMED work country when they have
+ *  stated one, and empty otherwise. Empty means the form asks, and the server
+ *  refuses a save without an answer -- which is the only honest behaviour
+ *  when nobody has said where the work happened. */
+export function emptyExperienceDraft(defaultCountry?: string | null): ExperienceDraft {
   return {
     id: null,
     employerName: "",
@@ -103,7 +117,7 @@ export function emptyExperienceDraft(): ExperienceDraft {
     startedOn: "",
     endedOn: null,
     ongoing: true,
-    jurisdictionCode: "SE",
+    jurisdictionCode: (defaultCountry ?? "").trim().toUpperCase(),
   };
 }
 
@@ -127,6 +141,10 @@ export function validateExperience(d: ExperienceDraft): Partial<Record<string, P
   const errors: Partial<Record<string, PassportCopyKey>> = {};
   if (d.employerName.trim() === "") errors.employerName = "entry.error.employerRequired";
   if (d.roleTitle.trim() === "") errors.roleTitle = "entry.error.roleRequired";
+  // `sp_experience_periods.jurisdiction_code` is NOT NULL and its DEFAULT is a
+  // country, so an unanswered field is not an empty record -- it is Sweden,
+  // asserted about somebody who never said it. Asked, and required.
+  if (d.jurisdictionCode.trim() === "") errors.jurisdictionCode = "entry.error.countryRequired";
   if (!ISO.test(d.startedOn)) errors.startedOn = "entry.error.startRequired";
   if (!d.ongoing) {
     if (!d.endedOn || !ISO.test(d.endedOn)) errors.endedOn = "entry.error.endRequired";
@@ -192,6 +210,24 @@ export function ExperienceForm({
           />
         </Field>
       </div>
+
+      {/* ── WHERE THE WORK HAPPENED ──────────────────────────────────
+          A real field, because it is a real fact about the record. It used to
+          be a hidden constant. */}
+      <Field id="exp-country" label={pt("entry.emp.country")} error={err("jurisdictionCode")}>
+        <select
+          id="exp-country"
+          value={draft.jurisdictionCode}
+          aria-invalid={err("jurisdictionCode") ? true : undefined}
+          onChange={(e) => set("jurisdictionCode", e.target.value)}
+          className={inputClass}
+        >
+          <option value="">{pt("entry.emp.countryPlaceholder")}</option>
+          <option value="SE">{pt("jurisdiction.SE")}</option>
+          <option value="GB">{pt("jurisdiction.GB")}</option>
+          <option value="AE">{pt("jurisdiction.AE")}</option>
+        </select>
+      </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="exp-start" label={pt("entry.emp.startedOn")} error={err("startedOn")}>
@@ -362,13 +398,15 @@ export interface ClaimDraft {
   expires: boolean;
 }
 
-export function emptyClaimDraft(kind: FreeClaimKind): ClaimDraft {
+/** A blank free-text claim. Same rule as the employment above: a country is
+ *  the holder's stated provenance, never a value this function supplies. */
+export function emptyClaimDraft(kind: FreeClaimKind, defaultCountry?: string | null): ClaimDraft {
   return {
     id: null,
     claimType: kind,
     title: "",
     issuerName: "",
-    jurisdictionCode: "SE",
+    jurisdictionCode: (defaultCountry ?? "").trim().toUpperCase(),
     issuedOn: null,
     validUntil: null,
     expires: false,
@@ -381,7 +419,9 @@ export function claimToDraft(c: ClaimEntry): ClaimDraft {
     claimType: c.claimType as FreeClaimKind,
     title: c.title,
     issuerName: c.issuerName ?? "",
-    jurisdictionCode: c.jurisdictionCode ?? "SE",
+    // A stored NULL is "not stated" and stays that way. Reading it as Sweden
+    // is how an unanswered field becomes an answer nobody gave.
+    jurisdictionCode: c.jurisdictionCode ?? "",
     issuedOn: c.issuedOn,
     validUntil: c.validUntil,
     expires: c.validUntil !== null,

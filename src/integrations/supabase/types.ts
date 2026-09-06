@@ -15268,6 +15268,23 @@ export type Database = {
           revoked_at: string
         }[]
       }
+      sp_passport_complete_first_merit: {
+        Args: {
+          _country: string
+          _declared: boolean
+          _ended_on: string
+          _merit_kind: string
+          _operation_id: string
+          _organisation: string
+          _started_on: string
+          _title: string
+        }
+        Returns: {
+          created: boolean
+          subject_id: string
+          subject_kind: string
+        }[]
+      }
       sp_raise_dispute: {
         Args: { _claim_id: string; _period_id: string; _reason: string }
         Returns: undefined
