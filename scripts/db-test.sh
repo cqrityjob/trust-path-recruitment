@@ -1768,6 +1768,52 @@ for REQUIRED in \
 done
 
 # ---------------------------------------------------------------------------
+# PR-R3A hotfix (20261030090000): the competency-name fallback on a report
+# that predates its catalogue rows -- the production condition after the
+# 2026-08-28 bootstrap. The suite releases a report, moves every catalogue
+# row to after the release, and proves a manifest-backed report keeps its
+# names and version, a legacy (pre-R1) report keeps the names its frozen
+# document supplied with the explicit legacy null for the version, the
+# overview names every area, and a dated catalogue resolves exactly as
+# before. It fails against the unfixed R3A definition at L2.1.
+# Runs BEFORE the rollback step (it reads the SCP content spine).
+# ---------------------------------------------------------------------------
+echo "==> Running PR-R3A name-fallback hotfix assertions"
+set +e
+R3AF_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_evidence_report_r3a_legacy_name_fallback_test.sql 2>&1)"
+R3AF_RC=$?
+set -e
+
+echo "$R3AF_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+R3AF_PASSED="$(echo "$R3AF_OUT" | grep -c "ok  " || true)"
+
+if [ "$R3AF_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the PR-R3A name-fallback suite exited with code ${R3AF_RC}." >&2
+  echo "$R3AF_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "PR-R3A name fallback"
+fi
+
+echo "    ok  ${R3AF_PASSED} PR-R3A name-fallback assertions passed"
+
+if [ "$R3AF_PASSED" -lt 11 ]; then
+  echo "FAIL: expected at least 11 PR-R3A name-fallback assertions, only ${R3AF_PASSED} ran." >&2
+  suite_failed "PR-R3A name fallback (assertion shortfall: floor 11)"
+fi
+
+for REQUIRED in \
+  "L1.0 the condition holds: every catalogue row postdates the release" \
+  "L1.1 manifest-backed: every competency is still named as the frozen document names it" \
+  "L2.1 legacy: every competency keeps the name its frozen document supplied" \
+  "L2.2 legacy: the competency version is the explicit legacy null, never invented" \
+  "L3.2 legacy with a dated catalogue: the version published at the release instant is resolved"; do
+  if ! echo "$R3AF_OUT" | grep -qF "$REQUIRED"; then
+    echo "FAIL: the mandatory PR-R3A name-fallback assertion did not run: ${REQUIRED}" >&2
+    suite_failed "PR-R3A name fallback (missing: ${REQUIRED})"
+  fi
+done
+
+# ---------------------------------------------------------------------------
 # PR-R3A rollback. The V3 contract stands on PR-R1 (it reads the snapshot's
 # manifest link as a fact), so it is rolled back BEFORE R1 below and
 # re-applied AFTER R1 is back. Its rollback drops one function and must leave
