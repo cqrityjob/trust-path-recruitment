@@ -33,6 +33,7 @@ import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EmployerRegisterRouteImport } from './routes/employer.register'
 import { Route as EmployerLoginRouteImport } from './routes/employer.login'
+import { Route as DevTrustEvidenceReportRouteImport } from './routes/dev.trust-evidence-report'
 import { Route as DevSecurityPassportRouteImport } from './routes/dev.security-passport'
 import { Route as DevCareerDiscoveryPreviewRouteImport } from './routes/dev.career-discovery-preview'
 import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
@@ -288,6 +289,11 @@ const EmployerRegisterRoute = EmployerRegisterRouteImport.update({
 const EmployerLoginRoute = EmployerLoginRouteImport.update({
   id: '/employer/login',
   path: '/employer/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevTrustEvidenceReportRoute = DevTrustEvidenceReportRouteImport.update({
+  id: '/dev/trust-evidence-report',
+  path: '/dev/trust-evidence-report',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevSecurityPassportRoute = DevSecurityPassportRouteImport.update({
@@ -1165,6 +1171,7 @@ export interface FileRoutesByFullPath {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
   '/dev/security-passport': typeof DevSecurityPassportRoute
+  '/dev/trust-evidence-report': typeof DevTrustEvidenceReportRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1320,6 +1327,7 @@ export interface FileRoutesByTo {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
   '/dev/security-passport': typeof DevSecurityPassportRoute
+  '/dev/trust-evidence-report': typeof DevTrustEvidenceReportRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1470,6 +1478,7 @@ export interface FileRoutesById {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
   '/dev/security-passport': typeof DevSecurityPassportRoute
+  '/dev/trust-evidence-report': typeof DevTrustEvidenceReportRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1633,6 +1642,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/dev/career-discovery-preview'
     | '/dev/security-passport'
+    | '/dev/trust-evidence-report'
     | '/employer/login'
     | '/employer/register'
     | '/invite/$token'
@@ -1788,6 +1798,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/dev/career-discovery-preview'
     | '/dev/security-passport'
+    | '/dev/trust-evidence-report'
     | '/employer/login'
     | '/employer/register'
     | '/invite/$token'
@@ -1937,6 +1948,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/dev/career-discovery-preview'
     | '/dev/security-passport'
+    | '/dev/trust-evidence-report'
     | '/employer/login'
     | '/employer/register'
     | '/invite/$token'
@@ -2089,6 +2101,7 @@ export interface RootRouteChildren {
   DevCareerAssessmentCalibrationRoute: typeof DevCareerAssessmentCalibrationRoute
   DevCareerDiscoveryPreviewRoute: typeof DevCareerDiscoveryPreviewRoute
   DevSecurityPassportRoute: typeof DevSecurityPassportRoute
+  DevTrustEvidenceReportRoute: typeof DevTrustEvidenceReportRoute
   EmployerLoginRoute: typeof EmployerLoginRoute
   EmployerRegisterRoute: typeof EmployerRegisterRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -2264,6 +2277,13 @@ declare module '@tanstack/react-router' {
       path: '/employer/login'
       fullPath: '/employer/login'
       preLoaderRoute: typeof EmployerLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/trust-evidence-report': {
+      id: '/dev/trust-evidence-report'
+      path: '/dev/trust-evidence-report'
+      fullPath: '/dev/trust-evidence-report'
+      preLoaderRoute: typeof DevTrustEvidenceReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev/security-passport': {
@@ -3824,6 +3844,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevCareerAssessmentCalibrationRoute: DevCareerAssessmentCalibrationRoute,
   DevCareerDiscoveryPreviewRoute: DevCareerDiscoveryPreviewRoute,
   DevSecurityPassportRoute: DevSecurityPassportRoute,
+  DevTrustEvidenceReportRoute: DevTrustEvidenceReportRoute,
   EmployerLoginRoute: EmployerLoginRoute,
   EmployerRegisterRoute: EmployerRegisterRoute,
   InviteTokenRoute: InviteTokenRoute,

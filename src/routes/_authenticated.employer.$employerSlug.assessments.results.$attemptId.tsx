@@ -70,10 +70,12 @@ import {
   getAcademyReport,
   getDevelopmentRecommendations,
   getSubjectProgress,
+  getTrustEvidenceReport,
   resolveParticipantIdentity,
   type ProgressRow,
   type ReportSnapshot,
 } from "@/lib/security-competency/academy-employer.functions";
+import { TrustReportPage } from "@/components/trust-report/TrustReportPage";
 
 // ── HOW THE REPORT KNOWS WHICH APPLICATION IT BELONGS TO ─────────────
 //
@@ -157,13 +159,36 @@ function Report({
     staleTime: 5 * 60 * 1000,
     enabled: Boolean(applicationId),
   });
-  const candidateName = applicationId
-    ? ((applicants.data ?? []).find((a) => a.id === applicationId)?.applicantDisplayName ?? null)
+  const application = applicationId
+    ? ((applicants.data ?? []).find((a) => a.id === applicationId) ?? null)
     : null;
+  const candidateName = application?.applicantDisplayName ?? null;
 
   const report = useQuery({
     queryKey: ["academy", "report", attemptId, "employer"],
     queryFn: () => reportFn({ data: { attemptId, audience: "employer" as const } }),
+  });
+
+  // ── THE TRUST EVIDENCE REPORT (PR-R3B) ────────────────────────────────
+  //
+  // The V3 document is read beside the V2 snapshot, never instead of it. A
+  // candidate report with a V3 document renders the TRUST Evidence Report;
+  // without one -- a database the R3A contract has not reached yet, a failed
+  // read, an employee report -- the page renders exactly what it rendered
+  // before. The failure is logged as such and is not mistaken for "no
+  // report": that distinction is the V2 query's, below, and stays there.
+  const trustFn = useServerFn(getTrustEvidenceReport);
+  const trust = useQuery({
+    queryKey: ["trust-report", attemptId],
+    queryFn: async () => {
+      try {
+        return await trustFn({ data: { attemptId } });
+      } catch (err) {
+        logAcademyError("assessments/results/trust-report", err);
+        throw err;
+      }
+    },
+    retry: false,
   });
 
   const subjectId = report.data?.subjectId;
@@ -178,7 +203,7 @@ function Report({
     enabled: Boolean(subjectId),
   });
 
-  if (report.isLoading) {
+  if (report.isLoading || trust.isLoading) {
     return <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>;
   }
   // A FAILED request and a report that simply is not released yet are different
@@ -226,6 +251,27 @@ function Report({
   // that starts later must not retroactively turn a candidate's report into an
   // employee's.
   const isCandidate = r.context?.personContext === "candidate";
+
+  // The TRUST Evidence Report, when the database produced one for this
+  // candidate. The frozen document carries its own context; the application
+  // (name, role, the way into a structured interview) travels from the link.
+  if (isCandidate && trust.data) {
+    return (
+      <TrustReportPage
+        doc={trust.data}
+        attemptId={attemptId}
+        nav={{ employerSlug, applicationId, jobId: application?.jobId ?? null }}
+        subject={{
+          candidateName,
+          jobTitle:
+            (lang === "en"
+              ? (application?.jobTitleEn ?? application?.jobTitleSv)
+              : (application?.jobTitleSv ?? application?.jobTitleEn)) ?? null,
+        }}
+        canRecord={canDecide}
+      />
+    );
+  }
 
   // Report V2 needs a brief to build from. A candidate snapshot without one
   // predates the brief and takes the legacy path with everybody else.

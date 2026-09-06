@@ -229,6 +229,14 @@ const FORBIDDEN_PROSE_EN = [
  *  to be allowed to name the thing they deny. Each is asserted below to be a
  *  denial in words. */
 const DENIAL_KEYS = new Set([
+  // PR-R3B, the TRUST Evidence Report page: each of these exists to say what
+  // the report is NOT.
+  "report.trust.overview.stepIsProcess",
+  "report.trust.safety.meaning",
+  "report.trust.map.selfReportTag",
+  "report.trust.addenda.live",
+  "report.trust.addenda.inert",
+  "report.trust.method.templateNow",
   "decision.stepIsProcessOnly",
   "decision.method.decisionBody",
   "decision.method.thinEvidence",
@@ -466,6 +474,7 @@ console.log("\nC. No radar, no polygon, no percentage profile on any report surf
 {
   const surfaces = [
     ...walk(join(ROOT, "src/components/academy")),
+    ...walk(join(ROOT, "src/components/trust-report")),
     ...walk(join(ROOT, "src/lib/security-competency")),
     ...walk(join(ROOT, "src/routes")).filter((p) =>
       /_authenticated\.academy\.|assessments\.results/.test(p),

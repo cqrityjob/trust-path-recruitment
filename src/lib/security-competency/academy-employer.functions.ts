@@ -14,6 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Ctx, RpcRow } from "./rpc-types";
+import { isTrustReportDocument, type TrustReportDocument } from "./trust-report.types";
 
 export type MaturityLevel =
   | "no_evidence"
@@ -1392,6 +1393,37 @@ export const getAcademyReport = createServerFn({ method: "GET" })
       limitationsSv: Array.isArray(row.limitations_sv) ? (row.limitations_sv as string[]) : [],
       limitationsEn: Array.isArray(row.limitations_en) ? (row.limitations_en as string[]) : [],
     };
+  });
+
+/**
+ * The TRUST Evidence Report, employer audience (PR-R3A, 20261029090000).
+ *
+ * scp_employer_report_v3 is a SECURITY DEFINER projection over the same
+ * released document scp_employer_report reads, with the three dimensions
+ * kept apart, the thirty-second overview, the TRUST Interview Plan and two
+ * live overlays. It returns NULL when there is no released report for the
+ * caller -- the same refusal semantics as the audience RPC -- and this
+ * function keeps the distinction the results route depends on: a failed
+ * read throws, a null is a null. The document is checked for its schema
+ * version and its four top-level blocks before it reaches a component; a
+ * document of another shape is logged and rendered as no V3 document, so
+ * the page falls back to the report it rendered before.
+ */
+export const getTrustEvidenceReport = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<TrustReportDocument | null> => {
+    const ctx = context as Ctx;
+    const { data: doc, error } = await ctx.supabase.rpc("scp_employer_report_v3", {
+      _attempt_id: data.attemptId,
+    });
+    if (error) throw fail(error.message, "report_read_failed");
+    if (doc === null || doc === undefined) return null;
+    if (!isTrustReportDocument(doc)) {
+      console.error("[academy-employer] trust report document has an unexpected shape");
+      return null;
+    }
+    return doc;
   });
 
 export const getDevelopmentRecommendations = createServerFn({ method: "GET" })

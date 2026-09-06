@@ -14272,6 +14272,10 @@ export type Database = {
           subject_id: string
         }[]
       }
+      scp_employer_report_v3: {
+        Args: { _attempt_id: string }
+        Returns: Json
+      }
       scp_employer_review_board: {
         Args: { _employer_id: string }
         Returns: {

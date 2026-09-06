@@ -326,3 +326,58 @@
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------
+ * TRUST Evidence Report (PR-R3B) — print.
+ *
+ * The screen order and the printed order differ on purpose: on screen the
+ * safety follow-up sits before the interview plan and the live addenda
+ * rail comes last; on paper the frozen document prints as identity,
+ * overview, evidence map, self-description, TRUST plan, safety (if any),
+ * limitations and method, and the live rail does not print at all
+ * (.no-print). Sections carry data-print-order; flex order applies it.
+ * The navy identity band becomes a plain bordered card so grayscale
+ * printers do not lay down a full-width block of ink.
+ * ------------------------------------------------------------------- */
+@media print {
+  .trust-report {
+    display: flex;
+    flex-direction: column;
+  }
+  .trust-report > [data-print-order="1"] { order: 1; }
+  .trust-report > [data-print-order="2"] { order: 2; }
+  .trust-report > [data-print-order="3"] { order: 3; }
+  .trust-report > [data-print-order="4"] { order: 4; }
+  .trust-report > [data-print-order="5"] { order: 5; }
+  .trust-report > [data-print-order="6"] { order: 6; }
+  .trust-report > [data-print-order="7"] { order: 7; }
+  .trust-report > [data-print-order="8"] { order: 8; }
+  .trust-report > [data-print-order="9"] { order: 9; }
+  .trust-report > [data-print-order="10"] { order: 10; }
+  .trust-report > section {
+    margin-top: 16pt;
+  }
+  .trust-report .tr-hero-navy {
+    background: #fff !important;
+    color: #101828 !important;
+    border: 1px solid #d8e1ea;
+    box-shadow: none !important;
+  }
+  .trust-report .tr-hero-navy * {
+    color: #101828 !important;
+    border-color: #d8e1ea !important;
+  }
+  .trust-report .tr-card,
+  .trust-report article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .trust-report .tr-card li,
+  .trust-report article li {
+    break-inside: auto;
+  }
+  .trust-report a[href^="#"] {
+    text-decoration: none;
+    color: inherit;
+  }
+}

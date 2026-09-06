@@ -574,6 +574,19 @@ jobs:
       - name: rds-v1 next-step parity (TypeScript half)
         run: bun run trust-next-step-parity:check
 
+      # TRUST Evidence Report, PR-R3B. Renders the employer page against the
+      # four real V3 documents (standard, safety finding, mixed/developing
+      # with addenda, legacy chain) and asserts what a recruiter sees: the
+      # section order, the three dimensions as three separate words on every
+      # card (SCC-08 on one item reads "Inte fastställt / Begränsat, 1
+      # observerad uppgift / Följ upp i intervju"), the self-report label,
+      # a safety section only for an explicit human finding, the live rail
+      # labelled live and excluded from print, no forbidden vocabulary, no
+      # ranking number, no "undefined"/"null" on a legacy document, and no
+      # raw i18n key in either language.
+      - name: TRUST evidence report render check
+        run: bun run trust-report-render:check
+
       # The retired assessment engine stays retired: its four URL-reachable
       # routes redirect into the Assessment Center (or say the link is no
       # longer in use) and import none of the legacy runner, while the current
