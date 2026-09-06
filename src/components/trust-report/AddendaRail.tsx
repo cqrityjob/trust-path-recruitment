@@ -24,7 +24,7 @@ import {
   recordInterviewNote,
   type InterviewNoteOutcome,
 } from "@/lib/security-competency/academy-employer.functions";
-import { Chip, Section, Tag } from "./primitives";
+import { Chip, Section } from "./primitives";
 
 const STATUS_TO_OUTCOME: Record<InterviewAddendum["status"], InterviewNoteOutcome> = {
   supported_in_interview: "evidence_confirmed",
@@ -63,10 +63,21 @@ export function AddendaRail({
       title={t("report.trust.addenda.heading")}
       printOrder={10}
       className="no-print"
-      aside={<Tag muted>{t("report.trust.addenda.live")}</Tag>}
+      aside={
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-1.5">
+          <span className="h-2 w-2 rounded-full bg-trust" aria-hidden="true" />
+          <span className="text-[12px] font-semibold text-foreground">
+            {t("report.trust.addenda.liveTitle")}
+          </span>
+          <span className="text-[12px] text-muted-foreground">
+            {t("report.trust.addenda.liveSub")}
+          </span>
+          <span className="sr-only">{t("report.trust.addenda.live")}</span>
+        </div>
+      }
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
-        <div className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
           {doc.addenda_overlay?.as_of && (
             <p className="text-[12px] text-muted-foreground">
               {t("report.trust.addenda.asOf")} {formatDateTime(doc.addenda_overlay.as_of, lang)}
@@ -84,7 +95,7 @@ export function AddendaRail({
                     aria-hidden="true"
                     className="relative mt-1.5 flex w-3 shrink-0 justify-center"
                   >
-                    <span className="h-2.5 w-2.5 rounded-full border-2 border-accent bg-card" />
+                    <span className="h-2.5 w-2.5 rounded-full border-2 border-trust bg-card" />
                     <span className="absolute top-3 bottom-[-20px] w-px bg-border last:hidden" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -172,7 +183,7 @@ function Composer({ doc, attemptId }: { doc: TrustReportDocument; attemptId: str
         e.preventDefault();
         void save();
       }}
-      className="rounded-[14px] border border-border bg-[color:var(--surface-subtle)] p-4"
+      className="rounded-xl border border-border bg-secondary/40 p-4"
       aria-label={t("report.trust.addenda.add")}
     >
       <p className="text-[13px] font-semibold text-foreground">{t("report.trust.addenda.add")}</p>

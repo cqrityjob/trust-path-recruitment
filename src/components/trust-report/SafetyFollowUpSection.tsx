@@ -35,11 +35,8 @@ export function SafetyFollowUpSection({ doc }: { doc: TrustReportDocument }) {
       printOrder={7}
       aside={<Tag>{t("report.trust.safety.employerOnly")}</Tag>}
     >
-      <article className="avoid-break relative overflow-hidden rounded-[14px] border border-border bg-card p-6 shadow-[var(--shadow-xs)]">
-        <span
-          aria-hidden="true"
-          className="absolute inset-y-0 left-0 w-1.5 bg-[color:var(--gold)]"
-        />
+      <article className="avoid-break relative overflow-hidden rounded-xl border border-[color:var(--gold)]/40 bg-[color:var(--gold)]/5 p-6 shadow-[var(--shadow-xs)]">
+        <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-[color:var(--gold)]" />
         <div className="flex items-start gap-3">
           <ShieldAlert
             className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--gold)]"

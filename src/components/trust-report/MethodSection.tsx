@@ -30,7 +30,7 @@ export function MethodSection({ doc }: { doc: TrustReportDocument }) {
       printOrder={8}
       subordinate
     >
-      <div className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
+      <div className="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-xs)] sm:p-6">
         <p className="text-[15px] font-medium leading-relaxed text-foreground">
           {pick(core.limitations?.standing_statement, lang)}
         </p>

@@ -1,13 +1,27 @@
 // TRUST Evidence Report — the evidence map.
 //
-// Eight cards, one per competency. Collapsed, a card is readable in a glance:
-// the name, the three dimensions as three labelled words, the count, and the
-// document's own one-line explanation. Expanded, it shows the observed tasks,
-// the scope of the evidence, the candidate's own description (marked as such),
-// the human-reviewed free text, the limitations, the prepared TRUST question
-// and the traceability line. Print shows every card expanded.
+// Eight cards, one per competency, at the quality level of the Credential
+// Vault cards: a soft-navy icon tile, a strong title, small metadata, one
+// semantic chip, thin borders and soft depth. Collapsed, a card is readable
+// in a glance: the name, the three dimensions in three registers (a chip,
+// a line of text, an action label), the count, and the document's own
+// one-line explanation. Expanded, it shows the observed tasks, the scope of
+// the evidence, the candidate's own description (marked as such), the
+// human-reviewed free text, the limitations, the prepared TRUST question and
+// the traceability line. Print shows every card expanded.
 
-import { ShieldAlert } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  Compass,
+  Eye,
+  Gauge,
+  HandHeart,
+  MessageSquareText,
+  Scale,
+  ShieldAlert,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TrustReportDocument } from "@/lib/security-competency/trust-report.types";
 import { pick } from "@/lib/security-competency/trust-report.types";
@@ -20,7 +34,20 @@ import {
   competencyName,
   type EvidenceCard,
 } from "@/lib/security-competency/trust-report.presentation";
-import { AxisTriplet, Fold, Section, Tag } from "./primitives";
+import { AxisTriplet, Fold, IconTile, Section, Tag } from "./primitives";
+
+/** A neutral glyph per competency family. Decorative and consistent in
+ *  position; none of them ranks or grades anything. */
+const COMPETENCY_ICON: Record<string, typeof Scale> = {
+  "SCC-01": Scale,
+  "SCC-03": Eye,
+  "SCC-04": Gauge,
+  "SCC-06": MessageSquareText,
+  "SCC-07": HandHeart,
+  "SCC-08": Users,
+  "SCC-09": ShieldCheck,
+  "SCC-11": Compass,
+};
 
 export function EvidenceMap({ doc }: { doc: TrustReportDocument }) {
   const { t } = useT();
@@ -33,7 +60,7 @@ export function EvidenceMap({ doc }: { doc: TrustReportDocument }) {
       printOrder={3}
     >
       {cards.length === 0 ? (
-        <p className="rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-5 text-[13px] text-muted-foreground">
+        <p className="rounded-xl border border-border bg-secondary/40 p-5 text-[13px] text-muted-foreground">
           {t("report.trust.map.empty")}
         </p>
       ) : (
@@ -60,29 +87,41 @@ function Card({ card }: { card: EvidenceCard }) {
   const flags = core.methodological_flags ?? [];
   const reasons = area?.verify_reasons ?? [];
   const traceable = Boolean(area?.traceability?.available);
+  const Icon = COMPETENCY_ICON[card.code] ?? ShieldCheck;
 
   return (
     <article
       aria-labelledby={`trust-card-${card.code}`}
       data-competency={card.code}
-      className="tr-card flex h-full flex-col rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]"
+      className="tr-card flex h-full flex-col rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-xs)] transition-shadow hover:shadow-[var(--shadow-md)] motion-reduce:transition-none sm:p-6"
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3
-          id={`trust-card-${card.code}`}
-          className="text-[17px] font-semibold leading-snug tracking-tight text-foreground"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {competencyName(core, lang)}
-        </h3>
-        {safety && (
-          <span className="inline-flex min-h-[24px] items-center gap-1 rounded-[6px] border border-[color:var(--gold)]/60 px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-foreground">
-            <ShieldAlert className="h-3.5 w-3.5 text-[color:var(--gold)]" aria-hidden="true" />
-            {t("report.trust.safetyFollowUp")}
-          </span>
-        )}
+      <div className="flex items-start gap-4">
+        <IconTile>
+          <Icon className="h-5 w-5" />
+        </IconTile>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h3
+              id={`trust-card-${card.code}`}
+              className="text-[17px] font-semibold leading-snug tracking-tight text-foreground"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {competencyName(core, lang)}
+            </h3>
+            {safety && (
+              <span className="inline-flex h-6 items-center gap-1 rounded-md border border-[color:var(--gold)]/50 bg-[color:var(--gold)]/5 px-2 text-[10.5px] font-semibold uppercase tracking-widest text-foreground">
+                <ShieldAlert className="h-3.5 w-3.5 text-[color:var(--gold)]" aria-hidden="true" />
+                {t("report.trust.safetyFollowUp")}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-muted-foreground">
+            {pick(core.factual_explanation, lang)}
+          </p>
+        </div>
       </div>
-      <div className="mt-3">
+
+      <div className="mt-4 border-t border-border pt-4">
         <AxisTriplet
           pattern={core.observed_pattern}
           sufficiency={core.evidence_sufficiency}
@@ -90,17 +129,14 @@ function Card({ card }: { card: EvidenceCard }) {
           priority={priority}
         />
       </div>
-      <p className="mt-3 text-[14px] leading-relaxed text-foreground">
-        {pick(core.factual_explanation, lang)}
-      </p>
 
-      <div className="mt-2">
+      <div className="mt-1">
         <Fold
           openLabel={t("report.trust.map.expand")}
           closeLabel={t("report.trust.map.collapse")}
           triggerClassName="-ml-2"
         >
-          <div className="mt-2 flex flex-col gap-5 border-t border-border pt-4">
+          <div className="mt-2 flex flex-col gap-5 border-t border-border pt-5">
             <Block title={t("report.trust.map.observed")}>
               <p className="text-[14px] leading-relaxed text-foreground">
                 {pick(core.factual_explanation, lang)}
@@ -173,7 +209,7 @@ function Card({ card }: { card: EvidenceCard }) {
                   {selfDescription.map((s) => (
                     <li
                       key={s.domain_key}
-                      className="rounded-[10px] border border-dashed border-border bg-[color:var(--surface-subtle)] px-3 py-2.5"
+                      className="rounded-lg border border-dashed border-border bg-secondary/40 px-3 py-2.5"
                     >
                       <p className="text-[13px] font-semibold text-foreground">
                         {lang === "en" ? s.domain_en : s.domain_sv}
@@ -236,7 +272,7 @@ function Card({ card }: { card: EvidenceCard }) {
                   {reasons.map((r) => (
                     <li
                       key={`r-${r}`}
-                      className="inline-flex min-h-[24px] items-center rounded-[6px] border border-accent/30 bg-[color:var(--secondary)] px-2 text-[11px] font-semibold text-accent"
+                      className="inline-flex h-6 items-center rounded-md border border-accent/30 bg-accent/5 px-2 text-[11.5px] font-semibold text-accent"
                     >
                       {t(REASON_KEY[r])}
                     </li>
@@ -244,7 +280,7 @@ function Card({ card }: { card: EvidenceCard }) {
                   {flags.map((f) => (
                     <li
                       key={f}
-                      className="inline-flex min-h-[24px] items-center rounded-[6px] border border-border px-2 text-[11px] font-medium text-muted-foreground"
+                      className="inline-flex h-6 items-center rounded-md border border-border px-2 text-[11.5px] font-medium text-muted-foreground"
                     >
                       {t(FLAG_KEY[f])}
                     </li>
@@ -259,7 +295,7 @@ function Card({ card }: { card: EvidenceCard }) {
                   {followUps.map((f) => (
                     <li
                       key={`${f.focus}-${f.evidence_type}`}
-                      className="rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-3"
+                      className="rounded-lg border border-border bg-secondary/40 p-3.5"
                     >
                       <p className="text-[14px] font-medium leading-relaxed text-foreground">
                         {pick(f.question, lang)}
@@ -274,7 +310,7 @@ function Card({ card }: { card: EvidenceCard }) {
                       )}
                       {(lang === "en" ? f.listen_for?.en : f.listen_for?.sv)?.length > 0 && (
                         <div className="mt-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                          <p className="text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground">
                             {t("report.trust.map.listenFor")}
                           </p>
                           <ul className="mt-1 list-disc pl-5 text-[13px] leading-relaxed text-foreground">
@@ -325,19 +361,11 @@ function Card({ card }: { card: EvidenceCard }) {
   );
 }
 
-function Block({
-  title,
-  tag,
-  children,
-}: {
-  title: string;
-  tag?: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function Block({ title, tag, children }: { title: string; tag?: ReactNode; children: ReactNode }) {
   return (
     <div className="avoid-break">
-      <div className="mb-1.5 flex flex-wrap items-center gap-2">
-        <h4 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <h4 className="text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground">
           {title}
         </h4>
         {tag}

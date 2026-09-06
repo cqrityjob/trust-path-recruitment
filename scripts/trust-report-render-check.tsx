@@ -58,6 +58,25 @@ await mock.module("@tanstack/react-start", () => ({
 await mock.module("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: async () => undefined }),
 }));
+const passthrough =
+  (tag: string) =>
+  ({
+    children,
+    asChild,
+    ...rest
+  }: {
+    children?: React.ReactNode;
+    asChild?: boolean;
+    [k: string]: unknown;
+  }) =>
+    asChild ? (children as React.ReactElement) : React.createElement(tag, rest, children);
+await mock.module("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: passthrough("div"),
+  DropdownMenuTrigger: passthrough("div"),
+  DropdownMenuContent: passthrough("div"),
+  DropdownMenuItem: passthrough("div"),
+  DropdownMenuSeparator: passthrough("hr"),
+}));
 await mock.module("@/lib/security-competency/academy-employer.functions", () => ({
   recordInterviewNote: async () => ({ noteId: "x" }),
 }));
@@ -148,7 +167,6 @@ group("1. Information hierarchy: the sections come in the argued order");
     "Evidenskarta",
     "Kandidatens egen beskrivning",
     "TRUST Interview Plan",
-    "Från evidens till en bättre intervju.",
     "Intervjutillägg",
     "Om rapporten",
   ];
@@ -163,6 +181,31 @@ group("1. Information hierarchy: the sections come in the argued order");
   }
   check("every section is present, in order", ok, seen.join(" | "));
   check("the page has exactly one h1", (std.match(/<h1\b/g) ?? []).length === 1);
+  check(
+    "the masthead carries the product identity and the report subtitle",
+    std.includes("tr-masthead") &&
+      stdText.includes("rityjob") &&
+      stdText.includes("Från evidens till en bättre intervju."),
+  );
+  check(
+    "the identity card is a white executive card: name, role, employer, released, human-reviewed, the standing sentence",
+    std.includes("tr-identity-card") &&
+      [
+        "Kim Andersson",
+        "Väktare, Stockholm",
+        "Trust Bevakning R3A AB",
+        "Mänskligt granskat",
+        "Beslutsstöd för fortsatt mänsklig bedömning.",
+      ].every((x) => stdText.includes(x)),
+  );
+  check(
+    "the actions are one primary, one secondary and a More menu (plan, share, back)",
+    stdText.includes("Starta strukturerad intervju") &&
+      stdText.includes("Skriv ut / PDF") &&
+      stdText.includes("Mer") &&
+      stdText.includes("Dela internt") &&
+      stdText.includes("Tillbaka till kandidatlistan"),
+  );
   check(
     "the print order covers identity, overview, evidence, self-description, plan, method",
     [1, 2, 3, 5, 6, 8].every((n) => std.includes(`data-print-order="${n}"`)),
@@ -318,8 +361,8 @@ group("4. Self-report is subordinate and labelled");
     visible(self).includes("Självbeskrivning — inte observerad evidens"),
   );
   check(
-    "the section is drawn with a dashed frame, subordinate to the evidence map",
-    self.includes("border-dashed"),
+    "the section is drawn with a dashed frame and a soft surface, subordinate in evidential status",
+    self.includes("border-dashed") && self.includes("bg-secondary/40"),
   );
   check(
     "the self-report section comes after the evidence map",
@@ -418,7 +461,8 @@ group("7. Frozen report vs live addenda");
   const railText = visible(rail);
   check(
     "the rail is labelled as live information outside the frozen report",
-    railText.includes("Levande information — ingår inte i den frysta rapporten."),
+    railText.includes("Levande information") &&
+      railText.includes("Ingår inte i den frysta rapporten."),
   );
   check(
     "the rail is excluded from print",
@@ -586,12 +630,14 @@ group("10. Accessibility and touch targets");
 {
   check(
     "every interactive control has a 44px minimum height",
-    (std.match(/<(button|a)\b[^>]*class="[^"]*min-h-\[44px\]/g) ?? []).length >= 10 &&
-      !/<button\b(?![^>]*min-h-\[44px\])[^>]*>/.test(std.replace(/<button[^>]*sr-only[^>]*>/g, "")),
+    (std.match(/<(button|a)\b[^>]*class="[^"]*(min-h-\[44px\]|\bh-11\b)/g) ?? []).length >= 10 &&
+      !/<button\b(?![^>]*(min-h-\[44px\]|\bh-11\b))[^>]*>/.test(
+        std.replace(/<button[^>]*sr-only[^>]*>/g, ""),
+      ),
   );
   check(
     "status is never colour alone: every chip prints a word",
-    (std.match(/rounded-full border[^>]*>\s*[^<\s]/g) ?? []).length > 20,
+    (std.match(/rounded-md border[^"]*"[^>]*>(<span[^>]*><\/span>)?[^<\s]/g) ?? []).length > 20,
   );
   check(
     "the breadcrumb is a labelled nav with aria-current",
@@ -600,6 +646,10 @@ group("10. Accessibility and touch targets");
   check(
     "every section is labelled by its heading",
     (std.match(/aria-labelledby="trust-[a-z]+-title"/g) ?? []).length >= 6,
+  );
+  check(
+    "the three axes use three registers: a chip for the pattern, text for the evidence, an action label for the next step",
+    /Observerat svarsmönster/.test(stdText) && (std.match(/lucide-arrow-right/g) ?? []).length >= 3,
   );
   check("decorative icons are aria-hidden", !/<svg(?![^>]*aria-hidden="true")/.test(std));
 }

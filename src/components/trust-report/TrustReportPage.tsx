@@ -39,7 +39,7 @@ export function TrustReportPage({
       data-schema={doc.schema_version}
     >
       <ReportHeader doc={doc} nav={nav} subject={subject} />
-      <OverviewHero doc={doc} />
+      <OverviewHero doc={doc} nav={nav} />
       <EvidenceMap doc={doc} />
       <SelfReportSection doc={doc} />
       <SafetyFollowUpSection doc={doc} />

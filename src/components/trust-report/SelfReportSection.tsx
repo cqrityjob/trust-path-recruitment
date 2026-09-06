@@ -4,6 +4,7 @@
 // on every row that says what this is. Nothing here is observed evidence and
 // nothing here is compared with the observed evidence.
 
+import { UserRound } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TrustReportDocument } from "@/lib/security-competency/trust-report.types";
 import { pick } from "@/lib/security-competency/trust-report.types";
@@ -17,12 +18,17 @@ export function SelfReportSection({ doc }: { doc: TrustReportDocument }) {
     <Section
       id="trust-self"
       title={t("report.trust.self.heading")}
-      lede={t("report.trust.self.lede")}
       printOrder={5}
       subordinate
       aside={<Tag muted>{t("report.trust.map.selfReportTag")}</Tag>}
     >
-      <div className="rounded-[14px] border border-dashed border-border bg-[color:var(--surface-subtle)] p-5">
+      <div className="rounded-xl border border-dashed border-border bg-secondary/40 p-5 sm:p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-card text-primary shadow-[var(--shadow-xs)]">
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <p className="text-[13px] text-muted-foreground">{t("report.trust.self.lede")}</p>
+        </div>
         {rows.length === 0 ? (
           <p className="text-[13px] italic text-muted-foreground">{t("report.trust.self.empty")}</p>
         ) : (
