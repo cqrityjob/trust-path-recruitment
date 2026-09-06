@@ -38,7 +38,34 @@
 
 import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
 import { verifierAttributionKey } from "./format";
-import type { VerificationMethod } from "./types";
+import {
+  effectiveAssertionLevel,
+  effectiveTrust,
+  isCQrityjob,
+  isLegacyUnsupportedEntry,
+  isLegacyUnsupportedProvenance,
+  isUnsupportedSourceClaim,
+  type EffectiveTrust,
+  type ProvenanceBearing,
+  type ProvenanceSubjectKind,
+} from "./provenance";
+import {
+  credentialPresentation,
+  presentationWordKey,
+  type CredentialPresentationState,
+  type OpenReviewStatus,
+} from "./design/credential-symbols";
+import type { LifecycleState, VerificationMethod } from "./types";
+
+export {
+  effectiveAssertionLevel,
+  effectiveTrust,
+  isLegacyUnsupportedEntry,
+  isUnsupportedSourceClaim,
+  type EffectiveTrust,
+  type ProvenanceBearing,
+  type ProvenanceSubjectKind,
+};
 
 /**
  * How much the product may claim about a fact, as a presentation grouping.
@@ -68,7 +95,16 @@ export type TrustStatus =
  * every surface starts distinguishing it at once. Nothing here is inferred —
  * the value is the recorded `verification_method` or null.
  */
-export type TrustSourceType = VerificationMethod | "unattributed";
+export type TrustSourceType =
+  | VerificationMethod
+  | "unattributed"
+  /** A recorded source method the product cannot structurally support: a
+   *  source method CQrityjob recorded about itself (the legacy rows), or any
+   *  issuer confirmation, which has no issuer identity, membership, receipt
+   *  or revocation authority behind it until the Issuer Foundation release.
+   *  Verified -- an authorised verifier really decided -- but not by a
+   *  source, so it wears no source attribution. */
+  | "unsupported_source";
 
 export interface TrustPresentation {
   readonly status: TrustStatus;
@@ -101,6 +137,9 @@ export interface DescribeTrustInput {
   readonly verifierName?: string | null;
   readonly verificationMethod?: VerificationMethod | string | null;
   readonly verifiedOn?: string | null;
+  /** What the decision was ABOUT. Absent means a credential; see
+   *  ProvenanceBearing in provenance.ts. */
+  readonly subjectKind?: ProvenanceSubjectKind;
   /** True when the provenance read did not answer. Overrides everything:
    *  a fact whose trust could not be read has an unknown standing, not a
    *  negative one. */
@@ -138,6 +177,7 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
     verifierName = null,
     verificationMethod = null,
     verifiedOn = null,
+    subjectKind,
     provenanceUnavailable = false,
   } = input;
 
@@ -176,13 +216,53 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
     return none(assertionLevel === "document_provided" ? "document_provided" : "self_reported");
   }
 
+  // ── A SOURCE METHOD CQRITYJOB RECORDED ABOUT ITSELF ──────────────────
+  //
+  // Three hosted rows predate the rule that a method must belong to the
+  // deciding party. They stay as written; what they may SAY is decided here,
+  // once, and it is the neutral sentence: a review was recorded, and a direct
+  // source confirmation cannot be shown. `method` is null on purpose --
+  // `isEmployerConfirmed` and every "confirmed by" branch downstream key on
+  // it, and none of them may fire for a confirmation nobody gave.
+  if (isUnsupportedSourceClaim({ assertionLevel, verificationMethod, verifierName, subjectKind })) {
+    // WHICH sentence depends on who is named: the legacy rows name CQrityjob
+    // and take the pinned legacy wording; anything else takes the general
+    // one, because naming CQrityjob there would name the wrong party.
+    const key: PassportCopyKey = isCQrityjob(verifierName)
+      ? "trust.legacy.unsupported"
+      : "trust.unsupportedSource";
+    return {
+      status: "verified",
+      sourceType: "unsupported_source",
+      organisation: verifierName,
+      method: null,
+      date: verifiedOn,
+      labelSv: passportT(key, "sv"),
+      labelEn: passportT(key, "en"),
+      // The short word is the LEVEL word, not "Verified": a compact surface
+      // or a screen reader gets the same answer the pill gives.
+      shortSv: passportT("trust.level.documented", "sv"),
+      shortEn: passportT("trust.level.documented", "en"),
+    };
+  }
+
   // Verified, but the decision record does not name a decider. That happens
   // only for rows predating the PR 5 rule that an approval must state one.
   // The status stays `verified` -- an authorised verifier really did decide
   // -- and the attribution line is simply absent, because there is nobody
   // this product may name.
   const method = (verificationMethod as VerificationMethod | null) ?? null;
-  const key = verifierAttributionKey(method);
+  const key = verifierAttributionKey(method, verifierName, subjectKind);
+
+  // The short word is the OUTWARD LEVEL, never "Verified": a CQrityjob
+  // document review is Documented; only an employer's or issuer's own
+  // confirmation is Source-confirmed. The attribution line beside it still
+  // says exactly what happened ("Document reviewed by CQrityjob").
+  const shortKey: PassportCopyKey =
+    effectiveTrust({ assertionLevel, verificationMethod, verifierName, subjectKind }) ===
+    "source_confirmed"
+      ? "trust.level.source_verified"
+      : "trust.level.documented";
 
   return {
     status: "verified",
@@ -192,8 +272,8 @@ export function describeTrust(input: DescribeTrustInput): TrustPresentation {
     date: verifiedOn,
     labelSv: line(key, verifierName, "sv"),
     labelEn: line(key, verifierName, "en"),
-    shortSv: SHORT.verified.sv,
-    shortEn: SHORT.verified.en,
+    shortSv: passportT(shortKey, "sv"),
+    shortEn: passportT(shortKey, "en"),
   };
 }
 
@@ -243,11 +323,225 @@ export function isEmployerConfirmed(trust: TrustPresentation): boolean {
  */
 export function employmentTrustLine(trust: TrustPresentation, lang: PassportLang): string | null {
   if (trust.status !== "verified" || !trust.organisation) return null;
+  // The legacy sentence is already complete and already names the decider.
+  if (trust.sourceType === "unsupported_source") return trustLabel(trust, lang);
   const key: PassportCopyKey =
     trust.method === "employer_confirmation"
       ? "employment.attribution.employer_confirmation"
       : verifierAttributionKey(trust.method);
   return `${passportT(key, lang)} ${trust.organisation}`;
+}
+
+/**
+ * The copy key for a recorded verification METHOD, as a reader should see it.
+ *
+ * The single replacement for the per-surface `METHOD_KEY` tables that used
+ * to sit in the recipient page, the credential page and the holder's panel.
+ * Four copies of one mapping were four places to forget the legacy rule; this
+ * is the one place it is applied. Null for a method this build has no words
+ * for -- registry and authority verification arrive as new methods -- so a
+ * caller prints the stored code or "not stated" rather than a guess.
+ */
+export function methodLabelKey(
+  method: string | null | undefined,
+  organisation: string | null | undefined,
+  subjectKind: ProvenanceSubjectKind | undefined = undefined,
+): PassportCopyKey | null {
+  if (!method) return null;
+  // A short VALUE for the method cell. The explanatory sentence
+  // (trust.legacy.unsupported) is rendered beside it, once, by the surface.
+  if (
+    isUnsupportedSourceClaim({
+      assertionLevel: "verified",
+      verificationMethod: method,
+      verifierName: organisation,
+      subjectKind,
+    })
+  ) {
+    return "trust.legacy.method";
+  }
+  switch (method) {
+    case "document_review":
+      return "ver.method.document_review";
+    case "employer_confirmation":
+      return "ver.method.employer_confirmation";
+    case "issuer_confirmation":
+      return "ver.method.issuer_confirmation";
+    default:
+      return null;
+  }
+}
+
+/**
+ * The three words a reader outside the product is given, derived from what
+ * the record actually supports.
+ *
+ * ── NOT A FOURTH TRUST STATE ───────────────────────────────────────────
+ *
+ * A presentation grouping over the stored axes, exactly like `TrustStatus`.
+ * It stores nothing and promotes nothing:
+ *
+ *   self_declared    the holder said so, or attached a file nobody assessed
+ *   documented       an authorised CQrityjob verifier decided, having read
+ *                    evidence -- INCLUDING a legacy row whose stored method
+ *                    claims more than a CQrityjob decision can support
+ *   source_verified  the employer confirmed employment they were party to,
+ *                    or (in a later release) the issuer confirmed
+ *
+ * Null when the standing could not be read: `unknown` is not a level.
+ */
+export type PublicTrustLevel = "self_declared" | "documented" | "source_verified";
+
+export function publicTrustLevel(trust: TrustPresentation): PublicTrustLevel | null {
+  switch (trust.status) {
+    case "unknown":
+      return null;
+    case "self_reported":
+    case "document_provided":
+      return "self_declared";
+    case "verified":
+      return trust.sourceType === "employer_confirmation" ||
+        trust.sourceType === "issuer_confirmation"
+        ? "source_verified"
+        : "documented";
+  }
+}
+
+/** The copy key for a public trust level. Three words, and a fourth for a
+ *  standing that could not be read. */
+export function trustLevelWordKey(level: PublicTrustLevel | null): PassportCopyKey {
+  switch (level) {
+    case "self_declared":
+      return "trust.level.self_declared";
+    case "documented":
+      return "trust.level.documented";
+    case "source_verified":
+      return "trust.level.source_verified";
+    default:
+      return "trust.level.unknown";
+  }
+}
+
+/**
+ * Whether a trust presentation may wear the present-tense VERIFIED
+ * decoration -- the gold check, the filled pill, the count.
+ *
+ * `status === "verified"` says an authorised verifier decided. That stays
+ * true for a legacy unsupported row, because it did. What such a row may not
+ * do is PRESENT as verified: its effective level is documented. Every
+ * consumer that used to test the status directly asks this instead.
+ */
+export function presentsAsVerified(trust: TrustPresentation): boolean {
+  return publicTrustLevel(trust) === "source_verified";
+}
+
+/**
+ * The credential symbol state for an entry, from its EFFECTIVE level.
+ *
+ * The one replacement for `credentialPresentation(entry.assertionLevel, …)`
+ * at every call site. A legacy unsupported entry arrives at the symbol
+ * system as document_provided and takes the documented mark -- the state
+ * that already exists for "CQrityjob has something to look at, and no source
+ * has confirmed it" -- never the approved mark.
+ */
+export function credentialPresentationOf(
+  entry: ProvenanceBearing,
+  effectiveLifecycle: LifecycleState,
+  openReview: OpenReviewStatus = null,
+): CredentialPresentationState {
+  return credentialPresentation(effectiveAssertionLevel(entry), effectiveLifecycle, openReview);
+}
+
+/**
+ * The status WORD beside a credential symbol, for an entry.
+ *
+ * Ordinarily the symbol vocabulary's own word for the state. For a legacy
+ * unsupported entry that has taken the documented state, the level word
+ * "Dokumenterad / Documented" rather than "document provided": CQrityjob did
+ * review it, and saying otherwise would be a different untruth.
+ */
+export function presentationWordKeyOf(
+  entry: ProvenanceBearing,
+  state: CredentialPresentationState,
+): PassportCopyKey {
+  const trust = effectiveTrust(entry);
+  if (state === "documented" && trust === "documented") return "trust.level.documented";
+  if (state === "verified" && trust === "source_confirmed") return "trust.level.source_verified";
+  return presentationWordKey(state);
+}
+
+/**
+ * The neutral sentence an unsupported source claim carries, or null.
+ *
+ * The pinned legacy wording when CQrityjob recorded the source method about
+ * itself; the general one otherwise, because naming CQrityjob in a row that
+ * names somebody else would name the wrong party. Decided here so a surface
+ * renders what the record supports rather than the only sentence it knew.
+ */
+export function unsupportedSourceNoticeKey(entry: ProvenanceBearing): PassportCopyKey | null {
+  if (!isUnsupportedSourceClaim(entry)) return null;
+  return isCQrityjob(entry.verifierName) ? "trust.legacy.unsupported" : "trust.unsupportedSource";
+}
+
+/** The three field labels a provenance block carries: who, how, when. */
+export interface ProvenanceLabelKeys {
+  readonly by: PassportCopyKey;
+  readonly method: PassportCopyKey;
+  readonly at: PassportCopyKey;
+}
+
+/**
+ * Field labels that do not themselves claim what the record cannot support.
+ *
+ * "Verified by / Method / Verified" is right for a verification. For a
+ * legacy unsupported row the labels are "Reviewed by / Review method /
+ * Reviewed": a label is a claim too, and a reader takes "Verified by
+ * CQrityjob" at face value however carefully the value beside it is worded.
+ */
+export function provenanceLabelKeys(entry: ProvenanceBearing): ProvenanceLabelKeys {
+  // Documented -- a CQrityjob review, genuine or legacy -- is REVIEWED, in the
+  // label as well as in the value. Only a source confirmation is "Verified by".
+  if (effectiveTrust(entry) === "documented") {
+    return { by: "trust.reviewedBy", method: "trust.reviewMethod", at: "trust.reviewedAt" };
+  }
+  return { by: "rec.verifiedBy", method: "rec.method", at: "rec.verifiedAt" };
+}
+
+/**
+ * Whether a subject's decision history holds a standing CQrityjob document
+ * review. Drives the reviewer's "Document review completed -- holder-facing
+ * result: Documented" block; decides nothing.
+ */
+export function hasCompletedDocumentReview(
+  decisions: readonly {
+    readonly decision: string;
+    readonly method: string | null;
+    readonly organisation: string | null;
+  }[],
+): boolean {
+  return decisions.some(
+    (d) =>
+      d.decision === "approved" &&
+      d.method === "document_review" &&
+      !isLegacyUnsupportedProvenance(d.method, d.organisation),
+  );
+}
+
+/**
+ * Whether a subject's decision history holds an approval of the legacy
+ * unsupported shape. Drives the reviewer's re-review warning; decides
+ * nothing and edits nothing.
+ */
+export function hasLegacyUnsupportedApproval(
+  decisions: readonly {
+    readonly decision: string;
+    readonly method: string | null;
+    readonly organisation: string | null;
+  }[],
+): boolean {
+  return decisions.some(
+    (d) => d.decision === "approved" && isLegacyUnsupportedProvenance(d.method, d.organisation),
+  );
 }
 
 /**
@@ -282,13 +576,14 @@ export function employmentTrustLine(trust: TrustPresentation, lang: PassportLang
  * Implemented through `describeTrust` deliberately: the predicate and the
  * rendered attribution can then never disagree about the same entry.
  */
-export function isCurrentlyVerified(entry: {
-  readonly assertionLevel: string;
-  readonly lifecycleState?: string | null;
-}): boolean {
+export function isCurrentlyVerified(
+  entry: ProvenanceBearing & { readonly lifecycleState?: string | null },
+): boolean {
   return (
     describeTrust({
-      assertionLevel: entry.assertionLevel,
+      // The EFFECTIVE level: a legacy unsupported entry is not currently
+      // verified, whatever its stored level records about the past.
+      assertionLevel: effectiveAssertionLevel(entry),
       lifecycleState: entry.lifecycleState,
     }).status === "verified"
   );

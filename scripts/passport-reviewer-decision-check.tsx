@@ -429,13 +429,22 @@ group("GROUP 6 — attribution says HOW, not just WHO");
     "6.1 a document review says so",
     verifierAttributionKey("document_review") === "claims.attribution.document_review",
   );
+  // The subject is half the rule (owner decision, 2026-09-05): an employer
+  // confirms an EMPLOYMENT, so the employer's words are reached only there.
   ck(
-    "6.2 an employer confirmation says CONFIRMED, not VERIFIED",
-    verifierAttributionKey("employer_confirmation") === "claims.attribution.employer_confirmation",
+    "6.2 an employer confirmation of an EMPLOYMENT says CONFIRMED, not VERIFIED",
+    verifierAttributionKey("employer_confirmation", "Bevakning AB", "employment") ===
+      "claims.attribution.employer_confirmation",
   );
+  // INVERTED: the same method on a credential, and any issuer confirmation by
+  // any name, take the review label instead -- the product has no issuer
+  // identity, membership, receipt or revocation authority behind that name,
+  // so it fails closed until the Issuer Foundation release.
   ck(
-    "6.3 an issuer confirmation says so",
-    verifierAttributionKey("issuer_confirmation") === "claims.attribution.issuer_confirmation",
+    "6.3 an employer confirmation on a CREDENTIAL, and any issuer confirmation, take the review label",
+    verifierAttributionKey("employer_confirmation", "Bevakning AB") === "trust.reviewedBy" &&
+      verifierAttributionKey("issuer_confirmation", "CQrityjob") === "trust.reviewedBy" &&
+      verifierAttributionKey("issuer_confirmation", "Polismyndigheten") === "trust.reviewedBy",
   );
   // An approval with no recorded method cannot be described more strongly
   // than "verified". PR 5 made a method mandatory going forward; rows written

@@ -471,7 +471,7 @@ console.log("\n8 -- the card never files a credential under the wrong market");
   );
 
   const markup = html(<PassportCard card={card} />);
-  ck("the card names its markets", /VERIFIERADE MARKNADER|Verifierade marknader/i.test(markup));
+  ck("the card names its markets", /DOKUMENTERADE MARKNADER|Dokumenterade marknader/i.test(markup));
   ck(
     "the card labels the current work market",
     /AKTUELL ARBETSMARKNAD|Aktuell arbetsmarknad/i.test(markup),
@@ -525,7 +525,9 @@ console.log("\n8 -- the card never files a credential under the wrong market");
   );
   const panel = html(<OtherMarketsPanel profiles={panelProfiles} />);
   ck("the other-markets panel names Sweden", /Sverige/.test(panel));
-  ck("the other-markets panel counts what is verified", /2 verifierade/.test(panel));
+  // Documented-or-better is what the market count means now (owner decision:
+  // a CQrityjob review is documented, and that is what is counted).
+  ck("the other-markets panel counts what is documented", /2 dokumenterade/.test(panel));
   ck(
     "the other-markets panel offers no way to add a credential",
     !/\/passport\/credentials\/new/.test(panel),

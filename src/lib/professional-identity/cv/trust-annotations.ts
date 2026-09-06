@@ -116,6 +116,7 @@ export function buildCvTrustAnnotations(identity: ProfessionalIdentityV1): CvTru
       verifierName: e.verifierName,
       verificationMethod: e.verificationMethod,
       verifiedOn: e.verifiedOn,
+      subjectKind: "employment",
     });
   }
 

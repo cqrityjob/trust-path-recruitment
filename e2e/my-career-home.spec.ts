@@ -607,7 +607,14 @@ test.describe("/my-career — the real route", () => {
     await mount(page, "established");
     const passport = page.locator("[data-passport-summary]");
     await expect(passport.locator('[data-merit-count="registered"]')).toContainText("6");
-    await expect(passport.locator('[data-merit-count="verified"]')).toContainText("2");
+    // PR #189: both standing approvals in this fixture are CQrityjob document
+    // reviews. A review is a decision and it is not the source confirming the
+    // merit, so the card counts them as documented and leaves the verified
+    // figure at nothing. What this test defends is unchanged -- the archived
+    // approval does not inflate a current count, and the decided merits are
+    // not reported as none.
+    await expect(passport.locator('[data-merit-count="documented"]')).toContainText("2");
+    await expect(passport.locator('[data-merit-count="verified"]')).toContainText("0");
     await expect(passport.locator('[data-merit-count="expired"]')).toContainText("1");
     const activity = page.locator("[data-recent-activity]");
     await expect(

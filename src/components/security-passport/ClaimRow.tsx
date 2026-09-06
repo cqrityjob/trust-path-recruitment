@@ -19,7 +19,11 @@ import {
   formatJurisdiction,
   verifierAttributionKey,
 } from "@/lib/security-passport/format";
-import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
+import {
+  credentialPresentationOf,
+  provenanceLabelKeys,
+  unsupportedSourceNoticeKey,
+} from "@/lib/security-passport/trust-presentation";
 import type { Claim } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
 import { CredentialSymbol } from "./CredentialSymbol";
@@ -56,6 +60,7 @@ export function ClaimRow({
 }) {
   const { pt, lang } = usePassportCopy();
   const title = lang === "sv" ? claim.titleSv : claim.titleEn;
+  const noticeKey = unsupportedSourceNoticeKey(claim);
   const limitation = lang === "sv" ? claim.limitationSv : claim.limitationEn;
 
   return (
@@ -75,7 +80,7 @@ export function ClaimRow({
           {claim.credentialCode ? (
             <CredentialSymbol
               code={claim.credentialCode}
-              state={credentialPresentation(claim.assertionLevel, claim.lifecycleState)}
+              state={credentialPresentationOf(claim, claim.lifecycleState)}
               name={title}
               size={40}
               className="mt-0.5 shrink-0"
@@ -94,6 +99,7 @@ export function ClaimRow({
           <AssertionChip
             level={claim.assertionLevel}
             lifecycleState={claim.lifecycleState}
+            provenance={claim}
             size="sm"
           />
           <LifecycleChip state={claim.lifecycleState} />
@@ -131,16 +137,24 @@ export function ClaimRow({
             field rather than reaching for the issuer's name. */}
         {claim.verifierName ? (
           <Field
-            label={pt(verifierAttributionKey(claim.verificationMethod))}
+            label={pt(verifierAttributionKey(claim.verificationMethod, claim.verifierName))}
             value={claim.verifierName}
           />
         ) : null}
         {claim.verifierName && claim.verifiedOn ? (
-          <Field label={pt("claims.verifiedOn")} value={claim.verifiedOn} />
+          <Field label={pt(provenanceLabelKeys(claim).at)} value={claim.verifiedOn} />
         ) : null}
       </dl>
 
       <LifecycleNote state={claim.lifecycleState} />
+
+      {/* A recorded source method the product cannot structurally support --
+          a legacy CQrityjob row, or any issuer confirmation. The chip above
+          already says Dokumenterad; this says why, in the sentence the record
+          itself supports. */}
+      {noticeKey ? (
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{pt(noticeKey)}</p>
+      ) : null}
 
       {limitation ? (
         <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">

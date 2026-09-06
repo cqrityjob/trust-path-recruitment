@@ -100,6 +100,13 @@ export function PassportSummary({
                 label={L(PASSPORT.verified, l)}
                 testId="verified"
               />
+              {passport.counts.documentedCount > 0 && (
+                <Count
+                  value={passport.counts.documentedCount}
+                  label={L(PASSPORT.documented, l)}
+                  testId="documented"
+                />
+              )}
               {passport.counts.expiredCount > 0 && (
                 <Count
                   value={passport.counts.expiredCount}

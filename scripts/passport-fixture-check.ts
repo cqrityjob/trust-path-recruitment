@@ -523,7 +523,7 @@ for (const pkg of DISCLOSURE_PACKAGES) {
 // 15. Phase 1B — the social card carries only the safe subset
 // ---------------------------------------------------------------------------
 {
-  const ANON = "Verifierad väktare";
+  const ANON = "Innehavare av Security Passport";
 
   for (const persona of PERSONAS) {
     for (const mode of ["full_name", "initials", "anonymous"] as const) {
@@ -1024,7 +1024,7 @@ for (const pkg of DISCLOSURE_PACKAGES) {
 
     const social = buildSocialCard(lapsed, EVAL, {
       privacyMode: "full_name",
-      anonymousLabel: "Verifierad väktare",
+      anonymousLabel: "Innehavare av Security Passport",
     });
     expect(
       social.verifiedCredentials.length === 0,
@@ -1032,24 +1032,51 @@ for (const pkg of DISCLOSURE_PACKAGES) {
     );
   }
 
-  // The social card now carries the taxonomy code — and still only for
-  // verified, active credentials (asserted per-claim in section 15c).
+  // The social card carries the taxonomy code -- and ONLY for source-confirmed,
+  // active credentials. INVERTED (owner decision): the persona's OV appointment
+  // is a CQrityjob review, which is documented, and a documented credential is
+  // never published to a social image as verified. The same appointment
+  // confirmed by its source IS carried.
   const ovCurrent = PERSONAS.find((p) => p.id === "cred-ov-current");
   if (ovCurrent) {
     const social = buildSocialCard(ovCurrent, EVAL, {
       privacyMode: "full_name",
-      anonymousLabel: "Verifierad väktare",
+      anonymousLabel: "Innehavare av Security Passport",
     });
     expect(
-      social.verifiedCredentials.some((c) => c.code === "OV"),
-      "The social card must carry the OV code for a current verified appointment.",
+      !social.verifiedCredentials.some((c) => c.code === "OV"),
+      "A CQrityjob-reviewed OV appointment is documented and must NOT be published to the social image.",
+    );
+    // Nor is it carried when the recorded method names an issuer: issuer
+    // confirmation has no issuer identity, membership, receipt or revocation
+    // authority behind it until the Issuer Foundation release, so it fails
+    // closed to documented whatever organisation is named.
+    const namedIssuer = {
+      ...ovCurrent,
+      claims: ovCurrent.claims.map((c) =>
+        c.credentialCode === "OV"
+          ? {
+              ...c,
+              verifierName: "Polismyndigheten (fiktiv)",
+              verificationMethod: "issuer_confirmation" as const,
+            }
+          : c,
+      ),
+    };
+    const socialNamedIssuer = buildSocialCard(namedIssuer, EVAL, {
+      privacyMode: "full_name",
+      anonymousLabel: "Innehavare av Security Passport",
+    });
+    expect(
+      socialNamedIssuer.verifiedCredentials.length === 0,
+      "An issuer confirmation naming an authority is still documented and must NOT be published to the social image.",
     );
   }
   const ovExpired = PERSONAS.find((p) => p.id === "cred-ov-expired");
   if (ovExpired) {
     const social = buildSocialCard(ovExpired, EVAL, {
       privacyMode: "full_name",
-      anonymousLabel: "Verifierad väktare",
+      anonymousLabel: "Innehavare av Security Passport",
     });
     expect(
       !social.verifiedCredentials.some((c) => c.code === "OV"),

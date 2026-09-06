@@ -115,6 +115,7 @@ function sourceFilesUnder(dir: string): string[] {
 }
 
 import {
+  presentsAsVerified,
   describeTrust,
   employmentTrustLine,
   isEmployerConfirmed,
@@ -902,6 +903,47 @@ console.log("\n2c · the /my-career surfaces");
     "the merit counter interprets trust through describeTrust, never its own strings",
     meritsSrc.includes("describeTrust({") && !/assertionLevel === "verified"/.test(meritsSrc),
   );
+  // ── PR #189 · THE METHOD DECIDES, AND THE COUNT IS THE OUTWARD LEVEL ──
+  //
+  // The home's figure moved from summariseTrust to countMerits, so the rule
+  // #189 pinned there is re-pinned here on the module that now owns it.
+  // Omitting verificationMethod or subjectKind does not weaken describeTrust,
+  // it inverts it: the call falls through to the unattributed branch and a
+  // CQrityjob document review returns looking source-confirmed.
+  ck(
+    "the merit counter passes the whole provenance -- the method and the subject too",
+    /verificationMethod: merit\.verificationMethod/.test(meritsSrc) &&
+      /subjectKind: merit\.subjectKind \?\? "credential"/.test(meritsSrc) &&
+      /subjectKind: "employment" as const/.test(meritsSrc) &&
+      /subjectKind: "credential" as const/.test(meritsSrc),
+  );
+  ck(
+    "and gates the verified count on the outward level, never on status alone",
+    meritsSrc.includes("publicTrustLevel(trust)") &&
+      /level === "source_verified"/.test(meritsSrc) &&
+      !/trust\.status === "verified"/.test(meritsSrc),
+  );
+  ck(
+    "a decided-but-documented merit is counted apart, and never as ready to verify",
+    /readonly documentedCount: number/.test(meritsSrc) &&
+      /documentedCount: of\("documented"\)/.test(meritsSrc) &&
+      !/label === "documented"/.test(
+        meritsSrc.slice(meritsSrc.indexOf("export function countReadyForVerification(")),
+      ),
+  );
+  ck(
+    "the summary card names the documented state rather than folding it into verified",
+    read("src/components/professional-identity/PassportSummary.tsx").includes(
+      "passport.counts.documentedCount > 0",
+    ) &&
+      read("src/components/professional-identity/home-copy.ts").includes(
+        'documented: c("Dokumenterade meriter", "Documented merits")',
+      ),
+  );
+  ck(
+    "and the summariser #189 pinned still reads the same way for the surfaces that use it",
+    read("src/lib/professional-identity/trust-summary.ts").includes("presentsAsVerified(trust)"),
+  );
   ck(
     "the relevance split itself is unchanged",
     read("src/lib/security-passport/jurisdiction-relevance.ts").includes("splitByWorkLocation"),
@@ -1026,13 +1068,40 @@ console.log("\n4 · CV source bundle");
     bundle.credentials.every((c) => c.verified === false),
   );
 
-  const verifiedBundle = buildCvSourceBundle({
-    identity: identity({ claims: [claim({ assertionLevel: "verified" })] }),
+  // "Verified" for the bundle means SOURCE-CONFIRMED (owner decision): the
+  // employer confirmed an employment through the authorised attestation
+  // path, or -- once the Issuer Foundation release exists -- an identified
+  // issuer confirmed a credential. NO CREDENTIAL CAN REACH IT TODAY: a
+  // CQrityjob document review is documented, an issuer confirmation has no
+  // structure behind it whatever organisation is named, and a verified level
+  // with no recorded method fails closed the same way.
+  const credentialBundle = buildCvSourceBundle({
+    identity: identity({
+      claims: [
+        claim({
+          id: "c-review",
+          assertionLevel: "verified",
+          verifierName: "CQrityjob",
+          verificationMethod: "document_review",
+        }),
+        claim({
+          id: "c-issuer",
+          assertionLevel: "verified",
+          verifierName: "BYA",
+          verificationMethod: "issuer_confirmation",
+        }),
+        claim({ id: "c-nomethod", assertionLevel: "verified" }),
+      ],
+    }),
     locale: "sv",
     includeCareerInsight: false,
     targetJobText: null,
   });
-  ck("a verified claim IS marked verified", verifiedBundle.credentials[0]?.verified === true);
+  ck(
+    "no credential is marked verified today: a review, an issuer confirmation and a methodless approval all fail closed",
+    credentialBundle.credentials.length === 3 &&
+      credentialBundle.credentials.every((c) => c.verified === false),
+  );
 
   // "evidenced" is the holder attaching a document to their own claim. A
   // holder cannot verify themselves.
@@ -1837,6 +1906,7 @@ console.log("\n10 · verified trust across the career outputs");
       verifierName: CONFIRMED.verifierName,
       verificationMethod: CONFIRMED.verificationMethod,
       verifiedOn: CONFIRMED.verifiedOn,
+      subjectKind: "employment",
     });
     const en = employmentTrustLine(t, "en") ?? "";
     const sv = employmentTrustLine(t, "sv") ?? "";
@@ -1857,6 +1927,7 @@ console.log("\n10 · verified trust across the career outputs");
       verifierName: REVIEWED_EMPLOYMENT.verifierName,
       verificationMethod: REVIEWED_EMPLOYMENT.verificationMethod,
       verifiedOn: REVIEWED_EMPLOYMENT.verifiedOn,
+      subjectKind: "employment",
     });
     const en = employmentTrustLine(t, "en") ?? "";
     ck(
@@ -2035,17 +2106,22 @@ console.log("\n10 · verified trust across the career outputs");
       "10.29 the CV attributes the SAME employment to Company X",
       employmentTrustLine(cvEmployment, "en") === "Employment confirmed by Company X",
     );
+    // INVERTED (owner decision): the document-reviewed VU1 is documented, so
+    // the card counts NO verified credential; only the employer's own
+    // confirmation of employment survives compression.
     ck(
-      "10.30 the Career Card says the same thing, compressed",
-      careerCardTrustLine(summary, "en") === "1 verified credential · Employment confirmed",
+      "10.30 the Career Card says the same thing, compressed -- and counts the review as documented",
+      careerCardTrustLine(summary, "en") === "Employment confirmed",
     );
     ck(
       "10.31 and the card never names the employer",
       !(careerCardTrustLine(summary, "en") ?? "").includes("Company X"),
     );
     ck(
-      "10.32 the CV credential and the card agree it is verified",
-      annotations.claims[VU1_APPROVED.id].status === "verified" && summary.verifiedClaims === 1,
+      "10.32 the CV credential records the decision, and the card agrees it is documented, not verified",
+      annotations.claims[VU1_APPROVED.id].status === "verified" &&
+        !presentsAsVerified(annotations.claims[VU1_APPROVED.id]) &&
+        summary.verifiedClaims === 0,
     );
   }
 
@@ -2320,8 +2396,17 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
   /* ---- 11a · B1: the saved CV ------------------------------------- */
 
   // The bundle is FROZEN at save time, with `verified: true` baked in. This
-  // is the stored row, unchanged, exactly as the defect had it.
-  const savedBundle = bundleOf(idActive);
+  // is the stored row, unchanged, exactly as the defect had it -- a CV saved
+  // BEFORE 2026-09-05, when a CQrityjob document review still froze
+  // `verified: true`. It is written out here rather than produced by
+  // today's builder, because today's builder correctly writes `false`: the
+  // point of this section is that a bundle frozen with the old flag must
+  // still not be read as current trust.
+  const freshBundle = bundleOf(idActive);
+  const savedBundle = {
+    ...freshBundle,
+    credentials: freshBundle.credentials.map((c) => ({ ...c, verified: true })),
+  };
   const savedPresentation = factualStoredPresentation(savedBundle);
 
   ck(
@@ -2379,9 +2464,13 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
       !/\bclaim\.verified\b/.test(viewCode) && !/\bfact\.verified\b/.test(viewCode),
     );
     ck(
+      // Gated on the annotation, and through presentsAsVerified() rather than
+      // the raw status: a legacy unsupported approval (a source method
+      // CQrityjob recorded about itself, pre-20261030090000) has status
+      // "verified" -- a verifier did decide -- and still may not wear the mark.
       "11.9   and is gated on the annotation's current status instead",
       read("src/components/professional-identity/CvDocumentView.tsx").includes(
-        'const currentlyVerified = !trust.unavailable && t?.status === "verified"',
+        "const currentlyVerified = !trust.unavailable && !!t && presentsAsVerified(t)",
       ),
     );
   }
@@ -2463,7 +2552,25 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
 
   /* ---- 11b · B2: current vs historical verification ---------------- */
 
-  ck("11.16 an active verified claim IS currently verified", isCurrentlyVerified(VU1_ACTIVE));
+  // INVERTED (owner decision, 2026-09-05): "currently verified" means
+  // source-confirmed, and a CQrityjob document review is documented. The
+  // credential is still there and its decision is still recorded; what it may
+  // not do is present as a current verification. An employment an employer
+  // confirmed through the attestation path still can.
+  ck(
+    "11.16 an active document-reviewed claim is NOT currently verified -- it is documented",
+    !isCurrentlyVerified(VU1_ACTIVE),
+  );
+  ck(
+    "11.16b but an employer-confirmed employment still is",
+    isCurrentlyVerified({
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      verifierName: "Company X",
+      verificationMethod: "employer_confirmation",
+      subjectKind: "employment",
+    }),
+  );
   ck("11.17 a revoked one is NOT", !isCurrentlyVerified(VU1_REVOKED));
   ck(
     "11.18 nor is a disputed one",
@@ -2484,9 +2591,17 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
   );
   // An entry with no lifecycle at all is unaffected — employment periods
   // reach the annotations already filtered to active.
+  // ... on its assertion AND its provenance: a source-confirmed entry with no
+  // lifecycle is currently verified; a verified level with no recorded method
+  // fails closed to documented (owner decision) and is not.
   ck(
-    "11.22 an entry carrying no lifecycle is judged on its assertion alone",
-    isCurrentlyVerified({ assertionLevel: "verified" }),
+    "11.22 an entry carrying no lifecycle is judged on its assertion and provenance alone",
+    isCurrentlyVerified({
+      assertionLevel: "verified",
+      verifierName: "Company X",
+      verificationMethod: "employer_confirmation",
+      subjectKind: "employment",
+    }) && !isCurrentlyVerified({ assertionLevel: "verified" }),
   );
   ck(
     "11.23 and the historical verification is NEVER rewritten to achieve this",
@@ -2508,13 +2623,24 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
         // mark on anything not currently active.
         meritSrc.includes("lifecycleState: merit.lifecycleState ?? null") &&
         trustSrc.includes("identity.claims.filter(isVerifiedClaim)") &&
+        // The EFFECTIVE level (security-passport/provenance.ts), so a legacy
+        // unsupported approval is not counted as currently verified either.
         read("src/lib/professional-identity/types.ts").includes(
-          'claim.assertionLevel === "verified" && claim.lifecycleState === "active"',
+          'effectiveAssertionLevel(claim) === "verified" && claim.lifecycleState === "active"',
         ),
     );
     ck(
+      // Re-pointed for PR #189: BOTH decided levels lapse. A source
+      // confirmation and a CQrityjob review each stop being current when the
+      // merit's own validity runs out, and neither may sit in a present-tense
+      // figure afterwards. The behaviour itself is asserted in the counted-
+      // shapes group at the foot of this file.
       "11.24b and a merit whose own validity has lapsed is counted apart from it",
-      meritSrc.includes('return hasLapsed(merit.validUntil ?? null, now) ? "expired" : "verified"'),
+      meritSrc.includes("const lapsed = hasLapsed(merit.validUntil ?? null, now)") &&
+        meritSrc.includes(
+          'if (level === "source_verified") return lapsed ? "expired" : "verified"',
+        ) &&
+        meritSrc.includes('if (level === "documented") return lapsed ? "expired" : "documented"'),
     );
     ck(
       "11.25 and a revoked-only Passport counts as nothing currently verified",
@@ -2540,8 +2666,12 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
     const cardSrc = read("src/lib/security-passport/card.ts");
     ck(
       "11.29 the Passport Card's own state is a present-tense claim",
-      cardSrc.includes("periods.some(isCurrentlyVerified)") &&
-        cardSrc.includes("periods.every(isCurrentlyVerified)"),
+      // The periods are mapped to declare their subject first -- an employer
+      // confirmation source-confirms an employment and nothing else -- and
+      // the lifecycle-aware predicate is what the state is built from.
+      cardSrc.includes('subjectKind: "employment" as const') &&
+        cardSrc.includes("asEmployment.some(isCurrentlyVerified)") &&
+        cardSrc.includes("asEmployment.every(isCurrentlyVerified)"),
     );
   }
 
@@ -3223,6 +3353,239 @@ console.log("\n14 · career journey background");
   ck(
     "14.13 and it still reads the canonical profile rather than a copy",
     code.includes('"security_career_profiles"'),
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* MY CAREER x THE PASSPORT'S TRUST — the four shapes, counted            */
+/*                                                                       */
+/* PR #189 moved the outward level off the stored assertion level: an     */
+/* authorised verifier deciding is one fact, and the source confirming is */
+/* another, and only the second may wear the word verified. The career    */
+/* home counts merits through its own module, so the rule is tested HERE  */
+/* on the behaviour, not only on the source. Every case below is a shape  */
+/* the product really holds today.                                        */
+/* ------------------------------------------------------------------ */
+
+{
+  console.log("\nMY CAREER x PASSPORT TRUST — the counted shapes");
+  const fx = await import("../src/lib/professional-identity/fixtures/career-home-fixtures");
+  const merits = await import("../src/lib/professional-identity/passport-merits");
+  const NOW = new Date("2026-09-06T10:00:00Z");
+  const QUIET = { known: true, open: new Set<string>(), clarification: new Set<string>() };
+  const countOne = (row: Parameters<typeof merits.countMeritRows>[0][number]) =>
+    merits.countMeritRows([row], QUIET, NOW);
+  const labelOf = (row: Parameters<typeof merits.labelMerit>[0]) =>
+    merits.labelMerit(row, { openReview: false, clarificationOpen: false }, NOW);
+
+  // ── A · a CQrityjob document review ─────────────────────────────────
+  //
+  // The commonest verified row in the product. An authorised verifier read
+  // the evidence and decided, so the Passport records assertion_level
+  // verified -- and the outward level is Documented, because CQrityjob is
+  // not the source of the credential.
+  const reviewed = {
+    id: "c-doc",
+    assertionLevel: "verified",
+    lifecycleState: "active",
+    verifierName: "CQrityjob",
+    verificationMethod: "document_review",
+    subjectKind: "credential" as const,
+  };
+  ck(
+    "A · a document-reviewed credential is documented, not verified",
+    labelOf(reviewed) === "documented",
+  );
+  const a = countOne(reviewed);
+  ck(
+    "A · it is counted as documented and NOT in the verified figure",
+    a.documentedCount === 1 && a.verifiedCount === 0,
+  );
+  ck("A · it is still a recorded merit", a.addedCount === 1);
+  ck(
+    "A · and the home never offers to send it for verification again",
+    merits.countReadyForVerification(
+      fx.identity({
+        claims: [
+          fx.claim("c-doc", {
+            assertionLevel: "verified",
+            verifierName: "CQrityjob",
+            verificationMethod: "document_review",
+          }),
+        ],
+      }),
+      [],
+      NOW,
+    ) === 0,
+  );
+
+  // ── B · an issuer confirmation with nothing structural behind it ─────
+  //
+  // No issuer organisation id, no membership, no receipt, no revocation
+  // authority: the organisation name is a string somebody typed. It fails
+  // closed to documented until the Issuer Foundation release, and the rule
+  // must never learn to recognise an issuer by name.
+  const issuer = {
+    id: "c-iss",
+    assertionLevel: "verified",
+    lifecycleState: "active",
+    verifierName: "Polismyndigheten",
+    verificationMethod: "issuer_confirmation",
+    subjectKind: "credential" as const,
+  };
+  ck(
+    "B · an unsupported issuer confirmation fails closed to documented",
+    labelOf(issuer) === "documented",
+  );
+  const b = countOne(issuer);
+  ck("B · and is never counted as verified", b.verifiedCount === 0 && b.documentedCount === 1);
+  ck(
+    "B · a well-known issuer name changes nothing -- the name is not the authority",
+    labelOf({ ...issuer, verifierName: "Länsstyrelsen" }) === "documented" &&
+      labelOf({ ...issuer, verifierName: "Svenska Kraftnät" }) === "documented",
+  );
+
+  // ── C · an employer confirming an employment period ──────────────────
+  //
+  // The one structurally supported source confirmation the product has: the
+  // database proves the caller represents that employer and refuses the
+  // shape aimed at anything but an employment period. It is a confirmed
+  // EMPLOYMENT, and it is not a credential verification.
+  const employmentRow = {
+    id: "e-1",
+    assertionLevel: "verified",
+    lifecycleState: null,
+    verifierName: "Bevakning AB",
+    verificationMethod: "employer_confirmation",
+    subjectKind: "employment" as const,
+  };
+  ck(
+    "C · an employer-confirmed employment presents as verified",
+    labelOf(employmentRow) === "verified",
+  );
+  const c = countOne(employmentRow);
+  ck("C · and is counted in the verified figure", c.verifiedCount === 1 && c.documentedCount === 0);
+  ck(
+    "C · the SAME method against a credential is not a credential verification",
+    labelOf({
+      ...employmentRow,
+      id: "c-emp",
+      subjectKind: "credential" as const,
+      lifecycleState: "active",
+    }) === "documented",
+  );
+  ck(
+    "C · the seam states the subject for each kind, so neither borrows the other's rule",
+    (() => {
+      const rows = merits.identityMeritRows(
+        fx.identity({
+          claims: [fx.claim("c-1")],
+          employment: [
+            {
+              id: "e-1",
+              employerName: "Bevakning AB",
+              roleTitle: "Väktare",
+              startedOn: "2021-01-01",
+              endedOn: null,
+              employmentType: "permanent",
+              jurisdictionCode: "SE",
+              assertionLevel: "verified",
+              verifierName: "Bevakning AB",
+              verificationMethod: "employer_confirmation",
+              verifiedOn: "2026-01-01",
+            },
+          ],
+        }),
+      );
+      return (
+        rows.find((r) => r.id === "c-1")?.subjectKind === "credential" &&
+        rows.find((r) => r.id === "e-1")?.subjectKind === "employment"
+      );
+    })(),
+  );
+
+  // ── D · a source confirmation that IS structurally supported ─────────
+  //
+  // Stated as the rule rather than as a row: when effectiveTrust reaches
+  // source_confirmed, the count says verified. Today exactly one shape
+  // reaches it (C above), and this asserts the gate is the level and not a
+  // hard-coded list -- so the Issuer Foundation release promotes issuers by
+  // changing the rule, and this counter follows without being edited.
+  const trust = await import("../src/lib/security-passport/trust-presentation");
+  ck(
+    "D · a structurally supported source confirmation is verified, and it is the level that decides",
+    trust.publicTrustLevel(
+      trust.describeTrust({
+        assertionLevel: "verified",
+        lifecycleState: null,
+        verifierName: "Bevakning AB",
+        verificationMethod: "employer_confirmation",
+        subjectKind: "employment",
+      }),
+    ) === "source_verified" &&
+      labelOf(employmentRow) === "verified" &&
+      trust.publicTrustLevel(
+        trust.describeTrust({
+          assertionLevel: "verified",
+          lifecycleState: "active",
+          verifierName: "CQrityjob",
+          verificationMethod: "document_review",
+          subjectKind: "credential",
+        }),
+      ) === "documented",
+  );
+
+  // ── The states that were already right, held in place ────────────────
+  ck(
+    "a self-declared merit is added by you, and an attached document is not a review",
+    labelOf({ id: "c-s", assertionLevel: "self_declared", lifecycleState: "active" }) ===
+      "added_by_you" &&
+      labelOf({ id: "c-d", assertionLevel: "document_provided", lifecycleState: "active" }) ===
+        "document_provided",
+  );
+  ck(
+    "an archived row is never a current merit, whatever was decided about it",
+    merits.countMeritRows(
+      [
+        { ...reviewed, lifecycleState: "superseded" },
+        { ...employmentRow, id: "e-2", lifecycleState: "revoked" },
+      ],
+      QUIET,
+      NOW,
+    ).addedCount === 0,
+  );
+  ck(
+    "a lapsed source confirmation is expired, not verified",
+    labelOf({ ...employmentRow, validUntil: "2020-01-01" }) === "expired",
+  );
+  ck(
+    "an unfinished merit is a draft, never a recorded one",
+    merits.countMeritRows([{ ...reviewed, lifecycleState: "draft" }], QUIET, NOW).draftCount === 1,
+  );
+  ck(
+    "a merit under review reads as requested, never as verified",
+    merits.labelMerit(
+      { id: "c-p", assertionLevel: "document_provided", lifecycleState: "active" },
+      { openReview: true, clarificationOpen: false },
+      NOW,
+    ) === "verification_requested",
+  );
+  ck(
+    "and the ladder counts only what nobody has decided on yet",
+    merits.countReadyForVerification(
+      fx.identity({
+        claims: [
+          fx.claim("c-new"),
+          fx.claim("c-rev", {
+            assertionLevel: "verified",
+            verifierName: "CQrityjob",
+            verificationMethod: "document_review",
+          }),
+        ],
+      }),
+      [],
+      NOW,
+    ) === 1,
   );
 }
 

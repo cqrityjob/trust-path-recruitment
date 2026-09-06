@@ -45,7 +45,8 @@
 // `known` is false when the reads behind the counts did not answer, and
 // then every count is a floor rather than a fact.
 
-import { describeTrust } from "@/lib/security-passport/trust-presentation";
+import { describeTrust, publicTrustLevel } from "@/lib/security-passport/trust-presentation";
+import type { ProvenanceSubjectKind } from "@/lib/security-passport/provenance";
 import { isArchivedMerit, isCurrentMerit, isUnfinishedMerit } from "@/lib/security-passport/types";
 import { isUnavailable, type IdentityClaim, type ProfessionalIdentityV1 } from "./types";
 import type { VerificationAttention } from "./verification-attention";
@@ -57,6 +58,10 @@ export type MeritLabel =
   | "document_provided"
   | "verification_requested"
   | "clarification_needed"
+  /** An authorised CQrityjob verifier read the evidence and decided. NOT
+   *  the same as the source confirming it, and since PR #189 the product
+   *  says so outwardly: this is the Passport's "Dokumenterad". */
+  | "documented"
   | "verified"
   | "expired";
 
@@ -64,6 +69,10 @@ export interface MeritCounts {
   /** Every CURRENT merit the holder has recorded. The TOTAL, not a rung. */
   readonly addedCount: number;
   readonly documentProvidedCount: number;
+  /** Reviewed by CQrityjob and standing as documented. Counted APART from
+   *  `verifiedCount`, never inside it: a document review is a decision, and
+   *  it is not the source confirming the fact. */
+  readonly documentedCount: number;
   /** Null when the verification read did not answer — never 0. */
   readonly pendingCount: number | null;
   readonly verifiedCount: number;
@@ -87,6 +96,7 @@ export interface MeritCounts {
 const UNKNOWN: MeritCounts = {
   addedCount: 0,
   documentProvidedCount: 0,
+  documentedCount: 0,
   pendingCount: null,
   verifiedCount: 0,
   expiredCount: 0,
@@ -109,19 +119,42 @@ export function labelMerit(
     readonly lifecycleState?: string | null;
     readonly validUntil?: string | null;
     readonly verifierName?: string | null;
+    readonly verificationMethod?: string | null;
+    readonly subjectKind?: ProvenanceSubjectKind;
   },
   state: { readonly openReview: boolean; readonly clarificationOpen: boolean },
   now: Date,
 ): MeritLabel {
   if (state.clarificationOpen) return "clarification_needed";
+  // ── THE WHOLE PROVENANCE, OR THE ANSWER IS WRONG ────────────────────
+  //
+  // `describeTrust` decides on the METHOD and the SUBJECT as much as on the
+  // level: an employer confirming an employment period is a source
+  // confirmation, and the same word recorded against a credential, or an
+  // issuer confirmation with no issuer identity behind it, is not. Omitting
+  // either field here does not weaken the answer, it INVERTS it -- the call
+  // falls through to the unattributed branch and a CQrityjob document review
+  // comes back looking like a source confirmation. So both are passed, and
+  // `subjectKind` is stated rather than defaulted.
   const trust = describeTrust({
     assertionLevel: merit.assertionLevel,
     lifecycleState: merit.lifecycleState ?? null,
     verifierName: merit.verifierName ?? null,
+    verificationMethod: merit.verificationMethod ?? null,
+    subjectKind: merit.subjectKind ?? "credential",
   });
-  if (trust.status === "verified") {
-    return hasLapsed(merit.validUntil ?? null, now) ? "expired" : "verified";
-  }
+  // ── THE OUTWARD LEVEL, NEVER `status` ───────────────────────────────
+  //
+  // `status === "verified"` means an authorised verifier decided, which is
+  // true of a CQrityjob document review as well. What a count under the word
+  // "Verifierade" may hold is the level the reader is shown, and that is
+  // `publicTrustLevel` -- the same function the CV, the Career Card and the
+  // Passport pill ask. A decided merit that is not source-confirmed is
+  // documented, and it is counted as documented.
+  const level = publicTrustLevel(trust);
+  const lapsed = hasLapsed(merit.validUntil ?? null, now);
+  if (level === "source_verified") return lapsed ? "expired" : "verified";
+  if (level === "documented") return lapsed ? "expired" : "documented";
   if (state.openReview) return "verification_requested";
   return trust.status === "document_provided" ? "document_provided" : "added_by_you";
 }
@@ -141,6 +174,13 @@ export interface MeritRow {
   readonly lifecycleState?: string | null;
   readonly validUntil?: string | null;
   readonly verifierName?: string | null;
+  /** HOW it was decided. Without it a document review and a source
+   *  confirmation are the same row to this module. */
+  readonly verificationMethod?: string | null;
+  /** WHAT was decided about. An employer confirmation source-confirms an
+   *  employment period and nothing else; the default is a credential, so a
+   *  caller that forgets fails closed. */
+  readonly subjectKind?: ProvenanceSubjectKind;
 }
 
 export interface ReviewState {
@@ -198,6 +238,7 @@ export function countMeritRows(
   return {
     addedCount: labels.length,
     documentProvidedCount: of("document_provided"),
+    documentedCount: of("documented"),
     pendingCount: review.known ? of("verification_requested") : null,
     verifiedCount: of("verified"),
     expiredCount: of("expired"),
@@ -217,6 +258,9 @@ export function identityMeritRows(identity: ProfessionalIdentityV1): readonly Me
       lifecycleState: c.lifecycleState,
       validUntil: c.validUntil,
       verifierName: c.verifierName,
+      verificationMethod: c.verificationMethod,
+      // A CREDENTIAL. No method reaches source-confirmed on one today.
+      subjectKind: "credential" as const,
     })),
     ...identity.employment.map((e) => ({
       id: e.id,
@@ -224,6 +268,10 @@ export function identityMeritRows(identity: ProfessionalIdentityV1): readonly Me
       lifecycleState: null,
       validUntil: null,
       verifierName: e.verifierName,
+      verificationMethod: e.verificationMethod,
+      // An EMPLOYMENT PERIOD: the one subject an employer confirmation may
+      // source-confirm, and the reason this field is stated everywhere.
+      subjectKind: "employment" as const,
     })),
   ];
 }
@@ -264,6 +312,9 @@ export function countReadyForVerification(
   for (const r of identityMeritRows(identity)) {
     if (!isCurrentMerit(r.lifecycleState ?? "active")) continue;
     const label = labelMerit(r, { openReview: open.has(r.id), clarificationOpen: false }, now);
+    // `documented` is deliberately absent: CQrityjob has already decided on
+    // that merit, and offering "send it for verification" again would be the
+    // ladder promoting an action from a decision that already happened.
     if (label === "added_by_you" || label === "document_provided") n += 1;
   }
   return n;

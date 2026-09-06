@@ -66,6 +66,7 @@ const DECLINE_KEY: Record<DecisionErrorCode, PassportCopyKey> = {
   already_decided: "vq.decline.already_decided",
   not_found: "vq.decline.not_found",
   method_required: "vq.decline.method_required",
+  method_not_permitted: "vq.decline.method_not_permitted",
   holder_message_required: "vq.decline.holder_message_required",
   invalid_validity: "vq.decline.invalid_validity",
   issuer_required: "vq.decline.issuer_required",

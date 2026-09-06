@@ -406,7 +406,12 @@ group("T3 · the merit states stay apart, and no score exists");
   ck("five merits recorded", counts.addedCount === 5);
   ck("one has a document nobody assessed", counts.documentProvidedCount === 1);
   ck("one is under review", counts.pendingCount === 1);
-  ck("one is verified", counts.verifiedCount === 1);
+  // PR #189: claims d and e were reviewed by CQrityjob. A review is a
+  // decision and it is NOT the source confirming the merit, so it is counted
+  // as documented and the verified figure stays empty. Nothing is lost --
+  // both are still recorded merits, and the lapsed one is still apart.
+  ck("the reviewed one is documented, not verified", counts.documentedCount === 1);
+  ck("and no merit here reaches the verified figure", counts.verifiedCount === 0);
   ck("the lapsed one is NOT counted as verified", counts.expiredCount === 1);
   const html = render(
     <PassportSummary
@@ -419,6 +424,9 @@ group("T3 · the merit states stay apart, and no score exists");
     "Registrerade meriter",
     "Under verifiering",
     "Verifierade meriter",
+    // The documented state is named on the card rather than folded into the
+    // total, so a reader can see what the review actually established.
+    "Dokumenterade meriter",
     "Giltighet har gått ut",
   ])
     ck(`"${label}" is stated in words`, html.includes(label));
@@ -556,12 +564,20 @@ group("T5 · a read that failed is never a zero, and always has a way out");
 }
 
 /* T6 ---------------------------------------------------------------- */
-group("T6 · a verified merit is never reported as none; an archived approval is said so");
+group("T6 · a decided merit is never reported as none; an archived approval is said so");
 {
   const { m, html } = renderPage(fixture("established"));
+  // PR #189: both standing approvals in this fixture are CQrityjob document
+  // reviews, so they are counted as documented. The property this group
+  // defends is unchanged -- a decided merit is never reported as nothing --
+  // and it is now checked on the level the record actually supports.
   ck(
-    "two current merits are verified",
-    m.passport.state === "counts" && m.passport.counts.verifiedCount === 2,
+    "two current merits are decided, and counted as documented",
+    m.passport.state === "counts" && m.passport.counts.documentedCount === 2,
+  );
+  ck(
+    "and none of them is claimed as verified",
+    m.passport.state === "counts" && m.passport.counts.verifiedCount === 0,
   );
   ck("six are recorded", m.passport.state === "counts" && m.passport.counts.addedCount === 6);
   const archived = m.activity.all.find((a) => a.kind === "verification_approved_archived");
@@ -990,9 +1006,16 @@ group("T16 · the lifecycle definition is shared; the reads are not, and that is
     "registered: identical for the rows both surfaces can see",
     fromPassport.addedCount === fromSeam.addedCount && fromSeam.addedCount === 3,
   );
+  // The point of this pair is that the two surfaces AGREE, whatever the
+  // level is. Post-#189 the decided row here is documented, and both
+  // surfaces say so identically.
   ck(
-    "verified: identical",
-    fromPassport.verifiedCount === fromSeam.verifiedCount && fromSeam.verifiedCount === 1,
+    "documented: identical",
+    fromPassport.documentedCount === fromSeam.documentedCount && fromSeam.documentedCount === 1,
+  );
+  ck(
+    "verified: identical, and empty -- no document review reaches it",
+    fromPassport.verifiedCount === fromSeam.verifiedCount && fromSeam.verifiedCount === 0,
   );
   ck(
     "lapsed validity: identical, and apart from verified",

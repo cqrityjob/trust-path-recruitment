@@ -38,7 +38,7 @@ import {
 } from "@/lib/security-passport/verification.functions";
 import { validityOf } from "@/lib/security-passport/validity";
 import { formatExpiry, formatPeriodRange } from "@/lib/security-passport/format";
-import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
+import { credentialPresentationOf } from "@/lib/security-passport/trust-presentation";
 import { correctClaim } from "@/lib/security-passport/passport.functions";
 import {
   getCredentialPrivateFields,
@@ -470,7 +470,7 @@ function PassportEntryRoute() {
           {claim?.credentialCode ? (
             <CredentialSymbol
               code={claim.credentialCode}
-              state={credentialPresentation(claim.assertionLevel, validity.effectiveState)}
+              state={credentialPresentationOf(claim, validity.effectiveState)}
               name={title}
               size={56}
               decorative
@@ -556,7 +556,10 @@ function PassportEntryRoute() {
             {pt("claim.trustState")}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <AssertionChip level={subject.assertionLevel} />
+            <AssertionChip
+              level={subject.assertionLevel}
+              provenance={{ ...subject, subjectKind: isClaim ? "credential" : "employment" }}
+            />
             <LifecycleChip state={validity.effectiveState} />
           </div>
           <LifecycleNote state={validity.effectiveState} />
@@ -636,6 +639,7 @@ function PassportEntryRoute() {
 
       <VerificationPanel
         assertionLevel={subject.assertionLevel}
+        subjectKind={isClaim ? "credential" : "employment"}
         validity={validity}
         openRequest={openRequest}
         rejectedRequest={rejectedRequest}

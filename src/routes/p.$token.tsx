@@ -44,10 +44,12 @@ import {
   formatWorkLocation,
 } from "@/lib/security-passport/format";
 import { buildRecipientPresentation } from "@/lib/security-passport/recipient-presentation";
+import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
 import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
 import { RecipientPassportCard } from "@/components/security-passport/live/RecipientPassportCard";
+import { RecipientCredentialList } from "@/components/security-passport/live/RecipientCredentialList";
 import { CredentialVerificationPage } from "@/components/security-passport/live/CredentialVerificationPage";
 import { publicShareOrigin } from "@/lib/security-passport/public-origin";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
@@ -94,12 +96,6 @@ export const Route = createFileRoute("/p/$token")({
   }),
   component: RecipientRoute,
 });
-
-const METHOD_KEY: Readonly<Record<string, PassportCopyKey>> = {
-  document_review: "ver.method.document_review",
-  employer_confirmation: "ver.method.employer_confirmation",
-  issuer_confirmation: "ver.method.issuer_confirmation",
-};
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -337,95 +333,7 @@ function RecipientRoute() {
       </section>
 
       {/* ── Disclosed credentials, in full ──────────────────────────── */}
-      {presentation.credentials.length > 0 ? (
-        <section className="mt-6">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            {pt("rec.qualifications")}
-          </h2>
-          <ul className="mt-3 space-y-3">
-            {presentation.credentials.map((c) => (
-              <li key={c.id} className="rounded-lg border border-border bg-card p-4">
-                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <CredentialSymbol
-                      code={c.code}
-                      state={c.presentation}
-                      name={c.title}
-                      size={40}
-                      className="mt-0.5 shrink-0"
-                    />
-                    <h3 className="min-w-0 flex-1 text-base font-semibold tracking-tight text-foreground">
-                      {c.title}
-                    </h3>
-                  </div>
-                  <span className="flex shrink-0 flex-col items-end gap-1.5">
-                    {/* An entry that is no longer current must not carry the
-                        present-tense VERIFIED pill. */}
-                    {c.lifecycle === "active" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-                        <BadgeCheck aria-hidden="true" className="h-3.5 w-3.5" />
-                        {pt("assertion.verified")}
-                      </span>
-                    ) : (
-                      <AssertionChip level={c.assertion} size="sm" className="opacity-80" />
-                    )}
-                    <LifecycleChip state={c.lifecycle} />
-                  </span>
-                </div>
-
-                <LifecycleNote state={c.lifecycle} />
-
-                {/* The same component the card uses, so the public page and
-                    the employer's application view cannot drift into two
-                    readings of one privacy boundary. */}
-                <CredentialScopeLine credential={c} className="mt-3" />
-
-                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
-                  <Row label={pt("rec.issuer")} value={c.issuer ?? pt("common.notStated")} />
-                  {/* The credential's OWN market, on every credential.
-                      Previously only a REGION was printed, and only when the
-                      credential had one — so a Swedish appointment showed no
-                      country at all and was read under the holder's work
-                      location at the top of the page. For a Swedish holder
-                      working in Dubai that is the transfer claim, made by
-                      omission. Rendered through formatWorkLocation so an
-                      emirate prints as "Dubai, Förenade Arabemiraten" and is
-                      never flattened to the UAE. */}
-                  {c.jurisdiction ? (
-                    <Row
-                      label={pt("rec.credentialMarket")}
-                      value={formatWorkLocation(c.jurisdiction, c.subJurisdiction, lang)}
-                    />
-                  ) : null}
-                  <Row
-                    label={pt("rec.verifiedBy")}
-                    value={c.verifierOrganisation ?? pt("common.notStated")}
-                  />
-                  <Row
-                    label={pt("rec.method")}
-                    value={
-                      c.verificationMethod
-                        ? pt(METHOD_KEY[c.verificationMethod] ?? "common.notStated")
-                        : pt("common.notStated")
-                    }
-                  />
-                  <Row
-                    label={pt("rec.verifiedAt")}
-                    value={c.verifiedAt ? c.verifiedAt.slice(0, 10) : pt("common.notStated")}
-                  />
-                  <Row label={pt("rec.validUntil")} value={formatExpiry(c.validUntil, lang)} />
-                  {c.jurisdiction ? (
-                    <Row
-                      label={pt("rec.jurisdiction")}
-                      value={formatJurisdiction(c.jurisdiction, lang)}
-                    />
-                  ) : null}
-                </dl>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <RecipientCredentialList credentials={presentation.credentials} />
 
       {/* ── Verified employment ─────────────────────────────────────── */}
       {presentation.experience.length > 0 ? (

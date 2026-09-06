@@ -105,6 +105,9 @@ export const PASSPORT = {
   registered: c("Registrerade meriter", "Recorded merits"),
   underReview: c("Under verifiering", "Being verified"),
   verified: c("Verifierade meriter", "Verified merits"),
+  /** Reviewed by CQrityjob. Shown apart from "Verifierade meriter", because
+   *  a document review is not the source confirming the merit. */
+  documented: c("Dokumenterade meriter", "Documented merits"),
   expired: c("Giltighet har gått ut", "Validity has expired"),
   drafts: c("Påbörjade meriter", "Unfinished merits"),
   /** Only a surface that reads every lifecycle can show this, and it is
@@ -113,8 +116,8 @@ export const PASSPORT = {
   reviewUnknown: c("kunde inte läsas", "could not be read"),
   loading: c("Hämtar dina meriter…", "Loading your merits…"),
   explanation: c(
-    "Dina egna uppgifter märks som tillagda av dig. En merit visas som verifierad först när en behörig part har bekräftat den.",
-    "Your own entries are marked as added by you. A merit is shown as verified only once an authorised party has confirmed it.",
+    "Dina egna uppgifter märks som tillagda av dig. En merit visas som verifierad först när källan själv har bekräftat den. Har CQrityjob granskat ett dokument visas meriten som dokumenterad.",
+    "Your own entries are marked as added by you. A merit is shown as verified only once the source itself has confirmed it. Where CQrityjob has reviewed a document, the merit is shown as documented.",
   ),
   open: c("Öppna mitt Security Passport", "Open my Security Passport"),
   /** /passport/credentials/new creates a CREDENTIAL. The label says so. */
@@ -130,6 +133,7 @@ export const MERIT_LABEL: Readonly<Record<MeritLabel, Copy>> = {
   document_provided: c("Underlag bifogat", "Document provided"),
   verification_requested: c("Verifiering begärd", "Verification requested"),
   clarification_needed: c("Komplettering behövs", "More information needed"),
+  documented: c("Dokumentgranskad av {0}", "Document reviewed by {0}"),
   verified: c("Verifierad av {0}", "Verified by {0}"),
   expired: c("Giltighet har gått ut", "Validity has expired"),
 };
