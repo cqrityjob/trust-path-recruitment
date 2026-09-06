@@ -349,16 +349,23 @@ export function isTrustReportDocument(value: unknown): value is TrustReportDocum
   );
 }
 
-/** Repair the generator's plural placeholders in frozen prose.
+/** LEGACY COMPATIBILITY -- not the generation path.
  *
- *  The released document says "Endast 1 uppgift(er) ..." / "Only 1 task(s)
- *  ...", because the SQL that wrote it built one sentence for both counts.
- *  That reads as unfinished software in an executive report, and the frozen
- *  text cannot be rewritten -- so the reader is shown the same statement with
- *  the number and the noun in agreement: the count decides whether the
- *  suffix in brackets is used. Nothing else about the sentence changes, and
- *  no count, claim or qualifier is touched. The real fix belongs in the
- *  document generator; until it ships, this keeps the artefact off the page.
+ *  The database now writes grammatical Swedish and English: since
+ *  20261030090000 scp_release_attempt_report agrees the noun with the number
+ *  in every observed-line sentence, and the database suite proves a report
+ *  released from here can contain no placeholder at all.
+ *
+ *  Reports released BEFORE that migration are frozen documents that still
+ *  say "Endast 1 uppgift(er) ..." / "Only 1 task(s) ...", because the SQL
+ *  that wrote them built one sentence for both counts. A frozen document is
+ *  never rewritten -- that is the whole point of freezing it -- so the reader
+ *  is shown the same statement with the number and the noun in agreement.
+ *
+ *  Deliberately narrow. It repairs ONE shape, a number followed by a word
+ *  with a short bracketed suffix, and nothing else: no other prose in a
+ *  frozen report is touched, no count, claim or qualifier is altered, and
+ *  text the current generator produces passes through unchanged.
  *
  *  "2 uppgift(er)" -> "2 uppgifter"; "1 task(s)" -> "1 task". */
 export function repairPlurals(text: string): string {

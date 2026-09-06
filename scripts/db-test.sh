@@ -1719,6 +1719,55 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# PR-R3B copy decisions (20261030090000): the SCC-07 display label moves to a
+# new published competency version, and the release function stops writing
+# "uppgift(er)" / "task(s)". The suite releases a report and proves the new
+# label reaches it, that a report already released keeps the label and the
+# competency version it was released with after the catalogue moves again,
+# that the whole frozen core stays byte-identical, and that one observed task
+# now reads "1 uppgift" / "1 task" while more than one keeps the plural.
+# Runs BEFORE the rollback step (it reads the SCP content spine).
+# ---------------------------------------------------------------------------
+echo "==> Running PR-R3B copy decision assertions (display label, plural generation)"
+set +e
+R3BC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_competency_display_label_and_report_plurals_test.sql 2>&1)"
+R3BC_RC=$?
+set -e
+
+echo "$R3BC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+R3BC_PASSED="$(echo "$R3BC_OUT" | grep -c "ok  " || true)"
+
+if [ "$R3BC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the PR-R3B copy decision suite exited with code ${R3BC_RC}." >&2
+  echo "$R3BC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "PR-R3B copy decisions"
+fi
+
+echo "    ok  ${R3BC_PASSED} PR-R3B copy decision assertions passed"
+
+if [ "$R3BC_PASSED" -lt 20 ]; then
+  echo "FAIL: expected at least 20 PR-R3B copy decision assertions, only ${R3BC_PASSED} ran." >&2
+  suite_failed "PR-R3B copy decisions (assertion shortfall: floor 20)"
+fi
+
+for REQUIRED in \
+  "C1.3 the definition, the indicators and the interpretation rules are identical to version 1" \
+  "C1.4 version 1 keeps its own wording and stays readable as the retired historical version" \
+  "C1.5 no competency has two published versions" \
+  "C2.1 the released employer brief names SCC-07 by the approved Swedish label" \
+  "C3.1 after a newer competency version is published, the released report still names the label" \
+  "C3.3 the whole frozen core is byte-identical before and after the catalogue moved" \
+  "C4.2 the area with one observed task reads" \
+  "C4.5 the release function cannot write a placeholder" \
+  "C5.1 the V3 projection returns the frozen sentence verbatim and rewrites nothing"; do
+  if ! echo "$R3BC_OUT" | grep -qF "$REQUIRED"; then
+    echo "FAIL: the mandatory PR-R3B copy decision assertion did not run: ${REQUIRED}" >&2
+    suite_failed "PR-R3B copy decisions (missing: ${REQUIRED})"
+  fi
+done
+
+# ---------------------------------------------------------------------------
 # PR-R3A rollback. The V3 contract stands on PR-R1 (it reads the snapshot's
 # manifest link as a fact), so it is rolled back BEFORE R1 below and
 # re-applied AFTER R1 is back. Its rollback drops one function and must leave

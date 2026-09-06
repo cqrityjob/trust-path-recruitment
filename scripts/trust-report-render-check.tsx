@@ -755,6 +755,57 @@ group("11. Professional language and the printed document");
   check("the live rail is ordered out of the printed document", /data-print-order="20"/.test(std));
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+group("12. The legacy plural repair, and only the legacy plural repair");
+// ═══════════════════════════════════════════════════════════════════════════
+{
+  // The four fixtures are real documents released BEFORE 20261030090000, so
+  // they still carry the generator's old placeholder in their frozen text.
+  // That is what makes them the regression: the repair has to fix exactly
+  // this and leave everything else alone.
+  const legacyPresent = Object.values(TRUST_REPORT_FIXTURES).some((d) =>
+    JSON.stringify(d).includes("uppgift(er)"),
+  );
+  check("the fixtures really are documents released before the generator was fixed", legacyPresent);
+  check(
+    "one observed task: the Swedish reads 1 uppgift, the English 1 task",
+    repairPlurals("Endast 1 uppgift(er) i den här bedömningen berörde området.") ===
+      "Endast 1 uppgift i den här bedömningen berörde området." &&
+      repairPlurals("Only 1 task(s) in this assessment touched this area.") ===
+        "Only 1 task in this assessment touched this area.",
+  );
+  check(
+    "more than one: the Swedish reads 2 uppgifter, the English 2 tasks",
+    repairPlurals("Endast 2 uppgift(er) i den här bedömningen berörde området.") ===
+      "Endast 2 uppgifter i den här bedömningen berörde området." &&
+      repairPlurals("Only 2 task(s) in this assessment touched this area.") ===
+        "Only 2 tasks in this assessment touched this area.",
+  );
+  check(
+    "a sentence the current generator wrote passes through untouched",
+    [
+      "Endast 1 uppgift i den här bedömningen berörde området.",
+      "Svaren höll en jämn och hög nivå över 4 uppgifter i den här bedömningen.",
+      "Only 1 task in this assessment touched this area.",
+      "Answers were consistently strong across 4 tasks in this assessment.",
+    ].every((x) => repairPlurals(x) === x),
+  );
+  check(
+    "the repair is idempotent",
+    repairPlurals(repairPlurals("Endast 2 uppgift(er) berörde området.")) ===
+      repairPlurals("Endast 2 uppgift(er) berörde området."),
+  );
+  check(
+    "no other frozen prose is rewritten",
+    [
+      "Kandidaten (som är ny i rollen) beskriver ett eget exempel.",
+      "Har en egen checklista (kort) i huvudet.",
+      "Svaren skilde sig åt mellan jämförbara uppgifter (3 uppgifter, spännvidd 0.75).",
+      "Rapporten omfattar 12 kompetensområden.",
+    ].every((x) => repairPlurals(x) === x),
+  );
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) {
   console.error(`\ntrust-report-render-check: FAIL (${failures.length})`);

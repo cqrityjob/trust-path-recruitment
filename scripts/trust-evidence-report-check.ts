@@ -1012,12 +1012,43 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     ),
   );
   const R3A_MIGRATION = "20261029090000_scp_trust_evidence_report_r3a_contract.sql";
+  // PR-R3B redefines the release function to write grammatical Swedish and
+  // English, and the release function is what writes the manifest -- so its
+  // migration necessarily names the table. It is admitted here by name, and
+  // held to touching nothing about the manifest itself below.
+  const R3B_COPY_MIGRATION = "20261030090000_scp_competency_display_label_and_report_plurals.sql";
   check(
-    "H11 exactly two migrations name scp_report_computation_manifests: PR-R1 (creates it) and PR-R3A (reads counts from it)",
-    migrationMentions.length === 2 &&
+    "H11 exactly three migrations name scp_report_computation_manifests: PR-R1 (creates it), PR-R3A (reads counts from it) and PR-R3B (rewrites the release function that writes it)",
+    migrationMentions.length === 3 &&
       migrationMentions.includes(R1_MIGRATION) &&
-      migrationMentions.includes(R3A_MIGRATION),
+      migrationMentions.includes(R3A_MIGRATION) &&
+      migrationMentions.includes(R3B_COPY_MIGRATION),
     migrationMentions.join(", "),
+  );
+  const r3bCopy = stripComments(read(`supabase/migrations/${R3B_COPY_MIGRATION}`));
+  check(
+    "H11a PR-R3B does not touch the manifest contract: no DDL, no grant, no policy on it",
+    !/(CREATE|ALTER|DROP) TABLE [^;]*scp_report_computation_manifests/.test(r3bCopy) &&
+      !/(GRANT|REVOKE)[^;]*scp_report_computation_manifests/.test(r3bCopy) &&
+      !/CREATE POLICY [a-z_]+ ON public\.scp_report_computation_manifests/.test(r3bCopy),
+  );
+  check(
+    "H11a PR-R3B changes copy only: it publishes a competency version and redefines the release function, and creates no object",
+    /INSERT INTO public\.scp_competency_versions/.test(r3bCopy) &&
+      /CREATE OR REPLACE FUNCTION public\.scp_release_attempt_report/.test(r3bCopy) &&
+      !/CREATE TABLE/.test(r3bCopy) &&
+      !/DROP FUNCTION/.test(r3bCopy),
+  );
+  const r3bFnStart = r3bCopy.indexOf(
+    "CREATE OR REPLACE FUNCTION public.scp_release_attempt_report",
+  );
+  const r3bFnBody = r3bCopy.slice(r3bFnStart, r3bCopy.indexOf("$function$;", r3bFnStart));
+  check(
+    "H11a and the release function it installs can no longer write a plural placeholder",
+    r3bFnBody.length > 1000 &&
+      !/uppgift\(er\)|task\(s\)/.test(r3bFnBody) &&
+      /THEN 'uppgift' ELSE 'uppgifter'/.test(r3bFnBody) &&
+      /THEN 'task' ELSE 'tasks'/.test(r3bFnBody),
   );
   const r1 = read(`supabase/migrations/${R1_MIGRATION}`);
   const r1Body = stripComments(r1);
