@@ -410,7 +410,7 @@ export function PassportOverview({
             <RecognitionPanel recognition={recognition} />
           </section>
 
-          <section id="merits" className="scroll-mt-24 space-y-4" data-merits-list>
+          <section id="merits" tabIndex={-1} className="scroll-mt-24 space-y-4" data-merits-list>
             <SectionHeading>{pt("overview.sectionClaims")}</SectionHeading>
 
             {grouped.length === 0 ? (

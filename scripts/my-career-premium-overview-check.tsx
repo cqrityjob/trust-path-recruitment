@@ -19,8 +19,10 @@
 //   T13 no empty container; the earlier-reports collection
 //   T14 mobile order is source order
 //   T15 sv/en parity
-//   T16 cross-surface count parity: the Passport's rows and the seam's rows
-//       count identically under the one lifecycle policy
+//   T16 the lifecycle DEFINITION is shared, and the two reads are not: the
+//       counter answers identically for the rows both surfaces can see, the
+//       seam's narrower read is pinned, and no second total exists for this
+//       one to contradict
 //
 // Run: bun run my-career-premium-overview:check
 
@@ -920,12 +922,22 @@ group("T15 · sv/en parity");
 }
 
 /* T16 --------------------------------------------------------------- */
-group("T16 · cross-surface count parity under the one lifecycle policy");
+group("T16 · the lifecycle definition is shared; the reads are not, and that is stated");
 {
-  // The Passport reads EVERY lifecycle row; the seam reads current rows
-  // only. Under the shared policy they count the same current merits, and
-  // the Passport's extra rows land in `archived`/`draft`, never in
-  // "registered".
+  // ── WHAT THIS PROVES, AND WHAT IT DOES NOT ─────────────────────────
+  //
+  // It proves the DEFINITION is one definition: fed the same row, both
+  // surfaces classify it the same way, and the counter reports identical
+  // figures for the rows both can see. It does NOT prove the two production
+  // queries are the same query — they are not, and the assertions below pin
+  // the actual difference so it cannot drift unnoticed:
+  //
+  //   getMyPassport          every lifecycle row (it lists history)
+  //   identity.functions.ts  lifecycle_state = 'active' only (its claims
+  //                          array also feeds the CV)
+  //
+  // These are synthetic rows. A fixture cannot prove anything about live
+  // data, and this group does not claim to.
   const passportRows = [
     {
       id: "a",
@@ -970,12 +982,12 @@ group("T16 · cross-surface count parity under the one lifecycle policy");
       verifierName: "CQrityjob",
     },
   ];
-  const seamRows = passportRows.filter((r) => r.lifecycleState === "active");
-  const review = reviewStateOf(null);
-  const fromPassport = countMeritRows(passportRows, { ...review, known: true }, NOW);
-  const fromSeam = countMeritRows(seamRows, { ...review, known: true }, NOW, 1);
+  const seamRows = passportRows.filter((r) => isCurrentMerit(r.lifecycleState));
+  const review = { ...reviewStateOf(null), known: true };
+  const fromPassport = countMeritRows(passportRows, review, NOW);
+  const fromSeam = countMeritRows(seamRows, review, NOW, 1);
   ck(
-    "registered: identical from both surfaces",
+    "registered: identical for the rows both surfaces can see",
     fromPassport.addedCount === fromSeam.addedCount && fromSeam.addedCount === 3,
   );
   ck(
@@ -983,29 +995,26 @@ group("T16 · cross-surface count parity under the one lifecycle policy");
     fromPassport.verifiedCount === fromSeam.verifiedCount && fromSeam.verifiedCount === 1,
   );
   ck(
-    "lapsed validity: identical, apart from verified",
+    "lapsed validity: identical, and apart from verified",
     fromPassport.expiredCount === fromSeam.expiredCount && fromSeam.expiredCount === 1,
   );
   ck(
-    "drafts: identical",
-    fromPassport.draftCount === fromSeam.draftCount && fromSeam.draftCount === 1,
-  );
-  ck(
-    "archived rows are counted only where they are read, and never as registered",
+    "archived rows are counted ONLY where they are read, never as registered",
     fromPassport.archivedCount === 2 && fromSeam.archivedCount === 0,
-  );
-  ck(
-    "the policy is one function, imported by both",
-    code(read("src/components/security-passport/PassportOverview.tsx")).includes(
-      "isCurrentMerit(",
-    ) && code(read("src/lib/professional-identity/passport-merits.ts")).includes("isCurrentMerit("),
   );
   ck(
     "the policy partitions every lifecycle exactly once",
     ["draft", "active", "expired", "revoked", "superseded", "disputed"].every(
-      (s) =>
-        [isCurrentMerit(s), isUnfinishedMerit(s), isArchivedMerit(s)].filter(Boolean).length === 1,
+      (st) =>
+        [isCurrentMerit(st), isUnfinishedMerit(st), isArchivedMerit(st)].filter(Boolean).length ===
+        1,
     ),
+  );
+  ck(
+    "the definition is one module, imported by both surfaces",
+    code(read("src/components/security-passport/PassportOverview.tsx")).includes(
+      "isCurrentMerit(",
+    ) && code(read("src/lib/professional-identity/passport-merits.ts")).includes("isCurrentMerit("),
   );
   ck(
     "the Passport overview judges emptiness on CURRENT rows",
@@ -1013,13 +1022,75 @@ group("T16 · cross-surface count parity under the one lifecycle policy");
       code(read("src/components/security-passport/PassportOverview.tsx")),
     ),
   );
+
+  // ── THE READS, PINNED AS THEY ACTUALLY ARE ─────────────────────────
+  const seamSrc = code(read("src/lib/professional-identity/identity.functions.ts"));
+  const passportSrc = code(read("src/lib/security-passport/passport.functions.ts"));
   ck(
-    "the merits list is anchored for the home's deep link",
-    read("src/components/security-passport/PassportOverview.tsx").includes('id="merits"'),
+    "the identity seam still reads ACTIVE rows only (claims and periods)",
+    (seamSrc.match(/\.eq\("lifecycle_state", "active"\)/g) ?? []).length === 2,
+    (seamSrc.match(/\.eq\("lifecycle_state", "active"\)/g) ?? []).length,
   );
   ck(
-    "the Passport index scrolls to the hash once ready",
-    read("src/routes/_authenticated.passport.index.tsx").includes("ScrollToHashOnceReady"),
+    "and reads drafts as a separate, id-only count",
+    seamSrc.includes('.eq("lifecycle_state", "draft")'),
+  );
+  // Scoped to getMyPassport's own body: other functions in that file
+  // legitimately filter (a disclosure may only carry verified, active rows),
+  // and a file-wide scan would read one of those as this one.
+  const getMyPassportBody = (() => {
+    const i = passportSrc.indexOf("export const getMyPassport");
+    const j = passportSrc.indexOf("\nexport ", i + 1);
+    return passportSrc.slice(i, j === -1 ? undefined : j);
+  })();
+  ck(
+    "getMyPassport reads sp_claims and applies no lifecycle filter — it lists history",
+    getMyPassportBody.includes('from("sp_claims")') &&
+      !/eq\("lifecycle_state"/.test(getMyPassportBody),
+  );
+  ck(
+    "the difference is DOCUMENTED where the counter lives, not implied",
+    read("src/lib/professional-identity/passport-merits.ts").includes("NOT SHARED: the READ"),
+  );
+  const overview = code(read("src/components/security-passport/PassportOverview.tsx"));
+  ck(
+    "the Passport renders no merit count, so no two totals can disagree",
+    !/Registrerade meriter|Verifierade meriter|Under verifiering/.test(overview) &&
+      !/\{(currentClaims|liveClaims|holder\.claims)\.length\}/.test(overview),
+  );
+
+  // ── THE DEEP-LINK TARGETS EXIST, ONCE EACH ─────────────────────────
+  const overviewRaw = read("src/components/security-passport/PassportOverview.tsx");
+  const passportRoute = read("src/routes/_authenticated.passport.index.tsx");
+  const outcomes = read("src/components/professional-identity/VerificationOutcomes.tsx");
+  ck(
+    "the merits list is anchored and focusable",
+    overviewRaw.includes('id="merits"') &&
+      /id="merits"[\s\S]{0,80}tabIndex=\{-1\}/.test(overviewRaw),
+  );
+  ck(
+    "the attention REGION is focusable and labelled",
+    /id="attention"[\s\S]{0,200}tabIndex=\{-1\}/.test(passportRoute) &&
+      passportRoute.includes('aria-labelledby="attention-heading"'),
+  );
+  ck(
+    "and wraps BOTH the outcomes panel and the attention panel",
+    (() => {
+      const i = passportRoute.indexOf('id="attention"');
+      const j = passportRoute.indexOf("</section>", i);
+      const region = passportRoute.slice(i, j);
+      return region.includes("<VerificationOutcomes") && region.includes("<AttentionPanel");
+    })(),
+  );
+  ck(
+    "the id is not duplicated anywhere",
+    (passportRoute.match(/id="attention"/g) ?? []).length === 1 &&
+      !outcomes.includes('id="attention"'),
+  );
+  ck(
+    "the Passport index scrolls to AND focuses the hash once ready",
+    passportRoute.includes("ScrollToHashOnceReady") &&
+      passportRoute.includes('el.setAttribute("data-hash-target", hash)'),
   );
 }
 

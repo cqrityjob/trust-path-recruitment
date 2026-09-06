@@ -1,15 +1,28 @@
 // "Link an earlier test result" — an action with an outcome.
 //
-// A person who took an employer-assigned test before they had an account
-// can bind that result to the account they now have. The previous version
-// of this control changed nothing visible on click: no pending state, no
-// success, no error, no way to open what was just linked. A click that
-// appears to do nothing is the product lying about what happened.
+// A person who completed an employer-assigned assessment before they had an
+// account can bind that completion to the account they now have. Linking
+// creates an `assessment_runs` row through `save_career_report`, so what
+// they get is a CAREER REPORT — opened at /my-career/reports/$runId, which
+// is the route that reads `assessment_runs`. It is not an `scp_attempts`
+// id and must never be routed to /academy/$attemptId.
 //
-// Now each row owns its own state: pending while the claim runs, a success
-// line with a direct link to the linked test, or an inline error with a
-// retry — and the outcome is announced to assistive technology. Nothing
-// here touches the Passport: a linked test result is the employer's
+// ── AN OUTCOME, ALWAYS ─────────────────────────────────────────────────
+//
+// The first version of this control changed nothing visible on click. Each
+// row now owns its state: pending while the claim runs, a success line with
+// a direct link to the report it just created, or an inline error with a
+// retry — announced to assistive technology either way.
+//
+// ── SUCCESS IS A RUN ID, NOT A FLAG ────────────────────────────────────
+//
+// `linkAssignmentRun` can fail to create the run (no published assessment
+// version, or the RPC refused). A response carrying no run id is therefore
+// a FAILURE however its flag reads: there is nothing to open, and telling
+// somebody their result is linked when no report exists is the same class
+// of untruth as a confident zero.
+//
+// Nothing here touches the Passport: a linked result is the employer's
 // material in that process, and the copy says so.
 
 import { useState } from "react";
@@ -33,11 +46,19 @@ function Row({ row, onLinked }: { row: LinkableRow; onLinked: () => void }) {
   const { lang } = useT();
   const l = lang as Lang;
   const claimFn = useServerFn(claimAssessmentAssignment);
-  const [linkedRunId, setLinkedRunId] = useState<string | null | undefined>(undefined);
+  /** The report that now exists. Null until one does. */
+  const [linkedRunId, setLinkedRunId] = useState<string | null>(null);
   const claim = useMutation({
-    mutationFn: () => claimFn({ data: { assignmentId: row.id } }),
-    onSuccess: (r) => {
-      setLinkedRunId(r.linked ? r.runId : null);
+    mutationFn: async () => {
+      const result = await claimFn({ data: { assignmentId: row.id } });
+      // The run id IS the success. A response without one is a failure,
+      // whatever `linked` says — thrown so the mutation's own error state
+      // renders it, rather than a success line with nothing behind it.
+      if (!result.linked || !result.runId) throw new Error("LINK_PRODUCED_NO_REPORT");
+      return result.runId;
+    },
+    onSuccess: (runId) => {
+      setLinkedRunId(runId);
       onLinked();
     },
   });
@@ -47,7 +68,7 @@ function Row({ row, onLinked }: { row: LinkableRow; onLinked: () => void }) {
     <li className="py-2" data-linkable-row={row.id} data-link-state={claim.status}>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="text-sm text-foreground">{name}</span>
-        {linkedRunId === undefined && (
+        {linkedRunId === null && (
           <button
             type="button"
             disabled={claim.isPending}
@@ -65,25 +86,21 @@ function Row({ row, onLinked }: { row: LinkableRow; onLinked: () => void }) {
           </button>
         )}
       </div>
-      {/* The outcome, announced. role=status for success, role=alert for
-          failure, so a screen reader hears what a sighted person sees. */}
-      {linkedRunId !== undefined && (
+      {linkedRunId !== null && (
         <p role="status" className="mt-1 text-sm text-foreground" data-link-success>
           {L(LINK_EARLIER.success, l)}{" "}
-          {linkedRunId && (
-            <Link
-              to="/academy/$attemptId"
-              params={{ attemptId: linkedRunId }}
-              className={LINK}
-              data-link-open
-            >
-              {L(LINK_EARLIER.open, l)}
-              <ArrowRight className="h-3 w-3" aria-hidden="true" />
-            </Link>
-          )}
+          <Link
+            to="/my-career/reports/$runId"
+            params={{ runId: linkedRunId }}
+            className={LINK}
+            data-link-open
+          >
+            {L(LINK_EARLIER.open, l)}
+            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+          </Link>
         </p>
       )}
-      {claim.isError && linkedRunId === undefined && (
+      {claim.isError && linkedRunId === null && (
         <p role="alert" className="mt-1 text-sm text-destructive" data-link-error>
           {L(LINK_EARLIER.failed, l)}
         </p>

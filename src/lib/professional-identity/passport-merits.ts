@@ -15,14 +15,30 @@
 //                       says who, what and when.
 //   EXPIRED             verified once; its own validity has since lapsed.
 //
-// ── ONE LIFECYCLE POLICY, TWO SURFACES ─────────────────────────────────
+// ── WHAT IS SHARED, AND WHAT IS NOT ────────────────────────────────────
 //
-// What counts as a CURRENT merit is decided by `isCurrentMerit` in the
-// Passport's own types module, and both this file and the Passport
-// overview apply it. The core counter below takes plain rows, so the
-// Passport (which reads every lifecycle) and the home (which reads the
-// identity seam) count the same rows under the same label. Archived rows
-// are counted apart and never inside "Registrerade meriter".
+// SHARED: the DEFINITION. `isCurrentMerit` / `isUnfinishedMerit` /
+// `isArchivedMerit` live in the Passport's own types module, and both this
+// file and `PassportOverview` apply them. So the two surfaces cannot
+// disagree about what the word "merit" means, which is what produced the
+// original contradiction.
+//
+// NOT SHARED: the READ. `getMyPassport` selects every lifecycle row,
+// because the Passport lists history and has to render an expired or
+// superseded entry with its own trust wording. The identity seam
+// (identity.functions.ts) selects `lifecycle_state = 'active'` only, and
+// deliberately: its `claims` array also feeds the CV, and an archived
+// credential must never reach a document somebody sends an employer.
+//
+// The counter below therefore takes PLAIN ROWS and applies the policy to
+// whatever it is given: fed the Passport's rows it reports archived ones in
+// `archivedCount`; fed the seam's rows it reports 0 there, because the seam
+// filtered them out upstream. `addedCount`, `verifiedCount`, `pendingCount`
+// and `expiredCount` are identical from either input for the rows both can
+// see, and that is the guarantee — not that the two queries are the same
+// query. The Passport renders no merit COUNT at all today, so there is no
+// second total on any screen for this one to contradict; what the shared
+// definition protects is the labelling and the emptiness judgement.
 //
 // ── UNKNOWN IS NOT ZERO ────────────────────────────────────────────────
 //
@@ -56,9 +72,12 @@ export interface MeritCounts {
   /** Begun and not finished. Not part of `addedCount`. */
   readonly draftCount: number;
   /** Rows that are no longer the current entry: expired, revoked,
-   *  superseded or disputed BY LIFECYCLE. Only a surface that reads every
-   *  lifecycle can know this; the identity seam reads current rows only
-   *  and reports 0 here, and the label a surface prints for it must say
+   *  superseded or disputed BY LIFECYCLE.
+   *
+   *  Only a surface that READS every lifecycle can know this. The identity
+   *  seam selects active rows only, so the career home always reports 0
+   *  here — truthfully: it means "none among the rows I was given", not
+   *  "none exist". A surface that shows this number must label it
    *  "archived", never "recorded". */
   readonly archivedCount: number;
   readonly clarificationCount: number;

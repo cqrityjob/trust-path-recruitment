@@ -775,6 +775,20 @@ const claimSchema = z.object({ assignmentId: z.string().uuid() });
 export const claimAssessmentAssignment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => claimSchema.parse(d))
+  // ── WHAT `runId` IS ──────────────────────────────────────────────────
+  //
+  // An `assessment_runs` row, created by the `save_career_report` RPC (see
+  // linkAssignmentRun below) — the SAME identifier the legacy career report
+  // route takes. It is NOT an `scp_attempts` id, and routing it to
+  // /academy/$attemptId opens a run that does not exist. Its one correct
+  // destination is /my-career/reports/$runId.
+  //
+  // ── AND WHY `linked` CAN BE FALSE ────────────────────────────────────
+  //
+  // `linkAssignmentRun` returns null when no published assessment version
+  // exists or the RPC refused, and a caller cannot tell "we made you a
+  // report" from "we could not" if both answer `linked: true`. So the run
+  // id IS the success: no id, not linked.
   .handler(async ({ data, context }): Promise<{ linked: boolean; runId: string | null }> => {
     const ctx = context as Ctx;
     const admin = await getAdminClient();
@@ -809,7 +823,9 @@ export const claimAssessmentAssignment = createServerFn({ method: "POST" })
       row.assessment_id as string,
       row.profile_id as string,
     );
-    return { linked: true, runId };
+    // No run, no link. Reporting success for a report that was never
+    // created leaves the person with a confirmation and nothing to open.
+    return runId ? { linked: true, runId } : { linked: false, runId: null };
   });
 
 // Shared by completeAssessmentAssignment (inline, if already signed in) and

@@ -251,11 +251,25 @@ function MyCareerPage() {
     staleTime: 30_000,
     retry: false,
   });
+  // Linking writes an `assessment_runs` row through `save_career_report`, so
+  // what it changes is the CAREER REPORT side of this page, not only the
+  // Academy side: the newly created run can become the active report for
+  // somebody with no v3 snapshot, it belongs in the earlier-analyses list,
+  // and the report route reads it by id. Invalidating only the Academy keys
+  // left the page showing the state from before the link.
   const onLinked = () => {
-    void qc.invalidateQueries({ queryKey: ["academy", "work"] });
-    void qc.invalidateQueries({ queryKey: ["academy", "my-history"] });
-    void qc.invalidateQueries({ queryKey: ["professional-identity"] });
-    void qc.invalidateQueries({ queryKey: ["my-career", "linkable-assignments"] });
+    for (const queryKey of [
+      ["my-career", "active-report"],
+      ["my-career", "runs"],
+      ["my-career", "report"],
+      ["career-discovery", "my-reports"],
+      ["academy", "work"],
+      ["academy", "my-history"],
+      ["professional-identity"],
+      ["my-career", "linkable-assignments"],
+    ]) {
+      void qc.invalidateQueries({ queryKey });
+    }
   };
 
   // ── APPLICATIONS AND INTERVIEWS ─────────────────────────────────────

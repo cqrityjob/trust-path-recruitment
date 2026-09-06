@@ -484,13 +484,15 @@ export const ACTIVITY_LINE: Readonly<Record<ActivityKind, { with: Copy; without:
 export const LINK_EARLIER = {
   title: c("Koppla ett tidigare testresultat", "Link an earlier test result"),
   body: c(
-    "Du har gjort ett arbetsgivartilldelat test med den här e-postadressen innan du hade ett konto. Koppla resultatet till ditt konto för att se det under Tester & utveckling. Det blir inte en merit i ditt Security Passport.",
-    "You completed an employer-assigned test with this email address before you had an account. Link the result to your account to see it under Tests & development. It does not become a merit in your Security Passport.",
+    "Du har gjort ett arbetsgivartilldelat test med den här e-postadressen innan du hade ett konto. Koppla resultatet till ditt konto, så sparas det som en rapport du kan öppna. Det blir inte en merit i ditt Security Passport.",
+    "You completed an employer-assigned test with this email address before you had an account. Link the result to your account and it is saved as a report you can open. It does not become a merit in your Security Passport.",
   ),
   cta: c("Koppla resultatet till mitt konto", "Link the result to my account"),
   pending: c("Kopplar…", "Linking…"),
   success: c("Resultatet är kopplat till ditt konto.", "The result is now linked to your account."),
-  open: c("Öppna testet", "Open the test"),
+  /** Linking creates a career report (assessment_runs), which is what the
+   *  link opens. Never "open the test": the attempt is not what was made. */
+  open: c("Öppna rapporten", "Open the report"),
   failed: c(
     "Kopplingen misslyckades. Ingenting har ändrats.",
     "The link failed. Nothing has changed.",

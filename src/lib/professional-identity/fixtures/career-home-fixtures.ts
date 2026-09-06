@@ -335,6 +335,7 @@ export type FixtureId =
   | "general_jobs"
   | "established"
   | "clarification_exact"
+  | "clarifications_many"
   | "history_loading"
   | "legacy_report"
   | "partial_failure"
@@ -439,6 +440,32 @@ export const REQS_CLARIFICATION: readonly MyVerificationRequest[] = [
     status: "clarification_requested",
     decidedAt: "2026-09-04T09:00:00Z",
     holderMessage: "Bifoga baksidan av intyget.",
+  }),
+];
+
+/** THREE open questions, on three merits. With no single entry to open, the
+ *  action goes to the Passport's attention REGION rather than guessing one. */
+export const REQS_CLARIFICATIONS_MANY: readonly MyVerificationRequest[] = [
+  request({
+    id: "r-q1",
+    claimId: "c1",
+    status: "clarification_requested",
+    decidedAt: "2026-09-04T09:00:00Z",
+    holderMessage: "Bifoga baksidan av intyget.",
+  }),
+  request({
+    id: "r-q2",
+    claimId: "c2",
+    status: "clarification_requested",
+    decidedAt: "2026-09-03T09:00:00Z",
+    holderMessage: "Vilket år utfärdades det?",
+  }),
+  request({
+    id: "r-q3",
+    periodId: "emp-period-1",
+    status: "clarification_requested",
+    decidedAt: "2026-09-02T09:00:00Z",
+    holderMessage: "Bekräfta slutdatum.",
   }),
 ];
 
@@ -896,6 +923,16 @@ export const FIXTURES: readonly HomeFixture[] = [
     input: {
       ...PROFESSIONAL_BASE,
       verificationAttention: attentionOf(REQS_CLARIFICATION),
+    },
+  },
+  {
+    id: "clarifications_many",
+    description:
+      "Three reviewer questions on three merits: no single entry to open, so the action goes to the Passport's attention region.",
+    requests: REQS_CLARIFICATIONS_MANY,
+    input: {
+      ...PROFESSIONAL_BASE,
+      verificationAttention: attentionOf(REQS_CLARIFICATIONS_MANY),
     },
   },
   {

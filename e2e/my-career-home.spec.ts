@@ -37,6 +37,92 @@ const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
 const USER_ID = "00000000-0000-4000-8000-000000000001";
 
+// ── THREE IDENTIFIER DOMAINS, THREE VISIBLY DIFFERENT UUIDS ───────────
+//
+// The defect this pins: `claimAssessmentAssignment` returns an
+// `assessment_runs` id (created by save_career_report), and it was being
+// routed to /academy/$attemptId — an `scp_attempts` id. Ids that looked
+// alike made the two indistinguishable in a test. These cannot be
+// confused by eye, and every assertion names which domain it expects.
+const ASSIGNMENT_ID = "aaaaaaaa-0000-4000-8000-00000000a551"; // assessment_assignments
+const LINKED_RUN_ID = "bbbbbbbb-0000-4000-8000-0000000000ce"; // assessment_runs
+const ATTEMPT_ID = "cccccccc-0000-4000-8000-00000000a11e"; // scp_attempts
+const FAILING_ASSIGNMENT_ID = "dddddddd-0000-4000-8000-00000000fa11";
+
+/** The minimum PassportSnapshot the Passport index needs to reach its ready
+ *  branch, so a navigation scenario lands on a real page. */
+function passportSnapshot(f: HomeFixture) {
+  const id = f.input.identity;
+  const claims = id.state === "ready" ? id.identity.claims : [];
+  const periods = id.state === "ready" ? id.identity.employment : [];
+  return {
+    profile: {
+      displayName: "Amina Karlsson",
+      headline: "Väktare",
+      cigProfessionSlug: "vaktare",
+      jurisdictionCode: "SE",
+      subJurisdictionCode: null,
+      workLocationConfirmedAt: "2026-01-01T00:00:00Z",
+      privacyMode: "private",
+      onboardingState: "complete",
+      onboardingStep: 0,
+      onboardingAnswers: {},
+    },
+    holder: {
+      id: USER_ID,
+      displayName: "Amina Karlsson",
+      professionSlug: "vaktare",
+      identity: {
+        engineVersion: "identity-v1",
+        evaluatedOn: "2026-09-05",
+        includesSelfDeclared: true,
+        educationCompleted: [],
+        professionalCompetence: [],
+        localEligibility: [],
+        activeTitles: [],
+      },
+      jurisdictionCode: "SE",
+      subJurisdictionCode: null,
+      periods: periods.map((p) => ({
+        id: p.id,
+        employerName: p.employerName,
+        roleTitle: p.roleTitle,
+        cigProfessionSlug: null,
+        jurisdictionCode: p.jurisdictionCode,
+        employmentType: p.employmentType,
+        fteFraction: 1,
+        securityRelevance: "primary",
+        securityFraction: null,
+        startedOn: p.startedOn,
+        endedOn: p.endedOn,
+        assertionLevel: p.assertionLevel,
+        lifecycleState: "active",
+      })),
+      claims: claims.map((c) => ({
+        id: c.id,
+        claimType: c.claimType,
+        credentialCode: null,
+        skillCode: null,
+        skillLevel: c.skillLevel,
+        title: c.title,
+        claimedIssuerName: c.issuerName,
+        jurisdictionCode: "SE",
+        subJurisdictionCode: null,
+        authorisationScope: null,
+        issuedOn: c.issuedOn,
+        validFrom: null,
+        validUntil: c.validUntil,
+        assertionLevel: c.assertionLevel,
+        lifecycleState: c.lifecycleState,
+        versionNo: 1,
+        supersedesId: null,
+      })),
+      hasCareerDiscoveryResult: false,
+    },
+    eventCount: 0,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Stubbing                                                            */
 /* ------------------------------------------------------------------ */
@@ -62,6 +148,25 @@ const HANG: Reply = { hang: true };
 
 const src = <T>(s: { state: string; rows?: readonly T[] }): Reply =>
   s.state === "ready" ? ok(s.rows ?? []) : s.state === "error" ? fail() : HANG;
+
+/**
+ * The last mount's bookkeeping, asserted after every test.
+ *
+ * A per-test call would have to be remembered; an `afterEach` cannot be
+ * forgotten, and it covers scenarios added later too.
+ */
+let current: { errors: string[]; unmatched: string[] } | null = null;
+
+test.afterEach(() => {
+  const c = current;
+  current = null;
+  if (!c) return;
+  expect(
+    c.unmatched,
+    `unstubbed server functions: ${[...new Set(c.unmatched)].join(", ")}`,
+  ).toEqual([]);
+  expect(c.errors, c.errors.join("\n")).toEqual([]);
+});
 
 /** The stub table for one fixture. Any scenario may override entries. */
 function repliesFor(f: HomeFixture): Record<string, Reply> {
@@ -121,6 +226,25 @@ function repliesFor(f: HomeFixture): Record<string, Reply> {
           ? ok({ requests: f.requests, decisions: [] })
           : HANG,
     getMyCareerProfileForJobs: profile,
+    // ── DESTINATIONS ────────────────────────────────────────────────
+    // The two routes a scenario navigates to. Stubbed in the base table so
+    // a click-through cannot leave an unstubbed read behind.
+    getMySavedReport: ok({
+      run: { id: LINKED_RUN_ID, completedAt: "2026-07-01T09:00:00Z", status: "completed" },
+      // A run with no stored report renders the route's "legacy empty"
+      // state — a real destination state that proves the route resolved
+      // THIS run id, without inventing an engine result.
+      report: null,
+    }),
+    getMyPassport: ok(passportSnapshot(f)),
+    ensureMyPassport: ok({ created: false }),
+    getRegulatedCredentialAvailability: ok({
+      state: "open",
+      jurisdictionCode: "SE",
+      subJurisdictionCode: null,
+      marketPackCode: "SE-CORE",
+      types: [],
+    }),
     // header chrome
     countMyAcademyWork: ok({ total: 0, actionable: 0 }),
     countMyReviewQueue: ok(0),
@@ -179,11 +303,15 @@ async function mount(
         `[rpc] ${name} -> ${reply ? ("hang" in reply ? "hang" : "error" in reply ? "500" : "200") : "UNMATCHED"}`,
       );
     if (!reply) {
+      // An unstubbed server function is a HOLE IN THE TEST, not a passing
+      // case: answering it with `null` let a query silently succeed with
+      // nothing and hid whichever read the scenario forgot. It fails loudly,
+      // and every scenario asserts the list stayed empty.
       unmatched.push(name);
       return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ result: null, error: null, context: {} }),
+        status: 500,
+        contentType: "text/plain",
+        body: `UNSTUBBED_SERVER_FN:${name}`,
       });
     }
     if (typeof reply === "function") return reply(route);
@@ -249,6 +377,7 @@ async function mount(
   await page.goto(`${BASE}/my-career`, { waitUntil: "domcontentloaded" });
   await page.locator("[data-career-header]").waitFor({ timeout: 20_000 });
   await page.waitForTimeout(600);
+  current = { errors, unmatched };
   return { f, errors, unmatched };
 }
 
@@ -488,20 +617,24 @@ test.describe("/my-career — the real route", () => {
     await expect(activity).not.toContainText(/^.*En merit i ditt Security Passport verifierades$/);
   });
 
-  test("13 · linking an earlier result shows pending, success with an open link, and an inline error with retry", async ({
+  test("13 · linking an earlier result: pending → success → the CAREER REPORT destination renders", async ({
     page,
   }) => {
+    // The identifier domains are deliberately unmistakable. The link
+    // creates an `assessment_runs` row (save_career_report), so the CTA
+    // must carry LINKED_RUN_ID to /my-career/reports/$runId — never
+    // ATTEMPT_ID, and never the ASSIGNMENT_ID it was claimed from.
     await mount(page, "eight_unverified", {
       overrides: {
         getMyLinkableAssignments: ok([
           {
-            id: "asg-ok",
+            id: ASSIGNMENT_ID,
             assessmentNameSv: "Väktare – rekryteringstest",
             assessmentNameEn: "Security officer – recruitment test",
             completedAt: "2026-07-01T09:00:00Z",
           },
           {
-            id: "asg-bad",
+            id: FAILING_ASSIGNMENT_ID,
             assessmentNameSv: "Ordningsvakt – test",
             assessmentNameEn: "Public order officer – test",
             completedAt: "2026-06-01T09:00:00Z",
@@ -509,14 +642,14 @@ test.describe("/my-career — the real route", () => {
         ]),
         claimAssessmentAssignment: async (route) => {
           const body = route.request().postData() ?? "";
-          if (body.includes("asg-bad"))
+          if (body.includes(FAILING_ASSIGNMENT_ID))
             return route.fulfill({ status: 500, contentType: "text/plain", body: "boom" });
           await new Promise((r) => setTimeout(r, 300));
           return route.fulfill({
             status: 200,
             contentType: "application/json",
             body: JSON.stringify({
-              result: { linked: true, runId: "att-linked" },
+              result: { linked: true, runId: LINKED_RUN_ID },
               error: null,
               context: {},
             }),
@@ -524,19 +657,95 @@ test.describe("/my-career — the real route", () => {
         },
       },
     });
-    const okRow = page.locator('[data-linkable-row="asg-ok"]');
+
+    const okRow = page.locator(`[data-linkable-row="${ASSIGNMENT_ID}"]`);
     await expect(okRow.locator("[data-link-earlier-cta]")).toHaveText(
       /Koppla resultatet till mitt konto/,
     );
     await okRow.locator("[data-link-earlier-cta]").click();
     await expect(okRow.locator("[data-link-earlier-cta]")).toHaveAttribute("aria-busy", "true");
     await expect(okRow.locator("[data-link-success]")).toBeVisible();
-    await expect(okRow.locator("[data-link-open]")).toHaveAttribute("href", "/academy/att-linked");
 
-    const badRow = page.locator('[data-linkable-row="asg-bad"]');
+    const open = okRow.locator("[data-link-open]");
+    await expect(open).toHaveAttribute("href", `/my-career/reports/${LINKED_RUN_ID}`);
+    // The wrong domains must not appear anywhere on the row.
+    const rowHtml = (await okRow.innerHTML()) ?? "";
+    expect(rowHtml).not.toContain(ATTEMPT_ID);
+    expect(rowHtml).not.toContain("/academy/");
+
+    // ── AND IT ACTUALLY OPENS ───────────────────────────────────────
+    await open.click();
+    await page.waitForURL(`**/my-career/reports/${LINKED_RUN_ID}`);
+    // The destination resolved THIS run: the route's not-found branch is
+    // what an id from the wrong domain would produce, and it is absent.
+    await expect(page.locator("body")).not.toContainText("Rapporten kunde inte hittas.");
+    await expect(page.locator("body")).toContainText("Gör om testet");
+    expect(page.url()).toContain(LINKED_RUN_ID);
+    expect(page.url()).not.toContain(ATTEMPT_ID);
+
+    await page.goBack();
+    await page.locator("[data-career-header]").waitFor();
+    const badRow = page.locator(`[data-linkable-row="${FAILING_ASSIGNMENT_ID}"]`);
     await badRow.locator("[data-link-earlier-cta]").click();
     await expect(badRow.locator("[data-link-error]")).toBeVisible();
     await expect(badRow.locator("[data-link-earlier-cta]")).toHaveText(/Försök igen/);
+  });
+
+  test("13b · linked=true with no runId is a failure, not a success", async ({ page }) => {
+    // `linkAssignmentRun` returns null when no published assessment version
+    // exists or the RPC refuses. A confirmation with nothing to open is the
+    // same class of untruth as a confident zero.
+    await mount(page, "eight_unverified", {
+      overrides: {
+        getMyLinkableAssignments: ok([
+          {
+            id: ASSIGNMENT_ID,
+            assessmentNameSv: "Väktare – rekryteringstest",
+            assessmentNameEn: "Security officer – recruitment test",
+            completedAt: "2026-07-01T09:00:00Z",
+          },
+        ]),
+        claimAssessmentAssignment: ok({ linked: true, runId: null }),
+      },
+    });
+    const row = page.locator(`[data-linkable-row="${ASSIGNMENT_ID}"]`);
+    await row.locator("[data-link-earlier-cta]").click();
+    await expect(row.locator("[data-link-error]")).toBeVisible();
+    await expect(row.locator("[data-link-success]")).toHaveCount(0);
+    await expect(row.locator("[data-link-earlier-cta]")).toHaveText(/Försök igen/);
+  });
+
+  test("13c · several reviewer questions open the Passport's attention region, focused", async ({
+    page,
+  }) => {
+    await mount(page, "clarifications_many");
+    const cta = page.locator("[data-primary-cta]");
+    // No single entry to open, so the action names the REGION.
+    await expect(cta).toHaveAttribute("href", "/passport#attention");
+    await expect(page.locator('[data-next-action="primary"]')).toContainText("Svara granskaren");
+    await expect(page.locator('[data-next-action="primary"]')).toContainText(
+      "3 granskare väntar på svar från dig.",
+    );
+
+    await cta.click();
+    await page.waitForURL("**/passport#attention");
+    expect(page.url()).toMatch(/\/passport#attention$/);
+
+    // The target exists, is the one the hash named, and holds BOTH panels.
+    const region = page.locator("#attention");
+    await expect(region).toBeVisible();
+    await expect(region).toHaveAttribute("data-hash-target", "attention");
+    await expect(region.locator("[data-verification-attention]")).toHaveCount(1);
+    // And focus moved there, so a keyboard user arrives where the link said.
+    const focused = await page.evaluate(() => ({
+      id: document.activeElement?.id ?? "",
+      inRegion: !!document.activeElement?.closest("#attention"),
+    }));
+    expect(focused.id).toBe("attention");
+    expect(focused.inRegion).toBe(true);
+    // The region is scrolled into view rather than left above the fold.
+    const top = await region.evaluate((el) => el.getBoundingClientRect().top);
+    expect(top).toBeLessThan(200);
   });
 
   for (const lang of ["sv", "en"] as const) {
