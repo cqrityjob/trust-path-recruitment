@@ -247,7 +247,10 @@ export function VerificationOutcomes({
   // them apart.
   if (attention.unavailable) {
     return (
-      <section className={`rounded-xl border border-border bg-card p-5 ${className ?? ""}`}>
+      <section
+        id="attention"
+        className={`scroll-mt-24 rounded-xl border border-border bg-card p-5 ${className ?? ""}`}
+      >
         <h2 className="text-base font-semibold tracking-tight text-foreground">
           {L(COPY.heading, l)}
         </h2>
@@ -264,8 +267,9 @@ export function VerificationOutcomes({
 
   return (
     <section
+      id="attention"
       data-verification-attention={attentionDemandCount(attention) > 0 ? "demands" : "quiet"}
-      className={`rounded-xl border border-border bg-card p-5 ${className ?? ""}`}
+      className={`scroll-mt-24 rounded-xl border border-border bg-card p-5 ${className ?? ""}`}
     >
       <h2 className="text-base font-semibold tracking-tight text-foreground">
         {L(COPY.heading, l)}

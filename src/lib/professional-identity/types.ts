@@ -146,6 +146,10 @@ export interface IdentityWorkload {
    *  model would put an unfinished entry on a CV. The home needs to know it
    *  EXISTS so it can offer to finish it; nothing else needs to see it. */
   readonly draftClaimCount: number;
+  /** The newest few draft ids, newest first, so a "finish the merit" action
+   *  can open the exact form rather than the Passport home. Bounded and
+   *  id-only: still nothing about a draft reaches any other surface. */
+  readonly draftClaimIds: readonly string[];
 }
 
 /* ------------------------------------------------------------------ */

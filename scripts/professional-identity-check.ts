@@ -36,6 +36,7 @@ import {
   PROFILE_COMPLETENESS_VERSION,
 } from "../src/lib/professional-identity/completeness";
 import {
+  ACTION_CLASSIFICATION,
   computeNextBestActions,
   MAX_PRIMARY_ACTIONS,
 } from "../src/lib/professional-identity/next-best-action";
@@ -347,39 +348,68 @@ console.log("\n2 · next best action");
   const withReport = computeNextBestActions(
     identity({ workload: { ...EMPTY.workload, releasedReportCount: 2 } }),
   );
+  // v5 of the ladder: a released report is NOT an action. There is no read
+  // receipt anywhere in this product, so "read your report" could never
+  // retire — it stayed the recommended step for ever. A released result is a
+  // dated row under Tester och resultat; the only P1 rung is a verification
+  // decision that did not go the holder's way, which the holder can act on.
   ck(
-    "a released report is priority 1",
-    withReport.all.find((a) => a.kind === "read_released_report")?.priority === 1,
+    "a released report is not a ladder action",
+    !Object.keys(ACTION_CLASSIFICATION).includes("read_released_report"),
+  );
+  ck(
+    "a rejected verification is priority 1",
+    computeNextBestActions(ESTABLISHED, { verificationOutcomeCount: 1 }).primary[0]?.kind ===
+      "review_verification_outcome" &&
+      computeNextBestActions(ESTABLISHED, { verificationOutcomeCount: 1 }).primary[0]?.priority ===
+        1,
   );
 
-  // ── B1 · the released report goes somewhere ────────────────────────
+  // ── B1 · the released result goes somewhere ────────────────────────
   //
-  // It pointed at /my-career, which IS the page the action is rendered on.
-  // The one suggestion on this list where somebody else has already decided
-  // the person may read something spent its click going nowhere.
-  const reportAction = (a: ReturnType<typeof computeNextBestActions>) =>
-    a.all.find((x) => x.kind === "read_released_report");
+  // It used to be a ladder action that pointed at /my-career — the page it
+  // was rendered on. It is a ROW now (v5), and the row's destination is
+  // decided by the view model from the pipeline's own state: the report
+  // route when the result is readable, nothing when it is not. Never the
+  // page it is on, never a route the model invented.
+  const { buildCareerHomeViewModel } =
+    await import("../src/lib/professional-identity/home-presentation");
+  const fx = await import("../src/lib/professional-identity/fixtures/career-home-fixtures");
+  const released = buildCareerHomeViewModel(fx.fixtureById("released_and_waiting")!.input);
+  const releasedRow =
+    released.employerWork.state === "ready"
+      ? released.employerWork.tests.find((t) => t.attemptId === "att-released")
+      : undefined;
   ck(
-    "the released-report action never links back to the page it is on",
-    reportAction(withReport)?.href !== "/my-career" &&
-      !reportAction(withReport)!.href.startsWith("/my-career"),
+    "a released result is a row, not the recommended step",
+    released.nextAction.state === "ready" &&
+      released.nextAction.primary?.action.kind !== ("read_released_report" as never),
   );
   ck(
-    "with no identifiable report it opens the area that lists them",
-    reportAction(withReport)?.href === "/academy",
+    "the row opens the report itself, never the page it is on",
+    releasedRow?.href === "/academy/report/att-released",
+    releasedRow?.href,
   );
-  const namedReport = computeNextBestActions(
-    identity({
-      workload: {
-        ...EMPTY.workload,
-        releasedReportCount: 1,
-        releasedReportAttemptId: "att-42",
-      },
-    }),
-  );
+  const unreadable = buildCareerHomeViewModel({
+    ...fx.fixtureById("released_and_waiting")!.input,
+    assessmentHistory: {
+      state: "ready",
+      rows: [
+        fx.history({
+          attemptId: "att-released",
+          lifecycleState: "result_available",
+          participantSnapshotId: null,
+        }),
+      ],
+    },
+  });
+  const unreadableRow =
+    unreadable.employerWork.state === "ready"
+      ? unreadable.employerWork.tests.find((t) => t.attemptId === "att-released")
+      : undefined;
   ck(
-    "and opens the report itself when the seam could name one",
-    reportAction(namedReport)?.href === "/academy/report/att-42",
+    "a released result without a participant snapshot offers no link rather than a dead one",
+    unreadableRow?.phase === "released" && unreadableRow.href === null,
   );
 
   // ── B5 · a closed gate cannot become an actionable CTA ─────────────
@@ -444,9 +474,7 @@ console.log("\n2 · next best action");
   );
   ck(
     "a failed assessment read invents neither an invitation nor a report",
-    !assessmentsUnread.all.some(
-      (a) => a.kind === "complete_assessment_assignment" || a.kind === "read_released_report",
-    ),
+    !assessmentsUnread.all.some((a) => a.kind === "complete_assessment_assignment"),
   );
   // The whole point of recording failures rather than throwing: one broken
   // read costs its own rules, not the list.
@@ -897,9 +925,15 @@ console.log("\n2c · the /my-career surfaces");
   );
 
   // ── M2 · the block does not silently disappear ─────────────────────
+  // The failure travels INTO the view model (`identity: { state: "error" }`)
+  // and the header renders it as a named state with a retry — never a
+  // plain greeting, never a skeleton.
   ck(
     "a failed identity read is stated rather than replaced by a plain greeting",
-    /identityQ\.isError \?/.test(dashboard),
+    /identityQ\.isError\s*\?\s*\{ state: "error" \}/.test(dashboard) &&
+      read("src/components/professional-identity/CareerPageHeader.tsx").includes(
+        'profile.state === "unavailable"',
+      ),
   );
   ck(
     "and offers a retry rather than asking for a page reload",

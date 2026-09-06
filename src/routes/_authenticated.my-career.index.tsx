@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ClipboardCheck } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import {
@@ -10,6 +9,7 @@ import {
   isRenderableDiscovery,
 } from "@/lib/career-discovery/active-report.functions";
 import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
+import { listMyDiscoveryReports } from "@/lib/career-discovery/discovery.functions";
 import { ReportHistoryList } from "@/components/career-discovery/ReportHistoryList";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
 import {
@@ -22,63 +22,67 @@ import { NextBestAction } from "@/components/professional-identity/NextBestActio
 import { PassportSummary } from "@/components/professional-identity/PassportSummary";
 import { CareerDirectionSection } from "@/components/professional-identity/CareerDirectionSection";
 import { JobRecommendations } from "@/components/professional-identity/JobRecommendations";
-import { ApplicationsAndResults } from "@/components/professional-identity/ApplicationsAndResults";
+import { EmployerProcesses } from "@/components/professional-identity/EmployerProcesses";
+import { DevelopmentSection } from "@/components/professional-identity/DevelopmentSection";
 import { CareerTools } from "@/components/professional-identity/CareerTools";
 import { RecentActivity } from "@/components/professional-identity/RecentActivity";
+import { LinkEarlierResult } from "@/components/professional-identity/LinkEarlierResult";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
 import {
   deriveVerificationAttention,
   VERIFICATION_ATTENTION_UNAVAILABLE,
 } from "@/lib/professional-identity/verification-attention";
-import { buildCareerHomeViewModel, sourceOf } from "@/lib/professional-identity/home-presentation";
+import {
+  buildCareerHomeViewModel,
+  sourceOf,
+  type IdentityInput,
+  type JobFilterInput,
+} from "@/lib/professional-identity/home-presentation";
 import { useNextActionAnalytics } from "@/lib/professional-identity/next-action-analytics";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
 import { listMyCvs } from "@/lib/professional-identity/cv/cv-store.functions";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  getMyLinkableAssignments,
-  claimAssessmentAssignment,
-} from "@/lib/job-intelligence/assessment-assignments.functions";
+import { getMyLinkableAssignments } from "@/lib/job-intelligence/assessment-assignments.functions";
 import { listMyApplications } from "@/lib/job-intelligence/applications.functions";
 import { listMyInterviews } from "@/lib/interview-intelligence/candidate.functions";
-import { listMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
+import {
+  claimAssessmentInvitations,
+  listAcademyWork,
+} from "@/lib/security-competency/academy-training.functions";
+import { getMyAssessmentHistory } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import type { CareerProfileForJobsV1 } from "@/lib/career-intelligence-engine/profile-for-jobs";
 import { L, type Copy } from "@/components/professional-identity/copy";
-import { CAREER, LINK_EARLIER, NEXT_ACTION } from "@/components/professional-identity/home-copy";
+import { CAREER } from "@/components/professional-identity/home-copy";
 
 /**
  * /my-career — the personal career home.
  *
  * ONE PERSON → ONE PROFESSIONAL IDENTITY → ONE MOST IMPORTANT NEXT STEP.
  *
- * ── WHAT THE PAGE IS ABOUT ─────────────────────────────────────────────
+ * Three questions, answered in this order, above the fold: who am I in the
+ * security industry (CareerPageHeader), what is my one most useful step
+ * (NextBestAction), and what has actually been established about me
+ * (PassportSummary). The Passport is the durable evidence layer; tests,
+ * results, training and applications are processes around it, laid out
+ * further down as rows.
  *
- * Three questions, answered in this order, above the fold:
+ * ── ONE VIEW MODEL, EVERY SOURCE ON ITS OWN ────────────────────────────
  *
- *   who am I in the security industry     CareerPageHeader
- *   what is my single most useful step    NextBestAction
- *   what has been established about me    PassportSummary
+ * Every section reads `buildCareerHomeViewModel`. Each query below carries
+ * its own state into it, so a failed read costs one section — never the
+ * page — and a skeleton only ever means "still loading". The identity read
+ * is not a gate: with it failed, the header says so with a retry and the
+ * sections fed by other reads still render.
  *
- * The Security Passport is the candidate's long-term evidence layer.
- * Assessments, reports and applications are temporary processes AROUND
- * that, and they are laid out that way: the Passport sits beside the
- * recommendation at the top; an employer's assessment report is a row in
- * an ordinary operational section further down, not the page's hero.
+ * ── THE SAME READS THE DESTINATIONS USE ────────────────────────────────
  *
- * ── ONE VIEW MODEL ─────────────────────────────────────────────────────
- *
- * Every section reads `buildCareerHomeViewModel`. Each product still
- * answers its own query — this page adds no database source — but no
- * product speaks for itself here any more: the model decides where each
- * fact is shown and shows it ONCE. That is what stops the page saying "0
- * verified" in one place and "a merit was verified" in another.
- *
- * ── AND A FAILED READ IS NEVER A ZERO ──────────────────────────────────
- *
- * Each read's state travels into the model, and the sections say "could
- * not be read" rather than printing a number nobody established.
+ * Tests and training come from the SAME two calls /academy makes — claim
+ * any invitation addressed to this person's confirmed email, then list the
+ * canonical work — so an emailed invitation appears on this visit, and what
+ * the home shows is what the destination shows. Pipeline states come from
+ * the participant's own history read, which is the lifecycle's source.
  */
 
 export const Route = createFileRoute("/_authenticated/my-career/")({
@@ -106,15 +110,11 @@ function pickTopFamily(profile: CareerProfileForJobsV1) {
 function MyCareerPage() {
   const { lang } = useT();
   const say = (v: Copy) => L(v, lang);
+  const qc = useQueryClient();
 
-  /**
-   * The name the person set for themselves.
-   *
-   * `display_name` or `name` from the account metadata, and NOTHING else.
-   * The email local part used to stand in for a missing name, which greeted
-   * people as "sandleradam191" — a string they never offered as a name. The
-   * view model falls back to the account's first name, then to no name.
-   */
+  // The name the person set for themselves — `display_name` or `name` from
+  // the session metadata, never an email local part. The model falls back
+  // to the account's first name, then to no name.
   const [preferredName, setPreferredName] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -132,12 +132,7 @@ function MyCareerPage() {
     };
   }, []);
 
-  // ── WHO AM I, WHAT DO I HAVE, WHAT NEXT ───────────────────────────────
-  //
-  // One read across the products, assembled server-side by the
-  // Professional Identity seam. Deliberately NOT gating the rest of the
-  // page: a failed read here costs the header and the recommendation, and
-  // the sections below still render from their own state.
+  // ── WHO AM I, WHAT DO I HAVE ────────────────────────────────────────
   const loadIdentity = useServerFn(getMyProfessionalIdentity);
   const identityQ = useQuery({
     queryKey: ["professional-identity"],
@@ -146,9 +141,6 @@ function MyCareerPage() {
     retry: 1,
   });
 
-  // Saved CVs, as a SIGNAL rather than part of the identity read model --
-  // see NextBestActionSignals for why the seam deliberately does not carry
-  // this.
   const loadCvs = useServerFn(listMyCvs);
   const cvsQ = useQuery({
     queryKey: ["cv", "list"],
@@ -157,11 +149,7 @@ function MyCareerPage() {
     retry: 1,
   });
 
-  // ── Can THIS candidate actually open the career analysis? ─────────────
-  //
-  // The SAME two questions the assessment route asks, in the same order,
-  // so this page never offers a door the product will refuse to open. The
-  // gate itself is deliberate (v31-public.functions.ts) and untouched here.
+  // ── Can THIS candidate actually open the career analysis? ───────────
   const checkAvailability = useServerFn(getV31Availability);
   const checkTesterStatus = useServerFn(getV31TesterStatus);
   const assessmentOpenQ = useQuery({
@@ -174,27 +162,20 @@ function MyCareerPage() {
     },
     staleTime: 60_000,
   });
-  // Undefined while loading. Treated as "not open" ONLY for enabling a CTA —
-  // never for showing the closed notice — so a slow query cannot flash a
-  // "closed" message at a candidate who may in fact be allowed in.
   const assessmentOpen = assessmentOpenQ.data;
   const assessmentClosed = assessmentOpenQ.data === false;
 
-  // ONE selection point, resolved on the server before anything renders.
+  // ── THE CAREER PICTURE, FROM THE FROZEN REPORT ──────────────────────
   const activeFn = useServerFn(getActiveCareerReport);
+  // One retry, like the identity read. The default three with backoff kept
+  // the career section a skeleton for ~7s after a failed read, which reads
+  // as a permanent skeleton to anybody waiting on it.
   const activeQ = useQuery({
     queryKey: ["my-career", "active-report"],
     queryFn: () => activeFn({}),
     staleTime: 60_000,
+    retry: 1,
   });
-
-  // ── THE CAREER PICTURE COMES FROM THE FROZEN REPORT ───────────────────
-  //
-  // The occupation the analysis recommended is IN the stored snapshot, and
-  // this reads it there rather than recomputing it — a dashboard that
-  // recomputed would eventually disagree with the report it links to. One
-  // extra round trip, only for somebody who HAS a readable report, through
-  // the same owner-scoped server function the report page itself uses.
   const activeSnapshotId = isRenderableDiscovery(activeQ.data) ? activeQ.data.snapshotId : null;
   const loadStoredReport = useServerFn(getStoredDiscoveryReport);
   const storedReportQ = useQuery({
@@ -205,10 +186,11 @@ function MyCareerPage() {
     retry: 1,
   });
 
-  // Legacy v2.1 runs. Still read, and for two reasons: `getActiveCareerReport`
-  // can name a legacy report as the CURRENT one, and the earlier ones stay
-  // reachable from the career section rather than from the full-width "all my
-  // reports" panel this page used to render empty at the bottom.
+  // Earlier analyses: legacy v2.1 runs AND v3 reports, both read here so
+  // the disclosure is rendered only when at least one genuine earlier
+  // report exists — never opened onto an empty list, never listing the
+  // current report as "earlier". Same query key as the history list, so
+  // the list's own read is served from cache.
   const fetchRuns = useServerFn(listAssessmentRuns);
   const runsQ = useQuery({
     queryKey: ["my-career", "runs"],
@@ -216,61 +198,82 @@ function MyCareerPage() {
     staleTime: 30_000,
     retry: false,
   });
+  const fetchDiscoveryReports = useServerFn(listMyDiscoveryReports);
+  const discoveryReportsQ = useQuery({
+    queryKey: ["career-discovery", "my-reports"],
+    queryFn: () => fetchDiscoveryReports({}),
+    staleTime: 30_000,
+    retry: false,
+  });
 
-  // Employer-assigned assessments completed before this account existed,
-  // matched by verified email, not yet linked -- surfaced so linking is
-  // always an explicit, signed-in action, never automatic.
-  const qc = useQueryClient();
+  // ── EMPLOYER PROCESSES — the canonical academy reads ───────────────
+  //
+  // The same orchestration as /academy: the list starts at once (never
+  // gated on the claim, which would render as a failure on first paint),
+  // the claim runs alongside, and the list is refetched only if the claim
+  // actually bound something. Somebody invited by email before they had an
+  // account sees the test on THIS visit.
+  const listWork = useServerFn(listAcademyWork);
+  const academyWorkQ = useQuery({
+    queryKey: ["academy", "work"],
+    queryFn: () => listWork(),
+    retry: false,
+  });
+  const claimInvitations = useServerFn(claimAssessmentInvitations);
+  const claimQ = useQuery({
+    queryKey: ["academy", "claim-invitations"],
+    queryFn: () => claimInvitations(),
+    staleTime: Infinity,
+    retry: false,
+  });
+  const bound = claimQ.data?.bound ?? 0;
+  const refetchWork = academyWorkQ.refetch;
+  useEffect(() => {
+    if (bound > 0) void refetchWork();
+  }, [bound, refetchWork]);
+
+  // The participant's own pipeline states. This is what decides whether a
+  // test is waiting on the employer, released, or something else.
+  const fetchHistory = useServerFn(getMyAssessmentHistory);
+  const historyQ = useQuery({
+    queryKey: ["academy", "my-history"],
+    queryFn: () => fetchHistory(),
+    retry: false,
+  });
+
+  // Tests completed before this account existed, matched by verified
+  // email, offered for explicit linking. A successful link refreshes every
+  // read the linked test appears in.
   const fetchLinkable = useServerFn(getMyLinkableAssignments);
   const linkableQ = useQuery({
     queryKey: ["my-career", "linkable-assignments"],
     queryFn: () => fetchLinkable(),
     staleTime: 30_000,
+    retry: false,
   });
-  const claimFn = useServerFn(claimAssessmentAssignment);
-  const claimMutation = useMutation({
-    mutationFn: (assignmentId: string) => claimFn({ data: { assignmentId } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-career", "linkable-assignments"] });
-      qc.invalidateQueries({ queryKey: ["academy", "my-work"] });
-      qc.invalidateQueries({ queryKey: ["professional-identity"] });
-    },
-  });
+  const onLinked = () => {
+    void qc.invalidateQueries({ queryKey: ["academy", "work"] });
+    void qc.invalidateQueries({ queryKey: ["academy", "my-history"] });
+    void qc.invalidateQueries({ queryKey: ["professional-identity"] });
+    void qc.invalidateQueries({ queryKey: ["my-career", "linkable-assignments"] });
+  };
 
-  // Each of these is non-critical: a backend that is briefly unavailable
-  // degrades one figure, never the home, hence retry: false. What it must
-  // NOT do is degrade into a zero -- the view model carries each read's
-  // state and says "could not be read" instead.
+  // ── APPLICATIONS AND INTERVIEWS ─────────────────────────────────────
   const fetchMyApplications = useServerFn(listMyApplications);
-  const fetchMyInterviews = useServerFn(listMyInterviews);
   const myApplicationsQ = useQuery({
     queryKey: ["my-career", "applications"],
     queryFn: () => fetchMyApplications(),
     staleTime: 30_000,
     retry: false,
   });
-  // The candidate's own interviews, as the coarse projection the database
-  // builds (scp_iv_candidate_interview_status).
+  const fetchMyInterviews = useServerFn(listMyInterviews);
   const myInterviewsQ = useQuery({
     queryKey: ["my-career", "interviews"],
     queryFn: () => fetchMyInterviews(),
     retry: false,
   });
 
-  // Everything an employer has asked of this person. Same query key the
-  // tests area uses, so the two share one request.
-  const fetchAcademyWork = useServerFn(listMyAcademyWork);
-  const academyWorkQ = useQuery({
-    queryKey: ["academy", "my-work"],
-    queryFn: () => fetchAcademyWork(),
-    retry: false,
-  });
-
-  // ── DECISIONS THE CANDIDATE HAS NOT SEEN ────────────────────────────
-  //
-  // The same read the Passport uses, and deliberately the same derivation.
-  // The failure is REPORTED rather than rendered as "nothing waiting",
-  // which is the whole point of VERIFICATION_ATTENTION_UNAVAILABLE.
+  // ── VERIFICATION STATE — the same read the Passport uses ───────────
   const fetchVerifications = useServerFn(listMyVerificationRequests);
   const verificationsQ = useQuery({
     queryKey: ["passport", "my-verification-requests"],
@@ -284,207 +287,186 @@ function MyCareerPage() {
       ? VERIFICATION_ATTENTION_UNAVAILABLE
       : null;
 
-  // Open roles: the same profile-driven family filter the jobs surface
-  // uses. Stated as such, and never as a personal match.
+  // ── OPEN ROLES — filtered by the career analysis, or not at all ─────
+  //
+  // The family comes from the career analysis (assessment_runs.result_
+  // summary), and from nowhere else. With no analysis there is no filter,
+  // and the newest vacancies are shown under a sentence that says so.
   const profileState = useCareerProfileForJobs();
-  const profile = profileState.status === "ready" ? profileState.data.profile : undefined;
-  const topFamilyId = profile ? pickTopFamily(profile) : undefined;
+  const jobFilter: JobFilterInput =
+    profileState.status === "loading"
+      ? { state: "loading" }
+      : profileState.status === "ready"
+        ? { state: "family", familyId: pickTopFamily(profileState.data.profile) ?? "" }
+        : { state: "none" };
+  const familyId =
+    jobFilter.state === "family" && jobFilter.familyId ? jobFilter.familyId : undefined;
   const jobsQ = useQuery({
-    queryKey: ["my-career", "jobs", topFamilyId ?? "all"],
-    queryFn: () => listPublicJobs({ familyId: topFamilyId, limit: 3 }),
+    queryKey: ["my-career", "jobs", familyId ?? "all"],
+    queryFn: () => listPublicJobs({ familyId, limit: 3 }),
+    enabled: jobFilter.state !== "loading",
     staleTime: 60_000,
+    retry: false,
   });
 
   // ── ONE VIEW MODEL ──────────────────────────────────────────────────
-  const identity = identityQ.data;
+  const identityInput: IdentityInput = identityQ.data
+    ? { state: "ready", identity: identityQ.data }
+    : identityQ.isError
+      ? { state: "error" }
+      : { state: "loading" };
   const model = useMemo(
     () =>
-      identity
-        ? buildCareerHomeViewModel({
-            identity,
-            verificationAttention,
-            assignments: sourceOf(academyWorkQ.data, academyWorkQ.isError),
-            interviews: sourceOf(myInterviewsQ.data, myInterviewsQ.isError),
-            applications: sourceOf(myApplicationsQ.data, myApplicationsQ.isError),
-            jobs: sourceOf(jobsQ.data, jobsQ.isError),
-            activeReport: activeQ.data,
-            activeReportError: activeQ.isError,
-            storedReport: storedReportQ.data,
-            storedReportError: storedReportQ.isError,
-            preferredName,
-            savedCvCount: cvsQ.data?.length,
-            careerDiscoveryOpen: assessmentOpen,
-            now: new Date(),
-          })
-        : null,
+      buildCareerHomeViewModel({
+        identity: identityInput,
+        verificationAttention,
+        academyWork: sourceOf(academyWorkQ.data, academyWorkQ.isError),
+        assessmentHistory: sourceOf(historyQ.data, historyQ.isError),
+        interviews: sourceOf(myInterviewsQ.data, myInterviewsQ.isError),
+        applications: sourceOf(myApplicationsQ.data, myApplicationsQ.isError),
+        jobFilter,
+        jobs: sourceOf(jobsQ.data, jobsQ.isError),
+        activeReport: activeQ.data,
+        activeReportError: activeQ.isError,
+        storedReport: storedReportQ.data,
+        storedReportError: storedReportQ.isError,
+        legacyRuns: sourceOf(runsQ.data as never, runsQ.isError),
+        discoveryReports: sourceOf(discoveryReportsQ.data?.reports, discoveryReportsQ.isError),
+        preferredName,
+        savedCvCount: cvsQ.data?.length,
+        careerDiscoveryOpen: assessmentOpen,
+        now: new Date(),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- every query's data and error state is listed
     [
-      identity,
+      identityQ.data,
+      identityQ.isError,
       verificationAttention,
       academyWorkQ.data,
       academyWorkQ.isError,
+      historyQ.data,
+      historyQ.isError,
       myInterviewsQ.data,
       myInterviewsQ.isError,
       myApplicationsQ.data,
       myApplicationsQ.isError,
+      profileState.status,
+      familyId,
       jobsQ.data,
       jobsQ.isError,
       activeQ.data,
       activeQ.isError,
       storedReportQ.data,
       storedReportQ.isError,
+      runsQ.data,
+      runsQ.isError,
+      discoveryReportsQ.data,
+      discoveryReportsQ.isError,
       preferredName,
       cvsQ.data,
       assessmentOpen,
     ],
   );
 
-  // ── MEASUREMENT ─────────────────────────────────────────────────────
-  //
-  // One impression per state, not one per render. The state key is the
-  // ladder rung plus the action kind and carries nothing about the person;
-  // see next-action-analytics.ts, including why nothing is recorded until
-  // the funnel allowlist has the two names.
+  // ── MEASUREMENT — one impression per state ──────────────────────────
   const analytics = useNextActionAnalytics();
   const seenStateKey = useRef<string | null>(null);
-  const stateKey = model?.nextAction?.action.stateKey ?? null;
+  const stateKey =
+    model.nextAction.state === "ready" ? (model.nextAction.primary?.action.stateKey ?? null) : null;
   useEffect(() => {
     if (!stateKey || seenStateKey.current === stateKey) return;
     seenStateKey.current = stateKey;
     analytics.impression(stateKey);
   }, [stateKey, analytics]);
 
-  const linkableTasks = linkableQ.data ?? [];
+  const retryIdentity = () => void identityQ.refetch();
+  const analysisHref =
+    model.career.state === "ready" || model.career.state === "legacy"
+      ? model.career.reportHref
+      : null;
 
   return (
     <SiteLayout>
-      {/* `Section` defaults to the marketing pages' rhythm; a home is not read
-          that way. ~1240px is the brief's width for a 12-column workspace. */}
       <Section className="py-8 md:py-10" containerClassName="max-w-[1240px]">
-        {/* ---------------- 1 · Who am I ---------------- */}
-        {model ? (
-          <CareerPageHeader profile={model.profile} onRetry={() => void identityQ.refetch()} />
-        ) : (
-          <CareerPageHeader
-            profile={{
-              preferredName,
-              accountFirstName: null,
-              greetingName: preferredName,
-              headline: null,
-              professionTitleSv: null,
-              professionTitleEn: null,
-              workCountry: null,
-              workSubJurisdiction: null,
-              complete: false,
-              degraded: identityQ.isError,
-            }}
-            onRetry={identityQ.isError ? () => void identityQ.refetch() : undefined}
-          />
-        )}
+        {/* 1 · Who am I */}
+        <CareerPageHeader profile={model.profile} onRetry={retryIdentity} />
 
-        {/* ---------------- 2 · The one next step, 3 · the Passport ----------
-            Two columns on desktop, both above the fold. On mobile the grid
-            collapses to one column in source order: the recommendation
-            first, the Passport second. */}
+        {/* 2 · The one next step, 3 · the Passport — two columns on desktop,
+            one column at 375 in source order. */}
         <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            {model ? (
-              <NextBestAction
-                next={model.nextAction}
-                calm={model.calm}
-                onPrimaryClick={(key, destination) => analytics.click(key as never, destination)}
-              />
-            ) : (
-              <div role="status" aria-live="polite">
-                <p className="sr-only">{say(NEXT_ACTION.loading)}</p>
-                <div className="h-56 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" />
-              </div>
-            )}
+            <NextBestAction
+              next={model.nextAction}
+              onRetry={retryIdentity}
+              onPrimaryClick={(key, destination) => analytics.click(key as never, destination)}
+            />
           </div>
           <div className="lg:col-span-5">
-            {model ? (
-              <PassportSummary passport={model.passport} />
-            ) : (
-              <div className="h-56 animate-pulse rounded-xl bg-muted motion-reduce:animate-none" />
-            )}
+            <PassportSummary
+              passport={model.passport}
+              onRetry={() => {
+                void identityQ.refetch();
+                void verificationsQ.refetch();
+              }}
+            />
           </div>
         </div>
 
-        {model && (
-          <>
-            {/* ---------------- 4 · Where this career could go ---------------- */}
-            <CareerDirectionSection
-              career={model.career}
-              closed={assessmentClosed}
-              className="mt-8"
-            >
-              {/* Every analysis this person has, as a compact disclosure
-                  inside the section that is about them — v3 reports and
-                  legacy v2.1 runs in one chronological list. Rendered only
-                  when there IS a result; the panel it replaces was a
-                  full-width empty box on every account, result or not. */}
-              {(model.career.state === "ready" ||
-                model.career.state === "legacy" ||
-                (runsQ.data?.length ?? 0) > 1) && (
-                <details className="mt-5 border-t border-border pt-3">
-                  <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    {say(CAREER.earlier)}
-                  </summary>
-                  <div className="mt-3">
-                    <ReportHistoryList legacyRuns={runsQ.data.slice(1) as never} />
-                  </div>
-                </details>
-              )}
-            </CareerDirectionSection>
+        {/* 4 · Where this career could go */}
+        <CareerDirectionSection
+          career={model.career}
+          closed={assessmentClosed}
+          onRetry={() => {
+            void activeQ.refetch();
+            void storedReportQ.refetch();
+          }}
+          className="mt-10"
+        >
+          {model.earlierReports.state === "ready" && model.earlierReports.count > 0 && (
+            <details className="mt-4 border-t border-border pt-2" data-earlier-reports>
+              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                {say(CAREER.earlier)} ({model.earlierReports.count})
+              </summary>
+              <div className="mt-2">
+                <ReportHistoryList
+                  legacyRuns={model.earlierReports.legacyRuns as never}
+                  discoveryReports={model.earlierReports.discoveryReports}
+                />
+              </div>
+            </details>
+          )}
+        </CareerDirectionSection>
 
-            {/* ---------------- 5 · Open roles ---------------- */}
-            <JobRecommendations jobs={model.jobs} className="mt-8" />
+        {/* 5 · Open roles */}
+        <JobRecommendations
+          jobs={model.jobs}
+          analysisHref={analysisHref}
+          onRetry={() => void jobsQ.refetch()}
+          className="mt-10"
+        />
 
-            {/* ---------------- 6 · Applications, tests and results ---------- */}
-            <ApplicationsAndResults
-              assessments={model.assessments}
-              jobs={model.jobs}
-              className="mt-8"
-            >
-              {/* Employer-assigned assessments completed before sign-in,
-                  matched by verified email, offered for explicit linking. A
-                  one-off housekeeping action for a small minority of accounts,
-                  rendered only when there is genuinely something to link. */}
-              {linkableTasks.length > 0 && (
-                <div className="mt-3 rounded-lg border border-dashed border-border bg-muted/20 p-4">
-                  <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    <ClipboardCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                    {say(LINK_EARLIER.title)}
-                  </h4>
-                  <p className="mt-2 text-sm text-muted-foreground">{say(LINK_EARLIER.body)}</p>
-                  <ul className="mt-2 divide-y divide-border">
-                    {linkableTasks.map((a) => (
-                      <li key={a.id} className="flex items-center justify-between gap-3 py-2">
-                        <span className="text-sm text-foreground">
-                          {lang === "sv" ? a.assessmentNameSv : a.assessmentNameEn}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={claimMutation.isPending}
-                          onClick={() => claimMutation.mutate(a.id)}
-                          className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent underline-offset-4 hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                          {say(LINK_EARLIER.cta)}
-                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </ApplicationsAndResults>
+        {/* 6 · Applications, tests and results */}
+        <EmployerProcesses
+          applications={model.applications}
+          work={model.employerWork}
+          onRetryApplications={() => void myApplicationsQ.refetch()}
+          onRetryWork={() => {
+            void academyWorkQ.refetch();
+            void historyQ.refetch();
+          }}
+          className="mt-10"
+        >
+          <LinkEarlierResult rows={linkableQ.data ?? []} onLinked={onLinked} />
+        </EmployerProcesses>
 
-            {/* ---------------- 7 · Career tools ---------------- */}
-            <CareerTools tools={model.tools} className="mt-10" />
+        {/* 7 · Training and development — only when there is any */}
+        <DevelopmentSection work={model.employerWork} className="mt-10" />
 
-            {/* ---------------- 8 · What happened ---------------- */}
-            <RecentActivity activity={model.activity} className="mt-10" />
-          </>
-        )}
+        {/* 8 · Career tools */}
+        <CareerTools tools={model.tools} className="mt-10" />
+
+        {/* 9 · What happened */}
+        <RecentActivity activity={model.activity} className="mt-10" />
       </Section>
     </SiteLayout>
   );

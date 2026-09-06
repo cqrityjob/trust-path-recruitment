@@ -1,24 +1,11 @@
 // Recent activity — the last few things that happened to this person, once.
 //
-// One shared feed rather than one per product: a report release, a
-// verification decision, an interview and an application are all "something
-// happened about you", and a person should not need to know which product
-// to open to find out. At most three rows, newest first, each linking to
-// the thing itself.
-//
-// ── WHAT IT DOES NOT REPEAT ────────────────────────────────────────────
-//
-// The presentation model has already removed every event the primary card
-// claimed. If the released report IS the most important thing on the page,
-// it is announced there and not again here.
-//
-// ── EMPTY IS INVISIBLE, FAILED IS NOT ──────────────────────────────────
-//
-// With nothing to say the section is not rendered at all -- a card that
-// exists to say "nothing here" is the premium space this page refuses to
-// spend. A source that FAILED is different: then a single quiet line says
-// so, because "no activity" and "we could not check" are not the same
-// sentence about somebody's week.
+// Each line names its object: the merit that was verified, the employer
+// whose result arrived, the job applied for. An approval whose merit has
+// since been archived says so, so this feed can never contradict a
+// Passport summary that counts current merits. "Show all" reveals the rest
+// in place — there is no all-activity route, and a link to a page that
+// does not exist is worse than none.
 
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -26,8 +13,9 @@ import { useT } from "@/i18n/context";
 import type { ActivityItem, ActivityModel } from "@/lib/professional-identity/home-presentation";
 import { L, Lf, type Lang } from "./copy";
 import { ACTIVITY, ACTIVITY_LINE } from "./home-copy";
+import { Group } from "./home-primitives";
+import { LINK } from "./home-format";
 
-/** "idag", "igår", or the day and month. */
 function formatActivityDay(iso: string, l: Lang, now: Date): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -43,12 +31,7 @@ function formatActivityDay(iso: string, l: Lang, now: Date): string {
 
 function lineFor(item: ActivityItem, l: Lang): string {
   const copy = ACTIVITY_LINE[item.kind];
-  const subject =
-    item.kind === "application_submitted"
-      ? l === "sv"
-        ? item.titleSv
-        : item.titleEn
-      : item.employerName;
+  const subject = l === "sv" ? item.subjectSv : item.subjectEn;
   return subject ? Lf(copy.with, l, subject) : L(copy.without, l);
 }
 
@@ -63,25 +46,19 @@ export function RecentActivity({
 }) {
   const { lang } = useT();
   const l = lang as Lang;
-  // "Show all activity" reveals the rest IN PLACE. There is no
-  // all-activity route in this product, and a link to a page that does not
-  // exist is worse than not offering one at all.
   const [showAll, setShowAll] = useState(false);
-
   if (activity.items.length === 0 && !activity.partial) return null;
-
   const rows = showAll ? activity.all : activity.items;
 
   return (
-    <section aria-labelledby="activity-heading" className={className} data-recent-activity>
-      <h2
-        id="activity-heading"
-        className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
-      >
-        {L(ACTIVITY.heading, l)}
-      </h2>
+    <Group
+      id="activity"
+      title={L(ACTIVITY.heading, l)}
+      className={className}
+      data-recent-activity=""
+    >
       {rows.length > 0 && (
-        <ul className="mt-2 divide-y divide-border border-t border-border">
+        <ul className="mt-1 divide-y divide-border">
           {rows.map((item) => (
             <li key={item.id}>
               <Link
@@ -106,7 +83,7 @@ export function RecentActivity({
           onClick={() => setShowAll(true)}
           data-show-all-activity
           aria-expanded={false}
-          className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className={`${LINK} mt-1`}
         >
           {L(ACTIVITY.all, l)}
         </button>
@@ -116,6 +93,6 @@ export function RecentActivity({
           {L(activity.unavailable ? ACTIVITY.unavailable : ACTIVITY.partial, l)}
         </p>
       )}
-    </section>
+    </Group>
   );
 }

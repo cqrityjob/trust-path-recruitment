@@ -117,10 +117,15 @@ expect(
 // result or not. The disclosure is conditional on there BEING a result.
 expect(
   routeCode.includes("ReportHistoryList") &&
-    /model\.career\.state === "ready" \|\|\s*model\.career\.state === "legacy" \|\|/.test(
+    /model\.earlierReports\.state === "ready" && model\.earlierReports\.count > 0 && \(/.test(
       routeCode,
-    ),
-  `${routePath}: earlier analyses must stay reachable, and only when there is a result.`,
+    ) &&
+    /discoveryReports=\{model\.earlierReports\.discoveryReports\}/.test(routeCode),
+  `${routePath}: earlier analyses must render only when at least one genuine earlier report exists.`,
+);
+expect(
+  /currentLegacyId/.test(model) && /currentSnapshotId/.test(model),
+  `${modelPath}: the current report must be excluded from the earlier ones by id, per instrument.`,
 );
 expect(
   model.includes("/my-career/reports/${active.runId}"),
@@ -240,7 +245,10 @@ expect(
   `${routePath}: the lifecycle must not be rendered as a linear checklist.`,
 );
 expect(
-  /linkableTasks\.length > 0 && \(/.test(routeCode),
+  routeCode.includes("<LinkEarlierResult") &&
+    code(read("src/components/professional-identity/LinkEarlierResult.tsx")).includes(
+      "if (rows.length === 0) return null;",
+    ),
   `${routePath}: the link-an-earlier-result strip renders only when there is something to link.`,
 );
 // The retired cards must not come back as mounted surfaces.
@@ -267,7 +275,7 @@ expect(
   `${modelPath}: the primary card's metadata must carry the attempt's own governed purpose.`,
 );
 expect(
-  /next\.meta\.purposeSv/.test(workspace) && /next\.meta\.purposeEn/.test(workspace),
+  /meta\.purposeSv/.test(workspace) && /meta\.purposeEn/.test(workspace),
   `${workspacePath}: the primary card must state the attempt's own purpose, per attempt.`,
 );
 {

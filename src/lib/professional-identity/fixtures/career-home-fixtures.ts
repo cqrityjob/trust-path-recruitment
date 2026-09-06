@@ -1,33 +1,28 @@
-// Fictional accounts for the career home — the ten states the brief names.
+// Fictional accounts for the career home — every state the correction
+// pass names, in one place.
 //
-// ── WHY THEY LIVE IN src/ AND NOT IN A TEST FOLDER ─────────────────────
+// Two consumers share them: the guard that renders every section to static
+// markup, and the browser harness that mounts the REAL route against these
+// as stubbed server-function responses. What CI checks, what a reviewer
+// screenshots and what the browser test clicks through are one account.
 //
-// Two consumers need the same data: the guard script that renders every
-// section to static markup, and the development-only preview route that
-// screenshots them at 375 and 1440. Keeping one copy is what stops "the
-// tests pass but the page looks wrong" — they are looking at the same
-// account. `src/lib/security-passport/fixtures/personas.ts` established
-// this pattern for the Passport prototype.
-//
-// ── EVERY VALUE IS INVENTED ────────────────────────────────────────────
-//
-// No real person, employer, credential or report appears here. Nothing in
-// this file reaches a database, and the preview route that renders it
-// refuses to resolve outside development.
+// Every value is invented. Nothing here reaches a database.
 
 import type { CandidateInterviewRow } from "@/lib/interview-intelligence/candidate.functions";
 import type { MyApplicationRow } from "@/lib/job-intelligence/applications.functions";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
-import type { MyAssignment } from "@/lib/security-competency/academy-learning.functions";
+import type { AcademyWorkItem } from "@/lib/security-competency/academy-training.functions";
+import type { MyAssessmentRow } from "@/lib/security-competency/assessment-lifecycle.functions";
 import type { MyVerificationRequest } from "@/lib/security-passport/verification.functions";
 import type { ActiveReport } from "@/lib/career-discovery/active-report.functions";
 import type { StoredReportResult } from "@/lib/career-discovery/stored-report.functions";
-import { deriveVerificationAttention } from "../verification-attention";
-import type { HomePresentationInput } from "../home-presentation";
+import {
+  deriveVerificationAttention,
+  VERIFICATION_ATTENTION_UNAVAILABLE,
+} from "../verification-attention";
+import type { DiscoveryReportRow, HomePresentationInput, LegacyRunRow } from "../home-presentation";
 import type { IdentityClaim, ProfessionalIdentityV1 } from "../types";
 
-/** The clock every fixture is evaluated against, so a screenshot taken in
- *  six months still shows the same page. */
 export const FIXTURE_NOW = new Date("2026-09-05T10:00:00Z");
 
 /* ------------------------------------------------------------------ */
@@ -64,13 +59,12 @@ const EMPTY_IDENTITY: ProfessionalIdentityV1 = {
     releasedReportAttemptId: null,
     assessmentAssignmentAttemptId: null,
     draftClaimCount: 0,
+    draftClaimIds: [],
     employerWorkspaceCount: 0,
   },
   unavailable: [],
 };
 
-/** `workload` is accepted a field at a time: a fixture that cares about one
- *  count should not have to restate the other six. */
 type IdentityOverride = Partial<Omit<ProfessionalIdentityV1, "workload">> & {
   readonly workload?: Partial<ProfessionalIdentityV1["workload"]>;
 };
@@ -118,19 +112,43 @@ export function request(
   };
 }
 
-export function assignment(over: Partial<MyAssignment> & { attemptId: string }): MyAssignment {
+/** One row of the CANONICAL academy work read (scp_my_academy_work). */
+export function work(over: Partial<AcademyWorkItem> & { workId: string }): AcademyWorkItem {
   return {
-    mode: "assessment",
-    programmeNameSv: "Väktare – rekryteringsbedömning",
-    programmeNameEn: "Security officer – recruitment assessment",
+    workKind: "assessment",
+    titleSv: "Väktare – rekryteringstest",
+    titleEn: "Security officer – recruitment test",
     employerName: "Nordväkt AB",
-    attemptStatus: "released",
-    answered: 56,
-    totalItems: 56,
+    status: "in_progress",
+    progressDone: 12,
+    progressTotal: 56,
+    assignedAt: "2026-09-01T08:00:00Z",
     deadline: null,
-    releasedAt: "2026-09-04T08:00:00Z",
-    purposeSv: "Rekryteringsbedömning",
-    purposeEn: "Recruitment assessment",
+    releasedAt: null,
+    purposeSv: "Rekryteringstest",
+    purposeEn: "Recruitment test",
+    useCase: "recruitment",
+    jobTitleSv: "Väktare, Stockholm",
+    jobTitleEn: "Security officer, Stockholm",
+    ...over,
+  };
+}
+
+/** One row of the participant's own pipeline history. */
+export function history(over: Partial<MyAssessmentRow> & { attemptId: string }): MyAssessmentRow {
+  return {
+    assessmentSlug: "vaktare",
+    assessmentNameSv: "Väktare – rekryteringstest",
+    assessmentNameEn: "Security officer – recruitment test",
+    issuerName: "Nordväkt AB",
+    purposeCode: "recruitment",
+    useCase: "recruitment",
+    lifecycleState: "in_progress",
+    invitedAt: "2026-09-01T08:00:00Z",
+    startedAt: "2026-09-01T09:00:00Z",
+    submittedAt: null,
+    releasedAt: null,
+    participantSnapshotId: null,
     ...over,
   };
 }
@@ -197,7 +215,6 @@ export function job(over: Partial<PublicJobCard> & { id: string; slug: string })
   };
 }
 
-/** Which report is current, as `getActiveCareerReport` answers it. */
 export function activeV31(snapshotId = "snap-1"): ActiveReport {
   return {
     kind: "discovery_v3_1",
@@ -211,12 +228,13 @@ export function activeV31(snapshotId = "snap-1"): ActiveReport {
     identity: { schemaVersion: "cd-report-v3.1.0" } as never,
   };
 }
-
 export const ACTIVE_NONE: ActiveReport = { kind: "none" };
+export const ACTIVE_LEGACY: ActiveReport = {
+  kind: "legacy_v21",
+  runId: "run-legacy-1",
+  completedAt: "2025-05-01T09:00:00Z",
+};
 
-/** A stored v3.1 career-analysis result, trimmed to the fields the home
- *  reads. Cast once, here, so no fixture has to restate the whole snapshot
- *  contract to name three professions. */
 export function storedReport(
   over: {
     snapshotId?: string;
@@ -273,19 +291,36 @@ export function storedReport(
         ranked: ranked.map((r) => ({
           rank: r.rank,
           confidence: r.confidence,
-          match: {
-            titleSv: r.titleSv,
-            titleEn: r.titleEn,
-            cigProfessionSlug: r.slug,
-          },
+          match: { titleSv: r.titleSv, titleEn: r.titleEn, cigProfessionSlug: r.slug },
         })),
       },
     } as unknown as Extract<StoredReportResult, { status: "v3.1" }>["snapshot"],
   };
 }
 
+export const CURRENT_V3_ROW: DiscoveryReportRow = {
+  snapshotId: "snap-1",
+  generatedAt: "2026-08-20T09:00:00Z",
+  definitionVersion: "3.1.0",
+};
+export const EARLIER_V3_ROW: DiscoveryReportRow = {
+  snapshotId: "snap-0",
+  generatedAt: "2026-03-02T09:00:00Z",
+  definitionVersion: "3.0.0",
+};
+export const LEGACY_RUN: LegacyRunRow = {
+  id: "run-legacy-1",
+  completed_at: "2025-05-01T09:00:00Z",
+  started_at: "2025-05-01T08:00:00Z",
+};
+export const OLDER_LEGACY_RUN: LegacyRunRow = {
+  id: "run-legacy-0",
+  completed_at: "2024-11-11T09:00:00Z",
+  started_at: "2024-11-11T08:00:00Z",
+};
+
 /* ------------------------------------------------------------------ */
-/* The ten fixtures                                                    */
+/* The fixtures                                                        */
 /* ------------------------------------------------------------------ */
 
 export type FixtureId =
@@ -293,16 +328,27 @@ export type FixtureId =
   | "eight_unverified"
   | "under_verification"
   | "assessment_deadline"
+  | "training_deadline"
+  | "sole_primary_test"
   | "released_and_waiting"
   | "no_matching_jobs"
+  | "general_jobs"
   | "established"
-  | "partial_failure";
+  | "clarification_exact"
+  | "history_loading"
+  | "legacy_report"
+  | "partial_failure"
+  | "identity_failed";
 
 export interface HomeFixture {
   readonly id: FixtureId;
-  /** What state of the world this account is in, in one line. */
   readonly description: string;
   readonly input: HomePresentationInput;
+  /** The raw verification requests `input.verificationAttention` was derived
+   *  from, so a harness can serve them as listMyVerificationRequests. Null
+   *  when the fixture's verification read never answers; "error" when it
+   *  failed. */
+  readonly requests: readonly MyVerificationRequest[] | null | "error";
 }
 
 const BASE_PROFESSIONAL = {
@@ -331,28 +377,180 @@ const BASE_PROFESSIONAL = {
     },
   ],
 };
-
-const EMPTY_SOURCES = {
-  assignments: { state: "ready" as const, rows: [] },
-  interviews: { state: "ready" as const, rows: [] },
-  applications: { state: "ready" as const, rows: [] },
-  jobs: { state: "ready" as const, rows: [] },
+const WITH_REPORT = {
+  hasPassport: true,
+  discovery: {
+    hasCompletedReport: true,
+    snapshotId: "snap-1",
+    generatedAt: "2026-08-20T09:00:00Z",
+    namesCareers: true,
+  },
 };
 
-/** Eight recorded MERITS in total, none verified, none under review: seven
- *  credentials plus the one employment period on BASE_PROFESSIONAL. The
- *  Passport counts employment as a merit, so a fixture that wanted eight
- *  merits and listed eight credentials would have nine. */
-const EIGHT_CLAIMS = Array.from({ length: 7 }, (_, i) => claim(`c${i + 1}`));
+/** Seven credentials plus the employment period: eight merits. */
+const SEVEN_CLAIMS = Array.from({ length: 7 }, (_, i) => claim(`c${i + 1}`));
+
+const attentionOf = (requests: readonly MyVerificationRequest[]) =>
+  deriveVerificationAttention(requests, FIXTURE_NOW);
+
+/* ---- the raw verification requests each fixture is built from --------- */
+//
+// Named once and referenced twice: the view model derives attention from
+// them, and the browser harness serves them as listMyVerificationRequests.
+// One source, so the guard, the preview and the real route agree.
+
+export const REQS_NONE: readonly MyVerificationRequest[] = [];
+export const REQS_UNDER_REVIEW: readonly MyVerificationRequest[] = [
+  ...Array.from({ length: 7 }, (_, i) =>
+    request({
+      id: `r-c${i + 1}`,
+      claimId: `c${i + 1}`,
+      submittedAt: `2026-09-0${(i % 3) + 1}T09:00:00Z`,
+    }),
+  ),
+  request({ id: "r-emp", periodId: "emp-period-1", submittedAt: "2026-09-01T09:00:00Z" }),
+];
+export const REQS_ESTABLISHED: readonly MyVerificationRequest[] = [
+  request({ id: "r-open", claimId: "d1", status: "pending" }),
+  // Approved a week ago — and the claim it approved has since been
+  // superseded, so it is NOT among the current rows the seam holds.
+  request({
+    id: "r-archived",
+    claimId: "c-superseded",
+    status: "approved",
+    submittedAt: "2026-08-20T09:00:00Z",
+    decidedAt: "2026-08-29T09:00:00Z",
+    method: "document_review",
+  }),
+  // Approved recently, on a merit that IS current: the feed names it.
+  request({
+    id: "r-v1",
+    claimId: "v1",
+    status: "approved",
+    submittedAt: "2026-08-20T09:00:00Z",
+    decidedAt: "2026-08-30T09:00:00Z",
+    method: "document_review",
+  }),
+];
+export const REQS_CLARIFICATION: readonly MyVerificationRequest[] = [
+  request({
+    id: "r-q",
+    claimId: "c3",
+    status: "clarification_requested",
+    decidedAt: "2026-09-04T09:00:00Z",
+    holderMessage: "Bifoga baksidan av intyget.",
+  }),
+];
+
+const READY_EMPTY: Pick<
+  HomePresentationInput,
+  | "academyWork"
+  | "assessmentHistory"
+  | "interviews"
+  | "applications"
+  | "jobs"
+  | "legacyRuns"
+  | "discoveryReports"
+> = {
+  academyWork: { state: "ready", rows: [] },
+  assessmentHistory: { state: "ready", rows: [] },
+  interviews: { state: "ready", rows: [] },
+  applications: { state: "ready", rows: [] },
+  jobs: { state: "ready", rows: [] },
+  legacyRuns: { state: "ready", rows: [] },
+  discoveryReports: { state: "ready", rows: [] },
+};
+
+/** An established professional with a current v3.1 analysis. */
+const PROFESSIONAL_BASE: HomePresentationInput = {
+  identity: {
+    state: "ready",
+    identity: identity({ ...BASE_PROFESSIONAL, ...WITH_REPORT, claims: SEVEN_CLAIMS }),
+  },
+  verificationAttention: attentionOf(REQS_NONE),
+  ...READY_EMPTY,
+  jobFilter: { state: "family", familyId: "guarding" },
+  jobs: { state: "ready", rows: [job({ id: "j1", slug: "vaktare-stockholm" })] },
+  activeReport: activeV31(),
+  storedReport: storedReport(),
+  discoveryReports: { state: "ready", rows: [CURRENT_V3_ROW] },
+  preferredName: "Amina",
+  savedCvCount: 0,
+  careerDiscoveryOpen: false,
+  now: FIXTURE_NOW,
+};
+
+const FOUR_APPLICATIONS: MyApplicationRow[] = [
+  // Withdrawn, and updated MOST recently: must never stand in for the
+  // latest active application.
+  application({
+    id: "a-withdrawn",
+    status: "withdrawn",
+    jobTitleSv: "Skyddsvakt, Kiruna",
+    jobTitleEn: "Protective security officer, Kiruna",
+    employerName: "Gruv AB",
+    createdAt: "2026-08-10T09:00:00Z",
+    updatedAt: "2026-09-04T12:00:00Z",
+  }),
+  application({
+    id: "a1",
+    status: "reviewing",
+    createdAt: "2026-08-28T09:00:00Z",
+    updatedAt: "2026-09-03T09:00:00Z",
+  }),
+  application({
+    id: "a2",
+    status: "submitted",
+    jobTitleSv: "Ordningsvakt, Göteborg",
+    jobTitleEn: "Public order officer, Gothenburg",
+    employerName: "Väst Bevakning",
+    createdAt: "2026-09-01T09:00:00Z",
+    updatedAt: "2026-09-01T09:00:00Z",
+  }),
+  application({
+    id: "a3",
+    status: "interview",
+    jobTitleSv: "Larmoperatör, Malmö",
+    jobTitleEn: "Alarm operator, Malmö",
+    employerName: "Syd Larm",
+    createdAt: "2026-08-20T09:00:00Z",
+    updatedAt: "2026-08-29T09:00:00Z",
+  }),
+  application({
+    id: "a4",
+    status: "submitted",
+    createdAt: "2026-08-15T09:00:00Z",
+    updatedAt: "2026-08-15T09:00:00Z",
+  }),
+];
 
 export const FIXTURES: readonly HomeFixture[] = [
   {
     id: "new_user",
-    description: "A brand-new account: no career analysis, no Passport, nothing recorded.",
+    description:
+      "A brand-new account: no career analysis, no Passport, nothing recorded, no filter — general jobs.",
+    requests: REQS_NONE,
     input: {
-      identity: identity({ displayName: "Nyregistrerad Användare", accountCountry: "SE" }),
-      verificationAttention: deriveVerificationAttention([], FIXTURE_NOW),
-      ...EMPTY_SOURCES,
+      identity: {
+        state: "ready",
+        identity: identity({ displayName: "Nyregistrerad Användare", accountCountry: "SE" }),
+      },
+      verificationAttention: attentionOf(REQS_NONE),
+      ...READY_EMPTY,
+      jobFilter: { state: "none" },
+      jobs: {
+        state: "ready",
+        rows: [
+          job({ id: "g1", slug: "vaktare-stockholm" }),
+          job({
+            id: "g2",
+            slug: "ordningsvakt-goteborg",
+            title_sv: "Ordningsvakt, Göteborg",
+            title_en: "Public order officer, Gothenburg",
+            city: "Göteborg",
+          }),
+        ],
+      },
       activeReport: ACTIVE_NONE,
       preferredName: null,
       savedCvCount: 0,
@@ -364,254 +562,305 @@ export const FIXTURES: readonly HomeFixture[] = [
     id: "eight_unverified",
     description:
       "The brief's screenshot state: a completed career analysis and eight recorded merits, none verified.",
-    input: {
-      identity: identity({
-        ...BASE_PROFESSIONAL,
-        hasPassport: true,
-        claims: EIGHT_CLAIMS,
-        discovery: {
-          hasCompletedReport: true,
-          snapshotId: "snap-1",
-          generatedAt: "2026-08-20T09:00:00Z",
-          namesCareers: true,
-        },
-      }),
-      verificationAttention: deriveVerificationAttention([], FIXTURE_NOW),
-      ...EMPTY_SOURCES,
-      jobs: { state: "ready", rows: [job({ id: "j1", slug: "vaktare-stockholm" })] },
-      activeReport: activeV31(),
-      storedReport: storedReport(),
-      preferredName: "Amina",
-      savedCvCount: 0,
-      careerDiscoveryOpen: false,
-      now: FIXTURE_NOW,
-    },
+    requests: REQS_NONE,
+    input: PROFESSIONAL_BASE,
   },
   {
     id: "under_verification",
-    description: "Merits are under review with the correct verifier. Nothing is required.",
+    description: "Every merit is under review with the correct verifier. Nothing is required.",
+    requests: REQS_UNDER_REVIEW,
     input: {
-      identity: identity({
-        ...BASE_PROFESSIONAL,
-        hasPassport: true,
-        claims: EIGHT_CLAIMS,
-        discovery: {
-          hasCompletedReport: true,
-          snapshotId: "snap-1",
-          generatedAt: "2026-08-20T09:00:00Z",
-          namesCareers: true,
-        },
-      }),
-      // EVERY merit, the employment period included: "nothing is required of
-      // you" is only true when nothing is left unsubmitted, and an employment
-      // nobody has been asked about is exactly something to submit.
-      verificationAttention: deriveVerificationAttention(
-        [
-          ...EIGHT_CLAIMS.map((c, i) =>
-            request({
-              id: `r-${c.id}`,
-              claimId: c.id,
-              submittedAt: `2026-09-0${(i % 3) + 1}T09:00:00Z`,
-            }),
-          ),
-          request({ id: "r-emp", periodId: "emp-period-1", submittedAt: "2026-09-01T09:00:00Z" }),
-        ],
-        FIXTURE_NOW,
-      ),
-      ...EMPTY_SOURCES,
-      activeReport: activeV31(),
-      storedReport: storedReport(),
-      preferredName: "Amina",
-      savedCvCount: 0,
-      careerDiscoveryOpen: false,
-      now: FIXTURE_NOW,
+      ...PROFESSIONAL_BASE,
+      verificationAttention: attentionOf(REQS_UNDER_REVIEW),
     },
   },
   {
     id: "assessment_deadline",
-    description: "An employer is waiting on an assessment that carries a deadline.",
+    description:
+      "A recruitment test with a deadline, requested by an organisation for a named role.",
+    requests: REQS_NONE,
     input: {
-      identity: identity({
-        ...BASE_PROFESSIONAL,
-        hasPassport: true,
-        claims: EIGHT_CLAIMS,
-        workload: { assessmentAssignmentCount: 1, assessmentAssignmentAttemptId: "att-open" },
-        discovery: {
-          hasCompletedReport: true,
-          snapshotId: "snap-1",
-          generatedAt: "2026-08-20T09:00:00Z",
-          namesCareers: true,
-        },
-      }),
-      verificationAttention: deriveVerificationAttention([], FIXTURE_NOW),
-      ...EMPTY_SOURCES,
-      assignments: {
+      ...PROFESSIONAL_BASE,
+      identity: {
+        state: "ready",
+        identity: identity({
+          ...BASE_PROFESSIONAL,
+          ...WITH_REPORT,
+          claims: SEVEN_CLAIMS,
+          workload: {
+            assessmentAssignmentCount: 1,
+            assessmentAssignmentAttemptId: "att-open",
+            applicationCount: 1,
+          },
+        }),
+      },
+      academyWork: {
+        state: "ready",
+        rows: [work({ workId: "att-open", deadline: "2026-09-12T23:59:00Z" })],
+      },
+      assessmentHistory: { state: "ready", rows: [history({ attemptId: "att-open" })] },
+      applications: {
+        state: "ready",
+        rows: [application({ id: "a1", status: "reviewing", updatedAt: "2026-09-02T09:00:00Z" })],
+      },
+    },
+  },
+  {
+    id: "training_deadline",
+    description: "Employer-assigned training with a due date, and nothing else waiting.",
+    requests: REQS_NONE,
+    input: {
+      ...PROFESSIONAL_BASE,
+      academyWork: {
         state: "ready",
         rows: [
-          assignment({
-            attemptId: "att-open",
-            attemptStatus: "in_progress",
-            answered: 12,
-            totalItems: 56,
-            deadline: "2026-09-12T23:59:00Z",
-            releasedAt: null,
+          work({
+            workId: "tr-1",
+            workKind: "training",
+            titleSv: "Brandskydd – grundprogram",
+            titleEn: "Fire safety – foundation programme",
+            employerName: "Nordväkt AB",
+            status: "assigned",
+            progressDone: 1,
+            progressTotal: 4,
+            deadline: "2026-09-20T23:59:00Z",
+            useCase: "workforce",
+            purposeSv: "Kompetensutveckling",
+            purposeEn: "Competence development",
+            jobTitleSv: null,
+            jobTitleEn: null,
           }),
         ],
       },
-      activeReport: activeV31(),
-      storedReport: storedReport(),
-      preferredName: "Amina",
-      savedCvCount: 0,
-      careerDiscoveryOpen: false,
-      now: FIXTURE_NOW,
+    },
+  },
+  {
+    id: "sole_primary_test",
+    description:
+      "One open test, no deadline: it is the recommended step, and the tests list must not claim no test exists.",
+    requests: REQS_NONE,
+    input: {
+      ...PROFESSIONAL_BASE,
+      identity: {
+        state: "ready",
+        identity: identity({
+          ...BASE_PROFESSIONAL,
+          ...WITH_REPORT,
+          claims: SEVEN_CLAIMS,
+          workload: { assessmentAssignmentCount: 1, assessmentAssignmentAttemptId: "att-only" },
+        }),
+      },
+      academyWork: { state: "ready", rows: [work({ workId: "att-only" })] },
+      assessmentHistory: { state: "ready", rows: [history({ attemptId: "att-only" })] },
     },
   },
   {
     id: "released_and_waiting",
-    description: "A released result, plus three assessments still waiting on the employer.",
+    description:
+      "A released result (no read receipt), three tests waiting on the employer, one attempt in a state the pipeline does not describe, four applications.",
+    requests: REQS_NONE,
     input: {
-      identity: identity({
-        ...BASE_PROFESSIONAL,
-        hasPassport: true,
-        claims: EIGHT_CLAIMS,
-        workload: {
-          releasedReportCount: 1,
-          releasedReportAttemptId: "att-released",
-          applicationCount: 4,
-        },
-        discovery: {
-          hasCompletedReport: true,
-          snapshotId: "snap-1",
-          generatedAt: "2026-08-20T09:00:00Z",
-          namesCareers: true,
-        },
-      }),
-      verificationAttention: deriveVerificationAttention([], FIXTURE_NOW),
-      ...EMPTY_SOURCES,
-      assignments: {
+      ...PROFESSIONAL_BASE,
+      identity: {
+        state: "ready",
+        identity: identity({
+          ...BASE_PROFESSIONAL,
+          ...WITH_REPORT,
+          claims: SEVEN_CLAIMS,
+          workload: {
+            releasedReportCount: 1,
+            releasedReportAttemptId: "att-released",
+            applicationCount: 5,
+          },
+        }),
+      },
+      academyWork: {
         state: "ready",
         rows: [
-          assignment({ attemptId: "att-released" }),
-          assignment({ attemptId: "att-w1", attemptStatus: "submitted", releasedAt: null }),
-          assignment({ attemptId: "att-w2", attemptStatus: "submitted", releasedAt: null }),
-          assignment({ attemptId: "att-w3", attemptStatus: "submitted", releasedAt: null }),
+          work({
+            workId: "att-released",
+            status: "released",
+            progressDone: 56,
+            progressTotal: 56,
+            releasedAt: "2026-09-04T08:00:00Z",
+          }),
+          work({
+            workId: "att-w1",
+            status: "submitted",
+            progressDone: 56,
+            progressTotal: 56,
+            employerName: "Väst Bevakning",
+            jobTitleSv: "Ordningsvakt, Göteborg",
+            jobTitleEn: "Public order officer, Gothenburg",
+          }),
+          work({ workId: "att-w2", status: "scored", progressDone: 56, progressTotal: 56 }),
+          work({ workId: "att-w3", status: "submitted", progressDone: 56, progressTotal: 56 }),
+          // An expired attempt: NOT waiting, NOT released — shown as-is.
+          work({
+            workId: "att-x",
+            status: "expired",
+            progressDone: 3,
+            progressTotal: 56,
+            employerName: "Gruv AB",
+            jobTitleSv: "Skyddsvakt, Kiruna",
+            jobTitleEn: "Protective security officer, Kiruna",
+          }),
         ],
       },
-      applications: {
+      assessmentHistory: {
         state: "ready",
         rows: [
-          application({ id: "a1", status: "reviewing", createdAt: "2026-09-01T09:00:00Z" }),
-          application({ id: "a2", status: "submitted", createdAt: "2026-08-28T09:00:00Z" }),
-          application({ id: "a3", status: "interview", createdAt: "2026-08-20T09:00:00Z" }),
-          application({ id: "a4", status: "submitted", createdAt: "2026-08-15T09:00:00Z" }),
+          history({
+            attemptId: "att-released",
+            lifecycleState: "result_available",
+            submittedAt: "2026-09-02T09:00:00Z",
+            releasedAt: "2026-09-04T08:00:00Z",
+            participantSnapshotId: "psnap-1",
+          }),
+          history({
+            attemptId: "att-w1",
+            lifecycleState: "under_review",
+            submittedAt: "2026-09-03T09:00:00Z",
+            issuerName: "Väst Bevakning",
+          }),
+          history({
+            attemptId: "att-w2",
+            lifecycleState: "processing",
+            submittedAt: "2026-09-03T09:00:00Z",
+          }),
+          history({
+            attemptId: "att-w3",
+            lifecycleState: "ready_to_release",
+            submittedAt: "2026-09-03T09:00:00Z",
+          }),
         ],
       },
-      activeReport: activeV31(),
-      storedReport: storedReport(),
-      preferredName: "Amina",
-      savedCvCount: 0,
-      careerDiscoveryOpen: false,
-      now: FIXTURE_NOW,
+      applications: { state: "ready", rows: FOUR_APPLICATIONS },
     },
   },
   {
     id: "no_matching_jobs",
     description:
-      "Four live applications, a completed analysis, and no open roles in the stated family.",
+      "A completed analysis names a family with nothing open in it; four live applications.",
+    requests: REQS_NONE,
     input: {
-      identity: identity({
-        ...BASE_PROFESSIONAL,
-        hasPassport: true,
-        claims: EIGHT_CLAIMS.slice(0, 3).map((c) => ({
-          ...c,
-          assertionLevel: "verified",
-          verifierName: "CQrityjob",
-          verificationMethod: "document_review",
-          verifiedOn: "2026-07-01",
-        })),
-        workload: { applicationCount: 4 },
-        discovery: {
-          hasCompletedReport: true,
-          snapshotId: "snap-1",
-          generatedAt: "2026-08-20T09:00:00Z",
-          namesCareers: true,
-        },
-      }),
-      verificationAttention: deriveVerificationAttention([], FIXTURE_NOW),
-      ...EMPTY_SOURCES,
-      applications: {
+      ...PROFESSIONAL_BASE,
+      identity: {
+        state: "ready",
+        identity: identity({
+          ...BASE_PROFESSIONAL,
+          ...WITH_REPORT,
+          claims: SEVEN_CLAIMS.slice(0, 3).map((c) => ({
+            ...c,
+            assertionLevel: "verified",
+            verifierName: "CQrityjob",
+            verificationMethod: "document_review",
+            verifiedOn: "2026-07-01",
+          })),
+          workload: { applicationCount: 5 },
+        }),
+      },
+      jobs: { state: "ready", rows: [] },
+      applications: { state: "ready", rows: FOUR_APPLICATIONS },
+    },
+  },
+  {
+    id: "general_jobs",
+    description:
+      "A completed analysis is absent, so there is no filter: the newest vacancies, said as such.",
+    requests: REQS_NONE,
+    input: {
+      ...PROFESSIONAL_BASE,
+      identity: {
+        state: "ready",
+        identity: identity({ ...BASE_PROFESSIONAL, hasPassport: true, claims: SEVEN_CLAIMS }),
+      },
+      activeReport: ACTIVE_NONE,
+      storedReport: undefined,
+      discoveryReports: { state: "ready", rows: [] },
+      jobFilter: { state: "none" },
+      jobs: {
         state: "ready",
         rows: [
-          application({ id: "a1", status: "reviewing", createdAt: "2026-09-01T09:00:00Z" }),
-          application({ id: "a2", status: "submitted", createdAt: "2026-08-28T09:00:00Z" }),
-          application({ id: "a3", status: "interview", createdAt: "2026-08-20T09:00:00Z" }),
-          application({ id: "a4", status: "submitted", createdAt: "2026-08-15T09:00:00Z" }),
+          job({ id: "g1", slug: "vaktare-stockholm" }),
+          job({
+            id: "g2",
+            slug: "ordningsvakt-goteborg",
+            title_sv: "Ordningsvakt, Göteborg",
+            title_en: "Public order officer, Gothenburg",
+            city: "Göteborg",
+          }),
+          job({
+            id: "g3",
+            slug: "larmoperator-malmo",
+            title_sv: "Larmoperatör, Malmö",
+            title_en: "Alarm operator, Malmö",
+            city: "Malmö",
+          }),
         ],
       },
-      activeReport: activeV31(),
-      storedReport: storedReport(),
-      preferredName: "Amina",
-      savedCvCount: 0,
-      careerDiscoveryOpen: false,
-      now: FIXTURE_NOW,
+      careerDiscoveryOpen: true,
     },
   },
   {
     id: "established",
     description:
-      "An established holder: verified merits, a saved CV, a Career Card, and nothing waiting.",
+      "An established holder: verified merits, an approval on a merit since archived, a saved CV, a Career Card, filtered jobs, an earlier analysis.",
+    requests: REQS_ESTABLISHED,
     input: {
-      identity: identity({
-        ...BASE_PROFESSIONAL,
-        hasPassport: true,
-        claims: [
-          claim("v1", {
-            title: "Väktarutbildning grundkurs (VU1)",
-            assertionLevel: "verified",
-            verifierName: "CQrityjob",
-            verificationMethod: "document_review",
-            verifiedOn: "2026-06-01",
-          }),
-          claim("v2", {
-            title: "Ordningsvaktsförordnande",
-            assertionLevel: "verified",
-            verifierName: "Nordväkt AB",
-            verificationMethod: "employer_attestation",
-            verifiedOn: "2026-07-11",
-          }),
-          claim("v3", {
-            title: "Hjärt- och lungräddning",
-            assertionLevel: "verified",
-            verifierName: "CQrityjob",
-            verificationMethod: "document_review",
-            verifiedOn: "2024-05-01",
-            validUntil: "2026-05-01",
-          }),
-          claim("d1", { title: "Brandskyddsutbildning", assertionLevel: "document_provided" }),
-          claim("s1", {
-            title: "Engelska",
-            claimType: "language",
-            assertionLevel: "self_declared",
-          }),
-        ],
-        workload: { applicationCount: 2, draftClaimCount: 0 },
-        discovery: {
-          hasCompletedReport: true,
-          snapshotId: "snap-1",
-          generatedAt: "2026-08-20T09:00:00Z",
-          namesCareers: true,
-        },
-      }),
-      verificationAttention: deriveVerificationAttention(
-        [request({ id: "r-open", claimId: "d1", status: "pending" })],
-        FIXTURE_NOW,
-      ),
-      ...EMPTY_SOURCES,
+      ...PROFESSIONAL_BASE,
+      identity: {
+        state: "ready",
+        identity: identity({
+          ...BASE_PROFESSIONAL,
+          ...WITH_REPORT,
+          claims: [
+            claim("v1", {
+              title: "Väktarutbildning grundkurs (VU1)",
+              assertionLevel: "verified",
+              verifierName: "CQrityjob",
+              verificationMethod: "document_review",
+              verifiedOn: "2026-08-30",
+            }),
+            claim("v2", {
+              title: "Ordningsvaktsförordnande",
+              assertionLevel: "verified",
+              verifierName: "Nordväkt AB",
+              verificationMethod: "employer_attestation",
+              verifiedOn: "2026-07-11",
+            }),
+            claim("v3", {
+              title: "Hjärt- och lungräddning",
+              assertionLevel: "verified",
+              verifierName: "CQrityjob",
+              verificationMethod: "document_review",
+              verifiedOn: "2024-05-01",
+              validUntil: "2026-05-01",
+            }),
+            claim("d1", { title: "Brandskyddsutbildning", assertionLevel: "document_provided" }),
+            claim("s1", {
+              title: "Engelska",
+              claimType: "language",
+              assertionLevel: "self_declared",
+            }),
+          ],
+          workload: { applicationCount: 2 },
+        }),
+      },
+      verificationAttention: attentionOf(REQS_ESTABLISHED),
       applications: {
         state: "ready",
         rows: [
-          application({ id: "a1", status: "reviewing", createdAt: "2026-09-01T09:00:00Z" }),
-          application({ id: "a2", status: "submitted", createdAt: "2026-08-28T09:00:00Z" }),
+          application({ id: "a1", status: "reviewing", updatedAt: "2026-09-01T09:00:00Z" }),
+          application({
+            id: "a2",
+            status: "submitted",
+            jobTitleSv: "Ordningsvakt, Göteborg",
+            jobTitleEn: "Public order officer, Gothenburg",
+            employerName: "Väst Bevakning",
+            createdAt: "2026-08-28T09:00:00Z",
+            updatedAt: "2026-08-28T09:00:00Z",
+          }),
         ],
       },
       jobs: {
@@ -634,41 +883,95 @@ export const FIXTURES: readonly HomeFixture[] = [
           }),
         ],
       },
-      activeReport: activeV31(),
-      storedReport: storedReport(),
-      preferredName: "Amina",
+      discoveryReports: { state: "ready", rows: [CURRENT_V3_ROW, EARLIER_V3_ROW] },
+      legacyRuns: { state: "ready", rows: [LEGACY_RUN] },
       savedCvCount: 1,
       careerDiscoveryOpen: true,
-      now: FIXTURE_NOW,
+    },
+  },
+  {
+    id: "clarification_exact",
+    description: "One reviewer question, on one merit: the action opens that merit.",
+    requests: REQS_CLARIFICATION,
+    input: {
+      ...PROFESSIONAL_BASE,
+      verificationAttention: attentionOf(REQS_CLARIFICATION),
+    },
+  },
+  {
+    id: "history_loading",
+    description:
+      "The career report is ready while the report history is still loading: no disclosure, no crash.",
+    requests: REQS_NONE,
+    input: {
+      ...PROFESSIONAL_BASE,
+      legacyRuns: { state: "loading" },
+      discoveryReports: { state: "loading" },
+    },
+  },
+  {
+    id: "legacy_report",
+    description:
+      "The newest analysis is a v2.1 report; an older legacy run is the only earlier one.",
+    requests: REQS_NONE,
+    input: {
+      ...PROFESSIONAL_BASE,
+      identity: {
+        state: "ready",
+        identity: identity({ ...BASE_PROFESSIONAL, hasPassport: true, claims: SEVEN_CLAIMS }),
+      },
+      activeReport: ACTIVE_LEGACY,
+      storedReport: undefined,
+      discoveryReports: { state: "ready", rows: [] },
+      legacyRuns: { state: "ready", rows: [LEGACY_RUN, OLDER_LEGACY_RUN] },
+      jobFilter: { state: "family", familyId: "guarding" },
     },
   },
   {
     id: "partial_failure",
-    description: "One module failed and one is still loading: nothing may render as a zero.",
+    description:
+      "The verification read, jobs and applications failed; interviews still loading; provenance unreadable. Nothing renders as a zero, nothing is a permanent skeleton.",
+    requests: "error",
     input: {
-      identity: identity({
-        ...BASE_PROFESSIONAL,
-        hasPassport: true,
-        claims: EIGHT_CLAIMS,
-        discovery: {
-          hasCompletedReport: true,
-          snapshotId: "snap-1",
-          generatedAt: "2026-08-20T09:00:00Z",
-          namesCareers: true,
-        },
-        unavailable: ["provenance"],
-      }),
-      verificationAttention: null,
-      assignments: { state: "error" },
+      ...PROFESSIONAL_BASE,
+      identity: {
+        state: "ready",
+        identity: identity({
+          ...BASE_PROFESSIONAL,
+          ...WITH_REPORT,
+          claims: SEVEN_CLAIMS,
+          unavailable: ["provenance"],
+        }),
+      },
+      verificationAttention: VERIFICATION_ATTENTION_UNAVAILABLE,
       interviews: { state: "loading" },
       applications: { state: "error" },
       jobs: { state: "error" },
       activeReportError: true,
+      activeReport: undefined,
       storedReportError: true,
-      preferredName: "Amina",
       savedCvCount: undefined,
       careerDiscoveryOpen: undefined,
-      now: FIXTURE_NOW,
+    },
+  },
+  {
+    id: "identity_failed",
+    description:
+      "The identity read failed while every other read succeeded — and a test with a deadline is still waiting.",
+    requests: REQS_NONE,
+    input: {
+      ...PROFESSIONAL_BASE,
+      identity: { state: "error" },
+      academyWork: {
+        state: "ready",
+        rows: [work({ workId: "att-open", deadline: "2026-09-12T23:59:00Z" })],
+      },
+      assessmentHistory: { state: "ready", rows: [history({ attemptId: "att-open" })] },
+      applications: {
+        state: "ready",
+        rows: [application({ id: "a1", status: "reviewing", updatedAt: "2026-09-02T09:00:00Z" })],
+      },
+      preferredName: "Amina",
     },
   },
 ];

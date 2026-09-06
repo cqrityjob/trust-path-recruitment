@@ -43,7 +43,10 @@ export const dictionaries = {
     "nav.myPassport": "Mitt Security Passport",
     "nav.findJobs": "Hitta jobb",
     "nav.professionsAndPaths": "Yrken och karriärvägar",
-    "nav.testsAndResults": "Tester och resultat",
+    // "Tester & utveckling": the area holds recruitment tests, their released
+    // results AND employer-assigned training. "Tester och resultat" named
+    // half of it. The two are separated INSIDE the page, never mixed.
+    "nav.testsAndDevelopment": "Tester & utveckling",
     "nav.reviews": "Granskningar",
     "appnav.aria": "Primär navigering",
     "nav.menu.open": "Öppna menyn",
@@ -5591,7 +5594,7 @@ export const dictionaries = {
     "nav.myPassport": "My Security Passport",
     "nav.findJobs": "Find jobs",
     "nav.professionsAndPaths": "Professions and career paths",
-    "nav.testsAndResults": "Tests and results",
+    "nav.testsAndDevelopment": "Tests & development",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",
     "nav.menu.open": "Open menu",

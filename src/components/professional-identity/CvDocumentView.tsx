@@ -68,7 +68,10 @@ const COPY = {
   languages: c("Språk", "Languages"),
   summary: c("Sammanfattning", "Summary"),
   present: c("nu", "present"),
-  aiDrafted: c("Utkast skrivet av AI — granska innan du använder det", "Drafted by AI — review before you use it"),
+  aiDrafted: c(
+    "Utkast skrivet av AI — granska innan du använder det",
+    "Drafted by AI — review before you use it",
+  ),
   verified: c("Verifierad", "Verified"),
   /** Screen-reader prefix so the line is never an icon plus a bare company
    *  name. §34: the meaning must not depend on seeing the symbol. */

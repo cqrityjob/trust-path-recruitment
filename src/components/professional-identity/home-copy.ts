@@ -2,29 +2,20 @@
 // screens that read them, per the convention documented in copy.ts.
 //
 // Every string here is a STATUS or a DESTINATION, never a score, never a
-// demand. The three classifications from the brief are named in words so
-// nothing depends on seeing a colour, and a suggestion is called a
-// recommendation rather than dressed as a requirement.
-//
-// ── TWO WORDS THAT ARE BANNED HERE ─────────────────────────────────────
-//
-// "uppgift" and "rapport" without an object, and "klar" without a subject.
-// "Din uppgift är klar" tells a person nothing: which entry, finished by
-// whom, and for what. Every sentence below names the thing it is about.
-// "Merit" is the candidate-facing word for what the Passport holds, and it
-// is used consistently — a merit is a credential, an education, a language,
-// a skill or an employment the person has recorded.
+// demand. "Merit" is the candidate-facing word for what the Passport holds.
+// A candidate takes a TEST; "bedömning" is the employer's word and stays on
+// employer surfaces. Nothing here says who a result is NOT shared with.
 
 import type { CandidateInterviewStatus } from "@/lib/interview-intelligence/candidate.functions";
 import type { StatusClassification } from "@/lib/professional-identity/next-best-action";
-import type { ActivityKind, ToolKey } from "@/lib/professional-identity/home-presentation";
+import type {
+  ActivityKind,
+  TestPhase,
+  ToolKey,
+} from "@/lib/professional-identity/home-presentation";
 import type { MeritLabel } from "@/lib/professional-identity/passport-merits";
 import type { ApplicationStatus } from "@/lib/job-intelligence/applications.functions";
 import { c, cp, type Copy, type PluralCopy } from "./copy";
-
-/* ------------------------------------------------------------------ */
-/* Classification chips                                                */
-/* ------------------------------------------------------------------ */
 
 export const CLASSIFICATION: Readonly<Record<StatusClassification, Copy>> = {
   action_required: c("Kräver din åtgärd", "Needs your action"),
@@ -33,13 +24,16 @@ export const CLASSIFICATION: Readonly<Record<StatusClassification, Copy>> = {
   suggestion: c("Rekommenderat nästa steg", "Recommended next step"),
 };
 
+export const COMMON = {
+  retry: c("Försök igen", "Try again"),
+  unavailableShort: c("kunde inte läsas", "could not be read"),
+} as const;
+
 /* ------------------------------------------------------------------ */
 /* The page header                                                     */
 /* ------------------------------------------------------------------ */
 
 export const HEADER = {
-  /** {0} is the preferred name, or the account first name. When neither
-   *  exists the page uses `titleAnon` rather than greeting a blank. */
   title: c("Din karriär, {0}", "Your career, {0}"),
   titleAnon: c("Din karriär", "Your career"),
   lede: c(
@@ -49,9 +43,9 @@ export const HEADER = {
   noTitle: c("Yrkestitel inte ifylld", "Professional title not filled in"),
   noCountry: c("Arbetsland inte angett", "Work country not set"),
   editDetails: c("Redigera mina uppgifter", "Edit my details"),
-  /** Said only when every basic section is answered. Never a percentage,
-   *  and never a claim about quality: the profile is filled in, not good. */
-  basicsComplete: c("Grundprofil komplett", "Basic profile complete"),
+  /** A fact about answered sections. Never a percentage, never a claim of
+   *  quality: the details are filled in, not good. */
+  basicsComplete: c("Grunduppgifter ifyllda", "Basic details filled in"),
   selfReported: c(
     "Uppgifterna här är självrapporterade. Det som är verifierat visas i ditt Security Passport.",
     "The information here is self-reported. What has been verified is shown in your Security Passport.",
@@ -60,7 +54,12 @@ export const HEADER = {
     "Delar av din profil kunde inte läsas. Ingenting har tagits bort.",
     "Parts of your profile could not be read. Nothing has been removed.",
   ),
-  retry: c("Försök igen", "Try again"),
+  failedTitle: c("Dina uppgifter kunde inte hämtas", "Your details could not be loaded"),
+  failedBody: c(
+    "Resten av sidan visar det som gick att läsa. Ingenting har tagits bort.",
+    "The rest of the page shows what could be read. Nothing has been removed.",
+  ),
+  loading: c("Hämtar dina uppgifter…", "Loading your details…"),
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -77,6 +76,12 @@ export const NEXT_ACTION = {
   ),
   deadline: c("Senast {0}", "By {0}"),
   loading: c("Hämtar ditt nästa steg…", "Loading your next step…"),
+  failedTitle: c("Ditt nästa steg kunde inte avgöras", "Your next step could not be determined"),
+  failedBody: c(
+    "Dina uppgifter gick inte att läsa just nu, så ingen rekommendation kan göras. Du kan ändå öppna ditt Security Passport.",
+    "Your details could not be read right now, so no recommendation can be made. You can still open your Security Passport.",
+  ),
+  failedPassportLink: c("Öppna mitt Security Passport", "Open my Security Passport"),
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -85,7 +90,6 @@ export const NEXT_ACTION = {
 
 export const PASSPORT = {
   heading: c("Mitt Security Passport", "My Security Passport"),
-  eyebrow: c("Dina meriter", "Your merits"),
   unreadable: c(
     "Dina meriter kunde inte läsas just nu. Ingenting har tagits bort.",
     "Your merits could not be read right now. Nothing has been removed.",
@@ -98,51 +102,38 @@ export const PASSPORT = {
     "Passet är privat som standard. Du väljer själv vad du delar och med vem.",
     "The Passport is private by default. You choose what you share, and with whom.",
   ),
-
-  /** The three figures the brief names, each a count of merits and never a
-   *  share of a whole. */
   registered: c("Registrerade meriter", "Recorded merits"),
   underReview: c("Under verifiering", "Being verified"),
   verified: c("Verifierade meriter", "Verified merits"),
-  /** A fourth, shown only when it is non-zero: a merit whose validity has
-   *  lapsed is not a current merit and must not sit inside "verified". */
   expired: c("Giltighet har gått ut", "Validity has expired"),
   drafts: c("Påbörjade meriter", "Unfinished merits"),
+  /** Only a surface that reads every lifecycle can show this, and it is
+   *  never folded into "Registrerade meriter". */
+  archived: c("Arkiverade meriter", "Archived merits"),
   reviewUnknown: c("kunde inte läsas", "could not be read"),
   loading: c("Hämtar dina meriter…", "Loading your merits…"),
-
   explanation: c(
     "Dina egna uppgifter märks som tillagda av dig. En merit visas som verifierad först när en behörig part har bekräftat den.",
     "Your own entries are marked as added by you. A merit is shown as verified only once an authorised party has confirmed it.",
   ),
-
   open: c("Öppna mitt Security Passport", "Open my Security Passport"),
-  add: c("Lägg till en merit", "Add a merit"),
+  /** /passport/credentials/new creates a CREDENTIAL. The label says so. */
+  addCredential: c("Lägg till ett intyg eller en utbildning", "Add a certificate or qualification"),
   clarification: cp(
     c("1 merit behöver en komplettering från dig", "1 merit needs something from you"),
     c("{0} meriter behöver en komplettering från dig", "{0} merits need something from you"),
   ),
 } as const;
 
-/**
- * The six labels a merit may carry.
- *
- * Every one is a sentence about the MERIT, never about the person: this
- * product never says somebody is verified. `verified` takes the verifying
- * organisation's name, and says what was confirmed and when beside it.
- */
 export const MERIT_LABEL: Readonly<Record<MeritLabel, Copy>> = {
   added_by_you: c("Tillagd av dig", "Added by you"),
   document_provided: c("Underlag bifogat", "Document provided"),
   verification_requested: c("Verifiering begärd", "Verification requested"),
   clarification_needed: c("Komplettering behövs", "More information needed"),
-  /** {0} is the organisation that DECIDED — never the issuer. */
   verified: c("Verifierad av {0}", "Verified by {0}"),
   expired: c("Giltighet har gått ut", "Validity has expired"),
 };
 
-/** When a verified merit's decision record names nobody — rows predating
- *  the rule that an approval must state its decider. */
 export const MERIT_VERIFIED_UNATTRIBUTED = c("Verifierad", "Verified");
 
 /* ------------------------------------------------------------------ */
@@ -153,42 +144,36 @@ export const CAREER = {
   heading: c("Din karriärbild", "Your career picture"),
   eyebrow: c("Baserat på din karriäranalys", "Based on your career analysis"),
   completed: c("Genomförd {0}", "Completed {0}"),
-
   topRole: c("Närmast din profil", "Closest to your profile"),
   alternatives: c("Andra möjliga riktningar", "Other possible directions"),
   strengths: c("Dina styrkor enligt analysen", "Your strengths according to the analysis"),
-
-  /** The sentence that keeps guidance from reading as a verdict. */
   guidance: c(
     "Det här är möjliga riktningar utifrån dina svar. Det är vägledning, inte ett bevis på kompetens, och ingen bedömning av om du får ett jobb.",
     "These are possible directions based on your answers. It is guidance, not proof of competence, and not a judgement about whether you will get a job.",
   ),
-  /** Said when the analysis named strengths but no occupation. */
   noRolesNamed: c(
     "Din analys namnger inga enskilda yrken. Den beskriver hur du arbetar och vilka områden som passar dig.",
     "Your analysis names no individual professions. It describes how you work and which areas suit you.",
   ),
-  /** Said when the stored result is in the other language. */
   frozenLocale: c(
     "Innehållet visas på det språk analysen genomfördes på.",
     "This content is shown in the language the analysis was taken in.",
   ),
-  /** `indicative` confidence: the closest in the catalogue, and no more. */
   indicative: c(
     "Det här är den närmaste träffen i vår yrkeskatalog, inte ett fastställt matchningsresultat.",
     "This is the closest match in our profession catalogue, not an established matching result.",
   ),
-
   view: c("Se hela karriäranalysen", "See the full career analysis"),
-  /** The v2.1 instrument named career AREAS and no occupation. Saying so is
-   *  better than showing an empty "top profession" for a real result. */
+  /** The catalogue is NOT filtered to the candidate's top three, and the
+   *  label must not imply it is. Individual professions deep-link below. */
+  explore: c("Utforska yrken och karriärvägar", "Explore professions and career paths"),
+  openProfession: c("Läs om {0}", "Read about {0}"),
+  history: c("Se mina karriäranalyser", "See my career analyses"),
+  earlier: c("Tidigare karriäranalyser", "Earlier career analyses"),
   legacy: c(
     "Din senaste karriäranalys gjordes med en tidigare version. Den beskriver vilka områden som passar dig, men namnger inga enskilda yrken.",
     "Your most recent career analysis was taken with an earlier version. It describes which areas suit you, but names no individual professions.",
   ),
-  earlier: c("Tidigare karriäranalyser", "Earlier career analyses"),
-  explore: c("Utforska matchande yrken", "Explore matching professions"),
-
   noneTitle: c(
     "Upptäck vilka säkerhetsyrken som passar dig",
     "Discover which security professions suit you",
@@ -207,7 +192,6 @@ export const CAREER = {
     "Din sparade karriäranalys kan inte visas i den här versionen. Den finns kvar och har inte tagits bort.",
     "Your saved career analysis cannot be shown in this version. It is still there and has not been removed.",
   ),
-  unreadableCta: c("Se mina karriäranalyser", "See my career analyses"),
   unavailable: c(
     "Din karriäranalys kunde inte läsas just nu.",
     "Your career analysis could not be read right now.",
@@ -216,89 +200,76 @@ export const CAREER = {
 } as const;
 
 /* ------------------------------------------------------------------ */
-/* Job recommendations                                                 */
+/* Open roles                                                          */
 /* ------------------------------------------------------------------ */
 
 export const JOBS = {
   heading: c("Lediga jobb", "Open roles"),
-  /** Says exactly what the filter did, and claims nothing more. */
-  basis: c(
-    "Urvalet bygger på det yrkesområde du har angett, inte på en personlig matchning.",
-    "The selection is based on the professional area you stated, not on a personal match.",
+  /** The filter IS the career analysis. Never "the profession you entered". */
+  basisAnalysis: c(
+    "Urvalet bygger på den yrkesinriktning som framgår av din karriäranalys.",
+    "The selection is based on the professional direction your career analysis indicates.",
   ),
-  emptyTitle: c(
-    "Vi hittade inga jobb som matchar din inriktning just nu",
-    "We found no jobs matching your direction right now",
+  /** No filter exists: these are the newest vacancies, and say so. */
+  general: c(
+    "Utforska lediga jobb inom säkerhetsbranschen.",
+    "Explore open roles across the security sector.",
   ),
-  emptyBody: c(
-    "Du kan se alla lediga jobb eller komplettera dina uppgifter för bättre rekommendationer.",
-    "You can see all open roles, or complete your details for better recommendations.",
+  generalHint: c(
+    "Gör karriäranalysen för att få jobb inom din inriktning här.",
+    "Take the career analysis to see roles within your direction here.",
+  ),
+  filteredEmptyTitle: c(
+    "Vi hittade inga jobb inom din inriktning just nu",
+    "We found no roles within your direction right now",
+  ),
+  filteredEmptyBody: c(
+    "Nya jobb publiceras löpande. Du kan se alla lediga jobb, eller se hela karriäranalysen som urvalet bygger på.",
+    "New roles are published continuously. You can see all open roles, or the full career analysis the selection is based on.",
   ),
   all: c("Se alla jobb", "See all jobs"),
-  completeProfile: c("Komplettera mina uppgifter", "Complete my details"),
+  seeAnalysis: c("Se karriäranalysen", "See the career analysis"),
   unavailable: c(
     "Lediga jobb kunde inte hämtas just nu.",
     "Open roles could not be loaded right now.",
   ),
+  loading: c("Hämtar lediga jobb…", "Loading open roles…"),
 } as const;
 
 /* ------------------------------------------------------------------ */
-/* Applications, tests and results                                     */
+/* Applications                                                        */
 /* ------------------------------------------------------------------ */
 
-export const WORK = {
-  heading: c("Ansökningar, tester och resultat", "Applications, tests and results"),
-
-  applicationsTitle: c("Mina ansökningar", "My applications"),
-  applicationsActive: cp(
+export const APPLICATIONS = {
+  title: c("Mina ansökningar", "My applications"),
+  active: cp(
     c("1 aktiv ansökan", "1 active application"),
     c("{0} aktiva ansökningar", "{0} active applications"),
   ),
-  applicationsNone: c(
-    "Du har inte sökt något jobb ännu.",
-    "You have not applied for anything yet.",
+  none: c("Du har inte sökt något jobb ännu.", "You have not applied for anything yet."),
+  onlyHistory: cp(
+    c("1 avslutad ansökan", "1 concluded application"),
+    c("{0} avslutade ansökningar", "{0} concluded applications"),
   ),
-  applicationsLatest: c("Senast: {0}", "Most recent: {0}"),
-  applicationsCta: c("Följ mina ansökningar", "Track my applications"),
-  applicationsUnavailable: c(
+  latestActive: c("Senast uppdaterad", "Most recently updated"),
+  cta: c("Följ mina ansökningar", "Track my applications"),
+  unavailable: c(
     "Dina ansökningar kunde inte hämtas just nu.",
     "Your applications could not be loaded right now.",
   ),
-
-  testsTitle: c("Tester och resultat", "Tests and results"),
-  testsNone: c(
-    "Ingen arbetsgivare har bett dig göra ett test.",
-    "No employer has asked you to take a test.",
-  ),
-  testsUnavailable: c(
-    "Dina tester kunde inte hämtas just nu.",
-    "Your tests could not be loaded right now.",
-  ),
-  testOpen: c("Öppna testet", "Open the test"),
-  testProgress: c("{0} besvarade", "{0} answered"),
-  testDeadline: c("Senast {0}", "By {0}"),
-  resultOpen: c("Läs resultatet", "Read the result"),
-  resultReleased: c("Delat med dig {0}", "Shared with you {0}"),
-  /** The brief's passive-state example, in both grammatical numbers. It is
-   *  a STATUS: the sentence says outright that nothing is required. */
-  waiting: cp(
-    c(
-      "1 test väntar på resultat från arbetsgivaren. Du behöver inte göra något just nu.",
-      "1 test is awaiting its result from the employer. You do not need to do anything right now.",
-    ),
-    c(
-      "{0} tester väntar på resultat från arbetsgivaren. Du behöver inte göra något just nu.",
-      "{0} tests are awaiting their results from the employer. You do not need to do anything right now.",
-    ),
-  ),
+  loading: c("Hämtar dina ansökningar…", "Loading your applications…"),
   interviews: cp(
     c("1 intervju pågår", "1 interview under way"),
     c("{0} intervjuer pågår", "{0} interviews under way"),
   ),
+  /** The application-scoped Passport disclosure lives on the applications
+   *  page, per application. Named here so the home can point at it. */
+  disclosureHint: c(
+    "Där väljer du också vilka meriter varje arbetsgivare får se.",
+    "That is also where you choose which merits each employer may see.",
+  ),
 } as const;
 
-/** What a candidate is told about their own application. Never a
- *  prediction, and never a judgement of their chances. */
 export const APPLICATION_STATUS: Readonly<Record<ApplicationStatus, Copy>> = {
   submitted: c("Skickad", "Submitted"),
   reviewing: c("Under granskning hos arbetsgivaren", "Being reviewed by the employer"),
@@ -308,9 +279,6 @@ export const APPLICATION_STATUS: Readonly<Record<ApplicationStatus, Copy>> = {
   withdrawn: c("Återkallad av dig", "Withdrawn by you"),
 };
 
-/** The three states a candidate is told about. `employer_process_continuing`
- *  covers four internal states, and the wording is chosen to be honest about
- *  that rather than to imply a stalled process. */
 export const INTERVIEW_STATUS: Readonly<Record<CandidateInterviewStatus, Copy>> = {
   interview_offered: c(
     "Intervju erbjuden — förbered dig inför intervjun",
@@ -321,6 +289,79 @@ export const INTERVIEW_STATUS: Readonly<Record<CandidateInterviewStatus, Copy>> 
     "Intervjun är genomförd. Arbetsgivarens process fortsätter.",
     "Interview completed. The employer's process continues.",
   ),
+};
+
+/* ------------------------------------------------------------------ */
+/* Tests and results · Training and development                        */
+/* ------------------------------------------------------------------ */
+
+export const EMPLOYER_WORK = {
+  heading: c("Arbetsgivarprocesser", "Employer processes"),
+  testsTitle: c("Tester och resultat", "Tests and results"),
+  developmentTitle: c("Utbildning och kompetensutveckling", "Training and development"),
+  /** Recruitment: the organisation REQUESTED a test; the person is an
+   *  applicant, never an employee. */
+  requestedBy: c("Begärt av {0}", "Requested by {0}"),
+  assignedBy: c("Tilldelat av {0}", "Assigned by {0}"),
+  forRole: c("för tjänsten {0}", "for the role {0}"),
+  recruitmentTest: c("Rekryteringstest", "Recruitment test"),
+  workforceTest: c("Test", "Test"),
+  progress: c("{0} besvarade", "{0} answered"),
+  modules: c("{0} moduler klara", "{0} modules done"),
+  deadline: c("Senast {0}", "By {0}"),
+  released: c("Delat med dig {0}", "Shared with you {0}"),
+  open: c("Öppna testet", "Open the test"),
+  openTraining: c("Öppna utbildningen", "Open the training"),
+  readResult: c("Läs resultatet", "Read the result"),
+  /** The only item is the recommended step above. Never "no test exists". */
+  testFeaturedAbove: c(
+    "Testet visas som rekommenderat nästa steg ovan.",
+    "The test is shown as the recommended next step above.",
+  ),
+  trainingFeaturedAbove: c(
+    "Utbildningen visas som rekommenderat nästa steg ovan.",
+    "The training is shown as the recommended next step above.",
+  ),
+  testsNone: c(
+    "Ingen arbetsgivare har bett dig göra ett test.",
+    "No employer has asked you to take a test.",
+  ),
+  developmentNone: c(
+    "Ingen arbetsgivare har tilldelat dig en utbildning.",
+    "No employer has assigned you any training.",
+  ),
+  unavailable: c(
+    "Dina tester kunde inte hämtas just nu.",
+    "Your tests could not be loaded right now.",
+  ),
+  loading: c("Hämtar dina tester…", "Loading your tests…"),
+  all: c("Öppna Tester & utveckling", "Open Tests & development"),
+  /** Passive, and says outright that nothing is required. Both numbers. */
+  waiting: cp(
+    c(
+      "1 test väntar på resultat från arbetsgivaren. Du behöver inte göra något just nu.",
+      "1 test is awaiting its result from the employer. You do not need to do anything right now.",
+    ),
+    c(
+      "{0} tester väntar på resultat från arbetsgivaren. Du behöver inte göra något just nu.",
+      "{0} tests are awaiting their results from the employer. You do not need to do anything right now.",
+    ),
+  ),
+  /** Not a merit, not evidence. Said where a result is listed. */
+  resultNotEvidence: c(
+    "Ett testresultat är arbetsgivarens underlag i den processen. Det blir inte en merit i ditt Security Passport.",
+    "A test result is the employer's material in that process. It does not become a merit in your Security Passport.",
+  ),
+} as const;
+
+/** What each pipeline phase is called to the candidate. Only the explicit
+ *  states the pipeline supports are described as waiting. */
+export const TEST_PHASE: Readonly<Record<TestPhase, Copy>> = {
+  action: c("Kräver din åtgärd", "Needs your action"),
+  waiting: c("Väntar på resultat från arbetsgivaren", "Awaiting the employer's result"),
+  released: c("Resultat delat med dig", "Result shared with you"),
+  abandoned: c("Avbrutet", "Cancelled"),
+  unknown: c("Status kunde inte tolkas", "Status could not be interpreted"),
 };
 
 /* ------------------------------------------------------------------ */
@@ -343,8 +384,8 @@ export const TOOL: Readonly<Record<ToolKey, { title: Copy; existingTitle?: Copy;
   career_card: {
     title: c("Visa mitt Career Card", "View my Career Card"),
     body: c(
-      "Din karriärbild som ett kort du själv väljer att dela.",
-      "Your career picture as a card you choose to share.",
+      "Dina yrkesrekommendationer från karriäranalysen i ett kort du själv väljer att dela. Career Card är karriärvägledning och är inte ett verifieringsbevis.",
+      "Your profession recommendations from the career analysis, in a card you choose to share. The Career Card is career guidance, not proof of verification.",
     ),
   },
   professions: {
@@ -382,22 +423,41 @@ export const ACTIVITY = {
   ),
 } as const;
 
-/** {0} is the employer or the title, where the row has one. */
+/** {0} is the merit, the employer or the title, where the row has one. */
 export const ACTIVITY_LINE: Readonly<Record<ActivityKind, { with: Copy; without: Copy }>> = {
   report_released: {
     with: c("Resultat från {0} delat med dig", "Result from {0} shared with you"),
-    without: c(
-      "Ett bedömningsresultat delades med dig",
-      "An assessment result was shared with you",
-    ),
+    without: c("Ett testresultat delades med dig", "A test result was shared with you"),
   },
   verification_approved: {
-    with: c("En merit i ditt Passport verifierades", "A merit in your Passport was verified"),
-    without: c("En merit i ditt Passport verifierades", "A merit in your Passport was verified"),
+    with: c(
+      "{0} verifierades i ditt Security Passport",
+      "{0} was verified in your Security Passport",
+    ),
+    without: c(
+      "En merit i ditt Security Passport verifierades",
+      "A merit in your Security Passport was verified",
+    ),
+  },
+  /** The decision stands; the merit it was about is no longer current. Said
+   *  so the feed can never contradict a Passport summary counting current
+   *  merits only. */
+  verification_approved_archived: {
+    with: c(
+      "{0} verifierades · meriten är sedan dess arkiverad",
+      "{0} was verified · the merit has since been archived",
+    ),
+    without: c(
+      "En merit verifierades · meriten är sedan dess arkiverad",
+      "A merit was verified · the merit has since been archived",
+    ),
   },
   verification_rejected: {
-    with: c("Beslut om en merit i ditt Passport", "A decision about a merit in your Passport"),
-    without: c("Beslut om en merit i ditt Passport", "A decision about a merit in your Passport"),
+    with: c("Beslut om {0}", "Decision on {0}"),
+    without: c(
+      "Beslut om en merit i ditt Security Passport",
+      "A decision about a merit in your Security Passport",
+    ),
   },
   interview_offered: {
     with: c("Intervju erbjuden av {0}", "Interview offered by {0}"),
@@ -418,20 +478,27 @@ export const ACTIVITY_LINE: Readonly<Record<ActivityKind, { with: Copy; without:
 };
 
 /* ------------------------------------------------------------------ */
-/* Housekeeping that has nowhere better to live                        */
+/* Link an earlier result                                              */
 /* ------------------------------------------------------------------ */
 
 export const LINK_EARLIER = {
-  title: c("Koppla ett tidigare resultat", "Link an earlier result"),
+  title: c("Koppla ett tidigare testresultat", "Link an earlier test result"),
   body: c(
-    "Du har genomfört ett arbetsgivartilldelat test med den här e-postadressen. Koppla resultatet till din profil för att se det under Tester och resultat.",
-    "You have completed an employer-assigned test with this email address. Link the result to your profile to see it under Tests and results.",
+    "Du har gjort ett arbetsgivartilldelat test med den här e-postadressen innan du hade ett konto. Koppla resultatet till ditt konto för att se det under Tester & utveckling. Det blir inte en merit i ditt Security Passport.",
+    "You completed an employer-assigned test with this email address before you had an account. Link the result to your account to see it under Tests & development. It does not become a merit in your Security Passport.",
   ),
-  cta: c("Koppla till min profil", "Link to my profile"),
+  cta: c("Koppla resultatet till mitt konto", "Link the result to my account"),
+  pending: c("Kopplar…", "Linking…"),
+  success: c("Resultatet är kopplat till ditt konto.", "The result is now linked to your account."),
+  open: c("Öppna testet", "Open the test"),
+  failed: c(
+    "Kopplingen misslyckades. Ingenting har ändrats.",
+    "The link failed. Nothing has changed.",
+  ),
+  retry: c("Försök igen", "Try again"),
 } as const;
 
-/** Kept for the greeting used by the profile page's own hero, which is not
- *  part of the career home but shares this module. */
+/** Kept for the profile page's own hero, which shares this module. */
 export const GREETING = {
   noTitle: HEADER.noTitle,
   experienceYears: c("{0} års erfarenhet", "{0} years of experience"),
@@ -440,7 +507,7 @@ export const GREETING = {
   basicsComplete: HEADER.basicsComplete,
   selfReported: HEADER.selfReported,
   degraded: HEADER.degraded,
-  retry: HEADER.retry,
+  retry: COMMON.retry,
   welcome: c("Välkommen tillbaka, {0}", "Welcome back, {0}"),
   welcomeAnon: c("Välkommen tillbaka", "Welcome back"),
   lede: c(
@@ -449,5 +516,4 @@ export const GREETING = {
   ),
 } as const;
 
-/** Plural helper re-exports kept so importers need one module. */
 export type { Copy, PluralCopy };

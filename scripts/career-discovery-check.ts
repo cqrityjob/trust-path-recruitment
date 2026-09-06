@@ -1244,7 +1244,9 @@ const activeFns = read("src/lib/career-discovery/active-report.functions.ts");
 const dashboard =
   read("src/routes/_authenticated.my-career.index.tsx") +
   read("src/lib/professional-identity/home-presentation.ts") +
-  read("src/components/professional-identity/CareerDirectionSection.tsx");
+  read("src/components/professional-identity/CareerDirectionSection.tsx") +
+  // The loading primitive every section shares — where the skeleton lives.
+  read("src/components/professional-identity/home-primitives.tsx");
 const v3Summary = read("src/components/career-discovery/DiscoveryCareerSummary.tsx");
 
 // Selection happens ONCE, on the server, before render.

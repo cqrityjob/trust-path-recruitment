@@ -266,6 +266,7 @@ function PassportOverviewRoute() {
         className="mb-5"
       />
 
+      <ScrollToHashOnceReady />
       <PassportOverview
         holder={snapshot.holder}
         evaluationOn={today()}
@@ -306,4 +307,28 @@ function PassportOverviewRoute() {
       />
     </div>
   );
+}
+
+/**
+ * Honour a `#merits` / `#attention` arrival from the career home.
+ *
+ * The home links to the SECTION of the Passport an action is about, so a
+ * person asked to "choose merits to verify" lands on the merits list and
+ * not on the top of a page they then have to search. The element only
+ * exists once the Passport read has answered — after the browser has
+ * already given up on the hash — so it is scrolled to here, once, from
+ * inside the ready branch, and made the focus target so keyboard and
+ * screen-reader users arrive where the link said.
+ */
+function ScrollToHashOnceReady() {
+  useEffect(() => {
+    const hash = typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "";
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    if (!el) return;
+    el.scrollIntoView({ block: "start" });
+    if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+    (el as HTMLElement).focus({ preventScroll: true });
+  }, []);
+  return null;
 }

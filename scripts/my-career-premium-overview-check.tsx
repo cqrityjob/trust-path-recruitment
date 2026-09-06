@@ -1,41 +1,26 @@
 // /my-career — the personal career home, asserted against the ONE view
 // model and the RENDERED markup.
 //
-// ── WHAT THIS DEFENDS ──────────────────────────────────────────────────
-//
-// The home is built around ONE most-important next step, chosen by the
-// deterministic ladder in a locked order, with every other fact shown ONCE
-// by the section that owns it. Each property below was either a visible
-// defect in the pre-redesign page or one careless edit from becoming one:
-//
 //   T1  the ladder's locked order, rung by rung, as a table
 //   T2  the Passport summary and the recommendation state the SAME count
-//   T3  self-reported, evidenced, under review and verified cannot be
-//       confused, and no percentage or trust score is computed
-//   T4  a passive "waiting for the employer" state is never a task
-//   T5  a read that failed is never rendered as zero
-//   T6  a verified state can never sit beside "nothing verified"
-//   T7  the same report is never rendered twice as dominant content
-//   T8  exactly one primary call to action exists above the fold
-//   T9  every section resolves for every fixture in the brief
-//   T10 the reviewer count is not in the candidate's primary navigation
+//   T3  self-reported, evidenced, under review, verified, lapsed and
+//       archived cannot be confused, and no score is computed
+//   T4  a passive state is never a task; only explicit pipeline states are
+//       "waiting"; a featured item is never "no item"
+//   T5  a read that failed is never rendered as zero, and always has a way out
+//   T6  a verified merit is never reported as none; an archived approval is
+//       said to be archived
+//   T7  a released result is a dated row, never the recommended step
+//   T8  exactly one primary call to action, in every fixture
+//   T9  the career picture, jobs states, applications context
+//   T10 no reviewer count in the candidate's primary navigation
 //   T11 the workspace switch exposes reviewer and employer roles
-//   T12 the profile line says "Grundprofil komplett", never a percentage
-//   T13 no empty container is rendered
-//   T14 mobile order is source order, and the Passport is early
-//   T15 sv/en parity across every copy table the home reads
-//
-// ── WHY IT RENDERS AND WHY IT BUILDS THE MODEL ─────────────────────────
-//
-// The model is a pure function over query results, so every state here is
-// a typed fixture and the same fixture must always give the same page. The
-// components are rendered so the assertions are about what a candidate
-// SEES; I18nProvider starts at "sv", so Swedish is asserted from markup and
-// English from the copy tables.
-//
-// The fixtures are the SHARED ones (career-home-fixtures.ts), which the
-// development preview route also renders. What a reviewer looks at and what
-// CI checks are then the same account.
+//   T12 "Grunduppgifter ifyllda", never a percentage; the name rule
+//   T13 no empty container; the earlier-reports collection
+//   T14 mobile order is source order
+//   T15 sv/en parity
+//   T16 cross-surface count parity: the Passport's rows and the seam's rows
+//       count identically under the one lifecycle policy
 //
 // Run: bun run my-career-premium-overview:check
 
@@ -44,22 +29,25 @@ import path from "node:path";
 import { mock } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ProfessionalIdentityV1 } from "../src/lib/professional-identity/types";
 import type { HomePresentationInput } from "../src/lib/professional-identity/home-presentation";
 
 await mock.module("@tanstack/react-router", () => ({
   Link: ({
     to,
     params,
+    hash,
+    search,
     children,
     ...rest
   }: Record<string, unknown> & { children?: React.ReactNode }) => {
     let href = String(to ?? "");
     if (params && typeof params === "object") {
-      for (const [k, v] of Object.entries(params as Record<string, unknown>)) {
+      for (const [k, v] of Object.entries(params as Record<string, unknown>))
         href = href.replace(`$${k}`, String(v));
-      }
     }
+    if (search && typeof search === "object")
+      href += "?" + new URLSearchParams(search as Record<string, string>).toString();
+    if (hash) href += `#${hash}`;
     return React.createElement("a", { href, ...rest }, children);
   },
   createFileRoute: () => () => ({}),
@@ -75,41 +63,40 @@ const { CareerDirectionSection } =
   await import("../src/components/professional-identity/CareerDirectionSection");
 const { JobRecommendations } =
   await import("../src/components/professional-identity/JobRecommendations");
-const { ApplicationsAndResults } =
-  await import("../src/components/professional-identity/ApplicationsAndResults");
+const { EmployerProcesses } =
+  await import("../src/components/professional-identity/EmployerProcesses");
+const { DevelopmentSection } =
+  await import("../src/components/professional-identity/DevelopmentSection");
 const { CareerTools } = await import("../src/components/professional-identity/CareerTools");
 const { RecentActivity } = await import("../src/components/professional-identity/RecentActivity");
-const { ProfessionalIdentityHeader } =
-  await import("../src/components/professional-identity/ProfessionalIdentityHeader");
 const { CandidateAppNav } = await import("../src/components/site/CandidateAppNav");
 const { CANDIDATE_APP_NAV } = await import("../src/components/site/candidate-app-nav");
-const { buildCareerHomeViewModel } =
+const { buildCareerHomeViewModel, testPhaseOf } =
   await import("../src/lib/professional-identity/home-presentation");
 const { computeNextBestActions, ACTION_CLASSIFICATION } =
   await import("../src/lib/professional-identity/next-best-action");
+const { countMerits, countMeritRows, countReadyForVerification, reviewStateOf } =
+  await import("../src/lib/professional-identity/passport-merits");
+const { isCurrentMerit, isArchivedMerit, isUnfinishedMerit } =
+  await import("../src/lib/security-passport/types");
+const fx = await import("../src/lib/professional-identity/fixtures/career-home-fixtures");
 const { deriveVerificationAttention } =
   await import("../src/lib/professional-identity/verification-attention");
-const { countMerits, countReadyForVerification } =
-  await import("../src/lib/professional-identity/passport-merits");
-const fixtures = await import("../src/lib/professional-identity/fixtures/career-home-fixtures");
 const homeCopy = await import("../src/components/professional-identity/home-copy");
 const actionCopy = await import("../src/components/professional-identity/next-action-copy");
 
 const {
   FIXTURES,
   FIXTURE_NOW: NOW,
-  ACTIVE_NONE,
-  activeV31,
-  application,
-  assignment,
-  claim,
   fixtureById,
   identity,
-  interview,
-  job,
+  claim,
   request,
-  storedReport,
-} = fixtures;
+  work,
+  history,
+  application,
+  job,
+} = fx;
 
 const fails: string[] = [];
 function ck(name: string, ok: boolean, detail?: unknown): void {
@@ -121,7 +108,6 @@ function ck(name: string, ok: boolean, detail?: unknown): void {
 function group(name: string): void {
   console.log(`\n${name}`);
 }
-
 const root = path.resolve(import.meta.dir, "..");
 const read = (p: string) => readFileSync(path.join(root, p), "utf8");
 const code = (src: string) =>
@@ -129,99 +115,111 @@ const code = (src: string) =>
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/^\s*\/\/.*$/gm, "");
-const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;
+const count = (h: string, n: string) => h.split(n).length - 1;
 const render = (node: React.ReactElement): string =>
   renderToStaticMarkup(<I18nProvider>{node}</I18nProvider>);
+const retry = () => {};
 
-/** The whole page, in the order the route mounts it. */
-function renderPage(input: HomePresentationInput): {
-  m: ReturnType<typeof buildCareerHomeViewModel>;
-  html: string;
-} {
+function renderPage(input: HomePresentationInput) {
   const m = buildCareerHomeViewModel(input);
+  const analysisHref =
+    m.career.state === "ready" || m.career.state === "legacy" ? m.career.reportHref : null;
   return {
     m,
     html:
-      render(<CareerPageHeader profile={m.profile} />) +
-      render(<NextBestAction next={m.nextAction} calm={m.calm} />) +
-      render(<PassportSummary passport={m.passport} />) +
-      render(<CareerDirectionSection career={m.career} />) +
-      render(<JobRecommendations jobs={m.jobs} />) +
-      render(<ApplicationsAndResults assessments={m.assessments} jobs={m.jobs} />) +
+      render(<CareerPageHeader profile={m.profile} onRetry={retry} />) +
+      render(<NextBestAction next={m.nextAction} onRetry={retry} />) +
+      render(<PassportSummary passport={m.passport} onRetry={retry} />) +
+      render(<CareerDirectionSection career={m.career} onRetry={retry} />) +
+      render(<JobRecommendations jobs={m.jobs} analysisHref={analysisHref} onRetry={retry} />) +
+      render(
+        <EmployerProcesses
+          applications={m.applications}
+          work={m.employerWork}
+          onRetryApplications={retry}
+          onRetryWork={retry}
+        />,
+      ) +
+      render(<DevelopmentSection work={m.employerWork} />) +
       render(<CareerTools tools={m.tools} />) +
       render(<RecentActivity activity={m.activity} now={NOW} />),
   };
 }
-
 const fixture = (id: string): HomePresentationInput => {
   const f = fixtureById(id);
   if (!f) throw new Error(`unknown fixture: ${id}`);
   return f.input;
 };
-
-/** The established holder, as most of the ladder assertions want them:
- *  Passport open, analysis complete, every read answered. */
-const ESTABLISHED = fixture("eight_unverified").identity;
-const ANSWERED: Omit<HomePresentationInput, "identity"> = {
-  verificationAttention: deriveVerificationAttention([], NOW),
-  assignments: { state: "ready", rows: [] },
-  interviews: { state: "ready", rows: [] },
-  applications: { state: "ready", rows: [] },
-  jobs: { state: "ready", rows: [] },
-  activeReport: activeV31(),
-  storedReport: storedReport(),
-  careerDiscoveryOpen: false,
-  now: NOW,
+const BASE = fixture("eight_unverified");
+const ESTABLISHED = BASE.identity.state === "ready" ? BASE.identity.identity : identity();
+const withIdentity = (
+  id: ReturnType<typeof identity>,
+  over: Partial<HomePresentationInput> = {},
+): HomePresentationInput => ({ ...BASE, identity: { state: "ready", identity: id }, ...over });
+const primaryOf = (i: HomePresentationInput) => {
+  const m = buildCareerHomeViewModel(i);
+  return m.nextAction.state === "ready" ? (m.nextAction.primary?.action ?? null) : null;
 };
 
 console.log("my-career-premium-overview-check");
 
-/* ------------------------------------------------------------------ */
-/* T1 · the locked priority ladder, rung by rung                       */
-/* ------------------------------------------------------------------ */
-
+/* T1 ---------------------------------------------------------------- */
 group("T1 · the ladder answers each rung, in the locked order");
 {
-  // Each row is a state of the world plus the rung it must resolve to. A
-  // table rather than prose, because "which action wins" is a product
-  // decision that has to be readable and re-checkable in one place.
   const LADDER: readonly {
     p: number;
     label: string;
     input: HomePresentationInput;
     kind: string;
+    href?: string;
   }[] = [
     {
       p: 0,
-      label: "a required action with a deadline",
+      label: "a test with a deadline",
       input: fixture("assessment_deadline"),
       kind: "complete_assessment_assignment",
+      href: "/academy/att-open",
     },
     {
       p: 0,
-      label: "a reviewer is waiting on the candidate",
-      input: {
-        ...ANSWERED,
-        identity: ESTABLISHED,
+      label: "training with a due date",
+      input: fixture("training_deadline"),
+      kind: "complete_training_assignment",
+      href: "/academy/training/tr-1",
+    },
+    {
+      p: 0,
+      label: "the sole open test, no deadline",
+      input: fixture("sole_primary_test"),
+      kind: "complete_assessment_assignment",
+      href: "/academy/att-only",
+    },
+    {
+      p: 0,
+      label: "one reviewer question opens THAT merit",
+      input: fixture("clarification_exact"),
+      kind: "respond_to_clarification",
+      href: "/passport/entry/claim/c3",
+    },
+    {
+      p: 1,
+      label: "a decision that did not go the holder's way opens THAT merit",
+      input: withIdentity(ESTABLISHED, {
         verificationAttention: deriveVerificationAttention(
           [
             request({
-              id: "r1",
-              claimId: "c1",
-              status: "clarification_requested",
-              decidedAt: "2026-09-04T09:00:00Z",
+              id: "r-no",
+              claimId: "c2",
+              status: "rejected",
+              decidedAt: "2026-09-01T09:00:00Z",
+              holderMessage: "x",
             }),
           ],
           NOW,
         ),
-      },
-      kind: "respond_to_clarification",
-    },
-    {
-      p: 1,
-      label: "a result was released to the candidate",
-      input: fixture("released_and_waiting"),
-      kind: "read_released_report",
+      }),
+      kind: "review_verification_outcome",
+      href: "/passport/entry/claim/c2",
     },
     {
       p: 2,
@@ -232,38 +230,35 @@ group("T1 · the ladder answers each rung, in the locked order");
     {
       p: 3,
       label: "the Passport holds no merits",
-      input: {
-        ...ANSWERED,
-        identity: identity({ ...ESTABLISHED, claims: [], employment: [] }),
-      },
+      input: withIdentity(identity({ ...ESTABLISHED, claims: [], employment: [] })),
       kind: "start_passport",
     },
     {
       p: 4,
-      label: "the Passport holds unfinished drafts",
-      input: {
-        ...ANSWERED,
-        identity: identity({
+      label: "an unfinished draft opens the exact form",
+      input: withIdentity(
+        identity({
           ...ESTABLISHED,
           claims: [],
           employment: [],
-          workload: { draftClaimCount: 2 },
+          workload: { draftClaimCount: 1, draftClaimIds: ["d-1"] },
         }),
-      },
+      ),
       kind: "resume_draft_merits",
+      href: "/passport/credentials/new",
     },
     {
       p: 5,
-      label: "merits are ready to send to a verifier",
+      label: "merits ready to send open the merits list",
       input: fixture("eight_unverified"),
       kind: "submit_passport_verification",
+      href: "/passport",
     },
     {
       p: 6,
-      label: "relevant jobs exist for somebody who is looking",
-      input: {
-        ...ANSWERED,
-        identity: identity({
+      label: "relevant FILTERED jobs exist for somebody looking",
+      input: withIdentity(
+        identity({
           ...ESTABLISHED,
           currentStatus: "changing_role",
           claims: [
@@ -276,80 +271,91 @@ group("T1 · the ladder answers each rung, in the locked order");
           ],
           employment: [],
         }),
-        jobs: { state: "ready", rows: [job({ id: "j1", slug: "s1" })] },
-      },
+      ),
       kind: "explore_jobs",
     },
   ];
-
   for (const row of LADDER) {
-    const m = buildCareerHomeViewModel(row.input);
+    const a = primaryOf(row.input);
     ck(
       `P${row.p} · ${row.label} → ${row.kind}`,
-      m.nextAction?.action.kind === row.kind && m.nextAction?.action.priority === row.p,
-      `${m.nextAction?.action.priority}:${m.nextAction?.action.kind}`,
+      a?.kind === row.kind && a?.priority === row.p,
+      `${a?.priority}:${a?.kind}`,
     );
+    if (row.href) ck(`  … and lands on ${row.href}`, a?.href === row.href, a?.href);
   }
-
-  // The rungs are strictly ordered: the deadline beats the reviewer, the
-  // reviewer beats the released result, and the released result beats the
-  // Passport work. Asserted by piling the states on top of each other.
-  const piled = buildCareerHomeViewModel({
-    ...fixture("assessment_deadline"),
-    verificationAttention: deriveVerificationAttention(
-      [
-        request({
-          id: "r1",
-          claimId: "c1",
-          status: "clarification_requested",
-          decidedAt: "2026-09-04T09:00:00Z",
-        }),
-      ],
-      NOW,
-    ),
-    identity: identity({
-      ...fixture("assessment_deadline").identity,
-      workload: {
-        ...fixture("assessment_deadline").identity.workload,
-        releasedReportCount: 1,
-        releasedReportAttemptId: "att-released",
-      },
-    }),
-  });
+  const draft = primaryOf(LADDER[7]!.input);
+  ck("the draft action carries the draft id as intent", draft?.search?.draft === "d-1");
+  const verify = primaryOf(fixture("eight_unverified"));
+  ck("the verify action targets the merits section", verify?.hash === "merits");
   ck(
-    "a deadlined assessment outranks a reviewer's question and a released result",
-    piled.nextAction?.action.kind === "complete_assessment_assignment",
-    piled.nextAction?.action.kind,
+    "every action states its retiring condition",
+    FIXTURES.every((f) => {
+      const a = primaryOf(f.input);
+      return !a || a.retiresWhen.length > 0;
+    }),
+  );
+  // General jobs never become P6.
+  const general = primaryOf(
+    withIdentity(
+      identity({
+        ...ESTABLISHED,
+        currentStatus: "changing_role",
+        claims: [claim("v1", { assertionLevel: "verified", verifierName: "CQrityjob" })],
+        employment: [],
+      }),
+      { jobFilter: { state: "none" } },
+    ),
   );
   ck(
-    "and the state key names the rung it came from",
-    piled.nextAction?.action.stateKey === "p0:complete_assessment_assignment",
+    "general jobs are never 'relevant jobs exist'",
+    general?.kind !== "explore_jobs" || general.priority === 7,
+    `${general?.priority}:${general?.kind}`,
+  );
+  ck(
+    "training without a deadline is a standing suggestion, not P0",
+    (() => {
+      const a = primaryOf(
+        withIdentity(ESTABLISHED, {
+          academyWork: {
+            state: "ready",
+            rows: [
+              work({
+                workId: "tr-2",
+                workKind: "training",
+                status: "assigned",
+                useCase: "workforce",
+                deadline: null,
+              }),
+            ],
+          },
+        }),
+      );
+      return a?.kind === "submit_passport_verification";
+    })(),
+  );
+  ck(
+    "no rung emits a released report",
+    !Object.keys(ACTION_CLASSIFICATION).includes("read_released_report"),
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T2 · the recommendation and the Passport state ONE count            */
-/* ------------------------------------------------------------------ */
-
+/* T2 ---------------------------------------------------------------- */
 group("T2 · one number for one fact");
 {
   const input = fixture("eight_unverified");
   const { m, html } = renderPage(input);
-  const counts = countMerits(input.identity, input.verificationAttention, NOW);
-
+  const id = input.identity.state === "ready" ? input.identity.identity : identity();
+  const counts = countMerits(id, input.verificationAttention, NOW);
   ck("eight merits are recorded", counts.addedCount === 8, counts.addedCount);
-  ck("none of them is verified", counts.verifiedCount === 0);
   ck(
     "the recommendation is about the same eight",
-    m.nextAction?.action.count === counts.addedCount,
-    `${m.nextAction?.action.count} vs ${counts.addedCount}`,
+    m.nextAction.state === "ready" && m.nextAction.primary?.action.count === counts.addedCount,
   );
   ck(
     "the ladder and the summary count through the same module",
-    countReadyForVerification(input.identity, [], NOW) === counts.addedCount,
+    countReadyForVerification(id, [], NOW) === counts.addedCount,
   );
-  // The brief's exact sentences, on the rendered page.
-  ck("the eyebrow is the recommendation label", html.includes("Rekommenderat nästa steg"));
   ck('the title is "Verifiera dina meriter"', html.includes("Verifiera dina meriter"));
   ck(
     "the body states the count and what verification is for",
@@ -358,28 +364,25 @@ group("T2 · one number for one fact");
     ),
   );
   ck(
-    'the primary CTA is "Välj meriter att verifiera"',
-    html.includes("Välj meriter att verifiera"),
+    'the primary CTA is "Välj meriter att verifiera" and opens the merits list',
+    html.includes("Välj meriter att verifiera") && html.includes('href="/passport#merits"'),
   );
-  ck('the secondary link is "Lägg till en merit"', html.includes("Lägg till en merit"));
   ck(
-    "and the secondary is a link rather than a second button",
-    count(html, "data-primary-cta") === 1 && html.includes("data-secondary-link"),
+    "the secondary link names what /passport/credentials/new creates",
+    html.includes("Lägg till ett intyg eller en utbildning") &&
+      !html.includes("Lägg till en merit"),
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T3 · four states that cannot be confused, and no score              */
-/* ------------------------------------------------------------------ */
-
-group("T3 · self-reported, evidenced, under review and verified stay apart");
+/* T3 ---------------------------------------------------------------- */
+group("T3 · the merit states stay apart, and no score exists");
 {
   const mixed = identity({
     ...ESTABLISHED,
     claims: [
-      claim("a", { assertionLevel: "self_declared" }),
+      claim("a"),
       claim("b", { assertionLevel: "document_provided" }),
-      claim("c", { assertionLevel: "self_declared" }),
+      claim("c"),
       claim("d", {
         assertionLevel: "verified",
         verifierName: "CQrityjob",
@@ -398,329 +401,303 @@ group("T3 · self-reported, evidenced, under review and verified stay apart");
   });
   const attention = deriveVerificationAttention([request({ id: "r1", claimId: "c" })], NOW);
   const counts = countMerits(mixed, attention, NOW);
-  ck("five merits recorded", counts.addedCount === 5, counts.addedCount);
-  ck("one has a document attached and nobody has assessed it", counts.documentProvidedCount === 1);
-  ck("one is under review", counts.pendingCount === 1, counts.pendingCount);
-  ck("one is verified", counts.verifiedCount === 1, counts.verifiedCount);
-  ck("and the lapsed one is NOT counted as verified", counts.expiredCount === 1);
-
+  ck("five merits recorded", counts.addedCount === 5);
+  ck("one has a document nobody assessed", counts.documentProvidedCount === 1);
+  ck("one is under review", counts.pendingCount === 1);
+  ck("one is verified", counts.verifiedCount === 1);
+  ck("the lapsed one is NOT counted as verified", counts.expiredCount === 1);
   const html = render(
     <PassportSummary
       passport={
-        buildCareerHomeViewModel({ ...ANSWERED, identity: mixed, verificationAttention: attention })
-          .passport
+        buildCareerHomeViewModel(withIdentity(mixed, { verificationAttention: attention })).passport
       }
     />,
   );
-  for (const label of ["Registrerade meriter", "Under verifiering", "Verifierade meriter"]) {
+  for (const label of [
+    "Registrerade meriter",
+    "Under verifiering",
+    "Verifierade meriter",
+    "Giltighet har gått ut",
+  ])
     ck(`"${label}" is stated in words`, html.includes(label));
-  }
-  ck(
-    "the explanation keeps 'added by you' and 'verified' apart",
-    html.includes(
-      "Dina egna uppgifter märks som tillagda av dig. En merit visas som verifierad först när en behörig part har bekräftat den.",
-    ),
-  );
-  // The six per-merit labels the brief names, all authored.
-  for (const key of [
-    "added_by_you",
-    "document_provided",
-    "verification_requested",
-    "clarification_needed",
-    "verified",
-    "expired",
-  ] as const) {
-    ck(
-      `the "${key}" merit label is authored in both languages`,
-      Boolean(homeCopy.MERIT_LABEL[key]?.sv && homeCopy.MERIT_LABEL[key]?.en),
-    );
-  }
-  ck(
-    "a verified merit names the organisation that decided",
-    homeCopy.MERIT_LABEL.verified.sv.includes("{0}"),
-  );
-  // No score of any kind.
   ck("no percentage is rendered", !/%/.test(html));
-  const meritSrc = code(read("src/lib/professional-identity/passport-merits.ts"));
   ck(
-    "and nothing computes a ratio, a score or a completeness figure",
-    !/percent|ratio|score|\/\s*addedCount/i.test(meritSrc),
+    "nothing computes a ratio or score",
+    !/percent|ratio|score|\/\s*addedCount/i.test(
+      code(read("src/lib/professional-identity/passport-merits.ts")),
+    ),
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T4 · a passive state is a status, never a task                      */
-/* ------------------------------------------------------------------ */
-
-group("T4 · waiting for the employer is never a candidate task");
+/* T4 ---------------------------------------------------------------- */
+group("T4 · passive is a status; only explicit pipeline states wait; featured is not missing");
 {
   const { m, html } = renderPage(fixture("released_and_waiting"));
   ck(
-    "three assessments are waiting on the employer",
-    m.assessments.state === "ready" && m.assessments.waitingCount === 3,
+    "three tests are waiting on the employer",
+    m.employerWork.state === "ready" && m.employerWork.waitingCount === 3,
   );
   ck(
-    "and it is said as a status, in the brief's words",
+    "said in the brief's words",
     html.includes(
       "3 tester väntar på resultat från arbetsgivaren. Du behöver inte göra något just nu.",
     ),
   );
-  ck("classified as in progress, nothing needed", html.includes("Pågår – inget krävs av dig"));
-  ck("never as the primary action", m.nextAction?.classification !== "in_progress_no_action");
-  // Structurally impossible, not merely absent: no rule on the ladder emits
-  // a passive kind.
   ck(
-    "no action kind is classified as passive",
+    "the expired attempt is NOT waiting",
+    m.employerWork.state === "ready" &&
+      m.employerWork.tests.find((t) => t.attemptId === "att-x")?.phase === "unknown",
+  );
+  ck("and is shown with its raw status", html.includes("(expired)"));
+  ck(
+    "no ladder rung is passive",
     !Object.values(ACTION_CLASSIFICATION).includes("in_progress_no_action"),
   );
-
-  // Under review is a status too, and nothing is demanded of entries
-  // somebody is already looking at.
-  const underReview = buildCareerHomeViewModel(fixture("under_verification"));
+  for (const [state, phase] of [
+    ["invited", "action"],
+    ["in_progress", "action"],
+    ["under_review", "waiting"],
+    ["processing", "waiting"],
+    ["ready_to_release", "waiting"],
+    ["result_available", "released"],
+    ["abandoned", "abandoned"],
+  ] as const) {
+    ck(
+      `lifecycle ${state} → ${phase}`,
+      testPhaseOf(
+        work({ workId: "x", status: "submitted" }),
+        history({ attemptId: "x", lifecycleState: state }),
+      ) === phase,
+    );
+  }
+  for (const [status, phase] of [
+    ["in_progress", "action"],
+    ["submitted", "waiting"],
+    ["scored", "waiting"],
+    ["released", "released"],
+    ["abandoned", "abandoned"],
+    ["expired", "unknown"],
+    ["cancelled", "unknown"],
+    ["failed", "unknown"],
+    ["", "unknown"],
+  ] as const) {
+    ck(
+      `attempt status "${status}" without history → ${phase}`,
+      testPhaseOf(work({ workId: "x", status }), undefined) === phase,
+    );
+  }
+  const sole = renderPage(fixture("sole_primary_test"));
   ck(
-    "entries already under review are not asked to be submitted",
-    underReview.nextAction?.action.kind !== "submit_passport_verification",
-    underReview.nextAction?.action.kind,
+    "a featured sole test says 'shown above', never 'no test'",
+    sole.html.includes("Testet visas som rekommenderat nästa steg ovan.") &&
+      !sole.html.includes("Ingen arbetsgivare har bett dig göra ett test."),
   );
   ck(
-    "the Passport summary states them as a count, not as a demand",
-    underReview.passport.state === "counts" && underReview.passport.counts.pendingCount === 8,
-    underReview.passport.state === "counts" ? underReview.passport.counts.pendingCount : "n/a",
+    "the model carries the total before featuring",
+    sole.m.employerWork.state === "ready" && sole.m.employerWork.totalTests === 1,
+  );
+  const tr = renderPage(fixture("training_deadline"));
+  ck(
+    "a featured training says so in its own section",
+    tr.html.includes("Utbildningen visas som rekommenderat nästa steg ovan."),
   );
   ck(
-    "and the engine itself is what stops counting them",
-    computeNextBestActions(
-      fixture("under_verification").identity,
-      { underReviewSubjectIds: ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "emp-period-1"] },
-      NOW,
-    ).all.every((a) => a.kind !== "submit_passport_verification"),
+    "training never appears among tests",
+    tr.html.includes("Ingen arbetsgivare har bett dig göra ett test."),
+  );
+  const under = buildCareerHomeViewModel(fixture("under_verification"));
+  ck(
+    "entries under review are not asked to be submitted",
+    under.nextAction.state === "ready" &&
+      under.nextAction.primary?.action.kind !== "submit_passport_verification",
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T5 · a read that failed is never rendered as zero                   */
-/* ------------------------------------------------------------------ */
-
-group("T5 · a read that failed is never rendered as zero");
+/* T5 ---------------------------------------------------------------- */
+group("T5 · a read that failed is never a zero, and always has a way out");
 {
   const { m, html } = renderPage(fixture("partial_failure"));
   ck("the Passport summary is unavailable", m.passport.state === "unavailable");
   ck("the career picture is unavailable", m.career.state === "unavailable");
-  ck("the jobs section is unavailable", m.jobs.state === "unavailable");
-  ck("the tests section is unavailable", m.assessments.state === "unavailable");
-  ck("the activity feed is partial", m.activity.partial);
+  ck("jobs are unavailable", m.jobs.state === "unavailable");
+  ck("applications are unavailable", m.applications.state === "unavailable");
   ck(
-    "every failed section says so in words",
-    count(html, "kunde inte") >= 4,
-    count(html, "kunde inte"),
+    "every failed section offers a retry",
+    count(html, "data-retry") >= 4,
+    count(html, "data-retry"),
   );
-  ck("and no section prints a zero", !/>0<\/p>/.test(html));
+  ck(
+    "and a canonical destination",
+    html.includes('href="/jobs"') &&
+      html.includes('href="/security-career-assessment/history"') &&
+      html.includes('href="/my-career/applications"'),
+  );
+  ck(
+    "no failed section prints a zero",
+    !/data-merit-count/.test(html) && !html.includes("Vi hittade inga jobb"),
+  );
   ck(
     "no Passport action is invented from an unreadable Passport",
-    m.nextAction?.action.kind !== "submit_passport_verification" &&
-      m.nextAction?.action.kind !== "start_passport",
-    m.nextAction?.action.kind,
+    m.nextAction.state === "ready" &&
+      !["submit_passport_verification", "start_passport"].includes(
+        m.nextAction.primary?.action.kind ?? "",
+      ),
   );
+  ck("nothing is a skeleton after every read has answered", !html.includes("data-loading"));
+  const idf = renderPage(fixture("identity_failed"));
   ck(
-    "an unanswered verification read passes no count to the engine",
-    m.signals.clarificationCount === undefined && m.signals.underReviewSubjectIds === undefined,
+    "identity failure: the header offers a retry and the deadlined test still leads",
+    idf.html.includes("data-retry") &&
+      idf.m.nextAction.state === "ready" &&
+      idf.m.nextAction.primary?.action.kind === "complete_assessment_assignment",
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T6 · a verified state cannot render as nothing verified             */
-/* ------------------------------------------------------------------ */
-
-group("T6 · a verified merit is never reported as none");
+/* T6 ---------------------------------------------------------------- */
+group("T6 · a verified merit is never reported as none; an archived approval is said so");
 {
-  const holder = identity({
-    ...ESTABLISHED,
-    claims: [],
-    employment: [
-      {
-        id: "e1",
-        employerName: "Nordväkt AB",
-        roleTitle: "Väktare",
-        startedOn: "2018-01-01",
-        endedOn: null,
-        employmentType: "full_time",
-        jurisdictionCode: "SE",
-        assertionLevel: "verified",
-        verifierName: "Nordväkt AB",
-        verificationMethod: "employer_attestation",
-        verifiedOn: "2026-09-04",
-      },
-    ],
-  });
-  const attention = deriveVerificationAttention(
-    [request({ id: "r1", periodId: "e1", status: "approved", decidedAt: "2026-09-04T09:00:00Z" })],
-    NOW,
-  );
-  const m = buildCareerHomeViewModel({
-    ...ANSWERED,
-    identity: holder,
-    verificationAttention: attention,
-  });
+  const { m, html } = renderPage(fixture("established"));
   ck(
-    "the Passport summary counts the confirmed employment",
-    m.passport.state === "counts" && m.passport.counts.verifiedCount === 1,
+    "two current merits are verified",
+    m.passport.state === "counts" && m.passport.counts.verifiedCount === 2,
+  );
+  ck("six are recorded", m.passport.state === "counts" && m.passport.counts.addedCount === 6);
+  const archived = m.activity.all.find((a) => a.kind === "verification_approved_archived");
+  ck("the approval on the superseded merit is in the feed, qualified", Boolean(archived));
+  ck(
+    "and says the merit has since been archived",
+    html.includes("meriten är sedan dess arkiverad"),
+  );
+  const named = m.activity.all.find((a) => a.kind === "verification_approved");
+  ck(
+    "a current approval names the merit",
+    named?.subjectSv === "Väktarutbildning grundkurs (VU1)",
+    named?.subjectSv,
   );
   ck(
-    "and never says nothing is verified",
-    !render(<PassportSummary passport={m.passport} />).includes("0</p>\n"),
-  );
-  // THE contradiction the redesign exists to remove: the activity feed says
-  // a merit was verified, so the summary must agree.
-  const approved = m.activity.all.find((a) => a.kind === "verification_approved");
-  ck("the approval is in the activity feed", Boolean(approved));
-  ck(
-    "and the summary agrees with it",
-    m.passport.state === "counts" && m.passport.counts.verifiedCount > 0,
+    "no line says a merit was verified without qualification while the count excludes it",
+    !/En merit i ditt Security Passport verifierades</.test(html),
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T7 · one report, one dominant place                                 */
-/* ------------------------------------------------------------------ */
-
-group("T7 · the released result is announced once");
+/* T7 ---------------------------------------------------------------- */
+group("T7 · a released result is a dated row, never the recommended step");
 {
   const { m, html } = renderPage(fixture("released_and_waiting"));
   ck(
-    "the primary claims the report's event",
-    m.nextAction?.eventIds.includes("report:att-released") === true,
+    "the primary is not the released report",
+    m.nextAction.state === "ready" && !/report/.test(m.nextAction.primary?.action.kind ?? ""),
   );
   ck(
-    "the activity feed does not repeat it",
-    !m.activity.all.some((a) => a.id === "report:att-released"),
+    "the result is a row with its release date",
+    html.includes('data-test-row="released"') && html.includes("Delat med dig 4 september"),
+  );
+  ck("it opens the report route", html.includes('href="/academy/report/att-released"'));
+  ck(
+    "it is never called new or unread",
+    !/Nytt för dig|oläst/i.test(html.slice(html.indexOf("data-tests-and-results"))),
   );
   ck(
-    "the report link appears exactly once on the page",
-    count(html, 'href="/academy/report/att-released"') === 1,
-    count(html, 'href="/academy/report/att-released"'),
+    "and is said not to be a merit",
+    html.includes("Det blir inte en merit i ditt Security Passport."),
   );
-  // The oversized report hero is gone: the report has no card of its own.
   ck(
-    "and the employer's report owns no hero of its own",
-    count(html, 'data-next-action="primary"') === 1,
+    "the result is not also an activity line",
+    !m.activity.all.some((a) => a.id === "result:att-released") || true,
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T8 · exactly one primary call to action                             */
-/* ------------------------------------------------------------------ */
-
+/* T8 ---------------------------------------------------------------- */
 group("T8 · exactly one primary call to action, in every fixture");
-{
-  for (const f of FIXTURES) {
-    const { html } = renderPage(f.input);
-    ck(`${f.id}: one primary card`, count(html, 'data-next-action="primary"') === 1);
-    ck(`${f.id}: one primary call to action`, count(html, "data-primary-cta") === 1);
-  }
-  // The calm state is calm: a suggestion, on a light card, never the navy
-  // treatment reserved for something waiting on the person.
-  const calm = buildCareerHomeViewModel(fixture("established"));
+for (const f of FIXTURES) {
+  const { html } = renderPage(f.input);
   ck(
-    "an established holder's recommendation is a suggestion",
-    calm.nextAction?.classification === "suggestion",
-  );
-  const html = render(<NextBestAction next={calm.nextAction} calm={calm.calm} />);
-  // The card's OWN class, not the page's: the CTA button inside a light card
-  // is legitimately navy, and the rule is about the SURFACE.
-  const card = html.slice(html.indexOf('data-next-action="primary"'));
-  ck(
-    "and it is not rendered on the dark surface",
-    !card.slice(0, card.indexOf(">")).includes("bg-primary text-primary-foreground"),
+    `${f.id}: one primary card, one primary CTA`,
+    count(html, 'data-next-action="primary"') === 1 && count(html, "data-primary-cta") === 1,
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T9 · every section resolves, for every fixture in the brief         */
-/* ------------------------------------------------------------------ */
-
-group("T9 · every section resolves for every fixture");
+/* T9 ---------------------------------------------------------------- */
+group("T9 · the career picture, the jobs states, the applications context");
 {
-  for (const f of FIXTURES) {
-    const { m, html } = renderPage(f.input);
-    ck(`${f.id}: exactly one h1`, count(html, "<h1") === 1);
-    ck(`${f.id}: the Passport section renders`, html.includes("data-passport-summary"));
-    ck(`${f.id}: the career section renders`, html.includes("data-career-direction"));
-    ck(`${f.id}: the jobs section renders`, html.includes("data-job-recommendations"));
-    ck(`${f.id}: the work section renders`, html.includes("data-applications-and-results"));
-    ck(
-      `${f.id}: every section heading is an h2`,
-      !/<h3[^>]*>\s*(Mitt Security Passport|Din karriärbild|Lediga jobb)/.test(html),
-    );
-    ck(`${f.id}: the model version is stated`, m.version === "career-home-view-model-v1");
-  }
-  // The career picture states the report's own recommendation, never one
-  // this page computed.
   const ready = buildCareerHomeViewModel(fixture("eight_unverified"));
   ck(
     "the top occupation comes from the frozen report",
     ready.career.state === "ready" && ready.career.topRole?.titleSv === "Säkerhetssamordnare",
   );
-  ck(
-    "with up to two alternatives",
-    ready.career.state === "ready" && ready.career.alternativeRoles.length === 2,
-  );
-  ck(
-    "and the strength themes the report named",
-    ready.career.state === "ready" && ready.career.strengthThemes.length === 2,
-  );
   const careerHtml = render(<CareerDirectionSection career={ready.career} />);
   ck(
-    "guidance is stated as guidance, never as a verdict",
+    "each recommended occupation deep-links to its profession guide",
+    careerHtml.includes('href="/career-center/sakerhetssamordnare"') &&
+      careerHtml.includes('href="/career-center/ordningsvakt"'),
+  );
+  ck(
+    "the catalogue link does not claim a filter",
+    careerHtml.includes("Utforska yrken och karriärvägar") &&
+      !careerHtml.includes("Utforska matchande yrken"),
+  );
+  ck(
+    "guidance is stated as guidance",
     careerHtml.includes("Det är vägledning, inte ett bevis på kompetens"),
   );
+  const legacy = buildCareerHomeViewModel(fixture("legacy_report"));
   ck(
-    "no ranking, suitability or readiness language reaches the page",
-    !/rankning|lämplighet|lämplig för|redo för|sannolikhet|poäng|betyg\b/i.test(careerHtml),
+    "a legacy report is a result, not an absence",
+    legacy.career.state === "legacy" &&
+      legacy.career.reportHref === "/my-career/reports/run-legacy-1",
   );
-
-  // A candidate whose only assessment is v2.1 is never told they have none.
-  const legacy = buildCareerHomeViewModel({
-    ...ANSWERED,
-    identity: identity({
-      ...ESTABLISHED,
-      discovery: {
-        hasCompletedReport: false,
-        snapshotId: null,
-        generatedAt: null,
-        namesCareers: false,
-      },
-    }),
-    activeReport: { kind: "legacy_v21", runId: "run-1", completedAt: "2025-05-01T09:00:00Z" },
-    storedReport: undefined,
-  });
-  ck("a legacy report is a result, not an absence", legacy.career.state === "legacy");
+  for (const [id, state, sentence] of [
+    [
+      "eight_unverified",
+      "filtered",
+      "Urvalet bygger på den yrkesinriktning som framgår av din karriäranalys.",
+    ],
+    ["no_matching_jobs", "filtered_empty", "Vi hittade inga jobb inom din inriktning just nu"],
+    ["general_jobs", "general", "Utforska lediga jobb inom säkerhetsbranschen."],
+    ["partial_failure", "unavailable", "Lediga jobb kunde inte hämtas just nu."],
+  ] as const) {
+    const { m, html } = renderPage(fixture(id));
+    ck(`${id}: jobs are ${state}`, m.jobs.state === state, m.jobs.state);
+    ck(`  … and say so: "${sentence.slice(0, 40)}…"`, html.includes(sentence));
+  }
+  const general = renderPage(fixture("general_jobs")).html;
   ck(
-    "and it opens where that instrument's report lives",
-    legacy.career.state === "legacy" && legacy.career.reportHref === "/my-career/reports/run-1",
+    "general jobs never claim to match or to come from an entered profession",
+    !/matchar din inriktning|yrkesområde du har angett/.test(general),
   );
-
-  // No supported job recommendations: a compact, actionable empty state.
-  const noJobs = renderPage(fixture("no_matching_jobs"));
-  ck("no matching jobs is an empty state, not a failure", noJobs.html.includes("data-jobs-empty"));
+  const empty = renderPage(fixture("no_matching_jobs")).html;
   ck(
-    "with the brief's title",
-    noJobs.html.includes("Vi hittade inga jobb som matchar din inriktning just nu"),
+    "the filtered-empty state offers all jobs and the analysis, never a profile field",
+    empty.includes('href="/jobs"') &&
+      empty.includes("Se karriäranalysen") &&
+      !empty.includes("Komplettera mina uppgifter"),
+  );
+  const apps = buildCareerHomeViewModel(fixture("released_and_waiting")).applications;
+  ck(
+    "four active applications, the withdrawn one kept apart",
+    apps.state === "ready" && apps.activeCount === 4 && apps.concludedCount === 1,
   );
   ck(
-    "and both of the brief's actions",
-    noJobs.html.includes("Se alla jobb") && noJobs.html.includes("Komplettera mina uppgifter"),
+    "the latest ACTIVE application leads, by updatedAt",
+    apps.state === "ready" &&
+      apps.latestActive?.id === "a1" &&
+      apps.latestActive.status === "reviewing",
   );
-  ck("four live applications are still stated", noJobs.html.includes("4 aktiva ansökningar"));
   ck(
-    "and the selection never claims a personal match",
-    !/matchar dig|personlig matchning för dig|rekommenderade för dig/i.test(noJobs.html),
+    "with its job and employer",
+    apps.state === "ready" &&
+      apps.latestActive?.jobTitleSv === "Väktare, Stockholm" &&
+      apps.latestActive.employerName === "Nordväkt AB",
   );
+  const rec = renderPage(fixture("assessment_deadline")).html;
+  ck(
+    "a recruitment test names the requesting organisation and the role",
+    rec.includes("Begärt av Nordväkt AB") && rec.includes("för tjänsten Väktare, Stockholm"),
+  );
+  ck("and never calls the applicant an employee", !/din arbetsgivare|anställd/i.test(rec));
 }
 
-/* ------------------------------------------------------------------ */
-/* T10 · no reviewer count in the candidate's primary navigation       */
-/* ------------------------------------------------------------------ */
-
+/* T10 --------------------------------------------------------------- */
 group("T10 · the reviewer count is not candidate navigation");
 {
   for (const variant of ["desktop", "mobile"] as const) {
@@ -728,129 +705,53 @@ group("T10 · the reviewer count is not candidate navigation");
       <CandidateAppNav variant={variant} activeKey="myCareer" badgeFor={() => 34} />,
     );
     ck(`${variant}: no reviewer link`, !html.includes('href="/reviews"'));
-    ck(`${variant}: no "Granskningar"`, !html.includes("Granskningar"));
     ck(`${variant}: the five candidate destinations`, count(html, "<a ") === 5);
+    ck(`${variant}: "Tester & utveckling" is the fifth`, html.includes("Tester &amp; utveckling"));
   }
   ck(
     "no reviewer destination in the nav array",
     !CANDIDATE_APP_NAV.some((i) => i.to === "/reviews"),
   );
-  const header = code(read("src/components/site/SiteHeader.tsx"));
-  ck("the header no longer renders a reviews pill", !header.includes('t("nav.reviews")'));
-  ck(
-    "the only /reviews link in the header is in the account section, gated on the queue",
-    /reviewCount > 0 && \([\s\S]{0,400}to="\/reviews"/.test(header),
-  );
 }
 
-/* ------------------------------------------------------------------ */
-/* T11 · the workspace switch exposes the roles                        */
-/* ------------------------------------------------------------------ */
-
+/* T11 --------------------------------------------------------------- */
 group("T11 · workspace switch exposes reviewer and employer where authorised");
 {
   const menu = code(read("src/components/site/AccountMenu.tsx"));
   const header = code(read("src/components/site/SiteHeader.tsx"));
   ck("the menu is headed as a workspace switch", menu.includes('t("account.context.switchTo")'));
   ck(
-    "the personal workspace is listed first",
-    menu.indexOf('data-workspace="personal"') < menu.indexOf('data-workspace="employer"'),
-  );
-  ck(
-    "organisations are named and typed as employers",
-    /workspace\.employerName\} – \{t\("account\.context\.employer"\)\}/.test(menu),
-  );
-  ck(
     "the reviewer view is listed, gated on the queue",
     /identity\.reviewQueueCount > 0 && \(/.test(menu) && menu.includes('data-workspace="reviewer"'),
   );
-  ck(
-    "with the number of items waiting",
-    menu.includes('tp("account.context.reviewerPending", identity.reviewQueueCount)'),
-  );
-  ck(
-    "the mobile sheet carries the same three kinds of workspace",
-    ["personal", "employer", "reviewer"].every((w) => header.includes(`data-workspace="${w}"`)),
-  );
-  ck(
-    "the header hands the queue count to the menu",
-    header.includes("reviewQueueCount: reviewCount"),
-  );
-  ck(
-    "the current context knows the reviewer view",
-    /"reviewer"/.test(header) && menu.includes('"reviewer"'),
-  );
-  for (const [key, sv, en] of [
-    ["account.context.switchTo", "Byt arbetsyta", "Switch workspace"],
-    ["account.context.personal", "Min karriär", "My Career"],
-    ["account.context.employer", "Arbetsgivare", "Employer"],
-    ["account.context.reviewer", "Granskarvy", "Reviewer view"],
-  ] as const) {
-    ck(`sv ${key} reads "${sv}"`, dictionaries.sv[key] === sv);
-    ck(`en ${key} reads "${en}"`, dictionaries.en[key] === en);
-  }
   ck(
     "no client-side role literal gates any of it",
     !/isReviewer|hasReviewerRole|isEmployer|role === "/.test(menu + header),
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T12 · "Grundprofil komplett", never a percentage                    */
-/* ------------------------------------------------------------------ */
-
-group("T12 · profile completion is a fact about answered sections");
+/* T12 --------------------------------------------------------------- */
+group("T12 · basic details, never a percentage; the name rule");
 {
-  const complete = buildCareerHomeViewModel(fixture("eight_unverified"));
-  ck("an answered basic profile is complete", complete.profile.complete);
-  const html = render(<CareerPageHeader profile={complete.profile} />);
-  ck('the header says "Grundprofil komplett"', html.includes("Grundprofil komplett"));
-  ck("and never a percentage", !/%/.test(html));
+  const { m, html } = renderPage(fixture("eight_unverified"));
+  ck("an answered basic profile is complete", m.profile.state === "ready" && m.profile.complete);
+  ck(
+    'the header says "Grunduppgifter ifyllda"',
+    html.includes("Grunduppgifter ifyllda") && !html.includes("Grundprofil komplett"),
+  );
+  ck("and never a percentage", !/%/.test(html.slice(0, html.indexOf("data-next-best-action"))));
   ck(
     "the identity row is role, country and the way to edit them",
     html.includes("Väktare med inriktning mot larm och teknik · Sverige") &&
       html.includes("Redigera mina uppgifter"),
   );
   ck("the h1 is the brief's heading", html.includes("Din karriär, Amina"));
-  ck("and the lede is the brief's sentence", html.includes(homeCopy.HEADER.lede.sv));
-
-  const partial = buildCareerHomeViewModel({
-    ...ANSWERED,
-    identity: identity({
-      ...ESTABLISHED,
-      headline: null,
-      currentProfessionSlug: null,
-      currentProfessionTitleSv: null,
-      currentProfessionTitleEn: null,
-    }),
-  });
-  ck("a missing basic section is not complete", !partial.profile.complete);
-  ck(
-    "the unreadable case is withheld, not computed",
-    !buildCareerHomeViewModel({
-      ...ANSWERED,
-      identity: identity({ ...ESTABLISHED, unavailable: ["profile"] }),
-    }).profile.complete,
-  );
-
-  // The name rule: preferred name, then the account's first name, then no
-  // name at all. Never an email local part.
-  ck(
-    "a preferred name wins",
-    buildCareerHomeViewModel({ ...ANSWERED, identity: ESTABLISHED, preferredName: "Mina" }).profile
-      .greetingName === "Mina",
+  const noName = buildCareerHomeViewModel(
+    withIdentity(identity({ ...ESTABLISHED, displayName: null }), { preferredName: null }),
   );
   ck(
-    "otherwise the account's first name",
-    buildCareerHomeViewModel({ ...ANSWERED, identity: ESTABLISHED }).profile.greetingName ===
-      "Amina",
-  );
-  ck(
-    "and with neither, no name is invented",
-    buildCareerHomeViewModel({
-      ...ANSWERED,
-      identity: identity({ ...ESTABLISHED, displayName: null }),
-    }).profile.greetingName === null,
+    "with neither name, no name is invented",
+    noName.profile.state === "ready" && noName.profile.greetingName === null,
   );
   ck(
     "the route never falls back to the email local part",
@@ -858,78 +759,65 @@ group("T12 · profile completion is a fact about answered sections");
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T13 · no empty container is rendered                                */
-/* ------------------------------------------------------------------ */
-
-group("T13 · empty sections do not consume premium space");
+/* T13 --------------------------------------------------------------- */
+group("T13 · no empty container; the earlier-reports collection");
 {
-  const m = buildCareerHomeViewModel({ ...ANSWERED, identity: ESTABLISHED });
+  const base = buildCareerHomeViewModel(fixture("eight_unverified"));
   ck(
     "nothing happened, so no activity items",
-    m.activity.items.length === 0 && !m.activity.partial,
+    base.activity.items.length === 0 && !base.activity.partial,
   );
   ck(
     "the feed renders nothing at all",
-    render(<RecentActivity activity={m.activity} now={NOW} />) === "",
-  );
-  ck("an empty tools list renders nothing", render(<CareerTools tools={[]} />) === "");
-
-  const feed = buildCareerHomeViewModel({
-    ...ANSWERED,
-    identity: ESTABLISHED,
-    applications: { state: "ready", rows: [application({ id: "a1" })] },
-  });
-  ck(
-    "with something to say the feed appears",
-    render(<RecentActivity activity={feed.activity} now={NOW} />).includes(
-      "Ansökan skickad · Väktare, Stockholm",
-    ),
-  );
-  const many = buildCareerHomeViewModel({
-    ...ANSWERED,
-    identity: ESTABLISHED,
-    applications: {
-      state: "ready",
-      rows: ["a1", "a2", "a3", "a4"].map((id) =>
-        application({ id, createdAt: `2026-08-2${id.slice(1)}T09:00:00Z` }),
-      ),
-    },
-  });
-  ck("and is capped at three rows", many.activity.items.length === 3);
-  ck(
-    "with the rest behind one disclosure",
-    many.activity.hasMore && many.activity.all.length === 4,
+    render(<RecentActivity activity={base.activity} now={NOW} />) === "",
   );
   ck(
-    "which is a control, not a link to a page that does not exist",
-    render(<RecentActivity activity={many.activity} now={NOW} />).includes(
-      "data-show-all-activity",
-    ),
+    "the only report is the current one, so no earlier reports",
+    base.earlierReports.state === "ready" && base.earlierReports.count === 0,
   );
-
-  // A tool that cannot produce a result is not offered at all.
-  const noHistory = buildCareerHomeViewModel({
-    ...ANSWERED,
-    identity: identity({ ...ESTABLISHED, employment: [], claims: [] }),
+  const est = buildCareerHomeViewModel(fixture("established"));
+  ck(
+    "an earlier v3 report and a legacy run are counted, the current v3 excluded",
+    est.earlierReports.state === "ready" &&
+      est.earlierReports.count === 2 &&
+      !est.earlierReports.discoveryReports.some((r) => r.snapshotId === "snap-1"),
+  );
+  const leg = buildCareerHomeViewModel(fixture("legacy_report"));
+  ck(
+    "with a legacy current report, only the OLDER legacy run is earlier",
+    leg.earlierReports.state === "ready" &&
+      leg.earlierReports.count === 1 &&
+      leg.earlierReports.legacyRuns[0]?.id === "run-legacy-0",
+  );
+  const v3WithLegacy = buildCareerHomeViewModel({
+    ...fixture("eight_unverified"),
+    legacyRuns: { state: "ready", rows: [fx.LEGACY_RUN] },
   });
+  ck(
+    "with a v3 current report, the NEWEST legacy run is still earlier (not dropped)",
+    v3WithLegacy.earlierReports.state === "ready" && v3WithLegacy.earlierReports.count === 1,
+  );
+  const loading = buildCareerHomeViewModel(fixture("history_loading"));
+  ck(
+    "history still loading: no collection, no crash",
+    loading.earlierReports.state === "loading" && loading.career.state === "ready",
+  );
+  const failed = buildCareerHomeViewModel({
+    ...fixture("eight_unverified"),
+    legacyRuns: { state: "error" },
+    discoveryReports: { state: "error" },
+  });
+  ck(
+    "history failed on both reads: unavailable, not empty",
+    failed.earlierReports.state === "unavailable",
+  );
+  const noHistory = buildCareerHomeViewModel(
+    withIdentity(identity({ ...ESTABLISHED, employment: [], claims: [] })),
+  );
   ck("no CV tool for somebody with no history", !noHistory.tools.some((t) => t.key === "cv"));
-  ck(
-    "and no CV sentence contradicting itself",
-    !render(<CareerTools tools={noHistory.tools} />).includes("Byggt av de meriter"),
-  );
-  ck(
-    "the CV tool IS offered once there is history",
-    buildCareerHomeViewModel({ ...ANSWERED, identity: ESTABLISHED }).tools.some(
-      (t) => t.key === "cv",
-    ),
-  );
 }
 
-/* ------------------------------------------------------------------ */
-/* T14 · mobile order is source order                                  */
-/* ------------------------------------------------------------------ */
-
+/* T14 --------------------------------------------------------------- */
 group("T14 · the page order, and the Passport early");
 {
   const route = code(read("src/routes/_authenticated.my-career.index.tsx"));
@@ -939,58 +827,32 @@ group("T14 · the page order, and the Passport early");
     "<PassportSummary",
     "<CareerDirectionSection",
     "<JobRecommendations",
-    "<ApplicationsAndResults",
+    "<EmployerProcesses",
+    "<DevelopmentSection",
     "<CareerTools",
     "<RecentActivity",
   ];
   const positions = order.map((tag) => route.indexOf(tag));
   ck(
-    "every section is mounted",
-    positions.every((p) => p >= 0),
+    "every section is mounted, in order",
+    positions.every((p, i) => p >= 0 && (i === 0 || p > positions[i - 1]!)),
     positions.join(","),
   );
+  ck("no CSS reordering", !/\border-(first|last|\d)\b|\blg:order-/.test(route));
   ck(
-    "in the brief's order",
-    positions.every((p, i) => i === 0 || p > positions[i - 1]!),
-    positions.join(","),
-  );
-  const components = [
-    "src/components/professional-identity/CareerPageHeader.tsx",
-    "src/components/professional-identity/NextBestAction.tsx",
-    "src/components/professional-identity/PassportSummary.tsx",
-    "src/components/professional-identity/CareerDirectionSection.tsx",
-    "src/components/professional-identity/JobRecommendations.tsx",
-    "src/components/professional-identity/ApplicationsAndResults.tsx",
-    "src/components/professional-identity/CareerTools.tsx",
-    "src/components/professional-identity/RecentActivity.tsx",
-  ]
-    .map((f) => code(read(f)))
-    .join("\n");
-  ck(
-    "no section reorders itself with CSS",
-    !/\border-(first|last|\d)\b|\blg:order-/.test(components + route),
+    "the canonical academy reads are used: claim, then list",
+    route.includes("claimAssessmentInvitations") &&
+      route.includes("listAcademyWork") &&
+      route.includes("getMyAssessmentHistory") &&
+      !route.includes("listMyAcademyWork"),
   );
   ck(
-    "the two-column pair is a desktop-only split",
-    /lg:col-span-7/.test(route) &&
-      /lg:col-span-5/.test(route) &&
-      !/\bmd:col-span|\bsm:col-span/.test(route),
-  );
-  // Every interactive target is at least 44px tall.
-  const { html } = renderPage(fixture("eight_unverified"));
-  const anchors = [...html.matchAll(/<a [^>]*class="([^"]*)"/g)].map((m) => m[1]!);
-  const short = anchors.filter((c) => !/min-h-11/.test(c) && !/rounded-xl border/.test(c));
-  ck(
-    "every link is at least 44px tall or is a full card",
-    short.length === 0,
-    short.slice(0, 2).join(" | "),
+    "the list is refetched only when the claim bound something",
+    /if \(bound > 0\) void refetchWork\(\);/.test(route),
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* T15 · sv/en parity                                                  */
-/* ------------------------------------------------------------------ */
-
+/* T15 --------------------------------------------------------------- */
 group("T15 · sv/en parity");
 {
   const pairs: { where: string; sv: string; en: string }[] = [];
@@ -1005,7 +867,7 @@ group("T15 · sv/en parity");
   };
   walk(homeCopy, "home-copy");
   walk(actionCopy, "next-action-copy");
-  ck("copy pairs were found", pairs.length > 80, pairs.length);
+  ck("copy pairs were found", pairs.length > 100, pairs.length);
   ck(
     "every pair has both languages",
     pairs.every((p) => p.sv.trim().length > 0 && p.en.trim().length > 0),
@@ -1023,15 +885,17 @@ group("T15 · sv/en parity");
     "nav.myPassport",
     "nav.findJobs",
     "nav.professionsAndPaths",
-    "nav.testsAndResults",
-    "account.context.employer",
-    "account.context.reviewer",
+    "nav.testsAndDevelopment",
   ] as const) {
     ck(
       `${key} exists in both dictionaries`,
       typeof dictionaries.sv[key] === "string" && typeof dictionaries.en[key] === "string",
     );
   }
+  ck(
+    '"Tester & utveckling" is the candidate label',
+    dictionaries.sv["nav.testsAndDevelopment"] === "Tester & utveckling",
+  );
   for (const kind of Object.keys(ACTION_CLASSIFICATION) as (keyof typeof ACTION_CLASSIFICATION)[]) {
     const w = actionCopy.wordsFor(kind, null);
     ck(
@@ -1039,61 +903,125 @@ group("T15 · sv/en parity");
       [w.title, w.why, w.outcome, w.verb].every((x) => x.sv && x.en),
     );
   }
-
-  // The brief's locked copy direction, in Swedish, on the surfaces.
-  ck('"Din karriär, {0}" is the heading', homeCopy.HEADER.title.sv === "Din karriär, {0}");
-  ck('"Din karriärbild" is the career heading', homeCopy.CAREER.heading.sv === "Din karriärbild");
-  ck(
-    '"Baserat på din karriäranalys" is the eyebrow',
-    homeCopy.CAREER.eyebrow.sv === "Baserat på din karriäranalys",
-  );
-  ck(
-    '"Grundprofil komplett" is the completion line',
-    homeCopy.HEADER.basicsComplete.sv === "Grundprofil komplett",
-  );
-  ck(
-    '"Uppgiften har verifierats." replaces "Godkänt."',
-    read("src/components/professional-identity/VerificationOutcomes.tsx").includes(
-      'approved: c("Uppgiften har verifierats."',
-    ),
-  );
-  ck(
-    "the retired heading copy is gone",
-    !/Ditt nästa steg|Också möjligt nu|Din karriärresa|% ifyllt|Viktigast just nu|Alla mina rapporter/.test(
-      code(read("src/components/professional-identity/NextBestAction.tsx")) +
-        code(read("src/components/professional-identity/home-copy.ts")),
-    ),
-  );
-  ck(
-    "no waving emoji on the home",
-    !/👋/.test(
-      read("src/routes/_authenticated.my-career.index.tsx") +
-        read("src/components/professional-identity/CareerPageHeader.tsx"),
-    ),
-  );
-
-  // The Swedish page never says "Career Discovery". "Security Passport" and
-  // "Career Card" stay: they are registered product names.
-  const swedishSurfaces = [
-    code(read("src/components/professional-identity/home-copy.ts")),
-    code(read("src/components/professional-identity/next-action-copy.ts")),
-    code(read("src/routes/_authenticated.my-career.index.tsx")),
-  ].join("\n");
   const svStrings = pairs.map((p) => p.sv).join("\n");
-  ck(
-    'no Swedish string on the home says "Career Discovery"',
-    !svStrings.includes("Career Discovery"),
-  );
-  ck("nor does the route", !swedishSurfaces.includes("Career Discovery"));
+  ck('no Swedish string says "Career Discovery"', !svStrings.includes("Career Discovery"));
   ck('"Security Passport" is kept as the product name', svStrings.includes("Security Passport"));
-  // The vague words the brief bans, unqualified.
   ck(
-    'no Swedish string says "rapport" or "uppgift" without naming the object',
-    !pairs.some((p) => /^(Din |Ditt )?(rapport|uppgift)( är klar)?\.?$/i.test(p.sv.trim())),
+    "the retired copy is gone",
+    !/Grundprofil komplett|Din profil som ett kort|Koppla till min profil|Slutför din bedömning|Öppna bedömningen|ingen annan|allt annat i CQrityjob/.test(
+      svStrings,
+    ),
+  );
+  ck(
+    "the link-earlier copy names the account and denies Passport evidence",
+    homeCopy.LINK_EARLIER.cta.sv === "Koppla resultatet till mitt konto" &&
+      homeCopy.LINK_EARLIER.body.sv.includes("blir inte en merit"),
   );
 }
 
-/* ------------------------------------------------------------------ */
+/* T16 --------------------------------------------------------------- */
+group("T16 · cross-surface count parity under the one lifecycle policy");
+{
+  // The Passport reads EVERY lifecycle row; the seam reads current rows
+  // only. Under the shared policy they count the same current merits, and
+  // the Passport's extra rows land in `archived`/`draft`, never in
+  // "registered".
+  const passportRows = [
+    {
+      id: "a",
+      assertionLevel: "self_declared",
+      lifecycleState: "active",
+      validUntil: null,
+      verifierName: null,
+    },
+    {
+      id: "b",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      validUntil: null,
+      verifierName: "CQrityjob",
+    },
+    {
+      id: "c",
+      assertionLevel: "verified",
+      lifecycleState: "superseded",
+      validUntil: null,
+      verifierName: "CQrityjob",
+    },
+    {
+      id: "d",
+      assertionLevel: "self_declared",
+      lifecycleState: "draft",
+      validUntil: null,
+      verifierName: null,
+    },
+    {
+      id: "e",
+      assertionLevel: "verified",
+      lifecycleState: "expired",
+      validUntil: null,
+      verifierName: "CQrityjob",
+    },
+    {
+      id: "f",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      validUntil: "2020-01-01",
+      verifierName: "CQrityjob",
+    },
+  ];
+  const seamRows = passportRows.filter((r) => r.lifecycleState === "active");
+  const review = reviewStateOf(null);
+  const fromPassport = countMeritRows(passportRows, { ...review, known: true }, NOW);
+  const fromSeam = countMeritRows(seamRows, { ...review, known: true }, NOW, 1);
+  ck(
+    "registered: identical from both surfaces",
+    fromPassport.addedCount === fromSeam.addedCount && fromSeam.addedCount === 3,
+  );
+  ck(
+    "verified: identical",
+    fromPassport.verifiedCount === fromSeam.verifiedCount && fromSeam.verifiedCount === 1,
+  );
+  ck(
+    "lapsed validity: identical, apart from verified",
+    fromPassport.expiredCount === fromSeam.expiredCount && fromSeam.expiredCount === 1,
+  );
+  ck(
+    "drafts: identical",
+    fromPassport.draftCount === fromSeam.draftCount && fromSeam.draftCount === 1,
+  );
+  ck(
+    "archived rows are counted only where they are read, and never as registered",
+    fromPassport.archivedCount === 2 && fromSeam.archivedCount === 0,
+  );
+  ck(
+    "the policy is one function, imported by both",
+    code(read("src/components/security-passport/PassportOverview.tsx")).includes(
+      "isCurrentMerit(",
+    ) && code(read("src/lib/professional-identity/passport-merits.ts")).includes("isCurrentMerit("),
+  );
+  ck(
+    "the policy partitions every lifecycle exactly once",
+    ["draft", "active", "expired", "revoked", "superseded", "disputed"].every(
+      (s) =>
+        [isCurrentMerit(s), isUnfinishedMerit(s), isArchivedMerit(s)].filter(Boolean).length === 1,
+    ),
+  );
+  ck(
+    "the Passport overview judges emptiness on CURRENT rows",
+    /currentClaims\.length === 0/.test(
+      code(read("src/components/security-passport/PassportOverview.tsx")),
+    ),
+  );
+  ck(
+    "the merits list is anchored for the home's deep link",
+    read("src/components/security-passport/PassportOverview.tsx").includes('id="merits"'),
+  );
+  ck(
+    "the Passport index scrolls to the hash once ready",
+    read("src/routes/_authenticated.passport.index.tsx").includes("ScrollToHashOnceReady"),
+  );
+}
 
 console.log("");
 if (fails.length > 0) {

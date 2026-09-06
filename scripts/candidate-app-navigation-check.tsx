@@ -167,7 +167,10 @@ group("1 · one canonical link per product, desktop and mobile");
       sv: "Yrken och karriärvägar",
       en: "Professions and career paths",
     },
-    { key: "assessments", to: "/academy", sv: "Tester och resultat", en: "Tests and results" },
+    // "Tester & utveckling": the area holds recruitment tests, their
+    // released results AND employer-assigned training. "Tester och resultat"
+    // named half of it; the two are separated INSIDE the page.
+    { key: "assessments", to: "/academy", sv: "Tester & utveckling", en: "Tests & development" },
   ];
 
   ck(
@@ -185,7 +188,8 @@ group("1 · one canonical link per product, desktop and mobile");
       hrefs.join(",") === EXPECTED.map((e) => e.to).join(","),
     );
     for (const e of EXPECTED) {
-      ck(`${variant}: "${e.sv}" appears exactly once`, html.split(`>${e.sv}<`).length - 1 === 1);
+      const shown = e.sv.replace(/&/g, "&amp;");
+      ck(`${variant}: "${e.sv}" appears exactly once`, html.split(`>${shown}<`).length - 1 === 1);
       ck(
         `${variant}: ${e.to} is linked exactly once`,
         hrefs.filter((h) => h === e.to).length === 1,
@@ -506,7 +510,10 @@ group("7 · one name per product");
     "src/components/professional-identity/PassportSummary.tsx",
     "src/components/professional-identity/CareerDirectionSection.tsx",
     "src/components/professional-identity/JobRecommendations.tsx",
-    "src/components/professional-identity/ApplicationsAndResults.tsx",
+    "src/components/professional-identity/EmployerProcesses.tsx",
+    "src/components/professional-identity/DevelopmentSection.tsx",
+    "src/components/professional-identity/LinkEarlierResult.tsx",
+    "src/components/professional-identity/home-primitives.tsx",
     "src/components/professional-identity/CareerTools.tsx",
     "src/components/professional-identity/RecentActivity.tsx",
     "src/components/professional-identity/ProfessionalIdentityHeader.tsx",

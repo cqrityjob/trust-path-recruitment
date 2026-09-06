@@ -111,7 +111,7 @@ const COPY = {
 
   trustProfile: c("Profil", "Profile"),
   trustProfileFilled: c("{0} av {1} delar ifyllda", "{0} of {1} sections filled in"),
-  trustProfileComplete: c("Grundprofil komplett", "Basic profile complete"),
+  trustProfileComplete: c("Grunduppgifter ifyllda", "Basic details filled in"),
 
   verifiedMeaning: c(
     "Verifierat betyder att en behörig granskare har fattat ett beslut — inte att du har fyllt i något.",

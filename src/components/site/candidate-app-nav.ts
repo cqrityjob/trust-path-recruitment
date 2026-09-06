@@ -32,7 +32,7 @@
 /** The five destinations, in the candidate's own order.
  *
  *  Min karriär · Mitt Security Passport · Hitta jobb · Yrken och
- *  karriärvägar · Tester och resultat. The Passport is second because it is
+ *  karriärvägar · Tester & utveckling. The Passport is second because it is
  *  the durable thing this product builds for a person; jobs, professions and
  *  tests are what happens around it.
  *
@@ -130,7 +130,7 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
   {
     key: "assessments",
     to: "/academy",
-    labelKey: "nav.testsAndResults",
+    labelKey: "nav.testsAndDevelopment",
     // The URL says "academy" for historical reasons and stays that way —
     // renaming a route to fix a label is how link rot starts. The label
     // is the product name; the path is an implementation detail nobody is
