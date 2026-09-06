@@ -3,7 +3,8 @@ export type Lang = "sv" | "en";
 export const dictionaries = {
   sv: {
     "nav.careers": "Säkerhetskarriärcenter",
-    "nav.career_center": "Säkerhetskarriärcenter",
+    "nav.passportPublic": "Security Passport",
+    "nav.career_center": "Karriärvägar",
     "nav.jobs": "Jobb",
     "nav.employers": "Arbetsgivare",
     "nav.assessment": "Bedömningar",
@@ -55,122 +56,173 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Där förtroende kommer först.",
 
-    "cta.assessment": "Gör karriärtestet",
-    "cta.careers": "Utforska karriärer inom säkerhet",
+    // The ONE primary action on the public site. It is the Passport, not
+    // the Career Analysis: an account is the thing somebody keeps, and the
+    // Passport is what the account is FOR.
+    "cta.passport": "Skapa ditt Security Passport",
+    // The hero's quiet second control. It scrolls to the next section on
+    // the same page rather than opening a second conversion path.
+    "cta.howItWorks": "Se hur det fungerar",
+    "cta.assessment": "Starta karriäranalysen",
+    "cta.careers": "Utforska karriärvägar",
     "cta.contact": "Kontakta oss",
     "cta.talk": "Prata med oss",
     "cta.notify": "Meddela mig vid lansering",
     "cta.learn_more": "Läs mer",
     "cta.all_careers": "Se alla karriärer",
 
-    "home.hero.eyebrow": "Karriär · Rekrytering · Tester",
-    "home.hero.title": "Bygg din framtid inom säkerhet.",
+    // ── THE PUBLIC HOMEPAGE (2026-09-06) ────────────────────────────────
+    //
+    // Four sections and nothing else. The page carried eight, and somebody
+    // who read all of them still could not say what CQrityjob is: three
+    // pillars, six account capabilities, two audience paths, six role
+    // cards, a career-test campaign and two employer sections said the same
+    // few things over and over, in 437 words and 5,511px.
+    //
+    // ── WHAT THE PAGE IS NOW ABOUT ──────────────────────────────────────
+    //
+    // Security Passport. Not the Career Analysis, which is what the page
+    // used to lead with and is a SUPPORTING tool: it suggests what somebody
+    // could do next. The Passport is the thing they keep — the professional
+    // identity a security career is actually built on, and the record every
+    // other surface reads from. CV, a shared profile, job applications and
+    // development are all USES of it, which is why they are drawn around it
+    // rather than listed beside it.
+    //
+    // The order of the product, and therefore of this copy:
+    //   1 Security Passport   the persistent professional identity
+    //   2 CV and Career Card  presentations built FROM it
+    //   3 controlled sharing  the holder chooses what an employer receives
+    //   4 jobs                using the profile
+    //   5 Career Analysis     guidance about possible next steps
+    //   6 development         roles, education, future competence
+    "home.hero.eyebrow": "Din yrkesidentitet inom säkerhet",
+    "home.hero.title": "Din säkerhetskarriär. Samlad på ett ställe.",
     "home.hero.subtitle":
-      "Upptäck karriärer inom säkerhet, mät din kompetens, utvecklas professionellt och möt arbetsgivare som värdesätter rätt kunskap.",
-    "home.hero.note": "Kostnadsfritt karriärtest · Inget konto krävs för att börja",
+      "Samla erfarenhet, meriter, certifikat och CV i ditt Security Passport. Dela rätt information med arbetsgivare och se hur du kan utvecklas vidare.",
+    // Two short lines under the actions, and they are the two promises the
+    // product can actually keep today: the record is the holder's, and
+    // nothing leaves it without their decision.
+    "home.hero.note": "Dina uppgifter · Du bestämmer vad som delas",
+    // ── WHAT "PORTABLE" MAY AND MAY NOT MEAN ────────────────────────────
+    //
+    // Built FOR a career that moves. Not: recognised, approved or valid
+    // anywhere. CQrityjob has no issuer identity, no cross-border
+    // equivalence and no authority over a licence, a work permit, a
+    // background check or a local eligibility rule — so the sentence says
+    // what the product does (collect, structure, reuse, share on the
+    // holder's terms) and stops there. International credential recognition
+    // is a future capability and is not claimed on a public page.
+    "home.hero.portable": "Byggt för en karriär mellan roller, arbetsgivare och länder.",
 
-    "home.pillars.title": "Tre sätt vi stöttar din utveckling",
-    "home.pillars.subtitle":
-      "En plattform för karriärutveckling, professionell utveckling och rekrytering — helt fokuserad på säkerhetsbranschen.",
-    "home.pillar.discover.title": "Upptäck",
-    "home.pillar.discover.desc":
-      "Lär dig om yrken inom säkerhet, kompetenskrav och möjliga karriärvägar.",
-    "home.pillar.develop.title": "Utvecklas",
-    "home.pillar.develop.desc": "Förstå dina styrkor och identifiera nästa steg i din karriär.",
-    "home.pillar.hired.title": "Bli anställd",
-    "home.pillar.hired.desc": "Möt arbetsgivare och uppdrag inom hela säkerhetsbranschen.",
+    // Section 2 — one continuous journey, not three feature cards. One
+    // sentence each and no buttons: the page has ONE primary action and
+    // these steps explain it rather than compete with it.
+    "home.how.title": "Samla. Styrk. Dela.",
+    "home.how.step1.title": "Samla din erfarenhet",
+    "home.how.step1.desc": "Lägg in anställningar, utbildningar, certifikat och andra meriter.",
+    "home.how.step2.title": "Visa vad uppgifterna bygger på",
+    "home.how.step2.desc": "Se tydligt vad som är registrerat, dokumenterat eller källbekräftat.",
+    "home.how.step3.title": "Använd det på dina villkor",
+    "home.how.step3.desc": "Skapa CV och dela valda uppgifter med arbetsgivare.",
 
-    // The account proposition (2026-08-30). The landing page described six
-    // capabilities and never said that ONE account is what holds them
-    // together -- a visitor could read the whole page and still believe
-    // CQrityjob was six systems. Placed before the two-paths split on
-    // purpose: the split is about audiences, and the account is what both
-    // audiences share.
-    "home.account.eyebrow": "Ett konto",
-    "home.account.title": "Din säkerhetskarriär. En yrkesidentitet.",
-    "home.account.subtitle":
-      "Du berättar om din yrkessituation en gång. Sedan används den av allt annat — och du väljer själv vad som delas.",
-    "home.account.item.profile.title": "Yrkesprofil",
-    "home.account.item.profile.desc":
-      "Din yrkesroll, erfarenhet och riktning. Ifylld en gång, återanvänd överallt.",
-    "home.account.item.discovery.title": "Karriärutforskning",
-    "home.account.item.discovery.desc": "Var du står och vilka yrken inom säkerhet som passar dig.",
-    "home.account.item.card.title": "Karriärkort",
-    "home.account.item.card.desc": "Din yrkesidentitet som ett kort du kan dela.",
-    "home.account.item.passport.title": "Säkerhetspass",
-    "home.account.item.passport.desc":
-      "Skiljer på vad du uppger och vad en behörig granskare faktiskt har verifierat.",
-    "home.account.item.jobs.title": "Jobb och ansökningar",
-    "home.account.item.jobs.desc": "Sök och följ dina ansökningar under samma konto.",
-    "home.account.item.cv.title": "CV",
-    "home.account.item.cv.desc": "Byggt av dina egna registrerade uppgifter. Ingenting hittas på.",
-    "home.account.note":
-      "Är du också rekryterare byter du till din organisation — utan en andra inloggning.",
-    "home.paths.title": "Byggd för individer och organisationer",
-    "home.paths.subtitle": "En plattform, två tydliga vägar. Välj den ingång som passar dig.",
-    "home.paths.individuals.label": "För individer",
-    "home.paths.individuals.title": "Väx i din karriär inom säkerhet",
-    "home.paths.individuals.item1": "Karriärutforskning",
-    "home.paths.individuals.item2": "Kompetensutveckling",
-    "home.paths.individuals.item3": "Jobb inom säkerhet",
-    "home.paths.individuals.item4": "Karriärutveckling",
-    "home.paths.individuals.cta": "Utforska karriärer",
-    "home.paths.orgs.label": "För organisationer",
-    "home.paths.orgs.title": "Rekrytera, bedöm och utveckla er personal",
-    "home.paths.orgs.item1": "Rekrytering",
-    "home.paths.orgs.item2": "Kandidatbedömning",
-    "home.paths.orgs.item3": "Kompetensutveckling",
-    "home.paths.orgs.item4": "Kompetensverifiering",
-    "home.paths.orgs.cta": "För arbetsgivare",
+    // ── THE THREE TRUST LEVELS, SAID OUT LOUD ON A PUBLIC PAGE ──────────
+    //
+    // PR #189 settled what each level may claim. This is the first surface
+    // outside the signed-in product that states the distinction, so it has
+    // to be exact — a marketing page that says "verifierade meriter" undoes
+    // the whole containment, because a CQrityjob document review is a
+    // REVIEW, not the source.
+    //
+    //   Registrerat    the holder entered it
+    //   Dokumenterat   CQrityjob reviewed the evidence the holder supplied;
+    //                  a review is not the source, so it stops here
+    //   Källbekräftat  the source itself confirmed the fact. That has
+    //                  exactly ONE shape today: an employer confirming an
+    //                  EMPLOYMENT PERIOD through the authorised attestation
+    //                  path. No credential can reach this level, so nothing
+    //                  here says a credential was verified — an employment
+    //                  confirmation is not credential verification.
+    //
+    // The words are the owner's ("Registrerat", not the product's internal
+    // "Egen uppgift"), and only Källbekräftat wears the green confirmation
+    // treatment. The level is a TRUST state and never a lifecycle state:
+    // nothing here says active, expired, revoked or archived.
+    // Never rendered as visible copy: it is the accessible name of the
+    // group, so a screen-reader user meets three chips as one legend
+    // rather than as three loose words after a list of steps.
+    "home.trust.legend": "De tre nivåerna i ditt Security Passport",
+    "home.trust.registered": "Registrerat",
+    "home.trust.documented": "Dokumenterat",
+    "home.trust.sourceConfirmed": "Källbekräftat",
 
-    "home.careers.eyebrow": "Utvalda yrken",
-    "home.careers.title": "Utforska roller i säkerhetsbranschen",
-    "home.careers.subtitle":
-      "Från operativa roller till specialist- och ledarskapsspår. Detaljerade yrkesguider är under uppbyggnad.",
-    "home.careers.cta": "Se alla karriärer",
+    "home.passport.title": "Ett Passport genom hela karriären",
+    "home.passport.body":
+      "Återanvänd samma uppgifter när du skapar CV, söker jobb eller delar din profil. När du vill vidare hjälper karriäranalysen dig att utforska nästa steg.",
+    // The one sentence that keeps the two products apart. The Passport is a
+    // RECORD of what happened; the Career Analysis is guidance about what
+    // could happen next. It measures nothing and verifies nothing, and this
+    // is the sentence that stops it being read as a competence test.
+    "home.passport.callout":
+      "Security Passport visar vad du har gjort. Karriäranalysen hjälper dig att se vad du kan göra härnäst.",
+    // The four USES of one record. A CV is an output built from collected
+    // information, never a second source of truth; "Sök jobb" is a place to
+    // apply, never a promise of a match or of employment.
+    "home.passport.use.cv": "Skapa CV",
+    "home.passport.use.share": "Dela profil",
+    "home.passport.use.jobs": "Sök jobb",
+    "home.passport.use.develop": "Utvecklas",
+    "home.passport.cta": "Utforska din karriärväg",
 
-    "home.assessment.eyebrow": "För individer",
-    "home.assessment.title": "Kostnadsfritt karriärtest inom säkerhet",
-    "home.assessment.subtitle":
-      "Ett kostnadsfritt karriärtest som hjälper dig utforska vilka roller inom säkerhet som kan passa dig — och nästa steg för att komma dit. Karriärtestet är tillgängligt idag.",
-    "home.assessment.point.free": "Kostnadsfri",
-    "home.assessment.point.time": "Cirka fem minuter",
-    "home.assessment.point.guidance":
-      "Karriärvägledning — inte ett behörighets- eller lämplighetsbeslut",
-    "home.assessment.point.matches": "Föreslår möjliga karriärvägar",
-    "home.assessment.point.next": "Rekommenderar nästa steg",
-    "home.assessment.cta": "Starta karriärtestet",
-    "home.assessment.note":
-      "Karriärtestet är tillgängligt idag. Kostnadsfritt, cirka fem minuter, inget konto krävs. Resultatet är vägledning, inte ett behörighetsbeslut.",
+    // Section 4 — the ONE employer section, and the quietest control on the
+    // page. It says what the product supports and who decides; it does not
+    // say CQrityjob approves, rejects, ranks or selects anybody.
+    // ── THE ILLUSTRATIONS' OWN COPY ─────────────────────────────────────
+    //
+    // Every visible word in the two Passport compositions lives here, in
+    // both languages, and none of it is inlined in the component.
+    //
+    // It was inlined, and the English homepage rendered a Swedish product
+    // mock next to English prose. `aria-hidden` did not save it and could
+    // not: it removes a subtree from the ACCESSIBILITY TREE, not from the
+    // screen. A sighted English reader saw "Din säkerhetsprofil",
+    // "Utbildningar" and "Stockholm, Sverige" beside "Your security
+    // career", which is exactly the impression of an unfinished product
+    // this rebuild exists to remove.
+    //
+    // These are small interface labels on a picture, not prose. They are
+    // still copy, they are still read, and they are still translated.
+    "home.mock.subtitle": "Din säkerhetsprofil",
+    "home.mock.edit": "Redigera profil",
+    "home.mock.role": "Säkerhetsspecialist",
+    "home.mock.location": "Stockholm, Sverige",
+    // The four categories a Passport holds. Deliberately the same words the
+    // signed-in product uses for them.
+    "home.mock.cat.experience": "Erfarenhet",
+    "home.mock.cat.education": "Utbildningar",
+    "home.mock.cat.certificates": "Certifikat",
+    "home.mock.cat.merits": "Meriter",
+    // The hero's four satellites: what one record is FOR.
+    "home.mock.cv.title": "CV",
+    "home.mock.cv.body": "Skapa CV från dina uppgifter",
+    "home.mock.share.title": "Delad profil",
+    "home.mock.share.body": "Dela valda uppgifter",
+    "home.mock.jobs.title": "Jobb",
+    "home.mock.jobs.body": "Använd din profil i jobbansökningar",
+    "home.mock.develop.title": "Utveckling",
+    "home.mock.develop.body": "Se möjliga nästa steg",
+    // Section 3's four, which name the same uses in the fuller words that
+    // section has room for. Titles are home.passport.use.* above.
+    "home.passport.use.cv.body": "Skapa professionellt CV med dina uppgifter",
+    "home.passport.use.share.body": "Dela valda uppgifter med arbetsgivare",
+    "home.passport.use.jobs.body": "Använd ditt Security Passport i jobbansökningar",
+    "home.passport.use.develop.body": "Utforska nästa steg med karriäranalysen",
 
     "home.employers.eyebrow": "För arbetsgivare",
-    "home.employers.title": "Rekrytera och utveckla säkerhetspersonal med större säkerhet",
+    "home.employers.title": "Strukturerat stöd för rekrytering och kompetensutveckling",
     "home.employers.subtitle":
-      "Praktiskt stöd genom hela kompetensresan — från rekrytering till löpande utveckling.",
-    "home.employers.item.recruit.title": "Rekrytera",
-    "home.employers.item.recruit.desc":
-      "Publicera roller eller få hjälp att hitta rätt kandidater inom säkerhet.",
-    "home.employers.item.assess.title": "Bedöm",
-    "home.employers.item.assess.desc":
-      "Strukturerade kandidatbedömningar som ger jämförbart beslutsstöd.",
-    "home.employers.item.develop.title": "Testa befintlig personal",
-    "home.employers.item.develop.desc":
-      "Kompetenstest av egen eller upphandlad säkerhetspersonal mot definierade rollkrav.",
-    "home.employers.item.verify.title": "Verifiera",
-    "home.employers.item.verify.desc":
-      "Mät kompetens mot definierade organisatoriska krav över tid.",
-    "home.employers.cta": "Prata med oss",
-
-    "home.platform.eyebrow": "För organisationer",
-    "home.platform.title": "Rollbaserade kompetenstest för organisationer",
-    "home.platform.subtitle":
-      "Rollbaserade kompetenstest för kandidatbedömning vid rekrytering och för att testa och utveckla befintlig säkerhetspersonal. Under utveckling — förhandstitt på kommande produkt.",
-    "home.platform.point1": "Kandidatbedömning vid rekrytering",
-    "home.platform.point2": "Kompetenstest av befintlig säkerhetspersonal",
-    "home.platform.point3": "Rollspecifika bedömningar och gapanalys mot definierade krav",
-    "home.platform.point4": "Uppföljning av kompetens över tid",
-    "home.platform.disclaimer":
-      "CQrityjobs kompetenstest är beslutsstöd — de ersätter inte mänskligt omdöme och godkänner, avvisar eller rangordnar aldrig personer automatiskt. Organisationen fattar alltid det slutliga beslutet.",
+      "Se hur strukturerade bedömningar kan ge stöd vid rekrytering och utveckling av säkerhetspersonal. Ni fattar alltid besluten.",
+    "home.employers.cta": "Se lösningar för arbetsgivare",
 
     "careers.title": "Karriärer inom säkerhet",
     "careers.lead":
@@ -710,7 +762,7 @@ export const dictionaries = {
     "footer.company": "Företag",
     "footer.legal": "Juridiskt",
     "footer.legal.privacy": "Integritetspolicy",
-    "footer.legal.terms": "Villkor",
+    "footer.legal.terms": "Användarvillkor",
     "footer.rights": "Alla rättigheter förbehållna.",
     "footer.built": "Baserat i Sverige. Byggd för säkerhetsbranschen.",
 
@@ -5577,7 +5629,8 @@ export const dictionaries = {
   },
   en: {
     "nav.careers": "Security Career Center",
-    "nav.career_center": "Security Career Center",
+    "nav.passportPublic": "Security Passport",
+    "nav.career_center": "Career paths",
     "nav.jobs": "Jobs",
     "nav.employers": "Employers",
     "nav.assessment": "Assessments",
@@ -5603,119 +5656,87 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
 
-    "cta.assessment": "Take the career test",
-    "cta.careers": "Explore Security Careers",
+    "cta.passport": "Create your Security Passport",
+    "cta.howItWorks": "See how it works",
+    "cta.assessment": "Start the Career Analysis",
+    "cta.careers": "Explore career paths",
     "cta.contact": "Contact us",
     "cta.talk": "Talk to our team",
     "cta.notify": "Notify me at launch",
     "cta.learn_more": "Learn more",
     "cta.all_careers": "See all careers",
 
-    "home.hero.eyebrow": "Career · Recruitment · Assessments",
-    "home.hero.title": "Build your future in security.",
+    // The public homepage (2026-09-06). See the Swedish block above for the
+    // product order this copy follows. Written as English rather than
+    // translated word for word, and it names the supporting tool "Career
+    // Analysis" every time — never test, assessment or guidance.
+    "home.hero.eyebrow": "Your professional identity in security",
+    "home.hero.title": "Your security career. All in one place.",
     "home.hero.subtitle":
-      "Discover security careers, measure your competence, develop professionally and connect with employers who value the right skills.",
-    "home.hero.note": "Free career test · No account required to start",
+      "Bring your experience, credentials, certificates and CV together in your Security Passport. Share the right information with employers and keep developing your career.",
+    "home.hero.note": "Your information · You choose what to share",
+    "home.hero.portable": "Built for a career that moves between roles, employers and countries.",
 
-    "home.pillars.title": "Three ways CQrityjob supports your journey",
-    "home.pillars.subtitle":
-      "One platform for career discovery, professional development and recruitment — focused entirely on the security industry.",
-    "home.pillar.discover.title": "Discover",
-    "home.pillar.discover.desc":
-      "Learn about security careers, required skills and professional pathways.",
-    "home.pillar.develop.title": "Develop",
-    "home.pillar.develop.desc": "Understand your strengths and identify your next career step.",
-    "home.pillar.hired.title": "Get hired",
-    "home.pillar.hired.desc":
-      "Connect with employers and opportunities across the security industry.",
+    "home.how.title": "Collect. Support. Share.",
+    "home.how.step1.title": "Collect your experience",
+    "home.how.step1.desc": "Add employments, education, certificates and other merits.",
+    "home.how.step2.title": "Show what each record rests on",
+    "home.how.step2.desc": "See clearly what is registered, documented or source-confirmed.",
+    "home.how.step3.title": "Use it on your terms",
+    "home.how.step3.desc": "Build a CV and share selected records with employers.",
 
-    // The account proposition (2026-08-30). See the Swedish block above.
-    "home.account.eyebrow": "One account",
-    "home.account.title": "Your security career. One professional identity.",
-    "home.account.subtitle":
-      "You describe your professional situation once. Everything else then uses it — and you decide what is shared.",
-    "home.account.item.profile.title": "Professional profile",
-    "home.account.item.profile.desc":
-      "Your role, experience and direction. Filled in once, reused everywhere.",
-    "home.account.item.discovery.title": "Career Discovery",
-    "home.account.item.discovery.desc": "Where you stand, and which security professions suit you.",
-    "home.account.item.card.title": "Career Card",
-    "home.account.item.card.desc": "Your professional identity as a card you can share.",
-    "home.account.item.passport.title": "Security Passport",
-    "home.account.item.passport.desc":
-      "Keeps what you state separate from what an authorised reviewer has actually verified.",
-    "home.account.item.jobs.title": "Jobs and applications",
-    "home.account.item.jobs.desc": "Search and track your applications under the same account.",
-    "home.account.item.cv.title": "CV",
-    "home.account.item.cv.desc": "Built from your own recorded information. Nothing is invented.",
-    "home.account.note":
-      "If you are also a recruiter, switch to your organisation — without a second sign-in.",
-    "home.paths.title": "Built for individuals and organizations",
-    "home.paths.subtitle": "One platform, two clear paths. Pick the entry point that fits you.",
-    "home.paths.individuals.label": "For individuals",
-    "home.paths.individuals.title": "Grow your career in security",
-    "home.paths.individuals.item1": "Career discovery",
-    "home.paths.individuals.item2": "Competence development",
-    "home.paths.individuals.item3": "Security jobs",
-    "home.paths.individuals.item4": "Career progression",
-    "home.paths.individuals.cta": "Explore careers",
-    "home.paths.orgs.label": "For organizations",
-    "home.paths.orgs.title": "Recruit, assess and develop your workforce",
-    "home.paths.orgs.item1": "Recruitment",
-    "home.paths.orgs.item2": "Candidate assessment",
-    "home.paths.orgs.item3": "Workforce development",
-    "home.paths.orgs.item4": "Competence verification",
-    "home.paths.orgs.cta": "For employers",
+    // The three trust levels — see the Swedish block for what each one may
+    // claim. "Documented" and "Source-confirmed" are the product's own
+    // English labels (src/lib/security-passport/i18n.ts), so the marketing
+    // page and the signed-in product cannot drift apart.
+    "home.trust.legend": "The three levels in your Security Passport",
+    "home.trust.registered": "Registered",
+    "home.trust.documented": "Documented",
+    "home.trust.sourceConfirmed": "Source-confirmed",
 
-    "home.careers.eyebrow": "Featured professions",
-    "home.careers.title": "Explore roles across the security industry",
-    "home.careers.subtitle":
-      "From operational positions to specialist and leadership tracks. Detailed profession guides are being built.",
-    "home.careers.cta": "See all careers",
+    "home.passport.title": "One Passport for your whole career",
+    "home.passport.body":
+      "Reuse your records when you build a CV, apply for jobs or share your profile. When you want to move on, the Career Analysis helps you explore your next step.",
+    "home.passport.callout":
+      "Security Passport shows what you have done. The Career Analysis helps you see what you could do next.",
+    "home.passport.use.cv": "Build a CV",
+    "home.passport.use.share": "Share a profile",
+    "home.passport.use.jobs": "Apply for jobs",
+    "home.passport.use.develop": "Keep developing",
+    "home.passport.cta": "Explore your career path",
 
-    "home.assessment.eyebrow": "For individuals",
-    "home.assessment.title": "Free security career test",
-    "home.assessment.subtitle":
-      "A free career test that helps you explore which security roles may suit you — and the steps to get there. The career test is live today.",
-    "home.assessment.point.free": "Free to take",
-    "home.assessment.point.time": "About five minutes",
-    "home.assessment.point.guidance":
-      "Career guidance — not an eligibility or suitability decision",
-    "home.assessment.point.matches": "Suggests possible career paths",
-    "home.assessment.point.next": "Recommends next steps",
-    "home.assessment.cta": "Start the career test",
-    "home.assessment.note":
-      "The career test is live today. Free, about five minutes, no account required. Results are guidance, not an eligibility decision.",
+    // The illustrations' own copy — see the Swedish block for why none of
+    // it may be inlined in the component.
+    "home.mock.subtitle": "Your security profile",
+    "home.mock.edit": "Edit profile",
+    "home.mock.role": "Security specialist",
+    "home.mock.location": "Stockholm, Sweden",
+    "home.mock.cat.experience": "Experience",
+    "home.mock.cat.education": "Education",
+    "home.mock.cat.certificates": "Certificates",
+    "home.mock.cat.merits": "Merits",
+    // "CV" is the same word in both languages and is the term the rest of
+    // the product already uses in English. It is the ONE key here that is
+    // legitimately identical, and public-homepage:check names it as such
+    // rather than letting the sv/en parity rule be weakened for everything.
+    "home.mock.cv.title": "CV",
+    "home.mock.cv.body": "Build a CV from your records",
+    "home.mock.share.title": "Shared profile",
+    "home.mock.share.body": "Share selected records",
+    "home.mock.jobs.title": "Jobs",
+    "home.mock.jobs.body": "Use your profile when you apply",
+    "home.mock.develop.title": "Development",
+    "home.mock.develop.body": "See possible next steps",
+    "home.passport.use.cv.body": "Build a professional CV from your records",
+    "home.passport.use.share.body": "Share selected records with employers",
+    "home.passport.use.jobs.body": "Use your Security Passport when you apply",
+    "home.passport.use.develop.body": "Explore your next step with the Career Analysis",
 
     "home.employers.eyebrow": "For employers",
-    "home.employers.title": "Recruit and develop security professionals with greater confidence",
+    "home.employers.title": "Structured support for recruitment and competence development",
     "home.employers.subtitle":
-      "Practical support across the full talent lifecycle — from recruitment to ongoing development.",
-    "home.employers.item.recruit.title": "Recruit",
-    "home.employers.item.recruit.desc":
-      "Publish roles or get help sourcing the right security candidates.",
-    "home.employers.item.assess.title": "Assess",
-    "home.employers.item.assess.desc":
-      "Structured candidate assessments that produce comparable decision support.",
-    "home.employers.item.develop.title": "Test existing personnel",
-    "home.employers.item.develop.desc":
-      "Competence testing of in-house or contracted security personnel against defined role requirements.",
-    "home.employers.item.verify.title": "Verify",
-    "home.employers.item.verify.desc":
-      "Measure competence against defined organisational requirements over time.",
-    "home.employers.cta": "Talk to our team",
-
-    "home.platform.eyebrow": "For organizations",
-    "home.platform.title": "Role-based competence assessments for organizations",
-    "home.platform.subtitle":
-      "Role-based competence assessments for candidate assessment during recruitment and for testing and developing existing security personnel. In development — a preview of the coming product.",
-    "home.platform.point1": "Candidate assessment during recruitment",
-    "home.platform.point2": "Competence testing of existing security personnel",
-    "home.platform.point3":
-      "Role-specific assessments and gap analysis against defined requirements",
-    "home.platform.point4": "Follow-up on competence over time",
-    "home.platform.disclaimer":
-      "CQrityjob competence assessments provide decision support — they do not replace human judgment and never automatically approve, reject or rank people. The organization always makes the final decision.",
+      "See how structured assessments can support recruitment and the development of security personnel. You always make the decisions.",
+    "home.employers.cta": "See solutions for employers",
 
     "careers.title": "Security Careers",
     "careers.lead":
@@ -6241,7 +6262,7 @@ export const dictionaries = {
     "footer.company": "Company",
     "footer.legal": "Legal",
     "footer.legal.privacy": "Privacy policy",
-    "footer.legal.terms": "Terms",
+    "footer.legal.terms": "Terms of use",
     "footer.rights": "All rights reserved.",
     "footer.built": "Based in Sweden. Built for the security industry.",
 

@@ -110,13 +110,32 @@ export function SiteHeader() {
   // Nothing is removed from the site: the public pages keep their routes,
   // their nav on public pages, and their place in the footer. See
   // candidate-app-nav.ts for the four destinations that replace them.
+  //
+  // ── FIVE, NOT SIX, AND THE PRODUCT COMES FIRST (2026-09-06) ─────────
+  //
+  // "Bedömningar" and "Kontakt" are gone. Neither route is deleted and
+  // neither redirects: /assessment is a product page that belongs behind
+  // /employers rather than beside it, and /contact carries a form that
+  // calls preventDefault and sends nothing -- a top-level invitation to a
+  // dead form is worse than no invitation.
+  //
+  // "Security Passport" is first, because it is the product. It points at
+  // the homepage's own Passport section rather than a page of its own:
+  // every Passport route lives under `_authenticated`, so there is no
+  // public destination to send a signed-out visitor to, and a nav item
+  // that lands on a login wall is a dead end wearing a product name. The
+  // day a public information page exists, this entry is what changes.
+  //
+  // `hash` rather than a path with "#" in it: the router does not parse
+  // one out of `to`, and `exact` matching is required on "/" because a
+  // Link matches by PREFIX -- without it this item is marked current on
+  // every route on the site.
   const nav = [
-    { to: "/career-center", label: t("nav.career_center") },
-    { to: "/jobs", label: t("nav.jobs") },
-    { to: "/employers", label: t("nav.employers") },
-    { to: "/assessment", label: t("nav.assessment") },
-    { to: "/about", label: t("nav.about") },
-    { to: "/contact", label: t("nav.contact") },
+    { to: "/", hash: "passport", label: t("nav.passportPublic") },
+    { to: "/career-center", hash: undefined, label: t("nav.career_center") },
+    { to: "/jobs", hash: undefined, label: t("nav.jobs") },
+    { to: "/employers", hash: undefined, label: t("nav.employers") },
+    { to: "/about", hash: undefined, label: t("nav.about") },
   ] as const;
 
   // ── The two role entries ────────────────────────────────────────────
@@ -381,6 +400,8 @@ export function SiteHeader() {
                 <Link
                   key={item.to}
                   to={item.to}
+                  hash={item.hash}
+                  activeOptions={{ exact: item.to === "/" }}
                   className={cn(
                     "relative rounded-md px-2.5 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                     focusRing,
@@ -442,19 +463,29 @@ export function SiteHeader() {
                 <AccountMenu identity={identity} onSignOut={onSignOut} />
               </>
             ) : (
-              // ONE door in, one door to create an account. The header used
-              // to carry two audience-specific logins, which asked a visitor
-              // to classify themselves before the product had told them that
-              // one account covers both. "Arbetsgivare" still belongs to the
+              // ONE door in, and ONE primary action. The header used to carry
+              // two audience-specific logins, which asked a visitor to
+              // classify themselves before the product had told them that one
+              // account covers both. "Arbetsgivare" still belongs to the
               // marketing page in the primary nav and to nothing else --
               // reusing that word for an action is what made this header
               // unreadable in the first place, and that fix is preserved.
               //
-              // The hierarchy between the two is now unmistakable: signing in
-              // is a quiet text control, creating an account is the one solid
-              // navy button in the row. Two bordered boxes of equal weight
-              // asked a first-time visitor to choose between two things that
-              // looked identically important.
+              // ── WHY THE SOLID BUTTON IS NO LONGER "SKAPA KONTO" ────────
+              //
+              // Because "Skapa konto" describes a form, not a reason. The
+              // account exists to hold a Security Passport, so the button
+              // says so and carries the intent with it: /signup with a
+              // validated `?redirect=/passport`, which is the mechanism the
+              // product already uses to make an organisation invitation and
+              // an anonymous Career Discovery claim survive registration.
+              // It survives email/password, an emailed confirmation link and
+              // Google, and it lands on the Passport's own first-run screen
+              // rather than a dashboard.
+              //
+              // Nothing is lost and nothing is new: /signup is untouched,
+              // the one door stays /login, and there is still exactly one
+              // way to create an account -- see scripts/header-entry-check.ts.
               <>
                 <Link
                   to="/login"
@@ -467,12 +498,13 @@ export function SiteHeader() {
                 </Link>
                 <Link
                   to="/signup"
+                  search={{ redirect: "/passport" } as never}
                   className={cn(
                     "inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-sm transition-all duration-200 hover:bg-[color:var(--primary-hover)] hover:shadow-md motion-reduce:transition-none",
                     focusRing,
                   )}
                 >
-                  {t("nav.createAccount")}
+                  {t("cta.passport")}
                 </Link>
               </>
             )}
@@ -526,6 +558,8 @@ export function SiteHeader() {
                 <Link
                   key={item.to}
                   to={item.to}
+                  hash={item.hash}
+                  activeOptions={{ exact: item.to === "/" }}
                   onClick={() => setOpen(false)}
                   className={cn(
                     // 44px, not the old ~36px row: these are the primary
@@ -589,20 +623,27 @@ export function SiteHeader() {
               )}
             </div>
             {/* Mobile carries the same single entrance as desktop, and the
-                same primary action. There is no employer door here either:
-                an organisation context is reached from the account section
+                same primary action -- the Career Analysis, not account
+                creation. There is no employer door here either: an
+                organisation context is reached from the account section
                 below, by name, and only for organisations the database
-                returned. */}
+                returned.
+
+                It carries the same `?redirect=/passport` intent, so the
+                account somebody creates on a phone lands where the one they
+                create on a laptop lands. This sheet grows no control the
+                desktop bar does not have. */}
             {signedIn !== true && (
               <Link
                 to="/signup"
+                search={{ redirect: "/passport" } as never}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex min-h-[44px] items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)] motion-reduce:transition-none",
+                  "flex min-h-[44px] items-center justify-center rounded-md bg-primary px-4 text-center text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)] motion-reduce:transition-none",
                   focusRing,
                 )}
               >
-                {t("nav.createAccount")}
+                {t("cta.passport")}
               </Link>
             )}
           </div>
