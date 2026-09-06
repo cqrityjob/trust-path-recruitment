@@ -247,12 +247,20 @@ function Index() {
               than no card. */}
           <PassportComposition
             left={[
-              { icon: FileText, title: "CV", body: "Skapa CV från dina uppgifter" },
-              { icon: Share2, title: "Delad profil", body: "Dela valda uppgifter" },
+              { icon: FileText, titleKey: "home.mock.cv.title", bodyKey: "home.mock.cv.body" },
+              {
+                icon: Share2,
+                titleKey: "home.mock.share.title",
+                bodyKey: "home.mock.share.body",
+              },
             ]}
             right={[
-              { icon: Briefcase, title: "Jobb", body: "Använd din profil i jobbansökningar" },
-              { icon: BarChart3, title: "Utveckling", body: "Se möjliga nästa steg" },
+              { icon: Briefcase, titleKey: "home.mock.jobs.title", bodyKey: "home.mock.jobs.body" },
+              {
+                icon: BarChart3,
+                titleKey: "home.mock.develop.title",
+                bodyKey: "home.mock.develop.body",
+              },
             ]}
             showEditAffordance
           />
@@ -313,24 +321,24 @@ function Index() {
               {
                 icon: FileText,
                 titleKey: "home.passport.use.cv",
-                body: "Skapa professionellt CV med dina uppgifter",
+                bodyKey: "home.passport.use.cv.body",
               },
               {
                 icon: Share2,
                 titleKey: "home.passport.use.share",
-                body: "Dela valda uppgifter med arbetsgivare",
+                bodyKey: "home.passport.use.share.body",
               },
             ]}
             right={[
               {
                 icon: Briefcase,
                 titleKey: "home.passport.use.jobs",
-                body: "Använd ditt Security Passport i jobbansökningar",
+                bodyKey: "home.passport.use.jobs.body",
               },
               {
                 icon: BarChart3,
                 titleKey: "home.passport.use.develop",
-                body: "Utforska nästa steg med karriäranalysen",
+                bodyKey: "home.passport.use.develop.body",
               },
             ]}
           />
@@ -517,11 +525,18 @@ function TrustLevels() {
  * cannot overflow a narrow column, and the satellites simply drop away
  * below `lg` while the Passport itself stays. */
 
+/** A label on the picture.
+ *
+ *  Both fields are TRANSLATION KEYS, and there is deliberately no raw-string
+ *  variant: the previous shape allowed `title: "Delad profil"` and that is
+ *  exactly how a Swedish product mock ended up rendering beside English
+ *  prose. `aria-hidden` did not help and could not — it removes a subtree
+ *  from the accessibility tree, not from the screen. Making the type refuse
+ *  a bare string is what stops it happening again. */
 type Satellite = {
   readonly icon: typeof FileText;
-  readonly title?: string;
-  readonly titleKey?: TranslationKey;
-  readonly body: string;
+  readonly titleKey: TranslationKey;
+  readonly bodyKey: TranslationKey;
 };
 
 function PassportComposition({
@@ -562,23 +577,40 @@ function SatelliteColumn({
   const { t } = useT();
   return (
     <div className={cn("hidden w-[132px] shrink-0 flex-col gap-3.5 lg:flex", className)}>
-      {items.map(({ icon: Icon, title, titleKey, body }) => (
+      {items.map(({ icon: Icon, titleKey, bodyKey }) => (
         <div
-          key={title ?? titleKey}
+          key={titleKey}
           className="rounded-xl border border-border bg-background p-3 shadow-[var(--shadow-sm)]"
         >
           <Icon className="h-4 w-4 text-accent" strokeWidth={1.75} />
-          <p className="mt-2 text-[11px] font-semibold text-foreground">
-            {titleKey ? t(titleKey) : title}
-          </p>
-          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{body}</p>
+          <p className="mt-2 text-[11px] font-semibold text-foreground">{t(titleKey)}</p>
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{t(bodyKey)}</p>
         </div>
       ))}
     </div>
   );
 }
 
+/** The invented holder in both illustrations. A NAME, so it is the one
+ *  string in the composition that is not translated — and it is fictional,
+ *  which matters because this repository is public. */
+const MOCK_HOLDER = "Alex Karlsson";
+
+/** The four categories a Passport holds, and the shape of the interface
+ *  around them. Digits carry the counts; the labels are keys. */
+const MOCK_CATEGORIES = [
+  { icon: Briefcase, labelKey: "home.mock.cat.experience", count: "5" },
+  { icon: GraduationCap, labelKey: "home.mock.cat.education", count: "3" },
+  { icon: FileText, labelKey: "home.mock.cat.certificates", count: "4" },
+  { icon: Award, labelKey: "home.mock.cat.merits", count: "8" },
+] as const satisfies readonly {
+  icon: typeof Award;
+  labelKey: TranslationKey;
+  count: string;
+}[];
+
 function PassportCardMock({ showEditAffordance }: { showEditAffordance: boolean }) {
+  const { t } = useT();
   return (
     <div className="w-full max-w-[288px] shrink-0 rounded-2xl border border-border bg-background p-4 shadow-[var(--shadow-lg)]">
       <div className="flex items-start justify-between gap-2">
@@ -587,14 +619,16 @@ function PassportCardMock({ showEditAffordance }: { showEditAffordance: boolean 
             <ShieldCheck className="h-5 w-5 text-primary" strokeWidth={1.75} />
           </span>
           <div className="min-w-0">
+            {/* The product's own name, which is a proper noun and the same
+                in both languages -- and everything else, translated. */}
             <p className="truncate text-[13px] font-semibold text-foreground">Security Passport</p>
-            <p className="truncate text-[10px] text-muted-foreground">Din säkerhetsprofil</p>
+            <p className="truncate text-[10px] text-muted-foreground">{t("home.mock.subtitle")}</p>
           </div>
         </div>
         {showEditAffordance && (
           <span className="hidden shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-secondary px-2 py-1 text-[9px] font-medium text-accent sm:inline-flex">
             <PencilLine className="h-2.5 w-2.5 shrink-0" strokeWidth={2} />
-            Redigera profil
+            {t("home.mock.edit")}
           </span>
         )}
       </div>
@@ -604,11 +638,13 @@ function PassportCardMock({ showEditAffordance }: { showEditAffordance: boolean 
           <UserRound className="h-5 w-5" strokeWidth={1.75} />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-[12px] font-semibold text-foreground">Alex Karlsson</p>
-          <p className="truncate text-[10px] text-muted-foreground">Säkerhetsspecialist</p>
+          {/* A person's name is not translated, and this one is invented --
+              see MOCK_HOLDER. Everything beside it is. */}
+          <p className="truncate text-[12px] font-semibold text-foreground">{MOCK_HOLDER}</p>
+          <p className="truncate text-[10px] text-muted-foreground">{t("home.mock.role")}</p>
           <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
             <MapPin className="h-2.5 w-2.5 shrink-0" strokeWidth={2} />
-            Stockholm, Sverige
+            {t("home.mock.location")}
           </p>
         </div>
       </div>
@@ -617,29 +653,21 @@ function PassportCardMock({ showEditAffordance }: { showEditAffordance: boolean 
           count is not a claim, and the three levels are stated in words one
           section below rather than implied by a tick beside a number. */}
       <ul className="mt-3 border-t border-border pt-1">
-        {[
-          [Briefcase, "Erfarenhet", "5"],
-          [GraduationCap, "Utbildningar", "3"],
-          [FileText, "Certifikat", "4"],
-          [Award, "Meriter", "8"],
-        ].map(([Icon, label, n]) => {
-          const I = Icon as typeof Award;
-          return (
-            <li
-              key={label as string}
-              className="flex items-center gap-2.5 border-b border-border/60 py-2.5 last:border-b-0"
-            >
-              <I className="h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} />
-              <span className="flex-1 truncate text-[11.5px] text-foreground">
-                {label as string}
-              </span>
-              <span className="text-[11.5px] font-semibold tabular-nums text-foreground">
-                {n as string}
-              </span>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" strokeWidth={2} />
-            </li>
-          );
-        })}
+        {MOCK_CATEGORIES.map(({ icon: Icon, labelKey, count }) => (
+          <li
+            key={labelKey}
+            className="flex items-center gap-2.5 border-b border-border/60 py-2.5 last:border-b-0"
+          >
+            <Icon className="h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} />
+            <span className="flex-1 truncate text-[11.5px] text-foreground">{t(labelKey)}</span>
+            {/* Digits, which need no translation. They are the shape of the
+                interface, not anybody's record. */}
+            <span className="text-[11.5px] font-semibold tabular-nums text-foreground">
+              {count}
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" strokeWidth={2} />
+          </li>
+        ))}
       </ul>
     </div>
   );

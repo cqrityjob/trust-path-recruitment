@@ -177,6 +177,47 @@ export const dictionaries = {
     // Section 4 — the ONE employer section, and the quietest control on the
     // page. It says what the product supports and who decides; it does not
     // say CQrityjob approves, rejects, ranks or selects anybody.
+    // ── THE ILLUSTRATIONS' OWN COPY ─────────────────────────────────────
+    //
+    // Every visible word in the two Passport compositions lives here, in
+    // both languages, and none of it is inlined in the component.
+    //
+    // It was inlined, and the English homepage rendered a Swedish product
+    // mock next to English prose. `aria-hidden` did not save it and could
+    // not: it removes a subtree from the ACCESSIBILITY TREE, not from the
+    // screen. A sighted English reader saw "Din säkerhetsprofil",
+    // "Utbildningar" and "Stockholm, Sverige" beside "Your security
+    // career", which is exactly the impression of an unfinished product
+    // this rebuild exists to remove.
+    //
+    // These are small interface labels on a picture, not prose. They are
+    // still copy, they are still read, and they are still translated.
+    "home.mock.subtitle": "Din säkerhetsprofil",
+    "home.mock.edit": "Redigera profil",
+    "home.mock.role": "Säkerhetsspecialist",
+    "home.mock.location": "Stockholm, Sverige",
+    // The four categories a Passport holds. Deliberately the same words the
+    // signed-in product uses for them.
+    "home.mock.cat.experience": "Erfarenhet",
+    "home.mock.cat.education": "Utbildningar",
+    "home.mock.cat.certificates": "Certifikat",
+    "home.mock.cat.merits": "Meriter",
+    // The hero's four satellites: what one record is FOR.
+    "home.mock.cv.title": "CV",
+    "home.mock.cv.body": "Skapa CV från dina uppgifter",
+    "home.mock.share.title": "Delad profil",
+    "home.mock.share.body": "Dela valda uppgifter",
+    "home.mock.jobs.title": "Jobb",
+    "home.mock.jobs.body": "Använd din profil i jobbansökningar",
+    "home.mock.develop.title": "Utveckling",
+    "home.mock.develop.body": "Se möjliga nästa steg",
+    // Section 3's four, which name the same uses in the fuller words that
+    // section has room for. Titles are home.passport.use.* above.
+    "home.passport.use.cv.body": "Skapa professionellt CV med dina uppgifter",
+    "home.passport.use.share.body": "Dela valda uppgifter med arbetsgivare",
+    "home.passport.use.jobs.body": "Använd ditt Security Passport i jobbansökningar",
+    "home.passport.use.develop.body": "Utforska nästa steg med karriäranalysen",
+
     "home.employers.eyebrow": "För arbetsgivare",
     "home.employers.title": "Strukturerat stöd för rekrytering och kompetensutveckling",
     "home.employers.subtitle":
@@ -5663,6 +5704,33 @@ export const dictionaries = {
     "home.passport.use.jobs": "Apply for jobs",
     "home.passport.use.develop": "Keep developing",
     "home.passport.cta": "Explore your career path",
+
+    // The illustrations' own copy — see the Swedish block for why none of
+    // it may be inlined in the component.
+    "home.mock.subtitle": "Your security profile",
+    "home.mock.edit": "Edit profile",
+    "home.mock.role": "Security specialist",
+    "home.mock.location": "Stockholm, Sweden",
+    "home.mock.cat.experience": "Experience",
+    "home.mock.cat.education": "Education",
+    "home.mock.cat.certificates": "Certificates",
+    "home.mock.cat.merits": "Merits",
+    // "CV" is the same word in both languages and is the term the rest of
+    // the product already uses in English. It is the ONE key here that is
+    // legitimately identical, and public-homepage:check names it as such
+    // rather than letting the sv/en parity rule be weakened for everything.
+    "home.mock.cv.title": "CV",
+    "home.mock.cv.body": "Build a CV from your records",
+    "home.mock.share.title": "Shared profile",
+    "home.mock.share.body": "Share selected records",
+    "home.mock.jobs.title": "Jobs",
+    "home.mock.jobs.body": "Use your profile when you apply",
+    "home.mock.develop.title": "Development",
+    "home.mock.develop.body": "See possible next steps",
+    "home.passport.use.cv.body": "Build a professional CV from your records",
+    "home.passport.use.share.body": "Share selected records with employers",
+    "home.passport.use.jobs.body": "Use your Security Passport when you apply",
+    "home.passport.use.develop.body": "Explore your next step with the Career Analysis",
 
     "home.employers.eyebrow": "For employers",
     "home.employers.title": "Structured support for recruitment and competence development",

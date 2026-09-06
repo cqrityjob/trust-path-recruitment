@@ -626,16 +626,80 @@ test.describe("the public homepage", () => {
     expect(seen.size, "Focus never moved — keyboard trap.").toBeGreaterThan(3);
   });
 
+  // ── THE ENGLISH PAGE IS ENGLISH, DECORATION INCLUDED ────────────────
+  //
+  // Every visible word in the two Passport compositions used to be inlined
+  // in the component, so the English homepage rendered "Din
+  // säkerhetsprofil", "Utbildningar" and "Stockholm, Sverige" beside
+  // English prose. Nothing caught it, because every text assertion — here
+  // and in the static guard — read a projection that skipped aria-hidden
+  // subtrees. aria-hidden removes a subtree from the ACCESSIBILITY TREE,
+  // not from the screen; it is not a localisation mechanism.
+  //
+  // This reads `innerText`: what a person actually sees.
+  test("the English homepage renders no Swedish, including the illustrations", async ({ page }) => {
+    await setLang(page, "en");
+    const seen = await visibleText(page);
+
+    // One line, and it catches most of the class outright.
+    const diacritics = seen.match(/\S*[åäöÅÄÖ]\S*/g) ?? [];
+    expect(diacritics, `Swedish characters on the English page: ${diacritics.join(", ")}`).toEqual(
+      [],
+    );
+
+    // And the words with no diacritic to give them away.
+    for (const phrase of [
+      "Din säkerhetsprofil",
+      "Redigera profil",
+      "Säkerhetsspecialist",
+      "Stockholm, Sverige",
+      "Erfarenhet",
+      "Utbildningar",
+      "Certifikat",
+      "Meriter",
+      "Delad profil",
+      "Utveckling",
+      "Skapa CV",
+      "Dela valda uppgifter",
+    ]) {
+      expect(seen, `"${phrase}" is rendered on the English page`).not.toContain(phrase);
+    }
+
+    // The illustration is translated, not deleted.
+    for (const phrase of [
+      "Your security profile",
+      "Security specialist",
+      "Stockholm, Sweden",
+      "Experience",
+      "Education",
+      "Certificates",
+      "Merits",
+      "Edit profile",
+    ]) {
+      expect(seen, `"${phrase}" is missing from the English illustration`).toContain(phrase);
+    }
+
+    // And the Swedish page still says the Swedish words.
+    await setLang(page, "sv");
+    const svSeen = await visibleText(page);
+    for (const phrase of ["Din säkerhetsprofil", "Utbildningar", "Stockholm, Sverige"]) {
+      expect(svSeen, `"${phrase}" is missing from the Swedish illustration`).toContain(phrase);
+    }
+  });
+
   // The illustrations are decoration, and must not be reachable or read.
   test("the product illustrations are out of the accessibility tree", async ({ page }) => {
     const decorative = page.locator('main [aria-hidden="true"]');
     expect(await decorative.count()).toBeGreaterThan(0);
 
     // The mock person's name is DRAWN — it is a picture of the product — and
-    // is never announced. `innerText` is the wrong instrument for this:
-    // aria-hidden removes a node from the accessibility tree, not from the
-    // rendered text, so the assertion is that every node carrying the name
-    // sits inside an aria-hidden subtree.
+    // is never announced. `innerText` is the wrong instrument for that, and
+    // knowing which instrument answers which question is the whole lesson of
+    // the localisation defect asserted above: aria-hidden removes a node
+    // from the accessibility tree, not from the rendered text. So the name
+    // IS in innerText, and every node carrying it sits inside an
+    // aria-hidden subtree.
+    expect(await page.locator("main").innerText()).toContain("Alex Karlsson");
     const exposed = await page.evaluate(
       () =>
         [...document.querySelectorAll("main *")]

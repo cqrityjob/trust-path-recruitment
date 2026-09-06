@@ -27,6 +27,9 @@
 //       the aria-hidden illustrations
 //   T14 nothing on the page claims international recognition, or that the
 //       Passport replaces a licence, permit, screening or due diligence
+//   T15 the English page is ENGLISH — including the decorative product
+//       illustrations, which aria-hidden removes from the accessibility
+//       tree and does not remove from the screen
 //
 // The height, overflow, focus-ring, target-size and click-through halves of
 // the brief are a property of a LAYOUT and cannot be read out of markup.
@@ -174,11 +177,34 @@ async function copyText(markup: string): Promise<string> {
     .trim();
 }
 
+/** Everything a person SEES, decoration included.
+ *
+ *  `copyText` above deliberately drops aria-hidden subtrees, because they
+ *  are not prose and must not be measured as prose. That exclusion is also
+ *  exactly how a Swedish product mock shipped inside the English homepage
+ *  without one assertion noticing: aria-hidden removes a subtree from the
+ *  ACCESSIBILITY TREE, not from the screen. Anything about what is
+ *  RENDERED — above all whether the English page is in English — is
+ *  asserted against this projection instead. */
+function fullText(markup: string): string {
+  return markup
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const svMain = mainOf(html.sv);
 const enMain = mainOf(html.en);
 const svCopy = await copyText(svMain);
 const enCopy = await copyText(enMain);
 const copyOf: Record<Lang, string> = { sv: svCopy, en: enCopy };
+const seenOf: Record<Lang, string> = { sv: fullText(svMain), en: fullText(enMain) };
 
 const headings = (markup: string, tag: "h1" | "h2" | "h3") =>
   [...markup.matchAll(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "g"))].map((m) =>
@@ -749,7 +775,10 @@ group("T12 · sv and en say the same thing, with the same structure");
   );
   // Product names are the same in both. Nothing else may be — an untouched
   // English string is an untranslated one.
-  const SAME_IN_BOTH = new Set<string>();
+  // "CV" is the same word in both languages and is what the rest of the
+  // product already calls it in English. Named here rather than weakening
+  // the parity rule for everything else.
+  const SAME_IN_BOTH = new Set<string>(["home.mock.cv.title"]);
   for (const key of homeKeys("sv")) {
     for (const lang of LANGS) {
       const v = (dictionaries[lang] as Record<string, string>)[key];
@@ -794,7 +823,22 @@ group("T13 · the copy budget");
   for (const lang of LANGS) {
     let prose = copyOf[lang];
     for (const label of BUTTON_LABELS) prose = prose.split(label).join(" ");
-    ck(`${lang}: ${wc(prose)} words inside main (max 220)`, wc(prose) <= 220, wc(prose));
+    ck(`${lang}: ${wc(prose)} words of prose inside main (max 220)`, wc(prose) <= 220, wc(prose));
+    // And a ceiling on the WHOLE rendered page, decoration included.
+    //
+    // The brief's 220 is prose, "excluding buttons and small UI labels" —
+    // and the two product mocks are small UI labels by any reading: a row
+    // label beside a digit, a role under a name. But they are still words
+    // on a screen, and the exemption they enjoy is precisely what let a
+    // Swedish mock ship inside the English page. So they are counted, out
+    // loud, with a ceiling that is a CEILING rather than a snapshot of
+    // today: 268 sv / 299 en against 320, which is room for a satellite or
+    // two and not for a second body of copy.
+    ck(
+      `${lang}: ${wc(seenOf[lang])} words rendered in total, decoration included (ceiling 320)`,
+      wc(seenOf[lang]) <= 320,
+      wc(seenOf[lang]),
+    );
   }
 
   for (const lang of LANGS) {
@@ -833,12 +877,12 @@ group("T13 · the copy budget");
       ),
     ),
   );
-  // The mock person never reaches the accessibility tree or the copy.
+  // The mock person is DRAWN and never announced. Asserted on BOTH
+  // projections, so the difference between them stays visible right here:
+  // it is in what is seen, and it is not in what is read.
   for (const lang of LANGS) {
-    ck(
-      `${lang}: the illustration's mock name is not read as copy`,
-      !copyOf[lang].includes("Alex Karlsson"),
-    );
+    ck(`${lang}: the mock holder is drawn`, seenOf[lang].includes("Alex Karlsson"));
+    ck(`${lang}: and is not in the accessibility tree`, !copyOf[lang].includes("Alex Karlsson"));
   }
 }
 
@@ -877,6 +921,121 @@ group("T14 · what the page may not claim about a career that moves");
       ck(`${lang}: no "${rx.source}"`, !rx.test(copyOf[lang]));
     }
   }
+}
+
+/* T15 --------------------------------------------------------------- */
+group("T15 · the English page is English, decoration included");
+{
+  // ── THE DEFECT THIS EXISTS FOR ──────────────────────────────────────
+  //
+  // Every visible word in the two Passport compositions was inlined in the
+  // component: "Din säkerhetsprofil", "Utbildningar", "Certifikat",
+  // "Stockholm, Sverige", "Skapa CV från dina uppgifter". The English
+  // homepage rendered all of it, in Swedish, beside English prose.
+  //
+  // Nothing caught it, and the reason is worth writing down: every text
+  // assertion in this file ran against `copyText`, which strips aria-hidden
+  // subtrees. The illustrations are aria-hidden — correctly, they are
+  // decoration — so they were invisible to the guard and perfectly visible
+  // to the reader. aria-hidden is not a localisation mechanism and never
+  // was. Everything below reads `seenOf`, the WHOLE rendered page.
+
+  // 1. No Swedish-specific character survives into the English page. One
+  //    line, and it catches most of the class outright.
+  const diacritics = seenOf.en.match(/[åäöÅÄÖ]/g) ?? [];
+  ck(
+    "no å/ä/ö anywhere on the English page",
+    diacritics.length === 0,
+    diacritics.length === 0
+      ? ""
+      : `${diacritics.length} found, e.g. ${seenOf.en
+          .match(/\S*[åäöÅÄÖ]\S*/g)
+          ?.slice(0, 6)
+          .join(", ")}`,
+  );
+
+  // 2. The words that have no diacritic to give them away — "Certifikat",
+  //    "CV", "Jobb". For every key that IS translated, the other language's
+  //    value must not appear on this page. Symmetric, so a reverse
+  //    regression (English leaking into the Swedish page) fails too.
+  const homeKeys = Object.keys(dictionaries.sv).filter(
+    (k) => k.startsWith("home.") || k === "cta.passport" || k === "cta.howItWorks",
+  );
+  for (const [lang, other] of [
+    ["en", "sv"],
+    ["sv", "en"],
+  ] as const) {
+    const leaked: string[] = [];
+    for (const key of homeKeys) {
+      const mine = (dictionaries[lang] as Record<string, string>)[key];
+      const theirs = (dictionaries[other] as Record<string, string>)[key];
+      // Identical values are the same word in both languages, not a leak.
+      if (!theirs || theirs === mine || theirs.length < 4) continue;
+      if (seenOf[lang].includes(theirs)) leaked.push(`${key}="${theirs}"`);
+    }
+    ck(`${lang}: no ${other} string is rendered`, leaked.length === 0, leaked.join(" · "));
+  }
+
+  // 3. The exact strings that were inlined, named so this failure has a
+  //    memory even if the two rules above are ever relaxed.
+  const WAS_INLINED = [
+    "Din säkerhetsprofil",
+    "Redigera profil",
+    "Säkerhetsspecialist",
+    "Stockholm, Sverige",
+    "Erfarenhet",
+    "Utbildningar",
+    "Certifikat",
+    "Meriter",
+    "Delad profil",
+    "Utveckling",
+    "Skapa CV från dina uppgifter",
+    "Dela valda uppgifter",
+    "Använd din profil i jobbansökningar",
+    "Se möjliga nästa steg",
+    "Skapa professionellt CV med dina uppgifter",
+    "Dela valda uppgifter med arbetsgivare",
+    "Använd ditt Security Passport i jobbansökningar",
+    "Utforska nästa steg med karriäranalysen",
+  ];
+  for (const phrase of WAS_INLINED) {
+    ck(`en: "${phrase}" is not rendered`, !seenOf.en.includes(phrase));
+  }
+
+  // 4. And the Swedish page really does say them, so "fixed" cannot mean
+  //    "deleted the illustration".
+  for (const phrase of ["Din säkerhetsprofil", "Utbildningar", "Stockholm, Sverige"]) {
+    ck(`sv: "${phrase}" is still rendered`, seenOf.sv.includes(phrase));
+  }
+  for (const phrase of ["Your security profile", "Education", "Stockholm, Sweden"]) {
+    ck(`en: "${phrase}" is rendered instead`, seenOf.en.includes(phrase));
+  }
+
+  // ── STRUCTURAL: the type refuses a raw string ──────────────────────
+  //
+  // The rules above are a net. This is the hole being welded shut: a
+  // `Satellite` may only be given translation KEYS, so `title: "Delad
+  // profil"` is a type error rather than a rendering bug somebody has to
+  // notice in a screenshot.
+  ck(
+    "a Satellite carries keys, not strings",
+    /type Satellite = \{[\s\S]*?titleKey: TranslationKey;[\s\S]*?bodyKey: TranslationKey;[\s\S]*?\};/.test(
+      routeCode,
+    ),
+  );
+  ck(
+    "and has no raw-string variant",
+    !/type Satellite = \{[\s\S]*?title\??: string;[\s\S]*?\};/.test(routeCode),
+  );
+
+  // No Swedish string literal is left anywhere in the route's own source.
+  // The document <title> is exempt: the whole site's SSR head is
+  // Swedish-first and is not per-language on any route, which is a
+  // site-wide concern rather than this page's.
+  const literals = [...routeCode.matchAll(/"([^"\n]*[åäöÅÄÖ][^"\n]*)"/g)]
+    .map((m) => m[1])
+    .filter((v) => !v.startsWith("CQrityjob —"));
+  ck("no Swedish string literal remains in the route", literals.length === 0, literals.join(" · "));
 }
 
 /* -------------------------------------------------------------------- */
