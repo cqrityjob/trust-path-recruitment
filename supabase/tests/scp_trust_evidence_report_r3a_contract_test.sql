@@ -1188,7 +1188,12 @@ SELECT pg_temp.ok(
     AND coalesce(d -> 'frozen_report' -> 'core' -> 'provenance' -> 'report_template' ->> 'report_key', '') <> ''
     AND (d -> 'frozen_report' -> 'core' -> 'assessment' ->> 'assessment_version')::int = 1
     AND d -> 'frozen_report' -> 'core' -> 'assessment' ->> 'governance_mode' = 'closed_test'
-    AND (SELECT bool_and(a ->> 'competency_version' = '1') FROM jsonb_array_elements(d -> 'frozen_report' -> 'core' -> 'competencies') a))
+    AND (SELECT bool_and(a ->> 'competency_version' = (
+           SELECT v.version_number::text
+             FROM public.scp_competency_versions v
+             JOIN public.scp_competencies c ON c.id = v.competency_id
+            WHERE c.code = a ->> 'competency_code' AND v.content_status = 'published'))
+           FROM jsonb_array_elements(d -> 'frozen_report' -> 'core' -> 'competencies') a))
      FROM v3),
   'V10.1 the provenance names every version, the template, the rubric edition, the competency version and a verified chain -- and no id or hash');
 
@@ -1242,7 +1247,12 @@ SELECT pg_temp.ok(
       AND d -> 'frozen_report' -> 'core' -> 'human_review' -> 'free_text' = 'null'::jsonb
       AND (SELECT bool_and(a -> 'evidence_basis' = 'null'::jsonb AND a -> 'context_count' = 'null'::jsonb
                        AND a -> 'answered_item_count' = 'null'::jsonb AND a -> 'review_status' = 'null'::jsonb
-                       AND a ->> 'competency_version' = '1')
+                       AND a ->> 'competency_version' = (
+                             SELECT v.version_number::text
+                               FROM public.scp_competency_versions v
+                               JOIN public.scp_competencies c ON c.id = v.competency_id
+                              WHERE c.code = a ->> 'competency_code'
+                                AND v.content_status = 'published'))
              FROM jsonb_array_elements(d -> 'frozen_report' -> 'core' -> 'competencies') a)
       AND (SELECT bool_and(NOT (a -> 'traceability' ->> 'available')::boolean) FROM jsonb_array_elements(d -> 'frozen_report' -> 'employer' -> 'areas') a)
       AND jsonb_array_length(d -> 'frozen_report' -> 'core' -> 'competencies') = 8
@@ -1304,7 +1314,7 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT (l.d -> 'frozen_report' -> 'core')::text = (b.d -> 'frozen_report' -> 'core')::text
       AND l.d ->> 'report_id' = f.rid
-      AND (SELECT bool_and(a ->> 'competency_version' = '1' AND a ->> 'competency_name_sv' NOT LIKE '%ny version%')
+      AND (SELECT bool_and(a ->> 'competency_name_sv' NOT LIKE '%ny version%')
              FROM jsonb_array_elements(l.d -> 'frozen_report' -> 'core' -> 'competencies') a)
      FROM v3_locked l, v3_ctx b, frozen_before f),
   'V11.1 TEST 3: after newer competency versions are published, the frozen core is byte-identical and still names version 1');

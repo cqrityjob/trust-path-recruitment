@@ -466,6 +466,7 @@ console.log("\nC. No radar, no polygon, no percentage profile on any report surf
 {
   const surfaces = [
     ...walk(join(ROOT, "src/components/academy")),
+    ...walk(join(ROOT, "src/components/trust-report")),
     ...walk(join(ROOT, "src/lib/security-competency")),
     ...walk(join(ROOT, "src/routes")).filter((p) =>
       /_authenticated\.academy\.|assessments\.results/.test(p),
@@ -1019,6 +1020,35 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       migrationMentions.includes(R3A_MIGRATION),
     migrationMentions.join(", "),
   );
+  const r3bCopy = migrationMentions.includes(R3B_COPY_MIGRATION)
+    ? stripComments(read(`supabase/migrations/${R3B_COPY_MIGRATION}`))
+    : "";
+  if (r3bCopy) {
+    check(
+      "H11a PR-R3B does not touch the manifest contract: no DDL, no grant, no policy on it",
+      !/(CREATE|ALTER|DROP) TABLE [^;]*scp_report_computation_manifests/.test(r3bCopy) &&
+        !/(GRANT|REVOKE)[^;]*scp_report_computation_manifests/.test(r3bCopy) &&
+        !/CREATE POLICY [a-z_]+ ON public\.scp_report_computation_manifests/.test(r3bCopy),
+    );
+    check(
+      "H11a PR-R3B changes copy only: it publishes a competency version and redefines the release function, and creates no object",
+      /INSERT INTO public\.scp_competency_versions/.test(r3bCopy) &&
+        /CREATE OR REPLACE FUNCTION public\.scp_release_attempt_report/.test(r3bCopy) &&
+        !/CREATE TABLE/.test(r3bCopy) &&
+        !/DROP FUNCTION/.test(r3bCopy),
+    );
+    const r3bFnStart = r3bCopy.indexOf(
+      "CREATE OR REPLACE FUNCTION public.scp_release_attempt_report",
+    );
+    const r3bFnBody = r3bCopy.slice(r3bFnStart, r3bCopy.indexOf("$function$;", r3bFnStart));
+    check(
+      "H11a and the release function it installs can no longer write a plural placeholder",
+      r3bFnBody.length > 1000 &&
+        !/uppgift\(er\)|task\(s\)/.test(r3bFnBody) &&
+        /THEN 'uppgift' ELSE 'uppgifter'/.test(r3bFnBody) &&
+        /THEN 'task' ELSE 'tasks'/.test(r3bFnBody),
+    );
+  }
   const r1 = read(`supabase/migrations/${R1_MIGRATION}`);
   const r1Body = stripComments(r1);
   check(
