@@ -1003,9 +1003,18 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     ),
   );
   const R3A_MIGRATION = "20261029090000_scp_trust_evidence_report_r3a_contract.sql";
+  // Two later files may name the manifest table besides the two that own it:
+  // the PR-R3A hotfix (it redefines the V3 projection, which reads the
+  // manifest for counts) and PR-R3B's copy decisions (they redefine the
+  // release function, which writes it). Each is admitted by name and held to
+  // its own scope below; nothing else may name the table.
+  const R3A_FALLBACK_MIGRATION =
+    "20261030090000_scp_trust_evidence_report_r3a_legacy_name_fallback.sql";
+  const R3B_COPY_MIGRATION = "20261031090000_scp_competency_display_label_and_report_plurals.sql";
+  const MANIFEST_NAMERS = [R1_MIGRATION, R3A_MIGRATION, R3A_FALLBACK_MIGRATION, R3B_COPY_MIGRATION];
   check(
-    "H11 exactly two migrations name scp_report_computation_manifests: PR-R1 (creates it) and PR-R3A (reads counts from it)",
-    migrationMentions.length === 2 &&
+    "H11 only PR-R1 (creates it), PR-R3A (reads counts), the R3A hotfix and PR-R3B's copy decisions name scp_report_computation_manifests, and the two owners always do",
+    migrationMentions.every((f) => MANIFEST_NAMERS.includes(f)) &&
       migrationMentions.includes(R1_MIGRATION) &&
       migrationMentions.includes(R3A_MIGRATION),
     migrationMentions.join(", "),
@@ -1056,10 +1065,55 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     ),
   );
   check(
-    "H14 exactly one migration creates scp_employer_report_v3, and it is PR-R3A's",
-    v3Creators.length === 1 && v3Creators[0] === R3A_MIGRATION,
+    "H14 PR-R3A creates scp_employer_report_v3, and the only other migration allowed to redefine it is the R3A name-fallback hotfix",
+    v3Creators.includes(R3A_MIGRATION) &&
+      v3Creators.every((f) => f === R3A_MIGRATION || f === R3A_FALLBACK_MIGRATION),
     v3Creators.join(", "),
   );
+  if (v3Creators.includes(R3A_FALLBACK_MIGRATION)) {
+    // The hotfix body must be the R3A body with exactly one block replaced:
+    // the fallback that erased frozen names on a report older than its
+    // catalogue rows. Rebuild that patch from the R3A file and compare.
+    const fnOf = (src: string) => {
+      const a = src.indexOf("CREATE OR REPLACE FUNCTION public.scp_employer_report_v3");
+      return src.slice(a, src.indexOf("$function$;", a) + "$function$;".length);
+    };
+    const r3aFn = fnOf(read(`supabase/migrations/${R3A_MIGRATION}`));
+    const fixFn = fnOf(read(`supabase/migrations/${R3A_FALLBACK_MIGRATION}`));
+    const OLD_DECLARE = "  _has_finding boolean; _critical_codes jsonb; _rt int; _rc int;\nBEGIN";
+    const NEW_DECLARE =
+      "  _has_finding boolean; _critical_codes jsonb; _rt int; _rc int;\n  _fb_sv text; _fb_en text; _fb_ver text;\nBEGIN";
+    // Offsets are taken on the DECLARE-patched R3A text, which is the text
+    // being sliced; taking them on the unpatched text shifts every index.
+    const r3aPatched = r3aFn.replace(OLD_DECLARE, NEW_DECLARE);
+    const oldFallbackStart = r3aPatched.indexOf("    IF _name_sv IS NULL OR _cver IS NULL THEN");
+    const oldFallbackEnd =
+      r3aPatched.indexOf("    END IF;", oldFallbackStart) + "    END IF;".length;
+    const newFallbackStart = fixFn.indexOf("    IF _name_sv IS NULL OR _cver IS NULL THEN");
+    const newFallbackEnd = fixFn.indexOf("    END IF;", newFallbackStart) + "    END IF;".length;
+    const r3aOutside = r3aPatched.slice(0, oldFallbackStart) + r3aPatched.slice(oldFallbackEnd);
+    const fixOutside = fixFn.slice(0, newFallbackStart) + fixFn.slice(newFallbackEnd);
+    const newFallback = fixFn.slice(newFallbackStart, newFallbackEnd);
+    check(
+      "H14a the hotfix is the R3A definition with exactly the fallback block replaced (and three fallback variables declared)",
+      r3aOutside === fixOutside && oldFallbackStart > 0 && newFallbackStart > 0,
+    );
+    check(
+      "H14b the replaced fallback lands in its own variables and only fills what is empty",
+      /INTO _fb_sv, _fb_en, _fb_ver/.test(newFallback) &&
+        /_name_sv := coalesce\(_name_sv, _fb_sv\)/.test(newFallback) &&
+        /_cver\s+:= coalesce\(_cver, _fb_ver\)/.test(newFallback) &&
+        !/INTO _name_sv, _name_en, _cver/.test(newFallback) &&
+        /cv\.created_at <= _d\.released_at/.test(newFallback),
+    );
+    const fixFile = stripComments(read(`supabase/migrations/${R3A_FALLBACK_MIGRATION}`));
+    check(
+      "H14c the hotfix touches nothing else: no table, no grant, no policy, no other routine, and it re-runs the R3A proof",
+      !/CREATE TABLE|ALTER TABLE|DROP |CREATE POLICY|GRANT |REVOKE /.test(fixFile) &&
+        (fixFile.match(/CREATE OR REPLACE FUNCTION/g) ?? []).length === 1 &&
+        /SCP_R3A_PROOF/.test(fixFile),
+    );
+  }
   const r3a = stripComments(read(`supabase/migrations/${R3A_MIGRATION}`));
   const lockedKeys = [
     ...TRUST_V3_TOP_LEVEL_KEYS,
