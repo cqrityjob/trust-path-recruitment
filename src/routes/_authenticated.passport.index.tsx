@@ -229,43 +229,63 @@ function PassportOverviewRoute() {
           both the inventory below and the expiry notices, and it is the
           thing they could previously only find by opening entries one at a
           time. */}
-      <VerificationOutcomes
-        attention={attention}
-        titleOf={(item) =>
-          item.subjectKind === "claim"
-            ? (snapshot.holder.claims.find((c) => c.id === item.subjectId)?.titleSv ??
-              pt("att.entryRemoved"))
-            : ((p) => (p ? `${p.roleTitle} · ${p.employerName}` : pt("att.entryRemoved")))(
-                snapshot.holder.periods.find((p) => p.id === item.subjectId),
-              )
-        }
-        hrefOf={(item) => `/passport/entry/${item.subjectKind}/${item.subjectId}`}
-        // The panel below already answers "is anything waiting" for the
-        // lifecycle side. Two panels both saying "nothing waiting" is the
-        // page talking to itself.
-        showClear={false}
-        className="mb-5"
-      />
+      {/* ── EVERYTHING THAT NEEDS THIS HOLDER, IN ONE REGION ──────────
+          The career home links here as `/passport#attention` whenever more
+          than one entry needs the holder — several reviewer questions, or
+          several decisions — because there is no single entry to open. The
+          anchor therefore has to be a REAL region that contains both
+          panels: decisions that were made, and requests still open. It is
+          `tabindex=-1` so `ScrollToHashOnceReady` can move focus here, and
+          labelled so a screen-reader user who lands on it is told what it
+          is rather than hearing an unnamed group. */}
+      <section
+        id="attention"
+        aria-labelledby="attention-heading"
+        tabIndex={-1}
+        className="scroll-mt-24"
+      >
+        <h2 id="attention-heading" className="sr-only">
+          {pt("att.title")}
+        </h2>
+        <VerificationOutcomes
+          attention={attention}
+          titleOf={(item) =>
+            item.subjectKind === "claim"
+              ? (snapshot.holder.claims.find((c) => c.id === item.subjectId)?.titleSv ??
+                pt("att.entryRemoved"))
+              : ((p) => (p ? `${p.roleTitle} · ${p.employerName}` : pt("att.entryRemoved")))(
+                  snapshot.holder.periods.find((p) => p.id === item.subjectId),
+                )
+          }
+          hrefOf={(item) => `/passport/entry/${item.subjectKind}/${item.subjectId}`}
+          // The panel below already answers "is anything waiting" for the
+          // lifecycle side. Two panels both saying "nothing waiting" is the
+          // page talking to itself.
+          showClear={false}
+          className="mb-5"
+        />
 
-      {/* What needs doing comes before the inventory of what exists. A holder
-          who opens this page wants to know whether anything is on them. */}
-      <AttentionPanel
-        summary={attentionFor(
-          snapshot.holder.claims,
-          snapshot.holder.periods,
-          today(),
-          openReviews,
-        )}
-        onOpenEntry={(kind, id) =>
-          void navigate({
-            to: "/passport/entry/$kind/$entryId",
-            params: { kind, entryId: id },
-          })
-        }
-        otherAttention={!attention.clear}
-        className="mb-5"
-      />
+        {/* What needs doing comes before the inventory of what exists. A holder
+            who opens this page wants to know whether anything is on them. */}
+        <AttentionPanel
+          summary={attentionFor(
+            snapshot.holder.claims,
+            snapshot.holder.periods,
+            today(),
+            openReviews,
+          )}
+          onOpenEntry={(kind, id) =>
+            void navigate({
+              to: "/passport/entry/$kind/$entryId",
+              params: { kind, entryId: id },
+            })
+          }
+          otherAttention={!attention.clear}
+          className="mb-5"
+        />
+      </section>
 
+      <ScrollToHashOnceReady />
       <PassportOverview
         holder={snapshot.holder}
         evaluationOn={today()}
@@ -306,4 +326,35 @@ function PassportOverviewRoute() {
       />
     </div>
   );
+}
+
+/**
+ * Honour a `#merits` / `#attention` arrival from the career home.
+ *
+ * The home links to the SECTION of the Passport an action is about, so a
+ * person asked to "choose merits to verify" lands on the merits list and
+ * not on the top of a page they then have to search. The element only
+ * exists once the Passport read has answered — after the browser has
+ * already given up on the hash — so it is scrolled to here, once, from
+ * inside the ready branch, and made the focus target so keyboard and
+ * screen-reader users arrive where the link said.
+ */
+function ScrollToHashOnceReady() {
+  useEffect(() => {
+    const hash = typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "";
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    if (!el) return;
+    el.scrollIntoView({ block: "start" });
+    // Focus, so keyboard and screen-reader users arrive where the link said
+    // rather than at the top of a page they must then re-read. Both targets
+    // (`#attention`, `#merits`) already carry tabindex=-1; the fallback is
+    // for any anchor added later without one.
+    if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+    (el as HTMLElement).focus({ preventScroll: true });
+    // Marked so a browser test can assert the arrival happened, and which
+    // target it resolved to, rather than inferring it from scroll position.
+    el.setAttribute("data-hash-target", hash);
+  }, []);
+  return null;
 }

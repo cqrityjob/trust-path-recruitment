@@ -391,7 +391,7 @@ function claimsIn(body: string): { text: string; low: number; high: number }[] {
     "src/components/career-discovery/v31/shell/AssessmentIntro.tsx",
     "src/routes/career-center.index.tsx",
     "src/routes/_authenticated/my-career/career-card.tsx",
-    "src/components/professional-identity/NextActions.tsx",
+    "src/components/professional-identity/NextBestAction.tsx",
     "src/components/career-discovery/DiscoveryLanding.tsx",
   ];
   const offenders: string[] = [];

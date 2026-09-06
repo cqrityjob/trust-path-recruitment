@@ -79,6 +79,47 @@ export function countsTowardExperience(state: LifecycleState): boolean {
   return state === "active";
 }
 
+/* ------------------------------------------------------------------ */
+/* THE merit lifecycle policy — one answer for every surface           */
+/* ------------------------------------------------------------------ */
+//
+// ── WHY THIS IS HERE AND NOT IN EACH SURFACE ───────────────────────────
+//
+// The Passport overview read every lifecycle row and My Career read
+// `active` rows only, and both called the result "your merits". A holder
+// with three superseded credentials was therefore shown two different
+// totals under one label depending on which page they were on, and an
+// approval recorded against a credential that had since been superseded
+// made the home say "0 verified" beside "a merit was verified" — both
+// true, about different rows, with no way for the reader to know.
+//
+// So the question "does this row count as a CURRENT merit" is answered in
+// exactly one place, and the two other buckets a surface may need are named
+// beside it. A surface that shows a different bucket labels it differently.
+//
+//   CURRENT    active                      the merit as it stands today
+//   UNFINISHED draft                       the holder's private work
+//   ARCHIVED   expired · revoked ·         history: it was recorded, it is
+//              superseded · disputed       no longer the current entry
+
+/** Counts as a current merit — what "Registrerade meriter" means. */
+export function isCurrentMerit(state: LifecycleState | string): boolean {
+  return state === "active";
+}
+
+/** Begun and not finished. Never a recorded merit, never on a CV. */
+export function isUnfinishedMerit(state: LifecycleState | string): boolean {
+  return state === "draft";
+}
+
+/** Recorded once, no longer the current entry. A surface may show these,
+ *  but never under the same label as current merits. */
+export function isArchivedMerit(state: LifecycleState | string): boolean {
+  return (
+    state === "expired" || state === "revoked" || state === "superseded" || state === "disputed"
+  );
+}
+
 export type ClaimType =
   | "training"
   | "certification"

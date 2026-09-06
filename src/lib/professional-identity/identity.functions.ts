@@ -94,6 +94,7 @@ export async function readProfessionalIdentity(
     passport,
     experience,
     claims,
+    draftClaims,
     snapshot,
     applications,
     assignments,
@@ -134,6 +135,24 @@ export async function readProfessionalIdentity(
       )
       .eq("holder_user_id", userId)
       .eq("lifecycle_state", "active"),
+    // ── UNFINISHED WORK, COUNTED AND NOT CARRIED ──────────────────────
+    //
+    // A COUNT, deliberately, and never the rows. A draft is an entry the
+    // holder started and abandoned: the Passport keeps it out of its own
+    // lists, and letting one into `claims` above would put an unfinished
+    // credential on a CV and into the verified/pending arithmetic. The home
+    // only needs to know that unfinished work exists so it can offer to
+    // finish it, and a head count says exactly that and nothing more.
+    // Ids only, newest first, capped: enough for a "finish the merit" action
+    // to open the exact form. No title, no issuer, no date — nothing that
+    // could make an unfinished entry look like a recorded one anywhere.
+    supabase
+      .from("sp_claims")
+      .select("id", { count: "exact" })
+      .eq("holder_user_id", userId)
+      .eq("lifecycle_state", "draft")
+      .order("updated_at", { ascending: false })
+      .limit(5),
     // Newest report only. The dashboard shows one; a history page reads
     // its own list.
     //
@@ -206,6 +225,7 @@ export async function readProfessionalIdentity(
   note("passport", passport);
   note("employment", experience);
   note("claims", claims);
+  note("claims", draftClaims);
   note("discovery", snapshot);
   note("applications", applications);
   note("assessments", assignments);
@@ -386,6 +406,8 @@ export async function readProfessionalIdentity(
       releasedReportCount,
       releasedReportAttemptId,
       assessmentAssignmentAttemptId,
+      draftClaimCount: draftClaims?.count ?? ((draftClaims?.data ?? []) as Row[]).length,
+      draftClaimIds: ((draftClaims?.data ?? []) as Row[]).map((r) => String(r.id)),
       employerWorkspaceCount: memberships?.count ?? 0,
     },
     unavailable,

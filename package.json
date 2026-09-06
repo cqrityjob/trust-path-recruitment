@@ -27,6 +27,7 @@
     "cie:check": "bun run scripts/cie-check.ts", 
     "career-profession-bridge:check": "bun run scripts/career-profession-bridge-check.tsx",
     "e2e": "playwright test", 
+    "e2e:my-career": "playwright test e2e/my-career-home.spec.ts --project=chromium",
     "e2e:responsive": "playwright test e2e/passport-responsive-a11y.spec.ts --project=chromium --project=mobile-375 --project=mobile-390", 
     "employer-taxonomy:check": "bun run scripts/employer-taxonomy-check.ts", 
     "invitation-email-guard:check": "bun run scripts/invitation-email-guard-check.ts", 

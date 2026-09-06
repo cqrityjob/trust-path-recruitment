@@ -34,6 +34,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EmployerRegisterRouteImport } from './routes/employer.register'
 import { Route as EmployerLoginRouteImport } from './routes/employer.login'
 import { Route as DevSecurityPassportRouteImport } from './routes/dev.security-passport'
+import { Route as DevCareerHomeRouteImport } from './routes/dev.career-home'
 import { Route as DevCareerDiscoveryPreviewRouteImport } from './routes/dev.career-discovery-preview'
 import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
 import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
@@ -293,6 +294,11 @@ const EmployerLoginRoute = EmployerLoginRouteImport.update({
 const DevSecurityPassportRoute = DevSecurityPassportRouteImport.update({
   id: '/dev/security-passport',
   path: '/dev/security-passport',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevCareerHomeRoute = DevCareerHomeRouteImport.update({
+  id: '/dev/career-home',
+  path: '/dev/career-home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevCareerDiscoveryPreviewRoute =
@@ -1164,6 +1170,7 @@ export interface FileRoutesByFullPath {
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
+  '/dev/career-home': typeof DevCareerHomeRoute
   '/dev/security-passport': typeof DevSecurityPassportRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
@@ -1319,6 +1326,7 @@ export interface FileRoutesByTo {
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
+  '/dev/career-home': typeof DevCareerHomeRoute
   '/dev/security-passport': typeof DevSecurityPassportRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
@@ -1469,6 +1477,7 @@ export interface FileRoutesById {
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
+  '/dev/career-home': typeof DevCareerHomeRoute
   '/dev/security-passport': typeof DevSecurityPassportRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
@@ -1632,6 +1641,7 @@ export interface FileRouteTypes {
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/dev/career-discovery-preview'
+    | '/dev/career-home'
     | '/dev/security-passport'
     | '/employer/login'
     | '/employer/register'
@@ -1787,6 +1797,7 @@ export interface FileRouteTypes {
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/dev/career-discovery-preview'
+    | '/dev/career-home'
     | '/dev/security-passport'
     | '/employer/login'
     | '/employer/register'
@@ -1936,6 +1947,7 @@ export interface FileRouteTypes {
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/dev/career-discovery-preview'
+    | '/dev/career-home'
     | '/dev/security-passport'
     | '/employer/login'
     | '/employer/register'
@@ -2088,6 +2100,7 @@ export interface RootRouteChildren {
   CandidateRegisterRoute: typeof CandidateRegisterRoute
   DevCareerAssessmentCalibrationRoute: typeof DevCareerAssessmentCalibrationRoute
   DevCareerDiscoveryPreviewRoute: typeof DevCareerDiscoveryPreviewRoute
+  DevCareerHomeRoute: typeof DevCareerHomeRoute
   DevSecurityPassportRoute: typeof DevSecurityPassportRoute
   EmployerLoginRoute: typeof EmployerLoginRoute
   EmployerRegisterRoute: typeof EmployerRegisterRoute
@@ -2271,6 +2284,13 @@ declare module '@tanstack/react-router' {
       path: '/dev/security-passport'
       fullPath: '/dev/security-passport'
       preLoaderRoute: typeof DevSecurityPassportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/career-home': {
+      id: '/dev/career-home'
+      path: '/dev/career-home'
+      fullPath: '/dev/career-home'
+      preLoaderRoute: typeof DevCareerHomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev/career-discovery-preview': {
@@ -3823,6 +3843,7 @@ const rootRouteChildren: RootRouteChildren = {
   CandidateRegisterRoute: CandidateRegisterRoute,
   DevCareerAssessmentCalibrationRoute: DevCareerAssessmentCalibrationRoute,
   DevCareerDiscoveryPreviewRoute: DevCareerDiscoveryPreviewRoute,
+  DevCareerHomeRoute: DevCareerHomeRoute,
   DevSecurityPassportRoute: DevSecurityPassportRoute,
   EmployerLoginRoute: EmployerLoginRoute,
   EmployerRegisterRoute: EmployerRegisterRoute,

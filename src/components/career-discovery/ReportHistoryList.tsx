@@ -38,13 +38,41 @@ type Row =
   | { kind: "discovery"; id: string; at: string; version: string; internalTest: boolean }
   | { kind: "legacy"; id: string; at: string };
 
-export function ReportHistoryList({ legacyRuns }: { legacyRuns: LegacyRunRow[] }) {
+/** A v3 report as the caller already holds it. */
+export interface DiscoveryReportRow {
+  snapshotId: string;
+  generatedAt: string;
+  definitionVersion: string;
+}
+
+export function ReportHistoryList({
+  legacyRuns,
+  /** The v3 rows, when the caller has already read them — the career home
+   *  reads the list to decide whether to render this at all, and has
+   *  already removed the CURRENT report. Given, the component does not
+   *  fetch a second time and cannot re-add what the caller excluded. */
+  discoveryReports,
+}: {
+  legacyRuns: LegacyRunRow[];
+  discoveryReports?: readonly DiscoveryReportRow[];
+}) {
   const { t, lang } = useT();
   const load = useServerFn(listMyDiscoveryReports);
-  const [discovery, setDiscovery] = useState<Row[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [discovery, setDiscovery] = useState<Row[]>(() =>
+    discoveryReports
+      ? discoveryReports.map((r) => ({
+          kind: "discovery" as const,
+          id: r.snapshotId,
+          at: r.generatedAt,
+          version: r.definitionVersion,
+          internalTest: true,
+        }))
+      : [],
+  );
+  const [loaded, setLoaded] = useState(Boolean(discoveryReports));
 
   useEffect(() => {
+    if (discoveryReports) return;
     let alive = true;
     load({})
       .then((d) => {
@@ -67,7 +95,7 @@ export function ReportHistoryList({ legacyRuns }: { legacyRuns: LegacyRunRow[] }
     return () => {
       alive = false;
     };
-  }, [load]);
+  }, [load, discoveryReports]);
 
   const rows: Row[] = [
     ...discovery,
@@ -131,7 +159,7 @@ export function ReportHistoryList({ legacyRuns }: { legacyRuns: LegacyRunRow[] }
             <Link
               to="/security-career-assessment/report/$snapshotId"
               params={{ snapshotId: row.id }}
-              className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline"
+              className="inline-flex min-h-11 flex-shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {t("careerDiscovery.history.open")}
               <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -140,7 +168,7 @@ export function ReportHistoryList({ legacyRuns }: { legacyRuns: LegacyRunRow[] }
             <Link
               to="/my-career/reports/$runId"
               params={{ runId: row.id }}
-              className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline"
+              className="inline-flex min-h-11 flex-shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {t("careerDiscovery.history.open")}
               <ArrowRight className="h-3 w-3" aria-hidden="true" />

@@ -35,6 +35,7 @@ import type { ProfessionMatch } from "@/lib/career-discovery/v31/professions";
 import type { ReportSnapshot } from "@/lib/career-discovery/v31/snapshot";
 import type { StoredReportVersions } from "@/lib/career-discovery/stored-report.functions";
 import { setCareerGoal } from "@/lib/career-discovery/v31-feedback.functions";
+import { RetakeAnalysisLink } from "@/components/career-discovery/RetakeAnalysisLink";
 
 /** Presentation order of the seven story questions. Declared here rather than
  *  imported so a change to the live story module can never re-order a report
@@ -511,6 +512,10 @@ export function V31ReportView({
           >
             {t("careerDiscovery.report.actions.allReports")}
           </Link>
+          {/* Quiet, and only when the gate would admit them. A retake is a
+              decision made after reading a result, so it lives here rather
+              than on the personal home. */}
+          <RetakeAnalysisLink />
         </div>
       )}
 

@@ -25,6 +25,7 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { totalsByEvidenceLevel } from "@/lib/security-passport/experience";
 import { recognitionFor } from "@/lib/security-passport/recognition";
 import type { Claim, ClaimType, PassportHolder } from "@/lib/security-passport/types";
+import { isCurrentMerit, isUnfinishedMerit } from "@/lib/security-passport/types";
 import { AssertionLegend } from "./AssertionChip";
 import { ClaimList } from "./ClaimRow";
 import { CredentialSymbol } from "./CredentialSymbol";
@@ -114,13 +115,19 @@ export function PassportOverview({
   const totals = totalsByEvidenceLevel(holder.periods, evaluationOn);
   const recognition = recognitionFor(totals);
 
-  // A draft is unfinished, private work — it resumes in the form rather
-  // than posing as a recorded entry in the lists below.
-  const draftClaims = holder.claims.filter((c) => c.lifecycleState === "draft");
-  const liveClaims = holder.claims.filter((c) => c.lifecycleState !== "draft");
+  // ONE lifecycle policy, shared with the career home (security-passport/
+  // types.ts): a draft is unfinished private work and resumes in the form;
+  // an archived row (expired, revoked, superseded, disputed) is history and
+  // is still listed below, with its own trust wording — but it is never
+  // what "your merits" MEANS. Emptiness is judged on current rows, so this
+  // page and the home answer "do you have merits" identically.
+  const draftClaims = holder.claims.filter((c) => isUnfinishedMerit(c.lifecycleState));
+  const liveClaims = holder.claims.filter((c) => !isUnfinishedMerit(c.lifecycleState));
+  const currentClaims = liveClaims.filter((c) => isCurrentMerit(c.lifecycleState));
+  const currentPeriods = holder.periods.filter((p) => isCurrentMerit(p.lifecycleState));
 
-  const isEmpty = holder.periods.length === 0 && liveClaims.length === 0;
-  const isPartial = !isEmpty && (holder.periods.length === 0 || liveClaims.length < 2);
+  const isEmpty = currentPeriods.length === 0 && currentClaims.length === 0;
+  const isPartial = !isEmpty && (currentPeriods.length === 0 || currentClaims.length < 2);
 
   const grouped = CLAIM_GROUPS.map((type) => ({
     type,
@@ -403,7 +410,7 @@ export function PassportOverview({
             <RecognitionPanel recognition={recognition} />
           </section>
 
-          <section className="space-y-4">
+          <section id="merits" tabIndex={-1} className="scroll-mt-24 space-y-4" data-merits-list>
             <SectionHeading>{pt("overview.sectionClaims")}</SectionHeading>
 
             {grouped.length === 0 ? (

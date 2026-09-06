@@ -36,6 +36,7 @@ import {
   PROFILE_COMPLETENESS_VERSION,
 } from "../src/lib/professional-identity/completeness";
 import {
+  ACTION_CLASSIFICATION,
   computeNextBestActions,
   MAX_PRIMARY_ACTIONS,
 } from "../src/lib/professional-identity/next-best-action";
@@ -319,9 +320,18 @@ console.log("\n2 · next best action");
     "a new account is offered at most three actions",
     brandNew.primary.length <= MAX_PRIMARY_ACTIONS,
   );
+  // v4 of the ladder: the career analysis outranks the profile. A profile
+  // field is how a merit gets DESCRIBED; the analysis and the Passport are
+  // what this product actually builds for a person, and a brand-new account
+  // has neither. The profile action is still offered, at P7.
   ck(
-    "a new account is asked to complete the profile first",
-    brandNew.primary[0]?.kind === "complete_profile_basics",
+    "a new account is asked to take the career analysis first",
+    brandNew.primary[0]?.kind === "take_career_discovery",
+    brandNew.primary[0]?.kind,
+  );
+  ck(
+    "and the profile action is still offered, lower down",
+    brandNew.all.some((a) => a.kind === "complete_profile_basics" && a.priority === 7),
   );
 
   // The rule the whole ladder exists for.
@@ -339,39 +349,68 @@ console.log("\n2 · next best action");
   const withReport = computeNextBestActions(
     identity({ workload: { ...EMPTY.workload, releasedReportCount: 2 } }),
   );
+  // v5 of the ladder: a released report is NOT an action. There is no read
+  // receipt anywhere in this product, so "read your report" could never
+  // retire — it stayed the recommended step for ever. A released result is a
+  // dated row under Tester och resultat; the only P1 rung is a verification
+  // decision that did not go the holder's way, which the holder can act on.
   ck(
-    "a released report is priority 1",
-    withReport.all.find((a) => a.kind === "read_released_report")?.priority === 1,
+    "a released report is not a ladder action",
+    !Object.keys(ACTION_CLASSIFICATION).includes("read_released_report"),
+  );
+  ck(
+    "a rejected verification is priority 1",
+    computeNextBestActions(ESTABLISHED, { verificationOutcomeCount: 1 }).primary[0]?.kind ===
+      "review_verification_outcome" &&
+      computeNextBestActions(ESTABLISHED, { verificationOutcomeCount: 1 }).primary[0]?.priority ===
+        1,
   );
 
-  // ── B1 · the released report goes somewhere ────────────────────────
+  // ── B1 · the released result goes somewhere ────────────────────────
   //
-  // It pointed at /my-career, which IS the page the action is rendered on.
-  // The one suggestion on this list where somebody else has already decided
-  // the person may read something spent its click going nowhere.
-  const reportAction = (a: ReturnType<typeof computeNextBestActions>) =>
-    a.all.find((x) => x.kind === "read_released_report");
+  // It used to be a ladder action that pointed at /my-career — the page it
+  // was rendered on. It is a ROW now (v5), and the row's destination is
+  // decided by the view model from the pipeline's own state: the report
+  // route when the result is readable, nothing when it is not. Never the
+  // page it is on, never a route the model invented.
+  const { buildCareerHomeViewModel } =
+    await import("../src/lib/professional-identity/home-presentation");
+  const fx = await import("../src/lib/professional-identity/fixtures/career-home-fixtures");
+  const released = buildCareerHomeViewModel(fx.fixtureById("released_and_waiting")!.input);
+  const releasedRow =
+    released.employerWork.state === "ready"
+      ? released.employerWork.tests.find((t) => t.attemptId === "att-released")
+      : undefined;
   ck(
-    "the released-report action never links back to the page it is on",
-    reportAction(withReport)?.href !== "/my-career" &&
-      !reportAction(withReport)!.href.startsWith("/my-career"),
+    "a released result is a row, not the recommended step",
+    released.nextAction.state === "ready" &&
+      released.nextAction.primary?.action.kind !== ("read_released_report" as never),
   );
   ck(
-    "with no identifiable report it opens the area that lists them",
-    reportAction(withReport)?.href === "/academy",
+    "the row opens the report itself, never the page it is on",
+    releasedRow?.href === "/academy/report/att-released",
+    releasedRow?.href,
   );
-  const namedReport = computeNextBestActions(
-    identity({
-      workload: {
-        ...EMPTY.workload,
-        releasedReportCount: 1,
-        releasedReportAttemptId: "att-42",
-      },
-    }),
-  );
+  const unreadable = buildCareerHomeViewModel({
+    ...fx.fixtureById("released_and_waiting")!.input,
+    assessmentHistory: {
+      state: "ready",
+      rows: [
+        fx.history({
+          attemptId: "att-released",
+          lifecycleState: "result_available",
+          participantSnapshotId: null,
+        }),
+      ],
+    },
+  });
+  const unreadableRow =
+    unreadable.employerWork.state === "ready"
+      ? unreadable.employerWork.tests.find((t) => t.attemptId === "att-released")
+      : undefined;
   ck(
-    "and opens the report itself when the seam could name one",
-    reportAction(namedReport)?.href === "/academy/report/att-42",
+    "a released result without a participant snapshot offers no link rather than a dead one",
+    unreadableRow?.phase === "released" && unreadableRow.href === null,
   );
 
   // ── B5 · a closed gate cannot become an actionable CTA ─────────────
@@ -436,9 +475,7 @@ console.log("\n2 · next best action");
   );
   ck(
     "a failed assessment read invents neither an invitation nor a report",
-    !assessmentsUnread.all.some(
-      (a) => a.kind === "complete_assessment_assignment" || a.kind === "read_released_report",
-    ),
+    !assessmentsUnread.all.some((a) => a.kind === "complete_assessment_assignment"),
   );
   // The whole point of recording failures rather than throwing: one broken
   // read costs its own rules, not the list.
@@ -845,11 +882,67 @@ console.log("\n2c · the /my-career surfaces");
   // claims AND verified employment -- so it can never contradict the journey
   // strip or the Career Card, which count from the same function. The
   // jurisdiction-relevance split stays on the Passport itself.
+  // The home's Passport figures come from the ONE merit counter -- claims AND
+  // employment, labelled by the Passport's own trust interpretation -- so
+  // they can never contradict the Passport, the journey strip or the Career
+  // Card. The ladder asks the same module for "how many are ready to send",
+  // which is what stopped the recommendation stating a different total from
+  // the panel beside it.
+  const meritsSrc = read("src/lib/professional-identity/passport-merits.ts");
   ck(
-    "the home's verified figure is counted by summariseTrust",
-    /verified: trust\.known \? trust\.verifiedClaims \+ trust\.verifiedEmployment/.test(
-      snapshotModel,
-    ),
+    "the home's Passport figures are counted by countMerits",
+    /const counts = countMerits\(identity, attention, input\.now\)/.test(snapshotModel),
+  );
+  ck(
+    "and the ladder counts what is ready to send from the same module",
+    read("src/lib/professional-identity/next-best-action.ts").includes(
+      "countReadyForVerification(identity",
+    ) && meritsSrc.includes("export function countReadyForVerification("),
+  );
+  ck(
+    "the merit counter interprets trust through describeTrust, never its own strings",
+    meritsSrc.includes("describeTrust({") && !/assertionLevel === "verified"/.test(meritsSrc),
+  );
+  // ── PR #189 · THE METHOD DECIDES, AND THE COUNT IS THE OUTWARD LEVEL ──
+  //
+  // The home's figure moved from summariseTrust to countMerits, so the rule
+  // #189 pinned there is re-pinned here on the module that now owns it.
+  // Omitting verificationMethod or subjectKind does not weaken describeTrust,
+  // it inverts it: the call falls through to the unattributed branch and a
+  // CQrityjob document review returns looking source-confirmed.
+  ck(
+    "the merit counter passes the whole provenance -- the method and the subject too",
+    /verificationMethod: merit\.verificationMethod/.test(meritsSrc) &&
+      /subjectKind: merit\.subjectKind \?\? "credential"/.test(meritsSrc) &&
+      /subjectKind: "employment" as const/.test(meritsSrc) &&
+      /subjectKind: "credential" as const/.test(meritsSrc),
+  );
+  ck(
+    "and gates the verified count on the outward level, never on status alone",
+    meritsSrc.includes("publicTrustLevel(trust)") &&
+      /level === "source_verified"/.test(meritsSrc) &&
+      !/trust\.status === "verified"/.test(meritsSrc),
+  );
+  ck(
+    "a decided-but-documented merit is counted apart, and never as ready to verify",
+    /readonly documentedCount: number/.test(meritsSrc) &&
+      /documentedCount: of\("documented"\)/.test(meritsSrc) &&
+      !/label === "documented"/.test(
+        meritsSrc.slice(meritsSrc.indexOf("export function countReadyForVerification(")),
+      ),
+  );
+  ck(
+    "the summary card names the documented state rather than folding it into verified",
+    read("src/components/professional-identity/PassportSummary.tsx").includes(
+      "passport.counts.documentedCount > 0",
+    ) &&
+      read("src/components/professional-identity/home-copy.ts").includes(
+        'documented: c("Dokumenterade meriter", "Documented merits")',
+      ),
+  );
+  ck(
+    "and the summariser #189 pinned still reads the same way for the surfaces that use it",
+    read("src/lib/professional-identity/trust-summary.ts").includes("presentsAsVerified(trust)"),
   );
   ck(
     "the relevance split itself is unchanged",
@@ -874,9 +967,15 @@ console.log("\n2c · the /my-career surfaces");
   );
 
   // ── M2 · the block does not silently disappear ─────────────────────
+  // The failure travels INTO the view model (`identity: { state: "error" }`)
+  // and the header renders it as a named state with a retry — never a
+  // plain greeting, never a skeleton.
   ck(
     "a failed identity read is stated rather than replaced by a plain greeting",
-    /identityQ\.isError \?/.test(dashboard),
+    /identityQ\.isError\s*\?\s*\{ state: "error" \}/.test(dashboard) &&
+      read("src/components/professional-identity/CareerPageHeader.tsx").includes(
+        'profile.state === "unavailable"',
+      ),
   );
   ck(
     "and offers a retry rather than asking for a page reload",
@@ -2516,15 +2615,32 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
     // isVerifiedClaim -- a revoked credential is not currently verified.
     const pillarSrc = read("src/lib/professional-identity/home-presentation.ts");
     const trustSrc = read("src/lib/professional-identity/trust-summary.ts");
+    const meritSrc = read("src/lib/professional-identity/passport-merits.ts");
     ck(
-      "11.24 the home's Passport pillar counts CURRENTLY verified claims",
-      pillarSrc.includes("summariseTrust(identity)") &&
+      "11.24 the home's Passport summary counts CURRENTLY verified merits",
+      pillarSrc.includes("countMerits(identity, attention, input.now)") &&
+        // labelMerit hands the lifecycle to describeTrust, which refuses the
+        // mark on anything not currently active.
+        meritSrc.includes("lifecycleState: merit.lifecycleState ?? null") &&
         trustSrc.includes("identity.claims.filter(isVerifiedClaim)") &&
         // The EFFECTIVE level (security-passport/provenance.ts), so a legacy
         // unsupported approval is not counted as currently verified either.
         read("src/lib/professional-identity/types.ts").includes(
           'effectiveAssertionLevel(claim) === "verified" && claim.lifecycleState === "active"',
         ),
+    );
+    ck(
+      // Re-pointed for PR #189: BOTH decided levels lapse. A source
+      // confirmation and a CQrityjob review each stop being current when the
+      // merit's own validity runs out, and neither may sit in a present-tense
+      // figure afterwards. The behaviour itself is asserted in the counted-
+      // shapes group at the foot of this file.
+      "11.24b and a merit whose own validity has lapsed is counted apart from it",
+      meritSrc.includes("const lapsed = hasLapsed(merit.validUntil ?? null, now)") &&
+        meritSrc.includes(
+          'if (level === "source_verified") return lapsed ? "expired" : "verified"',
+        ) &&
+        meritSrc.includes('if (level === "documented") return lapsed ? "expired" : "documented"'),
     );
     ck(
       "11.25 and a revoked-only Passport counts as nothing currently verified",
@@ -3237,6 +3353,239 @@ console.log("\n14 · career journey background");
   ck(
     "14.13 and it still reads the canonical profile rather than a copy",
     code.includes('"security_career_profiles"'),
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* MY CAREER x THE PASSPORT'S TRUST — the four shapes, counted            */
+/*                                                                       */
+/* PR #189 moved the outward level off the stored assertion level: an     */
+/* authorised verifier deciding is one fact, and the source confirming is */
+/* another, and only the second may wear the word verified. The career    */
+/* home counts merits through its own module, so the rule is tested HERE  */
+/* on the behaviour, not only on the source. Every case below is a shape  */
+/* the product really holds today.                                        */
+/* ------------------------------------------------------------------ */
+
+{
+  console.log("\nMY CAREER x PASSPORT TRUST — the counted shapes");
+  const fx = await import("../src/lib/professional-identity/fixtures/career-home-fixtures");
+  const merits = await import("../src/lib/professional-identity/passport-merits");
+  const NOW = new Date("2026-09-06T10:00:00Z");
+  const QUIET = { known: true, open: new Set<string>(), clarification: new Set<string>() };
+  const countOne = (row: Parameters<typeof merits.countMeritRows>[0][number]) =>
+    merits.countMeritRows([row], QUIET, NOW);
+  const labelOf = (row: Parameters<typeof merits.labelMerit>[0]) =>
+    merits.labelMerit(row, { openReview: false, clarificationOpen: false }, NOW);
+
+  // ── A · a CQrityjob document review ─────────────────────────────────
+  //
+  // The commonest verified row in the product. An authorised verifier read
+  // the evidence and decided, so the Passport records assertion_level
+  // verified -- and the outward level is Documented, because CQrityjob is
+  // not the source of the credential.
+  const reviewed = {
+    id: "c-doc",
+    assertionLevel: "verified",
+    lifecycleState: "active",
+    verifierName: "CQrityjob",
+    verificationMethod: "document_review",
+    subjectKind: "credential" as const,
+  };
+  ck(
+    "A · a document-reviewed credential is documented, not verified",
+    labelOf(reviewed) === "documented",
+  );
+  const a = countOne(reviewed);
+  ck(
+    "A · it is counted as documented and NOT in the verified figure",
+    a.documentedCount === 1 && a.verifiedCount === 0,
+  );
+  ck("A · it is still a recorded merit", a.addedCount === 1);
+  ck(
+    "A · and the home never offers to send it for verification again",
+    merits.countReadyForVerification(
+      fx.identity({
+        claims: [
+          fx.claim("c-doc", {
+            assertionLevel: "verified",
+            verifierName: "CQrityjob",
+            verificationMethod: "document_review",
+          }),
+        ],
+      }),
+      [],
+      NOW,
+    ) === 0,
+  );
+
+  // ── B · an issuer confirmation with nothing structural behind it ─────
+  //
+  // No issuer organisation id, no membership, no receipt, no revocation
+  // authority: the organisation name is a string somebody typed. It fails
+  // closed to documented until the Issuer Foundation release, and the rule
+  // must never learn to recognise an issuer by name.
+  const issuer = {
+    id: "c-iss",
+    assertionLevel: "verified",
+    lifecycleState: "active",
+    verifierName: "Polismyndigheten",
+    verificationMethod: "issuer_confirmation",
+    subjectKind: "credential" as const,
+  };
+  ck(
+    "B · an unsupported issuer confirmation fails closed to documented",
+    labelOf(issuer) === "documented",
+  );
+  const b = countOne(issuer);
+  ck("B · and is never counted as verified", b.verifiedCount === 0 && b.documentedCount === 1);
+  ck(
+    "B · a well-known issuer name changes nothing -- the name is not the authority",
+    labelOf({ ...issuer, verifierName: "Länsstyrelsen" }) === "documented" &&
+      labelOf({ ...issuer, verifierName: "Svenska Kraftnät" }) === "documented",
+  );
+
+  // ── C · an employer confirming an employment period ──────────────────
+  //
+  // The one structurally supported source confirmation the product has: the
+  // database proves the caller represents that employer and refuses the
+  // shape aimed at anything but an employment period. It is a confirmed
+  // EMPLOYMENT, and it is not a credential verification.
+  const employmentRow = {
+    id: "e-1",
+    assertionLevel: "verified",
+    lifecycleState: null,
+    verifierName: "Bevakning AB",
+    verificationMethod: "employer_confirmation",
+    subjectKind: "employment" as const,
+  };
+  ck(
+    "C · an employer-confirmed employment presents as verified",
+    labelOf(employmentRow) === "verified",
+  );
+  const c = countOne(employmentRow);
+  ck("C · and is counted in the verified figure", c.verifiedCount === 1 && c.documentedCount === 0);
+  ck(
+    "C · the SAME method against a credential is not a credential verification",
+    labelOf({
+      ...employmentRow,
+      id: "c-emp",
+      subjectKind: "credential" as const,
+      lifecycleState: "active",
+    }) === "documented",
+  );
+  ck(
+    "C · the seam states the subject for each kind, so neither borrows the other's rule",
+    (() => {
+      const rows = merits.identityMeritRows(
+        fx.identity({
+          claims: [fx.claim("c-1")],
+          employment: [
+            {
+              id: "e-1",
+              employerName: "Bevakning AB",
+              roleTitle: "Väktare",
+              startedOn: "2021-01-01",
+              endedOn: null,
+              employmentType: "permanent",
+              jurisdictionCode: "SE",
+              assertionLevel: "verified",
+              verifierName: "Bevakning AB",
+              verificationMethod: "employer_confirmation",
+              verifiedOn: "2026-01-01",
+            },
+          ],
+        }),
+      );
+      return (
+        rows.find((r) => r.id === "c-1")?.subjectKind === "credential" &&
+        rows.find((r) => r.id === "e-1")?.subjectKind === "employment"
+      );
+    })(),
+  );
+
+  // ── D · a source confirmation that IS structurally supported ─────────
+  //
+  // Stated as the rule rather than as a row: when effectiveTrust reaches
+  // source_confirmed, the count says verified. Today exactly one shape
+  // reaches it (C above), and this asserts the gate is the level and not a
+  // hard-coded list -- so the Issuer Foundation release promotes issuers by
+  // changing the rule, and this counter follows without being edited.
+  const trust = await import("../src/lib/security-passport/trust-presentation");
+  ck(
+    "D · a structurally supported source confirmation is verified, and it is the level that decides",
+    trust.publicTrustLevel(
+      trust.describeTrust({
+        assertionLevel: "verified",
+        lifecycleState: null,
+        verifierName: "Bevakning AB",
+        verificationMethod: "employer_confirmation",
+        subjectKind: "employment",
+      }),
+    ) === "source_verified" &&
+      labelOf(employmentRow) === "verified" &&
+      trust.publicTrustLevel(
+        trust.describeTrust({
+          assertionLevel: "verified",
+          lifecycleState: "active",
+          verifierName: "CQrityjob",
+          verificationMethod: "document_review",
+          subjectKind: "credential",
+        }),
+      ) === "documented",
+  );
+
+  // ── The states that were already right, held in place ────────────────
+  ck(
+    "a self-declared merit is added by you, and an attached document is not a review",
+    labelOf({ id: "c-s", assertionLevel: "self_declared", lifecycleState: "active" }) ===
+      "added_by_you" &&
+      labelOf({ id: "c-d", assertionLevel: "document_provided", lifecycleState: "active" }) ===
+        "document_provided",
+  );
+  ck(
+    "an archived row is never a current merit, whatever was decided about it",
+    merits.countMeritRows(
+      [
+        { ...reviewed, lifecycleState: "superseded" },
+        { ...employmentRow, id: "e-2", lifecycleState: "revoked" },
+      ],
+      QUIET,
+      NOW,
+    ).addedCount === 0,
+  );
+  ck(
+    "a lapsed source confirmation is expired, not verified",
+    labelOf({ ...employmentRow, validUntil: "2020-01-01" }) === "expired",
+  );
+  ck(
+    "an unfinished merit is a draft, never a recorded one",
+    merits.countMeritRows([{ ...reviewed, lifecycleState: "draft" }], QUIET, NOW).draftCount === 1,
+  );
+  ck(
+    "a merit under review reads as requested, never as verified",
+    merits.labelMerit(
+      { id: "c-p", assertionLevel: "document_provided", lifecycleState: "active" },
+      { openReview: true, clarificationOpen: false },
+      NOW,
+    ) === "verification_requested",
+  );
+  ck(
+    "and the ladder counts only what nobody has decided on yet",
+    merits.countReadyForVerification(
+      fx.identity({
+        claims: [
+          fx.claim("c-new"),
+          fx.claim("c-rev", {
+            assertionLevel: "verified",
+            verifierName: "CQrityjob",
+            verificationMethod: "document_review",
+          }),
+        ],
+      }),
+      [],
+      NOW,
+    ) === 1,
   );
 }
 
