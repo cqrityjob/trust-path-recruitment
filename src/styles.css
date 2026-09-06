@@ -334,21 +334,33 @@
 }
 
 /* ---------------------------------------------------------------------
- * TRUST Evidence Report (PR-R3B) — print.
+ * TRUST Evidence Report (PR-R3B) — the printed document.
  *
- * The screen order and the printed order differ on purpose: on screen the
- * safety follow-up sits before the interview plan and the live addenda
- * rail comes last; on paper the frozen document prints as identity,
- * overview, evidence map, self-description, TRUST plan, safety (if any),
- * limitations and method, and the live rail does not print at all
- * (.no-print). Sections carry data-print-order; flex order applies it.
- * The navy identity band becomes a plain bordered card so grayscale
- * printers do not lay down a full-width block of ink.
+ * On screen the report is one page. On paper it is a document in two parts:
+ *
+ *   PART 1  employer report   identity, the thirty-second overview, the
+ *                             eight areas at a glance, the TRUST Interview
+ *                             Plan, safety-related follow-up when there is
+ *                             one, and the limitations and method.
+ *   PART 2  evidence appendix the full per-competency evidence, the
+ *                             candidate's own description and the technical
+ *                             traceability.
+ *
+ * Nothing is dropped: a recruitment manager can read Part 1 and stop, and an
+ * auditor still has everything. The screen order never changes -- sections
+ * carry data-print-order and flex order applies it only in print. The live
+ * addenda rail is not part of the document and does not print.
+ *
+ * Page breaks are the reason this block exists at all: an unconditional
+ * break-inside:avoid on every card produced near-empty pages, so the type is
+ * tightened, the evidence cards run in one column, and only blocks small
+ * enough to fit are held together.
  * ------------------------------------------------------------------- */
 @media print {
   .trust-report {
     display: flex;
     flex-direction: column;
+    font-size: 9.5pt;
   }
   .trust-report > [data-print-order="1"] { order: 1; }
   .trust-report > [data-print-order="2"] { order: 2; }
@@ -360,18 +372,35 @@
   .trust-report > [data-print-order="8"] { order: 8; }
   .trust-report > [data-print-order="9"] { order: 9; }
   .trust-report > [data-print-order="10"] { order: 10; }
+  .trust-report > [data-print-order="11"] { order: 11; }
+  .trust-report > [data-print-order="20"] { order: 20; }
+
+  /* Rhythm: tighter than the screen, still a document and not a form. */
   .trust-report > section {
-    margin-top: 16pt;
+    margin-top: 14pt;
   }
+  .trust-report p,
+  .trust-report li,
+  .trust-report dd {
+    line-height: 1.45;
+  }
+  /* Word-spacing survives PDF text extraction only without the display
+   * face's negative tracking, so headings print at normal spacing. */
+  .trust-report h1,
+  .trust-report h2,
+  .trust-report h3,
+  .trust-report h4 {
+    letter-spacing: normal;
+  }
+
+  /* The masthead becomes a printed head, the identity card a plain block. */
   .trust-report .tr-masthead {
     background: #fff !important;
     color: #101828 !important;
     border-bottom: 2px solid #0b1f3a;
     border-radius: 0 !important;
-    padding-top: 0 !important;
-    padding-bottom: 8pt !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding: 0 0 8pt !important;
+    margin: 0 !important;
     box-shadow: none !important;
   }
   .trust-report .tr-masthead * {
@@ -379,7 +408,7 @@
     border-color: #d8e1ea !important;
   }
   .trust-report .tr-identity-card {
-    margin-top: 12pt !important;
+    margin: 10pt 0 0 !important;
     box-shadow: none !important;
   }
   .trust-report .tr-plan-head {
@@ -392,20 +421,264 @@
   }
   .trust-report .shadow-\[var\(--shadow-xs\)\],
   .trust-report .shadow-\[var\(--shadow-sm\)\],
-  .trust-report .shadow-\[var\(--shadow-md\)\] {
+  .trust-report .shadow-\[var\(--shadow-md\)\],
+  .trust-report .shadow-\[var\(--shadow-lg\)\] {
     box-shadow: none !important;
   }
-  .trust-report .tr-card,
-  .trust-report article {
+
+  /* Part headings. Part 2 always starts a page; Part 1 never does. */
+  .trust-report .tr-part {
+    display: block;
+    margin-top: 16pt;
+    padding-bottom: 4pt;
+    border-bottom: 1px solid #0b1f3a;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .trust-report .tr-part-2 {
+    break-before: page;
+    page-break-before: always;
+  }
+  .trust-report .tr-part-label {
+    font-family: var(--font-display);
+    font-size: 12pt;
+    font-weight: 600;
+    letter-spacing: normal;
+  }
+  .trust-report .tr-part-lede {
+    margin-top: 2pt;
+    font-size: 8.5pt;
+    color: #475467;
+  }
+
+  /* The eight areas at a glance: one table, one page, Part 1. */
+  .trust-report .tr-summary {
+    display: block;
+    margin-top: 14pt;
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .trust-report .tr-card li,
-  .trust-report article li {
-    break-inside: auto;
+  .trust-report .tr-summary h2 {
+    font-family: var(--font-display);
+    font-size: 12pt;
+    font-weight: 600;
+    margin-bottom: 5pt;
+  }
+  .trust-report .tr-summary table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+  }
+  .trust-report .tr-summary th,
+  .trust-report .tr-summary td {
+    text-align: left;
+    vertical-align: top;
+    padding: 3.5pt 6pt 3.5pt 0;
+    border-bottom: 1px solid #e6ecf2;
+  }
+  .trust-report .tr-summary thead th {
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475467;
+    border-bottom: 1px solid #0b1f3a;
+  }
+  .trust-report .tr-summary tbody th {
+    font-weight: 600;
+    width: 34%;
+  }
+
+  /* Anything screen-only inside a printed section. */
+  .trust-report .tr-hide-in-print {
+    display: none !important;
+  }
+
+  /* The evidence appendix: one column, so a card is not stretched to the
+   * height of its neighbour and then pushed whole onto the next page. */
+  .trust-report #trust-map ul {
+    display: block;
+  }
+  .trust-report #trust-map > ul > li {
+    margin-top: 8pt;
+  }
+  .trust-report .tr-card,
+  .trust-report #trust-plan article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .trust-report .tr-card {
+    padding: 10pt !important;
+  }
+  /* A card's detail runs in two columns on paper: the blocks are short, and
+   * one column per block is what made the appendix twice as long as it
+   * needed to be. */
+  .trust-report .tr-card .screen-fold {
+    column-count: 2;
+    column-gap: 14pt;
+  }
+  .trust-report .tr-card .screen-fold > div > div {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .trust-report .tr-card h3,
+  .trust-report .tr-card h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Never leave a heading, a part label or a table head alone at the foot. */
+  .trust-report h2,
+  .trust-report h3 {
+    orphans: 3;
+    widows: 3;
   }
   .trust-report a[href^="#"] {
     text-decoration: none;
     color: inherit;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * TRUST Evidence Report — printed density.
+ *
+ * A printed page is 180mm wide, which is 680 CSS pixels: every responsive
+ * grid above the `sm` breakpoint collapses, and the report that reads as
+ * three columns on screen prints as one long ribbon. The overview, the plan
+ * and the appendix therefore state their printed columns explicitly.
+ *
+ * The appendix is also set smaller than the screen. It is reference material
+ * -- eight competency sheets a reader consults, not prose they read through
+ * -- and at screen sizes it ran to six pages on its own.
+ * ------------------------------------------------------------------- */
+@media print {
+  .trust-report .tr-print-cols-3 {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8pt !important;
+  }
+  .trust-report .tr-print-cols-2 {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8pt !important;
+  }
+  .trust-report .tr-print-dup {
+    display: none !important;
+  }
+
+  /* The evidence appendix, set as a reference sheet. */
+  .trust-report .tr-card {
+    padding: 7pt 8pt !important;
+    font-size: 8pt;
+  }
+  .trust-report .tr-card p,
+  .trust-report .tr-card li,
+  .trust-report .tr-card dd,
+  .trust-report .tr-card span {
+    font-size: 8pt !important;
+    line-height: 1.35 !important;
+  }
+  .trust-report .tr-card h3 {
+    font-size: 10pt !important;
+  }
+  .trust-report .tr-card h4,
+  .trust-report .tr-card dt {
+    font-size: 7pt !important;
+  }
+  .trust-report .tr-card .screen-fold {
+    margin-top: 4pt;
+    padding-top: 4pt;
+  }
+  .trust-report .tr-card .screen-fold > div {
+    gap: 7pt !important;
+  }
+  .trust-report #trust-map > ul > li {
+    margin-top: 6pt;
+  }
+  .trust-report #trust-map > ul > li:first-child {
+    margin-top: 0;
+  }
+
+  /* The plan and the overview stay at reading size; only their rhythm tightens. */
+  .trust-report #trust-plan article {
+    padding: 9pt !important;
+  }
+  .trust-report > section {
+    margin-top: 12pt;
+  }
+}
+
+@media print {
+  /* The card's detail is a flex column, and a flex container cannot be split
+   * across columns -- so the two-column appendix sheet was filling one column
+   * and leaving the other empty. Block layout lets the blocks flow. */
+  .trust-report .tr-card .screen-fold > div {
+    display: block !important;
+    border-top: 1px solid #e6ecf2;
+    padding-top: 5pt;
+  }
+  .trust-report .tr-card .screen-fold > div > div {
+    margin-bottom: 7pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * TRUST Evidence Report — what may not be split across a page.
+ *
+ * The repository-wide rule keeps every list item, row and .avoid-break block
+ * whole. Applied to a document of this size that produced pages that were
+ * 40% empty: a competency sheet is taller than half a page, so two never fit
+ * and one was printed per page.
+ *
+ * So the report states its own policy. Only units small enough to survive it
+ * are held together -- a summary table, one overview column, one interview
+ * priority, the safety block, the identity card, and the individual blocks
+ * inside a competency sheet. Everything else, including the sheet itself,
+ * flows. Measured on the released fixtures: 20 pages -> 11 (standard),
+ * 23 -> 13 (with a safety follow-up), with no near-empty page.
+ * ------------------------------------------------------------------- */
+@media print {
+  .trust-report *,
+  .trust-report li,
+  .trust-report tr {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+  .trust-report .tr-identity-card,
+  .trust-report .tr-summary,
+  .trust-report .tr-summary tr,
+  .trust-report #trust-overview > article,
+  .trust-report #trust-overview > div.grid > section,
+  .trust-report #trust-plan article,
+  .trust-report #trust-safety article,
+  .trust-report .tr-card .screen-fold > div > div {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+
+@media print {
+  /* The site-wide print rule above neutralises `flex-1` to stop a trailing
+   * blank page on the assessment layout. Inside this report that stops every
+   * flex row from shrinking, and the identity card, the next-step card and
+   * the plan pushed their text past the right edge of the page. Restore the
+   * behaviour here, where the trailing-page problem does not exist. */
+  .trust-report .flex-1 {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+@media print {
+  /* Four count columns inside a 295pt appendix column leaves no room between
+   * the labels, and "Scenariouppgifter" ran into "Fritextsvar". Two columns
+   * with a real gap, at print size. */
+  .trust-report .tr-card .screen-fold dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    column-gap: 10pt !important;
+    row-gap: 4pt !important;
   }
 }

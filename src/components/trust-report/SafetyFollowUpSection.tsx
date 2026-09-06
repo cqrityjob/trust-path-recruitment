@@ -32,7 +32,8 @@ export function SafetyFollowUpSection({ doc }: { doc: TrustReportDocument }) {
     <Section
       id="trust-safety"
       title={t("report.trust.safety.heading")}
-      printOrder={7}
+      lede={t("report.trust.safety.lede")}
+      printOrder={6}
       aside={<Tag>{t("report.trust.safety.employerOnly")}</Tag>}
     >
       <article className="avoid-break relative overflow-hidden rounded-xl border border-[color:var(--gold)]/40 bg-[color:var(--gold)]/5 p-6 shadow-[var(--shadow-xs)]">

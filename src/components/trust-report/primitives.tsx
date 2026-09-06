@@ -70,6 +70,14 @@ export function PatternChip({ value }: { value: ObservedPattern }) {
  *  the amount of evidence is never read as the quality of the candidate. */
 export function SufficiencyText({ value, items }: { value: EvidenceSufficiency; items: number }) {
   const { t, tp } = useT();
+  // The long form says what the evidence is sufficient FOR. Never "sufficient
+  // competence": the amount of evidence is not a statement about the person.
+  const label =
+    value === "sufficient"
+      ? t("report.trust.sufficiency.sufficientLong")
+      : value === "limited"
+        ? t("report.trust.sufficiency.limitedLong")
+        : t("report.trust.sufficiency.none");
   return (
     <span className="inline-flex flex-wrap items-center gap-x-1.5 text-[13px] leading-none">
       <span
@@ -79,7 +87,7 @@ export function SufficiencyText({ value, items }: { value: EvidenceSufficiency; 
             : "font-semibold text-muted-foreground"
         }
       >
-        {t(SUFFICIENCY_KEY[value])}
+        {label}
       </span>
       <span aria-hidden="true" className="text-muted-foreground/60">
         ·

@@ -13,7 +13,7 @@ import { ArrowRight, MessagesSquare } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import type { TrustReportDocument } from "@/lib/security-competency/trust-report.types";
-import { pick } from "@/lib/security-competency/trust-report.types";
+import { pick, pickLimitation } from "@/lib/security-competency/trust-report.types";
 import { UNCLEAR_KEY, planPriorities } from "@/lib/security-competency/trust-report.presentation";
 import { Fold, PatternChip, SufficiencyText, Tag } from "./primitives";
 import type { TrustReportNav } from "./nav";
@@ -35,7 +35,7 @@ export function InterviewPlanSection({
     <section
       id="trust-plan"
       aria-labelledby="trust-plan-title"
-      data-print-order={6}
+      data-print-order={5}
       className="mt-10"
     >
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-sm)]">
@@ -85,10 +85,14 @@ export function InterviewPlanSection({
                 const name = lang === "en" ? p.target.area_en : p.target.area_sv;
                 const listen = lang === "en" ? p.tell.listen_for.en : p.tell.listen_for.sv;
                 const unclear = p.ready.limitation
-                  ? lang === "en"
-                    ? p.ready.limitation.en
-                    : p.ready.limitation.sv
+                  ? pickLimitation(p.ready.limitation, lang)
                   : t(UNCLEAR_KEY[p.target.focus]);
+                // A priority built on the candidate's own account is never
+                // headlined as something the evidence shows.
+                const knowHeading =
+                  p.target.evidence_type === "self_reported"
+                    ? t("report.trust.plan.knowSelfReported")
+                    : t("report.trust.plan.knowObserved");
                 return (
                   <li key={`${p.order}-${p.competency_code}`}>
                     <article
@@ -116,10 +120,10 @@ export function InterviewPlanSection({
                         </Tag>
                       </div>
 
-                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <div className="tr-print-cols-2 mt-4 grid gap-3 md:grid-cols-2">
                         <div className="rounded-lg bg-secondary/40 p-4">
                           <p className="text-[10.5px] font-semibold uppercase tracking-widest text-muted-foreground">
-                            {t("report.trust.plan.know")}
+                            {knowHeading}
                           </p>
                           <p className="mt-1.5 text-[14px] leading-relaxed text-foreground">
                             {pick(p.ready.existing_evidence, lang)}

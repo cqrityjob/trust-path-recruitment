@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TrustReportDocument } from "@/lib/security-competency/trust-report.types";
-import { pick } from "@/lib/security-competency/trust-report.types";
+import { pick, pickLimitation } from "@/lib/security-competency/trust-report.types";
 import {
   ADDENDUM_STATUS_KEY,
   FLAG_KEY,
@@ -57,7 +57,7 @@ export function EvidenceMap({ doc }: { doc: TrustReportDocument }) {
       id="trust-map"
       title={t("report.trust.map.heading")}
       lede={t("report.trust.map.lede")}
-      printOrder={3}
+      printOrder={9}
     >
       {cards.length === 0 ? (
         <p className="rounded-xl border border-border bg-secondary/40 p-5 text-[13px] text-muted-foreground">
@@ -138,7 +138,7 @@ function Card({ card }: { card: EvidenceCard }) {
         >
           <div className="mt-2 flex flex-col gap-5 border-t border-border pt-5">
             <Block title={t("report.trust.map.observed")}>
-              <p className="text-[14px] leading-relaxed text-foreground">
+              <p className="tr-print-dup text-[14px] leading-relaxed text-foreground">
                 {pick(core.factual_explanation, lang)}
               </p>
               {pick(core.behaviour, lang) && (
@@ -185,7 +185,7 @@ function Card({ card }: { card: EvidenceCard }) {
                     value={String(basis.self_description_items)}
                   />
                   <Fact
-                    label={t("report.trust.map.reviewedWord")}
+                    label={t("report.trust.map.scope.freeTextReviewed")}
                     value={String(basis.free_text_reviewed)}
                   />
                 </dl>
@@ -260,7 +260,7 @@ function Card({ card }: { card: EvidenceCard }) {
             <Block title={t("report.trust.map.limitations")}>
               {core.limitation ? (
                 <p className="text-[14px] leading-relaxed text-foreground">
-                  {lang === "en" ? core.limitation.en : core.limitation.sv}
+                  {pickLimitation(core.limitation, lang)}
                 </p>
               ) : (
                 <p className="text-[13px] italic text-muted-foreground">

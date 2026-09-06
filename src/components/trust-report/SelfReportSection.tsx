@@ -18,7 +18,7 @@ export function SelfReportSection({ doc }: { doc: TrustReportDocument }) {
     <Section
       id="trust-self"
       title={t("report.trust.self.heading")}
-      printOrder={5}
+      printOrder={10}
       subordinate
       aside={<Tag muted>{t("report.trust.map.selfReportTag")}</Tag>}
     >

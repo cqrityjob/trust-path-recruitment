@@ -61,7 +61,7 @@ export function AddendaRail({
     <Section
       id="trust-addenda"
       title={t("report.trust.addenda.heading")}
-      printOrder={10}
+      printOrder={20}
       className="no-print"
       aside={
         <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-1.5">

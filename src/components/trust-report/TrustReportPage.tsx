@@ -9,6 +9,8 @@
 // stays on screen.
 
 import type { TrustReportDocument } from "@/lib/security-competency/trust-report.types";
+import { CompetencySummary, PrintPart } from "./PrintStructure";
+import { ProvenanceSection } from "./ProvenanceSection";
 import { AddendaRail } from "./AddendaRail";
 import { EvidenceMap } from "./EvidenceMap";
 import { InterviewPlanSection } from "./InterviewPlanSection";
@@ -39,13 +41,17 @@ export function TrustReportPage({
       data-schema={doc.schema_version}
     >
       <ReportHeader doc={doc} nav={nav} subject={subject} />
+      <PrintPart part={1} printOrder={2} />
       <OverviewHero doc={doc} nav={nav} />
+      <CompetencySummary doc={doc} printOrder={4} />
       <EvidenceMap doc={doc} />
       <SelfReportSection doc={doc} />
       <SafetyFollowUpSection doc={doc} />
       <InterviewPlanSection doc={doc} nav={nav} />
+      <PrintPart part={2} printOrder={8} />
       <AddendaRail doc={doc} attemptId={attemptId} canRecord={canRecord} />
       <MethodSection doc={doc} />
+      <ProvenanceSection doc={doc} printOrder={11} />
     </div>
   );
 }

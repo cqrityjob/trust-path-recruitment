@@ -60,7 +60,7 @@ export function OverviewHero({ doc, nav }: { doc: TrustReportDocument; nav: Trus
     <Section
       id="trust-overview"
       title={t("report.trust.overview.heading")}
-      printOrder={2}
+      printOrder={3}
       className="mt-8"
     >
       {step && (
@@ -118,7 +118,7 @@ export function OverviewHero({ doc, nav }: { doc: TrustReportDocument; nav: Trus
         </article>
       )}
 
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
+      <div className="tr-print-cols-3 mt-4 grid gap-4 md:grid-cols-3">
         <Column
           title={t("report.trust.overview.col.support")}
           hint={t("report.trust.overview.col.supportHint")}
@@ -244,12 +244,9 @@ function Column({
                     <PriorityLabel value={l.follow_up_priority} />
                   ))}
                 {kind === "limited" && (
-                  <>
-                    <SufficiencyChip value={l.evidence_sufficiency} />
-                    <span className="text-[12px] text-muted-foreground">
-                      {l.observed_item_count} {tp("report.trust.items", l.observed_item_count)}
-                    </span>
-                  </>
+                  <span className="text-[12.5px] font-medium text-muted-foreground">
+                    {l.observed_item_count} {tp("report.trust.items", l.observed_item_count)}
+                  </span>
                 )}
               </div>
             </li>

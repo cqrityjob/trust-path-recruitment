@@ -349,6 +349,32 @@ export function isTrustReportDocument(value: unknown): value is TrustReportDocum
   );
 }
 
-/** Pick the language of a bilingual pair. */
+/** Repair the generator's plural placeholders in frozen prose.
+ *
+ *  The released document says "Endast 1 uppgift(er) ..." / "Only 1 task(s)
+ *  ...", because the SQL that wrote it built one sentence for both counts.
+ *  That reads as unfinished software in an executive report, and the frozen
+ *  text cannot be rewritten -- so the reader is shown the same statement with
+ *  the number and the noun in agreement: the count decides whether the
+ *  suffix in brackets is used. Nothing else about the sentence changes, and
+ *  no count, claim or qualifier is touched. The real fix belongs in the
+ *  document generator; until it ships, this keeps the artefact off the page.
+ *
+ *  "2 uppgift(er)" -> "2 uppgifter"; "1 task(s)" -> "1 task". */
+export function repairPlurals(text: string): string {
+  return text.replace(
+    /(\d+)(\s+)([A-Za-zÀ-ÿ]+)\(([A-Za-zÀ-ÿ]{1,3})\)/g,
+    (_m, n: string, gap: string, base: string, suffix: string) =>
+      `${n}${gap}${Number(n) === 1 ? base : base + suffix}`,
+  );
+}
+
+/** Pick the language of a bilingual pair, as the reader should see it. */
 export const pick = (t: Bilingual | null | undefined, lang: "sv" | "en"): string =>
-  t ? (lang === "en" ? t.en : t.sv) : "";
+  t ? repairPlurals(lang === "en" ? t.en : t.sv) : "";
+
+/** The same repair for a limitation, which is a flat {code, sv, en} row. */
+export const pickLimitation = (
+  t: { code: string; sv: string; en: string } | null | undefined,
+  lang: "sv" | "en",
+): string => (t ? repairPlurals(lang === "en" ? t.en : t.sv) : "");

@@ -86,6 +86,7 @@ const { dictionaries } = await import("../src/i18n/dictionaries");
 const { TrustReportPage } = await import("../src/components/trust-report/TrustReportPage");
 const { TRUST_REPORT_FIXTURES } =
   await import("../src/lib/security-competency/trust-report-fixtures");
+const { repairPlurals } = await import("../src/lib/security-competency/trust-report.types");
 const { buildEvidenceCards, hasSafetyFollowUp } =
   await import("../src/lib/security-competency/trust-report.presentation");
 
@@ -161,10 +162,10 @@ group("1. Information hierarchy: the sections come in the argued order");
     "Beslutsstöd för fortsatt mänsklig bedömning.",
     "Det här är viktigast inför nästa steg",
     "Nästa steg i processen",
-    "Tydligast stöd",
+    "Tydligast observerat stöd",
     "Verifiera i intervju",
     "Begränsat underlag",
-    "Evidenskarta",
+    "Kompetensområden och underlag",
     "Kandidatens egen beskrivning",
     "TRUST Interview Plan",
     "Intervjutillägg",
@@ -207,8 +208,8 @@ group("1. Information hierarchy: the sections come in the argued order");
       stdText.includes("Tillbaka till kandidatlistan"),
   );
   check(
-    "the print order covers identity, overview, evidence, self-description, plan, method",
-    [1, 2, 3, 5, 6, 8].every((n) => std.includes(`data-print-order="${n}"`)),
+    "the printed document is ordered as two parts: report then evidence appendix",
+    [1, 2, 3, 4, 5, 7, 8, 9, 10, 11].every((n) => std.includes(`data-print-order="${n}"`)),
   );
   check(
     "the standing statement is present and the decision is the employer's",
@@ -273,8 +274,8 @@ group("2. The thirty-second overview");
     safetyHero.includes("Säkerhetskritisk uppföljning finns"),
   );
   check(
-    "with a finding, the next step is to request clarification",
-    safetyHero.includes("Begär förtydligande"),
+    "with a finding, the next step is to follow up before the next step",
+    safetyHero.includes("Följ upp innan nästa steg"),
   );
 }
 
@@ -308,13 +309,15 @@ group("3. Evidence cards: three dimensions, three words");
     cards.every((c) => {
       const s = card(std, c.code);
       return (
-        s.includes("Observerat svarsmönster") && s.includes("Underlag") && s.includes("Nästa steg")
+        s.includes("Mönster i observerade svar") &&
+        s.includes("Underlag") &&
+        s.includes("Nästa steg")
       );
     }),
   );
   check(
     "every card carries the document's one-line explanation",
-    cards.every((c) => card(std, c.code).includes(c.core.factual_explanation.sv)),
+    cards.every((c) => card(std, c.code).includes(repairPlurals(c.core.factual_explanation.sv))),
   );
   check(
     "the expanded detail is in the DOM behind a screen-only fold, so print shows it",
@@ -397,7 +400,7 @@ group("5. Safety follow-up: only from an explicit human finding");
   check("the section is marked employer-only", sec.includes("Endast arbetsgivaren"));
   check(
     "the finding is a count and an area, never a score",
-    /1 fynd/.test(sec) && !/poäng|score|\d+\s?%/i.test(sec),
+    /1 uppföljningspunkt/.test(sec) && !/poäng|score|\d+\s?%/i.test(sec),
   );
   check(
     "the safety section prints after the plan (print order 7 > 6)",
@@ -427,10 +430,23 @@ group("6. The TRUST Interview Plan");
       (plan.match(/aria-labelledby="trust-plan-SCC-/g) ?? []).length > 0,
   );
   check(
-    "each priority states what we know, what is unclear, the main question and what to listen for",
-    ["Det här vet vi", "Det här är oklart", "Huvudfråga", "Lyssna efter"].every(
+    "each priority states what is known, what needs clarifying, the main question and what to listen for",
+    ["Det här behöver klargöras", "Huvudfråga", "Lyssna efter"].every(
       (s) => (text.match(new RegExp(s, "g")) ?? []).length >= 3,
-    ),
+    ) && (text.match(/Det här uppger kandidaten|Det här finns i underlaget/g) ?? []).length >= 3,
+  );
+  check(
+    "a priority built on the candidate's own account is not headlined as evidence",
+    (() => {
+      const doc = TRUST_REPORT_FIXTURES.standard;
+      const selfFirst =
+        doc.frozen_report.employer.trust_plan.priorities[0].target.evidence_type ===
+        "self_reported";
+      const firstBlock = plan.slice(plan.indexOf("trust-plan-"), plan.indexOf("Huvudfråga"));
+      return selfFirst
+        ? visible(firstBlock).includes("Det här uppger kandidaten")
+        : visible(firstBlock).includes("Det här finns i underlaget");
+    })(),
   );
   check(
     "the conversation structure is Situation, Egen roll, Agerande, Resultat, Reflektion",
@@ -494,35 +510,44 @@ group("7. Frozen report vs live addenda");
 group("8. Method, provenance and the legacy document");
 // ═══════════════════════════════════════════════════════════════════════════
 {
-  const method = visible(std.slice(std.indexOf('id="trust-method"')));
+  const method = visible(
+    std.slice(std.indexOf('id="trust-method"'), std.indexOf('id="trust-provenance"')),
+  );
   check(
     "the standing statement is visible outside the fold",
     method.includes("Detta visar hur kandidaten svarade i just dessa uppgifter."),
   );
   check(
     "the template's limitation lines are labelled as current, not frozen",
-    method.includes("Aktuell vägledning från rapportmallen, inte fryst"),
+    method.includes("Aktuell vägledning från rapportmallen — inte fryst"),
   );
   check(
     "the human-review meaning is stated as a denial",
     method.includes("Det betyder inte att svaren är godkända"),
   );
   check(
-    "provenance shows versions and the report id, never a manifest id or hash",
-    method.includes("Beräkningskedja") &&
-      method.includes("Verifierad") &&
-      !/manifest|sha256|hash/i.test(method),
+    "the reader's method section carries no version identifier",
+    !/trust-evidence-core|det-v1|ras-v1|des-v2|rab-v1|attempt-v1/.test(method),
   );
+  const prov = visible(std.slice(std.indexOf('id="trust-provenance"')));
+  check(
+    "technical traceability is its own compact section: versions, the report id, the chain",
+    prov.includes("Teknisk spårbarhet") &&
+      prov.includes("trust-evidence-core/v1") &&
+      prov.includes("Verifierad") &&
+      /[0-9a-f]{8}-[0-9a-f]{4}/.test(prov),
+  );
+  check("provenance names no manifest id and no hash", !/manifest|sha256|hash/i.test(prov));
   const legacy = page("legacy");
   const legacyText = visible(legacy);
   check(
     "legacy: the calculation chain is stated as legacy",
-    legacyText.includes("Äldre rapport, kedjan är inte verifierad"),
+    legacyText.includes("Äldre rapport — beräkningskedjan kan inte verifieras"),
   );
   check(
     "legacy: per-area scope says not available instead of zeros",
-    legacyText.includes("Omfattningen per område är inte tillgänglig") &&
-      legacyText.includes("Spårbarhet är inte tillgänglig"),
+    legacyText.includes("Omfattningen per område kan inte visas") &&
+      legacyText.includes("Spårbarhet kan inte visas"),
   );
   check(
     "legacy: nothing renders as undefined, null, NaN or [object",
@@ -602,7 +627,8 @@ group("9. Vocabulary, keys and both languages");
     );
     check(
       `${name} en: the English page is English`,
-      en.includes("what matters most before the next step") && en.includes("evidence map"),
+      en.includes("what matters most before the next step") &&
+        en.includes("competency areas and evidence"),
     );
   }
   const svKeys = Object.keys(dictionaries.sv).filter((k) => k.startsWith("report.trust."));
@@ -649,9 +675,84 @@ group("10. Accessibility and touch targets");
   );
   check(
     "the three axes use three registers: a chip for the pattern, text for the evidence, an action label for the next step",
-    /Observerat svarsmönster/.test(stdText) && (std.match(/lucide-arrow-right/g) ?? []).length >= 3,
+    /Mönster i observerade svar/.test(stdText) &&
+      (std.match(/lucide-arrow-right/g) ?? []).length >= 3,
   );
   check("decorative icons are aria-hidden", !/<svg(?![^>]*aria-hidden="true")/.test(std));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+group("11. Professional language and the printed document");
+// ═══════════════════════════════════════════════════════════════════════════
+{
+  for (const name of Object.keys(TRUST_REPORT_FIXTURES) as (keyof typeof TRUST_REPORT_FIXTURES)[]) {
+    const sv = visible(page(name, "sv"));
+    const en = visible(page(name, "en"));
+    check(
+      `${name}: no unresolved plural placeholder reaches the reader`,
+      !/\w\([a-z]{1,3}\)/.test(sv) && !/\w\([a-z]{1,3}\)/.test(en),
+      (sv.match(/\w\([a-z]{1,3}\)/g) ?? []).join(", "),
+    );
+    check(
+      `${name}: no count is introduced by a bare adjective or category`,
+      !/(^|\s)(granskade|Granskade|Besvarade|Sammanhang)\s+\d/.test(sv) &&
+        !/(^|\s)(reviewed|Reviewed|Answered|Contexts)\s+\d/.test(en),
+    );
+  }
+  check(
+    "the report is completed, not released to a system",
+    stdText.includes("Rapport färdigställd") && !stdText.includes("Frisläppt"),
+  );
+  check(
+    "human review is stated as a completed review and denies approval in its own words",
+    stdText.includes("Mänsklig granskning slutförd") &&
+      visible(
+        std.slice(std.indexOf('id="trust-method"'), std.indexOf('id="trust-provenance"')),
+      ).includes("Det betyder inte att svaren är godkända"),
+  );
+  check(
+    "evidence sufficiency says what it is sufficient FOR",
+    stdText.includes("Tillräckligt underlag för tolkning"),
+  );
+  check(
+    "the closed pilot is named as a pilot",
+    stdText.includes("Stängd pilot") || stdText.includes("Pilotversion"),
+  );
+  const safe = visible(page("safety"));
+  check(
+    "safety-related follow-up never reads as a finding about the person",
+    safe.includes("Säkerhetsrelaterad uppföljningspunkt") && !/\bfynd\b/i.test(safe),
+  );
+  check(
+    "safety says what was identified and what it is not",
+    safe.includes(
+      "Ett svar inom ett säkerhetskritiskt område har identifierats för uppföljning i intervju.",
+    ) && safe.includes("Det är inte en bedömning av kandidaten som säkerhetsrisk."),
+  );
+  check(
+    "the printed document is in two parts, with the appendix behind the report",
+    std.includes("tr-part-1") &&
+      std.includes("tr-part-2") &&
+      stdText.includes("Del 1 — Arbetsgivarrapport") &&
+      stdText.includes("Del 2 — Underlagsbilaga"),
+  );
+  check(
+    "part 1 carries the eight areas at a glance as one table",
+    std.includes("tr-summary") &&
+      (std.slice(std.indexOf("tr-summary")).match(/<tr>/g) ?? []).length >= 9,
+  );
+  check(
+    "the summary states all three dimensions per area and no fourth thing",
+    (() => {
+      const tbl = visible(std.slice(std.indexOf("tr-summary"), std.indexOf('id="trust-map"')));
+      return (
+        tbl.includes("Mönster i observerade svar") &&
+        tbl.includes("Kompetensområde") &&
+        !/%|poäng/.test(tbl)
+      );
+    })(),
+  );
+  check("the live rail is ordered out of the printed document", /data-print-order="20"/.test(std));
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

@@ -27,7 +27,7 @@ export function MethodSection({ doc }: { doc: TrustReportDocument }) {
       id="trust-method"
       title={t("report.trust.method.heading")}
       lede={t("report.trust.method.sub")}
-      printOrder={8}
+      printOrder={7}
       subordinate
     >
       <div className="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-xs)] sm:p-6">
@@ -104,9 +104,6 @@ export function MethodSection({ doc }: { doc: TrustReportDocument }) {
                 </h3>
                 <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
                   {lang === "en" ? def.en : def.sv}
-                  {typeof def.minimum_observed_items === "number"
-                    ? ` (${def.rule_version}: ${def.minimum_observed_items})`
-                    : ""}
                 </p>
               </div>
             )}
@@ -146,85 +143,6 @@ export function MethodSection({ doc }: { doc: TrustReportDocument }) {
                 </dl>
               </div>
             )}
-
-            <div className="avoid-break" data-print-order={9}>
-              <h3 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                {t("report.trust.method.versions")}
-              </h3>
-              <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
-                <Meta
-                  label={t("report.trust.meta.reportId")}
-                  value={<span className="font-mono text-[12px]">{doc.report_id}</span>}
-                />
-                <Meta
-                  label={t("report.trust.meta.released")}
-                  value={formatDateTime(prov?.released_at ?? core.timestamps?.released_at, lang)}
-                />
-                <Meta
-                  label={t("report.trust.method.calculatedAt")}
-                  value={formatDateTime(prov?.calculated_at, lang)}
-                />
-                <Meta label={t("report.trust.method.core")} value={core.core_version} />
-                <Meta
-                  label={t("report.trust.method.assessmentVersion")}
-                  value={
-                    core.assessment
-                      ? `${core.assessment.assessment_slug} v${core.assessment.assessment_version}`
-                      : ""
-                  }
-                />
-                <Meta
-                  label={t("report.trust.method.scoringModel")}
-                  value={
-                    prov
-                      ? [
-                          prov.scoring_model_version,
-                          prov.signal_version,
-                          prov.evidence_state_version,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")
-                      : ""
-                  }
-                />
-                <Meta
-                  label={t("report.trust.method.rubric")}
-                  value={
-                    prov?.rubric_versions?.length
-                      ? prov.rubric_versions.map((v) => `v${v}`).join(", ")
-                      : ""
-                  }
-                />
-                <Meta
-                  label={t("report.trust.method.reportTemplate")}
-                  value={
-                    prov?.report_template
-                      ? `${prov.report_template.report_key} v${prov.report_template.version}`
-                      : ""
-                  }
-                />
-                <Meta
-                  label={t("report.trust.method.chain")}
-                  value={
-                    prov
-                      ? prov.computation_chain === "verified"
-                        ? t("report.trust.method.chain.verified")
-                        : t("report.trust.method.chain.legacy")
-                      : ""
-                  }
-                />
-                <Meta
-                  label={t("report.trust.method.humanReview")}
-                  value={
-                    hr
-                      ? hr.completed
-                        ? t("report.trust.humanReviewed")
-                        : t("report.trust.humanReviewPending")
-                      : ""
-                  }
-                />
-              </dl>
-            </div>
           </div>
         </Fold>
       </div>
