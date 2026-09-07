@@ -36,6 +36,19 @@
 // page is wrong in exactly the same way, which is the only honest
 // relationship the two can have.
 //
+// ── WHAT MAY BE SHARED, AND WHAT IS SAID ABOUT IT ──────────────────────
+//
+// Every CURRENT merit, at whatever standing it has — see share-policy.ts. A
+// self-declared entry is offered beside a source-confirmed one, each wearing
+// the word the shared labeller gives it, and drafts and archived rows are
+// never offered at all.
+//
+// A merit with a review case open on it is offered TOO, with the case stated
+// beside it: the recipient reads its stored standing either way, and the
+// holder is the one who needs to know the standing may be about to move. When
+// the review read FAILS, every affected row says so instead of falling back
+// to a settled word.
+//
 // ── WHAT THIS SCREEN DOES NOT CLAIM ────────────────────────────────────
 //
 // * It does not say a recipient has READ anything. `access_count` counts
@@ -43,9 +56,10 @@
 //   prefetch, and no durable read-receipt model exists. It is labelled as
 //   what it is.
 // * It cannot re-show a link. Only the token's SHA-256 is stored, so a link
-//   the holder did not capture is gone — deliberately, because a
-//   recoverable link is a standing liability. The list says so rather than
-//   offering a "copy" that cannot work.
+//   the holder did not capture is gone — deliberately, because a recoverable
+//   link is a standing liability. What the list offers instead is a NEW link
+//   over the same contents, with the holder's own choice about whether the
+//   old one keeps working.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -65,10 +79,13 @@ import {
   splitSelection,
   type ShareSelectionModel,
 } from "@/lib/security-passport/share-selection";
+import { hasCaveat, type ShareReviewCaveat } from "@/lib/security-passport/share-policy";
+import { shareErrorCode, type ShareErrorCode } from "@/lib/security-passport/share-errors";
 import {
   createSelectedShare,
   listMyShares,
   previewSelectedShare,
+  replaceShare,
   revokeShare,
   type ShareRecord,
 } from "@/lib/security-passport/selected-sharing.functions";
@@ -77,7 +94,7 @@ import { buildRecipientPresentation } from "@/lib/security-passport/recipient-pr
 import { RecipientPassportView } from "@/components/security-passport/live/RecipientPassportView";
 import { publicShareUrl, publicShareOrigin } from "@/lib/security-passport/public-origin";
 import { MeritStatusChip } from "@/components/security-passport/MeritStatusChip";
-import { formatIsoDay, formatPeriodRange, formatExpiry } from "@/lib/security-passport/format";
+import { formatIsoDay, formatIsoDayRange } from "@/lib/security-passport/format";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type { PassportLang } from "@/lib/security-passport/i18n";
 
@@ -97,6 +114,38 @@ const EXPIRY_CHOICES: readonly { days: number; labelKey: PassportCopyKey }[] = [
 ];
 
 const DEFAULT_EXPIRY_DAYS = 30;
+
+/** What a holder is told when the database refuses.
+ *
+ *  Keyed on the CODE the function raised, never on its sentence: the sentence
+ *  is English, untranslated, and written for a log. Anything this build has no
+ *  words for takes the generic message rather than a guess at which rule was
+ *  broken. */
+const CREATE_ERROR_KEY: Readonly<Record<ShareErrorCode, PassportCopyKey>> = {
+  merit_not_shareable: "sel.error.meritGone",
+  nothing_selected: "sel.chooseFirst",
+  too_many_merits: "sel.error.create",
+  unsupported_expiry: "sel.error.expiry",
+  unsupported_locale: "sel.error.locale",
+  request_key_required: "sel.error.create",
+  request_key_conflict: "sel.error.conflict",
+  share_not_replaceable: "sel.error.notReplaceable",
+  no_passport: "sc.needPassport",
+  not_authenticated: "sel.error.create",
+  unknown: "sel.error.create",
+};
+
+const REISSUE_ERROR_KEY: Readonly<Record<ShareErrorCode, PassportCopyKey>> = {
+  ...CREATE_ERROR_KEY,
+  merit_not_shareable: "sel.error.lapsed",
+  unknown: "sel.error.reissue",
+};
+
+const CAVEAT_KEY: Readonly<Record<Exclude<ShareReviewCaveat, "none">, PassportCopyKey>> = {
+  in_review: "sel.caveat.in_review",
+  needs_answer: "sel.caveat.needs_answer",
+  unknown: "sel.caveat.unknown",
+};
 
 const STATE_KEY: Readonly<Record<ShareRecord["state"], PassportCopyKey>> = {
   active: "sc.state.active",
@@ -131,7 +180,14 @@ function newRequestKey(): string {
 }
 
 type CreateOutcome =
-  | { readonly kind: "created"; readonly token: string; readonly expiresAt: string | null }
+  | {
+      readonly kind: "created";
+      readonly token: string;
+      readonly expiresAt: string | null;
+      /** Only a reissue answers this. Null for an ordinary creation, which
+       *  replaced nothing. */
+      readonly previousRevoked?: boolean | null;
+    }
   | { readonly kind: "already"; readonly disclosureId: string; readonly expiresAt: string | null };
 
 type LoadState = "loading" | "ready" | "failed";
@@ -168,10 +224,18 @@ function PassportShareRoute() {
   const [copyFailed, setCopyFailed] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState(false);
+  /** Which share the holder is reissuing, and whether they chose to revoke
+   *  the one it replaces. Opened per row, so the choice is made about a
+   *  specific link rather than in the abstract. */
+  const [reissueFor, setReissueFor] = useState<string | null>(null);
+  const [reissueRevoke, setReissueRevoke] = useState(true);
+  const [reissuing, setReissuing] = useState<string | null>(null);
+  const [reissueError, setReissueError] = useState<PassportCopyKey | null>(null);
 
   // Held across retries so a lost response cannot become two links. Cleared
   // only once a create has succeeded.
   const requestKey = useRef<string>(newRequestKey());
+  const reissueKey = useRef<string>(newRequestKey());
   const linkFieldRef = useRef<HTMLInputElement | null>(null);
 
   /* ---------------------------------------------------------------- */
@@ -245,7 +309,7 @@ function PassportShareRoute() {
   const availableKeys = useMemo(() => {
     const keys = new Set<string>();
     for (const group of selection?.groups ?? []) {
-      for (const merit of group.merits) keys.add(meritKey(merit));
+      for (const candidate of group.candidates) keys.add(meritKey(candidate.merit));
     }
     return keys;
   }, [selection]);
@@ -330,11 +394,7 @@ function PassportShareRoute() {
       console.error("[passport] share: create failed", err);
       // The key is deliberately NOT rotated: a retry must reconcile with
       // whatever this attempt may already have committed.
-      setCreateError(
-        String((err as Error)?.message ?? "").includes("SP_MERIT_NOT_SHAREABLE")
-          ? "sel.error.meritGone"
-          : "sel.error.create",
-      );
+      setCreateError(CREATE_ERROR_KEY[shareErrorCode(err)]);
     } finally {
       setCreating(false);
     }
@@ -355,6 +415,43 @@ function PassportShareRoute() {
       setCopyFailed(true);
       linkFieldRef.current?.focus();
       linkFieldRef.current?.select();
+    }
+  }
+
+  /** A NEW link over the same contents. The holder said whether the previous
+   *  one should be revoked; both answers are legitimate and neither is
+   *  assumed, so the flag travels exactly as they set it. */
+  async function onReissue(id: string, revokePrevious: boolean) {
+    setReissuing(id);
+    setReissueError(null);
+    try {
+      const result = await replaceShare({
+        data: { disclosureId: id, revokePrevious, requestKey: reissueKey.current },
+      });
+      if (result.status === "created") {
+        setOutcome({
+          kind: "created",
+          token: result.token,
+          expiresAt: result.expiresAt,
+          previousRevoked: result.previousRevoked,
+        });
+      } else {
+        setOutcome({
+          kind: "already",
+          disclosureId: result.disclosureId,
+          expiresAt: result.expiresAt,
+        });
+      }
+      reissueKey.current = newRequestKey();
+      setReissueFor(null);
+      await readShares();
+    } catch (err) {
+      console.error("[passport] share: reissue failed", err);
+      // Same rule as the create: a failed attempt keeps its key, so a retry
+      // reconciles instead of minting a second link.
+      setReissueError(REISSUE_ERROR_KEY[shareErrorCode(err)]);
+    } finally {
+      setReissuing(null);
     }
   }
 
@@ -455,6 +552,16 @@ function PassportShareRoute() {
             </p>
           ) : null}
 
+          {selection?.reviewUnavailable ? (
+            <p
+              role="status"
+              data-review-unavailable
+              className="mt-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm leading-relaxed text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+            >
+              {pt("sel.reviewUnavailable")}
+            </p>
+          ) : null}
+
           {selection && selection.eligibleCount === 0 ? (
             <div className="mt-3 rounded-xl border border-dashed border-border bg-secondary/40 p-5">
               <p className="text-sm leading-relaxed text-foreground">{pt("sel.empty.title")}</p>
@@ -485,7 +592,7 @@ function PassportShareRoute() {
                   {pt(group.titleKey)}
                 </legend>
                 <ul className="mt-2 divide-y divide-border">
-                  {group.merits.map((merit) => {
+                  {group.candidates.map(({ merit, caveat }) => {
                     const key = meritKey(merit);
                     const id = `sel-${key.replace(":", "-")}`;
                     return (
@@ -493,6 +600,7 @@ function PassportShareRoute() {
                         <label
                           htmlFor={id}
                           data-merit-option={key}
+                          data-merit-caveat={caveat}
                           className="flex min-h-[44px] cursor-pointer items-start gap-3 py-3"
                         >
                           <input
@@ -518,6 +626,17 @@ function PassportShareRoute() {
                               {" · "}
                               {meritDates(merit, lang, pt)}
                             </span>
+                            {/* What is in flight on this merit. Never a reason
+                                to withhold it — the recipient reads its stored
+                                standing either way — but the holder is the one
+                                who needs to know the standing may move, and
+                                `unknown` says we could not tell rather than
+                                that nothing is open. */}
+                            {hasCaveat(caveat) ? (
+                              <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
+                                {pt(CAVEAT_KEY[caveat])}
+                              </span>
+                            ) : null}
                           </span>
                           <MeritStatusChip
                             status={merit.label}
@@ -574,7 +693,6 @@ function PassportShareRoute() {
                 <RecipientPassportView
                   presentation={previewPresentation}
                   lang={shareLang}
-                  checkedAt=""
                   verifyUrl={publicShareOrigin()}
                   preview
                 />
@@ -680,8 +798,20 @@ function PassportShareRoute() {
         state={sharesState}
         revoking={revoking}
         revokeError={revokeError}
+        reissueFor={reissueFor}
+        reissueRevoke={reissueRevoke}
+        reissuing={reissuing}
+        reissueError={reissueError}
         onRetry={() => void readShares()}
         onRevoke={(id) => void onRevoke(id)}
+        onOpenReissue={(id) => {
+          setReissueError(null);
+          setReissueRevoke(true);
+          setReissueFor(id);
+        }}
+        onCancelReissue={() => setReissueFor(null)}
+        onToggleReissueRevoke={setReissueRevoke}
+        onReissue={(id) => void onReissue(id, reissueRevoke)}
         pt={pt}
         lang={lang}
       />
@@ -702,10 +832,12 @@ function meritDates(
   lang: PassportLang,
   pt: (key: PassportCopyKey) => string,
 ): string {
+  // Localised, like every other date a person reads in this product. An ISO
+  // string is a machine's answer to "when".
   if (merit.dateKind === "period") {
-    return merit.from ? formatPeriodRange(merit.from, merit.to, lang) : pt("common.notStated");
+    return merit.from ? formatIsoDayRange(merit.from, merit.to, lang) : pt("common.notStated");
   }
-  return merit.to ? formatExpiry(merit.to, lang) : pt("common.notStated");
+  return merit.to ? formatIsoDay(merit.to, lang) : pt("claims.noExpiry");
 }
 
 function BackLink({ label }: { label: string }) {
@@ -781,6 +913,18 @@ function CreatedPanel({
         {pt("sel.created.onceOnly")}
       </p>
 
+      {/* After a reissue, the one question the holder will have: did the link
+          somebody may already be holding stop working? Absent for an ordinary
+          creation, which replaced nothing. */}
+      {outcome.previousRevoked != null ? (
+        <p
+          data-previous-revoked={String(outcome.previousRevoked)}
+          className="mt-2 text-sm leading-relaxed text-foreground"
+        >
+          {pt(outcome.previousRevoked ? "sel.reissue.previousRevoked" : "sel.reissue.previousKept")}
+        </p>
+      ) : null}
+
       <label htmlFor="sel-link" className="mt-4 block text-sm font-medium text-foreground">
         {pt("sel.created.link")}
       </label>
@@ -846,8 +990,16 @@ function ShareList({
   state,
   revoking,
   revokeError,
+  reissueFor,
+  reissueRevoke,
+  reissuing,
+  reissueError,
   onRetry,
   onRevoke,
+  onOpenReissue,
+  onCancelReissue,
+  onToggleReissueRevoke,
+  onReissue,
   pt,
   lang,
 }: {
@@ -855,8 +1007,16 @@ function ShareList({
   state: LoadState;
   revoking: string | null;
   revokeError: boolean;
+  reissueFor: string | null;
+  reissueRevoke: boolean;
+  reissuing: string | null;
+  reissueError: PassportCopyKey | null;
   onRetry: () => void;
   onRevoke: (id: string) => void;
+  onOpenReissue: (id: string) => void;
+  onCancelReissue: () => void;
+  onToggleReissueRevoke: (value: boolean) => void;
+  onReissue: (id: string) => void;
   pt: (key: PassportCopyKey) => string;
   lang: PassportLang;
 }) {
@@ -924,16 +1084,97 @@ function ShareList({
                     </p>
                   ) : null}
                 </div>
+                {/* NOT `shrink-0` on the action row: "Skapa en ny länk med
+                    samma innehåll" is a long label, and a row that cannot
+                    shrink pushes a 320px screen 99px sideways. It wraps. */}
                 {s.state === "active" ? (
-                  <button
-                    type="button"
-                    data-share-revoke={s.id}
-                    onClick={() => onRevoke(s.id)}
-                    disabled={revoking === s.id}
-                    className="inline-flex h-11 shrink-0 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  <div className="flex flex-wrap gap-2">
+                    {/* The safe answer to "I lost the link". Not a recovery —
+                        the token is gone — but a NEW link over the same
+                        contents, with the holder's own choice about the old
+                        one. Only offered for a chosen-merit share, because
+                        that is the only kind whose contents are a list this
+                        product can reproduce. */}
+                    {s.meritCount !== null ? (
+                      <button
+                        type="button"
+                        data-share-reissue={s.id}
+                        aria-expanded={reissueFor === s.id}
+                        onClick={() => onOpenReissue(s.id)}
+                        disabled={reissuing !== null}
+                        className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        {pt("sel.reissue")}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      data-share-revoke={s.id}
+                      onClick={() => onRevoke(s.id)}
+                      disabled={revoking === s.id}
+                      className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {revoking === s.id ? pt("sc.revoking") : pt("sc.revoke")}
+                    </button>
+                  </div>
+                ) : null}
+
+                {reissueFor === s.id ? (
+                  <div
+                    data-share-reissue-panel
+                    className="mt-1 w-full rounded-lg border border-border bg-secondary/40 p-4"
                   >
-                    {revoking === s.id ? pt("sc.revoking") : pt("sc.revoke")}
-                  </button>
+                    <p className="text-sm font-medium text-foreground">{pt("sel.reissue.title")}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      {pt("sel.reissue.body")}
+                    </p>
+                    <label
+                      htmlFor={`sel-reissue-revoke-${s.id}`}
+                      className="mt-3 flex min-h-[44px] cursor-pointer items-start gap-3"
+                    >
+                      <input
+                        id={`sel-reissue-revoke-${s.id}`}
+                        type="checkbox"
+                        data-share-reissue-revoke
+                        checked={reissueRevoke}
+                        onChange={(e) => onToggleReissueRevoke(e.target.checked)}
+                        className="mt-1 h-5 w-5 shrink-0 rounded border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm text-foreground">
+                          {pt("sel.reissue.revoke")}
+                        </span>
+                        <span className="mt-0.5 block text-sm text-muted-foreground">
+                          {pt("sel.reissue.revokeHelp")}
+                        </span>
+                      </span>
+                    </label>
+                    {reissueError ? (
+                      <p role="alert" className="mt-2 text-sm text-destructive">
+                        {pt(reissueError)}
+                      </p>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        data-share-reissue-confirm
+                        onClick={() => onReissue(s.id)}
+                        disabled={reissuing === s.id}
+                        className="inline-flex h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        {reissuing === s.id
+                          ? pt("sel.reissue.creating")
+                          : pt("sel.reissue.confirm")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onCancelReissue}
+                        className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        {pt("sel.reissue.cancel")}
+                      </button>
+                    </div>
+                  </div>
                 ) : null}
               </li>
             ))}

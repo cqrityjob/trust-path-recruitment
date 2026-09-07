@@ -50,7 +50,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../src/i18n/context";
 import { RecipientPassportView } from "../src/components/security-passport/live/RecipientPassportView";
 import { buildRecipientPresentation } from "../src/lib/security-passport/recipient-presentation";
-import { buildShareSelection, isShareable } from "../src/lib/security-passport/share-selection";
+import { buildShareSelection } from "../src/lib/security-passport/share-selection";
+import {
+  caveatFor,
+  isShareableMerit,
+  shareEligibility,
+} from "../src/lib/security-passport/share-policy";
 import { passportT } from "../src/lib/security-passport/i18n";
 import type { RecipientPayloadActive } from "../src/lib/security-passport/packages";
 import type { Claim, ExperiencePeriod } from "../src/lib/security-passport/types";
@@ -71,6 +76,7 @@ const ROUTE = "src/routes/_authenticated.passport.share.tsx";
 const VIEW = "src/components/security-passport/live/RecipientPassportView.tsx";
 const PUBLIC = "src/routes/p.$token.tsx";
 const SELECTION = "src/lib/security-passport/share-selection.ts";
+const POLICY = "src/lib/security-passport/share-policy.ts";
 const FUNCTIONS = "src/lib/security-passport/selected-sharing.functions.ts";
 const MIGRATION = "supabase/migrations/20261101090000_sp_selected_merit_sharing.sql";
 
@@ -78,6 +84,7 @@ const route = read(ROUTE);
 const view = read(VIEW);
 const publicPage = read(PUBLIC);
 const selectionSrc = read(SELECTION);
+const policySrc = read(POLICY);
 const functions = read(FUNCTIONS);
 const migration = read(MIGRATION);
 
@@ -87,36 +94,50 @@ group("GROUP 1 — the scope is the holder's, and the server's");
 
 // The rule the screen offers and the rule the database accepts must be one
 // rule. If they drift, the holder is shown merits the create will refuse.
+// THE SHARING POLICY. One rule, four enforcement points, and the screen must
+// offer exactly what the create accepts: laxer and it offers merits the create
+// refuses; stricter and it hides merits the holder is entitled to send.
 ck(
   "1.1 the screen's eligibility rule is the migration's, verbatim in meaning",
-  /assertionLevel === "verified" && row\.lifecycleState === "active"/.test(selectionSrc) &&
-    /c\.assertion_level = 'verified' AND c\.lifecycle_state = 'active'/.test(migration) &&
-    /e\.assertion_level = 'verified' AND e\.lifecycle_state = 'active'/.test(migration),
+  /isCurrentMerit\(row\.lifecycleState\)/.test(policySrc) &&
+    /c\.lifecycle_state = 'active'/.test(migration) &&
+    /e\.lifecycle_state = 'active'/.test(migration),
 );
 
-// The route must not form its own opinion about what may be shared.
+// The reversal: assertion level must NOT gate sharing, on either side.
 ck(
-  "1.2 the route decides no eligibility of its own",
-  route.includes("buildShareSelection") &&
-    !/assertion_level|assertionLevel/.test(route) &&
-    !/lifecycle_state/.test(route),
+  "1.2 nothing filters on an assertion level anywhere in the sharing path",
+  !/assertion_level|assertionLevel/.test(policySrc) &&
+    !/assertion_level|assertionLevel/.test(selectionSrc) &&
+    !/assertion_level|assertionLevel/.test(route),
+);
+ck(
+  "1.3 and the create's own ownership check gates on lifecycle only",
+  /WHERE c\.id = ANY\(_c\) AND c\.holder_user_id = auth\.uid\(\)\s*\n\s*AND c\.lifecycle_state = 'active'\)/.test(
+    migration,
+  ),
+);
+
+ck(
+  "1.4 the route decides no eligibility of its own",
+  route.includes("buildShareSelection") && !/lifecycle_state/.test(route),
 );
 
 // Nothing is ticked for the holder. A pre-ticked list is a decision made on
 // somebody's behalf about what a stranger may see.
 ck(
-  "1.3 nothing is selected by default",
+  "1.5 nothing is selected by default",
   /useState<ReadonlySet<string>>\(new Set\(\)\)/.test(route),
 );
 
 ck(
-  "1.4 the primary action is refused until something is chosen",
+  "1.6 the primary action is refused until something is chosen",
   /disabled=\{creating \|\| selectedCount === 0\}/.test(route),
 );
 
 // The pilot's three periods, and no permanent link hiding among them.
 ck(
-  "1.5 expiry is 7, 30 or 90 days, with 30 recommended and no permanent option",
+  "1.7 expiry is 7, 30 or 90 days, with 30 recommended and no permanent option",
   /\{ days: 7,/.test(route) &&
     /\{ days: 30,/.test(route) &&
     /\{ days: 90,/.test(route) &&
@@ -125,24 +146,56 @@ ck(
     /z\.literal\(7\), z\.literal\(30\), z\.literal\(90\)/.test(functions),
 );
 
+// ── THE INPUT CONTRACT IS IN THE DATABASE ────────────────────────────
+//
+// A Zod schema is a courtesy to the person filling in the form. The RPC is
+// callable by any authenticated principal with a HTTP client, so every one of
+// these has to be refused where the write happens.
+ck(
+  "1.8 the database refuses a missing request key, a bad expiry and a bad locale",
+  /SP_REQUEST_KEY_REQUIRED/.test(migration) &&
+    /_expires_days IS NULL OR _expires_days NOT IN \(7, 30, 90\)/.test(migration) &&
+    /_locale IS NULL OR _locale NOT IN \('sv', 'en'\)/.test(migration),
+);
+ck(
+  "1.9 and all three entry points run the same assertion",
+  (migration.match(/PERFORM public\.sp_assert_share_inputs\(/g) ?? []).length >= 3,
+);
+
 // The server is the boundary, not the browser: the ids go to a function that
 // checks every one of them against auth.uid().
 ck(
-  "1.6 the selection is enforced server-side",
-  /sp_create_selected_disclosure/.test(functions) &&
-    /IF \(SELECT count\(\*\) FROM public\.sp_claims c[\s\S]{0,320}<> cardinality\(_c\) THEN/.test(
-      migration,
-    ) &&
-    /SP_MERIT_NOT_SHAREABLE/.test(migration),
+  "1.10 the selection is enforced server-side",
+  /sp_create_selected_disclosure/.test(functions) && /SP_MERIT_NOT_SHAREABLE/.test(migration),
 );
 
 // A merit added later must not join a link already sent. The item rows are
 // what make that true; the payload reads them and nothing else.
 ck(
-  "1.7 the scope is pinned as rows, not re-evaluated at read time",
+  "1.11 the scope is pinned as rows, not re-evaluated at read time",
   /INSERT INTO public\.sp_disclosure_items \(disclosure_id, claim_id\)/.test(migration) &&
     /AND c\.id = ANY\(_c\)/.test(migration) &&
     /AND e\.id = ANY\(_e\)/.test(migration),
+);
+
+// ── IDEMPOTENCY ──────────────────────────────────────────────────────
+ck(
+  "1.12 a request key is bound to a fingerprint of every fact that decides the share",
+  /sp_share_request_fingerprint/.test(migration) &&
+    /_expires_days/.test(migration) &&
+    /SP_REQUEST_KEY_CONFLICT/.test(migration) &&
+    /request_fingerprint IS DISTINCT FROM _fp/.test(migration),
+);
+ck(
+  "1.13 simultaneous callers are serialised on the key, and a unique violation " +
+    "is never surfaced",
+  /PERFORM pg_advisory_xact_lock\(/.test(migration) &&
+    /EXCEPTION WHEN unique_violation THEN/.test(migration),
+);
+// Sorted AND deduplicated, or {A,B} and {B,A} would be two intentions.
+ck(
+  "1.14 the scope is normalised before it is hashed",
+  (migration.match(/array_agg\(DISTINCT x ORDER BY x\)/g) ?? []).length >= 4,
 );
 
 /* ================================================================== */
@@ -173,7 +226,7 @@ group("GROUP 3 — the recipient page, rendered");
 /* ================================================================== */
 
 const claim = (over: Record<string, unknown>) => ({
-  id: "c",
+  key: "c",
   type: "licence",
   title: "Titel",
   credential_code: null,
@@ -192,15 +245,20 @@ const claim = (over: Record<string, unknown>) => ({
   ...over,
 });
 
+// A MIXED-TRUST share, which is the ordinary case now that lifecycle gates
+// sharing and assertion level does not. All three rungs are present, so a
+// single fixture proves that each one wears its own word and none of them
+// borrows a stronger one.
 const payload = {
   status: "active",
   package: "selected_merits",
   focus: "passport",
   purpose: null,
   locale: "sv",
-  expires_at: "2026-10-07",
-  authorised_at: "2026-09-07",
-  last_updated: "2026-09-07",
+  expires_at: "2026-10-07T09:00:00Z",
+  authorised_at: "2026-09-07T09:00:00Z",
+  checked_at: "2026-09-07T07:00:00Z",
+  last_updated: "2026-08-30T09:00:00Z",
   holder: "Selma Delare",
   privacy_mode: "full_name",
   profession_slug: "vaktare",
@@ -208,22 +266,43 @@ const payload = {
   sub_jurisdiction: null,
   verified_claims: [
     // A CQrityjob document review. Documented, and nothing more.
-    claim({ id: "c1", title: "Vald behörighet A", credential_code: "VU1", type: "training" }),
+    claim({ key: "c1", title: "Vald behörighet A", credential_code: "VU1", type: "training" }),
     // An ISSUER confirmation. Verified by an authorised verifier, but this
     // product has no issuer identity, membership or revocation authority
     // behind it, so it must not wear a source word either.
     claim({
-      id: "c2",
+      key: "c2",
       title: "Vald behörighet B",
       verification_method: "issuer_confirmation",
       verifier_organisation: "Länsstyrelsen",
     }),
     // Past its validity date. Neutral validity copy, not a trust downgrade.
-    claim({ id: "c3", title: "Vald behörighet C", valid_until: "2025-01-01" }),
+    claim({ key: "c3", title: "Vald behörighet C", valid_until: "2025-01-01" }),
+    // THE HOLDER'S OWN WORD. Shareable, and it says so.
+    claim({
+      key: "c4",
+      title: "Vald behörighet D",
+      type: "training",
+      assertion: "self_declared",
+      verified_at: null,
+      verifier_organisation: null,
+      verification_method: null,
+    }),
+    // A document attached and nobody has assessed it. On the public ladder
+    // this sits on the self-declared rung, NOT the documented one.
+    claim({
+      key: "c5",
+      title: "Vald behörighet E",
+      type: "training",
+      assertion: "document_provided",
+      verified_at: null,
+      verifier_organisation: null,
+      verification_method: null,
+    }),
   ],
   verified_experience: [
     {
-      id: "e1",
+      key: "e1",
       employer: "Nordvakt AB",
       role: "Väktare",
       started_on: "2021-01-01",
@@ -235,7 +314,7 @@ const payload = {
       verification_method: "employer_confirmation",
     },
     {
-      id: "e2",
+      key: "e2",
       employer: "Sydvakt AB",
       role: "Ordningsvakt",
       started_on: "2023-02-01",
@@ -254,12 +333,7 @@ const presentation = buildRecipientPresentation(payload, "2026-09-07");
 const render = (lang: "sv" | "en") =>
   renderToStaticMarkup(
     <I18nProvider>
-      <RecipientPassportView
-        presentation={presentation}
-        lang={lang}
-        checkedAt="2026-09-07 09:00"
-        verifyUrl="cqrityjob.se"
-      />
+      <RecipientPassportView presentation={presentation} lang={lang} verifyUrl="cqrityjob.se" />
     </I18nProvider>,
   );
 
@@ -276,17 +350,39 @@ ck(
 
 // The scope proof at the render layer: a title the payload did not carry
 // cannot appear, whatever the holder happens to own.
-ck("3.2 a merit the payload did not carry appears nowhere", !sv.includes("Vald behörighet D"));
+ck("3.2 a merit the payload did not carry appears nowhere", !sv.includes("Vald behörighet F"));
 
-// The source word appears EXACTLY once on the page — in the legend, where it
-// is being explained — and never against a credential. Counting is the honest
-// assertion here: forbidding the string outright would forbid the explanation.
+// The source word appears EXACTLY once on the page — in the glossary, where
+// it is being explained — and never against a credential. Counting is the
+// honest assertion: forbidding the string outright would forbid the
+// explanation, and the glossary now sits AFTER the merits, so position alone
+// no longer separates the two.
 ck(
   "3.3 a CQrityjob document review is Dokumenterad, and no merit wears the source word",
   presentation.credentials[0].level === "documented" &&
     sv.includes(DOCUMENTED_SV) &&
     (sv.match(new RegExp(SOURCE_SV, "g")) ?? []).length === 1 &&
-    sv.indexOf(SOURCE_SV) < sv.indexOf("Vald behörighet A"),
+    sv.indexOf(SOURCE_SV) > sv.indexOf("Vald behörighet A"),
+);
+
+// THE REVERSED POLICY, rendered. A self-declared entry and an unassessed
+// document are both shareable, and both sit on the bottom rung — an attached
+// file is evidence that EXISTS, not evidence that was checked (PR #189).
+ck(
+  "3.3a a self-declared merit reads as the holder's own word",
+  presentation.credentials[3].level === "self_declared" &&
+    presentation.credentials[3].assertion === "self_declared",
+);
+ck(
+  "3.3b and an unassessed document does NOT reach Documented",
+  presentation.credentials[4].level === "self_declared" &&
+    presentation.credentials[4].assertion === "document_provided",
+);
+ck(
+  "3.3c so one page carries two different standings without either borrowing " + "the other's word",
+  new Set(presentation.credentials.map((c) => c.level)).size === 2 &&
+    presentation.credentials.some((c) => c.level === "documented") &&
+    presentation.credentials.some((c) => c.level === "self_declared"),
 );
 
 ck(
@@ -327,11 +423,22 @@ ck(
     sv.includes(passportT("rec.expiredNotice", "sv")),
 );
 
+// THE GLOSSARY COMES AFTER THE EVIDENCE.
+//
+// It sat above the card until the review of PR #197: a definition list
+// between a reader and the thing they opened the link to see. Each merit
+// states its own provenance where it stands; this is the reference for
+// anybody who wants the words spelled out, and reference material belongs
+// after the record.
 ck(
-  "3.9 the reader is told what the words mean before they meet one",
+  "3.9 the glossary is present, and it is AFTER the merits it explains",
   sv.includes(passportT("rec.legendTitle", "sv")) &&
     sv.includes(passportT("rec.legend.employmentNote", "sv")) &&
-    sv.indexOf(passportT("rec.legendTitle", "sv")) < sv.indexOf("Vald behörighet A"),
+    sv.indexOf(passportT("rec.legendTitle", "sv")) > sv.indexOf("Vald behörighet A"),
+);
+ck(
+  "3.9a the holder's identity and the Passport card come first",
+  sv.indexOf("Selma Delare") < sv.indexOf(passportT("rec.legendTitle", "sv")),
 );
 
 ck(
@@ -345,8 +452,61 @@ ck(
 );
 
 ck(
-  "3.12 the tenure total says it is scoped to the shared employments",
+  "3.12 the duration says it is scoped to the shared employments",
   sv.includes(passportT("rec.tenureScoped", "sv")),
+);
+
+// ── THE RENAMED PUBLIC FRAMING ───────────────────────────────────────
+//
+// "Verifiering", "den här sidan är källan" and "granskad tid i yrket" each
+// claimed more than a share is: a mixed set the holder chose, some of which
+// nobody has checked.
+ck(
+  "3.12a the page is framed as a SHARE, not as a verification",
+  sv.includes("Delat Security Passport") &&
+    !sv.includes("Verifiering av Security Passport") &&
+    en.includes("Shared Security Passport") &&
+    !en.includes("Security Passport verification"),
+);
+ck(
+  "3.12b it says it is the current share, not that it is the source",
+  !sv.includes("Den här sidan är källan") && !en.includes("This page is the source"),
+);
+ck(
+  "3.12c the duration is named for what it counts",
+  sv.includes("Bekräftad anställningstid") &&
+    en.includes("Confirmed employment duration") &&
+    !sv.includes("Granskad tid i yrket"),
+);
+ck(
+  "3.12d and the check time is about the LINK, not about the merits",
+  sv.includes("Länkstatus kontrollerad") && en.includes("Share status checked"),
+);
+
+// ── TIME AND DATES ───────────────────────────────────────────────────
+ck(
+  "3.12e the check time comes from the payload, in a stated time zone",
+  presentation.checkedAt === "2026-09-07T07:00:00Z" && /\bCET\b|\bGMT\+|\bCEST\b/.test(sv),
+);
+ck(
+  "3.12f dates are localised, not ISO — employment, review and validity alike",
+  sv.includes("1 januari 2021") &&
+    en.includes("1 January 2021") &&
+    sv.includes("1 februari 2024") &&
+    !/\b20\d\d-\d\d-\d\d\b/.test(sv),
+);
+
+// A merit nobody assessed must not print three empty verification fields:
+// "Verifierad av: Ej angivet" reads as a verification that was expected and is
+// missing, which is heavier than the truth — nobody was asked.
+ck(
+  "3.12h a self-declared merit shows no empty who / how / when rows",
+  (sv.match(new RegExp(passportT("common.notStated", "sv"), "g")) ?? []).length <=
+    (sv.match(new RegExp(passportT("rec.profession", "sv"), "g")) ?? []).length + 1,
+);
+ck(
+  "3.12g and freshness describes the shared facts, not the moment of sharing",
+  sv.includes("30 augusti 2026"),
 );
 
 ck(
@@ -410,6 +570,36 @@ ck(
   ),
 );
 
+// ── NO DATABASE IDENTIFIER CROSSES ───────────────────────────────────
+//
+// A uuid printed into anonymous JSON reaches the DOM, a screenshot, an
+// analytics payload and a support ticket. It survives revocation, it is the
+// same value in two shares, and it correlates one recipient's copy with
+// another's. The DB suite proves the payload carries none; this proves the
+// RENDER carries none either, which is where a careless key={} would put it.
+ck(
+  "4.2a the anonymous read strips row identifiers and substitutes an ordinal",
+  /row\.value - 'id'/.test(migration) && /'key', coalesce\(row\.value ->> 'key'/.test(migration),
+);
+ck(
+  "4.2b the builder emits a presentation key and never an id",
+  /'key', 'c' \|\| t\.ord/.test(migration) && /'key', 'e' \|\| t\.ord/.test(migration),
+);
+ck(
+  "4.2c the model and every renderer read that key, not an id",
+  /readonly key: string;/.test(read("src/lib/security-passport/recipient-presentation.ts")) &&
+    /data-recipient-credential=\{c\.key\}/.test(
+      read("src/components/security-passport/live/RecipientCredentialList.tsx"),
+    ) &&
+    /data-recipient-employment=\{e\.key\}/.test(view),
+);
+// The rendered page, checked against a real uuid shape rather than a name.
+ck(
+  "4.2d MUTATION no uuid appears anywhere in the rendered page, in either language",
+  !/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(sv) &&
+    !/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(en),
+);
+
 ck(
   "4.3 the public page stays out of search indexes",
   /"robots", content: "noindex, nofollow"/.test(publicPage.replace(/name: /g, "")),
@@ -419,6 +609,14 @@ ck(
   "4.4 the selection table grants a holder no write, and anon nothing",
   /REVOKE ALL ON public\.sp_disclosure_items FROM anon, authenticated, PUBLIC;/.test(migration) &&
     /GRANT SELECT ON public\.sp_disclosure_items TO authenticated;/.test(migration),
+);
+
+// The Open Graph card is the one thing a reader meets BEFORE any label, so it
+// must not put the strongest word on a mixed set.
+ck(
+  "4.5 the link preview makes no claim about standing",
+  !/Verified professional records|Verifierade yrkesuppgifter/.test(publicPage) &&
+    /Each entry shows where it came from/.test(publicPage),
 );
 
 /* ================================================================== */
@@ -440,10 +638,38 @@ ck(
 );
 
 // Only the hash is stored, so a link cannot be re-shown. The screen says so
-// rather than offering a control that cannot work.
+// rather than offering a control that cannot work — and offers the thing that
+// CAN work in its place.
 ck(
   "5.3 the list does not offer to copy a link the product cannot recover",
   /sel\.existing\.noRecovery/.test(route),
+);
+ck(
+  "5.3a it offers a NEW link over the same contents instead",
+  /sel\.reissue/.test(route) &&
+    /replaceShare/.test(route) &&
+    /sp_replace_selected_disclosure/.test(functions),
+);
+// The reissue's own body mints a token. Sliced rather than matched across the
+// file, so this cannot be satisfied by the CREATE's token a few hundred lines
+// earlier.
+const reissueBody = migration.slice(
+  migration.indexOf("FUNCTION public.sp_replace_selected_disclosure"),
+);
+ck(
+  "5.3b which mints a fresh token rather than recovering one",
+  /gen_random_bytes\(32\)/.test(reissueBody) &&
+    /encode\(digest\(_token, 'sha256'\)/.test(reissueBody),
+);
+ck(
+  "5.3c and the holder chooses explicitly whether the old link keeps working",
+  /data-share-reissue-revoke/.test(route) &&
+    /_revoke_previous/.test(functions) &&
+    /IF _revoke THEN/.test(migration),
+);
+ck(
+  "5.3d a reissue whose contents have lapsed is refused, not shipped smaller",
+  /SP_MERIT_NOT_SHAREABLE/.test(reissueBody) && /sel\.error\.lapsed/.test(route),
 );
 ck(
   "5.4 only the token's hash is ever stored",
@@ -565,33 +791,67 @@ const model = buildShareSelection({
   reviewState: "available",
   now,
 });
-const offered = model.groups.flatMap((g) => g.merits.map((m) => m.id));
+const offered = model.groups.flatMap((g) => g.candidates.map((c) => c.merit.id));
 
 ck("6.1 a current, verified merit is offered", offered.includes("ok-licence"));
 ck("6.2 POSITIVE CONTROL an employment is offered too", offered.includes("emp-ok"));
-ck("6.3 a self-reported merit is NOT offered", !offered.includes("self"));
+// THE REVERSAL, exercised: a self-reported merit IS offered now, and it is
+// the recipient page's own labels that keep it honest.
+ck("6.3 a self-reported merit IS offered", offered.includes("self"));
 ck("6.4 a draft is NOT offered", !offered.includes("draft"));
 ck("6.5 an archived merit is NOT offered", !offered.includes("archived"));
 ck(
   "6.6 the groups are the three the brief names, and empty ones do not render",
   model.groups.every((g) => ["employment", "qualification", "authorisation"].includes(g.id)) &&
-    model.groups.every((g) => g.merits.length > 0),
+    model.groups.every((g) => g.candidates.length > 0),
 );
 ck(
-  "6.7 the shareable rule is the one the create enforces",
-  isShareable({ assertionLevel: "verified", lifecycleState: "active" }) &&
-    !isShareable({ assertionLevel: "document_provided", lifecycleState: "active" }) &&
-    !isShareable({ assertionLevel: "verified", lifecycleState: "superseded" }),
+  "6.7 the shareable rule is the one the create enforces: lifecycle only",
+  isShareableMerit({ lifecycleState: "active" }) &&
+    !isShareableMerit({ lifecycleState: "draft" }) &&
+    !isShareableMerit({ lifecycleState: "superseded" }) &&
+    !isShareableMerit({ lifecycleState: "expired" }) &&
+    !isShareableMerit({ lifecycleState: "revoked" }) &&
+    !isShareableMerit({ lifecycleState: "disputed" }),
+);
+ck(
+  "6.7a and a lifecycle nobody taught it about fails CLOSED",
+  shareEligibility({ lifecycleState: "something-new" }) === "archived",
+);
+
+// ── THE REVIEW STATE FAILS CLOSED ────────────────────────────────────
+//
+// A merit whose review could not be read must not present as settled. The
+// caveat is never a reason to withhold the merit — the recipient reads its
+// stored standing either way — but the holder is owed the difference between
+// "nothing is open" and "we could not tell".
+ck(
+  "6.7b an unreadable review state is `unknown`, never a settled word",
+  caveatFor("added_by_you", "failed") === "unknown" &&
+    caveatFor("documented", "failed") === "unknown" &&
+    caveatFor("verified", "loading") === "unknown",
+);
+ck(
+  "6.7c and an open case is named rather than hidden",
+  caveatFor("clarification_needed", "available") === "needs_answer" &&
+    caveatFor("verification_requested", "available") === "in_review" &&
+    caveatFor("documented", "available") === "none",
+);
+ck(
+  "6.7d the screen says so once, at the top, and beside each affected merit",
+  /sel\.reviewUnavailable/.test(route) && /data-merit-caveat=\{caveat\}/.test(route),
 );
 ck(
   "6.8 a review read with no answer degrades to unknown rather than crashing",
   model.reviewState === "failed" && model.reviewUnavailable,
 );
 ck(
+  "6.8a and every offered merit then carries the unknown caveat",
+  model.groups.every((g) => g.candidates.every((c) => c.caveat === "unknown")),
+);
+ck(
   "6.9 the unshareable merits are counted rather than silently dropped",
-  model.unshareable.notVerified === 1 &&
-    model.unshareable.archived === 1 &&
-    model.unshareable.drafts === 1,
+  model.unshareable.archived === 1 && model.unshareable.drafts === 1,
 );
 
 /* ================================================================== */

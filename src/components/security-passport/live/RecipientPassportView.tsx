@@ -35,7 +35,9 @@ import type { PassportLang } from "@/lib/security-passport/i18n";
 import { PassportLangProvider, usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
   formatDuration,
-  formatPeriodRange,
+  formatIsoDay,
+  formatIsoDayRange,
+  formatMoment,
   formatWorkLocation,
 } from "@/lib/security-passport/format";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
@@ -59,8 +61,6 @@ function Row({ label, value }: { label: string; value: string }) {
 export interface RecipientPassportViewProps {
   readonly presentation: RecipientPresentation;
   readonly lang: PassportLang;
-  /** When the page last re-read the record. Blank until the read returns. */
-  readonly checkedAt: string;
   /** The address a recipient can return to. Never this page's own URL — see
    *  the note in p.$token.tsx. */
   readonly verifyUrl: string;
@@ -80,7 +80,6 @@ export function RecipientPassportView(props: RecipientPassportViewProps) {
 
 function RecipientPassportBody({
   presentation,
-  checkedAt,
   verifyUrl,
   preview = false,
 }: RecipientPassportViewProps) {
@@ -116,40 +115,10 @@ function RecipientPassportBody({
             whether to act on it rather than buried in the detail grid. */}
         {presentation.expiresAt ? (
           <p className="mt-2 text-sm tabular-nums text-muted-foreground">
-            {pt("rec.linkExpires")}: {presentation.expiresAt.slice(0, 10)}
+            {pt("rec.linkExpires")}: {formatIsoDay(presentation.expiresAt.slice(0, 10), lang)}
           </p>
         ) : null}
       </header>
-
-      {/* ── The trust legend ────────────────────────────────────────────
-          Three words, said once, in plain language, before the merits that
-          wear them. A reader who meets "Dokumenterad" beside a credential
-          with no explanation supplies their own, and what they supply is
-          always more than the record supports. */}
-      <section className="mt-6 rounded-xl border border-border bg-card p-5">
-        <h2 className="text-base font-semibold tracking-tight text-foreground">
-          {pt("rec.legendTitle")}
-        </h2>
-        <dl className="mt-3 space-y-3">
-          {(
-            [
-              ["trust.level.self_declared", "rec.legend.self_declared"],
-              ["trust.level.documented", "rec.legend.documented"],
-              ["trust.level.source_verified", "rec.legend.source_verified"],
-            ] as const
-          ).map(([word, body]) => (
-            <div key={word}>
-              <dt className="text-sm font-medium text-foreground">{pt(word)}</dt>
-              <dd className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{pt(body)}</dd>
-            </div>
-          ))}
-        </dl>
-        {/* The distinction §G of the brief turns on, stated rather than
-            implied by the absence of a word. */}
-        <p className="mt-4 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
-          {pt("rec.legend.employmentNote")}
-        </p>
-      </section>
 
       <section className="mt-6" aria-label={pt("rec.cardTitle")}>
         <RecipientPassportCard presentation={presentation} verifyUrl={verifyUrl} />
@@ -195,12 +164,22 @@ function RecipientPassportBody({
           {presentation.purpose ? (
             <Row label={pt("rec.purpose")} value={presentation.purpose} />
           ) : null}
-          <Row label={pt("rec.lastUpdated")} value={presentation.lastUpdated.slice(0, 10)} />
+          {/* Derived by the server from the rows this share actually carries.
+              A localised day, because an ISO string is a machine's answer. */}
+          <Row
+            label={pt("rec.lastUpdated")}
+            value={formatIsoDay(presentation.lastUpdated.slice(0, 10), lang)}
+          />
           {/* The link's validity is NOT repeated here. It is stated once, in
               the header, where a reader decides whether to act on the page at
               all — and saying it twice on one screen is how a page starts to
               read as a form rather than a record. */}
-          {checkedAt ? <Row label={pt("rec.checkedAt")} value={checkedAt} /> : null}
+          {/* The SERVER's moment, not the visitor's clock, and rendered in a
+              stated time zone so two readers in two countries can compare
+              what they see. Absent on a preview, which re-reads nothing. */}
+          {presentation.checkedAt ? (
+            <Row label={pt("rec.checkedAt")} value={formatMoment(presentation.checkedAt, lang)} />
+          ) : null}
         </dl>
 
         {/* WHAT A PACKAGE SHOWS, and — for a chosen scope — that the holder
@@ -252,15 +231,15 @@ function RecipientPassportBody({
               );
               return (
                 <li
-                  key={e.id}
-                  data-recipient-employment={e.id}
+                  key={e.key}
+                  data-recipient-employment={e.key}
                   className="rounded-lg border border-border bg-card p-4"
                 >
                   <h3 className="text-base font-semibold tracking-tight text-foreground">
                     {e.role} · {e.employer}
                   </h3>
                   <p className="mt-2 text-sm tabular-nums text-muted-foreground">
-                    {formatPeriodRange(e.startedOn, e.endedOn, lang)}
+                    {formatIsoDayRange(e.startedOn, e.endedOn, lang)}
                   </p>
                   {line ? (
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{line}</p>
@@ -272,13 +251,13 @@ function RecipientPassportBody({
         </section>
       ) : null}
 
-      {presentation.verifiedExperienceDays > 0 ? (
+      {presentation.confirmedEmploymentDays > 0 ? (
         <section className="mt-6 rounded-xl border border-border bg-card p-5">
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
             {pt("rec.tenure")}
           </h2>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-            {formatDuration(presentation.verifiedExperienceDays, lang)}
+            {formatDuration(presentation.confirmedEmploymentDays, lang)}
           </p>
           {presentation.packageCode === "selected_merits" ? (
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -293,6 +272,42 @@ function RecipientPassportBody({
           <p className="text-sm text-muted-foreground">{pt("rec.nothing")}</p>
         </section>
       ) : null}
+
+      {/* ── The trust legend ────────────────────────────────────────────
+          Three words, said once, in plain language — AFTER the evidence, not
+          before it.
+          
+          It sat above the card until the review of PR #197. That put a
+          glossary between a reader and the thing they opened the link to see,
+          and a recipient who has not yet seen a single merit has no reason to
+          read definitions of words they have not met. Each merit states its
+          own provenance where it stands; this is the reference for anybody who
+          wants the words spelled out, and reference material belongs after the
+          record. */}
+      <section className="mt-6 rounded-xl border border-border bg-card p-5">
+        <h2 className="text-base font-semibold tracking-tight text-foreground">
+          {pt("rec.legendTitle")}
+        </h2>
+        <dl className="mt-3 space-y-3">
+          {(
+            [
+              ["trust.level.self_declared", "rec.legend.self_declared"],
+              ["trust.level.documented", "rec.legend.documented"],
+              ["trust.level.source_verified", "rec.legend.source_verified"],
+            ] as const
+          ).map(([word, body]) => (
+            <div key={word}>
+              <dt className="text-sm font-medium text-foreground">{pt(word)}</dt>
+              <dd className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{pt(body)}</dd>
+            </div>
+          ))}
+        </dl>
+        {/* The distinction §G of the brief turns on, stated rather than
+            implied by the absence of a word. */}
+        <p className="mt-4 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
+          {pt("rec.legend.employmentNote")}
+        </p>
+      </section>
 
       <section className="mt-6 space-y-2 rounded-xl border border-border p-5">
         <p className="text-sm leading-relaxed text-muted-foreground">

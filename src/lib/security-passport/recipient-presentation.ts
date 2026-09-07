@@ -50,7 +50,11 @@ import type { AssertionLevel, Claim, IsoDate, LifecycleState } from "./types";
 import { validityOf } from "./validity";
 
 export interface RecipientCredential {
-  readonly id: string;
+  /** The payload's presentation key, never a database identifier. Used as the
+   *  React key, as the `data-recipient-credential` hook and as the id the
+   *  identity engine derives titles against — all of which need uniqueness
+   *  within one render and nothing more. */
+  readonly key: string;
   readonly title: string;
   /** Taxonomy code, or null for a free-text credential. */
   readonly code: string | null;
@@ -98,7 +102,7 @@ export interface RecipientCredential {
 }
 
 export interface RecipientExperience {
-  readonly id: string;
+  readonly key: string;
   readonly employer: string;
   readonly role: string;
   readonly startedOn: IsoDate;
@@ -151,8 +155,16 @@ export interface RecipientPresentation {
   readonly lastUpdated: string;
   readonly credentials: readonly RecipientCredential[];
   readonly experience: readonly RecipientExperience[];
-  /** 0 when the package does not disclose a tenure total. */
-  readonly verifiedExperienceDays: number;
+  /** CONFIRMED employment duration, in days.
+   *
+   *  Named for what it counts. A selected share sums the SELECTED periods and,
+   *  among those, only the ones somebody confirmed — a self-declared
+   *  employment appears in the list above and is deliberately not in this
+   *  number. 0 when the share discloses no confirmed employment. */
+  readonly confirmedEmploymentDays: number;
+  /** When the server last re-read this record. Null on a preview, which
+   *  re-reads nothing, and on a payload from before 20261101090000. */
+  readonly checkedAt: string | null;
   /** True when at least one disclosed credential is no longer current. */
   readonly containsExpired: boolean;
   /** True when the package disclosed nothing at all. */
@@ -171,7 +183,10 @@ export interface RecipientPresentation {
  *  evidence and the dates, all four of which the payload does carry. */
 function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number]): Claim {
   return {
-    id: c.id,
+    // The presentation key stands in for the id here too. The identity engine
+    // needs a value that is unique within this one derivation; it never
+    // resolves it against anything.
+    id: c.key,
     claimType: c.type as Claim["claimType"],
     credentialCode: c.credential_code,
     skillCode: null,
@@ -247,7 +262,7 @@ export function buildRecipientPresentation(
       }),
     );
     return {
-      id: c.id,
+      key: c.key,
       title: c.title,
       code: c.credential_code,
       presentation,
@@ -274,7 +289,7 @@ export function buildRecipientPresentation(
   });
 
   const experience: RecipientExperience[] = payload.verified_experience.map((e) => ({
-    id: e.id,
+    key: e.key,
     employer: e.employer,
     role: e.role,
     startedOn: e.started_on,
@@ -321,7 +336,8 @@ export function buildRecipientPresentation(
     lastUpdated: payload.last_updated,
     credentials,
     experience,
-    verifiedExperienceDays: payload.verified_experience_days,
+    confirmedEmploymentDays: payload.verified_experience_days,
+    checkedAt: payload.checked_at ?? null,
     containsExpired: credentials.some((c) => c.lifecycle === "expired"),
     isEmpty:
       credentials.length === 0 && experience.length === 0 && payload.verified_experience_days === 0,

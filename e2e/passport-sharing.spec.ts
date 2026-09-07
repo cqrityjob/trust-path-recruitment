@@ -28,6 +28,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { test, expect, type Page, type Route } from "@playwright/test";
+import { fromJSON } from "seroval";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
@@ -72,6 +73,19 @@ const CLAIM_SELF_REPORTED = {
   titleSv: "Egen anteckning (fiktiv)",
   titleEn: "Own note (fictional)",
   assertionLevel: "self_declared",
+  verifierName: null,
+  verificationMethod: null,
+  verifiedOn: null,
+};
+
+const CLAIM_DRAFT = {
+  ...CLAIM_SHAREABLE,
+  id: "c-draft",
+  credentialCode: null,
+  titleSv: "Påbörjat utkast (fiktivt)",
+  titleEn: "Unfinished draft (fictional)",
+  assertionLevel: "self_declared",
+  lifecycleState: "draft",
   verifierName: null,
   verificationMethod: null,
   verifiedOn: null,
@@ -123,7 +137,7 @@ const SNAPSHOT = {
     updatedAt: "2026-09-01T00:00:00Z",
   },
   holder: {
-    claims: [CLAIM_SHAREABLE, CLAIM_SELF_REPORTED, CLAIM_ARCHIVED],
+    claims: [CLAIM_SHAREABLE, CLAIM_SELF_REPORTED, CLAIM_DRAFT, CLAIM_ARCHIVED],
     periods: [PERIOD_SHAREABLE],
     recognitions: [],
     skills: [],
@@ -142,15 +156,16 @@ function recipientPayload(locale: "sv" | "en") {
     locale,
     expires_at: "2026-10-07T09:00:00Z",
     authorised_at: "2026-09-07T09:00:00Z",
-    last_updated: "2026-09-07T09:00:00Z",
+    last_updated: "2026-08-30T09:00:00Z",
     holder: "Selma Delare (fiktiv)",
     privacy_mode: "full_name",
     profession_slug: null,
     jurisdiction: "SE",
     sub_jurisdiction: null,
+    checked_at: "2026-09-07T07:00:00Z",
     verified_claims: [
       {
-        id: "c-vu1",
+        key: "c1",
         type: "training",
         title: "Väktarutbildning 1 (VU1)",
         credential_code: "VU1",
@@ -167,10 +182,28 @@ function recipientPayload(locale: "sv" | "en") {
         verifier_organisation: "CQrityjob",
         verification_method: "document_review",
       },
+      {
+        key: "c2",
+        type: "training",
+        title: "Egen anteckning (fiktiv)",
+        credential_code: null,
+        issuer: "Ingen",
+        jurisdiction: "SE",
+        sub_jurisdiction: null,
+        scope_limited: false,
+        authorisation_scope: null,
+        issued_on: "2025-02-01",
+        valid_until: null,
+        assertion: "self_declared",
+        lifecycle: "active",
+        verified_at: null,
+        verifier_organisation: null,
+        verification_method: null,
+      },
     ],
     verified_experience: [
       {
-        id: "p-nordvakt",
+        key: "e1",
         employer: "Nordvakt AB (fiktiv)",
         role: "Väktare",
         started_on: "2021-01-01",
@@ -211,6 +244,13 @@ interface Scenario {
   readonly createFails?: boolean;
   readonly noClipboard?: boolean;
   readonly noMerits?: boolean;
+  /** The verification-request read fails: every merit's review state becomes
+   *  unknown, and the screen has to say so rather than fall back to a settled
+   *  word. */
+  readonly reviewFails?: boolean;
+  readonly reissueFails?: boolean;
+  readonly reissueLapsed?: boolean;
+  readonly reissueAlreadyExists?: boolean;
   readonly lang?: "sv" | "en";
   /** For the public page. */
   readonly publicPayload?: unknown;
@@ -220,6 +260,8 @@ let unmatched: string[] = [];
 let pageErrors: string[] = [];
 let createCalls = 0;
 let lastCreateBody = "";
+let reissueCalls = 0;
+let lastReissueBody = "";
 
 function exportOf(url: string): string | null {
   const m = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(url);
@@ -231,6 +273,25 @@ function exportOf(url: string): string | null {
     return String(json.export ?? "").replace(/_createServerFn_handler$/, "");
   } catch {
     return null;
+  }
+}
+
+/**
+ * What the page actually sent.
+ *
+ * A server-function request body is SEROVAL, not JSON: `true` arrives as
+ * `{"t":2,"s":2}`, so `body.includes("true")` is always false and a stub that
+ * looks for it silently reports the wrong flag. seroval's own reviver is the
+ * only stable way to read one — the wire format is its internal business and
+ * has no contract with this file.
+ */
+function serverFnArgs(body: string | null): Record<string, unknown> {
+  if (!body) return {};
+  try {
+    const revived = fromJSON(JSON.parse(body) as never) as { data?: Record<string, unknown> };
+    return revived?.data ?? {};
+  } catch {
+    return {};
   }
 }
 
@@ -248,6 +309,8 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
   pageErrors = [];
   createCalls = 0;
   lastCreateBody = "";
+  reissueCalls = 0;
+  lastReissueBody = "";
   const lang = scenario.lang ?? "sv";
 
   await page.addInitScript(
@@ -297,12 +360,17 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
           scenario.noMerits
             ? {
                 ...SNAPSHOT,
-                holder: { ...SNAPSHOT.holder, claims: [CLAIM_SELF_REPORTED], periods: [] },
+                // A DRAFT and an ARCHIVED merit. Both are real rows the
+                // holder owns, and neither may ever be shared — which is what
+                // makes this the empty state rather than an error. A
+                // self-declared merit no longer belongs here: it IS shareable.
+                holder: { ...SNAPSHOT.holder, claims: [CLAIM_DRAFT, CLAIM_ARCHIVED], periods: [] },
               }
             : SNAPSHOT,
         );
 
       case "listMyVerificationRequests":
+        if (scenario.reviewFails) return boom(route, "verification read failed");
         return ok(route, { requests: [], decisions: [] });
 
       case "listMyShares":
@@ -329,6 +397,29 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
           token: "a".repeat(64),
           disclosureId: "d-2",
           expiresAt: "2026-10-07T09:00:00Z",
+        });
+      }
+
+      case "replaceShare": {
+        reissueCalls += 1;
+        lastReissueBody = route.request().postData() ?? "";
+        if (scenario.reissueLapsed) return boom(route, "SP_MERIT_NOT_SHAREABLE: lapsed");
+        if (scenario.reissueFails) return boom(route, "reissue failed");
+        if (scenario.reissueAlreadyExists) {
+          return ok(route, {
+            status: "already_created",
+            disclosureId: "d-9",
+            expiresAt: "2026-10-07T09:00:00Z",
+          });
+        }
+        return ok(route, {
+          status: "created",
+          token: "b".repeat(64),
+          disclosureId: "d-9",
+          expiresAt: "2026-10-07T09:00:00Z",
+          // Echoed back from what the page SENT, so the assertion downstream
+          // is about the flag travelling and not about the stub's own opinion.
+          previousRevoked: serverFnArgs(lastReissueBody).revokePrevious === true,
         });
       }
 
@@ -406,10 +497,12 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await expect(page.locator('[data-share-group="qualification"]')).toBeVisible();
     await expect(page.locator('[data-share-group="authorisation"]')).toHaveCount(0);
 
-    // The shareable merits, and NOT the self-reported or archived ones.
+    // EVERY current merit, at whatever standing it has — including the one
+    // nobody has checked. Drafts and archived rows are never offered.
     await expect(page.locator('[data-merit-option="claim:c-vu1"]')).toBeVisible();
     await expect(page.locator('[data-merit-option="experience:p-nordvakt"]')).toBeVisible();
-    await expect(page.locator('[data-merit-option="claim:c-self"]')).toHaveCount(0);
+    await expect(page.locator('[data-merit-option="claim:c-self"]')).toBeVisible();
+    await expect(page.locator('[data-merit-option="claim:c-draft"]')).toHaveCount(0);
     await expect(page.locator('[data-merit-option="claim:c-old"]')).toHaveCount(0);
 
     // Nothing chosen for the holder, and no link until they choose.
@@ -425,6 +518,11 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await expect(
       page.locator('[data-merit-option="experience:p-nordvakt"] [data-merit-status]'),
     ).toHaveAttribute("data-merit-status", "verified");
+    // The self-declared one wears its own word, so the list itself keeps the
+    // holder from thinking everything on it is checked.
+    await expect(
+      page.locator('[data-merit-option="claim:c-self"] [data-merit-status]'),
+    ).toHaveAttribute("data-merit-status", "added_by_you");
 
     expect(pageErrors).toEqual([]);
     await shoot(page, "share-select-sv");
@@ -444,12 +542,12 @@ test.describe("Security Passport — sharing, as the holder", () => {
     });
 
     // Exactly the two, and the merits that were not ticked appear nowhere.
-    await expect(page.locator("[data-share-preview] [data-recipient-credential]")).toHaveCount(1);
+    await expect(page.locator("[data-share-preview] [data-recipient-credential]")).toHaveCount(2);
     await expect(
-      page.locator('[data-share-preview] [data-recipient-credential="c-vu1"]'),
+      page.locator('[data-share-preview] [data-recipient-credential="c1"]'),
     ).toBeVisible();
     await expect(page.locator("[data-share-preview] [data-recipient-employment]")).toHaveCount(1);
-    await expect(page.locator("[data-share-preview]")).not.toContainText("Egen anteckning");
+    await expect(page.locator("[data-share-preview]")).not.toContainText("Påbörjat utkast");
     await expect(page.locator("[data-share-preview]")).not.toContainText("Gammal utbildning");
 
     // The trust words the recipient reads.
@@ -457,10 +555,21 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await expect(page.locator("[data-share-preview]")).toContainText(
       "Anställningen är bekräftad av Nordvakt AB (fiktiv)",
     );
-    // A CQrityjob review is never dressed as source confirmation.
+    // A CQrityjob review is never dressed as source confirmation, and the
+    // holder's own entry is never dressed as either.
     await expect(
-      page.locator('[data-share-preview] [data-recipient-credential="c-vu1"]'),
+      page.locator('[data-share-preview] [data-recipient-credential="c1"]'),
     ).not.toContainText("Källbekräftad");
+    await expect(
+      page.locator('[data-share-preview] [data-recipient-credential="c2"]'),
+    ).not.toContainText("Dokumenterad");
+
+    // NO DATABASE IDENTIFIER reaches the DOM — not as text, not as an
+    // attribute. The uuid shape is what is forbidden, not a particular id.
+    const previewHtml = (await page.locator("[data-share-preview]").innerHTML()) ?? "";
+    expect(previewHtml).not.toMatch(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+    );
 
     expect(pageErrors).toEqual([]);
     await shoot(page, "share-preview-sv");
@@ -524,7 +633,9 @@ test.describe("Security Passport — sharing, as the holder", () => {
     // No token is offered, because none can be: only the hash was stored.
     await expect(page.locator("[data-share-link]")).toHaveCount(0);
     expect(createCalls).toBe(1);
-    expect(lastCreateBody).toContain("requestKey");
+    expect(serverFnArgs(lastCreateBody).requestKey).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
     expect(pageErrors).toEqual([]);
   });
 
@@ -535,10 +646,7 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await shareReady(page);
     await page.locator('[data-merit-option="claim:c-vu1"] input').check();
 
-    // The body is seroval, not JSON, so the key is read out of the raw text.
-    // A uuid is unmistakable there and this is asserting IDENTITY, not shape.
-    const keyIn = (body: string) =>
-      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.exec(body)?.[0] ?? null;
+    const keyIn = (body: string) => (serverFnArgs(body).requestKey as string | undefined) ?? null;
 
     await page.locator("[data-share-cta]").click();
     await expect(page.getByRole("alert")).toBeVisible({ timeout: 20_000 });
@@ -696,6 +804,109 @@ test.describe("Security Passport — sharing, as the holder", () => {
     expect(pageErrors).toEqual([]);
     await shoot(page, "share-select-en");
   });
+
+  test("16 · a review read that fails is said out loud, never smoothed over", async ({ page }) => {
+    await mount(page, "/passport/share", { reviewFails: true });
+    await shareReady(page);
+
+    // Once, at the top.
+    await expect(page.locator("[data-review-unavailable]")).toBeVisible();
+    await expect(page.locator("[data-review-unavailable]")).toContainText(
+      "kunde inte läsa dina granskningsärenden",
+    );
+
+    // And beside every merit, because a settled word here would be a guess.
+    const options = page.locator("[data-merit-option]");
+    const count = await options.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i += 1) {
+      await expect(options.nth(i)).toHaveAttribute("data-merit-caveat", "unknown");
+    }
+    // The merits are still shareable: the recipient reads their stored
+    // standing either way, and a briefly unreadable queue table must not take
+    // the whole feature down.
+    await page.locator('[data-merit-option="claim:c-vu1"] input').check();
+    await expect(page.locator("[data-share-cta]")).toBeEnabled();
+    expect(pageErrors).toEqual([]);
+    await shoot(page, "share-review-unknown");
+  });
+
+  test("17 · a new link over the same contents, with the old one revoked", async ({ page }) => {
+    await mount(page, "/passport/share", { shares: [SHARE_ROW] });
+    await shareReady(page);
+
+    await page.locator('[data-share-reissue="d-1"]').click();
+    await expect(page.locator("[data-share-reissue-panel]")).toBeVisible();
+
+    // The choice is explicit and visible, and it defaults to the safer answer.
+    const revoke = page.locator("[data-share-reissue-revoke]");
+    await expect(revoke).toBeChecked();
+
+    await page.locator("[data-share-reissue-confirm]").click();
+    await expect(page.locator("[data-share-created]")).toBeVisible({ timeout: 20_000 });
+
+    // A FRESH token, not a recovered one.
+    const link = await page.locator("[data-share-link]").inputValue();
+    expect(link).toContain("b".repeat(64));
+    expect(reissueCalls).toBe(1);
+
+    // The holder's choice reached the server AND came back as a sentence they
+    // can act on. Asserted through the rendered answer rather than by decoding
+    // the request body, which is seroval and not a stable contract.
+    await expect(page.locator("[data-previous-revoked]")).toHaveAttribute(
+      "data-previous-revoked",
+      "true",
+    );
+    await expect(page.locator("[data-share-created]")).toContainText("är återkallad");
+    expect(serverFnArgs(lastReissueBody).revokePrevious).toBe(true);
+    expect(pageErrors).toEqual([]);
+    await shoot(page, "share-reissue-sv");
+  });
+
+  test("18 · or with the old one kept, when the holder says so", async ({ page }) => {
+    await mount(page, "/passport/share", { shares: [SHARE_ROW] });
+    await shareReady(page);
+
+    await page.locator('[data-share-reissue="d-1"]').click();
+    await page.locator("[data-share-reissue-revoke]").uncheck();
+    await expect(page.locator("[data-share-reissue-revoke]")).not.toBeChecked();
+    await page.locator("[data-share-reissue-confirm]").click();
+    await expect(page.locator("[data-share-created]")).toBeVisible({ timeout: 20_000 });
+
+    // The flag travels exactly as the holder set it. Both answers are
+    // legitimate and neither is assumed — and the two requests must therefore
+    // differ in the encoded flag, whatever encoding the transport uses.
+    await expect(page.locator("[data-previous-revoked]")).toHaveAttribute(
+      "data-previous-revoked",
+      "false",
+    );
+    await expect(page.locator("[data-share-created]")).toContainText("fungerar fortfarande");
+    expect(serverFnArgs(lastReissueBody).revokePrevious).toBe(false);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("19 · a lost reissue response reconciles, and a lapsed one is refused", async ({ page }) => {
+    await mount(page, "/passport/share", { shares: [SHARE_ROW], reissueAlreadyExists: true });
+    await shareReady(page);
+    await page.locator('[data-share-reissue="d-1"]').click();
+    await page.locator("[data-share-reissue-confirm]").click();
+    await expect(page.locator("[data-share-already]")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("[data-share-link]")).toHaveCount(0);
+    expect(reissueCalls).toBe(1);
+
+    await mount(page, "/passport/share", { shares: [SHARE_ROW], reissueLapsed: true });
+    await shareReady(page);
+    await page.locator('[data-share-reissue="d-1"]').click();
+    await page.locator("[data-share-reissue-confirm]").click();
+    await expect(page.locator("[data-share-reissue-panel] [role=alert]")).toContainText(
+      "inte längre aktuell",
+      { timeout: 20_000 },
+    );
+    // The panel stays open with the holder's choice intact, so the retry is
+    // one click and not a restart.
+    await expect(page.locator("[data-share-reissue-panel]")).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
 });
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -718,6 +929,30 @@ test.describe("Security Passport — the recipient link", () => {
     await expect(page.locator("[data-recipient-view]")).toContainText(
       "Anställningen är bekräftad av Nordvakt AB (fiktiv)",
     );
+
+    // The renamed public framing: a share, not a verification, and a duration
+    // named for what it counts.
+    await expect(page.locator("h1")).toHaveText("Delat Security Passport");
+    await expect(page.locator("[data-recipient-view]")).toContainText("Bekräftad anställningstid");
+    await expect(page.locator("[data-recipient-view]")).toContainText("Länkstatus kontrollerad");
+    await expect(page.locator("[data-recipient-view]")).not.toContainText(
+      "Den här sidan är källan",
+    );
+
+    // The glossary comes AFTER the evidence a reader opened the link to see.
+    const order = (await page.locator("[data-recipient-view]").innerText()) ?? "";
+    expect(order.indexOf("Väktarutbildning 1")).toBeLessThan(order.indexOf("Vad orden betyder"));
+
+    // A mixed share: the holder's own entry sits beside the reviewed one, and
+    // neither borrows the other's word.
+    await expect(page.locator('[data-recipient-credential="c2"]')).not.toContainText(
+      "Dokumenterad",
+    );
+
+    // Localised dates, and no database identifier anywhere in the DOM.
+    await expect(page.locator("[data-recipient-view]")).toContainText("1 januari 2021");
+    const html = (await page.locator("[data-recipient-view]").innerHTML()) ?? "";
+    expect(html).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
     // The public explanation of what a Security Passport is.
     await expect(page.getByRole("link", { name: /Läs mer/ })).toHaveAttribute("href", "/#passport");
     expect(pageErrors).toEqual([]);
@@ -733,6 +968,14 @@ test.describe("Security Passport — the recipient link", () => {
       "Employment confirmed by Nordvakt AB (fiktiv)",
     );
     await expect(page.locator("[data-recipient-view]")).not.toContainText("Vad orden betyder");
+    await expect(page.locator("h1")).toHaveText("Shared Security Passport");
+    await expect(page.locator("[data-recipient-view]")).toContainText(
+      "Confirmed employment duration",
+    );
+    await expect(page.locator("[data-recipient-view]")).toContainText("Share status checked");
+    // English dates, in English, with no Swedish month left over.
+    await expect(page.locator("[data-recipient-view]")).toContainText("1 January 2021");
+    await expect(page.locator("[data-recipient-view]")).not.toContainText("januari");
     expect(pageErrors).toEqual([]);
     await shoot(page, "recipient-en");
   });
@@ -744,6 +987,10 @@ test.describe("Security Passport — the recipient link", () => {
     await expect(page.locator("main")).toContainText("Länken är inte tillgänglig");
     await expect(page.locator("main")).toContainText("Be personen om en ny länk");
     await expect(page.locator("main")).toContainText("säger ingenting om personen");
+    await expect(page.getByRole("link", { name: /Om Security Passport/ })).toHaveAttribute(
+      "href",
+      "/#passport",
+    );
     // Nothing about an account, a holder or an id.
     await expect(page.locator("main")).not.toContainText("Selma");
     await expect(page.locator("main")).not.toContainText("abcdef0123456789");

@@ -178,7 +178,19 @@ export function livePackage(code: DisclosurePackageCode): LivePackage {
  *  page cannot read a field the function does not produce, and so adding a
  *  field to the payload is a deliberate, reviewable change in both places. */
 export interface RecipientClaim {
-  readonly id: string;
+  /** A PRESENTATION key — `c1`, `c2` — and never the row's database id.
+   *
+   *  A uuid printed into anonymous JSON reaches the DOM, a screenshot, an
+   *  analytics payload and a support ticket, and it is a durable internal
+   *  identifier a stranger has no use for: it survives revocation, it is the
+   *  same value in two different shares, and it correlates one recipient's
+   *  copy with another's. The ordinal is what a renderer and the identity
+   *  engine actually need, and it says nothing.
+   *
+   *  `sp_get_disclosure` strips `id` and substitutes this for whichever
+   *  branch built the payload, so the guarantee does not depend on the
+   *  builder a given share happened to use. */
+  readonly key: string;
   readonly type: string;
   readonly title: string;
   /** Supported-credential taxonomy code (VU1 / VU2 / OV / SV), or null for a
@@ -215,7 +227,8 @@ export interface RecipientClaim {
 }
 
 export interface RecipientPeriod {
-  readonly id: string;
+  /** A presentation key — `e1`, `e2`. See `RecipientClaim.key`. */
+  readonly key: string;
   readonly employer: string;
   readonly role: string;
   readonly started_on: string;
@@ -263,6 +276,13 @@ export interface RecipientPayloadActive {
   /** When the holder authorised this disclosure. Added by
    *  20260904090000; older payloads may not carry it. */
   readonly authorised_at?: string | null;
+  /** When the SERVER last re-read this record, stamped by
+   *  `sp_get_disclosure`.
+   *
+   *  The page used to print `new Date()` from the visitor's own machine beside
+   *  the words "checked", so a skewed clock made the product assert something
+   *  it had not observed. Absent on a preview, which re-reads nothing. */
+  readonly checked_at?: string | null;
   readonly last_updated: string;
   readonly holder: string | null;
   readonly privacy_mode: string;

@@ -12105,6 +12105,7 @@ export type Database = {
           package_code: string
           purpose: string | null
           recipient_hint: string | null
+          request_fingerprint: string | null
           request_key: string | null
           revoked_at: string | null
           token_hash: string | null
@@ -12121,6 +12122,7 @@ export type Database = {
           package_code: string
           purpose?: string | null
           recipient_hint?: string | null
+          request_fingerprint?: string | null
           request_key?: string | null
           revoked_at?: string | null
           token_hash?: string | null
@@ -12137,6 +12139,7 @@ export type Database = {
           package_code?: string
           purpose?: string | null
           recipient_hint?: string | null
+          request_fingerprint?: string | null
           request_key?: string | null
           revoked_at?: string | null
           token_hash?: string | null
@@ -15352,6 +15355,14 @@ export type Database = {
         Returns: Json
       }
       sp_disclosure_payload: { Args: { _disclosure_id: string }; Returns: Json }
+      sp_replace_selected_disclosure: {
+        Args: {
+          _disclosure_id: string
+          _request_key: string
+          _revoke_previous: boolean
+        }
+        Returns: Json
+      }
       sp_preview_selected_disclosure: {
         Args: {
           _claim_ids: string[]

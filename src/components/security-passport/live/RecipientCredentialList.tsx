@@ -24,6 +24,7 @@ import { CredentialScopeLine } from "./CredentialScopeLine";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
   formatExpiry,
+  formatIsoDay,
   formatJurisdiction,
   formatWorkLocation,
 } from "@/lib/security-passport/format";
@@ -58,8 +59,8 @@ export function RecipientCredentialList({
       <ul className="mt-3 space-y-3">
         {credentials.map((c) => (
           <li
-            key={c.id}
-            data-recipient-credential={c.id}
+            key={c.key}
+            data-recipient-credential={c.key}
             className="rounded-lg border border-border bg-card p-4"
           >
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -127,26 +128,38 @@ export function RecipientCredentialList({
                   value={formatWorkLocation(c.jurisdiction, c.subJurisdiction, lang)}
                 />
               ) : null}
+              {/* WHO / HOW / WHEN, and only when there is an answer.
+                  
+                  Since chosen-merit sharing carries self-declared entries too,
+                  a credential nobody has assessed reached this list — and
+                  printed "Verifierad av: Ej angivet · Metod: Ej angivet ·
+                  Verifierad: Ej angivet". Three empty verification fields
+                  under a merit read as a verification that was expected and is
+                  missing, which is a heavier statement than the truth: nobody
+                  was asked. The chip above already says Egen uppgift; these
+                  rows appear when there is something to put in them. */}
+              {c.verifierOrganisation ? (
+                <Row label={pt(c.labels.by)} value={c.verifierOrganisation} />
+              ) : null}
+              {c.verificationMethod ? (
+                <Row
+                  label={pt(c.labels.method)}
+                  value={pt(
+                    methodLabelKey(c.verificationMethod, c.verifierOrganisation) ??
+                      "common.notStated",
+                  )}
+                />
+              ) : null}
+              {c.verifiedAt ? (
+                <Row
+                  label={pt(c.labels.at)}
+                  value={formatIsoDay(c.verifiedAt.slice(0, 10), lang)}
+                />
+              ) : null}
               <Row
-                label={pt(c.labels.by)}
-                value={c.verifierOrganisation ?? pt("common.notStated")}
+                label={pt("rec.validUntil")}
+                value={c.validUntil ? formatIsoDay(c.validUntil, lang) : formatExpiry(null, lang)}
               />
-              <Row
-                label={pt(c.labels.method)}
-                value={
-                  c.verificationMethod
-                    ? pt(
-                        methodLabelKey(c.verificationMethod, c.verifierOrganisation) ??
-                          "common.notStated",
-                      )
-                    : pt("common.notStated")
-                }
-              />
-              <Row
-                label={pt(c.labels.at)}
-                value={c.verifiedAt ? c.verifiedAt.slice(0, 10) : pt("common.notStated")}
-              />
-              <Row label={pt("rec.validUntil")} value={formatExpiry(c.validUntil, lang)} />
               {c.jurisdiction ? (
                 <Row
                   label={pt("rec.jurisdiction")}

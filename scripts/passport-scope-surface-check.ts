@@ -62,7 +62,8 @@ function payload(opts: {
     jurisdiction: "SE",
     verified_claims: [
       {
-        id: "c-sv",
+        // A presentation key, not a database id — see RecipientClaim.key.
+        key: "c1",
         type: "licence",
         title: "Skyddsvaktsförordnande",
         credential_code: "SV",

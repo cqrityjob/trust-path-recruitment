@@ -110,14 +110,14 @@ export function RecipientPassportCard({
         </div>
 
         {/* ── Verified tenure, where the package discloses it ───────── */}
-        {presentation.verifiedExperienceDays > 0 ? (
+        {presentation.confirmedEmploymentDays > 0 ? (
           <div className="mt-4">
             <MicroLabel tone={TRUST_PALETTE.inkMuted}>{pt("rec.tenure")}</MicroLabel>
             <p
               className="mt-1 text-xl font-semibold tabular-nums"
               style={{ color: TRUST_PALETTE.ink, fontFamily: "var(--font-display)" }}
             >
-              {formatDuration(presentation.verifiedExperienceDays, lang)}
+              {formatDuration(presentation.confirmedEmploymentDays, lang)}
             </p>
           </div>
         ) : null}
@@ -130,7 +130,7 @@ export function RecipientPassportCard({
               const tone = CARD_WORD_TONE[c.presentation] ?? TRUST_PALETTE.inkMuted;
               return (
                 <li
-                  key={c.id}
+                  key={c.key}
                   className="flex items-start gap-3 rounded-md px-3 py-2.5"
                   style={{
                     background: isCurrent ? "rgba(183,146,85,0.12)" : "transparent",

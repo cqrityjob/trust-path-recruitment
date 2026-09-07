@@ -7,6 +7,16 @@
 //   createSelectedShare   sp_create_selected_disclosure
 //   listMyShares          a holder-scoped read under RLS
 //
+// ── THE VALIDATION HERE IS A COURTESY, NOT A BOUNDARY ──────────────────
+//
+// The Zod schemas below refuse a bad expiry or locale before a round trip, so
+// the holder gets an immediate answer. They are NOT what makes those values
+// safe: `sp_assert_share_inputs` refuses the same three things inside the
+// database, by name, because this RPC is callable by any authenticated
+// principal with a session and a HTTP client and everything the browser
+// believes is advisory by the time it arrives. The database suite asserts the
+// refusals against direct RPC calls with no browser involved.
+//
 // ── WHY THE SCOPE IS NOT DECIDED HERE ──────────────────────────────────
 //
 // A share's contents could have been assembled in this file: read the
@@ -89,6 +99,9 @@ export type CreateShareResult =
       readonly token: string;
       readonly disclosureId: string;
       readonly expiresAt: string | null;
+      /** Only a reissue answers this: whether the link it replaced was
+       *  revoked. Null for an ordinary creation, which replaced nothing. */
+      readonly previousRevoked: boolean | null;
     }
   | {
       /** This request key had already produced a share. The token is gone —
@@ -117,25 +130,68 @@ export const createSelectedShare = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
 
-    const row = result as unknown as {
-      status: string;
-      token?: string;
-      disclosure_id: string;
-      expires_at: string | null;
-    };
-    if (row.status === "created" && row.token) {
-      return {
-        status: "created",
-        token: row.token,
-        disclosureId: row.disclosure_id,
-        expiresAt: row.expires_at,
-      };
-    }
+    return readCreateResult(result);
+  });
+
+/** The two shapes `sp_create_selected_disclosure` and
+ *  `sp_replace_selected_disclosure` both return. Read in one place so a
+ *  replay cannot be mistaken for a creation by one caller and not the other —
+ *  the difference is whether a token came back, and a missing token must never
+ *  be reported as a link the holder can send. */
+function readCreateResult(result: unknown): CreateShareResult {
+  const row = result as {
+    status?: string;
+    token?: string;
+    disclosure_id?: string;
+    expires_at?: string | null;
+    previous_revoked?: boolean;
+  } | null;
+  if (row?.status === "created" && row.token) {
     return {
-      status: "already_created",
-      disclosureId: row.disclosure_id,
-      expiresAt: row.expires_at,
+      status: "created",
+      token: row.token,
+      disclosureId: String(row.disclosure_id),
+      expiresAt: row.expires_at ?? null,
+      previousRevoked: row.previous_revoked ?? null,
     };
+  }
+  return {
+    status: "already_created",
+    disclosureId: String(row?.disclosure_id),
+    expiresAt: row?.expires_at ?? null,
+  };
+}
+
+/**
+ * A NEW link over the same contents.
+ *
+ * The holder's safe answer to "I lost the link". A stored token would make
+ * every share recoverable forever from a backup, which is the liability the
+ * hash exists to avoid — so a lost link is not recovered, it is replaced, and
+ * the holder says explicitly whether the previous one should stop working.
+ *
+ * Idempotent on `requestKey` exactly as creation is, so a lost response
+ * reconciles to the link that already exists rather than minting a third.
+ */
+export const replaceShare = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        disclosureId: z.string().uuid(),
+        revokePrevious: z.boolean(),
+        requestKey: z.string().uuid(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ context, data }): Promise<CreateShareResult> => {
+    const { data: result, error } = await context.supabase.rpc("sp_replace_selected_disclosure", {
+      _disclosure_id: data.disclosureId,
+      _revoke_previous: data.revokePrevious,
+      _request_key: data.requestKey,
+    });
+    if (error) throw new Error(error.message);
+    return readCreateResult(result);
   });
 
 export const revokeShare = createServerFn({ method: "POST" })
@@ -214,11 +270,12 @@ export const listMyShares = createServerFn({ method: "GET" })
     const allPeriodIds = [...new Set([...chosen.values()].flatMap((c) => c.periods))];
 
     if (allClaimIds.length > 0) {
+      // THE SHARING POLICY, not a verification filter: a merit is still in a
+      // share while its lifecycle is `active`, at whatever standing it has.
       const { data: live, error: liveError } = await supabase
         .from("sp_claims")
         .select("id")
         .in("id", allClaimIds)
-        .eq("assertion_level", "verified")
         .eq("lifecycle_state", "active");
       if (liveError) throw new Error(liveError.message);
       for (const row of (live ?? []) as { id: string }[]) currentClaims.add(row.id);
@@ -228,7 +285,6 @@ export const listMyShares = createServerFn({ method: "GET" })
         .from("sp_experience_periods")
         .select("id")
         .in("id", allPeriodIds)
-        .eq("assertion_level", "verified")
         .eq("lifecycle_state", "active");
       if (liveError) throw new Error(liveError.message);
       for (const row of (live ?? []) as { id: string }[]) currentPeriods.add(row.id);

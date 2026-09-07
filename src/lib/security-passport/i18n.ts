@@ -1409,10 +1409,10 @@ const sv = {
     "Länken slutar fungera direkt. Den som redan öppnat sidan ser inget nytt efter det.",
   "sc.revoked": "Delningen är återkallad.",
   "rec.brand": "CQrityjob",
-  "rec.title": "Verifiering av Security Passport",
+  "rec.title": "Delat Security Passport",
   "rec.checking": "Hämtar …",
   "rec.authoritative":
-    "Den här sidan är källan. Den visar läget just nu och ändras om något återkallas eller går ut.",
+    "Det här är den aktuella delningen. Sidan läses om varje gång den öppnas, så den visar läget just nu och ändras om något återkallas eller går ut.",
   "rec.unavailableTitle": "Länken är inte tillgänglig",
   "rec.unavailableBody":
     "Länken kan ha gått ut, ha återkallats eller aldrig ha funnits. Be personen om en ny länk.",
@@ -1463,7 +1463,7 @@ const sv = {
   // had nothing to tell them a Swedish appointment was Swedish.
   "rec.credentialMarket": "Gäller i",
   "rec.experience": "Anställning",
-  "rec.tenure": "Granskad tid i yrket",
+  "rec.tenure": "Bekräftad anställningstid",
   "rec.verifiedBy": "Verifierad av",
   "rec.method": "Metod",
   "rec.verifiedAt": "Verifierad",
@@ -1473,7 +1473,7 @@ const sv = {
   "rec.nothing": "Det här paketet innehåller inget verifierat just nu.",
   "rec.lastUpdated": "Senast uppdaterad",
   "rec.linkExpires": "Länken gäller till",
-  "rec.checkedAt": "Kontrollerad",
+  "rec.checkedAt": "Länkstatus kontrollerad",
   "rec.jurisdictionNote":
     "Jurisdiktion beskriver var uppgiften är utfärdad. Den säger ingenting om rätt att arbeta i något land.",
   "rec.notAssessment": "Det här är styrkta uppgifter, inte ett omdöme om personen.",
@@ -1513,10 +1513,10 @@ const sv = {
   "sel.group.qualification": "Utbildningar, kurser och certifikat",
   "sel.group.authorisation": "Behörigheter och förordnanden",
   "sel.onlyCurrentVerified":
-    "Bara aktuella meriter som en granskare eller källa har bekräftat kan delas. Egna uppgifter, påbörjade utkast, arkiverade meriter och dina uppladdade dokument följer aldrig med.",
+    "Alla aktuella meriter kan delas. Varje merit visar själv vad som ligger bakom den, så mottagaren ser skillnad på det du har uppgett själv och det någon annan har bekräftat. Påbörjade utkast, arkiverade meriter och dina uppladdade dokument följer aldrig med.",
   "sel.empty.title": "Du har inget att dela ännu",
   "sel.empty.body":
-    "En merit kan delas när den är aktuell och har granskats. Lägg till en merit och begär granskning, så dyker den upp här.",
+    "Alla aktuella meriter går att dela — även sådana ingen har granskat ännu. Lägg till din första merit, så dyker den upp här.",
   "sel.empty.action": "Till mitt Passport",
   "sel.preview.lead": "Exakt den sidan mottagaren öppnar, med exakt de uppgifter du har valt.",
   "sel.preview.show": "Förhandsgranska mottagarens vy",
@@ -1548,7 +1548,7 @@ const sv = {
   "sel.existing.opensNote":
     "Öppningar räknar varje gång sidan hämtas, även dina egna. Det är inte ett kvitto på att mottagaren har läst något.",
   "sel.existing.noRecovery":
-    "En länk visas bara när den skapas. Vi kan inte visa den igen — skapa en ny om du har tappat bort den.",
+    "En länk visas bara när den skapas. Vi sparar bara ett avtryck av den, så den kan inte visas igen — men du kan skapa en ny länk med exakt samma innehåll.",
   "sel.existing.someLapsed":
     "Någon av meriterna i den här länken är inte längre aktuell och visas därför inte för mottagaren.",
   "sel.error.passport": "Vi kunde inte hämta ditt Security Passport just nu.",
@@ -1560,6 +1560,42 @@ const sv = {
     "Någon av meriterna du valt är inte längre aktuell och har tagits bort från valet. Kontrollera listan och försök igen.",
   "sel.error.revoke": "Länken kunde inte återkallas. Försök igen.",
   "sel.back": "Tillbaka till mitt Passport",
+  // ── Vad som pågår med en merit, sagt innan den delas ────────────────
+  //
+  // Aldrig ett skäl att hålla tillbaka meriten — mottagaren ser det lagrade
+  // läget oavsett. Alltid ett skäl att säga något till innehavaren, eftersom
+  // läget kan vara på väg att ändras.
+  "sel.caveat.in_review": "Granskning pågår",
+  "sel.caveat.needs_answer": "Granskaren väntar på ditt svar",
+  "sel.caveat.unknown": "Granskningsläget kunde inte läsas",
+  "sel.reviewUnavailable":
+    "Vi kunde inte läsa dina granskningsärenden just nu. Meriterna nedan går att dela, men vi kan inte visa om någon granskning pågår.",
+
+  // ── Ny länk med samma innehåll ──────────────────────────────────────
+  "sel.reissue": "Skapa en ny länk med samma innehåll",
+  "sel.reissue.title": "Ny länk med samma innehåll",
+  "sel.reissue.body":
+    "Vi kan inte visa en länk igen — bara ett kryptografiskt avtryck av den sparas. Däremot kan vi skapa en ny länk med exakt samma meriter, samma språk och samma giltighetstid.",
+  "sel.reissue.revoke": "Återkalla den gamla länken samtidigt",
+  "sel.reissue.revokeHelp":
+    "Kryssa ur om någon redan använder den gamla länken och du bara vill ha en till att skicka.",
+  "sel.reissue.confirm": "Skapa ny länk",
+  "sel.reissue.cancel": "Avbryt",
+  "sel.reissue.creating": "Skapar …",
+  // Said after the fact, because the holder has just made a choice about a
+  // link somebody else may be holding, and "did the old one stop working?"
+  // is the only question they will have.
+  "sel.reissue.previousRevoked": "Den gamla länken är återkallad och fungerar inte längre.",
+  "sel.reissue.previousKept": "Den gamla länken fungerar fortfarande.",
+  "sel.error.reissue": "Den nya länken kunde inte skapas. Försök igen — vi skapar ingen dubblett.",
+  "sel.error.notReplaceable":
+    "Den här länken går inte att förnya. Den kan ha återkallats eller gått ut — skapa en ny delning i stället.",
+  "sel.error.lapsed":
+    "Någon av meriterna i den här länken är inte längre aktuell, så vi kan inte skapa en länk med exakt samma innehåll. Gör ett nytt val i stället.",
+  "sel.error.expiry": "Välj 7, 30 eller 90 dagar.",
+  "sel.error.locale": "Välj svenska eller engelska.",
+  "sel.error.conflict":
+    "Det här försöket har redan skapat en länk, med ett annat innehåll. Ladda om sidan och gör om valet.",
 
   // ── Mottagarens sida: förklaringen och trappan ─────────────────────
   "rec.whatThisIs":
@@ -1581,6 +1617,7 @@ const sv = {
   // and one screen saying it twice reads as a form rather than an answer.
   "rec.unavailableNext":
     "Det säger ingenting om personen som skickade den, och det är inget fel på din webbläsare.",
+  "rec.aboutLink": "Om Security Passport",
 
   // ── Credential forms (Phase 6) ───────────────────────────────────────
   // The four launch credentials. The credential NAMES are not here: they
@@ -3271,10 +3308,10 @@ const en: Record<PassportCopyKey, string> = {
     "The link stops working immediately. Anyone who already opened it sees nothing new afterwards.",
   "sc.revoked": "The share has been revoked.",
   "rec.brand": "CQrityjob",
-  "rec.title": "Security Passport verification",
+  "rec.title": "Shared Security Passport",
   "rec.checking": "Loading …",
   "rec.authoritative":
-    "This page is the source. It shows the position right now and changes if something is revoked or expires.",
+    "This is the current share. The page is re-read every time it is opened, so it shows the position right now and changes if something is revoked or expires.",
   "rec.unavailableTitle": "This link is not available",
   "rec.unavailableBody":
     "The link may have expired, been revoked, or never existed. Ask the person for a new link.",
@@ -3306,7 +3343,7 @@ const en: Record<PassportCopyKey, string> = {
   "rec.subJurisdiction": "Region",
   "rec.credentialMarket": "Valid in",
   "rec.experience": "Employment",
-  "rec.tenure": "Reviewed time in the profession",
+  "rec.tenure": "Confirmed employment duration",
   "rec.verifiedBy": "Verified by",
   "rec.method": "Method",
   "rec.verifiedAt": "Verified",
@@ -3316,7 +3353,7 @@ const en: Record<PassportCopyKey, string> = {
   "rec.nothing": "This package contains nothing verified right now.",
   "rec.lastUpdated": "Last updated",
   "rec.linkExpires": "The link is valid until",
-  "rec.checkedAt": "Checked",
+  "rec.checkedAt": "Share status checked",
   "rec.jurisdictionNote":
     "Jurisdiction describes where an entry was issued. It says nothing about the right to work in any country.",
   "rec.notAssessment": "These are substantiated facts, not a judgement about the person.",
@@ -3352,10 +3389,10 @@ const en: Record<PassportCopyKey, string> = {
   "sel.group.qualification": "Training, courses and certificates",
   "sel.group.authorisation": "Authorisations and appointments",
   "sel.onlyCurrentVerified":
-    "Only current merits a reviewer or a source has confirmed can be shared. Your own unchecked entries, unfinished drafts, archived merits and the documents you uploaded are never included.",
+    "Every current merit can be shared. Each one shows what stands behind it, so the recipient can tell what you stated yourself from what somebody else confirmed. Unfinished drafts, archived merits and the documents you uploaded are never included.",
   "sel.empty.title": "You have nothing to share yet",
   "sel.empty.body":
-    "A merit can be shared once it is current and has been reviewed. Add a merit and request a review, and it will appear here.",
+    "Every current merit can be shared, including ones nobody has reviewed yet. Add your first merit and it will appear here.",
   "sel.empty.action": "Go to my Passport",
   "sel.preview.lead": "Exactly the page your recipient opens, with exactly the entries you picked.",
   "sel.preview.show": "Preview the recipient's view",
@@ -3388,7 +3425,7 @@ const en: Record<PassportCopyKey, string> = {
   "sel.existing.opensNote":
     "Opens counts every time the page is fetched, including your own. It is not a receipt that the recipient has read anything.",
   "sel.existing.noRecovery":
-    "A link is shown only when it is created. We cannot show it again — create a new one if you have lost it.",
+    "A link is shown only when it is created. We store only a fingerprint of it, so it cannot be shown again — but you can create a new link with exactly the same contents.",
   "sel.existing.someLapsed":
     "One of the merits in this link is no longer current, so the recipient does not see it.",
   "sel.error.passport": "We could not load your Security Passport just now.",
@@ -3400,6 +3437,36 @@ const en: Record<PassportCopyKey, string> = {
     "One of the merits you chose is no longer current and has been removed from your selection. Check the list and try again.",
   "sel.error.revoke": "The link could not be revoked. Try again.",
   "sel.back": "Back to my Passport",
+  // ── What is in flight on a merit, said before it is shared ──────────
+  "sel.caveat.in_review": "Under review",
+  "sel.caveat.needs_answer": "The reviewer is waiting for you",
+  "sel.caveat.unknown": "Review state could not be read",
+  "sel.reviewUnavailable":
+    "We could not read your review cases just now. The merits below can still be shared, but we cannot show whether a review is in progress.",
+
+  // ── A new link with the same contents ───────────────────────────────
+  "sel.reissue": "Create a new link with the same contents",
+  "sel.reissue.title": "New link, same contents",
+  "sel.reissue.body":
+    "We cannot show a link again — only a cryptographic fingerprint of it is stored. We can create a new link with exactly the same merits, the same language and the same lifetime.",
+  "sel.reissue.revoke": "Revoke the old link at the same time",
+  "sel.reissue.revokeHelp":
+    "Clear this if somebody is already using the old link and you just want another one to send.",
+  "sel.reissue.confirm": "Create new link",
+  "sel.reissue.cancel": "Cancel",
+  "sel.reissue.creating": "Creating …",
+  "sel.reissue.previousRevoked": "The old link is revoked and no longer works.",
+  "sel.reissue.previousKept": "The old link still works.",
+  "sel.error.reissue":
+    "The new link could not be created. Try again — we will not create a duplicate.",
+  "sel.error.notReplaceable":
+    "This link cannot be reissued. It may have been revoked or expired — create a new share instead.",
+  "sel.error.lapsed":
+    "One of the merits in this link is no longer current, so we cannot create a link with exactly the same contents. Make a new selection instead.",
+  "sel.error.expiry": "Choose 7, 30 or 90 days.",
+  "sel.error.locale": "Choose Swedish or English.",
+  "sel.error.conflict":
+    "This attempt already created a link with different contents. Reload the page and make the selection again.",
 
   // ── The recipient page: the explanation and the ladder ─────────────
   "rec.whatThisIs":
@@ -3417,6 +3484,7 @@ const en: Record<PassportCopyKey, string> = {
   "rec.tenureScoped": "Counted across the employments included in this share.",
   "rec.unavailableNext":
     "It says nothing about the person who sent it, and there is nothing wrong with your browser.",
+  "rec.aboutLink": "About Security Passport",
 
   // ── Credential forms (Phase 6) ───────────────────────────────────────
   "cred.add.title": "Add a credential or training",

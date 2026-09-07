@@ -43,7 +43,7 @@ import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getPublicDisclosureFromCookie } from "@/lib/security-passport/public-disclosure.functions";
 import type { RecipientPayload } from "@/lib/security-passport/packages";
-import { formatWorkLocation } from "@/lib/security-passport/format";
+import { formatMoment, formatWorkLocation } from "@/lib/security-passport/format";
 import { buildRecipientPresentation } from "@/lib/security-passport/recipient-presentation";
 import { RecipientPassportView } from "@/components/security-passport/live/RecipientPassportView";
 import { CredentialVerificationPage } from "@/components/security-passport/live/CredentialVerificationPage";
@@ -61,9 +61,15 @@ export const Route = createFileRoute("/p/$token")({
       // person who shared it.
       { property: "og:title", content: "Security Passport — CQrityjob" },
       {
+        // NEUTRAL, because a share is mixed. It may carry a licence an
+        // authority confirmed and a course the holder typed in themselves, and
+        // "verified professional records" would put the strongest word on the
+        // whole set — in the one place a reader meets before they can see a
+        // single label. It says what the page IS and defers every claim about
+        // standing to the merits that carry their own.
         property: "og:description",
         content:
-          "Verifierade yrkesuppgifter, delade av innehavaren. / Verified professional records, shared by the holder.",
+          "Yrkesuppgifter som innehavaren har valt att dela. Varje uppgift visar sin egen källa. / Professional records the holder chose to share. Each entry shows where it came from.",
       },
       { property: "og:type", content: "website" },
       // The canonical address of THIS page, and the one piece of the Open
@@ -116,7 +122,6 @@ function RecipientRoute() {
   const read = useServerFn(getPublicDisclosureFromCookie);
 
   const [payload, setPayload] = useState<RecipientPayload | null>(null);
-  const [checkedAt, setCheckedAt] = useState<string>("");
 
   // The payload is interpreted ONCE. The card, the detail list and every
   // other surface read this same model, so none of them can form a different
@@ -136,8 +141,11 @@ function RecipientRoute() {
     void read({ data: { navigationId } })
       .then((result) => {
         if (!alive) return;
+        // The moment this page was re-read is carried IN the payload, stamped
+        // by `sp_get_disclosure`. It used to be `new Date()` from the
+        // visitor's own machine, printed beside the word "checked" — so a
+        // skewed clock made the product assert something it had not observed.
         setPayload(result);
-        setCheckedAt(new Date().toISOString().slice(0, 16).replace("T", " "));
       })
       .catch(() => {
         // A network or server failure must land in the SAME place as an
@@ -182,7 +190,7 @@ function RecipientRoute() {
             href="/#passport"
             className="mt-4 inline-flex h-11 items-center text-sm font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {pt("rec.ctaAction")}
+            {pt("rec.aboutLink")}
           </a>
         </div>
       </main>
@@ -217,30 +225,23 @@ function RecipientRoute() {
   if (presentation.focus === "credential" && presentation.credentials.length === 1) {
     return (
       <PassportLangProvider lang={lang}>
-        <CredentialShare presentation={presentation} checkedAt={checkedAt} verifyUrl={shareUrl} />
+        <CredentialShare presentation={presentation} verifyUrl={shareUrl} />
       </PassportLangProvider>
     );
   }
 
   return (
     <main className="px-4 py-8 sm:py-10">
-      <RecipientPassportView
-        presentation={presentation}
-        lang={lang}
-        checkedAt={checkedAt}
-        verifyUrl={shareUrl}
-      />
+      <RecipientPassportView presentation={presentation} lang={lang} verifyUrl={shareUrl} />
     </main>
   );
 }
 
 function CredentialShare({
   presentation,
-  checkedAt,
   verifyUrl,
 }: {
   presentation: NonNullable<ReturnType<typeof buildRecipientPresentation>>;
-  checkedAt: string;
   verifyUrl: string;
 }) {
   const { pt, lang } = usePassportCopy();
@@ -265,9 +266,11 @@ function CredentialShare({
           verifyUrl={verifyUrl}
         />
       </div>
-      <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
-        {pt("rec.checkedAt")}: {checkedAt}
-      </p>
+      {presentation.checkedAt ? (
+        <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
+          {pt("rec.checkedAt")}: {formatMoment(presentation.checkedAt, lang)}
+        </p>
+      ) : null}
     </main>
   );
 }

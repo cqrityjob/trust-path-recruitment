@@ -39,7 +39,7 @@ const SCOPED_EMPLOYER = payload({
   package: "employer_review",
   verified_claims: [
     {
-      id: "r-sv-emp",
+      key: "r-sv-emp",
       type: "licence",
       title: "Skyddsvaktsförordnande",
       credential_code: "SV",
@@ -66,7 +66,7 @@ const SCOPED_PUBLIC = payload({
   package: "public_card",
   verified_claims: [
     {
-      id: "r-sv-pub",
+      key: "r-sv-pub",
       type: "licence",
       title: "Skyddsvaktsförordnande",
       credential_code: "SV",
@@ -90,7 +90,7 @@ const CURRENT = payload({
   verified_experience_days: 1490,
   verified_claims: [
     {
-      id: "r-ov",
+      key: "r-ov",
       type: "licence",
       title: "Ordningsvaktsförordnande",
       credential_code: "OV",
@@ -105,7 +105,7 @@ const CURRENT = payload({
       verification_method: "document_review",
     },
     {
-      id: "r-vu2",
+      key: "r-vu2",
       type: "training",
       title: "Väktarutbildning 2 (VU2)",
       credential_code: "VU2",
@@ -128,7 +128,7 @@ const LAPSED = payload({
   holder: "Ingrid Testsson",
   verified_claims: [
     {
-      id: "r-lapsed",
+      key: "r-lapsed",
       type: "licence",
       title: "Ordningsvaktsförordnande",
       credential_code: "OV",
@@ -151,7 +151,7 @@ const ANONYMOUS = payload({
   verified_experience_days: 2100,
   verified_claims: [
     {
-      id: "r-sv",
+      key: "r-sv",
       type: "licence",
       title: "Skyddsvaktsförordnande",
       credential_code: "SV",
