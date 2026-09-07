@@ -66,8 +66,9 @@ const check = (label: string, ok: boolean, detail = "") => {
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
 const BASE = "supabase/migrations/20260830094000_scp_security_officer_recruitment_assessment.sql";
-const V3 = "supabase/migrations/20261022090000_scp_vaktare_v1_content_review.sql";
-const V4 = "supabase/migrations/20261023090000_scp_vaktare_v1_self_report_quality.sql";
+const V3 = "supabase/archive/parked-migrations/20261022090000_scp_vaktare_v1_content_review.sql";
+const V4 =
+  "supabase/archive/parked-migrations/20261023090000_scp_vaktare_v1_self_report_quality.sql";
 const SELF_REPORT_EVIDENCE = "supabase/migrations/20260830090000_scp_self_reported_evidence.sql";
 const PACK = "docs/assessment/governance/vaktare-v1-self-report-review-2026-09-03.json";
 const V3_TAG = "$vaktare_content$";

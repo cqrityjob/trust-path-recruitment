@@ -17,12 +17,12 @@ DELETE FROM public.scp_form_items fi
                        JOIN public.scp_assessment_definitions d ON d.id = av.definition_id AND d.slug = 'security-officer-recruitment'
                       WHERE f.slug = 'security-officer-recruitment-form-a')
    AND fi.display_order = 1;
-\i supabase/migrations/20261021090000_scp_option_order_per_attempt.sql
+\i supabase/migrations/20260905053344_scp_option_order_per_attempt.sql
 ROLLBACK;
 \echo === CASE B: malformed historical twin
 BEGIN;
 DELETE FROM public.scp_form_items fi
  WHERE fi.form_id = 'fe000000-0000-0000-0000-00000000f0f0'::uuid AND fi.display_order = 1;
-\i supabase/migrations/20261021090000_scp_option_order_per_attempt.sql
+\i supabase/migrations/20260905053344_scp_option_order_per_attempt.sql
 SELECT 'CASE_B_APPLIED' AS marker;
 ROLLBACK;

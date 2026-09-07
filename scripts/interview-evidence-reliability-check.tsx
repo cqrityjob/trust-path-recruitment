@@ -287,11 +287,16 @@ const releaseState = JSON.parse(read("supabase/release-state.json")) as {
     hostedState: string;
     introduces: Array<{ object: string }>;
     rollback?: string;
+    evidenceSource?: string;
   }>;
 };
 const entry = releaseState.frontier.find((e) => e.file === path.basename(MIGRATION));
 ok(entry !== undefined, "release · the migration is classified");
-ok(entry?.hostedState === "pending", "release · and honestly marked pending, not applied");
+ok(entry?.hostedState === "applied", "release · and honestly marked applied after hosted proof");
+ok(
+  Boolean(entry?.evidenceSource?.trim()),
+  "release · the applied claim carries production evidence",
+);
 ok(
   entry?.introduces.some((i) => i.object === "scp_iv_guard_evidence_origin_in_case") === true,
   "release · the introduced trigger function is declared",

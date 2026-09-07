@@ -1,0 +1,69 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+
+const root = path.resolve(import.meta.dir, "..");
+const migrationsDir = path.join(root, "supabase/migrations");
+const parkedDir = path.join(root, "supabase/archive/parked-migrations");
+const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.json"), "utf8")) as {
+  frontier: { file: string; hostedState: string; evidenceSource?: string }[];
+};
+
+const expectedPending = [
+  "20261028090000_admin_cancel_assignment_error_contract.sql",
+  "20261030090000_sp_trust_source_containment.sql",
+  "20261031090000_sp_passport_first_merit.sql",
+];
+const hostedIdentities = [
+  "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
+  "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
+  "20260904174903_scp_trust_evidence_report_r2a_contract.sql",
+  "20260905053344_scp_option_order_per_attempt.sql",
+  "20260905053809_scp_release_facet_resolution.sql",
+  "20260905054603_scp_trust_evidence_report_r1_provenance.sql",
+  "20260906125945_scp_trust_evidence_report_r3a_contract.sql",
+];
+const retiredCanonicalIdentities = [
+  "20261021090000_scp_option_order_per_attempt.sql",
+  "20261024090000_scp_trust_evidence_report_r2a_audience_reads.sql",
+  "20261025090000_scp_trust_evidence_report_r2a_report_version_continuity.sql",
+  "20261026090000_scp_trust_evidence_report_r2a_contract.sql",
+  "20261026093000_scp_release_facet_resolution.sql",
+  "20261027090000_scp_trust_evidence_report_r1_provenance.sql",
+  "20261029090000_scp_trust_evidence_report_r3a_contract.sql",
+];
+const parked = [
+  "20261022090000_scp_vaktare_v1_content_review.sql",
+  "20261023090000_scp_vaktare_v1_self_report_quality.sql",
+];
+
+const active = new Set(readdirSync(migrationsDir).filter((file) => file.endsWith(".sql")));
+const pending = state.frontier
+  .filter((entry) => entry.hostedState === "pending")
+  .map((entry) => entry.file)
+  .sort();
+
+const failures: string[] = [];
+if (JSON.stringify(pending) !== JSON.stringify([...expectedPending].sort())) {
+  failures.push(`pending set is ${pending.join(", ") || "empty"}`);
+}
+for (const file of hostedIdentities) {
+  if (!active.has(file)) failures.push(`hosted identity missing from active path: ${file}`);
+}
+for (const file of retiredCanonicalIdentities) {
+  if (active.has(file)) failures.push(`already-applied canonical identity is active: ${file}`);
+}
+for (const file of parked) {
+  if (active.has(file)) failures.push(`unsafe migration is active: ${file}`);
+  if (!existsSync(path.join(parkedDir, file))) failures.push(`parked history missing: ${file}`);
+}
+for (const entry of state.frontier.filter((item) => item.hostedState === "applied")) {
+  if (!entry.evidenceSource?.trim()) failures.push(`applied entry lacks evidence: ${entry.file}`);
+}
+
+if (failures.length) {
+  console.error(`release-frontier-check FAILED (${failures.length})`);
+  for (const failure of failures) console.error(`  - ${failure}`);
+  process.exit(1);
+}
+
+console.log("release-frontier-check: exactly 28, 30 and 31 remain pending");

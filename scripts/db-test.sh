@@ -1016,7 +1016,7 @@ echo "    ok  two assessment versions carry a form with the Väktare slug (100 i
 
 echo "==> Option-order proof scope: the migration re-applies and ignores the twin"
 set +e
-OOPS_APPLY="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20261021090000_scp_option_order_per_attempt.sql 2>&1)"
+OOPS_APPLY="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20260905053344_scp_option_order_per_attempt.sql 2>&1)"
 OOPS_APPLY_RC=$?
 set -e
 if [ "$OOPS_APPLY_RC" -ne 0 ]; then
@@ -1782,7 +1782,7 @@ fi
 echo "==> R3A must refuse on a database without PR-R1"
 set +e
 R3A_REFUSE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261029090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
+  -f supabase/migrations/20260906125945_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
 R3A_REFUSE_RC=$?
 set -e
 if [ "$R3A_REFUSE_RC" -eq 0 ] || ! echo "$R3A_REFUSE" | grep -q "SCP_R3A_PRECONDITION: scp_report_snapshots.manifest_id is missing"; then
@@ -1828,7 +1828,7 @@ fi
 echo "==> R1 must refuse while the release function resolves facets by slug alone"
 set +e
 R1_REFUSE_FACET="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261027090000_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
+  -f supabase/migrations/20260905054603_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
 R1_REFUSE_FACET_RC=$?
 set -e
 if [ "$R1_REFUSE_FACET_RC" -eq 0 ] || ! echo "$R1_REFUSE_FACET" | grep -q "SCP_R1_PRECONDITION: scp_release_attempt_report still resolves guide facets by slug alone"; then
@@ -1842,7 +1842,7 @@ fi
 echo "==> Re-applying the facet-resolution prerequisite"
 set +e
 FR_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261026093000_scp_release_facet_resolution.sql 2>&1)"
+  -f supabase/migrations/20260905053809_scp_release_facet_resolution.sql 2>&1)"
 FR_FWD_RC=$?
 set -e
 if [ "$FR_FWD_RC" -ne 0 ]; then
@@ -1861,7 +1861,7 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c \
   "ALTER TABLE public.scp_attempts RENAME COLUMN option_order_seed TO option_order_seed_hidden_for_test;" >/dev/null
 set +e
 R1_REFUSE_SEED="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261027090000_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
+  -f supabase/migrations/20260905054603_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
 R1_REFUSE_SEED_RC=$?
 set -e
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c \
@@ -1883,7 +1883,7 @@ fi
 echo "==> Re-applying PR-R1 provenance"
 set +e
 R1_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261027090000_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
+  -f supabase/migrations/20260905054603_scp_trust_evidence_report_r1_provenance.sql 2>&1)"
 R1_FWD_RC=$?
 set -e
 if [ "$R1_FWD_RC" -ne 0 ]; then
@@ -1905,7 +1905,7 @@ fi
 echo "==> Re-applying PR-R3A (Report V3 contract)"
 set +e
 R3A_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261029090000_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
+  -f supabase/migrations/20260906125945_scp_trust_evidence_report_r3a_contract.sql 2>&1)"
 R3A_FWD_RC=$?
 set -e
 if [ "$R3A_FWD_RC" -ne 0 ]; then
@@ -1986,7 +1986,7 @@ fi
 echo "==> Re-applying PR-R2A-3 CONTRACT"
 set +e
 R2A3_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261026090000_scp_trust_evidence_report_r2a_contract.sql 2>&1)"
+  -f supabase/migrations/20260904174903_scp_trust_evidence_report_r2a_contract.sql 2>&1)"
 R2A3_FWD_RC=$?
 set -e
 if [ "$R2A3_FWD_RC" -ne 0 ]; then

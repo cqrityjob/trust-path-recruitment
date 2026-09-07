@@ -40,6 +40,10 @@ type Parked = {
   canonicalReplacement?: string[];
   equivalence?: string;
   hostedEvidence?: string;
+  /** Required when an unapplied migration is parked before its corrected
+   * replacement exists. This is a temporary safety state, not equivalence. */
+  followUp?: string;
+  disposition?: "superseded" | "deferred-unapplied";
 };
 type NeverReplay = Parked & { protection?: string; sha256?: string };
 type Policy = {
@@ -204,11 +208,19 @@ for (const entry of policy.parked) {
     );
   }
   if (!entry.canonicalReplacement || entry.canonicalReplacement.length === 0) {
-    fail(
-      `parked entry ${entry.file} names no canonicalReplacement.\n` +
-        `      Every parked migration must map to the active file(s) that are the\n` +
-        `      source of truth for its change.`,
-    );
+    const deliberatelyDeferred =
+      entry.disposition === "deferred-unapplied" &&
+      Boolean(entry.followUp?.trim()) &&
+      /not applied|never applied/i.test(entry.hostedEvidence);
+
+    if (!deliberatelyDeferred) {
+      fail(
+        `parked entry ${entry.file} names no canonicalReplacement.\n` +
+          `      A superseded migration must map to its active source of truth. An\n` +
+          `      unapplied migration may omit it only with disposition\n` +
+          `      deferred-unapplied, explicit hosted evidence and a follow-up.`,
+      );
+    }
     continue;
   }
   for (const canonical of entry.canonicalReplacement) {
