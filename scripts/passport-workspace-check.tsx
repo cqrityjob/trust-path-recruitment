@@ -70,6 +70,7 @@ const { ACTION_CLASSIFICATION, subjectHref } =
   await import("../src/lib/professional-identity/next-best-action");
 const { deriveVerificationAttention, VERIFICATION_ATTENTION_UNAVAILABLE } =
   await import("../src/lib/professional-identity/verification-attention");
+const { labelMerit } = await import("../src/lib/professional-identity/passport-merits");
 const { passportT } = await import("../src/lib/security-passport/i18n");
 
 import type { Claim, ExperiencePeriod, LifecycleState } from "../src/lib/security-passport/types";
@@ -367,17 +368,17 @@ group("2 · four figures and a lapsed line, adding up to what the holder owns");
   });
 
   const c = w.counts;
-  const registered = c.selfReportedCount + c.documentProvidedCount;
-  const inReview = (c.pendingCount ?? 0) + c.clarificationCount;
+  const st = w.status;
   ck(
     "2.1 registered + documented + source-confirmed + in review + lapsed = every current merit",
-    registered + c.documentedCount + c.verifiedCount + inReview + c.expiredCount === c.addedCount,
-    `${registered}+${c.documentedCount}+${c.verifiedCount}+${inReview}+${c.expiredCount} vs ${c.addedCount}`,
+    (st.registered ?? -1) + st.documented + st.sourceConfirmed + (st.inReview ?? -1) + st.lapsed ===
+      c.addedCount,
+    `${st.registered}+${st.documented}+${st.sourceConfirmed}+${st.inReview}+${st.lapsed} vs ${c.addedCount}`,
   );
   ck(
-    "2.2 the 'registered' tile is a RUNG, never the total",
-    c.selfReportedCount < c.addedCount,
-    `${c.selfReportedCount} vs ${c.addedCount}`,
+    "2.2 the 'registered' figure is a RUNG, never the total",
+    (st.registered ?? 0) < c.addedCount,
+    `${st.registered} vs ${c.addedCount}`,
   );
 
   const markup = html(w);
@@ -385,16 +386,24 @@ group("2 · four figures and a lapsed line, adding up to what the holder owns");
     new RegExp(`data-status-tile="${name}"[^>]*data-count="([^"]*)"`).exec(markup)?.[1] ??
     new RegExp(`data-count="([^"]*)"[^>]*data-status-tile="${name}"`).exec(markup)?.[1] ??
     "";
-  ck("2.3 the registered tile renders that rung", tile("registered") === String(registered));
+  ck("2.3 the registered tile renders that rung", tile("registered") === String(st.registered));
   ck(
-    "2.4 the documented tile renders documentedCount",
-    tile("documented") === String(c.documentedCount),
+    "2.4 the documented tile renders the documented figure",
+    tile("documented") === String(st.documented),
   );
   ck(
-    "2.5 the source-confirmed tile renders verifiedCount",
-    tile("source-confirmed") === String(c.verifiedCount),
+    "2.5 the source-confirmed tile renders the source-confirmed figure",
+    tile("source-confirmed") === String(st.sourceConfirmed),
   );
-  ck("2.6 the in-review tile renders both open shapes", tile("in-review") === String(inReview));
+  ck("2.6 the in-review tile renders both open shapes", tile("in-review") === String(st.inReview));
+  // The COMPONENT does no arithmetic: a tile that added two fields together
+  // is a second derivation, and the first thing such a tile forgets is that
+  // one of its addends may be unknown.
+  const componentSrc = code(read("src/components/security-passport/PassportWorkspace.tsx"));
+  ck(
+    "2.10 the component reads decided figures rather than adding counts up",
+    !/counts\.\w+\s*\+/.test(componentSrc) && componentSrc.includes("status.registered"),
+  );
 
   // The counts come from the SHARED derivation, not from a second count.
   const src = code(read("src/lib/security-passport/workspace.ts"));
@@ -653,6 +662,18 @@ group("4 · one recommended step, from real rows, with a real retirement");
     calm.includes(passportT("ws.next.clearTitle", "sv")),
   );
 
+  // A GENERIC LABEL MAY NOT CARRY A SPECIFIC DESTINATION. "Lägg till merit"
+  // pointing at the employment block is the same small lie the header CTA
+  // used to tell: a person who came to record a course lands on a form for
+  // a job. The step goes to the page that holds every way in; the chooser is
+  // where a kind is picked.
+  const addMore = build({ periods: [period()] }).nextStep;
+  ck(
+    "4.11a the generic add-merit step lands on the page, not on one form",
+    addMore?.href === "/passport/information" && addMore?.hash === null,
+    `${addMore?.href}#${addMore?.hash}`,
+  );
+
   // A STANDING DESTINATION IS NOT A STEP. "Share your Passport" can never be
   // completed, so it must never be emitted as one — that is the permanent
   // loop this page is not allowed to grow.
@@ -660,6 +681,175 @@ group("4 · one recommended step, from real rows, with a real retirement");
   ck(
     "4.12 no step is a standing destination",
     !/retiresWhen:\s*"never/i.test(ladder) && !ladder.includes('kind: "share_passport"'),
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   4B · FAIL CLOSED WHEN THE REVIEW STATE CANNOT BE READ
+   ══════════════════════════════════════════════════════════════════════ */
+group("4B · a merit that MAY be under review never reads as an ordinary one");
+
+{
+  // THE REGRESSION THE CORRECTION PASS WAS ASKED FOR: one actually pending
+  // merit, one with a reviewer's question against it, one ordinary
+  // self-reported merit — and then the verification read fails.
+  const rows = {
+    claims: [
+      claim({ id: "c-pending", titleSv: "Under granskning", titleEn: "Under review" }),
+      claim({ id: "c-ask", titleSv: "Har en fråga", titleEn: "Has a question" }),
+      claim({ id: "c-plain", titleSv: "Vanlig uppgift", titleEn: "Ordinary entry" }),
+    ],
+    requests: [
+      request({ id: "r-p", claimId: "c-pending", status: "pending" as const }),
+      request({ id: "r-a", claimId: "c-ask", status: "clarification_requested" as const }),
+    ],
+  };
+
+  const known = build(rows);
+  const down = build({ ...rows, unavailable: true });
+
+  // With the read answering, the three are three different things.
+  ck(
+    "4B.1 with the read answering, the three merits are distinguished",
+    known.groups.inReview.some((m) => m.id === "c-pending") &&
+      known.groups.current.find((m) => m.id === "c-ask")?.label === "clarification_needed" &&
+      known.groups.current.find((m) => m.id === "c-plain")?.label === "added_by_you",
+  );
+
+  // ── NEGATIVE CONTROL ──────────────────────────────────────────────
+  //
+  // This is exactly what the derivation did before the correction: the
+  // review sets were EMPTY because the read failed, and `labelMerit` was
+  // asked with `openReview: false, clarificationOpen: false`. It answers
+  // `added_by_you` — for a merit that is really pending. The assertions
+  // below are therefore not vacuous: without the fix they fail.
+  const asItWas = labelMerit(
+    {
+      assertionLevel: "self_declared",
+      lifecycleState: "active",
+      validUntil: null,
+      verifierName: null,
+      verificationMethod: null,
+      subjectKind: "credential",
+    },
+    { openReview: false, clarificationOpen: false },
+    NOW,
+  );
+  ck(
+    "4B.2 NEGATIVE CONTROL: an empty review set really does yield `added_by_you`",
+    asItWas === "added_by_you",
+    asItWas,
+  );
+
+  // ── AND WHAT IT DOES NOW ──────────────────────────────────────────
+  const byId = (id: string) =>
+    [...down.groups.current, ...down.groups.inReview, ...down.groups.reviewUnknown].find(
+      (m) => m.id === id,
+    );
+  for (const id of ["c-pending", "c-ask", "c-plain"]) {
+    ck(
+      `4B.3 ${id} reads as unknown, not as an ordinary registered merit`,
+      byId(id)?.label === "unknown",
+      byId(id)?.label,
+    );
+  }
+  ck(
+    "4B.4 none of them is placed in the current group",
+    down.groups.current.length === 0,
+    down.groups.current.map((m) => m.id).join(),
+  );
+  ck(
+    "4B.5 nor falsely in the under-review group",
+    down.groups.inReview.length === 0,
+    down.groups.inReview.map((m) => m.id).join(),
+  );
+  ck(
+    "4B.6 they are in their own group, which names the reason",
+    down.groups.reviewUnknown.length === 3,
+    String(down.groups.reviewUnknown.length),
+  );
+  ck("4B.7 the registered figure is null, never 3", down.status.registered === null);
+  ck("4B.8 the in-review figure is null, never 0", down.status.inReview === null);
+
+  const markup = html(down);
+  const t = text(markup);
+  ck(
+    "4B.9 the rendered page puts them under the unknown heading",
+    markup.includes('data-merit-group="review-unknown"') &&
+      !markup.includes('data-merit-group="current"'),
+  );
+  ck(
+    "4B.10 each row says the review status could not be read",
+    (markup.match(/data-merit-status="unknown"/g) ?? []).length === 3,
+  );
+  ck(
+    "4B.11 in words, not only in an attribute",
+    t.includes(passportT("ws.merit.status.unknown", "sv")) &&
+      t.includes(passportT("ws.merits.reviewUnknown", "sv")),
+  );
+  ck(
+    "4B.12 and never calls any of them by the settled word",
+    !t.includes(passportT("ws.merit.status.added_by_you", "sv")),
+  );
+
+  // ── INTRINSIC STANDINGS SURVIVE, BECAUSE THEY DO NOT DEPEND ON IT ──
+  const mixedDown = build({
+    claims: [
+      claim({
+        id: "c-doc",
+        assertionLevel: "verified",
+        verifierName: "CQrityjob",
+        verificationMethod: "document_review",
+        verifiedOn: "2026-06-01",
+      }),
+      claim({ id: "c-plain" }),
+    ],
+    periods: [
+      period({
+        assertionLevel: "verified",
+        verifierName: "Nordic Security AB",
+        verificationMethod: "employer_confirmation",
+        verifiedOn: "2026-07-15",
+      }),
+    ],
+    unavailable: true,
+  });
+  ck(
+    "4B.13 a document review is still Documented — it does not depend on the request table",
+    mixedDown.status.documented === 1 &&
+      mixedDown.groups.current.find((m) => m.id === "c-doc")?.label === "documented",
+  );
+  ck(
+    "4B.14 a source confirmation is still Källbekräftad",
+    mixedDown.status.sourceConfirmed === 1 &&
+      mixedDown.groups.current.find((m) => m.id === "p-1")?.label === "verified",
+  );
+  ck(
+    "4B.15 only the self-reported one moves to the unknown group",
+    mixedDown.groups.reviewUnknown.map((m) => m.id).join() === "c-plain",
+    mixedDown.groups.reviewUnknown.map((m) => m.id).join(),
+  );
+  ck("4B.16 and no step is recommended from any of it", mixedDown.nextStep === null);
+
+  // The rule is stated as data, not scattered through the builders.
+  const src = code(read("src/lib/security-passport/workspace.ts"));
+  ck(
+    "4B.17 the review-dependent labels are named in one list",
+    src.includes("REVIEW_DEPENDENT") &&
+      src.includes('"added_by_you"') &&
+      src.includes('"document_provided"'),
+  );
+  ck(
+    "4B.18 and documented / verified / expired are NOT on it",
+    (() => {
+      const i = src.indexOf("const REVIEW_DEPENDENT");
+      const list = src.slice(i, src.indexOf("]", i));
+      return (
+        !list.includes('"documented"') &&
+        !list.includes('"verified"') &&
+        !list.includes('"expired"')
+      );
+    })(),
   );
 }
 
@@ -675,7 +865,12 @@ group("5 · a verification read that did not answer says so");
     unavailable: true,
   });
   ck("5.1 the workspace reports it as unavailable", down.unavailable);
-  ck("5.2 the review-derived figure is null, never 0", down.counts.pendingCount === null);
+  ck(
+    "5.2 the review-derived figures are null, never 0",
+    down.counts.pendingCount === null &&
+      down.status.inReview === null &&
+      down.status.registered === null,
+  );
   ck("5.3 and no step is recommended", down.nextStep === null);
 
   const markup = html(down);
@@ -817,6 +1012,52 @@ group("7 · one heading, one dominant call, three real destinations");
 
   // ONE dominant call while nothing is waiting: adding a merit.
   ck("7.4 the primary CTA is 'add a merit'", markup.includes('data-primary-cta="add-merit"'));
+
+  // ── THE GENERIC VERB DOES NOT HIDE A SPECIFIC DESTINATION ─────────
+  //
+  // "Lägg till merit" used to be one link to the EMPLOYMENT block. A person
+  // who came to record a course pressed a button that said neither and
+  // landed on a form for a job.
+  ck(
+    "7.4a the add-merit control offers a choice rather than one hidden destination",
+    markup.includes("data-add-merit-chooser"),
+  );
+  const addOptions = [...markup.matchAll(/data-add-merit="([a-z]+)"/g)].map((m) => m[1]!);
+  ck(
+    "7.4b it names the three real ways a merit is entered",
+    addOptions.join() === "employment,education,credential",
+    addOptions.join(),
+  );
+  const addHrefs = [...markup.matchAll(/data-add-merit="[a-z]+"[^>]*/g)].map((m) => m[0]);
+  const hrefFor = (kind: string) =>
+    /href="([^"]+)"/.exec(
+      new RegExp(
+        `<a[^>]*data-add-merit="${kind}"[^>]*>|<a[^>]*href="[^"]*"[^>]*data-add-merit="${kind}"`,
+      ).exec(markup)?.[0] ?? "",
+    )?.[1] ?? "";
+  ck(
+    "7.4c employment goes to the employment section",
+    hrefFor("employment") === "/passport/information#sp-employment",
+  );
+  ck(
+    "7.4d education goes to the education section",
+    hrefFor("education") === "/passport/information#sp-education",
+  );
+  ck(
+    "7.4e a credential goes to the credential form",
+    hrefFor("credential") === "/passport/credentials/new",
+  );
+  ck("7.4f no option is unaccounted for", addHrefs.length === 3, String(addHrefs.length));
+  // Both anchors have to EXIST on the page they point at, and that page has
+  // to honour an arriving fragment at all — it renders its sections after
+  // the browser has given up on one.
+  const info = read("src/routes/_authenticated.passport.information.tsx");
+  ck("7.4g #sp-employment exists on the information page", info.includes('id="sp-employment"'));
+  ck("7.4h #sp-education exists on the information page", info.includes('"sp-education"'));
+  ck(
+    "7.4i and that page scrolls to an arriving fragment once its sections exist",
+    info.includes("<ScrollToHashOnceReady />"),
+  );
   ck(
     "7.5 and there is exactly one of them",
     (markup.match(/data-primary-cta=/g) ?? []).length === 1,
@@ -898,6 +1139,71 @@ group("7 · one heading, one dominant call, three real destinations");
   ck(
     "7.18 an unrecorded issuer says so rather than printing a dash",
     dash.includes(passportT("ws.merit.organisationUnknown", "sv")),
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   7B · ONE CARD, AND THE REST IS A DOCUMENT
+   ══════════════════════════════════════════════════════════════════════ */
+group("7B · only the recommended step is a card");
+
+{
+  const w = build({
+    claims: [claim({ id: "c-a" }), claim({ id: "c-b" })],
+    periods: [period()],
+  });
+  const markup = html(w);
+
+  // Attribute order in the rendered markup is React's, not the author's, so
+  // every one of these reads the class list either side of the marker.
+  const classesOf = (marker: string): string[] =>
+    [...markup.matchAll(new RegExp(`<[a-z]+[^>]*${marker}[^>]*>`, "g"))]
+      .map((m) => /class="([^"]*)"/.exec(m[0])?.[1] ?? "")
+      .filter((c) => c !== "");
+
+  // A merit is a ROW in a list, not a card: no border and no surface of its
+  // own. The list carries the hairlines.
+  const rows = classesOf('data-merit-row="[^"]*"');
+  ck("7B.1 every merit row was found", rows.length === 3, String(rows.length));
+  ck(
+    "7B.2 no merit row draws its own border",
+    rows.every((c) => !/(^|\s)border(\s|-|$)/.test(c)),
+    rows.find((c) => /(^|\s)border(\s|-|$)/.test(c)),
+  );
+  ck(
+    "7B.3 nor its own surface",
+    rows.every((c) => !/\bbg-card\b/.test(c)),
+  );
+  ck(
+    "7B.4 the list separates them with hairlines instead",
+    (markup.match(/divide-y divide-border/g) ?? []).length > 0,
+  );
+
+  // The status overview is ONE band, not four boxes.
+  const tiles = classesOf('data-status-tile="[^"]*"');
+  ck("7B.5 all four figures were found", tiles.length === 4, String(tiles.length));
+  ck(
+    "7B.6 no figure is its own bordered card",
+    tiles.every((c) => !/(^|\s)border(\s|-|$)/.test(c) && !/\bbg-card\b/.test(c)),
+    tiles.find((c) => /(^|\s)border(\s|-|$)/.test(c)),
+  );
+
+  // Nothing in the CONTENT FLOW is elevated except the recommended step. The
+  // add-merit chooser's panel is elevated too and is meant to be: it floats
+  // above the page while it is open, and it is not part of the flow.
+  const useLinks = classesOf('data-use-link="[^"]*"');
+  ck("7B.7 the three uses were found", useLinks.length === 3, String(useLinks.length));
+  ck(
+    "7B.8 no merit row, figure or use link is elevated",
+    [...rows, ...tiles, ...useLinks].every((c) => !/\bshadow-/.test(c)),
+  );
+  const stepCard = /<article[^>]*class="([^"]*)"/.exec(
+    markup.slice(markup.indexOf("data-next-step=")),
+  )?.[1];
+  ck(
+    "7B.9 and the recommended step is the one element that is",
+    Boolean(stepCard && /\bshadow-/.test(stepCard)),
+    stepCard,
   );
 }
 

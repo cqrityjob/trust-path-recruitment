@@ -33,6 +33,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
+import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
 import { MarketCredentialSection } from "@/components/security-passport/MarketCredentialSection";
 import {
   OtherMarketsPanel,
@@ -118,9 +119,7 @@ const CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey 
 ];
 
 type Editing =
-  | { kind: "experience"; draft: ExperienceDraft }
-  | { kind: "claim"; draft: ClaimDraft }
-  | null;
+  { kind: "experience"; draft: ExperienceDraft } | { kind: "claim"; draft: ClaimDraft } | null;
 
 function SectionShell({
   icon,
@@ -598,6 +597,12 @@ function PassportInformationRoute() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
+      {/* The Passport workspace links here as `#sp-employment`,
+          `#sp-education` and `#sp-work-country`, so "add a course" lands on
+          the course section rather than at the top of a page the reader then
+          has to search. The sections only exist once the reads answer, which
+          is after the browser has given up on the fragment. */}
+      <ScrollToHashOnceReady />
       <header>
         <h1
           className="text-2xl font-semibold tracking-tight text-foreground"

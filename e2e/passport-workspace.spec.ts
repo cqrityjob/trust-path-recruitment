@@ -276,6 +276,66 @@ const MIXED: Scenario = {
 /** The verification read did not answer. Nothing may be claimed about it. */
 const VERIFICATION_DOWN: Scenario = { ...MIXED, verificationFails: true };
 
+/**
+ * THE FAIL-CLOSED REGRESSION.
+ *
+ * One merit that really is pending, one with a reviewer's question against
+ * it, one ordinary self-reported merit — and then the verification read
+ * fails. Before the correction the first two came back from the shared
+ * labeller as `added_by_you` (the empty review sets said nothing was open)
+ * and sat among the ordinary merits under "Aktuella meriter".
+ */
+const REVIEW_STATE_DOWN: Scenario = {
+  claims: [
+    claim({ id: "c-pending", titleSv: "Under granskning", titleEn: "Under review" }),
+    claim({ id: "c-ask", titleSv: "Har en fråga", titleEn: "Has a question" }),
+    claim({ id: "c-plain", titleSv: "Vanlig uppgift", titleEn: "Ordinary entry" }),
+  ],
+  periods: [],
+  requests: [
+    request({ id: "r-p", claimId: "c-pending", status: "pending" }),
+    request({ id: "r-a", claimId: "c-ask", status: "clarification_requested" }),
+  ],
+  verificationFails: true,
+};
+
+/** The same three merits with the read answering, as the control. */
+const REVIEW_STATE_UP: Scenario = { ...REVIEW_STATE_DOWN, verificationFails: false };
+
+/** A decision that went against the holder, and nothing else outstanding. */
+const REJECTED: Scenario = {
+  claims: [claim()],
+  periods: [period()],
+  requests: [
+    request({
+      claimId: "c-1",
+      status: "rejected",
+      decidedAt: "2026-09-05T09:00:00.000Z",
+      holderMessage: "Underlaget visar inte kursens omfattning.",
+    }),
+  ],
+};
+
+/** Two open questions: no single entry to open, so the region is the target. */
+const TWO_QUESTIONS: Scenario = {
+  claims: [
+    claim({ id: "c-a", titleSv: "Hjärt- och lungräddning", titleEn: "CPR" }),
+    claim({ id: "c-b", titleSv: "Skyddsvaktsutbildning", titleEn: "Protective security" }),
+  ],
+  periods: [period()],
+  requests: [
+    request({ id: "r-a", claimId: "c-a", status: "clarification_requested" }),
+    request({ id: "r-b", claimId: "c-b", status: "clarification_requested" }),
+  ],
+};
+
+/** Two merits nobody has reviewed: the merits list is the target. */
+const TWO_UNREVIEWED: Scenario = {
+  claims: [claim({ id: "c-a" }), claim({ id: "c-b", titleSv: "Kurs B", titleEn: "Course B" })],
+  periods: [period()],
+  requests: [],
+};
+
 /* ------------------------------------------------------------------ */
 /* Mount                                                               */
 /* ------------------------------------------------------------------ */
@@ -400,26 +460,74 @@ async function mount(
         if (scenario.verificationFails) return boom(route, "verification read failed");
         return ok(route, { requests: scenario.requests, decisions: [] });
 
-      // Reads other Passport pages make. Present so a stray navigation in a
-      // scenario does not fail for the wrong reason.
+      // ── EVERY DESTINATION THIS PAGE LINKS TO, RENDERABLE ───────────
+      //
+      // The dead-end scenarios do not check an HTTP status; they CLICK, and
+      // the page they land on has to render from real reads. So the reads
+      // those pages make are stubbed here too, with data consistent with the
+      // scenario — the same claims and periods, so a merit opened from the
+      // list is the merit that opens.
       case "getRegulatedCredentialAvailability":
         return ok(route, {
           state: "open",
           jurisdictionCode: "SE",
           subJurisdictionCode: null,
           marketPackCode: "SE-CORE",
-          types: [],
+          types: [
+            { code: "VU1", nameSv: "Väktare grund 1", nameEn: "Guard 1", symbolLabel: null },
+            { code: "OV", nameSv: "Ordningsvakt", nameEn: "Public order", symbolLabel: null },
+          ],
         });
       case "listMyEntries":
-        return ok(route, { experience: scenario.periods, claims: scenario.claims });
+        return ok(route, {
+          experience: scenario.periods.map((p) => ({ ...p, editable: true })),
+          claims: scenario.claims.map((c) => ({
+            ...c,
+            title: c.titleSv,
+            issuerName: c.issuerName,
+            editable: true,
+          })),
+          skills: [],
+        });
       case "listJurisdictions":
-        return ok(route, []);
+        return ok(route, [{ code: "SE", nameSv: "Sverige", nameEn: "Sweden" }]);
       case "listSkillTypes":
         return ok(route, []);
       case "getMyProfessionalIdentity":
         return ok(route, null);
       case "getMyPassportProfileBasics":
         return ok(route, null);
+
+      // /passport/share
+      case "listMyDisclosures":
+        return ok(route, []);
+
+      // /passport/credentials/new
+      case "listMyCredentialDrafts":
+        return ok(route, []);
+      case "listCredentialTypes":
+        return ok(route, []);
+
+      // /passport/entry/$kind/$entryId
+      case "listMyEvidence":
+        return ok(route, []);
+      case "listClaimVersions":
+        return ok(route, []);
+      case "getCredentialPrivateFields":
+        return ok(route, null);
+      case "searchAttestableEmployers":
+        return ok(route, []);
+
+      // /my-career/cv
+      case "prepareMyCv":
+        return ok(route, {
+          readiness: { state: "ready", missingFields: [] },
+          bundle: null,
+          factualDocument: null,
+          hasCareerInsight: false,
+        });
+      case "listMyCvs":
+        return ok(route, []);
 
       // Header chrome, on every authenticated page.
       case "countMyAcademyWork":
@@ -697,31 +805,318 @@ test.describe("Security Passport — the workspace", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test("10 · every CTA lands on a real destination, and none is a dead end", async ({ page }) => {
+  /* ────────────────────────────────────────────────────────────────
+     10 · THE DEAD-END CONTRACT, PROVED BY CLICKING
+     ────────────────────────────────────────────────────────────────
+     An HTTP 200 for a route is not proof that a button works. It says the
+     server would serve a document; it says nothing about whether the click
+     navigates, whether the page renders, whether it renders the RIGHT
+     object, or whether the person can get back. Each scenario below presses
+     the control a person would press and then asserts all four.
+     ──────────────────────────────────────────────────────────────── */
+
+  /** Everything that must be true of any page a Passport CTA lands on. */
+  async function landed(
+    page: Page,
+    expected: { url: RegExp; heading?: RegExp; contains?: (string | RegExp)[] },
+  ) {
+    await page.waitForURL(expected.url, { timeout: 30_000 });
+
+    // Not a login wall. The stub keeps a session, so being bounced to
+    // sign-in means the destination is not reachable for a signed-in holder.
+    expect(page.url()).not.toMatch(/\/(login|signin|signup)\b/);
+
+    // Not a not-found page, and not a placeholder.
+    const body = await page.locator("main, body").first().innerText();
+    for (const dud of [
+      "404",
+      "Sidan finns inte",
+      "Page not found",
+      "Kommer snart",
+      "Coming soon",
+      "Not implemented",
+    ]) {
+      expect(body, `placeholder "${dud}" on ${page.url()}`).not.toContain(dud);
+    }
+
+    if (expected.heading) {
+      await expect(page.getByRole("heading", { name: expected.heading }).first()).toBeVisible({
+        timeout: 30_000,
+      });
+    }
+    for (const needle of expected.contains ?? []) {
+      await expect(page.locator("body")).toContainText(needle, { timeout: 30_000 });
+    }
+
+    // A CLEAR ROUTE BACK TO THE PASSPORT.
+    //
+    // Reachable, not merely present in the DOM: `.first()` on this selector
+    // resolves to the site header's link, which is real but collapsed into
+    // the menu sheet at phone widths. A link nobody can see is not a route
+    // back, and a link one tap inside a labelled menu is — so the assertion
+    // accepts either, and fails when neither is true.
+    const backHome = page.locator('a[href="/passport"]');
+    const anyVisible = async () => {
+      const n = await backHome.count();
+      for (let i = 0; i < n; i += 1) if (await backHome.nth(i).isVisible()) return true;
+      return false;
+    };
+    if (!(await anyVisible())) {
+      await page.locator("[aria-controls='site-menu']").first().click();
+      await expect(page.locator("#site-menu")).toBeVisible();
+    }
+    expect(await anyVisible(), `no reachable route back to /passport from ${page.url()}`).toBe(
+      true,
+    );
+
+    expect(pageErrors, `page errors on ${page.url()}`).toEqual([]);
+  }
+
+  /** Open the add-merit chooser and click one of its three options. */
+  async function chooseMerit(page: Page, kind: "employment" | "education" | "credential") {
+    await page.locator('[data-cta="add-merit"]').click();
+    await expect(page.locator(`[data-add-merit="${kind}"]`)).toBeVisible();
+    await page.locator(`[data-add-merit="${kind}"]`).click();
+  }
+
+  test("10a · Add merit → employment lands on the employment section", async ({ page }) => {
     await mount(page, MIXED);
     await ready(page);
+    await chooseMerit(page, "employment");
+    await landed(page, {
+      url: /\/passport\/information#sp-employment$/,
+      heading: /Mina uppgifter/,
+    });
+    // The SECTION, not merely the page: the anchor is resolved and focused
+    // once the sections exist, which the browser cannot do on its own here.
+    await expect(page.locator("#sp-employment")).toHaveAttribute(
+      "data-hash-target",
+      "sp-employment",
+    );
+    await expect(page.locator("#sp-employment")).toContainText("Lägg till anställning");
+  });
 
-    const expected: readonly [string, string][] = [
-      ['[data-cta="add-merit"]', "/passport/information#sp-employment"],
-      ['[data-cta="share"]', "/passport/share"],
-      ['[data-use-link="share"]', "/passport/share"],
-      ['[data-use-link="cv"]', "/my-career/cv"],
-      ['[data-use-link="card"]', "/passport/card"],
-      ['[data-merit-row="c-doc"]', "/passport/entry/claim/c-doc"],
-      ['[data-merit-row="p-1"]', "/passport/entry/experience/p-1"],
-      ['[data-draft-row="c-draft"]', "/passport/credentials/new?draft=c-draft"],
-    ];
-    for (const [selector, href] of expected) {
-      await expect(page.locator(selector), selector).toHaveAttribute("href", href);
-    }
+  test("10b · Add merit → education lands on the education section", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+    await chooseMerit(page, "education");
+    await landed(page, {
+      url: /\/passport\/information#sp-education$/,
+      heading: /Mina uppgifter/,
+    });
+    await expect(page.locator("#sp-education")).toHaveAttribute("data-hash-target", "sp-education");
+    await expect(page.locator("#sp-education")).toContainText("Utbildning");
+  });
 
-    // Every one of them resolves to a page that renders. A 404 or a blank
-    // screen behind a working-looking button is the defect this asserts away.
-    for (const [selector] of expected) {
-      const href = await page.locator(selector).getAttribute("href");
-      const response = await page.request.get(`${BASE}${href!.split("#")[0]}`);
-      expect(response.status(), href!).toBeLessThan(400);
+  test("10c · Add merit → authorisation lands on the credential form", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+    await chooseMerit(page, "credential");
+    await landed(page, {
+      url: /\/passport\/credentials\/new$/,
+      heading: /Lägg till behörighet eller utbildning/,
+    });
+  });
+
+  test("10d · Share Passport lands on the sharing centre", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+    await page.locator('[data-cta="share"]').click();
+    await landed(page, { url: /\/passport\/share$/, heading: /Dela ditt Passport/ });
+  });
+
+  test("10e · the CV link lands on the CV list", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+    await page.locator('[data-use-link="cv"]').click();
+    await landed(page, { url: /\/my-career\/cv$/, heading: /CV/ });
+  });
+
+  test("10f · the recipient view lands on the Passport Card", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+    await page.locator('[data-use-link="card"]').click();
+    await landed(page, { url: /\/passport\/card$/ });
+    // The card itself, not merely the route: the article the recipient sees.
+    await expect(page.getByRole("article", { name: "Security Passport" })).toBeVisible();
+    // And the tab that names where we are.
+    await expect(page.locator('a[href="/passport/card"][aria-current="page"]')).toBeVisible();
+  });
+
+  test("10g · a merit row opens THAT merit, not the route family", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+    await page.locator('[data-merit-row="c-doc"]').click();
+    await landed(page, {
+      url: /\/passport\/entry\/claim\/c-doc$/,
+      contains: ["Väktarutbildning grundkurs"],
+    });
+    // The CORRECT object: a neighbouring merit's title must not be here.
+    await expect(page.locator("body")).not.toContainText("Skyddsvaktsutbildning");
+  });
+
+  test("10h · an employment row opens that employment", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+    await page.locator('[data-merit-row="p-2"]').click();
+    await landed(page, {
+      url: /\/passport\/entry\/experience\/p-2$/,
+      contains: ["Ordningsvakt", "Väktarbolaget Syd AB"],
+    });
+  });
+
+  test("10i · a draft resumes IN the form, carrying its id", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+    await page.locator('[data-draft-row="c-draft"]').click();
+    await landed(page, {
+      url: /\/passport\/credentials\/new\?draft=c-draft$/,
+      heading: /Lägg till behörighet eller utbildning/,
+    });
+  });
+
+  test("10j · a reviewer's question opens the merit it is about", async ({ page }) => {
+    await mount(page, CLARIFICATION);
+    await ready(page);
+    await expect(page.locator("[data-next-step]")).toHaveAttribute(
+      "data-next-step",
+      "respond_to_clarification",
+    );
+    await page.locator("[data-next-step-cta]").click();
+    await landed(page, {
+      url: /\/passport\/entry\/claim\/c-1$/,
+      contains: ["Väktarutbildning grundkurs"],
+    });
+  });
+
+  test("10k · a refused request opens the merit it decided", async ({ page }) => {
+    await mount(page, REJECTED);
+    await ready(page);
+    await expect(page.locator("[data-next-step]")).toHaveAttribute(
+      "data-next-step",
+      "review_verification_outcome",
+    );
+    await page.locator("[data-next-step-cta]").click();
+    await landed(page, {
+      url: /\/passport\/entry\/claim\/c-1$/,
+      contains: ["Väktarutbildning grundkurs"],
+    });
+  });
+
+  test("10l · several questions open the attention region, which is really there", async ({
+    page,
+  }) => {
+    await mount(page, TWO_QUESTIONS);
+    await ready(page);
+    await expect(page.locator("[data-next-step-cta]")).toHaveAttribute(
+      "href",
+      "/passport#attention",
+    );
+    await page.locator("[data-next-step-cta]").click();
+    await expect(page.locator("#attention")).toBeVisible();
+    await expect(page.locator("#attention")).toContainText("Hjärt- och lungräddning");
+    await expect(page.locator("#attention")).toContainText("Skyddsvaktsutbildning");
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("10m · asking for verification opens the merits list, which is really there", async ({
+    page,
+  }) => {
+    await mount(page, TWO_UNREVIEWED);
+    await ready(page);
+    await expect(page.locator("[data-next-step]")).toHaveAttribute(
+      "data-next-step",
+      "submit_passport_verification",
+    );
+    await expect(page.locator("[data-next-step-cta]")).toHaveAttribute("href", "/passport#merits");
+    await page.locator("[data-next-step-cta]").click();
+    await expect(page.locator("#merits")).toBeVisible();
+    await expect(page.locator('[data-merit-group="current"]')).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("10n · REGRESSION: a failed review read never shows a pending merit as ordinary", async ({
+    page,
+  }) => {
+    // The control first: with the read answering, the three merits really are
+    // three different things, so the scenario is not asserting a tautology.
+    await mount(page, REVIEW_STATE_UP);
+    await ready(page);
+    await expect(
+      page.locator('[data-merit-group="in-review"] [data-merit-row="c-pending"]'),
+    ).toBeVisible();
+    await expect(page.locator('[data-merit-row="c-ask"] [data-merit-status]')).toHaveAttribute(
+      "data-merit-status",
+      "clarification_needed",
+    );
+    await expect(page.locator('[data-merit-row="c-plain"] [data-merit-status]')).toHaveAttribute(
+      "data-merit-status",
+      "added_by_you",
+    );
+    await expect(page.locator('[data-status-tile="registered"]')).toHaveAttribute(
+      "data-count",
+      "1",
+    );
+
+    // Now the read fails.
+    await mount(page, REVIEW_STATE_DOWN);
+    await ready(page);
+
+    // Not one of them is described as an ordinary registered merit.
+    for (const id of ["c-pending", "c-ask", "c-plain"]) {
+      await expect(
+        page.locator(`[data-merit-row="${id}"] [data-merit-status]`),
+        id,
+      ).toHaveAttribute("data-merit-status", "unknown");
     }
+    // There is no "current merits" group to be mistaken for one, and no
+    // "under review" group falsely asserting the opposite.
+    await expect(page.locator('[data-merit-group="current"]')).toHaveCount(0);
+    await expect(page.locator('[data-merit-group="in-review"]')).toHaveCount(0);
+    // They are under a heading that names the reason, in words.
+    await expect(page.locator('[data-merit-group="review-unknown"]')).toBeVisible();
+    await expect(page.locator('[data-merit-group="review-unknown"]')).toContainText(
+      "Granskningsstatus kunde inte läsas",
+    );
+    // Both review-derived figures are unknown, never a number.
+    await expect(page.locator('[data-status-tile="registered"]')).toHaveAttribute(
+      "data-count",
+      "unknown",
+    );
+    await expect(page.locator('[data-status-tile="in-review"]')).toHaveAttribute(
+      "data-count",
+      "unknown",
+    );
+    // And nothing is recommended off the back of it.
+    await expect(page.locator("[data-next-step]")).toHaveAttribute("data-next-step", "unavailable");
+    // The settled word appears nowhere on the page.
+    await expect(page.locator("[data-passport-workspace]")).not.toContainText("Egen uppgift");
+    expect(pageErrors).toEqual([]);
+    await shoot(page, "review-state-down-sv-1440");
+  });
+
+  test("10o · an intrinsically known standing survives the same failure", async ({ page }) => {
+    await mount(page, VERIFICATION_DOWN);
+    await ready(page);
+    // A CQrityjob document review and an employer confirmation are functions
+    // of stored provenance, not of the request table.
+    await expect(page.locator('[data-merit-row="c-doc"] [data-merit-status]')).toHaveAttribute(
+      "data-merit-status",
+      "documented",
+    );
+    await expect(page.locator('[data-merit-row="p-1"] [data-merit-status]')).toHaveAttribute(
+      "data-merit-status",
+      "verified",
+    );
+    await expect(page.locator('[data-status-tile="documented"]')).toHaveAttribute(
+      "data-count",
+      "1",
+    );
+    await expect(page.locator('[data-status-tile="source-confirmed"]')).toHaveAttribute(
+      "data-count",
+      "1",
+    );
+    expect(pageErrors).toEqual([]);
   });
 
   // One test per anchor, deliberately: two `goto`s that differ only in the

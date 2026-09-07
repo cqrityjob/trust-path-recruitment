@@ -1110,10 +1110,25 @@ group("T16 · the lifecycle definition is shared; the reads are not, and that is
     (passportRoute.match(/id="attention"/g) ?? []).length === 1 &&
       !outcomes.includes('id="attention"'),
   );
+  // The mechanism moved into a shared component (PR #196) because a second
+  // Passport route needs it — the workspace links to
+  // `/passport/information#sp-education`, and that page loads its sections
+  // after the browser has given up on the fragment too. The CONTRACT is
+  // unchanged and is now asserted where it lives, plus the fact that the
+  // index still renders it.
+  const hashHelper = read("src/components/security-passport/ScrollToHashOnceReady.tsx");
   ck(
     "the Passport index scrolls to AND focuses the hash once ready",
-    passportRoute.includes("ScrollToHashOnceReady") &&
-      passportRoute.includes('el.setAttribute("data-hash-target", hash)'),
+    passportRoute.includes("<ScrollToHashOnceReady />") &&
+      hashHelper.includes("scrollIntoView") &&
+      hashHelper.includes("focus({ preventScroll: true })") &&
+      hashHelper.includes('el.setAttribute("data-hash-target", hash)'),
+  );
+  ck(
+    "and so does the page its own add-merit links point at",
+    read("src/routes/_authenticated.passport.information.tsx").includes(
+      "<ScrollToHashOnceReady />",
+    ),
   );
 }
 

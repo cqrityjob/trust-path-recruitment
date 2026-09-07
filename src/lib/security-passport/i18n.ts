@@ -480,6 +480,23 @@ const sv = {
   "ws.merit.status.documented": "Dokumenterad",
   "ws.merit.status.verified": "Källbekräftad",
   "ws.merit.status.expired": "Giltigheten har gått ut",
+  // Granskningsstatus som inte kunde läsas. Inte en nivå och inte en
+  // nedgradering: uppgiften kommer fortfarande från användaren, och det som
+  // saknas är svaret på om någon granskar den.
+  "ws.merit.status.unknown": "Granskningsstatus okänd",
+  "ws.merits.reviewUnknown": "Granskningsstatus kunde inte läsas",
+  "ws.merits.reviewUnknownHelp":
+    "Vi kunde inte se om någon granskar dem. Uppgifterna är oförändrade.",
+  "ws.status.registeredUnknownHelp": "Vi kunde inte se vilka som är under granskning.",
+
+  // Att lägga till en merit — de tre verkliga vägarna, inga fler.
+  "ws.add.title": "Vad vill du lägga till?",
+  "ws.add.employment": "Anställning",
+  "ws.add.employmentBody": "En roll hos en arbetsgivare.",
+  "ws.add.education": "Utbildning, kurs eller certifikat",
+  "ws.add.educationBody": "Något du har gått eller tagit.",
+  "ws.add.credential": "Behörighet eller förordnande",
+  "ws.add.credentialBody": "VU1, VU2, ordningsvakt eller skyddsvakt.",
 
   "ws.use.title": "Använd ditt Passport",
   "ws.use.share": "Dela ditt Passport",
@@ -2363,6 +2380,19 @@ const en: Record<PassportCopyKey, string> = {
   "ws.merit.status.documented": "Documented",
   "ws.merit.status.verified": "Source-confirmed",
   "ws.merit.status.expired": "Validity has lapsed",
+  "ws.merit.status.unknown": "Review status unknown",
+  "ws.merits.reviewUnknown": "Review status could not be loaded",
+  "ws.merits.reviewUnknownHelp":
+    "We could not see whether anyone is reviewing them. The entries are unchanged.",
+  "ws.status.registeredUnknownHelp": "We could not see which ones are under review.",
+
+  "ws.add.title": "What would you like to add?",
+  "ws.add.employment": "Employment",
+  "ws.add.employmentBody": "A role with an employer.",
+  "ws.add.education": "Education, course or certificate",
+  "ws.add.educationBody": "Something you took or completed.",
+  "ws.add.credential": "Authorisation or appointment",
+  "ws.add.credentialBody": "VU1, VU2, public order or protective security.",
 
   "ws.use.title": "Use your Passport",
   "ws.use.share": "Share your Passport",

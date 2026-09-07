@@ -35,6 +35,7 @@ import { PassportWorkspace } from "@/components/security-passport/PassportWorksp
 import { needsWorkLocationConfirmation } from "@/lib/security-passport/onboarding";
 import { deriveFirstRunState } from "@/lib/security-passport/first-run";
 import { FirstRunLoading } from "@/components/security-passport/FirstRunJourney";
+import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
 import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
 import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
 import { buildPassportWorkspace } from "@/lib/security-passport/workspace";
@@ -299,35 +300,4 @@ function PassportWorkspaceRoute() {
       />
     </>
   );
-}
-
-/**
- * Honour a `#merits` / `#attention` arrival from the career home.
- *
- * The home links to the SECTION of the Passport an action is about, so a
- * person asked to "choose merits to verify" lands on the merits list and
- * not on the top of a page they then have to search. The element only
- * exists once the Passport read has answered — after the browser has
- * already given up on the hash — so it is scrolled to here, once, from
- * inside the ready branch, and made the focus target so keyboard and
- * screen-reader users arrive where the link said.
- */
-function ScrollToHashOnceReady() {
-  useEffect(() => {
-    const hash = typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "";
-    if (!hash) return;
-    const el = document.getElementById(hash);
-    if (!el) return;
-    el.scrollIntoView({ block: "start" });
-    // Focus, so keyboard and screen-reader users arrive where the link said
-    // rather than at the top of a page they must then re-read. Both targets
-    // (`#attention`, `#merits`) already carry tabindex=-1; the fallback is
-    // for any anchor added later without one.
-    if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
-    (el as HTMLElement).focus({ preventScroll: true });
-    // Marked so a browser test can assert the arrival happened, and which
-    // target it resolved to, rather than inferring it from scroll position.
-    el.setAttribute("data-hash-target", hash);
-  }, []);
-  return null;
 }

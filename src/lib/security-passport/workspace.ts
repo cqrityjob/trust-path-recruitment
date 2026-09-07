@@ -74,6 +74,53 @@ export const PASSPORT_WORKSPACE_VERSION = "passport-workspace-v1" as const;
  *  date under the heading "employed". */
 export type MeritDateKind = "period" | "validity";
 
+/**
+ * What the workspace may say about one merit's standing.
+ *
+ * The shared labeller's seven values, plus `unknown` — which exists because
+ * FOUR of those seven are only reachable by knowing whether a review is
+ * open, and the review read can fail.
+ */
+export type WorkspaceMeritStatus = MeritLabel | "unknown";
+
+/**
+ * The labels that are a statement about the REVIEW, not about stored data.
+ *
+ * ── WHY `added_by_you` IS ON THIS LIST ─────────────────────────────────
+ *
+ * It is the label `labelMerit` falls through to when nothing else applies —
+ * including when `openReview` and `clarificationOpen` are both false. Fed an
+ * EMPTY review set because the read failed, a merit that is actually pending,
+ * or that actually has a reviewer's question against it, comes back
+ * `added_by_you` and renders as an ordinary registered merit. That is the
+ * page inventing the reassuring answer out of a failure, which is precisely
+ * the class of defect this codebase spends its comments refusing.
+ *
+ * `documented`, `verified` and `expired` are NOT on the list: each is a
+ * function of the stored assertion level, method, subject and lifecycle, and
+ * remains exactly as true when the request table cannot be read. A merit
+ * CQrityjob reviewed was reviewed whether or not we can see today's queue.
+ */
+const REVIEW_DEPENDENT: readonly MeritLabel[] = [
+  "added_by_you",
+  "document_provided",
+  "verification_requested",
+  "clarification_needed",
+];
+
+/**
+ * One merit's status, failing CLOSED when the review state is unknown.
+ *
+ * `review.known` is false whenever the verification read did not answer.
+ * The last two entries of REVIEW_DEPENDENT cannot occur then — the sets are
+ * empty — and they are listed anyway so the rule reads as what it is: no
+ * review-derived word may be printed from a read that did not happen.
+ */
+function statusOf(label: MeritLabel, review: ReviewState): WorkspaceMeritStatus {
+  if (review.known) return label;
+  return REVIEW_DEPENDENT.includes(label) ? "unknown" : label;
+}
+
 export interface WorkspaceMerit {
   readonly kind: "claim" | "experience";
   readonly id: string;
@@ -91,8 +138,17 @@ export interface WorkspaceMerit {
   readonly dateKind: MeritDateKind;
   readonly from: IsoDate | null;
   readonly to: IsoDate | null;
-  /** The trust standing, from the shared labeller. Never computed here. */
-  readonly label: MeritLabel;
+  /**
+   * The trust standing, from the shared labeller — or `unknown`.
+   *
+   * `unknown` is not a rung and not a downgrade. It is what an honest page
+   * says about a merit whose standing DEPENDS on a read that failed: see
+   * `statusOf` below. Nothing here can produce it from stored data alone.
+   */
+  readonly label: WorkspaceMeritStatus;
+  /** The label the shared labeller returned, before the unknown rule. Kept
+   *  so a caller can see WHY a row reads unknown without re-deriving it. */
+  readonly rawLabel: MeritLabel;
   readonly lifecycleState: LifecycleState;
   /** Where this merit is opened. One destination, stated once. */
   readonly href: string;
@@ -137,6 +193,15 @@ export interface WorkspaceGroups {
   readonly current: readonly WorkspaceMerit[];
   /** A review is open. A status, never a task — see passport-merits.ts. */
   readonly inReview: readonly WorkspaceMerit[];
+  /**
+   * Current merits whose review state could not be read.
+   *
+   * Empty whenever the verification read answered. When it did not, every
+   * merit whose standing depends on it comes here rather than into
+   * `current`: a pending merit and a merit nobody has looked at must not sit
+   * under one heading that says neither is being reviewed.
+   */
+  readonly reviewUnknown: readonly WorkspaceMerit[];
   /** Expired, revoked, superseded or disputed BY LIFECYCLE. History. */
   readonly archived: readonly WorkspaceMerit[];
   /** Begun and not finished. Never a recorded merit. */
@@ -145,7 +210,7 @@ export interface WorkspaceGroups {
 
 /** Which current merits are asking something of the holder, so the list can
  *  put them first without inventing a fifth group for them. */
-const NEEDS_HOLDER: readonly MeritLabel[] = ["clarification_needed", "expired"];
+const NEEDS_HOLDER: readonly WorkspaceMeritStatus[] = ["clarification_needed", "expired"];
 
 export function meritNeedsHolder(merit: WorkspaceMerit): boolean {
   return NEEDS_HOLDER.includes(merit.label);
@@ -200,9 +265,38 @@ export interface WorkspaceNextStep {
   readonly retiresWhen: string;
 }
 
+/**
+ * The five figures the status overview prints, already decided.
+ *
+ * Null means "could not be read" and never 0. The component does no
+ * arithmetic over `counts`: a tile that added two fields together is a
+ * second derivation of the same question, and the first thing such a tile
+ * forgets is that one of its addends may be unknown.
+ *
+ * When every figure is known they partition the holder's current merits
+ * exactly, which is the property `passport-workspace:check` asserts.
+ */
+export interface WorkspaceStatusCounts {
+  /** Stated by the holder and unreviewed — INCLUDING an attached document
+   *  nobody has assessed. Null when the review read failed, because "no
+   *  review is open" is exactly what could not be established. */
+  readonly registered: number | null;
+  /** A CQrityjob document review. Independent of the review read. */
+  readonly documented: number;
+  /** A source confirming a fact it was party to. Independent. */
+  readonly sourceConfirmed: number;
+  /** Open with somebody else, or open and waiting on the holder. Null when
+   *  the review read failed. */
+  readonly inReview: number | null;
+  /** Verified once, validity since lapsed. Independent. */
+  readonly lapsed: number;
+}
+
 export interface PassportWorkspace {
   readonly version: typeof PASSPORT_WORKSPACE_VERSION;
   readonly counts: MeritCounts;
+  /** What the status overview renders. See WorkspaceStatusCounts. */
+  readonly status: WorkspaceStatusCounts;
   readonly groups: WorkspaceGroups;
   /** Exactly one, or null when there is genuinely nothing to recommend and
    *  when the trust standing could not be read. Those two cases are told
@@ -226,6 +320,23 @@ export interface WorkspaceInput {
 }
 
 function meritOfClaim(claim: Claim, review: ReviewState, now: Date): WorkspaceMerit {
+  const rawLabel = labelMerit(
+    // The WHOLE provenance. Dropping the method or the subject does not
+    // weaken the answer, it inverts it — see passport-merits.ts.
+    {
+      assertionLevel: claim.assertionLevel,
+      lifecycleState: claim.lifecycleState,
+      validUntil: claim.validUntil,
+      verifierName: claim.verifierName,
+      verificationMethod: claim.verificationMethod,
+      subjectKind: "credential",
+    },
+    {
+      openReview: review.open.has(claim.id),
+      clarificationOpen: review.clarification.has(claim.id),
+    },
+    now,
+  );
   return {
     kind: "claim",
     id: claim.id,
@@ -236,23 +347,8 @@ function meritOfClaim(claim: Claim, review: ReviewState, now: Date): WorkspaceMe
     dateKind: "validity",
     from: claim.issuedOn,
     to: claim.validUntil,
-    label: labelMerit(
-      // The WHOLE provenance. Dropping the method or the subject does not
-      // weaken the answer, it inverts it — see passport-merits.ts.
-      {
-        assertionLevel: claim.assertionLevel,
-        lifecycleState: claim.lifecycleState,
-        validUntil: claim.validUntil,
-        verifierName: claim.verifierName,
-        verificationMethod: claim.verificationMethod,
-        subjectKind: "credential",
-      },
-      {
-        openReview: review.open.has(claim.id),
-        clarificationOpen: review.clarification.has(claim.id),
-      },
-      now,
-    ),
+    label: statusOf(rawLabel, review),
+    rawLabel,
     lifecycleState: claim.lifecycleState,
     href: meritHref("claim", claim.id),
   };
@@ -264,6 +360,23 @@ function meritOfPeriod(period: ExperiencePeriod, review: ReviewState, now: Date)
   // carried in both fields rather than in one, so the renderer has the same
   // shape for every merit.
   const title = `${period.roleTitle}`;
+  const rawLabel = labelMerit(
+    {
+      assertionLevel: period.assertionLevel,
+      lifecycleState: period.lifecycleState,
+      validUntil: null,
+      verifierName: period.verifierName,
+      verificationMethod: period.verificationMethod,
+      // An EMPLOYMENT PERIOD: the one subject an employer confirmation may
+      // source-confirm.
+      subjectKind: "employment",
+    },
+    {
+      openReview: review.open.has(period.id),
+      clarificationOpen: review.clarification.has(period.id),
+    },
+    now,
+  );
   return {
     kind: "experience",
     id: period.id,
@@ -274,23 +387,8 @@ function meritOfPeriod(period: ExperiencePeriod, review: ReviewState, now: Date)
     dateKind: "period",
     from: period.startedOn,
     to: period.endedOn,
-    label: labelMerit(
-      {
-        assertionLevel: period.assertionLevel,
-        lifecycleState: period.lifecycleState,
-        validUntil: null,
-        verifierName: period.verifierName,
-        verificationMethod: period.verificationMethod,
-        // An EMPLOYMENT PERIOD: the one subject an employer confirmation
-        // may source-confirm.
-        subjectKind: "employment",
-      },
-      {
-        openReview: review.open.has(period.id),
-        clarificationOpen: review.clarification.has(period.id),
-      },
-      now,
-    ),
+    label: statusOf(rawLabel, review),
+    rawLabel,
     lifecycleState: period.lifecycleState,
     href: meritHref("experience", period.id),
   };
@@ -327,8 +425,12 @@ export function buildPassportWorkspace(input: WorkspaceInput): PassportWorkspace
   const archived = merits.filter((m) => isArchivedMerit(m.lifecycleState)).sort(byRecency);
   const live = merits.filter((m) => isCurrentMerit(m.lifecycleState));
   const inReview = live.filter((m) => m.label === "verification_requested").sort(byRecency);
+  // Separated from `current` rather than mixed into it: a merit that may be
+  // under review, and one nobody has looked at, must not share a heading
+  // that implies the second.
+  const reviewUnknown = live.filter((m) => m.label === "unknown").sort(byRecency);
   const current = live
-    .filter((m) => m.label !== "verification_requested")
+    .filter((m) => m.label !== "verification_requested" && m.label !== "unknown")
     .sort(byAttentionThenRecency);
 
   const counts = countMeritRows(
@@ -363,7 +465,21 @@ export function buildPassportWorkspace(input: WorkspaceInput): PassportWorkspace
   return {
     version: PASSPORT_WORKSPACE_VERSION,
     counts,
-    groups: { current, inReview, archived, drafts },
+    // ── THE FIGURES, EACH ANSWERING FOR ITS OWN DEPENDENCE ───────────
+    //
+    // Two of the five are statements about the request table and are null
+    // when it could not be read. The other three are statements about
+    // stored provenance and lifecycle, and are as true after a failed
+    // review read as before it.
+    status: {
+      registered: review.known ? counts.selfReportedCount + counts.documentProvidedCount : null,
+      documented: counts.documentedCount,
+      sourceConfirmed: counts.verifiedCount,
+      inReview:
+        counts.pendingCount === null ? null : counts.pendingCount + counts.clarificationCount,
+      lapsed: counts.expiredCount,
+    },
+    groups: { current, inReview, reviewUnknown, archived, drafts },
     nextStep: unavailable ? null : nextStepFor({ attention: attention!, live, drafts }),
     unavailable,
     empty: live.length === 0,
@@ -458,8 +574,14 @@ function nextStepFor(args: {
       kind: "add_more_merits",
       rank: 4,
       classification: "suggestion",
+      // The PAGE, not the employment block. Its label is the generic verb
+      // ("add a merit"), and a generic verb may not land on one specific
+      // form: somebody who came to record a course would arrive at a form
+      // for a job. /passport/information is the page that holds every way to
+      // enter one, so the label and the destination agree. The header's
+      // chooser is where a SPECIFIC kind is picked.
       href: "/passport/information",
-      hash: "sp-employment",
+      hash: null,
       search: null,
       count: 1,
       retiresWhen: "a second current merit is recorded",

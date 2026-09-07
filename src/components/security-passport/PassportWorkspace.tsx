@@ -35,16 +35,16 @@
 // deliberately no prop by which a caller could tell it to.
 
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Lock, Plus, RefreshCcw } from "lucide-react";
+import { ArrowRight, ChevronDown, Lock, Plus, RefreshCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
-import type { MeritLabel } from "@/lib/professional-identity/passport-merits";
 import { isArchivedMerit, type LifecycleState } from "@/lib/security-passport/types";
 import { formatPeriodRange } from "@/lib/security-passport/format";
 import type {
   PassportWorkspace as Workspace,
   WorkspaceMerit,
+  WorkspaceMeritStatus,
   WorkspaceNextStep,
 } from "@/lib/security-passport/workspace";
 
@@ -118,18 +118,25 @@ function Subhead({ children, help }: { children: string; help?: string }) {
 /* ------------------------------------------------------------------ */
 
 /**
- * One figure, its category and one line saying what the category means.
+ * The four figures, as ONE band rather than four cards.
  *
- * The explanation is VISIBLE rather than behind a tooltip. A tooltip is not
- * reachable by touch without a second interaction and is the first thing a
- * screen reader skips, and the whole reason these four figures exist is that
- * the difference between them is what this product is for.
+ * ── WHY THIS IS NOT A GRID OF BOXES ────────────────────────────────────
+ *
+ * Four bordered cards give four numbers the same visual weight as the one
+ * recommended action below them, and a page where everything is a card is a
+ * page with no hierarchy at all. One band, split by hairlines, reads as a
+ * single summary of one thing — which is what it is.
+ *
+ * The explanation under each figure is VISIBLE rather than behind a tooltip.
+ * A tooltip needs a second interaction on touch and is the first thing a
+ * screen reader skips, and the difference between these four is the whole
+ * product.
  *
  * A null count is "could not be loaded" — never 0. Printing zero for a
  * number nobody could read is the same lie the rest of this codebase spends
  * its comments refusing.
  */
-function StatusTile({
+function StatusFigure({
   count,
   label,
   help,
@@ -147,7 +154,7 @@ function StatusTile({
   const known = count !== null;
   return (
     <div
-      className="rounded-lg border border-border bg-card p-4"
+      className="min-w-0 px-4 py-3 sm:px-5 sm:py-4"
       data-status-tile={testid}
       data-count={known ? String(count) : "unknown"}
     >
@@ -157,8 +164,10 @@ function StatusTile({
       >
         {known ? count : "—"}
       </p>
-      <p className="mt-0.5 text-sm font-medium text-foreground">{known ? label : unknownLabel}</p>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+      <p className="mt-0.5 text-sm font-medium text-balance text-foreground">
+        {known ? label : unknownLabel}
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-pretty text-muted-foreground">
         {known ? help : unknownHelp}
       </p>
     </div>
@@ -169,7 +178,13 @@ function StatusTile({
 /* One merit                                                           */
 /* ------------------------------------------------------------------ */
 
-const STATUS_KEY: Readonly<Record<MeritLabel, PassportCopyKey>> = {
+const STATUS_KEY: Readonly<Record<WorkspaceMeritStatus, PassportCopyKey>> = {
+  // "We could not establish whether anybody is reviewing this." NOT a trust
+  // level and not a downgrade: the holder's own statement is as true as it
+  // ever was, and what is missing is the review state. The word says exactly
+  // that rather than borrowing "Egen uppgift", which would let a pending
+  // merit sit among the ordinary ones and read as settled.
+  unknown: "ws.merit.status.unknown",
   added_by_you: "ws.merit.status.added_by_you",
   document_provided: "ws.merit.status.document_provided",
   verification_requested: "ws.merit.status.verification_requested",
@@ -205,7 +220,7 @@ function StatusPill({
   label,
   lifecycleState,
 }: {
-  label: MeritLabel;
+  label: WorkspaceMeritStatus;
   lifecycleState: LifecycleState;
 }) {
   const { pt } = usePassportCopy();
@@ -272,13 +287,19 @@ function MeritRow({ merit }: { merit: WorkspaceMerit }) {
             : pt(STATUS_KEY[merit.label])
         }`}
         className={cn(
-          // STACKED BELOW sm, SIDE BY SIDE ABOVE IT. In one row at 375px the
+          // A LIST ROW, not a card. The list is one object with many entries;
+          // giving every entry its own border and its own surface made the
+          // page a wall of equal boxes, with the merits competing for weight
+          // against the one recommended action. Separation is a hairline
+          // between rows (`divide-y` on the list) and a hover tint.
+          //
+          // STACKED BELOW sm, SIDE BY SIDE ABOVE IT: in one row at 375px the
           // status pill left about a third of the width for the title, so
           // every credential read "Vaktarutbildnin..." and the list became
           // decoration. Nothing is truncated at any width now; the row grows
           // instead.
-          "group flex min-h-[3.5rem] w-full flex-col gap-2 rounded-lg border border-border bg-card px-4 py-3 transition-colors sm:flex-row sm:items-center sm:gap-3",
-          "hover:border-accent/50 hover:bg-accent/5",
+          "group flex min-h-[3.5rem] w-full flex-col gap-2 rounded-md px-3 py-3 transition-colors sm:flex-row sm:items-center sm:gap-4",
+          "hover:bg-accent/5",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         )}
       >
@@ -317,8 +338,8 @@ function DraftRow({ merit }: { merit: WorkspaceMerit }) {
         search={{ draft: merit.id }}
         data-draft-row={merit.id}
         className={cn(
-          "group flex min-h-[3.5rem] w-full flex-col gap-2 rounded-lg border border-dashed border-border bg-card px-4 py-3 transition-colors sm:flex-row sm:items-center sm:gap-3",
-          "hover:border-accent/50 hover:bg-accent/5",
+          "group flex min-h-[3.5rem] w-full flex-col gap-2 rounded-md px-3 py-3 transition-colors sm:flex-row sm:items-center sm:gap-4",
+          "hover:bg-accent/5",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         )}
       >
@@ -494,6 +515,108 @@ function NextStepCard({
 }
 
 /* ------------------------------------------------------------------ */
+/* Adding a merit                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The three real ways into this Passport, named.
+ *
+ * ── WHY THIS IS NOT ONE LINK ───────────────────────────────────────────
+ *
+ * "Lägg till merit" used to go straight to `/passport/information#sp-employment`
+ * — the employment block. A person who came to record a course landed on a
+ * form for a job, having pressed a button that said neither. A generic verb
+ * on a specific destination is a small lie, and it is the kind a person only
+ * discovers after they have started typing.
+ *
+ * ── AND WHY THERE ARE EXACTLY THREE ────────────────────────────────────
+ *
+ * Because there are exactly three places a merit can actually be entered
+ * today, and each option is one of them:
+ *
+ *   Employment                      /passport/information#sp-employment
+ *   Education, course, certificate  /passport/information#sp-education
+ *   Authorisation or appointment    /passport/credentials/new
+ *
+ * Nothing here promises a route that does not exist or a form that has not
+ * been built. Languages and practical skills are deliberately absent: they
+ * live on the same page but they are not merits, and offering them here
+ * would widen the word.
+ *
+ * `<details>` rather than a scripted popover: it opens with a keyboard, it
+ * opens without JavaScript, it is announced as expandable, and it renders
+ * fully in a static render — which is how the guard can read what it offers.
+ */
+function AddMeritChooser({ dominant }: { dominant: boolean }) {
+  const { pt } = usePassportCopy();
+  const options = [
+    {
+      key: "employment",
+      to: "/passport/information",
+      hash: "sp-employment",
+      title: "ws.add.employment",
+      body: "ws.add.employmentBody",
+    },
+    {
+      key: "education",
+      to: "/passport/information",
+      hash: "sp-education",
+      title: "ws.add.education",
+      body: "ws.add.educationBody",
+    },
+    {
+      key: "credential",
+      to: "/passport/credentials/new",
+      hash: undefined,
+      title: "ws.add.credential",
+      body: "ws.add.credentialBody",
+    },
+  ] as const;
+
+  return (
+    <details className="group relative" data-add-merit-chooser>
+      <summary
+        data-primary-cta={dominant ? "add-merit" : undefined}
+        data-cta="add-merit"
+        className={cn(
+          "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+          dominant ? BUTTON_PRIMARY : BUTTON_SECONDARY,
+        )}
+      >
+        <Plus aria-hidden="true" className="h-4 w-4" />
+        {pt("ws.addMerit")}
+        <ChevronDown
+          aria-hidden="true"
+          className="h-4 w-4 transition-transform group-open:rotate-180"
+        />
+      </summary>
+      {/* Static below sm so a phone does not get a floating panel it has to
+          dismiss; anchored under the button from sm up. */}
+      <div className="z-20 mt-2 w-full rounded-xl border border-border bg-card p-1 shadow-[var(--shadow-md)] sm:absolute sm:left-0 sm:w-[22rem]">
+        <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          {pt("ws.add.title")}
+        </p>
+        <ul className="divide-y divide-border">
+          {options.map((o) => (
+            <li key={o.key}>
+              <Link
+                to={o.to}
+                hash={o.hash}
+                data-add-merit={o.key}
+                className="flex min-h-11 flex-col justify-center rounded-md px-3 py-3 transition-colors hover:bg-accent/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+              >
+                <span className="text-sm font-semibold text-foreground">{pt(o.title)}</span>
+                <span className="mt-0.5 text-xs text-muted-foreground">{pt(o.body)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* The page                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -519,7 +642,7 @@ export function PassportWorkspace({
   className?: string;
 }) {
   const { pt } = usePassportCopy();
-  const { counts, groups, nextStep, unavailable } = workspace;
+  const { status, groups, nextStep, unavailable } = workspace;
 
   // One dominant call to action. When a reviewer is waiting, the recommended
   // step is it and this steps down; otherwise this is the page's primary.
@@ -544,17 +667,8 @@ export function PassportWorkspace({
           {pt("ws.lead")}
         </p>
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Link
-            to="/passport/information"
-            hash="sp-employment"
-            data-primary-cta={stepIsDominant ? undefined : "add-merit"}
-            data-cta="add-merit"
-            className={stepIsDominant ? BUTTON_SECONDARY : BUTTON_PRIMARY}
-          >
-            <Plus aria-hidden="true" className="h-4 w-4" />
-            {pt("ws.addMerit")}
-          </Link>
+        <div className="mt-5 flex flex-wrap items-start gap-3">
+          <AddMeritChooser dominant={!stepIsDominant} />
           <Link to="/passport/share" data-cta="share" className={BUTTON_SECONDARY}>
             {pt("ws.share")}
           </Link>
@@ -580,58 +694,52 @@ export function PassportWorkspace({
       </header>
 
       {/* ── 2 · What is registered, and how well it is backed ─────────── */}
-      <section aria-labelledby="ws-status-heading" className="mt-8" data-status-overview>
+      {/* ONE band, not four cards. Every figure comes from `workspace.status`
+          already decided — the component does no arithmetic, so a tile
+          cannot quietly add a known number to an unknown one. */}
+      <section aria-labelledby="ws-status-heading" className="mt-7" data-status-overview>
         <h2 id="ws-status-heading" className="sr-only">
           {pt("ws.status.title")}
         </h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatusTile
+        <div className="grid grid-cols-2 divide-x divide-y divide-border rounded-xl border border-border bg-card sm:grid-cols-4 sm:divide-y-0">
+          <StatusFigure
             testid="registered"
-            // The BOTTOM RUNG, not the total. Everything the holder stated
-            // and nobody has assessed — including an attached document that
-            // has not been reviewed, because "a file exists" and "a file was
-            // checked" are the two states this product most needs to keep
-            // apart, and only the second one is Documented. The row itself
-            // says which of the two it is.
+            // The BOTTOM RUNG, not the total — everything the holder stated
+            // that nobody has assessed, an unreviewed attached document
+            // included, because "a file exists" and "a file was checked" are
+            // the two states this product most needs to keep apart.
             //
-            // These four figures and the lapsed line below partition the
-            // current merits exactly: a holder can add them up and get the
-            // number of merits they have.
-            count={counts.selfReportedCount + counts.documentProvidedCount}
+            // NULL when the review read failed: "nobody is reviewing these"
+            // is exactly what could not be established.
+            count={status.registered}
             label={pt("ws.status.registered")}
             help={pt("ws.status.registeredHelp")}
             unknownLabel={pt("ws.status.unknown")}
-            unknownHelp={pt("ws.status.unknownHelp")}
+            unknownHelp={pt("ws.status.registeredUnknownHelp")}
           />
-          <StatusTile
+          <StatusFigure
             testid="documented"
-            count={counts.documentedCount}
+            count={status.documented}
             label={pt("ws.status.documented")}
             help={pt("ws.status.documentedHelp")}
             unknownLabel={pt("ws.status.unknown")}
             unknownHelp={pt("ws.status.unknownHelp")}
           />
-          <StatusTile
+          <StatusFigure
             testid="source-confirmed"
-            count={counts.verifiedCount}
+            count={status.sourceConfirmed}
             label={pt("ws.status.sourceConfirmed")}
             help={pt("ws.status.sourceConfirmedHelp")}
             unknownLabel={pt("ws.status.unknown")}
             unknownHelp={pt("ws.status.unknownHelp")}
           />
-          <StatusTile
+          <StatusFigure
             testid="in-review"
             // BOTH open shapes: a review nobody has answered yet, and one
-            // where the reviewer has asked the holder something. Both are
-            // reviews in progress; which of the two it is, and what it asks
-            // of this person, is said by the merit's own status word and by
-            // the region above. Counting only the first would leave a merit
-            // in no category at all.
-            //
-            // Null, never 0, when the verification read did not answer.
-            count={
-              counts.pendingCount === null ? null : counts.pendingCount + counts.clarificationCount
-            }
+            // where the reviewer has asked the holder something. Which of
+            // the two it is, and what it asks of this person, is said by the
+            // merit's own status word and by the region below.
+            count={status.inReview}
             label={pt("ws.status.inReview")}
             help={pt("ws.status.inReviewHelp")}
             unknownLabel={pt("ws.status.unknown")}
@@ -640,11 +748,11 @@ export function PassportWorkspace({
         </div>
         {/* A fifth figure only when there is one. A merit whose validity has
             lapsed is neither current backing nor archived history, and a
-            permanent "0 expired" tile would be four words of noise. */}
-        {counts.expiredCount > 0 ? (
+            permanent "0 expired" line would be four words of noise. */}
+        {status.lapsed > 0 ? (
           <p className="mt-3 text-sm text-muted-foreground" data-status-lapsed>
             <span className="font-medium text-foreground">
-              {counts.expiredCount} {pt("ws.status.lapsed").toLocaleLowerCase()}
+              {status.lapsed} {pt("ws.status.lapsed").toLocaleLowerCase()}
             </span>{" "}
             — {pt("ws.status.lapsedHelp")}
           </p>
@@ -668,9 +776,28 @@ export function PassportWorkspace({
             {groups.drafts.length > 0 ? (
               <div data-merit-group="drafts">
                 <Subhead help={pt("ws.merits.draftsHelp")}>{pt("ws.merits.drafts")}</Subhead>
-                <ul className="space-y-2">
+                <ul className="-mx-3 divide-y divide-border">
                   {groups.drafts.map((m) => (
                     <DraftRow key={m.id} merit={m} />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/* ── FAIL CLOSED, VISIBLY ────────────────────────────────
+                Merits whose review state could not be read. They are NOT in
+                "current merits": one of them may be pending, or may have a
+                reviewer's question against it, and a heading that groups
+                them with merits nobody is reviewing would answer a question
+                the product could not answer. */}
+            {groups.reviewUnknown.length > 0 ? (
+              <div data-merit-group="review-unknown">
+                <Subhead help={pt("ws.merits.reviewUnknownHelp")}>
+                  {pt("ws.merits.reviewUnknown")}
+                </Subhead>
+                <ul className="-mx-3 divide-y divide-border">
+                  {groups.reviewUnknown.map((m) => (
+                    <MeritRow key={m.id} merit={m} />
                   ))}
                 </ul>
               </div>
@@ -679,7 +806,7 @@ export function PassportWorkspace({
             {groups.current.length > 0 ? (
               <div data-merit-group="current">
                 <Subhead>{pt("ws.merits.current")}</Subhead>
-                <ul className="space-y-2">
+                <ul className="-mx-3 divide-y divide-border">
                   {groups.current.map((m) => (
                     <MeritRow key={m.id} merit={m} />
                   ))}
@@ -690,7 +817,7 @@ export function PassportWorkspace({
             {groups.inReview.length > 0 ? (
               <div data-merit-group="in-review">
                 <Subhead help={pt("ws.status.inReviewHelp")}>{pt("ws.merits.inReview")}</Subhead>
-                <ul className="space-y-2">
+                <ul className="-mx-3 divide-y divide-border">
                   {groups.inReview.map((m) => (
                     <MeritRow key={m.id} merit={m} />
                   ))}
@@ -701,7 +828,7 @@ export function PassportWorkspace({
             {groups.archived.length > 0 ? (
               <div data-merit-group="archived">
                 <Subhead help={pt("ws.merits.archivedHelp")}>{pt("ws.merits.archived")}</Subhead>
-                <ul className="space-y-2">
+                <ul className="-mx-3 divide-y divide-border">
                   {groups.archived.map((m) => (
                     <MeritRow key={m.id} merit={m} />
                   ))}
@@ -715,7 +842,7 @@ export function PassportWorkspace({
       {/* ── 5 · What the Passport is for ──────────────────────────────── */}
       <div className="mt-8">
         <Group id="ws-use" title={pt("ws.use.title")}>
-          <ul className="grid gap-2 md:grid-cols-3">
+          <ul className="grid divide-y divide-border overflow-hidden rounded-xl border border-border bg-card md:grid-cols-3 md:divide-x md:divide-y-0">
             {(
               [
                 {
@@ -737,7 +864,7 @@ export function PassportWorkspace({
                 <Link
                   to={item.to}
                   data-use-link={item.key}
-                  className="group flex h-full min-h-[3.5rem] flex-col justify-center rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className="group flex h-full min-h-[3.5rem] flex-col justify-center px-4 py-4 transition-colors hover:bg-accent/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                 >
                   <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     {pt(item.title)}
