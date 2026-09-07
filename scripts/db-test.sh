@@ -4118,12 +4118,158 @@ if [ "$SPSEL_RC" -ne 0 ]; then
   suite_failed "Security Passport selected-merit sharing"
 else
   echo "    ok  ${SPSEL_PASSED} selected-merit sharing assertions passed"
-  if [ "$SPSEL_PASSED" -lt 45 ]; then
-    echo "FAIL: expected at least 45 selected-merit sharing assertions, only ${SPSEL_PASSED} ran." >&2
-    suite_failed "Security Passport selected-merit sharing (assertion shortfall: floor 45)"
+  if [ "$SPSEL_PASSED" -lt 95 ]; then
+    echo "FAIL: expected at least 95 selected-merit sharing assertions, only ${SPSEL_PASSED} ran." >&2
+    suite_failed "Security Passport selected-merit sharing (assertion shortfall: floor 95)"
   fi
 fi
 
+
+# ---------------------------------------------------------------------------
+# Two callers, one request key.
+#
+# The sequential replay is asserted in the suite above; this is the case that
+# actually happens — two tabs, a double submit, a client retrying a slow
+# request. A holds its transaction open after creating; B arrives with the same
+# key while A is uncommitted.
+#
+# THE POLL LOOKS FOR AN ADVISORY LOCK SPECIFICALLY, and that is the point: the
+# unique index alone would also make B wait (its INSERT would block on A's
+# uncommitted duplicate key), so "B waited" is not evidence that the intended
+# protection is present. Removing pg_advisory_xact_lock from the create makes
+# this section fail on the very first assertion.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport selected-sharing concurrency proof"
+SELR_FAILED=0
+
+set +e
+SELR_SETUP="$(psql -v ON_ERROR_STOP=1 -q -v phase=setup -d "$TEST_DB" \
+  -f supabase/tests/security_passport_selected_sharing_race_test.sql 2>&1)"
+SELR_SETUP_RC=$?
+set -e
+
+if [ "$SELR_SETUP_RC" -ne 0 ]; then
+  echo "FAIL: the selected-sharing concurrency setup failed." >&2
+  echo "$SELR_SETUP" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport selected-sharing concurrency (setup)"
+else
+  SELR_HOLDER="d2000000-0000-4000-8000-000000000001"
+  SELR_CLAIM="d2c00000-0000-4000-8000-000000000001"
+  SELR_KEY="d2a00000-0000-4000-8000-000000000001"
+  SELR_A_LOG="$(mktemp)"; SELR_B_LOG="$(mktemp)"
+
+  # A: create the share, then hold the transaction open for three seconds.
+  (
+    psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SELR_A_LOG" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SELR_HOLDER}', true);
+INSERT INTO public.sp_share_race_out (session, status, disclosure_id, has_token)
+SELECT 'A', r ->> 'status', (r ->> 'disclosure_id')::uuid, (r ->> 'token') IS NOT NULL
+  FROM public.sp_create_selected_disclosure(
+    ARRAY['${SELR_CLAIM}']::uuid[], NULL, 30, NULL, NULL, 'sv',
+    '${SELR_KEY}'::uuid) AS r;
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+    echo "RC=$?" >>"$SELR_A_LOG"
+  ) &
+  SELR_A_PID=$!
+
+  # Wait until A actually holds the ADVISORY lock, so B starts into real
+  # contention on the key rather than on the table.
+  SELR_HELD=0
+  for _ in $(seq 1 200); do
+    SELR_HELD="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_locks where locktype = 'advisory' and granted;" 2>/dev/null || echo 0)"
+    [ "${SELR_HELD:-0}" -gt 0 ] && break
+    sleep 0.05
+  done
+
+  SELR_B_START="$(date +%s)"
+  set +e
+  psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SELR_B_LOG" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SELR_HOLDER}', true);
+INSERT INTO public.sp_share_race_out (session, status, disclosure_id, has_token)
+SELECT 'B', r ->> 'status', (r ->> 'disclosure_id')::uuid, (r ->> 'token') IS NOT NULL
+  FROM public.sp_create_selected_disclosure(
+    ARRAY['${SELR_CLAIM}']::uuid[], NULL, 30, NULL, NULL, 'sv',
+    '${SELR_KEY}'::uuid) AS r;
+COMMIT;
+SQL
+  SELR_B_RC=$?
+  set -e
+  SELR_B_WAITED=$(( $(date +%s) - SELR_B_START ))
+  wait "$SELR_A_PID" || true
+
+  if [ "${SELR_HELD:-0}" -eq 0 ]; then
+    echo "FAIL: no session ever held an advisory lock, so the two callers were never" >&2
+    echo "      serialised on the request key and this run proves nothing." >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  the first caller held an advisory lock on its request key"
+  fi
+
+  if ! grep -q "^RC=0" "$SELR_A_LOG"; then
+    echo "FAIL: the first create did not succeed." >&2
+    cat "$SELR_A_LOG" >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  the first create succeeded"
+  fi
+
+  if [ "$SELR_B_RC" -ne 0 ]; then
+    echo "FAIL: the simultaneous identical create ERRORED instead of being handed" >&2
+    echo "      the answer the winner produced." >&2
+    grep -iE "ERROR:|FEL:" "$SELR_B_LOG" | head -5 >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  the simultaneous identical create also succeeded"
+  fi
+
+  # No unique-violation leakage: a constraint name must never reach a caller.
+  if grep -qiE "duplicate key|unique constraint|sp_disclosures_request_key_uidx" "$SELR_B_LOG"; then
+    echo "FAIL: the losing caller was shown a constraint violation." >&2
+    grep -iE "duplicate key|unique constraint|uidx" "$SELR_B_LOG" | head -3 >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  and it was never shown an index name or a duplicate-key error"
+  fi
+
+  if [ "$SELR_B_WAITED" -lt 2 ]; then
+    echo "FAIL: the second create returned after ${SELR_B_WAITED}s without waiting." >&2
+    echo "      It was never blocked, so its answer is no evidence of serialisation." >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  the second create WAITED ${SELR_B_WAITED}s on the request key"
+  fi
+
+  rm -f "$SELR_A_LOG" "$SELR_B_LOG"
+
+  set +e
+  SELR_OUT="$(psql -v ON_ERROR_STOP=1 -q -v phase=verify -d "$TEST_DB" \
+    -f supabase/tests/security_passport_selected_sharing_race_test.sql 2>&1)"
+  SELR_RC=$?
+  set -e
+
+  echo "$SELR_OUT" | grep -E "ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  SELR_PASSED="$(echo "$SELR_OUT" | grep -c "ok  " || true)"
+
+  if [ "$SELR_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: the selected-sharing concurrency verification exited with code ${SELR_RC}." >&2
+    echo "$SELR_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    SELR_FAILED=1
+  elif [ "$SELR_PASSED" -lt 7 ]; then
+    echo "FAIL: expected at least 7 concurrency assertions, only ${SELR_PASSED} ran." >&2
+    SELR_FAILED=1
+  fi
+
+  if [ "$SELR_FAILED" -ne 0 ]; then
+    suite_failed "Security Passport selected-sharing concurrency"
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # The first-merit rollback, and back again.
