@@ -181,6 +181,119 @@ const sv = {
   "welcome.start": "Kom igång",
   "welcome.resume": "Fortsätt där du slutade",
 
+  // ── First run: create the Passport, add the first merit ──────────────
+  //
+  // Four screens, one purpose each. The wording is the owner-approved copy
+  // for PR #192 and is the reason this block exists rather than being folded
+  // into the older onboarding keys: those describe a six-step wizard that
+  // asked for a professional profile before it gave anybody anything.
+  "fr.progress": "Steg {n} av {total}",
+  "fr.stepLabel.create": "Skapa Passport",
+  "fr.stepLabel.choose": "Välj merit",
+  "fr.stepLabel.details": "Uppgifter",
+  "fr.stepLabel.done": "Klart",
+
+  // Screen 1
+  "fr.create.title": "Skapa ditt Security Passport",
+  "fr.create.body":
+    "Samla dina meriter på ett ställe. Du väljer själv vad du delar och med vem.",
+  "fr.create.cta": "Skapa mitt Security Passport",
+  "fr.create.creating": "Skapar …",
+  "fr.create.privateTitle": "Privat tills du själv delar",
+  "fr.create.privateBody":
+    "Ditt Passport är synligt bara för dig. Ingenting visas för en arbetsgivare förrän du aktivt delar det, och du kan när som helst sluta dela.",
+
+  // Screen 2
+  "fr.choose.title": "Börja med din första merit",
+  "fr.choose.body":
+    "Lägg till något du har gjort eller uppnått. Du kan ändra uppgifterna senare.",
+  "fr.choose.employment": "Anställning",
+  "fr.choose.employmentHint": "Ett jobb du har eller har haft.",
+  "fr.choose.education": "Utbildning",
+  "fr.choose.educationHint": "Gymnasium, yrkesutbildning eller högskola.",
+  "fr.choose.course": "Kurs",
+  "fr.choose.courseHint": "En kurs eller utbildningsinsats du har gått.",
+  "fr.choose.certification": "Certifiering",
+  "fr.choose.certificationHint": "Ett intyg eller certifikat du har fått.",
+  "fr.choose.licence": "Licens eller behörighet",
+  "fr.choose.licenceHint": "En yrkesbehörighet eller ett förordnande.",
+
+  // Screen 3
+  "fr.details.title.employment": "Om din anställning",
+  "fr.details.title.education": "Om din utbildning",
+  "fr.details.title.course": "Om din kurs",
+  "fr.details.title.certification": "Om din certifiering",
+  "fr.details.title.licence": "Om din licens eller behörighet",
+  "fr.details.body": "Fyll i det du vet nu. Du kan komplettera senare.",
+  "fr.details.change": "Byt typ av merit",
+  "fr.field.role": "Roll eller titel",
+  "fr.field.employer": "Arbetsgivare",
+  "fr.field.country": "Land där du arbetade",
+  "fr.field.countryPlaceholder": "Välj land",
+  "fr.field.countryHelp":
+    "Vi anger aldrig ett land åt dig. Ditt Passport kan i dag registrera arbete i Sverige, Storbritannien och Förenade Arabemiraten. Fler länder tillkommer.",
+  "fr.field.startedOn": "Startdatum",
+  "fr.field.ongoing": "Jag arbetar kvar här",
+  "fr.field.endedOn": "Slutdatum",
+  "fr.field.educationTitle": "Utbildningens namn",
+  "fr.field.school": "Skola eller lärosäte",
+  "fr.field.courseTitle": "Kursens namn",
+  "fr.field.provider": "Utbildare",
+  "fr.field.certificationTitle": "Certifieringens namn",
+  "fr.field.issuer": "Utfärdare",
+  "fr.field.licenceTitle": "Behörighetens namn",
+  "fr.field.authority": "Myndighet eller utfärdare",
+  "fr.field.completedOn": "Datum (om du vet)",
+  "fr.field.optional": "Frivilligt",
+  "fr.declaration":
+    "Jag intygar att uppgifterna jag lämnar är riktiga så vitt jag vet.",
+  "fr.save": "Spara i mitt Passport",
+  "fr.saving": "Sparar …",
+  "fr.saveExit": "Spara och avsluta",
+  "fr.error.required": "Fyll i det här fältet.",
+  "fr.error.invalidDate": "Ange ett giltigt datum.",
+  "fr.error.futureDate": "Datumet kan inte ligga i framtiden.",
+  "fr.error.endBeforeStart": "Slutdatumet måste ligga efter startdatumet.",
+  "fr.error.declaration": "Kryssa i intyget innan du sparar.",
+  "fr.saveExit.hint":
+    "Vi sparar det du har fyllt i och tar dig till Min karriär. Du hittar tillbaka hit från ditt Security Passport.",
+  "fr.error.createFailed":
+    "Ditt Security Passport kunde inte skapas. Ingenting har lagts till på ditt konto \u2014 försök igen.",
+  "fr.error.saveRefused":
+    "Meriten sparades inte. Ingenting har ändrats i ditt Passport \u2014 se över fälten ovan och försök igen.",
+  "fr.error.saveIndeterminate":
+    "Vi vet inte om meriten sparades. Svaret från servern kom aldrig fram, så den kan finnas. Tryck på \u201dSpara i mitt Passport\u201d igen \u2014 vi använder samma sparning, så du kan inte råka lägga till den två gånger.",
+  "fr.error.draftFailed":
+    "Utkastet kunde inte sparas, så vi stannar kvar här. Dina uppgifter finns kvar i formuläret.",
+  "fr.unknown.reconcile": "Försök spara igen",
+  "fr.loadError.title": "Vi kunde inte hämta ditt Security Passport",
+  "fr.loadError.body":
+    "Något gick fel när vi läste ditt Passport. Det betyder inte att du saknar ett \u2014 vi kunde bara inte läsa det just nu.",
+  "fr.loadError.reassurance": "Ingenting i ditt Passport har ändrats.",
+  "fr.loadError.retry": "Försök igen",
+  "fr.done.completeProfileHint":
+    "En längre sida där du kan fylla i fler uppgifter, i din egen takt.",
+  "fr.error.retry": "Försök igen",
+
+  // Screen 4
+  "fr.done.title": "Meriten är sparad",
+  "fr.done.status": "Uppgift från dig",
+  "fr.done.statusBody":
+    "Det här är din egen uppgift. Ingen har kontrollerat den ännu, och ditt Passport visar den precis så.",
+  "fr.done.next": "Vad du kan göra härnäst",
+  "fr.done.goToPassport": "Gå till mitt Security Passport",
+  "fr.done.addAnother": "Lägg till en merit till",
+  "fr.done.completeProfile": "Komplettera min profil",
+
+  // The readback that did not answer
+  "fr.unknown.title": "Vi kunde inte bekräfta sparningen",
+  "fr.unknown.body":
+    "Din merit kan ha sparats, men vi fick inget svar när vi läste tillbaka den. Öppna ditt Passport och se efter innan du lägger till den igen.",
+  "fr.unknown.action": "Öppna mitt Security Passport",
+
+  // The first-run hand-off from the Passport overview
+  "fr.handoff.loading": "Hämtar ditt Security Passport …",
+
   // ── Onboarding ───────────────────────────────────────────────────────
   "onboarding.title": "Bygg ditt Security Passport",
   "onboarding.step": "Steg",
@@ -1451,6 +1564,9 @@ const sv = {
 
   "entry.emp.employer": "Arbetsgivare",
   "entry.emp.role": "Roll",
+  "entry.emp.country": "Land där arbetet utfördes",
+  "entry.emp.countryPlaceholder": "Välj land",
+  "entry.error.countryRequired": "Välj det land arbetet utfördes i.",
   "entry.emp.startedOn": "Från och med",
   "entry.emp.endedOn": "Till och med",
   "entry.emp.ongoing": "Jag arbetar kvar här",
@@ -1874,6 +1990,114 @@ const en: Record<PassportCopyKey, string> = {
     "Only an authorised employer, training provider or issuer can make an entry verified.",
   "welcome.start": "Get started",
   "welcome.resume": "Continue where you left off",
+
+  // ── First run: create the Passport, add the first merit ──────────────
+  "fr.progress": "Step {n} of {total}",
+  "fr.stepLabel.create": "Create Passport",
+  "fr.stepLabel.choose": "Choose merit",
+  "fr.stepLabel.details": "Details",
+  "fr.stepLabel.done": "Done",
+
+  // Screen 1
+  "fr.create.title": "Create your Security Passport",
+  "fr.create.body":
+    "Keep your professional merits in one place. You decide what to share and with whom.",
+  "fr.create.cta": "Create my Security Passport",
+  "fr.create.creating": "Creating \u2026",
+  "fr.create.privateTitle": "Private until you share it yourself",
+  "fr.create.privateBody":
+    "Your Passport is visible only to you. Nothing reaches an employer until you deliberately share it, and you can stop sharing at any time.",
+
+  // Screen 2
+  "fr.choose.title": "Start with your first merit",
+  "fr.choose.body":
+    "Add something you have done or achieved. You can update the details later.",
+  "fr.choose.employment": "Employment",
+  "fr.choose.employmentHint": "A job you have or have had.",
+  "fr.choose.education": "Education",
+  "fr.choose.educationHint": "School, vocational training or university.",
+  "fr.choose.course": "Course",
+  "fr.choose.courseHint": "A course or training you have completed.",
+  "fr.choose.certification": "Certification",
+  "fr.choose.certificationHint": "A certificate you have been awarded.",
+  "fr.choose.licence": "Licence or professional authorisation",
+  "fr.choose.licenceHint": "A professional authorisation or appointment.",
+
+  // Screen 3
+  "fr.details.title.employment": "About your employment",
+  "fr.details.title.education": "About your education",
+  "fr.details.title.course": "About your course",
+  "fr.details.title.certification": "About your certification",
+  "fr.details.title.licence": "About your licence or authorisation",
+  "fr.details.body": "Fill in what you know now. You can add more later.",
+  "fr.details.change": "Change merit type",
+  "fr.field.role": "Role or title",
+  "fr.field.employer": "Employer",
+  "fr.field.country": "Country where you worked",
+  "fr.field.countryPlaceholder": "Select a country",
+  "fr.field.countryHelp":
+    "We never state a country for you. Your Passport can currently record work in Sweden, the United Kingdom and the United Arab Emirates. More countries will follow.",
+  "fr.field.startedOn": "Start date",
+  "fr.field.ongoing": "I still work here",
+  "fr.field.endedOn": "End date",
+  "fr.field.educationTitle": "Name of the education",
+  "fr.field.school": "School or institution",
+  "fr.field.courseTitle": "Name of the course",
+  "fr.field.provider": "Training provider",
+  "fr.field.certificationTitle": "Name of the certification",
+  "fr.field.issuer": "Issuer",
+  "fr.field.licenceTitle": "Name of the authorisation",
+  "fr.field.authority": "Authority or issuer",
+  "fr.field.completedOn": "Date (if you know it)",
+  "fr.field.optional": "Optional",
+  "fr.declaration":
+    "I confirm that the information I provide is accurate to the best of my knowledge.",
+  "fr.save": "Save to my Passport",
+  "fr.saving": "Saving \u2026",
+  "fr.saveExit": "Save and exit",
+  "fr.error.required": "Please fill in this field.",
+  "fr.error.invalidDate": "Enter a valid date.",
+  "fr.error.futureDate": "The date cannot be in the future.",
+  "fr.error.endBeforeStart": "The end date must be after the start date.",
+  "fr.error.declaration": "Tick the confirmation before saving.",
+  "fr.saveExit.hint":
+    "We save what you have filled in and take you to My Career. You can get back here from your Security Passport.",
+  "fr.error.createFailed":
+    "Your Security Passport could not be created. Nothing has been added to your account \u2014 please try again.",
+  "fr.error.saveRefused":
+    "The merit was not saved. Nothing in your Passport has changed \u2014 check the fields above and try again.",
+  "fr.error.saveIndeterminate":
+    "We do not know whether the merit was saved. The server\u2019s answer never reached us, so it may exist. Press \u201cSave to my Passport\u201d again \u2014 we reuse the same save, so you cannot add it twice by accident.",
+  "fr.error.draftFailed":
+    "The draft could not be saved, so we have stayed here. Your details are still in the form.",
+  "fr.unknown.reconcile": "Try saving again",
+  "fr.loadError.title": "We could not load your Security Passport",
+  "fr.loadError.body":
+    "Something went wrong while reading your Passport. That does not mean you do not have one \u2014 we just could not read it right now.",
+  "fr.loadError.reassurance": "Nothing in your Passport has changed.",
+  "fr.loadError.retry": "Try again",
+  "fr.done.completeProfileHint":
+    "A longer page where you can fill in more details, at your own pace.",
+  "fr.error.retry": "Try again",
+
+  // Screen 4
+  "fr.done.title": "Your merit is saved",
+  "fr.done.status": "Information provided by you",
+  "fr.done.statusBody":
+    "This is your own statement. Nobody has checked it yet, and your Passport shows it exactly that way.",
+  "fr.done.next": "What you can do next",
+  "fr.done.goToPassport": "Go to my Security Passport",
+  "fr.done.addAnother": "Add another merit",
+  "fr.done.completeProfile": "Complete my profile",
+
+  // The readback that did not answer
+  "fr.unknown.title": "We could not confirm the save",
+  "fr.unknown.body":
+    "Your merit may have been saved, but we got no answer when we read it back. Open your Passport and check before adding it again.",
+  "fr.unknown.action": "Open my Security Passport",
+
+  // The first-run hand-off from the Passport overview
+  "fr.handoff.loading": "Loading your Security Passport \u2026",
 
   "onboarding.title": "Build your Security Passport",
   "onboarding.step": "Step",
@@ -2956,6 +3180,9 @@ const en: Record<PassportCopyKey, string> = {
 
   "entry.emp.employer": "Employer",
   "entry.emp.role": "Role",
+  "entry.emp.country": "Country where the work was done",
+  "entry.emp.countryPlaceholder": "Select a country",
+  "entry.error.countryRequired": "Select the country the work was done in.",
   "entry.emp.startedOn": "From",
   "entry.emp.endedOn": "Until",
   "entry.emp.ongoing": "I still work here",

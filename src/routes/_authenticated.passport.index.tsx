@@ -22,13 +22,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ShieldQuestion } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import {
-  ensureMyPassport,
-  getMyPassport,
-  type PassportSnapshot,
-} from "@/lib/security-passport/passport.functions";
+import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import { PassportOverview } from "@/components/security-passport/PassportOverview";
 import { needsWorkLocationConfirmation } from "@/lib/security-passport/onboarding";
+import { deriveFirstRunState } from "@/lib/security-passport/first-run";
+import { FirstRunLoading } from "@/components/security-passport/FirstRunJourney";
 import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
 import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
@@ -58,7 +56,6 @@ function PassportOverviewRoute() {
   const { pt } = usePassportCopy();
   const navigate = useNavigate();
   const load = useServerFn(getMyPassport);
-  const create = useServerFn(ensureMyPassport);
   const loadRequests = useServerFn(listMyVerificationRequests);
   // The governed market catalogue. Read here rather than in the component so
   // the Passport component tree stays free of the server tier.
@@ -75,7 +72,6 @@ function PassportOverviewRoute() {
     VERIFICATION_ATTENTION_UNAVAILABLE,
   );
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
 
   const refresh = useCallback(async () => {
@@ -134,18 +130,33 @@ function PassportOverviewRoute() {
     void refresh();
   }, [refresh]);
 
-  async function onCreate() {
-    setBusy(true);
-    try {
-      await create({ data: undefined });
-      await refresh();
-    } catch (err) {
-      console.error("[passport] create failed", err);
-      setError(pt("live.error"));
-    } finally {
-      setBusy(false);
-    }
-  }
+  // ── IS THERE A PASSPORT TO SHOW? ───────────────────────────────────
+  //
+  // Derived from the snapshot with the same function the journey itself uses,
+  // so the two cannot disagree about whether this person has finished their
+  // first run. `overview` is the only state this page renders; every other
+  // one belongs to /passport/onboarding.
+  const firstRun = snapshot
+    ? deriveFirstRunState({
+        profile: snapshot.profile
+          ? {
+              onboardingState: snapshot.profile.onboardingState,
+              onboardingAnswers: snapshot.profile.onboardingAnswers,
+            }
+          : null,
+        meritLifecycleStates: [
+          ...snapshot.holder.claims.map((c) => c.lifecycleState),
+          ...snapshot.holder.periods.map((p) => p.lifecycleState),
+        ],
+      })
+    : null;
+
+  // `replace`, so the browser's Back button does not put somebody straight
+  // back onto a page that will send them here again.
+  const handOff = firstRun !== null && firstRun.screen !== "overview";
+  useEffect(() => {
+    if (handOff) void navigate({ to: "/passport/onboarding", replace: true });
+  }, [handOff, navigate]);
 
   if (error) {
     return (
@@ -172,32 +183,28 @@ function PassportOverviewRoute() {
   }
 
   if (!snapshot) {
-    return <p className="text-sm text-muted-foreground">{pt("live.loading")}</p>;
+    return <FirstRunLoading />;
   }
 
-  // No Passport yet: an explicit, private-by-default invitation rather than
-  // creating one silently on first visit. A professional record should begin
-  // with a decision.
-  if (!snapshot.profile) {
-    return (
-      <div className="mx-auto max-w-2xl rounded-xl border border-border bg-card p-6">
-        <h2
-          className="text-2xl font-semibold tracking-tight text-foreground"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {pt("live.startTitle")}
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{pt("live.startBody")}</p>
-        <button
-          type="button"
-          onClick={() => void onCreate()}
-          disabled={busy}
-          className="mt-5 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          {busy ? pt("live.creating") : pt("live.start")}
-        </button>
-      </div>
-    );
+  // ── THE FIRST RUN OWNS THE EMPTY PASSPORT ──────────────────────────
+  //
+  // This page used to answer two different questions with one screen: "here
+  // is your Passport" and "you do not have one yet". Both live on, but the
+  // second is now a JOURNEY rather than a button — create the Passport, add a
+  // merit, be told what was recorded — and it belongs at one URL so that a
+  // refresh resumes it and a link can point at it.
+  //
+  // The condition is a CURRENT merit, decided by `deriveFirstRunState` from
+  // the same lifecycle predicates My Career uses. Not `onboarding_state`: a
+  // profile can say completed and hold nothing, and hosted data carries such
+  // rows. Telling that holder they were finished, above an empty Passport, is
+  // the single most damaging thing this page could say.
+  //
+  // A draft or an archived credential does not count. Those are unfinished
+  // work and history; neither is Passport content, so neither ends the first
+  // run.
+  if (!firstRun || firstRun.screen !== "overview") {
+    return <FirstRunLoading />;
   }
 
   return (
@@ -295,8 +302,17 @@ function PassportOverviewRoute() {
         // old `DEFAULT 'SE'`. Deliberately the same prompt, because it is the
         // same question: the product does not know where this person works.
         needsWorkLocation={needsWorkLocationConfirmation(snapshot.profile)}
-        onConfirmWorkLocation={() => void navigate({ to: "/passport/onboarding" })}
-        onContinue={() => void navigate({ to: "/passport/onboarding" })}
+        // ── NEITHER OF THESE GOES TO THE FIRST RUN ANY MORE ──────────
+        //
+        // /passport/onboarding is now a JOURNEY that ends the moment a
+        // current merit exists — and this page only renders when one does, so
+        // sending a holder there would bounce them straight back here. Both
+        // controls want the same place a person actually adds and corrects
+        // things, and each opens the section it is about.
+        onConfirmWorkLocation={() =>
+          void navigate({ to: "/passport/information", hash: "sp-work-country" })
+        }
+        onContinue={() => void navigate({ to: "/passport/information", hash: "sp-employment" })}
         onOpenCard={() => void navigate({ to: "/passport/card" })}
         onShare={() => void navigate({ to: "/passport/share" })}
         // Undefined until the market answer arrives, which renders no

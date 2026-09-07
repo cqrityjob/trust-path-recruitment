@@ -257,7 +257,12 @@ const experienceInput = z
     startedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }),
     /** Null means ongoing. */
     endedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
-    jurisdictionCode: z.string().length(2).default("SE"),
+    // NO DEFAULT. A country is a factual claim about where somebody worked,
+    // and the server may not supply one -- the caller states it or the write
+    // is refused. `sp_experience_periods.jurisdiction_code` carries its own
+    // `DEFAULT 'SE'`, so a schema default here was the second place the same
+    // guess could be made.
+    jurisdictionCode: z.string().length(2),
   })
   // An end before the start is not an incomplete entry, it is a contradiction,
   // and the database CHECK would refuse it anyway. Refusing here gives the

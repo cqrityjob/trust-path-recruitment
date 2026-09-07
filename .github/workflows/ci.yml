@@ -227,6 +227,25 @@ jobs:
       - name: Passport fixture and copy-parity check
         run: bun run passport-fixture:check
 
+      # THE FIRST RUN (PR #192). Signup sends every new account to /passport,
+      # and this is what it finds there: create the Passport, add one merit,
+      # be told honestly what was recorded.
+      #
+      # Renders all four screens in BOTH languages and asserts the approved
+      # copy verbatim, that no Swedish leaks into the English interface, and
+      # that the confirmation screen never says verified, confirmed or
+      # documented about a merit its holder simply stated. Pins the state
+      # machine over every persisted shape -- including the legacy profile
+      # that says `completed` and holds nothing, which must receive the
+      # first-merit state and never "you are set up". Pins the persistence
+      # properties the browser owns (the operation id minted before the first
+      # attempt, single-flight completion, the debounced save flushed and
+      # awaited, "Save and exit" writing a draft and never a declaration), and
+      # asserts that the migration behind it carries every named refusal and
+      # that its function body cannot name a trust column.
+      - name: Passport first-run journey check
+        run: bun run passport-first-run:check
+
       # THE PLUMBING MAY NOT REACH THE TRUST SURFACES. Independent pilot
       # testing found the trust MODEL sound -- issuer separate from verifier,
       # current trust separate from withdrawn -- and the implementation

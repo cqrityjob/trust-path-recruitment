@@ -830,7 +830,16 @@ function PassportInformationRoute() {
             type="button"
             onClick={() => {
               setExpErrors({});
-              setEditing({ kind: "experience", draft: emptyExperienceDraft() });
+              // Seeded from the holder's own CONFIRMED work country, and from nothing
+              // else. An unconfirmed legacy 'SE' is not an answer they gave, so
+              // it must not become the country on a new employment either --
+              // `workCountry.confirmed` is what separates the two.
+              setEditing({
+                kind: "experience",
+                draft: emptyExperienceDraft(
+                  workCountry?.confirmed ? workCountry.jurisdictionCode : null,
+                ),
+              });
             }}
             className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
@@ -967,6 +976,9 @@ function PassportInformationRoute() {
                 type="button"
                 onClick={() => {
                   setClaimErrors({});
+                  // No country is seeded. This form shows no country field,
+                  // and where somebody WORKS is not the jurisdiction of their
+                  // education, course or certificate.
                   setEditing({ kind: "claim", draft: emptyClaimDraft(section.kind) });
                 }}
                 className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
