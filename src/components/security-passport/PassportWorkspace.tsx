@@ -40,8 +40,9 @@ import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { isArchivedMerit, type LifecycleState } from "@/lib/security-passport/types";
-import { formatPeriodRange } from "@/lib/security-passport/format";
+import { formatIsoDay, formatIsoDayRange } from "@/lib/security-passport/format";
 import type {
+  ReviewReadState,
   PassportWorkspace as Workspace,
   WorkspaceMerit,
   WorkspaceMeritStatus,
@@ -140,35 +141,45 @@ function StatusFigure({
   count,
   label,
   help,
-  unknownLabel,
-  unknownHelp,
+  state,
+  unavailableLabel,
+  loadingLabel,
   testid,
 }: {
   count: number | null;
   label: string;
   help: string;
-  unknownLabel: string;
-  unknownHelp: string;
+  state: ReviewReadState;
+  unavailableLabel: string;
+  loadingLabel: string;
   testid: string;
 }) {
   const known = count !== null;
+  // ── THE HEADING SURVIVES THE FAILURE ────────────────────────────────
+  //
+  // It used to be replaced by "Kunde inte läsas", so two figures side by
+  // side became two identical headings and a reader could not tell WHICH
+  // number was missing. The category keeps its name; what changes is the
+  // value and the line under it.
   return (
     <div
       className="min-w-0 px-4 py-3 sm:px-5 sm:py-4"
       data-status-tile={testid}
       data-count={known ? String(count) : "unknown"}
+      data-review-state={state}
     >
       <p
-        className="text-2xl font-semibold tabular-nums tracking-tight text-foreground"
+        className={cn(
+          "text-2xl font-semibold tabular-nums tracking-tight",
+          known ? "text-foreground" : "text-muted-foreground",
+        )}
         style={{ fontFamily: "var(--font-display)" }}
       >
         {known ? count : "—"}
       </p>
-      <p className="mt-0.5 text-sm font-medium text-balance text-foreground">
-        {known ? label : unknownLabel}
-      </p>
+      <p className="mt-0.5 text-sm font-medium text-balance text-foreground">{label}</p>
       <p className="mt-1 text-xs leading-relaxed text-pretty text-muted-foreground">
-        {known ? help : unknownHelp}
+        {known ? help : state === "loading" ? loadingLabel : unavailableLabel}
       </p>
     </div>
   );
@@ -263,14 +274,16 @@ function MeritRow({ merit }: { merit: WorkspaceMerit }) {
     merit.organisation ??
     pt(merit.kind === "experience" ? "ws.merit.employerUnknown" : "ws.merit.organisationUnknown");
 
+  // Dates a person reads, in their own language. A raw ISO day is a
+  // database value; "2 maj 2024" is a date.
   const dates =
     merit.dateKind === "period"
       ? merit.from
-        ? formatPeriodRange(merit.from, merit.to, lang)
+        ? formatIsoDayRange(merit.from, merit.to, lang)
         : null
       : [
-          merit.from ? `${pt("claims.issuedOn")} ${merit.from}` : null,
-          merit.to ? `${pt("claims.validUntil")} ${merit.to}` : null,
+          merit.from ? `${pt("claims.issuedOn")} ${formatIsoDay(merit.from, lang)}` : null,
+          merit.to ? `${pt("claims.validUntil")} ${formatIsoDay(merit.to, lang)}` : null,
         ]
           .filter(Boolean)
           .join(" · ") || null;
@@ -382,11 +395,11 @@ function DraftRow({ merit }: { merit: WorkspaceMerit }) {
  */
 function NextStepCard({
   step,
-  unavailable,
+  reviewState,
   onRetry,
 }: {
   step: WorkspaceNextStep | null;
-  unavailable: boolean;
+  reviewState: ReviewReadState;
   onRetry?: () => void;
 }) {
   const { pt } = usePassportCopy();
@@ -409,7 +422,32 @@ function NextStepCard({
     </section>
   );
 
-  if (unavailable) {
+  // ── LOADING IS NOT FAILURE ──────────────────────────────────────────
+  //
+  // A slow but perfectly healthy request must never announce an error. It is
+  // `role="status"`, not `role="alert"`, it offers no retry for something
+  // that has not failed, and it says what it is doing.
+  if (reviewState === "loading") {
+    return shell(
+      <div role="status" aria-live="polite">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          {pt("ws.next.title")}
+        </p>
+        <h3
+          className="mt-2 text-xl font-semibold tracking-tight text-balance text-foreground"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {pt("ws.next.loadingTitle")}
+        </h3>
+        <p className="mt-2 max-w-[60ch] text-sm text-muted-foreground">
+          {pt("ws.next.loadingBody")}
+        </p>
+      </div>,
+      { dark: false, state: "loading" },
+    );
+  }
+
+  if (reviewState === "failed") {
     return shell(
       <div role="alert">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -574,7 +612,7 @@ function AddMeritChooser({ dominant }: { dominant: boolean }) {
   ] as const;
 
   return (
-    <details className="group relative" data-add-merit-chooser>
+    <details id="add-merit" className="group relative scroll-mt-24" data-add-merit-chooser>
       <summary
         data-primary-cta={dominant ? "add-merit" : undefined}
         data-cta="add-merit"
@@ -642,12 +680,12 @@ export function PassportWorkspace({
   className?: string;
 }) {
   const { pt } = usePassportCopy();
-  const { status, groups, nextStep, unavailable } = workspace;
+  const { status, groups, nextStep, reviewState } = workspace;
 
   // One dominant call to action. When a reviewer is waiting, the recommended
   // step is it and this steps down; otherwise this is the page's primary.
   const stepIsDominant =
-    !unavailable && nextStep !== null && nextStep.classification !== "suggestion";
+    reviewState === "available" && nextStep !== null && nextStep.classification !== "suggestion";
 
   return (
     <div className={cn("mx-auto w-full max-w-3xl", className)} data-passport-workspace>
@@ -709,41 +747,45 @@ export function PassportWorkspace({
             // included, because "a file exists" and "a file was checked" are
             // the two states this product most needs to keep apart.
             //
-            // NULL when the review read failed: "nobody is reviewing these"
-            // is exactly what could not be established.
-            count={status.registered}
+            // NULL when the review read has not answered: "no case is open
+            // on these" is exactly what is not established yet.
+            count={status.selfReported}
             label={pt("ws.status.registered")}
             help={pt("ws.status.registeredHelp")}
-            unknownLabel={pt("ws.status.unknown")}
-            unknownHelp={pt("ws.status.registeredUnknownHelp")}
+            state={reviewState}
+            unavailableLabel={pt("ws.status.temporarilyUnavailable")}
+            loadingLabel={pt("ws.status.loading")}
           />
           <StatusFigure
             testid="documented"
             count={status.documented}
             label={pt("ws.status.documented")}
             help={pt("ws.status.documentedHelp")}
-            unknownLabel={pt("ws.status.unknown")}
-            unknownHelp={pt("ws.status.unknownHelp")}
+            state={reviewState}
+            unavailableLabel={pt("ws.status.temporarilyUnavailable")}
+            loadingLabel={pt("ws.status.loading")}
           />
           <StatusFigure
             testid="source-confirmed"
             count={status.sourceConfirmed}
             label={pt("ws.status.sourceConfirmed")}
             help={pt("ws.status.sourceConfirmedHelp")}
-            unknownLabel={pt("ws.status.unknown")}
-            unknownHelp={pt("ws.status.unknownHelp")}
+            state={reviewState}
+            unavailableLabel={pt("ws.status.temporarilyUnavailable")}
+            loadingLabel={pt("ws.status.loading")}
           />
           <StatusFigure
             testid="in-review"
-            // BOTH open shapes: a review nobody has answered yet, and one
-            // where the reviewer has asked the holder something. Which of
-            // the two it is, and what it asks of this person, is said by the
-            // merit's own status word and by the region below.
-            count={status.inReview}
+            // OPEN CASES: a review nobody has answered yet AND one where the
+            // reviewer has asked this holder something. The help line says
+            // both halves, because the figure holds both — "someone else is
+            // looking at them" was wrong about every clarification inside it.
+            count={status.openCases}
             label={pt("ws.status.inReview")}
             help={pt("ws.status.inReviewHelp")}
-            unknownLabel={pt("ws.status.unknown")}
-            unknownHelp={pt("ws.status.unknownHelp")}
+            state={reviewState}
+            unavailableLabel={pt("ws.status.temporarilyUnavailable")}
+            loadingLabel={pt("ws.status.loading")}
           />
         </div>
         {/* A fifth figure only when there is one. A merit whose validity has
@@ -751,6 +793,10 @@ export function PassportWorkspace({
             permanent "0 expired" line would be four words of noise. */}
         {status.lapsed > 0 ? (
           <p className="mt-3 text-sm text-muted-foreground" data-status-lapsed>
+            {/* NO CLAIM ABOUT WHAT CONFIRMED IT. This line holds a lapsed
+                CQrityjob document review and a lapsed source confirmation
+                alike; "var bekräftad en gång" is true of the second and
+                false of the first. It says only what is true of both. */}
             <span className="font-medium text-foreground">
               {status.lapsed} {pt("ws.status.lapsed").toLocaleLowerCase()}
             </span>{" "}
@@ -761,7 +807,7 @@ export function PassportWorkspace({
 
       {/* ── 3 · The one thing to do next ──────────────────────────────── */}
       <div className="mt-6">
-        <NextStepCard step={nextStep} unavailable={unavailable} onRetry={onRetry} />
+        <NextStepCard step={nextStep} reviewState={reviewState} onRetry={onRetry} />
       </div>
 
       {/* ── 4 · The merits themselves ─────────────────────────────────── */}
@@ -814,9 +860,27 @@ export function PassportWorkspace({
               </div>
             ) : null}
 
+            {/* ── OPEN, AND WAITING ON THIS PERSON ────────────────────
+                Its own group. The review is open AND the holder is the
+                blocker; "aktuella meriter" says neither, and "pågående
+                granskning" says only the first. The figure that counts it
+                says both halves in its help line. */}
+            {groups.needsAnswer.length > 0 ? (
+              <div data-merit-group="needs-answer">
+                <Subhead help={pt("ws.merits.needsAnswerHelp")}>
+                  {pt("ws.merits.needsAnswer")}
+                </Subhead>
+                <ul className="-mx-3 divide-y divide-border">
+                  {groups.needsAnswer.map((m) => (
+                    <MeritRow key={m.id} merit={m} />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             {groups.inReview.length > 0 ? (
               <div data-merit-group="in-review">
-                <Subhead help={pt("ws.status.inReviewHelp")}>{pt("ws.merits.inReview")}</Subhead>
+                <Subhead help={pt("att.waitingHint")}>{pt("ws.merits.inReview")}</Subhead>
                 <ul className="-mx-3 divide-y divide-border">
                   {groups.inReview.map((m) => (
                     <MeritRow key={m.id} merit={m} />

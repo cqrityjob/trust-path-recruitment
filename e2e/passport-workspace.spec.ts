@@ -119,6 +119,9 @@ interface Scenario {
   readonly requests: readonly Request[];
   /** The verification read fails. The page must survive it and say so. */
   readonly verificationFails?: boolean;
+  /** The verification read is SLOW but healthy. A page that announces a
+   *  failure here is announcing one that has not happened. */
+  readonly verificationDelayMs?: number;
   /** The Passport read fails. The only failure with no page. */
   readonly passportFails?: boolean;
   /** No profile row and no merit: the first run owns this holder. */
@@ -329,6 +332,9 @@ const TWO_QUESTIONS: Scenario = {
   ],
 };
 
+/** A healthy read that takes its time. */
+const SLOW_REVIEW: Scenario = { ...MIXED, verificationDelayMs: 4000 };
+
 /** Two merits nobody has reviewed: the merits list is the target. */
 const TWO_UNREVIEWED: Scenario = {
   claims: [claim({ id: "c-a" }), claim({ id: "c-b", titleSv: "Kurs B", titleEn: "Course B" })],
@@ -457,6 +463,8 @@ async function mount(
         return ok(route, snapshotOf(scenario));
 
       case "listMyVerificationRequests":
+        if (scenario.verificationDelayMs)
+          await new Promise((r) => setTimeout(r, scenario.verificationDelayMs));
         if (scenario.verificationFails) return boom(route, "verification read failed");
         return ok(route, { requests: scenario.requests, decisions: [] });
 
@@ -564,6 +572,7 @@ async function mount(
   });
 
   page.on("pageerror", (e) => pageErrors.push(String(e)));
+  if (process.env.E2E_DEBUG) page.on("console", (m) => console.log(`[page] ${m.text()}`));
 
   await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
 }
@@ -1119,6 +1128,113 @@ test.describe("Security Passport — the workspace", () => {
     expect(pageErrors).toEqual([]);
   });
 
+  test("10p · the add-another-merit step OPENS the chooser, in place", async ({ page }) => {
+    await mount(page, JUST_ADDED);
+    await ready(page);
+    await expect(page.locator("[data-next-step]")).toHaveAttribute(
+      "data-next-step",
+      "add_more_merits",
+    );
+    // Collapsed to begin with: a disclosure that is already open is not a
+    // proof that pressing the step opened it.
+    await expect(page.locator("[data-add-merit-chooser]")).not.toHaveAttribute("open", /.*/);
+
+    await page.locator("[data-next-step-cta]").click();
+
+    // The URL says where we went, the chooser is open, and the keyboard is
+    // on it — not at the top of a long page the person must now search.
+    await expect(page).toHaveURL(/\/passport#add-merit$/);
+    await expect(page.locator("#add-merit")).toHaveAttribute("data-hash-target", "add-merit");
+    await expect(page.locator("[data-add-merit-chooser]")).toHaveAttribute("open", /.*/);
+    await expect(page.locator('[data-cta="add-merit"]')).toBeFocused();
+
+    // All three options are visible and each is a real destination.
+    for (const kind of ["employment", "education", "credential"] as const) {
+      await expect(page.locator(`[data-add-merit="${kind}"]`)).toBeVisible();
+    }
+
+    // And one of them works from here, with a way back.
+    await page.locator('[data-add-merit="education"]').click();
+    await landed(page, {
+      url: /\/passport\/information#sp-education$/,
+      heading: /Mina uppgifter/,
+    });
+  });
+
+  // ── SAME-PAGE FRAGMENT NAVIGATION ────────────────────────────────────
+  //
+  // Pressed while already on /passport, these change the fragment and fire
+  // no document load at all. Before the correction they moved the address
+  // bar and nothing else.
+  for (const spec of [
+    { anchor: "attention", scenario: () => TWO_QUESTIONS, step: "respond_to_clarification" },
+    { anchor: "merits", scenario: () => TWO_UNREVIEWED, step: "submit_passport_verification" },
+  ] as const) {
+    test(`10q · a same-page click on #${spec.anchor} resolves, focuses and scrolls`, async ({
+      page,
+    }) => {
+      await mount(page, spec.scenario());
+      await ready(page);
+      await expect(page.locator("[data-next-step]")).toHaveAttribute("data-next-step", spec.step);
+      // Nothing has resolved yet — the page was opened without a fragment.
+      await expect(page.locator(`#${spec.anchor}`)).not.toHaveAttribute("data-hash-target", /.*/);
+
+      await page.locator("[data-next-step-cta]").click();
+
+      await expect(page).toHaveURL(new RegExp(`/passport#${spec.anchor}$`));
+      const target = page.locator(`#${spec.anchor}`);
+      await expect(target).toHaveAttribute("data-hash-target", spec.anchor);
+      await expect(target).toBeFocused();
+      await expect(target).toBeInViewport();
+      // Exactly one element answers to that id, so "the correct unique
+      // target" is a fact rather than the first of several.
+      expect(await page.locator(`[id="${spec.anchor}"]`).count()).toBe(1);
+      expect(pageErrors).toEqual([]);
+    });
+  }
+
+  test("10r · a slow but healthy review read never announces a failure", async ({ page }) => {
+    await mount(page, SLOW_REVIEW);
+    await ready(page);
+
+    // While it is in flight: a polite status, no alert, no retry, and the
+    // figures keep their headings.
+    await expect(page.locator("[data-next-step]")).toHaveAttribute("data-next-step", "loading");
+    await expect(page.locator("[data-next-step] [data-retry]")).toHaveCount(0);
+    await expect(page.locator("[data-passport-workspace]")).not.toContainText(
+      "Vi kunde inte läsa dina granskningar",
+    );
+    await expect(page.locator('[data-status-tile="registered"]')).toContainText("Registrerade");
+    await expect(page.locator('[data-status-tile="registered"]')).toHaveAttribute(
+      "data-review-state",
+      "loading",
+    );
+
+    // And when it answers, the page settles into the real state.
+    await expect(page.locator('[data-status-tile="in-review"]')).toHaveAttribute(
+      "data-count",
+      "2",
+      { timeout: 20_000 },
+    );
+    await expect(page.locator("[data-next-step]")).toHaveAttribute(
+      "data-next-step",
+      "respond_to_clarification",
+    );
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("10s · a failed review read is explained once, not in two blocks", async ({ page }) => {
+    await mount(page, VERIFICATION_DOWN);
+    await ready(page);
+    const failureSentence = "Vi kunde inte läsa dina granskningar";
+    await expect(page.locator("[data-next-step]")).toContainText(failureSentence);
+    // The outcomes panel used to print its own version underneath.
+    const body = await page.locator("[data-passport-workspace]").innerText();
+    expect(body.split("Vi kunde inte hämta dina verifieringar just nu").length - 1).toBe(0);
+    await expect(page.locator("[data-next-step] [data-retry]")).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+
   // One test per anchor, deliberately: two `goto`s that differ only in the
   // fragment are a same-document navigation, so the route never remounts and
   // the second arrival would be asserted against the first one's effect.
@@ -1156,35 +1272,97 @@ test.describe("Security Passport — the workspace", () => {
     await shoot(page, "mixed-en-1440");
   });
 
-  test("13 · the interactive targets are big enough and the focus ring is visible", async ({
-    page,
-  }) => {
+  test("13 · every interactive control is big enough and shows its focus", async ({ page }) => {
     await mount(page, MIXED);
     await ready(page);
 
-    const boxes = await page.evaluate(() =>
-      [
-        ...document.querySelectorAll(
-          "[data-passport-workspace] a, [data-passport-workspace] button",
-        ),
-      ]
+    // EVERY interactive kind, not just links and buttons: a summary is a
+    // control, and it was the one this page added.
+    const SELECTOR =
+      "[data-passport-workspace] a, [data-passport-workspace] button, " +
+      "[data-passport-workspace] summary, [data-passport-workspace] input, " +
+      "[data-passport-workspace] select, [data-passport-workspace] textarea, " +
+      '[data-passport-workspace] [role="button"], [data-passport-workspace] [tabindex]:not([tabindex="-1"])';
+
+    // Open the chooser first, so its options are audited too.
+    await page.locator('[data-cta="add-merit"]').click();
+    await expect(page.locator('[data-add-merit="employment"]')).toBeVisible();
+
+    const boxes = await page.evaluate((selector) => {
+      return [...document.querySelectorAll(selector)]
         .map((el) => {
           const r = el.getBoundingClientRect();
-          return { w: Math.round(r.width), h: Math.round(r.height), text: el.textContent?.trim() };
+          return {
+            w: Math.round(r.width),
+            h: Math.round(r.height),
+            tag: el.tagName.toLowerCase(),
+            text: (el.textContent ?? "").trim().slice(0, 40),
+          };
         })
-        .filter((b) => b.w > 0),
-    );
+        .filter((b) => b.w > 0 && b.h > 0);
+    }, SELECTOR);
+    expect(boxes.length, "no interactive controls found").toBeGreaterThan(8);
+    // The summary really is in the audit, rather than the selector silently
+    // matching nothing.
+    expect(
+      boxes.some((b) => b.tag === "summary"),
+      "no <summary> audited",
+    ).toBe(true);
     for (const b of boxes) {
-      expect(b.h, `height of "${b.text}"`).toBeGreaterThanOrEqual(44);
-      expect(b.w, `width of "${b.text}"`).toBeGreaterThanOrEqual(44);
+      expect(b.h, `height of <${b.tag}> "${b.text}"`).toBeGreaterThanOrEqual(44);
+      expect(b.w, `width of <${b.tag}> "${b.text}"`).toBeGreaterThanOrEqual(44);
     }
 
-    await page.locator('[data-cta="add-merit"]').focus();
-    const outline = await page.evaluate(() => {
-      const el = document.activeElement as HTMLElement | null;
-      return el ? getComputedStyle(el).outlineStyle : "none";
+    // Every tab stop paints a focus indicator.
+    const withoutRing = await page.evaluate((selector) => {
+      const out: string[] = [];
+      for (const el of [...document.querySelectorAll(selector)] as HTMLElement[]) {
+        if (!el.offsetParent && el.tagName !== "SUMMARY") continue;
+        el.focus();
+        const s = getComputedStyle(el);
+        const ring =
+          s.outlineStyle !== "none" ||
+          s.boxShadow !== "none" ||
+          getComputedStyle(el, ":focus-visible").outlineStyle !== "none";
+        if (!ring) out.push(`${el.tagName}: ${(el.textContent ?? "").trim().slice(0, 40)}`);
+      }
+      return out;
+    }, SELECTOR);
+    expect(withoutRing, "controls with no visible focus indicator").toEqual([]);
+
+    // One H1.
+    await expect(page.locator("h1")).toHaveCount(1);
+  });
+
+  test("13b · the merit chooser is operable from the keyboard alone", async ({ page }) => {
+    await mount(page, MIXED);
+    await ready(page);
+
+    const summary = page.locator('[data-cta="add-merit"]');
+    const box = await summary.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+
+    // Focus it without a pointer, open it with the keyboard, and check the
+    // panel it reveals is neither empty nor unreachable.
+    await summary.focus();
+    await expect(summary).toBeFocused();
+    await expect(page.locator("[data-add-merit-chooser]")).not.toHaveAttribute("open", /.*/);
+    await page.keyboard.press("Enter");
+    await expect(page.locator("[data-add-merit-chooser]")).toHaveAttribute("open", /.*/);
+
+    const options = page.locator("[data-add-merit]");
+    await expect(options).toHaveCount(3);
+    for (let i = 0; i < 3; i += 1) await expect(options.nth(i)).toBeVisible();
+
+    // Tab reaches the first option, and Enter follows it.
+    await page.keyboard.press("Tab");
+    await expect(page.locator('[data-add-merit="employment"]')).toBeFocused();
+    await page.keyboard.press("Enter");
+    await landed(page, {
+      url: /\/passport\/information#sp-employment$/,
+      heading: /Mina uppgifter/,
     });
-    expect(outline).not.toBe("none");
   });
 });
 
@@ -1228,4 +1406,45 @@ test.describe("Security Passport — the workspace at small widths", () => {
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
     await shoot(page, "mixed-sv-720-zoom200");
   });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   Review screenshots
+   ══════════════════════════════════════════════════════════════════════
+   Only when PASSPORT_SHOTS names a directory. No assertions: the point is
+   to photograph the same fixtures on both sides of a change, so the block
+   must also run against code that does not have this page yet.
+
+     PASSPORT_SHOTS=docs/passport/workspace PASSPORT_SHOTS_TAG=after \
+       E2E_BASE_URL=http://127.0.0.1:3100 bun run e2e:workspace
+   ────────────────────────────────────────────────────────────────────── */
+
+test.describe("Security Passport — review screenshots", () => {
+  test.skip(!SHOT_DIR, "set PASSPORT_SHOTS to capture review screenshots");
+  test.describe.configure({ timeout: 240_000 });
+
+  const STATES = [
+    { name: "mixed", scenario: () => MIXED, widths: [1440, 375, 720] },
+    { name: "clarification", scenario: () => CLARIFICATION, widths: [1440, 375] },
+    { name: "review-read-failed", scenario: () => VERIFICATION_DOWN, widths: [1440, 375] },
+    { name: "just-added", scenario: () => JUST_ADDED, widths: [1440] },
+  ] as const;
+
+  for (const state of STATES) {
+    for (const width of state.widths) {
+      for (const lang of ["sv", "en"] as const) {
+        // 720 CSS pixels is 1440 at 200% zoom — WCAG 1.4.10, emulated as the
+        // width, which is what a browser actually does.
+        const suffix = width === 720 ? "720-zoom200" : String(width);
+        test(`shot · ${state.name} ${lang} ${suffix}`, async ({ page }) => {
+          await page.setViewportSize({ width, height: width < 600 ? 812 : 900 });
+          await mount(page, state.scenario(), lang);
+          // Not `ready()`: this block also runs against the page this PR
+          // replaces, which has no workspace marker at all.
+          await page.waitForTimeout(4500);
+          await shoot(page, `${state.name}-${lang}-${suffix}`);
+        });
+      }
+    }
+  }
 });

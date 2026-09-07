@@ -52,6 +52,7 @@ import {
   type MeritRow,
   type ReviewState,
 } from "@/lib/professional-identity/passport-merits";
+import { meritFigures, type MeritFigures } from "@/lib/professional-identity/merit-figures";
 import type { VerificationAttention } from "@/lib/professional-identity/verification-attention";
 import type { PassportCopyKey } from "./i18n";
 import {
@@ -64,7 +65,28 @@ import {
   type LifecycleState,
 } from "./types";
 
-export const PASSPORT_WORKSPACE_VERSION = "passport-workspace-v1" as const;
+export const PASSPORT_WORKSPACE_VERSION = "passport-workspace-v2" as const;
+
+/**
+ * How the verification read is doing.
+ *
+ * ── WHY LOADING IS NOT A THIRD NAME FOR FAILED ─────────────────────────
+ *
+ * It used to be. The route initialised its attention state to the shared
+ * UNAVAILABLE sentinel, so for as long as a perfectly healthy request took
+ * to answer, the page said the read had failed — a slow network announcing
+ * an error that had not happened. Three states, and only one of them is an
+ * error:
+ *
+ *   loading    the answer has not arrived. Say nothing about it.
+ *   available  the answer arrived. Everything review-derived is known.
+ *   failed     the read did not answer. Say so, once, with a retry.
+ *
+ * Both `loading` and `failed` suppress the recommended step, because both
+ * mean the review-dependent state is UNKNOWN. Only `failed` says so out
+ * loud.
+ */
+export type ReviewReadState = "loading" | "available" | "failed";
 
 /* ------------------------------------------------------------------ */
 /* One merit, as the workspace lists it                                */
@@ -189,9 +211,19 @@ function statedOrNull(value: string | null | undefined): string | null {
  * a page comes to tell somebody their licence is both current and archived.
  */
 export interface WorkspaceGroups {
-  /** Recorded, current, and nobody is reviewing it right now. */
+  /** Recorded, current, and no review case is open on it. */
   readonly current: readonly WorkspaceMerit[];
-  /** A review is open. A status, never a task — see passport-merits.ts. */
+  /**
+   * A reviewer has asked this holder a question.
+   *
+   * Its own group, never among the current merits: the review is open AND
+   * the holder is the blocker, and a heading that says "aktuella meriter"
+   * says neither. The figure that counts it (`open_cases`) says both halves
+   * in its help text.
+   */
+  readonly needsAnswer: readonly WorkspaceMerit[];
+  /** A review is open with somebody else. A status, never a task — see
+   *  passport-merits.ts. */
   readonly inReview: readonly WorkspaceMerit[];
   /**
    * Current merits whose review state could not be read.
@@ -265,45 +297,24 @@ export interface WorkspaceNextStep {
   readonly retiresWhen: string;
 }
 
-/**
- * The five figures the status overview prints, already decided.
- *
- * Null means "could not be read" and never 0. The component does no
- * arithmetic over `counts`: a tile that added two fields together is a
- * second derivation of the same question, and the first thing such a tile
- * forgets is that one of its addends may be unknown.
- *
- * When every figure is known they partition the holder's current merits
- * exactly, which is the property `passport-workspace:check` asserts.
- */
-export interface WorkspaceStatusCounts {
-  /** Stated by the holder and unreviewed — INCLUDING an attached document
-   *  nobody has assessed. Null when the review read failed, because "no
-   *  review is open" is exactly what could not be established. */
-  readonly registered: number | null;
-  /** A CQrityjob document review. Independent of the review read. */
-  readonly documented: number;
-  /** A source confirming a fact it was party to. Independent. */
-  readonly sourceConfirmed: number;
-  /** Open with somebody else, or open and waiting on the holder. Null when
-   *  the review read failed. */
-  readonly inReview: number | null;
-  /** Verified once, validity since lapsed. Independent. */
-  readonly lapsed: number;
-}
-
 export interface PassportWorkspace {
   readonly version: typeof PASSPORT_WORKSPACE_VERSION;
   readonly counts: MeritCounts;
-  /** What the status overview renders. See WorkspaceStatusCounts. */
-  readonly status: WorkspaceStatusCounts;
+  /** What the status overview renders, from the SHARED presentation
+   *  contract (professional-identity/merit-figures.ts) — the same five
+   *  exclusive figures My Career prints, under the same words. */
+  readonly status: MeritFigures;
   readonly groups: WorkspaceGroups;
   /** Exactly one, or null when there is genuinely nothing to recommend and
    *  when the trust standing could not be read. Those two cases are told
    *  apart by `unavailable`, never by the absence alone. */
   readonly nextStep: WorkspaceNextStep | null;
-  /** The verification read did not answer. Counts derived from it are null
-   *  and no step is recommended. */
+  /** Loading, available or failed. The component needs all three: a slow
+   *  successful read must never announce a failure. */
+  readonly reviewState: ReviewReadState;
+  /** `reviewState !== "available"` — the review-derived state is UNKNOWN.
+   *  Counts derived from it are null and no step is recommended, whether the
+   *  answer is still coming or never will. */
   readonly unavailable: boolean;
   /** True when the holder holds no CURRENT merit at all. The route hands
    *  such a holder to the first run, so the workspace never renders it —
@@ -314,8 +325,12 @@ export interface PassportWorkspace {
 export interface WorkspaceInput {
   readonly claims: readonly Claim[];
   readonly periods: readonly ExperiencePeriod[];
-  /** Null when the verification read has not answered yet or failed. */
+  /** Null unless `reviewState` is `available`. */
   readonly attention: VerificationAttention | null;
+  /** Defaults to `available` when an attention object is given and `failed`
+   *  when it is not, so an existing caller keeps its behaviour; a caller
+   *  that can tell loading from failure states it. */
+  readonly reviewState?: ReviewReadState;
   readonly now: Date;
 }
 
@@ -414,7 +429,11 @@ function byAttentionThenRecency(a: WorkspaceMerit, b: WorkspaceMerit): number {
 
 export function buildPassportWorkspace(input: WorkspaceInput): PassportWorkspace {
   const { claims, periods, attention, now } = input;
-  const review = reviewStateOf(attention);
+  const reviewState: ReviewReadState =
+    input.reviewState ?? (attention && !attention.unavailable ? "available" : "failed");
+  // `reviewStateOf` reads `unavailable` off the attention object; a loading
+  // read has no object at all, and both reach the derivation as unknown.
+  const review = reviewStateOf(reviewState === "available" ? attention : null);
 
   const merits = [
     ...claims.map((c) => meritOfClaim(c, review, now)),
@@ -425,12 +444,18 @@ export function buildPassportWorkspace(input: WorkspaceInput): PassportWorkspace
   const archived = merits.filter((m) => isArchivedMerit(m.lifecycleState)).sort(byRecency);
   const live = merits.filter((m) => isCurrentMerit(m.lifecycleState));
   const inReview = live.filter((m) => m.label === "verification_requested").sort(byRecency);
+  const needsAnswer = live.filter((m) => m.label === "clarification_needed").sort(byRecency);
   // Separated from `current` rather than mixed into it: a merit that may be
   // under review, and one nobody has looked at, must not share a heading
   // that implies the second.
   const reviewUnknown = live.filter((m) => m.label === "unknown").sort(byRecency);
   const current = live
-    .filter((m) => m.label !== "verification_requested" && m.label !== "unknown")
+    .filter(
+      (m) =>
+        m.label !== "verification_requested" &&
+        m.label !== "clarification_needed" &&
+        m.label !== "unknown",
+    )
     .sort(byAttentionThenRecency);
 
   const counts = countMeritRows(
@@ -460,27 +485,25 @@ export function buildPassportWorkspace(input: WorkspaceInput): PassportWorkspace
     now,
   );
 
-  const unavailable = attention === null || attention.unavailable;
+  // Unknown, whether it is still coming or will never come. Every figure and
+  // every group treats the two identically; only the COPY differs, and that
+  // is the component's business.
+  const unavailable = reviewState !== "available";
 
   return {
     version: PASSPORT_WORKSPACE_VERSION,
     counts,
-    // ── THE FIGURES, EACH ANSWERING FOR ITS OWN DEPENDENCE ───────────
+    // ── THE FIGURES, FROM THE SHARED CONTRACT ───────────────────────
     //
-    // Two of the five are statements about the request table and are null
-    // when it could not be read. The other three are statements about
-    // stored provenance and lifecycle, and are as true after a failed
-    // review read as before it.
-    status: {
-      registered: review.known ? counts.selfReportedCount + counts.documentProvidedCount : null,
-      documented: counts.documentedCount,
-      sourceConfirmed: counts.verifiedCount,
-      inReview:
-        counts.pendingCount === null ? null : counts.pendingCount + counts.clarificationCount,
-      lapsed: counts.expiredCount,
-    },
-    groups: { current, inReview, reviewUnknown, archived, drafts },
+    // Not computed here. `meritFigures` is what My Career prints from too,
+    // so the two surfaces cannot describe one merit differently or let two
+    // categories silently overlap. Two of the five are statements about the
+    // request table and are null when it could not be read; the other three
+    // are statements about stored provenance and lifecycle.
+    status: meritFigures(counts),
+    groups: { current, needsAnswer, inReview, reviewUnknown, archived, drafts },
     nextStep: unavailable ? null : nextStepFor({ attention: attention!, live, drafts }),
+    reviewState,
     unavailable,
     empty: live.length === 0,
   };
@@ -574,14 +597,19 @@ function nextStepFor(args: {
       kind: "add_more_merits",
       rank: 4,
       classification: "suggestion",
-      // The PAGE, not the employment block. Its label is the generic verb
-      // ("add a merit"), and a generic verb may not land on one specific
-      // form: somebody who came to record a course would arrive at a form
-      // for a job. /passport/information is the page that holds every way to
-      // enter one, so the label and the destination agree. The header's
-      // chooser is where a SPECIFIC kind is picked.
-      href: "/passport/information",
-      hash: null,
+      // ── THE CHOOSER, NOT A PAGE ──────────────────────────────────
+      //
+      // "Lägg till en merit till" pointed first at the employment block —
+      // a generic verb on one specific form — and then at the top of a long
+      // page, where the person still had to find the right section. Neither
+      // is the step. The step is: pick what kind of merit this is.
+      //
+      // So it opens the chooser that already exists on this page, in place.
+      // `ScrollToHashOnceReady` opens a <details> target and focuses its
+      // summary, so the three options are on screen and the keyboard is on
+      // them the moment the card is pressed.
+      href: "/passport",
+      hash: "add-merit",
       search: null,
       count: 1,
       retiresWhen: "a second current merit is recorded",

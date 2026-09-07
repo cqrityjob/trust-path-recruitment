@@ -38,7 +38,7 @@ import { FirstRunLoading } from "@/components/security-passport/FirstRunJourney"
 import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
 import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
 import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
-import { buildPassportWorkspace } from "@/lib/security-passport/workspace";
+import { buildPassportWorkspace, type ReviewReadState } from "@/lib/security-passport/workspace";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
 import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
 import {
@@ -72,15 +72,21 @@ function PassportWorkspaceRoute() {
   // Decided requests, which `openReviews` deliberately drops. A decision is
   // the single most important thing that happens to a request and it was the
   // one state this page could not see.
-  const [attention, setAttention] = useState<VerificationAttention>(
-    VERIFICATION_ATTENTION_UNAVAILABLE,
-  );
+  //
+  // ── LOADING IS NOT FAILURE ────────────────────────────────────────
+  //
+  // This used to be initialised to VERIFICATION_ATTENTION_UNAVAILABLE, so
+  // for as long as a perfectly healthy request took to answer, the page said
+  // the read had failed. Three states, and only one of them is an error.
+  const [attention, setAttention] = useState<VerificationAttention | null>(null);
+  const [reviewState, setReviewState] = useState<ReviewReadState>("loading");
   const [error, setError] = useState<string | null>(null);
 
   /** The verification state, on its own clock. Failing it costs the figures
    *  it feeds and nothing else — and those figures then read "could not be
    *  loaded" rather than zero. */
   const refreshVerification = useCallback(async () => {
+    setReviewState("loading");
     try {
       const reqs = await loadRequests({ data: undefined });
       const open = new Map<string, "pending" | "clarification_requested">();
@@ -91,10 +97,12 @@ function PassportWorkspaceRoute() {
       }
       setOpenReviews(open);
       setAttention(deriveVerificationAttention(reqs.requests));
+      setReviewState("available");
     } catch (err) {
       console.error("[passport] verification state load failed", err);
       setOpenReviews(new Map());
       setAttention(VERIFICATION_ATTENTION_UNAVAILABLE);
+      setReviewState("failed");
     }
   }, [loadRequests]);
 
@@ -160,11 +168,12 @@ function PassportWorkspaceRoute() {
         ? buildPassportWorkspace({
             claims: snapshot.holder.claims,
             periods: snapshot.holder.periods,
-            attention: attention.unavailable ? null : attention,
+            attention: reviewState === "available" ? attention : null,
+            reviewState,
             now: new Date(),
           })
         : null,
-    [snapshot, attention],
+    [snapshot, attention, reviewState],
   );
 
   if (error) {
@@ -246,7 +255,7 @@ function PassportWorkspaceRoute() {
               {pt("att.title")}
             </h2>
             <VerificationOutcomes
-              attention={attention}
+              attention={attention ?? VERIFICATION_ATTENTION_UNAVAILABLE}
               titleOf={(item) =>
                 item.subjectKind === "claim"
                   ? ((c) => (c ? (lang === "sv" ? c.titleSv : c.titleEn) : pt("att.entryRemoved")))(
@@ -261,6 +270,13 @@ function PassportWorkspaceRoute() {
               // lifecycle side. Two panels both saying "nothing waiting" is the
               // page talking to itself.
               showClear={false}
+              // ── THE FAILURE IS EXPLAINED ONCE ────────────────────────
+              //
+              // The recommended-step card above owns that sentence and the
+              // retry with it. This panel rendering its own "we could not
+              // read your verifications" underneath was the same news
+              // twice, in two competing blocks, about one failed request.
+              showUnavailable={false}
               // DECIDED OR ASKED. The merits list below carries every open
               // review already, with the type, organisation and dates this
               // panel has no room for; repeating those titles here would be

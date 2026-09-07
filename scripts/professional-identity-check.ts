@@ -931,13 +931,21 @@ console.log("\n2c · the /my-career surfaces");
         meritsSrc.slice(meritsSrc.indexOf("export function countReadyForVerification(")),
       ),
   );
+  // PR #196 moved the FIGURES and their WORDS into one shared presentation
+  // contract that the Security Passport workspace prints from too — the two
+  // surfaces had come to mean different things by "Registrerade". The rule
+  // is unchanged and is now asserted where it lives: documented is its own
+  // figure with its own word, and it is never folded into source-confirmed.
   ck(
     "the summary card names the documented state rather than folding it into verified",
     read("src/components/professional-identity/PassportSummary.tsx").includes(
-      "passport.counts.documentedCount > 0",
+      "figures.documented > 0",
     ) &&
+      read("src/lib/professional-identity/merit-figures.ts").includes(
+        'documented: { sv: "Dokumenterade", en: "Documented" }',
+      ) &&
       read("src/components/professional-identity/home-copy.ts").includes(
-        'documented: c("Dokumenterade meriter", "Documented merits")',
+        "MERIT_FIGURE_WORDS.documented.sv",
       ),
   );
   ck(

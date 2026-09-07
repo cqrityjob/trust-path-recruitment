@@ -70,7 +70,11 @@ const { ACTION_CLASSIFICATION, subjectHref } =
   await import("../src/lib/professional-identity/next-best-action");
 const { deriveVerificationAttention, VERIFICATION_ATTENTION_UNAVAILABLE } =
   await import("../src/lib/professional-identity/verification-attention");
-const { labelMerit } = await import("../src/lib/professional-identity/passport-merits");
+const { countMeritRows, labelMerit, reviewStateOf } =
+  await import("../src/lib/professional-identity/passport-merits");
+const { MERIT_FIGURE_HELP, MERIT_FIGURE_WORDS, figuresPartition, meritFigures } =
+  await import("../src/lib/professional-identity/merit-figures");
+const { PassportSummary } = await import("../src/components/professional-identity/PassportSummary");
 const { passportT } = await import("../src/lib/security-passport/i18n");
 
 import type { Claim, ExperiencePeriod, LifecycleState } from "../src/lib/security-passport/types";
@@ -107,7 +111,10 @@ const NOW = new Date("2026-09-07T09:00:00.000Z");
 function html(workspace: Workspace, lang: "sv" | "en" = "sv"): string {
   return renderToStaticMarkup(
     <I18nProvider initialLang={lang}>
-      <PassportWorkspace workspace={workspace} />
+      {/* A retry handler, because the failed state OFFERS one and a render
+          without it would let the guard pass on a page that could not be
+          recovered from. */}
+      <PassportWorkspace workspace={workspace} onRetry={() => {}} />
     </I18nProvider>,
   );
 }
@@ -326,6 +333,243 @@ group("1 · a document review is Documented, and only a source is Källbekräfta
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   1B · ONE VOCABULARY, TWO SURFACES
+   ══════════════════════════════════════════════════════════════════════ */
+group("1B · the Passport and My Career describe one merit the same way");
+
+{
+  // The Passport's copy lives in its own domain module (nothing user-facing
+  // may live outside it), so equality against the shared contract is
+  // asserted rather than shared by import. A divergence is a failing build.
+  const PAIRS = [
+    ["self_reported", "ws.status.registered"],
+    ["documented", "ws.status.documented"],
+    ["source_confirmed", "ws.status.sourceConfirmed"],
+    ["open_cases", "ws.status.inReview"],
+    ["lapsed", "ws.status.lapsed"],
+  ] as const;
+  for (const [key, copyKey] of PAIRS) {
+    ck(
+      `1B.1 ${key} uses the shared Swedish word`,
+      passportT(copyKey, "sv") === MERIT_FIGURE_WORDS[key].sv,
+      `${passportT(copyKey, "sv")} vs ${MERIT_FIGURE_WORDS[key].sv}`,
+    );
+    ck(
+      `1B.2 ${key} uses the shared English word`,
+      passportT(copyKey, "en") === MERIT_FIGURE_WORDS[key].en,
+      `${passportT(copyKey, "en")} vs ${MERIT_FIGURE_WORDS[key].en}`,
+    );
+  }
+  ck(
+    "1B.3 and the help lines agree too",
+    passportT("ws.status.inReviewHelp", "sv") === MERIT_FIGURE_HELP.open_cases.sv &&
+      passportT("ws.status.lapsedHelp", "sv") === MERIT_FIGURE_HELP.lapsed.sv,
+  );
+
+  // ── THE BEHAVIOURAL REGRESSION: BOTH SURFACES, ONE HOLDER ──────────
+  //
+  // Six merits, one of every state the two pages can disagree about. The
+  // Passport is rendered from `buildPassportWorkspace`; My Career from
+  // `PassportSummary`. Same rows, same moment.
+  const rows = {
+    claims: [
+      claim({ id: "c-self" }),
+      claim({
+        id: "c-doc",
+        assertionLevel: "verified",
+        verifierName: "CQrityjob",
+        verificationMethod: "document_review",
+        verifiedOn: "2026-06-01",
+      }),
+      claim({ id: "c-open" }),
+      claim({ id: "c-ask" }),
+      claim({
+        id: "c-lapsed",
+        assertionLevel: "verified",
+        verifierName: "CQrityjob",
+        verificationMethod: "document_review",
+        verifiedOn: "2022-04-01",
+        validUntil: "2025-03-31",
+      }),
+    ],
+    periods: [
+      period({
+        assertionLevel: "verified",
+        verifierName: "Nordic Security AB",
+        verificationMethod: "employer_confirmation",
+        verifiedOn: "2026-07-15",
+      }),
+    ],
+    requests: [
+      request({ id: "r-o", claimId: "c-open", status: "pending" as const }),
+      request({ id: "r-a", claimId: "c-ask", status: "clarification_requested" as const }),
+    ],
+  };
+  const ws = build(rows);
+  const attention = deriveVerificationAttention(rows.requests, NOW);
+  const counts = countMeritRows(
+    [
+      ...rows.claims.map((c) => ({
+        id: c.id,
+        assertionLevel: c.assertionLevel,
+        lifecycleState: c.lifecycleState,
+        validUntil: c.validUntil,
+        verifierName: c.verifierName,
+        verificationMethod: c.verificationMethod,
+        subjectKind: "credential" as const,
+      })),
+      ...rows.periods.map((p) => ({
+        id: p.id,
+        assertionLevel: p.assertionLevel,
+        lifecycleState: p.lifecycleState,
+        validUntil: null,
+        verifierName: p.verifierName,
+        verificationMethod: p.verificationMethod,
+        subjectKind: "employment" as const,
+      })),
+    ],
+    reviewStateOf(attention),
+    NOW,
+  );
+  const figures = meritFigures(counts);
+
+  ck(
+    "1B.4 the two surfaces derive the SAME figures from the same rows",
+    JSON.stringify(figures) === JSON.stringify(ws.status),
+    `${JSON.stringify(figures)} vs ${JSON.stringify(ws.status)}`,
+  );
+  ck(
+    "1B.5 the five rungs partition the total — no category silently overlaps",
+    figuresPartition(figures),
+    JSON.stringify(figures),
+  );
+  ck(
+    "1B.6 one self-reported, one documented, one source-confirmed, two open, one lapsed",
+    figures.selfReported === 1 &&
+      figures.documented === 1 &&
+      figures.sourceConfirmed === 1 &&
+      figures.openCases === 2 &&
+      figures.lapsed === 1 &&
+      figures.totalCurrent === 6,
+    JSON.stringify(figures),
+  );
+
+  const career = renderToStaticMarkup(
+    <I18nProvider initialLang="sv">
+      <PassportSummary passport={{ state: "counts", counts }} />
+    </I18nProvider>,
+  );
+  const passport = html(ws);
+
+  // The same words, on both.
+  for (const key of ["self_reported", "documented", "source_confirmed", "open_cases"] as const) {
+    ck(
+      `1B.7 "${MERIT_FIGURE_WORDS[key].sv}" appears on both surfaces`,
+      career.includes(MERIT_FIGURE_WORDS[key].sv) && passport.includes(MERIT_FIGURE_WORDS[key].sv),
+    );
+  }
+  // The same NUMBER against each word, on both.
+  const figureOn = (markup: string, attr: string, id: string) =>
+    new RegExp(`${attr}="${id}"[^>]*data-count="([^"]*)"`).exec(markup)?.[1] ??
+    new RegExp(`data-count="([^"]*)"[^>]*${attr}="${id}"`).exec(markup)?.[1] ??
+    "";
+  const SAME = [
+    ["registered", "registered", String(figures.selfReported)],
+    ["source-confirmed", "verified", String(figures.sourceConfirmed)],
+    ["documented", "documented", String(figures.documented)],
+    ["in-review", "under-review", String(figures.openCases)],
+  ] as const;
+  for (const [passportId, careerId, expected] of SAME) {
+    ck(
+      `1B.8 ${passportId} reads ${expected} on both surfaces`,
+      figureOn(passport, "data-status-tile", passportId) === expected &&
+        figureOn(career, "data-merit-count", careerId) === expected,
+      `passport=${figureOn(passport, "data-status-tile", passportId)} career=${figureOn(
+        career,
+        "data-merit-count",
+        careerId,
+      )}`,
+    );
+  }
+  // NO CONTRADICTORY TOTAL. My Career names its total as a total; the
+  // Passport prints no total at all, so the two cannot disagree about one.
+  ck(
+    "1B.9 My Career names its total explicitly as a total",
+    career.includes(MERIT_FIGURE_WORDS.total_current.sv) &&
+      figureOn(career, "data-merit-count", "total-current") === String(figures.totalCurrent),
+  );
+  ck(
+    "1B.10 and neither surface calls the total a rung",
+    !career.includes(">Registrerade meriter<") &&
+      !passport.includes(MERIT_FIGURE_WORDS.total_current.sv),
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   1C · A LAPSED MERIT CLAIMS NOTHING ABOUT WHAT CONFIRMED IT
+   ══════════════════════════════════════════════════════════════════════ */
+group("1C · expired copy overclaims nothing");
+
+{
+  // Both shapes reach `expired`: a CQrityjob DOCUMENT REVIEW and a SOURCE
+  // confirmation. Copy that says "was confirmed once" is true of the second
+  // and false of the first, which is the exact distinction PR #189 exists
+  // to hold.
+  const lapsedReview = build({
+    claims: [
+      claim({
+        id: "c-lapsed",
+        assertionLevel: "verified",
+        verifierName: "CQrityjob",
+        verificationMethod: "document_review",
+        verifiedOn: "2022-04-01",
+        validUntil: "2025-03-31",
+      }),
+    ],
+  });
+  ck(
+    "1C.1 a lapsed document review reaches the lapsed figure",
+    lapsedReview.status.lapsed === 1 && lapsedReview.groups.current[0]?.label === "expired",
+    lapsedReview.groups.current[0]?.label,
+  );
+
+  const t = text(html(lapsedReview));
+  const OVERCLAIMS_SV = [/bekräftad/i, /verifierad/i, /källbekräftad/i];
+  const lapsedCopy = `${passportT("ws.status.lapsed", "sv")} ${passportT("ws.status.lapsedHelp", "sv")}`;
+  ck(
+    "1C.2 the Swedish lapsed copy claims no confirmation",
+    OVERCLAIMS_SV.every((re) => !re.test(lapsedCopy)),
+    lapsedCopy,
+  );
+  const lapsedCopyEn = `${passportT("ws.status.lapsed", "en")} ${passportT("ws.status.lapsedHelp", "en")}`;
+  ck("1C.3 nor does the English", !/confirm|verified/i.test(lapsedCopyEn), lapsedCopyEn);
+  ck(
+    "1C.4 and the rendered page says only that the validity ended",
+    t.includes(passportT("ws.status.lapsedHelp", "sv")) && !/Var bekräftad en gång/.test(t),
+  );
+  // POSITIVE CONTROL: a merit that IS source-confirmed still says so, so the
+  // rule above removed an overclaim rather than the vocabulary.
+  const sourced = build({
+    periods: [
+      period({
+        assertionLevel: "verified",
+        verifierName: "Nordic Security AB",
+        verificationMethod: "employer_confirmation",
+        verifiedOn: "2026-07-15",
+      }),
+    ],
+  });
+  ck(
+    "1C.5 POSITIVE CONTROL: a standing source confirmation still reads Källbekräftad",
+    text(html(sourced)).includes(passportT("ws.merit.status.verified", "sv")),
+  );
+  ck(
+    "1C.6 the shared help table carries the same neutral sentence",
+    MERIT_FIGURE_HELP.lapsed.sv === passportT("ws.status.lapsedHelp", "sv"),
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    2 · THE FIGURES PARTITION THE MERITS
    ══════════════════════════════════════════════════════════════════════ */
 group("2 · four figures and a lapsed line, adding up to what the holder owns");
@@ -371,14 +615,18 @@ group("2 · four figures and a lapsed line, adding up to what the holder owns");
   const st = w.status;
   ck(
     "2.1 registered + documented + source-confirmed + in review + lapsed = every current merit",
-    (st.registered ?? -1) + st.documented + st.sourceConfirmed + (st.inReview ?? -1) + st.lapsed ===
+    (st.selfReported ?? -1) +
+      st.documented +
+      st.sourceConfirmed +
+      (st.openCases ?? -1) +
+      st.lapsed ===
       c.addedCount,
-    `${st.registered}+${st.documented}+${st.sourceConfirmed}+${st.inReview}+${st.lapsed} vs ${c.addedCount}`,
+    `${st.selfReported}+${st.documented}+${st.sourceConfirmed}+${st.openCases}+${st.lapsed} vs ${c.addedCount}`,
   );
   ck(
     "2.2 the 'registered' figure is a RUNG, never the total",
-    (st.registered ?? 0) < c.addedCount,
-    `${st.registered} vs ${c.addedCount}`,
+    (st.selfReported ?? 0) < c.addedCount,
+    `${st.selfReported} vs ${c.addedCount}`,
   );
 
   const markup = html(w);
@@ -386,7 +634,7 @@ group("2 · four figures and a lapsed line, adding up to what the holder owns");
     new RegExp(`data-status-tile="${name}"[^>]*data-count="([^"]*)"`).exec(markup)?.[1] ??
     new RegExp(`data-count="([^"]*)"[^>]*data-status-tile="${name}"`).exec(markup)?.[1] ??
     "";
-  ck("2.3 the registered tile renders that rung", tile("registered") === String(st.registered));
+  ck("2.3 the registered tile renders that rung", tile("registered") === String(st.selfReported));
   ck(
     "2.4 the documented tile renders the documented figure",
     tile("documented") === String(st.documented),
@@ -395,14 +643,14 @@ group("2 · four figures and a lapsed line, adding up to what the holder owns");
     "2.5 the source-confirmed tile renders the source-confirmed figure",
     tile("source-confirmed") === String(st.sourceConfirmed),
   );
-  ck("2.6 the in-review tile renders both open shapes", tile("in-review") === String(st.inReview));
+  ck("2.6 the in-review tile renders both open shapes", tile("in-review") === String(st.openCases));
   // The COMPONENT does no arithmetic: a tile that added two fields together
   // is a second derivation, and the first thing such a tile forgets is that
   // one of its addends may be unknown.
   const componentSrc = code(read("src/components/security-passport/PassportWorkspace.tsx"));
   ck(
     "2.10 the component reads decided figures rather than adding counts up",
-    !/counts\.\w+\s*\+/.test(componentSrc) && componentSrc.includes("status.registered"),
+    !/counts\.\w+\s*\+/.test(componentSrc) && componentSrc.includes("status.selfReported"),
   );
 
   // The counts come from the SHARED derivation, not from a second count.
@@ -494,9 +742,13 @@ group("3 · a merit is in exactly one group, under the shared lifecycle policy")
     requests: [request({ claimId: "c-ask", status: "clarification_requested" })],
   });
   ck(
-    "3.9 the merit waiting on the holder is first in its group",
-    w.groups.current[0]?.id === "c-ask" && meritNeedsHolder(w.groups.current[0]!),
-    w.groups.current.map((m) => m.id).join(),
+    "3.9 a reviewer's question is its OWN group, never an ordinary current merit",
+    w.groups.needsAnswer.map((m) => m.id).join() === "c-ask" &&
+      !w.groups.current.some((m) => m.id === "c-ask") &&
+      meritNeedsHolder(w.groups.needsAnswer[0]!),
+    `needsAnswer=${w.groups.needsAnswer.map((m) => m.id).join()} current=${w.groups.current
+      .map((m) => m.id)
+      .join()}`,
   );
 }
 
@@ -545,7 +797,7 @@ group("4 · one recommended step, from real rows, with a real retirement");
       name: "a Passport holding one merit",
       workspace: build({ periods: [period()] }),
       kind: "add_more_merits",
-      href: "/passport/information",
+      href: "/passport",
     },
     {
       name: "two merits nobody has reviewed",
@@ -669,8 +921,8 @@ group("4 · one recommended step, from real rows, with a real retirement");
   // where a kind is picked.
   const addMore = build({ periods: [period()] }).nextStep;
   ck(
-    "4.11a the generic add-merit step lands on the page, not on one form",
-    addMore?.href === "/passport/information" && addMore?.hash === null,
+    "4.11a the generic add-merit step opens the chooser, not a page or one form",
+    addMore?.href === "/passport" && addMore?.hash === "add-merit",
     `${addMore?.href}#${addMore?.hash}`,
   );
 
@@ -712,7 +964,7 @@ group("4B · a merit that MAY be under review never reads as an ordinary one");
   ck(
     "4B.1 with the read answering, the three merits are distinguished",
     known.groups.inReview.some((m) => m.id === "c-pending") &&
-      known.groups.current.find((m) => m.id === "c-ask")?.label === "clarification_needed" &&
+      known.groups.needsAnswer.find((m) => m.id === "c-ask")?.label === "clarification_needed" &&
       known.groups.current.find((m) => m.id === "c-plain")?.label === "added_by_you",
   );
 
@@ -768,8 +1020,8 @@ group("4B · a merit that MAY be under review never reads as an ordinary one");
     down.groups.reviewUnknown.length === 3,
     String(down.groups.reviewUnknown.length),
   );
-  ck("4B.7 the registered figure is null, never 3", down.status.registered === null);
-  ck("4B.8 the in-review figure is null, never 0", down.status.inReview === null);
+  ck("4B.7 the registered figure is null, never 3", down.status.selfReported === null);
+  ck("4B.8 the open-cases figure is null, never 0", down.status.openCases === null);
 
   const markup = html(down);
   const t = text(markup);
@@ -868,8 +1120,8 @@ group("5 · a verification read that did not answer says so");
   ck(
     "5.2 the review-derived figures are null, never 0",
     down.counts.pendingCount === null &&
-      down.status.inReview === null &&
-      down.status.registered === null,
+      down.status.openCases === null &&
+      down.status.selfReported === null,
   );
   ck("5.3 and no step is recommended", down.nextStep === null);
 
@@ -890,6 +1142,134 @@ group("5 · a verification read that did not answer says so");
   ck(
     "5.8 the shared unavailable sentinel is not `clear`",
     VERIFICATION_ATTENTION_UNAVAILABLE.unavailable && !VERIFICATION_ATTENTION_UNAVAILABLE.clear,
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   4C · CLARIFICATION HAS ONE CANONICAL CLASSIFICATION
+   ══════════════════════════════════════════════════════════════════════ */
+group("4C · a reviewer's question is counted, grouped and acted on the same way");
+
+{
+  const w = build({
+    claims: [claim({ id: "c-ask" }), claim({ id: "c-open" }), claim({ id: "c-plain" })],
+    requests: [
+      request({ id: "r-a", claimId: "c-ask", status: "clarification_requested" as const }),
+      request({ id: "r-o", claimId: "c-open", status: "pending" as const }),
+    ],
+  });
+
+  ck(
+    "4C.1 it is in `needsAnswer`, never in `current`",
+    w.groups.needsAnswer.map((m) => m.id).join() === "c-ask" &&
+      !w.groups.current.some((m) => m.id === "c-ask"),
+  );
+  ck(
+    "4C.2 nor in `inReview`, which is what somebody ELSE is handling",
+    w.groups.inReview.map((m) => m.id).join() === "c-open",
+  );
+  ck(
+    "4C.3 the open-case figure counts BOTH, and its help says so",
+    w.status.openCases === 2 &&
+      /vänta på ditt svar/i.test(passportT("ws.status.inReviewHelp", "sv")) &&
+      /waiting for your answer/i.test(passportT("ws.status.inReviewHelp", "en")),
+  );
+  ck(
+    "4C.4 and it no longer claims somebody else is handling all of them",
+    !/Någon annan tittar på dem just nu/.test(passportT("ws.status.inReviewHelp", "sv")),
+  );
+  ck(
+    "4C.5 the recommended step is to answer it, and it opens that entry",
+    w.nextStep?.kind === "respond_to_clarification" &&
+      w.nextStep?.href === meritHref("claim", "c-ask"),
+  );
+
+  const markup = html(w);
+  ck(
+    "4C.6 the page renders the three groups distinctly",
+    markup.includes('data-merit-group="needs-answer"') &&
+      markup.includes('data-merit-group="in-review"') &&
+      markup.includes('data-merit-group="current"'),
+  );
+  ck(
+    "4C.7 and the questioned merit appears in exactly one of them",
+    (markup.match(/data-merit-row="c-ask"/g) ?? []).length === 1,
+  );
+  const t = text(markup);
+  ck(
+    "4C.8 the group is named for what it asks of the holder",
+    t.includes(passportT("ws.merits.needsAnswer", "sv")),
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   5B · LOADING IS NOT FAILURE
+   ══════════════════════════════════════════════════════════════════════ */
+group("5B · a slow read never announces an error");
+
+{
+  const loading = buildPassportWorkspace({
+    claims: [claim()],
+    periods: [period()],
+    attention: null,
+    reviewState: "loading",
+    now: NOW,
+  });
+  ck("5B.1 the state is loading, not failed", loading.reviewState === "loading");
+  ck("5B.2 review-derived figures are still unknown", loading.status.openCases === null);
+  ck("5B.3 and no step is recommended from an unknown state", loading.nextStep === null);
+
+  const markup = html(loading);
+  ck(
+    '5B.4 the card is in a "loading" state of its own',
+    markup.includes('data-next-step="loading"'),
+  );
+  ck(
+    "5B.5 it is announced politely, not as an alert",
+    /data-next-step="loading"[\s\S]{0,400}role="status"/.test(markup),
+  );
+  ck("5B.6 and offers no retry for something that has not failed", !markup.includes("data-retry"));
+  const t = text(markup);
+  ck(
+    "5B.7 it never says the read failed",
+    !t.includes(passportT("ws.next.unavailableTitle", "sv")),
+  );
+  ck(
+    "5B.8 the figures keep their headings and say they are loading",
+    t.includes(passportT("ws.status.registered", "sv")) &&
+      t.includes(passportT("ws.status.loading", "sv")),
+  );
+
+  // FAILED is a different rendering entirely.
+  const failed = buildPassportWorkspace({
+    claims: [claim()],
+    periods: [period()],
+    attention: null,
+    reviewState: "failed",
+    now: NOW,
+  });
+  const failedMarkup = html(failed);
+  ck(
+    "5B.9 a real failure is an alert with a retry",
+    failedMarkup.includes('data-next-step="unavailable"') &&
+      failedMarkup.includes("data-retry") &&
+      /data-next-step="unavailable"[\s\S]{0,400}role="alert"/.test(failedMarkup),
+  );
+  ck(
+    "5B.10 the failed figures keep their headings and say why",
+    text(failedMarkup).includes(passportT("ws.status.registered", "sv")) &&
+      text(failedMarkup).includes(passportT("ws.status.temporarilyUnavailable", "sv")),
+  );
+  ck(
+    "5B.11 and never print a second identical heading in place of a figure",
+    (text(failedMarkup).match(/Kunde inte läsas/g) ?? []).length === 0,
+  );
+
+  // ONE explanation. The route tells the outcomes panel not to repeat it.
+  const route = code(read("src/routes/_authenticated.passport.index.tsx"));
+  ck(
+    "5B.12 the outcomes panel does not repeat the failure sentence",
+    route.includes("showUnavailable={false}"),
   );
 }
 
@@ -1101,8 +1481,33 @@ group("7 · one heading, one dominant call, three real destinations");
     "7.8 every rendered href points somewhere",
     hrefs.every((h) => h.startsWith("/")),
   );
+  // ── THE CARD IS A PRIVATE PREVIEW, AND THE COPY SAYS SO ───────────
+  //
+  // /passport/card renders the holder's OWN preview and can include content
+  // no source has confirmed. "Se hur en mottagare ser ditt Passport" and
+  // "shows only what has been confirmed" both promised a recipient view and
+  // a filter the route does not apply.
   ck(
-    "7.9 the three uses of a Passport are share, CV and the recipient's view",
+    "7.9a the card link is described as a preview, not as a recipient's view",
+    !/mottagare|recipient/i.test(passportT("ws.use.card", "sv")) &&
+      !/mottagare|recipient/i.test(passportT("ws.use.card", "en")),
+    `${passportT("ws.use.card", "sv")} / ${passportT("ws.use.card", "en")}`,
+  );
+  ck(
+    "7.9b and claims no filter the route does not apply",
+    !/bara det som är bekräftat|only what has been confirmed/i.test(
+      `${passportT("ws.use.cardBody", "sv")} ${passportT("ws.use.cardBody", "en")}`,
+    ),
+    `${passportT("ws.use.cardBody", "sv")} / ${passportT("ws.use.cardBody", "en")}`,
+  );
+  ck(
+    "7.9c it says what the destination actually shows",
+    /kortet/i.test(passportT("ws.use.cardBody", "sv")) &&
+      /card/i.test(passportT("ws.use.cardBody", "en")),
+  );
+
+  ck(
+    "7.9 the three uses of a Passport are share, CV and the card preview",
     markup.includes('data-use-link="share"') &&
       markup.includes('data-use-link="cv"') &&
       markup.includes('data-use-link="card"'),
@@ -1131,7 +1536,10 @@ group("7 · one heading, one dominant call, three real destinations");
   ck("7.13 the row states the type", t.includes(passportT("claims.type.certification", "sv")));
   ck("7.14 the title", t.includes("Väktarutbildning grundkurs"));
   ck("7.15 the issuer", t.includes("BYA"));
-  ck("7.16 the date", t.includes("2024-05-02"));
+  ck(
+    "7.16 the date, in the reader's language rather than as an ISO day",
+    t.includes("2 maj 2024") && !t.includes("2024-05-02"),
+  );
   ck("7.17 and the trust standing", t.includes(passportT("ws.merit.status.added_by_you", "sv")));
 
   // An unstated issuer says so in words rather than printing the sentinel.
@@ -1298,8 +1706,14 @@ group("9 · the route wires it, and nothing else decides trust");
       !/Promise\.all\(\[[\s\S]*?loadRequests/.test(route),
   );
   ck(
-    "9.6 a failed verification read reaches the derivation as UNKNOWN, not as empty",
-    route.includes("attention.unavailable ? null : attention"),
+    "9.6 a failed OR PENDING verification read reaches the derivation as unknown",
+    route.includes('reviewState === "available" ? attention : null') &&
+      route.includes("reviewState,"),
+  );
+  ck(
+    "9.6a and loading is a state of its own, never the failure sentinel",
+    route.includes('useState<ReviewReadState>("loading")') &&
+      !/useState<VerificationAttention>\(\s*VERIFICATION_ATTENTION_UNAVAILABLE/.test(route),
   );
   ck(
     "9.7 the attention region is still the career home's deep-link target",
@@ -1326,7 +1740,7 @@ group("9 · the route wires it, and nothing else decides trust");
     "9.10 it renders no completion percentage or score",
     !/%\s*(complete|klar)/i.test(component) && !/completeness|score/i.test(component),
   );
-  ck("9.11 the derivation is versioned", PASSPORT_WORKSPACE_VERSION === "passport-workspace-v1");
+  ck("9.11 the derivation is versioned", PASSPORT_WORKSPACE_VERSION === "passport-workspace-v2");
 }
 
 /* ------------------------------------------------------------------ */

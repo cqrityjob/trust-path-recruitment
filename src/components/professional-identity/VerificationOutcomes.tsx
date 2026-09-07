@@ -256,6 +256,15 @@ export function VerificationOutcomes({
    * the panel judges its own emptiness on what it will actually print.
    */
   groups = ALL_ATTENTION_GROUPS,
+  /**
+   * Whether this panel says, itself, that the read failed.
+   *
+   * True by default: on the career home this panel is the only thing that
+   * knows. The Passport workspace sets it false, because its recommended-step
+   * card already says it once and owns the retry — two competing blocks
+   * announcing one failed request is the page shouting.
+   */
+  showUnavailable = true,
   className,
 }: {
   attention: VerificationAttention;
@@ -263,6 +272,7 @@ export function VerificationOutcomes({
   hrefOf: (item: VerificationAttentionItem) => string;
   showClear?: boolean;
   groups?: readonly AttentionGroup[];
+  showUnavailable?: boolean;
   className?: string;
 }) {
   const { lang } = useT();
@@ -280,6 +290,7 @@ export function VerificationOutcomes({
   // every list below is empty in both cases and only this sentence tells
   // them apart.
   if (attention.unavailable) {
+    if (!showUnavailable) return null;
     return (
       <section className={`rounded-xl border border-border bg-card p-5 ${className ?? ""}`}>
         <h2 className="text-base font-semibold tracking-tight text-foreground">

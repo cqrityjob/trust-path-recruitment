@@ -424,10 +424,11 @@ const sv = {
   "ws.status.documentedHelp": "CQrityjob har granskat ett dokument. Källan har inte bekräftat.",
   "ws.status.sourceConfirmed": "Källbekräftade",
   "ws.status.sourceConfirmedHelp": "Den faktiska källan har bekräftat uppgiften.",
-  "ws.status.inReview": "Pågående granskningar",
-  "ws.status.inReviewHelp": "Någon annan tittar på dem just nu.",
-  "ws.status.lapsed": "Giltigheten har gått ut",
-  "ws.status.lapsedHelp": "Var bekräftad en gång. Behöver förnyas.",
+  "ws.status.inReview": "Pågående granskningsärenden",
+  "ws.status.inReviewHelp": "Öppna granskningsärenden. Några kan vänta på ditt svar.",
+  "ws.status.lapsed": "Giltigheten har löpt ut",
+  "ws.status.lapsedHelp":
+    "Giltighetstiden har löpt ut. Kontrollera om meriten behöver förnyas.",
   "ws.status.unknown": "Kunde inte läsas",
   "ws.status.unknownHelp": "Vi kunde inte läsa granskningarna just nu.",
 
@@ -479,12 +480,24 @@ const sv = {
   "ws.merit.status.clarification_needed": "Väntar på ditt svar",
   "ws.merit.status.documented": "Dokumenterad",
   "ws.merit.status.verified": "Källbekräftad",
-  "ws.merit.status.expired": "Giltigheten har gått ut",
+  "ws.merit.status.expired": "Giltigheten har löpt ut",
   // Granskningsstatus som inte kunde läsas. Inte en nivå och inte en
   // nedgradering: uppgiften kommer fortfarande från användaren, och det som
   // saknas är svaret på om någon granskar den.
   "ws.merit.status.unknown": "Granskningsstatus okänd",
   "ws.merits.reviewUnknown": "Granskningsstatus kunde inte läsas",
+  // Öppna granskningsärenden som väntar på HOLDERN. Egen grupp, aldrig bland
+  // de aktuella meriterna: ärendet är öppet OCH användaren är den som står
+  // för nästa steg, och "aktuella meriter" säger ingetdera.
+  "ws.merits.needsAnswer": "Kräver ditt svar",
+  "ws.merits.needsAnswerHelp": "En granskare har bett dig om mer information.",
+  // En siffra som inte kunde läsas behåller sin rubrik. Två identiska
+  // "Kunde inte läsas" bredvid varandra säger inte vilken siffra som saknas.
+  "ws.status.temporarilyUnavailable": "Tillfälligt otillgängligt",
+  "ws.status.loading": "Hämtar …",
+  "ws.next.loadingTitle": "Hämtar dina granskningar",
+  "ws.next.loadingBody": "Vi föreslår ett steg så snart vi vet hur det ser ut.",
+  "ws.add.open": "Välj vad du vill lägga till",
   "ws.merits.reviewUnknownHelp":
     "Vi kunde inte se om någon granskar dem. Uppgifterna är oförändrade.",
   "ws.status.registeredUnknownHelp": "Vi kunde inte se vilka som är under granskning.",
@@ -503,8 +516,8 @@ const sv = {
   "ws.use.shareBody": "Skapa en länk du kan återkalla när du vill.",
   "ws.use.cv": "Skapa eller uppdatera CV",
   "ws.use.cvBody": "Dina meriter kan användas i ett CV på Min karriär.",
-  "ws.use.card": "Se hur en mottagare ser ditt Passport",
-  "ws.use.cardBody": "Passport Card visar bara det som är bekräftat.",
+  "ws.use.card": "Förhandsvisa ditt Passport-kort",
+  "ws.use.cardBody": "Se hur dina meriter och deras status presenteras på kortet.",
 
   // ── Experience totals ────────────────────────────────────────────────
   "totals.title": "Erfarenhet efter underlag",
@@ -2326,10 +2339,11 @@ const en: Record<PassportCopyKey, string> = {
   "ws.status.documentedHelp": "CQrityjob reviewed a document. The source has not confirmed.",
   "ws.status.sourceConfirmed": "Source-confirmed",
   "ws.status.sourceConfirmedHelp": "The actual source confirmed the entry.",
-  "ws.status.inReview": "Reviews in progress",
-  "ws.status.inReviewHelp": "Someone else is looking at them right now.",
-  "ws.status.lapsed": "Validity has lapsed",
-  "ws.status.lapsedHelp": "Confirmed once. Needs renewing.",
+  "ws.status.inReview": "Open review cases",
+  "ws.status.inReviewHelp": "Open review cases. Some may be waiting for your answer.",
+  "ws.status.lapsed": "Validity has ended",
+  "ws.status.lapsedHelp":
+    "The validity period has ended. Check whether this merit needs renewing.",
   "ws.status.unknown": "Could not be loaded",
   "ws.status.unknownHelp": "We could not read your reviews just now.",
 
@@ -2379,9 +2393,16 @@ const en: Record<PassportCopyKey, string> = {
   "ws.merit.status.clarification_needed": "Waiting for your answer",
   "ws.merit.status.documented": "Documented",
   "ws.merit.status.verified": "Source-confirmed",
-  "ws.merit.status.expired": "Validity has lapsed",
+  "ws.merit.status.expired": "Validity has ended",
   "ws.merit.status.unknown": "Review status unknown",
   "ws.merits.reviewUnknown": "Review status could not be loaded",
+  "ws.merits.needsAnswer": "Needs your answer",
+  "ws.merits.needsAnswerHelp": "A reviewer has asked you for more information.",
+  "ws.status.temporarilyUnavailable": "Temporarily unavailable",
+  "ws.status.loading": "Loading …",
+  "ws.next.loadingTitle": "Loading your reviews",
+  "ws.next.loadingBody": "We will suggest a step as soon as we know how it stands.",
+  "ws.add.open": "Choose what to add",
   "ws.merits.reviewUnknownHelp":
     "We could not see whether anyone is reviewing them. The entries are unchanged.",
   "ws.status.registeredUnknownHelp": "We could not see which ones are under review.",
@@ -2399,8 +2420,8 @@ const en: Record<PassportCopyKey, string> = {
   "ws.use.shareBody": "Create a link you can revoke whenever you like.",
   "ws.use.cv": "Create or update a CV",
   "ws.use.cvBody": "Your merits can be used in a CV under My Career.",
-  "ws.use.card": "See how a recipient sees your Passport",
-  "ws.use.cardBody": "The Passport Card shows only what has been confirmed.",
+  "ws.use.card": "Preview your Passport Card",
+  "ws.use.cardBody": "See how your merits and their status are presented on the card.",
 
   "totals.title": "Experience by evidence",
   "totals.reported": "Reported experience",

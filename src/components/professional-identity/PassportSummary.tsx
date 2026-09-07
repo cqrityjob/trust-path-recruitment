@@ -10,6 +10,8 @@
 // still in flight is a skeleton, never a zero and never "could not read".
 
 import { Link } from "@tanstack/react-router";
+import { meritFigures } from "@/lib/professional-identity/merit-figures";
+import type { MeritCounts } from "@/lib/professional-identity/passport-merits";
 import { ArrowRight, IdCard, Info } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { PassportSummaryModel } from "@/lib/professional-identity/home-presentation";
@@ -18,27 +20,61 @@ import { PASSPORT } from "./home-copy";
 import { Failed, Loading } from "./home-primitives";
 import { LINK } from "./home-format";
 
-function Count({ value, label, testId }: { value: number | null; label: string; testId: string }) {
+function Count({
+  value,
+  label,
+  unavailableLabel,
+  testId,
+}: {
+  value: number | null;
+  label: string;
+  /** Said INSTEAD of the figure, never instead of the label: two figures
+   *  whose headings were both replaced by "kunde inte läsas" left a reader
+   *  unable to tell which number was missing. */
+  unavailableLabel?: string;
+  testId: string;
+}) {
   const { lang } = useT();
   const l = lang as Lang;
   return (
-    <div className="min-w-0" data-merit-count={testId}>
+    <div
+      className="min-w-0"
+      data-merit-count={testId}
+      data-count={value === null ? "unknown" : String(value)}
+    >
       <dd
-        className="m-0 text-2xl font-semibold tabular-nums text-foreground"
+        className={`m-0 text-2xl font-semibold tabular-nums ${
+          value === null ? "text-muted-foreground" : "text-foreground"
+        }`}
         style={{ fontFamily: "var(--font-display)" }}
       >
-        {value === null ? (
-          <span className="text-base font-normal italic text-muted-foreground">
-            {L(PASSPORT.reviewUnknown, l)}
-          </span>
-        ) : (
-          value
-        )}
+        {value === null ? "—" : value}
       </dd>
       <dt className="mt-0.5 text-xs text-muted-foreground">{label}</dt>
+      {value === null && (
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {unavailableLabel ?? L(PASSPORT.reviewUnknown, l)}
+        </p>
+      )}
     </div>
   );
 }
+
+/** Zeroes for the branches that render no figures at all. `meritFigures` is
+ *  total, so the call is unconditional and the render is not. */
+const EMPTY_COUNTS: MeritCounts = {
+  addedCount: 0,
+  selfReportedCount: 0,
+  documentProvidedCount: 0,
+  documentedCount: 0,
+  pendingCount: 0,
+  verifiedCount: 0,
+  expiredCount: 0,
+  draftCount: 0,
+  archivedCount: 0,
+  clarificationCount: 0,
+  known: false,
+};
 
 export function PassportSummary({
   passport,
@@ -51,6 +87,7 @@ export function PassportSummary({
 }) {
   const { lang } = useT();
   const l = lang as Lang;
+  const figures = meritFigures(passport.state === "counts" ? passport.counts : EMPTY_COUNTS);
 
   return (
     <section
@@ -84,35 +121,44 @@ export function PassportSummary({
           </>
         ) : (
           <>
+            {/* ── THE SHARED FIGURES ────────────────────────────────
+                From `meritFigures`, which the Security Passport workspace
+                prints from too. Five mutually exclusive rungs and one figure
+                that is NAMED as a total, so the same merit cannot be
+                described one way here and another way there, and two
+                categories cannot silently overlap. */}
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
               <Count
-                value={passport.counts.addedCount}
+                value={figures.totalCurrent}
+                label={L(PASSPORT.total, l)}
+                testId="total-current"
+              />
+              <Count
+                value={figures.selfReported}
                 label={L(PASSPORT.registered, l)}
+                unavailableLabel={L(PASSPORT.figureUnavailable, l)}
                 testId="registered"
               />
               <Count
-                value={passport.counts.pendingCount}
+                value={figures.openCases}
                 label={L(PASSPORT.underReview, l)}
+                unavailableLabel={L(PASSPORT.figureUnavailable, l)}
                 testId="under-review"
               />
               <Count
-                value={passport.counts.verifiedCount}
+                value={figures.sourceConfirmed}
                 label={L(PASSPORT.verified, l)}
                 testId="verified"
               />
-              {passport.counts.documentedCount > 0 && (
+              {figures.documented > 0 && (
                 <Count
-                  value={passport.counts.documentedCount}
+                  value={figures.documented}
                   label={L(PASSPORT.documented, l)}
                   testId="documented"
                 />
               )}
-              {passport.counts.expiredCount > 0 && (
-                <Count
-                  value={passport.counts.expiredCount}
-                  label={L(PASSPORT.expired, l)}
-                  testId="expired"
-                />
+              {figures.lapsed > 0 && (
+                <Count value={figures.lapsed} label={L(PASSPORT.expired, l)} testId="expired" />
               )}
               {passport.counts.draftCount > 0 && (
                 <Count
