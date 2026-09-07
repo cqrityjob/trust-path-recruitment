@@ -12046,6 +12046,52 @@ export type Database = {
           },
         ]
       }
+      sp_disclosure_items: {
+        Row: {
+          claim_id: string | null
+          created_at: string
+          disclosure_id: string
+          experience_id: string | null
+          id: string
+        }
+        Insert: {
+          claim_id?: string | null
+          created_at?: string
+          disclosure_id: string
+          experience_id?: string | null
+          id?: string
+        }
+        Update: {
+          claim_id?: string | null
+          created_at?: string
+          disclosure_id?: string
+          experience_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_disclosure_items_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: false
+            referencedRelation: "sp_disclosures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_disclosure_items_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_disclosure_items_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "sp_experience_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sp_disclosures: {
         Row: {
           access_count: number
@@ -12055,9 +12101,11 @@ export type Database = {
           focus_claim_id: string | null
           holder_user_id: string
           id: string
+          locale: string | null
           package_code: string
           purpose: string | null
           recipient_hint: string | null
+          request_key: string | null
           revoked_at: string | null
           token_hash: string | null
         }
@@ -12069,9 +12117,11 @@ export type Database = {
           focus_claim_id?: string | null
           holder_user_id: string
           id?: string
+          locale?: string | null
           package_code: string
           purpose?: string | null
           recipient_hint?: string | null
+          request_key?: string | null
           revoked_at?: string | null
           token_hash?: string | null
         }
@@ -12083,9 +12133,11 @@ export type Database = {
           focus_claim_id?: string | null
           holder_user_id?: string
           id?: string
+          locale?: string | null
           package_code?: string
           purpose?: string | null
           recipient_hint?: string | null
+          request_key?: string | null
           revoked_at?: string | null
           token_hash?: string | null
         }
@@ -15287,7 +15339,29 @@ export type Database = {
         }
         Returns: string
       }
+      sp_create_selected_disclosure: {
+        Args: {
+          _claim_ids: string[]
+          _experience_ids: string[]
+          _expires_days: number
+          _locale: string | null
+          _purpose: string | null
+          _recipient_hint: string | null
+          _request_key: string | null
+        }
+        Returns: Json
+      }
       sp_disclosure_payload: { Args: { _disclosure_id: string }; Returns: Json }
+      sp_preview_selected_disclosure: {
+        Args: {
+          _claim_ids: string[]
+          _experience_ids: string[]
+          _expires_days: number
+          _locale: string | null
+          _purpose: string | null
+        }
+        Returns: Json
+      }
       sp_dispute_queue: { Args: never; Returns: Json }
       sp_employer_attestation_queue: {
         Args: { _employer_id: string }

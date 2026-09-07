@@ -443,6 +443,17 @@ jobs:
       - name: Passport trust-source containment
         run: bun run passport-trust-source:check
 
+      # PR #197. Sharing is now a decision the holder makes, so three things
+      # can quietly stop being true: the screen could start offering merits
+      # the create would refuse (or deciding eligibility for itself), the
+      # "preview" could become a second renderer that drifts from the page it
+      # claims to preview, and the recipient page could start wearing a trust
+      # word the record does not support. Rendered in both languages, with the
+      # selection model exercised against self-reported, draft and archived
+      # merits.
+      - name: Passport sharing flow check
+        run: bun run passport-sharing-flow:check
+
       # Employment confirmation, rendered for both people in the exchange. The
       # candidate must read "Bekräftad av Company X" and never "Verifierad av"
       # for something no reviewer read; the employer must be told the message

@@ -506,8 +506,9 @@ async function mount(
       case "getMyPassportProfileBasics":
         return ok(route, null);
 
-      // /passport/share
-      case "listMyDisclosures":
+      // /passport/share — the holder's own list of links. The sharing screen
+      // reads this one now (PR #197); the old package list is gone.
+      case "listMyShares":
         return ok(route, []);
 
       // /passport/credentials/new

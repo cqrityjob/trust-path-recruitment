@@ -104,6 +104,13 @@ export interface RecipientExperience {
   readonly startedOn: IsoDate;
   readonly endedOn: IsoDate | null;
   readonly jurisdiction: string | null;
+  /** The DECIDER, and the act. Undefined when the share did not say — which
+   *  is every package share, because no package emits employment provenance.
+   *  A renderer must print nothing for undefined rather than assume a level:
+   *  "verified with nobody named" and "we were not told" are different
+   *  states, and only one of them is a claim. */
+  readonly verifiedBy?: string | null;
+  readonly verificationMethod?: string | null;
 }
 
 export interface RecipientPresentation {
@@ -131,6 +138,10 @@ export interface RecipientPresentation {
    *  sees — which is the UAE-wide reading the Dubai pack refuses. */
   readonly subJurisdiction: string | null;
   readonly packageCode: string;
+  /** The language the holder chose for this recipient, or null for the
+   *  reader's own. Carried, never applied here: this module produces a model,
+   *  and choosing words from it is the renderer's job. */
+  readonly locale: "sv" | "en" | null;
   /** "credential" when the holder shared exactly one credential. */
   readonly focus: "passport" | "credential";
   readonly purpose: string | null;
@@ -269,6 +280,12 @@ export function buildRecipientPresentation(
     startedOn: e.started_on,
     endedOn: e.ended_on,
     jurisdiction: e.jurisdiction,
+    // Carried through UNCHANGED and UNINTERPRETED. The sentence a reader gets
+    // is composed by `employmentTrustLine` from these two recorded facts, in
+    // employment's own register, so this module states no trust of its own —
+    // exactly as it does for credentials above.
+    verifiedBy: e.verifier_organisation,
+    verificationMethod: e.verification_method,
   }));
 
   // Derived from the disclosed claims alone. A recipient sees a title exactly
@@ -293,6 +310,10 @@ export function buildRecipientPresentation(
     jurisdiction: payload.jurisdiction,
     subJurisdiction: payload.sub_jurisdiction ?? null,
     packageCode: payload.package,
+    // Narrowed rather than trusted: the column is CHECK-constrained to the two
+    // values, and a payload that somehow carried a third would fall back to
+    // the reader's own language rather than to a locale nothing can render.
+    locale: payload.locale === "sv" || payload.locale === "en" ? payload.locale : null,
     focus: payload.focus ?? "passport",
     purpose: payload.purpose,
     expiresAt: payload.expires_at,

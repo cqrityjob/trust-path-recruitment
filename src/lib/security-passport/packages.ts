@@ -25,6 +25,11 @@ export const DISCLOSURE_PACKAGE_CODES = [
   "verified_experience",
   "employer_review",
   "full_verification",
+  // The holder's own list. Not a package in the sense the other five are —
+  // its contents are `sp_disclosure_items`, not a contract — but it is a
+  // `package_code` value in the database and every reader keys on that, so it
+  // belongs in the same closed set.
+  "selected_merits",
 ] as const;
 
 export type DisclosurePackageCode = (typeof DISCLOSURE_PACKAGE_CODES)[number];
@@ -148,6 +153,17 @@ export const LIVE_PACKAGES: readonly LivePackage[] = [
   },
 ];
 
+/**
+ * The five FIXED contracts. `selected_merits` is deliberately absent.
+ *
+ * Every entry here promises the same contents to every recipient of that
+ * package, which is what makes an includes/excludes list truthful. A selected
+ * share promises whatever the holder ticked, so printing a fixed list over it
+ * would describe a contract it does not have — the recipient page says "the
+ * holder chose these" instead, and the merits below it are the list.
+ *
+ * Callers that look a code up here must therefore handle `undefined`.
+ */
 export function livePackage(code: DisclosurePackageCode): LivePackage {
   const found = LIVE_PACKAGES.find((p) => p.code === code);
   if (!found) throw new Error(`Unknown disclosure package: ${code}`);
@@ -207,6 +223,21 @@ export interface RecipientPeriod {
   readonly jurisdiction: string | null;
   readonly assertion: string;
   readonly lifecycle: string;
+  /** WHICH ACT verified this employment, and who performed it.
+   *
+   *  Emitted by `sp_selected_merits_payload` only. The five fixed packages
+   *  send neither, which is why both are OPTIONAL rather than nullable: a
+   *  missing key means "this share does not say", and the recipient page
+   *  renders nothing at all for it. A `null` VALUE would mean "verified, and
+   *  the decision record names nobody", which is a different fact and is also
+   *  rendered as nothing — but by a different route.
+   *
+   *  The distinction they exist for: an employment reaches `verified` either
+   *  because the employer confirmed a fact they were party to, or because
+   *  CQrityjob read a contract. Calling the second one "confirmed by Company
+   *  X" attributes to the employer an act it never performed. */
+  readonly verifier_organisation?: string | null;
+  readonly verification_method?: string | null;
 }
 
 export interface RecipientPayloadActive {
@@ -221,6 +252,13 @@ export interface RecipientPayloadActive {
    *  every pre-Phase-9 share was. */
   readonly focus?: "passport" | "credential";
   readonly purpose: string | null;
+  /** The language the HOLDER chose for this recipient, where they chose one.
+   *
+   *  A share is addressed to one person, and the holder knows which language
+   *  that person reads; the recipient is a stranger with no preference stored
+   *  here. Null or absent means the reader's own language, which is what every
+   *  share created before 20261101090000 has. */
+  readonly locale?: string | null;
   readonly expires_at: string | null;
   /** When the holder authorised this disclosure. Added by
    *  20260904090000; older payloads may not carry it. */

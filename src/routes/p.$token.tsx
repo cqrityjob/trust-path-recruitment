@@ -14,6 +14,15 @@
 //      would be an oracle: a way to learn that a token was once real, or
 //      that a guess is getting warmer.
 //
+// ── WHAT THIS FILE IS, AND WHAT IT IS NOT ──────────────────────────────
+//
+// It is the anonymous TRANSPORT: the head, the fail-closed read, and the
+// three states that read can be in. It is NOT the recipient experience —
+// that lives in `RecipientPassportView`, because the holder must be able to
+// see exactly what this page will show before they send the link, and the
+// only way to guarantee that is for the preview and this page to be the same
+// component reading the same model built by the same database function.
+//
 // ── noindex, AND WHY THE PREVIEW IS GENERIC ────────────────────────────
 //
 // A share link is addressed to one recipient. It is not published, so it is
@@ -27,32 +36,19 @@
 // keeping it out of search indexes is a governance decision, not a tuning
 // knob to trade away for a nicer preview.
 
-import { CredentialScopeLine } from "@/components/security-passport/live/CredentialScopeLine";
-import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, ExternalLink, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getPublicDisclosureFromCookie } from "@/lib/security-passport/public-disclosure.functions";
-import { LIVE_PACKAGES, type RecipientPayload } from "@/lib/security-passport/packages";
-import {
-  formatDuration,
-  formatExpiry,
-  formatJurisdiction,
-  formatPeriodRange,
-  formatWorkLocation,
-} from "@/lib/security-passport/format";
+import type { RecipientPayload } from "@/lib/security-passport/packages";
+import { formatWorkLocation } from "@/lib/security-passport/format";
 import { buildRecipientPresentation } from "@/lib/security-passport/recipient-presentation";
-import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
-import { AssertionChip } from "@/components/security-passport/AssertionChip";
-import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
-import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
-import { RecipientPassportCard } from "@/components/security-passport/live/RecipientPassportCard";
-import { RecipientCredentialList } from "@/components/security-passport/live/RecipientCredentialList";
+import { RecipientPassportView } from "@/components/security-passport/live/RecipientPassportView";
 import { CredentialVerificationPage } from "@/components/security-passport/live/CredentialVerificationPage";
+import { PassportLangProvider } from "@/lib/security-passport/use-passport-copy";
 import { publicShareOrigin } from "@/lib/security-passport/public-origin";
-import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 export const Route = createFileRoute("/p/$token")({
   ssr: false,
@@ -101,19 +97,8 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="mt-0.5 text-sm text-foreground">{value}</dd>
-    </div>
-  );
-}
-
 function RecipientRoute() {
-  const { pt, lang } = usePassportCopy();
+  const { pt, lang: readerLang } = usePassportCopy();
   // The param here is a NAVIGATION ID, never a token.
   //
   // src/server.ts answers `/p/<token>` with a 302 to `/p/<navigationId>` and
@@ -133,13 +118,18 @@ function RecipientRoute() {
   const [payload, setPayload] = useState<RecipientPayload | null>(null);
   const [checkedAt, setCheckedAt] = useState<string>("");
 
-  // The payload is interpreted ONCE. The card below, the detail list and the
-  // downloadable image all read this same model, so none of them can form a
-  // different opinion about whether a credential is still current.
+  // The payload is interpreted ONCE. The card, the detail list and every
+  // other surface read this same model, so none of them can form a different
+  // opinion about whether a credential is still current.
   const presentation = useMemo(
     () => (payload?.status === "active" ? buildRecipientPresentation(payload, today()) : null),
     [payload],
   );
+
+  // The share's language when the holder chose one, the reader's otherwise.
+  // Never inferred from the holder's jurisdiction: a Swedish guard sending a
+  // licence to a London agency is exactly the case this exists for.
+  const lang = presentation?.locale ?? readerLang;
 
   useEffect(() => {
     let alive = true;
@@ -167,6 +157,10 @@ function RecipientRoute() {
     );
   }
 
+  // Revoked, expired, never-existed, throttled and "the server did not
+  // answer" all arrive here, and all render identically. The copy is written
+  // for the ordinary case — a link that has done its job — and says what a
+  // reader can actually DO about it, which is ask the person who sent it.
   if (payload.status === "unavailable") {
     return (
       <main className="mx-auto max-w-2xl px-4 py-16">
@@ -181,15 +175,24 @@ function RecipientRoute() {
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {pt("rec.unavailableBody")}
           </p>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {pt("rec.unavailableNext")}
+          </p>
+          <a
+            href="/#passport"
+            className="mt-4 inline-flex h-11 items-center text-sm font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("rec.ctaAction")}
+          </a>
         </div>
       </main>
     );
   }
 
-  const meta = LIVE_PACKAGES.find((p) => p.code === payload.package);
   // `presentation` is non-null whenever the payload is active; the guard
   // keeps TypeScript honest without a cast.
   if (!presentation) return null;
+
   // The canonical site address, NOT this page's own URL.
   //
   // It used to be `window.location.href`, which was the share link itself —
@@ -205,197 +208,66 @@ function RecipientRoute() {
 
   // A single-credential share is a different object from a Passport, so it
   // gets its own presentation rather than the Passport page with one row.
+  //
+  // Rendered through its own component so every word on it — including the
+  // two sentences this file writes — resolves INSIDE the language provider.
+  // Reading them from the route's own `pt`, which is bound before the
+  // provider exists, is how a page ends up half in the reader's language and
+  // half in the recipient's.
   if (presentation.focus === "credential" && presentation.credentials.length === 1) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-8 sm:py-10">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {pt("rec.brand")}
-        </p>
-        <p className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
-          <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-          {pt("rec.authoritative")}
-        </p>
-        <div className="mt-6">
-          <CredentialVerificationPage
-            credential={presentation.credentials[0]}
-            holderLabel={presentation.holderLabel ?? pt("rec.anonymousHolder")}
-            jurisdiction={formatWorkLocation(
-              presentation.jurisdiction,
-              presentation.subJurisdiction,
-              lang,
-            )}
-            verifyUrl={shareUrl}
-          />
-        </div>
-        <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
-          {pt("rec.checkedAt")}: {checkedAt}
-        </p>
-      </main>
+      <PassportLangProvider lang={lang}>
+        <CredentialShare presentation={presentation} checkedAt={checkedAt} verifyUrl={shareUrl} />
+      </PassportLangProvider>
     );
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {pt("rec.brand")}
-        </p>
-        <h1
-          className="mt-2 text-2xl font-semibold tracking-tight text-foreground md:text-3xl"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {pt("rec.title")}
-        </h1>
+    <main className="px-4 py-8 sm:py-10">
+      <RecipientPassportView
+        presentation={presentation}
+        lang={lang}
+        checkedAt={checkedAt}
+        verifyUrl={shareUrl}
+      />
+    </main>
+  );
+}
 
-        {/* Stated at the top, before any content: this page — not a
-            screenshot of it — is the current position. */}
-        <p className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
-          <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-          {pt("rec.authoritative")}
-        </p>
-      </header>
-
-      {/* ── The Passport itself, first ──────────────────────────────── */}
-      <section className="mt-6" aria-label={pt("rec.cardTitle")}>
-        <RecipientPassportCard presentation={presentation} verifyUrl={shareUrl} />
-      </section>
-
-      {presentation.containsExpired ? (
-        <p
-          role="status"
-          className="mt-4 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm leading-relaxed text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
-        >
-          {pt("rec.expiredNotice")}
-        </p>
-      ) : null}
-
-      {/* ── What the share contains ─────────────────────────────────── */}
-      <section className="mt-6 rounded-xl border border-border bg-card p-5">
-        <h2 className="text-base font-semibold tracking-tight text-foreground">
-          {pt("rec.detailsTitle")}
-        </h2>
-        <dl className="mt-3 grid gap-4 sm:grid-cols-2">
-          <Row
-            label={pt("rec.holder")}
-            value={presentation.holderLabel ?? pt("rec.anonymousHolder")}
-          />
-          <Row
-            label={pt("rec.package")}
-            value={meta ? pt(meta.nameKey) : presentation.packageCode}
-          />
-          <Row
-            label={pt("rec.profession")}
-            value={joinTitles(presentation.titles, lang, pt("common.notStated"))}
-          />
-          {/* Separate from `rec.profession` deliberately: one says what this
-              person may be CALLED, the other says what an authority currently
-              PERMITS, and a public reader must not merge them. */}
-          {presentation.eligibility.length > 0 ? (
-            <Row
-              label={pt("identity.eligibility")}
-              value={joinTitles(presentation.eligibility, lang, pt("common.notStated"))}
-            />
-          ) : null}
-          <Row
-            label={pt("rec.jurisdiction")}
-            value={formatWorkLocation(
-              presentation.jurisdiction,
-              presentation.subJurisdiction,
-              lang,
-            )}
-          />
-          {presentation.purpose ? (
-            <Row label={pt("rec.purpose")} value={presentation.purpose} />
-          ) : null}
-          <Row label={pt("rec.lastUpdated")} value={presentation.lastUpdated.slice(0, 10)} />
-          {presentation.expiresAt ? (
-            <Row label={pt("rec.linkExpires")} value={presentation.expiresAt.slice(0, 10)} />
-          ) : null}
-          <Row label={pt("rec.checkedAt")} value={checkedAt} />
-        </dl>
-
-        {/* What this package does and does not carry, so a recipient knows
-            what an absence means rather than guessing. */}
-        {meta ? (
-          <div className="mt-4 border-t border-border pt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("rec.packageShows")}
-            </p>
-            <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-              {meta.includesKeys.map((k) => (
-                <li key={k} className="text-sm text-foreground">
-                  · {pt(k)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </section>
-
-      {/* ── Disclosed credentials, in full ──────────────────────────── */}
-      <RecipientCredentialList credentials={presentation.credentials} />
-
-      {/* ── Verified employment ─────────────────────────────────────── */}
-      {presentation.experience.length > 0 ? (
-        <section className="mt-6">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            {pt("rec.experience")}
-          </h2>
-          <ul className="mt-3 space-y-3">
-            {presentation.experience.map((e) => (
-              <li key={e.id} className="rounded-lg border border-border bg-card p-4">
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
-                  {e.role} · {e.employer}
-                </h3>
-                <p className="mt-2 text-sm tabular-nums text-muted-foreground">
-                  {formatPeriodRange(e.startedOn, e.endedOn, lang)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {/* ── Verified tenure, as an aggregate ────────────────────────── */}
-      {presentation.verifiedExperienceDays > 0 ? (
-        <section className="mt-6 rounded-xl border border-border bg-card p-5">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            {pt("rec.tenure")}
-          </h2>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-            {formatDuration(presentation.verifiedExperienceDays, lang)}
-          </p>
-        </section>
-      ) : null}
-
-      {presentation.isEmpty ? (
-        <section className="mt-6 rounded-xl border border-dashed border-border bg-secondary/40 p-5">
-          <p className="text-sm text-muted-foreground">{pt("rec.nothing")}</p>
-        </section>
-      ) : null}
-
-      <section className="mt-6 space-y-2 rounded-xl border border-border p-5">
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {pt("rec.jurisdictionNote")}
-        </p>
-        <p className="text-sm leading-relaxed text-muted-foreground">{pt("rec.notAssessment")}</p>
-      </section>
-
-      {/* Restrained, and last. The recipient came here to check somebody
-          else's record, not to be sold to. */}
-      <section className="mt-6 rounded-xl border border-border bg-secondary/40 p-5">
-        <h2 className="text-base font-semibold tracking-tight text-foreground">
-          {pt("rec.ctaTitle")}
-        </h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{pt("rec.ctaBody")}</p>
-        <a
-          href="/"
-          className="mt-3 inline-flex h-11 items-center gap-2 text-sm font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          {pt("rec.ctaAction")}
-          <ExternalLink aria-hidden="true" className="h-4 w-4" />
-        </a>
-      </section>
+function CredentialShare({
+  presentation,
+  checkedAt,
+  verifyUrl,
+}: {
+  presentation: NonNullable<ReturnType<typeof buildRecipientPresentation>>;
+  checkedAt: string;
+  verifyUrl: string;
+}) {
+  const { pt, lang } = usePassportCopy();
+  return (
+    <main className="mx-auto max-w-2xl px-4 py-8 sm:py-10">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {pt("rec.brand")}
+      </p>
+      <p className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
+        <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+        {pt("rec.authoritative")}
+      </p>
+      <div className="mt-6">
+        <CredentialVerificationPage
+          credential={presentation.credentials[0]}
+          holderLabel={presentation.holderLabel ?? pt("rec.anonymousHolder")}
+          jurisdiction={formatWorkLocation(
+            presentation.jurisdiction,
+            presentation.subJurisdiction,
+            lang,
+          )}
+          verifyUrl={verifyUrl}
+        />
+      </div>
+      <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
+        {pt("rec.checkedAt")}: {checkedAt}
+      </p>
     </main>
   );
 }

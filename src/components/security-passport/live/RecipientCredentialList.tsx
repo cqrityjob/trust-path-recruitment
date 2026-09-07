@@ -57,7 +57,11 @@ export function RecipientCredentialList({
       </h2>
       <ul className="mt-3 space-y-3">
         {credentials.map((c) => (
-          <li key={c.id} className="rounded-lg border border-border bg-card p-4">
+          <li
+            key={c.id}
+            data-recipient-credential={c.id}
+            className="rounded-lg border border-border bg-card p-4"
+          >
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
               <div className="flex min-w-0 flex-1 items-start gap-3">
                 <CredentialSymbol

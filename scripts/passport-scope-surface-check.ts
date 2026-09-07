@@ -152,9 +152,25 @@ console.log("\nGROUP 3 -- one component renders it, so the surfaces cannot disag
     "POSITIVE CONTROL the employer panel does render that card",
   );
 
+  // The recipient surface moved out of the route into RecipientPassportView
+  // (PR #197), so that the holder's preview and the public page cannot be two
+  // renderings. The assertion follows it, and keeps both halves: the shared
+  // scope component is what renders a limit, and the route reaches it only by
+  // delegating rather than by interpreting the payload itself.
+  const recipientView = readFileSync(
+    join(process.cwd(), "src/components/security-passport/live/RecipientPassportView.tsx"),
+    "utf8",
+  );
+  const credentialList = readFileSync(
+    join(process.cwd(), "src/components/security-passport/live/RecipientCredentialList.tsx"),
+    "utf8",
+  );
   const publicPage = readFileSync(join(process.cwd(), "src/routes/p.$token.tsx"), "utf8");
   ok(
-    publicPage.includes("CredentialScopeLine"),
+    recipientView.includes("RecipientCredentialList") &&
+      credentialList.includes("CredentialScopeLine") &&
+      publicPage.includes("RecipientPassportView") &&
+      !publicPage.includes("authorisationScope"),
     "the public page renders the same component, not a second interpretation",
   );
 

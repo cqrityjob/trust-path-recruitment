@@ -645,11 +645,21 @@ group("GROUP 6 — the method and attribution keys follow the same rule");
       ) &&
       /subjectKind: "employment"/.test(code("src/routes/_authenticated.passport.information.tsx")),
   );
+  // The recipient SURFACE moved out of the route (PR #197): the holder's
+  // preview and the public page have to be the same component or the preview
+  // is a promise nothing keeps. The assertion follows it, and gains a half —
+  // the route must DELEGATE, so an inline list cannot creep back into either.
   ck(
-    "6.10 the recipient route renders the list component and no inline credential list",
+    "6.10 the recipient view renders the list component and no inline credential list",
     /<RecipientCredentialList credentials=\{presentation\.credentials\}/.test(
-      code("src/routes/p.$token.tsx"),
-    ) && !/rec\.verifiedBy/.test(code("src/routes/p.$token.tsx")),
+      code("src/components/security-passport/live/RecipientPassportView.tsx"),
+    ) &&
+      !/rec\.verifiedBy/.test(
+        code("src/components/security-passport/live/RecipientPassportView.tsx"),
+      ) &&
+      /<RecipientPassportView/.test(code("src/routes/p.$token.tsx")) &&
+      !/<RecipientCredentialList/.test(code("src/routes/p.$token.tsx")) &&
+      !/rec\.verifiedBy/.test(code("src/routes/p.$token.tsx")),
   );
 }
 
