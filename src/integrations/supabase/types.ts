@@ -10153,6 +10153,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "scp_report_computation_manife_participant_report_version_i_fkey"
+            columns: ["participant_report_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifest_employer_report_version_id_fkey"
+            columns: ["employer_report_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_versions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scp_report_computation_manifests_attempt_id_fkey"
             columns: ["attempt_id"]
             isOneToOne: true
@@ -10167,24 +10181,10 @@ export type Database = {
             referencedColumns: ["attempt_id"]
           },
           {
-            foreignKeyName: "scp_report_computation_manifests_employer_report_version_id_fkey"
-            columns: ["employer_report_version_id"]
-            isOneToOne: false
-            referencedRelation: "scp_report_versions"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "scp_report_computation_manifests_issuer_organization_id_fkey"
             columns: ["issuer_organization_id"]
             isOneToOne: false
             referencedRelation: "employers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scp_report_computation_manifests_participant_report_version_id_fkey"
-            columns: ["participant_report_version_id"]
-            isOneToOne: false
-            referencedRelation: "scp_report_versions"
             referencedColumns: ["id"]
           },
           {
@@ -10200,8 +10200,8 @@ export type Database = {
         Row: {
           attempt_id: string
           audience: string
-          canonical_sha256: string | null
           brief: Json | null
+          canonical_sha256: string | null
           context: Json | null
           created_at: string
           derivation_input: Json | null
@@ -10221,8 +10221,8 @@ export type Database = {
         Insert: {
           attempt_id: string
           audience: string
-          canonical_sha256?: string | null
           brief?: Json | null
+          canonical_sha256?: string | null
           context?: Json | null
           created_at?: string
           derivation_input?: Json | null
@@ -10242,8 +10242,8 @@ export type Database = {
         Update: {
           attempt_id?: string
           audience?: string
-          canonical_sha256?: string | null
           brief?: Json | null
+          canonical_sha256?: string | null
           context?: Json | null
           created_at?: string
           derivation_input?: Json | null
@@ -14272,6 +14272,7 @@ export type Database = {
           subject_id: string
         }[]
       }
+      scp_employer_report_v3: { Args: { _attempt_id: string }; Returns: Json }
       scp_employer_review_board: {
         Args: { _employer_id: string }
         Returns: {
@@ -14537,6 +14538,10 @@ export type Database = {
       }
       scp_is_standard_recruitment_content: {
         Args: { _definition_id: string; _employer_id: string }
+        Returns: boolean
+      }
+      scp_item_order_is_meaningful: {
+        Args: { _item_format: string }
         Returns: boolean
       }
       scp_iv_add_source: {
@@ -14934,6 +14939,10 @@ export type Database = {
           version_number: number
         }[]
       }
+      scp_option_order_key: {
+        Args: { _item_version_id: string; _option_id: string; _seed: number }
+        Returns: number
+      }
       scp_participant_report: {
         Args: { _attempt_id: string }
         Returns: {
@@ -14987,9 +14996,19 @@ export type Database = {
         }
         Returns: Json
       }
-      scp_report_manifest_hash: {
-        Args: { _body: Json }
-        Returns: string
+      scp_report_manifest_hash: { Args: { _body: Json }; Returns: string }
+      scp_report_next_step: {
+        Args: {
+          _areas_limited: number
+          _areas_sufficient: number
+          _observed_items: number
+          _safety_findings_present: boolean
+        }
+        Returns: {
+          reason_code: string
+          rule_version: string
+          step: string
+        }[]
       }
       scp_report_snapshot_readable: {
         Args: {
