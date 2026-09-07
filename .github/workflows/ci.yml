@@ -345,6 +345,13 @@ jobs:
       - name: Release parity bookkeeping check
         run: bun run release-parity:check
 
+      # Production ledger reconciliation after PR #192. Seven migrations are
+      # live under generated ledger identities and two unsafe content updates
+      # are parked. This pins the only three migrations the official
+      # integration may select when this PR merges.
+      - name: Release frontier selection check
+        run: bun run release-frontier:check
+
       # THE MERGE GATE.
       #
       # release-parity --release computes the right thing at the wrong moment:

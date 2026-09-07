@@ -9,9 +9,7 @@
       "file": "20260720180000_h4_1_assessment_blueprint_engine_phase1.sql",
       "reason": "Blueprint Engine Phase 1 (26 tables, 33 functions). Parked by owner decision F, Phase 0C: not applied to hosted production and the product does not depend on it. Physically outside supabase/migrations so no db push, CLI or replay can reach it. Its one load-bearing object, public.assessment_run_reports, was extracted to 20260720180001_assessment_run_reports_canonical_home.sql.",
       "decidedIn": "docs/technical/phase-0c-canonical-baseline-repair.md",
-      "canonicalReplacement": [
-        "20260720180001_assessment_run_reports_canonical_home.sql"
-      ],
+      "canonicalReplacement": ["20260720180001_assessment_run_reports_canonical_home.sql"],
       "equivalence": "superseded",
       "hostedEvidence": "Never applied to hosted production (owner decision F, Phase 0C); its one load-bearing object was extracted to the canonical replacement."
     },
@@ -20,18 +18,14 @@
       "file": "20260824082256_ef3fa7cb-f983-41e4-bc40-bb104bce485f.sql",
       "reason": "Lovable's generated copy of Phase A migration 3. Parked rather than deleted because it is NOT equivalent to the canonical 20260907092000_sp_uk_market_pack.sql -- it drops six GB local_eligibility title rules and renames the education_completed ones -- so it is the only record of what the hosted database actually contains. Deleting it would erase that evidence; leaving it in the active path would replay it out of canonical order. See the matching appliedThroughLovable entry.",
       "decidedIn": "Phase A migration 3 reconciliation",
-      "canonicalReplacement": [
-        "20260907092000_sp_uk_market_pack.sql"
-      ],
+      "canonicalReplacement": ["20260907092000_sp_uk_market_pack.sql"],
       "equivalence": "superseded",
       "hostedEvidence": "NOT content-equivalent to the canonical UK market pack; it is the only record of what the hosted database actually ran (see reason). See the appliedThroughLovable entry for the canonical file."
     },
     {
       "version": "20260805054801",
       "file": "20260805054801_4f577347-be36-4dc0-bb0a-04db0f0d247a.sql",
-      "canonicalReplacement": [
-        "20260810090000_scp_phase2h_staging_corrections.sql"
-      ],
+      "canonicalReplacement": ["20260810090000_scp_phase2h_staging_corrections.sql"],
       "equivalence": "superseded",
       "reason": "Lovable Cloud re-issue of the Phase 2h staging corrections, including the SCP_LEARNING_FEEDBACK_ON_ASSESSMENT_ITEM guard whose early installation is what refused the authored 1G-a on every replay. Its one differing statement (guard body) is superseded: the canonical 2h defines the guard at its canonical position.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -40,9 +34,7 @@
     {
       "version": "20260805055049",
       "file": "20260805055049_68826607-5d85-490f-890b-367e2dbbd135.sql",
-      "canonicalReplacement": [
-        "20260812100000_scp_phase2l_submit_requires_every_item.sql"
-      ],
+      "canonicalReplacement": ["20260812100000_scp_phase2l_submit_requires_every_item.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of Phase 2l; whitespace-normalised identical to the canonical file it shadowed.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -51,9 +43,7 @@
     {
       "version": "20260729075534",
       "file": "20260729075534_6036589a-27b4-46d0-b9a5-f78017807372.sql",
-      "canonicalReplacement": [
-        "20260729090000_career_discovery_v3_internal_test.sql"
-      ],
+      "canonicalReplacement": ["20260729090000_career_discovery_v3_internal_test.sql"],
       "equivalence": "superseded",
       "reason": "Generated re-issue of the CD v3 internal-test migration sorted EARLIER than the authored file, which therefore always failed on replay ('cd_internal_testers already exists') with only its Section 0 committing. Its statements not in the canonical file are all superseded: cd_complete_session's final definer is 20260729150000, cd_guard_completion_is_server_side's is 20260731053218, and cd_my_report_history is redefined by the canonical file itself. With this file parked the authored file applies fully, Section 0 included.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -62,9 +52,7 @@
     {
       "version": "20260805054236",
       "file": "20260805054236_a764df1f-735a-42a9-a86d-36199159b65e.sql",
-      "canonicalReplacement": [
-        "20260809090000_scp_phase2e_employer_learning_progress.sql"
-      ],
+      "canonicalReplacement": ["20260809090000_scp_phase2e_employer_learning_progress.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of Phase 2e; whitespace-normalised identical to the canonical file it shadowed.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -73,9 +61,7 @@
     {
       "version": "20260728181422",
       "file": "20260728181422_cff0d76a-c34f-46c1-98c1-dd28126902fb.sql",
-      "canonicalReplacement": [
-        "20260727120000_scp_a1_security_competency_platform_domain.sql"
-      ],
+      "canonicalReplacement": ["20260727120000_scp_a1_security_competency_platform_domain.sql"],
       "equivalence": "prefix-covered",
       "reason": "Lovable Cloud re-issue of SCP A1 generated during Cloud sync. On replay its FIRST statement (CREATE TABLE scp_content_roles) failed, so no statement of this file has ever executed in a replay.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -84,9 +70,7 @@
     {
       "version": "20260717121112",
       "file": "20260717121112_0ca14630-b02e-490c-93c0-5ea5dd05dc3e.sql",
-      "canonicalReplacement": [
-        "20260717073316_2bb2b7a4-e12a-4024-8e35-cb69452f6cec.sql"
-      ],
+      "canonicalReplacement": ["20260717073316_2bb2b7a4-e12a-4024-8e35-cb69452f6cec.sql"],
       "equivalence": "identical",
       "reason": "Generated re-issue of the identically generated 20260717073316; whitespace-normalised identical. Second application was idempotent; the earlier file stays active as the executing copy.",
       "hostedEvidence": "Both versions are recorded in hosted (zrah) history; the parked file preserves the second application verbatim.",
@@ -95,9 +79,7 @@
     {
       "version": "20260719220600",
       "file": "20260719220600_0e43ff83-6b6a-4bd0-ab65-f16e86f79946.sql",
-      "canonicalReplacement": [
-        "20260719190845_h3_1_candidate_employer_portal.sql"
-      ],
+      "canonicalReplacement": ["20260719190845_h3_1_candidate_employer_portal.sql"],
       "equivalence": "prefix-covered",
       "reason": "Generated re-issue of H3.1 (its header states it re-applies 20260719190845). On replay its FIRST statement (ADD COLUMN registration_number) failed, so no statement of this file has ever executed in a replay.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -106,9 +88,7 @@
     {
       "version": "20260805054915",
       "file": "20260805054915_f8dcce61-6485-4205-babe-0a6c7dfca734.sql",
-      "canonicalReplacement": [
-        "20260811100000_scp_phase2j_assign_token_without_pgcrypto.sql"
-      ],
+      "canonicalReplacement": ["20260811100000_scp_phase2j_assign_token_without_pgcrypto.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of Phase 2j; whitespace-normalised identical to the canonical file it shadowed.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -117,9 +97,7 @@
     {
       "version": "20260718153627",
       "file": "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql",
-      "canonicalReplacement": [
-        "20260718083056_security_career_profiles.sql"
-      ],
+      "canonicalReplacement": ["20260718083056_security_career_profiles.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of the canonical Security Career Profile migration. On a clean replay it re-ran CREATE TABLE security_career_profiles and failed with 42P07 -- the exact failure that aborted the official owner-Supabase bootstrap of vcgwvtmzftmulmoxmufv on 2026-08-28 (merge 76ac1a9).",
       "hostedEvidence": "Hosted (zrah) applied it as version 20260718153633; see the appliedThroughLovable entry for the canonical file.",
@@ -128,9 +106,7 @@
     {
       "version": "20260728181803",
       "file": "20260728181803_500542a9-3dc2-4e13-8505-7113dc859560.sql",
-      "canonicalReplacement": [
-        "20260727130000_scp_a2_scoring_versions_and_publication_gates.sql"
-      ],
+      "canonicalReplacement": ["20260727130000_scp_a2_scoring_versions_and_publication_gates.sql"],
       "equivalence": "prefix-covered",
       "reason": "Lovable Cloud re-issue of SCP A2. On replay its FIRST statement (CREATE TABLE scp_scoring_versions) failed, so no statement of this file has ever executed in a replay.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -139,9 +115,7 @@
     {
       "version": "20260720072016",
       "file": "20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153.sql",
-      "canonicalReplacement": [
-        "20260720064743_h3_2_employer_settings.sql"
-      ],
+      "canonicalReplacement": ["20260720064743_h3_2_employer_settings.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of H3.2; whitespace-normalised identical. On replay it failed on the canonical file's policy (employers_owner_admin_update already exists).",
       "hostedEvidence": "Hosted (zrah) applied it as version 20260720072017; see the appliedThroughLovable entry for the canonical file.",
@@ -162,9 +136,7 @@
     {
       "version": "20260720124636",
       "file": "20260720124636_c5e57833-aa14-4466-a5ec-03c29424eac0.sql",
-      "canonicalReplacement": [
-        "20260720114043_h3_3_platform_admin_employer_moderation.sql"
-      ],
+      "canonicalReplacement": ["20260720114043_h3_3_platform_admin_employer_moderation.sql"],
       "equivalence": "prefix-covered",
       "reason": "Generated re-issue of H3.3. On replay its FIRST statement (CREATE TABLE employer_moderation_events) failed, so no statement of this file has ever executed in a replay.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -185,9 +157,7 @@
     {
       "version": "20260805053250",
       "file": "20260805053250_566120b7-548a-49d9-9fff-7e25ab67cc2d.sql",
-      "canonicalReplacement": [
-        "20260805090000_scp_phase1g_content_correction.sql"
-      ],
+      "canonicalReplacement": ["20260805090000_scp_phase1g_content_correction.sql"],
       "equivalence": "superseded",
       "reason": "Lovable Cloud re-issue of Phase 1G-a content correction, sorted BEFORE the authored file. Because the block also re-issued Phase 2h's guard earlier, the authored 1G-a was then REFUSED on replay (SCP_LEARNING_FEEDBACK_ON_ASSESSMENT_ITEM) -- with the block parked the authored file applies at its canonical position, before the 2h guard exists, exactly as the hosted history did. Its one differing statement (scp_guard_construct_honesty body) is superseded: the final active definer is 20260916090000.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -196,9 +166,7 @@
     {
       "version": "20260719115332",
       "file": "20260719115332_aa5ec826-c781-4d2d-a03e-f6c744d43272.sql",
-      "canonicalReplacement": [
-        "20260719100000_employer_memberships.sql"
-      ],
+      "canonicalReplacement": ["20260719100000_employer_memberships.sql"],
       "equivalence": "prefix-covered",
       "reason": "Generated re-issue of the employer memberships migration. On replay its FIRST statement (ALTER TABLE employers ADD COLUMN status) failed against the canonical file's earlier work, so no statement of this file has ever executed in a replay; every object it describes is created by the canonical file.",
       "hostedEvidence": "The file is Lovable Cloud's own sync-back of the hosted application and is preserved verbatim as that record.",
@@ -207,9 +175,7 @@
     {
       "version": "20260731105625",
       "file": "20260731105625_c4c23c34-4fcb-4691-b9dd-de2d12a912b9.sql",
-      "canonicalReplacement": [
-        "20260801100000_scp_restore_scoring_lineage_readability.sql"
-      ],
+      "canonicalReplacement": ["20260801100000_scp_restore_scoring_lineage_readability.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of the scoring lineage readability migration, sorted EARLIER than the canonical file; whitespace-normalised identical.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -218,9 +184,7 @@
     {
       "version": "20260728181901",
       "file": "20260728181901_0db6ed3c-faa0-4b55-8509-c24ed96e7b4a.sql",
-      "canonicalReplacement": [
-        "20260727140000_scp_a3_close_high_findings.sql"
-      ],
+      "canonicalReplacement": ["20260727140000_scp_a3_close_high_findings.sql"],
       "equivalence": "prefix-covered",
       "reason": "Lovable Cloud re-issue of SCP A3. Its executed replay prefix was one CREATE OR REPLACE of scp_guard_version_starts_as_draft, whose final active definer is 20260731053218 either way; it then failed on the canonical file's trigger and nothing after that (including its scp_content_events insert) ever executed.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -229,9 +193,7 @@
     {
       "version": "20260805053845",
       "file": "20260805053845_c3fc52f8-b6d2-42dc-a68b-73b163f46e3c.sql",
-      "canonicalReplacement": [
-        "20260808090000_scp_phase2b_fixture_and_delivery.sql"
-      ],
+      "canonicalReplacement": ["20260808090000_scp_phase2b_fixture_and_delivery.sql"],
       "equivalence": "superseded",
       "reason": "Lovable Cloud re-issue of Phase 2b. Its one differing statement (scp_guard_snapshot_immutable body) is superseded: the canonical 2b defines it at its position and the final active definer is 20260916090000.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -240,9 +202,7 @@
     {
       "version": "20260724123025",
       "file": "20260724123025_51727b05-4f6f-411b-ae53-8ff4e99ffbf4.sql",
-      "canonicalReplacement": [
-        "20260724130000_admin_portal_operational_scope.sql"
-      ],
+      "canonicalReplacement": ["20260724130000_admin_portal_operational_scope.sql"],
       "equivalence": "superseded",
       "reason": "Generated re-issue of the admin portal scope migration sorted EARLIER than the authored file, which therefore always failed on replay ('policy employees_admin_select already exists'). Its one statement not present in the canonical file (CREATE OR REPLACE jobs_validate_before_write) is superseded: the final active definer of that function is 20260906100000_jobs_self_publish_admin_member_fix.sql either way.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -251,9 +211,7 @@
     {
       "version": "20260805053628",
       "file": "20260805053628_505b877a-5596-493d-a7b2-5c2e8e35192c.sql",
-      "canonicalReplacement": [
-        "20260807090000_scp_phase2_read_models_and_identity_rpc.sql"
-      ],
+      "canonicalReplacement": ["20260807090000_scp_phase2_read_models_and_identity_rpc.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of Phase 2 read models; whitespace-normalised identical to the canonical file it shadowed, which therefore always failed its boundary assertion (SCP_P2_BOUNDARY_BREACHED) on replay.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -262,9 +220,7 @@
     {
       "version": "20260805053507",
       "file": "20260805053507_c95d47f8-ebca-4961-8894-2d422765d477.sql",
-      "canonicalReplacement": [
-        "20260806090000_scp_phase1h_foundation_corrections.sql"
-      ],
+      "canonicalReplacement": ["20260806090000_scp_phase1h_foundation_corrections.sql"],
       "equivalence": "superseded",
       "reason": "Lovable Cloud re-issue of Phase 1H, sorted BEFORE the authored file, which therefore always failed its boundary assertion (SCP_P1H_ACADEMY_PUBLISHED) on replay. Its one differing statement -- REVOKE on scp_guard_assignment_targets_published, a SECURITY DEFINER TRIGGER function -- is a documented inert ACL delta: PostgreSQL refuses direct invocation of trigger functions, so EXECUTE grants on it are unreachable.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -273,9 +229,7 @@
     {
       "version": "20260827112444",
       "file": "20260827112444_58fc45db-729a-4d5b-a545-7c0e40d74175.sql",
-      "canonicalReplacement": [
-        "20260917090000_superadmin_permanent_account_deletion.sql"
-      ],
+      "canonicalReplacement": ["20260917090000_superadmin_permanent_account_deletion.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of the superadmin permanent account deletion migration, sorted EARLIER than the canonical file; whitespace-normalised identical (guarded DDL). No active migration between the two positions references its objects.",
       "hostedEvidence": "Hosted (zrah) applied it as version 20260827112444; see the appliedThroughLovable entry for the canonical file.",
@@ -284,9 +238,7 @@
     {
       "version": "20260731105531",
       "file": "20260731105531_45a611f0-6060-4479-8c7c-36ddc5d85eb5.sql",
-      "canonicalReplacement": [
-        "20260801090000_career_discovery_v31_personal_layer.sql"
-      ],
+      "canonicalReplacement": ["20260801090000_career_discovery_v31_personal_layer.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of the v3.1 personal layer, sorted EARLIER than the canonical file; whitespace-normalised identical. No active migration between the two positions references its objects.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -295,9 +247,7 @@
     {
       "version": "20260805053026",
       "file": "20260805053026_54aff8d4-a8fe-4904-8f49-30025561d9b8.sql",
-      "canonicalReplacement": [
-        "20260804110000_scp_phase1f_bestworst_cr_rubrics.sql"
-      ],
+      "canonicalReplacement": ["20260804110000_scp_phase1f_bestworst_cr_rubrics.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of Phase 1F (2026-08-05 05xxxx block); whitespace-normalised identical to the canonical file it shadowed.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -306,9 +256,7 @@
     {
       "version": "20260805054837",
       "file": "20260805054837_e7c94245-d141-468e-9c5d-9d479d6a322a.sql",
-      "canonicalReplacement": [
-        "20260811090000_scp_phase2i_seed_processing_purpose_version.sql"
-      ],
+      "canonicalReplacement": ["20260811090000_scp_phase2i_seed_processing_purpose_version.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of Phase 2i; whitespace-normalised identical to the canonical file it shadowed.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -317,9 +265,7 @@
     {
       "version": "20260814054617",
       "file": "20260814054617_aa33afbd-687d-4c68-96d3-1c7b65056086.sql",
-      "canonicalReplacement": [
-        "20260813090000_scp_phase2m_fixture_internal_only.sql"
-      ],
+      "canonicalReplacement": ["20260813090000_scp_phase2m_fixture_internal_only.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of Phase 2m, sorted AFTER the canonical file; whitespace-normalised identical; second application was idempotent. The approvedDuplicateVersions pairing this resolved is retired with it.",
       "hostedEvidence": "Hosted (zrah) recorded both versions; preserved verbatim.",
@@ -328,9 +274,7 @@
     {
       "version": "20260804063601",
       "file": "20260804063601_b8f08ec6-eeb3-4acd-baa7-762de05a3b44.sql",
-      "canonicalReplacement": [
-        "20260803120000_scp_phase1d_security_guard_draft_content.sql"
-      ],
+      "canonicalReplacement": ["20260803120000_scp_phase1d_security_guard_draft_content.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of Phase 1D draft content, sorted AFTER the canonical file; whitespace-normalised identical; second application was idempotent.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -351,9 +295,7 @@
     {
       "version": "20260825164105",
       "file": "20260825164105_9ae58010-10dc-4d5f-901f-cc7fa3eecdf4.sql",
-      "canonicalReplacement": [
-        "20260909092000_jobs_other_profession_selection.sql"
-      ],
+      "canonicalReplacement": ["20260909092000_jobs_other_profession_selection.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of the jobs other-profession selection migration, sorted EARLIER than the canonical file; whitespace-normalised identical (guarded ADD COLUMN IF NOT EXISTS). No active migration between the two positions references its columns.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; see the appliedThroughLovable entry for the canonical file.",
@@ -362,9 +304,7 @@
     {
       "version": "20260728181922",
       "file": "20260728181922_8a907474-dd2f-45cc-a56e-44be6760ebca.sql",
-      "canonicalReplacement": [
-        "20260727150000_scp_a4_scoring_visibility.sql"
-      ],
+      "canonicalReplacement": ["20260727150000_scp_a4_scoring_visibility.sql"],
       "equivalence": "prefix-covered",
       "reason": "Lovable Cloud re-issue of SCP A4. Its executed replay prefix was two DROP POLICY IF EXISTS statements that the canonical A4 had already performed (no-ops); it then failed on CREATE VIEW scp_scoring_version_lineage and nothing after that (including its scp_content_events insert) ever executed.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -373,9 +313,7 @@
     {
       "version": "20260805054010",
       "file": "20260805054010_06bf64f1-6c91-4331-a7cd-2f91a28fd8f4.sql",
-      "canonicalReplacement": [
-        "20260808100000_scp_phase2c_test_fixture_programme.sql"
-      ],
+      "canonicalReplacement": ["20260808100000_scp_phase2c_test_fixture_programme.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of the Phase 2c fixture programme; whitespace-normalised identical to the canonical file it shadowed, which therefore always failed on replay with a duplicate-key second insert.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -396,9 +334,7 @@
     {
       "version": "20260728182046",
       "file": "20260728182046_75665c93-b819-4d78-a0ef-722d21dbaab1.sql",
-      "canonicalReplacement": [
-        "20260728120000_career_discovery_v3_phase1.sql"
-      ],
+      "canonicalReplacement": ["20260728120000_career_discovery_v3_phase1.sql"],
       "equivalence": "prefix-covered",
       "reason": "Lovable Cloud re-issue of Career Discovery v3 Phase 1. Its executed replay prefix was two guarded inserts (ON CONFLICT DO NOTHING / WHERE NOT EXISTS) that the canonical file had already satisfied (no-ops); it then failed on CREATE TABLE cd_definition_versions and nothing after that ever executed.",
       "hostedEvidence": "Lovable Cloud sync-back of the hosted application, preserved verbatim.",
@@ -407,9 +343,7 @@
     {
       "version": "20260805055006",
       "file": "20260805055006_bfe1e360-ea4b-4792-8330-ef2316121047.sql",
-      "canonicalReplacement": [
-        "20260812090000_scp_phase2k_partial_bestworst_while_open.sql"
-      ],
+      "canonicalReplacement": ["20260812090000_scp_phase2k_partial_bestworst_while_open.sql"],
       "equivalence": "superseded",
       "reason": "Lovable Cloud re-issue of Phase 2k. Its one differing statement (scp_guard_response_matches_format body) is superseded: the canonical 2k defines it at its canonical position.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -418,9 +352,7 @@
     {
       "version": "20260724101608",
       "file": "20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql",
-      "canonicalReplacement": [
-        "20260724090000_employer_assessment_assignments.sql"
-      ],
+      "canonicalReplacement": ["20260724090000_employer_assessment_assignments.sql"],
       "equivalence": "identical",
       "reason": "Lovable-generated copy of the assessment assignments migration; whitespace-normalised identical. Always failed on replay against the canonical file's table.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; see the appliedThroughLovable evidence for the canonical file.",
@@ -429,9 +361,7 @@
     {
       "version": "20260805054409",
       "file": "20260805054409_7595e4fa-c1e1-44d6-b389-a117aa34789f.sql",
-      "canonicalReplacement": [
-        "20260809100000_scp_phase2f_learning_fixture.sql"
-      ],
+      "canonicalReplacement": ["20260809100000_scp_phase2f_learning_fixture.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of the Phase 2f learning fixture; whitespace-normalised identical to the canonical file it shadowed, which therefore always failed on replay with a duplicate-key second insert.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
@@ -440,13 +370,31 @@
     {
       "version": "20260805053416",
       "file": "20260805053416_64cee415-920d-4d95-9b9a-65488066cfbd.sql",
-      "canonicalReplacement": [
-        "20260805100000_scp_phase1g_learning_and_anchors.sql"
-      ],
+      "canonicalReplacement": ["20260805100000_scp_phase1g_learning_and_anchors.sql"],
       "equivalence": "identical",
       "reason": "Lovable Cloud re-issue of Phase 1G learning and anchors; whitespace-normalised identical to the canonical file it shadowed, which therefore always failed its boundary assertion (SCP_P1G_BOUNDARY_BREACHED) on replay.",
       "hostedEvidence": "Hosted (zrah) applied it under its own version; preserved verbatim.",
       "decidedIn": "Atomic retirement of the legacy generated chain, owner decision 2026-08-28 (strict replay contract). The active path must replay on an empty database with zero failures; every Lovable-generated re-issue leaves the active path in ONE change because the chain's members shadow each other's objects and cannot be removed one at a time."
+    },
+    {
+      "version": "20261022090000",
+      "file": "20261022090000_scp_vaktare_v1_content_review.sql",
+      "canonicalReplacement": [],
+      "disposition": "deferred-unapplied",
+      "reason": "Temporarily parked before production deployment. The migration resolves a form by a slug that is duplicated in production, so SELECT INTO can choose the quiet one-attempt form while the 12-attempt pilot form remains unchanged. Its in-flight-attempt guard and item snapshot are then scoped to the wrong form and can report success dishonestly.",
+      "hostedEvidence": "Not applied on owner production wrygicdfxwjnrugduxnt as of the read-only release-frontier audit on 2026-09-07. The live database has two forms with slug security-officer-recruitment-form-a; the migration currently resolves the wrong form and is excluded from the active path.",
+      "followUp": "Create a new reviewed migration that resolves the form through assessment definition and version identity, refuses ambiguity, scopes the in-flight guard to that exact form and proves the 12-attempt pilot form is the intended target. Then name that active file in canonicalReplacement.",
+      "decidedIn": "Release-frontier reconciliation after PR #192, owner instruction 2026-09-07."
+    },
+    {
+      "version": "20261023090000",
+      "file": "20261023090000_scp_vaktare_v1_self_report_quality.sql",
+      "canonicalReplacement": [],
+      "disposition": "deferred-unapplied",
+      "reason": "Temporarily parked before production deployment. It repeats the duplicated-slug lookup from 20261022090000, so its attempt guard and 20 self-report item updates can be applied to the wrong form while the live pilot form is left untouched.",
+      "hostedEvidence": "Not applied on owner production wrygicdfxwjnrugduxnt as of the read-only release-frontier audit on 2026-09-07. The same duplicated form slug is live, and this migration is excluded from the active path until its target identity is deterministic.",
+      "followUp": "Create a new reviewed migration after the corrected content-review migration. Resolve the identical form identity deterministically, refuse ambiguity, preserve option ids and scoring, and prove the 12-attempt pilot form is protected. Then name that active file in canonicalReplacement.",
+      "decidedIn": "Release-frontier reconciliation after PR #192, owner instruction 2026-09-07."
     }
   ],
   "neverReplay": [
@@ -473,27 +421,55 @@
       "hostedVersion": "20260818162445",
       "reason": "Production applied closed-test governance through Lovable under the generated UUID version 20260818162445, not under the authored version 20260818090000. The repository file now carries the hosted ledger identity so canonical replay identity and hosted ledger identity agree, and so the 20260818090000 collision with Passport Phase 10 is resolved without inventing a version.",
       "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260818162445';"
-    }, 
+    },
     {
-      "file": "20261025090000_scp_trust_evidence_report_r2a_report_version_continuity.sql", 
-      "hostedVersion": "20260904171840", 
-      "hostedName": "scp_trust_evidence_report_r2a_report_version_continuity", 
-      "reason": "PR-R2A-2 continuity hotfix, applied to production wrygicdfxwjnrugduxnt on 2026-09-04 through DIRECT SUPABASE ACCESS (the management API), not through Lovable and not by the GitHub integration. That mechanism stamps its own ledger identity, so the canonical version 20261025090000 does not appear in supabase_migrations.schema_migrations; the hosted identity is 20260904171840. This entry is the map between the two. THE CANONICAL FILE MUST NOT BE EXECUTED AGAIN: its SQL is already represented in production. Because the canonical version is absent from the hosted ledger, an automated deploy that decides what to run by comparing filenames against that ledger would select it; verify with the query below before any such run. Re-execution would in fact be harmless (the file only does CREATE OR REPLACE of two functions and re-states their grants, and its own proof block would pass again), but it would still be an unintended second execution. Recorded here rather than under appliedThroughLovable because that field names a mechanism this apply did not use, and provenance must not be falsified. release-state.json records the same apply with the full read-only verification.", 
+      "file": "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
+      "hostedVersion": "20260904171840",
+      "hostedName": "scp_trust_evidence_report_r2a_report_version_continuity",
+      "reason": "PR-R2A-2 continuity hotfix, applied to production wrygicdfxwjnrugduxnt on 2026-09-04 through DIRECT SUPABASE ACCESS (the management API), not through Lovable and not by the GitHub integration. That mechanism stamps its own ledger identity, so the canonical version 20261025090000 does not appear in supabase_migrations.schema_migrations; the hosted identity is 20260904171840. This entry is the map between the two. THE CANONICAL FILE MUST NOT BE EXECUTED AGAIN: its SQL is already represented in production. Because the canonical version is absent from the hosted ledger, an automated deploy that decides what to run by comparing filenames against that ledger would select it; verify with the query below before any such run. Re-execution would in fact be harmless (the file only does CREATE OR REPLACE of two functions and re-states their grants, and its own proof block would pass again), but it would still be an unintended second execution. Recorded here rather than under appliedThroughLovable because that field names a mechanism this apply did not use, and provenance must not be falsified. release-state.json records the same apply with the full read-only verification.",
       "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260904171840';"
-    }, 
+    },
     {
-      "file": "20261026090000_scp_trust_evidence_report_r2a_contract.sql", 
-      "hostedVersion": "20260904174903", 
-      "hostedName": "scp_trust_evidence_report_r2a_contract", 
-      "reason": "PR-R2A-3 CONTRACT, applied to production wrygicdfxwjnrugduxnt on 2026-09-04 through DIRECT SUPABASE ACCESS (the management API), not through Lovable and not by the GitHub integration. Canonical version 20261026090000 is recorded in supabase_migrations.schema_migrations as 20260904174903; this entry is the map between the two. THE CANONICAL FILE MUST NOT BE EXECUTED AGAIN. Same caveat as the continuity entry above: the canonical version is absent from the hosted ledger, so a filename-versus-ledger comparison would select it; verify with the query below first. Re-execution would be harmless in effect (DROP POLICY IF EXISTS / CREATE POLICY / REVOKE / GRANT, with a precondition block that refuses unless the audience contracts are present) but is still unintended. Recorded here rather than under appliedThroughLovable because that field names a mechanism this apply did not use. release-state.json records the same apply with verification blocks A-I.", 
+      "file": "20260904174903_scp_trust_evidence_report_r2a_contract.sql",
+      "hostedVersion": "20260904174903",
+      "hostedName": "scp_trust_evidence_report_r2a_contract",
+      "reason": "PR-R2A-3 CONTRACT, applied to production wrygicdfxwjnrugduxnt on 2026-09-04 through DIRECT SUPABASE ACCESS (the management API), not through Lovable and not by the GitHub integration. Canonical version 20261026090000 is recorded in supabase_migrations.schema_migrations as 20260904174903; this entry is the map between the two. THE CANONICAL FILE MUST NOT BE EXECUTED AGAIN. Same caveat as the continuity entry above: the canonical version is absent from the hosted ledger, so a filename-versus-ledger comparison would select it; verify with the query below first. Re-execution would be harmless in effect (DROP POLICY IF EXISTS / CREATE POLICY / REVOKE / GRANT, with a precondition block that refuses unless the audience contracts are present) but is still unintended. Recorded here rather than under appliedThroughLovable because that field names a mechanism this apply did not use. release-state.json records the same apply with verification blocks A-I.",
       "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260904174903';"
-    }, 
+    },
     {
-      "file": "20261027090000_scp_trust_evidence_report_r1_provenance.sql", 
-      "hostedVersion": "20260904190901", 
-      "hostedName": "scp_trust_evidence_report_r1_provenance", 
-      "reason": "Applied, verified, then rolled back. Historical deployment record; no longer represents the current schema. PR-R1 provenance was applied to production wrygicdfxwjnrugduxnt on 2026-09-04 through DIRECT SUPABASE ACCESS (the management API), not through Lovable and not by the GitHub integration; the ledger stamped it 20260904190901. Every read-only verification passed, then a transient release proof found the release function failing with 42703 because scp_attempts.option_order_seed (20261021090000) is not applied hosted, and the documented rollback was executed the same session: no R1 object exists on production and the release function is the pre-R1 definition again. The ledger row is Supabase's own history and is deliberately left untouched. The canonical file has since been hardened (option_order_seed and facet-resolution preconditions, trigger-function revoke, competency-scoped facet lookup), so its sha256 no longer matches this row. When R1 is re-applied it will be stamped under a NEW hosted version, which must be recorded as its own entry; this row must never be read as evidence that R1 is live. release-state.json keeps R1 at pending with the full account.", 
-      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260904190901';  -- exists (historical). Then: SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='scp_report_computation_manifests';  -- expect 0 until R1 is re-applied under a new version."
+      "file": "20260905054603_scp_trust_evidence_report_r1_provenance.sql",
+      "hostedVersion": "20260905054603",
+      "hostedName": "scp_trust_evidence_report_r1_provenance",
+      "reason": "The first hosted apply at 20260904190901 was rolled back and remains historical evidence only. The corrected migration was subsequently applied as 20260905054603 and is live: the manifest table exists with RLS enabled and zero policies, both snapshot link columns exist, and all four provenance functions exist. The repository file now carries that live hosted identity so the GitHub integration cannot select and re-run it.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260905054603'; SELECT relrowsecurity, (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='scp_report_computation_manifests') FROM pg_class WHERE oid='public.scp_report_computation_manifests'::regclass;"
+    },
+    {
+      "file": "20260905053344_scp_option_order_per_attempt.sql",
+      "hostedVersion": "20260905053344",
+      "hostedName": "scp_option_order_per_attempt",
+      "reason": "Applied and live on owner production under hosted version 20260905053344. The option_order_seed column, four functions and both triggers are present; 0 of 34 historical attempts were seeded, matching the migration's explicit no-backfill contract. The file carries the hosted identity to prevent re-execution.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260905053344'; SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_attempts' AND column_name='option_order_seed';"
+    },
+    {
+      "file": "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
+      "hostedVersion": "20260904134520",
+      "hostedName": "ea2e5b1f-6d13-454e-b61b-bac4591ab899",
+      "reason": "Applied through Lovable and live under generated ledger version 20260904134520. The repository file now uses that hosted identity while appliedThroughLovable retains the exact provenance record.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260904134520';"
+    },
+    {
+      "file": "20260905053809_scp_release_facet_resolution.sql",
+      "hostedVersion": "20260905053809",
+      "hostedName": "scp_release_facet_resolution",
+      "reason": "Applied and live on owner production under hosted version 20260905053809. The release function resolves facets by competency id and slug and contains no slug-only lookup. The file carries the hosted identity to prevent re-execution.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260905053809';"
+    },
+    {
+      "file": "20260906125945_scp_trust_evidence_report_r3a_contract.sql",
+      "hostedVersion": "20260906125945",
+      "hostedName": "scp_trust_evidence_report_r3a_contract",
+      "reason": "Applied and live on owner production under hosted version 20260906125945. scp_employer_report_v3 and scp_report_next_step have the reviewed posture; the latter is internal and has no authenticated EXECUTE. The file carries the hosted identity to prevent re-execution.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260906125945';"
     }
   ],
   "appliedThroughLovable": [
@@ -1590,8 +1566,8 @@
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260827112444';"
     },
     {
-      "canonicalFile": "20261024090000_scp_trust_evidence_report_r2a_audience_reads.sql",
-      "canonicalVersion": "20261024090000",
+      "canonicalFile": "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
+      "canonicalVersion": "20260904134520",
       "hostedVersion": "20260904134520",
       "hostedName": "ea2e5b1f-6d13-454e-b61b-bac4591ab899",
       "generatedFileOnMain": null,
@@ -1601,7 +1577,7 @@
       "appliedAt": "2026-09-04T13:45:20Z",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260904134520';",
       "sqlEquivalence": "The canonical file was submitted verbatim to supabase--migration; the hosted ledger row 20260904134520 is that same SQL (its statements begin with the canonical file's TRUST Evidence Report header and it is the only ledger row containing SCP_R2A_EXPAND_PROOF, whose apply-time assertions all passed).",
-      "reason": "PR-R2A-1 EXPAND, step 1 of 3, applied hosted on its own under owner approval: additive only -- four read routines, EXECUTE to authenticated on the two audience entry points and the shared predicate, nothing revoked, no policy re-pointed, no row touched. R2A-2 (application cutover) and R2A-3 (CONTRACT) are NOT applied and must follow in order. Must never be executed hosted again."
+      "reason": "PR-R2A-1 EXPAND, step 1 of 3, applied hosted on its own under owner approval: additive only -- four read routines, EXECUTE to authenticated on the two audience entry points and the shared predicate, nothing revoked, no policy re-pointed, no row touched. R2A-2 and R2A-3 were subsequently applied under their hosted ledger identities; all three files now carry those identities. Must never be executed hosted again."
     }
   ],
   "canonicalProject": {

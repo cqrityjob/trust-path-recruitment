@@ -77,7 +77,8 @@ const check = (label: string, ok: boolean, detail = "") => {
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
 const BASE = "supabase/migrations/20260830094000_scp_security_officer_recruitment_assessment.sql";
-const REVIEW = "supabase/migrations/20261022090000_scp_vaktare_v1_content_review.sql";
+const REVIEW =
+  "supabase/archive/parked-migrations/20261022090000_scp_vaktare_v1_content_review.sql";
 const THRESHOLDS = "supabase/migrations/20260802090000_scp_phase0_competency_graph.sql";
 const AUDIT = "docs/assessment/governance/vaktare-v1-item-audit-2026-09-03.json";
 const TAG = "$vaktare_content$";

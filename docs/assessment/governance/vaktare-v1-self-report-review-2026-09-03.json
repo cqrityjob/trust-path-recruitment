@@ -1,5 +1,5 @@
 {
-  "migration": "supabase/migrations/20261023090000_scp_vaktare_v1_self_report_quality.sql", 
+  "migration": "supabase/archive/parked-migrations/20261023090000_scp_vaktare_v1_self_report_quality.sql",
   "cue_position": "The review classified most self-report items as HIGH or MODERATE cue after revision, and none as LOW. Wording cannot eliminate social desirability and this pack does not claim it does. The objective was to reduce obviousness, not to make the self-report objective. A HIGH-CUE item is not a blocker while it is presented explicitly as self-description; it is recorded here for pilot analysis.", 
   "product_boundary": "Self-report shows how the candidate describes their own working style and behavioural patterns. It is candidate self-description, useful for human review and for structured interview follow-up. It is NOT observed evidence, proof of competence, evidence maturity, suitability, a personality diagnosis or an employment recommendation. No single self-report item may independently establish a competency; self_report carries counts_toward_maturity = false, so no self-report answer can move a measured evidence level.", 
   "pilot_watch": [

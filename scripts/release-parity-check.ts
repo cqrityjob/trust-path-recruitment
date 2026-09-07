@@ -276,7 +276,9 @@ for (const entry of state.frontier) {
 // 3 · The release sequence
 // =========================================================================
 
-const unapplied = state.frontier.filter((e) => e.hostedState !== "applied");
+const unapplied = state.frontier
+  .filter((e) => e.hostedState !== "applied")
+  .sort((a, b) => a.file.localeCompare(b.file));
 const unverified = unapplied.filter((e) => e.hostedState === "unverified");
 
 console.log(`release-parity-check: ${migrations.length} canonical migrations`);

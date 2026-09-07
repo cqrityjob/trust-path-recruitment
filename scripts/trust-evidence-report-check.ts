@@ -985,7 +985,7 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
   // "not yet" guards and are inverted here deliberately: exactly one
   // migration creates the table, and only PR-R1's files (migration and
   // rollback) may name it -- a second creator would be a parallel engine.
-  const R1_MIGRATION = "20261027090000_scp_trust_evidence_report_r1_provenance.sql";
+  const R1_MIGRATION = "20260905054603_scp_trust_evidence_report_r1_provenance.sql";
   const migrations = readdirSync(join(ROOT, "supabase/migrations"));
   const manifestCreators = migrations.filter((f) =>
     /CREATE TABLE(?: IF NOT EXISTS)? public\.scp_report_computation_manifests/.test(
@@ -1002,7 +1002,7 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
       readFileSync(join(ROOT, "supabase/migrations", f), "utf8"),
     ),
   );
-  const R3A_MIGRATION = "20261029090000_scp_trust_evidence_report_r3a_contract.sql";
+  const R3A_MIGRATION = "20260906125945_scp_trust_evidence_report_r3a_contract.sql";
   check(
     "H11 exactly two migrations name scp_report_computation_manifests: PR-R1 (creates it) and PR-R3A (reads counts from it)",
     migrationMentions.length === 2 &&
