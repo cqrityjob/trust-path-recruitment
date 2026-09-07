@@ -26,18 +26,22 @@
 --     failure — a link whose scope can no longer be evaluated must show
 --     nothing, never everything — but it means every live selected share
 --     goes dark until the forward migration is re-applied.
---   * A lost create response can mint a second live link again.
+--   * A lost create response can mint a second live link again, and a reused
+--     request key stops being distinguishable from a genuine retry.
 --   * The holder's language choice for a recipient is lost.
+--   * The holder can no longer reissue a link over the same contents.
+--   * The anonymous payload carries database identifiers again, and the check
+--     time returns to whatever the visitor's own clock says.
 --
 -- ── DATA SAFETY ────────────────────────────────────────────────────────
 --
 -- This is deliberately NOT a clean drop of everything the forward migration
 -- created. Two things are kept:
 --
---   * `sp_disclosures.locale` and `sp_disclosures.request_key` are LEFT IN
---     PLACE. They carry values a holder supplied; dropping the columns would
---     destroy them, and an unused nullable column costs nothing. Re-applying
---     the forward migration finds them and continues.
+--   * `sp_disclosures.locale`, `.request_key` and `.request_fingerprint` are
+--     LEFT IN PLACE. They carry values a holder supplied; dropping the columns
+--     would destroy them, and an unused nullable column costs nothing.
+--     Re-applying the forward migration finds them and continues.
 --   * `sp_disclosure_items` rows are the holder's own sharing decisions. The
 --     table is left in place too, unreachable but intact, so re-applying
 --     restores every live share exactly as it was.
@@ -53,8 +57,37 @@
 
 BEGIN;
 
+DROP FUNCTION IF EXISTS public.sp_replace_selected_disclosure(uuid, boolean, uuid);
 DROP FUNCTION IF EXISTS public.sp_preview_selected_disclosure(uuid[],uuid[],integer,text,text);
 DROP FUNCTION IF EXISTS public.sp_create_selected_disclosure(uuid[],uuid[],integer,text,text,text,uuid);
+
+-- Restored from 20260903091000: no identifier stripping, no server-authored
+-- check time, and the same fail-closed head. A payload built by a definition
+-- that no longer exists cannot be repaired here; what CAN be guaranteed is
+-- that nothing new leaves, which the restored function does by carrying the
+-- pre-20261101090000 body exactly.
+CREATE OR REPLACE FUNCTION public.sp_get_disclosure(_token text)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, extensions AS $function$
+DECLARE _d public.sp_disclosures%ROWTYPE;
+BEGIN
+  SELECT * INTO _d FROM public.sp_disclosures
+   WHERE token_hash = encode(digest(coalesce(_token,''), 'sha256'), 'hex')
+     AND application_id IS NULL;
+
+  IF NOT FOUND OR _d.revoked_at IS NOT NULL
+     OR (_d.expires_at IS NOT NULL AND _d.expires_at < now()) THEN
+    RETURN jsonb_build_object('status','unavailable');
+  END IF;
+
+  UPDATE public.sp_disclosures SET access_count = access_count + 1 WHERE id = _d.id;
+  INSERT INTO public.sp_disclosure_accesses (disclosure_id) VALUES (_d.id);
+
+  RETURN public.sp_disclosure_payload(_d.id);
+END; $function$;
+
+REVOKE ALL ON FUNCTION public.sp_get_disclosure(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.sp_get_disclosure(text) TO service_role;
 
 -- Restored verbatim from 20260908094000.
 CREATE OR REPLACE FUNCTION public.sp_disclosure_payload(_disclosure_id uuid)
@@ -156,8 +189,11 @@ BEGIN
       ELSE 0 END);
 END; $function$;
 
--- The builder goes last: nothing calls it once the payload has been restored.
+-- The internals go last: nothing calls them once the payload and the
+-- anonymous boundary have been restored.
 DROP FUNCTION IF EXISTS public.sp_selected_merits_payload(uuid,uuid[],uuid[],text,text,timestamptz,timestamptz);
+DROP FUNCTION IF EXISTS public.sp_assert_share_inputs(integer, text);
+DROP FUNCTION IF EXISTS public.sp_share_request_fingerprint(uuid,uuid[],uuid[],integer,text,text,text,uuid);
 
 -- The closed set, back to five. NOT VALID so no existing row is examined:
 -- a selected share created while the forward migration was live keeps its row
