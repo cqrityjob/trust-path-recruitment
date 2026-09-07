@@ -42,7 +42,14 @@ export type OpenReviews = ReadonlyMap<string, "pending" | "clarification_request
 export interface AttentionItem {
   readonly kind: "claim" | "experience";
   readonly id: string;
+  /** BOTH languages, because a title is data and this list is read in
+   *  whichever language the holder chose. It used to carry `titleSv` alone,
+   *  so an English Passport listed Swedish credential titles under English
+   *  headings — the one place on the page that was not translated. An
+   *  employment period reads the same in both: a role title and an employer
+   *  name are the holder's own words and a proper noun. */
   readonly title: string;
+  readonly titleEn: string;
   /** Days until it lapses. Only present for `expiring`. */
   readonly daysLeft?: number;
 }
@@ -91,15 +98,16 @@ export function attentionFor(
     kind: "claim" | "experience",
     id: string,
     title: string,
+    titleEn: string,
     lifecycle: Claim["lifecycleState"],
     validUntil: IsoDate | null,
     assertion: Claim["assertionLevel"],
   ): void => {
     const review = openReviews.get(id);
     if (review === "clarification_requested") {
-      needsHolder.push({ kind, id, title });
+      needsHolder.push({ kind, id, title, titleEn });
     } else if (review === "pending") {
-      waiting.push({ kind, id, title });
+      waiting.push({ kind, id, title, titleEn });
     }
 
     // Expiry is only interesting for something that was actually checked: a
@@ -109,30 +117,24 @@ export function attentionFor(
 
     const validity = validityOf(lifecycle, validUntil, evaluationOn);
     if (validity.hasExpired) {
-      expired.push({ kind, id, title });
+      expired.push({ kind, id, title, titleEn });
       return;
     }
     if (validUntil) {
       const left = daysBetween(evaluationOn, validUntil);
       if (left >= 0 && left <= EXPIRY_HORIZON_DAYS) {
-        expiring.push({ kind, id, title, daysLeft: left });
+        expiring.push({ kind, id, title, titleEn, daysLeft: left });
       }
     }
   };
 
   for (const c of claims) {
     if (c.lifecycleState === "draft") continue; // drafts are their own section
-    consider("claim", c.id, c.titleSv, c.lifecycleState, c.validUntil, c.assertionLevel);
+    consider("claim", c.id, c.titleSv, c.titleEn, c.lifecycleState, c.validUntil, c.assertionLevel);
   }
   for (const p of periods) {
-    consider(
-      "experience",
-      p.id,
-      `${p.roleTitle} · ${p.employerName}`,
-      p.lifecycleState,
-      null,
-      p.assertionLevel,
-    );
+    const employment = `${p.roleTitle} · ${p.employerName}`;
+    consider("experience", p.id, employment, employment, p.lifecycleState, null, p.assertionLevel);
   }
 
   // Soonest first: the one that lapses in nine days matters more than the one

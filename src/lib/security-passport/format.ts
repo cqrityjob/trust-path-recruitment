@@ -113,6 +113,43 @@ export function formatNameList(names: readonly string[], lang: PassportLang): st
   return `${names.slice(0, -1).join(", ")} ${conjunction} ${names[names.length - 1]}`;
 }
 
+/**
+ * One ISO day as a person reads it: "2 maj 2024", "2 May 2024".
+ *
+ * ── WHY NOT `formatDate` ───────────────────────────────────────────────
+ *
+ * `formatDate` returns the stored string. That is right where the value is
+ * a RECORD — a credential's stated issue day beside its stated expiry, in a
+ * field grid a reviewer reads against a document. It is wrong in a list a
+ * holder skims, where "2024-05-02" is a database value rather than a date.
+ * Both exist on purpose; this is the reader-facing one.
+ *
+ * An unparseable value comes back UNCHANGED rather than as "Invalid Date":
+ * a stored day this function cannot read is still the stored day, and
+ * showing it is more honest than hiding it behind an error word.
+ */
+export function formatIsoDay(date: IsoDate | null, lang: PassportLang): string {
+  if (!date) return passportT("common.notStated", lang);
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString(lang === "sv" ? "sv-SE" : "en-GB", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** A period, in reader-facing days. An absent end is "nu" / "now". */
+export function formatIsoDayRange(
+  startedOn: IsoDate,
+  endedOn: IsoDate | null,
+  lang: PassportLang,
+): string {
+  const end = endedOn ? formatIsoDay(endedOn, lang) : passportT("common.present", lang);
+  return `${formatIsoDay(startedOn, lang)} – ${end}`;
+}
+
 /** "2021-03-01 – 2024-03-01" or "2022-06-01 – nu" for an open period. */
 export function formatPeriodRange(
   startedOn: IsoDate,

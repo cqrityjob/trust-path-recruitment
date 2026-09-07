@@ -233,11 +233,24 @@ console.log("\n4 -- the catalogue is not load-bearing for the pages that show it
       );
     }
 
-    // And the market read has a catch of its own, so its failure is survivable
-    // rather than merely relocated.
+    // ── NOT READING IT IS THE STRONGEST FORM OF THIS RULE ─────────────
+    //
+    // The rule is that an OPTIONAL read must not be able to take a
+    // load-bearing one down with it. A route that reads the catalogue owes
+    // that read a catch of its own. A route that does not read it at all
+    // owes nothing, and is the safer of the two: the Passport workspace
+    // (PR #196) links to the page that owns the catalogue rather than
+    // rendering a second copy of it, so there is no optional read left on
+    // it to survive. Stated as a branch rather than dropped, so the
+    // catalogue coming back to this page brings its catch back with it.
+    const readsCatalogue = src.includes("loadAvailability");
     ck(
-      `${name}: the catalogue read has its own try/catch`,
-      /try\s*\{[^}]*loadAvailability[\s\S]{0,400}?\}\s*catch/.test(src),
+      readsCatalogue
+        ? `${name}: the catalogue read has its own try/catch`
+        : `${name}: does not read the catalogue at all, so it cannot be taken down by one`,
+      readsCatalogue
+        ? /try\s*\{[^}]*loadAvailability[\s\S]{0,400}?\}\s*catch/.test(src)
+        : !src.includes("getRegulatedCredentialAvailability"),
     );
   }
 }

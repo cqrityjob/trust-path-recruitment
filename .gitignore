@@ -54,3 +54,7 @@ supabase/.temp/
 # because "what we last accepted as the state of the law" is exactly the kind
 # of thing that must be reviewable in a diff.
 /regulatory-source-report.md
+
+# Local-only Playwright override (browser path); never committed.
+pw.local.config.ts
+pw.shots.mjs

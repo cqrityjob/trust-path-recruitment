@@ -219,6 +219,17 @@ function Group({
   );
 }
 
+/** The four lists this panel can print, named so a surface can ask for a
+ *  subset without a boolean per list. */
+export type AttentionGroup = "actionRequired" | "outcomes" | "information" | "waiting";
+
+const ALL_ATTENTION_GROUPS: readonly AttentionGroup[] = [
+  "actionRequired",
+  "outcomes",
+  "information",
+  "waiting",
+];
+
 export function VerificationOutcomes({
   attention,
   /** The entry's own title, resolved by the surface that has the rows. A
@@ -231,21 +242,55 @@ export function VerificationOutcomes({
   /** Suppress the "nothing waiting" line — for a surface that shows other
    *  attention of its own and would otherwise contradict itself. */
   showClear = true,
+  /**
+   * Which groups this surface wants this panel to own. All four by default.
+   *
+   * The Passport workspace passes the three DECIDED-or-ASKED groups and not
+   * `waiting`, because its merits list already carries every open review
+   * with the type, the organisation and the dates this panel does not have.
+   * Listing the same credential here as well is the page saying the same
+   * thing twice under two headings, which is what makes a page feel like a
+   * report rather than a place to work.
+   *
+   * Narrowing hides nothing that is not shown elsewhere on that surface, and
+   * the panel judges its own emptiness on what it will actually print.
+   */
+  groups = ALL_ATTENTION_GROUPS,
+  /**
+   * Whether this panel says, itself, that the read failed.
+   *
+   * True by default: on the career home this panel is the only thing that
+   * knows. The Passport workspace sets it false, because its recommended-step
+   * card already says it once and owns the retry — two competing blocks
+   * announcing one failed request is the page shouting.
+   */
+  showUnavailable = true,
   className,
 }: {
   attention: VerificationAttention;
   titleOf: (item: VerificationAttentionItem) => string;
   hrefOf: (item: VerificationAttentionItem) => string;
   showClear?: boolean;
+  groups?: readonly AttentionGroup[];
+  showUnavailable?: boolean;
   className?: string;
 }) {
   const { lang } = useT();
   const l = lang as Lang;
+  const wants = (group: AttentionGroup) => groups.includes(group);
+  // What this panel would actually PRINT. Not `attention.clear`, which
+  // answers for all four lists whether or not this surface asked for them.
+  const nothingToShow =
+    (!wants("actionRequired") || attention.actionRequired.length === 0) &&
+    (!wants("outcomes") || attention.outcomes.length === 0) &&
+    (!wants("information") || attention.information.length === 0) &&
+    (!wants("waiting") || attention.waiting.length === 0);
 
   // A failed read is not an empty one. Said before anything else, because
   // every list below is empty in both cases and only this sentence tells
   // them apart.
   if (attention.unavailable) {
+    if (!showUnavailable) return null;
     return (
       <section className={`rounded-xl border border-border bg-card p-5 ${className ?? ""}`}>
         <h2 className="text-base font-semibold tracking-tight text-foreground">
@@ -258,7 +303,7 @@ export function VerificationOutcomes({
     );
   }
 
-  if (attention.clear && !showClear) return null;
+  if (nothingToShow && !showClear) return null;
 
   const shared = { titleOf, hrefOf, lang: l };
 
@@ -271,42 +316,52 @@ export function VerificationOutcomes({
         {L(COPY.heading, l)}
       </h2>
 
-      {attention.clear ? (
+      {nothingToShow ? (
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{L(COPY.clear, l)}</p>
       ) : (
         <div className="mt-4 space-y-5">
-          <Group
-            {...shared}
-            title={L(COPY.actionRequired, l)}
-            hint={L(COPY.actionRequiredHint, l)}
-            icon={<AlertCircle className="h-4 w-4 text-amber-500" aria-hidden="true" />}
-            items={attention.actionRequired}
-            rule="border-amber-500/60"
-          />
-          <Group
-            {...shared}
-            title={L(COPY.outcomes, l)}
-            hint={L(COPY.outcomesHint, l)}
-            icon={<Info className="h-4 w-4 text-amber-500" aria-hidden="true" />}
-            items={attention.outcomes}
-            rule="border-amber-500/60"
-          />
-          <Group
-            {...shared}
-            title={L(COPY.information, l)}
-            hint={L(COPY.informationHint, l)}
-            icon={<CheckCircle2 className="h-4 w-4 text-[color:var(--gold)]" aria-hidden="true" />}
-            items={attention.information}
-            rule="border-border"
-          />
-          <Group
-            {...shared}
-            title={L(COPY.waiting, l)}
-            hint={L(COPY.waitingHint, l)}
-            icon={<Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />}
-            items={attention.waiting}
-            rule="border-border"
-          />
+          {wants("actionRequired") ? (
+            <Group
+              {...shared}
+              title={L(COPY.actionRequired, l)}
+              hint={L(COPY.actionRequiredHint, l)}
+              icon={<AlertCircle className="h-4 w-4 text-amber-500" aria-hidden="true" />}
+              items={attention.actionRequired}
+              rule="border-amber-500/60"
+            />
+          ) : null}
+          {wants("outcomes") ? (
+            <Group
+              {...shared}
+              title={L(COPY.outcomes, l)}
+              hint={L(COPY.outcomesHint, l)}
+              icon={<Info className="h-4 w-4 text-amber-500" aria-hidden="true" />}
+              items={attention.outcomes}
+              rule="border-amber-500/60"
+            />
+          ) : null}
+          {wants("information") ? (
+            <Group
+              {...shared}
+              title={L(COPY.information, l)}
+              hint={L(COPY.informationHint, l)}
+              icon={
+                <CheckCircle2 className="h-4 w-4 text-[color:var(--gold)]" aria-hidden="true" />
+              }
+              items={attention.information}
+              rule="border-border"
+            />
+          ) : null}
+          {wants("waiting") ? (
+            <Group
+              {...shared}
+              title={L(COPY.waiting, l)}
+              hint={L(COPY.waitingHint, l)}
+              icon={<Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />}
+              items={attention.waiting}
+              rule="border-border"
+            />
+          ) : null}
         </div>
       )}
     </section>

@@ -405,6 +405,120 @@ const sv = {
   "overview.viewCard": "Visa Passport Card",
   "overview.share": "Dela",
 
+  // ── The workspace (PR #196) ──────────────────────────────────────────
+  //
+  // Vokabulären är oförändrad. "Registrerade", "Dokumenterade" och
+  // "Källbekräftade" är rubriker över de nivåer som redan finns i
+  // trust.level.* — ingen ny nivå, ingen ny betydelse. Hjälptexten under
+  // varje siffra säger vad nivån faktiskt betyder, med samma ord som
+  // meriten själv bär.
+  "ws.lead":
+    "Ditt Security Passport samlar dina meriter på ett ställe och visar vem som har bekräftat vad. Du bestämmer vem som får se det.",
+  "ws.addMerit": "Lägg till merit",
+  "ws.share": "Dela Passport",
+
+  "ws.status.title": "Statusöversikt",
+  "ws.status.registered": "Registrerade",
+  "ws.status.registeredHelp": "Du har lagt in dem själv. Ingen har granskat dem ännu.",
+  "ws.status.documented": "Dokumenterade",
+  "ws.status.documentedHelp": "CQrityjob har granskat ett dokument. Källan har inte bekräftat.",
+  "ws.status.sourceConfirmed": "Källbekräftade",
+  "ws.status.sourceConfirmedHelp": "Den faktiska källan har bekräftat uppgiften.",
+  "ws.status.inReview": "Pågående granskningsärenden",
+  "ws.status.inReviewHelp": "Öppna granskningsärenden. Några kan vänta på ditt svar.",
+  "ws.status.lapsed": "Giltigheten har löpt ut",
+  "ws.status.lapsedHelp":
+    "Giltighetstiden har löpt ut. Kontrollera om meriten behöver förnyas.",
+  "ws.status.unknown": "Kunde inte läsas",
+  "ws.status.unknownHelp": "Vi kunde inte läsa granskningarna just nu.",
+
+  "ws.next.title": "Rekommenderat nästa steg",
+  "ws.next.clearTitle": "Inget väntar på dig",
+  "ws.next.clearBody": "Ditt Passport är i ordning. Lägg till mer när du vill.",
+  "ws.next.unavailableTitle": "Vi kunde inte läsa dina granskningar",
+  "ws.next.unavailableBody":
+    "Ingenting i ditt Passport har ändrats. Vi föreslår inget steg förrän vi vet hur det ser ut.",
+  "ws.next.respond_to_clarification.title": "Svara på granskarens fråga",
+  "ws.next.respond_to_clarification.body":
+    "Granskaren behöver något mer av dig innan de kan gå vidare.",
+  "ws.next.respond_to_clarification.cta": "Öppna frågan",
+  "ws.next.review_verification_outcome.title": "Läs beslutet om din merit",
+  "ws.next.review_verification_outcome.body":
+    "Någon har svarat, och det gick inte din väg. Du kan rätta uppgiften eller fråga på nytt.",
+  "ws.next.review_verification_outcome.cta": "Läs beslutet",
+  "ws.next.resume_draft_merits.title": "Slutför en påbörjad merit",
+  "ws.next.resume_draft_merits.body": "Du har börjat på något som inte är sparat som merit ännu.",
+  "ws.next.resume_draft_merits.cta": "Fortsätt där du slutade",
+  "ws.next.submit_passport_verification.title": "Be om granskning av en merit",
+  "ws.next.submit_passport_verification.body":
+    "Uppgiften kommer från dig. En granskning visar för andra vem som har bekräftat den.",
+  "ws.next.submit_passport_verification.cta": "Välj merit att granska",
+  "ws.next.add_more_merits.title": "Lägg till en merit till",
+  "ws.next.add_more_merits.body":
+    "Ditt Passport innehåller en merit. Med fler blir bilden av din bakgrund användbar.",
+  "ws.next.add_more_merits.cta": "Lägg till merit",
+
+  "ws.merits.title": "Mina meriter",
+  "ws.merits.current": "Aktuella meriter",
+  "ws.merits.inReview": "Pågående granskning",
+  "ws.merits.archived": "Arkiverade meriter",
+  "ws.merits.archivedHelp": "Registrerade en gång, men inte längre aktuella.",
+  "ws.merits.drafts": "Påbörjade meriter",
+  "ws.merits.draftsHelp": "Inte sparade som meriter ännu. Bara du ser dem.",
+  "ws.merits.count": "meriter",
+  "ws.merit.open": "Öppna meriten",
+  "ws.merit.organisationUnknown": "Utfärdare ej angiven",
+  "ws.merit.employerUnknown": "Arbetsgivare ej angiven",
+  "ws.merit.ongoing": "Pågår",
+  "ws.type.employment": "Anställning",
+
+  // Statusordet på en enskild merit. Samma ord som nivåerna ovan, med två
+  // tillägg som beskriver ett pågående förlopp och inte en nivå.
+  "ws.merit.status.added_by_you": "Egen uppgift",
+  "ws.merit.status.document_provided": "Dokument inlämnat",
+  "ws.merit.status.verification_requested": "Granskas",
+  "ws.merit.status.clarification_needed": "Väntar på ditt svar",
+  "ws.merit.status.documented": "Dokumenterad",
+  "ws.merit.status.verified": "Källbekräftad",
+  "ws.merit.status.expired": "Giltigheten har löpt ut",
+  // Granskningsstatus som inte kunde läsas. Inte en nivå och inte en
+  // nedgradering: uppgiften kommer fortfarande från användaren, och det som
+  // saknas är svaret på om någon granskar den.
+  "ws.merit.status.unknown": "Granskningsstatus okänd",
+  "ws.merits.reviewUnknown": "Granskningsstatus kunde inte läsas",
+  // Öppna granskningsärenden som väntar på HOLDERN. Egen grupp, aldrig bland
+  // de aktuella meriterna: ärendet är öppet OCH användaren är den som står
+  // för nästa steg, och "aktuella meriter" säger ingetdera.
+  "ws.merits.needsAnswer": "Kräver ditt svar",
+  "ws.merits.needsAnswerHelp": "En granskare har bett dig om mer information.",
+  // En siffra som inte kunde läsas behåller sin rubrik. Två identiska
+  // "Kunde inte läsas" bredvid varandra säger inte vilken siffra som saknas.
+  "ws.status.temporarilyUnavailable": "Tillfälligt otillgängligt",
+  "ws.status.loading": "Hämtar …",
+  "ws.next.loadingTitle": "Hämtar dina granskningar",
+  "ws.next.loadingBody": "Vi föreslår ett steg så snart vi vet hur det ser ut.",
+  "ws.add.open": "Välj vad du vill lägga till",
+  "ws.merits.reviewUnknownHelp":
+    "Vi kunde inte se om någon granskar dem. Uppgifterna är oförändrade.",
+  "ws.status.registeredUnknownHelp": "Vi kunde inte se vilka som är under granskning.",
+
+  // Att lägga till en merit — de tre verkliga vägarna, inga fler.
+  "ws.add.title": "Vad vill du lägga till?",
+  "ws.add.employment": "Anställning",
+  "ws.add.employmentBody": "En roll hos en arbetsgivare.",
+  "ws.add.education": "Utbildning, kurs eller certifikat",
+  "ws.add.educationBody": "Något du har gått eller tagit.",
+  "ws.add.credential": "Behörighet eller förordnande",
+  "ws.add.credentialBody": "VU1, VU2, ordningsvakt eller skyddsvakt.",
+
+  "ws.use.title": "Använd ditt Passport",
+  "ws.use.share": "Dela ditt Passport",
+  "ws.use.shareBody": "Skapa en länk du kan återkalla när du vill.",
+  "ws.use.cv": "Skapa eller uppdatera CV",
+  "ws.use.cvBody": "Dina meriter kan användas i ett CV på Min karriär.",
+  "ws.use.card": "Förhandsvisa ditt Passport-kort",
+  "ws.use.cardBody": "Se hur dina meriter och deras status presenteras på kortet.",
+
   // ── Experience totals ────────────────────────────────────────────────
   "totals.title": "Erfarenhet efter underlag",
   "totals.reported": "Rapporterad erfarenhet",
@@ -2211,6 +2325,103 @@ const en: Record<PassportCopyKey, string> = {
   "overview.noClaims": "No entries yet.",
   "overview.viewCard": "View Passport Card",
   "overview.share": "Share",
+
+  // ── The workspace (PR #196) ──────────────────────────────────────────
+  "ws.lead":
+    "Your Security Passport keeps your merits in one place and shows who has confirmed what. You decide who may see it.",
+  "ws.addMerit": "Add a merit",
+  "ws.share": "Share Passport",
+
+  "ws.status.title": "Status overview",
+  "ws.status.registered": "Registered",
+  "ws.status.registeredHelp": "You entered them yourself. Nobody has reviewed them yet.",
+  "ws.status.documented": "Documented",
+  "ws.status.documentedHelp": "CQrityjob reviewed a document. The source has not confirmed.",
+  "ws.status.sourceConfirmed": "Source-confirmed",
+  "ws.status.sourceConfirmedHelp": "The actual source confirmed the entry.",
+  "ws.status.inReview": "Open review cases",
+  "ws.status.inReviewHelp": "Open review cases. Some may be waiting for your answer.",
+  "ws.status.lapsed": "Validity has ended",
+  "ws.status.lapsedHelp":
+    "The validity period has ended. Check whether this merit needs renewing.",
+  "ws.status.unknown": "Could not be loaded",
+  "ws.status.unknownHelp": "We could not read your reviews just now.",
+
+  "ws.next.title": "Recommended next step",
+  "ws.next.clearTitle": "Nothing is waiting on you",
+  "ws.next.clearBody": "Your Passport is in order. Add more whenever you like.",
+  "ws.next.unavailableTitle": "We could not read your reviews",
+  "ws.next.unavailableBody":
+    "Nothing in your Passport has changed. We will not suggest a step until we know how it stands.",
+  "ws.next.respond_to_clarification.title": "Answer the reviewer's question",
+  "ws.next.respond_to_clarification.body":
+    "The reviewer needs something more from you before they can continue.",
+  "ws.next.respond_to_clarification.cta": "Open the question",
+  "ws.next.review_verification_outcome.title": "Read the decision about your merit",
+  "ws.next.review_verification_outcome.body":
+    "Someone answered, and it did not go your way. You can correct the entry or ask again.",
+  "ws.next.review_verification_outcome.cta": "Read the decision",
+  "ws.next.resume_draft_merits.title": "Finish a merit you started",
+  "ws.next.resume_draft_merits.body": "You began something that is not saved as a merit yet.",
+  "ws.next.resume_draft_merits.cta": "Continue where you left off",
+  "ws.next.submit_passport_verification.title": "Ask for a merit to be reviewed",
+  "ws.next.submit_passport_verification.body":
+    "The entry comes from you. A review shows others who has confirmed it.",
+  "ws.next.submit_passport_verification.cta": "Choose a merit to review",
+  "ws.next.add_more_merits.title": "Add one more merit",
+  "ws.next.add_more_merits.body":
+    "Your Passport holds one merit. With a few more the picture of your background becomes useful.",
+  "ws.next.add_more_merits.cta": "Add a merit",
+
+  "ws.merits.title": "My merits",
+  "ws.merits.current": "Current merits",
+  "ws.merits.inReview": "Under review",
+  "ws.merits.archived": "Archived merits",
+  "ws.merits.archivedHelp": "Recorded once, no longer the current entry.",
+  "ws.merits.drafts": "Unfinished merits",
+  "ws.merits.draftsHelp": "Not saved as merits yet. Only you can see them.",
+  "ws.merits.count": "merits",
+  "ws.merit.open": "Open the merit",
+  "ws.merit.organisationUnknown": "Issuer not stated",
+  "ws.merit.employerUnknown": "Employer not stated",
+  "ws.merit.ongoing": "Ongoing",
+  "ws.type.employment": "Employment",
+
+  "ws.merit.status.added_by_you": "Self-reported",
+  "ws.merit.status.document_provided": "Document provided",
+  "ws.merit.status.verification_requested": "In review",
+  "ws.merit.status.clarification_needed": "Waiting for your answer",
+  "ws.merit.status.documented": "Documented",
+  "ws.merit.status.verified": "Source-confirmed",
+  "ws.merit.status.expired": "Validity has ended",
+  "ws.merit.status.unknown": "Review status unknown",
+  "ws.merits.reviewUnknown": "Review status could not be loaded",
+  "ws.merits.needsAnswer": "Needs your answer",
+  "ws.merits.needsAnswerHelp": "A reviewer has asked you for more information.",
+  "ws.status.temporarilyUnavailable": "Temporarily unavailable",
+  "ws.status.loading": "Loading …",
+  "ws.next.loadingTitle": "Loading your reviews",
+  "ws.next.loadingBody": "We will suggest a step as soon as we know how it stands.",
+  "ws.add.open": "Choose what to add",
+  "ws.merits.reviewUnknownHelp":
+    "We could not see whether anyone is reviewing them. The entries are unchanged.",
+  "ws.status.registeredUnknownHelp": "We could not see which ones are under review.",
+
+  "ws.add.title": "What would you like to add?",
+  "ws.add.employment": "Employment",
+  "ws.add.employmentBody": "A role with an employer.",
+  "ws.add.education": "Education, course or certificate",
+  "ws.add.educationBody": "Something you took or completed.",
+  "ws.add.credential": "Authorisation or appointment",
+  "ws.add.credentialBody": "VU1, VU2, public order or protective security.",
+
+  "ws.use.title": "Use your Passport",
+  "ws.use.share": "Share your Passport",
+  "ws.use.shareBody": "Create a link you can revoke whenever you like.",
+  "ws.use.cv": "Create or update a CV",
+  "ws.use.cvBody": "Your merits can be used in a CV under My Career.",
+  "ws.use.card": "Preview your Passport Card",
+  "ws.use.cardBody": "See how your merits and their status are presented on the card.",
 
   "totals.title": "Experience by evidence",
   "totals.reported": "Reported experience",

@@ -73,11 +73,12 @@ function PassportShell() {
 
   return (
     <SiteLayout>
-      {/* `py-20 md:py-28` is right for a marketing section and wrong for a
-          four-field form: it pushed the heading a third of the way down a
-          1440px window and made the journey feel further from the reader than
-          it is. The first run gets its own, tighter rhythm. */}
-      <Section className={firstRun ? "py-10 md:py-14" : undefined}>
+      {/* `py-20 md:py-28` is right for a marketing section and wrong for an
+          application: it pushed the heading a third of the way down a 1440px
+          window, so a holder opening their Passport met a screen of nothing
+          before the first word. The whole product shell takes the tighter
+          rhythm; the first run, which is a short form, takes it too. */}
+      <Section className="py-10 md:py-14">
         {firstRun ? null : (
           <nav aria-label={pt("card.brand")} className="mb-6 border-b border-border">
             <ul className="-mb-px flex flex-wrap gap-1">

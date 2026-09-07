@@ -7,6 +7,7 @@
 // employer surfaces. Nothing here says who a result is NOT shared with.
 
 import type { CandidateInterviewStatus } from "@/lib/interview-intelligence/candidate.functions";
+import { FIGURE_UNAVAILABLE, MERIT_FIGURE_WORDS } from "@/lib/professional-identity/merit-figures";
 import type { StatusClassification } from "@/lib/professional-identity/next-best-action";
 import type {
   ActivityKind,
@@ -102,13 +103,31 @@ export const PASSPORT = {
     "Passet är privat som standard. Du väljer själv vad du delar och med vem.",
     "The Passport is private by default. You choose what you share, and with whom.",
   ),
-  registered: c("Registrerade meriter", "Recorded merits"),
-  underReview: c("Under verifiering", "Being verified"),
-  verified: c("Verifierade meriter", "Verified merits"),
-  /** Reviewed by CQrityjob. Shown apart from "Verifierade meriter", because
-   *  a document review is not the source confirming the merit. */
-  documented: c("Dokumenterade meriter", "Documented merits"),
-  expired: c("Giltighet har gått ut", "Validity has expired"),
+  // ── ONE VOCABULARY, TWO SURFACES ─────────────────────────────────────
+  //
+  // These five words are NOT authored here. They come from
+  // lib/professional-identity/merit-figures.ts, which the Security Passport
+  // workspace prints from as well, because authoring them twice is exactly
+  // how "Registrerade" came to mean the bottom rung on one screen and the
+  // total on the other — for the same person, on the same afternoon.
+  //
+  // `total` is named as a TOTAL. It used to be labelled "Registrerade
+  // meriter" while holding `addedCount`, which contains the documented and
+  // the source-confirmed ones; a reader adding the figures up got more
+  // merits than they own.
+  total: c(MERIT_FIGURE_WORDS.total_current.sv, MERIT_FIGURE_WORDS.total_current.en),
+  registered: c(MERIT_FIGURE_WORDS.self_reported.sv, MERIT_FIGURE_WORDS.self_reported.en),
+  underReview: c(MERIT_FIGURE_WORDS.open_cases.sv, MERIT_FIGURE_WORDS.open_cases.en),
+  /** The SOURCE confirming a fact it was party to. Never a CQrityjob review;
+   *  see PR #189, and `documented` below. */
+  verified: c(MERIT_FIGURE_WORDS.source_confirmed.sv, MERIT_FIGURE_WORDS.source_confirmed.en),
+  /** Reviewed by CQrityjob. Shown apart from the source-confirmed figure,
+   *  because a document review is not the source confirming the merit. */
+  documented: c(MERIT_FIGURE_WORDS.documented.sv, MERIT_FIGURE_WORDS.documented.en),
+  expired: c(MERIT_FIGURE_WORDS.lapsed.sv, MERIT_FIGURE_WORDS.lapsed.en),
+  /** A figure the request table could not answer for. Never "0", and never a
+   *  second copy of the heading. */
+  figureUnavailable: c(FIGURE_UNAVAILABLE.sv, FIGURE_UNAVAILABLE.en),
   drafts: c("Påbörjade meriter", "Unfinished merits"),
   /** Only a surface that reads every lifecycle can show this, and it is
    *  never folded into "Registrerade meriter". */

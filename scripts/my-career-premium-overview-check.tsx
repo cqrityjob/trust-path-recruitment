@@ -73,6 +73,8 @@ const { CareerTools } = await import("../src/components/professional-identity/Ca
 const { RecentActivity } = await import("../src/components/professional-identity/RecentActivity");
 const { CandidateAppNav } = await import("../src/components/site/CandidateAppNav");
 const { CANDIDATE_APP_NAV } = await import("../src/components/site/candidate-app-nav");
+const { MERIT_FIGURE_WORDS, figuresPartition, meritFigures } =
+  await import("../src/lib/professional-identity/merit-figures");
 const { buildCareerHomeViewModel, testPhaseOf } =
   await import("../src/lib/professional-identity/home-presentation");
 const { computeNextBestActions, ACTION_CLASSIFICATION } =
@@ -420,16 +422,40 @@ group("T3 · the merit states stay apart, and no score exists");
       }
     />,
   );
-  for (const label of [
-    "Registrerade meriter",
-    "Under verifiering",
-    "Verifierade meriter",
+  // ── ONE VOCABULARY, TWO SURFACES (PR #196) ─────────────────────────
+  //
+  // The words are no longer authored here or in home-copy.ts. They come from
+  // lib/professional-identity/merit-figures.ts, which the Security Passport
+  // workspace prints from as well — because authoring them twice is exactly
+  // how "Registrerade" came to mean the bottom rung on the Passport and the
+  // TOTAL here, for the same person, at the same moment.
+  for (const key of [
+    "total_current",
+    "self_reported",
+    "open_cases",
+    "source_confirmed",
     // The documented state is named on the card rather than folded into the
-    // total, so a reader can see what the review actually established.
-    "Dokumenterade meriter",
-    "Giltighet har gått ut",
-  ])
-    ck(`"${label}" is stated in words`, html.includes(label));
+    // source-confirmed figure, so a reader can see what the review actually
+    // established.
+    "documented",
+    "lapsed",
+  ] as const)
+    ck(
+      `"${MERIT_FIGURE_WORDS[key].sv}" is stated in words`,
+      html.includes(MERIT_FIGURE_WORDS[key].sv),
+    );
+  // And the total is NAMED as a total, so a reader adding the rungs up does
+  // not find more merits than they own.
+  ck(
+    "the total is labelled as a total, not as a rung",
+    MERIT_FIGURE_WORDS.total_current.sv === "Aktuella meriter totalt" &&
+      html.includes("Aktuella meriter totalt"),
+  );
+  ck(
+    "and the five rungs partition it",
+    figuresPartition(meritFigures(counts)),
+    JSON.stringify(meritFigures(counts)),
+  );
   ck("no percentage is rendered", !/%/.test(html));
   ck(
     "nothing computes a ratio or score",
@@ -1110,10 +1136,25 @@ group("T16 · the lifecycle definition is shared; the reads are not, and that is
     (passportRoute.match(/id="attention"/g) ?? []).length === 1 &&
       !outcomes.includes('id="attention"'),
   );
+  // The mechanism moved into a shared component (PR #196) because a second
+  // Passport route needs it — the workspace links to
+  // `/passport/information#sp-education`, and that page loads its sections
+  // after the browser has given up on the fragment too. The CONTRACT is
+  // unchanged and is now asserted where it lives, plus the fact that the
+  // index still renders it.
+  const hashHelper = read("src/components/security-passport/ScrollToHashOnceReady.tsx");
   ck(
     "the Passport index scrolls to AND focuses the hash once ready",
-    passportRoute.includes("ScrollToHashOnceReady") &&
-      passportRoute.includes('el.setAttribute("data-hash-target", hash)'),
+    passportRoute.includes("<ScrollToHashOnceReady />") &&
+      hashHelper.includes("scrollIntoView") &&
+      hashHelper.includes("focus({ preventScroll: true })") &&
+      hashHelper.includes('el.setAttribute("data-hash-target", hash)'),
+  );
+  ck(
+    "and so does the page its own add-merit links point at",
+    read("src/routes/_authenticated.passport.information.tsx").includes(
+      "<ScrollToHashOnceReady />",
+    ),
   );
 }
 
