@@ -8,11 +8,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
   frontier: { file: string; hostedState: string; evidenceSource?: string }[];
 };
 
-const expectedPending = [
-  "20261028090000_admin_cancel_assignment_error_contract.sql",
-  "20261030090000_sp_trust_source_containment.sql",
-  "20261031090000_sp_passport_first_merit.sql",
-];
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
@@ -21,6 +17,10 @@ const hostedIdentities = [
   "20260905053809_scp_release_facet_resolution.sql",
   "20260905054603_scp_trust_evidence_report_r1_provenance.sql",
   "20260906125945_scp_trust_evidence_report_r3a_contract.sql",
+  "20260907071826_6c070461-aa51-4d78-8ed0-a82294f12489.sql",
+  "20261028090000_admin_cancel_assignment_error_contract.sql",
+  "20261030090000_sp_trust_source_containment.sql",
+  "20261031090000_sp_passport_first_merit.sql",
 ];
 const retiredCanonicalIdentities = [
   "20261021090000_scp_option_order_per_attempt.sql",
@@ -30,6 +30,9 @@ const retiredCanonicalIdentities = [
   "20261026093000_scp_release_facet_resolution.sql",
   "20261027090000_scp_trust_evidence_report_r1_provenance.sql",
   "20261029090000_scp_trust_evidence_report_r3a_contract.sql",
+  "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
+  "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
+  "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
 ];
 const parked = [
   "20261022090000_scp_vaktare_v1_content_review.sql",
@@ -66,4 +69,6 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("release-frontier-check: exactly 28, 30 and 31 remain pending");
+console.log(
+  "release-frontier-check: production frontier reconciled; no active migration is pending",
+);

@@ -44,16 +44,39 @@ under `supabase/archive/parked-migrations/` but cannot be reached by replay or
 the GitHub integration. A corrected follow-up must resolve the form through
 assessment-definition/version identity and refuse ambiguity.
 
-## Merge-time deployment selection
+## Production application completed
 
 After the seven identity corrections and the two parking decisions, exactly
-these active migrations remain declared pending:
+these three migrations were selected and applied through Lovable's connected
+Supabase mechanism on 2026-09-07:
 
-1. `20261028090000_admin_cancel_assignment_error_contract.sql`
-2. `20261030090000_sp_trust_source_containment.sql`
-3. `20261031090000_sp_passport_first_merit.sql`
+1. canonical `20261028090000_admin_cancel_assignment_error_contract.sql`
+   → hosted `20260907064303` / `f8efc1c3-def4-4147-9db1-45a68b1f6a69`
+2. canonical `20261030090000_sp_trust_source_containment.sql`
+   → hosted `20260907064513` / `19c76abb-f1fd-40e5-aa50-b008b7de38bf`
+3. canonical `20261031090000_sp_passport_first_merit.sql`
+   → hosted `20260907064849` / `0bb96516-c1eb-4178-8e9e-60bde13071dd`
 
-The repository guard `release-frontier:check` pins that set. Merging this
-reconciliation is therefore also the production deployment of those three
-migrations through the approved GitHub integration. The pull request must not
-be merged until CI and an independent review are green.
+Read-only postflight verification confirmed all function contracts, grants,
+row locks, RLS boundaries and indexes. Core holder row counts were unchanged:
+profiles 5, events 154, claims 45, experience periods 5, verification requests
+12, verification decisions 11 and operation receipts 0. Security advisors
+moved from 213 to 216 only because migration 31 intentionally adds one private
+RLS-with-no-policy table and two authenticated SECURITY DEFINER entry points.
+No anonymous callable function was added.
+
+The first application left the schema correct but the three canonical versions
+absent from migration history. A second, history-only Lovable migration
+(`20260907071826` / `6c070461-aa51-4d78-8ed0-a82294f12489`) then recorded the
+three canonical aliases after verifying each hosted anchor and refusing any
+unexpected name. It executed no application or schema DDL. The hosted ledger
+now contains 265 rows, including both the three original hosted identities and
+the three canonical aliases. Core holder row counts remained unchanged.
+
+The repository keeps the three complete authored migrations at their original
+canonical versions so a clean replay preserves dependency order. The generated
+copies are parked outside the active replay path. The hosted-version mappings in
+`migrations-policy.json` are the durable evidence that these migrations must
+never be executed against production again; the canonical alias rows are the
+technical barrier that prevents filename-versus-ledger selection.
+`release-frontier:check` pins an empty pending set.
