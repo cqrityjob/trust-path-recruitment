@@ -105,11 +105,12 @@
 -- no benefit: it survives revocation, it is the same value in two different
 -- shares, and it correlates one recipient's copy with another's.
 --
--- So the builder emits `key` — `c1`, `c2`, `e1` — an ORDINAL within this one
--- payload. It is stable for as long as the render is, it is what React and
--- the identity engine actually need, and it says nothing. `sp_get_disclosure`
--- additionally strips `id` from every row of whichever branch built the
--- payload, so the anonymous boundary holds even for the five older packages.
+-- So the selected builder emits `key` — `c1`, `c2`, `e1` — an ORDINAL within
+-- this one payload. It is stable for as long as the render is, it is what
+-- React and the identity engine actually need, and it says nothing.
+-- `sp_get_disclosure` applies the identifier/check-time projection ONLY to
+-- `selected_merits`: schema-first deployment must leave the five older
+-- packages byte-identical for the application version already in production.
 --
 -- ── ONE BUILDER, SO THE PREVIEW CANNOT DRIFT ───────────────────────────
 --
@@ -280,6 +281,12 @@ CREATE POLICY sp_disclosure_items_self ON public.sp_disclosure_items
 -- item table exists to make impossible.
 REVOKE ALL ON public.sp_disclosure_items FROM anon, authenticated, PUBLIC;
 GRANT SELECT ON public.sp_disclosure_items TO authenticated;
+
+-- Revocation is a one-way lifecycle operation, not a mutable timestamp. An
+-- old column grant let a holder set revoked_at back to NULL through PostgREST
+-- and reactivate a public token. The owner-checked SECURITY DEFINER RPC
+-- sp_revoke_disclosure is the only holder write path this column needs.
+REVOKE UPDATE (revoked_at) ON public.sp_disclosures FROM authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 4. The request fingerprint
@@ -496,15 +503,29 @@ BEGIN
     --   the SELECTED periods only  — the package total sums every period the
     --     holder has, which inside a chosen scope would be a figure derived
     --     from employments the holder did not disclose;
-    --   the VERIFIED ones only     — a self-declared employment is shareable
-    --     and appears in the list above, but it is nobody's confirmation and
-    --     must not be counted under a heading that says it is.
+    --   employer-confirmed only    — `verified` is also written after a
+    --     CQrityjob document review. That proves a document was reviewed, not
+    --     that the employer confirmed the employment. The duration therefore
+    --     requires the same structurally-supported employer act the trust
+    --     presentation recognises.
     'verified_experience_days', coalesce((
       SELECT sum(coalesce(e.ended_on, current_date) - e.started_on)
         FROM public.sp_experience_periods e
        WHERE e.holder_user_id = _holder
          AND e.assertion_level = 'verified' AND e.lifecycle_state = 'active'
          AND e.id = ANY(_e)
+         AND EXISTS (
+           SELECT 1
+             FROM public.sp_verification_decisions d2
+             JOIN public.sp_verification_requests r2 ON r2.id = d2.request_id
+            WHERE r2.period_id = e.id
+              AND r2.request_kind = 'employer_attestation'
+              AND r2.target_employer_id IS NOT NULL
+              AND d2.decision = 'approved'
+              AND d2.verification_method = 'employer_confirmation'
+              AND nullif(btrim(d2.decider_organisation), '') IS NOT NULL
+              AND lower(btrim(d2.decider_organisation)) <> 'cqrityjob'
+         )
     ), 0));
 END; $function$;
 
@@ -627,16 +648,13 @@ END; $function$;
 -- ---------------------------------------------------------------------------
 -- 7. The anonymous boundary
 -- ---------------------------------------------------------------------------
--- Reproduced from 20260903091000 with two additions, both about what leaves:
+-- Reproduced from 20260903091000 with one package-scoped addition:
 --
---   * NO DATABASE IDENTIFIER. `id` is stripped from every disclosed row and a
---     presentation `key` put in its place, for whichever branch built the
---     payload. The selected builder already emits no `id`; the five packages
---     do, and they reach this same anonymous page.
---   * A SERVER-AUTHORED CHECK TIME. The page used to print `new Date()` from
---     the visitor's own machine beside the words "checked at", so a skewed
---     clock made the product assert something it had not observed. The moment
---     the record was actually re-read is a fact this function holds.
+--   * For `selected_merits` only, no database identifier leaves and the
+--     server stamps the moment it re-read the share. The five older package
+--     payloads return byte-for-byte as before. This migration is deployed
+--     schema-first, so changing their wire contract before their application
+--     consumer ships would not be safe-alone.
 --
 -- The token lookup, the application_id exclusion, the revoked/expired head,
 -- the access counting and the single `unavailable` are unchanged.
@@ -671,21 +689,25 @@ BEGIN
     RETURN jsonb_build_object('status','unavailable');
   END IF;
 
-  _payload := jsonb_set(_payload, '{verified_claims}', coalesce((
-    SELECT jsonb_agg((row.value - 'id')
-                     || jsonb_build_object('key', coalesce(row.value ->> 'key', 'c' || row.ord))
-                     ORDER BY row.ord)
-      FROM jsonb_array_elements(_payload -> 'verified_claims')
-             WITH ORDINALITY AS row(value, ord)), '[]'::jsonb));
+  IF _d.package_code = 'selected_merits' THEN
+    _payload := jsonb_set(_payload, '{verified_claims}', coalesce((
+      SELECT jsonb_agg((row.value - 'id')
+                       || jsonb_build_object('key', coalesce(row.value ->> 'key', 'c' || row.ord))
+                       ORDER BY row.ord)
+        FROM jsonb_array_elements(_payload -> 'verified_claims')
+               WITH ORDINALITY AS row(value, ord)), '[]'::jsonb));
 
-  _payload := jsonb_set(_payload, '{verified_experience}', coalesce((
-    SELECT jsonb_agg((row.value - 'id')
-                     || jsonb_build_object('key', coalesce(row.value ->> 'key', 'e' || row.ord))
-                     ORDER BY row.ord)
-      FROM jsonb_array_elements(_payload -> 'verified_experience')
-             WITH ORDINALITY AS row(value, ord)), '[]'::jsonb));
+    _payload := jsonb_set(_payload, '{verified_experience}', coalesce((
+      SELECT jsonb_agg((row.value - 'id')
+                       || jsonb_build_object('key', coalesce(row.value ->> 'key', 'e' || row.ord))
+                       ORDER BY row.ord)
+        FROM jsonb_array_elements(_payload -> 'verified_experience')
+               WITH ORDINALITY AS row(value, ord)), '[]'::jsonb));
 
-  RETURN _payload || jsonb_build_object('checked_at', now());
+    RETURN _payload || jsonb_build_object('checked_at', now());
+  END IF;
+
+  RETURN _payload;
 END; $function$;
 
 REVOKE ALL ON FUNCTION public.sp_get_disclosure(text) FROM PUBLIC, anon, authenticated;
@@ -700,10 +722,17 @@ GRANT EXECUTE ON FUNCTION public.sp_get_disclosure(text) TO service_role;
 -- believes about the request is advisory by the time it arrives here.
 --
 -- So the contract is asserted where the write happens, by name, and the same
--- three checks run for the preview, the create and the replacement.
+-- expiry, locale and text bounds run wherever those facts enter or are reused.
+-- Drop the earlier two-argument draft if this pending migration is replayed
+-- in a disposable review database; the canonical contract is the bounded
+-- four-argument form below.
+DROP FUNCTION IF EXISTS public.sp_assert_share_inputs(integer, text);
+
 CREATE OR REPLACE FUNCTION public.sp_assert_share_inputs(
   _expires_days integer,
-  _locale       text)
+  _locale       text,
+  _purpose      text,
+  _recipient_hint text)
 RETURNS void
 LANGUAGE plpgsql
 IMMUTABLE
@@ -721,10 +750,20 @@ BEGIN
     RAISE EXCEPTION 'SP_UNSUPPORTED_LOCALE: a share is rendered in sv or en.'
       USING ERRCODE = 'check_violation';
   END IF;
+
+  IF _purpose IS NOT NULL AND length(_purpose) > 200 THEN
+    RAISE EXCEPTION 'SP_PURPOSE_TOO_LONG: purpose is limited to 200 characters.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF _recipient_hint IS NOT NULL AND length(_recipient_hint) > 200 THEN
+    RAISE EXCEPTION 'SP_RECIPIENT_HINT_TOO_LONG: recipient hint is limited to 200 characters.'
+      USING ERRCODE = 'check_violation';
+  END IF;
 END; $function$;
 
-REVOKE ALL ON FUNCTION public.sp_assert_share_inputs(integer, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.sp_assert_share_inputs(integer, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.sp_assert_share_inputs(integer, text, text, text)
+  FROM PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 9. Creation
@@ -769,10 +808,8 @@ DECLARE
   -- once, and {A,B} and {B,A} are one selection. Both matter twice over — the
   -- unique index would refuse the duplicate, and the fingerprint has to be
   -- the same value for the same intention however the array was ordered.
-  _c uuid[] := (SELECT coalesce(array_agg(DISTINCT x ORDER BY x), '{}'::uuid[])
-                  FROM unnest(coalesce(_claim_ids, '{}'::uuid[])) AS x);
-  _e uuid[] := (SELECT coalesce(array_agg(DISTINCT x ORDER BY x), '{}'::uuid[])
-                  FROM unnest(coalesce(_experience_ids, '{}'::uuid[])) AS x);
+  _c uuid[];
+  _e uuid[];
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE='insufficient_privilege';
@@ -785,7 +822,21 @@ BEGIN
       'it belongs to.' USING ERRCODE='check_violation';
   END IF;
 
-  PERFORM public.sp_assert_share_inputs(_expires_days, _locale);
+  PERFORM public.sp_assert_share_inputs(
+    _expires_days, _locale, _purpose, _recipient_hint);
+
+  -- Bound the raw request before sorting/deduplicating it. Otherwise a caller
+  -- can make the SECURITY DEFINER function spend unbounded work normalising an
+  -- array that is only rejected after the work is complete.
+  IF coalesce(cardinality(_claim_ids), 0)
+       + coalesce(cardinality(_experience_ids), 0) > 200 THEN
+    RAISE EXCEPTION 'SP_TOO_MANY_MERITS' USING ERRCODE='check_violation';
+  END IF;
+
+  SELECT coalesce(array_agg(DISTINCT x ORDER BY x), '{}'::uuid[])
+    INTO _c FROM unnest(coalesce(_claim_ids, '{}'::uuid[])) AS x;
+  SELECT coalesce(array_agg(DISTINCT x ORDER BY x), '{}'::uuid[])
+    INTO _e FROM unnest(coalesce(_experience_ids, '{}'::uuid[])) AS x;
 
   _fp := public.sp_share_request_fingerprint(
     auth.uid(), _c, _e, _expires_days, _purpose, _recipient_hint, _locale, NULL);
@@ -820,11 +871,6 @@ BEGIN
   IF cardinality(_c) + cardinality(_e) = 0 THEN
     RAISE EXCEPTION 'SP_NOTHING_SELECTED: choose at least one current merit to share.'
       USING ERRCODE='check_violation';
-  END IF;
-
-  -- A ceiling, so a crafted call cannot write an unbounded item list.
-  IF cardinality(_c) + cardinality(_e) > 200 THEN
-    RAISE EXCEPTION 'SP_TOO_MANY_MERITS' USING ERRCODE='check_violation';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM public.sp_passport_profiles
@@ -930,20 +976,24 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
-  _c uuid[] := (SELECT coalesce(array_agg(DISTINCT x ORDER BY x), '{}'::uuid[])
-                  FROM unnest(coalesce(_claim_ids, '{}'::uuid[])) AS x);
-  _e uuid[] := (SELECT coalesce(array_agg(DISTINCT x ORDER BY x), '{}'::uuid[])
-                  FROM unnest(coalesce(_experience_ids, '{}'::uuid[])) AS x);
+  _c uuid[];
+  _e uuid[];
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE='insufficient_privilege';
   END IF;
 
-  PERFORM public.sp_assert_share_inputs(_expires_days, _locale);
+  PERFORM public.sp_assert_share_inputs(_expires_days, _locale, _purpose, NULL);
 
-  IF cardinality(_c) + cardinality(_e) > 200 THEN
+  IF coalesce(cardinality(_claim_ids), 0)
+       + coalesce(cardinality(_experience_ids), 0) > 200 THEN
     RAISE EXCEPTION 'SP_TOO_MANY_MERITS' USING ERRCODE='check_violation';
   END IF;
+
+  SELECT coalesce(array_agg(DISTINCT x ORDER BY x), '{}'::uuid[])
+    INTO _c FROM unnest(coalesce(_claim_ids, '{}'::uuid[])) AS x;
+  SELECT coalesce(array_agg(DISTINCT x ORDER BY x), '{}'::uuid[])
+    INTO _e FROM unnest(coalesce(_experience_ids, '{}'::uuid[])) AS x;
 
   IF (SELECT count(*) FROM public.sp_claims c
        WHERE c.id = ANY(_c) AND c.holder_user_id = auth.uid()
@@ -1006,7 +1056,7 @@ DECLARE
   _existing public.sp_disclosures%ROWTYPE;
   _token text; _id uuid; _fp text; _days integer; _expires timestamptz;
   _c uuid[]; _e uuid[];
-  _revoke boolean := coalesce(_revoke_previous, true);
+  _revoke boolean;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE='insufficient_privilege';
@@ -1015,6 +1065,11 @@ BEGIN
     RAISE EXCEPTION 'SP_REQUEST_KEY_REQUIRED: every create must name the attempt '
       'it belongs to.' USING ERRCODE='check_violation';
   END IF;
+  IF _revoke_previous IS NULL THEN
+    RAISE EXCEPTION 'SP_REVOKE_CHOICE_REQUIRED: choose whether the previous link '
+      'must stop working.' USING ERRCODE='check_violation';
+  END IF;
+  _revoke := _revoke_previous;
 
   -- The source and the revoke choice are the facts, so they are the
   -- fingerprint: replacing the same share while keeping the old link is a
@@ -1059,7 +1114,8 @@ BEGIN
   -- The ORIGINAL lifetime, in days, re-validated through the same contract:
   -- a reissue must not become a way to mint a lifetime the create refuses.
   _days := round(extract(epoch FROM (_source.expires_at - _source.created_at)) / 86400.0);
-  PERFORM public.sp_assert_share_inputs(_days, _source.locale);
+  PERFORM public.sp_assert_share_inputs(
+    _days, _source.locale, _source.purpose, _source.recipient_hint);
 
   SELECT coalesce(array_agg(DISTINCT i.claim_id ORDER BY i.claim_id)
                     FILTER (WHERE i.claim_id IS NOT NULL), '{}'::uuid[]),
@@ -1168,6 +1224,12 @@ BEGIN
       'directly; the selection would no longer be a server-side fact.';
   END IF;
 
+  IF has_column_privilege(
+       'authenticated', 'public.sp_disclosures', 'revoked_at', 'UPDATE') THEN
+    RAISE EXCEPTION 'SP_SELECTED_SHARE_POSTFLIGHT: a holder can reactivate a '
+      'revoked disclosure through the table.';
+  END IF;
+
   IF NOT has_table_privilege('authenticated', 'public.sp_disclosure_items', 'SELECT') THEN
     RAISE EXCEPTION 'SP_SELECTED_SHARE_POSTFLIGHT: a holder cannot read their own selection.';
   END IF;
@@ -1203,7 +1265,7 @@ BEGIN
      OR has_function_privilege('anon',
        'public.sp_replace_selected_disclosure(uuid, boolean, uuid)', 'EXECUTE')
      OR has_function_privilege('anon',
-       'public.sp_assert_share_inputs(integer, text)', 'EXECUTE')
+       'public.sp_assert_share_inputs(integer, text, text, text)', 'EXECUTE')
      OR has_function_privilege('anon',
        'public.sp_share_request_fingerprint(uuid,uuid[],uuid[],integer,text,text,text,uuid)', 'EXECUTE')
      OR has_function_privilege('anon',
@@ -1217,7 +1279,9 @@ BEGIN
   IF has_function_privilege('authenticated',
        'public.sp_selected_merits_payload(uuid,uuid[],uuid[],text,text,timestamptz,timestamptz)', 'EXECUTE')
      OR has_function_privilege('authenticated',
-       'public.sp_share_request_fingerprint(uuid,uuid[],uuid[],integer,text,text,text,uuid)', 'EXECUTE') THEN
+       'public.sp_share_request_fingerprint(uuid,uuid[],uuid[],integer,text,text,text,uuid)', 'EXECUTE')
+     OR has_function_privilege('authenticated',
+       'public.sp_assert_share_inputs(integer,text,text,text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'SP_SELECTED_SHARE_POSTFLIGHT: authenticated can execute an internal function.';
   END IF;
 
@@ -1258,14 +1322,17 @@ BEGIN
     RAISE EXCEPTION 'SP_SELECTED_SHARE_POSTFLIGHT: request_fingerprint is missing.';
   END IF;
 
-  -- The anonymous boundary strips database identifiers and stamps its own
-  -- check time. Asserted against the function's text because there is no row
-  -- to interrogate at migration time.
+  -- The selected-merit anonymous boundary strips database identifiers and
+  -- stamps its own check time, without changing any legacy package payload.
+  -- Asserted against the function's text because there is no row to
+  -- interrogate at migration time.
   IF NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
                   WHERE n.nspname='public' AND p.proname='sp_get_disclosure'
-                    AND p.prosrc LIKE '%- ''id''%' AND p.prosrc LIKE '%checked_at%') THEN
-    RAISE EXCEPTION 'SP_SELECTED_SHARE_POSTFLIGHT: the anonymous boundary no longer strips '
-      'identifiers or no longer stamps a server check time.';
+                    AND p.prosrc LIKE '%IF _d.package_code = ''selected_merits''%'
+                    AND p.prosrc LIKE '%- ''id''%'
+                    AND p.prosrc LIKE '%checked_at%') THEN
+    RAISE EXCEPTION 'SP_SELECTED_SHARE_POSTFLIGHT: the selected-merit boundary no longer '
+      'scopes identifier stripping and server check time to its package.';
   END IF;
 
   -- The advisory lock is what turns two simultaneous same-key calls into one
