@@ -430,7 +430,37 @@ test.describe("the public homepage", () => {
     // `undefined` and sends the page down its own error branch, which is a
     // real state but not the one under test.
     const REPLIES: Record<string, unknown> = {
-      getMyPassport: { profile: null, claims: [], periods: [], employment: [] },
+      // The real PassportSnapshot shape for a brand-new account: no profile
+      // row, and a holder with nothing in it. The `holder` half is not
+      // optional -- /passport derives the first-run state from the merits it
+      // carries, so a stub without it fails inside the route rather than
+      // testing it.
+      getMyPassport: {
+        profile: null,
+        holder: {
+          id: "00000000-0000-4000-8000-000000000001",
+          displayName: null,
+          professionSlug: null,
+          identity: {
+            engineVersion: "identity-v1",
+            evaluatedOn: "2026-09-06",
+            includesSelfDeclared: true,
+            educationCompleted: [],
+            professionalCompetence: [],
+            localEligibility: [],
+            activeTitles: [],
+          },
+          jurisdictionCode: null,
+          subJurisdictionCode: null,
+          periods: [],
+          claims: [],
+        },
+        eventCount: 0,
+      },
+      // The journey the landing hands over to writes a draft as soon as a
+      // merit kind is chosen. Stubbed so an accidental write during this
+      // arrival is answered rather than counted as a hole.
+      saveFirstRunDraft: { savedAt: "2026-09-06T09:00:00.000Z" },
       listMyVerificationRequests: { requests: [] },
       // The real `RegulatedCredentialAvailability` shape. An approximation
       // here threw inside the Passport shell and the route rendered its
@@ -475,7 +505,18 @@ test.describe("the public homepage", () => {
 
     await page.goto(`${BASE}/passport`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(3000);
-    expect(new URL(page.url()).pathname, "the landing bounced to login").toBe("/passport");
+    // ── THE MECHANISM MOVED; THE PROMISE DID NOT ──────────────────────
+    //
+    // /passport used to hold its own "you have no Passport yet" screen. Since
+    // PR #192 it derives the first-run state from persisted rows and hands a
+    // Passport with no CURRENT merit to /passport/onboarding, which is the
+    // four-screen journey that ends in a real merit. So the arrival is one of
+    // those two paths -- and never /login, which is what this line was
+    // written to catch.
+    expect(
+      ["/passport", "/passport/onboarding"],
+      "the landing bounced somewhere else (login?)",
+    ).toContain(new URL(page.url()).pathname);
 
     const body = await page.evaluate(() => document.body.innerText);
     expect(body.trim().length, "the landing is blank").toBeGreaterThan(60);

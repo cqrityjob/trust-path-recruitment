@@ -449,17 +449,41 @@ group("T6 · the primary action carries the Passport intent, to a real landing")
     existsSync(path.join(root, "src/routes/_authenticated.passport.index.tsx")),
   );
 
-  // The landing EXPLAINS the next step rather than being a dashboard. A new
-  // account has no Passport row, and /passport answers that with a named
-  // first action rather than an empty page.
+  // The landing EXPLAINS the next step rather than being a dashboard.
+  //
+  // PR #192 changed the MECHANISM and not the promise. /passport used to hold
+  // a "you have no Passport yet" branch with a create button; it now derives
+  // the first-run state from persisted rows and hands the whole first run to
+  // /passport/onboarding, which is a four-screen journey ending in a real
+  // merit. So the assertions follow the hand-off rather than the old branch --
+  // what must stay true is that a new account is given a NAMED FIRST ACTION,
+  // not an empty page.
+  //
+  // The condition is deliberately a CURRENT MERIT and not `onboarding_state`:
+  // a profile can say completed and hold nothing, and telling that person
+  // they are finished above an empty Passport is the failure this whole
+  // branch exists to prevent.
   const landing = code(read("src/routes/_authenticated.passport.index.tsx"));
-  ck("the landing has a no-Passport-yet branch", landing.includes("!snapshot.profile"));
+  ck(
+    "the landing derives the first-run state from persisted rows",
+    landing.includes("deriveFirstRunState("),
+  );
+  ck(
+    "and hands a Passport with no current merit to the first-run journey",
+    landing.includes('firstRun.screen !== "overview"') &&
+      landing.includes('to: "/passport/onboarding"'),
+  );
+  ck(
+    "the journey route exists",
+    existsSync(path.join(root, "src/routes/_authenticated.passport.onboarding.tsx")),
+  );
+  const journey = code(read("src/components/security-passport/FirstRunJourney.tsx"));
   ck(
     "which names the first action in words",
-    landing.includes('pt("live.startTitle")') && landing.includes('pt("live.startBody")'),
+    journey.includes('pt("fr.create.title")') && journey.includes('pt("fr.create.cta")'),
   );
   const passportCopy = read("src/lib/security-passport/i18n.ts");
-  for (const key of ["live.startTitle", "live.startBody"]) {
+  for (const key of ["fr.create.title", "fr.create.body", "fr.create.cta"]) {
     ck(`"${key}" has copy`, new RegExp(`"${key}":`).test(passportCopy));
   }
 
