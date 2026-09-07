@@ -4160,7 +4160,8 @@ else
 
   # A: create the share, then hold the transaction open for three seconds.
   (
-    psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SELR_A_LOG" 2>&1 <<SQL
+    PGAPPNAME=sp_selected_share_race_a \
+      psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SELR_A_LOG" 2>&1 <<SQL
 BEGIN;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '${SELR_HOLDER}', true);
@@ -4176,11 +4177,24 @@ SQL
   ) &
   SELR_A_PID=$!
 
-  # Wait until A actually holds the ADVISORY lock, so B starts into real
-  # contention on the key rather than on the table.
+  # Wait until A's backend holds THE advisory lock for this holder/request
+  # pair. Polling "any advisory lock" can be satisfied by unrelated work and
+  # makes the race appear concurrent when these two sessions never overlapped.
   SELR_HELD=0
   for _ in $(seq 1 200); do
-    SELR_HELD="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_locks where locktype = 'advisory' and granted;" 2>/dev/null || echo 0)"
+    SELR_HELD="$(psql -tAq -d "$TEST_DB" -c "
+      select count(*)
+        from pg_locks l
+        join pg_stat_activity a on a.pid = l.pid
+       where l.locktype = 'advisory'
+         and l.granted
+         and l.objsubid = 1
+         and a.application_name = 'sp_selected_share_race_a'
+         and l.classid::bigint = ((hashtextextended(
+               'sp_share:${SELR_HOLDER}:${SELR_KEY}', 0) >> 32) & 4294967295)
+         and l.objid::bigint = (hashtextextended(
+               'sp_share:${SELR_HOLDER}:${SELR_KEY}', 0) & 4294967295);" \
+      2>/dev/null || echo 0)"
     [ "${SELR_HELD:-0}" -gt 0 ] && break
     sleep 0.05
   done
