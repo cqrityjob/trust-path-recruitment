@@ -12380,6 +12380,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sp_passport_operations: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          holder_user_id: string
+          operation_id: string
+          operation_kind: string
+          request_fingerprint: string
+          subject_id: string | null
+          subject_type: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          holder_user_id: string
+          operation_id: string
+          operation_kind: string
+          request_fingerprint: string
+          subject_id?: string | null
+          subject_type?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          holder_user_id?: string
+          operation_id?: string
+          operation_kind?: string
+          request_fingerprint?: string
+          subject_id?: string | null
+          subject_type?: string | null
+        }
+        Relationships: []
+      }
       sp_passport_profiles: {
         Row: {
           cig_profession_slug: string | null
@@ -12391,6 +12424,7 @@ export type Database = {
           is_private: boolean
           jurisdiction_code: string | null
           onboarding_answers: Json
+          onboarding_draft_revision: number
           onboarding_state: string
           onboarding_step: number
           privacy_mode: string
@@ -12411,6 +12445,7 @@ export type Database = {
           is_private?: boolean
           jurisdiction_code?: string | null
           onboarding_answers?: Json
+          onboarding_draft_revision?: number
           onboarding_state?: string
           onboarding_step?: number
           privacy_mode?: string
@@ -12431,6 +12466,7 @@ export type Database = {
           is_private?: boolean
           jurisdiction_code?: string | null
           onboarding_answers?: Json
+          onboarding_draft_revision?: number
           onboarding_state?: string
           onboarding_step?: number
           privacy_mode?: string
@@ -15257,6 +15293,17 @@ export type Database = {
         Args: { _employer_id: string }
         Returns: Json
       }
+      sp_first_merit_fingerprint: {
+        Args: {
+          _country: string
+          _ended_on: string
+          _merit_kind: string
+          _organisation: string
+          _started_on: string
+          _title: string
+        }
+        Returns: string
+      }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
       sp_grant_pilot_member: {
         Args: { _market_pack_code: string; _note?: string; _user_id: string }
@@ -15285,6 +15332,30 @@ export type Database = {
           job_title_sv: string
           package_code: string
           revoked_at: string
+        }[]
+      }
+      sp_passport_complete_first_merit: {
+        Args: {
+          _country: string
+          _declared: boolean
+          _ended_on: string
+          _merit_kind: string
+          _operation_id: string
+          _organisation: string
+          _started_on: string
+          _title: string
+        }
+        Returns: {
+          created: boolean
+          subject_id: string
+          subject_kind: string
+        }[]
+      }
+      sp_passport_ensure: {
+        Args: { _question_version?: string }
+        Returns: {
+          created: boolean
+          repaired: boolean
         }[]
       }
       sp_raise_dispute: {
