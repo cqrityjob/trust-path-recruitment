@@ -7,6 +7,40 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261031090000_sp_passport_first_merit.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "sp_passport_operations",
+          "kind": "table"
+        },
+        {
+          "object": "sp_passport_complete_first_merit",
+          "kind": "function"
+        },
+        {
+          "object": "sp_passport_ensure",
+          "kind": "function"
+        },
+        {
+          "object": "sp_first_merit_fingerprint",
+          "kind": "function"
+        },
+        {
+          "table": "sp_passport_profiles",
+          "object": "onboarding_draft_revision",
+          "kind": "column"
+        },
+        {
+          "object": "sp_events_one_per_operation",
+          "kind": "index"
+        }
+      ],
+      "rollback": "supabase/rollback/20261031090000_sp_passport_first_merit_rollback.sql",
+      "verify": "SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname IN ('sp_passport_complete_first_merit','sp_passport_ensure','sp_first_merit_fingerprint');  -- expect 3 rows. Then: SELECT prosrc LIKE '%SP_DECLARATION_REQUIRED%', prosrc LIKE '%SP_WORK_COUNTRY_REQUIRED%', prosrc LIKE '%SP_OPERATION_FACTS_CHANGED%', prosrc LIKE '%SP_FIRST_MERIT_ALREADY_EXISTS%', prosrc LIKE '%sp_passport_operations%', prosrc LIKE '%pg_advisory_xact_lock%', prosrc NOT LIKE '%assertion_level%' FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname='sp_passport_complete_first_merit';  -- expect t|t|t|t|t|t|t. Then the boundary: SELECT has_table_privilege('anon','public.sp_passport_operations','SELECT'), has_table_privilege('anon','public.sp_passport_operations','TRUNCATE'), has_table_privilege('authenticated','public.sp_passport_operations','SELECT'), has_table_privilege('authenticated','public.sp_passport_operations','INSERT'), has_table_privilege('authenticated','public.sp_passport_operations','TRUNCATE');  -- expect f|f|f|f|f. Then: SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid='public.sp_passport_operations'::regclass;  -- expect t|t. Then: SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='sp_passport_operations';  -- expect 0. Then: SELECT with_check FROM pg_policies WHERE schemaname='public' AND tablename='sp_passport_events' AND policyname='sp_events_self_insert';  -- expect a clause naming operation_id AND first_merit. Then: SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sp_passport_profiles' AND column_name='onboarding_draft_revision';  -- expect one row. Then, read-only: SELECT count(*) FROM public.sp_passport_events WHERE detail ? 'operation_id';  -- expect 0 immediately after apply.",
+      "note": "SCHEMA HALF of the Security Passport first-run journey. Adds ONE private table (public.sp_passport_operations), THREE SECURITY DEFINER functions, ONE partial unique index on sp_passport_events, and ONE column on sp_passport_profiles (onboarding_draft_revision). It also TIGHTENS one existing policy -- sp_events_self_insert now refuses a client-written event whose detail carries operation_id or first_merit. No row is rewritten or back-filled and no other existing object changes. THE DEFECT: finishing the first-run wizard performed four independent writes from the browser -- insert the employment period, update the profile, insert two events -- with nothing holding them together, so a failure at any seam left a merit with onboarding still in progress (and the next attempt SKIPPED the insert because a period now existed, leaving the holder unable ever to finish), or a completed profile whose audit events were lost silently because the insert's error was never read. Completion was also not idempotent, and the truthfulness declaration was never checked at all: declared_accurate_at was written unconditionally whenever completion was called, while the tick-box lived only in React state. THE SECOND DEFECT, found by independent review of the first draft of this migration: idempotency was keyed on sp_passport_events.detail->>'operation_id', and that table is directly insertable by authenticated with RLS checking only the holder and actor -- so a signed-in holder could pre-seed an experience_created event carrying any operation id and the function would answer a replay without proving the subject existed, belonged to them, matched the submitted facts, or that onboarding and the declaration had happened. Idempotency now rests on sp_passport_operations, which has NO grant of any kind for anon or authenticated (TRUNCATE included, which RLS does not cover) and RLS enabled and FORCED with no policies, so the Data API cannot reach it; the operation is bound to auth.uid() and to a sha256 fingerprint of exactly the facts submitted, a replay carrying different facts is refused (SP_OPERATION_FACTS_CHANGED), one holder replaying another's id is refused (SP_OPERATION_ID_CONFLICT), and a replay is answered only after re-checking that the recorded subject still exists and still belongs to the caller (SP_OPERATION_SUBJECT_MISSING). sp_passport_ensure commits the profile, its receipt and its creation event in one transaction and repairs a legacy profile that has no receipt. The function is NOT a general merit API: a NEW first-merit operation is refused once the holder holds a current merit (SP_FIRST_MERIT_ALREADY_EXISTS), while the original operation still replays -- and that decision is SERIALISED PER HOLDER with a transaction-scoped advisory lock keyed to auth.uid(), taken before the receipt is claimed, because two DIFFERENT operation ids do not conflict on the receipt's primary key and would otherwise each see no committed merit and each create one. The lock is released at commit or rollback, so it is not a permanent constraint: a holder whose only merit is later archived returns to the first run. Proved with two psql processes carrying different ids (the second waited 3s and was refused; one merit, one receipt, one event set), and a permanent negative control in db-test.sh strips the lock out of the live definition, watches two merits appear, and re-applies this migration. The declaration is stamped with the time it was MADE rather than coalesced onto a legacy timestamp, and a replay preserves it. It names no trust column at all, so the merit takes the self_declared / active column defaults; the migration's postflight and the database suite both assert that, along with the grants, the RLS state and the absence of any policy on the receipts table. DEPLOY ORDER: SCHEMA FIRST and safe alone -- nothing existing calls the functions, the receipts table starts empty, the index is partial on a key no existing row carries, and the column is additive with a default. The tightened events policy breaks no existing client: every application event insert writes a detail object carrying neither key. The dependent application release is held out of merge by schema-first-release-check.ts until this is recorded applied here. Rolling back drops the three functions, the table, the index and the column, and restores the previous events policy; it touches no holder merit, event or profile row, and the db-test.sh rollback proof asserts exactly that before re-applying over the same data. Not applied hosted."
+    },
+    {
       "file": "20261030090000_sp_trust_source_containment.sql",
       "hostedState": "pending",
       "introduces": [],
