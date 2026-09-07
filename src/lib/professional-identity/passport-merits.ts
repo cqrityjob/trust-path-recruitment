@@ -36,9 +36,14 @@
 // filtered them out upstream. `addedCount`, `verifiedCount`, `pendingCount`
 // and `expiredCount` are identical from either input for the rows both can
 // see, and that is the guarantee — not that the two queries are the same
-// query. The Passport renders no merit COUNT at all today, so there is no
-// second total on any screen for this one to contradict; what the shared
-// definition protects is the labelling and the emptiness judgement.
+// query.
+//
+// Since PR #196 the Passport workspace DOES render counts, from this
+// function, over its own rows. That is precisely why it calls this rather
+// than counting for itself: two derivations of "how many merits do you
+// have" is the defect above, and there is still only one. The one figure a
+// surface must not borrow from another is `archivedCount`, which means
+// "none among the rows I was given" on the seam and "none exist" nowhere.
 //
 // ── UNKNOWN IS NOT ZERO ────────────────────────────────────────────────
 //
@@ -68,6 +73,18 @@ export type MeritLabel =
 export interface MeritCounts {
   /** Every CURRENT merit the holder has recorded. The TOTAL, not a rung. */
   readonly addedCount: number;
+  /**
+   * The BOTTOM RUNG on its own: recorded by the holder, no document
+   * attached, nobody reviewing it.
+   *
+   * Separate from `addedCount` because the two answer different questions
+   * and a surface that shows both must not use one for the other. A page
+   * that printed `addedCount` beside `documentedCount` and `verifiedCount`
+   * would show four figures of which the first silently contains the other
+   * three — and a holder counting them would find more merits on the page
+   * than they own.
+   */
+  readonly selfReportedCount: number;
   readonly documentProvidedCount: number;
   /** Reviewed by CQrityjob and standing as documented. Counted APART from
    *  `verifiedCount`, never inside it: a document review is a decision, and
@@ -95,6 +112,7 @@ export interface MeritCounts {
 
 const UNKNOWN: MeritCounts = {
   addedCount: 0,
+  selfReportedCount: 0,
   documentProvidedCount: 0,
   documentedCount: 0,
   pendingCount: null,
@@ -237,6 +255,7 @@ export function countMeritRows(
   const of = (label: MeritLabel) => labels.filter((l) => l === label).length;
   return {
     addedCount: labels.length,
+    selfReportedCount: of("added_by_you"),
     documentProvidedCount: of("document_provided"),
     documentedCount: of("documented"),
     pendingCount: review.known ? of("verification_requested") : null,

@@ -1,34 +1,43 @@
-// Security Passport — private overview, live data.
+// Security Passport — the holder's workspace, live data.
 //
-// The whole point of Phase 2: real rows, the same calculations the fixture
-// prototype was reviewed against, and an honest picture of what a
-// self-reported Passport actually looks like.
+// ── WHAT THIS ROUTE IS FOR ─────────────────────────────────────────────
 //
-// ── WHY IT REUSES THE PROTOTYPE COMPONENTS VERBATIM ────────────────────
+// One question: what does a person see when they come back to their
+// Passport after recording their first merit? Everything the page shows is
+// derived from two reads and one pure function, so the answer is the same
+// on every load and can be tested without a browser.
 //
-// PassportOverview, ExperienceTotalsPanel and the rest take plain domain
-// objects. Feeding them live rows rather than fixtures means the reviewed
-// presentation and the reviewed calculations are the ones that ship — not a
-// second implementation that agrees with them today and drifts next month.
+// ── THE READS ARE INDEPENDENT, AND THAT IS THE POINT ───────────────────
 //
-// ── WHAT A PHASE 2 HOLDER WILL ACTUALLY SEE ────────────────────────────
+// The Passport, the verification requests and the market catalogue used to
+// share one `Promise.all`, so a failed verification read took the whole
+// record with it: a holder whose merits were perfectly intact saw "we could
+// not fetch your Security Passport". They are three separate reads now.
 //
-// Self-reported totals, no verified milestone, no seal. That is the honest
-// state, and the page says so in words rather than leaving an empty
-// recognition panel to imply something is missing or broken.
+//   * the PASSPORT failing is the only failure that has no page. Nothing
+//     can be shown without it, and the retry is the whole page.
+//   * the VERIFICATION state failing costs the review-derived figures and
+//     the recommended step — which then say so, rather than showing zero
+//     and "nothing needs you" over an unread clarification.
+//   * the MARKET catalogue failing costs nothing on this page at all.
+//
+// ── IT DECIDES NO TRUST ────────────────────────────────────────────────
+//
+// `buildPassportWorkspace` does, and it in turn asks the shared merit
+// labeller. This file wires reads to a component and owns navigation.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ShieldQuestion } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
-import { PassportOverview } from "@/components/security-passport/PassportOverview";
+import { PassportWorkspace } from "@/components/security-passport/PassportWorkspace";
 import { needsWorkLocationConfirmation } from "@/lib/security-passport/onboarding";
 import { deriveFirstRunState } from "@/lib/security-passport/first-run";
 import { FirstRunLoading } from "@/components/security-passport/FirstRunJourney";
 import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
 import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
+import { buildPassportWorkspace } from "@/lib/security-passport/workspace";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
 import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
 import {
@@ -36,14 +45,10 @@ import {
   VERIFICATION_ATTENTION_UNAVAILABLE,
   type VerificationAttention,
 } from "@/lib/professional-identity/verification-attention";
-import {
-  getRegulatedCredentialAvailability,
-  type RegulatedCredentialAvailability,
-} from "@/lib/security-passport/credentials.functions";
 
 export const Route = createFileRoute("/_authenticated/passport/")({
   ssr: false,
-  component: PassportOverviewRoute,
+  component: PassportWorkspaceRoute,
 });
 
 /** Today, as an ISO date. The calculations take the evaluation date as an
@@ -52,18 +57,16 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function PassportOverviewRoute() {
-  const { pt } = usePassportCopy();
+function PassportWorkspaceRoute() {
+  const { pt, lang } = usePassportCopy();
   const navigate = useNavigate();
   const load = useServerFn(getMyPassport);
   const loadRequests = useServerFn(listMyVerificationRequests);
-  // The governed market catalogue. Read here rather than in the component so
-  // the Passport component tree stays free of the server tier.
-  const loadAvailability = useServerFn(getRegulatedCredentialAvailability);
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
-  // Which entries have a review open. The overview cannot say "waiting on you"
-  // without it, and the holder's own requests are the only honest source.
+  // Which entries have a review open. The workspace cannot say "waiting on
+  // you" without it, and the holder's own requests are the only honest
+  // source.
   const [openReviews, setOpenReviews] = useState<OpenReviews>(new Map());
   // Decided requests, which `openReviews` deliberately drops. A decision is
   // the single most important thing that happens to a request and it was the
@@ -72,36 +75,13 @@ function PassportOverviewRoute() {
     VERIFICATION_ATTENTION_UNAVAILABLE,
   );
   const [error, setError] = useState<string | null>(null);
-  const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
 
-  const refresh = useCallback(async () => {
-    setError(null);
-
-    // ── THE CATALOGUE IS NOT LOAD-BEARING FOR THIS PAGE ───────────────
-    //
-    // It used to be the third leg of one Promise.all, so when the market
-    // lookup failed the snapshot was never set either and the entire Passport
-    // rendered a bare "loading" line -- for a holder whose Passport was
-    // perfectly intact. One optional read took the whole record with it.
-    //
-    // It is fetched on its own now. Failing to learn which credentials may be
-    // ADDED costs the holder the add controls, and nothing else: everything
-    // they already have still renders.
-    void (async () => {
-      try {
-        setAvailability(await loadAvailability({ data: undefined }));
-      } catch (err) {
-        console.error("[passport] market availability load failed", err);
-        setAvailability(null);
-      }
-    })();
-
+  /** The verification state, on its own clock. Failing it costs the figures
+   *  it feeds and nothing else — and those figures then read "could not be
+   *  loaded" rather than zero. */
+  const refreshVerification = useCallback(async () => {
     try {
-      const [snap, reqs] = await Promise.all([
-        load({ data: undefined }),
-        loadRequests({ data: undefined }),
-      ]);
-      setSnapshot(snap);
+      const reqs = await loadRequests({ data: undefined });
       const open = new Map<string, "pending" | "clarification_requested">();
       for (const r of reqs.requests) {
         if (r.status !== "pending" && r.status !== "clarification_requested") continue;
@@ -111,20 +91,32 @@ function PassportOverviewRoute() {
       setOpenReviews(open);
       setAttention(deriveVerificationAttention(reqs.requests));
     } catch (err) {
+      console.error("[passport] verification state load failed", err);
+      setOpenReviews(new Map());
+      setAttention(VERIFICATION_ATTENTION_UNAVAILABLE);
+    }
+  }, [loadRequests]);
+
+  const refresh = useCallback(async () => {
+    setError(null);
+    void refreshVerification();
+
+    try {
+      setSnapshot(await load({ data: undefined }));
+    } catch (err) {
       // The message is logged, not shown: a raw PostgREST error reads as a
       // crash and can leak schema detail.
       //
       // `live.readError` rather than the generic `live.error` because this
-      // catch is now REACHABLE in a way it was not: getMyPassport used to
-      // swallow a failed claims or periods query and return an empty Passport,
-      // so a holder whose credentials could not be read saw "0 verifierade"
-      // instead of this. Now they see this, which makes the wording matter —
-      // and the wording a person needs at that moment is that nothing of
-      // theirs has changed.
+      // catch is REACHABLE: getMyPassport used to swallow a failed claims or
+      // periods query and return an empty Passport, so a holder whose
+      // credentials could not be read saw "0 verifierade" instead of this.
+      // The wording a person needs at that moment is that nothing of theirs
+      // has changed.
       console.error("[passport] load failed", err);
       setError(pt("live.readError"));
     }
-  }, [load, loadRequests, loadAvailability, pt]);
+  }, [load, refreshVerification, pt]);
 
   useEffect(() => {
     void refresh();
@@ -158,6 +150,22 @@ function PassportOverviewRoute() {
     if (handOff) void navigate({ to: "/passport/onboarding", replace: true });
   }, [handOff, navigate]);
 
+  // Everything the page shows, derived once from what has actually loaded.
+  // `attention` carries its own `unavailable`, so a failed verification read
+  // reaches the derivation as unknown rather than as "nothing outstanding".
+  const workspace = useMemo(
+    () =>
+      snapshot
+        ? buildPassportWorkspace({
+            claims: snapshot.holder.claims,
+            periods: snapshot.holder.periods,
+            attention: attention.unavailable ? null : attention,
+            now: new Date(),
+          })
+        : null,
+    [snapshot, attention],
+  );
+
   if (error) {
     return (
       <div className="mx-auto max-w-2xl">
@@ -182,7 +190,7 @@ function PassportOverviewRoute() {
     );
   }
 
-  if (!snapshot) {
+  if (!snapshot || !workspace) {
     return <FirstRunLoading />;
   }
 
@@ -190,7 +198,7 @@ function PassportOverviewRoute() {
   //
   // This page used to answer two different questions with one screen: "here
   // is your Passport" and "you do not have one yet". Both live on, but the
-  // second is now a JOURNEY rather than a button — create the Passport, add a
+  // second is a JOURNEY rather than a button — create the Passport, add a
   // merit, be told what was recorded — and it belongs at one URL so that a
   // refresh resumes it and a link can point at it.
   //
@@ -199,148 +207,97 @@ function PassportOverviewRoute() {
   // profile can say completed and hold nothing, and hosted data carries such
   // rows. Telling that holder they were finished, above an empty Passport, is
   // the single most damaging thing this page could say.
-  //
-  // A draft or an archived credential does not count. Those are unfinished
-  // work and history; neither is Passport content, so neither ends the first
-  // run.
   if (!firstRun || firstRun.screen !== "overview") {
     return <FirstRunLoading />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stated once, at the top, in the holder's language: everything here
-          is self-reported and verification does not exist yet. Leaving that
-          to be inferred from chip colours would be the single easiest way
-          for this product to mislead someone. */}
-      <section className="rounded-xl border border-border bg-secondary/40 p-5">
-        <div className="flex items-start gap-3">
-          <ShieldQuestion
-            aria-hidden="true"
-            className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground"
-          />
-          <div>
-            <p className="text-sm leading-relaxed text-foreground">{pt("live.selfReportedOnly")}</p>
-            <p className="mt-2 text-sm font-medium text-foreground">
-              {pt("live.noVerificationYet")}
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              {pt("live.noVerificationBody")}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── DECISIONS FIRST ────────────────────────────────────────────
-          Somebody has answered a request this holder made. That outranks
-          both the inventory below and the expiry notices, and it is the
-          thing they could previously only find by opening entries one at a
-          time. */}
-      {/* ── EVERYTHING THAT NEEDS THIS HOLDER, IN ONE REGION ──────────
-          The career home links here as `/passport#attention` whenever more
-          than one entry needs the holder — several reviewer questions, or
-          several decisions — because there is no single entry to open. The
-          anchor therefore has to be a REAL region that contains both
-          panels: decisions that were made, and requests still open. It is
-          `tabindex=-1` so `ScrollToHashOnceReady` can move focus here, and
-          labelled so a screen-reader user who lands on it is told what it
-          is rather than hearing an unnamed group. */}
-      <section
-        id="attention"
-        aria-labelledby="attention-heading"
-        tabIndex={-1}
-        className="scroll-mt-24"
-      >
-        <h2 id="attention-heading" className="sr-only">
-          {pt("att.title")}
-        </h2>
-        <VerificationOutcomes
-          attention={attention}
-          titleOf={(item) =>
-            item.subjectKind === "claim"
-              ? (snapshot.holder.claims.find((c) => c.id === item.subjectId)?.titleSv ??
-                pt("att.entryRemoved"))
-              : ((p) => (p ? `${p.roleTitle} · ${p.employerName}` : pt("att.entryRemoved")))(
-                  snapshot.holder.periods.find((p) => p.id === item.subjectId),
-                )
-          }
-          hrefOf={(item) => `/passport/entry/${item.subjectKind}/${item.subjectId}`}
-          // The panel below already answers "is anything waiting" for the
-          // lifecycle side. Two panels both saying "nothing waiting" is the
-          // page talking to itself.
-          showClear={false}
-          className="mb-5"
-        />
-
-        {/* What needs doing comes before the inventory of what exists. A holder
-            who opens this page wants to know whether anything is on them. */}
-        <AttentionPanel
-          summary={attentionFor(
-            snapshot.holder.claims,
-            snapshot.holder.periods,
-            today(),
-            openReviews,
-          )}
-          onOpenEntry={(kind, id) =>
-            void navigate({
-              to: "/passport/entry/$kind/$entryId",
-              params: { kind, entryId: id },
-            })
-          }
-          otherAttention={!attention.clear}
-          className="mb-5"
-        />
-      </section>
-
+    <>
       <ScrollToHashOnceReady />
-      <PassportOverview
-        holder={snapshot.holder}
-        evaluationOn={today()}
-        viewingJurisdiction={snapshot.holder.jurisdictionCode}
+      <PassportWorkspace
+        workspace={workspace}
         // Asked once, of anyone whose work location nobody has confirmed —
         // both the brand-new Passport and the legacy row still carrying the
         // old `DEFAULT 'SE'`. Deliberately the same prompt, because it is the
         // same question: the product does not know where this person works.
         needsWorkLocation={needsWorkLocationConfirmation(snapshot.profile)}
-        // ── NEITHER OF THESE GOES TO THE FIRST RUN ANY MORE ──────────
-        //
-        // /passport/onboarding is now a JOURNEY that ends the moment a
-        // current merit exists — and this page only renders when one does, so
-        // sending a holder there would bounce them straight back here. Both
-        // controls want the same place a person actually adds and corrects
-        // things, and each opens the section it is about.
         onConfirmWorkLocation={() =>
           void navigate({ to: "/passport/information", hash: "sp-work-country" })
         }
-        onContinue={() => void navigate({ to: "/passport/information", hash: "sp-employment" })}
-        onOpenCard={() => void navigate({ to: "/passport/card" })}
-        onShare={() => void navigate({ to: "/passport/share" })}
-        // Undefined until the market answer arrives, which renders no
-        // regulated catalogue at all — never a Swedish one standing in for a
-        // market whose rules nobody has reviewed.
-        marketCredentials={
-          availability ? { state: availability.state, options: availability.types } : undefined
-        }
-        onOpenEntry={(kind, id) =>
-          void navigate({
-            to: "/passport/entry/$kind/$entryId",
-            params: { kind, entryId: id },
-          })
-        }
-        onAddCredential={(code) =>
-          void navigate({
-            to: "/passport/credentials/new",
-            search: code ? { code } : {},
-          })
-        }
-        onResumeDraft={(claimId) =>
-          void navigate({
-            to: "/passport/credentials/new",
-            search: { draft: claimId },
-          })
+        onRetry={() => void refreshVerification()}
+        attention={
+          /* ── EVERYTHING THAT NEEDS THIS HOLDER, IN ONE REGION ──────────
+             The career home links here as `/passport#attention` whenever more
+             than one entry needs the holder — several reviewer questions, or
+             several decisions — because there is no single entry to open. The
+             anchor therefore has to be a REAL region that contains both
+             panels: decisions that were made, and requests still open. It is
+             `tabindex=-1` so `ScrollToHashOnceReady` can move focus here, and
+             labelled so a screen-reader user who lands on it is told what it
+             is rather than hearing an unnamed group. */
+          <section
+            id="attention"
+            aria-labelledby="attention-heading"
+            tabIndex={-1}
+            className="scroll-mt-24"
+          >
+            <h2 id="attention-heading" className="sr-only">
+              {pt("att.title")}
+            </h2>
+            <VerificationOutcomes
+              attention={attention}
+              titleOf={(item) =>
+                item.subjectKind === "claim"
+                  ? ((c) => (c ? (lang === "sv" ? c.titleSv : c.titleEn) : pt("att.entryRemoved")))(
+                      snapshot.holder.claims.find((c) => c.id === item.subjectId),
+                    )
+                  : ((p) => (p ? `${p.roleTitle} · ${p.employerName}` : pt("att.entryRemoved")))(
+                      snapshot.holder.periods.find((p) => p.id === item.subjectId),
+                    )
+              }
+              hrefOf={(item) => `/passport/entry/${item.subjectKind}/${item.subjectId}`}
+              // The panel below already answers "is anything waiting" for the
+              // lifecycle side. Two panels both saying "nothing waiting" is the
+              // page talking to itself.
+              showClear={false}
+              // DECIDED OR ASKED. The merits list below carries every open
+              // review already, with the type, organisation and dates this
+              // panel has no room for; repeating those titles here would be
+              // the page listing one credential twice under two headings.
+              groups={["actionRequired", "outcomes", "information"]}
+              className="mb-4"
+            />
+
+            <AttentionPanel
+              summary={attentionFor(
+                snapshot.holder.claims,
+                snapshot.holder.periods,
+                today(),
+                openReviews,
+              )}
+              onOpenEntry={(kind, id) =>
+                void navigate({
+                  to: "/passport/entry/$kind/$entryId",
+                  params: { kind, entryId: id },
+                })
+              }
+              // The recommended-step card above always says something, so
+              // this panel never has to print "nothing is waiting on you" —
+              // and on a Passport in good order it renders nothing at all
+              // rather than a box saying so.
+              otherAttention
+              // VALIDITY ONLY. The outcomes panel directly above owns the
+              // reviewer's question and the reviewer's decision, and the
+              // merits list below owns the open reviews with the type,
+              // organisation and dates this panel does not carry. What is
+              // left, and what nothing else on the page answers, is what has
+              // lapsed and what is about to.
+              buckets={["expired", "expiring"]}
+            />
+          </section>
         }
       />
-    </div>
+    </>
   );
 }
 
