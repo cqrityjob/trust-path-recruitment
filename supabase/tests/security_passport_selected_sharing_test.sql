@@ -274,6 +274,27 @@ BEGIN
   PERFORM set_config('sp_test.disclosure', _d::text, false);
 END $$;
 
+-- A CQrityjob document review can make an employment row `verified`, but it
+-- is not the employer confirming the employment. Keep that distinction out of
+-- the aggregate even when the reviewed row itself is selected.
+DO $$
+DECLARE _h uuid := 'd1000000-0000-4000-8000-000000000001'; _payload jsonb;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  _payload := public.sp_preview_selected_disclosure(
+    NULL, ARRAY['d1e00000-0000-4000-8000-000000000002']::uuid[],
+    30, NULL, 'sv');
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(
+    (_payload -> 'verified_experience' -> 0 ->> 'assertion') = 'verified'
+    AND (_payload -> 'verified_experience' -> 0 ->> 'verification_method') = 'document_review',
+    '1.14 POSITIVE CONTROL the selected employment is document-reviewed');
+  PERFORM pg_temp.ok((_payload ->> 'verified_experience_days')::int = 0,
+    '1.15 a document-reviewed employment is NOT counted as employer-confirmed time');
+END $$;
+
 
 -- =========================================================================
 -- GROUP 2 — a merit recorded later never joins an existing share
@@ -522,12 +543,21 @@ BEGIN
            current_setting('sp_test.disclosure')),
     '', '6.2 nor delete one');
 
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.sp_disclosures SET revoked_at = NULL WHERE id = %L',
+           current_setting('sp_test.disclosure')),
+    '', '6.3 a holder cannot rewrite revocation state through the table');
+
   RESET ROLE;
 
   PERFORM pg_temp.ok(
     NOT has_table_privilege('anon','public.sp_disclosure_items','SELECT')
     AND NOT has_table_privilege('anon','public.sp_disclosure_items','TRUNCATE'),
-    '6.3 anon holds no privilege on the selection at all — TRUNCATE included');
+    '6.4 anon holds no privilege on the selection at all — TRUNCATE included');
+  PERFORM pg_temp.ok(
+    NOT has_column_privilege(
+      'authenticated','public.sp_disclosures','revoked_at','UPDATE'),
+    '6.5 authenticated has no direct grant that can reactivate a revoked token');
 END $$;
 
 
@@ -563,14 +593,24 @@ BEGIN
     public.sp_get_disclosure(_tok) = jsonb_build_object('status','unavailable'),
     '7.2 a REVOKED link returns exactly the same payload, byte for byte');
 
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.sp_disclosures SET revoked_at = NULL WHERE id = %L', _d),
+    '', '7.3 a holder cannot reactivate the revoked token through PostgREST');
+  RESET ROLE;
+  PERFORM pg_temp.ok(
+    public.sp_get_disclosure(_tok) = jsonb_build_object('status','unavailable'),
+    '7.4 the token remains unavailable after the attempted reactivation');
+
   PERFORM pg_temp.ok(
     public.sp_get_disclosure(encode(gen_random_bytes(32),'hex'))
       = jsonb_build_object('status','unavailable'),
-    '7.3 and so does a token that never existed — no account, no id, no hint');
+    '7.5 and so does a token that never existed — no account, no id, no hint');
 
   PERFORM pg_temp.ok(
     public.sp_get_disclosure('') = jsonb_build_object('status','unavailable'),
-    '7.4 and so does an empty token');
+    '7.6 and so does an empty token');
 
   PERFORM set_config('sp_test.revoked_share', _d::text, false);
 END $$;
@@ -639,11 +679,39 @@ BEGIN
     || 'ARRAY[''d1c00000-0000-4000-8000-000000000001'']::uuid[], NULL, 30, NULL, ''de'')',
     'SP_UNSUPPORTED_LOCALE', '8.12 and the same locale');
 
+  -- ── bounded text and bounded work ──────────────────────────────────
+  PERFORM pg_temp.must_fail(
+    'SELECT public.sp_create_selected_disclosure(' || _ok
+    || '30, repeat(''p'',201), NULL, ''sv'', gen_random_uuid())',
+    'SP_PURPOSE_TOO_LONG', '8.13 a purpose over 200 characters is refused in the database');
+  PERFORM pg_temp.must_fail(
+    'SELECT public.sp_create_selected_disclosure(' || _ok
+    || '30, NULL, repeat(''r'',201), ''sv'', gen_random_uuid())',
+    'SP_RECIPIENT_HINT_TOO_LONG',
+    '8.14 a recipient hint over 200 characters is refused in the database');
+  PERFORM pg_temp.must_fail(
+    'SELECT public.sp_preview_selected_disclosure('
+    || 'ARRAY[''d1c00000-0000-4000-8000-000000000001'']::uuid[], NULL, 30, '
+    || 'repeat(''p'',201), ''sv'')',
+    'SP_PURPOSE_TOO_LONG', '8.15 preview enforces the same text bound');
+  PERFORM pg_temp.must_fail(
+    'SELECT public.sp_create_selected_disclosure('
+    || 'array_fill(''d1c00000-0000-4000-8000-000000000001''::uuid, ARRAY[201]), '
+    || 'NULL, 30, NULL, NULL, ''sv'', gen_random_uuid())',
+    'SP_TOO_MANY_MERITS',
+    '8.16 the raw request is bounded BEFORE duplicate normalisation');
+
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.sp_replace_selected_disclosure(%L, NULL, gen_random_uuid())',
+           current_setting('sp_test.disclosure')),
+    'SP_REVOKE_CHOICE_REQUIRED',
+    '8.17 a reissue cannot silently assume whether the previous link is revoked');
+
   RESET ROLE;
 
   -- POSITIVE CONTROL: the three accepted lifetimes really are accepted, so
   -- the refusals above are a contract and not a broken function.
-  PERFORM pg_temp.ok(true, '8.13 (positive control follows)');
+  PERFORM pg_temp.ok(true, '8.18 (positive control follows)');
 END $$;
 
 DO $$
@@ -656,11 +724,11 @@ BEGIN
       ARRAY['d1c00000-0000-4000-8000-000000000001']::uuid[], NULL,
       _days, NULL, NULL, 'sv', gen_random_uuid());
     IF _res ->> 'status' <> 'created' THEN
-      RAISE EXCEPTION 'ASSERTION FAILED: 8.14 the % day lifetime was refused', _days;
+      RAISE EXCEPTION 'ASSERTION FAILED: 8.19 the % day lifetime was refused', _days;
     END IF;
   END LOOP;
   RESET ROLE;
-  RAISE NOTICE 'ok  8.14 POSITIVE CONTROL 7, 30 and 90 days are all accepted';
+  RAISE NOTICE 'ok  8.19 POSITIVE CONTROL 7, 30 and 90 days are all accepted';
 END $$;
 
 
@@ -865,7 +933,7 @@ END $$;
 -- GROUP 11 — no database identifier crosses the anonymous boundary
 -- =========================================================================
 DO $$
-DECLARE _payload jsonb; _keys text[]; _d uuid;
+DECLARE _payload jsonb; _keys text[];
 BEGIN
   _payload := public.sp_get_disclosure(current_setting('sp_test.token'));
 
@@ -891,26 +959,6 @@ BEGIN
   PERFORM pg_temp.ok(_keys = ARRAY['e1','e2'],
     '11.4 and so does each employment');
 
-  -- The five older packages reach the same anonymous page, so the boundary
-  -- has to hold for them too — and their builder still emits `id`.
-  INSERT INTO public.sp_disclosures (holder_user_id, package_code, token_hash, expires_at)
-  VALUES ('d1000000-0000-4000-8000-000000000001','public_card',
-          encode(digest('sel-package-token','sha256'),'hex'), now() + interval '7 days')
-  RETURNING id INTO _d;
-
-  PERFORM pg_temp.ok(
-    EXISTS (SELECT 1 FROM jsonb_array_elements(public.sp_disclosure_payload(_d)
-                                               -> 'verified_claims') x
-             WHERE x ? 'id'),
-    '11.5 POSITIVE CONTROL the package builder does still produce `id`');
-
-  _payload := public.sp_get_disclosure('sel-package-token');
-  PERFORM pg_temp.ok(_payload ->> 'status' = 'active',
-    '11.6 and the package share resolves through the same anonymous read');
-  PERFORM pg_temp.ok(
-    NOT EXISTS (SELECT 1 FROM pg_temp.payload_row_keys(_payload) k WHERE k = 'id')
-    AND _payload::text NOT LIKE '%d1c00000-0000-4000-8000-%',
-    '11.7 MUTATION the anonymous boundary strips it there as well');
 END $$;
 
 
@@ -1033,28 +1081,34 @@ END $$;
 -- GROUP 13 — nothing about the existing packages moved
 -- =========================================================================
 DO $$
-DECLARE _d uuid; _payload jsonb;
+DECLARE _d uuid; _payload jsonb; _built jsonb;
 BEGIN
-  INSERT INTO public.sp_disclosures (holder_user_id, package_code, token_hash)
+  INSERT INTO public.sp_disclosures (holder_user_id, package_code, token_hash, expires_at)
   VALUES ('d1000000-0000-4000-8000-000000000001','public_card',
-          encode(gen_random_bytes(32),'hex'))
+          encode(digest('sel-legacy-byte-token','sha256'),'hex'), now() + interval '7 days')
   RETURNING id INTO _d;
 
-  _payload := public.sp_disclosure_payload(_d);
-  PERFORM pg_temp.ok(_payload ->> 'package' = 'public_card',
+  _built := public.sp_disclosure_payload(_d);
+  PERFORM pg_temp.ok(_built ->> 'package' = 'public_card',
     '13.1 a public card is still a public card');
   PERFORM pg_temp.ok(
     (SELECT bool_and(x ->> 'assertion' = 'verified')
-       FROM jsonb_array_elements(_payload -> 'verified_claims') x),
+       FROM jsonb_array_elements(_built -> 'verified_claims') x),
     '13.2 and still carries VERIFIED credentials only — the policy change is '
     'scoped to chosen-merit shares');
-  PERFORM pg_temp.ok(jsonb_array_length(_payload -> 'verified_experience') = 0,
+  PERFORM pg_temp.ok(jsonb_array_length(_built -> 'verified_experience') = 0,
     '13.3 and still carries no employment');
-  PERFORM pg_temp.ok((_payload -> 'verified_claims' -> 0) ->> 'authorisation_scope' IS NULL,
+  PERFORM pg_temp.ok((_built -> 'verified_claims' -> 0) ->> 'authorisation_scope' IS NULL,
     '13.4 and still withholds the exact scope');
-  PERFORM pg_temp.ok((_payload -> 'verified_claims' -> 0) ? 'id',
-    '13.5 and its builder is unchanged, right down to the id the anonymous '
-    'boundary strips');
+  PERFORM pg_temp.ok((_built -> 'verified_claims' -> 0) ? 'id',
+    '13.5 and its builder is unchanged, including its established row id');
+
+  _payload := public.sp_get_disclosure('sel-legacy-byte-token');
+  PERFORM pg_temp.ok(_payload = _built,
+    '13.6 schema-first deployment leaves the legacy public wire payload byte-identical');
+  PERFORM pg_temp.ok((_payload -> 'verified_claims' -> 0) ? 'id'
+                 AND NOT (_payload ? 'checked_at'),
+    '13.7 identifier stripping and server check time are scoped to selected_merits only');
 END $$;
 
 \echo '==> Security Passport selected-merit sharing: all assertions passed'
