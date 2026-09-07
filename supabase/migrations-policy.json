@@ -5,6 +5,33 @@
   "parkedDirectory": "supabase/archive/parked-migrations",
   "parked": [
     {
+      "version": "20260907064303",
+      "file": "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
+      "canonicalReplacement": ["20261028090000_admin_cancel_assignment_error_contract.sql"],
+      "equivalence": "identical-after-comment-and-whitespace-normalisation",
+      "reason": "Lovable sync-back copy of the admin cancellation error contract. It is SQL-equivalent to the reviewed canonical file but sorts before the canonical dependency frontier, so it is preserved as deployment evidence outside the active replay path.",
+      "hostedEvidence": "Applied to owner production wrygicdfxwjnrugduxnt as ledger version 20260907064303, name f8efc1c3-def4-4147-9db1-45a68b1f6a69. Canonical alias 20261028090000 was recorded by the history-only repair 20260907071826.",
+      "decidedIn": "docs/release/2026-09-07-release-frontier-reconciliation.md"
+    },
+    {
+      "version": "20260907064513",
+      "file": "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
+      "canonicalReplacement": ["20261030090000_sp_trust_source_containment.sql"],
+      "equivalence": "identical-after-comment-and-whitespace-normalisation",
+      "reason": "Lovable sync-back copy of the trust-source containment contract. It is SQL-equivalent to the reviewed canonical file but would replay before the function definition it hardens and later be overwritten, so it is preserved as deployment evidence outside the active replay path.",
+      "hostedEvidence": "Applied to owner production wrygicdfxwjnrugduxnt as ledger version 20260907064513, name 19c76abb-f1fd-40e5-aa50-b008b7de38bf. Canonical alias 20261030090000 was recorded by the history-only repair 20260907071826.",
+      "decidedIn": "docs/release/2026-09-07-release-frontier-reconciliation.md"
+    },
+    {
+      "version": "20260907064849",
+      "file": "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
+      "canonicalReplacement": ["20261031090000_sp_passport_first_merit.sql"],
+      "equivalence": "identical-after-comment-whitespace-and-outer-transaction-normalisation",
+      "reason": "Lovable sync-back copy of the Passport first-merit migration. It is SQL-equivalent to the reviewed canonical file after accounting for Lovable stripping the outer transaction wrapper, but its hosted timestamp is not the canonical replay position, so it is preserved as deployment evidence outside the active replay path.",
+      "hostedEvidence": "Applied to owner production wrygicdfxwjnrugduxnt as ledger version 20260907064849, name 0bb96516-c1eb-4178-8e9e-60bde13071dd. Canonical alias 20261031090000 was recorded by the history-only repair 20260907071826.",
+      "decidedIn": "docs/release/2026-09-07-release-frontier-reconciliation.md"
+    },
+    {
       "version": "20260720180000",
       "file": "20260720180000_h4_1_assessment_blueprint_engine_phase1.sql",
       "reason": "Blueprint Engine Phase 1 (26 tables, 33 functions). Parked by owner decision F, Phase 0C: not applied to hosted production and the product does not depend on it. Physically outside supabase/migrations so no db push, CLI or replay can reach it. Its one load-bearing object, public.assessment_run_reports, was extracted to 20260720180001_assessment_run_reports_canonical_home.sql.",
@@ -1578,6 +1605,54 @@
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260904134520';",
       "sqlEquivalence": "The canonical file was submitted verbatim to supabase--migration; the hosted ledger row 20260904134520 is that same SQL (its statements begin with the canonical file's TRUST Evidence Report header and it is the only ledger row containing SCP_R2A_EXPAND_PROOF, whose apply-time assertions all passed).",
       "reason": "PR-R2A-1 EXPAND, step 1 of 3, applied hosted on its own under owner approval: additive only -- four read routines, EXECUTE to authenticated on the two audience entry points and the shared predicate, nothing revoked, no policy re-pointed, no row touched. R2A-2 and R2A-3 were subsequently applied under their hosted ledger identities; all three files now carry those identities. Must never be executed hosted again."
+    },
+    {
+      "canonicalFile": "20261028090000_admin_cancel_assignment_error_contract.sql",
+      "canonicalVersion": "20261028090000",
+      "hostedVersion": "20260907064303",
+      "hostedName": "f8efc1c3-def4-4147-9db1-45a68b1f6a69",
+      "historyRepairVersion": "20260907071826",
+      "historyRepairName": "6c070461-aa51-4d78-8ed0-a82294f12489",
+      "generatedFileOnMain": "supabase/migrations/20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
+      "doNotReExecute": true,
+      "equivalenceVerified": true,
+      "mechanism": "Lovable supabase--migration (tracked), applied to owner production wrygicdfxwjnrugduxnt.",
+      "appliedAt": "2026-09-07T06:43:03Z",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260907064303' AND name='f8efc1c3-def4-4147-9db1-45a68b1f6a69';",
+      "sqlEquivalence": "Verified identical after removing SQL comments and normalising whitespace; the complete canonical migration's apply-time assertions passed, and production postconditions were independently re-read after apply.",
+      "reason": "Canonical authored identity 20261028090000 was applied once under Lovable's hosted identity. The complete reviewed SQL remains at its canonical replay position; the generated duplicate is removed from the active path. A migration-history repair records the canonical alias so filename-versus-ledger deployment cannot select it again."
+    },
+    {
+      "canonicalFile": "20261030090000_sp_trust_source_containment.sql",
+      "canonicalVersion": "20261030090000",
+      "hostedVersion": "20260907064513",
+      "hostedName": "19c76abb-f1fd-40e5-aa50-b008b7de38bf",
+      "historyRepairVersion": "20260907071826",
+      "historyRepairName": "6c070461-aa51-4d78-8ed0-a82294f12489",
+      "generatedFileOnMain": "supabase/migrations/20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
+      "doNotReExecute": true,
+      "equivalenceVerified": true,
+      "mechanism": "Lovable supabase--migration (tracked), applied to owner production wrygicdfxwjnrugduxnt.",
+      "appliedAt": "2026-09-07T06:45:13Z",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260907064513' AND name='19c76abb-f1fd-40e5-aa50-b008b7de38bf';",
+      "sqlEquivalence": "Verified identical after removing SQL comments and normalising whitespace; the complete canonical migration's apply-time assertions passed, and production postconditions and unchanged historical counts were independently re-read after apply.",
+      "reason": "Canonical authored identity 20261030090000 was applied once under Lovable's hosted identity. The complete reviewed SQL remains at its canonical replay position, after the function definition it hardens; the generated duplicate is removed from the active path. A migration-history repair records the canonical alias so filename-versus-ledger deployment cannot select it again."
+    },
+    {
+      "canonicalFile": "20261031090000_sp_passport_first_merit.sql",
+      "canonicalVersion": "20261031090000",
+      "hostedVersion": "20260907064849",
+      "hostedName": "0bb96516-c1eb-4178-8e9e-60bde13071dd",
+      "historyRepairVersion": "20260907071826",
+      "historyRepairName": "6c070461-aa51-4d78-8ed0-a82294f12489",
+      "generatedFileOnMain": "supabase/migrations/20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
+      "doNotReExecute": true,
+      "equivalenceVerified": true,
+      "mechanism": "Lovable supabase--migration (tracked), applied to owner production wrygicdfxwjnrugduxnt.",
+      "appliedAt": "2026-09-07T06:48:49Z",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260907064849' AND name='0bb96516-c1eb-4178-8e9e-60bde13071dd';",
+      "sqlEquivalence": "Verified identical after removing SQL comments, normalising whitespace and accounting for Lovable stripping the canonical file's outer BEGIN/COMMIT wrapper; the complete canonical migration's apply-time assertions passed, and production function, lock, RLS, grant, index, policy and row-count postconditions were independently re-read after apply.",
+      "reason": "Canonical authored identity 20261031090000 was applied once under Lovable's hosted identity. The complete reviewed SQL remains at its canonical replay position; the generated duplicate is removed from the active path. A migration-history repair records the canonical alias so filename-versus-ledger deployment cannot select it again."
     }
   ],
   "canonicalProject": {
