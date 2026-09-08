@@ -85,10 +85,6 @@ import {
   setMyCvSelection,
 } from "@/lib/professional-identity/cv/cv-store.functions";
 import { generateMyCv } from "@/lib/professional-identity/cv/cv.functions";
-import {
-  buildSavedCvDocument,
-  storedFromAiPresentation,
-} from "@/lib/professional-identity/cv/stored";
 
 export const Route = createFileRoute("/_authenticated/my-career/cv/$cvId")({
   ssr: false,
@@ -122,6 +118,11 @@ function CvDetailPage() {
   const [bullets, setBullets] = useState<Record<string, string>>({});
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [contact, setContact] = useState<CvContactForm>(EMPTY_CV_CONTACT_FORM);
+  /** What the form was seeded WITH, which is not always what was stored: an
+   *  empty email is prefilled from the account. `dirty` compares against
+   *  this, so offering somebody their own address does not make the page
+   *  announce unsaved changes they never made. */
+  const [contactBaseline, setContactBaseline] = useState<CvContactForm>(EMPTY_CV_CONTACT_FORM);
   const [docLocale, setDocLocale] = useState<"sv" | "en">(l);
   /** Ids the person has unticked in edit mode but not saved yet. Held apart
    *  from the stored exclusions so "unsaved changes" can mean what it says
@@ -143,7 +144,14 @@ function CvDetailPage() {
         cv.data.presentation.experience.map((e) => [e.sourceId, e.bullets.join("\n")]),
       ),
     );
-    setContact(cv.data.presentation.contact);
+    const seededContact = cv.data.presentation.contact.email
+      ? cv.data.presentation.contact
+      : // Offered, not switched on: a CV saved before contact details
+        // existed gets the address filled in and `showEmail` left exactly
+        // as it was, so nothing appears on the document without a tick.
+        { ...cv.data.presentation.contact, email: cv.data.accountEmail ?? "" };
+    setContact(seededContact);
+    setContactBaseline(seededContact);
     setDocLocale(cv.data.locale);
     setUnticked([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,19 +164,18 @@ function CvDetailPage() {
     if (summary !== cv.data.presentation.summary) return true;
     if (docLocale !== cv.data.locale) return true;
     if (unticked.length > 0) return true;
-    const saved = cv.data.presentation.contact;
     if (
-      contact.email !== saved.email ||
-      contact.phone !== saved.phone ||
-      contact.showEmail !== saved.showEmail ||
-      contact.showPhone !== saved.showPhone
+      contact.email !== contactBaseline.email ||
+      contact.phone !== contactBaseline.phone ||
+      contact.showEmail !== contactBaseline.showEmail ||
+      contact.showPhone !== contactBaseline.showPhone
     ) {
       return true;
     }
     return cv.data.presentation.experience.some(
       (e) => (bullets[e.sourceId] ?? "") !== e.bullets.join("\n"),
     );
-  }, [cv.data, title, headline, summary, bullets, contact, docLocale, unticked]);
+  }, [cv.data, title, headline, summary, bullets, contact, contactBaseline, docLocale, unticked]);
 
   /* -- what this CV carries ------------------------------------------ */
   const reselect = useServerFn(setMyCvSelection);
@@ -289,29 +296,22 @@ function CvDetailPage() {
 
   /* -- what to render -------------------------------------------------- */
 
-  // The proposal is rendered from the SAME builder the saved document uses,
-  // so a suggestion and the thing it would become cannot look different for
-  // any reason other than the words.
-  const proposalDocument =
-    propose.data?.presentation && cv.data
-      ? buildSavedCvDocument(
-          cv.data.bundle,
-          // The person's own editorial choices carried onto the proposal, so
-          // the preview is the document they would actually get. Without
-          // them the suggestion would appear to drop a contact line the
-          // accepted version keeps.
-          storedFromAiPresentation(propose.data.presentation, {
-            excludedIds: cv.data.presentation.excludedIds,
-            contact: cv.data.presentation.contact,
-          }),
-          // The saved document's own annotations, which the server resolved
-          // from the live Passport. A proposal changes the WORDS, never the
-          // verification standing of the facts underneath them, so previewing
-          // one must not quietly drop the trust lines and make the accepted
-          // version look different from what it will be.
-          cv.data.document.trust,
-        )
-      : null;
+  // ── THE PREVIEW IS THE DOCUMENT THAT WOULD BE SAVED ─────────────────
+  //
+  // This used to rebuild the proposal locally, over `cv.data.bundle` -- the
+  // SAVED snapshot -- while `generateMyCv` had drafted against a freshly
+  // read one and `saveCvDraft` would go on to write that fresh one. When the
+  // profile had moved in between, the two disagreed: an employment added
+  // last week was cited by the draft, silently dropped from the preview
+  // because the saved bundle had never heard of it, and then present in the
+  // document after "use this suggestion". A person reviewed one document and
+  // accepted a different one.
+  //
+  // The server already builds exactly the right thing -- same facts, same
+  // annotations, same builders -- so the preview is that, and accepting it
+  // can no longer produce a surprise. The drift banner above still says the
+  // profile has changed, which is now the only place that news comes from.
+  const proposalDocument = propose.data?.presentation ? (propose.data.document ?? null) : null;
 
   const proposalRejected = (acceptProposal.data?.violations.length ?? 0) > 0;
   const drift = cv.data?.profileDrift;
@@ -596,7 +596,7 @@ function CvDetailPage() {
                       value={contact}
                       onChange={setContact}
                       lang={l}
-                      accountEmail={null}
+                      accountEmail={cv.data.accountEmail}
                       disabled={saveEdits.isPending}
                       idPrefix="cv-edit-contact"
                     />

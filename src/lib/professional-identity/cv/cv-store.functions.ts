@@ -125,6 +125,12 @@ export interface SavedCv {
    * was saved.
    */
   readonly omitted: readonly CvOmittedFact[];
+  /** The account email, so the edit screen can offer the same prefill the
+   *  creator does. A CV saved before contact details existed has an empty
+   *  field, and making the person retype an address the product already
+   *  holds is the friction this whole feature exists to remove. Never turned
+   *  on by this: the switch stays where the person left it. */
+  readonly accountEmail: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -232,7 +238,11 @@ export const getMyCv = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({ cvId: z.string().uuid() }))
   .handler(async ({ context, data }): Promise<SavedCv> => {
-    const { supabase, userId } = context as { supabase: ScopedClient; userId: string };
+    const { supabase, userId, claims } = context as {
+      supabase: ScopedClient;
+      userId: string;
+      claims: Record<string, unknown>;
+    };
     const row = await loadOwnRow(supabase, userId, data.cvId);
 
     const bundle = parseBundle(row.source_bundle);
@@ -276,6 +286,7 @@ export const getMyCv = createServerFn({ method: "POST" })
       // added to the profile since this CV was saved is also not on it, and
       // the person needs to know that just as much.
       omitted: omittedFacts(fresh.full, bundle),
+      accountEmail: typeof claims?.email === "string" ? claims.email : null,
     };
   });
 
