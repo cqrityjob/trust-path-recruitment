@@ -14,23 +14,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is applied hides a genuinely stuck migration behind an expectation, which is
 // what this list exists to prevent.
 //
-// 20261102090000_cv_documents_controlled_writes is APPLIED. It went to the
-// owner project through the Supabase GitHub integration after PR #201 merged,
-// release-state.json records it `applied` with the hosted evidence, and main
-// therefore carries an empty list. That is correct for main.
-//
-// This branch is phase 3, so it has exactly one pending name of its own.
-//
-// The precondition the earlier version of this comment named has now been
-// met: PR #199 is merged and published, and production UAT confirmed a CV
-// saving and refreshing through the controlled cv_* RPC path. What remains
-// before 20261103090000 may be applied is independent review of THIS PR and
-// an owner decision -- the revoke is one-way for the published application,
-// and nothing here should imply it is automatic.
-//
-// REMOVE THIS NAME once it is applied and release-state.json records it
-// `applied` with evidence.
-const expectedPending: string[] = ["20261103090000_cv_documents_lockdown.sql"];
+// 20261102090000_cv_documents_controlled_writes and
+// 20261103090000_cv_documents_lockdown are APPLIED. The owner project
+// received both through the official Supabase GitHub integration after their
+// reviewed PRs merged. release-state.json and hosted-ledger.json record the
+// production evidence, so main correctly has no expected pending migration.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
