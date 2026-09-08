@@ -227,6 +227,272 @@ SELECT pg_temp.ok(
   'W5 and delete it, which is the last verb the application needs');
 
 -- ═════════════════════════════════════════════════════════════════════════
+DO $$ BEGIN RAISE NOTICE 'GROUP R — the refresh path, which is the one that is not obvious'; END $$;
+-- ═════════════════════════════════════════════════════════════════════════
+--
+-- ── WHY THIS GROUP EXISTS, WHEN GROUP W ALREADY PASSED ─────────────────
+--
+-- Group W exercises cv_create, cv_save and cv_delete. All three are SECURITY
+-- DEFINER, so their survival after the revoke follows from what SECURITY
+-- DEFINER means. cv_refresh_from_profile is different and was the one entry
+-- point this suite did not touch:
+--
+--   cv_refresh_from_profile  SECURITY INVOKER   <- owns no privilege at all
+--     └── cv_save            SECURITY DEFINER   <- does the write
+--
+-- It runs as the CALLER. After this migration that caller has no UPDATE on
+-- cv_documents, so the only reason it still works is that it does not write:
+-- it delegates, and the definer function underneath writes on its behalf.
+-- That is a real property of the code and it is not visible from the
+-- function's own definition, which is exactly the kind of thing that should
+-- be executed rather than reasoned about.
+--
+-- If somebody later "simplifies" the wrapper into a direct UPDATE, everything
+-- else in this file still passes and "Update from profile" breaks in
+-- production for every user, on the day the lockdown is applied.
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.as_holder('70000000-0000-0000-0000-00000000000a');
+
+DO $$
+DECLARE _r jsonb;
+BEGIN
+  _r := public.cv_create(
+    'bbbb0000-0000-4000-8000-000000000002'::uuid,
+    'CV att uppdatera', 'sv', 'general', NULL, false,
+    ARRAY['e7000000-0000-0000-0000-000000000001']::uuid[],
+    '{"email":"","phone":"","showEmail":false,"showPhone":false}'::jsonb,
+    '{}'::jsonb);
+  PERFORM set_config('pg_temp.rcv', _r ->> 'cv_id', true);
+  PERFORM set_config('pg_temp.rrev', _r ->> 'updated_at', true);
+END $$;
+RESET ROLE;
+
+-- The profile moves underneath the saved CV, so the refresh has something to
+-- carry. A refresh that changed nothing could pass without ever writing.
+UPDATE public.sp_experience_periods
+   SET employer_name = 'Lockdown Bevakning Sverige AB'
+ WHERE id = 'e7000000-0000-0000-0000-000000000001';
+
+SELECT pg_temp.ok(
+  (SELECT source_bundle #>> '{employment,0,employerName}' FROM public.cv_documents
+    WHERE id = current_setting('pg_temp.rcv')::uuid) = 'Lockdown Bevakning AB',
+  'R1 the saved CV still holds the old employer, as a snapshot should');
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.as_holder('70000000-0000-0000-0000-00000000000a');
+DO $$
+DECLARE _r jsonb;
+BEGIN
+  _r := public.cv_refresh_from_profile(
+    current_setting('pg_temp.rcv')::uuid,
+    current_setting('pg_temp.rrev')::timestamptz);
+  PERFORM set_config('pg_temp.rrev2', _r ->> 'updated_at', true);
+END $$;
+RESET ROLE;
+
+SELECT pg_temp.ok(
+  (SELECT source_bundle #>> '{employment,0,employerName}' FROM public.cv_documents
+    WHERE id = current_setting('pg_temp.rcv')::uuid) = 'Lockdown Bevakning Sverige AB',
+  'R2 cv_refresh_from_profile still WRITES after the revoke, through its delegation');
+
+SELECT pg_temp.ok(
+  (SELECT updated_at FROM public.cv_documents
+    WHERE id = current_setting('pg_temp.rcv')::uuid)
+  = current_setting('pg_temp.rrev2')::timestamptz,
+  'R3 and the revision it returned is the one now on the row');
+
+-- The mechanism itself, asserted so a future reader is told WHY R2 holds
+-- rather than being left to infer it.
+SELECT pg_temp.ok(
+  (SELECT prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'cv_save')
+  AND NOT (SELECT prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public' AND p.proname = 'cv_refresh_from_profile'),
+  'R4 cv_save is DEFINER and the refresh is INVOKER — delegation is the mechanism');
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.as_holder('70000000-0000-0000-0000-00000000000a');
+SELECT pg_temp.must_fail(
+  format($$SELECT public.cv_refresh_from_profile(%L::uuid, %L::timestamptz)$$,
+         current_setting('pg_temp.rcv'), '2020-01-01 00:00:00+00'),
+  'CV_CHANGED',
+  'R5 a stale revision is refused by the refresh too, not only by cv_save');
+RESET ROLE;
+
+-- ═════════════════════════════════════════════════════════════════════════
+DO $$ BEGIN RAISE NOTICE 'GROUP O — who may call, and about whose rows'; END $$;
+-- ═════════════════════════════════════════════════════════════════════════
+--
+-- The revoke removes a table privilege. It does not, and must not, weaken the
+-- checks inside the functions -- otherwise the lockdown would have moved the
+-- hole rather than closed it.
+
+INSERT INTO auth.users (id, email) VALUES
+  ('70000000-0000-0000-0000-00000000000b', 'other@example.test')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.profiles (id, display_name, country, locale) VALUES
+  ('70000000-0000-0000-0000-00000000000b', 'Otto Other', 'SE', 'sv')
+ON CONFLICT (id) DO NOTHING;
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.as_holder('70000000-0000-0000-0000-00000000000b');
+
+-- CV_NOT_FOUND for somebody else's CV, and the SAME answer a genuinely absent
+-- one gives. A caller who can tell those apart has an existence oracle over
+-- other people's documents.
+SELECT pg_temp.must_fail(
+  format($$SELECT public.cv_save(%L::uuid, %L::timestamptz, 'Taken over')$$,
+         current_setting('pg_temp.rcv'), current_setting('pg_temp.rrev2')),
+  'CV_NOT_FOUND',
+  'O1 another signed-in holder cannot save over this CV');
+
+SELECT pg_temp.must_fail(
+  format($$SELECT public.cv_refresh_from_profile(%L::uuid, %L::timestamptz)$$,
+         current_setting('pg_temp.rcv'), current_setting('pg_temp.rrev2')),
+  'CV_NOT_FOUND',
+  'O2 nor refresh it');
+
+SELECT pg_temp.must_fail(
+  format($$SELECT public.cv_delete(%L::uuid, %L::timestamptz)$$,
+         current_setting('pg_temp.rcv'), current_setting('pg_temp.rrev2')),
+  'CV_NOT_FOUND',
+  'O3 nor delete it');
+
+SELECT pg_temp.must_fail(
+  $$SELECT public.cv_save('00000000-0000-4000-8000-00000000dead'::uuid, now(), 'x')$$,
+  'CV_NOT_FOUND',
+  'O4 and a CV that does not exist gives the identical answer');
+
+RESET ROLE;
+
+-- Unauthenticated: `authenticated` with no JWT subject at all.
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '', true);
+SELECT set_config('request.jwt.claims', '', true);
+SELECT pg_temp.must_fail(
+  $$SELECT public.cv_create('bbbb0000-0000-4000-8000-00000000000e'::uuid, 'x', 'sv', 'general',
+      NULL, false, ARRAY[]::uuid[], '{}'::jsonb, '{}'::jsonb)$$,
+  'CV_NOT_AUTHENTICATED',
+  'O5 a caller with no identity is refused before anything is read');
+RESET ROLE;
+
+-- ═════════════════════════════════════════════════════════════════════════
+DO $$ BEGIN RAISE NOTICE 'GROUP F — the function surface after the revoke'; END $$;
+-- ═════════════════════════════════════════════════════════════════════════
+--
+-- Closing the table and leaving an internal builder callable would move the
+-- problem rather than solve it: cv_source_bundle takes an id array and
+-- returns facts, and cv_application_snapshot shapes the copy an employer
+-- receives. Neither is a client surface.
+--
+-- PUBLIC is checked separately from anon and authenticated on purpose. A
+-- grant to PUBLIC is inherited by every role including future ones, it is what
+-- Postgres gives a new function by default, and it is invisible if you only
+-- ever ask about the two roles you happen to be thinking about.
+
+SELECT pg_temp.ok(
+  NOT has_function_privilege('authenticated',
+        'public.cv_source_bundle(uuid[],text,boolean,text)', 'EXECUTE')
+  AND NOT has_function_privilege('anon',
+        'public.cv_source_bundle(uuid[],text,boolean,text)', 'EXECUTE'),
+  'F1 the bundle builder is not a client surface');
+
+SELECT pg_temp.ok(
+  NOT has_function_privilege('authenticated',
+        'public.cv_application_snapshot(public.cv_documents,timestamptz)', 'EXECUTE')
+  AND NOT has_function_privilege('anon',
+        'public.cv_application_snapshot(public.cv_documents,timestamptz)', 'EXECUTE'),
+  'F2 nor is the employer-snapshot builder');
+
+DO $$
+DECLARE _leaky text;
+BEGIN
+  SELECT string_agg(p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
+                    ', ' ORDER BY p.proname)
+    INTO _leaky
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public'
+     AND p.proname LIKE 'cv\_%'
+     AND aclcontains(coalesce(p.proacl, acldefault('f', p.proowner)),
+                     makeaclitem(0::oid, p.proowner, 'EXECUTE', false));
+  PERFORM pg_temp.ok(_leaky IS NULL,
+    format('F3 no cv_* function is executable by PUBLIC (leaky: %s)', coalesce(_leaky, 'none')));
+END $$;
+
+DO $$
+DECLARE _open text;
+BEGIN
+  SELECT string_agg(p.proname, ', ' ORDER BY p.proname) INTO _open
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname LIKE 'cv\_%'
+     AND has_function_privilege('anon', p.oid, 'EXECUTE');
+  PERFORM pg_temp.ok(_open IS NULL,
+    format('F4 no cv_* function is executable by anon at all (open: %s)', coalesce(_open, 'none')));
+END $$;
+
+DO $$
+DECLARE _holder text;
+BEGIN
+  SELECT string_agg(p.proname, ', ' ORDER BY p.proname) INTO _holder
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname LIKE 'cv\_%'
+     AND has_function_privilege('authenticated', p.oid, 'EXECUTE');
+  PERFORM pg_temp.ok(
+    _holder = 'cv_create, cv_delete, cv_refresh_from_profile, cv_save',
+    format('F5 the holder may execute exactly the four entry points (got: %s)',
+           coalesce(_holder, 'none')));
+END $$;
+
+DO $$
+DECLARE _unpinned text;
+BEGIN
+  SELECT string_agg(p.proname, ', ' ORDER BY p.proname) INTO _unpinned
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname LIKE 'cv\_%'
+     AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig, ARRAY[]::text[])) c
+                      WHERE c LIKE 'search\_path=%');
+  PERFORM pg_temp.ok(_unpinned IS NULL,
+    format('F6 every cv_* function pins search_path (unpinned: %s)', coalesce(_unpinned, 'none')));
+END $$;
+
+-- ═════════════════════════════════════════════════════════════════════════
+DO $$ BEGIN RAISE NOTICE 'GROUP I — idempotency still holds after the revoke'; END $$;
+-- ═════════════════════════════════════════════════════════════════════════
+--
+-- The lost-response contract is what makes a retry safe, and it lives in the
+-- operations ledger, which no client can reach. The revoke must not have
+-- disturbed it. (The genuine TWO-PROCESS race is proved separately, from
+-- db-test.sh, because two sessions cannot contend inside one transaction.)
+
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.as_holder('70000000-0000-0000-0000-00000000000a');
+
+DO $$
+DECLARE _a jsonb; _b jsonb;
+BEGIN
+  _a := public.cv_create(
+    'bbbb0000-0000-4000-8000-000000000003'::uuid, 'Replay', 'sv', 'general', NULL, false,
+    ARRAY['e7000000-0000-0000-0000-000000000001']::uuid[],
+    '{"email":"","phone":"","showEmail":false,"showPhone":false}'::jsonb, '{}'::jsonb);
+  _b := public.cv_create(
+    'bbbb0000-0000-4000-8000-000000000003'::uuid, 'Replay', 'sv', 'general', NULL, false,
+    ARRAY['e7000000-0000-0000-0000-000000000001']::uuid[],
+    '{"email":"","phone":"","showEmail":false,"showPhone":false}'::jsonb, '{}'::jsonb);
+  PERFORM pg_temp.ok((_a ->> 'cv_id') = (_b ->> 'cv_id'),
+    'I1 the same operation id returns the same CV after the lockdown');
+  PERFORM pg_temp.ok((_b ->> 'replayed')::boolean,
+    'I2 and says so, rather than quietly making a second one');
+  PERFORM set_config('pg_temp.icv', _a ->> 'cv_id', true);
+END $$;
+RESET ROLE;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cv_documents
+    WHERE id = current_setting('pg_temp.icv')::uuid) = 1,
+  'I3 exactly one row exists for that request');
+
+-- ═════════════════════════════════════════════════════════════════════════
 DO $$ BEGIN RAISE NOTICE 'GROUP X — it refuses to lock an empty room'; END $$;
 -- ═════════════════════════════════════════════════════════════════════════
 --
