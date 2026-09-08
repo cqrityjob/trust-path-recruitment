@@ -133,6 +133,7 @@ export function diffCvSourceBundles(saved: CvSourceBundle, fresh: CvSourceBundle
     saved.identity.displayName,
     saved.identity.headline ?? "",
     saved.identity.country ?? "",
+    saved.identity.countrySubdivision ?? "",
     saved.identity.currentProfession ?? "",
     saved.identity.yearsOfExperience ?? "",
   ].join(" ");
@@ -140,6 +141,7 @@ export function diffCvSourceBundles(saved: CvSourceBundle, fresh: CvSourceBundle
     fresh.identity.displayName,
     fresh.identity.headline ?? "",
     fresh.identity.country ?? "",
+    fresh.identity.countrySubdivision ?? "",
     fresh.identity.currentProfession ?? "",
     fresh.identity.yearsOfExperience ?? "",
   ].join(" ");

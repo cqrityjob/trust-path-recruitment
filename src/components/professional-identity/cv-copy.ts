@@ -64,7 +64,55 @@ export const CV = {
   identity: c("Namn och yrkestitel", "Name and professional title"),
   none: c("Inga", "None"),
 
-  step2: c("2. Välj syfte", "2. Choose a purpose"),
+  /* -- step 1b: what goes on it -------------------------------------- */
+  selectTitle: c("2. Välj vad som ska med", "2. Choose what to include"),
+  selectLede: c(
+    "Allt du har registrerat är med från början. Kryssa ur det som inte hör hemma i just det här CV:t — det tas då bort ur dokumentet och ur exporten, och ligger kvar orört i din profil.",
+    "Everything you have recorded is included to begin with. Uncheck anything that does not belong on this particular CV — it is then absent from the document and from the export, and stays untouched in your profile.",
+  ),
+  selectEndedNote: c(
+    "Avslutade anställningar är en del av din yrkeshistorik och är med som vanligt.",
+    "Employment that has ended is part of your professional history and is included as normal.",
+  ),
+  selectAll: c("Markera alla", "Select all"),
+  selectNone: c("Avmarkera alla", "Clear all"),
+  selectedCount: c("{0} med", "{0} included"),
+  selectEmptySection: c("Inget registrerat", "Nothing recorded"),
+  /** The one selection that produces no CV at all, said before the person
+   *  presses a button that would refuse. */
+  selectNoHistory: c(
+    "Ett CV behöver minst en anställning eller en utbildning. Kryssa i minst en för att fortsätta.",
+    "A CV needs at least one employment or one education. Tick at least one to continue.",
+  ),
+
+  /* -- language ------------------------------------------------------ */
+  languageTitle: c("Språk", "Language"),
+  languageHelp: c(
+    "Styr rubriker, datumord och verifieringsrader. Din egen text och AI-utkastets text översätts inte — de står kvar på det språk de skrevs.",
+    "Sets the headings, the date words and the verification lines. Your own text and any AI-drafted text are not translated — they stay in the language they were written in.",
+  ),
+  languageSv: c("Svenska", "Swedish"),
+  languageEn: c("Engelska", "English"),
+
+  /* -- contact ------------------------------------------------------- */
+  contactTitle: c("Kontaktuppgifter", "Contact details"),
+  contactHelp: c(
+    "Du väljer vad som står på CV:t. Ingenting visas om du inte kryssar i det.",
+    "You choose what appears on the CV. Nothing is shown unless you tick it.",
+  ),
+  contactEmail: c("E-post", "Email"),
+  contactPhone: c("Telefon", "Telephone"),
+  contactShow: c("Visa på CV:t", "Show on the CV"),
+  contactFromAccount: c(
+    "Hämtad från ditt konto. Ändra den här om du hellre vill bli kontaktad på en annan adress.",
+    "Taken from your account. Change it here if you would rather be contacted at another address.",
+  ),
+  contactNotVerified: c(
+    "Kontaktuppgifter är egna uppgifter och märks aldrig som verifierade.",
+    "Contact details are self-reported and are never marked as verified.",
+  ),
+
+  step2: c("3. Välj syfte", "3. Choose a purpose"),
   purposeGeneral: c("Allmänt CV", "General CV"),
   purposeGeneralHelp: c(
     "Kronologiskt, utan anpassning mot en särskild roll.",
@@ -76,7 +124,7 @@ export const CV = {
     "The advert decides order and emphasis. It can never add a qualification you do not have.",
   ),
 
-  step3: c("3. Klistra in jobbannonsen", "3. Paste the job advert"),
+  step3: c("4. Klistra in jobbannonsen", "4. Paste the job advert"),
   step3Help: c(
     "Valfritt. Texten behandlas som material, aldrig som instruktioner till systemet.",
     "Optional. The text is treated as material, never as instructions to the system.",
@@ -174,6 +222,36 @@ export const CV = {
   driftAdded: c("Tillagt", "Added"),
   driftRemoved: c("Borttaget", "Removed"),
   driftChanged: c("Ändrat", "Changed"),
+
+  /* -- what this CV leaves out -------------------------------------- */
+  omittedTitle: c(
+    "Detta finns i din profil men inte på det här CV:t",
+    "In your profile, but not on this CV",
+  ),
+  omittedBody: c(
+    "Antingen valde du bort det, eller så har du lagt till det efter att CV:t sparades. Du kan lägga till det här — inget annat i CV:t ändras.",
+    "Either you left it off, or you added it after this CV was saved. You can put it on here — nothing else in the CV changes.",
+  ),
+  omittedAdd: c("Lägg till på CV:t", "Add to this CV"),
+  omittedRemove: c("Ta bort från CV:t", "Remove from this CV"),
+  omittedSaving: c("Ändrar…", "Changing…"),
+  omittedFailed: c(
+    "Det gick inte att ändra vad CV:t innehåller. Ingenting ändrades. Försök igen.",
+    "What this CV includes could not be changed. Nothing changed. Try again.",
+  ),
+  editIncluded: c("Innehåll", "Contents"),
+  editIncludedHelp: c(
+    "Kryssa ur något för att ta bort det från det här CV:t. Uppgiften ligger kvar i din profil.",
+    "Uncheck something to take it off this CV. The entry stays in your profile.",
+  ),
+
+  /* -- error recovery ------------------------------------------------ */
+  retry: c("Försök igen", "Try again"),
+  retrying: c("Försöker igen…", "Trying again…"),
+  exportHelp: c(
+    "Öppnar webbläsarens utskriftsdialog, där du väljer skrivare eller “Spara som PDF”.",
+    "Opens your browser's print dialog, where you choose a printer or “Save as PDF”.",
+  ),
 } as const;
 
 export const CV_COUNTED: Readonly<Record<"dropped", PluralCopy>> = {

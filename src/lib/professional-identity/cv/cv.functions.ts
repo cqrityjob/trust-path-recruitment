@@ -18,17 +18,18 @@
 // text, which is treated as untrusted and labelled as such all the way
 // down.
 //
-// ── WHAT IS AND IS NOT SAVED ───────────────────────────────────────────
+// ── WHAT IS AND IS NOT SAVED HERE ──────────────────────────────────────
 //
-// Nothing is saved. This release generates and returns a document; the
-// person reviews it in the browser and exports it. Persisting CV documents
-// needs a table, and this repository's schema-first release contract puts
-// the migration in one release and the code that reads it in the next —
-// so `20261010090000_cv_documents.sql` ships here as the schema half and
-// nothing in `src/` names it. See that file's header.
+// Nothing, still. These two functions PREPARE and GENERATE; persistence is
+// `cv-store.functions.ts` and it is a separate file on purpose, because
+// generating is not consent to keep. A person may draft a CV, read it,
+// dislike it and close the tab, and this file will have written nothing
+// about them anywhere.
 //
-// This is not a limitation of the trust model: an unsaved CV is private by
-// construction, which is the default the requirement asks for.
+// (When the CV feature first shipped there was no store at all: the table
+// arrived in its own schema release, as this repository's schema-first
+// contract requires. The split survived the store landing because it was
+// never only about the table.)
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -39,6 +40,8 @@ import { computeCvReadiness, type CvReadiness } from "./readiness";
 import { applyCvPresentation, buildFactualCvDocument, type CvDocument } from "./document";
 import { buildCvTrustAnnotations } from "./trust-annotations";
 import { generateCvPresentation, type CvGenerationStatus } from "./generation";
+import { resolveCvContact, storedContactSchema } from "./stored";
+import { cvSelectionSchema } from "./selection";
 import type { CvPresentation } from "./schema";
 import type { QuarantinedPassage } from "@/lib/interview-intelligence/ai/injection";
 import type { ProviderMode } from "@/lib/interview-intelligence/ai/orchestrator";
@@ -57,6 +60,12 @@ const generateSchema = z.object({
   /** Opt-IN. An assessment insight on a CV is a choice the person makes. */
   includeCareerInsight: z.boolean().default(false),
   locale: z.enum(["sv", "en"]).default("sv"),
+  /** What the person took off this CV. Applied while the bundle is built,
+   *  so a deselected employment is not in the provider request either. */
+  excludedIds: cvSelectionSchema,
+  /** Rendered on the preview so the person reviews the document they will
+   *  actually save. Never reaches the bundle, so never reaches a prompt. */
+  contact: storedContactSchema,
 });
 
 export interface CvPreparation {
@@ -72,6 +81,21 @@ export interface CvPreparation {
    *  preparation bundle is deliberately built with the insight OFF — it is
    *  opt-in — so the bundle can never answer "could this person opt in". */
   readonly hasCareerInsight: boolean;
+  /**
+   * The account email, offered as a contact line the person may switch on.
+   *
+   * Read from the verified session claims on the server, never accepted
+   * from the browser, and never turned on by default -- "we already know
+   * this" is a reason to save somebody typing, not a reason to publish it.
+   * Null when the session carries no email, in which case the field is
+   * simply empty and the person may type one.
+   */
+  readonly accountEmail: string | null;
+  /** The language the person's account is set to, as the starting choice for
+   *  the document. They may pick the other one; this is a default, not a
+   *  constraint, because the language a CV is READ in is decided by whoever
+   *  is being applied to. */
+  readonly defaultLocale: "sv" | "en";
 }
 
 export interface CvGenerationOutcome {
@@ -113,20 +137,31 @@ export interface CvGenerationOutcome {
 export const prepareMyCv = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<CvPreparation> => {
-    const { supabase, userId } = context as { supabase: ScopedClient; userId: string };
+    const { supabase, userId, claims } = context as {
+      supabase: ScopedClient;
+      userId: string;
+      claims: Record<string, unknown>;
+    };
     const identity = await readProfessionalIdentity(supabase, userId);
     const locale = identity.locale === "en" ? "en" : "sv";
+    // UNFILTERED, deliberately. This is the picker's input: it has to show
+    // everything the person could put on a CV, including what they will
+    // choose to leave off. The exclusions are applied when a document is
+    // generated or saved, not here.
     const bundle = buildCvSourceBundle({
       identity,
       locale,
       includeCareerInsight: false,
       targetJobText: null,
     });
+    const email = typeof claims?.email === "string" ? claims.email : null;
     return {
       readiness: computeCvReadiness(identity),
       bundle,
       factualDocument: buildFactualCvDocument(bundle, buildCvTrustAnnotations(identity)),
       hasCareerInsight: identity.discovery.hasCompletedReport,
+      accountEmail: email,
+      defaultLocale: locale,
     };
   });
 
@@ -153,7 +188,9 @@ export const generateMyCv = createServerFn({ method: "POST" })
       // A "general" CV never carries the advert, even if one was sent.
       // Purpose is the person's stated intent and it decides what is used.
       targetJobText: data.purpose === "targeted" ? data.targetJobText : null,
+      excludedIds: data.excludedIds,
     });
+    const contact = resolveCvContact(data.contact);
 
     if (readiness.state !== "ready") {
       return {
@@ -174,7 +211,7 @@ export const generateMyCv = createServerFn({ method: "POST" })
     // receives the bundle alone -- which is the whole point: the provider
     // is never given a verifier organisation to weave into prose.
     const trust = buildCvTrustAnnotations(identity);
-    const factual = buildFactualCvDocument(bundle, trust);
+    const factual = buildFactualCvDocument(bundle, trust, contact);
     const result = await generateCvPresentation(bundle);
 
     if (result.status !== "succeeded" || !result.presentation) {
@@ -196,7 +233,7 @@ export const generateMyCv = createServerFn({ method: "POST" })
       status: "succeeded",
       readiness,
       presentation: result.presentation,
-      document: applyCvPresentation(bundle, result.presentation, trust),
+      document: applyCvPresentation(bundle, result.presentation, trust, contact),
       providerMode: result.providerMode,
       model: result.model,
       quarantinedPassages: result.quarantinedPassages,

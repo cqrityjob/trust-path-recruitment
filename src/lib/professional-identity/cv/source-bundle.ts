@@ -27,6 +27,18 @@
 //   * Protected personal data. Nothing here carries date of birth, health,
 //     family situation or any other protected characteristic, because
 //     nothing upstream stores one on these rows.
+//   * CONTACT DETAILS. An email address and a telephone number are on the
+//     finished page and are deliberately not here, so they are never part of
+//     a provider request. They reach the document on the renderer channel
+//     alongside the trust annotations -- see `document.ts` -- for the same
+//     reason that provenance does: text a model never receives is text a
+//     model cannot weave into a sentence.
+//   * Anything the person took OFF this CV. `excludedIds` is applied while
+//     the bundle is built, so a deselected employment is absent from the
+//     model's input, from the validator's allowlist, from the rendered page,
+//     from the print export AND from the copy an employer receives with a
+//     job application. `selection.ts` explains why hiding it later would not
+//     have been the same thing.
 //
 // ── WHY EVERY FACT HAS AN ID ───────────────────────────────────────────
 //
@@ -34,6 +46,7 @@
 // not in this bundle is a fabricated citation, and `validation.ts` rejects
 // the whole run for one.
 
+import { withoutExcluded, type CvExcludedIds } from "./selection";
 import {
   CREDENTIAL_CLAIM_TYPES,
   EDUCATION_CLAIM_TYPES,
@@ -52,6 +65,15 @@ export interface CvFactIdentity {
    *  profession slug dressed up as a headline. */
   readonly headline: string | null;
   readonly country: string | null;
+  /** The emirate/region inside `country`, where the holder stated one and
+   *  the country came from their Passport work location.
+   *
+   *  Carried because "AE" and "Dubai, United Arab Emirates" are different
+   *  statements about where somebody may work, and printing the first when
+   *  the holder said the second makes a UAE-wide claim the market pack
+   *  exists to refuse. Rendered through `formatWorkLocation`, never as a
+   *  bare code. */
+  readonly countrySubdivision: string | null;
   readonly currentProfession: string | null;
   readonly yearsOfExperience: string | null;
 }
@@ -145,6 +167,18 @@ export interface BuildCvSourceBundleInput {
    *  an assessment insight on a CV is a choice, not a default. */
   readonly includeCareerInsight: boolean;
   readonly targetJobText: string | null;
+  /**
+   * Facts the person took OFF this CV.
+   *
+   * Applied here rather than in the renderer, and `selection.ts` sets out
+   * why at length: a saved bundle is copied onto a job application and is
+   * employer-readable, so a fact hidden by a renderer would still be in the
+   * row the employer can read. Excluding it here means the model never sees
+   * it, the validator will not accept a citation of it, the document cannot
+   * draw it and the application snapshot does not contain it -- one absence,
+   * inherited everywhere, rather than five filters that must agree.
+   */
+  readonly excludedIds?: CvExcludedIds;
 }
 
 /**
@@ -156,6 +190,7 @@ export interface BuildCvSourceBundleInput {
  */
 export function buildCvSourceBundle(input: BuildCvSourceBundleInput): CvSourceBundle {
   const { identity, locale, includeCareerInsight } = input;
+  const excluded = input.excludedIds ?? [];
 
   const target = input.targetJobText?.trim();
 
@@ -166,26 +201,43 @@ export function buildCvSourceBundle(input: BuildCvSourceBundleInput): CvSourceBu
       displayName: identity.displayName ?? "",
       headline: identity.headline,
       country: identity.workCountry ?? identity.accountCountry,
+      // Only when the country IS the Passport work country. A sub-jurisdiction
+      // is a statement about where the holder works; pairing it with the
+      // account country it does not belong to would invent a location.
+      countrySubdivision: identity.workCountry ? identity.workSubJurisdiction : null,
       currentProfession: identity.currentProfessionSlug ?? identity.currentProfessionOther,
       yearsOfExperience: identity.yearsOfExperience,
     },
-    employment: newestFirst(identity.employment).map((e) => ({
-      id: e.id,
-      employerName: e.employerName,
-      roleTitle: e.roleTitle,
-      startedOn: e.startedOn,
-      endedOn: e.endedOn,
-      employmentType: e.employmentType,
-      assertionLevel: e.assertionLevel,
-    })),
-    education: claimsOfType(identity.claims, EDUCATION_CLAIM_TYPES).map(toFactClaim),
-    credentials: claimsOfType(identity.claims, CREDENTIAL_CLAIM_TYPES).map(toFactClaim),
-    skills: claimsOfType(identity.claims, SKILL_CLAIM_TYPES).map(toFactClaim),
-    languages: claimsOfType(identity.claims, LANGUAGE_CLAIM_TYPES).map(toFactClaim),
+    employment: withoutExcluded(
+      newestFirst(identity.employment).map((e) => ({
+        id: e.id,
+        employerName: e.employerName,
+        roleTitle: e.roleTitle,
+        startedOn: e.startedOn,
+        endedOn: e.endedOn,
+        employmentType: e.employmentType,
+        assertionLevel: e.assertionLevel,
+      })),
+      excluded,
+    ),
+    education: withoutExcluded(
+      claimsOfType(identity.claims, EDUCATION_CLAIM_TYPES).map(toFactClaim),
+      excluded,
+    ),
+    credentials: withoutExcluded(
+      claimsOfType(identity.claims, CREDENTIAL_CLAIM_TYPES).map(toFactClaim),
+      excluded,
+    ),
+    skills: withoutExcluded(
+      claimsOfType(identity.claims, SKILL_CLAIM_TYPES).map(toFactClaim),
+      excluded,
+    ),
+    languages: withoutExcluded(
+      claimsOfType(identity.claims, LANGUAGE_CLAIM_TYPES).map(toFactClaim),
+      excluded,
+    ),
     careerInsight:
-      includeCareerInsight &&
-      identity.discovery.hasCompletedReport &&
-      identity.discovery.snapshotId
+      includeCareerInsight && identity.discovery.hasCompletedReport && identity.discovery.snapshotId
         ? {
             snapshotId: identity.discovery.snapshotId,
             generatedAt: identity.discovery.generatedAt ?? "",
@@ -199,12 +251,7 @@ export function buildCvSourceBundle(input: BuildCvSourceBundleInput): CvSourceBu
 export function citableIds(bundle: CvSourceBundle): ReadonlySet<string> {
   const ids = new Set<string>();
   for (const e of bundle.employment) ids.add(e.id);
-  for (const group of [
-    bundle.education,
-    bundle.credentials,
-    bundle.skills,
-    bundle.languages,
-  ]) {
+  for (const group of [bundle.education, bundle.credentials, bundle.skills, bundle.languages]) {
     for (const c of group) ids.add(c.id);
   }
   return ids;

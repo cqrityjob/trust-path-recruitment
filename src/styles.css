@@ -310,6 +310,46 @@
     padding-top: 0 !important;
     padding-bottom: 0 !important;
   }
+  /* ── The CV document ────────────────────────────────────────────────
+   *
+   * A CV is printed far more often than any other page in this product, and
+   * it is the one document that goes to an employer. So it gets the few
+   * rules a professional A4 page needs and nothing more; everything else it
+   * inherits from the report template above.
+   *
+   * Sized in points rather than rem: the screen scale is tuned for a card in
+   * a two-column layout, and at A4 the same type sets a CV that runs a page
+   * longer than it should. 10.5pt with 1.45 leading is an ordinary
+   * professional body size and keeps a short career on one page.
+   *
+   * `orphans`/`widows` stop a single line of a summary being left behind at
+   * a page boundary. Chromium honours both in paged media, which is what the
+   * export actually runs through. */
+  .cv-document {
+    font-size: 10.5pt;
+    line-height: 1.45;
+    orphans: 3;
+    widows: 3;
+  }
+  .cv-document h2 {
+    font-size: 20pt;
+  }
+  .cv-document h3 {
+    /* The section rules. Kept close to the content they introduce -- the
+     * generous screen margin above a heading becomes a visible gap at the
+     * top of a printed page. */
+    margin-top: 14pt;
+    font-size: 8.5pt;
+  }
+  /* An employment entry, a credential and the footer are self-contained
+   * blocks that must not straddle a page break. The global `li` rule above
+   * already covers list items; this covers the header block and the footer,
+   * and states the intent for anything added later. */
+  .cv-document .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   /* Belt-and-braces: never force a break after the last flow element. */
   main > *:last-child,
   main > * > *:last-child {

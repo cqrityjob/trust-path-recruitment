@@ -49,6 +49,7 @@ import {
   Loader2,
   Lock,
   Pencil,
+  Plus,
   Printer,
   RefreshCcw,
   ShieldAlert,
@@ -59,6 +60,14 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { CvDocumentView } from "@/components/professional-identity/CvDocumentView";
+import {
+  CvContactFields,
+  CvLanguageChoice,
+  CvSelectionPicker,
+  EMPTY_CV_CONTACT_FORM,
+  selectionHasHistory,
+  type CvContactForm,
+} from "@/components/professional-identity/CvComposer";
 import { L, Lf, Lp, type Lang } from "@/components/professional-identity/copy";
 import {
   CV,
@@ -73,9 +82,13 @@ import {
   getMyCv,
   refreshMyCvFromProfile,
   saveCvDraft,
+  setMyCvSelection,
 } from "@/lib/professional-identity/cv/cv-store.functions";
 import { generateMyCv } from "@/lib/professional-identity/cv/cv.functions";
-import { buildSavedCvDocument, storedFromAiPresentation } from "@/lib/professional-identity/cv/stored";
+import {
+  buildSavedCvDocument,
+  storedFromAiPresentation,
+} from "@/lib/professional-identity/cv/stored";
 
 export const Route = createFileRoute("/_authenticated/my-career/cv/$cvId")({
   ssr: false,
@@ -108,6 +121,12 @@ function CvDetailPage() {
   const [summary, setSummary] = useState("");
   const [bullets, setBullets] = useState<Record<string, string>>({});
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [contact, setContact] = useState<CvContactForm>(EMPTY_CV_CONTACT_FORM);
+  const [docLocale, setDocLocale] = useState<"sv" | "en">(l);
+  /** Ids the person has unticked in edit mode but not saved yet. Held apart
+   *  from the stored exclusions so "unsaved changes" can mean what it says
+   *  and so nothing is written until the save button is pressed. */
+  const [unticked, setUnticked] = useState<readonly string[]>([]);
 
   // Seed the form from the saved row once it arrives, and again whenever the
   // server's copy changes underneath us (an update-from-profile, say).
@@ -124,6 +143,9 @@ function CvDetailPage() {
         cv.data.presentation.experience.map((e) => [e.sourceId, e.bullets.join("\n")]),
       ),
     );
+    setContact(cv.data.presentation.contact);
+    setDocLocale(cv.data.locale);
+    setUnticked([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedAt, editing]);
 
@@ -132,20 +154,53 @@ function CvDetailPage() {
     if (title !== cv.data.title) return true;
     if (headline !== cv.data.presentation.headline) return true;
     if (summary !== cv.data.presentation.summary) return true;
+    if (docLocale !== cv.data.locale) return true;
+    if (unticked.length > 0) return true;
+    const saved = cv.data.presentation.contact;
+    if (
+      contact.email !== saved.email ||
+      contact.phone !== saved.phone ||
+      contact.showEmail !== saved.showEmail ||
+      contact.showPhone !== saved.showPhone
+    ) {
+      return true;
+    }
     return cv.data.presentation.experience.some(
       (e) => (bullets[e.sourceId] ?? "") !== e.bullets.join("\n"),
     );
-  }, [cv.data, title, headline, summary, bullets]);
+  }, [cv.data, title, headline, summary, bullets, contact, docLocale, unticked]);
+
+  /* -- what this CV carries ------------------------------------------ */
+  const reselect = useServerFn(setMyCvSelection);
+  const changeSelection = useMutation({
+    mutationFn: (next: { excludedIds: string[]; addIds: string[] }) =>
+      reselect({ data: { cvId, ...next } }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
+      await queryClient.invalidateQueries({ queryKey: ["cv", "list"] });
+    },
+  });
 
   const edit = useServerFn(editMyCv);
   const saveEdits = useMutation({
-    mutationFn: () =>
-      edit({
+    mutationFn: async () => {
+      // Contents FIRST, wording second. Removing an employment drops its
+      // bullets server-side, so writing the bullets first would save text
+      // that the next statement immediately discards -- and a failure between
+      // the two would leave the person looking at a CV whose wording had
+      // been saved and whose contents had not.
+      if (unticked.length > 0) {
+        const merged = new Set([...(cv.data?.presentation.excludedIds ?? []), ...unticked]);
+        await reselect({ data: { cvId, excludedIds: [...merged], addIds: [] } });
+      }
+      return edit({
         data: {
           cvId,
           title,
+          locale: docLocale,
           headline,
           summary,
+          contact,
           bullets: Object.entries(bullets).map(([sourceId, text]) => ({
             sourceId,
             // A blank line is a paragraph break somebody typed, not a
@@ -156,10 +211,12 @@ function CvDetailPage() {
               .filter((b) => b.length > 0),
           })),
         },
-      }),
+      });
+    },
     onMutate: () => setSaveState("saving"),
     onSuccess: async () => {
       setSaveState("saved");
+      setUnticked([]);
       await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
       await queryClient.invalidateQueries({ queryKey: ["cv", "list"] });
     },
@@ -176,6 +233,11 @@ function CvDetailPage() {
           targetJobText: cv.data?.bundle.targetJobText ?? null,
           includeCareerInsight: (cv.data?.bundle.careerInsight ?? null) !== null,
           locale: cv.data?.locale ?? l,
+          // The same contents the saved CV carries. A regenerated draft that
+          // silently reached across a deselected employment would be the
+          // model editing a choice that is not its to make.
+          excludedIds: [...(cv.data?.presentation.excludedIds ?? [])],
+          contact: cv.data?.presentation.contact ?? EMPTY_CV_CONTACT_FORM,
         },
       }),
   });
@@ -191,6 +253,8 @@ function CvDetailPage() {
           targetJobText: cv.data?.bundle.targetJobText ?? null,
           includeCareerInsight: (cv.data?.bundle.careerInsight ?? null) !== null,
           locale: cv.data?.locale ?? l,
+          excludedIds: [...(cv.data?.presentation.excludedIds ?? [])],
+          contact: cv.data?.presentation.contact ?? EMPTY_CV_CONTACT_FORM,
           presentation: propose.data?.presentation ?? null,
           providerMode: propose.data?.providerMode ?? null,
           modelId: propose.data?.model ?? null,
@@ -232,7 +296,14 @@ function CvDetailPage() {
     propose.data?.presentation && cv.data
       ? buildSavedCvDocument(
           cv.data.bundle,
-          storedFromAiPresentation(propose.data.presentation),
+          // The person's own editorial choices carried onto the proposal, so
+          // the preview is the document they would actually get. Without
+          // them the suggestion would appear to drop a contact line the
+          // accepted version keeps.
+          storedFromAiPresentation(propose.data.presentation, {
+            excludedIds: cv.data.presentation.excludedIds,
+            contact: cv.data.presentation.contact,
+          }),
           // The saved document's own annotations, which the server resolved
           // from the live Passport. A proposal changes the WORDS, never the
           // verification standing of the facts underneath them, so previewing
@@ -258,9 +329,24 @@ function CvDetailPage() {
 
         {cv.isPending && <p className="mt-8 text-sm text-muted-foreground">{L(CV.loading, l)}</p>}
         {cv.isError && (
-          <p role="alert" className="mt-8 text-sm text-destructive">
-            {L(CV.loadFailed, l)}
-          </p>
+          <div className="mt-8 max-w-2xl">
+            <p role="alert" className="text-sm text-destructive">
+              {L(CV.loadFailed, l)}
+            </p>
+            <button
+              type="button"
+              disabled={cv.isFetching}
+              onClick={() => void cv.refetch()}
+              className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60"
+            >
+              {cv.isFetching ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {L(cv.isFetching ? CV.retrying : CV.retry, l)}
+            </button>
+          </div>
         )}
 
         {cv.data && (
@@ -283,23 +369,33 @@ function CvDetailPage() {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
-                >
-                  <Printer className="h-3.5 w-3.5" aria-hidden="true" />
-                  {L(CV.print, l)}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditing((e) => !e)}
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
-                >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                  {L(editing ? CV.editDone : CV.editPresentation, l)}
-                </button>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    aria-describedby="cv-export-help"
+                    onClick={() => window.print()}
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+                    {L(CV.print, l)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditing((e) => !e)}
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                    {L(editing ? CV.editDone : CV.editPresentation, l)}
+                  </button>
+                </div>
+                {/* The button opens the browser's own print dialog, and the
+                    label and this line both say so. Promising a download
+                    that the browser -- not this page -- decides whether to
+                    offer would be a promise this code cannot keep. */}
+                <p id="cv-export-help" className="mt-1.5 max-w-xs text-xs text-muted-foreground">
+                  {L(CV.exportHelp, l)}
+                </p>
               </div>
             </div>
 
@@ -347,6 +443,64 @@ function CvDetailPage() {
               <p role="status" className="no-print mt-4 text-sm text-muted-foreground">
                 {Lp(CV_COUNTED.dropped, l, updateFromProfile.data!.droppedIds.length)}
               </p>
+            )}
+
+            {/* -- what this CV leaves out ------------------------------
+                A saved CV that is missing a licence looks identical whether
+                the person took it off or never noticed it was absent, and
+                only they can tell those apart. Adding one back takes exactly
+                that record from the profile and changes nothing else --
+                `reselectSavedBundle` is explicit about why. */}
+            {cv.data.omitted.length > 0 && (
+              <section className="no-print mt-6 rounded-xl border border-border bg-card p-5">
+                <h2 className="text-sm font-semibold text-foreground">{L(CV.omittedTitle, l)}</h2>
+                <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  {L(CV.omittedBody, l)}
+                </p>
+                <ul className="mt-3 divide-y divide-border">
+                  {cv.data.omitted.map((fact) => (
+                    <li
+                      key={fact.id}
+                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5"
+                    >
+                      <span className="min-w-0 text-sm">
+                        <span className="block break-words font-medium text-foreground">
+                          {fact.label}
+                        </span>
+                        <span className="mt-0.5 block break-words text-xs text-muted-foreground">
+                          {L(CV_DRIFT_SECTION[fact.section], l)}
+                          {fact.detail ? ` · ${fact.detail}` : ""}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        disabled={changeSelection.isPending}
+                        onClick={() =>
+                          changeSelection.mutate({
+                            excludedIds: (cv.data?.presentation.excludedIds ?? []).filter(
+                              (id) => id !== fact.id,
+                            ),
+                            addIds: [fact.id],
+                          })
+                        }
+                        className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-3.5 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60"
+                      >
+                        {changeSelection.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                        )}
+                        {L(changeSelection.isPending ? CV.omittedSaving : CV.omittedAdd, l)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {changeSelection.isError && (
+                  <p role="alert" className="mt-3 text-sm text-destructive">
+                    {L(CV.omittedFailed, l)}
+                  </p>
+                )}
+              </section>
             )}
 
             {/* -- edit mode ------------------------------------------- */}
@@ -405,6 +559,49 @@ function CvDetailPage() {
                     />
                   </div>
 
+                  {/* What the document CARRIES, as distinct from how it
+                      reads. Unticking removes the fact from the CV and from
+                      anything exported or sent from it; the record itself is
+                      untouched and the panel above offers it back. */}
+                  <div className="rounded-lg border border-border p-4">
+                    <p className="text-sm font-medium text-foreground">{L(CV.editIncluded, l)}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {L(CV.editIncludedHelp, l)}
+                    </p>
+                    <div className="mt-3">
+                      <CvSelectionPicker
+                        bundle={cv.data.bundle}
+                        excludedIds={unticked}
+                        onChange={setUnticked}
+                        lang={l}
+                        disabled={saveEdits.isPending}
+                      />
+                    </div>
+                    {!selectionHasHistory(cv.data.bundle, unticked) && (
+                      <p role="alert" className="mt-2 text-xs font-medium text-destructive">
+                        {L(CV.selectNoHistory, l)}
+                      </p>
+                    )}
+                  </div>
+
+                  <CvLanguageChoice
+                    value={docLocale}
+                    onChange={setDocLocale}
+                    lang={l}
+                    disabled={saveEdits.isPending}
+                  />
+
+                  <div className="rounded-lg border border-border p-4">
+                    <CvContactFields
+                      value={contact}
+                      onChange={setContact}
+                      lang={l}
+                      accountEmail={null}
+                      disabled={saveEdits.isPending}
+                      idPrefix="cv-edit-contact"
+                    />
+                  </div>
+
                   {/* Every employment: the FACT is locked, the wording is
                       not. The lock is the whole editing contract, made
                       visible rather than merely enforced. */}
@@ -444,7 +641,11 @@ function CvDetailPage() {
                 <div className="mt-5 flex flex-wrap items-center gap-3">
                   <PrimaryButton
                     type="button"
-                    disabled={saveEdits.isPending || !dirty}
+                    disabled={
+                      saveEdits.isPending ||
+                      !dirty ||
+                      !selectionHasHistory(cv.data.bundle, unticked)
+                    }
                     onClick={() => saveEdits.mutate()}
                     className="gap-1.5"
                   >
@@ -458,7 +659,10 @@ function CvDetailPage() {
                   <span role="status" className="text-sm">
                     {saveState === "saved" && !dirty && (
                       <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                        <Check className="h-3.5 w-3.5 text-[color:var(--accent)]" aria-hidden="true" />
+                        <Check
+                          className="h-3.5 w-3.5 text-[color:var(--accent)]"
+                          aria-hidden="true"
+                        />
                         {L(CV.saved, l)}
                       </span>
                     )}
@@ -603,9 +807,7 @@ function CvDetailPage() {
             {/* -- the saved document ---------------------------------- */}
             {!editing && (
               <div className="mt-6">
-                <p className="no-print mb-3 text-xs text-muted-foreground">
-                  {L(CV.reviewNote, l)}
-                </p>
+                <p className="no-print mb-3 text-xs text-muted-foreground">{L(CV.reviewNote, l)}</p>
                 <CvDocumentView document={cv.data.document} />
               </div>
             )}

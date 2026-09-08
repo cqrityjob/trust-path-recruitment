@@ -417,7 +417,14 @@ function Candidate360({
                   {t("employer.candidate.cv.snapshotNote")}
                 </p>
                 <div className="mt-3">
-                  <CvDocumentView document={submittedCv.document} />
+                  {/* Dated by SUBMISSION, not by today. This copy is a
+                      historical artefact -- the document as the candidate
+                      sent it -- and dating it now would imply the employer
+                      is looking at something current. */}
+                  <CvDocumentView
+                    document={submittedCv.document}
+                    renderedOn={submittedCv.submittedAt.slice(0, 10)}
+                  />
                 </div>
               </>
             ) : null}

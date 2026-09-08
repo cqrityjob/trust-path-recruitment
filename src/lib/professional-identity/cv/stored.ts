@@ -39,10 +39,33 @@
 // somebody's own words as machine-written -- a small dishonesty, on the one
 // screen in this product whose entire argument is that it does not tell
 // small lies about provenance.
+//
+// -- CONTACT DETAILS ARE PRESENTATION, AND NOTHING ELSE ----------------
+//
+// `contact` sits in the stored presentation rather than in the bundle, and
+// the distinction is the same one this file already draws. An email address
+// is not a career FACT this product vouches for: nobody verified it, it
+// carries no assertion level, and no verification mark is reachable from
+// it -- `CvContactDetails` has no field that could carry one. It is the
+// person's own note to the reader about how to reply, which is exactly what
+// a presentation edit is.
+//
+// It is stored per CV, not per account, because the choice is per document:
+// a person may put their telephone number on a CV they send to one employer
+// and not on the one they hand round at a fair.
+//
+// -- AND SO IS THE SELECTION -------------------------------------------
+//
+// `excludedIds` records what the person took OFF this CV. It is stored
+// beside the wording because it IS an editorial decision about one
+// document, and it changes no record anywhere. The facts themselves are
+// removed from `source_bundle` when the bundle is built -- selection.ts
+// says why that has to happen there and not here.
 
 import { z } from "zod";
-import type { CvDocument } from "./document";
-import { buildFactualCvDocument } from "./document";
+import type { CvContactDetails, CvDocument } from "./document";
+import { buildFactualCvDocument, NO_CV_CONTACT } from "./document";
+import { cvSelectionSchema, pruneExclusions, selectableIds, type CvExcludedIds } from "./selection";
 import { emptyCvTrustAnnotations, type CvTrustAnnotations } from "./trust-annotations";
 import type { CvSourceBundle } from "./source-bundle";
 import type { CvPresentation } from "./schema";
@@ -52,6 +75,39 @@ export const CV_STORED_PRESENTATION_VERSION = "cv-stored-presentation-v1" as con
 /** Who wrote this particular field, as it currently stands. */
 export const authorSchema = z.enum(["ai", "person"]);
 export type Author = z.infer<typeof authorSchema>;
+
+/**
+ * The contact block, as stored.
+ *
+ * Both a VALUE and a SWITCH per field, rather than "empty means hidden".
+ * Somebody who turns their telephone number off before sending a CV to one
+ * employer should not have to retype it for the next one, and a product that
+ * silently discards it teaches people to keep it in a text file instead.
+ */
+export const storedContactSchema = z
+  .object({
+    email: z.string().max(320).default(""),
+    phone: z.string().max(40).default(""),
+    showEmail: z.boolean().default(false),
+    showPhone: z.boolean().default(false),
+  })
+  .default({ email: "", phone: "", showEmail: false, showPhone: false });
+
+export type StoredContact = z.infer<typeof storedContactSchema>;
+
+export const EMPTY_STORED_CONTACT: StoredContact = {
+  email: "",
+  phone: "",
+  showEmail: false,
+  showPhone: false,
+};
+
+/** The stored block, reduced to what the page may actually print. */
+export function resolveCvContact(contact: StoredContact): CvContactDetails {
+  const email = contact.showEmail ? contact.email.trim() : "";
+  const phone = contact.showPhone ? contact.phone.trim() : "";
+  return { email: email || null, phone: phone || null };
+}
 
 export const storedPresentationSchema = z.object({
   storedVersion: z.literal(CV_STORED_PRESENTATION_VERSION).default(CV_STORED_PRESENTATION_VERSION),
@@ -68,6 +124,11 @@ export const storedPresentationSchema = z.object({
     .default([]),
   emphasisedClaimIds: z.array(z.string().min(1)).max(60).default([]),
   tailoringRationale: z.string().max(600).default(""),
+  /** What the person took off this CV. See selection.ts. */
+  excludedIds: cvSelectionSchema,
+  /** Shown only where `show*` says so. An address the product happens to
+   *  know is not an address somebody agreed to publish. */
+  contact: storedContactSchema,
   authorship: z
     .object({
       headline: authorSchema.default("person"),
@@ -80,9 +141,24 @@ export const storedPresentationSchema = z.object({
 
 export type StoredPresentation = z.infer<typeof storedPresentationSchema>;
 
+/** What a caller carries across a save: the editorial choices that are not
+ *  wording, and that a regenerated draft must never silently reset. */
+export interface CvPresentationSettings {
+  readonly excludedIds: CvExcludedIds;
+  readonly contact: StoredContact;
+}
+
+export const DEFAULT_CV_PRESENTATION_SETTINGS: CvPresentationSettings = {
+  excludedIds: [],
+  contact: EMPTY_STORED_CONTACT,
+};
+
 /** A document nothing generated: the person's own facts, their own headline,
  *  no prose written on their behalf. */
-export function factualStoredPresentation(bundle: CvSourceBundle): StoredPresentation {
+export function factualStoredPresentation(
+  bundle: CvSourceBundle,
+  settings: CvPresentationSettings = DEFAULT_CV_PRESENTATION_SETTINGS,
+): StoredPresentation {
   return {
     storedVersion: CV_STORED_PRESENTATION_VERSION,
     headline: bundle.identity.headline ?? bundle.identity.currentProfession ?? "",
@@ -90,22 +166,39 @@ export function factualStoredPresentation(bundle: CvSourceBundle): StoredPresent
     experience: bundle.employment.map((e) => ({ sourceId: e.id, bullets: [] })),
     emphasisedClaimIds: [],
     tailoringRationale: "",
+    excludedIds: [...settings.excludedIds],
+    contact: settings.contact,
     authorship: { headline: "person", summary: "person", bullets: {} },
   };
 }
 
 /** A validated model draft, on its way to being saved. Everything it wrote
  *  is marked as its own; nothing here is quietly attributed to the person. */
-export function storedFromAiPresentation(presentation: CvPresentation): StoredPresentation {
+export function storedFromAiPresentation(
+  presentation: CvPresentation,
+  /** The person's own editorial choices, carried across.
+   *
+   *  A model drafts WORDING. It does not decide which of somebody's jobs are
+   *  on their CV and it does not decide whether their telephone number is
+   *  printed, so accepting a new draft must not reset either. Defaulting
+   *  these to empty rather than requiring them would have made "regenerate"
+   *  quietly put a deselected employment back and turn a contact line off. */
+  settings: CvPresentationSettings = DEFAULT_CV_PRESENTATION_SETTINGS,
+): StoredPresentation {
   const bullets: Record<string, Author> = {};
   for (const item of presentation.experience) bullets[item.sourceId] = "ai";
   return {
     storedVersion: CV_STORED_PRESENTATION_VERSION,
     headline: presentation.headline,
     summary: presentation.summary,
-    experience: presentation.experience.map((e) => ({ sourceId: e.sourceId, bullets: [...e.bullets] })),
+    experience: presentation.experience.map((e) => ({
+      sourceId: e.sourceId,
+      bullets: [...e.bullets],
+    })),
     emphasisedClaimIds: [...presentation.emphasisedClaimIds],
     tailoringRationale: presentation.tailoringRationale,
+    excludedIds: [...settings.excludedIds],
+    contact: settings.contact,
     authorship: { headline: "ai", summary: "ai", bullets },
   };
 }
@@ -136,6 +229,13 @@ export interface ReconcileResult {
 export function reconcileStoredPresentation(
   stored: StoredPresentation,
   bundle: CvSourceBundle,
+  /** Every id the person HAS, excluded ones included.
+   *
+   *  Needed because `bundle` has already had the exclusions applied, so it
+   *  cannot answer "does this excluded record still exist" -- and pruning
+   *  against it would drop every exclusion on every refresh, quietly putting
+   *  the whole profile back onto the CV. */
+  liveIds?: ReadonlySet<string>,
 ): ReconcileResult {
   const liveEmployment = new Set(bundle.employment.map((e) => e.id));
   const liveClaims = new Set(
@@ -164,6 +264,12 @@ export function reconcileStoredPresentation(
       ...stored,
       experience: [...kept, ...appended],
       emphasisedClaimIds: stored.emphasisedClaimIds.filter((id) => liveClaims.has(id)),
+      // An exclusion for a record that no longer exists is not a choice any
+      // more, it is litter -- and the list is stored, so litter accumulates.
+      // Pruned against the ids the bundle could actually offer, which for a
+      // bundle built WITH the exclusions applied means `liveIds` has to be
+      // supplied by the caller rather than read off `bundle`.
+      excludedIds: [...pruneExclusions(stored.excludedIds, liveIds ?? selectableIds(bundle))],
       authorship: { ...stored.authorship, bullets },
     },
     droppedIds,
@@ -192,7 +298,7 @@ export function buildSavedCvDocument(
   // ids point at is re-derived from the live Passport on every open. That is
   // what makes a revoked confirmation vanish from a CV saved in March
   // without anything having to go back and rewrite the saved row.
-  const base = buildFactualCvDocument(bundle, trust);
+  const base = buildFactualCvDocument(bundle, trust, resolveCvContact(stored.contact));
   const byId = new Map(bundle.employment.map((e) => [e.id, e]));
 
   const ordered = stored.experience
@@ -253,8 +359,30 @@ export function buildSavedCvDocument(
 export const cvEditSchema = z.object({
   cvId: z.string().uuid(),
   title: z.string().max(200).optional(),
+  /**
+   * The language the DOCUMENT is written in.
+   *
+   * A presentation choice, and a narrow one: it decides the section
+   * headings, the date words and the trust attribution lines, all of which
+   * this product owns in both languages. It does NOT translate anything the
+   * person or the model wrote -- there is no translation step here, and
+   * inventing one would be putting words in somebody's mouth in a language
+   * they did not choose them in. The screen says so before the switch.
+   */
+  locale: z.enum(["sv", "en"]).optional(),
   headline: z.string().max(160).optional(),
   summary: z.string().max(4000).optional(),
+  /** Contact details and whether each is printed. Not a fact, not verified,
+   *  and structurally incapable of carrying a verification mark. */
+  contact: z
+    .object({
+      email: z.string().max(320),
+      phone: z.string().max(40),
+      showEmail: z.boolean(),
+      showPhone: z.boolean(),
+    })
+    .partial()
+    .optional(),
   /** Bullets for one employment, replacing that employment's list. */
   bullets: z
     .array(z.object({ sourceId: z.string().min(1), bullets: z.array(z.string().max(600)).max(8) }))
@@ -299,6 +427,21 @@ export function applyCvEdit(
       ...next,
       summary: edit.summary,
       authorship: { ...next.authorship, summary: "person" },
+    };
+  }
+
+  if (edit.contact) {
+    // No authorship flag: contact details have no drafted variant. A model
+    // has never written one and cannot -- `cvPresentationOutput` has no
+    // field for an address -- so there is no "AI" badge to take off.
+    next = {
+      ...next,
+      contact: {
+        email: (edit.contact.email ?? next.contact.email).trim(),
+        phone: (edit.contact.phone ?? next.contact.phone).trim(),
+        showEmail: edit.contact.showEmail ?? next.contact.showEmail,
+        showPhone: edit.contact.showPhone ?? next.contact.showPhone,
+      },
     };
   }
 

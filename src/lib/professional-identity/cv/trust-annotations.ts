@@ -55,11 +55,71 @@
 // are rebuilt from the live identity every time a saved CV is opened, which
 // is what makes a revoked verification disappear from a CV somebody saved in
 // March without anything having to go back and edit it.
+//
+// ── AND EXPIRY TRAVELS ON THE SAME CHANNEL, FOR THE SAME REASON ────────
+//
+// A lapsed authorisation is the one thing a CV must never present as
+// current. It used to, here, and the mechanism is worth recording because
+// nothing about the code looked wrong:
+//
+// `validity.ts` states the Passport's rule — expiry is DERIVED at read time
+// and never stored, because anything that writes `lifecycle_state =
+// 'expired'` on the day a licence lapses is a job that can stop running and
+// leave a dead licence reading VERIFIED · ACTIVE. Every other surface
+// applies `validityOf` accordingly: the Passport Card, the recipient page,
+// the social card, the attention list, the entry page.
+//
+// The CV did not. It read `lifecycleState` straight off `sp_claims`, where
+// a lapsed credential is still `active` and still `verified` — because
+// somebody really did verify it, once — and so a Väktare authorisation that
+// expired last spring was printed with a gold check, an attribution line
+// naming the verifier, and no expiry date anywhere on the page. On the one
+// document that goes to employers.
+//
+// The fix is not a rule of the CV's own. It is the Passport's own function,
+// applied at the one point where this file decides what may be said:
+// `describeTrust` is given the EFFECTIVE lifecycle, so a lapsed credential
+// arrives as expired and `describeTrust`'s existing "only `active` is
+// current trust" branch does the rest.
+//
+// `validity` below carries the dates so the renderer can go further than
+// silence and SAY it lapsed. Silence would technically satisfy "never
+// present an expired authorisation as valid" while leaving the reader to
+// assume the credential is simply unverified, which is a different and also
+// untrue statement.
+//
+// It sits here, next to the trust it belongs with, and not on the bundle —
+// so it is renderer-only, and no model ever receives a validity date to
+// write "currently certified" around.
 
 import { describeTrust, type TrustPresentation } from "@/lib/security-passport/trust-presentation";
+import { todayIso } from "@/lib/security-passport/dates";
+import { validityOf } from "@/lib/security-passport/validity";
+import type { IsoDate, LifecycleState } from "@/lib/security-passport/types";
 import { isUnavailable, type ProfessionalIdentityV1 } from "../types";
 
 export const CV_TRUST_ANNOTATIONS_VERSION = "cv-trust-annotations-v1" as const;
+
+/**
+ * How current one credential is, as of the day the page was built.
+ *
+ * `validUntil` is the LIVE date, not the one frozen into the saved bundle.
+ * A saved CV freezes career content — the title, the issuer, the dates the
+ * person reviewed and accepted — and this is not career content: it is the
+ * Passport's current answer about whether the credential still stands. A
+ * renewal must therefore show through immediately, exactly as a revocation
+ * does, and for the same reason. The frozen copy would otherwise print a
+ * date that has passed next to a mark saying the credential is current, and
+ * the two would be arguing with each other on one line.
+ */
+export interface CvCredentialValidity {
+  readonly validUntil: string | null;
+  readonly hasExpired: boolean;
+  /** Still valid, but inside the Passport's own warning window. Rendered as
+   *  a date rather than an alarm: a CV is not a reminder service, and an
+   *  employer reading "valid until next month" has what they need. */
+  readonly expiresSoon: boolean;
+}
 
 export interface CvTrustAnnotations {
   readonly annotationsVersion: typeof CV_TRUST_ANNOTATIONS_VERSION;
@@ -72,6 +132,13 @@ export interface CvTrustAnnotations {
   /** Keyed by claim id, covering education, credentials, skills and
    *  languages alike; the renderer looks up whatever it is about to draw. */
   readonly claims: Readonly<Record<string, TrustPresentation>>;
+  /** Keyed by claim id, for every claim that carries a validity date. A
+   *  claim with no expiry has no entry, which is the ordinary case: a degree
+   *  does not lapse. */
+  readonly validity: Readonly<Record<string, CvCredentialValidity>>;
+  /** The day the annotations were derived. Carried so the export can be
+   *  honest about being a dated snapshot rather than a live document. */
+  readonly evaluatedOn: string;
   /**
    * The provenance read did not answer.
    *
@@ -88,11 +155,16 @@ export interface CvTrustAnnotations {
 
 /** No provenance for anything. The correct starting point for any caller
  *  that has facts but has not established their trust standing. */
-export function emptyCvTrustAnnotations(unavailable = false): CvTrustAnnotations {
+export function emptyCvTrustAnnotations(
+  unavailable = false,
+  evaluatedOn: string = todayIso(),
+): CvTrustAnnotations {
   return {
     annotationsVersion: CV_TRUST_ANNOTATIONS_VERSION,
     employment: {},
     claims: {},
+    validity: {},
+    evaluatedOn,
     unavailable,
   };
 }
@@ -105,9 +177,22 @@ export function emptyCvTrustAnnotations(unavailable = false): CvTrustAnnotations
  * Every entry goes through `describeTrust`, so a CV cannot reach a different
  * conclusion from My Career or the Career Card about the same fact.
  */
-export function buildCvTrustAnnotations(identity: ProfessionalIdentityV1): CvTrustAnnotations {
+export function buildCvTrustAnnotations(
+  identity: ProfessionalIdentityV1,
+  /** Pinned by the guard scripts so an expiry assertion does not depend on
+   *  the day the suite happens to run. Production passes nothing. */
+  evaluationOn: string = todayIso(),
+): CvTrustAnnotations {
   const unavailable = isUnavailable(identity, "provenance");
-  if (unavailable) return emptyCvTrustAnnotations(true);
+  // The validity of a credential is arithmetic on a date the claims read
+  // already returned, so it survives a failed PROVENANCE read: "we could not
+  // establish who verified this" and "this lapsed in March" are independent
+  // statements, and suppressing the second because the first is unknown
+  // would hide the more important one.
+  const validity = buildValidity(identity, evaluationOn);
+  if (unavailable) {
+    return { ...emptyCvTrustAnnotations(true, evaluationOn), validity };
+  }
 
   const employment: Record<string, TrustPresentation> = {};
   for (const e of identity.employment) {
@@ -124,7 +209,11 @@ export function buildCvTrustAnnotations(identity: ProfessionalIdentityV1): CvTru
   for (const c of identity.claims) {
     claims[c.id] = describeTrust({
       assertionLevel: c.assertionLevel,
-      lifecycleState: c.lifecycleState,
+      // THE EFFECTIVE LIFECYCLE, never the stored one. See the file header:
+      // `sp_claims` leaves a lapsed credential `active` on purpose, and
+      // passing that through is what printed an expired authorisation on a
+      // CV as verified and current.
+      lifecycleState: effectiveLifecycle(c, evaluationOn),
       verifierName: c.verifierName,
       verificationMethod: c.verificationMethod,
       verifiedOn: c.verifiedOn,
@@ -135,6 +224,41 @@ export function buildCvTrustAnnotations(identity: ProfessionalIdentityV1): CvTru
     annotationsVersion: CV_TRUST_ANNOTATIONS_VERSION,
     employment,
     claims,
+    validity,
+    evaluatedOn: evaluationOn,
     unavailable: false,
   };
+}
+
+/** The Passport's own derivation, not a second one. */
+function effectiveLifecycle(
+  claim: { readonly lifecycleState: string; readonly validUntil: string | null },
+  evaluationOn: string,
+): LifecycleState {
+  return validityOf(
+    claim.lifecycleState as LifecycleState,
+    claim.validUntil as IsoDate | null,
+    evaluationOn as IsoDate,
+  ).effectiveState;
+}
+
+function buildValidity(
+  identity: ProfessionalIdentityV1,
+  evaluationOn: string,
+): Record<string, CvCredentialValidity> {
+  const out: Record<string, CvCredentialValidity> = {};
+  for (const c of identity.claims) {
+    if (!c.validUntil) continue;
+    const v = validityOf(
+      c.lifecycleState as LifecycleState,
+      c.validUntil as IsoDate,
+      evaluationOn as IsoDate,
+    );
+    out[c.id] = {
+      validUntil: v.validUntil,
+      hasExpired: v.hasExpired,
+      expiresSoon: v.expiresSoon,
+    };
+  }
+  return out;
 }

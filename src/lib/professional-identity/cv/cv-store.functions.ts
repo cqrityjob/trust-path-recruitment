@@ -54,10 +54,20 @@ import {
   cvEditSchema,
   factualStoredPresentation,
   reconcileStoredPresentation,
+  storedContactSchema,
   storedFromAiPresentation,
   storedPresentationSchema,
+  type CvPresentationSettings,
   type StoredPresentation,
 } from "./stored";
+import {
+  cvSelectionSchema,
+  omittedFacts,
+  pruneExclusions,
+  reselectSavedBundle,
+  selectableIds,
+  type CvOmittedFact,
+} from "./selection";
 import type { CvDocument } from "./document";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,6 +114,17 @@ export interface SavedCv {
    * snapshot and is not rewritten behind the person's back.
    */
   readonly profileDrift: BundleDiff;
+  /**
+   * What this person HAS that this CV does not carry.
+   *
+   * Rendered as a list they can put back, and it is the answer to a
+   * question a saved CV otherwise leaves unanswerable: a fact is missing
+   * either because they took it off or because they never noticed it was
+   * absent, and only they can tell those apart. Computed by difference
+   * against the live profile, so it also covers a record added after the CV
+   * was saved.
+   */
+  readonly omitted: readonly CvOmittedFact[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -152,16 +173,32 @@ async function freshIdentityAndBundle(
   userId: string,
   locale: "sv" | "en",
   saved: CvSourceBundle,
-): Promise<{ identity: ProfessionalIdentityV1; bundle: CvSourceBundle }> {
+  excludedIds: readonly string[],
+): Promise<{
+  identity: ProfessionalIdentityV1;
+  /** With this CV's exclusions applied — the right comparison for DRIFT. */
+  bundle: CvSourceBundle;
+  /** Without them — the right comparison for "what is not on this CV".
+   *
+   *  Two bundles rather than one because the two questions are different and
+   *  answering both from one would get one of them wrong: comparing a
+   *  filtered saved bundle against an unfiltered fresh one reports every
+   *  deselected fact as newly "added", which is a drift banner that fires on
+   *  a choice the person made on purpose. Both are pure builds over the same
+   *  single identity read; the second costs no query. */
+  full: CvSourceBundle;
+}> {
   const identity = await readProfessionalIdentity(supabase, userId);
+  const common = {
+    identity,
+    locale,
+    includeCareerInsight: saved.careerInsight !== null,
+    targetJobText: saved.targetJobText,
+  } as const;
   return {
     identity,
-    bundle: buildCvSourceBundle({
-      identity,
-      locale,
-      includeCareerInsight: saved.careerInsight !== null,
-      targetJobText: saved.targetJobText,
-    }),
+    bundle: buildCvSourceBundle({ ...common, excludedIds }),
+    full: buildCvSourceBundle(common),
   };
 }
 
@@ -215,7 +252,13 @@ export const getMyCv = createServerFn({ method: "POST" })
     // revoked yesterday is gone from this CV today, without anything having
     // rewritten the saved row, because there was never a copy of it here to
     // go stale.
-    const fresh = await freshIdentityAndBundle(supabase, userId, locale, bundle);
+    const fresh = await freshIdentityAndBundle(
+      supabase,
+      userId,
+      locale,
+      bundle,
+      stored.excludedIds,
+    );
 
     return {
       cvId: String(row.id),
@@ -229,6 +272,10 @@ export const getMyCv = createServerFn({ method: "POST" })
       modelId: (row.model_id as string | null) ?? null,
       updatedAt: String(row.updated_at),
       profileDrift: diffCvSourceBundles(bundle, fresh.bundle),
+      // Against the SAVED bundle, not against the exclusion list: a record
+      // added to the profile since this CV was saved is also not on it, and
+      // the person needs to know that just as much.
+      omitted: omittedFacts(fresh.full, bundle),
     };
   });
 
@@ -309,6 +356,13 @@ const saveDraftSchema = z.object({
   targetJobText: z.string().max(MAX_TARGET_JOB_CHARS).nullable().default(null),
   includeCareerInsight: z.boolean().default(false),
   locale: z.enum(["sv", "en"]).default("sv"),
+  /** What the person took off this CV. Applied when the bundle is built, so
+   *  the saved snapshot -- and therefore any copy an employer later receives
+   *  with a job application -- does not contain the deselected facts at all. */
+  excludedIds: cvSelectionSchema,
+  /** Contact details and whether each is printed. Presentation, not a fact:
+   *  nobody verified them and nothing here can mark them as verified. */
+  contact: storedContactSchema,
   /** The draft the person is accepting. Null saves a purely factual CV. */
   presentation: z.unknown().nullable().default(null),
   providerMode: z.string().max(64).nullable().default(null),
@@ -355,13 +409,23 @@ export const saveCvDraft = createServerFn({ method: "POST" })
       locale: data.locale,
       includeCareerInsight: data.includeCareerInsight,
       targetJobText: data.purpose === "targeted" ? data.targetJobText : null,
+      excludedIds: data.excludedIds,
     });
+
+    // The editorial choices, carried onto whichever presentation is written.
+    // Passed explicitly rather than defaulted so that accepting a
+    // regenerated draft cannot quietly reset them -- a model drafts wording
+    // and has no view about which of somebody's jobs belong on their CV.
+    const settings: CvPresentationSettings = {
+      excludedIds: data.excludedIds,
+      contact: data.contact,
+    };
 
     let stored: StoredPresentation;
     let origin: "factual" | "ai_assisted";
 
     if (data.presentation === null) {
-      stored = factualStoredPresentation(bundle);
+      stored = factualStoredPresentation(bundle, settings);
       origin = "factual";
     } else {
       const shaped = cvPresentationOutput.safeParse(data.presentation);
@@ -383,7 +447,7 @@ export const saveCvDraft = createServerFn({ method: "POST" })
         // Rejected whole, never repaired. Same rule as generation.
         return { cvId: data.cvId ?? "", savedAt: "", violations };
       }
-      stored = storedFromAiPresentation(shaped.data);
+      stored = storedFromAiPresentation(shaped.data, settings);
       origin = "ai_assisted";
     }
 
@@ -454,6 +518,12 @@ export const editMyCv = createServerFn({ method: "POST" })
 
     const patch: Row = { presentation: next };
     if (data.title !== undefined) patch.title = data.title.trim();
+    // The document's language. A column rather than a presentation field
+    // because `listMyCvs` and the application dialog both label a CV by it
+    // without reading the presentation blob. Nothing is translated: the
+    // facts are the facts and the person's own prose stays in the words they
+    // wrote it in -- only the product's own labels change register.
+    if (data.locale !== undefined) patch.locale = data.locale;
 
     const { data: updated, error } = await supabase
       .from("cv_documents")
@@ -483,15 +553,22 @@ export const refreshMyCvFromProfile = createServerFn({ method: "POST" })
       const row = await loadOwnRow(supabase, userId, data.cvId);
       const locale = (row.locale === "en" ? "en" : "sv") as "sv" | "en";
 
-      const { bundle: fresh } = await freshIdentityAndBundle(
+      const stored = parseStored(row.presentation);
+      const { bundle: fresh, full } = await freshIdentityAndBundle(
         supabase,
         userId,
         locale,
         parseBundle(row.source_bundle),
+        stored.excludedIds,
       );
       const { presentation, droppedIds } = reconcileStoredPresentation(
-        parseStored(row.presentation),
+        stored,
         fresh,
+        // Pruning has to be judged against everything the person HAS, not
+        // against the filtered bundle -- which by construction contains none
+        // of the excluded ids and would therefore prune every one of them,
+        // silently putting the whole profile back onto the CV.
+        selectableIds(full),
       );
 
       const { data: updated, error } = await supabase
@@ -505,6 +582,71 @@ export const refreshMyCvFromProfile = createServerFn({ method: "POST" })
       return { savedAt: String(updated.updated_at), droppedIds };
     },
   );
+
+/**
+ * Change what this CV carries.
+ *
+ * ── WHY THIS IS NOT `refreshMyCvFromProfile` WITH AN ARGUMENT ──────────
+ *
+ * Because they answer to different intents, and merging them would make one
+ * of them lie. "Update from profile" says: take everything as it now
+ * stands. "Put my old job back" says: take that one thing, and change
+ * nothing else.
+ *
+ * Rebuilding the whole bundle here would apply every unrelated change made
+ * since the CV was saved -- a corrected employer name, a re-dated period --
+ * under a click that asked for something much smaller. That is precisely
+ * the silent overwrite `bundle-diff.ts` exists to prevent, and the drift
+ * banner would then have nothing left to offer. `reselectSavedBundle` does
+ * the asymmetric thing instead: removals filter the snapshot, and an
+ * addition takes exactly the one record it needs from the live profile.
+ *
+ * Nothing about a Passport record changes here. Excluding an employment
+ * writes to one CV row and to nothing else.
+ */
+export const setMyCvSelection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      cvId: z.string().uuid(),
+      excludedIds: cvSelectionSchema,
+      /** Facts to PUT ON this CV, named one by one. Never "everything that
+       *  is not excluded" -- see `reselectSavedBundle`. */
+      addIds: cvSelectionSchema,
+    }),
+  )
+  .handler(async ({ context, data }): Promise<{ savedAt: string }> => {
+    const { supabase, userId } = context as { supabase: ScopedClient; userId: string };
+    const row = await loadOwnRow(supabase, userId, data.cvId);
+    const locale = (row.locale === "en" ? "en" : "sv") as "sv" | "en";
+
+    const saved = parseBundle(row.source_bundle);
+    const stored = parseStored(row.presentation);
+    const { full } = await freshIdentityAndBundle(supabase, userId, locale, saved, []);
+
+    const excludedIds = [...pruneExclusions(data.excludedIds, selectableIds(full))];
+    const bundle = reselectSavedBundle(saved, full, excludedIds, data.addIds);
+
+    // The wording follows the facts: bullets for an employment that has just
+    // left the CV are dropped, and one that has just joined arrives with
+    // none. `reconcileStoredPresentation` already does exactly this, and
+    // re-deriving it here would be the second copy that drifts.
+    const { presentation } = reconcileStoredPresentation(
+      { ...stored, excludedIds },
+      bundle,
+      selectableIds(full),
+    );
+
+    const { data: updated, error } = await supabase
+      .from("cv_documents")
+      .update({ source_bundle: bundle, presentation })
+      .eq("id", data.cvId)
+      .eq("owner_user_id", userId)
+      .select("updated_at")
+      .maybeSingle();
+    if (error || !updated) throw new Error("Could not change what this CV includes.");
+    return { savedAt: String(updated.updated_at) };
+  });
 
 /** A CV is the person's own draft of their own presentation. Unlike a
  *  Passport entry -- a record other people act on, which is withdrawn
