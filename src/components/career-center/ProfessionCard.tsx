@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, type LucideIcon } from "lucide-react";
+import { useT } from "@/i18n/context";
 
 // A card is a promise that there is something to read.
 //
@@ -11,6 +12,19 @@ import { ArrowUpRight, type LucideIcon } from "lucide-react";
 //
 // What replaced it is `level`, which is information a reader actually uses to
 // decide whether to open the guide.
+//
+// ── WHAT THE PILOT PASS ADDED, AND THE ONE THING IT DID NOT ────────────
+//
+// `family` (which corner of the industry this is) and the FIRST formal
+// requirement (what stands between the reader and the role) — the two facts
+// that decide whether a card is worth opening and that a title alone cannot
+// carry.
+//
+// The card deliberately shows one requirement, not all of them. A card is a
+// decision aid; the complete, sourced list belongs on the guide. And when a
+// role records none, the card says "inga formella krav registrerade" rather
+// than staying silent: absence is information here, and silence would let a
+// reader assume we simply had not looked.
 
 export function ProfessionCard({
   slug,
@@ -18,6 +32,8 @@ export function ProfessionCard({
   description,
   icon: Icon,
   level,
+  family,
+  formalRequirement,
   onOpen,
 }: {
   slug: string;
@@ -25,8 +41,14 @@ export function ProfessionCard({
   description: string;
   icon: LucideIcon;
   level?: string;
+  /** The profession family, in the reader's language. */
+  family?: string;
+  /** The single most structural formal requirement, verbatim from the guide.
+   *  Undefined means the guide records none — which the card states. */
+  formalRequirement?: string;
   onOpen?: (slug: string) => void;
 }) {
+  const { t } = useT();
   return (
     <Link
       to="/career-center/$profession"
@@ -56,9 +78,26 @@ export function ProfessionCard({
           />
         </div>
       </div>
-      <div>
-        <h3 className="text-base font-semibold tracking-tight text-foreground">{title}</h3>
+      <div className="flex-1">
+        {family && (
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {family}
+          </p>
+        )}
+        <h3 className="mt-1 text-base font-semibold tracking-tight text-foreground">{title}</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+
+      <div className="border-t border-border pt-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          {t("cc.card.formal")}
+        </p>
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-foreground">
+          {formalRequirement ?? t("cc.card.formal.none")}
+        </p>
+        <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent transition-colors group-hover:text-[color:var(--accent-hover)]">
+          {t("cc.card.cta")}
+        </span>
       </div>
     </Link>
   );

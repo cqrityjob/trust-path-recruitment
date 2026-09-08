@@ -68,7 +68,11 @@ export type ProfessionFilters = {
   region?: Region | "all";
 };
 
-export function filterProfessions(list: readonly Profession[], f: ProfessionFilters, lang: "sv" | "en"): Profession[] {
+export function filterProfessions(
+  list: readonly Profession[],
+  f: ProfessionFilters,
+  lang: "sv" | "en",
+): Profession[] {
   const q = (f.query ?? "").trim().toLowerCase();
   return list.filter((p) => {
     if (f.family && f.family !== "all" && p.family !== f.family) return false;
@@ -77,7 +81,8 @@ export function filterProfessions(list: readonly Profession[], f: ProfessionFilt
     if (f.regulated === "regulated" && !p.regulated) return false;
     if (f.regulated === "not_regulated" && p.regulated) return false;
     if (f.sector && f.sector !== "all" && p.sector !== f.sector) return false;
-    if (f.orientation && f.orientation !== "all" && !p.orientation.includes(f.orientation)) return false;
+    if (f.orientation && f.orientation !== "all" && !p.orientation.includes(f.orientation))
+      return false;
     if (f.region && f.region !== "all" && !p.countries.includes(f.region)) return false;
     if (q) {
       const hay = [
@@ -97,6 +102,8 @@ export function filterProfessions(list: readonly Profession[], f: ProfessionFilt
   });
 }
 
-export function pickBi(b: Bi, lang: "sv" | "en"): string { return b[lang]; }
+export function pickBi(b: Bi, lang: "sv" | "en"): string {
+  return b[lang];
+}
 
 export type { ProfessionId };

@@ -16,7 +16,13 @@ export * from "./publishability";
 export * from "./meta-groups";
 export * from "./explorer-state";
 export * from "./career-routes";
+export * from "./transitions";
 export * from "./profession-fit";
+export * from "./profession-links";
+export * from "./education-links";
+export * from "./education-offers";
+export * from "./career-origin";
+export * from "./personal-direction";
 
 // Legacy compatibility for older consumers:
 import type { Lang } from "@/i18n/dictionaries";

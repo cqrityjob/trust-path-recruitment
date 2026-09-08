@@ -25,6 +25,22 @@
 //
 // ── WHY TWO NAMES ARE NEW ──────────────────────────────────────────────
 //
+// ── WHAT THIS DELIBERATELY DOES NOT MEASURE ────────────────────────────
+//
+// Sponsored education placements. An earlier revision of the Career Center
+// pilot added a `career_education_opened` event, with an `organic` /
+// `sponsored` detail, plus the migration to allow the name — for a feature
+// that cannot fire: `EDUCATION_PROVIDER_PLACEMENTS` is empty, and the event
+// was only ever emitted from a placement link. A hosted schema change with no
+// reachable caller is release risk without product value, so it is gone.
+//
+// It also could not have proved what it was described as proving. Ranking
+// neutrality is a property of the CODE — `educationOrderKey` cannot see a
+// placement — and is established by the type signature and by the guard that
+// re-orders with every offer marked sponsored. Telemetry measures engagement,
+// not ordering. The first real placement will bring its own measurement, in
+// its own reviewed commercial release, schema-first.
+//
 // `career_center_test_started` is the hub CTA CLICK, which is a different
 // measurement from `assessment_started` (the first question being answered)
 // — the gap between them is the drop-off this section was rebuilt to close,
@@ -69,7 +85,9 @@ export type CareerCenterSurface =
   | "hub_explorer"
   | "hub_routes"
   | "profession_guide"
-  | "profession_related";
+  | "profession_related"
+  | "profession_transitions"
+  | "hub_personal";
 
 export interface CareerCenterEventDetail {
   readonly surface: CareerCenterSurface;

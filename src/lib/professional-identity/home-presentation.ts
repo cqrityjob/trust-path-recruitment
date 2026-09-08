@@ -703,17 +703,23 @@ export function buildCareerHomeViewModel(input: HomePresentationInput): CareerHo
     ? { state: "unavailable" }
     : !active
       ? { state: "loading" }
-      : active.kind === "none"
-        ? { state: "none" }
-        : active.kind === "legacy_v21"
-          ? {
-              state: "legacy",
-              completedAt: active.completedAt,
-              reportHref: `/my-career/reports/${active.runId}`,
-            }
-          : active.kind === "discovery_unreadable"
-            ? { state: "unreadable", completedAt: active.generatedAt }
-            : deriveCareerDirection(input.storedReport, { isError: input.storedReportError });
+      : // A read that did not answer. Explicit, and BEFORE the fall-through
+        // to deriveCareerDirection: without this branch a failed read would
+        // reach the stored-report path with no snapshot and be rendered as
+        // "you have no analysis".
+        active.kind === "read_failed"
+        ? { state: "unavailable" }
+        : active.kind === "none"
+          ? { state: "none" }
+          : active.kind === "legacy_v21"
+            ? {
+                state: "legacy",
+                completedAt: active.completedAt,
+                reportHref: `/my-career/reports/${active.runId}`,
+              }
+            : active.kind === "discovery_unreadable"
+              ? { state: "unreadable", completedAt: active.generatedAt }
+              : deriveCareerDirection(input.storedReport, { isError: input.storedReportError });
 
   // The current report is never listed among the earlier ones, and the
   // newest legacy run is only "current" when the active report IS legacy.

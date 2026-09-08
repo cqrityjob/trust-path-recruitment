@@ -45,6 +45,7 @@ import type {
 import { experienceLevels } from "./categories";
 import { filterableFamilyIds } from "./meta-groups";
 import { publishedProfessions } from "./publishability";
+import { isSelectableOrigin } from "./career-origin";
 
 export type RegulatedFilter = "regulated" | "not_regulated";
 
@@ -64,6 +65,26 @@ export interface ExplorerSearch {
   /** Whether the "Fler filter" disclosure is open. Part of the URL so a
    *  shared link that uses an advanced filter opens showing that control. */
   readonly more?: true;
+  /**
+   * The reader's stated CURRENT role — the input to `pathFrom`.
+   *
+   * In the URL rather than in component state, and rather than written to
+   * their profile, for three reasons: an anonymous reader can use it, the
+   * resulting view is a link somebody can send to a colleague, and choosing
+   * a role to explore from is a question, not a change to who you are. A
+   * signed-in reader's own profile still seeds it when the URL says nothing.
+   */
+  readonly from?: string;
+  /**
+   * Whether the full profession catalogue is open.
+   *
+   * The hub leads with the reader's own direction and at most three paths;
+   * eleven guides with a filter bar underneath is the thing that made the
+   * page 11,700px tall on a phone. The catalogue is one click away and the
+   * click is in the URL, so a filtered catalogue view is still shareable and
+   * still deep-linkable.
+   */
+  readonly all?: true;
 }
 
 /** The two filters that are always visible. Everything else lives behind
@@ -176,6 +197,8 @@ export function parseExplorerSearch(raw: Record<string, unknown>): ExplorerSearc
     orientation?: Orientation;
     country?: Region;
     more?: true;
+    from?: string;
+    all?: true;
   } = {};
 
   const q = typeof raw.q === "string" ? raw.q.trim() : "";
@@ -213,7 +236,37 @@ export function parseExplorerSearch(raw: Record<string, unknown>): ExplorerSearc
     out.more = true;
   }
 
+  // Validated against the published catalogue, like every other value here: a
+  // hand-edited or stale `?from=` degrades to "no role stated" rather than to
+  // a heading naming a profession that does not exist.
+  if (typeof raw.from === "string" && isSelectableOrigin(raw.from.trim())) {
+    out.from = raw.from.trim();
+  }
+
+  // A narrowed catalogue is necessarily an open catalogue: a link that
+  // filters to entry-level roles has to show them.
+  if (hasNarrowingFilter(out) || raw.all === true || raw.all === "true" || raw.all === "1") {
+    out.all = true;
+  }
+
   return out;
+}
+
+/** Any control that changes WHICH guides are listed. `more` and `all` are
+ *  disclosure state, not filters, and `from` belongs to a different section
+ *  entirely. */
+function hasNarrowingFilter(s: {
+  q?: string;
+  family?: ProfessionFamilyId;
+  level?: string;
+  regulated?: RegulatedFilter;
+  sector?: Sector;
+  orientation?: Orientation;
+  country?: Region;
+}): boolean {
+  return Boolean(
+    s.q || s.family || s.level || s.regulated || s.sector || s.orientation || s.country,
+  );
 }
 
 /** True when the reader has narrowed anything at all. Drives "Rensa alla". */
@@ -239,8 +292,22 @@ export function withoutFilter(s: ExplorerSearch, key: FilterKey | "q"): Explorer
   return next as ExplorerSearch;
 }
 
+/**
+ * Clears the FILTERS and nothing else.
+ *
+ * `from` and `all` survive on purpose. "Rensa alla" means "stop narrowing the
+ * catalogue"; it does not mean "forget which job I said I do" or "close the
+ * catalogue I just opened". Dropping either would make the button do two
+ * surprising things at once.
+ */
 export function clearAllFilters(s: ExplorerSearch): ExplorerSearch {
-  return s.more ? { more: true } : {};
+  const next: ExplorerSearch = {};
+  return {
+    ...next,
+    ...(s.more ? { more: true as const } : {}),
+    ...(s.from ? { from: s.from } : {}),
+    ...(s.all ? { all: true as const } : {}),
+  };
 }
 
 /**

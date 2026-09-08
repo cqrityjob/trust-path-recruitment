@@ -1,0 +1,106 @@
+{
+  "$comment": "Reachability of every external source the Career Center renders. Written by `career-center:sources -- --online`; read offline by the same script in CI. A 403 is a bot wall, not a dead link, and is recorded as itself.",
+  "checkedOn": "2026-09-08",
+  "entries": [
+    {
+      "url": "https://polisen.se/lagar-och-regler/ordningsvakter/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://polisen.se/siteassets/forfattningssamling/fap-nummer/fap573-01-pmfs2017-10/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://sbsc.se/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.acams.org/en/about-certifications",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.asisonline.org/certification/certified-protection-professional-cpp/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.asisonline.org/certification/physical-security-professional/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.fi.se/sv/bank/penningtvatt/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.iso.org/iso-31000-risk-management.html",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.iso.org/standard/27001",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.iso.org/standard/65694.html",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.iso.org/standard/75106.html",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.msb.se/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-2017630-om-atgarder-mot-penningtvatt-och_sfs-2017-630",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-1974191-om-bevakningsforetag_sfs-1974-191/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-2006544-om-kommuners-och-regioners-atgarder_sfs-2006-544/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-2023421-om-ordningsvakter_sfs-2023-421/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/sakerhetsskyddslag-2018585_sfs-2018-585/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/skyddsforordning-2010523_sfs-2010-523/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    },
+    {
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/skyddslag-2010305_sfs-2010-305/",
+      "status": 200,
+      "checkedOn": "2026-09-08"
+    }
+  ]
+}

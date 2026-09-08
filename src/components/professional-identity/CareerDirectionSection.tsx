@@ -13,6 +13,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Compass } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { CareerDirection, RoleSummary } from "@/lib/professional-identity/career-direction";
+import { careerCenterProfessionSlug } from "@/lib/career-center/profession-links";
 import { L, Lf, type Lang } from "./copy";
 import { CAREER } from "./home-copy";
 import { Failed, Group, Loading } from "./home-primitives";
@@ -20,15 +21,31 @@ import { LINK, formatDate } from "./home-format";
 
 const roleTitle = (r: RoleSummary, l: Lang) => (l === "sv" ? r.titleSv : r.titleEn);
 
+// ── THE SLUG NAMESPACE DEFECT THIS FIXES ───────────────────────────────
+//
+// The report stores a CIG slug (`vaktare`, `sakerhetschef`). The Career
+// Center's URL space uses its own English ids (`security-officer`,
+// `security-manager`). This component used to interpolate the CIG slug
+// straight into `/career-center/$profession`, so the single most important
+// link on the candidate's home page — the occupation their own report
+// recommended — reached the "this guide is not published yet" state for eight
+// of the twelve bridged professions. Four coincide in both namespaces
+// (ordningsvakt, skyddsvakt, risk-manager, aml-specialist), which is exactly
+// enough for the bug to look like it worked.
+//
+// `careerCenterProfessionSlug` resolves through the one reviewed bridge and
+// returns null when no PUBLISHED guide exists — so a role with no guide
+// renders as plain text rather than as a link into a dead end.
 function RoleLink({ role, className }: { role: RoleSummary; className: string }) {
   const { lang } = useT();
   const l = lang as Lang;
-  if (!role.cigSlug) return <span className={className}>{roleTitle(role, l)}</span>;
+  const slug = careerCenterProfessionSlug(role.cigSlug);
+  if (!slug) return <span className={className}>{roleTitle(role, l)}</span>;
   return (
     <Link
       to="/career-center/$profession"
-      params={{ profession: role.cigSlug }}
-      data-role-link={role.cigSlug}
+      params={{ profession: slug }}
+      data-role-link={slug}
       aria-label={Lf(CAREER.openProfession, l, roleTitle(role, l))}
       className={`${className} inline-flex min-h-11 items-center text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
     >

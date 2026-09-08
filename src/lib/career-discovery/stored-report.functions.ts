@@ -46,6 +46,18 @@ export interface StoredReportVersions {
 
 export type StoredReportResult =
   | { readonly status: "not_found" }
+  /**
+   * The read did not answer.
+   *
+   * This select used to be written `const { data: row } = await …`, throwing
+   * the `error` half away. A failed read therefore produced `row === null`,
+   * which is byte-identical to "no such snapshot", and the function returned
+   * `not_found` — which every surface renders as "you have no result".
+   *
+   * A database fault is not an absence. It fails closed here, and the caller
+   * offers a retry.
+   */
+  | { readonly status: "read_failed"; readonly reason: string }
   | {
       readonly status: "v3.0";
       readonly snapshotId: string;
@@ -76,7 +88,8 @@ export const getStoredDiscoveryReport = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<StoredReportResult> => {
     const ctx = context as Ctx;
 
-    const { data: row } = await ctx.supabase
+    // `error` is READ, not discarded — see the `read_failed` member above.
+    const { data: row, error } = await ctx.supabase
       .from("cd_report_snapshots")
       .select(
         "id, session_id, generated_at, definition_version, content_version, scoring_version, taxonomy_version, dna_scores",
@@ -84,6 +97,14 @@ export const getStoredDiscoveryReport = createServerFn({ method: "GET" })
       .eq("id", data.snapshotId)
       .maybeSingle();
 
+    if (error) {
+      console.error("[career] stored report read failed", error.message);
+      return { status: "read_failed", reason: `cd_report_snapshots: ${error.message}` };
+    }
+
+    // Reached only when the read SUCCEEDED and matched no row. Another user's
+    // snapshot id lands here too, deliberately: distinguishing "exists but is
+    // not yours" would leak the existence of other people's reports.
     if (!row) return { status: "not_found" };
 
     const snapshotId = row.id as string;

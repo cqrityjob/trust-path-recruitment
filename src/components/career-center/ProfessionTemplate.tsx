@@ -1,4 +1,12 @@
-import { ArrowRight, Check, ExternalLink, Info, Minus, ShieldAlert } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Info,
+  Minus,
+  ShieldAlert,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
@@ -8,28 +16,59 @@ import {
   L,
   entrySteps,
   fitSignals,
-  getCertification,
   getCompetency,
   getEducation,
   getFamily,
   icon,
+  inboundTransitions,
+  onwardTransitions,
+  professionEducation,
   proficiencyLabels,
   publishedOnly,
   type Profession,
 } from "@/lib/career-center";
+import { useCareerCenterTracking } from "@/lib/career-center/analytics";
+import { useSupabaseSessionFlag } from "@/hooks/useMyCareerDirection";
 import { CareerHero } from "./CareerHero";
 import { CompetencyCard } from "./CompetencyCard";
-import { CertificationCard } from "./CertificationCard";
+import { EducationPanel } from "./EducationPanel";
 import { FAQAccordion } from "./FAQAccordion";
 import { ProfessionCard } from "./ProfessionCard";
+import { ProfessionNextSteps } from "./NextStepPanel";
+import { TransitionCard } from "./TransitionCard";
 
 // One published profession guide, in the settled order:
 //
 //   1 role hero · 2 fact row · 3 regulatory notice · 4 om yrket ·
 //   5 en dag i rollen · 6 passar dig som · 7 passar mindre bra om ·
 //   8 kompetenser · 9 formella krav · 10 så kommer du in ·
-//   11 utbildning & certifikat · 12 karriärväg · 13 karriärtest ·
-//   14 relaterade yrken · 15 källor och governance
+//   11 möjliga nästa karriärsteg · 12 utbildning och behörighet ·
+//   13 relaterade jobb och ditt Passport · 14 karriäranalys ·
+//   15 relaterade yrken · 16 källor och governance
+//
+// ── WHAT THE PILOT PASS CHANGED ────────────────────────────────────────
+//
+// Career steps moved BEFORE education, and both were rebuilt. The order is
+// the reader's question order: "where could I go" has to be answered before
+// "what would I have to study", or the education section is a list of courses
+// with no destination attached.
+//
+//   * "Karriärväg" was two columns of role names. It is now explained
+//     transitions (see TransitionCard): each one classified as an adjacent
+//     step, a formal gate or a longer-term goal, with what transfers, what is
+//     demanded more of, the destination's formal requirements verbatim, and —
+//     for a distant destination — the intermediate role the graph records.
+//
+//   * "Utbildning och certifikat" was two lists of names. It is now the
+//     neutral education surface: every row states whether it is a FORMAL
+//     REQUIREMENT or RECOMMENDED DEVELOPMENT, which country that holds in,
+//     its source and its review date, and rows that cannot carry all four are
+//     named as under review rather than presented as finished.
+//
+//   * Related open jobs and the Passport boundary are new. Section 4.8 of the
+//     directive asked for the first; the second exists because a page that
+//     tells somebody what a role requires, next to a product that records
+//     what they hold, invites exactly one wrong inference — and says so.
 //
 // ── WHAT THIS PAGE NO LONGER DOES ──────────────────────────────────────
 //
@@ -50,6 +89,10 @@ import { ProfessionCard } from "./ProfessionCard";
 
 export function ProfessionTemplate({ profession }: { profession: Profession }) {
   const { t, lang } = useT();
+  const track = useCareerCenterTracking();
+  // Only used to choose the right Passport entry point. Nothing this page
+  // CLAIMS depends on who is reading it.
+  const signedIn = useSupabaseSessionFlag();
   const family = getFamily(profession.family);
 
   const title = lang === "sv" ? profession.titleSv : profession.titleEn;
@@ -57,18 +100,14 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
   const signals = fitSignals(profession);
   const steps = entrySteps(profession, (id) => getEducation(id));
 
-  const educationPathways = (profession.educationPathways ?? [])
-    .map((id) => getEducation(id))
-    .filter((e): e is NonNullable<typeof e> => Boolean(e));
-  const professionCerts = (profession.certifications ?? [])
-    .map((id) => getCertification(id))
-    .filter((c): c is NonNullable<typeof c> => Boolean(c));
+  const education = professionEducation(profession);
 
   // Career-path and related lists link only to guides that exist. A dead-end
   // click from a finished guide onto an unavailable one is the same broken
-  // promise as an unfinished guide, arrived at one step later.
-  const previousRoles = publishedOnly(profession.previousRoles ?? []);
-  const nextRoles = publishedOnly(profession.nextRoles ?? []);
+  // promise as an unfinished guide, arrived at one step later — which the
+  // transition builders enforce for themselves.
+  const onward = onwardTransitions(profession);
+  const inbound = inboundTransitions(profession);
   const relatedRoles = publishedOnly(profession.related ?? []).filter(
     (p) => p.id !== profession.id,
   );
@@ -94,7 +133,11 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
       <nav aria-label={t("cc.explore.title")} className="border-b border-border bg-muted/40">
         <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-6 py-3 text-xs text-muted-foreground md:px-8">
           <Link to="/career-center" className="hover:text-foreground">
-            {t("cc.hero.title")}
+            {/* The product's short NAME, not the hub's headline. The h1 on
+                the hub is a sentence now, and a breadcrumb reading "Utforska
+                yrken och hitta din nästa karriärväg / Väktare" is not a
+                breadcrumb. */}
+            {t("cc.hero.name")}
           </Link>
           <span aria-hidden>/</span>
           <span className="text-foreground">{title}</span>
@@ -121,17 +164,36 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
           <Fact label={t("cc.p.fact.jurisdiction")} value={profession.countries.join(" · ")} />
         </dl>
 
-        {/* 3 — REGULATORY NOTICE (only where relevant) */}
-        {profession.regulated && profession.regulatoryNotes && (
-          <div className="mt-8 flex items-start gap-3 rounded-lg border border-accent/30 bg-accent/5 p-5">
+        {/* 3 — REGULATORY NOTICE
+            Rendered for a regulated role AND for an unregulated one that
+            states a boundary. Säkerhetssamordnare is the case that forced
+            this: the note there exists precisely to say that the title is NOT
+            regulated and must not be confused with säkerhetsskyddschef, a
+            statutory appointment under säkerhetsskyddslagen. Suppressing that
+            because `regulated` is false hid the one sentence that stops a
+            reader inventing a legal requirement. The heading differs, because
+            "Reglering" and "Avgränsning" are not the same claim. */}
+        {profession.regulatoryNotes && (
+          <div
+            data-regulatory-note={profession.regulated ? "regulation" : "boundary"}
+            className={[
+              "mt-8 flex items-start gap-3 rounded-lg border p-5",
+              profession.regulated
+                ? "border-accent/30 bg-accent/5"
+                : "border-border bg-secondary/40",
+            ].join(" ")}
+          >
             <ShieldAlert
-              className="mt-0.5 h-5 w-5 flex-shrink-0 text-accent"
+              className={[
+                "mt-0.5 h-5 w-5 flex-shrink-0",
+                profession.regulated ? "text-accent" : "text-muted-foreground",
+              ].join(" ")}
               strokeWidth={1.75}
               aria-hidden
             />
             <div>
               <p className="text-sm font-semibold tracking-tight text-foreground">
-                {t("cc.p.regulatory.title")}
+                {profession.regulated ? t("cc.p.regulatory.title") : t("cc.p.regulatory.boundary")}
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                 {L(profession.regulatoryNotes, lang)}
@@ -258,23 +320,38 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
             </p>
           )}
         </div>
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {profession.competencies.map((rc) => {
-            const competency = getCompetency(rc.competencyId);
-            if (!competency) return null;
-            return (
-              <CompetencyCard
-                key={rc.competencyId}
-                name={L(competency.name, lang)}
-                definition={L(competency.definition, lang)}
-                icon={icon(competency.icon)}
-                level={rc.requiredLevel}
-                levelLabel={L(proficiencyLabels[rc.requiredLevel], lang)}
-                critical={rc.critical}
-              />
-            );
-          })}
-        </div>
+        {/* Eleven competency cards unfolded is 2,000px on a phone for a
+            section most readers skim once. Native <details>: keyboard
+            operable, findable by in-page search, no script. */}
+        <details data-competency-disclosure className="group mt-8">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+            {t("cc.p.competencies.show")}
+            <span className="tabular-nums text-muted-foreground">
+              ({profession.competencies.length})
+            </span>
+            <ChevronDown
+              className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {profession.competencies.map((rc) => {
+              const competency = getCompetency(rc.competencyId);
+              if (!competency) return null;
+              return (
+                <CompetencyCard
+                  key={rc.competencyId}
+                  name={L(competency.name, lang)}
+                  definition={L(competency.definition, lang)}
+                  icon={icon(competency.icon)}
+                  level={rc.requiredLevel}
+                  levelLabel={L(proficiencyLabels[rc.requiredLevel], lang)}
+                  critical={rc.critical}
+                />
+              );
+            })}
+          </div>
+        </details>
       </Section>
 
       {/* 9 — FORMELLA KRAV  ·  10 — SÅ KOMMER DU IN */}
@@ -341,83 +418,96 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         </Section>
       ) : null}
 
-      {/* 11 — UTBILDNING & CERTIFIKAT (only when content exists) */}
-      {(educationPathways.length > 0 || professionCerts.length > 0) && (
-        <Section bordered className="py-16 md:py-20">
+      {/* 11 — MÖJLIGA NÄSTA KARRIÄRSTEG */}
+      <Section bordered id="karriarsteg" className="bg-secondary/40 py-16 md:py-20">
+        <div className="max-w-3xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.p.education")}
+            {t("cc.p.next.title")}
           </h2>
-          <div className="mt-8 grid grid-cols-1 gap-10 md:grid-cols-2">
-            {educationPathways.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  {t("cc.p.education.education")}
-                </h3>
-                <div className="mt-4 space-y-3">
-                  {educationPathways.map((e) => (
-                    <div key={e.id} className="rounded-lg border border-border bg-background p-5">
-                      <p className="text-sm font-semibold text-foreground">{L(e.name, lang)}</p>
-                      {e.provider && (
-                        <p className="mt-1 text-xs text-muted-foreground">{L(e.provider, lang)}</p>
-                      )}
-                      {e.officialSource?.url && (
-                        <a
-                          href={e.officialSource.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-3 inline-flex items-center gap-1 text-xs text-accent hover:text-foreground"
-                        >
-                          {L(e.officialSource.label, lang)}
-                          <ExternalLink className="h-3 w-3" aria-hidden />
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {professionCerts.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  {t("cc.p.education.certifications")}
-                </h3>
-                <div className="mt-4 space-y-3">
-                  {professionCerts.map((c) => (
-                    <CertificationCard
-                      key={c.id}
-                      name={
-                        c.shortName
-                          ? `${c.shortName} · ${L(c.fullName, lang)}`
-                          : L(c.fullName, lang)
-                      }
-                      provider={L(c.issuer, lang)}
-                      tag={c.officialSource?.url}
-                      href={c.officialSource?.url}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("cc.p.next.subtitle")}
+          </p>
+        </div>
+        {onward.length > 0 ? (
+          <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {onward.map((tr) => (
+              <TransitionCard
+                key={`onward-${tr.to.slug}`}
+                transition={tr}
+                direction="onward"
+                onOpen={(slug) =>
+                  track("career_profession_opened", {
+                    surface: "profession_transitions",
+                    subject: slug,
+                  })
+                }
+              />
+            ))}
           </div>
-        </Section>
-      )}
+        ) : (
+          <p className="mt-6 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {t("cc.p.next.none")}
+          </p>
+        )}
 
-      {/* 12 — KARRIÄRVÄG (published guides only) */}
-      {(previousRoles.length > 0 || nextRoles.length > 0) && (
-        <Section bordered className="bg-secondary/40 py-16 md:py-20">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.p.path")}
-          </h2>
-          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2">
-            {previousRoles.length > 0 && (
-              <RoleLinkList title={t("cc.p.path.previous")} roles={previousRoles} />
-            )}
-            {nextRoles.length > 0 && <RoleLinkList title={t("cc.p.path.next")} roles={nextRoles} />}
-          </div>
-        </Section>
-      )}
+        {/* "Vanliga vägar hit" is reference: a reader on this guide is asking
+            where they can GO. Folded, and counted so the summary is honest
+            about how much is behind it. */}
+        {inbound.length > 0 && (
+          <details data-inbound-disclosure className="group mt-12">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+              {t("cc.p.prev.show")}
+              <span className="tabular-nums text-muted-foreground">({inbound.length})</span>
+              <ChevronDown
+                className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <h3 className="mt-6 text-xl font-semibold tracking-tight text-foreground">
+              {t("cc.p.prev.title")}
+            </h3>
+            <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {inbound.map((tr) => (
+                <TransitionCard
+                  key={`inbound-${tr.from.slug}`}
+                  transition={tr}
+                  direction="inbound"
+                  headingLevel={4}
+                  onOpen={(slug) =>
+                    track("career_profession_opened", {
+                      surface: "profession_transitions",
+                      subject: slug,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </details>
+        )}
+        <p className="mt-8 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+          {t("cc.routes.disclaimer")}
+        </p>
+      </Section>
 
-      {/* 13 — CAREER TEST CTA */}
+      {/* 12 — UTBILDNING OCH BEHÖRIGHET */}
+      <Section bordered id="utbildning" className="py-16 md:py-20">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          {t("cc.p.education.title")}
+        </h2>
+        <EducationPanel education={education} />
+      </Section>
+
+      {/* 13 — RELATERADE LEDIGA JOBB · DITT PASSPORT */}
+      <Section bordered id="nasta-steg" className="bg-secondary/40 py-16 md:py-20">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          {t("cc.p.act.title")}
+        </h2>
+        <div className="mt-8">
+          <ProfessionNextSteps profession={profession} signedIn={signedIn} />
+        </div>
+      </Section>
+
+      {/* 14 — KARRIÄRANALYS */}
       <Section bordered className="py-14 md:py-16">
         <div className="grid grid-cols-1 gap-8 rounded-xl border border-border bg-background p-8 md:grid-cols-3 md:items-center">
           <div className="md:col-span-2">
@@ -437,24 +527,47 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         </div>
       </Section>
 
-      {/* 14 — RELATERADE YRKEN */}
+      {/* 15 — RELATERADE YRKEN */}
       {relatedRoles.length > 0 && (
-        <Section bordered className="py-16 md:py-20">
+        <Section bordered id="relaterade-yrken" className="py-16 md:py-20">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("cc.p.related")}
           </h2>
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {relatedRoles.map((p) => (
-              <ProfessionCard
-                key={p.slug}
-                slug={p.slug}
-                title={lang === "sv" ? p.titleSv : p.titleEn}
-                description={L(p.description, lang)}
-                icon={icon(p.icon)}
-                level={t(`cc.level.${p.level}` as TranslationKey)}
+          {/* A reference list at the foot of the page. Four profession cards
+              unfolded were 1,600px on a phone, below everything a reader came
+              for. */}
+          <details data-related-disclosure className="group mt-6">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+              {t("cc.p.related.show")}
+              <span className="tabular-nums text-muted-foreground">({relatedRoles.length})</span>
+              <ChevronDown
+                className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
               />
-            ))}
-          </div>
+            </summary>
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedRoles.map((p) => (
+                <ProfessionCard
+                  key={p.slug}
+                  slug={p.slug}
+                  title={lang === "sv" ? p.titleSv : p.titleEn}
+                  description={L(p.description, lang)}
+                  icon={icon(p.icon)}
+                  level={t(`cc.level.${p.level}` as TranslationKey)}
+                  family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
+                  formalRequirement={
+                    p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
+                  }
+                  onOpen={(slug) =>
+                    track("career_profession_opened", {
+                      surface: "profession_related",
+                      subject: slug,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </details>
         </Section>
       )}
 
@@ -471,7 +584,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         </Section>
       )}
 
-      {/* 15 — SOURCES / GOVERNANCE. Publishability guarantees at least one
+      {/* 16 — SOURCES / GOVERNANCE. Publishability guarantees at least one
           source, a review date and a jurisdiction, so this section is never
           empty on a page that renders. */}
       <Section bordered className="py-14 md:py-16">
@@ -479,30 +592,10 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
           <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {t("cc.p.sources")}
           </h2>
-          <ul className="mt-4 space-y-2 text-sm">
-            {(profession.sources ?? []).map((s, i) => (
-              <li key={i} className="flex items-start gap-2 text-foreground">
-                <span aria-hidden className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-accent" />
-                <span>
-                  {s.url ? (
-                    <a
-                      href={s.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 underline-offset-4 hover:text-accent hover:underline"
-                    >
-                      {L(s.label, lang)}
-                      <ExternalLink className="h-3 w-3" aria-hidden />
-                    </a>
-                  ) : (
-                    L(s.label, lang)
-                  )}
-                  {s.publisher && <span className="text-muted-foreground"> — {s.publisher}</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-2 border-t border-border pt-5 text-xs text-muted-foreground">
+          {/* The review date and the jurisdiction stay visible: they are the
+              two facts a reader uses to decide whether to trust the page at
+              all. The source LIST folds, because it is a reference. */}
+          <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-xs text-muted-foreground">
             <div className="flex gap-1.5">
               <dt className="font-medium">{t("cc.p.reviewed")}:</dt>
               <dd className="tabular-nums text-foreground">{profession.lastVerified}</dd>
@@ -512,6 +605,44 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
               <dd className="text-foreground">{profession.countries.join(", ")}</dd>
             </div>
           </dl>
+          <details data-sources-disclosure className="group mt-4">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+              {t("cc.p.sources.show")}
+              <span className="tabular-nums text-muted-foreground">
+                ({(profession.sources ?? []).length})
+              </span>
+              <ChevronDown
+                className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <ul className="mt-4 space-y-2 text-sm">
+              {(profession.sources ?? []).map((s, i) => (
+                <li key={i} className="flex items-start gap-2 text-foreground">
+                  <span
+                    aria-hidden
+                    className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-accent"
+                  />
+                  <span>
+                    {s.url ? (
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 underline-offset-4 hover:text-accent hover:underline"
+                      >
+                        {L(s.label, lang)}
+                        <ExternalLink className="h-3 w-3" aria-hidden />
+                      </a>
+                    ) : (
+                      L(s.label, lang)
+                    )}
+                    {s.publisher && <span className="text-muted-foreground"> — {s.publisher}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
           <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
             <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-accent" aria-hidden />
             {t("cc.p.disclaimer")}
@@ -536,35 +667,6 @@ function Fact({ label, value, emphasis }: { label: string; value: string; emphas
       >
         {value}
       </dd>
-    </div>
-  );
-}
-
-function RoleLinkList({ title, roles }: { title: string; roles: readonly Profession[] }) {
-  const { t, lang } = useT();
-  return (
-    <div>
-      <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        {title}
-      </h3>
-      <ul className="mt-4 space-y-2">
-        {roles.map((p) => (
-          <li key={p.slug}>
-            <Link
-              to="/career-center/$profession"
-              params={{ profession: p.slug }}
-              className="flex items-center justify-between gap-4 rounded-md border border-border bg-background px-4 py-3 text-sm transition-colors hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <span className="font-semibold tracking-tight text-foreground">
-                {lang === "sv" ? p.titleSv : p.titleEn}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {t(`cc.level.${p.level}` as TranslationKey)}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

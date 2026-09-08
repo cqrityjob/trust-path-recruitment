@@ -11,48 +11,132 @@ export const professionFamilies: readonly ProfessionFamily[] = [
       en: "An entry path for students, young people and career changers exploring which security roles may fit them.",
     },
   },
-  { id: "protective_operations", icon: "shield-check",
+  {
+    id: "protective_operations",
+    icon: "shield-check",
     name: { sv: "Bevakning och operativt skydd", en: "Protective Operations" },
-    description: { sv: "Operativa bevaknings-, ordnings- och personskyddsroller.", en: "Operational guarding, order and close-protection roles." } },
-  { id: "public_safety_justice", icon: "shield",
+    description: {
+      sv: "Operativa bevaknings-, ordnings- och personskyddsroller.",
+      en: "Operational guarding, order and close-protection roles.",
+    },
+  },
+  {
+    id: "public_safety_justice",
+    icon: "shield",
     name: { sv: "Samhällsskydd och rättsväsende", en: "Public Safety & Justice" },
-    description: { sv: "Myndighetsutövning inom polis, ordning, gränskontroll och rättsvård.", en: "Government authority roles across policing, public order, border control and justice." } },
-  { id: "corrections_secure_transport", icon: "lock",
+    description: {
+      sv: "Myndighetsutövning inom polis, ordning, gränskontroll och rättsvård.",
+      en: "Government authority roles across policing, public order, border control and justice.",
+    },
+  },
+  {
+    id: "corrections_secure_transport",
+    icon: "lock",
     name: { sv: "Kriminalvård och säker transport", en: "Corrections & Secure Transport" },
-    description: { sv: "Kriminalvård, transportsäkerhet och värdetransport.", en: "Correctional services, transport security and cash-in-transit." } },
-  { id: "defence_national_security", icon: "user-check",
+    description: {
+      sv: "Kriminalvård, transportsäkerhet och värdetransport.",
+      en: "Correctional services, transport security and cash-in-transit.",
+    },
+  },
+  {
+    id: "defence_national_security",
+    icon: "user-check",
     name: { sv: "Försvar och nationell säkerhet", en: "Defence & National Security" },
-    description: { sv: "Militär säkerhet och roller kopplade till försvar och nationell säkerhet.", en: "Military security roles connected to defence and national security." } },
-  { id: "corporate_security", icon: "building",
+    description: {
+      sv: "Militär säkerhet och roller kopplade till försvar och nationell säkerhet.",
+      en: "Military security roles connected to defence and national security.",
+    },
+  },
+  {
+    id: "corporate_security",
+    icon: "building",
     name: { sv: "Företagssäkerhet", en: "Corporate Security" },
-    description: { sv: "Interna säkerhetsfunktioner inom företag och organisationer.", en: "In-house security functions within companies and organisations." } },
-  { id: "critical_infrastructure_security", icon: "server",
+    description: {
+      sv: "Interna säkerhetsfunktioner inom företag och organisationer.",
+      en: "In-house security functions within companies and organisations.",
+    },
+  },
+  {
+    id: "critical_infrastructure_security",
+    icon: "server",
     name: { sv: "Kritisk infrastruktur och datacenter", en: "Critical Infrastructure Security" },
-    description: { sv: "Skydd av samhällsviktig verksamhet, hamnar, flygplatser och datacenter.", en: "Protection of essential services, ports, airports and data centres." } },
-  { id: "risk_management", icon: "alert-triangle",
+    description: {
+      sv: "Skydd av samhällsviktig verksamhet, hamnar, flygplatser och datacenter.",
+      en: "Protection of essential services, ports, airports and data centres.",
+    },
+  },
+  {
+    id: "risk_management",
+    icon: "alert-triangle",
     name: { sv: "Riskhantering", en: "Risk Management" },
-    description: { sv: "Identifiering, analys och hantering av operativa och organisatoriska risker.", en: "Identification, analysis and management of operational and organisational risk." } },
-  { id: "crisis_management", icon: "life-buoy",
+    description: {
+      sv: "Identifiering, analys och hantering av operativa och organisatoriska risker.",
+      en: "Identification, analysis and management of operational and organisational risk.",
+    },
+  },
+  {
+    id: "crisis_management",
+    icon: "life-buoy",
     name: { sv: "Krishantering och räddning", en: "Crisis Management & Emergency Response" },
-    description: { sv: "Krisberedskap, incidentledning och räddningstjänst.", en: "Crisis preparedness, incident command and emergency response." } },
-  { id: "business_continuity_resilience", icon: "activity",
+    description: {
+      sv: "Krisberedskap, incidentledning och räddningstjänst.",
+      en: "Crisis preparedness, incident command and emergency response.",
+    },
+  },
+  {
+    id: "business_continuity_resilience",
+    icon: "activity",
     name: { sv: "Kontinuitet och motståndskraft", en: "Business Continuity & Resilience" },
-    description: { sv: "Kontinuitetsplanering och organisatorisk motståndskraft.", en: "Continuity planning and organisational resilience." } },
-  { id: "cyber_information_security", icon: "lock",
+    description: {
+      sv: "Kontinuitetsplanering och organisatorisk motståndskraft.",
+      en: "Continuity planning and organisational resilience.",
+    },
+  },
+  {
+    id: "cyber_information_security",
+    icon: "lock",
     name: { sv: "Cyber- och informationssäkerhet", en: "Cyber & Information Security" },
-    description: { sv: "Digital säkerhet, incidenthantering och informationsskydd.", en: "Digital security, incident response and information protection." } },
-  { id: "financial_crime_compliance", icon: "scale",
+    description: {
+      sv: "Digital säkerhet, incidenthantering och informationsskydd.",
+      en: "Digital security, incident response and information protection.",
+    },
+  },
+  {
+    id: "financial_crime_compliance",
+    icon: "scale",
     name: { sv: "Finansiell brottslighet och compliance", en: "Financial Crime & Compliance" },
-    description: { sv: "AML, bedrägeribekämpning och regelefterlevnad.", en: "Anti-money-laundering, fraud prevention and compliance." } },
-  { id: "security_technology", icon: "cpu",
+    description: {
+      sv: "AML, bedrägeribekämpning och regelefterlevnad.",
+      en: "Anti-money-laundering, fraud prevention and compliance.",
+    },
+  },
+  {
+    id: "security_technology",
+    icon: "cpu",
     name: { sv: "Säkerhetsteknik", en: "Security Technology" },
-    description: { sv: "Installation, drift och integration av tekniska säkerhetssystem.", en: "Installation, operation and integration of technical security systems." } },
-  { id: "security_leadership_governance", icon: "briefcase",
+    description: {
+      sv: "Installation, drift och integration av tekniska säkerhetssystem.",
+      en: "Installation, operation and integration of technical security systems.",
+    },
+  },
+  {
+    id: "security_leadership_governance",
+    icon: "briefcase",
     name: { sv: "Säkerhetsledning och styrning", en: "Security Leadership & Governance" },
-    description: { sv: "Strategisk säkerhet, ledarskap, rådgivning och styrning.", en: "Strategic security leadership, advisory and governance." } },
-  { id: "investigations_intelligence", icon: "search",
+    description: {
+      sv: "Strategisk säkerhet, ledarskap, rådgivning och styrning.",
+      en: "Strategic security leadership, advisory and governance.",
+    },
+  },
+  {
+    id: "investigations_intelligence",
+    icon: "search",
     name: { sv: "Utredning och underrättelse", en: "Investigations & Intelligence" },
-    description: { sv: "Utredning, underrättelse och analys inom offentlig och privat sektor.", en: "Investigations, intelligence and analysis across public and private sectors." } },
+    description: {
+      sv: "Utredning, underrättelse och analys inom offentlig och privat sektor.",
+      en: "Investigations, intelligence and analysis across public and private sectors.",
+    },
+  },
 ] as const;
 
 export function getFamily(id: string) {

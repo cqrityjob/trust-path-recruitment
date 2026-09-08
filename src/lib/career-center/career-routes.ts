@@ -1,238 +1,153 @@
-// Career routes — the hub's "Karriärvägar" section.
+// "Karriärvägar" — independent directions out of a role, not a ladder.
 //
-// ── WHAT REPLACED WHAT ─────────────────────────────────────────────────
+// ── WHAT THIS REPLACED, TWICE ──────────────────────────────────────────
 //
-// The hub used to show one hard-coded chain of five strings:
-// Student → Väktare → Gruppledare → Säkerhetschef → Head of Security. Three
-// of those five are not professions this product has guides for; two are not
-// professions in the taxonomy at all. Nothing in it was clickable, nothing in
-// it was derived, and it implied a single linear ladder for an industry that
-// does not have one.
+// First it replaced five hard-coded strings (Student → Väktare → Gruppledare
+// → Säkerhetschef → Head of Security), three of which were not professions
+// this product has guides for.
 //
-// This replaces it with three routes assembled from the data that already
-// exists: `careerPaths` edges and the professions' own `nextRoles` /
-// `previousRoles` links, restricted to guides that pass the publishability
-// rule. Every step is a real guide a reader can open.
+// Then it had to replace ITS replacement. The stage model that followed drew
+// a chain:
 //
-// ── THE INVARIANT ──────────────────────────────────────────────────────
+//   Väktare → Ordningsvakt | Skyddsvakt → Säkerhetssamordnare → Säkerhetschef
 //
-// A stage may only follow another stage if the DATA carries a transition
-// between them — an explicit `careerPaths` edge, or a `nextRoles` /
-// `previousRoles` link on the professions themselves. `validateRoutes()`
-// enforces that, and the guard script runs it: composing a plausible-looking
-// route out of professions with no recorded relationship is exactly the kind
-// of invented claim this section exists to stop making.
+// Every stage was a real guide and every pair was backed by a recorded
+// relationship, so the invariant held — and the picture was still false. A
+// left-to-right chain of stages says *this comes after that*, and a reader
+// takes it as a sequence: that becoming an ordningsvakt or a skyddsvakt is
+// something you pass through on the way to coordinating security. It is not.
+// Those are two separate statutory appointments under two separate Acts,
+// neither of which is a prerequisite for anything else on the line.
 //
-// ── WHAT IS DERIVED VERSUS WHAT IS AUTHORED ────────────────────────────
+// The stage model could not express that, because a stage IS an ordinal. So
+// the model changed rather than the data.
 //
-// Authored here: which professions form which route, and nothing else.
+// ── BRANCHES ───────────────────────────────────────────────────────────
 //
-// Derived from the profession records: the level shift between stages, the
-// change in regulatory status, the change in orientation, and the
-// competencies the next stage adds or demands more of. Those are the honest
-// answer to "what changes between these stages" and they cannot go stale
-// against the guides, because they ARE the guides.
+// A route is now ONE origin and a set of INDEPENDENT directions out of it.
+// Nothing about the rendering implies order, and the copy says so explicitly.
+// Where a further direction exists from one of those destinations, it is its
+// own route with its own origin — not a fourth rung.
 //
-// Deliberately NOT produced: time-to-progress and formal progression
-// requirements, unless a `careerPaths` edge states them. No edge in the
-// current dataset carries `experienceRequired`, so the UI shows no timing
-// claim at all — which is the correct output, not a missing feature.
+// ── AND EVERY BRANCH CARRIES ITS OWN EVIDENCE LEVEL ────────────────────
+//
+// `transitions.ts` decides whether a move may be described or only named. A
+// branch backed by a placeholder edge renders as a direction under review,
+// with no likelihood, no experience claim and no progression wording — the
+// same treatment it gets on a profession guide, from the same function, so
+// the two surfaces cannot disagree.
 
-import type {
-  CareerPath,
-  Bi,
-  CompetencyId,
-  ExperienceLevel,
-  Orientation,
-  Profession,
-  ProficiencyLevel,
-} from "./types";
-import { careerPaths } from "./career-paths";
-import { getPublishedProfession, publishedOnly } from "./publishability";
+import type { Bi, Profession } from "./types";
+import { getPublishedProfession } from "./publishability";
+import {
+  onwardTransitions,
+  type ProfessionTransition,
+  type TransitionEvidenceLevel,
+} from "./transitions";
 
-export type CareerRouteId = "operational" | "technical" | "analytical_strategic";
+export type CareerRouteId =
+  | "from_security_officer"
+  | "from_security_coordinator"
+  | "from_security_technician"
+  | "from_risk_manager";
 
 interface AuthoredRoute {
   readonly id: CareerRouteId;
   readonly name: Bi;
-  /** The direction this route travels, in one sentence. Not a promise. */
+  /** What this group of directions has in common, in one sentence. Never a
+   *  promise, and never an ordering. */
   readonly direction: Bi;
-  /** Ordered stages. A stage holds more than one profession when the data
-   *  records parallel roles at the same point — the operational route splits
-   *  into two separately regulated appointments after the first stage, and
-   *  flattening that into a single line would misdescribe both. */
-  readonly stages: readonly (readonly string[])[];
+  /** The role a reader is standing in. */
+  readonly origin: string;
+  /** Independent destinations. Order here is presentation only: none is a
+   *  prerequisite for another, and `validateRoutes` asserts that no branch is
+   *  reachable from another branch in the same route, which is what would
+   *  make the list a sequence in disguise. */
+  readonly branches: readonly string[];
 }
 
 const authoredRoutes: readonly AuthoredRoute[] = [
   {
-    id: "operational",
-    name: { sv: "Operativt spår", en: "Operational route" },
+    id: "from_security_officer",
+    name: { sv: "Från väktare", en: "From security officer" },
     direction: {
-      sv: "Från bevakningsuppdrag i tjänst hos kund mot förordnade roller med utökade befogenheter, och vidare mot ansvar för en hel säkerhetsfunktion.",
-      en: "From guarding assignments on a client site towards appointed roles with wider powers, and onwards to responsibility for a whole security function.",
+      sv: "Tre oberoende riktningar från bevakningsuppdrag: två egna förordnanden med egna regelverk, och en samordnande roll utan reglering. Ingen av dem är ett steg på vägen mot någon annan.",
+      en: "Three independent directions out of guarding work: two separate appointments under their own regulations, and one unregulated coordinating role. None of them is a step towards any of the others.",
     },
-    stages: [["security-officer"], ["ordningsvakt", "skyddsvakt"], ["security-manager"]],
+    origin: "security-officer",
+    branches: ["ordningsvakt", "skyddsvakt", "security-coordinator"],
   },
   {
-    id: "technical",
-    name: { sv: "Tekniskt spår", en: "Technical route" },
+    id: "from_security_coordinator",
+    name: { sv: "Från säkerhetssamordnare", en: "From security coordinator" },
     direction: {
-      sv: "Från installation och drift av säkerhetssystem mot skydd av samhällsviktiga anläggningar, och vidare mot ansvar för teknik och säkerhet i kombination.",
-      en: "From installing and operating security systems towards protecting essential facilities, and onwards to owning technology and security together.",
+      sv: "Från att samordna säkerhetsarbetet mot ett samlat ansvar för hela säkerhetsfunktionen.",
+      en: "From coordinating security work towards owning a whole security function.",
     },
-    stages: [["security-technician"], ["data-center-security"], ["security-manager"]],
+    origin: "security-coordinator",
+    branches: ["security-manager"],
   },
   {
-    id: "analytical_strategic",
-    name: { sv: "Analytiskt och strategiskt spår", en: "Analytical and strategic route" },
+    id: "from_security_technician",
+    name: { sv: "Från säkerhetstekniker", en: "From security systems technician" },
     direction: {
-      sv: "Från specialistansvar för risk eller kontinuitet mot ett samlat lednings- och styrningsansvar för säkerhet.",
-      en: "From specialist ownership of risk or continuity towards combined leadership and governance responsibility for security.",
+      sv: "Från installation och drift av säkerhetssystem mot skydd av samhällsviktiga anläggningar.",
+      en: "From installing and operating security systems towards protecting essential facilities.",
     },
-    stages: [["risk-manager", "crisis-continuity-manager"], ["security-manager"]],
+    origin: "security-technician",
+    branches: ["data-center-security"],
+  },
+  {
+    id: "from_risk_manager",
+    name: { sv: "Från risk manager", en: "From risk manager" },
+    direction: {
+      sv: "Från specialistansvar för risk mot ett samlat lednings- och styrningsansvar för säkerhet.",
+      en: "From specialist ownership of risk towards combined leadership and governance responsibility for security.",
+    },
+    origin: "risk-manager",
+    branches: ["security-manager"],
   },
 ] as const;
 
-// ---------------------------------------------------------------------------
-// Transition evidence
-// ---------------------------------------------------------------------------
-
-/** Every recorded transition between two professions, from either direction
- *  the dataset happens to express it in. */
-export function transitionBetween(fromId: string, toId: string): CareerPath | "implicit" | null {
-  const edge = careerPaths.find((p) => p.from === fromId && p.to === toId);
-  if (edge) return edge;
-  const from = getPublishedProfession(fromId);
-  const to = getPublishedProfession(toId);
-  if (from?.nextRoles?.includes(toId)) return "implicit";
-  if (to?.previousRoles?.includes(fromId)) return "implicit";
-  return null;
-}
-
-export interface RouteStage {
-  readonly professions: readonly Profession[];
-  /** What changes on the way INTO this stage. Absent on the first stage. */
-  readonly shift?: StageShift;
-}
-
-export interface StageShift {
-  /** Populated only when the level actually differs. */
-  readonly levelFrom?: ExperienceLevel;
-  readonly levelTo?: ExperienceLevel;
-  /** True when the next stage introduces a regulated appointment that the
-   *  previous one did not require. */
-  readonly becomesRegulated: boolean;
-  /** Orientations the next stage adds. */
-  readonly addedOrientations: readonly Orientation[];
-  /** Competencies the next stage requires that the previous stage did not
-   *  require at all, or required at a lower level. */
-  readonly raisedCompetencies: readonly { id: CompetencyId; level: ProficiencyLevel }[];
-  /** Notes carried by an explicit `careerPaths` edge. Never synthesised. */
-  readonly notes: readonly Bi[];
-  /** Experience statements carried by an explicit edge. Empty in the current
-   *  dataset, and rendered as nothing rather than as a guess. */
-  readonly experienceRequired: readonly Bi[];
+export interface CareerRouteBranch {
+  readonly transition: ProfessionTransition;
+  readonly evidenceLevel: TransitionEvidenceLevel;
 }
 
 export interface CareerRoute {
   readonly id: CareerRouteId;
   readonly name: Bi;
   readonly direction: Bi;
-  readonly stages: readonly RouteStage[];
+  readonly origin: Profession;
+  readonly branches: readonly CareerRouteBranch[];
 }
 
-function maxRequiredLevel(
-  ps: readonly Profession[],
-  competencyId: CompetencyId,
-): ProficiencyLevel | 0 {
-  let best: ProficiencyLevel | 0 = 0;
-  for (const p of ps) {
-    for (const rc of p.competencies) {
-      if (rc.competencyId === competencyId && rc.requiredLevel > best) best = rc.requiredLevel;
-    }
-  }
-  return best;
-}
+function buildRoute(authored: AuthoredRoute, now: Date): CareerRoute | null {
+  const origin = getPublishedProfession(authored.origin);
+  if (!origin) return null;
 
-const LEVEL_ORDER: readonly ExperienceLevel[] = ["entry", "mid", "senior", "executive"];
+  // Branches are read through `onwardTransitions`, not assembled here: the
+  // route surface and the profession guide then describe the same move with
+  // the same words and the same evidence level, by construction.
+  const available = onwardTransitions(origin, now);
+  const branches = authored.branches
+    .map((id) => available.find((t) => t.to.id === id))
+    .filter((t): t is ProfessionTransition => Boolean(t))
+    .map((transition) => ({ transition, evidenceLevel: transition.evidenceLevel }));
 
-function highestLevel(ps: readonly Profession[]): ExperienceLevel {
-  return ps.reduce<ExperienceLevel>(
-    (acc, p) => (LEVEL_ORDER.indexOf(p.level) > LEVEL_ORDER.indexOf(acc) ? p.level : acc),
-    ps[0]?.level ?? "entry",
-  );
-}
-
-function computeShift(prev: readonly Profession[], next: readonly Profession[]): StageShift {
-  const levelFrom = highestLevel(prev);
-  const levelTo = highestLevel(next);
-
-  const becomesRegulated = next.every((p) => p.regulated) && !prev.every((p) => p.regulated);
-
-  const prevOrientations = new Set(prev.flatMap((p) => p.orientation));
-  const addedOrientations = Array.from(
-    new Set(next.flatMap((p) => p.orientation).filter((o) => !prevOrientations.has(o))),
-  );
-
-  // A competency counts as raised when EVERY profession in the next stage
-  // demands it above what ANY profession in the previous stage demanded. The
-  // asymmetry is deliberate: "you will need more of this wherever you land"
-  // is a claim the data supports; "one of three possible next roles wants
-  // slightly more of this" is not.
-  const candidateIds = Array.from(
-    new Set(next.flatMap((p) => p.competencies.map((c) => c.competencyId))),
-  );
-  const raisedCompetencies = candidateIds
-    .map((id) => ({ id, level: maxRequiredLevel(next, id) }))
-    .filter((c): c is { id: CompetencyId; level: ProficiencyLevel } => c.level > 0)
-    .filter((c) => next.every((p) => p.competencies.some((rc) => rc.competencyId === c.id)))
-    .filter((c) => c.level > maxRequiredLevel(prev, c.id))
-    .sort((a, b) => b.level - a.level || a.id.localeCompare(b.id));
-
-  const notes: Bi[] = [];
-  const experienceRequired: Bi[] = [];
-  for (const from of prev) {
-    for (const to of next) {
-      const edge = transitionBetween(from.id, to.id);
-      if (edge && edge !== "implicit") {
-        if (edge.notes) notes.push(edge.notes);
-        if (edge.experienceRequired) experienceRequired.push(edge.experienceRequired);
-      }
-    }
-  }
-
+  if (branches.length === 0) return null;
   return {
-    ...(levelFrom !== levelTo ? { levelFrom, levelTo } : {}),
-    becomesRegulated,
-    addedOrientations,
-    raisedCompetencies,
-    notes,
-    experienceRequired,
+    id: authored.id,
+    name: authored.name,
+    direction: authored.direction,
+    origin,
+    branches,
   };
 }
 
-function buildRoute(authored: AuthoredRoute): CareerRoute | null {
-  const stageProfessions = authored.stages.map((ids) => publishedOnly(ids));
-  // A stage that lost every published profession collapses the route: rather
-  // than silently splicing stage 1 to stage 3 and inventing a transition, the
-  // whole route drops out of the hub.
-  if (stageProfessions.some((s) => s.length === 0)) return null;
-  if (stageProfessions.length < 2) return null;
-
-  const stages: RouteStage[] = stageProfessions.map((professions, i) =>
-    i === 0
-      ? { professions }
-      : { professions, shift: computeShift(stageProfessions[i - 1], professions) },
-  );
-
-  return { id: authored.id, name: authored.name, direction: authored.direction, stages };
-}
-
-/** The routes the hub renders. Only routes whose every stage still resolves
- *  to published guides survive. */
+/** The routes the hub renders. */
 export const careerRoutes: readonly CareerRoute[] = authoredRoutes
-  .map(buildRoute)
+  .map((r) => buildRoute(r, new Date()))
   .filter((r): r is CareerRoute => r !== null);
 
 // ---------------------------------------------------------------------------
@@ -242,39 +157,76 @@ export const careerRoutes: readonly CareerRoute[] = authoredRoutes
 export type RouteIssue = { readonly routeId: CareerRouteId; readonly message: string };
 
 /**
- * Every consecutive stage pair must be backed by at least one recorded
- * transition, and every profession named must be published.
+ * What a branch list must satisfy, run by the guard.
  *
- * Run by the guard script. This is the assertion that keeps the section
- * honest: a route is allowed to be short, but it is not allowed to assert a
- * progression the dataset never recorded.
+ *   1. Every profession named is a published guide.
+ *   2. EVERY BRANCH IS A DIRECT RECORDED TRANSITION FROM THE ORIGIN.
+ *   3. No branch is the origin, and no branch is listed twice.
+ *
+ * ── WHY RULE 2 IS THE ANTI-LADDER RULE ─────────────────────────────────
+ *
+ * A ladder is a list whose entries are only reachable THROUGH each other.
+ * Requiring every branch to be reachable directly from the origin is exactly
+ * the property that makes the list unordered: no entry depends on any other,
+ * so no reading order is implied and none can be inferred.
+ *
+ * An earlier version of this function went further and refused any route
+ * where one branch also led on to another. That rejected the correct
+ * arrangement: both Ordningsvakt and Skyddsvakt happen to record a further
+ * direction towards Säkerhetssamordnare, and Säkerhetssamordnare is also
+ * directly reachable from Väktare. All three of those facts are true, and
+ * listing the three as parallel directions out of Väktare misrepresents none
+ * of them — the convergence downstream says nothing about the order a reader
+ * would take them in.
+ *
+ * What made the old rendering false was the STAGE MODEL, which numbered its
+ * entries and drew arrows between them. That is gone, the layout is a plain
+ * unordered row, and the copy states independence in words. The guard asserts
+ * both of those against the component source rather than trying to encode
+ * "reads as a sequence" as a graph property, which it is not.
  */
-export function validateRoutes(): RouteIssue[] {
+export function validateRoutes(now: Date = new Date()): RouteIssue[] {
   const issues: RouteIssue[] = [];
 
   for (const authored of authoredRoutes) {
-    for (const stage of authored.stages) {
-      for (const id of stage) {
-        if (!getPublishedProfession(id)) {
-          issues.push({
-            routeId: authored.id,
-            message: `stage references "${id}", which is not a published profession guide`,
-          });
-        }
-      }
+    const origin = getPublishedProfession(authored.origin);
+    if (!origin) {
+      issues.push({
+        routeId: authored.id,
+        message: `origin "${authored.origin}" is not a published profession guide`,
+      });
+      continue;
     }
 
-    for (let i = 1; i < authored.stages.length; i += 1) {
-      const prev = authored.stages[i - 1];
-      const next = authored.stages[i];
-      for (const toId of next) {
-        const backed = prev.some((fromId) => transitionBetween(fromId, toId) !== null);
-        if (!backed) {
-          issues.push({
-            routeId: authored.id,
-            message: `no recorded transition from [${prev.join(", ")}] to "${toId}" — a route may not assert a progression the data does not carry`,
-          });
-        }
+    const available = onwardTransitions(origin, now);
+    const seen = new Set<string>();
+
+    for (const branchId of authored.branches) {
+      if (branchId === authored.origin) {
+        issues.push({
+          routeId: authored.id,
+          message: `branch "${branchId}" is the route's own origin`,
+        });
+        continue;
+      }
+      if (seen.has(branchId)) {
+        issues.push({ routeId: authored.id, message: `branch "${branchId}" is listed twice` });
+        continue;
+      }
+      seen.add(branchId);
+
+      if (!getPublishedProfession(branchId)) {
+        issues.push({
+          routeId: authored.id,
+          message: `branch "${branchId}" is not a published profession guide`,
+        });
+        continue;
+      }
+      if (!available.some((t) => t.to.id === branchId)) {
+        issues.push({
+          routeId: authored.id,
+          message: `no DIRECT recorded transition from "${authored.origin}" to "${branchId}" — every branch must stand on its own, or the list is a ladder`,
+        });
       }
     }
   }

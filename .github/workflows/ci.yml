@@ -804,6 +804,25 @@ jobs:
       - name: Security Career Center check
         run: bun run career-center:check
 
+      # A guard that passes proves nothing on its own. This reintroduces
+      # eleven real defects one at a time — the repealed Act, the age-18
+      # regression, ISO modelled as a personal certificate, a placeholder
+      # transition promoted to reviewed, Säkerhetschef back as a direct step
+      # out of Väktare, the unreachable funnel event — and requires the guard
+      # above to fail with the right message for each, then puts every file
+      # back byte for byte and requires the guard to be green again.
+      - name: Security Career Center negative controls
+        run: bun run career-center:negative-controls
+
+      # Offline: every external source is HTTPS, on an allowlisted publisher,
+      # covered by the committed reachability snapshot, and every review date
+      # in the catalogue is inside the freshness policy. Reaches no network —
+      # `career-center:sources -- --online` refreshes the snapshot by hand.
+      # Two shipped sources were 404s and one guide cited an Act repealed in
+      # 2023; this is what notices both classes of decay.
+      - name: Security Career Center sources
+        run: bun run career-center:sources
+
       # ONE PERSON, ONE PROFESSIONAL IDENTITY. Four pure engines decide what
       # somebody is told on their own home page and what a generated CV may
       # say about them, and each is one edit from a silent regression: a

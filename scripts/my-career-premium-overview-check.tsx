@@ -670,10 +670,26 @@ group("T9 · the career picture, the jobs states, the applications context");
     ready.career.state === "ready" && ready.career.topRole?.titleSv === "Säkerhetssamordnare",
   );
   const careerHtml = render(<CareerDirectionSection career={ready.career} />);
+  // ── THE SLUG NAMESPACE THIS ASSERTION USED TO GET WRONG ────────────
+  //
+  // It pinned href="/career-center/sakerhetssamordnare" — a CIG slug in a
+  // URL space that uses the Career Center's own English ids. That URL never
+  // resolved to a guide; it reached the "not published yet" state, and the
+  // assertion passed anyway because it only compared strings. Eight of the
+  // twelve bridged professions were broken the same way; the four that
+  // happen to be spelled identically in both namespaces (ordningsvakt among
+  // them) hid it.
+  //
+  // Both halves are asserted now: the resolved link, and the absence of the
+  // raw CIG slug.
   ck(
     "each recommended occupation deep-links to its profession guide",
-    careerHtml.includes('href="/career-center/sakerhetssamordnare"') &&
+    careerHtml.includes('href="/career-center/security-coordinator"') &&
       careerHtml.includes('href="/career-center/ordningsvakt"'),
+  );
+  ck(
+    "a CIG slug is never interpolated into a Career Center URL",
+    !careerHtml.includes("/career-center/sakerhetssamordnare"),
   );
   ck(
     "the catalogue link does not claim a filter",

@@ -127,6 +127,11 @@ export function deriveCareerDirection(
 ): CareerDirection {
   if (options.isError) return { state: "unavailable" };
   if (!result) return { state: "loading" };
+  // A failed read is NOT an absence. `read_failed` exists precisely because
+  // the stored-report function used to collapse the two, and this surface
+  // then told somebody with a completed analysis that they had never taken
+  // one. It fails closed into the state that offers a retry.
+  if (result.status === "read_failed") return { state: "unavailable" };
   if (result.status === "not_found") return { state: "none" };
   if (result.status === "unreadable") {
     return { state: "unreadable", completedAt: result.generatedAt ?? null };

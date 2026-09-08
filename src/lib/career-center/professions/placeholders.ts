@@ -133,32 +133,12 @@ export const customsOfficer: Profession = ph({
   related: ["police-officer", "intelligence-analyst"],
 });
 
-export const securityCoordinator: Profession = ph({
-  id: "security-coordinator",
-  slug: "security-coordinator",
-  titleCanonical: "Security Coordinator",
-  titleSv: "Säkerhetssamordnare",
-  titleEn: "Security Coordinator",
-  family: "security_leadership_governance",
-  category: "corporate",
-  level: "mid",
-  sector: "private",
-  orientation: ["operational", "leadership"],
-  icon: "clipboard",
-  description: { sv: "Samordning av säkerhetsarbetet i en organisation, ofta som brygga mellan operativ och strategisk nivå.", en: "Coordination of security work in an organisation, often bridging operational and strategic levels." },
-  overview: { sv: "Rollen är utbredd men saknar formell reglering. Guiden är strukturellt komplett men innehållet är under utveckling.", en: "The role is widespread but not formally regulated. The guide is structurally complete but content is under development." },
-  roleFor: { sv: "Passar dig som är strukturerad och trivs mellan operativa team och ledning.", en: "Suits people who are structured and thrive between operational teams and leadership." },
-  responsibilities: [{ sv: "Innehåll är under uppbyggnad.", en: "Content is being built." }],
-  competencies: [
-    { competencyId: "communication", requiredLevel: 4 },
-    { competencyId: "planning", requiredLevel: 3 },
-    { competencyId: "reporting", requiredLevel: 3 },
-    { competencyId: "risk_awareness", requiredLevel: 3 },
-  ],
-  countries: ["SE", "EU", "INTL"],
-  related: ["security-officer", "security-manager"],
-  nextRoles: ["security-manager"],
-});
+// securityCoordinator lived here until the Career Center pilot. It is now a
+// researched, published guide in ./researched.ts: the pilot's headline chain
+// (Väktare -> Ordningsvakt / Skyddsvakt -> Säkerhetssamordnare ->
+// Säkerhetschef) runs through it, and without a published middle role the
+// operational route asserted a jump from a first-year appointment straight to
+// Säkerhetschef.
 
 export const securityInvestigator: Profession = ph({
   id: "security-investigator",
