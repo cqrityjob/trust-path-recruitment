@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowDown, Info } from "lucide-react";
+import { ArrowDown, Info, Landmark, MoveRight, ShieldAlert } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
@@ -8,6 +8,7 @@ import {
   getCompetency,
   type CareerRoute,
   type RouteStage,
+  type TransitionKind,
 } from "@/lib/career-center";
 
 // "Karriärvägar" — what replaced the single static chain.
@@ -22,6 +23,20 @@ import {
 // regulatory step — is read off the profession records rather than written
 // here, so it cannot drift from the guides it links to. Where the data
 // carries no timing claim, none is shown; see career-routes.ts.
+//
+// ── THE PILOT PASS ADDED ONE THING: WHAT KIND OF STEP THIS IS ──────────
+//
+// Every arrow between stages used to look the same. Väktare -> Ordningsvakt
+// (a statutory training and a police appointment) and Säkerhetssamordnare ->
+// Säkerhetschef (accumulated responsibility, no authorisation at all) were
+// the same downward chevron, so the section could not answer the question a
+// reader actually has: is this something I do next, something I have to be
+// admitted to, or something that takes years?
+//
+// The classification comes from `transitionKind` — the same function the
+// profession guides use — so "kräver utbildning eller myndighetsbeslut" means
+// exactly the same thing on both surfaces, and cannot mean one thing here and
+// another there.
 
 export function CareerRoutes({ onProfessionOpen }: { onProfessionOpen?: (slug: string) => void }) {
   const { t } = useT();
@@ -111,11 +126,18 @@ function StageBlock({
 /** What changes on the way into a stage. Each line is omitted when the data
  *  carries nothing for it, so a transition the dataset barely describes shows
  *  one line rather than four empty headings. */
+const KIND_ICON: Record<TransitionKind, typeof MoveRight> = {
+  adjacent: MoveRight,
+  formal_gate: ShieldAlert,
+  long_term: Landmark,
+};
+
 function StageShiftBlock({ stage }: { stage: RouteStage }) {
   const { t, lang } = useT();
   const shift = stage.shift;
   if (!shift) return null;
 
+  const KindIcon = KIND_ICON[shift.kind];
   const raised = shift.raisedCompetencies.slice(0, 3);
   const hasContent =
     shift.levelTo !== undefined ||
@@ -127,6 +149,21 @@ function StageShiftBlock({ stage }: { stage: RouteStage }) {
   return (
     <div className="py-2 pl-4">
       <ArrowDown className="h-4 w-4 text-muted-foreground/60" aria-hidden />
+      {/* The kind of step, named in words as well as marked with an icon —
+          a badge whose only signal is a shape tells a screen-reader user
+          nothing. */}
+      <p
+        data-route-step-kind={shift.kind}
+        className={[
+          "mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-tight",
+          shift.kind === "formal_gate"
+            ? "border-accent/40 bg-accent/10 text-accent"
+            : "border-border bg-secondary text-foreground",
+        ].join(" ")}
+      >
+        <KindIcon className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+        {t(`cc.step.${shift.kind}` as TranslationKey)}
+      </p>
       {hasContent && (
         <div className="mt-2 border-l-2 border-accent/30 pl-4 text-xs leading-relaxed text-muted-foreground">
           <p className="font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">

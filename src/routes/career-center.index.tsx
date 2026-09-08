@@ -14,39 +14,63 @@ import {
   applyExplorerSearch,
   nearestNonEmpty,
   parseExplorerSearch,
+  personalDirection,
   upcomingProfessions,
   type ExplorerSearch,
 } from "@/lib/career-center";
 import { useCareerCenterTracking } from "@/lib/career-center/analytics";
+import { useMyCareerDirection } from "@/hooks/useMyCareerDirection";
 import { CareerHero } from "@/components/career-center/CareerHero";
 import { CareerRoutes } from "@/components/career-center/CareerRoutes";
+import { PersonalDirectionSection } from "@/components/career-center/PersonalDirection";
 import { ProfessionExplorer } from "@/components/career-center/ProfessionExplorer";
 
-// The Security Career Center hub — six sections, in this order:
+// The Career Center hub, rebuilt for the pilot around five questions a reader
+// actually has, in the order they have them:
 //
-//   1 hero · 2 var står du i dag · 3 karriärtest · 4 utforska yrken ·
-//   5 karriärvägar · 6 så bygger vi innehållet
+//   1 hero — what is this and where do I start
+//   2 din riktning — where am I now (personal, or honestly not)
+//   3 utforska yrken — which professions could suit me
+//   4 karriärvägar — how do I get from here to there
+//   5 så bygger vi innehållet — why should I believe any of it
 //
-// ── WHAT WAS REMOVED ───────────────────────────────────────────────────
+// ── WHAT CHANGED IN THIS PASS, AND WHY ─────────────────────────────────
 //
-// Eleven sections became six. Four of them ("Utvalda yrken", "Bläddra efter
-// kategori", "Hitta rätt roll", "Yrkesfamiljer") were four presentations of
-// the same twenty professions and are now one explorer. Four more were
-// advertisements for content that does not exist — an "Utbildning" panel
-// reading "Utbildningsinformation byggs upp löpande", the same for
-// "Certifikat", three dashed boxes under "Senaste artiklar", and a "Utvalda
-// jobb" panel for a job board that has its own product area at /jobs. None of
-// those were sections; they were promises. They are gone rather than
-// restyled.
+// The previous hub had six sections and THREE competing calls to action
+// above the fold: "Starta karriärtestet" and "Utforska yrken" side by side in
+// the hero, then a "Var står du i dag?" band of three more cards, then a
+// full-width dark section repeating the test CTA a third time. A reader who
+// had already taken the analysis was offered it twice more; a reader who had
+// not was asked to choose between two doors before being told what was behind
+// either.
+//
+// So: one primary action per section, and the hero's primary action is chosen
+// by STATE rather than by hope. A reader whose own analysis is in hand gets
+// "Utgå från mitt resultat"; everybody else gets "Utforska alla yrken". The
+// second door is a quiet link, never a second button.
+//
+// The retired "Var står du i dag?" band's two useful destinations — the
+// explorer pre-filtered to entry level and to mid+senior — survive as quick
+// choices inside the explorer section, which is where a reader is already
+// deciding how to narrow the catalogue. The employer path keeps its link.
+// Nothing that led somewhere was deleted; the competition between them was.
+//
+// The retired dark career-test band's content survives inside section 2,
+// which is the only place on the page where "you have no result yet" is a
+// true statement — so it is the only place the invitation belongs.
+//
+// ── THE PERSONAL SECTION IS CLIENT-RESOLVED ────────────────────────────
+//
+// This route is public, indexed and server-rendered. `useMyCareerDirection`
+// issues no authenticated request until a live session has been observed in
+// the browser, so the HTML a crawler receives is the HTML an anonymous reader
+// receives, and section 2 renders its anonymous state until proven otherwise.
 //
 // ── EVERY NUMBER ON THIS PAGE IS DERIVED ───────────────────────────────
 //
-// The hero used to claim "60+" professions against a catalogue of twenty, ten
-// of which were placeholders, and to print "Modell v1.0" — an internal
-// version string — as though it were a fact about the product. The guide
-// count now comes from `PUBLISHED_PROFESSION_COUNT` and the question count
-// from the instrument's own `MVP_QUESTION_COUNT`, so neither can drift from
-// what a visitor would find.
+// The guide count comes from `PUBLISHED_PROFESSION_COUNT`, the question count
+// from the instrument's own `MVP_QUESTION_COUNT` and the duration from
+// `DURATION_CLAIM`, so none can drift from what a visitor would find.
 
 export const Route = createFileRoute("/career-center/")({
   head: ({ match }) => {
@@ -59,19 +83,19 @@ export const Route = createFileRoute("/career-center/")({
     void match;
     return {
       meta: [
-        { title: "Säkerhetskarriärcenter — yrken, krav och karriärvägar | CQrityjob" },
+        { title: "Karriärcenter — yrken, krav och karriärvägar | CQrityjob" },
         {
           name: "description",
-          content: `Källhänvisade yrkesguider för säkerhetsbranschen: vad rollerna innebär, vilka formella krav som gäller och vilka vägar som finns vidare. Kostnadsfritt karriärtest på cirka ${DURATION_CLAIM_MINUTES.low}–${DURATION_CLAIM_MINUTES.high} minuter.`,
+          content: `Källhänvisade yrkesguider för säkerhetsbranschen: vad rollerna innebär, vilka formella krav som gäller och vilka vägar som finns vidare. Kostnadsfri karriäranalys på cirka ${DURATION_CLAIM_MINUTES.low}–${DURATION_CLAIM_MINUTES.high} minuter.`,
         },
         {
           property: "og:title",
-          content: "Säkerhetskarriärcenter — yrken, krav och karriärvägar",
+          content: "Utforska yrken och hitta din nästa karriärväg",
         },
         {
           property: "og:description",
           content:
-            "Yrkesguider, karriärvägar och ett kostnadsfritt karriärtest för säkerhetsbranschen.",
+            "Yrkesguider, karriärvägar och en kostnadsfri karriäranalys för säkerhetsbranschen.",
         },
         { property: "og:type", content: "website" },
         { property: "og:url", content: "https://trust-path-recruitment.lovable.app/career-center" },
@@ -87,12 +111,17 @@ export const Route = createFileRoute("/career-center/")({
 });
 
 const EXPLORER_ANCHOR = "utforska-yrken";
+const PERSONAL_ANCHOR = "min-riktning";
 
 function CareerCenterHub() {
   const { t, lang } = useT();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const track = useCareerCenterTracking();
+
+  const { signedIn, career, refetch } = useMyCareerDirection();
+  const direction = useMemo(() => personalDirection(career, { signedIn }), [career, signedIn]);
+  const personalised = direction.state === "ready";
 
   const results = useMemo(() => applyExplorerSearch(search, lang), [search, lang]);
   const relaxation = useMemo(
@@ -120,119 +149,46 @@ function CareerCenterHub() {
         lead={t("cc.hero.lead")}
         note={t("cc.hero.trust")}
         actions={
-          <>
-            <PrimaryLink
-              to="/security-career-assessment"
-              variant="primary"
-              onClick={() => track("career_center_test_started", { surface: "hub_hero" })}
-            >
-              {t("cc.hero.cta.test")}
+          // ONE primary button. Which one depends on whether this reader's own
+          // analysis is in hand; the other path is a quiet link beside it, so
+          // the two never compete for the same attention.
+          personalised ? (
+            <>
+              <PrimaryLink to="/career-center" hash={PERSONAL_ANCHOR} variant="primary">
+                {t("cc.hero.cta.personal")}
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+              </PrimaryLink>
+              <a href={`#${EXPLORER_ANCHOR}`} className={SECONDARY_LINK}>
+                {t("cc.hero.cta.explore")}
+              </a>
+            </>
+          ) : (
+            <PrimaryLink to="/career-center" hash={EXPLORER_ANCHOR} variant="primary">
+              {t("cc.hero.cta.explore")}
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </PrimaryLink>
-            <a
-              href={`#${EXPLORER_ANCHOR}`}
-              className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-semibold text-foreground shadow-xs transition-all hover:border-accent/40 hover:bg-secondary hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {t("cc.hero.cta.explore")}
-            </a>
-          </>
+          )
         }
         aside={<TrustRail />}
       />
 
-      {/* ── 2. VAR STÅR DU I DAG? ───────────────────────────────────── */}
-      <Section className="bg-background py-16 md:py-20">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.where.title")}
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-            {t("cc.where.subtitle")}
-          </p>
-        </div>
-        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
-          {/* Each path lands somewhere genuinely different: a pre-filtered
-              explorer at entry level, the same explorer at mid+senior, and
-              the employer product. None of them is "Läs mer". */}
-          <EntryPathCard
-            icon={<Compass className="h-5 w-5" strokeWidth={1.5} aria-hidden />}
-            title={t("cc.where.curious.title")}
-            body={t("cc.where.curious.body")}
-            cta={t("cc.where.curious.cta")}
-            to="/career-center"
-            search={{ ...ENTRY_LEVEL_SEARCH }}
-            hash={EXPLORER_ANCHOR}
-          />
-          <EntryPathCard
-            icon={<Users className="h-5 w-5" strokeWidth={1.5} aria-hidden />}
-            title={t("cc.where.working.title")}
-            body={t("cc.where.working.body")}
-            cta={t("cc.where.working.cta")}
-            to="/career-center"
-            search={{ ...NEXT_LEVEL_SEARCH }}
-            hash={EXPLORER_ANCHOR}
-          />
-          <EntryPathCard
-            icon={<Building2 className="h-5 w-5" strokeWidth={1.5} aria-hidden />}
-            title={t("cc.where.org.title")}
-            body={t("cc.where.org.body")}
-            cta={t("cc.where.org.cta")}
-            to="/employers"
-          />
-        </div>
+      {/* ── 2. DIN RIKTNING ─────────────────────────────────────────── */}
+      <Section id={PERSONAL_ANCHOR} className="bg-background py-16 md:py-20">
+        <PersonalDirectionSection
+          direction={direction}
+          onRetry={refetch}
+          exploreHref={`#${EXPLORER_ANCHOR}`}
+          onProfessionOpen={(slug) =>
+            track("career_profession_opened", { surface: "hub_personal", subject: slug })
+          }
+          onAssessmentStart={() =>
+            track("career_center_test_started", { surface: "hub_test_section" })
+          }
+          facts={<TestFacts />}
+        />
       </Section>
 
-      {/* ── 3. KARRIÄRTEST ──────────────────────────────────────────── */}
-      <Section bordered className="bg-primary py-16 text-primary-foreground md:py-20">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-5 lg:items-center">
-          <div className="lg:col-span-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-foreground/70">
-              {t("cc.test.eyebrow")}
-            </p>
-            {/* The explicit colour is required, not redundant: a base-layer
-                rule in styles.css sets `color: var(--color-foreground)` on
-                every h1-h6, which beats the `text-primary-foreground` this
-                dark section sets on its container. Without it the heading
-                renders near-black on near-black. */}
-            <h2
-              className="mt-3 text-2xl font-semibold tracking-tight text-primary-foreground md:text-4xl"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              {t("cc.test.title")}
-            </h2>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/80">
-              {t("cc.test.body")}
-            </p>
-            <div className="mt-8">
-              <PrimaryLink
-                to="/security-career-assessment"
-                variant="accent"
-                onClick={() => track("career_center_test_started", { surface: "hub_test_section" })}
-              >
-                {t("cc.test.cta")}
-                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-              </PrimaryLink>
-            </div>
-          </div>
-          <ul className="space-y-3 lg:col-span-2">
-            {/* The question count is the instrument's own constant, not a
-                number typed into copy. */}
-            <TestFact>
-              <span className="tabular-nums">{MVP_QUESTION_COUNT}</span>{" "}
-              {t("cc.test.fact.questions")}
-            </TestFact>
-            {/* The duration, like the question count above it, is the
-                instrument's own figure rather than a number typed into copy.
-                This hub advertised "about 5 minutes" for a twenty-eight
-                question assessment; see v31/duration.ts. */}
-            <TestFact>{DURATION_CLAIM[lang === "en" ? "en" : "sv"]}</TestFact>
-            <TestFact>{t("cc.test.fact.account")}</TestFact>
-            <TestFact>{t("cc.test.fact.noright")}</TestFact>
-          </ul>
-        </div>
-      </Section>
-
-      {/* ── 4. UTFORSKA YRKEN ───────────────────────────────────────── */}
+      {/* ── 3. UTFORSKA YRKEN ───────────────────────────────────────── */}
       <Section bordered id={EXPLORER_ANCHOR} className="bg-background py-16 md:py-20">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
@@ -242,7 +198,33 @@ function CareerCenterHub() {
             {t("cc.explore.subtitle")}
           </p>
         </div>
-        <div className="mt-10">
+
+        {/* The two surviving destinations of the retired "Var står du i dag?"
+            band, plus the employer path. Quiet links, not cards: they narrow
+            a list the reader is about to see, which is a control rather than
+            a decision about where to go next. */}
+        <nav aria-label={t("cc.explore.quick.title")} className="mt-6">
+          <ul className="flex flex-wrap items-center gap-2">
+            <QuickChoice
+              icon={<Compass className="h-3.5 w-3.5" aria-hidden />}
+              label={t("cc.explore.quick.entry")}
+              search={{ ...ENTRY_LEVEL_SEARCH }}
+            />
+            <QuickChoice
+              icon={<Users className="h-3.5 w-3.5" aria-hidden />}
+              label={t("cc.explore.quick.next")}
+              search={{ ...NEXT_LEVEL_SEARCH }}
+            />
+            <li>
+              <Link to="/employers" className={QUICK_CHOICE_CLASS}>
+                <Building2 className="h-3.5 w-3.5" aria-hidden />
+                {t("cc.explore.quick.org")}
+              </Link>
+            </li>
+          </ul>
+        </nav>
+
+        <div className="mt-8">
           <ProfessionExplorer
             search={search}
             onSearchChange={onSearchChange}
@@ -256,7 +238,7 @@ function CareerCenterHub() {
         </div>
       </Section>
 
-      {/* ── 5. KARRIÄRVÄGAR ─────────────────────────────────────────── */}
+      {/* ── 4. KARRIÄRVÄGAR ─────────────────────────────────────────── */}
       <Section bordered className="bg-secondary/40 py-16 md:py-20">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
@@ -275,7 +257,7 @@ function CareerCenterHub() {
         </div>
       </Section>
 
-      {/* ── 6. SÅ BYGGER VI INNEHÅLLET ──────────────────────────────── */}
+      {/* ── 5. SÅ BYGGER VI INNEHÅLLET ──────────────────────────────── */}
       <Section bordered className="bg-background py-16 md:py-20">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
@@ -296,6 +278,53 @@ function CareerCenterHub() {
         </p>
       </Section>
     </>
+  );
+}
+
+const SECONDARY_LINK =
+  "inline-flex h-11 items-center justify-center rounded-md px-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+const QUICK_CHOICE_CLASS =
+  "inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+function QuickChoice({
+  icon,
+  label,
+  search,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  search: ExplorerSearch;
+}) {
+  return (
+    <li>
+      <Link
+        to="/career-center"
+        search={search}
+        hash={EXPLORER_ANCHOR}
+        className={QUICK_CHOICE_CLASS}
+      >
+        {icon}
+        {label}
+      </Link>
+    </li>
+  );
+}
+
+/** The three facts about the career analysis, every one of them read from the
+ *  instrument rather than typed into copy. Rendered only where the analysis is
+ *  actually being offered — inside section 2's invitation states. */
+function TestFacts() {
+  const { t, lang } = useT();
+  return (
+    <ul className="mt-6 flex flex-wrap gap-2">
+      <TestFact>
+        <span className="tabular-nums">{MVP_QUESTION_COUNT}</span> {t("cc.test.fact.questions")}
+      </TestFact>
+      <TestFact>{DURATION_CLAIM[lang === "en" ? "en" : "sv"]}</TestFact>
+      <TestFact>{t("cc.test.fact.account")}</TestFact>
+      <TestFact>{t("cc.test.fact.noright")}</TestFact>
+    </ul>
   );
 }
 
@@ -343,7 +372,7 @@ function RailFact({ icon, title, body }: { icon: React.ReactNode; title: string;
 
 function TestFact({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-center gap-3 rounded-md border border-primary-foreground/20 bg-primary-foreground/5 px-4 py-3 text-sm font-medium">
+    <li className="flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5 text-xs font-medium text-foreground">
       {children}
     </li>
   );
@@ -356,45 +385,5 @@ function TrustCard({ titleKey, bodyKey }: { titleKey: TranslationKey; bodyKey: T
       <h3 className="text-sm font-semibold tracking-tight text-foreground">{t(titleKey)}</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
     </div>
-  );
-}
-
-function EntryPathCard({
-  icon,
-  title,
-  body,
-  cta,
-  to,
-  search,
-  hash,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-  cta: string;
-  to: string;
-  search?: ExplorerSearch;
-  hash?: string;
-}) {
-  return (
-    <Link
-      to={to}
-      search={search}
-      hash={hash}
-      className="group flex flex-col rounded-xl border border-border bg-card p-6 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-    >
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-secondary text-accent transition-colors group-hover:bg-accent/10">
-        {icon}
-      </span>
-      <h3 className="mt-5 text-base font-semibold tracking-tight text-foreground">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
-      <span className="mt-6 inline-flex items-start gap-1.5 text-sm font-semibold text-accent transition-colors group-hover:text-[color:var(--accent-hover)]">
-        {cta}
-        <ArrowRight
-          className="mt-0.5 h-4 w-4 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
-          aria-hidden
-        />
-      </span>
-    </Link>
   );
 }

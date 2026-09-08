@@ -34,12 +34,12 @@
 // against the guides, because they ARE the guides.
 //
 // Deliberately NOT produced: time-to-progress and formal progression
-// requirements, unless a `careerPaths` edge states them. No edge in the
-// current dataset carries `experienceRequired`, so the UI shows no timing
-// claim at all — which is the correct output, not a missing feature.
+// requirements, unless a `careerPaths` edge states them. The two edges that
+// do carry `experienceRequired` (the Säkerhetssamordnare pair, added for the
+// pilot) state what the work looks like and name no duration, because no
+// duration is sourced — so the UI still shows no timing claim anywhere.
 
 import type {
-  CareerPath,
   Bi,
   CompetencyId,
   ExperienceLevel,
@@ -47,8 +47,12 @@ import type {
   Profession,
   ProficiencyLevel,
 } from "./types";
-import { careerPaths } from "./career-paths";
 import { getPublishedProfession, publishedOnly } from "./publishability";
+// `transitionBetween` and the three-way step classification live in
+// ./transitions.ts, which owns the whole vocabulary of "what does the data
+// record between these two roles". This module composes routes out of it; it
+// does not keep a second copy of the rule.
+import { transitionBetween, transitionKind, type TransitionKind } from "./transitions";
 
 export type CareerRouteId = "operational" | "technical" | "analytical_strategic";
 
@@ -69,10 +73,22 @@ const authoredRoutes: readonly AuthoredRoute[] = [
     id: "operational",
     name: { sv: "Operativt spår", en: "Operational route" },
     direction: {
-      sv: "Från bevakningsuppdrag i tjänst hos kund mot förordnade roller med utökade befogenheter, och vidare mot ansvar för en hel säkerhetsfunktion.",
-      en: "From guarding assignments on a client site towards appointed roles with wider powers, and onwards to responsibility for a whole security function.",
+      sv: "Från bevakningsuppdrag i tjänst hos kund, via förordnade roller med utökade befogenheter, till att samordna säkerhetsarbetet i en organisation och vidare mot ansvar för hela säkerhetsfunktionen.",
+      en: "From guarding assignments on a client site, through appointed roles with wider powers, to coordinating security work across an organisation and onwards to owning the whole security function.",
     },
-    stages: [["security-officer"], ["ordningsvakt", "skyddsvakt"], ["security-manager"]],
+    // Four stages, not three. Until the Career Center pilot this route ran
+    // security-officer -> [ordningsvakt, skyddsvakt] -> security-manager,
+    // which presented a senior leadership function as the step after a
+    // first-year appointment. The graph always recorded the middle role
+    // (both appointments link on to Säkerhetssamordnare, which links on to
+    // Säkerhetschef); it could not be shown because that guide was an
+    // unpublished stub. Publishing it made the honest chain renderable.
+    stages: [
+      ["security-officer"],
+      ["ordningsvakt", "skyddsvakt"],
+      ["security-coordinator"],
+      ["security-manager"],
+    ],
   },
   {
     id: "technical",
@@ -94,22 +110,6 @@ const authoredRoutes: readonly AuthoredRoute[] = [
   },
 ] as const;
 
-// ---------------------------------------------------------------------------
-// Transition evidence
-// ---------------------------------------------------------------------------
-
-/** Every recorded transition between two professions, from either direction
- *  the dataset happens to express it in. */
-export function transitionBetween(fromId: string, toId: string): CareerPath | "implicit" | null {
-  const edge = careerPaths.find((p) => p.from === fromId && p.to === toId);
-  if (edge) return edge;
-  const from = getPublishedProfession(fromId);
-  const to = getPublishedProfession(toId);
-  if (from?.nextRoles?.includes(toId)) return "implicit";
-  if (to?.previousRoles?.includes(fromId)) return "implicit";
-  return null;
-}
-
 export interface RouteStage {
   readonly professions: readonly Profession[];
   /** What changes on the way INTO this stage. Absent on the first stage. */
@@ -130,9 +130,13 @@ export interface StageShift {
   readonly raisedCompetencies: readonly { id: CompetencyId; level: ProficiencyLevel }[];
   /** Notes carried by an explicit `careerPaths` edge. Never synthesised. */
   readonly notes: readonly Bi[];
-  /** Experience statements carried by an explicit edge. Empty in the current
-   *  dataset, and rendered as nothing rather than as a guess. */
+  /** Experience statements carried by an explicit edge, verbatim. Never
+   *  synthesised, and never a duration. */
   readonly experienceRequired: readonly Bi[];
+  /** How far this stage is from the previous one — the same three-way
+   *  classification the profession guides use, so "kräver myndighetsbeslut"
+   *  and "långsiktigt mål" mean the same thing on both surfaces. */
+  readonly kind: TransitionKind;
 }
 
 export interface CareerRoute {
@@ -202,8 +206,19 @@ function computeShift(prev: readonly Profession[], next: readonly Profession[]):
     }
   }
 
+  // The strongest classification any pair in this stage transition produces.
+  // A stage that can be reached through a regulated appointment is gated
+  // whichever of its parallel roles the reader has in mind.
+  const kinds = prev.flatMap((f) => next.map((t) => transitionKind(f, t)));
+  const kind: TransitionKind = kinds.includes("formal_gate")
+    ? "formal_gate"
+    : kinds.includes("long_term")
+      ? "long_term"
+      : "adjacent";
+
   return {
     ...(levelFrom !== levelTo ? { levelFrom, levelTo } : {}),
+    kind,
     becomesRegulated,
     addedOrientations,
     raisedCompetencies,

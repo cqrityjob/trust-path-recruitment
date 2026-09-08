@@ -101,23 +101,38 @@ const { MVP_QUESTION_COUNT } = await import("../src/lib/career-discovery/v31/per
 // 1. Hub section order and count
 // =======================================================================
 //
-// Six sections, in this order. The order is the product argument: a visitor
-// is told what this is, then where they stand, then offered the test, and
-// only then handed a catalogue. Putting the explorer before the test is what
-// buried the conversion point under a scroll of profession cards.
+// Five sections, in this order. The order is the product argument: a visitor
+// is told what this is, then shown where THEY stand (or told honestly that we
+// cannot know), then handed the catalogue, then the routes through it, and
+// finally the basis on which any of it is claimed.
+//
+// The pilot pass replaced two sections with one. "Var står du i dag?" asked
+// the question and answered it with three generic cards; the standalone dark
+// career-test band asked a visitor who might already have a result to take it
+// again. Section 2 now answers the question with the reader's OWN analysis
+// when there is one, and offers the analysis when there is not — which is the
+// only place on the page where offering it is a true statement. The two
+// surviving pre-filtered destinations moved into the explorer as quick
+// choices; they are asserted separately below.
 
 const HUB_SECTION_HEADINGS = [
   "cc.hero.title",
-  "cc.where.title",
-  "cc.test.title",
+  "cc.me.title",
   "cc.explore.title",
   "cc.routes.title",
   "cc.trust.title",
 ] as const;
 
+// Section 2's heading is rendered by <PersonalDirectionSection>, so the hub's
+// own source carries the component rather than the key. Both are asserted:
+// the component must be mounted in the right position, and the component must
+// render the heading.
+const personal = read("src/components/career-center/PersonalDirection.tsx");
+const hubOrderText = hub.replace("<PersonalDirectionSection", 't("cc.me.title")');
+
 let cursor = -1;
 for (const key of HUB_SECTION_HEADINGS) {
-  const at = hub.indexOf(`t("${key}")`);
+  const at = hubOrderText.indexOf(`t("${key}")`);
   expect(at !== -1, `the hub must render the section heading "${key}"`);
   expect(
     at > cursor,
@@ -228,19 +243,42 @@ for (const key of enCc) {
 // 4. The career test is the hub's primary conversion point
 // =======================================================================
 
+// ── WHERE THE TEST LIVES NOW, AND WHY IT MOVED ─────────────────────────
+//
+// It used to be offered three times above the fold: in the hero, in a band of
+// entry-path cards, and again in a full-width dark section. A reader who had
+// already taken it was asked twice more; a reader who had not was made to
+// choose between two doors before being told what was behind either.
+//
+// It is now offered ONCE, inside section 2, in the states where "you have no
+// result yet" is actually true. That is strictly earlier than the catalogue,
+// so the conversion point is still never buried under profession cards.
 expect(
-  hub.indexOf('to="/security-career-assessment"') !== -1,
-  "the hub must link to the career test at /security-career-assessment",
+  personal.includes('to="/security-career-assessment"'),
+  "the personal section must link to the career analysis at /security-career-assessment",
 );
-// Present in the hero AND in its own section — the whole point of section 3
-// is that a visitor never has to scroll the catalogue to find the test.
 expect(
-  hub.split('to="/security-career-assessment"').length - 1 >= 2,
-  "the career test must be reachable from both the hero and its own section",
+  !hub.includes('to="/security-career-assessment"'),
+  "the hub must not repeat the career-analysis CTA outside the personal section — one primary action per section",
 );
 expect(
-  hub.indexOf('t("cc.test.title")') < hub.indexOf('t("cc.explore.title")'),
-  "the career test section must come before the profession explorer",
+  hubOrderText.indexOf('t("cc.me.title")') < hubOrderText.indexOf('t("cc.explore.title")'),
+  "the personal section must come before the profession explorer",
+);
+// The invitation is rendered only where there is no result to show. A
+// recommendation list under a personal heading, built from anything other
+// than the reader's own report, is the failure this whole section prevents.
+for (const state of ["anonymous", "no_result", "unreadable", "no_roles_named"]) {
+  expect(
+    personal.includes(`"${state}"`),
+    `the personal section must handle the "${state}" state explicitly`,
+  );
+}
+expect(
+  personal.includes("data-personal-recommendation") &&
+    personal.indexOf("data-personal-recommendation") >
+      personal.indexOf('state === "no_roles_named"'),
+  "recommendations may only be rendered after every non-ready state has returned",
 );
 // The question count is the instrument's, not a number typed into copy.
 expect(
@@ -667,6 +705,11 @@ for (const lang of ["sv", "en"] as const) {
 // 12. Profession guide section order
 // =======================================================================
 
+// Career steps come BEFORE education. The order is the reader's question
+// order: "where could I go from here" has to be answered before "what would I
+// have to study", or the education section is a list of courses with no
+// destination attached. Related jobs and the Passport boundary follow, then
+// the analysis, then related professions, then the sources.
 const GUIDE_SECTIONS = [
   "cc.p.about",
   "cc.p.day",
@@ -674,8 +717,9 @@ const GUIDE_SECTIONS = [
   "cc.p.competencies",
   "cc.p.formal",
   "cc.p.entry",
-  "cc.p.education",
-  "cc.p.path",
+  "cc.p.next.title",
+  "cc.p.education.title",
+  "cc.p.act.title",
   "cc.p.test.title",
   "cc.p.related",
   "cc.p.sources",
@@ -787,7 +831,12 @@ expect(
 // The database CHECK constraint is the other half of the allowlist. If the
 // code and the migration disagree, every event the code adds is rejected at
 // the database with no visible symptom.
-const migration = read("supabase/migrations/20261004090000_cd_v31_funnel_events_career_center.sql");
+// The CHECK is dropped and recreated in full by each additive migration, so
+// the NEWEST one carries the whole allowlist. Reading an older file would
+// pass while the live constraint rejected everything added since.
+const migration = read(
+  "supabase/migrations/20261102090000_cd_v31_funnel_events_career_education.sql",
+);
 for (const name of FUNNEL_EVENT_NAMES) {
   expect(
     migration.includes(`'${name}'::text`),
@@ -808,6 +857,455 @@ expect(
 expect(
   hub.includes("career_profession_opened"),
   "the hub must record a profession guide being opened",
+);
+
+// =======================================================================
+// 16. Career Center pilot — the five questions the hub must answer
+// =======================================================================
+//
+// Everything below was added with the pilot rebuild. Each assertion pins a
+// defect that was live on `origin/main` and that reintroduces itself quietly:
+// a slug namespace that silently half-works, a senior role presented as a
+// next step, an education list that cannot say whether something is legally
+// required, and a commercial placement that could one day reorder a
+// recommendation.
+
+const { resolveProfessionRef, careerCenterProfessionSlug, jobsProfessionSlug } =
+  await import("../src/lib/career-center/profession-links");
+const { transitionKind, onwardTransitions, inboundTransitions, describeTransition } =
+  await import("../src/lib/career-center/transitions");
+const {
+  professionEducation,
+  orderIsPlacementBlind,
+  educationOrderKey,
+  EDUCATION_PROVIDER_PLACEMENTS,
+} = await import("../src/lib/career-center/education-offers");
+const { personalDirection, MAX_PERSONAL_RECOMMENDATIONS } =
+  await import("../src/lib/career-center/personal-direction");
+const { CAREER_PROFESSION_BRIDGE } = await import("../src/lib/career-intelligence-engine/slug-map");
+const { publishedOnly } = await import("../src/lib/career-center/publishability");
+
+// -----------------------------------------------------------------------
+// 16a. One profession, three slug namespaces, no silent half-match
+// -----------------------------------------------------------------------
+//
+// Four slugs are spelled identically in both namespaces, which is exactly
+// enough coincidence for a namespace bug to look like it works. Two live
+// surfaces built a Career Center URL out of a CIG slug and dead-ended on the
+// other eight.
+
+for (const entry of CAREER_PROFESSION_BRIDGE) {
+  const viaCig = resolveProfessionRef(entry.cigSlug);
+  expect(
+    viaCig?.profession.id === entry.legacySlug,
+    `CIG slug "${entry.cigSlug}" must resolve to the Career Center guide "${entry.legacySlug}"`,
+  );
+  const viaCc = resolveProfessionRef(entry.legacySlug);
+  expect(
+    viaCc?.profession.id === entry.legacySlug && viaCc?.namespace === "career_center",
+    `Career Center slug "${entry.legacySlug}" must resolve in its own namespace first`,
+  );
+}
+expect(
+  resolveProfessionRef("vaktare")?.profession.slug === "security-officer",
+  'the report\'s "vaktare" must reach the "security-officer" guide — this is the My Career defect',
+);
+expect(
+  careerCenterProfessionSlug("nonexistent-slug") === null,
+  "an unknown slug must yield null rather than a guessed guide",
+);
+// An unpublished profession is deliberately indistinguishable from an unknown
+// slug: both mean "do not render a link".
+expect(
+  careerCenterProfessionSlug("police-officer") === null,
+  "an unpublished guide must never be linkable, whichever namespace named it",
+);
+
+const careerDirectionSection = code(
+  read("src/components/professional-identity/CareerDirectionSection.tsx"),
+);
+expect(
+  !careerDirectionSection.includes("profession: role.cigSlug"),
+  "My Career must not interpolate a CIG slug into a Career Center route",
+);
+expect(
+  careerDirectionSection.includes("careerCenterProfessionSlug"),
+  "My Career must resolve profession links through the shared bridge",
+);
+const jobsByProfession = code(read("src/routes/jobs.profession.$professionSlug.tsx"));
+expect(
+  jobsByProfession.includes("resolveProfessionRef"),
+  "the jobs-by-profession route must resolve its CIG route param through the shared bridge",
+);
+// A jobs link may only be built from a CIG slug, because that is what
+// jobs.profession_slug is a foreign key onto.
+for (const p of publishedProfessions) {
+  const slug = jobsProfessionSlug(p);
+  if (slug === null) continue;
+  expect(
+    CAREER_PROFESSION_BRIDGE.some((e) => e.legacySlug === p.id && e.cigSlug === slug),
+    `${p.id} must build its jobs link from its reviewed CIG slug`,
+  );
+}
+
+// -----------------------------------------------------------------------
+// 16b. A senior role is not a next step
+// -----------------------------------------------------------------------
+
+const KIND_CASES: readonly (readonly [string, string, "adjacent" | "formal_gate" | "long_term"])[] =
+  [
+    // Separate statutory basic training plus a police appointment.
+    ["security-officer", "ordningsvakt", "formal_gate"],
+    ["security-officer", "skyddsvakt", "formal_gate"],
+    // Unregulated, one level up: the nearest genuine move out of guarding.
+    ["security-officer", "security-coordinator", "adjacent"],
+    ["ordningsvakt", "security-coordinator", "adjacent"],
+    // Two levels, and a leadership function. THE case the pilot exists for.
+    ["security-officer", "security-manager", "long_term"],
+    ["ordningsvakt", "security-manager", "long_term"],
+    ["security-coordinator", "security-manager", "long_term"],
+  ];
+for (const [fromId, toId, kind] of KIND_CASES) {
+  const from = getPublishedProfession(fromId);
+  const to = getPublishedProfession(toId);
+  expect(Boolean(from && to), `${fromId} -> ${toId}: both guides must be published`);
+  if (!from || !to) continue;
+  expect(
+    transitionKind(from, to) === kind,
+    `${fromId} -> ${toId} must be classified "${kind}", not "${transitionKind(from, to)}"`,
+  );
+}
+
+// The long jump must offer the middle of the chain rather than asserting the
+// leap. This is what turns Ordningsvakt -> Säkerhetschef into
+// Ordningsvakt -> Säkerhetssamordnare -> Säkerhetschef.
+const longJump = describeTransition("ordningsvakt", "security-manager");
+expect(Boolean(longJump), "the data must record ordningsvakt -> security-manager");
+expect(
+  (longJump?.via ?? []).some((p) => p.id === "security-coordinator"),
+  "a long-term step must name the intermediate role the graph records",
+);
+// An adjacent move offers no detour: a middle step around something the
+// reader can already do is noise.
+for (const p of publishedProfessions) {
+  for (const tr of onwardTransitions(p)) {
+    if (tr.kind !== "long_term") {
+      expect(
+        tr.via.length === 0,
+        `${p.id} -> ${tr.to.id} is "${tr.kind}" and must not offer an intermediate step`,
+      );
+    }
+    expect(
+      Boolean(getPublishedProfession(tr.to.id)),
+      `${p.id} offers a step to "${tr.to.id}", which is not a published guide`,
+    );
+    // A gate states the requirement it gates on, verbatim from the guide.
+    if (tr.kind === "formal_gate") {
+      expect(
+        tr.formalRequirements.length > 0,
+        `${p.id} -> ${tr.to.id} is a formal gate but names no formal requirement`,
+      );
+    }
+    // Nothing may claim a duration. No source in this dataset carries one.
+    for (const bi of [...tr.notes, ...tr.experienceRequired]) {
+      expect(
+        !/\d+\s*(år|year|månad|month)/i.test(`${bi.sv} ${bi.en}`),
+        `${p.id} -> ${tr.to.id} states a duration; no source in this dataset carries one`,
+      );
+    }
+  }
+  for (const tr of inboundTransitions(p)) {
+    expect(
+      Boolean(getPublishedProfession(tr.from.id)),
+      `${p.id} names an inbound step from "${tr.from.id}", which is not a published guide`,
+    );
+  }
+}
+
+// The pilot's headline chain has to exist end to end.
+const coordinator = getPublishedProfession("security-coordinator");
+expect(
+  Boolean(coordinator),
+  "Säkerhetssamordnare must be a published guide — the operational route runs through it",
+);
+const operational = careerRoutes.find((r) => r.id === "operational");
+expect(Boolean(operational), "the operational route must render");
+const operationalIds = (operational?.stages ?? []).map((st) => st.professions.map((p) => p.id));
+expect(
+  operationalIds.length >= 4,
+  "the operational route must not jump from a first-year appointment to Säkerhetschef",
+);
+const coordinatorStage = operationalIds.findIndex((ids) => ids.includes("security-coordinator"));
+const managerStage = operationalIds.findIndex((ids) => ids.includes("security-manager"));
+expect(
+  coordinatorStage !== -1 && managerStage !== -1 && coordinatorStage < managerStage,
+  "Säkerhetssamordnare must sit between the appointments and Säkerhetschef",
+);
+// Every stage transition carries the same three-way classification the guides
+// use, so the two surfaces cannot mean different things by the same words.
+for (const route of careerRoutes) {
+  for (const stage of route.stages.slice(1)) {
+    expect(
+      stage.shift !== undefined &&
+        ["adjacent", "formal_gate", "long_term"].includes(stage.shift.kind),
+      `route "${route.id}" has a stage transition with no classification`,
+    );
+  }
+}
+
+// -----------------------------------------------------------------------
+// 16c. Education: four facts per row, and money touches none of them
+// -----------------------------------------------------------------------
+
+expect(
+  EDUCATION_PROVIDER_PLACEMENTS.length === 0,
+  "the pilot ships the placement mechanism and no placement; adding one is a content decision with a disclosure obligation",
+);
+
+for (const p of publishedProfessions) {
+  const edu = professionEducation(p);
+  for (const offer of edu.offers) {
+    expect(
+      offer.countries.length > 0,
+      `${p.id}/${offer.id}: an offer must state the jurisdiction it applies in`,
+    );
+    expect(
+      Boolean(offer.lastVerified),
+      `${p.id}/${offer.id}: an offer must state when it was last reviewed`,
+    );
+    expect(
+      Boolean(offer.source?.label?.sv && offer.source?.label?.en),
+      `${p.id}/${offer.id}: an offer must cite a source in both languages`,
+    );
+    // A formal requirement is a claim about law. It may only be made for a
+    // profession that is personally regulated AND in a jurisdiction that
+    // profession actually claims.
+    if (offer.relevance === "formal_requirement") {
+      expect(
+        p.regulated && (p.formalRequirements?.length ?? 0) > 0,
+        `${p.id}/${offer.id}: only a personally regulated role may carry a formal requirement`,
+      );
+      expect(
+        offer.countries.some((c) => p.countries.includes(c)),
+        `${p.id}/${offer.id}: a formal requirement must be scoped to a jurisdiction the guide claims`,
+      );
+    }
+  }
+  expect(
+    orderIsPlacementBlind(edu.offers),
+    `${p.id}: marking every offer sponsored must not change the order`,
+  );
+}
+
+// Structural, not empirical: the ordering key's own input type must not carry
+// a placement field, so no future edit can make ranking read one without
+// changing a signature that a reviewer will see.
+const educationSource = read("src/lib/career-center/education-offers.ts");
+const orderableBlock = educationSource.slice(
+  educationSource.indexOf("export interface OrderableOffer"),
+  educationSource.indexOf("const RELEVANCE_RANK"),
+);
+expect(
+  !/placement/i.test(orderableBlock),
+  "OrderableOffer must not carry a placement field — the ordering must be structurally blind to money",
+);
+expect(
+  educationOrderKey({ id: "z", kind: "education", relevance: "formal_requirement" })[0] <
+    educationOrderKey({ id: "a", kind: "education", relevance: "recommended_development" })[0],
+  "a formal requirement must always outrank recommended development",
+);
+
+// Disclosure has no off switch: the label is driven by the placement value
+// itself, and the panel states what a paid placement does and does not do.
+const educationPanel = code(read("src/components/career-center/EducationPanel.tsx"));
+expect(
+  educationPanel.includes('pl.placement === "sponsored"') &&
+    educationPanel.includes('t("cc.p.education.sponsored")'),
+  "a sponsored placement must render its disclosure label from the placement value",
+);
+expect(
+  educationPanel.includes('t("cc.p.education.neutrality")'),
+  "the education panel must state that the order is not affected by payment",
+);
+for (const lang of ["sv", "en"] as const) {
+  const d = dictionaries[lang] as Record<string, string>;
+  expect(
+    /sponsr|sponsor/i.test(d["cc.p.education.sponsored"]),
+    `${lang}: the sponsorship label must say it is sponsored`,
+  );
+  expect(
+    /rekommend|recommend/i.test(d["cc.p.education.sponsored.help"]),
+    `${lang}: the sponsorship note must state that payment does not affect what is recommended`,
+  );
+}
+
+// -----------------------------------------------------------------------
+// 16d. The personal section is personal only when it has the person
+// -----------------------------------------------------------------------
+
+expect(
+  personalDirection(undefined, { signedIn: false }).state === "anonymous",
+  "an anonymous visitor must reach the anonymous state, never a recommendation list",
+);
+expect(
+  personalDirection(undefined, { signedIn: null }).state === "loading",
+  "an unresolved session must not be treated as signed out",
+);
+expect(
+  personalDirection({ state: "none" }, { signedIn: true }).state === "no_result",
+  "a signed-in visitor with no analysis must be told so",
+);
+expect(
+  personalDirection({ state: "unavailable" }, { signedIn: true }).state === "unreadable",
+  "a failed read must never be reported as 'you have not taken the analysis'",
+);
+expect(
+  personalDirection({ state: "legacy", completedAt: null, reportHref: "/r/1" }, { signedIn: true })
+    .state === "no_roles_named",
+  "a legacy result is a result, and names areas rather than occupations",
+);
+const readyFixture = personalDirection(
+  {
+    state: "ready",
+    completedAt: "2026-09-01T00:00:00Z",
+    reportHref: "/security-career-assessment/report/abc",
+    topRole: {
+      rank: 1,
+      titleSv: "Väktare",
+      titleEn: "Security Officer",
+      cigSlug: "vaktare",
+      confidence: "high",
+    },
+    alternativeRoles: [
+      {
+        rank: 2,
+        titleSv: "Säkerhetssamordnare",
+        titleEn: "Security Coordinator",
+        cigSlug: "sakerhetssamordnare",
+        confidence: "indicative",
+      },
+      {
+        rank: 3,
+        titleSv: "Polis",
+        titleEn: "Police Officer",
+        cigSlug: "polis",
+        confidence: "high",
+      },
+    ],
+    strengthThemes: [],
+    frozenLocale: "sv",
+  },
+  { signedIn: true },
+);
+expect(readyFixture.state === "ready", "a readable v3.1 report must produce recommendations");
+if (readyFixture.state === "ready") {
+  expect(
+    readyFixture.items.length <= MAX_PERSONAL_RECOMMENDATIONS,
+    "the personal section must show at most three recommendations",
+  );
+  expect(
+    readyFixture.formalRequirementsAssessed === false,
+    "the personal section must always state that formal requirements were not assessed",
+  );
+  expect(
+    readyFixture.items[0]?.profession?.slug === "security-officer",
+    "a recommendation's guide link must be resolved through the slug bridge",
+  );
+  expect(
+    readyFixture.items[1]?.reason === "ranked_indicative",
+    "an indicative match must carry its own reason rather than being flattened",
+  );
+  expect(
+    readyFixture.items[2]?.profession === null,
+    "a recommendation with no published guide must render as text, not as a link",
+  );
+}
+expect(
+  personal.includes("formalRequirementsAssessed"),
+  "the personal section must render its 'formal requirements not assessed' line from the model",
+);
+
+// -----------------------------------------------------------------------
+// 16e. Passport: "not registered" is not "missing"
+// -----------------------------------------------------------------------
+
+const nextStepPanel = code(read("src/components/career-center/NextStepPanel.tsx"));
+expect(
+  nextStepPanel.includes('t("cc.p.act.passport.body")'),
+  "the profession guide must state the Passport boundary",
+);
+// The sentence has two halves and BOTH are load-bearing. "Not registered"
+// alone still leaves the reader to supply the other half themselves, and the
+// half they supply is "so you must not have it". So the copy has to state the
+// contrast explicitly, and the guard asserts the contrast rather than merely
+// banning the word "lack" — which appears in the correct sentence, negated.
+for (const [lang, registered, contrast, unqualified] of [
+  ["sv", /inte (är )?registrerad/i, /inte att du saknar/i, /(?<!inte att du )\bsaknas\b/i],
+  ["en", /not registered/i, /not that you lack/i, /\bis missing\b/i],
+] as const) {
+  const body = (dictionaries[lang] as Record<string, string>)["cc.p.act.passport.body"];
+  expect(
+    registered.test(body),
+    `${lang}: a merit that is not shown must be described as NOT REGISTERED`,
+  );
+  expect(
+    contrast.test(body),
+    `${lang}: the boundary must say explicitly that "not registered" is not "you do not have it"`,
+  );
+  expect(
+    !unqualified.test(body),
+    `${lang}: the Passport boundary must not state, unqualified, that a merit is missing`,
+  );
+}
+// The Career Center must not read the visitor's Passport at all: this is a
+// public, indexed, cacheable page about a profession, and holding merits is
+// not the same claim as being qualified for a role.
+for (const file of [
+  "src/components/career-center/NextStepPanel.tsx",
+  "src/components/career-center/ProfessionTemplate.tsx",
+  "src/routes/career-center.index.tsx",
+  "src/routes/career-center.$profession.tsx",
+]) {
+  const source = code(read(file));
+  expect(
+    !/getMyPassport|getMyProfessionalIdentity|countMerits/.test(source),
+    `${file} must not read Passport data — the Career Center links to the Passport, it does not interpret it`,
+  );
+}
+
+// -----------------------------------------------------------------------
+// 16f. No flow ends in a dead end
+// -----------------------------------------------------------------------
+
+for (const p of publishedProfessions) {
+  const hasWayOn =
+    onwardTransitions(p).length > 0 ||
+    inboundTransitions(p).length > 0 ||
+    publishedOnly(p.related ?? []).filter((r) => r.id !== p.id).length > 0;
+  expect(hasWayOn, `${p.id} offers no onward route of any kind`);
+}
+expect(
+  nextStepPanel.includes('t("cc.p.jobs.alt.all")') &&
+    nextStepPanel.includes('t("cc.p.jobs.alt.related")'),
+  "a profession with no job-catalogue node must still offer two live routes onward",
+);
+
+// -----------------------------------------------------------------------
+// 16g. Measurement: organic and sponsored are separable
+// -----------------------------------------------------------------------
+
+expect(
+  CAREER_CENTER_EVENT_WIRE_NAME.career_education_opened === "career_education_opened",
+  "opening a training offer needs its own event name — no existing name means it",
+);
+const analyticsSource = read("src/lib/career-center/analytics.ts");
+expect(
+  analyticsSource.includes("payload.placement = detail.placement"),
+  "the education event must carry its placement so organic and sponsored can be counted apart",
+);
+expect(
+  template.includes("placement,") && template.includes("career_education_opened"),
+  "the profession guide must forward the placement of the offer that was opened",
 );
 
 // =======================================================================

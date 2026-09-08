@@ -15,6 +15,7 @@
 //   career_test_completed       -> assessment_completed        (existing)
 //   career_profession_opened    -> profession_explored         (existing)
 //   career_filter_used          -> career_filter_used          (new name)
+//   career_education_opened     -> career_education_opened     (new name)
 //
 // Two of the four already have an allowlisted name that means precisely the
 // right thing, and reusing them keeps the existing funnel readable rather
@@ -52,12 +53,14 @@ import {
 export type CareerCenterEvent =
   | "career_center_test_started"
   | "career_profession_opened"
-  | "career_filter_used";
+  | "career_filter_used"
+  | "career_education_opened";
 
 export const CAREER_CENTER_EVENT_WIRE_NAME: Readonly<Record<CareerCenterEvent, FunnelEventName>> = {
   career_center_test_started: "career_center_test_started",
   career_profession_opened: "profession_explored",
   career_filter_used: "career_filter_used",
+  career_education_opened: "career_education_opened",
 };
 
 /** Where in the Career Center an event came from. Kept to a closed set: a
@@ -69,14 +72,26 @@ export type CareerCenterSurface =
   | "hub_explorer"
   | "hub_routes"
   | "profession_guide"
-  | "profession_related";
+  | "profession_related"
+  | "profession_transitions"
+  | "profession_education"
+  | "hub_personal";
 
 export interface CareerCenterEventDetail {
   readonly surface: CareerCenterSurface;
   /** Profession slug for `career_profession_opened`; filter key for
-   *  `career_filter_used`. Never free text typed by the visitor — a search
-   *  query is content, and content does not belong in telemetry. */
+   *  `career_filter_used`; education or certification id for
+   *  `career_education_opened`. Never free text typed by the visitor — a
+   *  search query is content, and content does not belong in telemetry. */
   readonly subject?: string;
+  /** `career_education_opened` only. Exactly "organic" or "sponsored".
+   *
+   *  This is the whole reason the event exists. The product promises that a
+   *  paid placement changes neither what is recommended nor the order it
+   *  appears in; that promise is only checkable if the two populations can be
+   *  counted apart. Inferring "sponsored" from a URL after the fact would be
+   *  a guess, so the placement travels WITH the click. */
+  readonly placement?: "organic" | "sponsored";
 }
 
 /**
@@ -96,6 +111,7 @@ export function useCareerCenterTracking(): (
       const eventName = CAREER_CENTER_EVENT_WIRE_NAME[event];
       const payload: Record<string, string> = { surface: detail.surface };
       if (detail.subject) payload.subject = detail.subject;
+      if (detail.placement) payload.placement = detail.placement;
       void track({ data: { eventName, detail: payload } }).catch(() => {
         // Deliberately silent. The visitor is reading a career guide; a
         // telemetry failure is not their problem and must not become one.

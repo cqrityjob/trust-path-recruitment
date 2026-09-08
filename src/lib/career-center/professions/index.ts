@@ -10,13 +10,13 @@ import {
   dataCenterSecurity,
   crisisContinuityManager,
   closeProtection,
+  securityCoordinator,
 } from "./researched";
 import {
   policeOfficer,
   militarySecuritySpecialist,
   correctionalOfficer,
   customsOfficer,
-  securityCoordinator,
   securityInvestigator,
   intelligenceAnalyst,
   fraudInvestigator,
@@ -25,7 +25,7 @@ import {
 } from "./placeholders";
 
 export const professions: readonly Profession[] = [
-  // Researched pilot (10)
+  // Researched and published (11)
   securityOfficer,
   ordningsvakt,
   skyddsvakt,
@@ -36,12 +36,12 @@ export const professions: readonly Profession[] = [
   dataCenterSecurity,
   crisisContinuityManager,
   closeProtection,
-  // Placeholder pilot (10)
+  securityCoordinator,
+  // Placeholder — named under "Kommer", never carded or linked (9)
   policeOfficer,
   militarySecuritySpecialist,
   correctionalOfficer,
   customsOfficer,
-  securityCoordinator,
   securityInvestigator,
   intelligenceAnalyst,
   fraudInvestigator,

@@ -1,5 +1,15 @@
 # Security Career Center — product completion
 
+> **Superseded in part.** This document records the rebuild that took
+> `/career-center` from eleven sections to six. The pilot rebuild that
+> followed it — the personal section, classified career steps, the neutral
+> education surface, the cross-namespace slug fix and the published
+> Säkerhetssamordnare guide — is documented in
+> [`career-center-pilot.md`](./career-center-pilot.md). Where the two
+> disagree about the current shape of the hub, the pilot document is right;
+> the audit in §A below is still an accurate record of what was there before
+> either pass.
+
 Rebuild of `/career-center` from a catalogue of unfinished content into a
 guided product. Eleven sections became six; twenty clickable profession guides
 became ten, with the other ten named but not linked.

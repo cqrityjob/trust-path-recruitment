@@ -14,7 +14,17 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // recorded as `applied` WITH evidence. Remove this entry at the same moment
 // that recording happens — an empty expected set is the steady state, and a
 // name left here after the fact would hide a genuinely stuck migration.
-const expectedPending: string[] = ["20261101090000_sp_selected_merit_sharing.sql"];
+// The Career Center pilot's measurement migration. Additive and object-free:
+// it drops and recreates the cd_v31_funnel_events CHECK and the RPC allowlist
+// with one more event name. Nothing renders differently before or after it —
+// the funnel tracker is fire-and-forget and never throws to its caller — so
+// unlike the entry above it blocks nothing, and it follows the precedent of
+// 20261004090000 and 20260816162000, which shipped the same way. Remove this
+// name when it is recorded as `applied` with evidence.
+const expectedPending: string[] = [
+  "20261101090000_sp_selected_merit_sharing.sql",
+  "20261102090000_cd_v31_funnel_events_career_education.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

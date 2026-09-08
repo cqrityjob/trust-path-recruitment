@@ -2916,11 +2916,13 @@ export const dictionaries = {
 
     // § 1 — Hero
     "cc.hero.eyebrow": "Yrkesguider · Karriärvägar · Karriärtest",
-    "cc.hero.title": "Säkerhetskarriärcenter",
+    "cc.hero.title": "Utforska yrken och hitta din nästa karriärväg",
+    "cc.hero.name": "Karriärcenter",
     "cc.hero.lead":
       "Här får du veta vad yrkena inom säkerhetsbranschen faktiskt innebär, vad som krävs för att komma in i dem och vilket steg som är rimligt för dig härnäst.",
     "cc.hero.cta.test": "Starta karriärtestet — ca 5 min, inget konto",
-    "cc.hero.cta.explore": "Utforska yrken",
+    "cc.hero.cta.explore": "Utforska alla yrken",
+    "cc.hero.cta.personal": "Utgå från mitt resultat",
     "cc.hero.trust": "Kostnadsfritt. Ingen bedömning av din kompetens eller anställningsbarhet.",
     "cc.hero.fact.guides": "färdiga yrkesguider",
     "cc.hero.fact.sources.title": "Källhänvisade och granskade",
@@ -3089,6 +3091,135 @@ export const dictionaries = {
     "cc.orientation.leadership": "Ledarskap",
     "cc.regulated.regulated": "Reglerad",
     "cc.regulated.not_regulated": "Ej reglerad",
+
+    // ── Din riktning — the personal section (§3B) ───────────────────────
+    //
+    // Rendered ONLY when the reader's own frozen report is in hand. Every
+    // other state is its own copy below, because a page that cannot read a
+    // result must not print one.
+    "cc.me.eyebrow": "Din riktning",
+    "cc.me.title": "Utifrån din karriäranalys",
+    "cc.me.subtitle":
+      "Yrkena nedan kommer från din egen karriäranalys. De är vägledning om riktning — inte ett besked om att du är lämplig eller behörig.",
+    "cc.me.completed": "Analys genomförd",
+    "cc.me.rank": "Rekommendation",
+    "cc.me.reason.ranked": "Din karriäranalys rankade det här yrket högst av de yrken den prövade.",
+    "cc.me.reason.rankedN": "Din karriäranalys rankade det här yrket som nummer {n}.",
+    "cc.me.reason.indicative":
+      "Analysen rankade yrket som det närmaste i katalogen. Det är en riktning att undersöka, inte ett utfall.",
+    "cc.me.noGuide": "Vi har ingen publicerad yrkesguide för det här yrket ännu.",
+    "cc.me.notAssessed":
+      "Analysen har inte prövat formella krav, behörigheter eller om du är kvalificerad för yrket. Det avgörs av regelverket och av arbetsgivaren.",
+    "cc.me.frozenLocale":
+      "Resultatet sparades på ett annat språk och yrkestitlarna visas som analysen skrev dem.",
+    "cc.me.view": "Öppna hela analysen",
+    "cc.me.cta": "Se yrket",
+    "cc.me.loading": "Hämtar din karriäranalys…",
+    "cc.me.loading.title": "Var står du i dag?",
+    "cc.me.invite.title": "Vet du inte var du passar in?",
+    "cc.me.invite.body":
+      "Karriäranalysen ger dig yrkesförslag att läsa vidare om. Den bedömer inte din kompetens och ger varken godkänt eller underkänt.",
+    "cc.me.invite.signedout":
+      "Har du gjort analysen tidigare? Logga in så visas ditt resultat här.",
+    "cc.me.invite.cta": "Gör karriäranalysen",
+    "cc.me.invite.secondary": "Utforska alla yrken i stället",
+    "cc.me.unreadable.title": "Vi kan inte läsa din senaste analys just nu",
+    "cc.me.unreadable.body":
+      "Resultatet finns kvar — det är läsningen som inte gick igenom. Försök igen, eller öppna din analyshistorik.",
+    "cc.me.unreadable.retry": "Försök igen",
+    "cc.me.unreadable.history": "Se mina analyser",
+    "cc.me.noroles.title": "Din analys pekar ut riktningar, inte enskilda yrken",
+    "cc.me.noroles.body":
+      "Den version du gjorde namnger karriärområden i stället för yrken. Öppna resultatet för att se dem, eller utforska yrkena här.",
+
+    // ── Yrkeskort (§3C) ─────────────────────────────────────────────────
+    "cc.card.cta": "Se yrket",
+    "cc.card.formal": "Formellt krav",
+    "cc.card.formal.none": "Inga formella krav registrerade",
+
+    // ── Karriärsteg — three kinds, derived (§3D) ────────────────────────
+    "cc.step.adjacent": "Närliggande steg",
+    "cc.step.formal_gate": "Kräver utbildning eller myndighetsbeslut",
+    "cc.step.long_term": "Långsiktigt mål",
+    "cc.step.adjacent.help":
+      "Bygger vidare på erfarenhet du kan skaffa i din nuvarande roll.",
+    "cc.step.formal_gate.help":
+      "Yrket är reglerat. Det krävs en särskild utbildning, ett godkännande eller ett förordnande innan du kan arbeta i rollen — det räcker inte att vara erfaren.",
+    "cc.step.long_term.help":
+      "Ligger längre bort. Det förutsätter bredare erfarenhet eller ett ledaransvar, och nås oftast via ett mellansteg.",
+    "cc.step.why": "Varför vägen är möjlig",
+    "cc.step.why.body": "Kompetenser som båda rollerna efterfrågar:",
+    "cc.step.why.none":
+      "Rollerna delar inga registrerade kompetenskrav. Kopplingen finns i data, men överföringen är inte beskriven.",
+    "cc.step.experience": "Erfarenhet som brukar behövas",
+    "cc.step.formal": "Formella krav i nästa roll",
+    "cc.step.formal.none": "Inga formella krav är registrerade för nästa roll.",
+    "cc.step.build": "Det här efterfrågas mer av",
+    "cc.step.via": "Möjligt mellansteg",
+    "cc.step.via.body": "Registrerade roller som ligger mellan de här två:",
+    "cc.step.next": "Nästa steg",
+    "cc.step.next.guide": "Se hela yrkesguiden",
+    "cc.step.next.jobs": "Se lediga jobb",
+    "cc.step.likelihood.common": "Vanlig övergång",
+    "cc.step.likelihood.possible": "Möjlig övergång",
+    "cc.step.evidence.implicit":
+      "Kopplingen mellan yrkena är registrerad. Någon granskad beskrivning av själva övergången finns ännu inte.",
+
+    // ── Yrkessidans nya avsnitt (§4) ────────────────────────────────────
+    "cc.p.next.title": "Möjliga nästa karriärsteg",
+    "cc.p.next.subtitle":
+      "Stegen bygger på registrerade kopplingar mellan yrkena. De är exempel på vad som är möjligt — inte en ordning du måste följa.",
+    "cc.p.next.none": "Inga nästa steg är registrerade för det här yrket ännu.",
+    "cc.p.prev.title": "Vanliga vägar hit",
+    "cc.p.regulatory.boundary": "Avgränsning",
+    "cc.p.education.title": "Utbildning och behörighet",
+    "cc.p.education.subtitle":
+      "Vi skiljer på vad regelverket kräver och vad som är rekommenderad utveckling. Varje post visar vilket land den gäller i, vilken källa den bygger på och när den senast granskades.",
+    "cc.p.education.relevance.formal_requirement": "Formellt krav",
+    "cc.p.education.relevance.recommended_development": "Rekommenderad utveckling",
+    "cc.p.education.formal.help":
+      "Krävs enligt regelverket för att arbeta i rollen i angivet land.",
+    "cc.p.education.recommended.help":
+      "Stärker profilen. Det är inget krav för att få arbeta i rollen.",
+    "cc.p.education.country": "Gäller i",
+    "cc.p.education.source": "Källa",
+    "cc.p.education.reviewed": "Granskad",
+    "cc.p.education.provider": "Anordnare",
+    "cc.p.education.underreview":
+      "Ytterligare utbildningsvägar är kopplade till yrket men är under granskning och visas inte ännu:",
+    "cc.p.education.none":
+      "Inga granskade utbildningar eller certifikat är registrerade för det här yrket ännu.",
+    "cc.p.education.sponsored": "Sponsrad utbildningsanordnare",
+    "cc.p.education.sponsored.help":
+      "Betald placering. Den påverkar varken vilka yrken som rekommenderas, vilka karriärvägar som visas eller i vilken ordning innehållet står.",
+    "cc.p.education.neutrality":
+      "Ordningen nedan bestäms av om något är ett formellt krav eller rekommenderad utveckling. Den påverkas inte av betalning.",
+
+    // ── Relaterade lediga jobb (§4.8, §5) ───────────────────────────────
+    "cc.p.jobs.title": "Relaterade lediga jobb",
+    "cc.p.jobs.cta": "Se lediga jobb",
+    "cc.p.jobs.body":
+      "Annonserna matchas mot yrket. Om ett krav i annonsen skiljer sig från den här guiden är det annonsen som gäller för just den tjänsten.",
+    "cc.p.jobs.unavailable.title": "Vi kan inte söka jobb på det här yrket ännu",
+    "cc.p.jobs.unavailable.body":
+      "Yrket saknar ännu en koppling till jobbkatalogen, så en sökning skulle visa noll träffar av fel anledning. Under tiden finns de här vägarna vidare:",
+    "cc.p.jobs.alt.all": "Se alla lediga jobb",
+    "cc.p.jobs.alt.related": "Se relaterade yrken",
+
+    // ── Ditt nästa steg (§5) ────────────────────────────────────────────
+    "cc.p.act.title": "Ditt nästa steg",
+    "cc.p.act.passport.title": "Lägg till relevant merit i ditt Passport",
+    "cc.p.act.passport.body":
+      "Ditt Security Passport samlar dina meriter. Om en merit inte visas där betyder det att den inte är registrerad — inte att du saknar den. CQrityjob kontrollerar inte om du uppfyller kraven för ett yrke.",
+    "cc.p.act.passport.cta": "Lägg till merit",
+    "cc.p.act.passport.ctaSignedOut": "Skapa ditt Passport",
+    "cc.p.act.test.title": "Osäker på om rollen passar dig?",
+
+    // ── Utforska: snabbval ──────────────────────────────────────────────
+    "cc.explore.quick.title": "Snabbval",
+    "cc.explore.quick.entry": "Roller du kan börja i utan tidigare erfarenhet",
+    "cc.explore.quick.next": "Roller på nästa nivå",
+    "cc.explore.quick.org": "Jag representerar en organisation",
     // ── Security Competence Academy — participant delivery ──────────────
     "academy.eyebrow": "Kompetensutveckling",
     "academy.intro.title": "Bedömning av yrkeskompetens",
@@ -8303,11 +8434,13 @@ export const dictionaries = {
 
     // § 1 — Hero
     "cc.hero.eyebrow": "Profession guides · Career routes · Career test",
-    "cc.hero.title": "Security Career Center",
+    "cc.hero.title": "Explore professions and find your next career step",
+    "cc.hero.name": "Career Center",
     "cc.hero.lead":
       "Find out what the professions in the security industry actually involve, what it takes to get into them, and which step makes sense for you next.",
     "cc.hero.cta.test": "Start the career test — about 5 min, no account",
-    "cc.hero.cta.explore": "Explore professions",
+    "cc.hero.cta.explore": "Explore all professions",
+    "cc.hero.cta.personal": "Start from my result",
     "cc.hero.trust": "Free. Not an assessment of your competence or your employability.",
     "cc.hero.fact.guides": "completed profession guides",
     "cc.hero.fact.sources.title": "Sourced and reviewed",
@@ -8478,6 +8611,131 @@ export const dictionaries = {
     "cc.orientation.leadership": "Leadership",
     "cc.regulated.regulated": "Regulated",
     "cc.regulated.not_regulated": "Not regulated",
+
+    // ── Your direction — the personal section (§3B) ─────────────────────
+    "cc.me.eyebrow": "Your direction",
+    "cc.me.title": "Based on your career analysis",
+    "cc.me.subtitle":
+      "The professions below come from your own career analysis. They are guidance on direction — not a decision that you are suitable or eligible.",
+    "cc.me.completed": "Analysis completed",
+    "cc.me.rank": "Recommendation",
+    "cc.me.reason.ranked": "Your career analysis ranked this profession highest of those it considered.",
+    "cc.me.reason.rankedN": "Your career analysis ranked this profession number {n}.",
+    "cc.me.reason.indicative":
+      "The analysis ranked this as the closest match in the catalogue. That is a direction worth exploring, not an outcome.",
+    "cc.me.noGuide": "We have no published profession guide for this occupation yet.",
+    "cc.me.notAssessed":
+      "The analysis has not tested formal requirements, authorisations or whether you are qualified for the role. That is decided by regulation and by the employer.",
+    "cc.me.frozenLocale":
+      "This result was saved in a different language, and the job titles are shown as the analysis wrote them.",
+    "cc.me.view": "Open the full analysis",
+    "cc.me.cta": "See the profession",
+    "cc.me.loading": "Loading your career analysis…",
+    "cc.me.loading.title": "Where are you now?",
+    "cc.me.invite.title": "Not sure where you fit?",
+    "cc.me.invite.body":
+      "The career analysis gives you occupations to read more about. It does not assess your competence and produces no pass or fail.",
+    "cc.me.invite.signedout":
+      "Taken it before? Sign in and your result appears here.",
+    "cc.me.invite.cta": "Take the career analysis",
+    "cc.me.invite.secondary": "Explore all professions instead",
+    "cc.me.unreadable.title": "We cannot read your latest analysis right now",
+    "cc.me.unreadable.body":
+      "The result is still there — it is the read that did not go through. Try again, or open your analysis history.",
+    "cc.me.unreadable.retry": "Try again",
+    "cc.me.unreadable.history": "See my analyses",
+    "cc.me.noroles.title": "Your analysis names directions rather than individual professions",
+    "cc.me.noroles.body":
+      "The version you took names career areas instead of occupations. Open the result to see them, or explore the professions here.",
+
+    // ── Profession card (§3C) ───────────────────────────────────────────
+    "cc.card.cta": "See the profession",
+    "cc.card.formal": "Formal requirement",
+    "cc.card.formal.none": "No formal requirements recorded",
+
+    // ── Career steps — three kinds, derived (§3D) ───────────────────────
+    "cc.step.adjacent": "Adjacent step",
+    "cc.step.formal_gate": "Requires training or an authority decision",
+    "cc.step.long_term": "Longer-term goal",
+    "cc.step.adjacent.help":
+      "Builds on experience you can gain in your current role.",
+    "cc.step.formal_gate.help":
+      "The role is regulated. Specific training, an approval or an appointment is required before you may work in it — experience alone is not enough.",
+    "cc.step.long_term.help":
+      "Further away. It presupposes broader experience or leadership responsibility, and is usually reached through an intermediate step.",
+    "cc.step.why": "Why this move is possible",
+    "cc.step.why.body": "Competencies both roles ask for:",
+    "cc.step.why.none":
+      "The roles share no recorded competency demands. The link exists in the data, but what transfers is not described.",
+    "cc.step.experience": "Experience usually needed",
+    "cc.step.formal": "Formal requirements in the next role",
+    "cc.step.formal.none": "No formal requirements are recorded for the next role.",
+    "cc.step.build": "More is asked of",
+    "cc.step.via": "Possible intermediate step",
+    "cc.step.via.body": "Recorded roles that sit between these two:",
+    "cc.step.next": "Next step",
+    "cc.step.next.guide": "See the full profession guide",
+    "cc.step.next.jobs": "See open jobs",
+    "cc.step.likelihood.common": "Common transition",
+    "cc.step.likelihood.possible": "Possible transition",
+    "cc.step.evidence.implicit":
+      "The link between the professions is recorded. A reviewed description of the transition itself does not exist yet.",
+
+    // ── New profession-guide sections (§4) ──────────────────────────────
+    "cc.p.next.title": "Possible next career steps",
+    "cc.p.next.subtitle":
+      "The steps come from recorded links between the professions. They are examples of what is possible — not an order you have to follow.",
+    "cc.p.next.none": "No next steps are recorded for this profession yet.",
+    "cc.p.prev.title": "Common routes in",
+    "cc.p.regulatory.boundary": "Scope",
+    "cc.p.education.title": "Education and authorisation",
+    "cc.p.education.subtitle":
+      "We separate what regulation requires from what is recommended development. Every entry states the country it applies in, the source it rests on and when it was last reviewed.",
+    "cc.p.education.relevance.formal_requirement": "Formal requirement",
+    "cc.p.education.relevance.recommended_development": "Recommended development",
+    "cc.p.education.formal.help":
+      "Required by regulation in order to work in the role in the stated country.",
+    "cc.p.education.recommended.help":
+      "Strengthens the profile. It is not a requirement for working in the role.",
+    "cc.p.education.country": "Applies in",
+    "cc.p.education.source": "Source",
+    "cc.p.education.reviewed": "Reviewed",
+    "cc.p.education.provider": "Provider",
+    "cc.p.education.underreview":
+      "Further education pathways are linked to this profession but are under review and not shown yet:",
+    "cc.p.education.none":
+      "No reviewed education or certification is recorded for this profession yet.",
+    "cc.p.education.sponsored": "Sponsored training provider",
+    "cc.p.education.sponsored.help":
+      "A paid placement. It affects neither which professions are recommended, nor which career routes are shown, nor the order this content appears in.",
+    "cc.p.education.neutrality":
+      "The order below is decided by whether something is a formal requirement or recommended development. It is not affected by payment.",
+
+    // ── Related open jobs (§4.8, §5) ────────────────────────────────────
+    "cc.p.jobs.title": "Related open jobs",
+    "cc.p.jobs.cta": "See open jobs",
+    "cc.p.jobs.body":
+      "Adverts are matched to the profession. Where an advert's requirement differs from this guide, the advert governs that particular position.",
+    "cc.p.jobs.unavailable.title": "We cannot search jobs on this profession yet",
+    "cc.p.jobs.unavailable.body":
+      "The profession has no link into the job catalogue yet, so a search would return zero results for the wrong reason. In the meantime:",
+    "cc.p.jobs.alt.all": "See all open jobs",
+    "cc.p.jobs.alt.related": "See related professions",
+
+    // ── Your next step (§5) ─────────────────────────────────────────────
+    "cc.p.act.title": "Your next step",
+    "cc.p.act.passport.title": "Add a relevant merit to your Passport",
+    "cc.p.act.passport.body":
+      "Your Security Passport holds your merits. If a merit is not shown there it means it is not registered — not that you lack it. CQrityjob does not check whether you meet the requirements for a profession.",
+    "cc.p.act.passport.cta": "Add a merit",
+    "cc.p.act.passport.ctaSignedOut": "Create your Passport",
+    "cc.p.act.test.title": "Not sure whether this role suits you?",
+
+    // ── Explore: quick choices ──────────────────────────────────────────
+    "cc.explore.quick.title": "Quick choices",
+    "cc.explore.quick.entry": "Roles you can start in with no prior experience",
+    "cc.explore.quick.next": "Roles at the next level",
+    "cc.explore.quick.org": "I represent an organisation",
     // ── Security Competence Academy — participant delivery ──────────────
     "academy.eyebrow": "Competence development",
     "academy.intro.title": "Professional competence assessment",

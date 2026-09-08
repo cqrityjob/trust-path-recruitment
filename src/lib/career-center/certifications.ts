@@ -59,7 +59,7 @@ export const certifications: readonly Certification[] = [
     issuer: { sv: "ISO / ackrediterade certifieringsorgan", en: "ISO / accredited certification bodies" },
     scope: ["INTL"],
     careerLevel: "senior",
-    relatedProfessions: ["crisis-continuity-manager", "security-manager"],
+    relatedProfessions: ["crisis-continuity-manager", "security-manager", "security-coordinator"],
     officialSource: {
       label: { sv: "ISO 22301:2019", en: "ISO 22301:2019" },
       publisher: "International Organization for Standardization",
@@ -74,7 +74,7 @@ export const certifications: readonly Certification[] = [
     issuer: { sv: "ISO", en: "ISO" },
     scope: ["INTL"],
     careerLevel: "senior",
-    relatedProfessions: ["risk-manager", "security-manager"],
+    relatedProfessions: ["risk-manager", "security-manager", "security-coordinator"],
     officialSource: {
       label: { sv: "ISO 31000:2018", en: "ISO 31000:2018" },
       publisher: "International Organization for Standardization",

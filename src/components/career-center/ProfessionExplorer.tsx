@@ -355,6 +355,10 @@ export function ProfessionExplorer({
                   description={L(p.description, lang)}
                   icon={icon(p.icon)}
                   level={t(`cc.level.${p.level}` as TranslationKey)}
+                  family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
+                  formalRequirement={
+                    p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
+                  }
                   onOpen={onProfessionOpen}
                 />
               </li>

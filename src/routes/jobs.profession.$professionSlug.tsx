@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
-import { getProfession } from "@/lib/career-center/professions";
+import { resolveProfessionRef } from "@/lib/career-center/profession-links";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { JobResults } from "@/components/jobs/JobResults";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
@@ -11,7 +11,12 @@ import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 export const Route = createFileRoute("/jobs/profession/$professionSlug")({
   ssr: false,
   head: ({ params }) => {
-    const profession = getProfession(params.professionSlug);
+    // The route param is a CIG slug: `jobs.profession_slug` is a foreign key
+    // onto `cig_professions.slug`. Resolving it through the Career Center's
+    // own `getProfession` matched only the four slugs that happen to be
+    // spelled the same in both namespaces, and printed the raw slug —
+    // "vaktare", "sakerhetschef" — as the page title for the rest.
+    const profession = resolveProfessionRef(params.professionSlug)?.profession;
     const url = `https://trust-path-recruitment.lovable.app/jobs/profession/${params.professionSlug}`;
     const name = profession ? profession.titleEn : params.professionSlug;
     const title = `${name} jobs — CQrityjob`;
@@ -34,10 +39,9 @@ export const Route = createFileRoute("/jobs/profession/$professionSlug")({
 function JobsByProfession() {
   const { professionSlug } = Route.useParams();
   const { t, lang } = useT();
-  const profession = getProfession(professionSlug);
+  const profession = resolveProfessionRef(professionSlug)?.profession;
   const profileState = useCareerProfileForJobs();
-  const profile =
-    profileState.status === "ready" ? profileState.data.profile : undefined;
+  const profile = profileState.status === "ready" ? profileState.data.profile : undefined;
 
   const q = useQuery({
     queryKey: ["public-jobs", "profession", professionSlug],

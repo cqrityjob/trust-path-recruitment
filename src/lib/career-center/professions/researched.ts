@@ -457,3 +457,149 @@ export const closeProtection: Profession = {
     { label: { sv: "Polismyndigheten – Bevakningsföretag och personskyddsväktare", en: "Swedish Police – Guarding companies and close protection" }, publisher: "Polismyndigheten", url: "https://polisen.se/tjanster-tillstand/tillstand/bevakningsforetag/" },
   ],
 };
+// ── SÄKERHETSSAMORDNARE ────────────────────────────────────────────────
+//
+// Promoted from `placeholders.ts` for the Career Center pilot, because the
+// chain the Career Center is being built to explain runs through it:
+//
+//   Väktare -> Ordningsvakt / Skyddsvakt -> Säkerhetssamordnare -> Säkerhetschef
+//
+// Without a published guide here the operational route jumped from a
+// first-year appointment straight to Säkerhetschef, which is not how the
+// industry works and is exactly the claim this rebuild exists to stop making.
+//
+// ── THE CAREFUL PART: THIS TITLE IS NOT REGULATED ──────────────────────
+//
+// "Säkerhetssamordnare" is a job title, not a legal status. Nobody appoints
+// one, no authority approves one, and there is no mandated training. The role
+// is nevertheless shaped by two statutes, and the guide cites them for what
+// they actually say rather than turning either into an entry requirement:
+//
+//   * Lag (2006:544) obliges municipalities and regions to produce risk and
+//     vulnerability analyses and preparedness plans. Coordinating that work
+//     is what the public-sector version of this role does.
+//
+//   * Säkerhetsskyddslagen (2018:585) requires an operator covered by it to
+//     appoint a SÄKERHETSSKYDDSCHEF. That is a separate statutory function
+//     with its own duties — an organisation can have both — and conflating
+//     the two would invent a legal requirement for an unregulated job.
+//
+// So `regulated: false` is correct AND `regulatoryNotes` is present: the note
+// exists to state a boundary, not to announce a requirement. It also carries
+// no `formalRequirements`, deliberately — listing "erfarenhet från branschen"
+// under a heading reading "Formella krav" would manufacture one. What
+// employers ask for belongs in a job advert, a different surface with a
+// different evidence standard.
+export const securityCoordinator: Profession = {
+  id: "security-coordinator",
+  slug: "security-coordinator",
+  status: "researched",
+  lastVerified: "2026-09-08",
+  titleCanonical: "Security Coordinator",
+  titleSv: "Säkerhetssamordnare",
+  titleEn: "Security Coordinator",
+  aliases: [
+    { sv: "Säkerhets- och beredskapssamordnare", en: "Security and preparedness coordinator" },
+  ],
+  family: "security_leadership_governance",
+  category: "corporate",
+  level: "mid",
+  sector: "hybrid",
+  orientation: ["operational", "analytical", "leadership"],
+  icon: "clipboard",
+  description: {
+    sv: "Samordnar säkerhets-, trygghets- och beredskapsarbetet i en organisation, mellan operativ verksamhet och ledning.",
+    en: "Coordinates security, safety and preparedness work across an organisation, between operations and management.",
+  },
+  overview: {
+    sv: "Säkerhetssamordnaren håller ihop en organisations säkerhetsarbete: riskanalyser, rutiner, incidentuppföljning, övningar och kontakten med bevakningsleverantörer, polis och andra myndigheter. Rollen finns både i kommuner och regioner, där lag (2006:544) kräver risk- och sårbarhetsanalyser och beredskapsplanering, och i privata verksamheter. Titeln är inte reglerad och kräver inget förordnande.",
+    en: "A security coordinator holds an organisation's security work together: risk analysis, routines, incident follow-up, exercises, and the relationship with guarding suppliers, police and other authorities. The role exists both in municipalities and regions — where Swedish law (2006:544) requires risk and vulnerability analyses and preparedness planning — and in private organisations. The title is not regulated and requires no appointment.",
+  },
+  roleFor: {
+    sv: "Rollen passar dig som är strukturerad, hellre skriver ned en rutin än löser samma sak två gånger, och trivs med att arbeta mellan operativa team och ledning.",
+    en: "Suits people who are structured, would rather write the routine down than solve the same thing twice, and are comfortable working between operational teams and management.",
+  },
+  responsibilities: [
+    {
+      sv: "Samordna risk- och sårbarhetsanalyser och följa upp åtgärderna.",
+      en: "Coordinate risk and vulnerability analyses and follow up on the resulting measures.",
+    },
+    {
+      sv: "Ta fram och underhålla rutiner, instruktioner och beredskapsplaner.",
+      en: "Produce and maintain routines, instructions and preparedness plans.",
+    },
+    {
+      sv: "Följa upp incidenter och tillbud och återföra lärdomar till verksamheten.",
+      en: "Follow up incidents and near misses and feed the lessons back into the organisation.",
+    },
+    {
+      sv: "Planera och genomföra utbildning och övning för medarbetare.",
+      en: "Plan and run training and exercises for staff.",
+    },
+    {
+      sv: "Vara kontaktväg mot bevakningsleverantör, polis och andra myndigheter.",
+      en: "Act as the contact point towards guarding suppliers, police and other authorities.",
+    },
+  ],
+  workEnvironments: [
+    {
+      sv: "Kommun- eller regionförvaltning, ofta i en säkerhets- eller beredskapsfunktion.",
+      en: "Municipal or regional administration, usually in a security or preparedness function.",
+    },
+    {
+      sv: "Fastighets-, handels-, industri- eller transportbolag med egen säkerhetsfunktion.",
+      en: "Property, retail, industrial or transport companies with an in-house security function.",
+    },
+    {
+      sv: "Kontorsarbete med inslag av platsbesök, övningar och beredskap.",
+      en: "Office work with site visits, exercises and on-call elements.",
+    },
+  ],
+  industries: [
+    {
+      sv: "Offentlig förvaltning, fastighet, handel, industri, transport, vård.",
+      en: "Public administration, real estate, retail, industry, transport, healthcare.",
+    },
+  ],
+  competencies: [
+    { competencyId: "planning", requiredLevel: 4, critical: true },
+    { competencyId: "communication", requiredLevel: 4, critical: true },
+    { competencyId: "risk_awareness", requiredLevel: 4 },
+    { competencyId: "reporting", requiredLevel: 4 },
+    { competencyId: "analytical", requiredLevel: 3 },
+    { competencyId: "teamwork", requiredLevel: 3 },
+    { competencyId: "leadership", requiredLevel: 3 },
+    { competencyId: "legal_regulatory", requiredLevel: 3 },
+  ],
+  regulated: false,
+  regulatoryNotes: {
+    sv: "Säkerhetssamordnare är inte ett reglerat yrke — titeln kräver varken föreskriven utbildning, godkännande eller förordnande. Den ska inte förväxlas med säkerhetsskyddschef, som är en särskild funktion som en verksamhetsutövare ska utse enligt säkerhetsskyddslagen (2018:585). En organisation kan ha båda.",
+    en: "Security coordinator is not a regulated profession — the title carries no mandated training, approval or appointment. It should not be confused with a säkerhetsskyddschef, a distinct function an operator must appoint under the Swedish Protective Security Act (2018:585). An organisation can have both.",
+  },
+  countries: ["SE"],
+  educationPathways: [],
+  certifications: ["iso-31000", "iso-22301"],
+  previousRoles: ["security-officer", "ordningsvakt", "skyddsvakt"],
+  nextRoles: ["security-manager"],
+  related: ["security-manager", "risk-manager", "crisis-continuity-manager"],
+  recommendedAssessment: "security-career-assessment",
+  relatedJobsQuery: "security-coordinator",
+  sources: [
+    {
+      label: {
+        sv: "Lag (2006:544) om kommuners och regioners åtgärder inför och vid extraordinära händelser i fredstid och höjd beredskap",
+        en: "Swedish Act (2006:544) on municipal and regional measures before and during extraordinary events in peacetime and during heightened alert",
+      },
+      publisher: "Sveriges riksdag",
+      url: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-2006544-om-kommuners-och-regioners-atgarder_sfs-2006-544/",
+    },
+    {
+      label: {
+        sv: "Säkerhetsskyddslag (2018:585)",
+        en: "Swedish Protective Security Act (2018:585)",
+      },
+      publisher: "Sveriges riksdag",
+      url: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/sakerhetsskyddslag-2018585_sfs-2018-585/",
+    },
+  ],
+};
