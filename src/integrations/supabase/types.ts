@@ -12070,17 +12070,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "sp_disclosure_items_disclosure_id_fkey"
-            columns: ["disclosure_id"]
-            isOneToOne: false
-            referencedRelation: "sp_disclosures"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "sp_disclosure_items_claim_id_fkey"
             columns: ["claim_id"]
             isOneToOne: false
             referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_disclosure_items_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: false
+            referencedRelation: "sp_disclosures"
             referencedColumns: ["id"]
           },
           {
@@ -15292,6 +15292,15 @@ export type Database = {
         Args: { _claim_id: string; _reason: string }
         Returns: undefined
       }
+      sp_assert_share_inputs: {
+        Args: {
+          _expires_days: number
+          _locale: string
+          _purpose: string
+          _recipient_hint: string
+        }
+        Returns: undefined
+      }
       sp_attach_evidence: {
         Args: {
           _claim_id: string
@@ -15347,32 +15356,14 @@ export type Database = {
           _claim_ids: string[]
           _experience_ids: string[]
           _expires_days: number
-          _locale: string | null
-          _purpose: string | null
-          _recipient_hint: string | null
-          _request_key: string | null
+          _locale: string
+          _purpose: string
+          _recipient_hint: string
+          _request_key: string
         }
         Returns: Json
       }
       sp_disclosure_payload: { Args: { _disclosure_id: string }; Returns: Json }
-      sp_replace_selected_disclosure: {
-        Args: {
-          _disclosure_id: string
-          _request_key: string
-          _revoke_previous: boolean
-        }
-        Returns: Json
-      }
-      sp_preview_selected_disclosure: {
-        Args: {
-          _claim_ids: string[]
-          _experience_ids: string[]
-          _expires_days: number
-          _locale: string | null
-          _purpose: string | null
-        }
-        Returns: Json
-      }
       sp_dispute_queue: { Args: never; Returns: Json }
       sp_employer_attestation_queue: {
         Args: { _employer_id: string }
@@ -15443,9 +15434,27 @@ export type Database = {
           repaired: boolean
         }[]
       }
+      sp_preview_selected_disclosure: {
+        Args: {
+          _claim_ids: string[]
+          _experience_ids: string[]
+          _expires_days: number
+          _locale: string
+          _purpose: string
+        }
+        Returns: Json
+      }
       sp_raise_dispute: {
         Args: { _claim_id: string; _period_id: string; _reason: string }
         Returns: undefined
+      }
+      sp_replace_selected_disclosure: {
+        Args: {
+          _disclosure_id: string
+          _request_key: string
+          _revoke_previous: boolean
+        }
+        Returns: Json
       }
       sp_resolve_dispute: {
         Args: {
@@ -15461,6 +15470,18 @@ export type Database = {
         Args: { _market_pack_code: string; _user_id: string }
         Returns: undefined
       }
+      sp_selected_merits_payload: {
+        Args: {
+          _authorised_at: string
+          _claim_ids: string[]
+          _experience_ids: string[]
+          _expires_at: string
+          _holder: string
+          _locale: string
+          _purpose: string
+        }
+        Returns: Json
+      }
       sp_share_passport_with_application: {
         Args: {
           _application_id: string
@@ -15468,6 +15489,19 @@ export type Database = {
           _focus_claim_id?: string
           _package_code: string
           _purpose?: string
+        }
+        Returns: string
+      }
+      sp_share_request_fingerprint: {
+        Args: {
+          _claim_ids: string[]
+          _experience_ids: string[]
+          _expires_days: number
+          _holder: string
+          _locale: string
+          _purpose: string
+          _recipient_hint: string
+          _source: string
         }
         Returns: string
       }

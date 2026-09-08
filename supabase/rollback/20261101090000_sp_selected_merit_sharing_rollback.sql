@@ -30,8 +30,9 @@
 --     request key stops being distinguishable from a genuine retry.
 --   * The holder's language choice for a recipient is lost.
 --   * The holder can no longer reissue a link over the same contents.
---   * The anonymous payload carries database identifiers again, and the check
---     time returns to whatever the visitor's own clock says.
+--   * Selected shares no longer expose their identifier-free projection or a
+--     server-authored check time because they fail closed while rolled back.
+--     The five legacy package payloads remain byte-identical throughout.
 --
 -- ── DATA SAFETY ────────────────────────────────────────────────────────
 --
@@ -192,8 +193,13 @@ END; $function$;
 -- The internals go last: nothing calls them once the payload and the
 -- anonymous boundary have been restored.
 DROP FUNCTION IF EXISTS public.sp_selected_merits_payload(uuid,uuid[],uuid[],text,text,timestamptz,timestamptz);
+DROP FUNCTION IF EXISTS public.sp_assert_share_inputs(integer, text, text, text);
 DROP FUNCTION IF EXISTS public.sp_assert_share_inputs(integer, text);
 DROP FUNCTION IF EXISTS public.sp_share_request_fingerprint(uuid,uuid[],uuid[],integer,text,text,text,uuid);
+
+-- Restore the pre-migration direct column grant exactly. The forward migration
+-- intentionally removes it because revocation must be monotonic.
+GRANT UPDATE (revoked_at) ON public.sp_disclosures TO authenticated;
 
 -- The closed set, back to five. NOT VALID so no existing row is examined:
 -- a selected share created while the forward migration was live keeps its row
