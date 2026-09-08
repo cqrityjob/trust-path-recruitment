@@ -3093,6 +3093,12 @@ export const dictionaries = {
     "cc.regulated.regulated": "Reglerad",
     "cc.regulated.not_regulated": "Ej reglerad",
 
+    // ── Progressiv visning: referensmaterial ────────────────────────────
+    "cc.routes.showMore": "Visa fler karriärvägar",
+    "cc.trust.show": "Visa hur vi bygger innehållet",
+    "cc.p.prev.show": "Visa vanliga vägar hit",
+    "cc.p.related.show": "Visa relaterade yrken",
+
     // ── Karriärvägar som grenar, inte en stege ──────────────────────────
     "cc.routes.origin": "Utgår från",
     "cc.routes.independent":
@@ -3195,8 +3201,7 @@ export const dictionaries = {
     "cc.step.adjacent": "Närliggande steg",
     "cc.step.formal_gate": "Kräver utbildning eller myndighetsbeslut",
     "cc.step.long_term": "Långsiktigt mål",
-    "cc.step.adjacent.help":
-      "Bygger vidare på erfarenhet du kan skaffa i din nuvarande roll.",
+    "cc.step.adjacent.help": "Bygger vidare på erfarenhet du kan skaffa i din nuvarande roll.",
     "cc.step.formal_gate.help":
       "Yrket är reglerat. Det krävs en särskild utbildning, ett godkännande eller ett förordnande innan du kan arbeta i rollen — det räcker inte att vara erfaren.",
     "cc.step.long_term.help":
@@ -8667,6 +8672,12 @@ export const dictionaries = {
     "cc.regulated.regulated": "Regulated",
     "cc.regulated.not_regulated": "Not regulated",
 
+    // ── Progressive disclosure: reference material ──────────────────────
+    "cc.routes.showMore": "Show more career routes",
+    "cc.trust.show": "Show how we build the content",
+    "cc.p.prev.show": "Show common routes in",
+    "cc.p.related.show": "Show related professions",
+
     // ── Career routes as branches, not a ladder ─────────────────────────
     "cc.routes.origin": "Starting from",
     "cc.routes.independent":
@@ -8727,7 +8738,8 @@ export const dictionaries = {
       "The professions below come from your own career analysis. They are guidance on direction — not a decision that you are suitable or eligible.",
     "cc.me.completed": "Analysis completed",
     "cc.me.rank": "Recommendation",
-    "cc.me.reason.ranked": "Your career analysis ranked this profession highest of those it considered.",
+    "cc.me.reason.ranked":
+      "Your career analysis ranked this profession highest of those it considered.",
     "cc.me.reason.rankedN": "Your career analysis ranked this profession number {n}.",
     "cc.me.reason.indicative":
       "The analysis ranked this as the closest match in the catalogue. That is a direction worth exploring, not an outcome.",
@@ -8743,8 +8755,7 @@ export const dictionaries = {
     "cc.me.invite.title": "Not sure where you fit?",
     "cc.me.invite.body":
       "The career analysis gives you occupations to read more about. It does not assess your competence and produces no pass or fail.",
-    "cc.me.invite.signedout":
-      "Taken it before? Sign in and your result appears here.",
+    "cc.me.invite.signedout": "Taken it before? Sign in and your result appears here.",
     "cc.me.invite.cta": "Take the career analysis",
     "cc.me.invite.secondary": "Explore all professions instead",
     "cc.me.unreadable.title": "We cannot read your latest analysis right now",
@@ -8765,8 +8776,7 @@ export const dictionaries = {
     "cc.step.adjacent": "Adjacent step",
     "cc.step.formal_gate": "Requires training or an authority decision",
     "cc.step.long_term": "Longer-term goal",
-    "cc.step.adjacent.help":
-      "Builds on experience you can gain in your current role.",
+    "cc.step.adjacent.help": "Builds on experience you can gain in your current role.",
     "cc.step.formal_gate.help":
       "The role is regulated. Specific training, an approval or an appointment is required before you may work in it — experience alone is not enough.",
     "cc.step.long_term.help":

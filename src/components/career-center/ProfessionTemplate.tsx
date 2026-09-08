@@ -450,9 +450,20 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
           </p>
         )}
 
+        {/* "Vanliga vägar hit" is reference: a reader on this guide is asking
+            where they can GO. Folded, and counted so the summary is honest
+            about how much is behind it. */}
         {inbound.length > 0 && (
-          <div className="mt-14">
-            <h3 className="text-xl font-semibold tracking-tight text-foreground">
+          <details data-inbound-disclosure className="group mt-12">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+              {t("cc.p.prev.show")}
+              <span className="tabular-nums text-muted-foreground">({inbound.length})</span>
+              <ChevronDown
+                className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <h3 className="mt-6 text-xl font-semibold tracking-tight text-foreground">
               {t("cc.p.prev.title")}
             </h3>
             <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -471,7 +482,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
                 />
               ))}
             </div>
-          </div>
+          </details>
         )}
         <p className="mt-8 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
           {t("cc.routes.disclaimer")}
@@ -522,28 +533,41 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("cc.p.related")}
           </h2>
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {relatedRoles.map((p) => (
-              <ProfessionCard
-                key={p.slug}
-                slug={p.slug}
-                title={lang === "sv" ? p.titleSv : p.titleEn}
-                description={L(p.description, lang)}
-                icon={icon(p.icon)}
-                level={t(`cc.level.${p.level}` as TranslationKey)}
-                family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
-                formalRequirement={
-                  p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
-                }
-                onOpen={(slug) =>
-                  track("career_profession_opened", {
-                    surface: "profession_related",
-                    subject: slug,
-                  })
-                }
+          {/* A reference list at the foot of the page. Four profession cards
+              unfolded were 1,600px on a phone, below everything a reader came
+              for. */}
+          <details data-related-disclosure className="group mt-6">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+              {t("cc.p.related.show")}
+              <span className="tabular-nums text-muted-foreground">({relatedRoles.length})</span>
+              <ChevronDown
+                className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
               />
-            ))}
-          </div>
+            </summary>
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedRoles.map((p) => (
+                <ProfessionCard
+                  key={p.slug}
+                  slug={p.slug}
+                  title={lang === "sv" ? p.titleSv : p.titleEn}
+                  description={L(p.description, lang)}
+                  icon={icon(p.icon)}
+                  level={t(`cc.level.${p.level}` as TranslationKey)}
+                  family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
+                  formalRequirement={
+                    p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
+                  }
+                  onOpen={(slug) =>
+                    track("career_profession_opened", {
+                      surface: "profession_related",
+                      subject: slug,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          </details>
         </Section>
       )}
 

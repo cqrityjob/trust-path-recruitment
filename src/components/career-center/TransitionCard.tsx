@@ -132,20 +132,26 @@ export function TransitionCard({
         )}
       </div>
 
-      {/* The pair, always in reading order from -> to, whichever direction the
-          card is describing. */}
-      <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
-        <span>{fromTitle}</span>
-        <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" aria-hidden />
-        <span className="font-semibold text-foreground">{toTitle}</span>
-      </p>
+      {/* The pair, in reading order. Rendered only for an INBOUND card, where
+          the heading names the origin and the direction of travel would
+          otherwise be ambiguous. On an onward card the section heading
+          already says "steg härifrån" and the line is a repeat. */}
+      {direction === "inbound" && (
+        <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
+          <span>{fromTitle}</span>
+          <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" aria-hidden />
+          <span className="font-semibold text-foreground">{toTitle}</span>
+        </p>
+      )}
 
-      <Heading className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+      <Heading className="mt-3 text-lg font-semibold tracking-tight text-foreground">
+        {/* A heading link is still a tap target: `min-h-11` rather than the
+            22px an inline link inherits from its line box. */}
         <Link
           to="/career-center/$profession"
           params={{ profession: subject.slug }}
           onClick={() => onOpen?.(subject.slug)}
-          className="underline-offset-4 hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="inline-flex min-h-11 items-center underline-offset-4 hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {title}
         </Link>
@@ -299,20 +305,14 @@ export function TransitionCard({
         </dl>
       </details>
 
-      {/* One primary action per card. The jobs link only exists when the
-          profession has a CIG node the job catalogue can actually be queried
-          on — otherwise it would always render "no openings". */}
-      <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-5">
-        <Link
-          to="/career-center/$profession"
-          params={{ profession: subject.slug }}
-          onClick={() => onOpen?.(subject.slug)}
-          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          {t("cc.step.next.guide")}
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-        </Link>
-        {jobsSlug && (
+      {/* ONE action here, not two. The card's heading is already the link to
+          the guide; repeating it in a footer row was a second copy of the same
+          destination and roughly 90px per card. The jobs link is the only
+          thing this row adds, and it only exists when the profession has a CIG
+          node the job catalogue can be queried on — otherwise it would always
+          render "no openings", which reads as "nobody is hiring". */}
+      {jobsSlug && (
+        <div className="mt-auto border-t border-border pt-4">
           <Link
             to="/jobs/profession/$professionSlug"
             params={{ professionSlug: jobsSlug }}
@@ -321,8 +321,8 @@ export function TransitionCard({
             <Briefcase className="h-3.5 w-3.5" aria-hidden />
             {t("cc.step.next.jobs")}
           </Link>
-        )}
-      </div>
+        </div>
+      )}
     </article>
   );
 }

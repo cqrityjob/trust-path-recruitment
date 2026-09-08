@@ -164,7 +164,11 @@ export function useMyCareerDirection(): MyCareerDirectionState {
   // loading state forever, with no retry and no way for the reader to tell a
   // slow read from a broken one. Settled-and-empty fails closed.
   if (activeQ.isPending) return { signedIn, career: { state: "loading" }, refetch };
-  if (activeQ.data === undefined) {
+  // `== null` deliberately: the response can carry `null` as well as be
+  // absent, and the original bug was a truthiness test that treated both as
+  // "still loading". The handler's return type is non-nullable, so either
+  // value means the response was malformed — a fault, not an absence.
+  if (activeQ.data == null) {
     return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
   }
 
@@ -203,8 +207,11 @@ export function useMyCareerDirection(): MyCareerDirectionState {
     return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
   }
   // Same rule as above: pending is loading; settled-and-empty is a failure.
+  // This is the case that hung: `!storedQ.data` was true for a completed read
+  // that carried nothing, so the section rendered its loading state forever
+  // with no retry and no way to tell a slow read from a broken one.
   if (storedQ.isPending) return { signedIn, career: { state: "loading" }, refetch };
-  if (storedQ.data === undefined) {
+  if (storedQ.data == null) {
     return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
   }
 
