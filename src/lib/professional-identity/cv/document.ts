@@ -27,6 +27,15 @@
 //                              as such in `aiWritten` so the review screen
 //                              can show the person which words are theirs
 //                              and which were drafted for them.
+//   email and telephone        `contact`, below. The person's own contact
+//                              details, shown only where they said to show
+//                              them, and on the same renderer-only channel
+//                              as `trust` so no provider request ever
+//                              carries them.
+//   whether a credential       `trust.validity`, derived through the
+//   still stands               Passport's `validityOf`. NEVER the frozen
+//                              `validUntil` in the bundle on its own — see
+//                              trust-annotations.ts.
 //
 // A reader of this file should be able to answer "could a model have
 // invented this line?" for every field, from the types alone.
@@ -34,6 +43,37 @@
 import type { CvPresentation } from "./schema";
 import type { CvFactClaim, CvFactEmployment, CvSourceBundle } from "./source-bundle";
 import { emptyCvTrustAnnotations, type CvTrustAnnotations } from "./trust-annotations";
+
+/**
+ * How to reach this person.
+ *
+ * ── WHY IT IS A DOCUMENT FIELD AND NOT A BUNDLE FIELD ──────────────────
+ *
+ * Same argument as `trust`, one step milder. Contact details in the bundle
+ * would be contact details in `governedContext.facts`, which is to say in a
+ * provider request — an email address and a telephone number sent to a
+ * third-party engine for no purpose, because nothing the model writes needs
+ * them. They are on the page and not in the prompt.
+ *
+ * ── AND WHY THEY CARRY NO VERIFICATION MARK, EVER ──────────────────────
+ *
+ * Nobody verified them. They are typed by the holder like any other
+ * self-reported line, and the renderer draws them as plain text with no
+ * trust decoration available to it — there is no field here that could
+ * carry one.
+ *
+ * Null means "not shown". The person chooses per field; an address the
+ * product happens to know is not an address they have agreed to publish on
+ * a document they send to strangers.
+ */
+export interface CvContactDetails {
+  readonly email: string | null;
+  readonly phone: string | null;
+}
+
+/** Nothing shown. The correct default everywhere: contact details appear
+ *  because somebody opted in, never because the product had them. */
+export const NO_CV_CONTACT: CvContactDetails = { email: null, phone: null };
 
 export const CV_DOCUMENT_VERSION = "cv-document-v1" as const;
 
@@ -61,6 +101,9 @@ export interface CvDocument {
 
   readonly displayName: string;
   readonly country: string | null;
+  readonly countrySubdivision: string | null;
+  /** Opt-in, per field. See `CvContactDetails`. */
+  readonly contact: CvContactDetails;
 
   /** The person's own headline, or the model's tightened version of it. */
   readonly headline: string | null;
@@ -106,14 +149,17 @@ export interface CvDocument {
 export function buildFactualCvDocument(
   bundle: CvSourceBundle,
   trust: CvTrustAnnotations = emptyCvTrustAnnotations(),
+  contact: CvContactDetails = NO_CV_CONTACT,
 ): CvDocument {
   return {
     trust,
+    contact,
     documentVersion: CV_DOCUMENT_VERSION,
     origin: "factual",
     locale: bundle.locale,
     displayName: bundle.identity.displayName,
     country: bundle.identity.country,
+    countrySubdivision: bundle.identity.countrySubdivision ?? null,
     headline: bundle.identity.headline,
     headlineIsAiWritten: false,
     summary: null,
@@ -149,8 +195,9 @@ export function applyCvPresentation(
   bundle: CvSourceBundle,
   presentation: CvPresentation,
   trust: CvTrustAnnotations = emptyCvTrustAnnotations(),
+  contact: CvContactDetails = NO_CV_CONTACT,
 ): CvDocument {
-  const base = buildFactualCvDocument(bundle, trust);
+  const base = buildFactualCvDocument(bundle, trust, contact);
   const byId = new Map(bundle.employment.map((e) => [e.id, e]));
 
   const ordered: CvExperienceSection[] = [];

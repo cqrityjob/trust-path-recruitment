@@ -96,12 +96,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap",
-      },
+      // NO THIRD-PARTY FONT FETCH.
+      //
+      // Sora and Manrope are served from this origin -- see the @font-face
+      // block in src/styles.css for why. In short: a printed CV whose webfont
+      // had not arrived fell back to the platform UI font, which macOS does
+      // not let Chromium embed, and the resulting PDF extracted the
+      // candidate's own name out of order in an applicant tracking system.
+      // A document that has to be right cannot depend on somebody else's CDN
+      // having answered in time.
     ],
   }),
   shellComponent: RootShell,

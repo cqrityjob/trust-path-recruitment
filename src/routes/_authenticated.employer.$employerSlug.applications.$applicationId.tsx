@@ -417,7 +417,17 @@ function Candidate360({
                   {t("employer.candidate.cv.snapshotNote")}
                 </p>
                 <div className="mt-3">
-                  <CvDocumentView document={submittedCv.document} />
+                  {/* Dated by the day the database last VERIFIED these facts
+                      against the candidate's records, which is the moment of
+                      submission -- never by today. This copy is a historical
+                      artefact, and every expiry line on it is judged against
+                      the same date, so a credential that lapsed after the
+                      application was sent is not shown to the employer as
+                      though the candidate had submitted a dead one. */}
+                  <CvDocumentView
+                    document={submittedCv.document}
+                    renderedOn={submittedCv.checkedAt.slice(0, 10)}
+                  />
                 </div>
               </>
             ) : null}

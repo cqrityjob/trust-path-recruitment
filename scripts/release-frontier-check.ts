@@ -14,13 +14,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is applied hides a genuinely stuck migration behind an expectation, which is
 // what this list exists to prevent.
 //
-// 20261102090000 adds the controlled write path to cv_documents. It is the
-// schema prerequisite for the corrected CV pilot (PR #199) and is waiting for
-// review, not for a deploy window: it is ADDITIVE and revokes nothing, so it
-// is safe to apply with the currently published application still running.
-// REMOVE THIS NAME once it is applied to the owner project and
-// release-state.json records it as `applied` with evidence.
-const expectedPending: string[] = ["20261102090000_cv_documents_controlled_writes.sql"];
+// Empty again as of 2026-09-08. 20261102090000_cv_documents_controlled_writes
+// was applied to the owner project through the Supabase GitHub integration
+// after PR #201 merged, and release-state.json now records it as `applied`
+// with the hosted evidence, so its name came out of this list on the same
+// occasion. The lockdown, 20261103090000, is deliberately NOT here: it lives
+// on the phase-3 branch (PR #202) and is not part of this deploy.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

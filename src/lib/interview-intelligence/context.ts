@@ -340,12 +340,23 @@ function candidateFacts(
     if (title === "") continue;
     const issuer = clean(c.issuerName);
     const line = issuer === "" ? title : `${title} — ${issuer}`;
+    // NO `verified` HERE ANY MORE, and it is not an omission.
+    //
+    // It used to read a boolean frozen into the submitted CV's bundle at
+    // save time. That flag is gone: it was a display decision with no date on
+    // it, and a saved CV was found still printing "Verified" after the
+    // credential behind it had been revoked. An interviewer reading a
+    // months-old copy is exactly the reader who would be misled by it.
+    //
+    // Verified standing reaches a recruiter the one way it should: through
+    // the holder-authorised, application-scoped Passport disclosure, which is
+    // live and logged. `verified` stays on ContextFact for the sources that
+    // genuinely have a current answer.
     out.push({
       key: `cv-claim-${c.id}`,
       sv: line,
       en: line,
       from: "cqrityjob_cv",
-      verified: c.verified,
     });
   }
 

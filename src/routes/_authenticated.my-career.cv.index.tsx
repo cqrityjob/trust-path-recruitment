@@ -20,7 +20,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, FileText, Plus, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Loader2, Plus, RefreshCcw, Sparkles } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
 import { L, Lf, type Lang } from "@/components/professional-identity/copy";
@@ -96,9 +96,36 @@ function CvListPage() {
           <p className="mt-8 text-sm text-muted-foreground">{L(CV.loading, l)}</p>
         )}
         {(preparation.isError || list.isError) && (
-          <p role="alert" className="mt-8 text-sm text-destructive">
-            {L(CV.loadFailed, l)}
-          </p>
+          <div className="mt-8 max-w-2xl">
+            <p role="alert" className="text-sm text-destructive">
+              {L(CV.loadFailed, l)}
+            </p>
+            {/* A RETRY, NOT "RELOAD THE PAGE".
+                
+                "Reload to try again" is a dead end dressed as advice: it is
+                what somebody would have tried anyway, it throws away
+                everything else on the screen, and on the one page where a
+                person keeps documents they have written it reads as though
+                the product does not know what went wrong. Refetching the
+                queries that failed is the actual repair, and it leaves the
+                rest of the page alone. */}
+            <button
+              type="button"
+              disabled={preparation.isFetching || list.isFetching}
+              onClick={() => {
+                if (preparation.isError) void preparation.refetch();
+                if (list.isError) void list.refetch();
+              }}
+              className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60"
+            >
+              {preparation.isFetching || list.isFetching ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {L(preparation.isFetching || list.isFetching ? CV.retrying : CV.retry, l)}
+            </button>
+          </div>
         )}
 
         {/* Not ready: say what is missing rather than offering a button
@@ -152,7 +179,9 @@ function CvListPage() {
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                       <span>
                         {L(
-                          cv.purpose === "targeted" ? CV.purposeTargetedLabel : CV.purposeGeneralLabel,
+                          cv.purpose === "targeted"
+                            ? CV.purposeTargetedLabel
+                            : CV.purposeGeneralLabel,
                           l,
                         )}
                       </span>

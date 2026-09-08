@@ -133,12 +133,7 @@ export function permittedYears(bundle: CvSourceBundle): ReadonlySet<string> {
     take(e.startedOn);
     take(e.endedOn);
   }
-  for (const group of [
-    bundle.education,
-    bundle.credentials,
-    bundle.skills,
-    bundle.languages,
-  ]) {
+  for (const group of [bundle.education, bundle.credentials, bundle.skills, bundle.languages]) {
     for (const c of group) {
       take(c.issuedOn);
       take(c.validUntil);

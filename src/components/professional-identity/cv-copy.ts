@@ -24,8 +24,8 @@ export const CV = {
   ),
   loading: c("Hämtar dina uppgifter…", "Loading your information…"),
   loadFailed: c(
-    "Dina uppgifter kunde inte hämtas just nu. Ladda om sidan för att försöka igen.",
-    "Your information could not be loaded right now. Reload the page to try again.",
+    "Dina uppgifter kunde inte hämtas just nu. Ingenting har gått förlorat.",
+    "Your information could not be loaded right now. Nothing has been lost.",
   ),
 
   /* -- readiness ---------------------------------------------------- */
@@ -64,7 +64,55 @@ export const CV = {
   identity: c("Namn och yrkestitel", "Name and professional title"),
   none: c("Inga", "None"),
 
-  step2: c("2. Välj syfte", "2. Choose a purpose"),
+  /* -- step 1b: what goes on it -------------------------------------- */
+  selectTitle: c("2. Välj vad som ska med", "2. Choose what to include"),
+  selectLede: c(
+    "Allt du har registrerat är med från början. Kryssa ur det som inte hör hemma i just det här CV:t — det tas då bort ur dokumentet och ur exporten, och ligger kvar orört i din profil.",
+    "Everything you have recorded is included to begin with. Uncheck anything that does not belong on this particular CV — it is then absent from the document and from the export, and stays untouched in your profile.",
+  ),
+  selectEndedNote: c(
+    "Avslutade anställningar är en del av din yrkeshistorik och är med som vanligt.",
+    "Employment that has ended is part of your professional history and is included as normal.",
+  ),
+  selectAll: c("Markera alla", "Select all"),
+  selectNone: c("Avmarkera alla", "Clear all"),
+  selectedCount: c("{0} med", "{0} included"),
+  selectEmptySection: c("Inget registrerat", "Nothing recorded"),
+  /** The one selection that produces no CV at all, said before the person
+   *  presses a button that would refuse. */
+  selectNoHistory: c(
+    "Ett CV behöver minst en anställning eller en utbildning. Kryssa i minst en för att fortsätta.",
+    "A CV needs at least one employment or one education. Tick at least one to continue.",
+  ),
+
+  /* -- language ------------------------------------------------------ */
+  languageTitle: c("Språk", "Language"),
+  languageHelp: c(
+    "Styr rubriker, datumord och verifieringsrader. Din egen text och AI-utkastets text översätts inte — de står kvar på det språk de skrevs.",
+    "Sets the headings, the date words and the verification lines. Your own text and any AI-drafted text are not translated — they stay in the language they were written in.",
+  ),
+  languageSv: c("Svenska", "Swedish"),
+  languageEn: c("Engelska", "English"),
+
+  /* -- contact ------------------------------------------------------- */
+  contactTitle: c("Kontaktuppgifter", "Contact details"),
+  contactHelp: c(
+    "Du väljer vad som står på CV:t. Ingenting visas om du inte kryssar i det.",
+    "You choose what appears on the CV. Nothing is shown unless you tick it.",
+  ),
+  contactEmail: c("E-post", "Email"),
+  contactPhone: c("Telefon", "Telephone"),
+  contactShow: c("Visa på CV:t", "Show on the CV"),
+  contactFromAccount: c(
+    "Hämtad från ditt konto. Ändra den här om du hellre vill bli kontaktad på en annan adress.",
+    "Taken from your account. Change it here if you would rather be contacted at another address.",
+  ),
+  contactNotVerified: c(
+    "Kontaktuppgifter är egna uppgifter och märks aldrig som verifierade.",
+    "Contact details are self-reported and are never marked as verified.",
+  ),
+
+  step2: c("3. Välj syfte", "3. Choose a purpose"),
   purposeGeneral: c("Allmänt CV", "General CV"),
   purposeGeneralHelp: c(
     "Kronologiskt, utan anpassning mot en särskild roll.",
@@ -76,7 +124,7 @@ export const CV = {
     "The advert decides order and emphasis. It can never add a qualification you do not have.",
   ),
 
-  step3: c("3. Klistra in jobbannonsen", "3. Paste the job advert"),
+  step3: c("4. Klistra in jobbannonsen", "4. Paste the job advert"),
   step3Help: c(
     "Valfritt. Texten behandlas som material, aldrig som instruktioner till systemet.",
     "Optional. The text is treated as material, never as instructions to the system.",
@@ -94,8 +142,23 @@ export const CV = {
     "Shown as a career direction, never as a competency or a qualification.",
   ),
 
-  generate: c("Skapa CV", "Create CV"),
-  generating: c("Skapar…", "Creating…"),
+  // The button makes a PREVIEW. Saving is a separate, consented act, and the
+  // label has to say which one is about to happen -- "Create CV" on a control
+  // that writes nothing was a promise the next screen had to walk back.
+  generate: c("Förhandsgranska CV", "Preview CV"),
+  generating: c("Tar fram förhandsgranskning…", "Preparing preview…"),
+  regeneratePreview: c("Uppdatera förhandsgranskningen", "Refresh the preview"),
+  previewStaleTitle: c("Förhandsgranskningen gäller inte längre", "This preview is out of date"),
+  previewStaleBody: c(
+    "Du har ändrat något som påverkar dokumentet. Ta fram en ny förhandsgranskning innan du sparar — annars skulle du spara ett annat CV än det du läste.",
+    "You have changed something that affects the document. Take a new preview before saving — otherwise you would be saving a different CV from the one you read.",
+  ),
+
+  /* -- what leaves this product ------------------------------------- */
+  aiNotice: c(
+    "Om du väljer ett AI-utkast skickas de uppgifter du valt ovan till den AI-tjänst som är konfigurerad för CQrityjob, för att formuleras om. Kontaktuppgifter skickas aldrig. Utan AI byggs CV:t direkt av dina uppgifter.",
+    "If you choose an AI draft, the entries you selected above are sent to the AI service configured for CQrityjob, to be rephrased. Contact details are never sent. Without AI the CV is built directly from your own information.",
+  ),
   awaiting: c(
     "Ditt CV visas här när du har skapat det. Du väljer själv om du vill spara det.",
     "Your CV appears here once you create it. Whether you save it is your choice.",
@@ -166,6 +229,18 @@ export const CV = {
     "The saved CV still shows the information as it stood when you saved it. It does not change on its own.",
   ),
   driftAction: c("Uppdatera från profilen", "Update from profile"),
+  driftReview: c(
+    "Detta är exakt vad som ändras om du uppdaterar. Inget annat rörs.",
+    "This is exactly what changes if you update. Nothing else is touched.",
+  ),
+  driftConfirm: c("Ja, uppdatera CV:t", "Yes, update this CV"),
+  driftCancel: c("Nej, behåll CV:t som det är", "No, leave this CV as it is"),
+  driftBefore: c("Nu på CV:t", "On the CV now"),
+  driftAfter: c("I din profil", "In your profile"),
+  driftFailed: c(
+    "CV:t kunde inte uppdateras. Ingenting ändrades. Försök igen.",
+    "This CV could not be updated. Nothing changed. Try again.",
+  ),
   driftUpdating: c("Uppdaterar…", "Updating…"),
   driftDropped: c(
     "{0} anställning finns inte längre i din profil, så dess punkter togs bort.",
@@ -174,6 +249,77 @@ export const CV = {
   driftAdded: c("Tillagt", "Added"),
   driftRemoved: c("Borttaget", "Removed"),
   driftChanged: c("Ändrat", "Changed"),
+
+  /* -- what this CV leaves out -------------------------------------- */
+  omittedTitle: c(
+    "Detta finns i din profil men inte på det här CV:t",
+    "In your profile, but not on this CV",
+  ),
+  omittedBody: c(
+    "Antingen valde du bort det, eller så har du lagt till det efter att CV:t sparades. Du kan lägga till det här — inget annat i CV:t ändras.",
+    "Either you left it off, or you added it after this CV was saved. You can put it on here — nothing else in the CV changes.",
+  ),
+  omittedAdd: c("Lägg till på CV:t", "Add to this CV"),
+  omittedRemove: c("Ta bort från CV:t", "Remove from this CV"),
+  omittedSaving: c("Ändrar…", "Changing…"),
+  omittedFailed: c(
+    "Det gick inte att ändra vad CV:t innehåller. Ingenting ändrades. Försök igen.",
+    "What this CV includes could not be changed. Nothing changed. Try again.",
+  ),
+  editIncluded: c("Innehåll", "Contents"),
+  editIncludedHelp: c(
+    "Kryssa ur något för att ta bort det från det här CV:t. Uppgiften ligger kvar i din profil.",
+    "Uncheck something to take it off this CV. The entry stays in your profile.",
+  ),
+
+  /* -- somebody else wrote first ------------------------------------ */
+  changedTitle: c("CV:t har ändrats i ett annat fönster", "This CV was changed in another window"),
+  changedBody: c(
+    "Ingenting sparades här. Ladda om sidan för att se den senaste versionen — då ser du vad som ändrats innan du skriver över något.",
+    "Nothing was saved here. Reload the page to see the latest version — you will then see what changed before you overwrite anything.",
+  ),
+  changedReload: c("Ladda om CV:t", "Reload this CV"),
+  conflictTitle: c(
+    "Ett annat CV har redan sparats med den här begäran",
+    "A different CV was already saved for this request",
+  ),
+  conflictBody: c(
+    "Ingenting sparades. Ta fram en ny förhandsgranskning och spara den i stället.",
+    "Nothing was saved. Take a new preview and save that instead.",
+  ),
+  limitReached: c(
+    "Du har nått gränsen för antal sparade CV. Ta bort ett du inte behöver för att spara ett nytt.",
+    "You have reached the limit for saved CVs. Delete one you no longer need to save another.",
+  ),
+  contactInvalid: c(
+    "Kontrollera e-postadressen och telefonnumret du valt att visa. Ingenting sparades.",
+    "Check the email address and telephone number you chose to show. Nothing was saved.",
+  ),
+  notReadyToSave: c(
+    "Ett CV behöver minst en anställning eller en utbildning. Ingenting sparades.",
+    "A CV needs at least one employment or one education. Nothing was saved.",
+  ),
+
+  /* -- leaving with unsaved work ------------------------------------ */
+  leaveTitle: c("Du har ändringar som inte är sparade", "You have unsaved changes"),
+  leaveBody: c(
+    "Om du lämnar sidan nu försvinner det du skrivit. Spara först, eller stäng redigeringen om du vill kasta ändringarna.",
+    "If you leave now, what you have written is lost. Save first, or close the editor if you want to discard your changes.",
+  ),
+  editCloseUnsaved: c("Stäng utan att spara", "Close without saving"),
+  deleteCancel: c("Behåll CV:t", "Keep this CV"),
+  deleteKeepsApplications: c(
+    "CV som du redan har skickat med en jobbansökan finns kvar hos arbetsgivaren. Det är bara det här dokumentet som tas bort.",
+    "A CV you have already submitted with a job application stays with that employer. Only this document is removed.",
+  ),
+
+  /* -- error recovery ------------------------------------------------ */
+  retry: c("Försök igen", "Try again"),
+  retrying: c("Försöker igen…", "Trying again…"),
+  exportHelp: c(
+    "Öppnar webbläsarens utskriftsdialog, där du väljer skrivare eller “Spara som PDF”.",
+    "Opens your browser's print dialog, where you choose a printer or “Save as PDF”.",
+  ),
 } as const;
 
 export const CV_COUNTED: Readonly<Record<"dropped", PluralCopy>> = {
@@ -227,9 +373,13 @@ export const CV_STATUS_NOTE: Readonly<Record<CvGenerationStatus, Copy>> = {
     "Utkastet innehöll uppgifter som inte finns i dina egna registrerade uppgifter, och kasserades i sin helhet. Det skrivs aldrig om för att godkännas. Ditt CV nedan är byggt direkt av dina uppgifter.",
     "The draft contained information that is not in your own recorded entries, and was discarded in full. It is never rewritten until it passes. Your CV below is built directly from your own information.",
   ),
+  // What the READER needs to know is that they have a complete CV. Whether an
+  // operator has configured a credential is our business, not theirs, and
+  // "no AI engine is configured in this environment" is an internal sentence
+  // that reads like a fault on a page where nothing is wrong.
   provider_unavailable: c(
-    "Ingen AI-motor är konfigurerad i den här miljön. Ditt CV nedan är byggt direkt av dina uppgifter — det är komplett och går att använda.",
-    "No AI engine is configured in this environment. Your CV below is built directly from your own information — it is complete and usable.",
+    "AI-stödet är inte tillgängligt just nu. Ditt CV nedan är byggt direkt av dina uppgifter — det är komplett och går att använda.",
+    "The AI assistant is not available right now. Your CV below is built directly from your own information — it is complete and usable.",
   ),
   provider_error: c(
     "AI-stödet gick inte att nå. Ditt CV nedan är byggt direkt av dina uppgifter.",
