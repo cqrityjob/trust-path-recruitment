@@ -135,6 +135,9 @@ function CvDetailPage() {
    *  screen then stops offering to save and offers to reload instead: there
    *  is no version of "try again" that does not discard the other change. */
   const [conflict, setConflict] = useState<"changed" | null>(null);
+  /** Whether the person has asked to see the update confirmed. Nothing is
+   *  written until they press again; cancelling puts it back. */
+  const [confirmRefresh, setConfirmRefresh] = useState(false);
 
   // Seed the form from the saved row once it arrives, and again whenever the
   // server's copy changes underneath us (an update-from-profile, say).
@@ -334,6 +337,7 @@ function CvDetailPage() {
   const updateFromProfile = useMutation({
     mutationFn: () => refresh({ data: { cvId, expectedUpdatedAt: revision } }),
     onSuccess: async () => {
+      setConfirmRefresh(false);
       await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
     },
     onError: noteRefusal,
@@ -498,16 +502,34 @@ function CvDetailPage() {
             )}
 
             {/* -- the profile has moved -------------------------------- */}
+            {/*
+                THE PROPOSAL IS SHOWN, NOT SUMMARISED.
+
+                It listed "Ändrat · Anställningar · Väktare – Nordic Security
+                AB" and offered a button. That tells somebody THAT something
+                moved and not WHAT, and then asks them to confirm an update
+                whose content they cannot see, on a document they will send to
+                an employer. A confirmation dialog in shape only.
+
+                Now every entry shows the value on the CV and the value in the
+                profile, side by side, and the update is a two-step confirm.
+                Cancelling changes nothing -- there is no write until the
+                second press.
+            */}
             {drift?.hasChanges && (
               <section className="no-print mt-6 rounded-xl border border-border border-l-[3px] border-l-[color:var(--accent)] bg-card p-5">
                 <h2 className="text-sm font-semibold text-foreground">{L(CV.driftTitle, l)}</h2>
                 <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                   {L(CV.driftBody, l)}
                 </p>
-                <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-                  {drift.changes.slice(0, 6).map((change, i) => (
-                    <li key={`${change.section}-${change.sourceId ?? i}`}>
-                      <span className="font-medium text-foreground">
+
+                <ul className="mt-4 space-y-3">
+                  {drift.changes.map((change, i) => (
+                    <li
+                      key={`${change.section}-${change.sourceId ?? i}`}
+                      className="rounded-lg border border-border bg-background p-3"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {L(
                           change.kind === "added"
                             ? CV.driftAdded
@@ -515,25 +537,82 @@ function CvDetailPage() {
                               ? CV.driftRemoved
                               : CV.driftChanged,
                           l,
-                        )}
-                      </span>{" "}
-                      · {L(CV_DRIFT_SECTION[change.section], l)} · {change.label}
+                        )}{" "}
+                        · {L(CV_DRIFT_SECTION[change.section], l)}
+                      </p>
+                      {/* The exact values. A removal has no "after" and an
+                          addition has no "before"; neither gets an empty
+                          column, because an empty column reads as "changed
+                          to nothing". */}
+                      {change.before && (
+                        <p className="mt-1.5 text-sm">
+                          <span className="text-xs text-muted-foreground">
+                            {L(CV.driftBefore, l)}:{" "}
+                          </span>
+                          <span
+                            className={
+                              change.after
+                                ? "text-muted-foreground line-through"
+                                : "text-foreground"
+                            }
+                          >
+                            {change.before}
+                          </span>
+                        </p>
+                      )}
+                      {change.after && (
+                        <p className="mt-0.5 text-sm">
+                          <span className="text-xs text-muted-foreground">
+                            {L(CV.driftAfter, l)}:{" "}
+                          </span>
+                          <span className="font-medium text-foreground">{change.after}</span>
+                        </p>
+                      )}
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
-                  disabled={updateFromProfile.isPending}
-                  onClick={() => updateFromProfile.mutate()}
-                  className="mt-4 inline-flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)] disabled:opacity-60"
-                >
-                  {updateFromProfile.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  ) : (
+
+                <p className="mt-4 text-sm text-muted-foreground">{L(CV.driftReview, l)}</p>
+
+                {!confirmRefresh ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRefresh(true)}
+                    className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)]"
+                  >
                     <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                  )}
-                  {L(updateFromProfile.isPending ? CV.driftUpdating : CV.driftAction, l)}
-                </button>
+                    {L(CV.driftAction, l)}
+                  </button>
+                ) : (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={updateFromProfile.isPending}
+                      onClick={() => updateFromProfile.mutate()}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)] disabled:opacity-60"
+                    >
+                      {updateFromProfile.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                      {L(updateFromProfile.isPending ? CV.driftUpdating : CV.driftConfirm, l)}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRefresh(false)}
+                      className="min-h-10 px-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      {L(CV.driftCancel, l)}
+                    </button>
+                  </div>
+                )}
+
+                {updateFromProfile.isError && (
+                  <p role="alert" className="mt-3 text-sm text-destructive">
+                    {L(CV.driftFailed, l)}
+                  </p>
+                )}
               </section>
             )}
 

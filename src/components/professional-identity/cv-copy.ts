@@ -24,8 +24,8 @@ export const CV = {
   ),
   loading: c("Hämtar dina uppgifter…", "Loading your information…"),
   loadFailed: c(
-    "Dina uppgifter kunde inte hämtas just nu. Ladda om sidan för att försöka igen.",
-    "Your information could not be loaded right now. Reload the page to try again.",
+    "Dina uppgifter kunde inte hämtas just nu. Ingenting har gått förlorat.",
+    "Your information could not be loaded right now. Nothing has been lost.",
   ),
 
   /* -- readiness ---------------------------------------------------- */
@@ -229,6 +229,18 @@ export const CV = {
     "The saved CV still shows the information as it stood when you saved it. It does not change on its own.",
   ),
   driftAction: c("Uppdatera från profilen", "Update from profile"),
+  driftReview: c(
+    "Detta är exakt vad som ändras om du uppdaterar. Inget annat rörs.",
+    "This is exactly what changes if you update. Nothing else is touched.",
+  ),
+  driftConfirm: c("Ja, uppdatera CV:t", "Yes, update this CV"),
+  driftCancel: c("Nej, behåll CV:t som det är", "No, leave this CV as it is"),
+  driftBefore: c("Nu på CV:t", "On the CV now"),
+  driftAfter: c("I din profil", "In your profile"),
+  driftFailed: c(
+    "CV:t kunde inte uppdateras. Ingenting ändrades. Försök igen.",
+    "This CV could not be updated. Nothing changed. Try again.",
+  ),
   driftUpdating: c("Uppdaterar…", "Updating…"),
   driftDropped: c(
     "{0} anställning finns inte längre i din profil, så dess punkter togs bort.",

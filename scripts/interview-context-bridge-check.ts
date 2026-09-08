@@ -127,7 +127,6 @@ const cqrityjobCv: ContextCvInput = {
         issuedOn: "2019-02-01",
         validUntil: null,
         level: null,
-        verified: true,
       },
     ],
     skills: [],
@@ -232,9 +231,25 @@ ok(
   cvFacts.some((f) => f.sv.includes("Skyddsvakt") && f.sv.includes("Nordic Security AB")),
   "C · an employment renders as role, employer and dates",
 );
+// ── THE CV NO LONGER CARRIES A VERIFICATION MARK, AND SHOULD NOT ──────
+//
+// This used to assert that the mark frozen into the submitted CV reached the
+// briefing. It was a boolean written at save time, with no date on it, on a
+// copy that could not know about a later revocation -- and an interviewer
+// reading a months-old application is exactly the reader it would mislead.
+//
+// The flag is gone from the bundle. Verified standing reaches a recruiter the
+// one way it should: through the holder-authorised, application-scoped
+// Passport disclosure, which is live and logged. So the assertion is that the
+// briefing carries the credential as a FACT and makes no claim about who
+// checked it.
 ok(
-  cvFacts.some((f) => f.sv.includes("Skyddsvaktsutbildning") && f.verified === true),
-  "C · the CV's own verification mark is carried, not recomputed",
+  cvFacts.some((f) => f.sv.includes("Skyddsvaktsutbildning")),
+  "C · a credential from the CV reaches the briefing as a fact",
+);
+ok(
+  cvFacts.every((f) => f.verified === undefined),
+  "C · and carries no verification mark of its own -- that comes from the live disclosure",
 );
 ok(full.cvPresence === "cqrityjob_cv", "C · the CV's origin is stated");
 

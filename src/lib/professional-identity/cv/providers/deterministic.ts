@@ -82,6 +82,18 @@ function relevanceScore(text: string, employment: { roleTitle: string; employerN
 
 function draft(bundle: CvSourceBundle): string {
   const p = PHRASES[bundle.locale];
+  // ── IT ANSWERS IN THE KEYS IT WAS ASKED IN ──────────────────────────
+  //
+  // A real provider receives ordinal keys (`e1`, `c3`) and never the ids --
+  // see provider-projection.ts. This stand-in holds the bundle, so it could
+  // cheat and cite the real ids; it must not, because then it would be
+  // exercising a path no production answer ever takes and the remap would go
+  // untested in every environment that runs it.
+  const keyOf = new Map<string, string>();
+  bundle.employment.forEach((e, i) => keyOf.set(e.id, `e${i + 1}`));
+  [...bundle.education, ...bundle.credentials, ...bundle.skills, ...bundle.languages].forEach(
+    (c, i) => keyOf.set(c.id, `c${i + 1}`),
+  );
   const targeted = Boolean(bundle.targetJobText);
 
   const employment = targeted
@@ -110,15 +122,19 @@ function draft(bundle: CvSourceBundle): string {
     headline: headlineBase.slice(0, 160),
     summary: summary.slice(0, 1200),
     experience: employment.map((e) => ({
-      sourceId: e.id,
+      sourceId: keyOf.get(e.id) ?? e.id,
       bullets: [
         `${p.role} ${e.roleTitle} ${p.at} ${e.employerName}.`.slice(0, 240),
         e.endedOn ? p.concluded : p.ongoing,
       ],
     })),
+    // Ordering, and no trust judgement. A stand-in that emphasised
+    // "verified" material would be making the one claim this whole feature
+    // reserves for the Passport -- and the bundle no longer carries a
+    // verification flag for it to read.
     emphasisedClaimIds: [...bundle.skills, ...bundle.languages]
-      .filter((c) => c.verified)
-      .map((c) => c.id),
+      .slice(0, 6)
+      .map((c) => keyOf.get(c.id) ?? c.id),
     tailoringRationale: targeted ? p.rationaleTargeted : p.rationale,
   });
 }

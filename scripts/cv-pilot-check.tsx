@@ -74,7 +74,11 @@ import {
   selectableIds,
   selectionHasHistory,
 } from "../src/lib/professional-identity/cv/selection";
-import { cvApplicationBlock } from "../src/lib/professional-identity/cv/application-source";
+import {
+  applicationCvDocument,
+  applicationCvSnapshotSchema,
+  cvApplicationBlock,
+} from "../src/lib/professional-identity/cv/application-source";
 import { computeCvReadiness } from "../src/lib/professional-identity/cv/readiness";
 import type { ProfessionalIdentityV1 } from "../src/lib/professional-identity/types";
 
@@ -1130,6 +1134,104 @@ group("SHAPE — a thin profile and a long career both produce a usable page");
   ck(
     "and each post is kept whole across a page break",
     (longMarkup.match(/avoid-break/g) ?? []).length >= 12,
+  );
+}
+
+group("EMPLOYER VIEW — expiry judged against the day it was submitted");
+{
+  // ── WHAT THE EMPLOYER'S COPY MUST NOT DO ───────────────────────────
+  //
+  // It carries no live trust annotations by design: verified standing reaches
+  // an employer through the holder-authorised Passport disclosure, not
+  // through a months-old copy. But "no annotations" used to mean no validity
+  // either, so a lapsed authorisation printed its date with nothing to say it
+  // had passed -- and the only clock available to a renderer is the reader's
+  // browser, which is neither the candidate's nor the submission's.
+  //
+  // `checked_at` is written by the database at submission. Expiry is derived
+  // against THAT, so the document says what was true when it was sent.
+  const submitted = "2026-06-01T09:00:00Z";
+  const snap = applicationCvSnapshotSchema.parse({
+    snapshot_version: "application-cv-snapshot-v2",
+    checked_at: submitted,
+    locale: "sv",
+    source_bundle: {
+      bundleVersion: "cv-source-bundle-v1",
+      locale: "sv",
+      identity: { displayName: "Karin Wallin", country: "SE" },
+      employment: [
+        {
+          id: "e1",
+          employerName: "Nordic Security AB",
+          roleTitle: "Väktare",
+          startedOn: "2022-03-01",
+          endedOn: null,
+        },
+      ],
+      education: [],
+      credentials: [
+        // Lapsed BEFORE the submission: the employer must be told.
+        {
+          id: "c1",
+          claimType: "licence",
+          title: "Ordningsvaktsförordnande",
+          issuerName: "Polismyndigheten",
+          issuedOn: "2021-04-01",
+          validUntil: "2026-03-31",
+          level: null,
+        },
+        // Still valid at submission, whatever today happens to be.
+        {
+          id: "c2",
+          claimType: "certification",
+          title: "Väktarutbildning VU1",
+          issuerName: "BYA",
+          issuedOn: "2019-04-01",
+          validUntil: "2028-04-01",
+          level: null,
+        },
+      ],
+      skills: [],
+      languages: [],
+      careerInsight: null,
+    },
+    presentation: { storedVersion: "cv-stored-presentation-v1" },
+  });
+
+  const doc = applicationCvDocument(snap);
+  ck("the submitted document is readable", doc !== null);
+
+  const markup = renderToStaticMarkup(
+    <CvDocumentView document={doc!} renderedOn={submitted.slice(0, 10)} />,
+  );
+  const text = visibleText(markup);
+
+  ck("the lapsed authorisation is named", text.includes("Ordningsvaktsförordnande"));
+  ck("with the date it was valid until", text.includes("Giltig t.o.m. 2026-03-31"));
+  ck(
+    "and is called expired, judged against the submission and not the reader's clock",
+    text.includes("Utgången"),
+  );
+  ck(
+    "the one still valid at submission is NOT called expired",
+    text.includes("Giltig t.o.m. 2028-04-01") && (text.match(/Utgången/g) ?? []).length === 1,
+  );
+  ck(
+    "no verification mark is drawn on either -- an employer's copy carries no trust",
+    !text.includes("Verifierad") && !text.includes("Verifieringsuppgift"),
+  );
+  ck("and no verifier is attributed", !text.includes("BYA · Verifierad"));
+  ck("the document is dated by submission", text.includes("2026-06-01"));
+
+  // The reader's clock must make no difference. Rendering the same snapshot
+  // twice with different `renderedOn` values changes the footer date and
+  // nothing about the expiry.
+  const later = visibleText(
+    renderToStaticMarkup(<CvDocumentView document={doc!} renderedOn="2029-01-01" />),
+  );
+  ck(
+    "a later reading does not retroactively expire the credential that was valid",
+    (later.match(/Utgången/g) ?? []).length === 1,
   );
 }
 

@@ -1,0 +1,72 @@
+{
+  "why": "Vendored so a printed CV never depends on a third-party font fetch, and STATIC so Chromium can embed them. Google Fonts serves Sora and Manrope as variable fonts only; Skia cannot embed a variable-font instance and writes Type 3 fonts instead, whose glyph boxes are the whole em square -- which made pdftotext extract a candidate's name out of order. See the @font-face block in src/styles.css.",
+  "licence": "SIL Open Font Licence 1.1 (see OFL.txt). Sora and Manrope by their respective authors.",
+  "derivedFrom": [
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/sora/Sora%5Bwght%5D.ttf",
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/Manrope%5Bwght%5D.ttf"
+  ],
+  "howToReDerive": [
+    "fonttools varLib.instancer -o <Family>-<w>.ttf <Family>[wght].ttf wght=<w>",
+    "pyftsubset <Family>-<w>.ttf --unicodes=<the unicode-range in styles.css, commas not spaces> --layout-features='*' --flavor=woff2 --output-file=<family>-<w>.woff2"
+  ],
+  "derivedAt": "2026-09-08",
+  "subset": "latin + latin-ext, which covers Swedish and English",
+  "files": [
+    {
+      "family": "Sora",
+      "weight": "400",
+      "file": "sora-400.woff2",
+      "bytes": 19984,
+      "sha256": "893efc89562782bf85c2c2b8a66498a98165a8770a3383ef8410a227cfc2b7c1"
+    },
+    {
+      "family": "Sora",
+      "weight": "500",
+      "file": "sora-500.woff2",
+      "bytes": 20536,
+      "sha256": "c135abd307cd2934e8085a4900ab73dec239659c76f0c7f026d151ced1fab135"
+    },
+    {
+      "family": "Sora",
+      "weight": "600",
+      "file": "sora-600.woff2",
+      "bytes": 20528,
+      "sha256": "6c5a132172c2b37d0d3fdf5a736c75ff51ace1dedeaf8bb827a86d5b7d3f2335"
+    },
+    {
+      "family": "Sora",
+      "weight": "700",
+      "file": "sora-700.woff2",
+      "bytes": 20612,
+      "sha256": "be0f28f679d87dfd02de43824f7eb4b78b090fdc19aebc8ec0e789573a03c38e"
+    },
+    {
+      "family": "Manrope",
+      "weight": "400",
+      "file": "manrope-400.woff2",
+      "bytes": 18992,
+      "sha256": "01a5b2601efb52b98d00d442ae26967dc328a1609272a38dc0ce185209172c8c"
+    },
+    {
+      "family": "Manrope",
+      "weight": "500",
+      "file": "manrope-500.woff2",
+      "bytes": 18700,
+      "sha256": "387e78d2f6e5fa065ffd3edc0698b169e6a4bf310bc5c177469803cc242fae84"
+    },
+    {
+      "family": "Manrope",
+      "weight": "600",
+      "file": "manrope-600.woff2",
+      "bytes": 18936,
+      "sha256": "79e3b999828850fbe6a5aefc77ebb1465ccad0c8a8e5956dc1279f0178e0555d"
+    },
+    {
+      "family": "Manrope",
+      "weight": "700",
+      "file": "manrope-700.woff2",
+      "bytes": 19196,
+      "sha256": "e3c20029b91de4bf15d961fbb3e38efe1ca389b6a160939186192d90c568af06"
+    }
+  ]
+}

@@ -135,6 +135,7 @@
     "professional-identity:check": "bun run scripts/professional-identity-check.ts",
     "cv-application-source:check": "bun run scripts/cv-application-source-check.tsx",
     "cv-pilot:check": "bun run scripts/cv-pilot-check.tsx",
+    "cv-provider-minimisation:check": "bun run scripts/cv-provider-minimisation-check.tsx",
     "cv-export:proof": "bun run scripts/cv-export-proof.tsx",
     "candidate-app-navigation:check": "bun run scripts/candidate-app-navigation-check.tsx"
   }, 

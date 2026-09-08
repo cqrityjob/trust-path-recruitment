@@ -170,6 +170,60 @@ export function emptyCvTrustAnnotations(
 }
 
 /**
+ * Validity WITHOUT trust, for a copy nobody may attribute a verifier to.
+ *
+ * ── THE READER'S CLOCK IS THE WRONG CLOCK ──────────────────────────────
+ *
+ * An employer opening a submitted CV gets `emptyCvTrustAnnotations()` on
+ * purpose: verified standing reaches them through the holder-authorised,
+ * application-scoped Passport disclosure, not through a months-old copy that
+ * could not know about a revocation.
+ *
+ * But "no annotations" also meant no VALIDITY, so a lapsed authorisation on
+ * that copy printed its date with nothing to say the date had passed. The
+ * obvious repair is to derive expiry in the renderer, and it is wrong twice
+ * over: the only clock a renderer has is the reader's browser, and the
+ * document is a statement about the day it was SUBMITTED. A recruiter opening
+ * it in 2029 must see what the candidate sent, not a credential that has
+ * lapsed since — and equally must not be shown a lapsed one as current.
+ *
+ * So the evaluation date comes from `checked_at`, which the database writes
+ * at submission, and this builds validity for it and nothing else. Every
+ * `claims` entry stays empty, so no mark and no attribution can be drawn.
+ */
+export function cvValidityAnnotations(
+  claims: readonly { readonly id: string; readonly validUntil: string | null }[],
+  evaluationOn: string,
+): CvTrustAnnotations {
+  const validity: Record<string, CvCredentialValidity> = {};
+  for (const c of claims) {
+    if (!c.validUntil) continue;
+    // `active` is the only lifecycle a submitted snapshot can speak to: it
+    // froze a fact the holder was carrying, and it has no way to know about a
+    // later revocation. `validityOf` then answers the one question this copy
+    // CAN answer honestly -- had the date passed by `checked_at`.
+    const v = validityOf("active", c.validUntil as IsoDate, evaluationOn as IsoDate);
+    validity[c.id] = {
+      validUntil: v.validUntil,
+      hasExpired: v.hasExpired,
+      expiresSoon: v.expiresSoon,
+    };
+  }
+  return {
+    annotationsVersion: CV_TRUST_ANNOTATIONS_VERSION,
+    employment: {},
+    claims: {},
+    validity,
+    evaluatedOn: evaluationOn,
+    // NOT `unavailable`. Trust was not unreadable here; it is deliberately
+    // not carried, and `unavailable: true` would make the renderer suppress
+    // the expiry line as well -- which is the one thing this function exists
+    // to draw.
+    unavailable: false,
+  };
+}
+
+/**
  * Build the annotations for one person, from the identity read they already
  * have. No query of its own — §24 and §25 of the brief, and the reason the
  * provenance reads were put in `identity.functions.ts` rather than here.

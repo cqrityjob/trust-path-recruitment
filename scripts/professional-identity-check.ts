@@ -1070,18 +1070,39 @@ console.log("\n4 · CV source bundle");
     "languages are separated from skills",
     bundle.languages.length === 1 && bundle.skills.length === 1,
   );
+  // ── THE BUNDLE MAKES NO TRUST JUDGEMENT AT ALL ──────────────────────
+  //
+  // It used to carry a `verified` boolean per claim, computed at build time.
+  // These assertions used to check that the boolean was computed CORRECTLY --
+  // that a CQrityjob document review, an unsupported issuer confirmation and
+  // a methodless approval all came out false.
+  //
+  // The field is gone, and that is the stronger position. A frozen display
+  // decision with no date on it is exactly what a saved CV was found still
+  // printing after the credential behind it had been revoked; the renderer
+  // now derives trust live through the Passport's own describeTrust and
+  // validityOf on every open, so the flag had no reader left. `cv_source_bundle`
+  // in SQL does not write one either, which is what makes the two builders
+  // produce the same shape.
+  //
+  // So the assertion is now about ABSENCE, over every section, and it is
+  // checked on the serialised bundle rather than a field list -- a field list
+  // only covers the fields somebody thought of.
+  const claimsOf = (b: ReturnType<typeof buildCvSourceBundle>) => [
+    ...b.education,
+    ...b.credentials,
+    ...b.skills,
+    ...b.languages,
+  ];
   ck(
-    "a self-declared claim is not marked verified",
-    bundle.credentials.every((c) => c.verified === false),
+    "no claim on a bundle carries a verification flag",
+    claimsOf(bundle).length > 0 &&
+      claimsOf(bundle).every((c) => !("verified" in (c as Record<string, unknown>))),
   );
 
-  // "Verified" for the bundle means SOURCE-CONFIRMED (owner decision): the
-  // employer confirmed an employment through the authorised attestation
-  // path, or -- once the Issuer Foundation release exists -- an identified
-  // issuer confirmed a credential. NO CREDENTIAL CAN REACH IT TODAY: a
-  // CQrityjob document review is documented, an issuer confirmation has no
-  // structure behind it whatever organisation is named, and a verified level
-  // with no recorded method fails closed the same way.
+  // The same identity that used to produce three carefully-false booleans.
+  // What matters now is that nothing about their trust reaches the bundle at
+  // all, whatever the recorded method was.
   const credentialBundle = buildCvSourceBundle({
     identity: identity({
       claims: [
@@ -1105,22 +1126,33 @@ console.log("\n4 · CV source bundle");
     targetJobText: null,
   });
   ck(
-    "no credential is marked verified today: a review, an issuer confirmation and a methodless approval all fail closed",
+    "three verified-level credentials still put no verification judgement on the bundle",
     credentialBundle.credentials.length === 3 &&
-      credentialBundle.credentials.every((c) => c.verified === false),
+      !/"verified"|verifierName|verificationMethod|verifiedOn/.test(
+        JSON.stringify(credentialBundle),
+      ),
   );
 
-  // "evidenced" is the holder attaching a document to their own claim. A
-  // holder cannot verify themselves.
-  const evidenced = buildCvSourceBundle({
-    identity: identity({ claims: [claim({ assertionLevel: "evidenced" })] }),
-    locale: "sv",
-    includeCareerInsight: false,
-    targetJobText: null,
-  });
+  // And the judgement that DOES get made is made live, by the Passport's own
+  // engine, on the annotations channel a model never sees. Restated here
+  // because the assertions above are now about absence, and absence alone
+  // would be satisfied by a build that had stopped deciding anything.
+  const liveTrust = buildCvTrustAnnotations(
+    identity({
+      claims: [
+        claim({
+          id: "c-review",
+          assertionLevel: "verified",
+          verifierName: "CQrityjob",
+          verificationMethod: "document_review",
+        }),
+      ],
+    }),
+  );
   ck(
-    "attaching evidence does not make a claim verified",
-    evidenced.credentials[0]?.verified === false,
+    "a CQrityjob document review presents as documented, not verified, live",
+    liveTrust.claims["c-review"] !== undefined &&
+      !presentsAsVerified(liveTrust.claims["c-review"]),
   );
 
   ck("the career insight is opt-in and absent by default", bundle.careerInsight === null);
@@ -2379,16 +2411,21 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
   // today's builder, because today's builder correctly writes `false`: the
   // point of this section is that a bundle frozen with the old flag must
   // still not be read as current trust.
+  //
+  // `CvFactClaim` no longer HAS a `verified` field -- neither builder writes
+  // one any more, in TypeScript or in SQL. Legacy rows in the database still
+  // carry it, so the cast is not a workaround: it is the fixture describing a
+  // row this code will meet and must not read as current trust.
   const freshBundle = bundleOf(idActive);
   const savedBundle = {
     ...freshBundle,
     credentials: freshBundle.credentials.map((c) => ({ ...c, verified: true })),
-  };
+  } as unknown as ReturnType<typeof bundleOf>;
   const savedPresentation = factualStoredPresentation(savedBundle);
 
   ck(
     "11.1 the saved bundle really does freeze verified: true",
-    savedBundle.credentials[0]?.verified === true,
+    (savedBundle.credentials[0] as unknown as { verified?: boolean }).verified === true,
   );
 
   {

@@ -152,6 +152,117 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/* ---------------------------------------------------------------------
+ * Self-hosted display and body faces.
+ *
+ * -- WHY THESE ARE NOT LOADED FROM GOOGLE ANY MORE ---------------------
+ *
+ * They were, and it made the CV export unreliable in a way nothing on screen
+ * showed. Chromium can only EMBED a font it has a file for; when the webfont
+ * has not arrived it falls back to the platform UI font, and the macOS system
+ * font cannot be embedded at all. Skia then writes the PDF with Type 3 fonts,
+ * whose glyph bounding boxes are the whole em square rather than the letters
+ * -- so pdftotext sees the name overlapping the line below it and extracts
+ * "Jonas / Sverige / Ek" instead of "Jonas Ek".
+ *
+ * That is a CV arriving at an applicant tracking system with the candidate's
+ * own name interleaved with an unrelated line. The document looks perfect;
+ * only the extraction is wrong, which is exactly the failure nobody notices
+ * until an employer says they never received an application.
+ *
+ * Any candidate whose browser had not fetched the webfont -- offline, a
+ * blocked third-party request, a corporate proxy, a content blocker -- got
+ * that PDF. Self-hosting removes the dependency: the file is served from the
+ * same origin as the page, so it is there when the print dialog opens.
+ *
+ * It also removes a third-party request that saw every visitor's IP address,
+ * which is not why this changed but is not nothing either.
+ *
+ * -- WHAT IS HERE ------------------------------------------------------
+ *
+ * Sora (display) and Manrope (body), weights 400/500/600/700, latin and
+ * latin-ext only -- the two subsets that cover Swedish and English. Both are
+ * SIL Open Font Licence 1.1; see public/fonts/OFL.txt. The files are the
+ * upstream Google Fonts builds, unmodified, and public/fonts/SOURCES.json
+ * records the exact URL and SHA-256 of each so a reviewer can re-derive them.
+ *
+ * scripts/cv-export-proof.tsx asserts through pdffonts that an exported CV
+ * contains no Type 3 font and that every face is embedded. That is the check
+ * that would have caught this, and it is now the check that keeps it caught.
+ * ------------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/sora-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/sora-500.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/sora-600.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/sora-700.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/manrope-400.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/manrope-500.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/manrope-600.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/manrope-700.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -217,10 +328,31 @@
     /* Running footer on every printed page. Browsers with paged-media support
      * (Chromium, Safari) render this; browsers without support ignore the rule
      * — the visible in-flow disclaimer at the end of the report is the source
-     * of truth. */
+     * of truth.
+     *
+     * PAGE NUMBERS ONLY, and the tagline moved into the document.
+     *
+     * `@page` is document-scoped: there is no selector on it, so its content
+     * cannot depend on which page is printing or what language that page is
+     * in. It read "CQrityjob — Where trust comes first", in English, at the
+     * foot of every Swedish CV — a brand line asserting itself in the wrong
+     * language on a document somebody sends to a Swedish employer.
+     *
+     * Page numbers are the part that genuinely belongs in a margin box: they
+     * are locale-neutral, they cannot be computed in the flow, and they are
+     * what a reader needs when a two-page CV arrives stapled. The tagline is
+     * ordinary content and now lives in each document's own footer, in that
+     * document's own language. */
     @bottom-center {
-      content: "CQrityjob — Where trust comes first · " counter(page) " / " counter(pages);
-      font-family: system-ui, sans-serif;
+      content: counter(page) " / " counter(pages);
+      /* The self-hosted face, not `system-ui`.
+       *
+       * A margin box drawn in the platform UI font pulls that font into the
+       * PDF, and on macOS it cannot be embedded -- so a document whose whole
+       * body was properly embedded still carried one Type 3 font for the sake
+       * of a page number. Naming the vendored family keeps the file to faces
+       * a reader can actually extract. */
+      font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
       font-size: 9pt;
       color: #6b7280;
     }

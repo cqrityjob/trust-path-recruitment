@@ -54,7 +54,6 @@ import {
   LANGUAGE_CLAIM_TYPES,
   SKILL_CLAIM_TYPES,
   claimsOfType,
-  isVerifiedClaim,
   type ProfessionalIdentityV1,
 } from "../types";
 
@@ -100,9 +99,15 @@ export interface CvFactClaim {
   readonly issuedOn: string | null;
   readonly validUntil: string | null;
   readonly level: string | null;
-  /** TRUE only when an authorised verifier decided so. The one field that
-   *  may put a verification mark on a page. */
-  readonly verified: boolean;
+  // NO `verified` FIELD, deliberately.
+  //
+  // There was one, and a saved CV was found still printing "Verified" after
+  // the credential behind it had been revoked: a frozen display decision with
+  // no date on it, copied into a bundle and then into an employer's snapshot.
+  // The renderer now derives trust live through the Passport's own
+  // describeTrust/validityOf on every open, so the flag had no reader left --
+  // and `cv_source_bundle` in SQL does not write one either, which is what
+  // makes the two builders produce the same shape.
 }
 
 export interface CvFactInsight {
@@ -113,8 +118,27 @@ export interface CvFactInsight {
 /**
  * The complete factual input to CV generation.
  *
- * Serialisable, comparable, and safe to log: it is the person's own data and
- * nothing else, and every downstream check is expressed against it.
+ * Serialisable and comparable, and every downstream check is expressed
+ * against it.
+ *
+ * ── IT IS NOT SAFE TO LOG, AND THIS COMMENT USED TO SAY IT WAS ─────────
+ *
+ * The original sentence read "safe to log: it is the person's own data and
+ * nothing else". The second half is true and the first does not follow from
+ * it. This object is one named individual's employment history, their
+ * credentials with issuers and dates, and the primary keys of the Passport
+ * rows behind them. "Their own data" is a statement about WHOSE it is, not
+ * about where it may be written.
+ *
+ * A comment like that is not inert. It is the sentence somebody reads at
+ * three in the morning while adding a `console.error(err, bundle)` to debug a
+ * failing save, and it tells them the thing they were about to do is fine.
+ *
+ * Nothing in this feature logs a bundle, a contact detail or a pasted job
+ * advert. The two `console.error` calls in cv-store.functions.ts carry a
+ * PostgREST error object and no payload, and `cv-pilot:check` asserts that no
+ * log statement in the CV directory takes a bundle, a presentation or a
+ * contact.
  */
 export interface CvSourceBundle {
   readonly bundleVersion: typeof CV_SOURCE_BUNDLE_VERSION;
@@ -152,7 +176,6 @@ function toFactClaim(claim: {
     issuedOn: claim.issuedOn,
     validUntil: claim.validUntil,
     level: claim.skillLevel,
-    verified: isVerifiedClaim(claim),
   };
 }
 

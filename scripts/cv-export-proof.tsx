@@ -37,8 +37,8 @@
 //             deselected. Proves the deselected facts are absent from the
 //             exported FILE, not merely undrawn on a screen.
 
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
-import { inflateSync } from "node:zlib";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { chromium } from "playwright";
@@ -65,206 +65,96 @@ function group(name: string): void {
 const TODAY = "2026-09-08";
 
 /* ------------------------------------------------------------------ */
-/* Reading text back out of a PDF, without a PDF library               */
+/* Reading text back out — with the reader an employer's system uses   */
 /* ------------------------------------------------------------------ */
-
-// ── WHY THIS IS NOT THIRTY LINES ───────────────────────────────────────
 //
-// Because a naive extractor passes when the export is broken, which is the
-// one thing a proof must not do.
+// ── THIS USED TO BE A HUNDRED AND FIFTY LINES OF BESPOKE PDF PARSING ───
 //
-// Chromium prints this page with the macOS system UI font, which it cannot
-// embed, so it emits TYPE 3 fonts: one subsetted font per style, glyph codes
-// that mean nothing outside their own font, and ONE `Tj` PER GLYPH with a
-// `Tf` in front of it. A first attempt merged every ToUnicode map in the
-// file into one table, and the result was confident nonsense -- code 0x5E is
-// a different letter in F5 than in F6, so roughly a third of the document
-// came back as plausible-looking text and the assertions failed for reasons
-// that had nothing to do with the CV.
+// It inflated the content streams, merged the ToUnicode CMaps and decoded the
+// show operators by hand, and it worked. It was still the wrong instrument,
+// for a reason that has nothing to do with whether the code was correct: it
+// was written by the same hand as the thing it was checking, so a defect in
+// the export and a matching assumption in the extractor cancelled out
+// silently. The pair agreed with each other while an applicant tracking
+// system saw something else.
 //
-// So the font is resolved the way a PDF reader resolves it: the page's
-// /Resources name the font objects, each font object names its own
-// /ToUnicode stream, and the content stream is walked with the current font
-// in hand. That is also exactly the path an applicant tracking system takes,
-// which is the property being asserted -- if the export ever stopped
-// carrying ToUnicode maps, the text would stop coming back here at the same
-// moment it stopped being selectable for a recruiter.
+// They did, in fact, disagree. The custom extractor read `thin.pdf` happily;
+// `pdftotext -layout` read the candidate's name as
+//
+//     Jonas
+//     Sverige
+//             Ek
+//
+// because the export had fallen back to a font Chromium could not embed, and
+// the resulting Type 3 glyph boxes were the whole em square. The bespoke
+// reader never looked at geometry, so it never noticed. That is the entire
+// argument for using somebody else's reader.
+//
+// Poppler is now a hard dependency of this proof. A missing binary FAILS the
+// script rather than degrading it: a check that silently becomes weaker when
+// a tool is absent is a check nobody can rely on.
 
-interface PdfObject {
-  readonly body: string;
-  readonly stream: Buffer | null;
+function poppler(tool: string, args: readonly string[]): string {
+  const r = spawnSync(tool, [...args], { encoding: "utf8" });
+  if (r.error || r.status !== 0) {
+    console.error(
+      `\n${tool} is required and did not run. Install poppler ` +
+        "(macOS: `brew install poppler`; Debian/Ubuntu: `apt-get install -y poppler-utils`).\n" +
+        `${r.error?.message ?? r.stderr ?? ""}`,
+    );
+    process.exit(2);
+  }
+  return r.stdout;
 }
 
-function parseObjects(buf: Buffer): Map<number, PdfObject> {
-  const latin = buf.toString("latin1");
-  const objects = new Map<number, PdfObject>();
-  for (const m of latin.matchAll(/(?:^|[\r\n])(\d+) 0 obj\b/g)) {
-    const num = Number(m[1]);
-    const bodyStart = m.index! + m[0].length;
-    const objEnd = latin.indexOf("endobj", bodyStart);
-    if (objEnd === -1) continue;
-    const body = latin.slice(bodyStart, objEnd);
-
-    let stream: Buffer | null = null;
-    // `\bstream` and NOT `\nstream`: Chromium writes `/Length 134>> stream`
-    // on one line, so requiring a newline in front of the keyword found no
-    // streams at all and the whole document came back empty. The word
-    // boundary is safe because `endstream` has none in front of `stream`.
-    const sm = /\bstream\r?\n/.exec(body);
-    if (sm) {
-      const dataStart = bodyStart + sm.index + sm[0].length;
-      const dataEnd = latin.indexOf("endstream", dataStart);
-      if (dataEnd !== -1) {
-        const raw = buf.subarray(dataStart, dataEnd);
-        if (/\/FlateDecode/.test(body.slice(0, sm.index))) {
-          try {
-            stream = inflateSync(raw);
-          } catch {
-            try {
-              stream = inflateSync(raw.subarray(0, -1));
-            } catch {
-              stream = Buffer.alloc(0);
-            }
-          }
-        } else {
-          stream = raw;
-        }
-      }
-    }
-    objects.set(num, { body, stream });
-  }
-  return objects;
-}
-
-function hexToStr(hex: string): string {
-  let s = "";
-  for (let i = 0; i + 3 < hex.length + 1; i += 4) {
-    s += String.fromCharCode(parseInt(hex.slice(i, i + 4), 16));
-  }
-  return s;
-}
-
-/** One font's own code -> character table, from its /ToUnicode CMap. */
-function cmapOf(stream: Buffer): Map<number, string> {
-  const map = new Map<number, string>();
-  const text = stream.toString("latin1");
-  for (const block of text.matchAll(/beginbfchar([\s\S]*?)endbfchar/g)) {
-    for (const m of block[1].matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)) {
-      map.set(parseInt(m[1], 16), hexToStr(m[2]));
-    }
-  }
-  for (const block of text.matchAll(/beginbfrange([\s\S]*?)endbfrange/g)) {
-    for (const m of block[1].matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)) {
-      const lo = parseInt(m[1], 16);
-      const hi = parseInt(m[2], 16);
-      const dst = parseInt(m[3], 16);
-      for (let ch = lo; ch <= hi && ch - lo < 65535; ch += 1) {
-        map.set(ch, String.fromCodePoint(dst + (ch - lo)));
-      }
-    }
-  }
-  return map;
-}
-
-/** The byte codes in one string operand, literal or hex. */
-function operandCodes(operand: string): number[] {
-  const codes: number[] = [];
-  if (operand.startsWith("<")) {
-    const hex = operand.slice(1, -1).replace(/\s/g, "");
-    for (let i = 0; i + 1 < hex.length; i += 2) codes.push(parseInt(hex.slice(i, i + 2), 16));
-    return codes;
-  }
-  const body = operand.slice(1, -1);
-  for (let i = 0; i < body.length; i += 1) {
-    if (body[i] === "\\" && i + 1 < body.length) {
-      const n = body[i + 1];
-      const oct = /[0-7]/.test(n) ? body.slice(i + 1, i + 4).match(/^[0-7]{1,3}/)?.[0] : null;
-      if (oct) {
-        codes.push(parseInt(oct, 8));
-        i += oct.length;
-        continue;
-      }
-      codes.push({ n: 10, r: 13, t: 9, b: 8, f: 12 }[n] ?? n.charCodeAt(0));
-      i += 1;
-      continue;
-    }
-    codes.push(body.charCodeAt(i));
-  }
-  return codes;
-}
-
-/** One string per page, in the order the pages are bound. */
-function pdfPages(file: string): string[] {
-  const buf = readFileSync(file);
-  const objects = parseObjects(buf);
-
-  /** font object number -> its ToUnicode table. */
-  const fontMaps = new Map<number, Map<number, string>>();
-  for (const [num, obj] of objects) {
-    const toUnicode = /\/ToUnicode (\d+) 0 R/.exec(obj.body);
-    if (!toUnicode) continue;
-    const cmapStream = objects.get(Number(toUnicode[1]))?.stream;
-    if (cmapStream) fontMaps.set(num, cmapOf(cmapStream));
-  }
-
-  // Page order comes from the page tree, not from where the objects happen
-  // to sit in the file -- an assertion about "page 2" has to mean the second
-  // page a reader sees.
-  const pagesNode = [...objects.values()].find((o) => /\/Type\s*\/Pages\b/.test(o.body));
-  const kids = pagesNode
-    ? [...(/\/Kids \[([^\]]*)\]/.exec(pagesNode.body)?.[1] ?? "").matchAll(/(\d+) 0 R/g)].map((m) =>
-        Number(m[1]),
-      )
-    : [...objects.entries()].filter(([, o]) => /\/Type\s*\/Page\b/.test(o.body)).map(([n]) => n);
-
-  const out: string[] = [];
-  for (const pageNum of kids) {
-    const page = objects.get(pageNum);
-    if (!page) continue;
-
-    /** resource name -> ToUnicode table, for THIS page. */
-    const byName = new Map<string, Map<number, string>>();
-    const fontDict = /\/Font <<([\s\S]*?)>>/.exec(page.body)?.[1] ?? "";
-    for (const m of fontDict.matchAll(/\/(\w+) (\d+) 0 R/g)) {
-      const table = fontMaps.get(Number(m[2]));
-      if (table) byName.set(m[1], table);
-    }
-
-    const contentRef = /\/Contents (\d+) 0 R/.exec(page.body);
-    const content = contentRef ? objects.get(Number(contentRef[1]))?.stream : null;
-    if (!content) continue;
-
-    const text = content.toString("latin1");
-    let current: Map<number, string> | null = null;
-    let page_ = "";
-    // Font selections and show operators, in the order they occur. Chromium
-    // emits one glyph per Tj, so the font in hand changes constantly and
-    // reading it any other way is what produced nonsense.
-    for (const m of text.matchAll(
-      /\/(\w+)\s+[\d.]+\s+Tf|(\[[^\]]*\]|\([^)]*\)|<[0-9A-Fa-f\s]*>)\s*(TJ|Tj)/g,
-    )) {
-      if (m[1]) {
-        current = byName.get(m[1]) ?? null;
-        continue;
-      }
-      const operand = m[2];
-      const parts = operand.startsWith("[")
-        ? [...operand.matchAll(/(\([^)]*\)|<[0-9A-Fa-f\s]*>)/g)].map((x) => x[1])
-        : [operand];
-      for (const part of parts) {
-        for (const code of operandCodes(part)) {
-          const ch = current?.get(code);
-          page_ += ch ?? (current ? "" : code >= 32 && code < 127 ? String.fromCharCode(code) : "");
-        }
-      }
-    }
-    out.push(page_.replace(/\s+/g, " ").trim());
+/** `pdfinfo` as a field map. */
+function pdfInfo(file: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const line of poppler("pdfinfo", [file]).split("\n")) {
+    const at = line.indexOf(":");
+    if (at > 0) out[line.slice(0, at).trim()] = line.slice(at + 1).trim();
   }
   return out;
 }
 
-/** Chromium positions every glyph individually, so word spacing in the
- *  extracted stream is decorative. Assertions run against this. */
+/**
+ * One row per font, parsed by COLUMN and not by whitespace.
+ *
+ * `pdffonts` prints a fixed-width table whose second column is literally
+ * "Type 3" and whose fourth is "yes"/"no". Splitting on whitespace makes the
+ * type "Type", the embedded flag "Custom", and every assertion built on them
+ * quietly meaningless -- which is what the first version of this function
+ * did, and it passed.
+ */
+function pdfFonts(file: string): { name: string; type: string; embedded: boolean }[] {
+  const lines = poppler("pdffonts", [file]).split("\n");
+  const ruler = lines[1] ?? "";
+  // The dashes row gives the exact span of every column.
+  const spans: [number, number][] = [];
+  let at = 0;
+  for (const run of ruler.split(" ")) {
+    if (run.length > 0) spans.push([at, at + run.length]);
+    at += run.length + 1;
+  }
+  const col = (line: string, i: number) =>
+    spans[i] ? line.slice(spans[i][0], spans[i][1]).trim() : "";
+
+  return lines
+    .slice(2)
+    .filter((l) => l.trim().length > 0)
+    .map((l) => ({ name: col(l, 0), type: col(l, 1), embedded: col(l, 3) === "yes" }));
+}
+
+/** One string per page, in reading order, as poppler sees it. */
+function pdfPages(file: string): string[] {
+  return poppler("pdftotext", ["-layout", file, "-"])
+    .split("\f")
+    .map((p) => p.replace(/\s+/g, " ").trim())
+    .filter((p) => p.length > 0);
+}
+
+/** Whitespace-insensitive containment. Layout mode pads columns, so a
+ *  sentence that wraps is still the same sentence. */
 function squashed(text: string): string {
   return text.replace(/\s+/g, "").toLowerCase();
 }
@@ -587,9 +477,24 @@ function pageHtml(c: Case): string {
   // `main` and the wrapper reproduce what SiteLayout puts around the article,
   // so the print rules that neutralise `min-h-screen` and `flex-1` are
   // exercised rather than assumed.
+  // ── THE FONTS ARE THE POINT, NOT DECORATION ──────────────────────────
+  //
+  // The compiled stylesheet references the self-hosted faces as `/fonts/...`,
+  // which resolves against the site origin. This page is loaded from `file:`,
+  // so those URLs would 404 and the browser would fall back to the platform
+  // UI font -- which is exactly the state that produced a Type 3 PDF with the
+  // candidate's name extracting out of order. Rewriting them to absolute
+  // file: URLs makes the harness print with the fonts a real visitor gets;
+  // `pdffonts` then proves it, rather than the harness assuming it.
+  // The compiled stylesheet writes them unquoted (`url(/fonts/x.woff2)`), so
+  // the rewrite matches what the bundler emits rather than what the source
+  // says -- a mismatch there fails silently as a 404, a fallback font and a
+  // Type 3 PDF, which is precisely the bug this harness exists to catch.
+  const css = CSS.replaceAll("url(/fonts/", `url(file://${path.join(root, "public/fonts")}/`);
+
   return `<!doctype html>
 <html lang="${c.locale}"><head><meta charset="utf-8"><title>CV</title>
-<style>${CSS}</style></head>
+<style>${css}</style></head>
 <body class="min-h-screen bg-background text-foreground">
 <main class="flex-1"><div class="py-14">${markup}</div></main>
 </body></html>`;
@@ -619,6 +524,164 @@ await browser.close();
 /* ------------------------------------------------------------------ */
 /* Assertions, against the PDFs                                        */
 /* ------------------------------------------------------------------ */
+
+group("POPPLER — what an applicant tracking system actually reads");
+for (const c of CASES) {
+  const file = path.join(OUT, `${c.key}.pdf`);
+  const info = pdfInfo(file);
+  const fonts = pdfFonts(file);
+
+  // A4 is 595 x 842 points. Poppler prints it as "595.276 x 841.89 pts (A4)"
+  // when it recognises the size, which is the assertion worth making: a
+  // document that says A4 on it is one a recruiter can print.
+  ck(`${c.key}: pdfinfo reports A4`, /\(A4\)/.test(info["Page size"] ?? ""), info["Page size"]);
+
+  // THE CHECK THAT CAUGHT THE REAL DEFECT. A Type 3 font is what Chromium
+  // writes when it cannot embed the face -- and its glyph boxes are the whole
+  // em square, so poppler reads the name as overlapping the line below it.
+  ck(
+    `${c.key}: no Type 3 font`,
+    fonts.length > 0 && fonts.every((f) => !/Type 3/i.test(f.type)),
+    fonts.map((f) => `${f.name}:${f.type}`).join(", "),
+  );
+  ck(
+    `${c.key}: every face is embedded`,
+    fonts.every((f) => f.embedded),
+    fonts
+      .filter((f) => !f.embedded)
+      .map((f) => f.name)
+      .join(", "),
+  );
+  ck(
+    `${c.key}: and they are the product's own faces`,
+    fonts.some((f) => /Sora|Manrope/i.test(f.name)),
+    fonts.map((f) => f.name).join(", "),
+  );
+
+  // ── TAGGING: STATED, NOT CLAIMED ─────────────────────────────────
+  //
+  // A TAGGED PDF carries a structure tree -- headings, lists, reading order --
+  // that assistive technology and the better applicant tracking systems use.
+  // Chromium's print pipeline does not produce one, and there is no flag on
+  // `page.pdf()` that makes it. So this document is UNTAGGED, and the
+  // assertion says exactly that rather than being quietly absent.
+  //
+  // It is asserted as `no` on purpose. If a future Chromium starts emitting a
+  // structure tree, this fails -- and somebody has to come and decide whether
+  // the export may now be described as accessible, rather than the claim
+  // drifting into being true without anybody noticing it had been false.
+  //
+  // What IS proved instead: embedded fonts, extractable text, and the correct
+  // reading order under `pdftotext`, which is what an ATS parses. That is
+  // less than tagging and it is not nothing, and the report says which.
+  ck(
+    `${c.key}: pdfinfo reports the document as UNTAGGED (Chromium cannot tag)`,
+    (info.Tagged ?? "") === "no",
+    `Tagged: ${info.Tagged}`,
+  );
+}
+
+group("POPPLER — reading order, in the reader an employer is likely to use");
+{
+  // ── THE DEFECT THIS GROUP EXISTS FOR ─────────────────────────────────
+  //
+  // `pdftotext -layout` used to extract the thin CV as
+  //
+  //     Jonas
+  //     Sverige
+  //             Ek
+  //
+  // The candidate's own name, split around an unrelated line. Nothing was
+  // wrong with the document: the export had fallen back to the platform UI
+  // font, macOS does not let Chromium embed it, and the resulting Type 3
+  // glyph boxes were the full em square -- so poppler saw the 20pt name
+  // overlapping the 14pt line beneath it and ordered them by geometry.
+  //
+  // Self-hosting the faces fixed it at the source. This is the assertion that
+  // keeps it fixed, in the tool that found it.
+  const layout = poppler("pdftotext", ["-layout", path.join(OUT, "thin.pdf"), "-"]);
+  const raw = poppler("pdftotext", [path.join(OUT, "thin.pdf"), "-"]);
+
+  ck(
+    "thin: the name extracts whole and in order (-layout)",
+    /Jonas Ek/.test(layout),
+    layout.slice(0, 120),
+  );
+  ck("thin: and in raw mode", /Jonas Ek/.test(raw));
+  ck(
+    "thin: nothing is interleaved between the given name and the surname",
+    !/Jonas[\s\S]{0,40}Sverige[\s\S]{0,40}Ek/.test(layout),
+  );
+  ck(
+    "thin: the country still follows the name rather than splitting it",
+    layout.indexOf("Sverige") > layout.indexOf("Jonas Ek"),
+  );
+  ck(
+    "thin: Swedish characters survive",
+    /Gymnasieexamen, barn- och fritidsprogrammet/.test(layout),
+  );
+  ck(
+    "thin: the sections are in document order",
+    layout.indexOf("UTBILDNING") > layout.indexOf("Jonas Ek"),
+  );
+}
+
+group("POPPLER — the vaktare CV, read as an employer's system reads it");
+{
+  const text = poppler("pdftotext", ["-layout", path.join(OUT, "vaktare.pdf"), "-"]);
+  const squash = (s: string) => s.replace(/\s+/g, " ");
+  const t = squash(text);
+
+  ck("the name is whole", t.includes("Karin Wallin"));
+  ck("the expired authorisation is named", t.includes("Ordningsvaktsförordnande"));
+  ck("with its date", t.includes("Giltig t.o.m. 2026-03-31"));
+  ck("and labelled expired", t.includes("UTGÅNGEN") || t.includes("Utgången"));
+  ck("the credential still in date keeps its mark", t.includes("Verifierad"));
+  ck(
+    "the contact details the person switched on are readable",
+    t.includes("karin.wallin@example.se"),
+  );
+  ck("Swedish characters survive", t.includes("Väktare") && t.includes("Malmö"));
+  ck(
+    "no internal identifier is extractable",
+    !/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(text),
+  );
+  ck(
+    "the employment order is newest first",
+    t.indexOf("Nordic Security AB") < t.indexOf("Stadsvakt"),
+  );
+}
+
+group("POPPLER — the deselected facts and the hidden number are absent");
+{
+  const text = poppler("pdftotext", ["-layout", path.join(OUT, "selected-en.pdf"), "-"]);
+  ck("the deselected employment is not in the file", !text.includes("Stadsvakt"));
+  ck("the deselected language is not in the file", !text.includes("Engelska"));
+  ck("the telephone the person switched off is not in the file", !text.includes("070-123"));
+  ck("the address they switched on is", text.includes("karin.wallin@example.se"));
+  ck(
+    "and the document reads as English",
+    text.includes("EXPERIENCE") || text.includes("Experience"),
+  );
+}
+
+group("POPPLER — pagination of a long career");
+{
+  const info = pdfInfo(path.join(OUT, "chef.pdf"));
+  ck("chef: pdfinfo agrees it is more than one page", Number(info.Pages ?? "0") >= 2, info.Pages);
+  const text = poppler("pdftotext", ["-layout", path.join(OUT, "chef.pdf"), "-"]);
+  const missing = CHEF.employment.map((e) => e.employerName).filter((n) => !text.includes(n));
+  ck(
+    `chef: all ${CHEF.employment.length} employers survive extraction`,
+    missing.length === 0,
+    missing.join(", "),
+  );
+  ck(
+    "chef: the long unbroken name extracts whole",
+    text.includes("Bengt-Åke Sjölund-Wikströmsson"),
+  );
+  ck("chef: no page is blank", !/\f\s*\f/.test(text) && !/\f\s*$/.test(text.replace(/\s+$/, "")));
+}
 
 group("THE FILE IS A TEXT DOCUMENT, NOT A PICTURE OF ONE");
 for (const [key, pages] of pdfs) {
@@ -730,5 +793,13 @@ if (fails.length > 0) {
   process.exit(1);
 }
 console.log(
-  "cv-export:proof OK (four real PDFs, selectable text, expiry stated, deselected facts absent, pagination intact)",
+  "cv-export:proof OK (four real PDFs, verified with poppler: A4, embedded CID TrueType with no\n" +
+    "Type 3 face, correct reading order, Swedish characters, expiry stated, deselected facts and\n" +
+    "hidden contact absent, no internal identifier, pagination intact)",
+);
+console.log(
+  "\nLIMITATION, asserted rather than glossed: the exported PDFs are UNTAGGED. Chromium's print\n" +
+    "pipeline emits no structure tree and no option makes it. Assistive technology and the better\n" +
+    "applicant tracking systems use that tree; what these documents offer instead is embedded\n" +
+    "fonts, extractable text and correct reading order. Tagging would need a different renderer.",
 );

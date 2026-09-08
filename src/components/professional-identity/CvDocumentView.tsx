@@ -118,6 +118,14 @@ const COPY = {
     "Dokumentet visar uppgifterna som de var {0}. En utskriven eller sparad PDF uppdateras inte när uppgifterna ändras.",
     "This document shows the information as it stood on {0}. A printed or saved PDF does not update when the information changes.",
   ),
+  /** The brand line, IN THE DOCUMENT'S LANGUAGE.
+   *
+   *  It used to sit in the `@page` margin box, which is document-scoped and
+   *  has no selector -- so it printed in English at the foot of every Swedish
+   *  CV. The margin box now carries page numbers, which are locale-neutral
+   *  and genuinely cannot be computed in the flow; this is ordinary content
+   *  and belongs where the rest of the document's language is decided. */
+  tagline: c("CQrityjob — Där förtroende kommer först.", "CQrityjob — Where trust comes first."),
 } as const;
 
 function period(startedOn: string, endedOn: string | null, lang: Lang): string {
@@ -484,6 +492,7 @@ export function CvDocumentView({
         <footer className="avoid-break mt-8 border-t border-border pt-3 text-[11px] leading-relaxed text-muted-foreground">
           {!doc.trust.unavailable && <p>{L(COPY.trustLegend, l)}</p>}
           <p className="mt-1">{Lf(COPY.snapshotNote, l, asAt)}</p>
+          <p className="mt-1">{L(COPY.tagline, l)}</p>
         </footer>
       )}
     </article>
