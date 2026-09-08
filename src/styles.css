@@ -325,6 +325,22 @@
    * `orphans`/`widows` stop a single line of a summary being left behind at
    * a page boundary. Chromium honours both in paged media, which is what the
    * export actually runs through. */
+  /* A printed CV is white paper.
+   *
+   * The application's page background is a warm off-white, and a body
+   * background propagates to the paged canvas -- so with "background
+   * graphics" enabled the CV printed onto a tinted sheet with a visible
+   * band below the last line where the document ended and the canvas did
+   * not. Found by rendering an actual PDF; it is invisible on screen and
+   * invisible in a screenshot of the screen.
+   *
+   * Scoped with `:has()` so the Saved Career Report keeps whatever it was
+   * doing. A browser without `:has()` simply keeps the tint, which is the
+   * cosmetic state this replaces rather than a broken one. */
+  body:has(.cv-document) {
+    background: #fff !important;
+  }
+
   .cv-document {
     font-size: 10.5pt;
     line-height: 1.45;
