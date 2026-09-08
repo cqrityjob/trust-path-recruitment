@@ -211,7 +211,10 @@ BEGIN
     'A8 the submission timestamp is recorded');
 
   _snap := _row.cv_document_snapshot;
-  PERFORM pg_temp.ok(_snap->>'snapshot_version' = 'application-cv-snapshot-v1',
+  -- v2 since 20261102090000: contact values whose switch is off have their
+  -- key removed, internal uuids are replaced by snapshot-local keys, and the
+  -- frozen per-credential "verified" flag is dropped.
+  PERFORM pg_temp.ok(_snap->>'snapshot_version' = 'application-cv-snapshot-v2',
     'A9 the artefact names its own contract version');
   PERFORM pg_temp.ok(
     _snap #>> '{source_bundle,identity,displayName}' = 'Anna Andersson',
@@ -484,5 +487,107 @@ BEGIN
 
   RAISE NOTICE 'job_application_cv_source_test: % surface assertions passed', _asserts;
 END $surface$;
+
+-- ===========================================================================
+-- GROUP J - the two things 20261102090000 changed about what is SENT
+-- ===========================================================================
+--
+-- Asserted through the REAL submission function against the RAW row an
+-- employer selects. The unit-level proofs live in
+-- cv_documents_server_owned_test; these are the end-to-end ones, because the
+-- leak they cover was invisible at every layer above this row.
+DO $sent$
+DECLARE
+  _anna uuid := 'a1000000-0000-4000-8000-000000000001';
+  -- job4: the only vacancy Anna has not already applied to. job3 carries her
+  -- uploaded-CV application from Group F, and one active application per
+  -- candidate per job is a unique index, not a convention.
+  _job4 uuid := 'c1000000-0000-4000-8000-000000000004';
+  -- A CV of this group's own: Group E deletes d1000000...0001 to prove that a
+  -- submitted artefact survives its source document, so by here there is
+  -- nothing left to submit.
+  _cvJ  uuid := 'd1000000-0000-4000-8000-00000000000f';
+  _appJ uuid := 'e1000000-0000-4000-8000-00000000000a';
+  _appK uuid := 'e1000000-0000-4000-8000-00000000000b';
+  _snap jsonb;
+  _n    integer;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', _anna::text, true);
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', _anna, 'role', 'authenticated')::text, true);
+
+  -- The candidate typed a telephone number, then decided not to show it. The
+  -- VALUE stays on their own row so they need not retype it for the next
+  -- employer; what must never happen is that it travels.
+  INSERT INTO public.cv_documents
+    (id, owner_user_id, title, locale, purpose, origin, source_bundle, presentation)
+  VALUES (_cvJ, _anna, 'CV med kontaktval', 'sv', 'general', 'factual',
+    jsonb_build_object(
+      'bundleVersion', 'cv-source-bundle-v1', 'locale', 'sv',
+      'identity', jsonb_build_object('displayName', 'Anna Andersson'),
+      'employment', jsonb_build_array(jsonb_build_object(
+        'id', 'emp-9', 'employerName', 'Bevakning AB', 'roleTitle', 'Väktare',
+        'startedOn', '2016-01-01', 'endedOn', NULL)),
+      'education', '[]'::jsonb, 'credentials', '[]'::jsonb,
+      'skills', '[]'::jsonb, 'languages', '[]'::jsonb,
+      'careerInsight', NULL),
+    jsonb_build_object(
+      'storedVersion', 'cv-stored-presentation-v1',
+      'headline', 'Väktare', 'summary', '',
+      'experience', '[]'::jsonb, 'emphasisedClaimIds', '[]'::jsonb,
+      'contact', jsonb_build_object(
+        'email', 'anna@example.test', 'phone', '070-555 00 11',
+        'showEmail', true, 'showPhone', false)));
+
+  PERFORM public.sp_submit_application_with_cv_source(
+    _appJ, _job4, NULL, NULL, NULL, NULL, NULL, 'cqrityjob_cv', _cvJ, false);
+
+  SELECT cv_document_snapshot INTO _snap
+    FROM public.job_applications WHERE id = _appJ;
+
+  PERFORM pg_temp.ok(_snap::text LIKE '%anna@example.test%',
+    'J1 the address the candidate chose to show is in the employer''s copy');
+  PERFORM pg_temp.ok(_snap::text NOT LIKE '%070-555 00 11%',
+    'J2 the number they chose NOT to show is nowhere in it');
+  PERFORM pg_temp.ok(NOT (_snap #> '{presentation,contact}' ? 'phone'),
+    'J3 and its key is absent rather than blank');
+  PERFORM pg_temp.ok(_snap ->> 'checked_at' IS NOT NULL,
+    'J4 the copy is dated, so an expiry on it can be judged against something');
+
+  -- Undo, so later groups see the row they expect.
+  DELETE FROM public.job_applications WHERE id = _appJ;
+
+  -- ── STALE FACTS ──────────────────────────────────────────────────────
+  --
+  -- A credential withdrawn since the CV was saved. The snapshot would carry
+  -- it as an ordinary line, and neither the candidate nor the employer would
+  -- have any way to know it no longer stands.
+  INSERT INTO public.sp_claims
+    (id, holder_user_id, claim_type, title, lifecycle_state)
+  VALUES ('c9000000-0000-4000-8000-000000000001', _anna,
+          'certification', 'Snart tillbakadragen', 'active');
+
+  UPDATE public.cv_documents
+     SET source_bundle = jsonb_set(source_bundle, '{credentials}', jsonb_build_array(
+           jsonb_build_object('id', 'c9000000-0000-4000-8000-000000000001',
+                              'claimType', 'certification',
+                              'title', 'Snart tillbakadragen')))
+   WHERE id = _cvJ;
+
+  UPDATE public.sp_claims SET lifecycle_state = 'withdrawn'
+   WHERE id = 'c9000000-0000-4000-8000-000000000001';
+
+  BEGIN
+    PERFORM public.sp_submit_application_with_cv_source(
+      _appK, _job4, NULL, NULL, NULL, NULL, NULL, 'cqrityjob_cv', _cvJ, false);
+    RAISE EXCEPTION 'ASSERTION FAILED: J5 a withdrawn credential was sent to an employer';
+  EXCEPTION WHEN SQLSTATE '23514' THEN
+    RAISE NOTICE 'ok  J5 a fact that no longer stands refuses the submission';
+  END;
+
+  SELECT count(*) INTO _n FROM public.job_applications WHERE id = _appK;
+  PERFORM pg_temp.ok(_n = 0,
+    'J6 and the refusal created no application -- the candidate updates and retries');
+END $sent$;
 
 ROLLBACK;

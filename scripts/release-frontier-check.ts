@@ -9,11 +9,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
   frontier: { file: string; hostedState: string; evidenceSource?: string }[];
 };
 
-// Empty is the steady state, and it is where the set belongs again: the schema
-// half of PR #197 was applied to owner production on 2026-09-08 and is now
-// recorded `applied` with evidence, so leaving its name here would hide a
-// genuinely stuck migration behind an expectation.
-const expectedPending: string[] = [];
+// Empty is the steady state. A name here is a migration that is SUPPOSED to be
+// waiting, and each one has to earn its place: leaving a name behind after it
+// is applied hides a genuinely stuck migration behind an expectation, which is
+// what this list exists to prevent.
+//
+// 20261102090000 makes cv_documents server-owned. It is the schema
+// prerequisite for the corrected CV pilot (PR #199) and is deliberately
+// waiting: main today writes cv_documents directly through PostgREST, so
+// applying it before the corrected application release merges would break CV
+// saving on the live site. REMOVE THIS NAME once it is applied to the owner
+// project and release-state.json records it as `applied` with evidence.
+const expectedPending: string[] = ["20261102090000_cv_documents_server_owned.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

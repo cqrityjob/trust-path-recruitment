@@ -109,39 +109,53 @@ SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cv_documents) = 1,
   'A1 the owner reads their own CV');
 
--- The owner may write one, and may write one only for themselves.
-INSERT INTO public.cv_documents (owner_user_id, title)
-VALUES ('cf000001-0000-0000-0000-000000000001', 'Anna CV 2');
+-- ── THE WRITE DOOR IS CLOSED (20261102090000) ──────────────────────────
+--
+-- Until that migration the owner could INSERT and UPDATE this table
+-- directly, and RLS checked ownership and nothing else -- so a signed-in
+-- holder could POST an invented employment history to the Data API and then
+-- attach it to a job application. The full negative control lives in
+-- cv_documents_server_owned_test.sql; what belongs HERE is the privilege
+-- itself, asserted next to the policies it used to accompany.
+--
+-- `permission denied`, not `row-level security`: the grant is now the
+-- boundary and refuses before any policy is consulted.
 
-SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cv_documents) = 2,
-  'A2 and may create another of their own');
+SELECT pg_temp.must_fail(
+  $$INSERT INTO public.cv_documents (owner_user_id, title)
+    VALUES ('cf000001-0000-0000-0000-000000000001', 'Anna CV 2')$$,
+  'permission denied',
+  'A2 the owner may NOT create a CV by writing the table directly');
 
--- The WITH CHECK on INSERT. A policy with USING and no WITH CHECK would
--- permit exactly this, which is why the migration writes four policies
--- rather than one FOR ALL.
 SELECT pg_temp.must_fail(
   $$INSERT INTO public.cv_documents (owner_user_id, title)
     VALUES ('cf000002-0000-0000-0000-000000000002', 'planted')$$,
-  'row-level security',
-  'A3 nobody may create a CV owned by somebody else');
+  'permission denied',
+  'A3 and certainly not one owned by somebody else');
 
--- The WITH CHECK on UPDATE. Handing your own row to another account is the
--- same disclosure as reading theirs, in the opposite direction.
 SELECT pg_temp.must_fail(
-  $$UPDATE public.cv_documents
-       SET owner_user_id = 'cf000002-0000-0000-0000-000000000002'
+  $$UPDATE public.cv_documents SET title = 'edited'
      WHERE owner_user_id = 'cf000001-0000-0000-0000-000000000001'$$,
-  'row-level security',
-  'A4 nor reassign their own CV to somebody else');
+  'permission denied',
+  'A4 nor edit one directly');
 
--- A CV is a draft of a person's own presentation. Unlike a Passport entry --
--- a record other people act on, which is withdrawn rather than deleted --
--- nobody else has seen this, so deleting it destroys no evidence.
-DELETE FROM public.cv_documents WHERE title = 'Anna CV 2';
+SELECT pg_temp.must_fail(
+  $$DELETE FROM public.cv_documents
+     WHERE owner_user_id = 'cf000001-0000-0000-0000-000000000001'$$,
+  'permission denied',
+  'A5 nor delete one directly -- deletion goes through cv_delete, which '
+  'checks the revision');
+
+-- The policies survive under the revoked grants and are worth keeping: if a
+-- future migration re-grants INSERT by accident -- which is exactly how this
+-- table got here -- the WITH CHECK still stops one person writing a row
+-- owned by another. Asserted so a later "tidy-up" that drops them is a
+-- deliberate act rather than a quiet one.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cv_documents) = 1,
-  'A5 the owner may delete their own CV');
+  (SELECT count(*) FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'cv_documents'
+      AND cmd IN ('INSERT', 'UPDATE', 'DELETE')) = 3,
+  'A5b the owner-scoped write policies remain as defence in depth');
 
 -- ── The other candidate ────────────────────────────────────────────────
 SELECT set_config('request.jwt.claim.sub', 'cf000002-0000-0000-0000-000000000002', true);
@@ -158,18 +172,26 @@ SELECT pg_temp.ok(
     WHERE id = '11110000-0000-0000-0000-000000000001') = 0,
   'A7 not even when they name the exact id');
 
--- A row they cannot see is a row they cannot change. UPDATE and DELETE match
--- nothing rather than erroring, so the assertion is on the row surviving.
-UPDATE public.cv_documents SET title = 'stolen'
- WHERE id = '11110000-0000-0000-0000-000000000001';
-DELETE FROM public.cv_documents
- WHERE id = '11110000-0000-0000-0000-000000000001';
+-- A row they cannot see is a row they cannot change -- and since
+-- 20261102090000 they hold no write privilege on the table at all, so the
+-- refusal now comes one layer earlier. Either way the row survives, which is
+-- what the assertion is about.
+SELECT pg_temp.must_fail(
+  $$UPDATE public.cv_documents SET title = 'stolen'
+     WHERE id = '11110000-0000-0000-0000-000000000001'$$,
+  'permission denied',
+  'A8 a stranger cannot reach the row with an UPDATE');
+SELECT pg_temp.must_fail(
+  $$DELETE FROM public.cv_documents
+     WHERE id = '11110000-0000-0000-0000-000000000001'$$,
+  'permission denied',
+  'A8b nor with a DELETE');
 RESET ROLE;
 
 SELECT pg_temp.ok(
   (SELECT title FROM public.cv_documents
     WHERE id = '11110000-0000-0000-0000-000000000001') = 'Anna CV',
-  'A8 a stranger''s UPDATE and DELETE reach no row');
+  'A8c and the CV is untouched');
 
 -- ═════════════════════════════════════════════════════════════════════════
 DO $$ BEGIN RAISE NOTICE 'GROUP B — the Supabase default-privilege trap'; END $$;
@@ -422,11 +444,13 @@ SELECT pg_temp.ok(
     WHERE owner_user_id = 'cf000001-0000-0000-0000-000000000001') = 0,
   'G3 not even when naming the applicant directly');
 
--- Nor may they write one into existence on somebody else's behalf.
+-- Nor may they write one into existence on somebody else's behalf. Since
+-- 20261102090000 no signed-in role holds INSERT on this table at all, so the
+-- refusal arrives one layer earlier than the policy that used to give it.
 SELECT pg_temp.must_fail(
   $$INSERT INTO public.cv_documents (owner_user_id, title)
     VALUES ('cf000001-0000-0000-0000-000000000001', 'recruiter-planted')$$,
-  'row-level security',
+  'permission denied',
   'G4 nor create a CV owned by the applicant');
 
 RESET ROLE;
