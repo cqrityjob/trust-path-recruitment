@@ -94,6 +94,10 @@ const cqrityjobCv: ContextCvInput = {
     locale: "sv",
     displayName: "Anna Lind",
     country: "SE",
+    countrySubdivision: null,
+    // Nothing shown. The interview bridge reads career facts; a contact
+    // detail is not one, and this fixture says so rather than defaulting.
+    contact: { email: null, phone: null },
     headline: "Säkerhetssamordnare med tio års erfarenhet",
     headlineIsAiWritten: false,
     summary: null,

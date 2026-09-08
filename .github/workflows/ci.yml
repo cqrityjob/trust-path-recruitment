@@ -801,6 +801,23 @@ jobs:
       - name: CQrityjob CV as an application source check
         run: bun run cv-application-source:check
 
+      # The CV a pilot user actually sends, end to end. It exists because a
+      # verified credential whose valid_until had passed was printed with a
+      # gold "Verified" chip, an attribution line naming the verifier, and no
+      # expiry date anywhere on the page: validity.ts derives expiry at read
+      # time and every other Passport surface applies it, while the CV read
+      # lifecycle_state straight off sp_claims, where a lapsed credential is
+      # still active and still verified.
+      #
+      # It also pins the property that makes deselecting a fact a privacy
+      # decision rather than a display one -- the fact is absent from the
+      # source bundle, so it is absent from the model's input, from the
+      # export, and from the copy an employer receives with an application.
+      # A filter in the renderer would satisfy every visual check and
+      # reintroduce that leak, so the guard asserts where the filter lives.
+      - name: CV pilot flow check
+        run: bun run cv-pilot:check
+
       # THE SIGNED-IN CANDIDATE'S CHROME AND VOCABULARY. Until PR 3 the
       # product had one navigation -- the marketing site's -- and served it
       # to people inside their own workspace: six items, none of them the
