@@ -1659,6 +1659,8 @@
       "canonicalVersion": "20261101090000",
       "hostedVersion": "20260908043205",
       "hostedName": "b315714c-89df-4610-9dd0-7b55207229a7",
+      "historyRepairVersion": "20261101090000",
+      "historyRepairName": "sp_selected_merit_sharing",
       "generatedFileOnMain": "supabase/migrations/20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql",
       "doNotReExecute": true,
       "equivalenceVerified": true,
@@ -1666,7 +1668,7 @@
       "appliedAt": "2026-09-08T04:32:05Z",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260908043205' AND name='b315714c-89df-4610-9dd0-7b55207229a7';",
       "sqlEquivalence": "Verified in this repository rather than asserted: both files were stripped of SQL comments and whitespace-normalised line by line, leaving 801 canonical and 799 generated significant lines. The complete diff is two lines — the canonical file opens with BEGIN; and closes with COMMIT;, which Lovable omits because its mechanism already runs the whole body in one transaction. Every other statement, in order, is byte-identical after normalisation. The generated file carries a header saying the same thing and naming the canonical file at main 52b0aaf1c54cbabf42b82305e4d29af33c6e3ced. This is the same deviation recorded for 20261031090000.",
-      "reason": "Canonical authored identity 20261101090000 was applied once, under Lovable hosted identity 20260908043205. The complete reviewed SQL stays at its canonical replay position; the generated duplicate is removed from the active path so a clean replay cannot run the same statements twice. NO HISTORY-REPAIR ALIAS WAS WRITTEN: the owner instruction for this release forbids re-running the migration and any database repair, so the canonical version 20261101090000 is deliberately absent from the hosted ledger. doNotReExecute and this mapping are therefore the only things standing between a filename-ordered deployment and a second execution, and a future release that wants the alias must add it as its own reviewed step."
+      "reason": "Canonical authored identity 20261101090000 was applied once under Lovable hosted identity 20260908043205. On 2026-09-08 an owner-approved history-only repair recorded the canonical alias after verifying the generated identity and all created objects. The generated filename remains in the active path only as a comment-only ledger marker, so db push sees the hosted version while a clean replay executes nothing twice."
     }
   ],
   "canonicalProject": {

@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = path.resolve(import.meta.dir, "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDir = path.join(root, "supabase/migrations");
 const parkedDir = path.join(root, "supabase/archive/parked-migrations");
 const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.json"), "utf8")) as {
@@ -38,11 +39,12 @@ const retiredCanonicalIdentities = [
   "20261026093000_scp_release_facet_resolution.sql",
   "20261027090000_scp_trust_evidence_report_r1_provenance.sql",
   "20261029090000_scp_trust_evidence_report_r3a_contract.sql",
+];
+const hostedLedgerMarkers = [
+  "20260904190901_scp_trust_evidence_report_r1_provenance.sql",
   "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
   "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
   "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
-  // Lovable's generated copy of 20261101090000. Same statements, applied once
-  // already; keeping it active would make a clean replay run them twice.
   "20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql",
 ];
 const parked = [
@@ -66,8 +68,24 @@ for (const file of hostedIdentities) {
 for (const file of retiredCanonicalIdentities) {
   if (active.has(file)) failures.push(`already-applied canonical identity is active: ${file}`);
 }
+for (const file of hostedLedgerMarkers) {
+  const markerPath = path.join(migrationsDir, file);
+  if (!active.has(file)) {
+    failures.push(`hosted ledger marker missing from active path: ${file}`);
+    continue;
+  }
+  const executableBody = readFileSync(markerPath, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/--[^\n]*/g, " ")
+    .replace(/\s+/g, "");
+  if (executableBody.length > 0) {
+    failures.push(`hosted ledger marker contains executable SQL: ${file}`);
+  }
+}
 for (const file of parked) {
-  if (active.has(file)) failures.push(`unsafe migration is active: ${file}`);
+  if (active.has(file) && !hostedLedgerMarkers.includes(file)) {
+    failures.push(`unsafe migration is active: ${file}`);
+  }
   if (!existsSync(path.join(parkedDir, file))) failures.push(`parked history missing: ${file}`);
 }
 for (const entry of state.frontier.filter((item) => item.hostedState === "applied")) {

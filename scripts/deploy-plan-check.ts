@@ -15,8 +15,8 @@
  * decides from exactly one comparison: local files in supabase/migrations
  * against the versions in supabase_migrations.schema_migrations.
  *
- * Run against a faithful copy of the production ledger on 2026-09-08, the real
- * CLI answered:
+ * Before the owner-approved history repair on 2026-09-08, the real CLI
+ * answered:
  *
  *   as the repo stands        LegacyDbPushMissingLocalError — five REMOTE-only
  *                             versions have no local file, so the push refuses
@@ -26,8 +26,9 @@
  *                             applied
  *   with the ledger alias     "Local database is up to date."
  *
- * So the protection everyone believed was in place was an ERROR, and the
- * moment somebody resolves that error the migration runs a second time.
+ * The repair recorded the canonical alias and restored the five remote
+ * identities as comment-only local markers. The standing requirement is now
+ * an empty plan: no missing local identity and no migration selected to run.
  *
  * This script is the executable answer. It reads a committed READ-ONLY
  * snapshot of the hosted ledger and reproduces `db push`'s selection rule, so
@@ -97,22 +98,11 @@ const wouldBlock = snapshot.versions
 /* The reviewed baseline                                               */
 /* ------------------------------------------------------------------ */
 //
-// Exactly what the plan looked like when this check was written, and why each
-// entry is there. Anything NOT on these lists is a new divergence and fails
-// `deploy-plan:check` immediately; everything on them still fails
-// `deploy-plan:gate`, because a deploy must not run in this state at all.
-//
-// Clearing these lists is the point of the owner action in
-// docs/release/2026-09-08-deploy-plan-and-ledger-alias.md. They are not a
-// permission to ship; they are a named, dated debt with an owner.
-const BASELINE_APPLY: readonly string[] = ["20261101090000_sp_selected_merit_sharing.sql"];
-const BASELINE_BLOCK: readonly string[] = [
-  "20260904190901 (scp_trust_evidence_report_r1_provenance)",
-  "20260907064303 (f8efc1c3-def4-4147-9db1-45a68b1f6a69)",
-  "20260907064513 (19c76abb-f1fd-40e5-aa50-b008b7de38bf)",
-  "20260907064849 (0bb96516-c1eb-4178-8e9e-60bde13071dd)",
-  "20260908043205 (b315714c-89df-4610-9dd0-7b55207229a7)",
-];
+// Empty is the steady state after the owner-approved reconciliation. A local
+// file missing from the hosted ledger would be selected for apply; a hosted
+// version missing locally would make db push refuse. Either is a failure.
+const BASELINE_APPLY: readonly string[] = [];
+const BASELINE_BLOCK: readonly string[] = [];
 
 const ageDays = Math.floor((Date.now() - Date.parse(snapshot.readAt)) / (1000 * 60 * 60 * 24));
 

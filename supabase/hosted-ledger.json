@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-08T00:00:00Z",
-  "readBy": "PR #198 completion, before any change to this branch",
+  "readAt": "2026-09-08T06:59:53Z",
+  "readBy": "PR #198 owner-approved migration-history reconciliation",
   "versions": [
     {
       "version": "20260716153446",
@@ -1079,6 +1079,10 @@
     {
       "version": "20261031090000",
       "name": "sp_passport_first_merit"
+    },
+    {
+      "version": "20261101090000",
+      "name": "sp_selected_merit_sharing"
     }
   ]
 }

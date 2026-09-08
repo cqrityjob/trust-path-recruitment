@@ -1,7 +1,9 @@
 # The deploy plan, and the ledger alias that is missing from it
 
-**Status: prepared, NOT executed. It needs owner approval and a production
-write to `supabase_migrations.schema_migrations`.**
+**Status: completed under owner approval on 2026-09-08.** The canonical alias
+was recorded after all preconditions passed. The five hosted identities now
+have comment-only local markers. No migration SQL or application data was
+executed again.
 
 ## What was believed
 
@@ -44,11 +46,11 @@ Two things follow, and neither was visible before:
 Both halves are needed, and they are independent: the alias stops the re-run,
 the local files stop the refusal.
 
-## The owner action
+## The completed owner action
 
-Two steps. **Neither has been run.**
+Both steps are complete in the final PR #198 head.
 
-### Step 1 — the ledger alias (production write)
+### Step 1 — the ledger alias (completed)
 
 Record that canonical identity `20261101090000` is already applied, exactly as
 migration `20260907071826` did for `20261028090000`, `20261030090000` and
@@ -113,7 +115,7 @@ schema and no data; the applied SQL is untouched either way.
 applied SQL, and does not change the generated row `20260908043205`, which
 stays as the record of what actually executed.
 
-### Step 2 — local files for the five remote-only identities (repository)
+### Step 2 — local files for the five remote-only identities (completed)
 
 `db push` refuses while any ledger row has no local file. The five are:
 
@@ -134,17 +136,13 @@ A file at those identities containing only comments satisfies `db push` and
 executes nothing on replay. That is the shape to restore, and the sandbox above
 confirms it is sufficient.
 
-**This is deliberately NOT done in PR #198.** Four of the five belong to another
-reconciliation, `migrations:check` currently requires their absence, and
-reversing that decision inside a Passport-sharing change would be scope the
-reviewer of that change cannot judge. It needs its own PR, with the guard's rule
-made precise — absent **or** containing no executable statement — rather than
-loosened.
+PR #198 restores only comment-only marker files. The executable historical
+copies remain parked, and the guards now enforce that every marker contains no
+executable SQL.
 
 ## The standing protection
 
 `bun run deploy-plan:check` computes the plan on every CI run from the committed
 ledger snapshot. It fails on any divergence that is not in its reviewed
-baseline, and `bun run deploy-plan:gate` fails while the plan is not empty. That
-is the release condition; it is not met today, and the report says so rather
-than a JSON field claiming otherwise.
+baseline, and `bun run deploy-plan:gate` requires an empty plan. That release
+condition is now met.
