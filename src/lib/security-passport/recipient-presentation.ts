@@ -37,6 +37,8 @@ import { effectiveAssertionLevel, isLegacyUnsupportedProvenance } from "./proven
 import {
   credentialPresentationOf,
   describeTrust,
+  employmentTrustLine,
+  trustLevelWordKey,
   presentationWordKeyOf,
   provenanceLabelKeys,
   publicTrustLevel,
@@ -47,6 +49,14 @@ import {
 import type { PassportCopyKey } from "./i18n";
 import { presentationKeyOf, type RecipientPayloadActive } from "./packages";
 import type { AssertionLevel, Claim, IsoDate, LifecycleState } from "./types";
+
+/** The three levels a stored assertion may be. Anything else — a value from a
+ *  newer build, or nothing at all — is UNKNOWN, and is presented as nothing. */
+const KNOWN_ASSERTIONS: readonly AssertionLevel[] = [
+  "self_declared",
+  "document_provided",
+  "verified",
+];
 import { validityOf } from "./validity";
 
 export interface RecipientCredential {
@@ -108,13 +118,36 @@ export interface RecipientExperience {
   readonly startedOn: IsoDate;
   readonly endedOn: IsoDate | null;
   readonly jurisdiction: string | null;
-  /** The DECIDER, and the act. Undefined when the share did not say — which
-   *  is every package share, because no package emits employment provenance.
-   *  A renderer must print nothing for undefined rather than assume a level:
-   *  "verified with nobody named" and "we were not told" are different
-   *  states, and only one of them is a claim. */
-  readonly verifiedBy?: string | null;
-  readonly verificationMethod?: string | null;
+  /** The STORED standing, or null when the share did not say.
+   *
+   *  ── WHY THIS IS HERE AT ALL ──────────────────────────────────────────
+   *
+   *  It used not to be. The payload carried `assertion`, this model dropped
+   *  it, and the recipient view passed a hard-coded `assertionLevel:
+   *  "verified"` into the trust engine for every employment. So an employment
+   *  the holder had entered themselves — but which still carried decision
+   *  metadata from an approval that was later withdrawn — was described to a
+   *  stranger as confirmed by the employer named in it. The engine was right;
+   *  it was being lied to. */
+  readonly assertion: AssertionLevel | null;
+  readonly lifecycle: LifecycleState | null;
+  /** The DECIDER, and the act. Null when the share did not say — which is
+   *  every package share, because no package emits employment provenance. */
+  readonly verifiedBy: string | null;
+  readonly verificationMethod: string | null;
+  /** self_declared · documented · source_verified, or NULL when the standing
+   *  could not be established from what the share carried. Derived once, here,
+   *  through the same engine the credentials use — never in a renderer. */
+  readonly level: PublicTrustLevel | null;
+  /** The word beside the employment, or null when there is nothing true to
+   *  say. Null and "self_declared" are different: one is silence, the other is
+   *  a statement. */
+  readonly statusWordKey: PassportCopyKey | null;
+  /** The attribution sentence in EMPLOYMENT's own register — "Anställningen är
+   *  bekräftad av X" for an employer's own confirmation, "Dokument granskat av
+   *  CQrityjob" for a review — or null when no decider may be named. */
+  readonly trustLineSv: string | null;
+  readonly trustLineEn: string | null;
 }
 
 export interface RecipientPresentation {
@@ -155,13 +188,29 @@ export interface RecipientPresentation {
   readonly lastUpdated: string;
   readonly credentials: readonly RecipientCredential[];
   readonly experience: readonly RecipientExperience[];
-  /** CONFIRMED employment duration, in days.
+  /** The employment total the share carries, in days. 0 when it carries none.
    *
-   *  Named for what it counts. A selected share sums the SELECTED periods and,
-   *  among those, only the ones somebody confirmed — a self-declared
-   *  employment appears in the list above and is deliberately not in this
-   *  number. 0 when the share discloses no confirmed employment. */
+   *  Read it with `employmentDaysBasis`, ALWAYS: the same field is computed
+   *  two different ways depending on the package, and the two may not wear the
+   *  same heading. */
   readonly confirmedEmploymentDays: number;
+  /** WHAT THE NUMBER ABOVE IS MADE OF.
+   *
+   *  `employer_confirmed`      a chosen-merit share. `sp_selected_merits_payload`
+   *                            counts only selected periods backed by an
+   *                            employer attestation whose decider is a real
+   *                            employer, so the number is confirmed employment
+   *                            time and may be called that.
+   *  `reviewed_or_confirmed`   one of the five older packages. Those sum every
+   *                            period that reached `verified`, which includes a
+   *                            CQrityjob document review. The number is real,
+   *                            but calling it confirmed employment time would
+   *                            attribute to an employer a confirmation no
+   *                            employer gave.
+   *
+   *  The distinction is in the database, not here; this only carries which
+   *  rule produced the figure so the heading can be true. */
+  readonly employmentDaysBasis: "employer_confirmed" | "reviewed_or_confirmed";
   /** When the server last re-read this record. Null on a preview, which
    *  re-reads nothing, and on a payload from before 20261101090000. */
   readonly checkedAt: string | null;
@@ -288,20 +337,54 @@ export function buildRecipientPresentation(
     };
   });
 
-  const experience: RecipientExperience[] = payload.verified_experience.map((e, index) => ({
-    key: presentationKeyOf(e, index, "e"),
-    employer: e.employer,
-    role: e.role,
-    startedOn: e.started_on,
-    endedOn: e.ended_on,
-    jurisdiction: e.jurisdiction,
-    // Carried through UNCHANGED and UNINTERPRETED. The sentence a reader gets
-    // is composed by `employmentTrustLine` from these two recorded facts, in
-    // employment's own register, so this module states no trust of its own —
-    // exactly as it does for credentials above.
-    verifiedBy: e.verifier_organisation,
-    verificationMethod: e.verification_method,
-  }));
+  const experience: RecipientExperience[] = payload.verified_experience.map((e, index) => {
+    // THE STORED LEVEL, or nothing. A share that did not say leaves this null
+    // and every derivation below returns null with it — the state is unknown,
+    // and unknown is not a quiet synonym for verified.
+    const assertion = KNOWN_ASSERTIONS.includes(e.assertion as AssertionLevel)
+      ? (e.assertion as AssertionLevel)
+      : null;
+    const lifecycle = (e.lifecycle as LifecycleState | undefined) ?? null;
+    const verifiedBy = e.verifier_organisation ?? null;
+    const verificationMethod = e.verification_method ?? null;
+
+    // The same engine the credentials go through, given the REAL level and the
+    // subject it is about. `subjectKind: "employment"` is what lets an
+    // employer confirmation reach source-confirmed at all, and what keeps an
+    // issuer confirmation from doing so.
+    const trust =
+      assertion === null
+        ? null
+        : describeTrust({
+            assertionLevel: assertion,
+            lifecycleState: lifecycle,
+            verifierName: verifiedBy,
+            verificationMethod,
+            subjectKind: "employment",
+          });
+
+    const level = trust ? publicTrustLevel(trust) : null;
+    return {
+      key: presentationKeyOf(e, index, "e"),
+      employer: e.employer,
+      role: e.role,
+      startedOn: e.started_on,
+      endedOn: e.ended_on,
+      jurisdiction: e.jurisdiction,
+      assertion,
+      lifecycle,
+      verifiedBy,
+      verificationMethod,
+      level,
+      statusWordKey: level === null ? null : trustLevelWordKey(level),
+      // Null for a self-declared employment even when stale decision metadata
+      // is still attached: `describeTrust` refuses to name a decider for a
+      // level that is not verified, which is exactly the upgrade this model
+      // used to perform by passing "verified" for everything.
+      trustLineSv: trust ? employmentTrustLine(trust, "sv") : null,
+      trustLineEn: trust ? employmentTrustLine(trust, "en") : null,
+    };
+  });
 
   // Derived from the disclosed claims alone. A recipient sees a title exactly
   // when the credentials in front of them support it — never because the
@@ -341,6 +424,8 @@ export function buildRecipientPresentation(
     credentials,
     experience,
     confirmedEmploymentDays: payload.verified_experience_days,
+    employmentDaysBasis:
+      payload.package === "selected_merits" ? "employer_confirmed" : "reviewed_or_confirmed",
     checkedAt: payload.checked_at ?? null,
     containsExpired: credentials.some((c) => c.lifecycle === "expired"),
     isEmpty:

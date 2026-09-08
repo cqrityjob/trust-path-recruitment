@@ -49,7 +49,10 @@ import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../src/i18n/context";
 import { RecipientPassportView } from "../src/components/security-passport/live/RecipientPassportView";
-import { buildRecipientPresentation } from "../src/lib/security-passport/recipient-presentation";
+import {
+  buildRecipientPresentation,
+  type RecipientPresentation,
+} from "../src/lib/security-passport/recipient-presentation";
 import { buildShareSelection } from "../src/lib/security-passport/share-selection";
 import {
   caveatFor,
@@ -330,12 +333,13 @@ const payload = {
 } as unknown as RecipientPayloadActive;
 
 const presentation = buildRecipientPresentation(payload, "2026-09-07");
-const render = (lang: "sv" | "en") =>
+const renderPresentation = (model: RecipientPresentation, lang: "sv" | "en") =>
   renderToStaticMarkup(
     <I18nProvider>
-      <RecipientPassportView presentation={presentation} lang={lang} verifyUrl="cqrityjob.se" />
+      <RecipientPassportView presentation={model} lang={lang} verifyUrl="cqrityjob.se" />
     </I18nProvider>,
   );
+const render = (lang: "sv" | "en") => renderPresentation(presentation, lang);
 
 const sv = render("sv");
 const en = render("en");
@@ -352,17 +356,21 @@ ck(
 // cannot appear, whatever the holder happens to own.
 ck("3.2 a merit the payload did not carry appears nowhere", !sv.includes("Vald behörighet F"));
 
-// The source word appears EXACTLY once on the page — in the glossary, where
-// it is being explained — and never against a credential. Counting is the
-// honest assertion: forbidding the string outright would forbid the
-// explanation, and the glossary now sits AFTER the merits, so position alone
-// no longer separates the two.
+// The source word may appear exactly where it is earned: once in the glossary,
+// where it is being explained, and once per employment that genuinely IS an
+// employer's own confirmation. Never against a credential. Counting against
+// the model is the honest assertion — forbidding the string outright would
+// forbid the explanation, and the glossary now sits after the merits, so
+// position alone no longer separates the two.
+const sourceConfirmedEmployments = presentation.experience.filter(
+  (e) => e.level === "source_verified",
+).length;
 ck(
-  "3.3 a CQrityjob document review is Dokumenterad, and no merit wears the source word",
+  "3.3 a CQrityjob document review is Dokumenterad, and no CREDENTIAL wears the source word",
   presentation.credentials[0].level === "documented" &&
     sv.includes(DOCUMENTED_SV) &&
-    (sv.match(new RegExp(SOURCE_SV, "g")) ?? []).length === 1 &&
-    sv.indexOf(SOURCE_SV) > sv.indexOf("Vald behörighet A"),
+    presentation.credentials.every((c) => c.level !== "source_verified") &&
+    (sv.match(new RegExp(SOURCE_SV, "g")) ?? []).length === 1 + sourceConfirmedEmployments,
 );
 
 // THE REVERSED POLICY, rendered. A self-declared entry and an unassessed
@@ -880,6 +888,217 @@ ck(
 ck(
   "6.9 the unshareable merits are counted rather than silently dropped",
   model.unshareable.archived === 1 && model.unshareable.drafts === 1,
+);
+
+/* ================================================================== */
+group("GROUP 7 — every employment says what actually backs it");
+/* ================================================================== */
+//
+// The regression this exists for: the view passed a hard-coded
+// `assertionLevel: "verified"` into the trust engine for every employment, and
+// the presentation model dropped the payload's real `assertion` on the way.
+// So a self-declared employment carrying stale decision metadata — an approval
+// that was later withdrawn, a period the holder re-entered — was described to
+// a stranger as confirmed by the employer named in it.
+
+// The decider defaults to the EMPLOYER, because that is what an employer
+// confirmation is. Spelling it as a fixed string would have made every
+// employment confirmed by the same company whatever its name, and the
+// assertions below would then pass while saying nothing.
+const period = (over: Record<string, unknown> & { employer?: string }) => ({
+  key: "e",
+  employer: over.employer ?? "Arbetsgivaren AB",
+  role: "Väktare",
+  started_on: "2021-01-01",
+  ended_on: "2023-01-01",
+  jurisdiction: "SE",
+  assertion: "verified",
+  lifecycle: "active",
+  verifier_organisation: over.employer ?? "Arbetsgivaren AB",
+  verification_method: "employer_confirmation",
+  ...over,
+});
+
+const employmentPayload = {
+  ...payload,
+  verified_claims: [],
+  verified_experience: [
+    // 1 · the employer confirmed employment it was party to.
+    period({ key: "e1", employer: "Nordvakt AB" }),
+    // 2 · CQrityjob read a contract. Documented, and it must not borrow the
+    //     employer's voice.
+    period({
+      key: "e2",
+      employer: "Sydvakt AB",
+      verifier_organisation: "CQrityjob",
+      verification_method: "document_review",
+    }),
+    // 3 · the holder's own word, with nobody named.
+    period({
+      key: "e3",
+      employer: "Egenrapporterad AB",
+      assertion: "self_declared",
+      verifier_organisation: null,
+      verification_method: null,
+    }),
+    // 4 · THE DANGEROUS ONE. Self-declared today, but an approved decision
+    //     from before is still attached. The stored level is what counts.
+    period({
+      key: "e4",
+      employer: "Nedgraderad AB",
+      assertion: "self_declared",
+      verifier_organisation: "Nedgraderad AB",
+      verification_method: "employer_confirmation",
+    }),
+    // 5 · the share did not say. Unknown is not "verified".
+    period({ key: "e5", employer: "Okänd AB", assertion: undefined }),
+  ],
+  verified_experience_days: 731,
+} as unknown as RecipientPayloadActive;
+
+const employment = buildRecipientPresentation(employmentPayload, "2026-09-07");
+const byKey = (k: string) => employment.experience.find((e) => e.key === k)!;
+
+ck(
+  "7.1 the payload's real assertion reaches the model, employment by employment",
+  byKey("e1").assertion === "verified" &&
+    byKey("e3").assertion === "self_declared" &&
+    byKey("e4").assertion === "self_declared" &&
+    byKey("e5").assertion === null,
+);
+ck("7.2 an employer confirmation is source-confirmed", byKey("e1").level === "source_verified");
+ck(
+  "7.3 a CQrityjob document review is documented, not source-confirmed",
+  byKey("e2").level === "documented",
+);
+ck("7.4 the holder's own word is self-declared", byKey("e3").level === "self_declared");
+ck(
+  "7.5 MUTATION a downgraded employment is NOT upgraded by its stale decision",
+  byKey("e4").level === "self_declared" && byKey("e4").trustLineSv === null,
+);
+ck(
+  "7.6 and a missing status is unknown — never assumed verified",
+  byKey("e5").level === null && byKey("e5").statusWordKey === null,
+);
+
+const employmentSv = renderPresentation(employment, "sv");
+const employmentEn = renderPresentation(employment, "en");
+
+ck(
+  "7.7 each employment carries a status word a reader can act on",
+  employmentSv.includes(passportT("trust.level.source_verified", "sv")) &&
+    employmentSv.includes(passportT("trust.level.documented", "sv")) &&
+    employmentSv.includes(passportT("trust.level.self_declared", "sv")),
+);
+ck(
+  "7.8 the employer sentence names the employer, once, for the one it belongs to",
+  employmentSv.includes(`${EMPLOYER_LINE_SV} Nordvakt AB`) &&
+    (employmentSv.match(new RegExp(EMPLOYER_LINE_SV, "g")) ?? []).length === 1,
+);
+ck(
+  "7.9 MUTATION the downgraded employment's old confirmer is never named",
+  !employmentSv.includes(`${EMPLOYER_LINE_SV} Nedgraderad AB`) &&
+    employmentSv.includes("Nedgraderad AB"),
+);
+ck(
+  "7.10 and the document review is attributed to the reviewer, in its own words",
+  employmentSv.includes(`${passportT("claims.attribution.document_review", "sv")} CQrityjob`),
+);
+ck(
+  "7.11 English says the same thing",
+  employmentEn.includes(
+    `${passportT("employment.attribution.employer_confirmation", "en")} Nordvakt AB`,
+  ) && employmentEn.includes(passportT("trust.level.self_declared", "en")),
+);
+
+/* ================================================================== */
+group("GROUP 8 — a legacy package's employment total is not called confirmed");
+/* ================================================================== */
+//
+// `selected_merits` sums only periods with a structurally supported employer
+// attestation. The five older packages sum every period that reached
+// `verified`, which includes a CQrityjob document review. The same number
+// under the same heading would say the employer confirmed time no employer
+// confirmed.
+
+const legacyPayload = {
+  ...payload,
+  package: "public_card",
+  checked_at: undefined,
+  verified_claims: [],
+  verified_experience: [],
+  verified_experience_days: 731,
+} as unknown as RecipientPayloadActive;
+const legacy = buildRecipientPresentation(legacyPayload, "2026-09-07");
+
+ck(
+  "8.1 the model says which basis the number has",
+  employment.employmentDaysBasis === "employer_confirmed" &&
+    legacy.employmentDaysBasis === "reviewed_or_confirmed",
+);
+
+const legacySv = renderPresentation(legacy, "sv");
+const legacyEn = renderPresentation(legacy, "en");
+
+ck(
+  "8.2 MUTATION a legacy total is NOT presented as employer-confirmed time",
+  !legacySv.includes(passportT("rec.tenure", "sv")) &&
+    !legacyEn.includes(passportT("rec.tenure", "en")),
+);
+ck(
+  "8.3 it is named for what it actually mixes, in both languages",
+  legacySv.includes(passportT("rec.tenureReviewedOrConfirmed", "sv")) &&
+    legacyEn.includes(passportT("rec.tenureReviewedOrConfirmed", "en")),
+);
+ck(
+  "8.4 POSITIVE CONTROL a chosen-merit total still is employer-confirmed time",
+  employmentSv.includes(passportT("rec.tenure", "sv")),
+);
+ck(
+  "8.5 and the Passport card uses the same two names, never one for both",
+  read("src/components/security-passport/live/RecipientPassportCard.tsx").includes(
+    "employmentDaysBasis",
+  ),
+);
+
+/* ================================================================== */
+group("GROUP 9 — no blanket claim that everything is substantiated");
+/* ================================================================== */
+//
+// "Det här är styrkta uppgifter" was true of a package share, which carries
+// verified entries only. A chosen-merit share can carry the holder's own
+// unchecked word, and one sentence at the foot of the page upgraded the whole
+// thing.
+ck(
+  "9.1 the page makes no blanket claim about the whole share",
+  !/styrkta uppgifter/i.test(employmentSv) && !/substantiated facts/i.test(employmentEn),
+);
+ck(
+  "9.2 in the preview and the legacy package too — it is one component",
+  !/styrkta uppgifter/i.test(legacySv) && !/substantiated facts/i.test(legacyEn),
+);
+// Comments are stripped first. This is an assertion about what a reader is
+// SHOWN; a comment that quotes the removed sentence to explain why it was
+// removed is the opposite of the defect.
+const copyOnly = (text: string) =>
+  text
+    .split("\n")
+    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+    .join("\n");
+ck(
+  "9.3 no copy key anywhere still carries it",
+  !/styrkta uppgifter|substantiated facts/i.test(
+    copyOnly(read("src/lib/security-passport/i18n.ts")),
+  ),
+);
+ck(
+  "9.4 nor the page metadata a reader meets before any label",
+  !/Verified professional records|Verifierade yrkesuppgifter|styrkta/i.test(copyOnly(publicPage)),
+);
+ck(
+  "9.5 and what remains is still true: this is not a judgement about a person",
+  employmentSv.includes(passportT("rec.notAssessment", "sv")) &&
+    employmentEn.includes(passportT("rec.notAssessment", "en")),
 );
 
 /* ================================================================== */

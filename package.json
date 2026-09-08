@@ -72,6 +72,8 @@
     "legacy-assessment-routes:check": "bun run scripts/legacy-assessment-route-guard-check.ts",
     "format": "prettier --write .", 
     "db:test": "bash scripts/db-test.sh", 
+    "deploy-plan:check": "bun run scripts/deploy-plan-check.ts",
+    "deploy-plan:gate": "bun run scripts/deploy-plan-check.ts --gate",
     "migrations:check": "bun run scripts/migration-safety-check.ts",
   "migrations-duplicate:check": "bun run scripts/migration-duplicate-check.ts",
     "schema-first-release:check": "bun run scripts/schema-first-release-check.ts",

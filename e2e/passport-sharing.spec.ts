@@ -1056,6 +1056,149 @@ test.describe("Security Passport — the recipient link", () => {
     expect(pageErrors).toEqual([]);
   });
 
+  test("21 · each employment shows the status it actually has", async ({ page }) => {
+    // The regression: the view passed a hard-coded `assertionLevel: "verified"`
+    // for every employment, so a self-declared one carrying stale decision
+    // metadata read as confirmed by the employer named in it.
+    await mount(page, "/p/abcdef0123456789", {
+      publicPayload: {
+        ...recipientPayload("sv"),
+        verified_claims: [],
+        verified_experience: [
+          {
+            key: "e1",
+            employer: "Nordvakt AB (fiktiv)",
+            role: "Väktare",
+            started_on: "2021-01-01",
+            ended_on: "2023-01-01",
+            jurisdiction: "SE",
+            assertion: "verified",
+            lifecycle: "active",
+            verifier_organisation: "Nordvakt AB (fiktiv)",
+            verification_method: "employer_confirmation",
+          },
+          {
+            key: "e2",
+            employer: "Sydvakt AB (fiktiv)",
+            role: "Ordningsvakt",
+            started_on: "2019-01-01",
+            ended_on: "2021-01-01",
+            jurisdiction: "SE",
+            assertion: "verified",
+            lifecycle: "active",
+            verifier_organisation: "CQrityjob",
+            verification_method: "document_review",
+          },
+          {
+            key: "e3",
+            employer: "Nedgraderad AB (fiktiv)",
+            role: "Väktare",
+            started_on: "2017-01-01",
+            ended_on: "2019-01-01",
+            jurisdiction: "SE",
+            // Self-declared TODAY, with an approval still attached from before.
+            assertion: "self_declared",
+            lifecycle: "active",
+            verifier_organisation: "Nedgraderad AB (fiktiv)",
+            verification_method: "employer_confirmation",
+          },
+        ],
+        verified_experience_days: 731,
+      },
+    });
+    await expect(page.locator("[data-recipient-view]")).toBeVisible({ timeout: 30_000 });
+
+    await expect(page.locator('[data-recipient-employment="e1"]')).toHaveAttribute(
+      "data-employment-level",
+      "source_verified",
+    );
+    await expect(page.locator('[data-recipient-employment="e2"]')).toHaveAttribute(
+      "data-employment-level",
+      "documented",
+    );
+    await expect(page.locator('[data-recipient-employment="e3"]')).toHaveAttribute(
+      "data-employment-level",
+      "self_declared",
+    );
+
+    // The employer's own confirmation names the employer, in employment's own
+    // register. The document review names the reviewer, in its own.
+    await expect(page.locator('[data-recipient-employment="e1"]')).toContainText(
+      "Anställningen är bekräftad av Nordvakt AB (fiktiv)",
+    );
+    await expect(page.locator('[data-recipient-employment="e2"]')).toContainText(
+      "Dokument granskat av CQrityjob",
+    );
+    await expect(page.locator('[data-recipient-employment="e2"]')).not.toContainText(
+      "Anställningen är bekräftad",
+    );
+
+    // THE ONE THAT MATTERED. Stale metadata must not speak for the employer.
+    await expect(page.locator('[data-recipient-employment="e3"]')).not.toContainText(
+      "bekräftad av",
+    );
+    await expect(page.locator('[data-recipient-employment="e3"]')).toContainText("Egen uppgift");
+    expect(pageErrors).toEqual([]);
+    await shoot(page, "recipient-employment-levels-sv");
+  });
+
+  test("22 · a legacy package's employment total is not called confirmed time", async ({
+    page,
+  }) => {
+    // The five older packages sum every period that reached `verified`, which
+    // includes a CQrityjob document review. `selected_merits` sums only
+    // employer-confirmed periods. One heading for both would put an employer's
+    // confirmation on time no employer confirmed.
+    const legacy = {
+      ...recipientPayload("sv"),
+      package: "public_card",
+      checked_at: undefined,
+      verified_claims: [],
+      verified_experience: [],
+      verified_experience_days: 731,
+    };
+    await mount(page, "/p/abcdef0123456789", { publicPayload: legacy });
+    await expect(page.locator("[data-recipient-view]")).toBeVisible({ timeout: 30_000 });
+
+    await expect(page.locator("[data-employment-days-basis]")).toHaveAttribute(
+      "data-employment-days-basis",
+      "reviewed_or_confirmed",
+    );
+    await expect(page.locator("[data-recipient-view]")).toContainText(
+      "Granskad eller bekräftad anställningstid",
+    );
+    await expect(page.locator("[data-recipient-view]")).not.toContainText(
+      "Bekräftad anställningstid",
+    );
+    // The card is the part people screenshot, so it takes the same name.
+    await expect(page.locator("[data-card-employment-basis]")).toHaveAttribute(
+      "data-card-employment-basis",
+      "reviewed_or_confirmed",
+    );
+    // And no blanket claim that the whole share is substantiated.
+    await expect(page.locator("[data-recipient-view]")).not.toContainText("styrkta uppgifter");
+    await expect(page.locator("[data-recipient-view]")).toContainText(
+      "Ingenting på den här sidan är ett omdöme om personen",
+    );
+    expect(pageErrors).toEqual([]);
+    await shoot(page, "recipient-legacy-package-sv");
+
+    // English says the same thing.
+    await mount(page, "/p/abcdef0123456789", {
+      publicPayload: { ...legacy, locale: "en" },
+    });
+    await expect(page.locator("[data-recipient-view]")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("[data-recipient-view]")).toContainText(
+      "Reviewed or confirmed employment duration",
+    );
+    await expect(page.locator("[data-recipient-view]")).not.toContainText(
+      "Confirmed employment duration",
+    );
+    await expect(page.locator("[data-recipient-view]")).not.toContainText("substantiated facts");
+    expect(pageErrors).toEqual([]);
+    await shoot(page, "recipient-legacy-package-en");
+  });
+
   test("15 · the recipient page fits every width", async ({ page }) => {
     await mount(page, "/p/abcdef0123456789", { publicPayload: recipientPayload("sv") });
     await expect(page.locator("[data-recipient-view]")).toBeVisible({ timeout: 30_000 });

@@ -1476,7 +1476,11 @@ const sv = {
   "rec.checkedAt": "Länkstatus kontrollerad",
   "rec.jurisdictionNote":
     "Jurisdiktion beskriver var uppgiften är utfärdad. Den säger ingenting om rätt att arbeta i något land.",
-  "rec.notAssessment": "Det här är styrkta uppgifter, inte ett omdöme om personen.",
+  // "Det här är styrkta uppgifter" was true of a package share, which carries
+  // verified entries only. A chosen-merit share can carry the holder's own
+  // unchecked word, and one sentence at the foot of the page upgraded the
+  // whole thing. What survives is the half that is true of every share.
+  "rec.notAssessment": "Ingenting på den här sidan är ett omdöme om personen.",
   "rec.ctaTitle": "Skapa ditt Security Passport",
   "rec.ctaBody": "Samla din yrkeserfarenhet och dina behörigheter. Du bestämmer vad som delas.",
   "rec.ctaAction": "Läs mer",
@@ -1612,6 +1616,12 @@ const sv = {
   "rec.selectedScope":
     "Innehavaren har valt ut de här uppgifterna. Det som saknas är inte nödvändigtvis något innehavaren saknar — det är sådant hen har valt att inte dela.",
   "rec.tenureScoped": "Räknat på de anställningar som ingår i den här delningen.",
+  // The five older paket räknar varje anställning som nått verifierad status,
+  // och dit hör även en dokumentgranskning. Att kalla den summan "bekräftad"
+  // skulle tillskriva en arbetsgivare en bekräftelse ingen arbetsgivare gett.
+  "rec.tenureReviewedOrConfirmed": "Granskad eller bekräftad anställningstid",
+  "rec.tenureMixedBasis":
+    "Räknat på anställningar som antingen har granskats av CQrityjob eller bekräftats av arbetsgivaren. Den här vyn skiljer inte på de två.",
   // What a reader can conclude, which is nothing about the person. Deliberately
   // NOT a second "ask for a new link": rec.unavailableBody already says that,
   // and one screen saying it twice reads as a form rather than an answer.
@@ -3356,7 +3366,7 @@ const en: Record<PassportCopyKey, string> = {
   "rec.checkedAt": "Share status checked",
   "rec.jurisdictionNote":
     "Jurisdiction describes where an entry was issued. It says nothing about the right to work in any country.",
-  "rec.notAssessment": "These are substantiated facts, not a judgement about the person.",
+  "rec.notAssessment": "Nothing on this page is a judgement about the person.",
   "rec.ctaTitle": "Create your Security Passport",
   "rec.ctaBody":
     "Gather your professional experience and authorisations. You decide what is shared.",
@@ -3482,6 +3492,9 @@ const en: Record<PassportCopyKey, string> = {
   "rec.selectedScope":
     "The holder picked these entries. What is missing is not necessarily something the holder lacks — it is something they chose not to share.",
   "rec.tenureScoped": "Counted across the employments included in this share.",
+  "rec.tenureReviewedOrConfirmed": "Reviewed or confirmed employment duration",
+  "rec.tenureMixedBasis":
+    "Counted across employments that were either reviewed by CQrityjob or confirmed by the employer. This view does not separate the two.",
   "rec.unavailableNext":
     "It says nothing about the person who sent it, and there is nothing wrong with your browser.",
   "rec.aboutLink": "About Security Passport",

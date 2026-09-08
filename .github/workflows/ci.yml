@@ -371,6 +371,16 @@ jobs:
       - name: Release frontier selection check
         run: bun run release-frontier:check
 
+      # What the deploy tool would actually do next, computed from a committed
+      # read-only snapshot of the production ledger. The other release guards
+      # compare the repository against itself and cannot see that a migration
+      # recorded as applied is missing its canonical alias in the hosted
+      # ledger — precisely the state that would re-apply an applied migration
+      # the moment somebody unblocked the deploy. This step reaches no database
+      # and holds no credential; it reads two files in this repository.
+      - name: Deploy plan check
+        run: bun run deploy-plan:check
+
       # THE MERGE GATE.
       #
       # release-parity --release computes the right thing at the wrong moment:

@@ -245,8 +245,15 @@ export interface RecipientPeriod {
   readonly started_on: string;
   readonly ended_on: string | null;
   readonly jurisdiction: string | null;
-  readonly assertion: string;
-  readonly lifecycle: string;
+  /** The STORED standing, and the only thing that may decide what a reader is
+   *  told about this employment.
+   *
+   *  Optional because "the share did not say" is a real state and must be
+   *  distinguishable from any level. A missing value is UNKNOWN, and unknown
+   *  is presented as nothing at all — never as verified, which is what the
+   *  recipient view assumed before it was fixed. */
+  readonly assertion?: string;
+  readonly lifecycle?: string;
   /** WHICH ACT verified this employment, and who performed it.
    *
    *  Emitted by `sp_selected_merits_payload` only. The five fixed packages

@@ -41,7 +41,6 @@ import {
   formatWorkLocation,
 } from "@/lib/security-passport/format";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
-import { describeTrust, employmentTrustLine } from "@/lib/security-passport/trust-presentation";
 import { LIVE_PACKAGES } from "@/lib/security-passport/packages";
 import type { RecipientPresentation } from "@/lib/security-passport/recipient-presentation";
 import { RecipientPassportCard } from "./RecipientPassportCard";
@@ -215,55 +214,75 @@ function RecipientPassportBody({
             {pt("rec.experience")}
           </h2>
           <ul className="mt-3 space-y-3">
-            {presentation.experience.map((e) => {
-              // The shared engine, in employment's own register. Null whenever
-              // the payload carried no decider — which is every package share,
-              // because no package emits employment provenance — so nothing is
-              // printed rather than a level this share did not establish.
-              const line = employmentTrustLine(
-                describeTrust({
-                  assertionLevel: "verified",
-                  verifierName: e.verifiedBy ?? null,
-                  verificationMethod: e.verificationMethod ?? null,
-                  subjectKind: "employment",
-                }),
-                lang,
-              );
-              return (
-                <li
-                  key={e.key}
-                  data-recipient-employment={e.key}
-                  className="rounded-lg border border-border bg-card p-4"
-                >
-                  <h3 className="text-base font-semibold tracking-tight text-foreground">
+            {presentation.experience.map((e) => (
+              <li
+                key={e.key}
+                data-recipient-employment={e.key}
+                data-employment-level={e.level ?? "unknown"}
+                className="rounded-lg border border-border bg-card p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                  <h3 className="min-w-0 flex-1 text-base font-semibold tracking-tight text-foreground">
                     {e.role} · {e.employer}
                   </h3>
-                  <p className="mt-2 text-sm tabular-nums text-muted-foreground">
-                    {formatIsoDayRange(e.startedOn, e.endedOn, lang)}
-                  </p>
-                  {line ? (
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{line}</p>
+                  {/* The status word, from the STORED level. Absent — not
+                      "verified" — when the share did not say enough to place
+                      it, which is the whole point of the field being nullable. */}
+                  {e.statusWordKey ? (
+                    <span
+                      data-employment-status={e.level ?? "unknown"}
+                      className="inline-flex shrink-0 items-center rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+                    >
+                      {pt(e.statusWordKey)}
+                    </span>
                   ) : null}
-                </li>
-              );
-            })}
+                </div>
+                <p className="mt-2 text-sm tabular-nums text-muted-foreground">
+                  {formatIsoDayRange(e.startedOn, e.endedOn, lang)}
+                </p>
+                {/* Composed by the shared engine in employment's own register,
+                    and NULL for anything that is not a verified employment with
+                    a named decider — including one that carries stale decision
+                    metadata from an approval since withdrawn. */}
+                {(lang === "sv" ? e.trustLineSv : e.trustLineEn) ? (
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {lang === "sv" ? e.trustLineSv : e.trustLineEn}
+                  </p>
+                ) : null}
+              </li>
+            ))}
           </ul>
         </section>
       ) : null}
 
       {presentation.confirmedEmploymentDays > 0 ? (
-        <section className="mt-6 rounded-xl border border-border bg-card p-5">
+        <section
+          data-employment-days-basis={presentation.employmentDaysBasis}
+          className="mt-6 rounded-xl border border-border bg-card p-5"
+        >
+          {/* THE HEADING FOLLOWS THE BASIS. A chosen-merit total counts only
+              employer-confirmed periods and may say so; the five older packages
+              count every period that reached verified, which includes a
+              CQrityjob document review, and calling that confirmed employment
+              time would attribute to an employer a confirmation it never
+              gave. */}
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            {pt("rec.tenure")}
+            {pt(
+              presentation.employmentDaysBasis === "employer_confirmed"
+                ? "rec.tenure"
+                : "rec.tenureReviewedOrConfirmed",
+            )}
           </h2>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
             {formatDuration(presentation.confirmedEmploymentDays, lang)}
           </p>
-          {presentation.packageCode === "selected_merits" ? (
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              {pt("rec.tenureScoped")}
-            </p>
-          ) : null}
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            {pt(
+              presentation.employmentDaysBasis === "employer_confirmed"
+                ? "rec.tenureScoped"
+                : "rec.tenureMixedBasis",
+            )}
+          </p>
         </section>
       ) : null}
 
