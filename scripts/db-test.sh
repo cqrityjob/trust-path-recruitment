@@ -158,6 +158,30 @@ echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # STRICT-REPLAY-CONTRACT END
 
 # ---------------------------------------------------------------------------
+# 3b. Walk back to the phase-1 CV state.
+#
+# The replay above ends in the FINAL schema, which on this branch includes
+# 20261103090000_cv_documents_lockdown.sql. That is correct as a replay and
+# wrong as a starting point for the suites: the CV suites and
+# cv_documents_privacy_test assert the phase-1 contract, in which the
+# published application still writes cv_documents directly.
+#
+# So the run walks the release rather than assuming one end of it. The
+# lockdown is stood down here, the phase-1 suites run against the phase-1
+# state, and the lockdown block further down applies it, proves both halves of
+# it, and stands it down again.
+#
+# Skipped silently where the file does not exist, so this script is identical
+# on a branch that does not carry phase 3.
+# ---------------------------------------------------------------------------
+if [ -f supabase/rollback/20261103090000_cv_documents_lockdown_rollback.sql ]; then
+  echo "==> Standing the CV lockdown down to reach the phase-1 state"
+  psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+    -f supabase/rollback/20261103090000_cv_documents_lockdown_rollback.sql >/dev/null
+  echo "    ok  cv_documents is at the phase-1 grants for the suites below"
+fi
+
+# ---------------------------------------------------------------------------
 # 4. Both Security Competency migrations must genuinely be applied
 # ---------------------------------------------------------------------------
 echo "==> Verifying the Security Competency schema landed"
@@ -4559,6 +4583,88 @@ fi
 # re-applied, over events that already carry an operation_id, which is the
 # state a real re-apply would meet.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# cv_documents lockdown (phase 3) — the door is shut, and the room still works.
+#
+# The lockdown is a SEPARATE migration on a separate branch because phase 1
+# had to be applicable on its own, with the currently published application
+# still writing the table directly. Here it is applied on top of phase 1 and
+# both halves are proved: a signed-in holder can no longer INSERT, UPDATE,
+# DELETE or TRUNCATE cv_documents -- the last of which no policy could have
+# constrained -- and the same holder can still create, edit and delete their
+# own CV through the controlled functions.
+#
+# It is then ROLLED BACK, because everything after this point in the run
+# (the rollback chain, and any suite that writes a CV directly) expects the
+# phase-1 grants.
+# ---------------------------------------------------------------------------
+echo "==> Running cv_documents lockdown assertions"
+CVLD_FAILED=0
+
+set +e
+CVLD_APPLY="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261103090000_cv_documents_lockdown.sql 2>&1)"
+CVLD_RC=$?
+set -e
+if [ "$CVLD_RC" -ne 0 ]; then
+  echo "FAIL: the lockdown migration did not apply." >&2
+  echo "$CVLD_APPLY" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CVLD_FAILED=1
+else
+  echo "    ok  the lockdown applied on top of the controlled write path"
+fi
+
+set +e
+CVLD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cv_documents_lockdown_test.sql 2>&1)"
+CVLD_TRC=$?
+set -e
+
+echo "$CVLD_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CVLD_PASSED="$(echo "$CVLD_OUT" | grep -c "ok  " || true)"
+
+if [ "$CVLD_TRC" -ne 0 ]; then
+  echo "FAIL: the cv_documents lockdown suite exited with code ${CVLD_TRC}." >&2
+  echo "$CVLD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  CVLD_FAILED=1
+else
+  echo "    ok  ${CVLD_PASSED} cv_documents lockdown assertions passed"
+  if [ "$CVLD_PASSED" -lt 15 ]; then
+    echo "FAIL: expected at least 15 lockdown assertions, only ${CVLD_PASSED} ran." >&2
+    CVLD_FAILED=1
+  fi
+fi
+
+# Back to the phase-1 state for the rest of the run.
+set +e
+CVLD_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261103090000_cv_documents_lockdown_rollback.sql 2>&1)"
+CVLD_BRC=$?
+set -e
+if [ "$CVLD_BRC" -ne 0 ]; then
+  echo "FAIL: the lockdown rollback did not run cleanly." >&2
+  echo "$CVLD_BACK" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CVLD_FAILED=1
+else
+  echo "    ok  and the lockdown rolls back to the phase-1 grants"
+fi
+
+CVLD_OPEN="$(psql -tAq -d "$TEST_DB" -c "select has_table_privilege('authenticated','public.cv_documents','INSERT')::text;")"
+if [ "$CVLD_OPEN" != "true" ]; then
+  echo "FAIL: the lockdown rollback did not restore the phase-1 grant." >&2
+  CVLD_FAILED=1
+fi
+CVLD_TRUNC="$(psql -tAq -d "$TEST_DB" -c "select has_table_privilege('authenticated','public.cv_documents','TRUNCATE')::text;")"
+if [ "$CVLD_TRUNC" != "false" ]; then
+  echo "FAIL: the lockdown rollback restored TRUNCATE, which was never granted." >&2
+  CVLD_FAILED=1
+else
+  echo "    ok  without restoring TRUNCATE, which was never granted"
+fi
+
+if [ "$CVLD_FAILED" -ne 0 ]; then
+  suite_failed "cv_documents lockdown"
+fi
+
 # ---------------------------------------------------------------------------
 # Stand the CV write path down before the Passport rollback chain.
 #

@@ -20,7 +20,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is safe to apply with the currently published application still running.
 // REMOVE THIS NAME once it is applied to the owner project and
 // release-state.json records it as `applied` with evidence.
-const expectedPending: string[] = ["20261102090000_cv_documents_controlled_writes.sql"];
+const expectedPending: string[] = [
+  "20261102090000_cv_documents_controlled_writes.sql",
+  // Phase 3. Waiting on a HUMAN CONFIRMATION and not on a review: it must not
+  // be applied until the owner has seen PR #199 saving a CV on the published
+  // site. REMOVE THIS NAME once it is applied and release-state.json records
+  // it `applied` with evidence.
+  "20261103090000_cv_documents_lockdown.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
