@@ -1,12 +1,12 @@
--- cv_documents IS SERVER-OWNED — the negative controls.
+-- cv_documents CONTROLLED WRITE PATH (phase 1) — the negative controls.
 --
 -- ── WHAT THIS SUITE IS FOR ─────────────────────────────────────────────
 --
 -- 20261010090000 granted `authenticated` INSERT and UPDATE on cv_documents
--- with row-level security that checked OWNERSHIP and nothing else, while the
--- application layer said, in two file headers, that a client could not supply
--- the facts. The application layer was telling the truth about itself and
--- nothing about the database.
+-- with RLS that checked OWNERSHIP and nothing else, while the application
+-- layer said, in two file headers, that a client could not supply the facts.
+-- The application layer was telling the truth about itself and nothing about
+-- the database.
 --
 -- The consequence was not a private fiction. sp_submit_application_with_cv_
 -- source copies a saved CV onto a job application, and job_applications is
@@ -14,17 +14,25 @@
 -- the Data API became an employer-readable document about a candidate's
 -- career.
 --
--- ── WHY GROUP N REPRODUCES THE DEFECT BEFORE ASSERTING THE FIX ─────────
+-- ── PHASE 1 DOES NOT CLOSE THE DOOR, AND THIS SUITE SAYS SO ────────────
 --
--- Because "the statement is refused" proves nothing on its own. It is what a
--- misspelt table name looks like, what a missing fixture looks like, and what
--- a test asserting the wrong thing looks like. So Group N re-grants the
--- privilege the old migration held, fabricates an employment that never
--- happened, and shows it landing in a row that would have been copied to an
--- employer. Then it revokes and runs the SAME statement again.
+-- The published application still writes this table directly. Revoking here
+-- would break CV saving on the live site until the new application shipped;
+-- publishing the new application first would have it call functions that did
+-- not exist. So phase 1 is additive, phase 3 revokes, and what stands between
+-- an employer and a fabricated CV in the meantime is the SUBMISSION
+-- BOUNDARY.
 --
--- A negative control that has never been seen to fail is a negative control
--- nobody should believe.
+-- Group N therefore does something a test suite rarely should: it proves the
+-- hole is still open. A holder writes an employment that never happened,
+-- straight to the table, and it lands. Then the same suite proves the
+-- document cannot be SENT — every fact is compared against the holder's own
+-- live records, by value, and a fabricated one refuses the submission.
+--
+-- Group P asserts the phase-1 privileges as they actually are, including the
+-- grants that are still open. A suite that asserted the locked-down state
+-- would fail here and pass after phase 3, which is the wrong way round: it
+-- would go green at the moment nobody was looking.
 --
 -- Runs inside one transaction that is rolled back. Every fixture is
 -- synthetic; no real data is read or written.
@@ -141,20 +149,17 @@ CREATE OR REPLACE FUNCTION pg_temp.no_contact() RETURNS jsonb LANGUAGE sql AS $$
 $$;
 
 -- ═════════════════════════════════════════════════════════════════════════
-DO $$ BEGIN RAISE NOTICE 'GROUP N — the negative control, seen to fail first'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP N — the hole is open in phase 1, and the boundary holds'; END $$;
 -- ═════════════════════════════════════════════════════════════════════════
-
--- ── N1. THE OLD DESIGN, RESTORED ───────────────────────────────────────
---
--- Exactly the grant 20261010090000 left in place. Nothing else about the
--- table changes: the same policies, the same RLS, the same owner.
-GRANT INSERT, UPDATE ON public.cv_documents TO authenticated;
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.as_holder('50000000-0000-0000-0000-00000000000a');
 
--- A career that never happened, written by the holder, owned by the holder,
--- and therefore accepted by every policy on the table.
+-- ── N1. THE DOOR IS STILL OPEN, AND THAT IS THE DESIGN ─────────────────
+--
+-- Nothing is re-granted here. This is the privilege 20261010090000 left in
+-- place and phase 1 deliberately does not take away, because the published
+-- application depends on it.
 INSERT INTO public.cv_documents (owner_user_id, title, source_bundle)
 VALUES ('50000000-0000-0000-0000-00000000000a', 'Fabricated',
         jsonb_build_object(
@@ -171,7 +176,7 @@ RESET ROLE;
 SELECT pg_temp.ok(
   (SELECT source_bundle #>> '{employment,0,employerName}' FROM public.cv_documents
     WHERE title = 'Fabricated') = 'Säkerhetspolisen',
-  'N1 UNDER THE OLD GRANT a holder writes an employment that never happened');
+  'N1 in phase 1 a holder CAN still write an employment that never happened');
 
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM public.sp_experience_periods
@@ -179,38 +184,59 @@ SELECT pg_temp.ok(
                  AND employer_name = 'Säkerhetspolisen'),
   'N2 and the Passport it claims to summarise has no such employment');
 
--- And it is not inert. This is the shape the submission function copies onto
--- an employer-readable application row.
 SELECT pg_temp.ok(
   public.cv_bundle_is_ready(
     (SELECT source_bundle FROM public.cv_documents WHERE title = 'Fabricated')),
-  'N3 the fabricated row passes the eligibility rule that gates submission');
+  'N3 the fabricated row even passes the eligibility rule that used to gate submission');
+
+-- ── N4. AND IT CANNOT BE SENT ──────────────────────────────────────────
+--
+-- The control that makes phase 1 safe to deploy on its own. Every fact is
+-- compared against the holder's own active records, BY VALUE, so an invented
+-- employment has nothing to match.
+SELECT pg_temp.as_holder('50000000-0000-0000-0000-00000000000a');
+SELECT pg_temp.ok(
+  public.cv_facts_unverified(
+    (SELECT source_bundle FROM public.cv_documents WHERE title = 'Fabricated')) = 1,
+  'N4 the submission boundary counts the fabricated employment as unverifiable');
+
+-- ── N5. THE ATTACK THAT AN ID CHECK WOULD HAVE MISSED ──────────────────
+--
+-- Keep a REAL id and change the employer name. An existence check passes;
+-- the value comparison does not, which is why it is a value comparison.
+SELECT pg_temp.ok(
+  public.cv_facts_unverified(jsonb_build_object(
+    'employment', jsonb_build_array(jsonb_build_object(
+      'id',           'e0000000-0000-0000-0000-000000000001',
+      'employerName', 'Säkerhetspolisen',
+      'roleTitle',    'Väktare',
+      'startedOn',    '2022-03-01',
+      'endedOn',      NULL)))) = 1,
+  'N5 a real employment with a rewritten employer name is refused too');
+
+SELECT pg_temp.ok(
+  public.cv_facts_unverified(jsonb_build_object(
+    'employment', jsonb_build_array(jsonb_build_object(
+      'id',           'e0000000-0000-0000-0000-000000000001',
+      'employerName', 'Nordic Security AB',
+      'roleTitle',    'Väktare',
+      'startedOn',    '2022-03-01',
+      'endedOn',      NULL)))) = 0,
+  'N6 while the honest version of the same fact verifies cleanly');
+
+-- Another holder's real employment, verbatim. It is a true row -- just not
+-- this caller's, which is the whole question the boundary is asking.
+SELECT pg_temp.ok(
+  public.cv_facts_unverified(jsonb_build_object(
+    'employment', jsonb_build_array(jsonb_build_object(
+      'id',           'e0000000-0000-0000-0000-0000000000b1',
+      'employerName', 'Bosses Bevakning AB',
+      'roleTitle',    'Väktare',
+      'startedOn',    '2024-01-01',
+      'endedOn',      NULL)))) = 1,
+  'N7 and so is another holder''s employment, copied exactly');
 
 DELETE FROM public.cv_documents WHERE title = 'Fabricated';
-
--- ── N4. THE CORRECTION ─────────────────────────────────────────────────
-REVOKE INSERT, UPDATE, DELETE ON public.cv_documents FROM authenticated;
-
-SET LOCAL ROLE authenticated;
-SELECT pg_temp.as_holder('50000000-0000-0000-0000-00000000000a');
-
-SELECT pg_temp.must_fail(
-  $$INSERT INTO public.cv_documents (owner_user_id, title, source_bundle)
-    VALUES ('50000000-0000-0000-0000-00000000000a', 'Fabricated',
-            '{"identity":{"displayName":"Karin Wallin"},
-              "employment":[{"id":"ffffffff-0000-0000-0000-000000000001",
-                             "employerName":"Säkerhetspolisen",
-                             "roleTitle":"Operativ chef",
-                             "startedOn":"2011-01-01"}]}'::jsonb)$$,
-  'permission denied',
-  'N4 THE SAME STATEMENT is refused after the correction');
-
-SELECT pg_temp.must_fail(
-  $$UPDATE public.cv_documents SET source_bundle = '{}'::jsonb$$,
-  'permission denied',
-  'N5 and so is editing the facts of a CV that already exists');
-
-RESET ROLE;
 
 -- ═════════════════════════════════════════════════════════════════════════
 DO $$ BEGIN RAISE NOTICE 'GROUP S — every factual value is derived, never sent'; END $$;
@@ -733,72 +759,93 @@ SELECT pg_temp.ok(
   'E9 the copy is dated, so an expiry on it can be judged against something');
 
 -- ═════════════════════════════════════════════════════════════════════════
-DO $$ BEGIN RAISE NOTICE 'GROUP L — current, not merely saved'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP L — true of the holder today, not merely saved'; END $$;
 -- ═════════════════════════════════════════════════════════════════════════
+
+SELECT pg_temp.as_holder('50000000-0000-0000-0000-00000000000a');
+
+SELECT pg_temp.ok(
+  public.cv_facts_unverified(
+    (SELECT source_bundle FROM public.cv_documents
+      WHERE id = current_setting('pg_temp.cv')::uuid)) = 0,
+  'L1 a CV built by cv_create verifies cleanly against the records it came from');
 
 -- The credential this CV carries is WITHDRAWN after it was saved. Sending it
 -- would put a retracted qualification in front of an employer with nothing
 -- anywhere to say so.
 --
 -- `withdrawn` rather than `revoked` because the Passport's own transition
--- rules allow the holder to withdraw and reserve revocation for the
--- verification workflow -- which is the correct rule, and the submission
--- boundary treats every non-active state the same way regardless of which
--- door it came through.
+-- rules let the holder withdraw and reserve revocation for the verification
+-- workflow -- which is the correct rule, and the submission boundary treats
+-- every non-active state the same way regardless of which door it came
+-- through.
 UPDATE public.sp_claims SET lifecycle_state = 'withdrawn'
  WHERE id = 'c0000000-0000-0000-0000-000000000002';
 
-INSERT INTO public.employers (id, name, slug, country, status)
-VALUES ('ef000009-0000-0000-0000-000000000009', 'Org L', 'org-l-cvtest', 'SE', 'active')
-ON CONFLICT (id) DO NOTHING;
+SELECT pg_temp.ok(
+  public.cv_facts_unverified(
+    (SELECT source_bundle FROM public.cv_documents
+      WHERE id = current_setting('pg_temp.cv')::uuid)) = 1,
+  'L2 a withdrawn credential is detected by the submission-boundary check');
 
--- Run as the owner: the readiness and id helpers are internal and hold no
--- EXECUTE grant for `authenticated`, which is asserted in Group P. The holder
--- identity still comes from the session GUC, so `auth.uid()` below is Karin
--- exactly as it would be inside the submission function.
-SELECT pg_temp.as_holder('50000000-0000-0000-0000-00000000000a');
+-- Withdrawal is one-way for a holder, so the fixture cannot simply put the
+-- credential back. The remaining assertions use an employment instead, which
+-- exercises the other half of the same comparison.
+
+-- A correction made in the Passport after the CV was saved. The document is
+-- not wrong about what it froze; it is no longer true of the holder today,
+-- and that is the same refusal for the same reason.
+-- Group A already refreshed this CV onto 'Nordic Security Group AB', so the
+-- correction has to be a further one for the comparison to have anything to
+-- notice. Renaming it to the value the bundle already holds would prove only
+-- that equal strings are equal.
+UPDATE public.sp_experience_periods SET employer_name = 'Nordic Security Sverige AB'
+ WHERE id = 'e0000000-0000-0000-0000-000000000001';
 
 SELECT pg_temp.ok(
-  NOT public.cv_bundle_is_ready(
+  public.cv_facts_unverified(
     (SELECT source_bundle FROM public.cv_documents
-      WHERE id = current_setting('pg_temp.cv')::uuid) - 'employment' - 'education'),
-  'L1 the readiness rule is the one the submission boundary applies');
+      WHERE id = current_setting('pg_temp.cv')::uuid)) >= 2,
+  'L3 and so is a saved employer name the profile has since corrected');
 
-DO $$
-DECLARE _ids uuid[];
-        _live integer;
-BEGIN
-  _ids := public.cv_bundle_ids(
+UPDATE public.sp_experience_periods SET employer_name = 'Nordic Security Group AB'
+ WHERE id = 'e0000000-0000-0000-0000-000000000001';
+
+SELECT pg_temp.ok(
+  public.cv_facts_unverified(
     (SELECT source_bundle FROM public.cv_documents
-      WHERE id = current_setting('pg_temp.cv')::uuid));
-  SELECT count(*) INTO _live FROM (
-    SELECT ep.id FROM public.sp_experience_periods ep
-     WHERE ep.holder_user_id = auth.uid() AND ep.lifecycle_state = 'active' AND ep.id = ANY(_ids)
-    UNION ALL
-    SELECT cl.id FROM public.sp_claims cl
-     WHERE cl.holder_user_id = auth.uid() AND cl.lifecycle_state = 'active' AND cl.id = ANY(_ids)) s;
-  PERFORM pg_temp.ok(_live < array_length(_ids, 1),
-    'L2 a withdrawn credential is detected by the submission-boundary re-check');
-END $$;
+      WHERE id = current_setting('pg_temp.cv')::uuid)) = 1,
+  'L3b and correcting it back leaves only the withdrawn credential outstanding');
+
+SELECT pg_temp.ok(
+  public.cv_facts_unverified('{}'::jsonb) = 0,
+  'L4 an empty bundle has nothing to verify and nothing to refuse -- readiness is a separate rule');
 
 -- ═════════════════════════════════════════════════════════════════════════
 DO $$ BEGIN RAISE NOTICE 'GROUP P — privileges'; END $$;
 -- ═════════════════════════════════════════════════════════════════════════
 
+-- PHASE 1 STILL GRANTS THE DIRECT WRITES. Asserted as it is, not as it will
+-- be: a suite that asserted the locked-down state would fail here and go
+-- green the moment phase 3 applied, which is exactly when nobody is looking.
+-- The lockdown migration carries its own suite for the other half.
 SELECT pg_temp.ok(
-  NOT has_table_privilege('authenticated', 'public.cv_documents', 'INSERT')
-  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'UPDATE')
-  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'DELETE')
-  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'TRUNCATE'),
-  'P1 authenticated holds no write privilege on cv_documents');
+  has_table_privilege('authenticated', 'public.cv_documents', 'SELECT')
+  AND has_table_privilege('authenticated', 'public.cv_documents', 'INSERT')
+  AND has_table_privilege('authenticated', 'public.cv_documents', 'UPDATE')
+  AND has_table_privilege('authenticated', 'public.cv_documents', 'DELETE'),
+  'P1 phase 1 leaves the published application''s direct writes intact');
 
 SELECT pg_temp.ok(
-  has_table_privilege('authenticated', 'public.cv_documents', 'SELECT'),
-  'P2 but still reads its own rows, under the owner-only policy');
+  NOT has_table_privilege('authenticated', 'public.cv_documents', 'TRUNCATE'),
+  'P2 but TRUNCATE was never granted, and RLS could not have constrained it');
 
 SELECT pg_temp.ok(
   NOT has_table_privilege('anon', 'public.cv_documents', 'SELECT')
-  AND NOT has_table_privilege('anon', 'public.cv_documents', 'INSERT'),
+  AND NOT has_table_privilege('anon', 'public.cv_documents', 'INSERT')
+  AND NOT has_table_privilege('anon', 'public.cv_documents', 'UPDATE')
+  AND NOT has_table_privilege('anon', 'public.cv_documents', 'DELETE')
+  AND NOT has_table_privilege('anon', 'public.cv_documents', 'TRUNCATE'),
   'P3 anon holds nothing at all');
 
 SELECT pg_temp.ok(

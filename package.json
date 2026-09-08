@@ -74,6 +74,7 @@
     "db:test": "bash scripts/db-test.sh", 
     "deploy-plan:check": "bun run scripts/deploy-plan-check.ts",
     "deploy-plan:gate": "bun run scripts/deploy-plan-check.ts --gate",
+    "deploy-plan-negative:check": "bun run scripts/deploy-plan-negative-control.ts",
     "migrations:check": "bun run scripts/migration-safety-check.ts",
   "migrations-duplicate:check": "bun run scripts/migration-duplicate-check.ts",
     "schema-first-release:check": "bun run scripts/schema-first-release-check.ts",

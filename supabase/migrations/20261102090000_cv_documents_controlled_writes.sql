@@ -1,7 +1,7 @@
--- cv_documents becomes SERVER-OWNED.
+-- cv_documents gains a CONTROLLED WRITE PATH. Phase 1 of 3, and additive.
 --
 -- ═════════════════════════════════════════════════════════════════════════
--- WHAT WAS WRONG
+-- WHAT IS WRONG, AND WHY THIS MIGRATION DOES NOT FIX ALL OF IT
 -- ═════════════════════════════════════════════════════════════════════════
 --
 -- 20261010090000 created cv_documents, stripped the Supabase default
@@ -19,7 +19,7 @@
 --      reads on every write. A client-supplied bundle would let somebody put
 --      text into the 'facts' this product then vouches for."
 --
--- That was true of the TanStack server function and false of the database.
+-- That is true of the TanStack server function and false of the database.
 -- A signed-in holder needs no browser: the Supabase Data API is a documented
 -- HTTP endpoint, their access token is in their own session, and
 --
@@ -30,45 +30,64 @@
 --                                         "roleTitle":"Regionchef",
 --                                         "startedOn":"2011-01-01"}] } }
 --
--- satisfies every policy on the table. RLS asked "is this row yours"; it was.
--- Nothing asked whether the employment had ever happened.
---
--- The row is then not merely a private fiction. sp_submit_application_with_
--- cv_source (20261018090000) reads it under the caller's own RLS -- finds it,
--- because it is genuinely theirs -- and COPIES it into
--- job_applications.cv_document_snapshot, which the employer reads. The
--- eligibility check it applies asks only for a non-empty display name and at
--- least one employment or education, all of which the fabricated row has.
---
--- So the product's central claim -- that a CQrityjob CV carries facts this
--- platform derived rather than facts a candidate typed -- did not hold at the
--- boundary that matters. This migration makes it hold there.
+-- satisfies every policy on the table. RLS asks "is this row yours"; it is.
+-- Nothing asks whether the employment ever happened. And
+-- sp_submit_application_with_cv_source then copies that row into
+-- job_applications.cv_document_snapshot, which the employer reads.
 --
 -- ═════════════════════════════════════════════════════════════════════════
--- THE CORRECTION, AND WHY IT IS SHAPED THIS WAY
+-- THE RELEASE SHAPE, AND WHY IT IS THREE PHASES AND NOT TWO
 -- ═════════════════════════════════════════════════════════════════════════
 --
--- The write door closes. `authenticated` keeps SELECT -- a person reads their
--- own CVs directly, under the same owner-only policy as before -- and loses
--- INSERT, UPDATE and DELETE entirely. Every write now goes through a
--- SECURITY DEFINER function that:
+-- The obvious fix is to revoke INSERT/UPDATE/DELETE here and route every
+-- write through controlled functions. An earlier draft of this file did
+-- exactly that, and it was undeployable:
 --
---   * takes the OWNER from auth.uid() and never from a parameter, so there is
---     no holder id for a client to send;
---   * takes only IDS of facts and the person's own WORDING, and derives every
---     factual value itself from sp_experience_periods, sp_claims,
---     sp_passport_profiles, security_career_profiles and profiles rows the
---     caller owns;
---   * intersects the requested ids with what the caller actually has, so an
---     unknown, stale or invented id cannot ADD anything -- it is simply not
---     in the intersection;
---   * refuses with a stable code that is identical for "no such CV" and "not
---     yours", so no probe learns whether another holder's CV exists.
+--   REVOKE FIRST   the published application still writes cv_documents
+--                  through PostgREST. The moment this applied, saving a CV
+--                  would fail on the live site, and would keep failing until
+--                  the new application merged AND Lovable rebuilt from main.
+--   PUBLISH FIRST  the new application calls cv_create / cv_save, which would
+--                  not exist yet. Saving a CV fails in the other direction.
 --
--- The policies stay in place under the revoked grants. They are belt rather
--- than boundary now, and they are worth keeping: if a future migration
--- re-grants INSERT by accident -- which is exactly how this table got here --
--- the WITH CHECK still stops one person writing a row owned by another.
+-- "Apply it immediately behind the merge" is not a contract. It is a hope
+-- about a window whose length nobody controls, on the one table that holds a
+-- person's employment history.
+--
+-- So the revoke is not here. This migration is ADDITIVE: it installs the
+-- controlled write path beside the existing one and takes nothing away, so it
+-- can be applied to production at any time with the currently published
+-- application still running unchanged.
+--
+--   PHASE 1  this file. Ledger, controlled write functions, server-derived
+--            bundles, employer-snapshot hardening, idempotency, concurrency
+--            protection, and a submission boundary that already refuses
+--            fabricated and stale facts. Legacy direct writes still work.
+--   PHASE 2  the application (PR #199) stops writing the table and uses only
+--            the controlled functions. It is correct against BOTH this state
+--            and the locked-down one, so the order of merge and publish
+--            inside phase 2 does not matter.
+--   PHASE 3  20261103090000_cv_documents_lockdown.sql revokes the direct
+--            write privileges. Applied only once the owner confirms phase 2
+--            is merged, synced and published.
+--
+-- ═════════════════════════════════════════════════════════════════════════
+-- WHAT PROTECTS AN EMPLOYER WHILE THE DOOR IS STILL OPEN
+-- ═════════════════════════════════════════════════════════════════════════
+--
+-- A fabricated row can still be WRITTEN in phase 1. It cannot be SENT.
+--
+-- Section 8 rebuilds sp_submit_application_with_cv_source so that every fact
+-- a CV carries is checked against the holder's own live records before the
+-- copy is made -- not merely that an id exists, but that the employer name,
+-- role title, dates, credential title, issuer and validity ON THE DOCUMENT
+-- are the ones the Passport actually holds. Anything that does not match, or
+-- no longer stands, refuses the submission with CV_DOCUMENT_STALE_FACTS.
+--
+-- So in phase 1 a holder can lie to themselves in their own drafts, and the
+-- lie stops at the boundary where somebody else would read it. That is what
+-- makes an additive phase safe to deploy alone; phase 3 then removes the
+-- ability to write the lie at all.
 --
 -- ── WHY THE BUNDLE IS BUILT IN SQL, AND WHAT IS NOT DUPLICATED ──────────
 --
@@ -77,10 +96,10 @@
 --
 -- DUPLICATED, deliberately and visibly: which claim_type belongs in which
 -- section. Four short lists, stated in section 4 below and cross-referenced
--- to src/lib/professional-identity/types.ts, in the same way
--- 20261018090000's eligibility rule is cross-referenced to
--- application-source.ts. A change to either is a change somebody has to make
--- twice, deliberately, rather than once, silently.
+-- to src/lib/professional-identity/types.ts, in the same way 20261018090000's
+-- eligibility rule is cross-referenced to application-source.ts. A change to
+-- either is a change somebody has to make twice, deliberately, rather than
+-- once, silently.
 --
 -- NOT DUPLICATED, and this is the important half: the TRUST RULES. The bundle
 -- this function builds carries no `verified` flag at all. It carries the
@@ -103,14 +122,14 @@
 -- ═════════════════════════════════════════════════════════════════════════
 --
 -- HIDDEN CONTACT DETAILS REACHED EMPLOYERS. The stored presentation keeps an
--- email and a telephone number with a `showEmail`/`showPhone` switch beside
--- each, so somebody can turn a number off for one employer without retyping
--- it for the next. The submission function copied the presentation almost
--- whole, so the VALUE travelled with the switch and an employer could read
--- the number the candidate had chosen not to show. Hiding it in React and in
--- the PDF hid it from the page, not from the payload. Section 8 builds the
--- employer's copy through a sanitiser instead: a value whose switch is off
--- has its KEY REMOVED, not blanked.
+-- email and a telephone number with a showEmail/showPhone switch beside each,
+-- so somebody can turn a number off for one employer without retyping it for
+-- the next. The submission function copied the presentation almost whole, so
+-- the VALUE travelled with the switch and an employer could read the number
+-- the candidate had chosen not to show. Hiding it in React and in the PDF hid
+-- it from the page, not from the payload. Section 8 builds the employer's
+-- copy through a sanitiser instead: a value whose switch is off has its KEY
+-- REMOVED, not blanked.
 --
 -- A LOST RESPONSE CREATED A SECOND CV. The insert committed, the answer never
 -- arrived, the retry inserted again. Section 3 adds a server-owned operations
@@ -124,39 +143,40 @@
 -- function and one UPDATE covering selection, bundle, title, locale, contact
 -- and wording together, with an expected-revision check in front of it.
 --
--- Reversible: supabase/rollback/20261102090000_cv_documents_server_owned_rollback.sql
+-- Reversible: supabase/rollback/20261102090000_cv_documents_controlled_writes_rollback.sql
 -- Idempotent: safe to replay from an empty database or over itself.
 
 -- ═════════════════════════════════════════════════════════════════════════
--- 1. Close the write door
+-- 1. The write door stays OPEN in this phase
 -- ═════════════════════════════════════════════════════════════════════════
 --
--- SELECT stays. A person opening their own CV list reads these rows directly
--- and the owner-only policy is the right control for that.
+-- Nothing is revoked here, and that is the point of phase 1: the currently
+-- published application writes this table directly and must keep working
+-- while this migration is live and before PR #199 is published.
 --
--- INSERT, UPDATE and DELETE go. There is no version of "the client may write
--- this row directly" that keeps the fabrication guarantee, because the
--- guarantee is about the CONTENT of a column and RLS reasons about the OWNER
--- of a row.
+-- The privileges are restated rather than assumed, because the
+-- default-privilege trap this table was first written to escape re-arms on
+-- every new object, and a grant that is already correct costs nothing to say
+-- again. `anon` gets nothing at all.
 
-REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
-  ON public.cv_documents FROM authenticated;
--- Restated rather than assumed: the default-privilege trap this table was
--- first written to escape re-arms itself on every new object, and a REVOKE
--- that is already true costs nothing.
 REVOKE ALL ON public.cv_documents FROM PUBLIC, anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.cv_documents TO authenticated;
+GRANT ALL ON public.cv_documents TO service_role;
 
 COMMENT ON TABLE public.cv_documents IS
-  'PRIVATE, owner-only CV documents. READ directly by the owner; WRITTEN only '
-  'through cv_create / cv_save / cv_refresh_from_profile / '
-  'cv_delete, which take the owner from auth.uid() and derive every '
-  'factual value from the caller''s own Passport and profile rows. '
-  '`authenticated` holds no INSERT, UPDATE or DELETE privilege: before '
-  '20261102090000 it did, and a signed-in holder could POST an invented '
-  'employment history straight to the Data API and then attach it to a job '
-  'application. Presentation over facts that live in '
-  'security_career_profiles, sp_experience_periods, sp_claims and profiles -- '
-  'never a second home for any of them.';
+  'PRIVATE, owner-only CV documents. Presentation over facts that live in '
+  'security_career_profiles, sp_experience_periods, sp_claims and profiles '
+  '-- never a second home for any of them. Since 20261102090000 there is a '
+  'CONTROLLED WRITE PATH (cv_create / cv_save / cv_refresh_from_profile / '
+  'cv_delete) that takes the owner from auth.uid() and derives every factual '
+  'value from the caller''s own active Passport and profile rows. Direct '
+  'INSERT/UPDATE/DELETE by `authenticated` REMAINS GRANTED in that migration '
+  'so the published application keeps working; '
+  '20261103090000_cv_documents_lockdown.sql revokes it once the application '
+  'no longer needs it. Until then the guarantee that an employer never reads '
+  'a fabricated CV is held by sp_submit_application_with_cv_source, which '
+  'verifies every carried fact against the holder''s live records before it '
+  'copies anything.';
 
 -- ── WHY THESE FUNCTIONS ARE `cv_` AND NOT `sp_` ────────────────────────
 --
@@ -693,6 +713,99 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.cv_bundle_ids(jsonb) FROM PUBLIC, anon, authenticated;
+
+/**
+ * How many facts on this document do NOT match the holder's live records.
+ *
+ * ── WHY EXISTENCE IS NOT ENOUGH ────────────────────────────────────────
+ *
+ * An earlier draft checked that every carried id resolved to an active row
+ * the caller owns. That catches a withdrawn credential and an invented
+ * identifier, and it does not catch the easy attack: take the REAL id of
+ * your own employment and change the employer name to Säkerhetspolisen. The
+ * id resolves, the check passes, and the employer reads a job that never
+ * happened at a company the candidate has never worked for.
+ *
+ * So this compares the VALUES the document actually renders. A fact that
+ * does not match one of the caller's own active rows, field for field, is
+ * counted -- whether it was fabricated, edited underneath, superseded, or
+ * simply frozen before a correction the person has since made.
+ *
+ * ── WHAT IS DELIBERATELY NOT COMPARED ──────────────────────────────────
+ *
+ * `employment_type` and `assertion_level`. Neither is rendered on the
+ * document, both exist on older bundles in shapes this build did not write,
+ * and comparing a field nobody reads would turn a harmless historical
+ * difference into a refusal to apply for a job. Trust is not compared at all
+ * and could not be: nothing here stores a verification judgement.
+ *
+ * ── AND WHY IT REFUSES RATHER THAN REWRITES ────────────────────────────
+ *
+ * Re-deriving the values at submission would silently apply every profile
+ * change made since the CV was saved, under a click that said "apply". A
+ * saved CV is a snapshot the person reviewed; the honest answer to "it no
+ * longer matches" is to say so and let them update it, which the drift
+ * banner already offers.
+ */
+CREATE OR REPLACE FUNCTION public.cv_facts_unverified(_bundle jsonb)
+RETURNS integer
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $$
+DECLARE
+  _uid uuid := auth.uid();
+  _bad integer := 0;
+  _n   integer;
+BEGIN
+  IF _uid IS NULL THEN
+    RAISE EXCEPTION 'CV_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT count(*) INTO _bad
+    FROM jsonb_array_elements(coalesce(_bundle -> 'employment', '[]'::jsonb)) e
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.sp_experience_periods ep
+      WHERE ep.holder_user_id  = _uid
+        AND ep.lifecycle_state = 'active'
+        -- `::text` on both sides: a bundle id that is not a uuid simply fails
+        -- to match, rather than raising a cast error the caller could use to
+        -- tell one refusal from another.
+        AND ep.id::text        = (e ->> 'id')
+        AND ep.employer_name   = (e ->> 'employerName')
+        AND ep.role_title      = (e ->> 'roleTitle')
+        AND ep.started_on::text = (e ->> 'startedOn')
+        AND ep.ended_on::text IS NOT DISTINCT FROM (e ->> 'endedOn'));
+
+  SELECT count(*) INTO _n
+    FROM jsonb_array_elements(
+           coalesce(_bundle -> 'education',   '[]'::jsonb)
+        || coalesce(_bundle -> 'credentials', '[]'::jsonb)
+        || coalesce(_bundle -> 'skills',      '[]'::jsonb)
+        || coalesce(_bundle -> 'languages',   '[]'::jsonb)) c
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.sp_claims cl
+      WHERE cl.holder_user_id  = _uid
+        AND cl.lifecycle_state = 'active'
+        AND cl.id::text        = (c ->> 'id')
+        AND cl.title           = (c ->> 'title')
+        AND cl.claimed_issuer_name IS NOT DISTINCT FROM (c ->> 'issuerName')
+        AND cl.issued_on::text     IS NOT DISTINCT FROM (c ->> 'issuedOn')
+        AND cl.valid_until::text   IS NOT DISTINCT FROM (c ->> 'validUntil')
+        AND cl.skill_level         IS NOT DISTINCT FROM (c ->> 'level'));
+
+  RETURN _bad + _n;
+END; $$;
+
+COMMENT ON FUNCTION public.cv_facts_unverified(jsonb) IS
+  'Counts the facts on a saved CV that do not match one of the caller''s own '
+  'active Passport rows, field for field, on the values the document renders. '
+  'The submission boundary refuses when this is non-zero -- which is what '
+  'stops a fabricated or edited-underneath bundle reaching an employer while '
+  'direct writes to cv_documents are still granted (phase 1).';
+
+REVOKE ALL ON FUNCTION public.cv_facts_unverified(jsonb) FROM PUBLIC, anon, authenticated;
 
 -- ═════════════════════════════════════════════════════════════════════════
 -- 7. The write door — four verbs, one owner, taken from auth.uid()
@@ -1304,17 +1417,20 @@ REVOKE ALL ON FUNCTION public.cv_application_snapshot(public.cv_documents, times
 --
 -- 1. The snapshot is built by cv_application_snapshot.
 --
--- 2. EVERY FACT IS RE-CHECKED AGAINST THE HOLDER'S LIVE RECORDS FIRST. A
---    saved CV is a snapshot and that is right for a document somebody reads;
---    it is not right for one being SENT. A credential archived, withdrawn,
---    superseded or revoked since the CV was saved would otherwise travel to
---    an employer as an ordinary line on a CV, and neither the candidate nor
---    the employer would have any way to know.
+-- 2. EVERY FACT IS VERIFIED AGAINST THE HOLDER'S LIVE RECORDS FIRST, by
+--    VALUE and not merely by id. A saved CV is a snapshot and that is right
+--    for a document somebody reads; it is not right for one being SENT.
 --
---    So a stale reference refuses the submission with CV_DOCUMENT_STALE_FACTS
---    rather than sending it quietly. The candidate is told which document is
---    out of date and updates it; that is a moment of friction in exchange for
---    never having sent an employer a credential that no longer stands.
+--    Two failures are caught by the same comparison. A credential archived,
+--    withdrawn, superseded or revoked since the CV was saved would otherwise
+--    travel as an ordinary line on a CV. And -- while phase 1 still grants
+--    direct writes -- an employment whose real id was kept and whose employer
+--    name was rewritten would travel as a job that never happened.
+--
+--    Either refuses the submission with CV_DOCUMENT_STALE_FACTS rather than
+--    being sent quietly. The candidate updates the document and applies
+--    again; that is a moment of friction in exchange for never having sent an
+--    employer something that is not true of them today.
 --
 --    EXPIRY is deliberately NOT in this check. A lapsed authorisation is a
 --    true part of somebody's history and may appear -- labelled, with no
@@ -1344,8 +1460,6 @@ DECLARE
   _snapshot  jsonb   := NULL;
   _bundle    jsonb;
   _now       timestamptz := now();
-  _ids       uuid[];
-  _live      integer;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege';
@@ -1382,23 +1496,14 @@ BEGIN
       RAISE EXCEPTION 'CV_DOCUMENT_NOT_READY' USING ERRCODE = 'check_violation';
     END IF;
 
-    -- ── CURRENT, NOT MERELY SAVED ────────────────────────────────────
-    _ids := public.cv_bundle_ids(_bundle);
-    IF array_length(_ids, 1) IS NOT NULL THEN
-      SELECT count(*) INTO _live FROM (
-        SELECT ep.id FROM public.sp_experience_periods ep
-         WHERE ep.holder_user_id = auth.uid()
-           AND ep.lifecycle_state = 'active'
-           AND ep.id = ANY(_ids)
-        UNION ALL
-        SELECT cl.id FROM public.sp_claims cl
-         WHERE cl.holder_user_id = auth.uid()
-           AND cl.lifecycle_state = 'active'
-           AND cl.id = ANY(_ids)) s;
-
-      IF _live <> array_length(_ids, 1) THEN
-        RAISE EXCEPTION 'CV_DOCUMENT_STALE_FACTS' USING ERRCODE = 'check_violation';
-      END IF;
+    -- ── TRUE OF THE HOLDER TODAY, NOT MERELY SAVED ONCE ──────────────
+    --
+    -- Every fact on the document is compared, field for field, against the
+    -- caller's own active records. This is the control that makes phase 1
+    -- safe to deploy while direct writes to cv_documents are still granted:
+    -- a fabricated bundle can be written and cannot be sent.
+    IF public.cv_facts_unverified(_bundle) > 0 THEN
+      RAISE EXCEPTION 'CV_DOCUMENT_STALE_FACTS' USING ERRCODE = 'check_violation';
     END IF;
 
     _snapshot := public.cv_application_snapshot(_cv, _now);

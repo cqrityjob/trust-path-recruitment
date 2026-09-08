@@ -57,8 +57,23 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GATE = process.argv.includes("--gate");
+
+/**
+ * Where the three inputs are read from.
+ *
+ * The repository, unless `--root <dir>` names somewhere else. That flag
+ * exists for exactly one caller -- scripts/deploy-plan-negative-control.ts,
+ * which builds fixture directories to prove this check FAILS on an
+ * unreviewed migration and on a stale pending entry. A guard nobody has seen
+ * fail is a guard nobody should believe, and the only way to see this one
+ * fail is to feed it a world where it should.
+ *
+ * It changes no rule and relaxes no comparison: same code, different files.
+ */
+const rootFlag = process.argv.indexOf("--root");
+const root = rootFlag === -1 ? repoRoot : path.resolve(process.argv[rootFlag + 1]);
 
 interface Snapshot {
   readonly source: string;
@@ -98,10 +113,47 @@ const wouldBlock = snapshot.versions
 /* The reviewed baseline                                               */
 /* ------------------------------------------------------------------ */
 //
-// Empty is the steady state after the owner-approved reconciliation. A local
-// file missing from the hosted ledger would be selected for apply; a hosted
-// version missing locally would make db push refuse. Either is a failure.
-const BASELINE_APPLY: readonly string[] = [];
+// ── WHY THE APPLY BASELINE IS DERIVED AND NOT TYPED ────────────────────
+//
+// It used to be a hand-written empty array, and that was right for a steady
+// state and wrong the first time a genuinely new migration appeared: the
+// check failed with "NEW local-only migration would be APPLIED", which is
+// TRUE and is not a defect. The honest fix is not to add the filename here --
+// a second hand-maintained list is a second place to forget -- but to say
+// where the reviewed answer already lives.
+//
+// `release-state.json` is that place. A migration recorded `pending` there is
+// one somebody has written a note, a rollback path and a hosted verification
+// query for. So the expected plan IS the pending set, and the check becomes a
+// CROSS-EXAMINATION of two independently maintained records:
+//
+//   in the plan, not pending    an unreviewed migration would be applied.
+//                               Fails. This is the case the guard exists for.
+//   pending, not in the plan    release-state still says "waiting" for
+//                               something the ledger shows as applied. Fails,
+//                               because a stale entry hides the next real one
+//                               behind it.
+//
+// Neither list can drift without the other noticing, and neither can be
+// silenced by editing this file.
+//
+// The BLOCK baseline stays hand-written and empty. A hosted row with no local
+// file makes `db push` refuse for EVERY migration, and there is no state of
+// release-state.json that should ever make that expected.
+interface FrontierEntry {
+  readonly file: string;
+  readonly hostedState: "applied" | "pending" | "unverified";
+}
+const frontier = (
+  JSON.parse(readFileSync(path.join(root, "supabase/release-state.json"), "utf8")) as {
+    frontier: readonly FrontierEntry[];
+  }
+).frontier;
+
+const BASELINE_APPLY: readonly string[] = frontier
+  .filter((e) => e.hostedState === "pending")
+  .map((e) => e.file)
+  .sort();
 const BASELINE_BLOCK: readonly string[] = [];
 
 const ageDays = Math.floor((Date.now() - Date.parse(snapshot.readAt)) / (1000 * 60 * 60 * 24));
@@ -112,7 +164,14 @@ console.log(
 );
 console.log(`  source          : ${snapshot.source}`);
 console.log(`  local files     : ${localFiles.length}`);
-console.log(`  ledger rows     : ${snapshot.versions.length}\n`);
+console.log(`  ledger rows     : ${snapshot.versions.length}`);
+console.log(
+  `  reviewed plan   : ${
+    BASELINE_APPLY.length === 0
+      ? "empty (release-state.json records nothing pending)"
+      : `${BASELINE_APPLY.length} pending in release-state.json`
+  }\n`,
+);
 
 if (wouldBlock.length > 0) {
   console.log("  WOULD REFUSE TO RUN — ledger rows with no local file:");
@@ -144,10 +203,12 @@ if (GATE && (wouldApply.length > 0 || wouldBlock.length > 0)) {
 
 for (const f of newApply) {
   failures.push(
-    `NEW local-only migration would be APPLIED: ${f}\n` +
-      "      If it is genuinely new, that is correct and it belongs in the release\n" +
-      "      sequence. If it is already applied under another identity, the ledger\n" +
-      "      needs its canonical alias before any deploy runs.",
+    `UNREVIEWED local-only migration would be APPLIED: ${f}\n` +
+      "      It is not recorded `pending` in supabase/release-state.json, so nobody\n" +
+      "      has written down what it introduces, how it is verified hosted, or how\n" +
+      "      it rolls back. If it is genuinely new, add that entry. If it is already\n" +
+      "      applied under another identity, the ledger needs its canonical alias\n" +
+      "      before any deploy runs.",
   );
 }
 for (const v of newBlock) {
@@ -160,7 +221,12 @@ for (const v of newBlock) {
 // A baseline entry that has gone is good news, and it still has to be recorded:
 // leaving a resolved entry in the list hides the next real one behind it.
 for (const f of goneApply) {
-  failures.push(`baseline entry no longer applies and must be removed: ${f}`);
+  failures.push(
+    `STALE pending entry: ${f}\n` +
+      "      release-state.json still records it `pending`, but the hosted ledger\n" +
+      "      already has it. Move it to `applied` with evidence -- a resolved entry\n" +
+      "      left in the list hides the next real one behind it.",
+  );
 }
 for (const v of goneBlock) {
   failures.push(`baseline entry no longer blocks and must be removed: ${v}`);

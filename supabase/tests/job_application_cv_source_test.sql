@@ -90,6 +90,21 @@ ON CONFLICT (id) DO NOTHING;
 RESET request.jwt.claim.sub;
 
 -- ---------------------------------------------------------------------------
+-- The Passport rows the CVs are ABOUT.
+--
+-- Needed since 20261102090000: the submission boundary verifies every fact on
+-- a document against the holder's own live records, by value, before copying
+-- anything. A fixture whose CV described an employment that existed nowhere
+-- used to submit happily; it must not now, and it does not -- so the fixture
+-- says what is true about Anna instead of what is convenient.
+-- ---------------------------------------------------------------------------
+INSERT INTO public.sp_experience_periods
+  (id, holder_user_id, employer_name, role_title, started_on, ended_on, lifecycle_state)
+VALUES ('f1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001',
+        'Bevakning AB', 'Väktare', DATE '2016-01-01', NULL, 'active')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
 -- The CVs. Written as the service role so the fixture exists independently of
 -- the owner-insert policy, which cv_documents_privacy_test tests on its own
 -- terms.
@@ -112,9 +127,10 @@ INSERT INTO public.cv_documents (id, owner_user_id, title, locale, purpose, orig
                                     'country', 'Sverige', 'currentProfession', 'Väktare',
                                     'yearsOfExperience', '10+'),
      'employment', jsonb_build_array(jsonb_build_object(
-        'id', 'emp-1', 'employerName', 'Bevakning AB', 'roleTitle', 'Väktare',
-        'startedOn', '2016-01-01', 'endedOn', NULL, 'employmentType', 'permanent',
-        'assertionLevel', 'verified')),
+        'id', 'f1000000-0000-4000-8000-000000000001',
+        'employerName', 'Bevakning AB', 'roleTitle', 'Väktare',
+        'startedOn', '2016-01-01', 'endedOn', NULL, 'employmentType', 'full_time',
+        'assertionLevel', 'self_declared')),
      'education', '[]'::jsonb, 'credentials', '[]'::jsonb,
      'skills', '[]'::jsonb, 'languages', '[]'::jsonb,
      'careerInsight', NULL,
@@ -123,12 +139,13 @@ INSERT INTO public.cv_documents (id, owner_user_id, title, locale, purpose, orig
      'storedVersion', 'cv-stored-presentation-v1',
      'headline', 'Väktare med tio års erfarenhet',
      'summary', 'Erfaren väktare.',
-     'experience', jsonb_build_array(jsonb_build_object('sourceId','emp-1',
+     'experience', jsonb_build_array(jsonb_build_object(
+        'sourceId','f1000000-0000-4000-8000-000000000001',
         'bullets', jsonb_build_array('Ronderande bevakning i Stockholm.'))),
      'emphasisedClaimIds', '[]'::jsonb,
      'tailoringRationale', 'Anpassat mot Annan Bevakning ABs annons.',
      'authorship', jsonb_build_object('headline','ai','summary','ai',
-        'bullets', jsonb_build_object('emp-1','ai')))),
+        'bullets', jsonb_build_object('f1000000-0000-4000-8000-000000000001','ai')))),
 
   ('d1000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000001',
    'Tomt CV', 'sv', 'general', 'factual',
@@ -526,7 +543,8 @@ BEGIN
       'bundleVersion', 'cv-source-bundle-v1', 'locale', 'sv',
       'identity', jsonb_build_object('displayName', 'Anna Andersson'),
       'employment', jsonb_build_array(jsonb_build_object(
-        'id', 'emp-9', 'employerName', 'Bevakning AB', 'roleTitle', 'Väktare',
+        'id', 'f1000000-0000-4000-8000-000000000001',
+        'employerName', 'Bevakning AB', 'roleTitle', 'Väktare',
         'startedOn', '2016-01-01', 'endedOn', NULL)),
       'education', '[]'::jsonb, 'credentials', '[]'::jsonb,
       'skills', '[]'::jsonb, 'languages', '[]'::jsonb,
@@ -567,11 +585,18 @@ BEGIN
   VALUES ('c9000000-0000-4000-8000-000000000001', _anna,
           'certification', 'Snart tillbakadragen', 'active');
 
+  -- A CV that carries it HONESTLY: the id, the title and the (absent) issuer
+  -- and dates all match the live row, so it verifies cleanly right up until
+  -- the row stops standing.
   UPDATE public.cv_documents
      SET source_bundle = jsonb_set(source_bundle, '{credentials}', jsonb_build_array(
            jsonb_build_object('id', 'c9000000-0000-4000-8000-000000000001',
                               'claimType', 'certification',
-                              'title', 'Snart tillbakadragen')))
+                              'title', 'Snart tillbakadragen',
+                              'issuerName', NULL,
+                              'issuedOn', NULL,
+                              'validUntil', NULL,
+                              'level', NULL)))
    WHERE id = _cvJ;
 
   UPDATE public.sp_claims SET lifecycle_state = 'withdrawn'

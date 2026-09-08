@@ -1,29 +1,37 @@
--- Rollback for 20261102090000_cv_documents_server_owned.sql
+-- Rollback for 20261102090000_cv_documents_controlled_writes.sql
 --
 -- ── WHAT ROLLING THIS BACK MEANS ───────────────────────────────────────
 --
--- It REOPENS a security defect. That is stated here rather than buried,
--- because a rollback file is read by somebody under pressure at the point
--- where they are least likely to reason it out for themselves.
+-- Phase 1 is ADDITIVE: it grants nothing away, so rolling it back takes no
+-- privilege back either. What it removes is the controlled write path and
+-- the hardened submission boundary.
 --
--- 20261102090000 closed direct INSERT/UPDATE/DELETE on cv_documents because
--- `authenticated` holding them meant a signed-in holder could POST an
--- invented employment history to the Data API and then attach it to a job
--- application an employer reads. Running this file restores those grants.
+-- That second one matters and is stated here rather than buried, because a
+-- rollback file is read by somebody under pressure at the point where they
+-- are least likely to reason it out: after this runs,
+-- sp_submit_application_with_cv_source no longer verifies a CV's facts
+-- against the holder's live records, and no longer removes a contact value
+-- the candidate switched off. Both protections came in with this migration
+-- and both leave with it.
 --
--- So it exists for exactly one situation: the application half is deployed,
--- something about the new write path is wrong, and the deployed code -- which
--- still calls cv_create / cv_save -- has to keep working while it is fixed.
--- It does NOT keep working after this file: the functions are gone. This is
--- therefore a rollback to be paired with reverting the application release,
--- not one to run on its own.
+-- So it exists for exactly one situation: phase 1 is applied, something about
+-- the new write path is wrong, and the deployed application -- which in phase
+-- 1 still writes cv_documents directly -- has to keep working while it is
+-- fixed. It does keep working, because phase 1 never took that away. That is
+-- the property that makes this rollback safe to run on its own, and it is the
+-- same property that makes phase 1 safe to apply on its own.
+--
+-- It must NOT be run once phase 3 (20261103090000_cv_documents_lockdown.sql)
+-- has been applied: the lockdown revokes the direct writes, so removing the
+-- controlled functions underneath it would leave no way to write a CV at all.
+-- Roll back the lockdown first.
 --
 -- ── WHAT IT PRESERVES ──────────────────────────────────────────────────
 --
--- Every CV. No cv_documents row is touched: the columns, the policies and the
--- data are exactly as they were. What goes is the operations ledger (which is
--- bookkeeping about calls, not data about people), the eleven functions, and
--- the tightened submission behaviour.
+-- Every CV. No cv_documents row is touched: the columns, the grants, the
+-- policies and the data are exactly as they were. What goes is the operations
+-- ledger (bookkeeping about calls, not data about people), the twelve
+-- functions, and the tightened submission behaviour.
 --
 -- ── WHAT IT CANNOT PUT BACK ────────────────────────────────────────────
 --
@@ -176,6 +184,7 @@ DROP FUNCTION IF EXISTS public.cv_save(uuid, timestamptz, text, text, text, text
 DROP FUNCTION IF EXISTS public.cv_create(uuid, text, text, text, text, boolean, uuid[], jsonb, jsonb, text, text);
 DROP FUNCTION IF EXISTS public.cv_application_snapshot(public.cv_documents, timestamptz);
 DROP FUNCTION IF EXISTS public.cv_merge_bundle(jsonb, jsonb, boolean);
+DROP FUNCTION IF EXISTS public.cv_facts_unverified(jsonb);
 DROP FUNCTION IF EXISTS public.cv_bundle_ids(jsonb);
 DROP FUNCTION IF EXISTS public.cv_normalise_presentation(jsonb, jsonb);
 DROP FUNCTION IF EXISTS public.cv_normalise_contact(jsonb);
@@ -189,13 +198,16 @@ DROP FUNCTION IF EXISTS public.cv_source_bundle(uuid[], text, boolean, text);
 DROP TABLE IF EXISTS public.cv_document_operations;
 
 -- ═════════════════════════════════════════════════════════════════════════
--- 3. Reopen the write door
+-- 3. The grants are untouched
 -- ═════════════════════════════════════════════════════════════════════════
 --
--- Exactly the grant 20261010090000 held. Read section 1 of the migration
--- before deciding this is what you want.
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.cv_documents TO authenticated;
+-- Phase 1 revoked nothing, so there is nothing to restore. Restated only so
+-- that a reader comparing this file with the migration can see the symmetry
+-- and stop looking for the missing half.
+--
+-- If `authenticated` has lost its direct write privileges, phase 3 is
+-- applied and THAT is what needs rolling back first --
+-- supabase/rollback/20261103090000_cv_documents_lockdown_rollback.sql.
 
 COMMENT ON TABLE public.cv_documents IS
   'PRIVATE, owner-only CV documents. Presentation over facts that live in '

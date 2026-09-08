@@ -2289,26 +2289,28 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# cv_documents is server-owned — the negative controls.
+# cv_documents controlled write path (phase 1) — the negative controls.
 #
-# The suite that reproduces the defect before asserting the fix. 20261010090000
-# granted `authenticated` INSERT and UPDATE on cv_documents with RLS that
-# checked ownership and nothing else, so a signed-in holder could POST an
-# invented employment history straight to the Data API -- and
-# sp_submit_application_with_cv_source would then copy it onto an
-# employer-readable job application.
+# 20261010090000 granted `authenticated` INSERT and UPDATE on cv_documents with
+# RLS that checked ownership and nothing else, so a signed-in holder could POST
+# an invented employment history straight to the Data API -- and
+# sp_submit_application_with_cv_source would copy it onto an employer-readable
+# job application.
 #
-# Group N re-grants that privilege, fabricates an employment that never
-# happened, shows it landing and passing the eligibility rule that gates
-# submission, then revokes and runs the SAME statement again. A negative
-# control nobody has seen fail is a negative control nobody should believe.
+# Phase 1 does NOT revoke that: the published application still depends on it,
+# and revoking before the new application ships would break CV saving on the
+# live site. So Group N proves the hole is still open -- it writes an
+# employment that never happened and shows it landing -- and then proves the
+# document cannot be SENT, because every fact is compared against the holder's
+# own live records by VALUE. A real id with a rewritten employer name fails the
+# same check, which is the attack an existence test would have missed.
 #
 # Runs BEFORE the rollback step: it depends on cv_documents, sp_claims and
 # sp_experience_periods, and the rollback drops the tables the fixtures need.
 # ---------------------------------------------------------------------------
-echo "==> Running cv_documents server-ownership assertions"
+echo "==> Running cv_documents controlled-write-path assertions"
 set +e
-CVO_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cv_documents_server_owned_test.sql 2>&1)"
+CVO_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cv_documents_controlled_writes_test.sql 2>&1)"
 CVO_RC=$?
 set -e
 
@@ -2317,15 +2319,15 @@ CVO_PASSED="$(echo "$CVO_OUT" | grep -c "ok  " || true)"
 
 if [ "$CVO_RC" -ne 0 ]; then
   echo ""
-  echo "FAIL: the cv_documents server-ownership suite exited with code ${CVO_RC}." >&2
+  echo "FAIL: the cv_documents controlled-write-path suite exited with code ${CVO_RC}." >&2
   echo "$CVO_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  suite_failed "cv_documents server ownership"
+  suite_failed "cv_documents controlled write path"
 else
-  echo "    ok  ${CVO_PASSED} cv_documents server-ownership assertions passed"
-  if [ "$CVO_PASSED" -lt 45 ]; then
-    echo "FAIL: expected at least 45 server-ownership assertions, only ${CVO_PASSED} ran." >&2
+  echo "    ok  ${CVO_PASSED} cv_documents controlled-write-path assertions passed"
+  if [ "$CVO_PASSED" -lt 55 ]; then
+    echo "FAIL: expected at least 55 controlled-write-path assertions, only ${CVO_PASSED} ran." >&2
     echo "      A suite that silently stops running assertions is worse than one that fails." >&2
-    suite_failed "cv_documents server ownership (assertion shortfall: floor 45)"
+    suite_failed "cv_documents controlled write path (assertion shortfall: floor 55)"
   fi
 fi
 
@@ -2459,7 +2461,7 @@ if [ "$CVRACE_FAILED" -ne 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# The cv_documents server-ownership rollback, and back again.
+# The cv_documents controlled-write-path rollback, and back again.
 #
 # A rollback file that nobody runs is a promise, not a plan -- and this one
 # REOPENS a security defect, so it had better do exactly what it says. Run
@@ -2471,7 +2473,7 @@ fi
 # Then the migration is re-applied over that state, which is what a real
 # re-apply would meet.
 # ---------------------------------------------------------------------------
-echo "==> Running cv_documents server-ownership rollback and reapply proof"
+echo "==> Running cv_documents controlled-write-path rollback and reapply proof"
 CVRB_FAILED=0
 
 CVRB_BEFORE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.cv_documents;")"
@@ -2482,12 +2484,12 @@ fi
 
 set +e
 CVRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20261102090000_cv_documents_server_owned_rollback.sql 2>&1)"
+  -f supabase/rollback/20261102090000_cv_documents_controlled_writes_rollback.sql 2>&1)"
 CVRB_RC=$?
 set -e
 
 if [ "$CVRB_RC" -ne 0 ]; then
-  echo "FAIL: the cv_documents server-ownership rollback did not run cleanly." >&2
+  echo "FAIL: the cv_documents controlled-write-path rollback did not run cleanly." >&2
   echo "$CVRB_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
   CVRB_FAILED=1
 else
@@ -2512,17 +2514,21 @@ fi
 
 # The defect really is reopened. Asserted, so nobody reads the rollback file
 # as a safe cleanup.
+# Phase 1 revoked nothing, so the direct-write grant is untouched on both
+# sides of the rollback. Asserted so that a future phase-3 change that
+# accidentally lands in THIS migration is caught here rather than in
+# production.
 CVRB_OPEN="$(psql -tAq -d "$TEST_DB" -c "select has_table_privilege('authenticated','public.cv_documents','INSERT')::text;")"
 if [ "$CVRB_OPEN" != "true" ]; then
-  echo "FAIL: the rollback did not restore the previous grant, so it is not a rollback." >&2
+  echo "FAIL: phase 1 or its rollback changed a grant. It is supposed to be additive." >&2
   CVRB_FAILED=1
 else
-  echo "    ok  the previous (unsafe) grant is restored, which is what rolling back MEANS"
+  echo "    ok  the published application's direct writes are untouched by both"
 fi
 
 set +e
 CVRA_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261102090000_cv_documents_server_owned.sql 2>&1)"
+  -f supabase/migrations/20261102090000_cv_documents_controlled_writes.sql 2>&1)"
 CVRA_RC=$?
 set -e
 
@@ -2534,16 +2540,16 @@ else
   echo "    ok  the migration re-applies cleanly over the rolled-back state"
 fi
 
-CVRA_SHUT="$(psql -tAq -d "$TEST_DB" -c "select (not has_table_privilege('authenticated','public.cv_documents','INSERT') and not has_table_privilege('authenticated','public.cv_documents','UPDATE'))::text;")"
-if [ "$CVRA_SHUT" != "true" ]; then
-  echo "FAIL: after re-applying, authenticated still holds a write privilege." >&2
+CVRA_FNS="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'cv\\_%';")"
+if [ "${CVRA_FNS:-0}" -lt 12 ]; then
+  echo "FAIL: after re-applying, only ${CVRA_FNS} controlled functions are present." >&2
   CVRB_FAILED=1
 else
-  echo "    ok  and the write door is shut again"
+  echo "    ok  and all ${CVRA_FNS} controlled write functions are back"
 fi
 
 if [ "$CVRB_FAILED" -ne 0 ]; then
-  suite_failed "cv_documents server-ownership rollback/reapply"
+  suite_failed "cv_documents controlled-write-path rollback/reapply"
 fi
 
 # ---------------------------------------------------------------------------
@@ -4569,7 +4575,7 @@ fi
 echo "==> Standing the CV write path down ahead of the Passport rollbacks"
 set +e
 CVSD_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20261102090000_cv_documents_server_owned_rollback.sql 2>&1)"
+  -f supabase/rollback/20261102090000_cv_documents_controlled_writes_rollback.sql 2>&1)"
 CVSD_RC=$?
 set -e
 if [ "$CVSD_RC" -ne 0 ]; then
