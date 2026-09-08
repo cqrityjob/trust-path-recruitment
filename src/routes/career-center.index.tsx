@@ -1,6 +1,14 @@
 import { useCallback, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Building2, Compass, FileCheck2, MapPin, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  ChevronDown,
+  Compass,
+  FileCheck2,
+  MapPin,
+  Users,
+} from "lucide-react";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
@@ -12,6 +20,7 @@ import {
   NEXT_LEVEL_SEARCH,
   PUBLISHED_PROFESSION_COUNT,
   applyExplorerSearch,
+  careerOrigin,
   nearestNonEmpty,
   parseExplorerSearch,
   personalDirection,
@@ -19,20 +28,44 @@ import {
   type ExplorerSearch,
 } from "@/lib/career-center";
 import { useCareerCenterTracking } from "@/lib/career-center/analytics";
-import { useMyCareerDirection } from "@/hooks/useMyCareerDirection";
+import { useMyCareerDirection, useMyStatedProfession } from "@/hooks/useMyCareerDirection";
 import { CareerHero } from "@/components/career-center/CareerHero";
 import { CareerRoutes } from "@/components/career-center/CareerRoutes";
+import { PathFromSection } from "@/components/career-center/PathFromSection";
 import { PersonalDirectionSection } from "@/components/career-center/PersonalDirection";
 import { ProfessionExplorer } from "@/components/career-center/ProfessionExplorer";
 
-// The Career Center hub, rebuilt for the pilot around five questions a reader
-// actually has, in the order they have them:
+// The Career Center hub, built around the questions a reader actually has,
+// in the order they have them:
 //
-//   1 hero — what is this and where do I start
-//   2 din riktning — where am I now (personal, or honestly not)
-//   3 utforska yrken — which professions could suit me
-//   4 karriärvägar — how do I get from here to there
-//   5 så bygger vi innehållet — why should I believe any of it
+//   1 hero        what is this and where do I start
+//   2 från ditt yrke   I work as X — where can I go from here?   (pathFrom)
+//   3 din riktning     what did my career analysis suggest?      (fit)
+//   4 karriärvägar     what directions exist in this industry?
+//   5 utforska yrken   the full catalogue, behind an explicit click
+//   6 så bygger vi innehållet   why should I believe any of it
+//
+// ── TWO PERSONAL SECTIONS, NEVER ONE ───────────────────────────────────
+//
+// `pathFrom` and `fit` answer different questions from different inputs, and
+// they are rendered as separate sections with separate headings, each stating
+// its own basis. A reader must always be able to tell whether a card is there
+// because an instrument scored them or because they named the job they are
+// in. There is no combined "Rekommenderat för dig" heading anywhere, and
+// there is no state in which either section claims eligibility — see
+// ELIGIBILITY_IS_NEVER_ASSESSED in career-origin.ts.
+//
+// `pathFrom` comes FIRST because it is the question most readers arrive with,
+// it works for an anonymous visitor, and it needs no assessment.
+//
+// ── THE CATALOGUE IS BEHIND A CLICK ────────────────────────────────────
+//
+// Eleven guides plus a filter bar, rendered unconditionally, is what made
+// this page 11,700px tall on a 375px screen. The explorer now opens on an
+// explicit "Visa alla yrken", and the open state lives in the URL (`?all=1`),
+// so a filtered catalogue view is still shareable and still deep-linkable —
+// and any narrowing filter in the URL forces it open, because a link that
+// filters the catalogue has to show it.
 //
 // ── WHAT CHANGED IN THIS PASS, AND WHY ─────────────────────────────────
 //
@@ -112,6 +145,8 @@ export const Route = createFileRoute("/career-center/")({
 
 const EXPLORER_ANCHOR = "utforska-yrken";
 const PERSONAL_ANCHOR = "min-riktning";
+const PATH_ANCHOR = "fran-mitt-yrke";
+const EXPLORER_PANEL_ID = "yrkeskatalog";
 
 function CareerCenterHub() {
   const { t, lang } = useT();
@@ -122,6 +157,46 @@ function CareerCenterHub() {
   const { signedIn, career, refetch } = useMyCareerDirection();
   const direction = useMemo(() => personalDirection(career, { signedIn }), [career, signedIn]);
   const personalised = direction.state === "ready";
+
+  // `pathFrom`. The URL wins over the profile: an explicit click on this page
+  // is the most recent thing the reader has said about themselves.
+  const stated = useMyStatedProfession(signedIn);
+  const origin = useMemo(
+    () =>
+      careerOrigin({
+        selectedSlug: search.from ?? null,
+        profileSlug: stated.slug,
+        profileLabel: stated.label,
+      }),
+    [search.from, stated.slug, stated.label],
+  );
+
+  const onSelectOrigin = useCallback(
+    (slug: string | null) => {
+      navigate({
+        search: (prev) => {
+          const next = { ...prev } as Record<string, unknown>;
+          if (slug) next.from = slug;
+          else delete next.from;
+          return next as ExplorerSearch;
+        },
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+
+  const onToggleCatalogue = useCallback(() => {
+    navigate({
+      search: (prev) => {
+        const next = { ...prev } as Record<string, unknown>;
+        if (prev.all) delete next.all;
+        else next.all = true;
+        return next as ExplorerSearch;
+      },
+      replace: true,
+    });
+  }, [navigate]);
 
   const results = useMemo(() => applyExplorerSearch(search, lang), [search, lang]);
   const relaxation = useMemo(
@@ -158,12 +233,26 @@ function CareerCenterHub() {
                 {t("cc.hero.cta.personal")}
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
               </PrimaryLink>
-              <a href={`#${EXPLORER_ANCHOR}`} className={SECONDARY_LINK}>
+              {/* The reader's current filters plus `all`, so the hero's
+                  secondary action opens the catalogue rather than scrolling to
+                  a collapsed panel. Spread explicitly: the router types its
+                  search reducer against every route's union. */}
+              <Link
+                to="/career-center"
+                search={{ ...search, all: true } as never}
+                hash={EXPLORER_ANCHOR}
+                className={SECONDARY_LINK}
+              >
                 {t("cc.hero.cta.explore")}
-              </a>
+              </Link>
             </>
           ) : (
-            <PrimaryLink to="/career-center" hash={EXPLORER_ANCHOR} variant="primary">
+            <PrimaryLink
+              to="/career-center"
+              search={{ all: "1" }}
+              hash={EXPLORER_ANCHOR}
+              variant="primary"
+            >
               {t("cc.hero.cta.explore")}
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </PrimaryLink>
@@ -172,8 +261,19 @@ function CareerCenterHub() {
         aside={<TrustRail />}
       />
 
-      {/* ── 2. DIN RIKTNING ─────────────────────────────────────────── */}
-      <Section id={PERSONAL_ANCHOR} className="bg-background py-16 md:py-20">
+      {/* ── 2. FRÅN DITT YRKE (pathFrom) ────────────────────────────── */}
+      <Section id={PATH_ANCHOR} className="bg-background py-16 md:py-20">
+        <PathFromSection
+          origin={origin}
+          onSelect={onSelectOrigin}
+          onProfessionOpen={(slug) =>
+            track("career_profession_opened", { surface: "hub_personal", subject: slug })
+          }
+        />
+      </Section>
+
+      {/* ── 3. DIN RIKTNING (fit) ───────────────────────────────────── */}
+      <Section bordered id={PERSONAL_ANCHOR} className="bg-secondary/40 py-16 md:py-20">
         <PersonalDirectionSection
           direction={direction}
           onRetry={refetch}
@@ -188,58 +288,8 @@ function CareerCenterHub() {
         />
       </Section>
 
-      {/* ── 3. UTFORSKA YRKEN ───────────────────────────────────────── */}
-      <Section bordered id={EXPLORER_ANCHOR} className="bg-background py-16 md:py-20">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.explore.title")}
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-            {t("cc.explore.subtitle")}
-          </p>
-        </div>
-
-        {/* The two surviving destinations of the retired "Var står du i dag?"
-            band, plus the employer path. Quiet links, not cards: they narrow
-            a list the reader is about to see, which is a control rather than
-            a decision about where to go next. */}
-        <nav aria-label={t("cc.explore.quick.title")} className="mt-6">
-          <ul className="flex flex-wrap items-center gap-2">
-            <QuickChoice
-              icon={<Compass className="h-3.5 w-3.5" aria-hidden />}
-              label={t("cc.explore.quick.entry")}
-              search={{ ...ENTRY_LEVEL_SEARCH }}
-            />
-            <QuickChoice
-              icon={<Users className="h-3.5 w-3.5" aria-hidden />}
-              label={t("cc.explore.quick.next")}
-              search={{ ...NEXT_LEVEL_SEARCH }}
-            />
-            <li>
-              <Link to="/employers" className={QUICK_CHOICE_CLASS}>
-                <Building2 className="h-3.5 w-3.5" aria-hidden />
-                {t("cc.explore.quick.org")}
-              </Link>
-            </li>
-          </ul>
-        </nav>
-
-        <div className="mt-8">
-          <ProfessionExplorer
-            search={search}
-            onSearchChange={onSearchChange}
-            results={results}
-            relaxation={relaxation}
-            upcoming={upcomingProfessions}
-            onProfessionOpen={(slug) =>
-              track("career_profession_opened", { surface: "hub_explorer", subject: slug })
-            }
-          />
-        </div>
-      </Section>
-
       {/* ── 4. KARRIÄRVÄGAR ─────────────────────────────────────────── */}
-      <Section bordered className="bg-secondary/40 py-16 md:py-20">
+      <Section bordered className="bg-background py-16 md:py-20">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("cc.routes.title")}
@@ -257,7 +307,87 @@ function CareerCenterHub() {
         </div>
       </Section>
 
-      {/* ── 5. SÅ BYGGER VI INNEHÅLLET ──────────────────────────────── */}
+      {/* ── 5. UTFORSKA YRKEN — behind an explicit click ───────────── */}
+      <Section bordered id={EXPLORER_ANCHOR} className="bg-secondary/40 py-16 md:py-20">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {t("cc.explore.title")}
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("cc.explore.subtitle")}
+          </p>
+        </div>
+
+        {/* The two surviving destinations of the retired "Var står du i dag?"
+            band, plus the employer path. Quiet links, not cards: they narrow a
+            list the reader is about to see, which is a control rather than a
+            decision about where to go next. Following one opens the catalogue,
+            because `parseExplorerSearch` forces `all` whenever a narrowing
+            filter is present. */}
+        <nav aria-label={t("cc.explore.quick.title")} className="mt-6">
+          <ul className="flex flex-wrap items-center gap-2">
+            <QuickChoice
+              icon={<Compass className="h-3.5 w-3.5" aria-hidden />}
+              label={t("cc.explore.quick.entry")}
+              search={{ ...ENTRY_LEVEL_SEARCH, all: true }}
+            />
+            <QuickChoice
+              icon={<Users className="h-3.5 w-3.5" aria-hidden />}
+              label={t("cc.explore.quick.next")}
+              search={{ ...NEXT_LEVEL_SEARCH, all: true }}
+            />
+            <li>
+              <Link to="/employers" className={QUICK_CHOICE_CLASS}>
+                <Building2 className="h-3.5 w-3.5" aria-hidden />
+                {t("cc.explore.quick.org")}
+              </Link>
+            </li>
+          </ul>
+        </nav>
+
+        {/* ── PROGRESSIVE DISCLOSURE ───────────────────────────────────
+            A real <button> with aria-expanded and aria-controls, not a
+            <details>: the open state has to live in the URL so a filtered
+            catalogue view is shareable, and that means the toggle navigates
+            rather than toggling DOM state. */}
+        <div className="mt-8">
+          <button
+            type="button"
+            data-catalogue-toggle
+            aria-expanded={Boolean(search.all)}
+            aria-controls={EXPLORER_PANEL_ID}
+            onClick={onToggleCatalogue}
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {search.all ? t("cc.explore.hideAll") : t("cc.explore.showAll")}
+            <span className="tabular-nums text-muted-foreground">
+              ({PUBLISHED_PROFESSION_COUNT})
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 transition-transform duration-200 ${search.all ? "rotate-180" : ""}`}
+              aria-hidden
+            />
+          </button>
+          <p className="mt-2 max-w-[62ch] text-xs leading-relaxed text-muted-foreground">
+            {t("cc.explore.showAll.help")}
+          </p>
+        </div>
+
+        <div id={EXPLORER_PANEL_ID} hidden={!search.all} className="mt-8">
+          <ProfessionExplorer
+            search={search}
+            onSearchChange={onSearchChange}
+            results={results}
+            relaxation={relaxation}
+            upcoming={upcomingProfessions}
+            onProfessionOpen={(slug) =>
+              track("career_profession_opened", { surface: "hub_explorer", subject: slug })
+            }
+          />
+        </div>
+      </Section>
+
+      {/* ── 6. SÅ BYGGER VI INNEHÅLLET ──────────────────────────────── */}
       <Section bordered className="bg-background py-16 md:py-20">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">

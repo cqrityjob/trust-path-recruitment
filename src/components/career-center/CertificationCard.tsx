@@ -18,7 +18,12 @@ export function CertificationCard({
         <h4 className="text-sm font-semibold tracking-tight text-foreground">{name}</h4>
         {provider && <p className="mt-1 text-xs text-muted-foreground">{provider}</p>}
         {href && (
-          <a href={href} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-[11px] text-accent hover:text-foreground">
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-[11px] text-accent hover:text-foreground"
+          >
             {new URL(href).hostname} <ExternalLink className="h-3 w-3" />
           </a>
         )}

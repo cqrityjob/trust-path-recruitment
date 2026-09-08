@@ -2996,7 +2996,8 @@ export const dictionaries = {
     "cc.routes.title": "Karriärvägar",
     "cc.routes.subtitle":
       "Tre riktningar genom branschen, byggda av de yrkesguider som finns publicerade. Varje steg går att läsa.",
-    "cc.routes.disclaimer": "Karriärvägar är exempel — utvecklingen är inte linjär för alla.",
+    "cc.routes.disclaimer":
+      "Karriärvägar är exempel på möjliga riktningar — inte en ordning du ska följa och inte en befordringstrappa. Utvecklingen ser olika ut för olika personer.",
     "cc.routes.stage": "Steg",
     "cc.routes.or": "eller",
     "cc.routes.shift.title": "Det här förändras på vägen hit",
@@ -3091,6 +3092,59 @@ export const dictionaries = {
     "cc.orientation.leadership": "Ledarskap",
     "cc.regulated.regulated": "Reglerad",
     "cc.regulated.not_regulated": "Ej reglerad",
+
+    // ── Karriärvägar som grenar, inte en stege ──────────────────────────
+    "cc.routes.origin": "Utgår från",
+    "cc.routes.independent":
+      "Riktningarna nedan är oberoende av varandra. Ingen av dem är ett krav för någon annan, och du behöver inte ta dem i någon viss ordning.",
+
+    // ── Bevisnivå för en övergång ───────────────────────────────────────
+    "cc.step.under_review": "Möjlig riktning under granskning",
+    "cc.step.under_review.help":
+      "Kopplingen mellan yrkena finns registrerad, men vi har ännu ingen granskad källa för själva övergången. Därför säger vi inget om hur vanlig den är, vad den kräver i erfarenhet eller i vilken ordning stegen kommer.",
+    "cc.step.detail": "Vad steget innebär",
+    "cc.step.what": "Vad som gäller",
+    "cc.step.sources": "Källor för övergången",
+    "cc.step.jurisdiction": "Gäller i",
+
+    // ── Vägar från ditt nuvarande yrke (pathFrom) ───────────────────────
+    "cc.path.eyebrow": "Från ditt yrke",
+    "cc.path.title": "Vägar från ditt nuvarande yrke",
+    "cc.path.titleFor": "Vägar från {role}",
+    "cc.path.subtitle":
+      "Riktningarna nedan utgår från yrket du arbetar i, inte från karriäranalysen. De bygger på registrerade kopplingar mellan yrken.",
+    "cc.path.source.profile": "Utgår från yrket i din profil",
+    "cc.path.source.selected": "Utgår från yrket du valde här",
+    "cc.path.select.label": "Vilket yrke arbetar du i i dag?",
+    "cc.path.select.none": "Välj yrke",
+    "cc.path.select.help":
+      "Valet sparas i adressen till sidan, inte i din profil. Du kan dela länken eller byta yrke när du vill.",
+    "cc.path.select.change": "Byt yrke",
+    "cc.path.none": "Vi har inga registrerade riktningar från det yrket ännu.",
+    "cc.path.notEligibility":
+      "Det här är riktningar, inte ett besked om att du är behörig. CQrityjob prövar inte om du uppfyller kraven för ett yrke — det gör regelverket och arbetsgivaren.",
+    "cc.path.more": "Se alla riktningar i yrkesguiden",
+    "cc.path.empty.title": "Välj ditt nuvarande yrke",
+    "cc.path.empty.body":
+      "Väljer du yrket du arbetar i visar vi vilka riktningar som finns registrerade därifrån, och vad var och en kräver.",
+
+    // ── Utforska: progressiv visning ────────────────────────────────────
+    "cc.explore.showAll": "Visa alla yrken",
+    "cc.explore.hideAll": "Dölj yrkeslistan",
+    "cc.explore.showAll.help":
+      "Hela katalogen med sökning och filter. Din nuvarande vy ligger kvar i adressen, så länken går att dela.",
+
+    // ── Yrkessida: progressiv visning ───────────────────────────────────
+    "cc.p.competencies.show": "Visa kompetenskraven",
+    "cc.p.sources.show": "Visa källor och granskning",
+
+    // ── Utbildning: uttrycklig relevans ─────────────────────────────────
+    "cc.p.education.supports": "Vad det uppfyller",
+    "cc.p.education.standard": "Kunskapsområde – publicerad standard",
+    "cc.p.education.credential": "Personlig certifiering",
+    "cc.p.education.publisher": "Utgivare",
+    "cc.p.education.notGuarantee":
+      "En genomförd utbildning garanterar aldrig lämplighet, godkännande, förordnande eller behörighet. Det avgörs av den myndighet eller arbetsgivare som fattar beslutet.",
 
     // ── Din riktning — the personal section (§3B) ───────────────────────
     //
@@ -3189,9 +3243,9 @@ export const dictionaries = {
       "Ytterligare utbildningsvägar är kopplade till yrket men är under granskning och visas inte ännu:",
     "cc.p.education.none":
       "Inga granskade utbildningar eller certifikat är registrerade för det här yrket ännu.",
-    "cc.p.education.sponsored": "Sponsrad utbildningsanordnare",
+    "cc.p.education.sponsored": "Annons – betald placering från {provider}",
     "cc.p.education.sponsored.help":
-      "Betald placering. Den påverkar varken vilka yrken som rekommenderas, vilka karriärvägar som visas eller i vilken ordning innehållet står.",
+      "Utbildningsanordnaren betalar för placeringen. Betalning påverkar varken vilka yrken som rekommenderas, vilka karriärvägar som visas eller i vilken ordning innehållet står — ordningen bestäms av om något är ett formellt krav eller rekommenderad utveckling.",
     "cc.p.education.neutrality":
       "Ordningen nedan bestäms av om något är ett formellt krav eller rekommenderad utveckling. Den påverkas inte av betalning.",
 
@@ -8516,7 +8570,8 @@ export const dictionaries = {
     "cc.routes.title": "Career routes",
     "cc.routes.subtitle":
       "Three directions through the industry, assembled from the guides that are published. Every step is readable.",
-    "cc.routes.disclaimer": "Career routes are examples — progression is not linear for everyone.",
+    "cc.routes.disclaimer":
+      "Career routes are examples of possible directions — not an order to follow and not a promotion ladder. Progression looks different for different people.",
     "cc.routes.stage": "Stage",
     "cc.routes.or": "or",
     "cc.routes.shift.title": "What changes on the way here",
@@ -8612,6 +8667,59 @@ export const dictionaries = {
     "cc.regulated.regulated": "Regulated",
     "cc.regulated.not_regulated": "Not regulated",
 
+    // ── Career routes as branches, not a ladder ─────────────────────────
+    "cc.routes.origin": "Starting from",
+    "cc.routes.independent":
+      "The directions below are independent of one another. None of them is a requirement for any of the others, and you do not have to take them in any particular order.",
+
+    // ── Evidence level for a transition ─────────────────────────────────
+    "cc.step.under_review": "Possible direction under review",
+    "cc.step.under_review.help":
+      "The link between the professions is recorded, but we have no reviewed source for the transition itself yet. So we say nothing about how common it is, what experience it takes, or what order the steps come in.",
+    "cc.step.detail": "What this step involves",
+    "cc.step.what": "What applies",
+    "cc.step.sources": "Sources for this transition",
+    "cc.step.jurisdiction": "Applies in",
+
+    // ── Paths from your current role (pathFrom) ─────────────────────────
+    "cc.path.eyebrow": "From your role",
+    "cc.path.title": "Paths from your current role",
+    "cc.path.titleFor": "Paths from {role}",
+    "cc.path.subtitle":
+      "The directions below start from the role you work in, not from the career analysis. They come from recorded links between professions.",
+    "cc.path.source.profile": "Based on the profession in your profile",
+    "cc.path.source.selected": "Based on the role you selected here",
+    "cc.path.select.label": "Which profession do you work in today?",
+    "cc.path.select.none": "Choose a profession",
+    "cc.path.select.help":
+      "The choice is kept in the page address, not in your profile. You can share the link or change the role whenever you like.",
+    "cc.path.select.change": "Change role",
+    "cc.path.none": "We have no recorded directions out of that profession yet.",
+    "cc.path.notEligibility":
+      "These are directions, not a decision that you are eligible. CQrityjob does not test whether you meet the requirements for a profession — regulation and the employer do.",
+    "cc.path.more": "See all directions in the profession guide",
+    "cc.path.empty.title": "Choose your current profession",
+    "cc.path.empty.body":
+      "Pick the role you work in and we will show which directions are recorded from there, and what each one requires.",
+
+    // ── Explore: progressive disclosure ─────────────────────────────────
+    "cc.explore.showAll": "Show all professions",
+    "cc.explore.hideAll": "Hide the profession list",
+    "cc.explore.showAll.help":
+      "The full catalogue with search and filters. Your current view stays in the address, so the link can be shared.",
+
+    // ── Profession guide: progressive disclosure ────────────────────────
+    "cc.p.competencies.show": "Show the competency demands",
+    "cc.p.sources.show": "Show sources and review",
+
+    // ── Education: explicit relevance ───────────────────────────────────
+    "cc.p.education.supports": "What it satisfies",
+    "cc.p.education.standard": "Knowledge area – published standard",
+    "cc.p.education.credential": "Personal credential",
+    "cc.p.education.publisher": "Published by",
+    "cc.p.education.notGuarantee":
+      "Completing a course never guarantees suitability, approval, appointment or eligibility. That is decided by the authority or employer that makes the decision.",
+
     // ── Your direction — the personal section (§3B) ─────────────────────
     "cc.me.eyebrow": "Your direction",
     "cc.me.title": "Based on your career analysis",
@@ -8705,9 +8813,9 @@ export const dictionaries = {
       "Further education pathways are linked to this profession but are under review and not shown yet:",
     "cc.p.education.none":
       "No reviewed education or certification is recorded for this profession yet.",
-    "cc.p.education.sponsored": "Sponsored training provider",
+    "cc.p.education.sponsored": "Advertisement – paid placement from {provider}",
     "cc.p.education.sponsored.help":
-      "A paid placement. It affects neither which professions are recommended, nor which career routes are shown, nor the order this content appears in.",
+      "The training provider pays for this placement. Payment affects neither which professions are recommended, nor which career routes are shown, nor the order this content appears in — the order is decided by whether something is a formal requirement or recommended development.",
     "cc.p.education.neutrality":
       "The order below is decided by whether something is a formal requirement or recommended development. It is not affected by payment.",
 

@@ -61,16 +61,63 @@ export const securityOfficer: Profession = {
   recommendedAssessment: "security-career-assessment",
   relatedJobsQuery: "security-officer",
   sources: [
-    { label: { sv: "Lag (1974:191) om bevakningsföretag", en: "Guarding Companies Act (1974:191)" }, publisher: "Sveriges riksdag", url: "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-1974191-om-bevakningsforetag_sfs-1974-191" },
-    { label: { sv: "Polismyndigheten – Bevakningsföretag och väktare", en: "Swedish Police – Guarding companies and security officers" }, publisher: "Polismyndigheten", url: "https://polisen.se/tjanster-tillstand/tillstand/bevakningsforetag/" },
+    {
+      label: {
+        sv: "Lag (1974:191) om bevakningsföretag",
+        en: "Guarding Companies Act (1974:191)",
+      },
+      publisher: "Sveriges riksdag",
+      url: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-1974191-om-bevakningsforetag_sfs-1974-191/",
+      retrieved: "2026-09-08",
+    },
+    {
+      // The previous source here was https://polisen.se/tjanster-tillstand/
+      // tillstand/bevakningsforetag/, which now 404s. A dead source is not a
+      // source: it is replaced with the Police Authority's own regulations for
+      // guarding companies, which is the instrument the training requirement
+      // actually comes from.
+      label: {
+        sv: "Polismyndighetens föreskrifter och allmänna råd om bevakningsföretag och bevakningspersonal (FAP 573-1)",
+        en: "Swedish Police Authority regulations on guarding companies and guarding personnel (FAP 573-1)",
+      },
+      publisher: "Polismyndigheten",
+      url: "https://polisen.se/siteassets/forfattningssamling/fap-nummer/fap573-01-pmfs2017-10/",
+      retrieved: "2026-09-08",
+    },
   ],
 };
 
+// ── ORDNINGSVAKT ───────────────────────────────────────────────────────
+//
+// ── THE ACT THIS GUIDE USED TO CITE IS REPEALED ────────────────────────
+//
+// Every reference here was to lagen (1980:578) om ordningsvakter, which was
+// replaced by lagen (2023:421) om ordningsvakter. The guide was therefore
+// citing repealed law as the current requirement — the single worst kind of
+// error a regulatory career guide can make, because a reader has no way to
+// tell a confident wrong answer from a right one.
+//
+// The 2023 Act's 9 § states three conditions for appointment, and the guide
+// now states all three rather than compressing them:
+//
+//   * at least 20 years of age  (NOT 18 — the age this catalogue carries for
+//     väktare, which is a different role under a different Act)
+//   * prescribed training completed
+//   * assessed as suitable, on lawfulness and other circumstances
+//
+// The appointment itself is a decision by Polismyndigheten (20 §).
+//
+// ── AND WORKING AS A VÄKTARE IS NOT A PREREQUISITE ─────────────────────
+//
+// Nothing in the Act requires it. The catalogue records a possible direction
+// from väktare to ordningsvakt because people do move between them, but the
+// guide must not present a guarding job as a legal step towards this
+// appointment, and `careerPaths` no longer implies that either.
 export const ordningsvakt: Profession = {
   id: "ordningsvakt",
   slug: "ordningsvakt",
   status: "researched",
-  lastVerified: "2026-07-16",
+  lastVerified: "2026-09-08",
   titleCanonical: "Public Order Officer",
   titleSv: "Ordningsvakt",
   titleEn: "Public Order Officer",
@@ -80,15 +127,31 @@ export const ordningsvakt: Profession = {
   sector: "hybrid",
   orientation: ["operational"],
   icon: "shield",
-  description: { sv: "Förordnad av Polismyndigheten för att medverka till att upprätthålla allmän ordning.", en: "Appointed by the Swedish Police Authority to help maintain public order." },
-  overview: {
-    sv: "Ordningsvakt är en särskild ställning enligt lag (1980:578) om ordningsvakter. Ordningsvakter förordnas av Polismyndigheten och har vissa befogenheter att medverka till att upprätthålla allmän ordning på angivna platser.",
-    en: "A Swedish Public Order Officer is a statutory role under the Public Order Officers Act (1980:578). Officers are appointed by the Swedish Police Authority and have limited powers to help maintain public order at designated locations.",
+  description: {
+    sv: "Förordnad av Polismyndigheten för att medverka till att upprätthålla allmän ordning och säkerhet.",
+    en: "Appointed by the Swedish Police Authority to help maintain public order and safety.",
   },
-  roleFor: { sv: "Rollen passar dig som vill arbeta operativt med allmän ordning under Polismyndighetens tillsyn.", en: "Suits people who want to work operationally with public order under Swedish Police oversight." },
+  overview: {
+    sv: "Ordningsvakt är en särskild ställning enligt lagen (2023:421) om ordningsvakter. Ordningsvakter förordnas av Polismyndigheten och har vissa befogenheter att medverka till att upprätthålla allmän ordning och säkerhet där förordnandet gäller. Ställningen är inte en anställning: förordnandet är personligt och beslutas av myndigheten.",
+    en: "A Swedish public order officer holds a statutory position under the Public Order Officers Act (2023:421). Officers are appointed by the Swedish Police Authority and hold limited powers to help maintain public order and safety where the appointment applies. The position is not an employment: the appointment is personal and decided by the authority.",
+  },
+  roleFor: {
+    sv: "Rollen passar dig som vill arbeta operativt med allmän ordning under Polismyndighetens tillsyn, och som accepterar att befogenheterna följer av ett myndighetsbeslut snarare än av arbetsgivaren.",
+    en: "Suits people who want to work operationally with public order under Swedish Police oversight, and who accept that the powers follow from an authority decision rather than from an employer.",
+  },
   responsibilities: [
-    { sv: "Medverka till att upprätthålla allmän ordning enligt förordnandet.", en: "Help maintain public order within the terms of the appointment." },
-    { sv: "Rapportera och dokumentera händelser till Polismyndigheten.", en: "Report and document incidents to the Swedish Police Authority." },
+    {
+      sv: "Medverka till att upprätthålla allmän ordning och säkerhet inom det som förordnandet omfattar.",
+      en: "Help maintain public order and safety within the scope of the appointment.",
+    },
+    {
+      sv: "Rapportera och dokumentera ingripanden och händelser till Polismyndigheten.",
+      en: "Report and document interventions and incidents to the Swedish Police Authority.",
+    },
+    {
+      sv: "Följa Polismyndighetens anvisningar och lyda order som meddelas av en polisman.",
+      en: "Follow the Police Authority's instructions and obey orders given by a police officer.",
+    },
   ],
   competencies: [
     { competencyId: "integrity", requiredLevel: 4, critical: true },
@@ -98,28 +161,97 @@ export const ordningsvakt: Profession = {
     { competencyId: "communication", requiredLevel: 3 },
     { competencyId: "stress", requiredLevel: 3 },
   ],
+  // The three conditions of 9 §, stated separately, plus the decision itself.
+  // Not compressed into "godkänd lämplighetsprövning och grundutbildning":
+  // the age condition disappeared in that wording, and it is the condition a
+  // reader is most likely to be caught by.
   formalRequirements: [
-    { sv: "Godkänd lämplighetsprövning och grundutbildning för ordningsvakt.", en: "Approved suitability review and basic training as a public order officer." },
-    { sv: "Förordnande från Polismyndigheten.", en: "Appointment issued by the Swedish Police Authority." },
+    {
+      sv: "Ha fyllt 20 år (9 § lagen [2023:421] om ordningsvakter).",
+      en: "Be at least 20 years old (section 9 of the Public Order Officers Act [2023:421]).",
+    },
+    {
+      sv: "Ha genomgått föreskriven utbildning för ordningsvakt.",
+      en: "Have completed the prescribed training for public order officers.",
+    },
+    {
+      sv: "Bedömas lämplig för uppdraget med hänsyn till laglydnad och andra omständigheter.",
+      en: "Be assessed as suitable for the assignment with regard to lawfulness and other circumstances.",
+    },
+    {
+      sv: "Förordnande beslutat av Polismyndigheten. Genomförd utbildning ger i sig inget förordnande.",
+      en: "An appointment decided by the Swedish Police Authority. Completing the training confers no appointment by itself.",
+    },
   ],
   regulated: true,
-  regulatoryNotes: { sv: "Ordningsvakt är en svensk myndighetsförordnad ställning – motsvarigheter finns inte i alla länder.", en: "Swedish public order officer is a state-appointed status – equivalents do not exist in every country." },
+  regulatoryNotes: {
+    sv: "Ordningsvakt är en svensk myndighetsförordnad ställning enligt lagen (2023:421) om ordningsvakter — motsvarigheter finns inte i alla länder. Att arbeta som väktare är inget rättsligt krav för att kunna förordnas.",
+    en: "Swedish public order officer is a state-appointed position under the Public Order Officers Act (2023:421) — equivalents do not exist in every country. Working as a security officer is not a legal prerequisite for being appointed.",
+  },
   countries: ["SE"],
   educationPathways: ["se-ordningsvaktsutbildning"],
   related: ["security-officer", "skyddsvakt", "police-officer"],
-  nextRoles: ["security-manager", "security-coordinator"],
+  nextRoles: ["security-coordinator"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "Lag (1980:578) om ordningsvakter", en: "Public Order Officers Act (1980:578)" }, publisher: "Sveriges riksdag", url: "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-1980578-om-ordningsvakter_sfs-1980-578" },
-    { label: { sv: "Polismyndigheten – Ordningsvakter", en: "Swedish Police – Public order officers" }, publisher: "Polismyndigheten", url: "https://polisen.se/tjanster-tillstand/tillstand/ordningsvakt/" },
+    {
+      label: {
+        sv: "Lag (2023:421) om ordningsvakter",
+        en: "Public Order Officers Act (2023:421)",
+      },
+      publisher: "Sveriges riksdag",
+      url: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-2023421-om-ordningsvakter_sfs-2023-421/",
+      retrieved: "2026-09-08",
+    },
+    {
+      label: {
+        sv: "Polismyndigheten – Ordningsvakter",
+        en: "Swedish Police Authority – Public order officers",
+      },
+      publisher: "Polismyndigheten",
+      url: "https://polisen.se/lagar-och-regler/ordningsvakter/",
+      retrieved: "2026-09-08",
+    },
+    {
+      label: {
+        sv: "Polismyndigheten – Ordningsvakt: utbildning och förordnande",
+        en: "Swedish Police Authority – Public order officer: training and appointment",
+      },
+      publisher: "Polismyndigheten",
+      url: "https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/",
+      retrieved: "2026-09-08",
+    },
   ],
 };
 
+// ── SKYDDSVAKT ─────────────────────────────────────────────────────────
+//
+// ── THREE DIFFERENT THINGS THIS GUIDE USED TO RUN TOGETHER ─────────────
+//
+// The old formal requirement read "Godkännande som skyddsvakt och utbildning
+// enligt skyddsobjektets krav", and the education record said the training was
+// set by "Polismyndighetens föreskrifter och skyddsobjektets krav". Both make
+// the operator of the site sound like the body that sets the training. It is
+// not. Three separate things are involved and each has a different decider:
+//
+//   TRAINING     prescribed by Polismyndigheten's regulations (15 §
+//                skyddsförordningen) for skyddsvakter outside the Armed
+//                Forces, and by Försvarsmakten's (14 §) for its own personnel.
+//
+//   APPROVAL     "Den som utses till skyddsvakt ska vara godkänd av
+//                länsstyrelsen i det län där han eller hon är bosatt" (6 §).
+//                Not the Police, and not the site operator. Försvarsmakten
+//                approves its own personnel.
+//
+//   ASSIGNMENT   a designated skyddsobjekt under skyddslagen, at which an
+//                approved skyddsvakt is put to work. This is where the site
+//                operator's own requirements live, and they are additional
+//                to — never a substitute for — the two decisions above.
 export const skyddsvakt: Profession = {
   id: "skyddsvakt",
   slug: "skyddsvakt",
   status: "researched",
-  lastVerified: "2026-07-16",
+  lastVerified: "2026-09-08",
   titleCanonical: "Protective Security Guard",
   titleSv: "Skyddsvakt",
   titleEn: "Protective Security Guard",
@@ -129,15 +261,31 @@ export const skyddsvakt: Profession = {
   sector: "hybrid",
   orientation: ["operational"],
   icon: "user-check",
-  description: { sv: "Bevakning av skyddsobjekt enligt skyddslagen (2010:305).", en: "Guarding of protected objects under the Swedish Protective Security Act (2010:305)." },
-  overview: {
-    sv: "Skyddsvakter bevakar skyddsobjekt – anläggningar och områden som är särskilt skyddsvärda enligt skyddslagen. Rollen ger vissa befogenheter inom området och kräver godkännande.",
-    en: "Protective security guards guard 'skyddsobjekt' – installations and areas designated as protected under the Swedish Protective Security Act. The role carries limited powers on the site and requires approval.",
+  description: {
+    sv: "Bevakning av skyddsobjekt enligt skyddslagen (2010:305), efter godkännande av länsstyrelsen.",
+    en: "Guarding of designated protected objects under the Protective Security Act (2010:305), after approval by a county administrative board.",
   },
-  roleFor: { sv: "Passar dig som är noggrann, disciplinerad och trivs med tydliga rutiner.", en: "Suits people who are precise, disciplined and thrive on clear procedures." },
+  overview: {
+    sv: "Skyddsvakter bevakar skyddsobjekt – anläggningar och områden som är särskilt skyddsvärda enligt skyddslagen. Rollen ger vissa befogenheter inom området. Tre beslut skiljer sig åt och blandas ofta ihop: den föreskrivna utbildningen, godkännandet som skyddsvakt, och uppdraget vid ett bestämt skyddsobjekt.",
+    en: "Protective security guards guard 'skyddsobjekt' – installations and areas designated as especially worth protecting under the Protective Security Act. The role carries limited powers within the area. Three decisions differ and are often conflated: the prescribed training, the approval as a protective security guard, and the assignment at a particular protected object.",
+  },
+  roleFor: {
+    sv: "Passar dig som är noggrann, disciplinerad och trivs med tydliga rutiner och ett tydligt avgränsat uppdrag.",
+    en: "Suits people who are precise, disciplined and thrive on clear procedures and a clearly bounded assignment.",
+  },
   responsibilities: [
-    { sv: "Bevaka skyddsobjektet enligt uppdrag och instruktion.", en: "Guard the protected object per assignment and instruction." },
-    { sv: "Utföra kontroll av personer och fordon inom skyddsområdet.", en: "Conduct checks of persons and vehicles within the protected area." },
+    {
+      sv: "Bevaka skyddsobjektet enligt uppdrag och instruktion.",
+      en: "Guard the protected object per assignment and instruction.",
+    },
+    {
+      sv: "Utföra kontroll av personer och fordon inom skyddsområdet.",
+      en: "Conduct checks of persons and vehicles within the protected area.",
+    },
+    {
+      sv: "Dokumentera och rapportera händelser till uppdragsgivaren och, när det krävs, till Polismyndigheten.",
+      en: "Document and report incidents to the client and, where required, to the Swedish Police Authority.",
+    },
   ],
   competencies: [
     { competencyId: "integrity", requiredLevel: 4, critical: true },
@@ -147,18 +295,45 @@ export const skyddsvakt: Profession = {
     { competencyId: "risk_awareness", requiredLevel: 3 },
   ],
   formalRequirements: [
-    { sv: "Godkännande som skyddsvakt och utbildning enligt skyddsobjektets krav.", en: "Approval as a protective security guard and training per the protected object's requirements." },
+    {
+      sv: "Genomgången föreskriven utbildning enligt Polismyndighetens föreskrifter (15 § skyddsförordningen [2010:523]), eller enligt Försvarsmaktens föreskrifter om du tillhör Försvarsmaktens personal (14 §).",
+      en: "Completed prescribed training under the Swedish Police Authority's regulations (section 15 of the Protective Security Ordinance [2010:523]), or under the Armed Forces' regulations if you are Armed Forces personnel (section 14).",
+    },
+    {
+      sv: "Godkännande som skyddsvakt av länsstyrelsen i det län där du är bosatt (6 § skyddsförordningen). Försvarsmakten godkänner sin egen personal.",
+      en: "Approval as a protective security guard by the county administrative board in the county where you live (section 6 of the Protective Security Ordinance). The Armed Forces approve their own personnel.",
+    },
+    {
+      sv: "Ett uppdrag vid ett skyddsobjekt. Uppdragsgivarens egna krav tillkommer utöver utbildningen och godkännandet — de ersätter dem inte.",
+      en: "An assignment at a designated protected object. The client's own requirements come in addition to the training and the approval — they do not replace either.",
+    },
   ],
   regulated: true,
-  regulatoryNotes: { sv: "Rollen är svensk och reglerad genom skyddslagen (2010:305) och skyddsförordningen (2010:523).", en: "This is a Swedish role regulated by the Protective Security Act (2010:305) and Regulation (2010:523)." },
+  regulatoryNotes: {
+    sv: "Rollen är svensk och reglerad genom skyddslagen (2010:305) och skyddsförordningen (2010:523). Utbildning, godkännande och uppdrag är tre skilda beslut med tre olika beslutsfattare.",
+    en: "This is a Swedish role regulated by the Protective Security Act (2010:305) and Ordinance (2010:523). Training, approval and assignment are three separate decisions with three different deciders.",
+  },
   countries: ["SE"],
   educationPathways: ["se-skyddsvaktsutbildning"],
   related: ["security-officer", "ordningsvakt", "military-security-specialist", "data-center-security"],
   nextRoles: ["data-center-security", "security-coordinator"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "Skyddslag (2010:305)", en: "Protective Security Act (2010:305)" }, publisher: "Sveriges riksdag", url: "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/skyddslag-2010305_sfs-2010-305" },
-    { label: { sv: "Skyddsförordning (2010:523)", en: "Protective Security Regulation (2010:523)" }, publisher: "Sveriges riksdag", url: "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/skyddsforordning-2010523_sfs-2010-523" },
+    {
+      label: { sv: "Skyddslag (2010:305)", en: "Protective Security Act (2010:305)" },
+      publisher: "Sveriges riksdag",
+      url: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/skyddslag-2010305_sfs-2010-305/",
+      retrieved: "2026-09-08",
+    },
+    {
+      label: {
+        sv: "Skyddsförordning (2010:523), 6, 14 och 15 §§",
+        en: "Protective Security Ordinance (2010:523), sections 6, 14 and 15",
+      },
+      publisher: "Sveriges riksdag",
+      url: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/skyddsforordning-2010523_sfs-2010-523/",
+      retrieved: "2026-09-08",
+    },
   ],
 };
 
@@ -460,36 +635,40 @@ export const closeProtection: Profession = {
 // ── SÄKERHETSSAMORDNARE ────────────────────────────────────────────────
 //
 // Promoted from `placeholders.ts` for the Career Center pilot, because the
-// chain the Career Center is being built to explain runs through it:
+// direction the Career Center is being built to explain runs through it.
 //
-//   Väktare -> Ordningsvakt / Skyddsvakt -> Säkerhetssamordnare -> Säkerhetschef
+// ── WHAT THE SOURCES ACTUALLY SUPPORT, AND WHAT THEY DO NOT ────────────
 //
-// Without a published guide here the operational route jumped from a
-// first-year appointment straight to Säkerhetschef, which is not how the
-// industry works and is exactly the claim this rebuild exists to stop making.
+// The first version of this guide cited lagen (2006:544) as though it
+// established the occupation. It does not. What it establishes is an
+// OBLIGATION ON MUNICIPALITIES AND REGIONS: to analyse risks and
+// vulnerabilities and to plan for extraordinary events. That obligation is
+// real, it is documented, and coordinating the work it requires is what the
+// public-sector version of this title does — so that is the only version this
+// guide describes as fact.
 //
-// ── THE CAREFUL PART: THIS TITLE IS NOT REGULATED ──────────────────────
+// It does NOT support:
 //
-// "Säkerhetssamordnare" is a job title, not a legal status. Nobody appoints
-// one, no authority approves one, and there is no mandated training. The role
-// is nevertheless shaped by two statutes, and the guide cites them for what
-// they actually say rather than turning either into an entry requirement:
+//   * the private-sector role description (varies by employer, unevidenced);
+//   * any claim about how people arrive in the role;
+//   * any claim that moving here from guarding is usual.
 //
-//   * Lag (2006:544) obliges municipalities and regions to produce risk and
-//     vulnerability analyses and preparedness plans. Coordinating that work
-//     is what the public-sector version of this role does.
+// The copy is narrowed to match, and `regulatoryNotes` states the limitation
+// on the page rather than only here. When occupation-specific evidence exists
+// — a classification entry, a sector study, an authority description of the
+// function — this guide can widen again; until then it says less.
 //
-//   * Säkerhetsskyddslagen (2018:585) requires an operator covered by it to
-//     appoint a SÄKERHETSSKYDDSCHEF. That is a separate statutory function
-//     with its own duties — an organisation can have both — and conflating
-//     the two would invent a legal requirement for an unregulated job.
+// ── THE TITLE IS NOT REGULATED ─────────────────────────────────────────
 //
-// So `regulated: false` is correct AND `regulatoryNotes` is present: the note
-// exists to state a boundary, not to announce a requirement. It also carries
-// no `formalRequirements`, deliberately — listing "erfarenhet från branschen"
-// under a heading reading "Formella krav" would manufacture one. What
-// employers ask for belongs in a job advert, a different surface with a
-// different evidence standard.
+// Nobody appoints a säkerhetssamordnare, no authority approves one, and no
+// training is mandated. It must not be confused with a SÄKERHETSSKYDDSCHEF,
+// which is a statutory function under säkerhetsskyddslagen (2018:585): that
+// Act applies to säkerhetskänslig verksamhet — activity of importance to
+// Sweden's security or covered by an international security-protection
+// commitment (1 kap. 1 §) — and 2 kap. 7 § requires such an operator to have
+// a säkerhetsskyddschef "om det inte är uppenbart obehövligt". Neither the
+// scope nor the "unless obviously unnecessary" qualifier may be dropped: a
+// guide that says every organisation must appoint one has invented a duty.
 export const securityCoordinator: Profession = {
   id: "security-coordinator",
   slug: "security-coordinator",
@@ -504,63 +683,52 @@ export const securityCoordinator: Profession = {
   family: "security_leadership_governance",
   category: "corporate",
   level: "mid",
-  sector: "hybrid",
+  sector: "public",
   orientation: ["operational", "analytical", "leadership"],
   icon: "clipboard",
   description: {
-    sv: "Samordnar säkerhets-, trygghets- och beredskapsarbetet i en organisation, mellan operativ verksamhet och ledning.",
-    en: "Coordinates security, safety and preparedness work across an organisation, between operations and management.",
+    sv: "Samordnar risk-, säkerhets- och beredskapsarbetet i en kommun eller region.",
+    en: "Coordinates risk, security and preparedness work in a Swedish municipality or region.",
   },
   overview: {
-    sv: "Säkerhetssamordnaren håller ihop en organisations säkerhetsarbete: riskanalyser, rutiner, incidentuppföljning, övningar och kontakten med bevakningsleverantörer, polis och andra myndigheter. Rollen finns både i kommuner och regioner, där lag (2006:544) kräver risk- och sårbarhetsanalyser och beredskapsplanering, och i privata verksamheter. Titeln är inte reglerad och kräver inget förordnande.",
-    en: "A security coordinator holds an organisation's security work together: risk analysis, routines, incident follow-up, exercises, and the relationship with guarding suppliers, police and other authorities. The role exists both in municipalities and regions — where Swedish law (2006:544) requires risk and vulnerability analyses and preparedness planning — and in private organisations. The title is not regulated and requires no appointment.",
+    sv: "Kommuner och regioner är enligt lag (2006:544) skyldiga att analysera vilka extraordinära händelser som kan inträffa, hur de påverkar den egna verksamheten, och att utifrån analysen fastställa en plan för hur händelserna ska hanteras. Säkerhetssamordnaren är den funktion som håller ihop det arbetet: analyserna, planerna, övningarna och kontakten med andra aktörer. Titeln är inte reglerad och kräver varken föreskriven utbildning eller förordnande.",
+    en: "Swedish municipalities and regions are required by law (2006:544) to analyse which extraordinary events may occur, how those would affect their own activities, and to adopt a plan for handling them based on that analysis. The security coordinator is the function that holds that work together: the analyses, the plans, the exercises and the contact with other actors. The title is not regulated and requires neither prescribed training nor an appointment.",
   },
   roleFor: {
-    sv: "Rollen passar dig som är strukturerad, hellre skriver ned en rutin än löser samma sak två gånger, och trivs med att arbeta mellan operativa team och ledning.",
-    en: "Suits people who are structured, would rather write the routine down than solve the same thing twice, and are comfortable working between operational teams and management.",
+    sv: "Rollen passar dig som är strukturerad, hellre skriver ned en rutin än löser samma sak två gånger, och trivs med att arbeta mellan operativa verksamheter och ledning.",
+    en: "Suits people who are structured, would rather write the routine down than solve the same thing twice, and are comfortable working between operational units and management.",
   },
+  // Each of these is the coordinating side of a duty the Act names. Nothing
+  // here describes a private-sector job, because nothing sourced here does.
   responsibilities: [
     {
-      sv: "Samordna risk- och sårbarhetsanalyser och följa upp åtgärderna.",
-      en: "Coordinate risk and vulnerability analyses and follow up on the resulting measures.",
+      sv: "Samordna risk- och sårbarhetsanalyser och följa upp de åtgärder de leder till.",
+      en: "Coordinate risk and vulnerability analyses and follow up the measures they lead to.",
     },
     {
-      sv: "Ta fram och underhålla rutiner, instruktioner och beredskapsplaner.",
-      en: "Produce and maintain routines, instructions and preparedness plans.",
+      sv: "Hålla ihop planen för hantering av extraordinära händelser och hålla den aktuell.",
+      en: "Maintain the plan for handling extraordinary events and keep it current.",
     },
     {
-      sv: "Följa upp incidenter och tillbud och återföra lärdomar till verksamheten.",
-      en: "Follow up incidents and near misses and feed the lessons back into the organisation.",
+      sv: "Planera och genomföra utbildning och övning för förtroendevalda och medarbetare.",
+      en: "Plan and run training and exercises for elected representatives and staff.",
     },
     {
-      sv: "Planera och genomföra utbildning och övning för medarbetare.",
-      en: "Plan and run training and exercises for staff.",
-    },
-    {
-      sv: "Vara kontaktväg mot bevakningsleverantör, polis och andra myndigheter.",
-      en: "Act as the contact point towards guarding suppliers, police and other authorities.",
+      sv: "Vara kontaktväg mot länsstyrelsen, polisen och andra aktörer i samverkan.",
+      en: "Act as the contact point towards the county administrative board, the police and other actors.",
     },
   ],
   workEnvironments: [
     {
-      sv: "Kommun- eller regionförvaltning, ofta i en säkerhets- eller beredskapsfunktion.",
-      en: "Municipal or regional administration, usually in a security or preparedness function.",
-    },
-    {
-      sv: "Fastighets-, handels-, industri- eller transportbolag med egen säkerhetsfunktion.",
-      en: "Property, retail, industrial or transport companies with an in-house security function.",
+      sv: "Kommun- eller regionförvaltning, i en säkerhets- eller beredskapsfunktion.",
+      en: "Municipal or regional administration, in a security or preparedness function.",
     },
     {
       sv: "Kontorsarbete med inslag av platsbesök, övningar och beredskap.",
       en: "Office work with site visits, exercises and on-call elements.",
     },
   ],
-  industries: [
-    {
-      sv: "Offentlig förvaltning, fastighet, handel, industri, transport, vård.",
-      en: "Public administration, real estate, retail, industry, transport, healthcare.",
-    },
-  ],
+  industries: [{ sv: "Offentlig förvaltning.", en: "Public administration." }],
   competencies: [
     { competencyId: "planning", requiredLevel: 4, critical: true },
     { competencyId: "communication", requiredLevel: 4, critical: true },
@@ -571,10 +739,13 @@ export const securityCoordinator: Profession = {
     { competencyId: "leadership", requiredLevel: 3 },
     { competencyId: "legal_regulatory", requiredLevel: 3 },
   ],
+  // Deliberately none. The title carries no statutory requirement, and listing
+  // "erfarenhet från branschen" under a heading reading "Formella krav" would
+  // manufacture one. What employers ask for belongs in a job advert.
   regulated: false,
   regulatoryNotes: {
-    sv: "Säkerhetssamordnare är inte ett reglerat yrke — titeln kräver varken föreskriven utbildning, godkännande eller förordnande. Den ska inte förväxlas med säkerhetsskyddschef, som är en särskild funktion som en verksamhetsutövare ska utse enligt säkerhetsskyddslagen (2018:585). En organisation kan ha båda.",
-    en: "Security coordinator is not a regulated profession — the title carries no mandated training, approval or appointment. It should not be confused with a säkerhetsskyddschef, a distinct function an operator must appoint under the Swedish Protective Security Act (2018:585). An organisation can have both.",
+    sv: "Säkerhetssamordnare är inte ett reglerat yrke — titeln kräver varken föreskriven utbildning, godkännande eller förordnande. Den här guiden beskriver rollen som den ser ut i kommuner och regioner, där uppgifterna följer av lag (2006:544). Samma titel förekommer i privata verksamheter, men innehållet varierar mellan arbetsgivare och är inte källbelagt här. Rollen ska inte förväxlas med säkerhetsskyddschef: säkerhetsskyddslagen (2018:585) gäller för säkerhetskänslig verksamhet, och en sådan verksamhetsutövare ska ha en säkerhetsskyddschef om det inte är uppenbart obehövligt (2 kap. 7 §). En organisation kan ha båda funktionerna.",
+    en: "Security coordinator is not a regulated profession — the title carries no mandated training, approval or appointment. This guide describes the role as it appears in Swedish municipalities and regions, where the duties follow from Act (2006:544). The same title is used in private organisations, but its content varies between employers and is not source-verified here. It should not be confused with a säkerhetsskyddschef: the Protective Security Act (2018:585) applies to security-sensitive activities, and such an operator must have a säkerhetsskyddschef unless it is obviously unnecessary (chapter 2, section 7). An organisation can have both functions.",
   },
   countries: ["SE"],
   educationPathways: [],
@@ -587,19 +758,21 @@ export const securityCoordinator: Profession = {
   sources: [
     {
       label: {
-        sv: "Lag (2006:544) om kommuners och regioners åtgärder inför och vid extraordinära händelser i fredstid och höjd beredskap",
-        en: "Swedish Act (2006:544) on municipal and regional measures before and during extraordinary events in peacetime and during heightened alert",
+        sv: "Lag (2006:544) om kommuners och regioners åtgärder inför och vid extraordinära händelser i fredstid och höjd beredskap, 2 kap. 1–2 §§",
+        en: "Swedish Act (2006:544) on municipal and regional measures before and during extraordinary events in peacetime and during heightened alert, chapter 2, sections 1–2",
       },
       publisher: "Sveriges riksdag",
       url: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-2006544-om-kommuners-och-regioners-atgarder_sfs-2006-544/",
+      retrieved: "2026-09-08",
     },
     {
       label: {
-        sv: "Säkerhetsskyddslag (2018:585)",
-        en: "Swedish Protective Security Act (2018:585)",
+        sv: "Säkerhetsskyddslag (2018:585), 1 kap. 1 § och 2 kap. 7 §",
+        en: "Swedish Protective Security Act (2018:585), chapter 1 section 1 and chapter 2 section 7",
       },
       publisher: "Sveriges riksdag",
       url: "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/sakerhetsskyddslag-2018585_sfs-2018-585/",
+      retrieved: "2026-09-08",
     },
   ],
 };

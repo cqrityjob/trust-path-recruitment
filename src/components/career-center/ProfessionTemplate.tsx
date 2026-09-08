@@ -1,4 +1,12 @@
-import { ArrowRight, Check, ExternalLink, Info, Minus, ShieldAlert } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Info,
+  Minus,
+  ShieldAlert,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
@@ -312,23 +320,38 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
             </p>
           )}
         </div>
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {profession.competencies.map((rc) => {
-            const competency = getCompetency(rc.competencyId);
-            if (!competency) return null;
-            return (
-              <CompetencyCard
-                key={rc.competencyId}
-                name={L(competency.name, lang)}
-                definition={L(competency.definition, lang)}
-                icon={icon(competency.icon)}
-                level={rc.requiredLevel}
-                levelLabel={L(proficiencyLabels[rc.requiredLevel], lang)}
-                critical={rc.critical}
-              />
-            );
-          })}
-        </div>
+        {/* Eleven competency cards unfolded is 2,000px on a phone for a
+            section most readers skim once. Native <details>: keyboard
+            operable, findable by in-page search, no script. */}
+        <details data-competency-disclosure className="group mt-8">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+            {t("cc.p.competencies.show")}
+            <span className="tabular-nums text-muted-foreground">
+              ({profession.competencies.length})
+            </span>
+            <ChevronDown
+              className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {profession.competencies.map((rc) => {
+              const competency = getCompetency(rc.competencyId);
+              if (!competency) return null;
+              return (
+                <CompetencyCard
+                  key={rc.competencyId}
+                  name={L(competency.name, lang)}
+                  definition={L(competency.definition, lang)}
+                  icon={icon(competency.icon)}
+                  level={rc.requiredLevel}
+                  levelLabel={L(proficiencyLabels[rc.requiredLevel], lang)}
+                  critical={rc.critical}
+                />
+              );
+            })}
+          </div>
+        </details>
       </Section>
 
       {/* 9 — FORMELLA KRAV  ·  10 — SÅ KOMMER DU IN */}
@@ -545,30 +568,10 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
           <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {t("cc.p.sources")}
           </h2>
-          <ul className="mt-4 space-y-2 text-sm">
-            {(profession.sources ?? []).map((s, i) => (
-              <li key={i} className="flex items-start gap-2 text-foreground">
-                <span aria-hidden className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-accent" />
-                <span>
-                  {s.url ? (
-                    <a
-                      href={s.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 underline-offset-4 hover:text-accent hover:underline"
-                    >
-                      {L(s.label, lang)}
-                      <ExternalLink className="h-3 w-3" aria-hidden />
-                    </a>
-                  ) : (
-                    L(s.label, lang)
-                  )}
-                  {s.publisher && <span className="text-muted-foreground"> — {s.publisher}</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-2 border-t border-border pt-5 text-xs text-muted-foreground">
+          {/* The review date and the jurisdiction stay visible: they are the
+              two facts a reader uses to decide whether to trust the page at
+              all. The source LIST folds, because it is a reference. */}
+          <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-xs text-muted-foreground">
             <div className="flex gap-1.5">
               <dt className="font-medium">{t("cc.p.reviewed")}:</dt>
               <dd className="tabular-nums text-foreground">{profession.lastVerified}</dd>
@@ -578,6 +581,44 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
               <dd className="text-foreground">{profession.countries.join(", ")}</dd>
             </div>
           </dl>
+          <details data-sources-disclosure className="group mt-4">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+              {t("cc.p.sources.show")}
+              <span className="tabular-nums text-muted-foreground">
+                ({(profession.sources ?? []).length})
+              </span>
+              <ChevronDown
+                className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <ul className="mt-4 space-y-2 text-sm">
+              {(profession.sources ?? []).map((s, i) => (
+                <li key={i} className="flex items-start gap-2 text-foreground">
+                  <span
+                    aria-hidden
+                    className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-accent"
+                  />
+                  <span>
+                    {s.url ? (
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 underline-offset-4 hover:text-accent hover:underline"
+                      >
+                        {L(s.label, lang)}
+                        <ExternalLink className="h-3 w-3" aria-hidden />
+                      </a>
+                    ) : (
+                      L(s.label, lang)
+                    )}
+                    {s.publisher && <span className="text-muted-foreground"> — {s.publisher}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
           <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
             <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-accent" aria-hidden />
             {t("cc.p.disclaimer")}

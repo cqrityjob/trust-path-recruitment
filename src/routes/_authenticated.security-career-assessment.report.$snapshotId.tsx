@@ -109,6 +109,20 @@ function DiscoveryReportRoute() {
 
   const data = query.data;
 
+  // A read that did not answer is a FAULT, not a missing report. It shares the
+  // error treatment above rather than the "no such report" copy below, because
+  // telling somebody their report does not exist when the database simply did
+  // not reply is the failure this status was added to prevent.
+  if (data.status === "read_failed") {
+    return (
+      <ReportMessage
+        title={t("careerDiscovery.report.error")}
+        body={t("careerDiscovery.report.unreadable.body")}
+        tone="error"
+      />
+    );
+  }
+
   if (data.status === "not_found") {
     return (
       <ReportMessage

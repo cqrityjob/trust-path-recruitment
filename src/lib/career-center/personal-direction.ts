@@ -1,4 +1,18 @@
-// "Utgå från mitt resultat" — the Career Center's personal section.
+// `fit` — the occupations the frozen Career Discovery report ranked.
+//
+// ── ONE OF THREE CONCEPTS, AND THE NARROWER ONE ────────────────────────
+//
+// This module answers "which occupations did the instrument suggest for me".
+// It does NOT answer "I work as a väktare, where can I go from here" — that
+// is `pathFrom`, and it lives in `career-origin.ts` with a different input,
+// different evidence and a different failure mode. The two are rendered as
+// separate sections with separate headings, each stating its own basis,
+// because a reader who cannot tell which one they are looking at cannot
+// trust either. Neither ever appears under a combined "Rekommenderat för
+// dig" heading.
+//
+// The third concept, `eligibility`, has no module: it is never computed. See
+// ELIGIBILITY_IS_NEVER_ASSESSED in career-origin.ts.
 //
 // ── THE RULE THAT SHAPES EVERY BRANCH BELOW ────────────────────────────
 //
@@ -46,6 +60,7 @@
 import type { CareerDirection, RoleSummary } from "@/lib/professional-identity/career-direction";
 import type { Profession } from "./types";
 import { publishedProfessionFromAnySlug } from "./profession-links";
+import { ELIGIBILITY_IS_NEVER_ASSESSED } from "./career-origin";
 
 export const MAX_PERSONAL_RECOMMENDATIONS = 3;
 
@@ -104,7 +119,7 @@ export type PersonalDirection =
       readonly completedAt: string | null;
       readonly items: readonly PersonalRecommendation[];
       /** Always false. See the header comment: guidance is not eligibility. */
-      readonly formalRequirementsAssessed: false;
+      readonly formalRequirementsAssessed: typeof ELIGIBILITY_IS_NEVER_ASSESSED;
       /** The locale the snapshot was frozen in, when it differs from what the
        *  reader has selected. The surface says so rather than presenting
        *  frozen Swedish strings as though they were translated. */
@@ -163,7 +178,7 @@ export function personalDirection(
     reportHref: career.reportHref,
     completedAt: career.completedAt,
     items: roles.slice(0, MAX_PERSONAL_RECOMMENDATIONS).map(toRecommendation),
-    formalRequirementsAssessed: false,
+    formalRequirementsAssessed: ELIGIBILITY_IS_NEVER_ASSESSED,
     frozenLocale: career.frozenLocale,
   };
 }

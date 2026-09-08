@@ -11,74 +11,65 @@
 // So the commercial model is prepared here as a SEPARATE LAYER that is
 // structurally incapable of touching relevance:
 //
-//   Layer 1  WHAT the reader needs        derived from the profession guide
+//   Layer 1  WHAT the reader needs        an authored profession->offer link
 //   Layer 2  WHICH ORDER it is shown in   derived from Layer 1 alone
 //   Layer 3  WHO delivers it              a placement, attached afterwards
+//
+// Layer 1 is a TABLE, not an inference — see `education-links.ts` for why a
+// legal claim needs an author.
 //
 // Layer 2 is computed by `educationOrderKey`, whose input type does not
 // contain a placement field at all. Not "does not read it" — cannot. A future
 // edit that wanted ranking to notice money would have to change a type
 // signature, which is a review event rather than a one-line diff. The guard
-// (`career-center:check`) additionally proves the property empirically: it
-// marks every offer sponsored, recomputes, and requires a byte-identical
-// order and an identical set.
+// re-orders every offer with a sponsored placement attached and requires a
+// byte-identical sequence.
+//
+// ── WHAT PROVES NEUTRALITY, AND WHAT DOES NOT ──────────────────────────
+//
+// The type signature and the guard prove it. TELEMETRY DOES NOT. An earlier
+// revision of this module claimed that an analytics event with an
+// organic/sponsored dimension made ranking neutrality "checkable"; it does
+// not. Counting clicks measures engagement. Ordering is a property of the
+// code, and the code is what is asserted. The event, and the hosted schema
+// change it needed, were removed.
 //
 // ── WHAT THIS PILOT DELIBERATELY DOES NOT BUILD ────────────────────────
 //
 // No payment, no invoicing, no commission accounting, no provider
-// self-service, and no sponsored placement in the shipped data:
+// self-service, and no placement in the shipped data:
 // `EDUCATION_PROVIDER_PLACEMENTS` is empty. What exists is the shape a
-// placement must have in order to be addable at all — a named provider, a
-// jurisdiction, a disclosure label, and its own measurement channel — plus
-// the proof that adding one cannot move anything.
-//
-// ── DISCLOSURE IS NOT OPTIONAL AND NOT A STYLE CHOICE ──────────────────
-//
-// `placement: "sponsored"` forces the "Sponsrad utbildningsanordnare" label
-// at render time; there is no flag that suppresses it. Organic and sponsored
-// carry different analytics `placement` values so the two can be measured
-// separately without inferring anything from a URL.
-//
-// ── AND WHAT IS NOT SHOWN AT ALL ───────────────────────────────────────
-//
-// The same rule the profession guides live under: content that has no source,
-// no jurisdiction and no review date is not presented as though it had them.
-// Eight of the education records in this dataset are structural placeholders.
-// They are counted and named as under review, never carded.
+// placement must have in order to be addable at all, plus the proof that
+// adding one cannot move anything. The requirements the first real placement
+// must satisfy are recorded in docs/career-center/career-center-pilot.md and
+// are deliberately NOT implemented here.
 
-import type { Bi, Certification, Education, Profession, Region } from "./types";
+import type { Bi, Certification, Education, Profession, Region, SourceRef } from "./types";
 import { getEducation } from "./education";
 import { getCertification } from "./certifications";
+import {
+  educationLinksFor,
+  type EducationRelevance,
+  type OfferKind,
+  type ProfessionEducationLink,
+} from "./education-links";
+
+export type { EducationRelevance, OfferKind, ProfessionEducationLink };
 
 // ---------------------------------------------------------------------------
-// Layer 1 — relevance
+// Layer 3 — placements
 // ---------------------------------------------------------------------------
-
-/**
- * Why this appears for this profession.
- *
- *   formal_requirement      Something an authority or a regulation requires
- *                           before a person may hold the role.
- *   recommended_development Development that strengthens the profile. Useful,
- *                           never mandatory.
- *
- * Kept as exactly two values on purpose. "Utbildning", "godkännande" and
- * "förordnande" are three different things, and a surface that blurs them is
- * the specific failure this product is not allowed to have. The distinction
- * a reader must never lose is *must* versus *may*, so that is the
- * distinction the type encodes.
- */
-export type EducationRelevance = "formal_requirement" | "recommended_development";
-
-export type OfferKind = "education" | "certification";
 
 export type OfferPlacement = "organic" | "sponsored";
 
 export interface EducationProviderPlacement {
-  /** The education or certification this provider delivers. */
+  /** Stable identifier for the placement itself, so a click, an impression
+   *  and an invoice can all name the same row without matching on a URL. */
+  readonly placementId: string;
   readonly offerId: string;
   readonly kind: OfferKind;
   readonly providerName: string;
+  /** HTTPS only — enforced by `placementIsWellFormed`, not by convention. */
   readonly url: string;
   /** Where this provider actually delivers. A placement is never shown
    *  outside the jurisdiction the reader is looking at. */
@@ -90,10 +81,47 @@ export interface EducationProviderPlacement {
  * Paid and manually-added provider placements.
  *
  * EMPTY IN THE PILOT, deliberately. The pilot ships the mechanism and no
- * placement; adding the first one is a content decision with a disclosure
- * obligation attached, not a side effect of this release.
+ * placement; adding the first one is a commercial release with its own
+ * review, not a side effect of this one.
  */
 export const EDUCATION_PROVIDER_PLACEMENTS: readonly EducationProviderPlacement[] = [];
+
+/** At most this many providers per offer, sponsored and organic together.
+ *  A cap is part of the contract rather than a styling decision: an offer
+ *  that can carry unbounded placements is an auction wearing a card. */
+export const MAX_PLACEMENTS_PER_OFFER = 3;
+
+/** Structural validity of a placement row. Applied by the guard, so a
+ *  malformed placement fails the build rather than rendering. */
+export function placementIsWellFormed(p: EducationProviderPlacement): boolean {
+  if (!p.placementId.trim() || !p.providerName.trim()) return false;
+  if (!p.url.startsWith("https://")) return false;
+  return p.countries.length > 0;
+}
+
+/**
+ * Provider order within one offer.
+ *
+ * Deterministic and price-blind: alphabetical by provider name, then by
+ * placement id. Sponsored placements are NOT hoisted, and the sort function
+ * cannot see a price because no price exists in this type. A paid provider
+ * that wanted to be first would have to be renamed, which is not a pricing
+ * lever.
+ */
+export function orderPlacements(
+  placements: readonly EducationProviderPlacement[],
+): EducationProviderPlacement[] {
+  return [...placements]
+    .sort(
+      (a, b) =>
+        a.providerName.localeCompare(b.providerName) || a.placementId.localeCompare(b.placementId),
+    )
+    .slice(0, MAX_PLACEMENTS_PER_OFFER);
+}
+
+// ---------------------------------------------------------------------------
+// Layer 1 — what the reader needs
+// ---------------------------------------------------------------------------
 
 export interface EducationOffer {
   readonly id: string;
@@ -101,13 +129,19 @@ export interface EducationOffer {
   readonly name: Bi;
   readonly provider?: Bi;
   readonly relevance: EducationRelevance;
-  /** The jurisdictions this offer is being presented FOR: the overlap between
-   *  what the offer scopes and what the guide claims, so a Swedish reader is
-   *  never shown an international programme labelled "gäller i Sverige". */
+  /** Which part of the requirement this satisfies, and what it does not.
+   *  Authored on the link, never derived. */
+  readonly supports: Bi;
+  /** The jurisdiction the relevance statement is made in. */
   readonly countries: readonly Region[];
-  readonly source?: { readonly label: Bi; readonly publisher?: string; readonly url?: string };
+  /** The authority behind the relevance statement (from the link), falling
+   *  back to the offer's own official source. */
+  readonly source?: SourceRef;
   readonly lastVerified: string;
   readonly notes?: Bi;
+  /** True when this record is a published STANDARD rather than a credential a
+   *  person can hold. The surface must never call one a certificate. */
+  readonly isStandard: boolean;
   /** Attached after ordering. Presentation only. */
   readonly placements: readonly EducationProviderPlacement[];
 }
@@ -126,42 +160,6 @@ export function offerPresentable(
   const s = e.officialSource;
   if (!s) return false;
   return Boolean(s.label?.sv?.trim() && s.label?.en?.trim() && (s.url || s.publisher));
-}
-
-/**
- * Whether a profession's own education pathways are formal requirements.
- *
- * ── THE RULE, AND ITS LIMIT ────────────────────────────────────────────
- *
- * An education attached to a REGULATED profession that states personal
- * formal requirements is the training those requirements name — that is why
- * the pathway is attached to that guide — and is marked `formal_requirement`.
- * Everything else is `recommended_development`.
- *
- * Two qualifications keep it honest:
- *
- *   * A profession regulated as an ACTIVITY rather than as a personal licence
- *     records `regulatoryNotes` and no `formalRequirements` (AML is the case
- *     in this dataset: the Act binds the firm, not the analyst). It has no
- *     personal requirement, so its pathways are recommended.
- *
- *   * The offer must scope a jurisdiction the guide actually claims. An
- *     international programme is never a Swedish legal requirement.
- *
- * The limit is real and worth stating: this cannot express "optional pathway
- * into a regulated role". No such case exists in the dataset today; the first
- * one needs a field on the profession, not a cleverer inference here.
- */
-function relevanceOf(p: Profession, scope: readonly Region[]): EducationRelevance {
-  const personallyRegulated = p.regulated && (p.formalRequirements?.length ?? 0) > 0;
-  if (!personallyRegulated) return "recommended_development";
-  const overlaps = scope.some((r) => p.countries.includes(r));
-  return overlaps ? "formal_requirement" : "recommended_development";
-}
-
-function jurisdictionFor(p: Profession, scope: readonly Region[]): readonly Region[] {
-  const overlap = scope.filter((r) => p.countries.includes(r));
-  return overlap.length > 0 ? overlap : scope;
 }
 
 // ---------------------------------------------------------------------------
@@ -203,93 +201,102 @@ export function orderOffers<T extends OrderableOffer>(offers: readonly T[]): T[]
 }
 
 // ---------------------------------------------------------------------------
-// Layer 3 — placements, attached after ordering
+// Assembly
 // ---------------------------------------------------------------------------
 
 function placementsFor(offerId: string, kind: OfferKind, countries: readonly Region[]) {
-  return EDUCATION_PROVIDER_PLACEMENTS.filter(
-    (pl) =>
-      pl.offerId === offerId && pl.kind === kind && pl.countries.some((c) => countries.includes(c)),
+  return orderPlacements(
+    EDUCATION_PROVIDER_PLACEMENTS.filter(
+      (pl) =>
+        pl.offerId === offerId &&
+        pl.kind === kind &&
+        pl.countries.some((c) => countries.includes(c)),
+    ),
   );
 }
 
 export interface ProfessionEducation {
   readonly offers: readonly EducationOffer[];
-  /** Names of pathways and certificates attached to this guide that are not
-   *  presentable yet. Counted and named, never carded — the same treatment
-   *  unfinished profession guides get. */
+  /** Offers linked to this guide that are not presentable yet. Counted and
+   *  named, never carded — the same treatment unfinished profession guides
+   *  get. */
   readonly underReview: readonly Bi[];
 }
 
-function fromEducation(p: Profession, e: Education): EducationOffer {
-  const countries = jurisdictionFor(p, e.scope);
+function fromLink(
+  link: ProfessionEducationLink,
+  record: { name: Bi; provider?: Bi; source?: SourceRef; notes?: Bi; isStandard: boolean },
+): EducationOffer {
   return {
-    id: e.id,
-    kind: "education",
-    name: e.name,
-    provider: e.provider,
-    relevance: relevanceOf(p, e.scope),
-    countries,
-    source: e.officialSource,
-    lastVerified: e.lastVerified!,
-    notes: e.notes,
-    placements: placementsFor(e.id, "education", countries),
+    id: link.offerId,
+    kind: link.kind,
+    name: record.name,
+    provider: record.provider,
+    relevance: link.relevance,
+    supports: link.supports,
+    countries: link.countries,
+    // The AUTHORITY behind the relevance claim first: that is the statement a
+    // reader most needs to check. The offer's own page is a fallback.
+    source: link.authority ?? record.source,
+    lastVerified: link.lastVerified,
+    notes: record.notes,
+    isStandard: record.isStandard,
+    placements: placementsFor(link.offerId, link.kind, link.countries),
   };
 }
 
-function fromCertification(p: Profession, c: Certification): EducationOffer {
-  const countries = jurisdictionFor(p, c.scope);
+function educationRecord(e: Education) {
   return {
-    id: c.id,
-    kind: "certification",
+    name: e.name,
+    provider: e.provider,
+    source: e.officialSource,
+    notes: e.notes,
+    isStandard: false,
+  };
+}
+
+function certificationRecord(c: Certification) {
+  return {
     name: c.shortName
-      ? { sv: `${c.shortName} — ${c.fullName.sv}`, en: `${c.shortName} — ${c.fullName.en}` }
+      ? { sv: c.shortName + " — " + c.fullName.sv, en: c.shortName + " — " + c.fullName.en }
       : c.fullName,
     provider: c.issuer,
-    // A certificate is a formal requirement only where its own sources say
-    // so. Nothing in this catalogue does, and none is inferred: a voluntary
-    // industry certificate presented as a legal requirement would be the
-    // most damaging sentence on the page.
-    relevance: c.mandatory === true ? "formal_requirement" : "recommended_development",
-    countries,
     source: c.officialSource,
-    lastVerified: c.lastVerified!,
-    placements: placementsFor(c.id, "certification", countries),
+    notes: undefined,
+    isStandard: c.credentialType === "standard",
   };
 }
 
 /**
  * Everything a profession guide may show under "Utbildning och behörighet".
  *
- * Order is Layer 2's, computed before any placement is attached.
+ * Driven entirely by the authored link table. A record that exists in the
+ * catalogue but has no link to this profession is not shown: the relationship
+ * is the claim, and an unauthored relationship is not one.
  */
 export function professionEducation(p: Profession): ProfessionEducation {
   const offers: EducationOffer[] = [];
   const underReview: Bi[] = [];
 
-  for (const id of p.educationPathways ?? []) {
-    const e = getEducation(id);
-    if (!e) continue;
-    if (offerPresentable(e)) offers.push(fromEducation(p, e));
-    else underReview.push(e.name);
-  }
-
-  for (const id of p.certifications ?? []) {
-    const c = getCertification(id);
-    if (!c) continue;
-    if (
-      offerPresentable({
-        name: c.fullName,
-        scope: c.scope,
-        officialSource: c.officialSource,
-        lastVerified: c.lastVerified,
-        status: c.status,
-      })
-    ) {
-      offers.push(fromCertification(p, c));
-    } else {
-      underReview.push(c.fullName);
+  for (const link of educationLinksFor(p.id)) {
+    if (link.kind === "education") {
+      const e = getEducation(link.offerId);
+      if (!e) continue;
+      if (offerPresentable(e)) offers.push(fromLink(link, educationRecord(e)));
+      else underReview.push(e.name);
+      continue;
     }
+    const c = getCertification(link.offerId);
+    if (!c) continue;
+    const presentable = offerPresentable({
+      name: c.fullName,
+      scope: c.scope,
+      officialSource: c.officialSource,
+      lastVerified: c.lastVerified,
+      status: c.status,
+    });
+    if (presentable) offers.push(fromLink(link, certificationRecord(c)));
+    else underReview.push(c.fullName);
   }
 
   return { offers: orderOffers(offers), underReview };
@@ -308,6 +315,7 @@ export function orderIsPlacementBlind(offers: readonly EducationOffer[]): boolea
     ...o,
     placements: [
       {
+        placementId: "probe-" + o.id,
         offerId: o.id,
         kind: o.kind,
         providerName: "Placement neutrality probe",

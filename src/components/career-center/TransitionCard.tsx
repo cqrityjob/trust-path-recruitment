@@ -1,5 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Briefcase, Landmark, MoveRight, ShieldAlert } from "lucide-react";
+import {
+  ArrowRight,
+  Briefcase,
+  ChevronDown,
+  ExternalLink,
+  FileSearch,
+  Landmark,
+  MoveRight,
+  ShieldAlert,
+} from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
@@ -11,23 +20,32 @@ import {
   type TransitionKind,
 } from "@/lib/career-center";
 
-// One recorded move between two professions, explained.
+// One recorded move between two professions.
 //
-// ── WHAT THIS REPLACED ─────────────────────────────────────────────────
+// ── WHAT IS VISIBLE, AND WHAT IS ONE CLICK AWAY ────────────────────────
 //
-// A row in a list of role names. "Ordningsvakt" and "Säkerhetschef" rendered
-// identically under "Vanliga steg härifrån", which told a first-year väktare
-// that a senior leadership function is one step away.
+// The first version of this card put everything on the page at once: the
+// competency overlap, the raised demands, the destination's full formal
+// requirements, the intermediate roles and the reviewed prose, for every
+// transition, unfolded. Four of them made a 4,200px section on a phone —
+// which reproduced, in a new shape, exactly the "rörig" problem the rebuild
+// was supposed to end.
 //
-// ── EVERY LINE IS CONDITIONAL ON ITS OWN DATA ──────────────────────────
+// So the card is now a SUMMARY plus a disclosure. Visible without any
+// interaction: what kind of step this is, which two roles, and the one
+// sentence that says why that kind matters. Everything that answers "what
+// exactly would I have to do" lives behind a native <details>, which keeps
+// keyboard support and in-page search working without a line of script.
 //
-// A transition with no reviewed prose shows no prose and says so. A
-// destination with no formal requirements says that too, in as many words —
-// "inga formella krav är registrerade" is information, and leaving the
-// heading out entirely would let a reader assume we simply had not looked.
+// ── AN UNREVIEWED MOVE SAYS LESS ───────────────────────────────────────
 //
-// Nothing here is per-reader. The card describes two ROLES; whether the
-// reader is ready for the move is not a question this product answers.
+// `evidenceLevel` comes from transitions.ts. A move backed by a placeholder
+// edge — no source, no jurisdiction, no review date — renders as a possible
+// direction under review. It keeps the two role names and the competency
+// overlap, because both of those are restatements of the guides themselves,
+// and it loses every claim about the move: no likelihood, no experience
+// statement, no progression wording. The model enforces that by returning
+// empty arrays; this component could not print them if it tried.
 
 const KIND_ICON: Record<TransitionKind, typeof MoveRight> = {
   adjacent: MoveRight,
@@ -57,9 +75,8 @@ export function TransitionCard({
   /** `onward` describes the destination; `inbound` describes where people
    *  came from. The facts are the same; the sentence that frames them is not. */
   direction?: "onward" | "inbound";
-  /** The card's title level. Cards under a section heading are h3; cards
-   *  under the "Vanliga vägar hit" sub-heading are h4, so the document
-   *  outline nests instead of flattening. */
+  /** The card's title level, so the document outline nests instead of
+   *  flattening under a sub-heading. */
   headingLevel?: 3 | 4;
   onOpen?: (slug: string) => void;
 }) {
@@ -67,6 +84,7 @@ export function TransitionCard({
   const { from, to, kind } = transition;
   const subject = direction === "onward" ? to : from;
   const Icon = KIND_ICON[kind];
+  const underReview = transition.evidenceLevel === "under_review";
 
   const title = lang === "sv" ? subject.titleSv : subject.titleEn;
   const fromTitle = lang === "sv" ? from.titleSv : from.titleEn;
@@ -86,6 +104,7 @@ export function TransitionCard({
       data-transition-to={to.slug}
       data-transition-from={from.slug}
       data-transition-kind={kind}
+      data-transition-evidence={transition.evidenceLevel}
       className="flex h-full flex-col rounded-xl border border-border bg-card p-6 shadow-xs"
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -95,16 +114,26 @@ export function TransitionCard({
           <Icon className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
           {t(`cc.step.${kind}` as TranslationKey)}
         </span>
+        {/* A frequency label needs frequency evidence. `likelihood` is null
+            everywhere in the current dataset, so nothing renders here. */}
         {transition.likelihood && (
           <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
             {t(`cc.step.likelihood.${transition.likelihood}` as TranslationKey)}
           </span>
         )}
+        {underReview && (
+          <span
+            data-transition-under-review
+            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+          >
+            <FileSearch className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+            {t("cc.step.under_review")}
+          </span>
+        )}
       </div>
 
       {/* The pair, always in reading order from -> to, whichever direction the
-          card is describing. A reader looking at "Vanliga vägar hit" still
-          needs to see which way the arrow points. */}
+          card is describing. */}
       <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
         <span>{fromTitle}</span>
         <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" aria-hidden />
@@ -123,114 +152,157 @@ export function TransitionCard({
       </Heading>
 
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        {t(`cc.step.${kind}.help` as TranslationKey)}
+        {underReview ? t("cc.step.under_review.help") : t(`cc.step.${kind}.help` as TranslationKey)}
       </p>
 
-      {transition.notes.map((n, i) => (
-        <p key={i} className="mt-3 text-sm leading-relaxed text-foreground">
-          {L(n, lang)}
-        </p>
-      ))}
-      {transition.evidence === "implicit" && (
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          {t("cc.step.evidence.implicit")}
-        </p>
-      )}
+      {/* ── DETAIL, BEHIND A DISCLOSURE ──────────────────────────────── */}
+      <details data-transition-detail className="group mt-4">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+          {t("cc.step.detail")}
+          <ChevronDown
+            className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+            aria-hidden
+          />
+        </summary>
 
-      <dl className="mt-5 space-y-4 border-t border-border pt-5 text-sm">
-        <Block label={t("cc.step.why")}>
-          {transition.transferable.length > 0 ? (
-            <>
-              <p className="text-muted-foreground">{t("cc.step.why.body")}</p>
-              <ul className="mt-2 flex flex-wrap gap-1.5">
-                {transition.transferable.slice(0, MAX_ITEMS).map((id) => (
-                  <li
-                    key={id}
-                    className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-foreground"
-                  >
-                    {competencyName(id)}
+        <dl className="mt-4 space-y-4 border-t border-border pt-4 text-sm">
+          {/* Reviewed prose. Empty unless the transition cleared the evidence
+              bar — the model returns [] rather than leaving it to this file. */}
+          {transition.notes.length > 0 && (
+            <Block label={t("cc.step.what")}>
+              {transition.notes.map((n, i) => (
+                <p key={i} className="text-foreground">
+                  {L(n, lang)}
+                </p>
+              ))}
+            </Block>
+          )}
+
+          <Block label={t("cc.step.why")}>
+            {transition.transferable.length > 0 ? (
+              <>
+                <p className="text-muted-foreground">{t("cc.step.why.body")}</p>
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {transition.transferable.slice(0, MAX_ITEMS).map((id) => (
+                    <li
+                      key={id}
+                      className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-foreground"
+                    >
+                      {competencyName(id)}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="text-muted-foreground">{t("cc.step.why.none")}</p>
+            )}
+          </Block>
+
+          {transition.experienceRequired.length > 0 && (
+            <Block label={t("cc.step.experience")}>
+              {transition.experienceRequired.map((e, i) => (
+                <p key={i} className="text-foreground">
+                  {L(e, lang)}
+                </p>
+              ))}
+            </Block>
+          )}
+
+          <Block label={t("cc.step.formal")}>
+            {transition.formalRequirements.length > 0 ? (
+              <ul className="space-y-1.5">
+                {transition.formalRequirements.map((r, i) => (
+                  <li key={i} className="flex items-start gap-2 text-foreground">
+                    <span
+                      aria-hidden
+                      className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent"
+                    />
+                    {L(r, lang)}
                   </li>
                 ))}
               </ul>
-            </>
-          ) : (
-            <p className="text-muted-foreground">{t("cc.step.why.none")}</p>
-          )}
-        </Block>
-
-        {transition.experienceRequired.length > 0 && (
-          <Block label={t("cc.step.experience")}>
-            {transition.experienceRequired.map((e, i) => (
-              <p key={i} className="text-foreground">
-                {L(e, lang)}
-              </p>
-            ))}
+            ) : (
+              <p className="text-muted-foreground">{t("cc.step.formal.none")}</p>
+            )}
           </Block>
-        )}
 
-        <Block label={t("cc.step.formal")}>
-          {transition.formalRequirements.length > 0 ? (
-            <ul className="space-y-1.5">
-              {transition.formalRequirements.map((r, i) => (
-                <li key={i} className="flex items-start gap-2 text-foreground">
-                  <span
-                    aria-hidden
-                    className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent"
-                  />
-                  {L(r, lang)}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground">{t("cc.step.formal.none")}</p>
-          )}
-        </Block>
-
-        {transition.raised.length > 0 && (
-          <Block label={t("cc.step.build")}>
-            <ul className="flex flex-wrap gap-1.5">
-              {transition.raised.slice(0, MAX_ITEMS).map((d) => (
-                <li
-                  key={d.competencyId}
-                  className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground"
-                >
-                  {competencyName(d.competencyId)}
-                  <span className="ml-1.5 text-muted-foreground">
-                    {L(proficiencyLabels[d.to], lang)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Block>
-        )}
-
-        {transition.via.length > 0 && (
-          <Block label={t("cc.step.via")}>
-            <p className="text-muted-foreground">{t("cc.step.via.body")}</p>
-            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-              {transition.via.map((p) => (
-                <li key={p.slug}>
-                  <Link
-                    to="/career-center/$profession"
-                    params={{ profession: p.slug }}
-                    onClick={() => onOpen?.(p.slug)}
-                    data-transition-via={p.slug}
-                    className="inline-flex min-h-11 items-center font-semibold text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          {transition.raised.length > 0 && (
+            <Block label={t("cc.step.build")}>
+              <ul className="flex flex-wrap gap-1.5">
+                {transition.raised.slice(0, MAX_ITEMS).map((d) => (
+                  <li
+                    key={d.competencyId}
+                    className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground"
                   >
-                    {lang === "sv" ? p.titleSv : p.titleEn}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Block>
-        )}
-      </dl>
+                    {competencyName(d.competencyId)}
+                    <span className="ml-1.5 text-muted-foreground">
+                      {L(proficiencyLabels[d.to], lang)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Block>
+          )}
+
+          {transition.via.length > 0 && (
+            <Block label={t("cc.step.via")}>
+              <p className="text-muted-foreground">{t("cc.step.via.body")}</p>
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                {transition.via.map((p) => (
+                  <li key={p.slug}>
+                    <Link
+                      to="/career-center/$profession"
+                      params={{ profession: p.slug }}
+                      onClick={() => onOpen?.(p.slug)}
+                      data-transition-via={p.slug}
+                      className="inline-flex min-h-11 items-center font-semibold text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      {lang === "sv" ? p.titleSv : p.titleEn}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Block>
+          )}
+
+          {/* The transition's OWN sources, and the jurisdiction they hold in.
+              A guide's sources are about the role; these are about the move. */}
+          {transition.sources.length > 0 && (
+            <Block label={t("cc.step.sources")}>
+              <ul className="space-y-1.5">
+                {transition.sources.map((s, i) => (
+                  <li key={i}>
+                    {s.url ? (
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-11 items-center gap-1 text-foreground underline-offset-4 hover:text-accent hover:underline"
+                      >
+                        {L(s.label, lang)}
+                        <ExternalLink className="h-3 w-3" aria-hidden />
+                      </a>
+                    ) : (
+                      <span className="text-foreground">{L(s.label, lang)}</span>
+                    )}
+                    {s.publisher && <span className="text-muted-foreground"> — {s.publisher}</span>}
+                  </li>
+                ))}
+              </ul>
+              {transition.countries.length > 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {t("cc.step.jurisdiction")}: {transition.countries.join(", ")}
+                </p>
+              )}
+            </Block>
+          )}
+        </dl>
+      </details>
 
       {/* One primary action per card. The jobs link only exists when the
           profession has a CIG node the job catalogue can actually be queried
-          on — otherwise it would always render "no openings", which reads as
-          "nobody is hiring" rather than "we cannot ask yet". */}
-      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-5">
+          on — otherwise it would always render "no openings". */}
+      <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-5">
         <Link
           to="/career-center/$profession"
           params={{ profession: subject.slug }}

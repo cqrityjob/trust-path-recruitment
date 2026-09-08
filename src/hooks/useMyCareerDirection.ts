@@ -33,6 +33,7 @@ import {
   isRenderableDiscovery,
 } from "@/lib/career-discovery/active-report.functions";
 import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
+import { getMySecurityCareerProfile } from "@/lib/security-career-profile/profile.functions";
 import {
   deriveCareerDirection,
   type CareerDirection,
@@ -63,6 +64,51 @@ export function useSupabaseSessionFlag(): boolean | null {
     };
   }, []);
   return signedIn;
+}
+
+/**
+ * The reader's own stated CURRENT profession, for `pathFrom`.
+ *
+ * ── WHY THIS READ AND NOT ANOTHER ──────────────────────────────────────
+ *
+ * `security_career_profiles.current_profession_slug` is the canonical,
+ * single-writer, USER-AUTHORED answer to "what do you do": the candidate
+ * chooses it from the same profession picker their profile page offers, and
+ * My Career prints it as their professional identity. Reusing it is right
+ * precisely because it was authored for that purpose.
+ *
+ * `getMySecurityCareerProfile` is also the narrowest read that answers the
+ * question — one row, five columns — rather than the whole professional
+ * identity seam, which a public career page has no business assembling.
+ *
+ * It is NOT derived from Security Passport merits, employment history or
+ * their absence. See career-origin.ts.
+ *
+ * A failed read yields `null`, which the surface treats as "no role stated"
+ * and offers the selector. That is the correct failure here and not a
+ * fail-open: nothing is claimed, and the reader can answer for themselves in
+ * one click.
+ */
+export function useMyStatedProfession(signedIn: boolean | null): {
+  readonly slug: string | null;
+  readonly label: string | null;
+} {
+  const loadProfile = useServerFn(getMySecurityCareerProfile);
+  const q = useQuery({
+    queryKey: ["career-center", "career-profile", signedIn],
+    queryFn: () => loadProfile(),
+    enabled: signedIn === true,
+    staleTime: 5 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+  if (signedIn !== true || q.isPending || q.isError || !q.data) {
+    return { slug: null, label: null };
+  }
+  return {
+    slug: q.data.currentProfessionSlug ?? null,
+    label: q.data.currentProfessionOther ?? null,
+  };
 }
 
 export interface MyCareerDirectionState {
@@ -111,7 +157,16 @@ export function useMyCareerDirection(): MyCareerDirectionState {
   if (activeQ.isError) {
     return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
   }
-  if (activeQ.isLoading) return { signedIn, career: { state: "loading" }, refetch };
+  // `isLoading` alone is not enough. A query that has SETTLED without an error
+  // and without data — a server function that resolved to null, a response the
+  // client could not unwrap — leaves `isLoading` false, `isError` false and
+  // `data` undefined. Testing only `isLoading` left that case rendering the
+  // loading state forever, with no retry and no way for the reader to tell a
+  // slow read from a broken one. Settled-and-empty fails closed.
+  if (activeQ.isPending) return { signedIn, career: { state: "loading" }, refetch };
+  if (activeQ.data === undefined) {
+    return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
+  }
 
   const active = activeQ.data;
   // No report at all, and a legacy v2.1 run, are genuinely different answers.
@@ -139,12 +194,18 @@ export function useMyCareerDirection(): MyCareerDirectionState {
       refetch,
     };
   }
+  // A read that did not answer. Never "you have no analysis".
+  if (active.kind === "read_failed") {
+    return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
+  }
 
   if (storedQ.isError) {
     return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
   }
-  if (storedQ.isLoading || !storedQ.data) {
-    return { signedIn, career: { state: "loading" }, refetch };
+  // Same rule as above: pending is loading; settled-and-empty is a failure.
+  if (storedQ.isPending) return { signedIn, career: { state: "loading" }, refetch };
+  if (storedQ.data === undefined) {
+    return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
   }
 
   return { signedIn, career: deriveCareerDirection(storedQ.data), refetch };

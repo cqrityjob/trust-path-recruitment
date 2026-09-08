@@ -64,6 +64,7 @@ export type ActiveReportKind =
   | "discovery_v3_1"
   | "discovery_unreadable"
   | "legacy_v21"
+  | "read_failed"
   | "none";
 
 /** Metadata carried by every readable v3 report, whichever contract it uses. */
@@ -114,11 +115,38 @@ export interface ActiveLegacyReport {
   completedAt: string | null;
 }
 
+/**
+ * A read did not answer.
+ *
+ * ── WHY THIS KIND HAD TO EXIST ─────────────────────────────────────────
+ *
+ * Both selects below used to be written `const { data } = await …`, throwing
+ * the `error` half of Supabase's `{ data, error }` away. A failed read — an
+ * RLS denial, a timeout, a PostgREST error, a dropped connection — therefore
+ * produced `data === null`, which is byte-identical to "this candidate has no
+ * report", and the function returned `{ kind: "none" }`.
+ *
+ * The surface then told somebody who has a completed career analysis that
+ * they have never taken one. That is worse than an error message in every
+ * way that matters: it is confidently wrong, it invites them to redo work
+ * they have already done, and nothing about it looks like a fault.
+ *
+ * So the reads fail CLOSED. A read that errors returns this kind, and every
+ * consumer renders it as a failure with a retry — never as an absence.
+ */
+export interface ActiveReadFailed {
+  kind: "read_failed";
+  /** Which read failed and what it said. Never shown verbatim to a
+   *  candidate; carried so a fault is diagnosable from a log. */
+  reason: string;
+}
+
 export type ActiveReport =
   | ActiveDiscoveryReport
   | ActiveDiscoveryV31Report
   | ActiveUnreadableReport
   | ActiveLegacyReport
+  | ActiveReadFailed
   | { kind: "none" };
 
 /** True for any kind that represents a real, renderable v3 report. */
@@ -140,12 +168,20 @@ export const getActiveCareerReport = createServerFn({ method: "GET" })
     const ctx = context as Ctx;
 
     // --- 1. Newest completed v3 report -----------------------------------
-    const { data: v3 } = await ctx.supabase
+    //
+    // `error` is READ, not discarded. See ActiveReadFailed: dropping it turns
+    // every database fault into "you have no career analysis".
+    const { data: v3, error: v3Error } = await ctx.supabase
       .from("cd_report_snapshots")
       .select("id, generated_at, definition_version, scoring_version, dna_scores, session_id")
       .order("generated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (v3Error) {
+      console.error("[career] active report: snapshot read failed", v3Error.message);
+      return { kind: "read_failed", reason: `cd_report_snapshots: ${v3Error.message}` };
+    }
 
     if (v3?.id) {
       const stored = (v3.dna_scores as { report?: unknown } | null)?.report ?? null;
@@ -200,13 +236,18 @@ export const getActiveCareerReport = createServerFn({ method: "GET" })
     }
 
     // --- 2. Fall back to the newest completed legacy run ------------------
-    const { data: legacy } = await ctx.supabase
+    const { data: legacy, error: legacyError } = await ctx.supabase
       .from("assessment_runs")
       .select("id, completed_at, status")
       .eq("status", "completed")
       .order("completed_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (legacyError) {
+      console.error("[career] active report: legacy read failed", legacyError.message);
+      return { kind: "read_failed", reason: `assessment_runs: ${legacyError.message}` };
+    }
 
     if (legacy?.id) {
       return {
@@ -217,5 +258,8 @@ export const getActiveCareerReport = createServerFn({ method: "GET" })
     }
 
     // --- 3. Nothing completed --------------------------------------------
+    //
+    // Reached only when BOTH reads answered successfully and neither found a
+    // row. "None" is now a fact about the data, not a fact about the network.
     return { kind: "none" };
   });
