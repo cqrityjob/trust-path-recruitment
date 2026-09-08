@@ -626,6 +626,55 @@ group("POPPLER — reading order, in the reader an employer is likely to use");
   );
 }
 
+group("POPPLER — the section headings survive as WORDS");
+{
+  // ── THE DEFECT THIS GROUP EXISTS FOR ─────────────────────────────────
+  //
+  // The section rules carry `tracking-[0.16em]` on screen, which looks right
+  // and printed a document that read perfectly. `pdftotext` saw it as
+  //
+  //     UTB I LDNI NG
+  //     C R E D E N T I A L S A N D A U T H O R I S AT I O N S
+  //
+  // A text extractor decides where a word begins from the gap between
+  // glyphs, and 0.16em on an 8.5pt heading is wide enough to look like one.
+  // An applicant tracking system segments a CV by finding its headings; it
+  // finds none of those. The document was beautiful and machine-unreadable.
+  //
+  // It was platform-dependent too: macOS Chromium joined the letters and
+  // Linux Chromium did not, from identical source. So this could not have
+  // been caught by looking at a PDF, and the print stylesheet now sets
+  // `letter-spacing: 0.04em` with the threshold measured, not guessed.
+  //
+  // Asserted with RAW `includes`, deliberately. Everywhere else in this file
+  // uses `squashed()`, which strips whitespace and would have called
+  // "U T B I L D N I N G" a pass — correct for a sentence that wraps, and
+  // exactly wrong for the one property being checked here.
+  const headings: Record<string, readonly string[]> = {
+    vaktare: ["ERFARENHET", "INTYG OCH BEHÖRIGHETER", "SPRÅK"],
+    thin: ["UTBILDNING"],
+    chef: ["ERFARENHET", "UTBILDNING", "INTYG OCH BEHÖRIGHETER"],
+    "selected-en": ["EXPERIENCE", "CREDENTIALS AND AUTHORISATIONS"],
+  };
+  for (const [key, wanted] of Object.entries(headings)) {
+    const text = poppler("pdftotext", ["-layout", path.join(OUT, `${key}.pdf`), "-"]);
+    for (const heading of wanted) {
+      ck(
+        `${key}: "${heading}" extracts as one word, not letter by letter`,
+        text.includes(heading),
+        // The shredded form, so a failure shows what the reader actually got
+        // rather than only that it did not match.
+        (
+          text
+            .split("\n")
+            .find((l) => l.replace(/\s+/g, "").includes(heading.replace(/\s+/g, ""))) ??
+          "(not found at all)"
+        ).trim(),
+      );
+    }
+  }
+}
+
 group("POPPLER — the vaktare CV, read as an employer's system reads it");
 {
   const text = poppler("pdftotext", ["-layout", path.join(OUT, "vaktare.pdf"), "-"]);

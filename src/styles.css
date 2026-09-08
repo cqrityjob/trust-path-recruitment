@@ -488,6 +488,32 @@
      * top of a printed page. */
     margin-top: 14pt;
     font-size: 8.5pt;
+    /* ── THE TRACKING COMES OFF, BECAUSE IT BREAKS THE WORD ─────────────
+     *
+     * On screen these headings carry `tracking-[0.16em]`, which is a
+     * deliberate and good-looking choice. In a PDF it is a defect: a text
+     * extractor decides where a word begins from the gap between glyphs, and
+     * at 0.16em an 8.5pt heading came out of `pdftotext` as
+     *
+     *     UTB I LDNI NG
+     *     C R E D E N T I A L S A N D A U T H O R I S AT I O N S
+     *
+     * An applicant tracking system segments a CV by finding its section
+     * headings. It finds none of those. The document looked perfect and was
+     * unreadable by the thing most likely to read it first.
+     *
+     * It was PLATFORM-DEPENDENT too: identical source produced joined
+     * headings under macOS Chromium and shredded ones under Linux Chromium,
+     * because the two round glyph advances differently. So this was never
+     * "fine on my machine" -- it was a coin toss on the reader's, which is
+     * why looking at an exported PDF could never have found it.
+     *
+     * 0.04em is measured, not guessed: poppler split the words at 0.08em and
+     * above and kept them whole at 0.06em and below. The margin is deliberate
+     * -- the threshold is a rounding boundary, not a promise. Every heading
+     * is asserted to extract as one word, in both languages, by
+     * `cv-export:proof`, so this cannot quietly come back. */
+    letter-spacing: 0.04em;
   }
   /* An employment entry, a credential and the footer are self-contained
    * blocks that must not straddle a page break. The global `li` rule above
