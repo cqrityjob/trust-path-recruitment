@@ -54,6 +54,7 @@ import {
   LANGUAGE_CLAIM_TYPES,
   SKILL_CLAIM_TYPES,
   claimsOfType,
+  professionLabel,
   type ProfessionalIdentityV1,
 } from "../types";
 
@@ -235,7 +236,32 @@ export function buildCvSourceBundle(input: BuildCvSourceBundleInput): CvSourceBu
       // is a statement about where the holder works; pairing it with the
       // account country it does not belong to would invent a location.
       countrySubdivision: identity.workCountry ? identity.workSubJurisdiction : null,
-      currentProfession: identity.currentProfessionSlug ?? identity.currentProfessionOther,
+      // ── THE PUBLISHED TITLE, NEVER THE SLUG ──────────────────────────
+      //
+      // This used to be `currentProfessionSlug ?? currentProfessionOther`,
+      // and it produced a defect that reached production.
+      //
+      // `cv_source_bundle` -- the SQL function that actually WRITES the saved
+      // bundle -- resolves the slug to the published catalogue title for the
+      // document's locale. This builder produced the raw slug. So for anybody
+      // with a profession chosen from the catalogue the two disagreed
+      // permanently: the stored CV said "Väktare" and this said "vaktare".
+      //
+      // `diffCvSourceBundles` compares `currentProfession` inside its identity
+      // signature, so a CV created seconds ago immediately reported "your
+      // profile has changed since this CV was saved" -- against a profile
+      // nobody had touched. Confirming the update re-derived the bundle in
+      // SQL, wrote the same title back, and the banner returned on the very
+      // next read. It could not be cleared by any action a person could take.
+      //
+      // The same value also feeds `factualStoredPresentation`, which falls
+      // back to it for the CV's headline. A person with no Passport headline
+      // had a database slug printed on the document they send to employers.
+      //
+      // `professionLabel` is the rule every other surface already applies,
+      // and it matches the SQL exactly: the published title for this locale,
+      // else the free-text answer, else null. One rule, stated once.
+      currentProfession: professionLabel(identity, locale),
       yearsOfExperience: identity.yearsOfExperience,
     },
     employment: keepOnly(

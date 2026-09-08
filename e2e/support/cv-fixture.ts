@@ -218,6 +218,10 @@ export class ServerModel {
   employerNameNow = "Nordic Security AB";
   /** So "the retry did not create a second CV" is checkable from both sides. */
   createCalls = 0;
+  /** So "one confirmation performs exactly one refresh" is checkable too. */
+  refreshCalls = 0;
+  /** Set by a scenario to make the next refresh be refused by the server. */
+  refuseRefresh: string | null = null;
 
   private clock = 0;
   private nextRevision(): string {
@@ -238,6 +242,36 @@ export class ServerModel {
       targetJobText: null,
       includedIds,
     });
+  }
+
+  /**
+   * The bundle AS THE DATABASE WOULD HAVE STORED IT.
+   *
+   * ── WHY THIS EXISTS, AND WHY ITS ABSENCE LET A DEFECT SHIP ───────────
+   *
+   * This fixture used to model the stored bundle with `buildCvSourceBundle`,
+   * the same call it used for the fresh one. That makes both sides of every
+   * drift comparison come from ONE implementation, so a disagreement between
+   * the TypeScript builder and the SQL writer is invisible here by
+   * construction -- and one shipped: the SQL stored the published profession
+   * title, TypeScript produced the raw slug, and the "your profile has
+   * changed" banner could never be cleared.
+   *
+   * A stub whose two sides cannot disagree cannot test whether they agree.
+   * So the stored side is pinned to what `cv_source_bundle` actually writes:
+   * the published catalogue title for the document's locale. If the
+   * TypeScript builder ever drifts from that again, a freshly saved CV starts
+   * reporting drift in these tests, exactly as it did to a person.
+   */
+  storedAsSql(includedIds: readonly string[] | undefined, locale: "sv" | "en"): CvSourceBundle {
+    const built = this.bundle(includedIds, locale);
+    return {
+      ...built,
+      identity: {
+        ...built.identity,
+        currentProfession: locale === "en" ? "Security officer" : "Väktare",
+      },
+    };
   }
 
   create(payload: Record<string, unknown>) {
@@ -263,7 +297,7 @@ export class ServerModel {
       return { cvId: cv.cvId, savedAt: cv.updatedAt, replayed: true, violations: [] };
     }
 
-    const frozen = this.bundle(includedIds, locale);
+    const frozen = this.storedAsSql(includedIds, locale);
     if (frozen.employment.length === 0 && frozen.education.length === 0) {
       throw new Error("CV_NOT_READY");
     }
@@ -293,7 +327,7 @@ export class ServerModel {
 
     if (Array.isArray(payload.includedIds)) {
       cv.includedIds = payload.includedIds as string[];
-      cv.frozen = this.bundle(cv.includedIds, cv.locale);
+      cv.frozen = this.storedAsSql(cv.includedIds, cv.locale);
     }
     const title = String(payload.title ?? "").trim();
     if (title) cv.title = title;
@@ -318,9 +352,11 @@ export class ServerModel {
   refresh(payload: Record<string, unknown>) {
     const cv = this.mine(payload);
     if (payload.expectedUpdatedAt !== cv.updatedAt) throw new Error("CV_CHANGED");
+    if (this.refuseRefresh) throw new Error(this.refuseRefresh);
     // Re-derives current values for the facts this CV ALREADY carries, and
     // adds nothing — the rule refreshMyCvFromProfile states.
-    cv.frozen = this.bundle(cv.includedIds, cv.locale);
+    this.refreshCalls += 1;
+    cv.frozen = this.storedAsSql(cv.includedIds, cv.locale);
     cv.updatedAt = this.nextRevision();
     return { savedAt: cv.updatedAt };
   }

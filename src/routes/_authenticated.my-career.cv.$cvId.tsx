@@ -390,6 +390,14 @@ function CvDetailPage() {
   const proposalRejected = (acceptProposal.data?.violations.length ?? 0) > 0;
   const drift = cv.data?.profileDrift;
 
+  /** A write is in flight. Every control that would either change the
+   *  document or capture it has to stand still until it lands: printing a CV
+   *  mid-refresh yields a PDF of a state that was never saved, and a second
+   *  refresh sent against a revision the first one is about to advance is
+   *  refused as CV_CHANGED for no reason the person did anything to cause. */
+  const busy =
+    updateFromProfile.isPending || saveEdits.isPending || destroy.isPending || addOmitted.isPending;
+
   return (
     <SiteLayout>
       <Container className="py-10 md:py-14">
@@ -445,9 +453,18 @@ function CvDetailPage() {
 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2.5">
+                  {/* ── PRINT IS DISABLED WHILE A WRITE IS IN FLIGHT ──────
+                      A refresh, an edit save or a delete is about to change
+                      what this document says. Printing during one produces a
+                      PDF of a state that existed for a second and was never
+                      the saved CV -- and a person cannot tell that from the
+                      paper afterwards. The control renders only inside
+                      `cv.data`, so there is no loading or empty state to
+                      print from either. */}
                   <button
                     type="button"
                     aria-describedby="cv-export-help"
+                    disabled={busy}
                     onClick={() => window.print()}
                     className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
                   >
@@ -577,6 +594,7 @@ function CvDetailPage() {
                 {!confirmRefresh ? (
                   <button
                     type="button"
+                    disabled={busy}
                     onClick={() => setConfirmRefresh(true)}
                     className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)]"
                   >
@@ -587,7 +605,7 @@ function CvDetailPage() {
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      disabled={updateFromProfile.isPending}
+                      disabled={busy}
                       onClick={() => updateFromProfile.mutate()}
                       className="inline-flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)] disabled:opacity-60"
                     >

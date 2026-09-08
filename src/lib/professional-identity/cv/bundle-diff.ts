@@ -189,30 +189,58 @@ export function diffCvSourceBundles(saved: CvSourceBundle, fresh: CvSourceBundle
 
   // The header block. One entry rather than five, because "your name and
   // title changed" is one thing a person needs to know about.
-  const identityBefore = [
-    saved.identity.displayName,
-    saved.identity.headline ?? "",
-    saved.identity.country ?? "",
-    saved.identity.countrySubdivision ?? "",
-    saved.identity.currentProfession ?? "",
-    saved.identity.yearsOfExperience ?? "",
-  ].join(" ");
-  const identityNow = [
-    fresh.identity.displayName,
-    fresh.identity.headline ?? "",
-    fresh.identity.country ?? "",
-    fresh.identity.countrySubdivision ?? "",
-    fresh.identity.currentProfession ?? "",
-    fresh.identity.yearsOfExperience ?? "",
-  ].join(" ");
+  //
+  // ── SEPARATED, BECAUSE A JOINED STRING IS NOT A DIFF ─────────────────
+  //
+  // These six values used to be joined with spaces, which produced
+  //
+  //     Karin Wallin Väktare med sex års erfarenhet SE  Väktare 5-10
+  //
+  // on both sides of a confirmation asking somebody to approve a change to a
+  // document they will send to an employer. Where the name ends and the
+  // headline begins is guesswork, an empty field collapses into a double
+  // space, and the one value that actually moved is impossible to find.
+  //
+  // A visible separator costs nothing and makes the two columns comparable by
+  // eye. Empty fields are dropped rather than printed as gaps: "changed to
+  // nothing" is a different statement from "not filled in".
+  //
+  // EQUALITY AND DISPLAY ARE COMPUTED SEPARATELY, and that is the whole point
+  // of there being two functions here. The signature keeps every field,
+  // including both the country and the sub-jurisdiction, so a change to any
+  // of them still raises the banner. Dropping one from the COMPARISON to make
+  // the sentence read better would be a silent loss of a real change -- the
+  // label is what a person reads, and it is not what decides.
+  const identitySignature = (b: CvSourceBundle): string =>
+    [
+      b.identity.displayName,
+      b.identity.headline ?? "",
+      b.identity.country ?? "",
+      b.identity.countrySubdivision ?? "",
+      b.identity.currentProfession ?? "",
+      b.identity.yearsOfExperience ?? "",
+    ].join("\u001f");
+  const identityLabel = (b: CvSourceBundle): string =>
+    [
+      b.identity.displayName,
+      b.identity.headline ?? "",
+      b.identity.currentProfession ?? "",
+      b.identity.countrySubdivision ?? b.identity.country ?? "",
+      b.identity.yearsOfExperience ?? "",
+    ]
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0)
+      .join(" · ");
+  const identityBefore = identitySignature(saved);
+  const identityNow = identitySignature(fresh);
   if (identityBefore !== identityNow) {
     changes.push({
       kind: "changed",
       section: "identity",
       sourceId: null,
       label: fresh.identity.headline ?? fresh.identity.displayName,
-      before: identityBefore.trim(),
-      after: identityNow.trim(),
+      before: identityLabel(saved),
+      after: identityLabel(fresh),
     });
   }
 
