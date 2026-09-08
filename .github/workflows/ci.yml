@@ -1010,3 +1010,149 @@ jobs:
       # assertion failure or a shortfall in assertion count.
       - name: Migration replay + database assertions + rollback verification
         run: bash scripts/db-test.sh
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # The exported CV, as an employer's system actually reads it.
+  # ═══════════════════════════════════════════════════════════════════════
+  #
+  # BLOCKING, and it needs real tools rather than a simulation, because the
+  # defect it exists for was invisible to everything else:
+  #
+  #   `pdftotext -layout` extracted a candidate's own name as
+  #     Jonas / Sverige / Ek
+  #   -- split around an unrelated line -- while the page looked perfect, the
+  #   screenshots looked perfect, and a bespoke extractor written in this
+  #   repository read it back happily. The export had fallen back to a font
+  #   Chromium could not embed, and the Type 3 glyph boxes it then wrote were
+  #   the whole em square, so poppler ordered the name by geometry.
+  #
+  # So this job prints the real component through Chromium's paged media with
+  # the application's own compiled stylesheet, and reads the result with
+  # poppler -- the reader an applicant tracking system is likely to be using.
+  #
+  # It is deliberately NOT `continue-on-error` and has no skip path. The
+  # script exits 2 if poppler is missing rather than degrading to a weaker
+  # check: a proof that quietly becomes weaker when a tool is absent is a
+  # proof nobody can rely on.
+  cv-export:
+    name: CV export — PDF and ATS proof
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # poppler-utils gives pdfinfo, pdffonts and pdftotext. Pinned to the
+      # distribution's package so the version is whatever the runner image
+      # ships and is reproducible for that image.
+      - name: Install poppler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils
+          pdftotext -v
+          pdfinfo -v
+
+      # The browser the export actually runs in. `--with-deps` installs the
+      # shared libraries a headless Chromium needs on a bare runner.
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      # The proof prints the component with the application's OWN compiled
+      # stylesheet. A PDF produced with different styles would prove nothing
+      # about the one a person exports, so the build is a prerequisite and not
+      # a convenience.
+      - name: Production build
+        run: bun run build
+
+      - name: Real PDF export and ATS proof
+        run: bun run cv-export:proof
+
+      # The artefacts a human looks at when the assertions disagree with them.
+      - name: Upload the exported PDFs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cv-export-pdfs
+          path: artifacts/cv-export/*.pdf
+          if-no-files-found: error
+
+
+  # ── The signed-in CV journey, in a real browser ─────────────────────────
+  #
+  # e2e/cv-flow.spec.ts drives the real /my-career/cv routes with a planted
+  # Supabase session and a stateful model of the server contract. It is the
+  # only check that can see the failures this feature is most likely to ship:
+  # a preview that survives the change it no longer describes, a retry that
+  # creates a second CV, a second tab that overwrites the first, a
+  # confirmation dialog about a change nobody can see.
+  #
+  # Blocking, with no skip path and no `continue-on-error`. The header of the
+  # spec lists the nine mutations each test was seen failing against, so a
+  # reviewer can confirm the assertions bite rather than take the green tick
+  # on trust.
+  #
+  # Nothing reaches a real backend: every `/_serverFn/` call and every request
+  # to the Supabase host is answered inside the browser context, and an
+  # unstubbed server function fails the scenario rather than passing quietly.
+  cv-browser:
+    name: CV browser — the signed-in journey
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      # The dev server, on a pinned port so the spec's default base URL is
+      # the one it actually gets. `--strictPort` makes a port clash a failure
+      # rather than a silent move to another port and a suite that then tests
+      # nothing.
+      - name: Start the application
+        run: |
+          nohup bun run dev -- --port 3100 --strictPort > /tmp/dev-server.log 2>&1 &
+          disown
+          for i in $(seq 1 60); do
+            if curl -sfo /dev/null http://localhost:3100/; then
+              echo "up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "the dev server did not come up"
+          cat /tmp/dev-server.log
+          exit 1
+
+      - name: Signed-in CV browser suite
+        run: bun run e2e:cv
+
+      - name: Server log
+        if: failure()
+        run: cat /tmp/dev-server.log
+
+      # Traces and screenshots for the failures, since nobody can reproduce a
+      # headless run by reading a summary line.
+      - name: Upload the failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cv-browser-traces
+          path: test-results/
+          if-no-files-found: ignore

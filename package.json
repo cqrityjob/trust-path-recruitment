@@ -28,6 +28,8 @@
     "career-profession-bridge:check": "bun run scripts/career-profession-bridge-check.tsx",
     "e2e": "playwright test", 
     "e2e:my-career": "playwright test e2e/my-career-home.spec.ts --project=chromium",
+    "e2e:cv": "playwright test e2e/cv-flow.spec.ts --project=chromium",
+    "e2e:cv-screens": "playwright test e2e/cv-screens.spec.ts --project=chromium",
     "e2e:first-run": "playwright test e2e/passport-first-run.spec.ts --project=chromium --project=mobile-375 --project=mobile-390",
     "e2e:workspace": "playwright test e2e/passport-workspace.spec.ts --project=chromium --project=mobile-375",
     "e2e:sharing": "playwright test e2e/passport-sharing.spec.ts --project=chromium --project=mobile-375",
