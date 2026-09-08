@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-08T11:17:37Z",
-  "readBy": "PR #199 application phase - read-only list_migrations after #201 was merged and applied hosted",
+  "readAt": "2026-09-08T17:20:34.722Z",
+  "readBy": "PR #202 post-merge read-only verification; canonical migration 20261103090000 applied by the official Supabase GitHub integration",
   "versions": [
     {
       "version": "20260716153446",
@@ -1087,6 +1087,10 @@
     {
       "version": "20261102090000",
       "name": "cv_documents_controlled_writes"
+    },
+    {
+      "version": "20261103090000",
+      "name": "cv_documents_lockdown"
     }
   ]
 }
