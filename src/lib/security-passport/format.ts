@@ -82,6 +82,36 @@ export function formatJurisdiction(code: string | null, lang: PassportLang): str
  *  Anything above zero but below a month is reported as such rather than as
  *  "0 years 0 months", which would read as nothing at all — the honest
  *  wording matters most exactly when someone is days short of a threshold. */
+/**
+ * A moment, in the reader's language and in a stated time zone.
+ *
+ * ── WHY THE ZONE IS NAMED AND NOT ASSUMED ──────────────────────────────
+ *
+ * The recipient page prints when the share's status was last checked. That
+ * value is authored by the database in UTC, and the reader may be anywhere.
+ * Rendering it in the visitor's own zone would mean two people comparing the
+ * same page see two different times with no way to tell which is which, and
+ * rendering it bare in UTC reads as a local clock that is simply wrong.
+ *
+ * So it is rendered in Europe/Stockholm — the market this record is kept in —
+ * WITH the zone shown, so a reader in London can convert it and a reader in
+ * Dubai can see that they need to.
+ */
+export function formatMoment(iso: string | null, lang: PassportLang): string {
+  if (!iso) return passportT("common.notStated", lang);
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return passportT("common.notStated", lang);
+  return parsed.toLocaleString(lang === "sv" ? "sv-SE" : "en-GB", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Stockholm",
+    timeZoneName: "short",
+  });
+}
+
 export function formatDuration(days: number, lang: PassportLang): string {
   if (days <= 0) return passportT("duration.zero", lang);
 

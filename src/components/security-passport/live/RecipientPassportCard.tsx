@@ -109,15 +109,26 @@ export function RecipientPassportCard({
           <EngravedRule tone={`${rim}99`} />
         </div>
 
-        {/* ── Verified tenure, where the package discloses it ───────── */}
-        {presentation.verifiedExperienceDays > 0 ? (
-          <div className="mt-4">
-            <MicroLabel tone={TRUST_PALETTE.inkMuted}>{pt("rec.tenure")}</MicroLabel>
+        {/* ── The employment total, under the heading its BASIS earns ─
+            A chosen-merit share counts only employer-confirmed periods; the
+            five older packages count every period that reached verified,
+            including a CQrityjob document review. One name for both would put
+            an employer's confirmation on time no employer confirmed — and this
+            card is the part people screenshot. */}
+        {presentation.confirmedEmploymentDays > 0 ? (
+          <div className="mt-4" data-card-employment-basis={presentation.employmentDaysBasis}>
+            <MicroLabel tone={TRUST_PALETTE.inkMuted}>
+              {pt(
+                presentation.employmentDaysBasis === "employer_confirmed"
+                  ? "rec.tenure"
+                  : "rec.tenureReviewedOrConfirmed",
+              )}
+            </MicroLabel>
             <p
               className="mt-1 text-xl font-semibold tabular-nums"
               style={{ color: TRUST_PALETTE.ink, fontFamily: "var(--font-display)" }}
             >
-              {formatDuration(presentation.verifiedExperienceDays, lang)}
+              {formatDuration(presentation.confirmedEmploymentDays, lang)}
             </p>
           </div>
         ) : null}
@@ -130,7 +141,7 @@ export function RecipientPassportCard({
               const tone = CARD_WORD_TONE[c.presentation] ?? TRUST_PALETTE.inkMuted;
               return (
                 <li
-                  key={c.id}
+                  key={c.key}
                   className="flex items-start gap-3 rounded-md px-3 py-2.5"
                   style={{
                     background: isCurrent ? "rgba(183,146,85,0.12)" : "transparent",

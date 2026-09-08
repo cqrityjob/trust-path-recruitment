@@ -15,7 +15,7 @@
  *   4. Has a never-replay file been edited since it was pinned?
  *   5. Does every active file have a well-formed, ordered version prefix?
  *   6. For a migration already applied in production through Lovable: is the
- *      canonical file still present, and is Lovable’s generated duplicate gone?
+ *      canonical file still present, and is any hosted-identity file comment-only?
  *   7. Does every parked entry carry a canonical replacement, a reason and a
  *      hosted-evidence mapping — and do its canonical replacement files exist
  *      in the active path?
@@ -80,6 +80,17 @@ const activeFiles = readdirSync(activeDir)
   .filter((f) => f.endsWith(".sql"))
   .sort();
 
+/** A hosted-ledger marker may live in the active directory only when it has
+ * no executable SQL. The filename then satisfies Supabase's version-parity
+ * check while a clean replay remains a no-op. */
+function isCommentOnlyMigration(filePath: string): boolean {
+  const body = readFileSync(filePath, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/--[^\n]*/g, " ")
+    .replace(/\s+/g, "");
+  return body.length === 0;
+}
+
 // --- 1 + 5. Version shape and uniqueness -----------------------------------
 const approved = new Set(policy.approvedDuplicateVersions.map((d) => d.version));
 const seen = new Map<string, string[]>();
@@ -109,11 +120,11 @@ for (const entry of policy.parked) {
   const inActive = join(activeDir, entry.file);
   const inParked = join(parkedDir, entry.file);
 
-  if (existsSync(inActive)) {
+  if (existsSync(inActive) && !isCommentOnlyMigration(inActive)) {
     fail(
-      `PARKED MIGRATION IS BACK IN THE ACTIVE PATH: ${entry.file}\n` +
+      `PARKED EXECUTABLE MIGRATION IS BACK IN THE ACTIVE PATH: ${entry.file}\n` +
         `      ${entry.reason}\n` +
-        `      Move it back to ${policy.parkedDirectory}/ or change the policy deliberately.`,
+        `      Only a comment-only hosted-ledger marker may share this filename.`,
     );
   }
   if (!existsSync(inParked)) {
@@ -166,9 +177,8 @@ for (const entry of policy.hostedLedgerOverrides) {
 //
 //   * the canonical file must still be present — it is the reviewed artefact
 //     and the only readable record of what production actually ran;
-//   * the generated duplicate must be ABSENT from the active path — leaving it
-//     recreates exactly the duplicate-ordering defect this repair removed, and
-//     a clean replay would run the same SQL twice.
+//   * the generated duplicate must be absent or reduced to a comment-only
+//     hosted-ledger marker. Executable content would recreate the duplicate.
 for (const entry of policy.appliedThroughLovable ?? []) {
   if (!existsSync(join(activeDir, entry.canonicalFile))) {
     fail(
@@ -179,11 +189,12 @@ for (const entry of policy.appliedThroughLovable ?? []) {
   }
   if (entry.generatedFileOnMain) {
     const generated = entry.generatedFileOnMain.replace(/^supabase\/migrations\//, "");
-    if (existsSync(join(activeDir, generated))) {
+    const generatedPath = join(activeDir, generated);
+    if (existsSync(generatedPath) && !isCommentOnlyMigration(generatedPath)) {
       fail(
-        `appliedThroughLovable: Lovable's generated duplicate is back in the active path: ${generated}\n` +
+        `appliedThroughLovable: Lovable's executable duplicate is back in the active path: ${generated}\n` +
           `      Same SQL as ${entry.canonicalFile}, already applied as ${entry.hostedVersion}.\n` +
-          `      Keeping both means a clean replay applies it twice. Remove the generated file.`,
+          `      Replace it with a comment-only hosted-ledger marker.`,
       );
     }
   }
