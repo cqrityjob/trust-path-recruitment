@@ -28,6 +28,8 @@
     "career-profession-bridge:check": "bun run scripts/career-profession-bridge-check.tsx",
     "e2e": "playwright test", 
     "e2e:my-career": "playwright test e2e/my-career-home.spec.ts --project=chromium",
+    "e2e:cv": "playwright test e2e/cv-flow.spec.ts --project=chromium",
+    "e2e:cv-screens": "playwright test e2e/cv-screens.spec.ts --project=chromium",
     "e2e:first-run": "playwright test e2e/passport-first-run.spec.ts --project=chromium --project=mobile-375 --project=mobile-390",
     "e2e:workspace": "playwright test e2e/passport-workspace.spec.ts --project=chromium --project=mobile-375",
     "e2e:sharing": "playwright test e2e/passport-sharing.spec.ts --project=chromium --project=mobile-375",
@@ -75,6 +77,7 @@
     "db:test": "bash scripts/db-test.sh", 
     "deploy-plan:check": "bun run scripts/deploy-plan-check.ts",
     "deploy-plan:gate": "bun run scripts/deploy-plan-check.ts --gate",
+    "deploy-plan-negative:check": "bun run scripts/deploy-plan-negative-control.ts",
     "migrations:check": "bun run scripts/migration-safety-check.ts",
   "migrations-duplicate:check": "bun run scripts/migration-duplicate-check.ts",
     "schema-first-release:check": "bun run scripts/schema-first-release-check.ts",
@@ -137,6 +140,9 @@
     "career-center:sources": "bun run scripts/career-center-source-check.ts",
     "professional-identity:check": "bun run scripts/professional-identity-check.ts",
     "cv-application-source:check": "bun run scripts/cv-application-source-check.tsx",
+    "cv-pilot:check": "bun run scripts/cv-pilot-check.tsx",
+    "cv-provider-minimisation:check": "bun run scripts/cv-provider-minimisation-check.tsx",
+    "cv-export:proof": "bun run scripts/cv-export-proof.tsx",
     "candidate-app-navigation:check": "bun run scripts/candidate-app-navigation-check.tsx"
   }, 
   "dependencies": {

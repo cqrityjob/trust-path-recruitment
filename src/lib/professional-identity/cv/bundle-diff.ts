@@ -44,6 +44,22 @@ export interface BundleChange {
   readonly sourceId: string | null;
   /** What the person would recognise it by: an employer name, a claim title. */
   readonly label: string;
+  /**
+   * The displayed text as the SAVED CV has it, and as the profile has it now.
+   *
+   * ── WHY THE VALUES AND NOT JUST THE FACT OF A CHANGE ──────────────────
+   *
+   * "Ändrat · Anställningar · Väktare – Nordic Security AB" tells somebody
+   * that something moved and not what. They are then asked to confirm an
+   * update whose content they cannot see, on a document they will send to an
+   * employer — which is a confirmation dialog in shape only.
+   *
+   * Both are null for an addition and a removal, where one side does not
+   * exist and inventing an empty string to fill the column would read as
+   * "changed to nothing".
+   */
+  readonly before: string | null;
+  readonly after: string | null;
 }
 
 export interface BundleDiff {
@@ -70,7 +86,10 @@ function claimSignature(c: CvFactClaim): string {
     c.issuedOn ?? "",
     c.validUntil ?? "",
     c.level ?? "",
-    String(c.verified),
+    // NOT the verification state. It is not career content, it is the
+    // Passport's current answer about the claim -- derived live on every
+    // open -- and a "your profile has changed" banner that fired on it would
+    // be reporting something the document never froze.
   ].join(" ");
 }
 
@@ -87,19 +106,60 @@ function diffGroup<T extends { id: string }>(
   const freshById = new Map(fresh.map((i) => [i.id, i]));
 
   for (const item of fresh) {
-    const before = savedById.get(item.id);
-    if (!before) {
-      out.push({ kind: "added", section, sourceId: item.id, label: label(item) });
-    } else if (signature(before) !== signature(item)) {
-      out.push({ kind: "changed", section, sourceId: item.id, label: label(item) });
+    const previous = savedById.get(item.id);
+    if (!previous) {
+      out.push({
+        kind: "added",
+        section,
+        sourceId: item.id,
+        label: label(item),
+        before: null,
+        after: describe(item),
+      });
+    } else if (signature(previous) !== signature(item)) {
+      out.push({
+        kind: "changed",
+        section,
+        sourceId: item.id,
+        label: label(item),
+        // The signature is what DECIDED there was a change; `describe` is
+        // what a person READS. They are separate on purpose: the signature
+        // may include a field nobody sees, and a reader shown a difference
+        // they cannot see would rightly stop trusting the banner.
+        before: describe(previous),
+        after: describe(item),
+      });
     }
   }
   for (const item of saved) {
     if (!freshById.has(item.id)) {
-      out.push({ kind: "removed", section, sourceId: item.id, label: label(item) });
+      out.push({
+        kind: "removed",
+        section,
+        sourceId: item.id,
+        label: label(item),
+        before: describe(item),
+        after: null,
+      });
       removedIds.push(item.id);
     }
   }
+}
+
+/** One fact as a person reads it. Employment and claims share this because
+ *  both are "a name, and the dates or issuer that pin it down". */
+function describe(item: unknown): string {
+  const r = item as Partial<CvFactEmployment & CvFactClaim>;
+  if (r.employerName !== undefined) {
+    const from = (r.startedOn ?? "").slice(0, 7);
+    const to = r.endedOn ? r.endedOn.slice(0, 7) : "";
+    return [`${r.roleTitle ?? ""} · ${r.employerName}`.trim(), to ? `${from} – ${to}` : from]
+      .filter((p) => p.length > 0)
+      .join(" · ");
+  }
+  return [r.title ?? "", r.issuerName ?? "", (r.issuedOn ?? "").slice(0, 4), r.level ?? ""]
+    .filter((p) => p.length > 0)
+    .join(" · ");
 }
 
 export function diffCvSourceBundles(saved: CvSourceBundle, fresh: CvSourceBundle): BundleDiff {
@@ -129,26 +189,58 @@ export function diffCvSourceBundles(saved: CvSourceBundle, fresh: CvSourceBundle
 
   // The header block. One entry rather than five, because "your name and
   // title changed" is one thing a person needs to know about.
-  const identityBefore = [
-    saved.identity.displayName,
-    saved.identity.headline ?? "",
-    saved.identity.country ?? "",
-    saved.identity.currentProfession ?? "",
-    saved.identity.yearsOfExperience ?? "",
-  ].join(" ");
-  const identityNow = [
-    fresh.identity.displayName,
-    fresh.identity.headline ?? "",
-    fresh.identity.country ?? "",
-    fresh.identity.currentProfession ?? "",
-    fresh.identity.yearsOfExperience ?? "",
-  ].join(" ");
+  //
+  // ── SEPARATED, BECAUSE A JOINED STRING IS NOT A DIFF ─────────────────
+  //
+  // These six values used to be joined with spaces, which produced
+  //
+  //     Karin Wallin Väktare med sex års erfarenhet SE  Väktare 5-10
+  //
+  // on both sides of a confirmation asking somebody to approve a change to a
+  // document they will send to an employer. Where the name ends and the
+  // headline begins is guesswork, an empty field collapses into a double
+  // space, and the one value that actually moved is impossible to find.
+  //
+  // A visible separator costs nothing and makes the two columns comparable by
+  // eye. Empty fields are dropped rather than printed as gaps: "changed to
+  // nothing" is a different statement from "not filled in".
+  //
+  // EQUALITY AND DISPLAY ARE COMPUTED SEPARATELY, and that is the whole point
+  // of there being two functions here. The signature keeps every field,
+  // including both the country and the sub-jurisdiction, so a change to any
+  // of them still raises the banner. Dropping one from the COMPARISON to make
+  // the sentence read better would be a silent loss of a real change -- the
+  // label is what a person reads, and it is not what decides.
+  const identitySignature = (b: CvSourceBundle): string =>
+    [
+      b.identity.displayName,
+      b.identity.headline ?? "",
+      b.identity.country ?? "",
+      b.identity.countrySubdivision ?? "",
+      b.identity.currentProfession ?? "",
+      b.identity.yearsOfExperience ?? "",
+    ].join("\u001f");
+  const identityLabel = (b: CvSourceBundle): string =>
+    [
+      b.identity.displayName,
+      b.identity.headline ?? "",
+      b.identity.currentProfession ?? "",
+      b.identity.countrySubdivision ?? b.identity.country ?? "",
+      b.identity.yearsOfExperience ?? "",
+    ]
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0)
+      .join(" · ");
+  const identityBefore = identitySignature(saved);
+  const identityNow = identitySignature(fresh);
   if (identityBefore !== identityNow) {
     changes.push({
       kind: "changed",
       section: "identity",
       sourceId: null,
       label: fresh.identity.headline ?? fresh.identity.displayName,
+      before: identityLabel(saved),
+      after: identityLabel(fresh),
     });
   }
 

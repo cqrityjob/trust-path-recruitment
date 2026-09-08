@@ -9,10 +9,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
   frontier: { file: string; hostedState: string; evidenceSource?: string }[];
 };
 
-// Empty is the steady state, and it is where the set belongs again: the schema
-// half of PR #197 was applied to owner production on 2026-09-08 and is now
-// recorded `applied` with evidence, so leaving its name here would hide a
-// genuinely stuck migration behind an expectation.
+// Empty is the steady state. A name here is a migration that is SUPPOSED to be
+// waiting, and each one has to earn its place: leaving a name behind after it
+// is applied hides a genuinely stuck migration behind an expectation, which is
+// what this list exists to prevent.
+//
+// 20261102090000_cv_documents_controlled_writes and
+// 20261103090000_cv_documents_lockdown are APPLIED. The owner project
+// received both through the official Supabase GitHub integration after their
+// reviewed PRs merged. release-state.json and hosted-ledger.json record the
+// production evidence, so main correctly has no expected pending migration.
 const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

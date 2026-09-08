@@ -692,6 +692,19 @@ export type SubmittedCv = {
    *  none, and an employer must not be told a candidate applied without a
    *  CV because a read of ours failed. */
   readonly unreadable: boolean;
+  /**
+   * The day the database last verified these facts against the holder's live
+   * records — the moment of submission, written into the snapshot as
+   * `checked_at`.
+   *
+   * Every expiry line on the document is judged against it, so an
+   * authorisation that lapsed AFTER the application was sent is not shown to
+   * the employer as though the candidate had submitted a dead one, and one
+   * that had already lapsed is not quietly presented as current. Falls back
+   * to the submission timestamp for a snapshot written before the field
+   * existed.
+   */
+  checkedAt: string;
 };
 
 /**
@@ -740,6 +753,7 @@ export const getApplicationSubmittedCv = createServerFn({ method: "POST" })
         document: null,
         title: null,
         submittedAt: app.created_at,
+        checkedAt: app.created_at,
         unreadable: false,
       };
     }
@@ -756,7 +770,14 @@ export const getApplicationSubmittedCv = createServerFn({ method: "POST" })
       // Unknown is not none. The row says a CQrityjob CV was submitted, so it
       // was; failing to read it is ours to report, not theirs to be blamed for.
       console.error("[applications] submitted CV read failed", snapshotErr);
-      return { source, document: null, title: null, submittedAt: app.created_at, unreadable: true };
+      return {
+        source,
+        document: null,
+        title: null,
+        submittedAt: app.created_at,
+        checkedAt: app.created_at,
+        unreadable: true,
+      };
     }
 
     const parsed = applicationCvSnapshotSchema.safeParse(snapshotRow?.cv_document_snapshot ?? {});
@@ -771,6 +792,12 @@ export const getApplicationSubmittedCv = createServerFn({ method: "POST" })
       document,
       title: isApplicant && parsed.success ? parsed.data.title || null : null,
       submittedAt: app.created_at,
+      // When the database last verified these facts against the holder's live
+      // records. The date the document's own expiry lines are judged against,
+      // and the date it should be shown as being TRUE OF -- which is not the
+      // day the recruiter opened it. Falls back to the submission timestamp
+      // for a snapshot written before the field existed.
+      checkedAt: (parsed.success ? parsed.data.checked_at : null) ?? app.created_at,
       unreadable: document === null,
     };
   });

@@ -110,6 +110,11 @@ SELECT pg_temp.ok(
   'A1 the owner reads their own CV');
 
 -- The owner may write one, and may write one only for themselves.
+--
+-- STILL TRUE IN PHASE 1. 20261102090000 adds a controlled write path beside
+-- this one and deliberately revokes nothing, so the published application
+-- keeps working; 20261103090000_cv_documents_lockdown.sql is what closes the
+-- door, and it carries the assertions for the closed state.
 INSERT INTO public.cv_documents (owner_user_id, title)
 VALUES ('cf000001-0000-0000-0000-000000000001', 'Anna CV 2');
 

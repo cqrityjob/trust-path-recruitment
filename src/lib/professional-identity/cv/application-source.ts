@@ -37,7 +37,7 @@ import { z } from "zod";
 import type { CvDocument } from "./document";
 import type { CvSourceBundle } from "./source-bundle";
 import { buildSavedCvDocument, storedPresentationSchema } from "./stored";
-import { emptyCvTrustAnnotations } from "./trust-annotations";
+import { cvValidityAnnotations } from "./trust-annotations";
 
 export const APPLICATION_CV_SNAPSHOT_VERSION = "application-cv-snapshot-v1" as const;
 
@@ -114,6 +114,21 @@ export const applicationCvSnapshotSchema = z.object({
   snapshot_version: z.string().default(APPLICATION_CV_SNAPSHOT_VERSION),
   cv_document_id: z.string().nullable().default(null),
   cv_updated_at: z.string().nullable().default(null),
+  /**
+   * When the database last checked these facts against the holder's live
+   * records — which is the moment of submission.
+   *
+   * The date every expiry on this document is judged against. Without it the
+   * only clock a renderer has is the reader's browser, which is neither the
+   * candidate's nor the submission's, and a credential that lapsed AFTER the
+   * application was sent would be shown to the employer as though the
+   * candidate had submitted a dead one.
+   *
+   * Null on a snapshot written before 20261102090000. The renderer then draws
+   * the validity DATE with no expiry judgement, which is the honest answer
+   * when nothing can say what the date should be compared with.
+   */
+  checked_at: z.string().nullable().default(null),
   title: z.string().default(""),
   locale: z.enum(["sv", "en"]).default("sv"),
   purpose: z.enum(["general", "targeted"]).default("general"),
@@ -145,6 +160,27 @@ export function applicationCvDocument(snapshot: ApplicationCvSnapshot): CvDocume
   if (!bundle || typeof bundle !== "object" || !bundle.identity) return null;
 
   const stored = storedPresentationSchema.safeParse(snapshot.presentation ?? {});
+
+  // ── VALIDITY, AND NOTHING ELSE ───────────────────────────────────────
+  //
+  // No verifier, no mark, no trust of any kind: see the file header, and it
+  // has not changed. What HAS changed is that a lapsed authorisation now says
+  // so, judged against `checked_at` — the moment the database verified these
+  // facts against the holder's live records — rather than against whatever
+  // day the recruiter happens to open the application.
+  //
+  // A snapshot from before that field existed gets empty validity, so the
+  // date prints with no judgement attached. That is the honest answer when
+  // there is nothing to compare it with, and it is the same shape the
+  // renderer already handles for a provenance read that did not answer.
+  const checkedOn = (snapshot.checked_at ?? "").slice(0, 10);
+  const claims = [
+    ...(bundle.education ?? []),
+    ...(bundle.credentials ?? []),
+    ...(bundle.skills ?? []),
+    ...(bundle.languages ?? []),
+  ];
+
   return buildSavedCvDocument(
     bundle,
     // A presentation written by an older contract degrades to an empty one
@@ -152,7 +188,6 @@ export function applicationCvDocument(snapshot: ApplicationCvSnapshot): CvDocume
     // still renders. Losing the wording is recoverable; a page an employer
     // cannot open is not. Same fallback `getMyCv` already takes.
     stored.success ? stored.data : storedPresentationSchema.parse({}),
-    // See the file header. Never the live Passport, never a stored copy.
-    emptyCvTrustAnnotations(),
+    cvValidityAnnotations(checkedOn ? claims : [], checkedOn),
   );
 }
