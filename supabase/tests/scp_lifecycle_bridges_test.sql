@@ -391,8 +391,8 @@ SELECT pg_temp.ok(
   NOT has_column_privilege('authenticated','public.sp_disclosures','application_id','UPDATE'),
   'L4.9 a holder cannot re-point an existing share at a different application');
 SELECT pg_temp.ok(
-  has_column_privilege('authenticated','public.sp_disclosures','revoked_at','UPDATE'),
-  'L4.10 revoking directly is still theirs to do');
+  NOT has_column_privilege('authenticated','public.sp_disclosures','revoked_at','UPDATE'),
+  'L4.10 revocation is one-way through the owner-checked RPC, not a direct mutable column');
 
 \echo '    GROUP H -- hired, and still the same person'
 

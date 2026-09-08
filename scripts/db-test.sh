@@ -4097,6 +4097,195 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Selected-merit sharing. Registered HERE, before the rollback chain begins:
+# from the next section onwards migrations are being reverted, and a suite
+# placed after them runs against a schema its own migration has been undone
+# from.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport selected-merit sharing assertions"
+set +e
+SPSEL_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_selected_sharing_test.sql 2>&1)"
+SPSEL_RC=$?
+set -e
+
+echo "$SPSEL_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPSEL_PASSED="$(echo "$SPSEL_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPSEL_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the selected-merit sharing suite exited with code ${SPSEL_RC}." >&2
+  echo "$SPSEL_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport selected-merit sharing"
+else
+  echo "    ok  ${SPSEL_PASSED} selected-merit sharing assertions passed"
+  if [ "$SPSEL_PASSED" -lt 95 ]; then
+    echo "FAIL: expected at least 95 selected-merit sharing assertions, only ${SPSEL_PASSED} ran." >&2
+    suite_failed "Security Passport selected-merit sharing (assertion shortfall: floor 95)"
+  fi
+fi
+
+
+# ---------------------------------------------------------------------------
+# Two callers, one request key.
+#
+# The sequential replay is asserted in the suite above; this is the case that
+# actually happens — two tabs, a double submit, a client retrying a slow
+# request. A holds its transaction open after creating; B arrives with the same
+# key while A is uncommitted.
+#
+# THE POLL LOOKS FOR AN ADVISORY LOCK SPECIFICALLY, and that is the point: the
+# unique index alone would also make B wait (its INSERT would block on A's
+# uncommitted duplicate key), so "B waited" is not evidence that the intended
+# protection is present. Removing pg_advisory_xact_lock from the create makes
+# this section fail on the very first assertion.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport selected-sharing concurrency proof"
+SELR_FAILED=0
+
+set +e
+SELR_SETUP="$(psql -v ON_ERROR_STOP=1 -q -v phase=setup -d "$TEST_DB" \
+  -f supabase/tests/security_passport_selected_sharing_race_test.sql 2>&1)"
+SELR_SETUP_RC=$?
+set -e
+
+if [ "$SELR_SETUP_RC" -ne 0 ]; then
+  echo "FAIL: the selected-sharing concurrency setup failed." >&2
+  echo "$SELR_SETUP" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport selected-sharing concurrency (setup)"
+else
+  SELR_HOLDER="d2000000-0000-4000-8000-000000000001"
+  SELR_CLAIM="d2c00000-0000-4000-8000-000000000001"
+  SELR_KEY="d2a00000-0000-4000-8000-000000000001"
+  SELR_A_LOG="$(mktemp)"; SELR_B_LOG="$(mktemp)"
+
+  # A: create the share, then hold the transaction open for three seconds.
+  (
+    PGAPPNAME=sp_selected_share_race_a \
+      psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SELR_A_LOG" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SELR_HOLDER}', true);
+INSERT INTO public.sp_share_race_out (session, status, disclosure_id, has_token)
+SELECT 'A', r ->> 'status', (r ->> 'disclosure_id')::uuid, (r ->> 'token') IS NOT NULL
+  FROM public.sp_create_selected_disclosure(
+    ARRAY['${SELR_CLAIM}']::uuid[], NULL, 30, NULL, NULL, 'sv',
+    '${SELR_KEY}'::uuid) AS r;
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+    echo "RC=$?" >>"$SELR_A_LOG"
+  ) &
+  SELR_A_PID=$!
+
+  # Wait until A's backend holds THE advisory lock for this holder/request
+  # pair. Polling "any advisory lock" can be satisfied by unrelated work and
+  # makes the race appear concurrent when these two sessions never overlapped.
+  SELR_HELD=0
+  for _ in $(seq 1 200); do
+    SELR_HELD="$(psql -tAq -d "$TEST_DB" -c "
+      select count(*)
+        from pg_locks l
+        join pg_stat_activity a on a.pid = l.pid
+       where l.locktype = 'advisory'
+         and l.granted
+         and l.objsubid = 1
+         and a.application_name = 'sp_selected_share_race_a'
+         and l.classid::bigint = ((hashtextextended(
+               'sp_share:${SELR_HOLDER}:${SELR_KEY}', 0) >> 32) & 4294967295)
+         and l.objid::bigint = (hashtextextended(
+               'sp_share:${SELR_HOLDER}:${SELR_KEY}', 0) & 4294967295);" \
+      2>/dev/null || echo 0)"
+    [ "${SELR_HELD:-0}" -gt 0 ] && break
+    sleep 0.05
+  done
+
+  SELR_B_START="$(date +%s)"
+  set +e
+  psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >"$SELR_B_LOG" 2>&1 <<SQL
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '${SELR_HOLDER}', true);
+INSERT INTO public.sp_share_race_out (session, status, disclosure_id, has_token)
+SELECT 'B', r ->> 'status', (r ->> 'disclosure_id')::uuid, (r ->> 'token') IS NOT NULL
+  FROM public.sp_create_selected_disclosure(
+    ARRAY['${SELR_CLAIM}']::uuid[], NULL, 30, NULL, NULL, 'sv',
+    '${SELR_KEY}'::uuid) AS r;
+COMMIT;
+SQL
+  SELR_B_RC=$?
+  set -e
+  SELR_B_WAITED=$(( $(date +%s) - SELR_B_START ))
+  wait "$SELR_A_PID" || true
+
+  if [ "${SELR_HELD:-0}" -eq 0 ]; then
+    echo "FAIL: no session ever held an advisory lock, so the two callers were never" >&2
+    echo "      serialised on the request key and this run proves nothing." >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  the first caller held an advisory lock on its request key"
+  fi
+
+  if ! grep -q "^RC=0" "$SELR_A_LOG"; then
+    echo "FAIL: the first create did not succeed." >&2
+    cat "$SELR_A_LOG" >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  the first create succeeded"
+  fi
+
+  if [ "$SELR_B_RC" -ne 0 ]; then
+    echo "FAIL: the simultaneous identical create ERRORED instead of being handed" >&2
+    echo "      the answer the winner produced." >&2
+    grep -iE "ERROR:|FEL:" "$SELR_B_LOG" | head -5 >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  the simultaneous identical create also succeeded"
+  fi
+
+  # No unique-violation leakage: a constraint name must never reach a caller.
+  if grep -qiE "duplicate key|unique constraint|sp_disclosures_request_key_uidx" "$SELR_B_LOG"; then
+    echo "FAIL: the losing caller was shown a constraint violation." >&2
+    grep -iE "duplicate key|unique constraint|uidx" "$SELR_B_LOG" | head -3 >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  and it was never shown an index name or a duplicate-key error"
+  fi
+
+  if [ "$SELR_B_WAITED" -lt 2 ]; then
+    echo "FAIL: the second create returned after ${SELR_B_WAITED}s without waiting." >&2
+    echo "      It was never blocked, so its answer is no evidence of serialisation." >&2
+    SELR_FAILED=1
+  else
+    echo "    ok  the second create WAITED ${SELR_B_WAITED}s on the request key"
+  fi
+
+  rm -f "$SELR_A_LOG" "$SELR_B_LOG"
+
+  set +e
+  SELR_OUT="$(psql -v ON_ERROR_STOP=1 -q -v phase=verify -d "$TEST_DB" \
+    -f supabase/tests/security_passport_selected_sharing_race_test.sql 2>&1)"
+  SELR_RC=$?
+  set -e
+
+  echo "$SELR_OUT" | grep -E "ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  SELR_PASSED="$(echo "$SELR_OUT" | grep -c "ok  " || true)"
+
+  if [ "$SELR_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: the selected-sharing concurrency verification exited with code ${SELR_RC}." >&2
+    echo "$SELR_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    SELR_FAILED=1
+  elif [ "$SELR_PASSED" -lt 7 ]; then
+    echo "FAIL: expected at least 7 concurrency assertions, only ${SELR_PASSED} ran." >&2
+    SELR_FAILED=1
+  fi
+
+  if [ "$SELR_FAILED" -ne 0 ]; then
+    suite_failed "Security Passport selected-sharing concurrency"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # The first-merit rollback, and back again.
 #
 # A rollback file that nobody runs is a promise, not a plan. This one is run
@@ -4159,6 +4348,121 @@ fi
 if [ "$FMRB_FAILED" -ne 0 ]; then
   suite_failed "Security Passport first-merit rollback"
 fi
+
+
+# ---------------------------------------------------------------------------
+# The selected-merit sharing rollback, and back again — and then reverted for
+# good.
+#
+# It runs FIRST in the chain because 20261101090000 is the newest migration in
+# it, and because sp_selected_merits_payload reads two columns the chain below
+# drops (sp_claims.authorisation_scope and sub_jurisdiction_code). A function
+# left behind that reads a dropped column fails at RUN time, not at definition
+# time, which is exactly the class of breakage the correction suite's group 4
+# exists to catch.
+#
+# Three steps, and the middle one is the point: a rollback that can only be
+# run once is not reversible, so the migration is re-applied over the item
+# rows the forward run wrote and asserted live again, before being reverted a
+# final time so the chain below meets the schema its own migrations expect.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport selected-merit sharing rollback proof"
+SELRB_FAILED=0
+
+SELRB_ITEMS_BEFORE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_disclosure_items;")"
+
+set +e
+SELRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261101090000_sp_selected_merit_sharing_rollback.sql 2>&1)"
+SELRB_RC=$?
+set -e
+
+if [ "$SELRB_RC" -ne 0 ]; then
+  echo "FAIL: the selected-merit sharing rollback did not run cleanly." >&2
+  echo "$SELRB_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  SELRB_FAILED=1
+else
+  echo "    ok  the rollback ran cleanly"
+fi
+
+SELRB_GONE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('sp_create_selected_disclosure','sp_preview_selected_disclosure','sp_selected_merits_payload');")"
+if [ "${SELRB_GONE:-1}" -ne 0 ]; then
+  echo "FAIL: the rollback left a selected-sharing function behind." >&2
+  SELRB_FAILED=1
+else
+  echo "    ok  no holder can create, preview or resolve a selected share"
+fi
+
+SELRB_ITEMS_AFTER="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_disclosure_items;")"
+if [ "$SELRB_ITEMS_BEFORE" != "$SELRB_ITEMS_AFTER" ]; then
+  echo "FAIL: the rollback destroyed the holders' own sharing decisions: ${SELRB_ITEMS_BEFORE} -> ${SELRB_ITEMS_AFTER}." >&2
+  SELRB_FAILED=1
+else
+  echo "    ok  every selected-merit row survives (${SELRB_ITEMS_AFTER}), so re-applying restores each share"
+fi
+
+SELRB_CHECK="$(psql -tAq -d "$TEST_DB" -c "select pg_get_constraintdef(oid) like '%selected_merits%' from pg_constraint where conrelid='public.sp_disclosures'::regclass and conname='sp_disclosures_package_code_check';")"
+if [ "${SELRB_CHECK:-t}" != "f" ]; then
+  echo "FAIL: 'selected_merits' is still an accepted package after the rollback." >&2
+  SELRB_FAILED=1
+else
+  echo "    ok  the package set is back to five, and existing rows were not rewritten"
+fi
+
+# The direction of failure, which is the whole reason the restored function
+# carries one added guard: a share whose scope can no longer be evaluated must
+# show NOTHING. Without the guard it would render active-with-empty-arrays --
+# a live page telling a recipient this person holds no verified merits.
+SELRB_DARK="$(psql -tAq -d "$TEST_DB" -c "select coalesce((select public.sp_disclosure_payload(id) ->> 'status' from public.sp_disclosures where package_code='selected_merits' order by created_at limit 1),'NO-FIXTURE');")"
+if [ "${SELRB_DARK}" != "unavailable" ]; then
+  echo "FAIL: a rolled-back selected share resolves as '${SELRB_DARK}', not 'unavailable'." >&2
+  echo "      An empty-but-active payload would tell a recipient this holder has nothing." >&2
+  SELRB_FAILED=1
+else
+  echo "    ok  a selected share fails CLOSED while the migration is reverted"
+fi
+
+set +e
+SELRB_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261101090000_sp_selected_merit_sharing.sql 2>&1)"
+SELRB_RE_RC=$?
+set -e
+
+if [ "$SELRB_RE_RC" -ne 0 ]; then
+  echo "FAIL: the migration could not be re-applied over its own item rows." >&2
+  echo "$SELRB_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  SELRB_FAILED=1
+else
+  echo "    ok  re-applied cleanly over shares that already carry a selection"
+fi
+
+SELRB_BACK="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.sp_disclosure_items i join public.sp_disclosures d on d.id=i.disclosure_id where d.package_code='selected_merits';")"
+SELRB_LIVE="$(psql -tAq -d "$TEST_DB" -c "select coalesce((select public.sp_disclosure_payload(id) ->> 'status' from public.sp_disclosures where package_code='selected_merits' order by created_at limit 1),'NO-FIXTURE');")"
+if [ "${SELRB_BACK:-0}" -lt 1 ] || [ "${SELRB_LIVE}" != "active" ]; then
+  echo "FAIL: after re-applying, the shares do not resolve again (items ${SELRB_BACK:-0}, status ${SELRB_LIVE})." >&2
+  SELRB_FAILED=1
+else
+  echo "    ok  the shares created before the rollback resolve again, from the rows that survived"
+fi
+
+set +e
+SELRB_FINAL="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261101090000_sp_selected_merit_sharing_rollback.sql 2>&1)"
+SELRB_FINAL_RC=$?
+set -e
+
+if [ "$SELRB_FINAL_RC" -ne 0 ]; then
+  echo "FAIL: the rollback is not repeatable." >&2
+  echo "$SELRB_FINAL" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  SELRB_FAILED=1
+else
+  echo "    ok  reverted again, and left reverted for the chain below"
+fi
+
+if [ "$SELRB_FAILED" -ne 0 ]; then
+  suite_failed "Security Passport selected-merit sharing rollback"
+fi
+
 
 # ---------------------------------------------------------------------------
 # The correction path, phase 1 of 2: with Phase A applied, immediately before

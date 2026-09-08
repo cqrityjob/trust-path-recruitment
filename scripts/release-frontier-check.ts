@@ -8,7 +8,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
   frontier: { file: string; hostedState: string; evidenceSource?: string }[];
 };
 
-const expectedPending: string[] = [];
+// The schema half of PR #197. It is deliberately NOT applied: the application
+// half calls sp_create_selected_disclosure / sp_preview_selected_disclosure and
+// is blocked by schema-first-release-check until this is applied hosted and
+// recorded as `applied` WITH evidence. Remove this entry at the same moment
+// that recording happens — an empty expected set is the steady state, and a
+// name left here after the fact would hide a genuinely stuck migration.
+const expectedPending: string[] = ["20261101090000_sp_selected_merit_sharing.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
@@ -70,5 +76,8 @@ if (failures.length) {
 }
 
 console.log(
-  "release-frontier-check: production frontier reconciled; no active migration is pending",
+  expectedPending.length === 0
+    ? "release-frontier-check: production frontier reconciled; no active migration is pending"
+    : `release-frontier-check: production frontier reconciled; ${expectedPending.length} migration(s) pending by design:`,
 );
+for (const file of expectedPending) console.log(`  - ${file}`);
