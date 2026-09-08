@@ -58,3 +58,8 @@ supabase/.temp/
 # Local-only Playwright override (browser path); never committed.
 pw.local.config.ts
 pw.shots.mjs
+
+# `bun run cv-export:proof` writes real PDFs here so a human can look at the
+# thing a candidate would send. Regenerated on demand from the fixtures in the
+# script, so the files themselves are evidence rather than source.
+/artifacts/

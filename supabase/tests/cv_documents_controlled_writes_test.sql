@@ -876,6 +876,171 @@ SELECT pg_temp.ok(
     'public.cv_application_snapshot(public.cv_documents,timestamptz)', 'EXECUTE'),
   'P7 and the internal builders are not a client-reachable surface either');
 
+-- ═══════════════════════════════════════════════════════════════════════
+-- GROUP T — the profession is a TITLE, and both builders must agree
+-- ═══════════════════════════════════════════════════════════════════════
+--
+-- ── THE DEFECT THIS GROUP EXISTS FOR ───────────────────────────────────
+--
+-- `cv_source_bundle` resolves current_profession_slug to the PUBLISHED
+-- catalogue title for the document's locale. The TypeScript builder used to
+-- write the raw slug instead, and `diffCvSourceBundles` compares
+-- currentProfession inside its identity signature.
+--
+-- So for anybody who had chosen a profession from the catalogue, a CV created
+-- seconds earlier immediately reported "your profile has changed since this
+-- CV was saved" -- against a profile nobody had touched. Confirming the
+-- update re-derived the bundle here, wrote the same title back, and the
+-- banner returned on the next read. It could not be cleared by any action a
+-- person could take, and it shipped.
+--
+-- These assertions pin THIS side of the contract. Their counterpart is the
+-- PROFESSION PARITY group in scripts/cv-pilot-check.tsx, which pins the
+-- TypeScript side to the identical expected strings. Neither can move alone.
+
+SELECT pg_temp.as_holder('50000000-0000-0000-0000-00000000000a');
+
+SELECT pg_temp.ok(
+  public.cv_source_bundle(
+    ARRAY['e0000000-0000-0000-0000-000000000001']::uuid[], 'sv', false, NULL)
+    #>> '{identity,currentProfession}' = 'Väktare',
+  'T1 the published Swedish title, not the slug');
+
+-- The profession follows the DOCUMENT's language, not the account's. Asserted
+-- separately because it is the reason this cannot be one stored string.
+SELECT pg_temp.ok(
+  public.cv_source_bundle(
+    ARRAY['e0000000-0000-0000-0000-000000000001']::uuid[], 'en', false, NULL)
+    #>> '{identity,currentProfession}' = 'Security Officer (Väktare)',
+  'T2 and the English title when the document is English');
+
+SELECT pg_temp.ok(
+  public.cv_source_bundle(
+    ARRAY['e0000000-0000-0000-0000-000000000001']::uuid[], 'sv', false, NULL)
+    #>> '{identity,currentProfession}' <> 'vaktare',
+  'T3 the raw slug is never the value');
+
+-- A refresh must be a FIXED POINT when nothing changed: re-deriving the
+-- bundle over an untouched profile has to produce byte-identical identity.
+-- That is the property whose absence made the banner unclearable, and it is
+-- asserted here rather than inferred from the two strings above.
+DO $$
+DECLARE _row public.cv_documents%ROWTYPE;
+BEGIN
+  SELECT * INTO _row FROM public.cv_documents
+   WHERE id = current_setting('pg_temp.cv')::uuid;
+  PERFORM pg_temp.ok(
+    _row.source_bundle -> 'identity'
+    = public.cv_source_bundle(public.cv_bundle_ids(_row.source_bundle),
+                              _row.locale, false, NULL) -> 'identity',
+    'T4 re-deriving an untouched profile reproduces the stored identity exactly');
+END $$;
+
+-- The fallback path, exercised legally: security_career_profiles_check forbids
+-- a slug and a free-text answer at the same time, so "the catalogue cannot
+-- answer" is reached by unpublishing the row, and "there is no catalogue
+-- answer at all" by clearing the slug and typing one instead. In neither case
+-- may the slug reappear as the value.
+DO $$
+DECLARE _got text;
+BEGIN
+  UPDATE public.cig_professions SET content_status = 'draft' WHERE slug = 'vaktare';
+  _got := public.cv_source_bundle(
+            ARRAY['e0000000-0000-0000-0000-000000000001']::uuid[], 'sv', false, NULL)
+          #>> '{identity,currentProfession}';
+  PERFORM pg_temp.ok(_got IS NULL,
+    format('T5 an unpublished catalogue row yields null, never the slug (got %L)', _got));
+
+  UPDATE public.security_career_profiles
+     SET current_profession_slug = NULL, current_profession_other = 'Skyddsvakt'
+   WHERE user_id = '50000000-0000-0000-0000-00000000000a';
+  _got := public.cv_source_bundle(
+            ARRAY['e0000000-0000-0000-0000-000000000001']::uuid[], 'sv', false, NULL)
+          #>> '{identity,currentProfession}';
+  PERFORM pg_temp.ok(_got = 'Skyddsvakt',
+    format('T6 and a free-text profession is used as written (got %L)', _got));
+
+  UPDATE public.security_career_profiles
+     SET current_profession_other = NULL, current_profession_slug = 'vaktare'
+   WHERE user_id = '50000000-0000-0000-0000-00000000000a';
+  UPDATE public.cig_professions SET content_status = 'published' WHERE slug = 'vaktare';
+END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- GROUP U — cv_refresh_from_profile survives the phase-3 lockdown
+-- ═══════════════════════════════════════════════════════════════════════
+--
+-- ── WHY THIS IS ASSERTED HERE AND NOT IN THE LOCKDOWN SUITE ────────────
+--
+-- 20261103090000_cv_documents_lockdown revokes INSERT/UPDATE/DELETE on
+-- cv_documents from `authenticated`. Three of the four entry points are
+-- SECURITY DEFINER and obviously unaffected. `cv_refresh_from_profile` is
+-- SECURITY INVOKER: it owns no privilege of its own and delegates its write
+-- to the SECURITY DEFINER `cv_save`. That delegation is the only reason it
+-- keeps working after the revoke, and "obviously" is not a proof.
+--
+-- The lockdown suite exercises cv_create, cv_save and cv_delete under the
+-- revoked grants and does not exercise this one -- the single entry point
+-- whose survival is not self-evident from its own definition.
+--
+-- This does not depend on that migration existing. It performs the same
+-- REVOKE inside this transaction, proves the refresh still succeeds and
+-- still writes, and lets the surrounding ROLLBACK put the grant back. So the
+-- property is proved on a branch that carries no lockdown migration at all,
+-- which is also the branch a reviewer of the lockdown will want it on.
+
+DO $$
+DECLARE
+  _rev timestamptz;
+  _out jsonb;
+  _before jsonb;
+  _after  jsonb;
+BEGIN
+  SELECT updated_at, source_bundle INTO _rev, _before
+    FROM public.cv_documents WHERE id = current_setting('pg_temp.cv')::uuid;
+
+  -- Exactly what phase 3 does.
+  REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.cv_documents FROM authenticated;
+
+  PERFORM pg_temp.ok(
+    NOT has_table_privilege('authenticated', 'public.cv_documents', 'UPDATE'),
+    'U1 the direct UPDATE grant is gone, as phase 3 leaves it');
+
+  PERFORM set_config('request.jwt.claim.sub', '50000000-0000-0000-0000-00000000000a', true);
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', '50000000-0000-0000-0000-00000000000a')::text, true);
+  SET LOCAL ROLE authenticated;
+
+  _out := public.cv_refresh_from_profile(current_setting('pg_temp.cv')::uuid, _rev);
+
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(_out ? 'updated_at',
+    'U2 cv_refresh_from_profile still succeeds for a holder with no direct write grant');
+
+  SELECT updated_at, source_bundle INTO _rev, _after
+    FROM public.cv_documents WHERE id = current_setting('pg_temp.cv')::uuid;
+
+  PERFORM pg_temp.ok((_out ->> 'updated_at')::timestamptz = _rev,
+    'U3 and the revision it returned is the one now on the row -- it really wrote');
+
+  PERFORM pg_temp.ok(_after -> 'identity' = _before -> 'identity',
+    'U4 an untouched profile refreshes to the same identity, under lockdown too');
+
+  -- Put it back for anything after this group; ROLLBACK would anyway.
+  GRANT INSERT, UPDATE, DELETE ON public.cv_documents TO authenticated;
+END $$;
+
+-- And the delegation is load-bearing: if cv_save stopped being SECURITY
+-- DEFINER, R2 would fail. Asserted directly so the reason is recorded, not
+-- just the symptom.
+SELECT pg_temp.ok(
+  (SELECT prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'cv_save')
+  AND NOT (SELECT prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public' AND p.proname = 'cv_refresh_from_profile'),
+  'U5 cv_save is SECURITY DEFINER and cv_refresh_from_profile is INVOKER — the delegation is the mechanism');
+
 DO $$ BEGIN RAISE NOTICE 'PASS — cv_documents_server_owned_test'; END $$;
 
 ROLLBACK;

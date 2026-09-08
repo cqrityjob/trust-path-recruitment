@@ -2348,10 +2348,13 @@ if [ "$CVO_RC" -ne 0 ]; then
   suite_failed "cv_documents controlled write path"
 else
   echo "    ok  ${CVO_PASSED} cv_documents controlled-write-path assertions passed"
-  if [ "$CVO_PASSED" -lt 55 ]; then
-    echo "FAIL: expected at least 55 controlled-write-path assertions, only ${CVO_PASSED} ran." >&2
+  # Raised from 55 with groups T (profession parity) and U (the refresh path
+  # after the phase-3 lockdown). A floor that stays behind the suite lets a
+  # whole group be deleted without anything going red.
+  if [ "$CVO_PASSED" -lt 75 ]; then
+    echo "FAIL: expected at least 75 controlled-write-path assertions, only ${CVO_PASSED} ran." >&2
     echo "      A suite that silently stops running assertions is worse than one that fails." >&2
-    suite_failed "cv_documents controlled write path (assertion shortfall: floor 55)"
+    suite_failed "cv_documents controlled write path (assertion shortfall: floor 75)"
   fi
 fi
 
