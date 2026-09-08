@@ -204,11 +204,13 @@ export function diffCvSourceBundles(saved: CvSourceBundle, fresh: CvSourceBundle
   // A visible separator costs nothing and makes the two columns comparable by
   // eye. Empty fields are dropped rather than printed as gaps: "changed to
   // nothing" is a different statement from "not filled in".
-  // EQUALITY and DISPLAY are computed separately and deliberately. The
-  // signature keeps every field, including both the country and the
-  // sub-jurisdiction, so a change to any of them still raises the banner;
-  // dropping one from the comparison to make the sentence read better would
-  // be a silent loss of a real change. The label is what a person reads.
+  //
+  // EQUALITY AND DISPLAY ARE COMPUTED SEPARATELY, and that is the whole point
+  // of there being two functions here. The signature keeps every field,
+  // including both the country and the sub-jurisdiction, so a change to any
+  // of them still raises the banner. Dropping one from the COMPARISON to make
+  // the sentence read better would be a silent loss of a real change -- the
+  // label is what a person reads, and it is not what decides.
   const identitySignature = (b: CvSourceBundle): string =>
     [
       b.identity.displayName,
