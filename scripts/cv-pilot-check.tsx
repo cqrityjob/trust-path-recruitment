@@ -80,6 +80,7 @@ import {
   cvApplicationBlock,
 } from "../src/lib/professional-identity/cv/application-source";
 import { computeCvReadiness } from "../src/lib/professional-identity/cv/readiness";
+import { diffCvSourceBundles } from "../src/lib/professional-identity/cv/bundle-diff";
 import type { ProfessionalIdentityV1 } from "../src/lib/professional-identity/types";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -401,6 +402,132 @@ group("SELECTION — it fails CLOSED, and the reasoning is in the failure mode")
     "no selection at all keeps everything -- the picker's starting state",
     keepOnly(bundleOf(WALLIN).employment, undefined).length === 2 &&
       keepOnly(bundleOf(WALLIN).employment, []).length === 0,
+  );
+}
+
+group("PROFESSION PARITY — the two bundle builders must say the same thing");
+{
+  // ── THE DEFECT THIS GROUP EXISTS FOR, AND WHY NOTHING CAUGHT IT ──────
+  //
+  // `cv_source_bundle` -- the SQL function that WRITES the saved bundle --
+  // resolves current_profession_slug to the published catalogue title for the
+  // document's locale. `buildCvSourceBundle` used to write the raw slug.
+  //
+  // `diffCvSourceBundles` compares currentProfession inside its identity
+  // signature, so for anybody who had chosen a profession from the catalogue
+  // the two disagreed permanently. A CV created seconds earlier reported
+  // "your profile has changed since this CV was saved" against a profile
+  // nobody had touched; confirming the update re-derived the bundle in SQL,
+  // wrote the same title back, and the banner returned on the next read.
+  // Nothing a person could do would clear it. It shipped to production.
+  //
+  // NOTHING CAUGHT IT because every existing test builds BOTH sides with the
+  // same builder. e2e/support/cv-fixture.ts models the stored bundle with
+  // `buildCvSourceBundle`, so a TypeScript-versus-SQL divergence is invisible
+  // to the browser suite by construction; the SQL suites never see the
+  // TypeScript. A parity defect between two implementations of one rule can
+  // only be caught by asserting both against the SAME stated expectation.
+  //
+  // So that is what this does. Its counterpart is GROUP T of
+  // supabase/tests/cv_documents_controlled_writes_test.sql, which pins the
+  // SQL side to these identical strings. Neither may move alone.
+  const bundleFor = (over: Partial<ProfessionalIdentityV1>, locale: "sv" | "en") =>
+    buildCvSourceBundle({
+      identity: identity({ ...WALLIN, ...over }),
+      locale,
+      includeCareerInsight: false,
+      targetJobText: null,
+    });
+
+  const sv = bundleFor({}, "sv");
+  const en = bundleFor({}, "en");
+  ck(
+    "T1 the published Swedish title, not the slug",
+    sv.identity.currentProfession === "Väktare",
+    String(sv.identity.currentProfession),
+  );
+  ck(
+    "T2 and the English title when the document is English",
+    en.identity.currentProfession === "Security officer",
+    String(en.identity.currentProfession),
+  );
+  ck(
+    "T3 the raw slug is never the value",
+    sv.identity.currentProfession !== WALLIN.currentProfessionSlug &&
+      en.identity.currentProfession !== WALLIN.currentProfessionSlug,
+  );
+  ck(
+    "T5 no catalogue title yields null, never the slug",
+    bundleFor({ currentProfessionTitleSv: null, currentProfessionTitleEn: null }, "sv").identity
+      .currentProfession === null,
+  );
+  ck(
+    "T6 and a free-text profession is used as written",
+    bundleFor(
+      {
+        currentProfessionSlug: null,
+        currentProfessionTitleSv: null,
+        currentProfessionTitleEn: null,
+        currentProfessionOther: "Skyddsvakt",
+      },
+      "sv",
+    ).identity.currentProfession === "Skyddsvakt",
+  );
+
+  // THE PROPERTY THE PERSON ACTUALLY EXPERIENCES. A bundle stored the way SQL
+  // stores it, compared against a freshly built one over an UNTOUCHED
+  // profile, must report nothing. This is the assertion that fails on the
+  // shipped code, and it is stated over the diff rather than over the two
+  // strings so it keeps holding if the identity signature grows a field.
+  const storedLikeSql = {
+    ...sv,
+    identity: { ...sv.identity, currentProfession: "Väktare" },
+  };
+  const drift = diffCvSourceBundles(storedLikeSql, bundleFor({}, "sv"));
+  ck(
+    "a CV nobody has touched reports no drift at all",
+    !drift.hasChanges,
+    drift.changes.map((c) => `${c.section}: ${c.before} -> ${c.after}`).join(" | "),
+  );
+
+  // And a REAL profile change must still be reported, so the repair cannot be
+  // "stop comparing".
+  const moved = diffCvSourceBundles(
+    storedLikeSql,
+    bundleFor({ headline: "Skyddsvakt med tio års erfarenhet" }, "sv"),
+  );
+  ck(
+    "but a genuine profile change still is",
+    moved.hasChanges && moved.changes.some((c) => c.section === "identity"),
+  );
+
+  // ── AND THE SLUG REACHED THE RENDERED DOCUMENT ──────────────────────
+  //
+  // `factualStoredPresentation` falls back to `currentProfession` for the CV's
+  // headline. A person with no Passport headline therefore had the string
+  // `vaktare` as the professional title on their own document -- proved here
+  // by building it, not by reading the fallback and reasoning about it.
+  {
+    const noHeadline = identity({ ...WALLIN, headline: null });
+    const b = buildCvSourceBundle({
+      identity: noHeadline,
+      locale: "sv",
+      includeCareerInsight: false,
+      targetJobText: null,
+    });
+    const rendered = buildSavedCvDocument(b, factualStoredPresentation(b));
+    ck(
+      "with no Passport headline the document falls back to the TITLE, never the slug",
+      rendered.headline === "Väktare",
+      String(rendered.headline),
+    );
+  }
+
+  // The structural half: the slug must not be reachable as a display value.
+  const src = read("src/lib/professional-identity/cv/source-bundle.ts");
+  ck(
+    "the builder does not read the slug as a display value",
+    !/currentProfession:\s*identity\.currentProfessionSlug/.test(src),
   );
 }
 

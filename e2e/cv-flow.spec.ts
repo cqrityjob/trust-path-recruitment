@@ -273,6 +273,90 @@ test.describe("CV — the signed-in journey", () => {
     await expect(page.getByText(/Din profil har ändrats/)).toHaveCount(0);
   });
 
+  test("a CV nobody has touched reports no drift at all", async ({ page }) => {
+    // ── THE PRODUCTION DEFECT, AS A PERSON MET IT ──────────────────────
+    //
+    // The saved bundle carried the published profession title and the fresh
+    // comparison produced the raw slug, so a CV saved seconds earlier said
+    // "your profile has changed since this CV was saved" -- and nothing the
+    // person could do would clear it.
+    //
+    // The fixture's stored side now comes from `storedAsSql`, so the two
+    // sides of the comparison can genuinely disagree. This is the assertion
+    // that fails when they do.
+    const model = new ServerModel();
+    await signedIn(page, model);
+    await gotoNew(page, /Skapa nytt CV/);
+    await createAndSave(page);
+
+    await expect(page.getByText(/Din profil har ändrats/)).toHaveCount(0);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(doc(page)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/Din profil har ändrats/)).toHaveCount(0);
+  });
+
+  test("confirming performs exactly one refresh, and the banner is gone afterwards", async ({
+    page,
+  }) => {
+    const model = new ServerModel();
+    await signedIn(page, model);
+    await gotoNew(page, /Skapa nytt CV/);
+    await createAndSave(page);
+
+    model.employerNameNow = "Nordic Security Group AB";
+    await page.reload({ waitUntil: "domcontentloaded" });
+
+    const panel = page.locator("section").filter({ hasText: "Din profil har ändrats" });
+    await expect(panel).toBeVisible({ timeout: 30_000 });
+
+    // First press is the confirmation step, and writes nothing.
+    await panel.getByRole("button", { name: /Uppdatera från profilen/ }).click();
+    expect(model.refreshCalls).toBe(0);
+    await expect(panel.getByRole("button", { name: /Ja, uppdatera CV:t/ })).toBeVisible();
+
+    await panel.getByRole("button", { name: /Ja, uppdatera CV:t/ }).click();
+
+    // The stored CV takes the new fact, the banner goes, and the document
+    // shows it -- all three, because the defect had the first without the
+    // second and the person could not tell which had failed.
+    await expect(doc(page)).toContainText("Nordic Security Group AB", { timeout: 20_000 });
+    await expect(page.getByText(/Din profil har ändrats/)).toHaveCount(0);
+    expect(model.refreshCalls).toBe(1);
+    expect(model.cvs.get(CV_ID)!.frozen.employment[0]!.employerName).toBe(
+      "Nordic Security Group AB",
+    );
+
+    // And it survives a reload: the value is on the row, not in a cache.
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(doc(page)).toContainText("Nordic Security Group AB", { timeout: 30_000 });
+    await expect(page.getByText(/Din profil har ändrats/)).toHaveCount(0);
+    expect(model.refreshCalls).toBe(1);
+  });
+
+  test("a refused refresh leaves the CV intact and says so", async ({ page }) => {
+    const model = new ServerModel();
+    await signedIn(page, model);
+    await gotoNew(page, /Skapa nytt CV/);
+    await createAndSave(page);
+
+    model.employerNameNow = "Nordic Security Group AB";
+    await page.reload({ waitUntil: "domcontentloaded" });
+    const panel = page.locator("section").filter({ hasText: "Din profil har ändrats" });
+    await expect(panel).toBeVisible({ timeout: 30_000 });
+
+    const before = model.cvs.get(CV_ID)!.updatedAt;
+    model.refuseRefresh = "CV_NOT_READY";
+    await panel.getByRole("button", { name: /Uppdatera från profilen/ }).click();
+    await panel.getByRole("button", { name: /Ja, uppdatera CV:t/ }).click();
+
+    // An actionable message, not a silent no-op -- which is exactly how the
+    // shipped defect presented, and why it went unreported for so long.
+    await expect(page.getByText(/CV:t kunde inte uppdateras/)).toBeVisible({ timeout: 20_000 });
+    expect(model.cvs.get(CV_ID)!.updatedAt).toBe(before);
+    expect(model.cvs.get(CV_ID)!.frozen.employment[0]!.employerName).toBe("Nordic Security AB");
+    await expect(doc(page)).toContainText("Nordic Security AB");
+  });
+
   test("the export button opens the print dialog, and says so", async ({ page }) => {
     const model = new ServerModel();
     await signedIn(page, model);

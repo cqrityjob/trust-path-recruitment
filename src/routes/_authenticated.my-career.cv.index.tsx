@@ -37,16 +37,30 @@ export const Route = createFileRoute("/_authenticated/my-career/cv/")({
   component: CvListPage,
 });
 
-/** A date somebody reads, in their own language, without a time. "Updated
- *  30 augusti 2026" is what the list is for; a timestamp to the second is
- *  precision nobody asked for. */
+/**
+ * A date somebody reads, in their own language.
+ *
+ * ── WHY IT CARRIES THE TIME NOW ────────────────────────────────────────
+ *
+ * It used to print the day alone, on the reasoning that a timestamp to the
+ * second is precision nobody asked for. That is true of seconds and it was
+ * wrong about the hour: this list identifies a document by its NAME and its
+ * date, and two CVs a person made in one afternoon -- a general one and a
+ * tailored one they forgot to rename -- were then two identical rows. The
+ * only way to tell which was which was to open both.
+ *
+ * A row in a list of documents has to be distinguishable from the other rows
+ * by something honest. The minute is the smallest thing that does it.
+ */
 function readableDate(iso: string, lang: Lang): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString(lang === "sv" ? "sv-SE" : "en-GB", {
+  return d.toLocaleString(lang === "sv" ? "sv-SE" : "en-GB", {
     year: "numeric",
     month: "long",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
