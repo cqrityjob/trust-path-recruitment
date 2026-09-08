@@ -381,6 +381,16 @@ jobs:
       - name: Deploy plan check
         run: bun run deploy-plan:check
 
+      # The expected plan is DERIVED from release-state.json's pending set, and
+      # a derived expectation can be satisfied by editing the thing it is
+      # derived from. So the guard is shown failing: an unreviewed migration
+      # and a stale pending entry are each fed to the real script, and each
+      # must still be refused. It also asserts that the gate stays stricter
+      # than the check -- the day those become the same sentence is the day a
+      # deploy runs with something in flight.
+      - name: Deploy plan negative controls
+        run: bun run deploy-plan-negative:check
+
       # THE MERGE GATE.
       #
       # release-parity --release computes the right thing at the wrong moment:
