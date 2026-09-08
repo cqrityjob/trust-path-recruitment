@@ -13,1080 +13,1084 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-08T11:17:37Z",
-  "readBy": "PR #199 application phase - read-only list_migrations after #201 was merged and applied hosted",
+  "readAt": "2026-09-08T17:19:52.872Z",
+  "readBy": "PR #202 post-merge read-only verification; canonical migration 20261103090000 applied by the official Supabase GitHub integration",
   "versions": [
     {
-      "version": "20260716153446",
-      "name": "41bff585-4ff3-4abc-9d86-1f11c2927006"
+      "name": "41bff585-4ff3-4abc-9d86-1f11c2927006",
+      "version": "20260716153446"
     },
     {
-      "version": "20260716153527",
-      "name": "4de906eb-a9ff-4e82-a77a-18a3f02b1604"
+      "name": "4de906eb-a9ff-4e82-a77a-18a3f02b1604",
+      "version": "20260716153527"
     },
     {
-      "version": "20260717052749",
-      "name": "cb7bcd11-d09e-495e-bc50-eedd84567c2c"
+      "name": "cb7bcd11-d09e-495e-bc50-eedd84567c2c",
+      "version": "20260717052749"
     },
     {
-      "version": "20260717064956",
-      "name": "c64dae88-e0d2-4ce7-aa34-50414c49d1ef"
+      "name": "c64dae88-e0d2-4ce7-aa34-50414c49d1ef",
+      "version": "20260717064956"
     },
     {
-      "version": "20260717071442",
-      "name": "7fe7e558-d6a7-4ef6-946f-e68017ba2d08"
+      "name": "7fe7e558-d6a7-4ef6-946f-e68017ba2d08",
+      "version": "20260717071442"
     },
     {
-      "version": "20260717073316",
-      "name": "2bb2b7a4-e12a-4024-8e35-cb69452f6cec"
+      "name": "2bb2b7a4-e12a-4024-8e35-cb69452f6cec",
+      "version": "20260717073316"
     },
     {
-      "version": "20260717073758",
-      "name": "a3d931d5-63b3-4227-90de-e3468d3a6f32"
+      "name": "a3d931d5-63b3-4227-90de-e3468d3a6f32",
+      "version": "20260717073758"
     },
     {
-      "version": "20260717074139",
-      "name": "4feb6c1b-9035-4a3d-a696-49b2280be31f"
+      "name": "4feb6c1b-9035-4a3d-a696-49b2280be31f",
+      "version": "20260717074139"
     },
     {
-      "version": "20260717113432",
-      "name": "d50ef104-1f91-4f59-9607-4a38cd187e83"
+      "name": "d50ef104-1f91-4f59-9607-4a38cd187e83",
+      "version": "20260717113432"
     },
     {
-      "version": "20260717143604",
-      "name": "f1d977b5-3bae-4317-abcd-f74ff5a961f5"
+      "name": "f1d977b5-3bae-4317-abcd-f74ff5a961f5",
+      "version": "20260717143604"
     },
     {
-      "version": "20260717165835",
-      "name": "1264dd66-dd6e-4b79-ae08-17d960b99cb6"
+      "name": "1264dd66-dd6e-4b79-ae08-17d960b99cb6",
+      "version": "20260717165835"
     },
     {
-      "version": "20260717172039",
-      "name": "2633ba0f-b467-4c57-83a4-08b68a1f7984"
+      "name": "2633ba0f-b467-4c57-83a4-08b68a1f7984",
+      "version": "20260717172039"
     },
     {
-      "version": "20260718083056",
-      "name": "security_career_profiles"
+      "name": "security_career_profiles",
+      "version": "20260718083056"
     },
     {
-      "version": "20260718182544",
-      "name": "dbec41a3-8985-4aaa-bc19-30cf337ef376"
+      "name": "dbec41a3-8985-4aaa-bc19-30cf337ef376",
+      "version": "20260718182544"
     },
     {
-      "version": "20260718190227",
-      "name": "0dc8d8a9-077e-4d87-be34-b2a9b8e2bdd0"
+      "name": "0dc8d8a9-077e-4d87-be34-b2a9b8e2bdd0",
+      "version": "20260718190227"
     },
     {
-      "version": "20260718193035",
-      "name": "8fbbcd18-7977-4c9c-afec-17c5aba48eca"
+      "name": "8fbbcd18-7977-4c9c-afec-17c5aba48eca",
+      "version": "20260718193035"
     },
     {
-      "version": "20260719100000",
-      "name": "employer_memberships"
+      "name": "employer_memberships",
+      "version": "20260719100000"
     },
     {
-      "version": "20260719173615",
-      "name": "a71beb5d-e303-4dcb-8938-d87c1d982bd4"
+      "name": "a71beb5d-e303-4dcb-8938-d87c1d982bd4",
+      "version": "20260719173615"
     },
     {
-      "version": "20260719173654",
-      "name": "4efae4c1-4aa6-4c3b-87d7-4ecf8a2371db"
+      "name": "4efae4c1-4aa6-4c3b-87d7-4ecf8a2371db",
+      "version": "20260719173654"
     },
     {
-      "version": "20260719180509",
-      "name": "f897a9d9-28c9-41ed-b398-05030b81ec40"
+      "name": "f897a9d9-28c9-41ed-b398-05030b81ec40",
+      "version": "20260719180509"
     },
     {
-      "version": "20260719181557",
-      "name": "f3038432-81c6-4331-802a-62a30ec97775"
+      "name": "f3038432-81c6-4331-802a-62a30ec97775",
+      "version": "20260719181557"
     },
     {
-      "version": "20260719190845",
-      "name": "h3_1_candidate_employer_portal"
+      "name": "h3_1_candidate_employer_portal",
+      "version": "20260719190845"
     },
     {
-      "version": "20260719221351",
-      "name": "7481e40f-5d24-4e2f-bf06-1f697abada0d"
+      "name": "7481e40f-5d24-4e2f-bf06-1f697abada0d",
+      "version": "20260719221351"
     },
     {
-      "version": "20260720064743",
-      "name": "h3_2_employer_settings"
+      "name": "h3_2_employer_settings",
+      "version": "20260720064743"
     },
     {
-      "version": "20260720114043",
-      "name": "h3_3_platform_admin_employer_moderation"
+      "name": "h3_3_platform_admin_employer_moderation",
+      "version": "20260720114043"
     },
     {
-      "version": "20260720140000",
-      "name": "h3_3_employer_status_transition_guard"
+      "name": "h3_3_employer_status_transition_guard",
+      "version": "20260720140000"
     },
     {
-      "version": "20260720150000",
-      "name": "h3_4a_candidate_application_core"
+      "name": "h3_4a_candidate_application_core",
+      "version": "20260720150000"
     },
     {
-      "version": "20260720153228",
-      "name": "f907bf88-0e75-4ff2-af66-bdbc63995640"
+      "name": "f907bf88-0e75-4ff2-af66-bdbc63995640",
+      "version": "20260720153228"
     },
     {
-      "version": "20260720160000",
-      "name": "h3_4b_beta_feedback"
+      "name": "h3_4b_beta_feedback",
+      "version": "20260720160000"
     },
     {
-      "version": "20260720170000",
-      "name": "h3_4_job_rejection_note_guard"
+      "name": "h3_4_job_rejection_note_guard",
+      "version": "20260720170000"
     },
     {
-      "version": "20260720180001",
-      "name": "assessment_run_reports_canonical_home"
+      "name": "assessment_run_reports_canonical_home",
+      "version": "20260720180001"
     },
     {
-      "version": "20260721085020",
-      "name": "796e7c92-8234-4081-87b4-0b57dce9f35d"
+      "name": "796e7c92-8234-4081-87b4-0b57dce9f35d",
+      "version": "20260721085020"
     },
     {
-      "version": "20260721090000",
-      "name": "public_assessment_v2"
+      "name": "public_assessment_v2",
+      "version": "20260721090000"
     },
     {
-      "version": "20260721110000",
-      "name": "assessment_catalog_public_career_assessment"
+      "name": "assessment_catalog_public_career_assessment",
+      "version": "20260721110000"
     },
     {
-      "version": "20260721110100",
-      "name": "assessment_catalog_security_guard_foundation"
+      "name": "assessment_catalog_security_guard_foundation",
+      "version": "20260721110100"
     },
     {
-      "version": "20260721120000",
-      "name": "employer_assessment_catalog_visibility"
+      "name": "employer_assessment_catalog_visibility",
+      "version": "20260721120000"
     },
     {
-      "version": "20260722090000",
-      "name": "employer_workforce_employees"
+      "name": "employer_workforce_employees",
+      "version": "20260722090000"
     },
     {
-      "version": "20260724090000",
-      "name": "employer_assessment_assignments"
+      "name": "employer_assessment_assignments",
+      "version": "20260724090000"
     },
     {
-      "version": "20260724120000",
-      "name": "admin_audit_job_publish_requires_active_employer"
+      "name": "admin_audit_job_publish_requires_active_employer",
+      "version": "20260724120000"
     },
     {
-      "version": "20260724130000",
-      "name": "admin_portal_operational_scope"
+      "name": "admin_portal_operational_scope",
+      "version": "20260724130000"
     },
     {
-      "version": "20260725090000",
-      "name": "assignment_email_delivery_tracking"
+      "name": "assignment_email_delivery_tracking",
+      "version": "20260725090000"
     },
     {
-      "version": "20260725100000",
-      "name": "assignment_duplicate_send_guard"
+      "name": "assignment_duplicate_send_guard",
+      "version": "20260725100000"
     },
     {
-      "version": "20260727120000",
-      "name": "scp_a1_security_competency_platform_domain"
+      "name": "scp_a1_security_competency_platform_domain",
+      "version": "20260727120000"
     },
     {
-      "version": "20260727130000",
-      "name": "scp_a2_scoring_versions_and_publication_gates"
+      "name": "scp_a2_scoring_versions_and_publication_gates",
+      "version": "20260727130000"
     },
     {
-      "version": "20260727140000",
-      "name": "scp_a3_close_high_findings"
+      "name": "scp_a3_close_high_findings",
+      "version": "20260727140000"
     },
     {
-      "version": "20260727150000",
-      "name": "scp_a4_scoring_visibility"
+      "name": "scp_a4_scoring_visibility",
+      "version": "20260727150000"
     },
     {
-      "version": "20260728120000",
-      "name": "career_discovery_v3_phase1"
+      "name": "career_discovery_v3_phase1",
+      "version": "20260728120000"
     },
     {
-      "version": "20260728130000",
-      "name": "career_discovery_v3_phase1_hardening"
+      "name": "career_discovery_v3_phase1_hardening",
+      "version": "20260728130000"
     },
     {
-      "version": "20260729090000",
-      "name": "career_discovery_v3_internal_test"
+      "name": "career_discovery_v3_internal_test",
+      "version": "20260729090000"
     },
     {
-      "version": "20260729140000",
-      "name": "retire_legacy_public_career_assessment"
+      "name": "retire_legacy_public_career_assessment",
+      "version": "20260729140000"
     },
     {
-      "version": "20260729150000",
-      "name": "normalise_cd_complete_session_contract"
+      "name": "normalise_cd_complete_session_contract",
+      "version": "20260729150000"
     },
     {
-      "version": "20260730090000",
-      "name": "career_discovery_v3_1_schema"
+      "name": "career_discovery_v3_1_schema",
+      "version": "20260730090000"
     },
     {
-      "version": "20260730100000",
-      "name": "career_discovery_v3_1_instrument"
+      "name": "career_discovery_v3_1_instrument",
+      "version": "20260730100000"
     },
     {
-      "version": "20260730110000",
-      "name": "career_discovery_v3_1_completion"
+      "name": "career_discovery_v3_1_completion",
+      "version": "20260730110000"
     },
     {
-      "version": "20260731053218",
-      "name": "ebac47bc-fefb-457c-add0-71b0d6e6d768"
+      "name": "ebac47bc-fefb-457c-add0-71b0d6e6d768",
+      "version": "20260731053218"
     },
     {
-      "version": "20260731054144",
-      "name": "3d28abeb-16ff-4324-b3b5-51897f2e0ac8"
+      "name": "3d28abeb-16ff-4324-b3b5-51897f2e0ac8",
+      "version": "20260731054144"
     },
     {
-      "version": "20260731054522",
-      "name": "843ecd41-0bbe-44af-8bcd-fa15549c2c12"
+      "name": "843ecd41-0bbe-44af-8bcd-fa15549c2c12",
+      "version": "20260731054522"
     },
     {
-      "version": "20260731054640",
-      "name": "7c8e5c25-8fdc-4930-b9ef-d4e0f3e177ae"
+      "name": "7c8e5c25-8fdc-4930-b9ef-d4e0f3e177ae",
+      "version": "20260731054640"
     },
     {
-      "version": "20260731054834",
-      "name": "c14b01f8-c876-4d74-bb36-e94df4f4ab69"
+      "name": "c14b01f8-c876-4d74-bb36-e94df4f4ab69",
+      "version": "20260731054834"
     },
     {
-      "version": "20260731100000",
-      "name": "career_discovery_v31_launch"
+      "name": "career_discovery_v31_launch",
+      "version": "20260731100000"
     },
     {
-      "version": "20260801090000",
-      "name": "career_discovery_v31_personal_layer"
+      "name": "career_discovery_v31_personal_layer",
+      "version": "20260801090000"
     },
     {
-      "version": "20260801100000",
-      "name": "scp_restore_scoring_lineage_readability"
+      "name": "scp_restore_scoring_lineage_readability",
+      "version": "20260801100000"
     },
     {
-      "version": "20260802090000",
-      "name": "scp_phase0_competency_graph"
+      "name": "scp_phase0_competency_graph",
+      "version": "20260802090000"
     },
     {
-      "version": "20260803090000",
-      "name": "scp_phase1a_programmes_and_modes"
+      "name": "scp_phase1a_programmes_and_modes",
+      "version": "20260803090000"
     },
     {
-      "version": "20260803100000",
-      "name": "scp_phase1b_rubrics_attempts_responses"
+      "name": "scp_phase1b_rubrics_attempts_responses",
+      "version": "20260803100000"
     },
     {
-      "version": "20260803110000",
-      "name": "scp_phase1c_ai_scoring_review_reports"
+      "name": "scp_phase1c_ai_scoring_review_reports",
+      "version": "20260803110000"
     },
     {
-      "version": "20260803114922",
-      "name": "9ee0e932-5bae-4e63-88f6-8a0c36369ca2"
+      "name": "9ee0e932-5bae-4e63-88f6-8a0c36369ca2",
+      "version": "20260803114922"
     },
     {
-      "version": "20260803115001",
-      "name": "5ecf4be3-9090-45b9-bd90-e19e0c45cade"
+      "name": "5ecf4be3-9090-45b9-bd90-e19e0c45cade",
+      "version": "20260803115001"
     },
     {
-      "version": "20260803120000",
-      "name": "scp_phase1d_security_guard_draft_content"
+      "name": "scp_phase1d_security_guard_draft_content",
+      "version": "20260803120000"
     },
     {
-      "version": "20260804061230",
-      "name": "19f031e1-16f3-4eb5-983d-7a2231155eba"
+      "name": "19f031e1-16f3-4eb5-983d-7a2231155eba",
+      "version": "20260804061230"
     },
     {
-      "version": "20260804061440",
-      "name": "9b082372-366c-49e5-b555-260e4e01941b"
+      "name": "9b082372-366c-49e5-b555-260e4e01941b",
+      "version": "20260804061440"
     },
     {
-      "version": "20260804061624",
-      "name": "2dae3b4e-4e96-4a3f-94f9-0964a4a456a0"
+      "name": "2dae3b4e-4e96-4a3f-94f9-0964a4a456a0",
+      "version": "20260804061624"
     },
     {
-      "version": "20260804061750",
-      "name": "26a3790b-e8ad-4e8d-8682-c6bce42b4d1f"
+      "name": "26a3790b-e8ad-4e8d-8682-c6bce42b4d1f",
+      "version": "20260804061750"
     },
     {
-      "version": "20260804063418",
-      "name": "06f72e92-e195-482f-a19a-0a113806c9e7"
+      "name": "06f72e92-e195-482f-a19a-0a113806c9e7",
+      "version": "20260804063418"
     },
     {
-      "version": "20260804063710",
-      "name": "e62eb18e-fc2a-4a42-bd86-64a6f97b071b"
+      "name": "e62eb18e-fc2a-4a42-bd86-64a6f97b071b",
+      "version": "20260804063710"
     },
     {
-      "version": "20260804090000",
-      "name": "scp_phase1f_content_schema"
+      "name": "scp_phase1f_content_schema",
+      "version": "20260804090000"
     },
     {
-      "version": "20260804100000",
-      "name": "scp_phase1f_sjt_content"
+      "name": "scp_phase1f_sjt_content",
+      "version": "20260804100000"
     },
     {
-      "version": "20260804110000",
-      "name": "scp_phase1f_bestworst_cr_rubrics"
+      "name": "scp_phase1f_bestworst_cr_rubrics",
+      "version": "20260804110000"
     },
     {
-      "version": "20260805055146",
-      "name": "315b28d2-1824-42d7-85ab-417db7974667"
+      "name": "315b28d2-1824-42d7-85ab-417db7974667",
+      "version": "20260805055146"
     },
     {
-      "version": "20260805090000",
-      "name": "scp_phase1g_content_correction"
+      "name": "scp_phase1g_content_correction",
+      "version": "20260805090000"
     },
     {
-      "version": "20260805100000",
-      "name": "scp_phase1g_learning_and_anchors"
+      "name": "scp_phase1g_learning_and_anchors",
+      "version": "20260805100000"
     },
     {
-      "version": "20260806090000",
-      "name": "scp_phase1h_foundation_corrections"
+      "name": "scp_phase1h_foundation_corrections",
+      "version": "20260806090000"
     },
     {
-      "version": "20260807090000",
-      "name": "scp_phase2_read_models_and_identity_rpc"
+      "name": "scp_phase2_read_models_and_identity_rpc",
+      "version": "20260807090000"
     },
     {
-      "version": "20260808090000",
-      "name": "scp_phase2b_fixture_and_delivery"
+      "name": "scp_phase2b_fixture_and_delivery",
+      "version": "20260808090000"
     },
     {
-      "version": "20260808100000",
-      "name": "scp_phase2c_test_fixture_programme"
+      "name": "scp_phase2c_test_fixture_programme",
+      "version": "20260808100000"
     },
     {
-      "version": "20260809090000",
-      "name": "scp_phase2e_employer_learning_progress"
+      "name": "scp_phase2e_employer_learning_progress",
+      "version": "20260809090000"
     },
     {
-      "version": "20260809100000",
-      "name": "scp_phase2f_learning_fixture"
+      "name": "scp_phase2f_learning_fixture",
+      "version": "20260809100000"
     },
     {
-      "version": "20260810090000",
-      "name": "scp_phase2h_staging_corrections"
+      "name": "scp_phase2h_staging_corrections",
+      "version": "20260810090000"
     },
     {
-      "version": "20260811090000",
-      "name": "scp_phase2i_seed_processing_purpose_version"
+      "name": "scp_phase2i_seed_processing_purpose_version",
+      "version": "20260811090000"
     },
     {
-      "version": "20260811100000",
-      "name": "scp_phase2j_assign_token_without_pgcrypto"
+      "name": "scp_phase2j_assign_token_without_pgcrypto",
+      "version": "20260811100000"
     },
     {
-      "version": "20260812090000",
-      "name": "scp_phase2k_partial_bestworst_while_open"
+      "name": "scp_phase2k_partial_bestworst_while_open",
+      "version": "20260812090000"
     },
     {
-      "version": "20260812100000",
-      "name": "scp_phase2l_submit_requires_every_item"
+      "name": "scp_phase2l_submit_requires_every_item",
+      "version": "20260812100000"
     },
     {
-      "version": "20260813090000",
-      "name": "scp_phase2m_fixture_internal_only"
+      "name": "scp_phase2m_fixture_internal_only",
+      "version": "20260813090000"
     },
     {
-      "version": "20260814090000",
-      "name": "jobs_archive_lifecycle"
+      "name": "jobs_archive_lifecycle",
+      "version": "20260814090000"
     },
     {
-      "version": "20260814171100",
-      "name": "cd_profession_layer4_content_fields"
+      "name": "cd_profession_layer4_content_fields",
+      "version": "20260814171100"
     },
     {
-      "version": "20260814180000",
-      "name": "cd_layer4_first_wave_professions"
+      "name": "cd_layer4_first_wave_professions",
+      "version": "20260814180000"
     },
     {
-      "version": "20260815090000",
-      "name": "cd_v31_feedback_analytics_goals"
+      "name": "cd_v31_feedback_analytics_goals",
+      "version": "20260815090000"
     },
     {
-      "version": "20260815120000",
-      "name": "cd_profession_rationale_softening"
+      "name": "cd_profession_rationale_softening",
+      "version": "20260815120000"
     },
     {
-      "version": "20260815130000",
-      "name": "cd_profession_calibration_operational_signal"
+      "name": "cd_profession_calibration_operational_signal",
+      "version": "20260815130000"
     },
     {
-      "version": "20260815140000",
-      "name": "cd_career_context_fields"
+      "name": "cd_career_context_fields",
+      "version": "20260815140000"
     },
     {
-      "version": "20260816083319",
-      "name": "cd_layer4_polis_operational_central"
+      "name": "cd_layer4_polis_operational_central",
+      "version": "20260816083319"
     },
     {
-      "version": "20260816105618",
-      "name": "cd_v31_option_matrix_v2_cid02_leadership"
+      "name": "cd_v31_option_matrix_v2_cid02_leadership",
+      "version": "20260816105618"
     },
     {
-      "version": "20260816150000",
-      "name": "cd_v31_content_v2_compliance_dimension"
+      "name": "cd_v31_content_v2_compliance_dimension",
+      "version": "20260816150000"
     },
     {
-      "version": "20260816160000",
-      "name": "cd_v31_option_matrix_v3_scoring_version_sync"
+      "name": "cd_v31_option_matrix_v3_scoring_version_sync",
+      "version": "20260816160000"
     },
     {
-      "version": "20260816161000",
-      "name": "cd_guard_profession_ranking_approval_17_dims"
+      "name": "cd_guard_profession_ranking_approval_17_dims",
+      "version": "20260816161000"
     },
     {
-      "version": "20260816162000",
-      "name": "cd_v31_funnel_event_result_downloaded"
+      "name": "cd_v31_funnel_event_result_downloaded",
+      "version": "20260816162000"
     },
     {
-      "version": "20260816170000",
-      "name": "cd_profession_profiles_current_view"
+      "name": "cd_profession_profiles_current_view",
+      "version": "20260816170000"
     },
     {
-      "version": "20260816180000",
-      "name": "cd_v31_rationale_evidence_consistency"
+      "name": "cd_v31_rationale_evidence_consistency",
+      "version": "20260816180000"
     },
     {
-      "version": "20260816190000",
-      "name": "cd_v31_activate_first_wave_professions"
+      "name": "cd_v31_activate_first_wave_professions",
+      "version": "20260816190000"
     },
     {
-      "version": "20260817090000",
-      "name": "sp_phase2_live_foundation"
+      "name": "sp_phase2_live_foundation",
+      "version": "20260817090000"
     },
     {
-      "version": "20260817113707",
-      "name": "7564d753-411c-45bf-9f56-67c74e910c83"
+      "name": "7564d753-411c-45bf-9f56-67c74e910c83",
+      "version": "20260817113707"
     },
     {
-      "version": "20260817115635",
-      "name": "ae62ad64-ba93-4027-8fe3-dfaa1953dd32"
+      "name": "ae62ad64-ba93-4027-8fe3-dfaa1953dd32",
+      "version": "20260817115635"
     },
     {
-      "version": "20260817120000",
-      "name": "sp_phase3_verification_and_sharing"
+      "name": "sp_phase3_verification_and_sharing",
+      "version": "20260817120000"
     },
     {
-      "version": "20260817140000",
-      "name": "sp_phase5_storage_public_boundary_and_workflow"
+      "name": "sp_phase5_storage_public_boundary_and_workflow",
+      "version": "20260817140000"
     },
     {
-      "version": "20260817150000",
-      "name": "sp_phase5b_pgcrypto_search_path_fix"
+      "name": "sp_phase5b_pgcrypto_search_path_fix",
+      "version": "20260817150000"
     },
     {
-      "version": "20260817160000",
-      "name": "sp_phase6_credential_taxonomy"
+      "name": "sp_phase6_credential_taxonomy",
+      "version": "20260817160000"
     },
     {
-      "version": "20260817170000",
-      "name": "sp_phase6b_correction_preserves_credential"
+      "name": "sp_phase6b_correction_preserves_credential",
+      "version": "20260817170000"
     },
     {
-      "version": "20260817180000",
-      "name": "sp_phase7_disclosure_credential_presentation"
+      "name": "sp_phase7_disclosure_credential_presentation",
+      "version": "20260817180000"
     },
     {
-      "version": "20260817190000",
-      "name": "sp_phase7b_revoke_trigger_function_execute"
+      "name": "sp_phase7b_revoke_trigger_function_execute",
+      "version": "20260817190000"
     },
     {
-      "version": "20260817200000",
-      "name": "sp_phase9_single_credential_share"
+      "name": "sp_phase9_single_credential_share",
+      "version": "20260817200000"
     },
     {
-      "version": "20260817210000",
-      "name": "sp_phase9b_revoke_delete_grants"
+      "name": "sp_phase9b_revoke_delete_grants",
+      "version": "20260817210000"
     },
     {
-      "version": "20260818090000",
-      "name": "sp_phase10_self_review_and_decision_events"
+      "name": "sp_phase10_self_review_and_decision_events",
+      "version": "20260818090000"
     },
     {
-      "version": "20260818100000",
-      "name": "cd_ranking_guard_per_match"
+      "name": "cd_ranking_guard_per_match",
+      "version": "20260818100000"
     },
     {
-      "version": "20260818120000",
-      "name": "sp_phase11_languages_and_practical_skills"
+      "name": "sp_phase11_languages_and_practical_skills",
+      "version": "20260818120000"
     },
     {
-      "version": "20260818162445",
-      "name": "scp_closed_test_governance"
+      "name": "scp_closed_test_governance",
+      "version": "20260818162445"
     },
     {
-      "version": "20260819090000",
-      "name": "employer_people_model"
+      "name": "employer_people_model",
+      "version": "20260819090000"
     },
     {
-      "version": "20260819100000",
-      "name": "scp_governed_assignment"
+      "name": "scp_governed_assignment",
+      "version": "20260819100000"
     },
     {
-      "version": "20260819110000",
-      "name": "sg_sjt_option_labels"
+      "name": "sg_sjt_option_labels",
+      "version": "20260819110000"
     },
     {
-      "version": "20260819120000",
-      "name": "scp_safety_critical_requires_review"
+      "name": "scp_safety_critical_requires_review",
+      "version": "20260819120000"
     },
     {
-      "version": "20260819130000",
-      "name": "scp_library_reflects_governance"
+      "name": "scp_library_reflects_governance",
+      "version": "20260819130000"
     },
     {
-      "version": "20260819140000",
-      "name": "scp_reviewer_workspace_context"
+      "name": "scp_reviewer_workspace_context",
+      "version": "20260819140000"
     },
     {
-      "version": "20260820090000",
-      "name": "scp_governed_purpose_selection"
+      "name": "scp_governed_purpose_selection",
+      "version": "20260820090000"
     },
     {
-      "version": "20260820100000",
-      "name": "scp_report_audience_payloads"
+      "name": "scp_report_audience_payloads",
+      "version": "20260820100000"
     },
     {
-      "version": "20260820110000",
-      "name": "scp_report_context"
+      "name": "scp_report_context",
+      "version": "20260820110000"
     },
     {
-      "version": "20260820120000",
-      "name": "scp_employer_report_decisions"
+      "name": "scp_employer_report_decisions",
+      "version": "20260820120000"
     },
     {
-      "version": "20260820130000",
-      "name": "scp_report_attempt_scoped_evidence"
+      "name": "scp_report_attempt_scoped_evidence",
+      "version": "20260820130000"
     },
     {
-      "version": "20260821090000",
-      "name": "scp_pilot_security_gate"
+      "name": "scp_pilot_security_gate",
+      "version": "20260821090000"
     },
     {
-      "version": "20260822090000",
-      "name": "scp_followup_prompts_explicit_grants"
+      "name": "scp_followup_prompts_explicit_grants",
+      "version": "20260822090000"
     },
     {
-      "version": "20260822091000",
-      "name": "trust_findings_least_privilege"
+      "name": "trust_findings_least_privilege",
+      "version": "20260822091000"
     },
     {
-      "version": "20260822092000",
-      "name": "cd_profession_bands_accessor"
+      "name": "cd_profession_bands_accessor",
+      "version": "20260822092000"
     },
     {
-      "version": "20260823090000",
-      "name": "scp_governed_evidence_model"
+      "name": "scp_governed_evidence_model",
+      "version": "20260823090000"
     },
     {
-      "version": "20260823100000",
-      "name": "scp_sg_v1_content_governance_corrections"
+      "name": "scp_sg_v1_content_governance_corrections",
+      "version": "20260823100000"
     },
     {
-      "version": "20260824090000",
-      "name": "scp_review_concurrency_and_legacy_removal"
+      "name": "scp_review_concurrency_and_legacy_removal",
+      "version": "20260824090000"
     },
     {
-      "version": "20260825090000",
-      "name": "scp_content_tenancy"
+      "name": "scp_content_tenancy",
+      "version": "20260825090000"
     },
     {
-      "version": "20260825091000",
-      "name": "scp_training_maturity_isolation"
+      "name": "scp_training_maturity_isolation",
+      "version": "20260825091000"
     },
     {
-      "version": "20260825092000",
-      "name": "scp_content_library_read_model"
+      "name": "scp_content_library_read_model",
+      "version": "20260825092000"
     },
     {
-      "version": "20260826090000",
-      "name": "scp_training_delivery"
+      "name": "scp_training_delivery",
+      "version": "20260826090000"
     },
     {
-      "version": "20260826091000",
-      "name": "scp_training_delivery_rpcs"
+      "name": "scp_training_delivery_rpcs",
+      "version": "20260826091000"
     },
     {
-      "version": "20260826092000",
-      "name": "scp_internal_training_fixture"
+      "name": "scp_internal_training_fixture",
+      "version": "20260826092000"
     },
     {
-      "version": "20260827090000",
-      "name": "scp_training_closed_test_assignability"
+      "name": "scp_training_closed_test_assignability",
+      "version": "20260827090000"
     },
     {
-      "version": "20260828090000",
-      "name": "scp_sg_situational_awareness_assessment"
+      "name": "scp_sg_situational_awareness_assessment",
+      "version": "20260828090000"
     },
     {
-      "version": "20260828091000",
-      "name": "scp_sg_conflict_deescalation_assessment"
+      "name": "scp_sg_conflict_deescalation_assessment",
+      "version": "20260828091000"
     },
     {
-      "version": "20260828092000",
-      "name": "scp_sg_reporting_documentation_assessment"
+      "name": "scp_sg_reporting_documentation_assessment",
+      "version": "20260828092000"
     },
     {
-      "version": "20260828093000",
-      "name": "scp_sg_access_control_assessment"
+      "name": "scp_sg_access_control_assessment",
+      "version": "20260828093000"
     },
     {
-      "version": "20260828094000",
-      "name": "scp_sg_incident_response_assessment"
+      "name": "scp_sg_incident_response_assessment",
+      "version": "20260828094000"
     },
     {
-      "version": "20260828095000",
-      "name": "scp_sg_module_learning_content"
+      "name": "scp_sg_module_learning_content",
+      "version": "20260828095000"
     },
     {
-      "version": "20260828096000",
-      "name": "scp_standalone_development_programmes"
+      "name": "scp_standalone_development_programmes",
+      "version": "20260828096000"
     },
     {
-      "version": "20260828097000",
-      "name": "scp_library_programmes_need_modules"
+      "name": "scp_library_programmes_need_modules",
+      "version": "20260828097000"
     },
     {
-      "version": "20260829090000",
-      "name": "scp_employer_response_reviewers"
+      "name": "scp_employer_response_reviewers",
+      "version": "20260829090000"
     },
     {
-      "version": "20260829091000",
-      "name": "scp_employer_team"
+      "name": "scp_employer_team",
+      "version": "20260829091000"
     },
     {
-      "version": "20260829092000",
-      "name": "scp_employee_subject_spine"
+      "name": "scp_employee_subject_spine",
+      "version": "20260829092000"
     },
     {
-      "version": "20260829093000",
-      "name": "scp_lifecycle_projections"
+      "name": "scp_lifecycle_projections",
+      "version": "20260829093000"
     },
     {
-      "version": "20260829094000",
-      "name": "scp_pipeline_supersedes_participants"
+      "name": "scp_pipeline_supersedes_participants",
+      "version": "20260829094000"
     },
     {
-      "version": "20260829095000",
-      "name": "scp_review_workload"
+      "name": "scp_review_workload",
+      "version": "20260829095000"
     },
     {
-      "version": "20260829096000",
-      "name": "scp_lifecycle_started_signal"
+      "name": "scp_lifecycle_started_signal",
+      "version": "20260829096000"
     },
     {
-      "version": "20260829097000",
-      "name": "scp_bind_known_employee_on_assign"
+      "name": "scp_bind_known_employee_on_assign",
+      "version": "20260829097000"
     },
     {
-      "version": "20260830090000",
-      "name": "scp_self_reported_evidence"
+      "name": "scp_self_reported_evidence",
+      "version": "20260830090000"
     },
     {
-      "version": "20260830091000",
-      "name": "scp_form_modules"
+      "name": "scp_form_modules",
+      "version": "20260830091000"
     },
     {
-      "version": "20260830092000",
-      "name": "scp_recruitment_assessment_metadata"
+      "name": "scp_recruitment_assessment_metadata",
+      "version": "20260830092000"
     },
     {
-      "version": "20260830093000",
-      "name": "scp_candidate_brief_and_interview_guide"
+      "name": "scp_candidate_brief_and_interview_guide",
+      "version": "20260830093000"
     },
     {
-      "version": "20260830094000",
-      "name": "scp_security_officer_recruitment_assessment"
+      "name": "scp_security_officer_recruitment_assessment",
+      "version": "20260830094000"
     },
     {
-      "version": "20260831090000",
-      "name": "scp_closed_test_recruitment_purpose"
+      "name": "scp_closed_test_recruitment_purpose",
+      "version": "20260831090000"
     },
     {
-      "version": "20260831091000",
-      "name": "scp_participant_invitations"
+      "name": "scp_participant_invitations",
+      "version": "20260831091000"
     },
     {
-      "version": "20260831092000",
-      "name": "scp_recruitment_read_models"
+      "name": "scp_recruitment_read_models",
+      "version": "20260831092000"
     },
     {
-      "version": "20260831093000",
-      "name": "scp_brief_executive_summary"
+      "name": "scp_brief_executive_summary",
+      "version": "20260831093000"
     },
     {
-      "version": "20260831094000",
-      "name": "scp_recruit_from_application"
+      "name": "scp_recruit_from_application",
+      "version": "20260831094000"
     },
     {
-      "version": "20260901090000",
-      "name": "scp_purpose_display_names"
+      "name": "scp_purpose_display_names",
+      "version": "20260901090000"
     },
     {
-      "version": "20260902090000",
-      "name": "scp_library_assessment_area_count"
+      "name": "scp_library_assessment_area_count",
+      "version": "20260902090000"
     },
     {
-      "version": "20260903090000",
-      "name": "scp_candidate_from_application"
+      "name": "scp_candidate_from_application",
+      "version": "20260903090000"
     },
     {
-      "version": "20260903091000",
-      "name": "sp_application_scoped_disclosure"
+      "name": "sp_application_scoped_disclosure",
+      "version": "20260903091000"
     },
     {
-      "version": "20260903092000",
-      "name": "scp_hired_becomes_employee"
+      "name": "scp_hired_becomes_employee",
+      "version": "20260903092000"
     },
     {
-      "version": "20260903100000",
-      "name": "scp_review_conflict_disclosure"
+      "name": "scp_review_conflict_disclosure",
+      "version": "20260903100000"
     },
     {
-      "version": "20260903110000",
-      "name": "scp_stamp_trigger_least_privilege"
+      "name": "scp_stamp_trigger_least_privilege",
+      "version": "20260903110000"
     },
     {
-      "version": "20260903120000",
-      "name": "scp_sg_reporting_documentation_rubrics"
+      "name": "scp_sg_reporting_documentation_rubrics",
+      "version": "20260903120000"
     },
     {
-      "version": "20260904090000",
-      "name": "sp_application_submission_with_passport"
+      "name": "sp_application_submission_with_passport",
+      "version": "20260904090000"
     },
     {
-      "version": "20260904134520",
-      "name": "ea2e5b1f-6d13-454e-b61b-bac4591ab899"
+      "name": "ea2e5b1f-6d13-454e-b61b-bac4591ab899",
+      "version": "20260904134520"
     },
     {
-      "version": "20260904171840",
-      "name": "scp_trust_evidence_report_r2a_report_version_continuity"
+      "name": "scp_trust_evidence_report_r2a_report_version_continuity",
+      "version": "20260904171840"
     },
     {
-      "version": "20260904174903",
-      "name": "scp_trust_evidence_report_r2a_contract"
+      "name": "scp_trust_evidence_report_r2a_contract",
+      "version": "20260904174903"
     },
     {
-      "version": "20260904190901",
-      "name": "scp_trust_evidence_report_r1_provenance"
+      "name": "scp_trust_evidence_report_r1_provenance",
+      "version": "20260904190901"
     },
     {
-      "version": "20260905053344",
-      "name": "scp_option_order_per_attempt"
+      "name": "scp_option_order_per_attempt",
+      "version": "20260905053344"
     },
     {
-      "version": "20260905053809",
-      "name": "scp_release_facet_resolution"
+      "name": "scp_release_facet_resolution",
+      "version": "20260905053809"
     },
     {
-      "version": "20260905054603",
-      "name": "scp_trust_evidence_report_r1_provenance"
+      "name": "scp_trust_evidence_report_r1_provenance",
+      "version": "20260905054603"
     },
     {
-      "version": "20260905090000",
-      "name": "scp_standard_recruitment_availability"
+      "name": "scp_standard_recruitment_availability",
+      "version": "20260905090000"
     },
     {
-      "version": "20260906090000",
-      "name": "jobs_bilingual_candidate_requirements"
+      "name": "jobs_bilingual_candidate_requirements",
+      "version": "20260906090000"
     },
     {
-      "version": "20260906091000",
-      "name": "jobs_employer_self_publish"
+      "name": "jobs_employer_self_publish",
+      "version": "20260906091000"
     },
     {
-      "version": "20260906100000",
-      "name": "jobs_self_publish_admin_member_fix"
+      "name": "jobs_self_publish_admin_member_fix",
+      "version": "20260906100000"
     },
     {
-      "version": "20260906125945",
-      "name": "scp_trust_evidence_report_r3a_contract"
+      "name": "scp_trust_evidence_report_r3a_contract",
+      "version": "20260906125945"
     },
     {
-      "version": "20260907064303",
-      "name": "f8efc1c3-def4-4147-9db1-45a68b1f6a69"
+      "name": "f8efc1c3-def4-4147-9db1-45a68b1f6a69",
+      "version": "20260907064303"
     },
     {
-      "version": "20260907064513",
-      "name": "19c76abb-f1fd-40e5-aa50-b008b7de38bf"
+      "name": "19c76abb-f1fd-40e5-aa50-b008b7de38bf",
+      "version": "20260907064513"
     },
     {
-      "version": "20260907064849",
-      "name": "0bb96516-c1eb-4178-8e9e-60bde13071dd"
+      "name": "0bb96516-c1eb-4178-8e9e-60bde13071dd",
+      "version": "20260907064849"
     },
     {
-      "version": "20260907071826",
-      "name": "6c070461-aa51-4d78-8ed0-a82294f12489"
+      "name": "6c070461-aa51-4d78-8ed0-a82294f12489",
+      "version": "20260907071826"
     },
     {
-      "version": "20260907090000",
-      "name": "sp_three_market_foundation"
+      "name": "sp_three_market_foundation",
+      "version": "20260907090000"
     },
     {
-      "version": "20260907091000",
-      "name": "sp_sweden_truth_model"
+      "name": "sp_sweden_truth_model",
+      "version": "20260907091000"
     },
     {
-      "version": "20260907092000",
-      "name": "sp_uk_market_pack"
+      "name": "sp_uk_market_pack",
+      "version": "20260907092000"
     },
     {
-      "version": "20260907092500",
-      "name": "sp_uk_title_rules_correction"
+      "name": "sp_uk_title_rules_correction",
+      "version": "20260907092500"
     },
     {
-      "version": "20260907093000",
-      "name": "sp_uae_dubai_market_pack"
+      "name": "sp_uae_dubai_market_pack",
+      "version": "20260907093000"
     },
     {
-      "version": "20260908043205",
-      "name": "b315714c-89df-4610-9dd0-7b55207229a7"
+      "name": "b315714c-89df-4610-9dd0-7b55207229a7",
+      "version": "20260908043205"
     },
     {
-      "version": "20260908090000",
-      "name": "sp_legacy_scope_correctable"
+      "name": "sp_legacy_scope_correctable",
+      "version": "20260908090000"
     },
     {
-      "version": "20260908091000",
-      "name": "sp_title_country_and_training_label"
+      "name": "sp_title_country_and_training_label",
+      "version": "20260908091000"
     },
     {
-      "version": "20260908092000",
-      "name": "sp_disclosure_scope_boundary"
+      "name": "sp_disclosure_scope_boundary",
+      "version": "20260908092000"
     },
     {
-      "version": "20260908093000",
-      "name": "sp_profile_work_country"
+      "name": "sp_profile_work_country",
+      "version": "20260908093000"
     },
     {
-      "version": "20260908094000",
-      "name": "sp_disclosure_holder_sub_jurisdiction"
+      "name": "sp_disclosure_holder_sub_jurisdiction",
+      "version": "20260908094000"
     },
     {
-      "version": "20260909090000",
-      "name": "jobs_delete_unpublished_draft"
+      "name": "jobs_delete_unpublished_draft",
+      "version": "20260909090000"
     },
     {
-      "version": "20260909092000",
-      "name": "jobs_other_profession_selection"
+      "name": "jobs_other_profession_selection",
+      "version": "20260909092000"
     },
     {
-      "version": "20260909093000",
-      "name": "application_status_notifications"
+      "name": "application_status_notifications",
+      "version": "20260909093000"
     },
     {
-      "version": "20260909094000",
-      "name": "job_audit_vocabulary_lifecycle"
+      "name": "job_audit_vocabulary_lifecycle",
+      "version": "20260909094000"
     },
     {
-      "version": "20260910090000",
-      "name": "sp_pilot_bugfix_1"
+      "name": "sp_pilot_bugfix_1",
+      "version": "20260910090000"
     },
     {
-      "version": "20260910091000",
-      "name": "cd_v31_content_v3_question_refinement"
+      "name": "cd_v31_content_v3_question_refinement",
+      "version": "20260910091000"
     },
     {
-      "version": "20260911090000",
-      "name": "admin_control_center_lifecycle"
+      "name": "admin_control_center_lifecycle",
+      "version": "20260911090000"
     },
     {
-      "version": "20260912090000",
-      "name": "cd_ranking_guard_recommendation"
+      "name": "cd_ranking_guard_recommendation",
+      "version": "20260912090000"
     },
     {
-      "version": "20260913090000",
-      "name": "cd_v31_content_v4_context_intent_separation"
+      "name": "cd_v31_content_v4_context_intent_separation",
+      "version": "20260913090000"
     },
     {
-      "version": "20260913091000",
-      "name": "cd_career_context_other_profession"
+      "name": "cd_career_context_other_profession",
+      "version": "20260913091000"
     },
     {
-      "version": "20260913092000",
-      "name": "cig_security_leadership_professions"
+      "name": "cig_security_leadership_professions",
+      "version": "20260913092000"
     },
     {
-      "version": "20260914090000",
-      "name": "sp_uk_vehicle_immobilisation"
+      "name": "sp_uk_vehicle_immobilisation",
+      "version": "20260914090000"
     },
     {
-      "version": "20260914091000",
-      "name": "sp_uae_dubai_cadre_catalogue"
+      "name": "sp_uae_dubai_cadre_catalogue",
+      "version": "20260914091000"
     },
     {
-      "version": "20260914092000",
-      "name": "sp_uae_abu_dhabi_market_pack"
+      "name": "sp_uae_abu_dhabi_market_pack",
+      "version": "20260914092000"
     },
     {
-      "version": "20260915090000",
-      "name": "sp_market_pilot_entitlement"
+      "name": "sp_market_pilot_entitlement",
+      "version": "20260915090000"
     },
     {
-      "version": "20260916090000",
-      "name": "security_hardening_expand"
+      "name": "security_hardening_expand",
+      "version": "20260916090000"
     },
     {
-      "version": "20260916091000",
-      "name": "security_hardening_contract"
+      "name": "security_hardening_contract",
+      "version": "20260916091000"
     },
     {
-      "version": "20260917090000",
-      "name": "superadmin_permanent_account_deletion"
+      "name": "superadmin_permanent_account_deletion",
+      "version": "20260917090000"
     },
     {
-      "version": "20260918090000",
-      "name": "scp_interview_role_packs"
+      "name": "scp_interview_role_packs",
+      "version": "20260918090000"
     },
     {
-      "version": "20260919090000",
-      "name": "scp_interview_intelligence_registries"
+      "name": "scp_interview_intelligence_registries",
+      "version": "20260919090000"
     },
     {
-      "version": "20260920090000",
-      "name": "scp_interview_runtime"
+      "name": "scp_interview_runtime",
+      "version": "20260920090000"
     },
     {
-      "version": "20260921090000",
-      "name": "scp_interview_integrity_hardening"
+      "name": "scp_interview_integrity_hardening",
+      "version": "20260921090000"
     },
     {
-      "version": "20260922090000",
-      "name": "scp_trust_method"
+      "name": "scp_trust_method",
+      "version": "20260922090000"
     },
     {
-      "version": "20260923090000",
-      "name": "scp_trust_corrections"
+      "name": "scp_trust_corrections",
+      "version": "20260923090000"
     },
     {
-      "version": "20260924090000",
-      "name": "migration_ledger_seed_event_reconciliation"
+      "name": "migration_ledger_seed_event_reconciliation",
+      "version": "20260924090000"
     },
     {
-      "version": "20260925090000",
-      "name": "scp_interview_open_pilot_entitlement"
+      "name": "scp_interview_open_pilot_entitlement",
+      "version": "20260925090000"
     },
     {
-      "version": "20260926090000",
-      "name": "scp_interview_startable_contract"
+      "name": "scp_interview_startable_contract",
+      "version": "20260926090000"
     },
     {
-      "version": "20260927090000",
-      "name": "scp_interview_ai_gate_and_provenance"
+      "name": "scp_interview_ai_gate_and_provenance",
+      "version": "20260927090000"
     },
     {
-      "version": "20260928090000",
-      "name": "scp_trust_stage_english_copy"
+      "name": "scp_trust_stage_english_copy",
+      "version": "20260928090000"
     },
     {
-      "version": "20260929090000",
-      "name": "scp_interview_english_guidance_copy"
+      "name": "scp_interview_english_guidance_copy",
+      "version": "20260929090000"
     },
     {
-      "version": "20260930090000",
-      "name": "scp_interview_5e_evidence_structure"
+      "name": "scp_interview_5e_evidence_structure",
+      "version": "20260930090000"
     },
     {
-      "version": "20261001090000",
-      "name": "scp_interview_rating_anchor_english_copy"
+      "name": "scp_interview_rating_anchor_english_copy",
+      "version": "20261001090000"
     },
     {
-      "version": "20261002090000",
-      "name": "scp_interview_conduct_layer"
+      "name": "scp_interview_conduct_layer",
+      "version": "20261002090000"
     },
     {
-      "version": "20261003090000",
-      "name": "scp_interview_conduct_guidance"
+      "name": "scp_interview_conduct_guidance",
+      "version": "20261003090000"
     },
     {
-      "version": "20261004090000",
-      "name": "cd_v31_funnel_events_career_center"
+      "name": "cd_v31_funnel_events_career_center",
+      "version": "20261004090000"
     },
     {
-      "version": "20261005090000",
-      "name": "cd_v31_scoring_version_draft4_ranking"
+      "name": "cd_v31_scoring_version_draft4_ranking",
+      "version": "20261005090000"
     },
     {
-      "version": "20261006090000",
-      "name": "cd_layer4_entry_gap_professions"
+      "name": "cd_layer4_entry_gap_professions",
+      "version": "20261006090000"
     },
     {
-      "version": "20261007090000",
-      "name": "canonical_professional_profile"
+      "name": "canonical_professional_profile",
+      "version": "20261007090000"
     },
     {
-      "version": "20261008090000",
-      "name": "canonical_professional_profile_contract"
+      "name": "canonical_professional_profile_contract",
+      "version": "20261008090000"
     },
     {
-      "version": "20261009090000",
-      "name": "scp_interview_assessment_supersede_order"
+      "name": "scp_interview_assessment_supersede_order",
+      "version": "20261009090000"
     },
     {
-      "version": "20261010090000",
-      "name": "cv_documents"
+      "name": "cv_documents",
+      "version": "20261010090000"
     },
     {
-      "version": "20261011090000",
-      "name": "cv_documents_editing_provenance"
+      "name": "cv_documents_editing_provenance",
+      "version": "20261011090000"
     },
     {
-      "version": "20261012090000",
-      "name": "sp_decision_requires_holder_message"
+      "name": "sp_decision_requires_holder_message",
+      "version": "20261012090000"
     },
     {
-      "version": "20261013090000",
-      "name": "sp_trust_boundary_hardening"
+      "name": "sp_trust_boundary_hardening",
+      "version": "20261013090000"
     },
     {
-      "version": "20261014090000",
-      "name": "sp_reviewer_detail_and_note_privacy"
+      "name": "sp_reviewer_detail_and_note_privacy",
+      "version": "20261014090000"
     },
     {
-      "version": "20261015090000",
-      "name": "sp_passport_verifier_role"
+      "name": "sp_passport_verifier_role",
+      "version": "20261015090000"
     },
     {
-      "version": "20261016090000",
-      "name": "sp_reviewer_least_privilege"
+      "name": "sp_reviewer_least_privilege",
+      "version": "20261016090000"
     },
     {
-      "version": "20261017090000",
-      "name": "sp_employer_attestation_queue_task"
+      "name": "sp_employer_attestation_queue_task",
+      "version": "20261017090000"
     },
     {
-      "version": "20261018090000",
-      "name": "job_application_cqrityjob_cv"
+      "name": "job_application_cqrityjob_cv",
+      "version": "20261018090000"
     },
     {
-      "version": "20261019090000",
-      "name": "sp_employer_attestation_eligible_org"
+      "name": "sp_employer_attestation_eligible_org",
+      "version": "20261019090000"
     },
     {
-      "version": "20261020090000",
-      "name": "scp_interview_evidence_reliability"
+      "name": "scp_interview_evidence_reliability",
+      "version": "20261020090000"
     },
     {
-      "version": "20261028090000",
-      "name": "admin_cancel_assignment_error_contract"
+      "name": "admin_cancel_assignment_error_contract",
+      "version": "20261028090000"
     },
     {
-      "version": "20261030090000",
-      "name": "sp_trust_source_containment"
+      "name": "sp_trust_source_containment",
+      "version": "20261030090000"
     },
     {
-      "version": "20261031090000",
-      "name": "sp_passport_first_merit"
+      "name": "sp_passport_first_merit",
+      "version": "20261031090000"
     },
     {
-      "version": "20261101090000",
-      "name": "sp_selected_merit_sharing"
+      "name": "sp_selected_merit_sharing",
+      "version": "20261101090000"
     },
     {
-      "version": "20261102090000",
-      "name": "cv_documents_controlled_writes"
+      "name": "cv_documents_controlled_writes",
+      "version": "20261102090000"
+    },
+    {
+      "name": "cv_documents_lockdown",
+      "version": "20261103090000"
     }
   ]
 }
