@@ -778,7 +778,7 @@ test.describe("structure and access", () => {
     expect(small, "controls below the 44px minimum").toEqual([]);
   });
 
-  test("1440, 375 and real 200% zoom hold without horizontal scroll", async ({ page }) => {
+  test("1440, 640, 375 and real 200% zoom hold without horizontal scroll", async ({ page }) => {
     await stubServerFns(page, BASE_REPLIES);
 
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -794,15 +794,49 @@ test.describe("structure and access", () => {
     await page.goto(`${BASE}/career-center/security-officer`, { waitUntil: "networkidle" });
     await noHorizontalScroll(page);
 
+    // 640 CSS pixels — the layout width a 1280px window has at 200% zoom, and
+    // the size a reader who has turned browser zoom up actually gets.
+    await page.setViewportSize({ width: 640, height: 900 });
+    for (const url of [
+      `${HUB}?from=security-officer`,
+      `${HUB}?from=security-officer&all=1`,
+      `${BASE}/career-center/security-officer`,
+      `${BASE}/career-center/ordningsvakt`,
+    ]) {
+      await page.goto(url, { waitUntil: "networkidle" });
+      await noHorizontalScroll(page);
+    }
+
     // Real 200% zoom: the browser's own page zoom, which changes device pixel
-    // ratio as well as layout width — not merely a narrower window.
+    // ratio as well as layout width — not merely a narrower window. Asserted
+    // at both the desktop and the 1280px window a 640px layout comes from.
     const cdp = await page.context().newCDPSession(page);
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });
-    await page.goto(`${HUB}?from=security-officer`, { waitUntil: "networkidle" });
-    await page.waitForSelector("[data-path-from]");
-    await noHorizontalScroll(page);
-    await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+    for (const width of [1440, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });
+      await page.goto(`${HUB}?from=security-officer`, { waitUntil: "networkidle" });
+      await page.waitForSelector("[data-path-from]");
+      await noHorizontalScroll(page);
+      await page.goto(`${BASE}/career-center/security-officer`, { waitUntil: "networkidle" });
+      await noHorizontalScroll(page);
+      await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+    }
+  });
+
+  test("nothing overflows at 375px or 640px in English either", async ({ page }) => {
+    await setLang(page, "en");
+    await stubServerFns(page, BASE_REPLIES);
+    for (const width of [375, 640]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const url of [
+        `${HUB}?from=security-officer&all=1`,
+        `${BASE}/career-center/security-officer`,
+        `${BASE}/career-center/security-coordinator`,
+      ]) {
+        await page.goto(url, { waitUntil: "networkidle" });
+        await noHorizontalScroll(page);
+      }
+    }
   });
 
   test("the whole journey works in English", async ({ page }) => {
