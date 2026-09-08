@@ -832,10 +832,12 @@ expect(
 // code and the migration disagree, every event the code adds is rejected at
 // the database with no visible symptom.
 // The CHECK is dropped and recreated in full by each additive migration, so
-// the NEWEST one carries the whole allowlist. Reading an older file would
-// pass while the live constraint rejected everything added since.
+// the NEWEST one carries the whole allowlist. Reading an older file would pass
+// while the live constraint rejected everything added since. That file is
+// 20261004090000 again: this pilot's own migration was removed, because the
+// event it allowed had no reachable caller (see 16g).
 const migration = read(
-  "supabase/migrations/20261102090000_cd_v31_funnel_events_career_education.sql",
+  "supabase/migrations/20261004090000_cd_v31_funnel_events_career_center.sql",
 );
 for (const name of FUNNEL_EVENT_NAMES) {
   expect(
@@ -1291,21 +1293,32 @@ expect(
 );
 
 // -----------------------------------------------------------------------
-// 16g. Measurement: organic and sponsored are separable
+// 16g. No unreachable measurement, and no unreachable schema
 // -----------------------------------------------------------------------
+//
+// An earlier revision of this pilot added a `career_education_opened` funnel
+// event plus the migration that allows the name — for a code path that cannot
+// execute, because `EDUCATION_PROVIDER_PLACEMENTS` is empty and the event was
+// only ever emitted from a placement link. A hosted schema change with no
+// reachable caller is release risk with no product value.
+//
+// It also did not prove what it was described as proving. Ranking neutrality
+// is a property of the CODE and is established by 16c; telemetry measures
+// engagement. The first real placement brings its own measurement, in its own
+// reviewed commercial release, schema-first.
 
+const analyticsSource = code(read("src/lib/career-center/analytics.ts"));
 expect(
-  CAREER_CENTER_EVENT_WIRE_NAME.career_education_opened === "career_education_opened",
-  "opening a training offer needs its own event name — no existing name means it",
-);
-const analyticsSource = read("src/lib/career-center/analytics.ts");
-expect(
-  analyticsSource.includes("payload.placement = detail.placement"),
-  "the education event must carry its placement so organic and sponsored can be counted apart",
+  !analyticsSource.includes("career_education_opened"),
+  "the education event was removed with its migration — it must not return without a reachable caller",
 );
 expect(
-  template.includes("placement,") && template.includes("career_education_opened"),
-  "the profession guide must forward the placement of the offer that was opened",
+  !(FUNNEL_EVENT_NAMES as readonly string[]).includes("career_education_opened"),
+  "FUNNEL_EVENT_NAMES must not declare an event no code can fire",
+);
+expect(
+  !analyticsSource.includes("placement"),
+  "Career Center telemetry must not carry a placement dimension while no placement can ship",
 );
 
 // =======================================================================

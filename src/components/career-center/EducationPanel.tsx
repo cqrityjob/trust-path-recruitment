@@ -29,15 +29,7 @@ import { L, type EducationOffer, type ProfessionEducation } from "@/lib/career-c
 // In the pilot `EDUCATION_PROVIDER_PLACEMENTS` is empty, so no badge renders
 // at all. The mechanism ships; the money does not.
 
-export function EducationPanel({
-  education,
-  onOfferOpen,
-}: {
-  education: ProfessionEducation;
-  /** Fired with the offer id and its placement so organic and sponsored can
-   *  be measured separately without inferring anything from a URL. */
-  onOfferOpen?: (offerId: string, placement: "organic" | "sponsored") => void;
-}) {
+export function EducationPanel({ education }: { education: ProfessionEducation }) {
   const { t, lang } = useT();
 
   if (education.offers.length === 0 && education.underReview.length === 0) {
@@ -65,7 +57,7 @@ export function EducationPanel({
           </p>
           <ul className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {education.offers.map((o) => (
-              <OfferCard key={`${o.kind}-${o.id}`} offer={o} onOpen={onOfferOpen} />
+              <OfferCard key={`${o.kind}-${o.id}`} offer={o} />
             ))}
           </ul>
         </>
@@ -93,13 +85,7 @@ export function EducationPanel({
   );
 }
 
-function OfferCard({
-  offer,
-  onOpen,
-}: {
-  offer: EducationOffer;
-  onOpen?: (offerId: string, placement: "organic" | "sponsored") => void;
-}) {
+function OfferCard({ offer }: { offer: EducationOffer }) {
   const { t, lang } = useT();
   const formal = offer.relevance === "formal_requirement";
 
@@ -146,7 +132,6 @@ function OfferCard({
                 href={pl.url}
                 target="_blank"
                 rel="noreferrer sponsored"
-                onClick={() => onOpen?.(offer.id, pl.placement)}
                 className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {pl.providerName}

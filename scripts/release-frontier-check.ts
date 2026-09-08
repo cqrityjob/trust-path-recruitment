@@ -1,30 +1,19 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = path.resolve(import.meta.dir, "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const migrationsDir = path.join(root, "supabase/migrations");
 const parkedDir = path.join(root, "supabase/archive/parked-migrations");
 const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.json"), "utf8")) as {
   frontier: { file: string; hostedState: string; evidenceSource?: string }[];
 };
 
-// The schema half of PR #197. It is deliberately NOT applied: the application
-// half calls sp_create_selected_disclosure / sp_preview_selected_disclosure and
-// is blocked by schema-first-release-check until this is applied hosted and
-// recorded as `applied` WITH evidence. Remove this entry at the same moment
-// that recording happens — an empty expected set is the steady state, and a
-// name left here after the fact would hide a genuinely stuck migration.
-// The Career Center pilot's measurement migration. Additive and object-free:
-// it drops and recreates the cd_v31_funnel_events CHECK and the RPC allowlist
-// with one more event name. Nothing renders differently before or after it —
-// the funnel tracker is fire-and-forget and never throws to its caller — so
-// unlike the entry above it blocks nothing, and it follows the precedent of
-// 20261004090000 and 20260816162000, which shipped the same way. Remove this
-// name when it is recorded as `applied` with evidence.
-const expectedPending: string[] = [
-  "20261101090000_sp_selected_merit_sharing.sql",
-  "20261102090000_cd_v31_funnel_events_career_education.sql",
-];
+// Empty is the steady state, and it is where the set belongs again: the schema
+// half of PR #197 was applied to owner production on 2026-09-08 and is now
+// recorded `applied` with evidence, so leaving its name here would hide a
+// genuinely stuck migration behind an expectation.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
@@ -37,6 +26,10 @@ const hostedIdentities = [
   "20261028090000_admin_cancel_assignment_error_contract.sql",
   "20261030090000_sp_trust_source_containment.sql",
   "20261031090000_sp_passport_first_merit.sql",
+  // Applied 2026-09-08 as hosted 20260908043205 / b315714c-…; the canonical
+  // file stays in the active path because it is the reviewed record of what
+  // production ran.
+  "20261101090000_sp_selected_merit_sharing.sql",
 ];
 const retiredCanonicalIdentities = [
   "20261021090000_scp_option_order_per_attempt.sql",
@@ -46,9 +39,13 @@ const retiredCanonicalIdentities = [
   "20261026093000_scp_release_facet_resolution.sql",
   "20261027090000_scp_trust_evidence_report_r1_provenance.sql",
   "20261029090000_scp_trust_evidence_report_r3a_contract.sql",
+];
+const hostedLedgerMarkers = [
+  "20260904190901_scp_trust_evidence_report_r1_provenance.sql",
   "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
   "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
   "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
+  "20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql",
 ];
 const parked = [
   "20261022090000_scp_vaktare_v1_content_review.sql",
@@ -71,8 +68,24 @@ for (const file of hostedIdentities) {
 for (const file of retiredCanonicalIdentities) {
   if (active.has(file)) failures.push(`already-applied canonical identity is active: ${file}`);
 }
+for (const file of hostedLedgerMarkers) {
+  const markerPath = path.join(migrationsDir, file);
+  if (!active.has(file)) {
+    failures.push(`hosted ledger marker missing from active path: ${file}`);
+    continue;
+  }
+  const executableBody = readFileSync(markerPath, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/--[^\n]*/g, " ")
+    .replace(/\s+/g, "");
+  if (executableBody.length > 0) {
+    failures.push(`hosted ledger marker contains executable SQL: ${file}`);
+  }
+}
 for (const file of parked) {
-  if (active.has(file)) failures.push(`unsafe migration is active: ${file}`);
+  if (active.has(file) && !hostedLedgerMarkers.includes(file)) {
+    failures.push(`unsafe migration is active: ${file}`);
+  }
   if (!existsSync(path.join(parkedDir, file))) failures.push(`parked history missing: ${file}`);
 }
 for (const entry of state.frontier.filter((item) => item.hostedState === "applied")) {

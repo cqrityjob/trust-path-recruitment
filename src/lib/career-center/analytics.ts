@@ -15,7 +15,6 @@
 //   career_test_completed       -> assessment_completed        (existing)
 //   career_profession_opened    -> profession_explored         (existing)
 //   career_filter_used          -> career_filter_used          (new name)
-//   career_education_opened     -> career_education_opened     (new name)
 //
 // Two of the four already have an allowlisted name that means precisely the
 // right thing, and reusing them keeps the existing funnel readable rather
@@ -25,6 +24,22 @@
 // second event fired from the Career Center would double-count it.
 //
 // ── WHY TWO NAMES ARE NEW ──────────────────────────────────────────────
+//
+// ── WHAT THIS DELIBERATELY DOES NOT MEASURE ────────────────────────────
+//
+// Sponsored education placements. An earlier revision of the Career Center
+// pilot added a `career_education_opened` event, with an `organic` /
+// `sponsored` detail, plus the migration to allow the name — for a feature
+// that cannot fire: `EDUCATION_PROVIDER_PLACEMENTS` is empty, and the event
+// was only ever emitted from a placement link. A hosted schema change with no
+// reachable caller is release risk without product value, so it is gone.
+//
+// It also could not have proved what it was described as proving. Ranking
+// neutrality is a property of the CODE — `educationOrderKey` cannot see a
+// placement — and is established by the type signature and by the guard that
+// re-orders with every offer marked sponsored. Telemetry measures engagement,
+// not ordering. The first real placement will bring its own measurement, in
+// its own reviewed commercial release, schema-first.
 //
 // `career_center_test_started` is the hub CTA CLICK, which is a different
 // measurement from `assessment_started` (the first question being answered)
@@ -53,14 +68,12 @@ import {
 export type CareerCenterEvent =
   | "career_center_test_started"
   | "career_profession_opened"
-  | "career_filter_used"
-  | "career_education_opened";
+  | "career_filter_used";
 
 export const CAREER_CENTER_EVENT_WIRE_NAME: Readonly<Record<CareerCenterEvent, FunnelEventName>> = {
   career_center_test_started: "career_center_test_started",
   career_profession_opened: "profession_explored",
   career_filter_used: "career_filter_used",
-  career_education_opened: "career_education_opened",
 };
 
 /** Where in the Career Center an event came from. Kept to a closed set: a
@@ -74,24 +87,14 @@ export type CareerCenterSurface =
   | "profession_guide"
   | "profession_related"
   | "profession_transitions"
-  | "profession_education"
   | "hub_personal";
 
 export interface CareerCenterEventDetail {
   readonly surface: CareerCenterSurface;
   /** Profession slug for `career_profession_opened`; filter key for
-   *  `career_filter_used`; education or certification id for
-   *  `career_education_opened`. Never free text typed by the visitor — a
-   *  search query is content, and content does not belong in telemetry. */
+   *  `career_filter_used`. Never free text typed by the visitor — a search
+   *  query is content, and content does not belong in telemetry. */
   readonly subject?: string;
-  /** `career_education_opened` only. Exactly "organic" or "sponsored".
-   *
-   *  This is the whole reason the event exists. The product promises that a
-   *  paid placement changes neither what is recommended nor the order it
-   *  appears in; that promise is only checkable if the two populations can be
-   *  counted apart. Inferring "sponsored" from a URL after the fact would be
-   *  a guess, so the placement travels WITH the click. */
-  readonly placement?: "organic" | "sponsored";
 }
 
 /**
@@ -111,7 +114,6 @@ export function useCareerCenterTracking(): (
       const eventName = CAREER_CENTER_EVENT_WIRE_NAME[event];
       const payload: Record<string, string> = { surface: detail.surface };
       if (detail.subject) payload.subject = detail.subject;
-      if (detail.placement) payload.placement = detail.placement;
       void track({ data: { eventName, detail: payload } }).catch(() => {
         // Deliberately silent. The visitor is reading a career guide; a
         // telemetry failure is not their problem and must not become one.

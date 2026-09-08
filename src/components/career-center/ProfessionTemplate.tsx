@@ -460,16 +460,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("cc.p.education.title")}
         </h2>
-        <EducationPanel
-          education={education}
-          onOfferOpen={(offerId, placement) =>
-            track("career_education_opened", {
-              surface: "profession_education",
-              subject: offerId,
-              placement,
-            })
-          }
-        />
+        <EducationPanel education={education} />
       </Section>
 
       {/* 13 — RELATERADE LEDIGA JOBB · DITT PASSPORT */}

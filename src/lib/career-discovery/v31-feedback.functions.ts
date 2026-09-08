@@ -64,13 +64,6 @@ export const FUNNEL_EVENT_NAMES = [
   // adding names here.
   "career_center_test_started",
   "career_filter_used",
-  // Career Center pilot. A reader opening a training or certification offer
-  // from a profession guide. It carries a `placement` detail of exactly
-  // "organic" or "sponsored" so a paid placement can be measured as its own
-  // population — the audit that makes "payment does not influence what we
-  // recommend" checkable rather than merely stated. Mirrored in the CHECK
-  // allowlist by 20261102090000_cd_v31_funnel_events_career_education.sql.
-  "career_education_opened",
 ] as const;
 
 export type FunnelEventName = (typeof FUNNEL_EVENT_NAMES)[number];
