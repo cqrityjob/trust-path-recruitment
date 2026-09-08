@@ -2281,11 +2281,275 @@ if [ "$CVS_RC" -ne 0 ]; then
   suite_failed "CQrityjob CV application source"
 else
   echo "    ok  ${CVS_PASSED} CQrityjob CV application source assertions passed"
-  if [ "$CVS_PASSED" -lt 38 ]; then
-    echo "FAIL: expected at least 38 CV application source assertions, only ${CVS_PASSED} ran." >&2
+  if [ "$CVS_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 CV application source assertions, only ${CVS_PASSED} ran." >&2
     echo "      A suite that silently stops running assertions is worse than one that fails." >&2
-    suite_failed "CQrityjob CV application source (assertion shortfall: floor 38)"
+    suite_failed "CQrityjob CV application source (assertion shortfall: floor 45)"
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# cv_documents controlled write path (phase 1) — the negative controls.
+#
+# 20261010090000 granted `authenticated` INSERT and UPDATE on cv_documents with
+# RLS that checked ownership and nothing else, so a signed-in holder could POST
+# an invented employment history straight to the Data API -- and
+# sp_submit_application_with_cv_source would copy it onto an employer-readable
+# job application.
+#
+# Phase 1 does NOT revoke that: the published application still depends on it,
+# and revoking before the new application ships would break CV saving on the
+# live site. So Group N proves the hole is still open -- it writes an
+# employment that never happened and shows it landing -- and then proves the
+# document cannot be SENT, because every fact is compared against the holder's
+# own live records by VALUE. A real id with a rewritten employer name fails the
+# same check, which is the attack an existence test would have missed.
+#
+# Runs BEFORE the rollback step: it depends on cv_documents, sp_claims and
+# sp_experience_periods, and the rollback drops the tables the fixtures need.
+# ---------------------------------------------------------------------------
+echo "==> Running cv_documents controlled-write-path assertions"
+set +e
+CVO_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cv_documents_controlled_writes_test.sql 2>&1)"
+CVO_RC=$?
+set -e
+
+echo "$CVO_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CVO_PASSED="$(echo "$CVO_OUT" | grep -c "ok  " || true)"
+
+if [ "$CVO_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the cv_documents controlled-write-path suite exited with code ${CVO_RC}." >&2
+  echo "$CVO_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "cv_documents controlled write path"
+else
+  echo "    ok  ${CVO_PASSED} cv_documents controlled-write-path assertions passed"
+  if [ "$CVO_PASSED" -lt 55 ]; then
+    echo "FAIL: expected at least 55 controlled-write-path assertions, only ${CVO_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "cv_documents controlled write path (assertion shortfall: floor 55)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Two processes, one operation id, exactly one CV.
+#
+# The in-suite idempotency assertions run in ONE session, where the second
+# call simply reads what the first one wrote. That proves the replay contract
+# and says nothing about the race, because a single session never contends
+# with itself.
+#
+# The interesting case is a client that retried while the first request was
+# still open -- a double submit, a flaky connection, a mobile browser
+# reconnecting. So A opens a transaction, creates the CV, and sits inside it;
+# B arrives with the same operation id and the same request and blocks on the
+# conflicting tuple. When A commits, B's ON CONFLICT DO NOTHING inserts
+# nothing, B reads the committed ledger row, and both callers are told the
+# same cvId.
+#
+# The assertion that matters is the row count: exactly one.
+# ---------------------------------------------------------------------------
+# A holder with a real, committed career, and one CV written through the new
+# function. Needed by both blocks below: the race needs somebody to create a
+# second CV as, and the rollback proof needs a committed row so that
+# "no CV was lost" compares something with something.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" >/dev/null <<'SQL'
+INSERT INTO auth.users (id, email)
+VALUES ('60000000-0000-0000-0000-00000000000c', 'race@example.test')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.profiles (id, display_name, country, locale)
+VALUES ('60000000-0000-0000-0000-00000000000c', 'Rut Racelund', 'SE', 'sv')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.security_career_profiles (user_id, current_status, years_of_experience)
+VALUES ('60000000-0000-0000-0000-00000000000c', 'working_in_industry', '1-3')
+ON CONFLICT (user_id) DO NOTHING;
+INSERT INTO public.sp_experience_periods
+  (id, holder_user_id, employer_name, role_title, started_on)
+VALUES ('e0000000-0000-0000-0000-0000000000c1', '60000000-0000-0000-0000-00000000000c',
+        'Racelunds Bevakning AB', 'Väktare', DATE '2023-01-01')
+ON CONFLICT (id) DO NOTHING;
+
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', '60000000-0000-0000-0000-00000000000c', true);
+SET LOCAL ROLE authenticated;
+SELECT public.cv_create(
+  'aaaa0000-0000-4000-8000-000000000001'::uuid,
+  'Ruts CV', 'sv', 'general', NULL, false,
+  ARRAY['e0000000-0000-0000-0000-0000000000c1']::uuid[],
+  '{"email":"","phone":"","showEmail":false,"showPhone":false}'::jsonb,
+  '{}'::jsonb);
+COMMIT;
+SQL
+
+echo "==> Running cv_documents concurrent-creation proof"
+CVRACE_FAILED=0
+CVRACE_OP="aaaa0000-0000-4000-8000-000000000002"
+CVRACE_A="$(mktemp)"; CVRACE_B="$(mktemp)"
+
+cat > "$CVRACE_A" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', '60000000-0000-0000-0000-00000000000c', true);
+SET LOCAL ROLE authenticated;
+-- Marked so the cvId cannot be confused with the holder id that set_config
+-- echoes back one line earlier; without the marker the comparison below was
+-- satisfied by two copies of the SAME holder uuid and proved nothing.
+SELECT 'CVID=' || (public.cv_create(
+  '${CVRACE_OP}'::uuid, 'Race CV', 'sv', 'general', NULL, false,
+  ARRAY['e0000000-0000-0000-0000-0000000000c1']::uuid[],
+  '{"email":"","phone":"","showEmail":false,"showPhone":false}'::jsonb,
+  '{}'::jsonb) ->> 'cv_id') AS marked;
+SELECT pg_sleep(2);
+COMMIT;
+SQL
+
+cat > "$CVRACE_B" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', '60000000-0000-0000-0000-00000000000c', true);
+SET LOCAL ROLE authenticated;
+-- Marked so the cvId cannot be confused with the holder id that set_config
+-- echoes back one line earlier; without the marker the comparison below was
+-- satisfied by two copies of the SAME holder uuid and proved nothing.
+SELECT 'CVID=' || (public.cv_create(
+  '${CVRACE_OP}'::uuid, 'Race CV', 'sv', 'general', NULL, false,
+  ARRAY['e0000000-0000-0000-0000-0000000000c1']::uuid[],
+  '{"email":"","phone":"","showEmail":false,"showPhone":false}'::jsonb,
+  '{}'::jsonb) ->> 'cv_id') AS marked;
+COMMIT;
+SQL
+
+CVRACE_BEFORE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.cv_documents where owner_user_id='60000000-0000-0000-0000-00000000000c';")"
+
+psql -tAq -d "$TEST_DB" -f "$CVRACE_A" > /tmp/cvrace_a.out 2>&1 &
+CVRACE_PID=$!
+# Long enough for A to be inside its transaction and holding the tuple.
+sleep 1
+psql -tAq -d "$TEST_DB" -f "$CVRACE_B" > /tmp/cvrace_b.out 2>&1
+wait "$CVRACE_PID" || true
+
+CVRACE_AFTER="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.cv_documents where owner_user_id='60000000-0000-0000-0000-00000000000c';")"
+CVRACE_ID_A="$(grep -oE 'CVID=[0-9a-f-]{36}' /tmp/cvrace_a.out | head -1 | cut -d= -f2)"
+CVRACE_ID_B="$(grep -oE 'CVID=[0-9a-f-]{36}' /tmp/cvrace_b.out | head -1 | cut -d= -f2)"
+
+if [ "$(( CVRACE_AFTER - CVRACE_BEFORE ))" -ne 1 ]; then
+  echo "FAIL: two concurrent creations under one operation id produced $(( CVRACE_AFTER - CVRACE_BEFORE )) CVs, not 1." >&2
+  head -5 /tmp/cvrace_a.out /tmp/cvrace_b.out >&2
+  CVRACE_FAILED=1
+else
+  echo "    ok  two concurrent processes, one operation id, exactly one CV"
+fi
+
+if [ -z "$CVRACE_ID_A" ] || [ "$CVRACE_ID_A" != "$CVRACE_ID_B" ]; then
+  echo "FAIL: the two callers were told different cvIds ('${CVRACE_ID_A}' vs '${CVRACE_ID_B}')." >&2
+  CVRACE_FAILED=1
+else
+  echo "    ok  and both callers were told the same cvId (${CVRACE_ID_A})"
+fi
+
+# The loser must WAIT, not fail. A caller that got a serialisation error here
+# would retry, and the retry is the thing being protected against.
+if grep -qiE "ERROR:|FEL:" /tmp/cvrace_b.out; then
+  echo "FAIL: the second caller errored instead of waiting for the first." >&2
+  head -5 /tmp/cvrace_b.out >&2
+  CVRACE_FAILED=1
+else
+  echo "    ok  the second caller waited for the first rather than failing"
+fi
+
+rm -f "$CVRACE_A" "$CVRACE_B"
+if [ "$CVRACE_FAILED" -ne 0 ]; then
+  suite_failed "cv_documents concurrent creation"
+fi
+
+# ---------------------------------------------------------------------------
+# The cv_documents controlled-write-path rollback, and back again.
+#
+# A rollback file that nobody runs is a promise, not a plan -- and this one
+# REOPENS a security defect, so it had better do exactly what it says. Run
+# against a database that already holds CVs written THROUGH the new functions,
+# because the property that matters is not "the drop succeeds": it is that
+# dropping the write path loses no holder data and restores the previous
+# submission contract.
+#
+# Then the migration is re-applied over that state, which is what a real
+# re-apply would meet.
+# ---------------------------------------------------------------------------
+echo "==> Running cv_documents controlled-write-path rollback and reapply proof"
+CVRB_FAILED=0
+
+CVRB_BEFORE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.cv_documents;")"
+if [ "${CVRB_BEFORE:-0}" -lt 1 ]; then
+  echo "FAIL: no committed CV exists, so the data-safety assertion would be vacuous." >&2
+  CVRB_FAILED=1
+fi
+
+set +e
+CVRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261102090000_cv_documents_controlled_writes_rollback.sql 2>&1)"
+CVRB_RC=$?
+set -e
+
+if [ "$CVRB_RC" -ne 0 ]; then
+  echo "FAIL: the cv_documents controlled-write-path rollback did not run cleanly." >&2
+  echo "$CVRB_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CVRB_FAILED=1
+else
+  echo "    ok  the rollback ran cleanly"
+fi
+
+CVRB_GONE="$(psql -tAq -d "$TEST_DB" -c "select (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'cv\\_%') + (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname='cv_document_operations');")"
+if [ "${CVRB_GONE:-1}" -ne 0 ]; then
+  echo "FAIL: the rollback left CV write functions or the operations ledger behind (${CVRB_GONE})." >&2
+  CVRB_FAILED=1
+else
+  echo "    ok  every controlled write function and the operations ledger are gone"
+fi
+
+CVRB_AFTER="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.cv_documents;")"
+if [ "$CVRB_BEFORE" != "$CVRB_AFTER" ]; then
+  echo "FAIL: the rollback changed the number of saved CVs (${CVRB_BEFORE} -> ${CVRB_AFTER})." >&2
+  CVRB_FAILED=1
+else
+  echo "    ok  no CV was lost (${CVRB_AFTER} rows before and after)"
+fi
+
+# The defect really is reopened. Asserted, so nobody reads the rollback file
+# as a safe cleanup.
+# Phase 1 revoked nothing, so the direct-write grant is untouched on both
+# sides of the rollback. Asserted so that a future phase-3 change that
+# accidentally lands in THIS migration is caught here rather than in
+# production.
+CVRB_OPEN="$(psql -tAq -d "$TEST_DB" -c "select has_table_privilege('authenticated','public.cv_documents','INSERT')::text;")"
+if [ "$CVRB_OPEN" != "true" ]; then
+  echo "FAIL: phase 1 or its rollback changed a grant. It is supposed to be additive." >&2
+  CVRB_FAILED=1
+else
+  echo "    ok  the published application's direct writes are untouched by both"
+fi
+
+set +e
+CVRA_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261102090000_cv_documents_controlled_writes.sql 2>&1)"
+CVRA_RC=$?
+set -e
+
+if [ "$CVRA_RC" -ne 0 ]; then
+  echo "FAIL: the migration did not re-apply after its own rollback." >&2
+  echo "$CVRA_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CVRB_FAILED=1
+else
+  echo "    ok  the migration re-applies cleanly over the rolled-back state"
+fi
+
+CVRA_FNS="$(psql -tAq -d "$TEST_DB" -c "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'cv\\_%';")"
+if [ "${CVRA_FNS:-0}" -lt 12 ]; then
+  echo "FAIL: after re-applying, only ${CVRA_FNS} controlled functions are present." >&2
+  CVRB_FAILED=1
+else
+  echo "    ok  and all ${CVRA_FNS} controlled write functions are back"
+fi
+
+if [ "$CVRB_FAILED" -ne 0 ]; then
+  suite_failed "cv_documents controlled-write-path rollback/reapply"
 fi
 
 # ---------------------------------------------------------------------------
@@ -4295,6 +4559,33 @@ fi
 # re-applied, over events that already carry an operation_id, which is the
 # state a real re-apply would meet.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Stand the CV write path down before the Passport rollback chain.
+#
+# cv_source_bundle reads sp_passport_profiles.sub_jurisdiction_code, and the
+# market-pack rollbacks below drop that column. A function left behind would
+# then fail at RUN time rather than at definition time, which is exactly what
+# security_passport_rollback_correction_test GROUP 4 exists to catch -- and it
+# caught this one.
+#
+# The rollback has already been proved, and re-proved by re-applying, further
+# up. This run is the dependency order a real rollback would follow: the
+# consumer goes before the thing it consumes.
+# ---------------------------------------------------------------------------
+echo "==> Standing the CV write path down ahead of the Passport rollbacks"
+set +e
+CVSD_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261102090000_cv_documents_controlled_writes_rollback.sql 2>&1)"
+CVSD_RC=$?
+set -e
+if [ "$CVSD_RC" -ne 0 ]; then
+  echo "FAIL: the CV write path could not be stood down before the Passport rollbacks." >&2
+  echo "$CVSD_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "cv_documents rollback (pre-Passport ordering)"
+else
+  echo "    ok  the CV write path is rolled back, in dependency order"
+fi
+
 echo "==> Running Security Passport first-merit rollback proof"
 FMRB_FAILED=0
 
