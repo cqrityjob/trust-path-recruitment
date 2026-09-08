@@ -19,23 +19,44 @@ export const securityOfficer: Profession = {
   sector: "private",
   orientation: ["operational"],
   icon: "shield-check",
-  description: { sv: "Operativa bevakningsuppdrag inom auktoriserad bevakningsverksamhet.", en: "Operational guarding duties within authorised guarding companies." },
+  description: {
+    sv: "Operativa bevakningsuppdrag inom auktoriserad bevakningsverksamhet.",
+    en: "Operational guarding duties within authorised guarding companies.",
+  },
   overview: {
     sv: "Väktare arbetar inom auktoriserade bevakningsföretag och utför bevaknings-, ronderings- och larmuppdrag hos kund. Verksamheten och yrket regleras i Sverige av lagen (1974:191) om bevakningsföretag och Polismyndighetens föreskrifter.",
     en: "Security officers work for authorised guarding companies performing guarding, patrol and alarm response for clients. In Sweden the activity and role are regulated by the Guarding Companies Act (1974:191) and the Swedish Police Authority's regulations.",
   },
-  roleFor: { sv: "Rollen passar dig som är lugn, strukturerad och trygg i mötet med människor.", en: "Suits people who are calm, structured and confident in interacting with others." },
+  roleFor: {
+    sv: "Rollen passar dig som är lugn, strukturerad och trygg i mötet med människor.",
+    en: "Suits people who are calm, structured and confident in interacting with others.",
+  },
   responsibilities: [
-    { sv: "Utföra bevaknings-, rondering- och larmuppdrag enligt uppdragsinstruktion.", en: "Perform guarding, patrol and alarm response duties per assignment instructions." },
-    { sv: "Rapportera händelser och avvikelser sakligt.", en: "Report events and deviations factually." },
-    { sv: "Samverka med kund, kollegor och vid behov med polis.", en: "Collaborate with client, colleagues and, when needed, the police." },
+    {
+      sv: "Utföra bevaknings-, rondering- och larmuppdrag enligt uppdragsinstruktion.",
+      en: "Perform guarding, patrol and alarm response duties per assignment instructions.",
+    },
+    {
+      sv: "Rapportera händelser och avvikelser sakligt.",
+      en: "Report events and deviations factually.",
+    },
+    {
+      sv: "Samverka med kund, kollegor och vid behov med polis.",
+      en: "Collaborate with client, colleagues and, when needed, the police.",
+    },
   ],
   workEnvironments: [
-    { sv: "Butiks-, kontors- och industrimiljöer.", en: "Retail, office and industrial environments." },
+    {
+      sv: "Butiks-, kontors- och industrimiljöer.",
+      en: "Retail, office and industrial environments.",
+    },
     { sv: "Rondering och larmutryckning.", en: "Patrols and alarm response." },
   ],
   industries: [
-    { sv: "Bevakningsföretag, fastighet, handel, transport, industri.", en: "Guarding companies, real estate, retail, transport, industry." },
+    {
+      sv: "Bevakningsföretag, fastighet, handel, transport, industri.",
+      en: "Guarding companies, real estate, retail, transport, industry.",
+    },
   ],
   competencies: [
     { competencyId: "integrity", requiredLevel: 3, critical: true },
@@ -47,11 +68,20 @@ export const securityOfficer: Profession = {
     { competencyId: "risk_awareness", requiredLevel: 3 },
   ],
   formalRequirements: [
-    { sv: "Ålder minst 18 år och godkänd lämplighetsprövning enligt Polismyndighetens föreskrifter.", en: "Minimum age 18 and approved suitability review under Swedish Police regulations." },
-    { sv: "Genomförd väktarutbildning hos auktoriserat bevakningsföretag.", en: "Completed security-officer training at an authorised guarding company." },
+    {
+      sv: "Ålder minst 18 år och godkänd lämplighetsprövning enligt Polismyndighetens föreskrifter.",
+      en: "Minimum age 18 and approved suitability review under Swedish Police regulations.",
+    },
+    {
+      sv: "Genomförd väktarutbildning hos auktoriserat bevakningsföretag.",
+      en: "Completed security-officer training at an authorised guarding company.",
+    },
   ],
   regulated: true,
-  regulatoryNotes: { sv: "Yrket är reglerat i Sverige. Motsvarande regelverk och benämning varierar mellan länder.", en: "The role is regulated in Sweden. Equivalent regulation and terminology vary between countries." },
+  regulatoryNotes: {
+    sv: "Yrket är reglerat i Sverige. Motsvarande regelverk och benämning varierar mellan länder.",
+    en: "The role is regulated in Sweden. Equivalent regulation and terminology vary between countries.",
+  },
   countries: ["SE"],
   educationPathways: ["se-vaktarutbildning"],
   certifications: [],
@@ -315,7 +345,12 @@ export const skyddsvakt: Profession = {
   },
   countries: ["SE"],
   educationPathways: ["se-skyddsvaktsutbildning"],
-  related: ["security-officer", "ordningsvakt", "military-security-specialist", "data-center-security"],
+  related: [
+    "security-officer",
+    "ordningsvakt",
+    "military-security-specialist",
+    "data-center-security",
+  ],
   nextRoles: ["data-center-security", "security-coordinator"],
   recommendedAssessment: "security-career-assessment",
   sources: [
@@ -351,14 +386,32 @@ export const securityManager: Profession = {
   sector: "private",
   orientation: ["leadership", "analytical"],
   icon: "building",
-  description: { sv: "Strategiskt ansvar för säkerhet, risk och kontinuitet i en organisation.", en: "Strategic responsibility for security, risk and continuity within an organisation." },
-  overview: { sv: "Säkerhetschefen leder säkerhetsfunktionen – från policy och risk till operativ leverans och kontinuitet.", en: "The Security Manager leads the security function – from policy and risk to operational delivery and continuity." },
-  roleFor: { sv: "Passar erfarna säkerhetsprofiler med tydlig ledaridentitet och affärsförståelse.", en: "Suits experienced security professionals with clear leadership identity and business acumen." },
+  description: {
+    sv: "Strategiskt ansvar för säkerhet, risk och kontinuitet i en organisation.",
+    en: "Strategic responsibility for security, risk and continuity within an organisation.",
+  },
+  overview: {
+    sv: "Säkerhetschefen leder säkerhetsfunktionen – från policy och risk till operativ leverans och kontinuitet.",
+    en: "The Security Manager leads the security function – from policy and risk to operational delivery and continuity.",
+  },
+  roleFor: {
+    sv: "Passar erfarna säkerhetsprofiler med tydlig ledaridentitet och affärsförståelse.",
+    en: "Suits experienced security professionals with clear leadership identity and business acumen.",
+  },
   responsibilities: [
-    { sv: "Utforma och underhålla säkerhetspolicy och styrande dokument.", en: "Design and maintain security policy and governance documents." },
+    {
+      sv: "Utforma och underhålla säkerhetspolicy och styrande dokument.",
+      en: "Design and maintain security policy and governance documents.",
+    },
     { sv: "Leda risk- och sårbarhetsanalyser.", en: "Lead risk and vulnerability assessments." },
-    { sv: "Ansvara för budget, leverantörer och kontinuitetsplaner.", en: "Own budget, vendors and continuity plans." },
-    { sv: "Rapportera till ledning och styrelse.", en: "Report to executive management and the board." },
+    {
+      sv: "Ansvara för budget, leverantörer och kontinuitetsplaner.",
+      en: "Own budget, vendors and continuity plans.",
+    },
+    {
+      sv: "Rapportera till ledning och styrelse.",
+      en: "Report to executive management and the board.",
+    },
   ],
   competencies: [
     { competencyId: "leadership", requiredLevel: 4, critical: true },
@@ -378,7 +431,11 @@ export const securityManager: Profession = {
   related: ["risk-manager", "crisis-continuity-manager", "security-consultant"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "ASIS International – CPP", en: "ASIS International – CPP" }, publisher: "ASIS International", url: "https://www.asisonline.org/certification/certified-protection-professional-cpp/" },
+    {
+      label: { sv: "ASIS International – CPP", en: "ASIS International – CPP" },
+      publisher: "ASIS International",
+      url: "https://www.asisonline.org/certification/certified-protection-professional-cpp/",
+    },
   ],
 };
 
@@ -396,13 +453,28 @@ export const securityTechnician: Profession = {
   sector: "private",
   orientation: ["technical"],
   icon: "cpu",
-  description: { sv: "Installation, drift och underhåll av tekniska säkerhetssystem.", en: "Installation, operation and maintenance of technical security systems." },
-  overview: { sv: "Säkerhetstekniker knyter ihop det fysiska och digitala – genom passersystem, kameror, larm och integrationer.", en: "Security technicians bridge the physical and digital – through access control, cameras, alarms and integrations." },
-  roleFor: { sv: "Passar tekniskt lagda, noggranna och lösningsorienterade.", en: "Suits technically minded, precise and solution-oriented people." },
+  description: {
+    sv: "Installation, drift och underhåll av tekniska säkerhetssystem.",
+    en: "Installation, operation and maintenance of technical security systems.",
+  },
+  overview: {
+    sv: "Säkerhetstekniker knyter ihop det fysiska och digitala – genom passersystem, kameror, larm och integrationer.",
+    en: "Security technicians bridge the physical and digital – through access control, cameras, alarms and integrations.",
+  },
+  roleFor: {
+    sv: "Passar tekniskt lagda, noggranna och lösningsorienterade.",
+    en: "Suits technically minded, precise and solution-oriented people.",
+  },
   responsibilities: [
-    { sv: "Installera och driftsätta säkerhetssystem.", en: "Install and commission security systems." },
+    {
+      sv: "Installera och driftsätta säkerhetssystem.",
+      en: "Install and commission security systems.",
+    },
     { sv: "Utföra service och felsökning.", en: "Perform service and troubleshooting." },
-    { sv: "Dokumentera installationer och integrationer.", en: "Document installations and integrations." },
+    {
+      sv: "Dokumentera installationer och integrationer.",
+      en: "Document installations and integrations.",
+    },
   ],
   competencies: [
     { competencyId: "technical", requiredLevel: 4, critical: true },
@@ -412,7 +484,10 @@ export const securityTechnician: Profession = {
     { competencyId: "reporting", requiredLevel: 3 },
   ],
   regulated: false,
-  regulatoryNotes: { sv: "Vissa installationer omfattas av branschregler (t.ex. SBSC) och nationella regelverk.", en: "Certain installations fall under industry rules (e.g. SBSC in Sweden) and national regulations." },
+  regulatoryNotes: {
+    sv: "Vissa installationer omfattas av branschregler (t.ex. SBSC) och nationella regelverk.",
+    en: "Certain installations fall under industry rules (e.g. SBSC in Sweden) and national regulations.",
+  },
   countries: ["SE", "INTL"],
   educationPathways: ["intl-vocational-tech"],
   certifications: ["asis-psp", "se-sbsc"],
@@ -420,7 +495,14 @@ export const securityTechnician: Profession = {
   nextRoles: ["data-center-security", "security-manager"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "SBSC – Svensk Brand- och Säkerhetscertifiering", en: "SBSC – Swedish Fire and Security Certification" }, publisher: "SBSC", url: "https://sbsc.se/" },
+    {
+      label: {
+        sv: "SBSC – Svensk Brand- och Säkerhetscertifiering",
+        en: "SBSC – Swedish Fire and Security Certification",
+      },
+      publisher: "SBSC",
+      url: "https://sbsc.se/",
+    },
   ],
 };
 
@@ -438,13 +520,31 @@ export const riskManager: Profession = {
   sector: "private",
   orientation: ["analytical", "leadership"],
   icon: "alert-triangle",
-  description: { sv: "Identifiering, analys och hantering av operativa och organisatoriska risker.", en: "Identification, analysis and management of operational and organisational risk." },
-  overview: { sv: "Risk managers ger ledningen ett strukturerat sätt att förstå och prioritera risker – från operativ till strategisk nivå.", en: "Risk managers give leadership a structured way to understand and prioritise risk – from operational to strategic level." },
-  roleFor: { sv: "Passar analytiska profiler som trivs med struktur, siffror och beslut under osäkerhet.", en: "Suits analytical people who thrive on structure, numbers and decisions under uncertainty." },
+  description: {
+    sv: "Identifiering, analys och hantering av operativa och organisatoriska risker.",
+    en: "Identification, analysis and management of operational and organisational risk.",
+  },
+  overview: {
+    sv: "Risk managers ger ledningen ett strukturerat sätt att förstå och prioritera risker – från operativ till strategisk nivå.",
+    en: "Risk managers give leadership a structured way to understand and prioritise risk – from operational to strategic level.",
+  },
+  roleFor: {
+    sv: "Passar analytiska profiler som trivs med struktur, siffror och beslut under osäkerhet.",
+    en: "Suits analytical people who thrive on structure, numbers and decisions under uncertainty.",
+  },
   responsibilities: [
-    { sv: "Etablera och underhålla ramverk för riskhantering.", en: "Establish and maintain risk-management frameworks." },
-    { sv: "Genomföra risk- och sårbarhetsanalyser.", en: "Perform risk and vulnerability assessments." },
-    { sv: "Rapportera risk till ledning och styrelse.", en: "Report risk to management and the board." },
+    {
+      sv: "Etablera och underhålla ramverk för riskhantering.",
+      en: "Establish and maintain risk-management frameworks.",
+    },
+    {
+      sv: "Genomföra risk- och sårbarhetsanalyser.",
+      en: "Perform risk and vulnerability assessments.",
+    },
+    {
+      sv: "Rapportera risk till ledning och styrelse.",
+      en: "Report risk to management and the board.",
+    },
   ],
   competencies: [
     { competencyId: "analytical", requiredLevel: 4, critical: true },
@@ -460,7 +560,11 @@ export const riskManager: Profession = {
   nextRoles: ["security-manager"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "ISO 31000:2018 – Riskhantering", en: "ISO 31000:2018 – Risk Management" }, publisher: "ISO", url: "https://www.iso.org/iso-31000-risk-management.html" },
+    {
+      label: { sv: "ISO 31000:2018 – Riskhantering", en: "ISO 31000:2018 – Risk Management" },
+      publisher: "ISO",
+      url: "https://www.iso.org/iso-31000-risk-management.html",
+    },
   ],
 };
 
@@ -478,13 +582,31 @@ export const amlSpecialist: Profession = {
   sector: "private",
   orientation: ["analytical"],
   icon: "scale",
-  description: { sv: "Motverkan av penningtvätt, finansiell brottslighet och regelefterlevnad.", en: "Anti-money-laundering, financial-crime prevention and regulatory compliance." },
-  overview: { sv: "AML-specialister skyddar det finansiella systemet genom kontroll, transaktionsövervakning och rapportering till tillsynsmyndigheter.", en: "AML specialists protect the financial system through controls, transaction monitoring and regulatory reporting." },
-  roleFor: { sv: "Passar noggranna, analytiska profiler med intresse för regelverk.", en: "Suits precise, analytical people with an interest in regulation." },
+  description: {
+    sv: "Motverkan av penningtvätt, finansiell brottslighet och regelefterlevnad.",
+    en: "Anti-money-laundering, financial-crime prevention and regulatory compliance.",
+  },
+  overview: {
+    sv: "AML-specialister skyddar det finansiella systemet genom kontroll, transaktionsövervakning och rapportering till tillsynsmyndigheter.",
+    en: "AML specialists protect the financial system through controls, transaction monitoring and regulatory reporting.",
+  },
+  roleFor: {
+    sv: "Passar noggranna, analytiska profiler med intresse för regelverk.",
+    en: "Suits precise, analytical people with an interest in regulation.",
+  },
   responsibilities: [
-    { sv: "Övervaka transaktioner och utreda misstänkta mönster.", en: "Monitor transactions and investigate suspicious patterns." },
-    { sv: "Utföra kundkännedom (KYC) och skärpta åtgärder.", en: "Perform customer due diligence (KYC) and enhanced measures." },
-    { sv: "Rapportera misstänkta transaktioner enligt lag.", en: "Report suspicious transactions in line with statutory obligations." },
+    {
+      sv: "Övervaka transaktioner och utreda misstänkta mönster.",
+      en: "Monitor transactions and investigate suspicious patterns.",
+    },
+    {
+      sv: "Utföra kundkännedom (KYC) och skärpta åtgärder.",
+      en: "Perform customer due diligence (KYC) and enhanced measures.",
+    },
+    {
+      sv: "Rapportera misstänkta transaktioner enligt lag.",
+      en: "Report suspicious transactions in line with statutory obligations.",
+    },
   ],
   competencies: [
     { competencyId: "analytical", requiredLevel: 4, critical: true },
@@ -494,7 +616,10 @@ export const amlSpecialist: Profession = {
     { competencyId: "communication", requiredLevel: 3 },
   ],
   regulated: true,
-  regulatoryNotes: { sv: "Verksamheten regleras i Sverige av penningtvättslagen (2017:630) och EU:s regelverk. Krav skiljer sig mellan verksamhetstyper.", en: "In Sweden the activity is regulated by the AML Act (2017:630) and EU rules. Requirements differ between business types." },
+  regulatoryNotes: {
+    sv: "Verksamheten regleras i Sverige av penningtvättslagen (2017:630) och EU:s regelverk. Krav skiljer sig mellan verksamhetstyper.",
+    en: "In Sweden the activity is regulated by the AML Act (2017:630) and EU rules. Requirements differ between business types.",
+  },
   countries: ["SE", "EU", "INTL"],
   educationPathways: ["eu-aml-training"],
   certifications: ["acams-cams"],
@@ -502,8 +627,19 @@ export const amlSpecialist: Profession = {
   nextRoles: ["fraud-investigator", "security-consultant"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "Lag (2017:630) om åtgärder mot penningtvätt och finansiering av terrorism", en: "Swedish AML Act (2017:630)" }, publisher: "Sveriges riksdag", url: "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-2017630-om-atgarder-mot-penningtvatt-och_sfs-2017-630" },
-    { label: { sv: "Finansinspektionen – Penningtvätt", en: "Swedish FSA – Money laundering" }, publisher: "Finansinspektionen", url: "https://www.fi.se/sv/bank/penningtvatt/" },
+    {
+      label: {
+        sv: "Lag (2017:630) om åtgärder mot penningtvätt och finansiering av terrorism",
+        en: "Swedish AML Act (2017:630)",
+      },
+      publisher: "Sveriges riksdag",
+      url: "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-2017630-om-atgarder-mot-penningtvatt-och_sfs-2017-630",
+    },
+    {
+      label: { sv: "Finansinspektionen – Penningtvätt", en: "Swedish FSA – Money laundering" },
+      publisher: "Finansinspektionen",
+      url: "https://www.fi.se/sv/bank/penningtvatt/",
+    },
   ],
 };
 
@@ -521,13 +657,31 @@ export const dataCenterSecurity: Profession = {
   sector: "private",
   orientation: ["operational", "technical"],
   icon: "server",
-  description: { sv: "Fysisk och operativ säkerhet för datacenter och kritisk digital infrastruktur.", en: "Physical and operational security for data centers and critical digital infrastructure." },
-  overview: { sv: "Säkerhet i datacenter kräver stenhård rutin, teknisk förståelse och en tydlig känsla för det som inte får hända.", en: "Data center security demands rigorous routine, technical understanding and a clear sense of what must never happen." },
-  roleFor: { sv: "Passar dig som gillar rutin, tekniska system och en stabil arbetsmiljö.", en: "Suits people who value routine, technical systems and a stable environment." },
+  description: {
+    sv: "Fysisk och operativ säkerhet för datacenter och kritisk digital infrastruktur.",
+    en: "Physical and operational security for data centers and critical digital infrastructure.",
+  },
+  overview: {
+    sv: "Säkerhet i datacenter kräver stenhård rutin, teknisk förståelse och en tydlig känsla för det som inte får hända.",
+    en: "Data center security demands rigorous routine, technical understanding and a clear sense of what must never happen.",
+  },
+  roleFor: {
+    sv: "Passar dig som gillar rutin, tekniska system och en stabil arbetsmiljö.",
+    en: "Suits people who value routine, technical systems and a stable environment.",
+  },
   responsibilities: [
-    { sv: "Utföra åtkomstkontroll och sitebevakning enligt kundens säkerhetspolicy.", en: "Perform access control and site security per client policy." },
-    { sv: "Övervaka fysiska och tekniska säkerhetssystem.", en: "Monitor physical and technical security systems." },
-    { sv: "Dokumentera händelser och samverka med drift och kund.", en: "Document events and collaborate with operations and client teams." },
+    {
+      sv: "Utföra åtkomstkontroll och sitebevakning enligt kundens säkerhetspolicy.",
+      en: "Perform access control and site security per client policy.",
+    },
+    {
+      sv: "Övervaka fysiska och tekniska säkerhetssystem.",
+      en: "Monitor physical and technical security systems.",
+    },
+    {
+      sv: "Dokumentera händelser och samverka med drift och kund.",
+      en: "Document events and collaborate with operations and client teams.",
+    },
   ],
   competencies: [
     { competencyId: "observation", requiredLevel: 4, critical: true },
@@ -537,14 +691,21 @@ export const dataCenterSecurity: Profession = {
     { competencyId: "integrity", requiredLevel: 4, critical: true },
   ],
   regulated: false,
-  regulatoryNotes: { sv: "Krav på personal styrs ofta av kundens säkerhetsklassning och internationella standarder.", en: "Personnel requirements are usually driven by client security classification and international standards." },
+  regulatoryNotes: {
+    sv: "Krav på personal styrs ofta av kundens säkerhetsklassning och internationella standarder.",
+    en: "Personnel requirements are usually driven by client security classification and international standards.",
+  },
   countries: ["SE", "EU", "INTL"],
   certifications: ["iso-27001", "asis-psp"],
   related: ["security-technician", "security-officer", "skyddsvakt"],
   nextRoles: ["security-manager", "security-consultant"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "ISO/IEC 27001:2022", en: "ISO/IEC 27001:2022" }, publisher: "ISO", url: "https://www.iso.org/standard/27001" },
+    {
+      label: { sv: "ISO/IEC 27001:2022", en: "ISO/IEC 27001:2022" },
+      publisher: "ISO",
+      url: "https://www.iso.org/standard/27001",
+    },
   ],
 };
 
@@ -562,12 +723,27 @@ export const crisisContinuityManager: Profession = {
   sector: "private",
   orientation: ["leadership", "analytical"],
   icon: "siren",
-  description: { sv: "Planering och ledning av kris- och incidenthantering och verksamhetskontinuitet.", en: "Planning and leading incident, crisis and business-continuity response." },
-  overview: { sv: "Kris- och kontinuitetsansvariga förbereder organisationen på det som ännu inte hänt – och leder när det gör det.", en: "Crisis and continuity leaders prepare the organisation for what has not yet happened – and lead when it does." },
-  roleFor: { sv: "Passar dig som är strukturerad, lugn och trygg i beslut under osäkerhet.", en: "Suits people who are structured, calm and confident making decisions under uncertainty." },
+  description: {
+    sv: "Planering och ledning av kris- och incidenthantering och verksamhetskontinuitet.",
+    en: "Planning and leading incident, crisis and business-continuity response.",
+  },
+  overview: {
+    sv: "Kris- och kontinuitetsansvariga förbereder organisationen på det som ännu inte hänt – och leder när det gör det.",
+    en: "Crisis and continuity leaders prepare the organisation for what has not yet happened – and lead when it does.",
+  },
+  roleFor: {
+    sv: "Passar dig som är strukturerad, lugn och trygg i beslut under osäkerhet.",
+    en: "Suits people who are structured, calm and confident making decisions under uncertainty.",
+  },
   responsibilities: [
-    { sv: "Etablera kontinuitetsprogram enligt ISO 22301 eller motsvarande.", en: "Establish continuity programmes aligned to ISO 22301 or equivalent." },
-    { sv: "Leda övningar, incidentrespons och efterlärande.", en: "Lead exercises, incident response and post-incident learning." },
+    {
+      sv: "Etablera kontinuitetsprogram enligt ISO 22301 eller motsvarande.",
+      en: "Establish continuity programmes aligned to ISO 22301 or equivalent.",
+    },
+    {
+      sv: "Leda övningar, incidentrespons och efterlärande.",
+      en: "Lead exercises, incident response and post-incident learning.",
+    },
   ],
   competencies: [
     { competencyId: "planning", requiredLevel: 4, critical: true },
@@ -585,8 +761,19 @@ export const crisisContinuityManager: Profession = {
   nextRoles: ["security-manager"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "ISO 22301:2019", en: "ISO 22301:2019" }, publisher: "ISO", url: "https://www.iso.org/standard/75106.html" },
-    { label: { sv: "MSB – Myndigheten för samhällsskydd och beredskap", en: "Swedish Civil Contingencies Agency (MSB)" }, publisher: "MSB", url: "https://www.msb.se/" },
+    {
+      label: { sv: "ISO 22301:2019", en: "ISO 22301:2019" },
+      publisher: "ISO",
+      url: "https://www.iso.org/standard/75106.html",
+    },
+    {
+      label: {
+        sv: "MSB – Myndigheten för samhällsskydd och beredskap",
+        en: "Swedish Civil Contingencies Agency (MSB)",
+      },
+      publisher: "MSB",
+      url: "https://www.msb.se/",
+    },
   ],
 };
 
@@ -604,12 +791,27 @@ export const closeProtection: Profession = {
   sector: "private",
   orientation: ["operational"],
   icon: "user-check",
-  description: { sv: "Personskydd för utsatta individer i olika miljöer och riskbilder.", en: "Personal protection for exposed individuals across varied environments and threat profiles." },
-  overview: { sv: "Personskyddsväktare arbetar diskret, förberett och professionellt – nära individen som skyddas. I Sverige regleras yrket via lagen om bevakningsföretag och Polismyndighetens föreskrifter.", en: "Close protection officers operate discreetly, prepared and professional – close to the individual being protected. In Sweden the role is regulated via the Guarding Companies Act and the Swedish Police Authority's regulations." },
-  roleFor: { sv: "Passar dig som är fysiskt och mentalt förberedd, disciplinerad och lugn under press.", en: "Suits people who are physically and mentally prepared, disciplined and calm under pressure." },
+  description: {
+    sv: "Personskydd för utsatta individer i olika miljöer och riskbilder.",
+    en: "Personal protection for exposed individuals across varied environments and threat profiles.",
+  },
+  overview: {
+    sv: "Personskyddsväktare arbetar diskret, förberett och professionellt – nära individen som skyddas. I Sverige regleras yrket via lagen om bevakningsföretag och Polismyndighetens föreskrifter.",
+    en: "Close protection officers operate discreetly, prepared and professional – close to the individual being protected. In Sweden the role is regulated via the Guarding Companies Act and the Swedish Police Authority's regulations.",
+  },
+  roleFor: {
+    sv: "Passar dig som är fysiskt och mentalt förberedd, disciplinerad och lugn under press.",
+    en: "Suits people who are physically and mentally prepared, disciplined and calm under pressure.",
+  },
   responsibilities: [
-    { sv: "Planera och genomföra personskyddsuppdrag.", en: "Plan and execute close-protection assignments." },
-    { sv: "Genomföra hotbildsbedömningar och rekognosering.", en: "Perform threat assessments and reconnaissance." },
+    {
+      sv: "Planera och genomföra personskyddsuppdrag.",
+      en: "Plan and execute close-protection assignments.",
+    },
+    {
+      sv: "Genomföra hotbildsbedömningar och rekognosering.",
+      en: "Perform threat assessments and reconnaissance.",
+    },
   ],
   competencies: [
     { competencyId: "risk_awareness", requiredLevel: 4, critical: true },
@@ -620,7 +822,10 @@ export const closeProtection: Profession = {
     { competencyId: "integrity", requiredLevel: 4, critical: true },
   ],
   formalRequirements: [
-    { sv: "Godkänd väktarutbildning och personskyddsutbildning vid auktoriserat bevakningsföretag.", en: "Approved security-officer and close-protection training at an authorised guarding company." },
+    {
+      sv: "Godkänd väktarutbildning och personskyddsutbildning vid auktoriserat bevakningsföretag.",
+      en: "Approved security-officer and close-protection training at an authorised guarding company.",
+    },
   ],
   regulated: true,
   countries: ["SE"],
@@ -629,7 +834,18 @@ export const closeProtection: Profession = {
   nextRoles: ["security-manager", "security-consultant"],
   recommendedAssessment: "security-career-assessment",
   sources: [
-    { label: { sv: "Polismyndigheten – Bevakningsföretag och personskyddsväktare", en: "Swedish Police – Guarding companies and close protection" }, publisher: "Polismyndigheten", url: "https://polisen.se/tjanster-tillstand/tillstand/bevakningsforetag/" },
+    {
+      // The polisen.se landing page this cited now 404s. Replaced with the
+      // Police Authority's own regulations, which is where the requirement
+      // actually lives — the same substitution the Väktare guide needed.
+      label: {
+        sv: "Polismyndighetens föreskrifter om bevakningsföretag och bevakningspersonal (FAP 573-1)",
+        en: "Swedish Police Authority regulations on guarding companies and guarding personnel (FAP 573-1)",
+      },
+      publisher: "Polismyndigheten",
+      url: "https://polisen.se/siteassets/forfattningssamling/fap-nummer/fap573-01-pmfs2017-10/",
+      retrieved: "2026-09-08",
+    },
   ],
 };
 // ── SÄKERHETSSAMORDNARE ────────────────────────────────────────────────

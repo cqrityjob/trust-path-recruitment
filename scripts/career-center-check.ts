@@ -117,9 +117,17 @@ const { MVP_QUESTION_COUNT } = await import("../src/lib/career-discovery/v31/per
 
 const HUB_SECTION_HEADINGS = [
   "cc.hero.title",
+  // pathFrom before fit: "I work as X, where can I go" is the question most
+  // readers arrive with, it works for an anonymous visitor, and it needs no
+  // assessment. The two are separate sections with separate headings and are
+  // never combined — see 16d.
+  "cc.path.title",
   "cc.me.title",
-  "cc.explore.title",
   "cc.routes.title",
+  // The catalogue comes last and opens on an explicit click: eleven guides
+  // plus a filter bar rendered unconditionally is what made this page
+  // 11,700px tall on a phone.
+  "cc.explore.title",
   "cc.trust.title",
 ] as const;
 
@@ -128,7 +136,10 @@ const HUB_SECTION_HEADINGS = [
 // the component must be mounted in the right position, and the component must
 // render the heading.
 const personal = read("src/components/career-center/PersonalDirection.tsx");
-const hubOrderText = hub.replace("<PersonalDirectionSection", 't("cc.me.title")');
+const pathFrom = read("src/components/career-center/PathFromSection.tsx");
+const hubOrderText = hub
+  .replace("<PathFromSection", 't("cc.path.title")')
+  .replace("<PersonalDirectionSection", 't("cc.me.title")');
 
 let cursor = -1;
 for (const key of HUB_SECTION_HEADINGS) {
@@ -643,28 +654,90 @@ expect(
   `career routes assert unsupported progressions: ${routeIssues.map((i) => `${i.routeId}: ${i.message}`).join("; ")}`,
 );
 expect(careerRoutes.length >= 3, "the hub must offer at least three career routes");
+
+// ── ROUTES ARE BRANCHES, NOT A LADDER ──────────────────────────────────
+//
+// The stage model rendered numbered stages with arrows between them, which
+// told a reader that Ordningsvakt comes before Säkerhetssamordnare on the way
+// to Säkerhetschef. It does not: those are separate roles under separate
+// Acts. The model changed rather than the data, and these assertions pin the
+// property that makes the new one honest — every branch stands on its own.
 for (const route of careerRoutes) {
   expect(
-    route.stages.length >= 2,
-    `route "${route.id}" needs at least two stages to show a direction`,
+    route.branches.length >= 1,
+    `route "${route.id}" needs at least one direction to be worth rendering`,
   );
-  for (const stage of route.stages) {
-    for (const p of stage.professions) {
+  expect(
+    getPublishedProfession(route.origin.slug) !== undefined,
+    `route "${route.id}" starts from "${route.origin.slug}", which has no published guide`,
+  );
+  for (const branch of route.branches) {
+    expect(
+      getPublishedProfession(branch.transition.to.slug) !== undefined,
+      `route "${route.id}" links to "${branch.transition.to.slug}", which has no published guide`,
+    );
+    // Every branch is reachable DIRECTLY from the origin. This is the
+    // anti-ladder property: no entry depends on any other, so no order is
+    // implied and none can be inferred.
+    expect(
+      branch.transition.from.id === route.origin.id,
+      `route "${route.id}" branch "${branch.transition.to.slug}" does not start from the route's origin`,
+    );
+    // A public route may not consume a placeholder transition AS EVIDENCE.
+    // It may still show it, but only as a direction under review — which the
+    // model enforces by emptying the claim-bearing fields.
+    if (branch.evidenceLevel === "under_review") {
       expect(
-        getPublishedProfession(p.slug) !== undefined,
-        `route "${route.id}" links to "${p.slug}", which has no published guide`,
+        branch.transition.notes.length === 0 &&
+          branch.transition.experienceRequired.length === 0 &&
+          branch.transition.likelihood === null,
+        `route "${route.id}" branch "${branch.transition.to.slug}" is under review but carries claims`,
       );
     }
   }
-  // No fabricated timing. Only an explicit careerPaths edge may state one.
-  for (const stage of route.stages) {
-    if (!stage.shift) continue;
-    expect(
-      stage.shift.experienceRequired.every((b) => b.sv.length > 0 && b.en.length > 0),
-      `route "${route.id}" carries an empty experience claim`,
-    );
-  }
 }
+
+// The operational route is the one the pilot exists for, and its exact shape
+// was the finding: three INDEPENDENT directions out of Väktare, with
+// Säkerhetschef reachable from Säkerhetssamordnare as its own route rather
+// than as a fourth rung.
+const operationalRoute = careerRoutes.find((r) => r.id === "from_security_officer");
+expect(Boolean(operationalRoute), "the route out of Väktare must render");
+const operationalBranches = (operationalRoute?.branches ?? []).map((b) => b.transition.to.id);
+for (const expected of ["ordningsvakt", "skyddsvakt", "security-coordinator"]) {
+  expect(
+    operationalBranches.includes(expected),
+    `the route out of Väktare must offer "${expected}" as an independent direction`,
+  );
+}
+expect(
+  !operationalBranches.includes("security-manager"),
+  "Säkerhetschef must not be a direction out of Väktare — it is reached from Säkerhetssamordnare, which is its own route",
+);
+const coordinatorRoute = careerRoutes.find((r) => r.id === "from_security_coordinator");
+expect(
+  coordinatorRoute?.branches.some((b) => b.transition.to.id === "security-manager") === true,
+  "Säkerhetssamordnare -> Säkerhetschef must exist as its own route with its own origin",
+);
+
+// The rendering must carry no ordinal and must state independence in words.
+const routesComponent = code(read("src/components/career-center/CareerRoutes.tsx"));
+expect(
+  !routesComponent.includes('t("cc.routes.stage")') && !/index \+ 1/.test(routesComponent),
+  "the routes section must not number its entries — a numbered list is a ladder",
+);
+expect(
+  routesComponent.includes('t("cc.routes.independent")'),
+  "a route with more than one direction must say in words that they are independent",
+);
+for (const lang of ["sv", "en"] as const) {
+  const independent = (dictionaries[lang] as Record<string, string>)["cc.routes.independent"];
+  expect(
+    /oberoende|independent/i.test(independent),
+    `${lang} must state that the directions are independent of one another`,
+  );
+}
+
 for (const lang of ["sv", "en"] as const) {
   const disclaimer = (dictionaries[lang] as Record<string, string>)["cc.routes.disclaimer"];
   expect(
@@ -836,9 +909,7 @@ expect(
 // while the live constraint rejected everything added since. That file is
 // 20261004090000 again: this pilot's own migration was removed, because the
 // event it allowed had no reachable caller (see 16g).
-const migration = read(
-  "supabase/migrations/20261004090000_cd_v31_funnel_events_career_center.sql",
-);
+const migration = read("supabase/migrations/20261004090000_cd_v31_funnel_events_career_center.sql");
 for (const name of FUNNEL_EVENT_NAMES) {
   expect(
     migration.includes(`'${name}'::text`),
@@ -874,8 +945,15 @@ expect(
 
 const { resolveProfessionRef, careerCenterProfessionSlug, jobsProfessionSlug } =
   await import("../src/lib/career-center/profession-links");
-const { transitionKind, onwardTransitions, inboundTransitions, describeTransition } =
-  await import("../src/lib/career-center/transitions");
+const {
+  transitionKind,
+  onwardTransitions,
+  inboundTransitions,
+  describeTransition,
+  transitionEvidenceLevel,
+  isFreshReview,
+} = await import("../src/lib/career-center/transitions");
+const { careerPaths } = await import("../src/lib/career-center/career-paths");
 const {
   professionEducation,
   orderIsPlacementBlind,
@@ -978,11 +1056,25 @@ for (const [fromId, toId, kind] of KIND_CASES) {
   );
 }
 
-// The long jump must offer the middle of the chain rather than asserting the
-// leap. This is what turns Ordningsvakt -> Säkerhetschef into
-// Ordningsvakt -> Säkerhetssamordnare -> Säkerhetschef.
-const longJump = describeTransition("ordningsvakt", "security-manager");
-expect(Boolean(longJump), "the data must record ordningsvakt -> security-manager");
+// A long jump must offer the middle of the chain rather than asserting the
+// leap. Väktare -> Säkerhetschef is the case: it is recorded, it is two
+// levels away, and the honest rendering names Säkerhetssamordnare in between
+// rather than implying the leap is a step.
+//
+// Ordningsvakt -> Säkerhetschef used to be asserted here. That edge is GONE:
+// `ordningsvakt.nextRoles` no longer contains `security-manager`, because a
+// first-year statutory appointment recording a direct relationship to a
+// senior leadership function is the false claim in data form.
+expect(
+  describeTransition("ordningsvakt", "security-manager") === undefined,
+  "Ordningsvakt must record no direct relationship to Säkerhetschef",
+);
+const longJump = describeTransition("security-officer", "security-manager");
+expect(Boolean(longJump), "the data must record security-officer -> security-manager");
+expect(
+  longJump?.kind === "long_term",
+  "Väktare -> Säkerhetschef must be classified as a long-term direction",
+);
 expect(
   (longJump?.via ?? []).some((p) => p.id === "security-coordinator"),
   "a long-term step must name the intermediate role the graph records",
@@ -1008,10 +1100,14 @@ for (const p of publishedProfessions) {
         `${p.id} -> ${tr.to.id} is a formal gate but names no formal requirement`,
       );
     }
-    // Nothing may claim a duration. No source in this dataset carries one.
+    // Nothing may claim a DURATION — "2-3 år", "three years' experience".
+    // A statutory AGE ("ha fyllt 20 år") is not a duration: it is a sourced
+    // condition of the appointment, and the guard must not force it out.
+    const DURATION =
+      /(\d+\s*[-–]\s*\d+\s*(år|years?))|(\d+\s*(års?|years?['’]?)\s*(erfarenhet|experience))/i;
     for (const bi of [...tr.notes, ...tr.experienceRequired]) {
       expect(
-        !/\d+\s*(år|year|månad|month)/i.test(`${bi.sv} ${bi.en}`),
+        !DURATION.test(`${bi.sv} ${bi.en}`),
         `${p.id} -> ${tr.to.id} states a duration; no source in this dataset carries one`,
       );
     }
@@ -1024,35 +1120,146 @@ for (const p of publishedProfessions) {
   }
 }
 
-// The pilot's headline chain has to exist end to end.
+// The pilot's flagship middle role has to exist, because without it the only
+// unregulated direction out of guarding is unreachable.
 const coordinator = getPublishedProfession("security-coordinator");
 expect(
   Boolean(coordinator),
-  "Säkerhetssamordnare must be a published guide — the operational route runs through it",
+  "Säkerhetssamordnare must be a published guide — the unregulated direction out of guarding runs through it",
 );
-const operational = careerRoutes.find((r) => r.id === "operational");
-expect(Boolean(operational), "the operational route must render");
-const operationalIds = (operational?.stages ?? []).map((st) => st.professions.map((p) => p.id));
-expect(
-  operationalIds.length >= 4,
-  "the operational route must not jump from a first-year appointment to Säkerhetschef",
-);
-const coordinatorStage = operationalIds.findIndex((ids) => ids.includes("security-coordinator"));
-const managerStage = operationalIds.findIndex((ids) => ids.includes("security-manager"));
-expect(
-  coordinatorStage !== -1 && managerStage !== -1 && coordinatorStage < managerStage,
-  "Säkerhetssamordnare must sit between the appointments and Säkerhetschef",
-);
-// Every stage transition carries the same three-way classification the guides
-// use, so the two surfaces cannot mean different things by the same words.
-for (const route of careerRoutes) {
-  for (const stage of route.stages.slice(1)) {
+
+// ── EVIDENCE, NOT JUST EXISTENCE ───────────────────────────────────────
+//
+// A recorded transition may be NAMED whatever its evidence. It may only be
+// DESCRIBED when it carries reviewed status, its own source, a jurisdiction
+// and a review date inside the freshness window. These assertions pin the
+// consequences rather than the rule, because the consequences are what a
+// reader sees.
+
+for (const p of publishedProfessions) {
+  for (const tr of [...onwardTransitions(p), ...inboundTransitions(p)]) {
+    if (tr.evidenceLevel === "under_review") {
+      expect(
+        tr.notes.length === 0,
+        `${tr.from.id} -> ${tr.to.id} is under review but renders reviewed prose`,
+      );
+      expect(
+        tr.experienceRequired.length === 0,
+        `${tr.from.id} -> ${tr.to.id} is under review but claims what experience it needs`,
+      );
+      expect(
+        tr.likelihood === null,
+        `${tr.from.id} -> ${tr.to.id} is under review but carries a likelihood`,
+      );
+      expect(
+        tr.sources.length === 0,
+        `${tr.from.id} -> ${tr.to.id} is under review but presents sources as its own`,
+      );
+    } else {
+      expect(
+        tr.sources.length > 0,
+        `${tr.from.id} -> ${tr.to.id} is reviewed but cites no source of its own`,
+      );
+      expect(
+        tr.countries.length > 0,
+        `${tr.from.id} -> ${tr.to.id} is reviewed but states no jurisdiction`,
+      );
+    }
+    // A frequency label needs frequency evidence about THIS transition.
+    // Profession-level sources never qualify.
+    if (tr.likelihood !== null) {
+      expect(
+        tr.frequencyEvidence.length > 0,
+        `${tr.from.id} -> ${tr.to.id} claims a frequency with no transition-specific evidence`,
+      );
+    }
+    // Experience and timing may only appear with transition-specific evidence.
+    if (tr.experienceRequired.length > 0) {
+      expect(
+        tr.evidenceLevel === "reviewed" && tr.sources.length > 0,
+        `${tr.from.id} -> ${tr.to.id} states required experience without its own evidence`,
+      );
+    }
+  }
+}
+
+// No frequency label renders anywhere in the current dataset, because no
+// source in it is about transition frequency.
+//
+// TWO assertions, and the first is the one that bites. `describeTransition`
+// already suppresses an unevidenced likelihood, so checking only the rendered
+// value is a tautology: it passes whether or not anybody has written
+// `likelihood: "common"` into the data. The DATA is what a future editor
+// touches, so the data is what is asserted — an edge claiming a frequency
+// with no evidence for it is a defect even while the renderer is hiding it.
+//
+// The same shape of tautology applies to the evidence bar itself:
+// `transitionEvidenceLevel` demotes an under-sourced edge to `under_review`,
+// so asserting only the RENDERED level can never fail. An edge whose status
+// says "researched" while carrying no source, no jurisdiction or a stale
+// review date is a data defect regardless of how gracefully the renderer
+// hides it — a reviewer reading career-paths.ts would believe it was
+// published. So the raw records are asserted too.
+for (const edge of careerPaths) {
+  if (edge.status !== "placeholder") {
+    const sources = (edge.sources ?? []).filter(
+      (src) => src.label?.sv?.trim() && src.label?.en?.trim() && (src.url || src.publisher),
+    );
     expect(
-      stage.shift !== undefined &&
-        ["adjacent", "formal_gate", "long_term"].includes(stage.shift.kind),
-      `route "${route.id}" has a stage transition with no classification`,
+      sources.length > 0,
+      `${edge.from} -> ${edge.to} is marked "${edge.status}" but cites no source of its own`,
+    );
+    expect(
+      (edge.countries?.length ?? 0) > 0,
+      `${edge.from} -> ${edge.to} is marked "${edge.status}" but states no jurisdiction`,
+    );
+    expect(
+      isFreshReview(edge.lastVerified),
+      `${edge.from} -> ${edge.to} is marked "${edge.status}" but its review date is missing or stale`,
     );
   }
+  // Prose belongs to a reviewed edge. A placeholder carrying notes or an
+  // experience statement is a claim waiting for the renderer to slip.
+  if (edge.status === "placeholder") {
+    expect(
+      !edge.notes && !edge.experienceRequired,
+      `${edge.from} -> ${edge.to} is a placeholder but carries prose that only a reviewed edge may state`,
+    );
+  }
+  const hasEvidence = (edge.frequencyEvidence?.length ?? 0) > 0;
+  expect(
+    edge.likelihood !== "common" || hasEvidence,
+    `${edge.from} -> ${edge.to} is marked "common" with no transition-specific frequency evidence — a statute about a role is not evidence about a move`,
+  );
+  if (hasEvidence) continue;
+  const described = describeTransition(edge.from, edge.to);
+  if (!described) continue;
+  expect(
+    described.likelihood === null,
+    `${edge.from} -> ${edge.to} renders a frequency label with no frequencyEvidence`,
+  );
+}
+
+// The freshness rule has to actually bite. A lapsed review date degrades a
+// transition to "under review" rather than leaving a two-year-old legal claim
+// standing — this repository shipped a guide citing an Act repealed in 2023.
+{
+  const gate = careerPaths.find((e) => e.from === "security-officer" && e.to === "ordningsvakt");
+  expect(Boolean(gate), "the Väktare -> Ordningsvakt edge must exist");
+  if (gate) {
+    expect(
+      transitionEvidenceLevel(gate, new Date("2026-09-08T00:00:00Z")) === "reviewed",
+      "a freshly reviewed, sourced, jurisdictioned edge must count as reviewed",
+    );
+    expect(
+      transitionEvidenceLevel(gate, new Date("2030-01-01T00:00:00Z")) === "under_review",
+      "a review date older than the freshness window must degrade the transition",
+    );
+  }
+  expect(isFreshReview("2026-09-08", new Date("2026-09-08T12:00:00Z")), "today is fresh");
+  expect(!isFreshReview("2099-01-01"), "a future review date is not fresh, it is wrong");
+  expect(!isFreshReview("not-a-date"), "an unparseable review date is not fresh");
+  expect(!isFreshReview(undefined), "a missing review date is not fresh");
 }
 
 // -----------------------------------------------------------------------
@@ -1131,13 +1338,19 @@ expect(
 );
 for (const lang of ["sv", "en"] as const) {
   const d = dictionaries[lang] as Record<string, string>;
+  // The label has to read as an advertisement and has to name the provider,
+  // because "sponsored" alone is a word readers have learned to skip.
   expect(
-    /sponsr|sponsor/i.test(d["cc.p.education.sponsored"]),
-    `${lang}: the sponsorship label must say it is sponsored`,
+    /annons|advertisement/i.test(d["cc.p.education.sponsored"]),
+    `${lang}: the paid-placement label must read as an advertisement`,
+  );
+  expect(
+    d["cc.p.education.sponsored"].includes("{provider}"),
+    `${lang}: the paid-placement label must name the provider`,
   );
   expect(
     /rekommend|recommend/i.test(d["cc.p.education.sponsored.help"]),
-    `${lang}: the sponsorship note must state that payment does not affect what is recommended`,
+    `${lang}: the paid-placement note must state that payment does not affect what is recommended`,
   );
 }
 
@@ -1291,6 +1504,404 @@ expect(
     nextStepPanel.includes('t("cc.p.jobs.alt.related")'),
   "a profession with no job-catalogue node must still offer two live routes onward",
 );
+
+// -----------------------------------------------------------------------
+// 16h. Three concepts, kept apart: fit, pathFrom, eligibility
+// -----------------------------------------------------------------------
+//
+// The pilot's first version answered only `fit` — which occupations the
+// instrument ranked — and called that personalisation. Most readers arrive
+// standing in a job asking what is reachable from it, which is a different
+// question with a different input. Collapsing the two under one heading makes
+// both untrustworthy, because a reader cannot tell which basis a card has.
+
+const { careerOrigin, ELIGIBILITY_IS_NEVER_ASSESSED, MAX_PATH_DIRECTIONS, selectableOrigins } =
+  await import("../src/lib/career-center/career-origin");
+
+expect(
+  ELIGIBILITY_IS_NEVER_ASSESSED === false,
+  "eligibility must never be assessed — the constant is what every personal state carries",
+);
+
+// pathFrom is driven by an EXPLICIT current role, in either slug namespace,
+// and it says which of the two sources it used.
+{
+  const fromProfile = careerOrigin({ profileSlug: "vaktare" });
+  expect(
+    fromProfile.state === "ready" && fromProfile.profession.id === "security-officer",
+    "a stated current profession must resolve through the slug bridge",
+  );
+  expect(
+    fromProfile.state === "ready" && fromProfile.provenance === "profile",
+    "a role taken from the profile must be labelled as coming from the profile",
+  );
+  expect(
+    fromProfile.state === "ready" && fromProfile.eligibilityAssessed === false,
+    "pathFrom must never claim eligibility",
+  );
+  expect(
+    fromProfile.state === "ready" && fromProfile.directions.length <= MAX_PATH_DIRECTIONS,
+    "pathFrom must cap what it shows and link on for the rest",
+  );
+
+  const overridden = careerOrigin({ profileSlug: "vaktare", selectedSlug: "security-coordinator" });
+  expect(
+    overridden.state === "ready" &&
+      overridden.profession.id === "security-coordinator" &&
+      overridden.provenance === "selected",
+    "an explicit selection must win over the stored profile, and say so",
+  );
+
+  expect(careerOrigin({}).state === "unknown", "no stated role must be its own state");
+  expect(
+    careerOrigin({ profileSlug: "police-officer" }).state === "unsupported",
+    "a role with no published guide must be named as unsupported, not silently dropped",
+  );
+  expect(
+    selectableOrigins().every((p) => getPublishedProfession(p.id) !== undefined),
+    "the role selector must offer published guides only",
+  );
+}
+
+// The two sections are separate, each states its basis, and neither is ever
+// rendered under a shared "recommended for you" heading.
+expect(
+  hub.includes("<PathFromSection") && hub.includes("<PersonalDirectionSection"),
+  "the hub must render pathFrom and fit as two separate sections",
+);
+expect(
+  pathFrom.includes("data-path-provenance"),
+  "the pathFrom section must state where the current role came from",
+);
+expect(
+  pathFrom.includes('t("cc.path.notEligibility")') && pathFrom.includes("eligibilityAssessed"),
+  "the pathFrom section must render its not-eligibility line from the model",
+);
+for (const lang of ["sv", "en"] as const) {
+  const d = dictionaries[lang] as Record<string, string>;
+  // Each section names its own basis in its own words.
+  expect(
+    /karriäranalys|career analysis/i.test(d["cc.me.subtitle"]),
+    `${lang}: the fit section must say the suggestions come from the career analysis`,
+  );
+  expect(
+    /nuvarande yrke|current role|yrket du|role you/i.test(d["cc.path.subtitle"]),
+    `${lang}: the pathFrom section must say the directions come from the stated role`,
+  );
+  // "Recommended for you" over a mixed list is the heading this design exists
+  // to avoid.
+  for (const key of ["cc.path.title", "cc.me.title", "cc.path.eyebrow", "cc.me.eyebrow"]) {
+    expect(
+      !/rekommenderat för dig|recommended for you/i.test(d[key]),
+      `${lang} "${key}" must not present a combined "recommended for you" heading`,
+    );
+  }
+}
+
+// The role selector is a real form control with a real label, reachable by
+// keyboard, and it writes to the URL rather than to the reader's profile.
+expect(
+  pathFrom.includes("<select") && pathFrom.includes("htmlFor={selectId}"),
+  "the role selector must be a labelled form control",
+);
+expect(
+  !pathFrom.includes("upsertMySecurityCareerProfile") &&
+    !pathFrom.includes("setMyCurrentProfession"),
+  "choosing a role to explore from must not write to the reader's stored profile",
+);
+
+// -----------------------------------------------------------------------
+// 16i. Swedish regulatory facts
+// -----------------------------------------------------------------------
+
+const ordningsvaktGuide = getPublishedProfession("ordningsvakt")!;
+const skyddsvaktGuide = getPublishedProfession("skyddsvakt")!;
+const coordinatorGuide = getPublishedProfession("security-coordinator")!;
+
+// The repealed Act must not appear in anything a reader can see. It is
+// allowed in a code comment recording why it went.
+{
+  const contentFiles = [
+    "src/lib/career-center/professions/researched.ts",
+    "src/lib/career-center/professions/placeholders.ts",
+    "src/lib/career-center/education.ts",
+    "src/lib/career-center/career-paths.ts",
+    "src/lib/career-center/education-links.ts",
+  ];
+  for (const file of contentFiles) {
+    expect(
+      !code(read(file)).includes("1980:578"),
+      `${file} still cites the repealed lagen (1980:578) om ordningsvakter as active content`,
+    );
+  }
+  const ovText = JSON.stringify(ordningsvaktGuide);
+  expect(ovText.includes("2023:421"), "the Ordningsvakt guide must cite lagen (2023:421)");
+  expect(!ovText.includes("1980:578"), "the Ordningsvakt guide must not cite the repealed Act");
+  expect(
+    (ordningsvaktGuide.sources ?? []).some((s) => s.url?.includes("lag-2023421-om-ordningsvakter")),
+    "the Ordningsvakt guide must source the current Act",
+  );
+  // Age 20, from 9 §. The old copy compressed the three conditions into one
+  // sentence and lost the age entirely.
+  expect(
+    (ordningsvaktGuide.formalRequirements ?? []).some((r) => /20 år/.test(r.sv)),
+    "the Ordningsvakt guide must state the minimum age of 20",
+  );
+  expect(
+    (ordningsvaktGuide.formalRequirements ?? []).some((r) => /20 years old/i.test(r.en)),
+    "the English Ordningsvakt guide must state the minimum age of 20",
+  );
+  expect(
+    !JSON.stringify(ordningsvaktGuide.formalRequirements).includes("18"),
+    "the Ordningsvakt guide must not carry the väktare age-18 condition",
+  );
+  for (const needle of ["föreskriven utbildning", "lämplig", "Polismyndigheten"]) {
+    expect(
+      (ordningsvaktGuide.formalRequirements ?? []).some((r) => r.sv.includes(needle)),
+      `the Ordningsvakt guide must state "${needle}" as its own condition`,
+    );
+  }
+  // Being a väktare is not a legal prerequisite, and the guide says so.
+  expect(
+    /inget rättsligt krav|not a legal prerequisite/i.test(JSON.stringify(ordningsvaktGuide)),
+    "the Ordningsvakt guide must state that working as a väktare is not a prerequisite",
+  );
+}
+
+// Skyddsvakt: three decisions, three deciders, never "the protected object's
+// requirements" as the source of the training.
+{
+  const svText =
+    JSON.stringify(skyddsvaktGuide) +
+    JSON.stringify(await import("../src/lib/career-center/education").then((m) => m.education));
+  expect(
+    !/skyddsobjektets krav/i.test(svText),
+    "training for a skyddsvakt must not be described as set by the protected object's requirements",
+  );
+  expect(
+    (skyddsvaktGuide.formalRequirements ?? []).some((r) => /länsstyrelsen/i.test(r.sv)),
+    "the Skyddsvakt guide must name the county administrative board as the approver",
+  );
+  expect(
+    (skyddsvaktGuide.formalRequirements ?? []).some((r) => /föreskriven utbildning/i.test(r.sv)),
+    "the Skyddsvakt guide must state the prescribed training separately from the approval",
+  );
+  expect(
+    (skyddsvaktGuide.formalRequirements ?? []).some((r) => /skyddsobjekt/i.test(r.sv)),
+    "the Skyddsvakt guide must state the assignment as its own, third condition",
+  );
+  expect(
+    (skyddsvaktGuide.sources ?? []).some((s) => s.url?.includes("skyddsforordning-2010523")),
+    "the Skyddsvakt guide must source the Protective Security Ordinance",
+  );
+}
+
+// Säkerhetssamordnare: the copy may claim only what 2006:544 supports, and
+// the säkerhetsskyddschef boundary must carry both the scope and the "unless
+// obviously unnecessary" qualifier.
+{
+  const notes = coordinatorGuide.regulatoryNotes!;
+  expect(
+    /säkerhetskänslig verksamhet/i.test(notes.sv) &&
+      /security-sensitive activities/i.test(notes.en),
+    "the säkerhetsskyddschef boundary must state that the Act applies to security-sensitive activity",
+  );
+  expect(
+    /uppenbart obehövligt/i.test(notes.sv) && /obviously unnecessary/i.test(notes.en),
+    'the säkerhetsskyddschef boundary must carry the "unless obviously unnecessary" qualifier',
+  );
+  expect(
+    /inte reglerat|not a regulated/i.test(notes.sv + notes.en),
+    "the Säkerhetssamordnare guide must state that the title is not regulated",
+  );
+  // The narrowing: the guide describes the public-sector role the Act
+  // documents, and says the private-sector variant is not source-verified.
+  expect(
+    /inte källbelagt|not source-verified/i.test(notes.sv + notes.en),
+    "the Säkerhetssamordnare guide must say which part of the role is not source-verified",
+  );
+  expect(
+    coordinatorGuide.sector === "public",
+    "the Säkerhetssamordnare guide must be scoped to the sector its sources cover",
+  );
+}
+
+// -----------------------------------------------------------------------
+// 16j. Education relevance is authored, and ISO is not a personal certificate
+// -----------------------------------------------------------------------
+
+const { PROFESSION_EDUCATION_LINKS } = await import("../src/lib/career-center/education-links");
+const { certifications } = await import("../src/lib/career-center/certifications");
+
+for (const link of PROFESSION_EDUCATION_LINKS) {
+  expect(
+    Boolean(link.supports?.sv?.trim() && link.supports?.en?.trim()),
+    `${link.professionId}/${link.offerId}: a link must state what it supports, in both languages`,
+  );
+  expect(
+    link.countries.length > 0,
+    `${link.professionId}/${link.offerId}: a link must state its jurisdiction`,
+  );
+  expect(
+    /^\d{4}-\d{2}-\d{2}$/.test(link.lastVerified),
+    `${link.professionId}/${link.offerId}: a link must carry a parseable review date`,
+  );
+  if (link.relevance === "formal_requirement") {
+    expect(
+      Boolean(link.authority?.url || link.authority?.publisher),
+      `${link.professionId}/${link.offerId}: a formal requirement must name the authority behind it`,
+    );
+    const p = getPublishedProfession(link.professionId);
+    expect(
+      Boolean(p?.regulated),
+      `${link.professionId}/${link.offerId}: only a regulated role may carry a formal requirement`,
+    );
+  }
+}
+
+// Nothing may imply that a course produces an approval.
+for (const lang of ["sv", "en"] as const) {
+  const d = dictionaries[lang] as Record<string, string>;
+  expect(
+    /garanterar aldrig|never guarantees/i.test(d["cc.p.education.notGuarantee"]),
+    `${lang}: the education section must state that a course guarantees nothing`,
+  );
+  for (const word of ["lämplighet", "godkännande", "suitability", "approval"]) {
+    void word;
+  }
+}
+expect(
+  code(read("src/components/career-center/EducationPanel.tsx")).includes(
+    't("cc.p.education.notGuarantee")',
+  ),
+  "the education panel must render the no-guarantee statement",
+);
+
+// ISO standards are not personal credentials, and ISO is not their issuer.
+for (const id of ["iso-31000", "iso-22301", "iso-27001"]) {
+  const c = certifications.find((x) => x.id === id);
+  expect(Boolean(c), `${id} must exist in the catalogue`);
+  if (!c) continue;
+  expect(
+    c.credentialType === "standard",
+    `${id} must be modelled as a published standard, not a personal credential`,
+  );
+  expect(
+    /utfärdar ing|issues no|inte avsedd för certifiering|not intended for certification|oberoende certifieringsorgan|independent certification bodies/i.test(
+      c.issuer.sv + " " + c.issuer.en,
+    ),
+    `${id} must say who does and does not certify against it`,
+  );
+  expect(
+    c.mandatory !== true,
+    `${id} must never be marked mandatory — no regulation requires a standard of a person`,
+  );
+}
+const iso31000 = certifications.find((c) => c.id === "iso-31000")!;
+expect(
+  /inte avsedd för certifiering|not intended for certification/i.test(
+    iso31000.issuer.sv + " " + iso31000.issuer.en,
+  ),
+  "ISO 31000 must state that it cannot be certified against at all",
+);
+for (const p of publishedProfessions) {
+  for (const offer of professionEducation(p).offers) {
+    if (!offer.isStandard) continue;
+    expect(
+      offer.relevance === "recommended_development",
+      `${p.id}/${offer.id}: a published standard may never be a formal requirement`,
+    );
+  }
+}
+expect(
+  code(read("src/components/career-center/EducationPanel.tsx")).includes(
+    't("cc.p.education.standard")',
+  ),
+  "a standard must be labelled as a standard rather than as a certificate",
+);
+
+// -----------------------------------------------------------------------
+// 16k. The commercial boundary
+// -----------------------------------------------------------------------
+
+const { MAX_PLACEMENTS_PER_OFFER, orderPlacements, placementIsWellFormed } =
+  await import("../src/lib/career-center/education-offers");
+
+expect(MAX_PLACEMENTS_PER_OFFER > 0, "a placement cap must exist");
+{
+  // Provider order is deterministic and price-blind, and a sponsored
+  // placement is not hoisted.
+  const probe = [
+    {
+      placementId: "b",
+      offerId: "x",
+      kind: "education" as const,
+      providerName: "Beta",
+      url: "https://beta.example/",
+      countries: ["SE"] as const,
+      placement: "sponsored" as const,
+    },
+    {
+      placementId: "a",
+      offerId: "x",
+      kind: "education" as const,
+      providerName: "Alfa",
+      url: "https://alfa.example/",
+      countries: ["SE"] as const,
+      placement: "organic" as const,
+    },
+  ];
+  const ordered = orderPlacements(probe).map((p) => p.providerName);
+  expect(ordered[0] === "Alfa", "a sponsored placement must not be hoisted above an organic one");
+  expect(
+    orderPlacements([...probe].reverse())
+      .map((p) => p.providerName)
+      .join() === ordered.join(),
+    "provider order must be deterministic regardless of input order",
+  );
+  expect(
+    orderPlacements(
+      Array.from({ length: MAX_PLACEMENTS_PER_OFFER + 3 }, (_, i) => ({
+        ...probe[0],
+        placementId: `p${i}`,
+        providerName: `Provider ${i}`,
+      })),
+    ).length === MAX_PLACEMENTS_PER_OFFER,
+    "the placement cap must be enforced",
+  );
+  expect(
+    !placementIsWellFormed({ ...probe[0], url: "http://insecure.example/" }),
+    "a placement URL must be HTTPS",
+  );
+  expect(
+    !placementIsWellFormed({ ...probe[0], placementId: "  " }),
+    "a placement must carry a stable id",
+  );
+}
+
+// rel="sponsored" is set only for a sponsored link, and the disclosure is
+// inside the link so it is part of the accessible name.
+{
+  const panel = code(read("src/components/career-center/EducationPanel.tsx"));
+  expect(
+    panel.includes('rel={sponsored ? "noreferrer sponsored" : "noreferrer"}'),
+    'rel="sponsored" must be conditional on the placement actually being sponsored',
+  );
+  const linkBlock = panel.slice(panel.indexOf("<a"), panel.indexOf("</a>"));
+  expect(
+    linkBlock.includes('t("cc.p.education.sponsored")'),
+    "the paid-placement disclosure must be inside the link, not beside it",
+  );
+}
+
+// The neutrality claim must rest on code, not on analytics.
+for (const lang of ["sv", "en"] as const) {
+  const d = dictionaries[lang] as Record<string, string>;
+  expect(
+    !/mät|measur|analys|analytic/i.test(d["cc.p.education.neutrality"]),
+    `${lang}: the neutrality statement must not claim telemetry proves anything`,
+  );
+}
 
 // -----------------------------------------------------------------------
 // 16g. No unreachable measurement, and no unreachable schema

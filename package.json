@@ -133,6 +133,8 @@
   "interview-gold-independence:check": "bun run scripts/interview-gold-independence-check.ts",
     "recruitment-assessment-ux:check": "bun run scripts/recruitment-assessment-ux-check.ts",
     "career-center:check": "bun run scripts/career-center-check.ts",
+    "career-center:negative-controls": "bun run scripts/career-center-negative-controls.ts",
+    "career-center:sources": "bun run scripts/career-center-source-check.ts",
     "professional-identity:check": "bun run scripts/professional-identity-check.ts",
     "cv-application-source:check": "bun run scripts/cv-application-source-check.tsx",
     "candidate-app-navigation:check": "bun run scripts/candidate-app-navigation-check.tsx"

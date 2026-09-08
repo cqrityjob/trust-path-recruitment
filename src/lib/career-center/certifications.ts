@@ -73,7 +73,7 @@ export const certifications: readonly Certification[] = [
     officialSource: {
       label: { sv: "ASIS PSP", en: "ASIS PSP" },
       publisher: "ASIS International",
-      url: "https://www.asisonline.org/certification/physical-security-professional-psp/",
+      url: "https://www.asisonline.org/certification/physical-security-professional/",
     },
   },
   {
@@ -93,7 +93,7 @@ export const certifications: readonly Certification[] = [
     officialSource: {
       label: { sv: "ACAMS CAMS", en: "ACAMS CAMS" },
       publisher: "ACAMS",
-      url: "https://www.acams.org/en/certifications/certified-anti-money-laundering-specialist-cams",
+      url: "https://www.acams.org/en/about-certifications",
     },
   },
   {

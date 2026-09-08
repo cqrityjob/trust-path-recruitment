@@ -106,14 +106,16 @@ export const careerPaths: readonly CareerPath[] = [
     status: "placeholder",
   },
   {
+    // The note this edge used to carry ("beror på erfarenhet, arbetsgivare och
+    // land — inget garanterat spår") was reasonable prose on an unsourced
+    // record, which is exactly the arrangement the evidence bar exists to
+    // refuse: prose sitting in a placeholder is a claim waiting for a renderer
+    // to slip. Neither profession is published, so nothing rendered it — and
+    // that is not a reason to keep it.
     from: "police-officer",
     to: "security-investigator",
     likelihood: "possible",
     status: "placeholder",
-    notes: {
-      sv: "Övergången beror på erfarenhet, arbetsgivare och land — inget garanterat spår.",
-      en: "Transition depends on experience, employer and country — not a guaranteed path.",
-    },
   },
   {
     from: "police-officer",
