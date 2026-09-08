@@ -25,11 +25,7 @@
 // provider is contacted, and `needs_information` is a refusal to generate
 // rather than a warning next to a generated document.
 
-import {
-  claimsOfType,
-  EDUCATION_CLAIM_TYPES,
-  type ProfessionalIdentityV1,
-} from "../types";
+import { claimsOfType, EDUCATION_CLAIM_TYPES, type ProfessionalIdentityV1 } from "../types";
 
 export const CV_READINESS_VERSION = "cv-readiness-v1" as const;
 
@@ -84,8 +80,7 @@ export function computeCvReadiness(identity: ProfessionalIdentityV1): CvReadines
   const satisfied: CvRequiredField[] = [];
   const missing: CvRequiredField[] = [];
 
-  const push = (field: CvRequiredField, ok: boolean) =>
-    (ok ? satisfied : missing).push(field);
+  const push = (field: CvRequiredField, ok: boolean) => (ok ? satisfied : missing).push(field);
 
   push("displayName", filled(identity.displayName));
   push(

@@ -54,18 +54,18 @@
 // a person may put their telephone number on a CV they send to one employer
 // and not on the one they hand round at a fair.
 //
-// -- AND SO IS THE SELECTION -------------------------------------------
+// -- THE SELECTION IS NOT STORED HERE, AND THAT IS THE POINT -----------
 //
-// `excludedIds` records what the person took OFF this CV. It is stored
-// beside the wording because it IS an editorial decision about one
-// document, and it changes no record anywhere. The facts themselves are
-// removed from `source_bundle` when the bundle is built -- selection.ts
-// says why that has to happen there and not here.
+// An earlier version kept an `excludedIds` list beside the wording. It does
+// not any more, because the bundle IS the selection: `source_bundle` contains
+// exactly the facts this CV carries and nothing else, so there is no second
+// place for the two to disagree and no list to go stale against the records
+// it names. What is not on the CV is computed by DIFFERENCE against the live
+// profile (`omittedFacts`), which also covers a record added since.
 
 import { z } from "zod";
 import type { CvContactDetails, CvDocument } from "./document";
 import { buildFactualCvDocument, NO_CV_CONTACT } from "./document";
-import { cvSelectionSchema, pruneExclusions, selectableIds, type CvExcludedIds } from "./selection";
 import { emptyCvTrustAnnotations, type CvTrustAnnotations } from "./trust-annotations";
 import type { CvSourceBundle } from "./source-bundle";
 import type { CvPresentation } from "./schema";
@@ -124,8 +124,6 @@ export const storedPresentationSchema = z.object({
     .default([]),
   emphasisedClaimIds: z.array(z.string().min(1)).max(60).default([]),
   tailoringRationale: z.string().max(600).default(""),
-  /** What the person took off this CV. See selection.ts. */
-  excludedIds: cvSelectionSchema,
   /** Shown only where `show*` says so. An address the product happens to
    *  know is not an address somebody agreed to publish. */
   contact: storedContactSchema,
@@ -144,12 +142,10 @@ export type StoredPresentation = z.infer<typeof storedPresentationSchema>;
 /** What a caller carries across a save: the editorial choices that are not
  *  wording, and that a regenerated draft must never silently reset. */
 export interface CvPresentationSettings {
-  readonly excludedIds: CvExcludedIds;
   readonly contact: StoredContact;
 }
 
 export const DEFAULT_CV_PRESENTATION_SETTINGS: CvPresentationSettings = {
-  excludedIds: [],
   contact: EMPTY_STORED_CONTACT,
 };
 
@@ -166,7 +162,6 @@ export function factualStoredPresentation(
     experience: bundle.employment.map((e) => ({ sourceId: e.id, bullets: [] })),
     emphasisedClaimIds: [],
     tailoringRationale: "",
-    excludedIds: [...settings.excludedIds],
     contact: settings.contact,
     authorship: { headline: "person", summary: "person", bullets: {} },
   };
@@ -178,11 +173,11 @@ export function storedFromAiPresentation(
   presentation: CvPresentation,
   /** The person's own editorial choices, carried across.
    *
-   *  A model drafts WORDING. It does not decide which of somebody's jobs are
-   *  on their CV and it does not decide whether their telephone number is
-   *  printed, so accepting a new draft must not reset either. Defaulting
-   *  these to empty rather than requiring them would have made "regenerate"
-   *  quietly put a deselected employment back and turn a contact line off. */
+   *  A model drafts WORDING. It does not decide whether somebody's telephone
+   *  number is printed, so accepting a new draft must not reset that.
+   *  (Which FACTS a CV carries is not here at all any more: the bundle is
+   *  the selection, and it is rebuilt in SQL from an allowlist the person
+   *  sent -- so a draft has no field through which it could change one.) */
   settings: CvPresentationSettings = DEFAULT_CV_PRESENTATION_SETTINGS,
 ): StoredPresentation {
   const bullets: Record<string, Author> = {};
@@ -197,82 +192,99 @@ export function storedFromAiPresentation(
     })),
     emphasisedClaimIds: [...presentation.emphasisedClaimIds],
     tailoringRationale: presentation.tailoringRationale,
-    excludedIds: [...settings.excludedIds],
     contact: settings.contact,
     authorship: { headline: "ai", summary: "ai", bullets },
   };
 }
 
 /* ------------------------------------------------------------------ */
-/* Reconciliation                                                      */
+/* Reconciliation lives in SQL now                                     */
+/* ------------------------------------------------------------------ */
+//
+// `reconcileStoredPresentation` used to sit here: it dropped bullets for an
+// employment the fresh bundle no longer contained, appended entries for new
+// ones, and pruned dead ids. Every one of those is now done by `cv_save`, in
+// the same statement that writes the row, because the bundle and the wording
+// have to agree and two round trips could not guarantee that they did.
+//
+// It is not re-implemented here as a "preview" of the same thing. The one
+// place a rule like this can be wrong quietly is the second copy of it.
+
+/* ------------------------------------------------------------------ */
+/* A person's own edit                                                 */
 /* ------------------------------------------------------------------ */
 
-export interface ReconcileResult {
-  readonly presentation: StoredPresentation;
-  /** Employment ids the presentation referred to that the bundle no longer
-   *  contains. Reported so the screen can say so rather than silently
-   *  losing a section the person wrote. */
-  readonly droppedIds: readonly string[];
+/** What a person may change about the WORDING of a saved CV.
+ *
+ *  Read this list as the boundary it is: there is no employer, no role title,
+ *  no date, no institution and no credential name, so no edit can carry one.
+ *  Which FACTS the CV carries is not here either -- that is an allowlist of
+ *  ids, resolved against the person's own records in SQL. */
+export interface CvPersonEdit {
+  readonly headline?: string;
+  readonly summary?: string;
+  readonly bullets?: readonly { readonly sourceId: string; readonly bullets: readonly string[] }[];
 }
 
 /**
- * Make a stored presentation consistent with a bundle.
+ * Fold a person's edit onto the wording that is stored.
  *
- * Needed in exactly one place: when somebody takes "update from profile" and
- * the fresh bundle no longer contains an employment they had written bullets
- * for. Dropping it silently would delete the person's own writing without
- * telling them, so the dropped ids come back with it.
+ * ── WHY THIS IS A PURE FUNCTION AND NOT SIX LINES IN A HANDLER ─────────
  *
- * It never ADDS bullets. A newly-appearing employment gets an entry with no
- * bullets, which renders as employer, role and dates -- an ordinary CV line.
+ * Because of the authorship rule, which is the one thing here that is easy to
+ * get subtly wrong and impossible to notice: once somebody edits a drafted
+ * sentence it is THEIR sentence, and the "AI" badge has to come off it.
+ * Leaving it on labels a person's own words as machine-written, on the one
+ * screen in this product whose entire argument is that it does not tell small
+ * lies about provenance.
+ *
+ * A field the person did not touch keeps whatever authorship it had. A field
+ * they touched and left identical was not an edit and keeps it too.
  */
-export function reconcileStoredPresentation(
+export function applyPersonEdit(
   stored: StoredPresentation,
-  bundle: CvSourceBundle,
-  /** Every id the person HAS, excluded ones included.
-   *
-   *  Needed because `bundle` has already had the exclusions applied, so it
-   *  cannot answer "does this excluded record still exist" -- and pruning
-   *  against it would drop every exclusion on every refresh, quietly putting
-   *  the whole profile back onto the CV. */
-  liveIds?: ReadonlySet<string>,
-): ReconcileResult {
-  const liveEmployment = new Set(bundle.employment.map((e) => e.id));
-  const liveClaims = new Set(
-    [...bundle.education, ...bundle.credentials, ...bundle.skills, ...bundle.languages].map(
-      (c) => c.id,
-    ),
-  );
+  edit: CvPersonEdit,
+): StoredPresentation {
+  const headlineChanged = edit.headline !== undefined && edit.headline !== stored.headline;
+  const summaryChanged = edit.summary !== undefined && edit.summary !== stored.summary;
 
-  const kept = stored.experience.filter((e) => liveEmployment.has(e.sourceId));
-  const droppedIds = stored.experience
-    .filter((e) => !liveEmployment.has(e.sourceId))
-    .map((e) => e.sourceId);
-
-  const keptIds = new Set(kept.map((e) => e.sourceId));
-  const appended = bundle.employment
-    .filter((e) => !keptIds.has(e.id))
-    .map((e) => ({ sourceId: e.id, bullets: [] as string[] }));
-
-  const bullets: Record<string, Author> = {};
-  for (const [id, author] of Object.entries(stored.authorship.bullets)) {
-    if (liveEmployment.has(id)) bullets[id] = author;
+  const bullets = { ...stored.authorship.bullets };
+  if (edit.bullets) {
+    for (const item of edit.bullets) {
+      const before = stored.experience.find((e) => e.sourceId === item.sourceId);
+      const same =
+        before !== undefined &&
+        before.bullets.length === item.bullets.length &&
+        before.bullets.every((b, i) => b === item.bullets[i]);
+      // Set explicitly rather than deleted. A missing key already READS as
+      // "person", so both express the same thing -- but a stored row that
+      // says so out loud is one a person can audit without knowing the
+      // schema's default.
+      if (!same) bullets[item.sourceId] = "person";
+    }
   }
 
   return {
-    presentation: {
-      ...stored,
-      experience: [...kept, ...appended],
-      emphasisedClaimIds: stored.emphasisedClaimIds.filter((id) => liveClaims.has(id)),
-      // An exclusion for a record that no longer exists is not a choice any
-      // more, it is litter -- and the list is stored, so litter accumulates.
-      // Pruned against the ids the bundle could actually offer, which for a
-      // bundle built WITH the exclusions applied means `liveIds` has to be
-      // supplied by the caller rather than read off `bundle`.
-      excludedIds: [...pruneExclusions(stored.excludedIds, liveIds ?? selectableIds(bundle))],
-      authorship: { ...stored.authorship, bullets },
+    ...stored,
+    headline: edit.headline ?? stored.headline,
+    summary: edit.summary ?? stored.summary,
+    // Mapped over what is ALREADY there, never replaced by what arrived. A
+    // bullet naming an employment this CV does not carry simply matches
+    // nothing -- the same rule the validator applies to a model's citations,
+    // and the same one `cv_normalise_presentation` applies again in SQL
+    // against the bundle. A client cannot introduce a reference through this
+    // door, and the order is the document's, not the request's.
+    experience: edit.bullets
+      ? stored.experience.map((e) => {
+          const next = edit.bullets!.find((b) => b.sourceId === e.sourceId);
+          return next ? { sourceId: e.sourceId, bullets: [...next.bullets] } : e;
+        })
+      : stored.experience,
+    authorship: {
+      headline: headlineChanged ? "person" : stored.authorship.headline,
+      summary: summaryChanged ? "person" : stored.authorship.summary,
+      bullets,
     },
-    droppedIds,
   };
 }
 

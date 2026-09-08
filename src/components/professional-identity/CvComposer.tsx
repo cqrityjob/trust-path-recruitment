@@ -17,10 +17,15 @@
 //
 // ── AND WHY THE SELECTION PICKER SHOWS EVERYTHING ──────────────────────
 //
-// It is fed the UNFILTERED bundle. A picker fed the filtered one could only
-// ever offer what is already on the CV, which makes taking something off a
-// one-way door: the row disappears from the list the moment you untick it
-// and there is nothing left to tick again.
+// It is fed the UNFILTERED bundle and works in INCLUDED ids. A picker fed the
+// filtered bundle could only ever offer what is already on the CV, which
+// makes taking something off a one-way door: the row disappears from the list
+// the moment you untick it and there is nothing left to tick again.
+//
+// Included rather than excluded because that is what the server stores and
+// what it intersects -- see selection.ts. A control that spoke the opposite
+// language would need a translation somewhere, and the translation is where
+// the fail-open would come back.
 
 import { useMemo } from "react";
 import { Check } from "lucide-react";
@@ -87,42 +92,35 @@ export function selectableGroups(
  * Skills, languages and a Career Discovery result deliberately do not count.
  * `readiness.ts` sets out why at length and this is that rule, not a second.
  */
-export function selectionHasHistory(bundle: CvSourceBundle, excluded: readonly string[]): boolean {
-  const drop = new Set(excluded);
-  return (
-    bundle.employment.some((e) => !drop.has(e.id)) || bundle.education.some((c) => !drop.has(c.id))
-  );
-}
-
 export function CvSelectionPicker({
   bundle,
-  excludedIds,
+  includedIds,
   onChange,
   lang,
   disabled = false,
 }: {
   /** UNFILTERED. See the file header. */
   bundle: CvSourceBundle;
-  excludedIds: readonly string[];
+  includedIds: readonly string[];
   onChange: (next: readonly string[]) => void;
   lang: Lang;
   disabled?: boolean;
 }) {
   const groups = useMemo(() => selectableGroups(bundle), [bundle]);
-  const excluded = useMemo(() => new Set(excludedIds), [excludedIds]);
+  const included = useMemo(() => new Set(includedIds), [includedIds]);
 
   const toggle = (id: string) => {
-    const next = new Set(excluded);
+    const next = new Set(included);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     onChange([...next]);
   };
 
   const setGroup = (rows: readonly Selectable[], include: boolean) => {
-    const next = new Set(excluded);
+    const next = new Set(included);
     for (const row of rows) {
-      if (include) next.delete(row.id);
-      else next.add(row.id);
+      if (include) next.add(row.id);
+      else next.delete(row.id);
     }
     onChange([...next]);
   };
@@ -130,7 +128,7 @@ export function CvSelectionPicker({
   return (
     <div className="space-y-5">
       {groups.map((group) => {
-        const included = group.rows.filter((r) => !excluded.has(r.id)).length;
+        const onCount = group.rows.filter((r) => included.has(r.id)).length;
         return (
           <fieldset key={group.key} className="min-w-0">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -140,15 +138,15 @@ export function CvSelectionPicker({
               {group.rows.length > 0 && (
                 <span className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="tabular-nums">
-                    {Lf(CV.selectedCount, lang, `${included}/${group.rows.length}`)}
+                    {Lf(CV.selectedCount, lang, `${onCount}/${group.rows.length}`)}
                   </span>
                   <button
                     type="button"
                     disabled={disabled}
-                    onClick={() => setGroup(group.rows, included !== group.rows.length)}
+                    onClick={() => setGroup(group.rows, onCount !== group.rows.length)}
                     className="min-h-[32px] rounded px-1.5 font-medium underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
                   >
-                    {L(included === group.rows.length ? CV.selectNone : CV.selectAll, lang)}
+                    {L(onCount === group.rows.length ? CV.selectNone : CV.selectAll, lang)}
                   </button>
                 </span>
               )}
@@ -164,12 +162,12 @@ export function CvSelectionPicker({
                   <li key={row.id}>
                     <label
                       className={`flex min-h-[44px] cursor-pointer items-start gap-2.5 rounded-md px-2 py-2 text-sm hover:bg-secondary/60 ${
-                        excluded.has(row.id) ? "text-muted-foreground" : "text-foreground"
+                        included.has(row.id) ? "text-foreground" : "text-muted-foreground"
                       }`}
                     >
                       <input
                         type="checkbox"
-                        checked={!excluded.has(row.id)}
+                        checked={included.has(row.id)}
                         disabled={disabled}
                         onChange={() => toggle(row.id)}
                         className="mt-0.5 h-4 w-4 shrink-0 accent-[color:var(--accent)]"

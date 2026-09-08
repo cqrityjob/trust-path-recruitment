@@ -63,14 +63,14 @@ import {
   CvLanguageChoice,
   CvSelectionPicker,
   EMPTY_CV_CONTACT_FORM,
-  selectionHasHistory,
   type CvContactForm,
 } from "@/components/professional-identity/CvComposer";
+import { selectableIds, selectionHasHistory } from "@/lib/professional-identity/cv/selection";
 import { L, Lf, type Lang } from "@/components/professional-identity/copy";
 import { CV, CV_MISSING_FIELD, CV_STATUS_NOTE } from "@/components/professional-identity/cv-copy";
 import { useT } from "@/i18n/context";
 import { generateMyCv, prepareMyCv } from "@/lib/professional-identity/cv/cv.functions";
-import { saveCvDraft } from "@/lib/professional-identity/cv/cv-store.functions";
+import { createMyCv } from "@/lib/professional-identity/cv/cv-store.functions";
 
 export const Route = createFileRoute("/_authenticated/my-career/cv/new")({
   ssr: false,
@@ -91,9 +91,17 @@ function CvNewPage() {
   const [jobText, setJobText] = useState("");
   const [includeInsight, setIncludeInsight] = useState(false);
   const [title, setTitle] = useState("");
-  /** What the person has taken OFF this CV. Empty to begin with: everything
-   *  they have recorded is on it until they say otherwise. */
-  const [excludedIds, setExcludedIds] = useState<readonly string[]>([]);
+  /**
+   * The facts to put ON this CV.
+   *
+   * Seeded, once the profile loads, to everything the person has -- so the
+   * screen still starts with everything ticked -- and sent as an ALLOWLIST
+   * that the server intersects with what they actually own. selection.ts sets
+   * out why the list says what to include rather than what to remove: a
+   * truncated or replayed exclusion list removes nothing and discloses
+   * everything, and a truncated allowlist includes nothing and is refused.
+   */
+  const [includedIds, setIncludedIds] = useState<readonly string[]>([]);
   const [contact, setContact] = useState<CvContactForm>(EMPTY_CV_CONTACT_FORM);
   /** The language of the DOCUMENT, which is not the language of the
    *  interface. Seeded from the account and then owned by the person. */
@@ -106,8 +114,53 @@ function CvNewPage() {
     staleTime: 60_000,
   });
 
-  // Seed the two fields the account can answer for, once, and then leave
-  // them alone: re-seeding on every render would fight the person typing.
+  /**
+   * The idempotency key for the NEXT save.
+   *
+   * Generated once per previewed document, not once per click: a lost
+   * response is answered by sending the same id again, and the database
+   * returns the original cvId instead of creating a second CV. It is
+   * regenerated whenever a new preview is produced, because a document built
+   * from different facts is honestly a different request -- reusing the id
+   * there would be refused as CV_REQUEST_CONFLICT, which is correct for a
+   * retry and wrong for a person who changed their mind.
+   */
+  const [operationId, setOperationId] = useState(() => crypto.randomUUID());
+
+  /**
+   * Everything that decides what the document SAYS.
+   *
+   * ── WHY A KEY AND NOT A useEffect ──────────────────────────────────────
+   *
+   * A preview is a statement about a specific set of facts, in a specific
+   * language, with specific contact details. Change any of them and the
+   * document on screen is about something else -- and the one thing this
+   * feature cannot do is let somebody read one document and save a different
+   * one. That already happened once, on the saved-CV screen, through a
+   * preview rebuilt over the wrong bundle.
+   *
+   * So the preview records the key it was generated from, and anything that
+   * changes the key marks it stale. Stale means: the document comes off the
+   * screen, Save is disabled, and the person is asked for a new preview. It
+   * is not silently regenerated -- that would spend a provider call on every
+   * keystroke in the advert box.
+   *
+   * The ids are sorted so that ticking A then B and ticking B then A are the
+   * same request, which they are.
+   */
+  const materialKey = JSON.stringify({
+    purpose,
+    jobText: purpose === "targeted" ? jobText.trim() : "",
+    includeInsight,
+    docLocale,
+    includedIds: [...includedIds].sort(),
+    contact,
+  });
+  const [previewedKey, setPreviewedKey] = useState<string | null>(null);
+  const previewStale = previewedKey !== null && previewedKey !== materialKey;
+
+  // Seed the fields the account can answer for, once, and then leave them
+  // alone: re-seeding on every render would fight the person typing.
   // Prefilled, never pre-published -- `showEmail` stays false until ticked.
   const accountEmail = preparation.data?.accountEmail ?? null;
   const preparedLocale = preparation.data?.defaultLocale;
@@ -116,6 +169,7 @@ function CvNewPage() {
     if (seeded || !preparation.data) return;
     if (accountEmail) setContact((c) => ({ ...c, email: accountEmail }));
     if (preparedLocale) setDocLocale(preparedLocale);
+    setIncludedIds(selectableIds(preparation.data.bundle));
     setSeeded(true);
   }, [seeded, preparation.data, accountEmail, preparedLocale]);
 
@@ -128,24 +182,30 @@ function CvNewPage() {
           targetJobText: purpose === "targeted" && jobText.trim() ? jobText.trim() : null,
           includeCareerInsight: includeInsight,
           locale: docLocale,
-          excludedIds: [...excludedIds],
+          includedIds: [...includedIds],
           contact,
         },
       }),
+    onSuccess: () => {
+      // This preview is now the document the save would produce, and it gets
+      // its own idempotency key.
+      setPreviewedKey(materialKey);
+      setOperationId(crypto.randomUUID());
+    },
   });
 
-  const save = useServerFn(saveCvDraft);
+  const save = useServerFn(createMyCv);
   const persist = useMutation({
     mutationFn: () =>
       save({
         data: {
-          cvId: null,
+          operationId,
           title: title.trim(),
           purpose,
           targetJobText: purpose === "targeted" && jobText.trim() ? jobText.trim() : null,
           includeCareerInsight: includeInsight,
           locale: docLocale,
-          excludedIds: [...excludedIds],
+          includedIds: [...includedIds],
           contact,
           // Null saves the factual document. On every failure path there is
           // no validated draft to keep, and the factual CV is what the
@@ -163,13 +223,13 @@ function CvNewPage() {
 
   const bundle = preparation.data?.bundle;
   const readiness = preparation.data?.readiness;
-  const outcome = run.data;
+  const outcome = previewStale ? undefined : run.data;
   const shown = outcome?.document ?? null;
   // The server refuses to save a CV with no professional history on it, and
   // `readiness.ts` explains why skills and languages do not count. Asked here
   // so the refusal is a sentence beside the checkboxes rather than an error
   // after a button somebody was allowed to press.
-  const hasHistory = bundle ? selectionHasHistory(bundle, excludedIds) : true;
+  const hasHistory = bundle ? selectionHasHistory(bundle, includedIds) : true;
   const rejectedOnSave = (persist.data?.violations.length ?? 0) > 0;
 
   return (
@@ -281,8 +341,8 @@ function CvNewPage() {
                 <div className="mt-3 rounded-lg border border-border bg-card p-4">
                   <CvSelectionPicker
                     bundle={bundle}
-                    excludedIds={excludedIds}
-                    onChange={setExcludedIds}
+                    includedIds={includedIds}
+                    onChange={setIncludedIds}
                     lang={l}
                   />
                 </div>
@@ -394,6 +454,12 @@ function CvNewPage() {
                 </label>
               )}
 
+              {/* Said BEFORE the button, not after it. A person is entitled
+                  to know that pressing this sends the entries they selected
+                  to a third-party engine, and to know it while they can still
+                  change what is selected. */}
+              <p className="text-xs leading-relaxed text-muted-foreground">{L(CV.aiNotice, l)}</p>
+
               <PrimaryButton
                 type="button"
                 disabled={run.isPending || !hasHistory}
@@ -401,12 +467,33 @@ function CvNewPage() {
                 className="w-full justify-center gap-2"
               >
                 {run.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                {run.isPending ? L(CV.generating, l) : L(CV.generate, l)}
+                {run.isPending
+                  ? L(CV.generating, l)
+                  : L(previewStale ? CV.regeneratePreview : CV.generate, l)}
               </PrimaryButton>
             </div>
 
             <div>
-              {!shown && !run.isPending && (
+              {/* THE DOCUMENT COMES OFF THE SCREEN when it stops describing
+                  what is selected. Reading one CV and saving another is the
+                  single failure this whole screen exists to prevent, and it
+                  is not prevented by a warning next to a still-visible
+                  document. */}
+              {previewStale && !run.isPending && (
+                <div
+                  role="status"
+                  className="no-print mb-5 max-w-md rounded-lg border border-border border-l-[3px] border-l-[color:var(--accent)] bg-card p-4"
+                >
+                  <p className="text-sm font-medium text-foreground">
+                    {L(CV.previewStaleTitle, l)}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {L(CV.previewStaleBody, l)}
+                  </p>
+                </div>
+              )}
+
+              {!shown && !run.isPending && !previewStale && (
                 <p className="no-print max-w-md rounded-lg border border-dashed border-border p-5 text-sm leading-relaxed text-muted-foreground">
                   {L(CV.awaiting, l)}
                 </p>
@@ -465,9 +552,13 @@ function CvNewPage() {
                           {L(CV.saveFailed, l)}
                         </span>
                       )}
+                      {/* Save is impossible while the preview does not
+                          describe the request. Disabled rather than hidden,
+                          so the person can see what they are being asked to
+                          do first. */}
                       <PrimaryButton
                         type="button"
-                        disabled={persist.isPending}
+                        disabled={persist.isPending || previewStale}
                         onClick={() => persist.mutate()}
                         className="gap-1.5"
                       >

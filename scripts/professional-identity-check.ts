@@ -64,11 +64,10 @@ import {
 import { validateCvPresentation } from "../src/lib/professional-identity/cv/validation";
 import { diffCvSourceBundles } from "../src/lib/professional-identity/cv/bundle-diff";
 import {
-  applyCvEdit,
+  applyPersonEdit,
   buildSavedCvDocument,
   cvEditSchema,
   factualStoredPresentation,
-  reconcileStoredPresentation,
   storedFromAiPresentation,
   storedPresentationSchema,
 } from "../src/lib/professional-identity/cv/stored";
@@ -1615,55 +1614,36 @@ console.log("\n9 . saved CV documents");
   );
 
   // -- A person's edit takes authorship of what they touched ---------
-  const edited = applyCvEdit(
-    stored,
-    { cvId: "00000000-0000-0000-0000-000000000000", summary: "Min egen sammanfattning." },
-    bundle,
-  );
+  const edited = applyPersonEdit(stored, { summary: "Min egen sammanfattning." });
   ck("an edited field becomes the person's", edited.authorship.summary === "person");
   ck("an untouched field keeps its authorship", edited.authorship.headline === "ai");
   ck("the edit is stored", edited.summary === "Min egen sammanfattning.");
 
-  const reSaved = applyCvEdit(
-    stored,
-    { cvId: "00000000-0000-0000-0000-000000000000", summary: stored.summary },
-    bundle,
-  );
+  const reSaved = applyPersonEdit(stored, { summary: stored.summary });
   ck("re-submitting identical text does not claim authorship", reSaved.authorship.summary === "ai");
 
-  const bulletEdit = applyCvEdit(
-    stored,
-    {
-      cvId: "00000000-0000-0000-0000-000000000000",
-      bullets: [{ sourceId: "e1", bullets: ["Ledde bevakningsuppdrag."] }],
-    },
-    bundle,
-  );
+  const bulletEdit = applyPersonEdit(stored, {
+    bullets: [{ sourceId: "e1", bullets: ["Ledde bevakningsuppdrag."] }],
+  });
   ck("an edited bullet becomes the person's", bulletEdit.authorship.bullets["e1"] === "person");
   ck("the other employment keeps its authorship", bulletEdit.authorship.bullets["e2"] === "ai");
 
   // -- A client cannot introduce a reference we never supplied -------
-  const injected = applyCvEdit(
-    stored,
-    {
-      cvId: "00000000-0000-0000-0000-000000000000",
-      bullets: [{ sourceId: "not-this-person's-employment", bullets: ["Arbetade där."] }],
-    },
-    bundle,
-  );
+  const injected = applyPersonEdit(stored, {
+    bullets: [{ sourceId: "not-this-person's-employment", bullets: ["Arbetade där."] }],
+  });
   ck(
     "an edit naming an employment this person does not have is ignored",
     injected.experience.every((e) => e.sourceId !== "not-this-person's-employment"),
   );
 
-  // -- Ordering is presentation; membership is not -------------------
-  const reordered = applyCvEdit(
-    stored,
-    { cvId: "00000000-0000-0000-0000-000000000000", experienceOrder: ["e2", "e1"] },
-    bundle,
+  // -- A bullet edit changes wording and NOTHING about membership ----
+  ck(
+    "editing one employment's bullets leaves every employment in place",
+    bulletEdit.experience.length === 2 &&
+      bulletEdit.experience[0]?.sourceId === "e1" &&
+      bulletEdit.experience[1]?.sourceId === "e2",
   );
-  ck("experience order is editable", reordered.experience[0]?.sourceId === "e2");
-  ck("and reordering removes nothing", reordered.experience.length === 2);
 
   // -- Rendering a saved row -----------------------------------------
   const doc = buildSavedCvDocument(bundle, stored);
@@ -1673,15 +1653,9 @@ console.log("\n9 . saved CV documents");
   );
   ck("and marks drafted prose as drafted", doc.summaryIsAiWritten);
 
-  const ownWords = applyCvEdit(
-    applyCvEdit(
-      stored,
-      { cvId: "00000000-0000-0000-0000-000000000000", summary: "Mina ord." },
-      bundle,
-    ),
-    { cvId: "00000000-0000-0000-0000-000000000000", headline: "Min titel" },
-    bundle,
-  );
+  const ownWords = applyPersonEdit(applyPersonEdit(stored, { summary: "Mina ord." }), {
+    headline: "Min titel",
+  });
   const ownDoc = buildSavedCvDocument(bundle, {
     ...ownWords,
     authorship: { headline: "person", summary: "person", bullets: {} },
@@ -1769,34 +1743,29 @@ console.log("\n10 . a saved CV is a snapshot");
     "a changed headline is detected",
     diffCvSourceBundles(savedBundle, newHeadline).changes.some((c) => c.section === "identity"),
   );
+}
 
-  // Reconciliation drops what is gone, keeps what survives, adds what is
-  // new -- and never invents a bullet.
-  const stored = storedFromAiPresentation({
-    headline: "Säkerhetschef",
-    summary:
-      "En sammanfattning som är tillräckligt lång för schemat att acceptera den utan problem.",
-    experience: [
-      { sourceId: "e1", bullets: ["Punkt ett."] },
-      { sourceId: "e2", bullets: ["Punkt två."] },
-    ],
-    emphasisedClaimIds: ["c4"],
-    tailoringRationale: "Kronologisk.",
-  });
-  const reconciled = reconcileStoredPresentation(stored, withoutE1);
-  ck("reconciliation drops a vanished employment", reconciled.droppedIds.includes("e1"));
+{
+  // -- RECONCILIATION MOVED INTO THE DATABASE -------------------------
+  //
+  // `reconcileStoredPresentation` used to live in stored.ts: it dropped
+  // bullets for an employment the fresh bundle no longer contained, appended
+  // entries for new ones and pruned dead ids. Every one of those now happens
+  // inside `cv_save`, in the same statement that writes the row, because the
+  // bundle and the wording have to agree and two round trips could not
+  // guarantee that they did.
+  //
+  // What is asserted here is that it was MOVED and not DUPLICATED. A
+  // TypeScript copy would be a second implementation of a rule whose whole
+  // point is that there is one, and the second copy is the one that drifts.
+  const storedSrc = read("src/lib/professional-identity/cv/stored.ts");
   ck(
-    "and reports it rather than silently deleting the person's writing",
-    reconciled.droppedIds.length === 1,
+    "no TypeScript reconciler survives to disagree with cv_save",
+    !/export function reconcileStoredPresentation/.test(storedSrc),
   );
   ck(
-    "the surviving employment keeps its bullets",
-    reconciled.presentation.experience.find((e) => e.sourceId === "e2")?.bullets[0] ===
-      "Punkt två.",
-  );
-  ck(
-    "reconciliation never invents a bullet",
-    reconciled.presentation.experience.every((e) => e.bullets.length === 0 || e.sourceId === "e2"),
+    "and stored.ts says where the rule went",
+    storedSrc.includes("Reconciliation lives in SQL now"),
   );
 }
 

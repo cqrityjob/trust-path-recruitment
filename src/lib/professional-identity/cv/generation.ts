@@ -42,14 +42,8 @@ import {
   type AiProvider,
   type AiRequest,
 } from "@/lib/interview-intelligence/ai/provider";
-import {
-  screenPassages,
-  type QuarantinedPassage,
-} from "@/lib/interview-intelligence/ai/injection";
-import {
-  selectProvider,
-  type ProviderMode,
-} from "@/lib/interview-intelligence/ai/orchestrator";
+import { screenPassages, type QuarantinedPassage } from "@/lib/interview-intelligence/ai/injection";
+import { selectProvider, type ProviderMode } from "@/lib/interview-intelligence/ai/orchestrator";
 import { DeterministicCvProvider } from "./providers/deterministic";
 import { cvAbstentionSchema, cvPresentationOutput, type CvPresentation } from "./schema";
 import { validateCvPresentation, type CvViolation } from "./validation";

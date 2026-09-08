@@ -43,7 +43,6 @@ import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CvDocumentView } from "../src/components/professional-identity/CvDocumentView";
 import { CV } from "../src/components/professional-identity/cv-copy";
-import { selectionHasHistory } from "../src/components/professional-identity/CvComposer";
 import {
   buildCvSourceBundle,
   citableIds,
@@ -58,20 +57,22 @@ import {
   NO_CV_CONTACT,
 } from "../src/lib/professional-identity/cv/document";
 import {
-  applyCvEdit,
+  applyPersonEdit,
   buildSavedCvDocument,
-  cvEditSchema,
   factualStoredPresentation,
-  reconcileStoredPresentation,
   resolveCvContact,
   storedFromAiPresentation,
   type StoredContact,
 } from "../src/lib/professional-identity/cv/stored";
 import {
+  cvCreatePayloadSchema,
+  cvSavePayloadSchema,
+} from "../src/lib/professional-identity/cv/cv-store.functions";
+import {
+  keepOnly,
   omittedFacts,
-  pruneExclusions,
-  reselectSavedBundle,
   selectableIds,
+  selectionHasHistory,
 } from "../src/lib/professional-identity/cv/selection";
 import { cvApplicationBlock } from "../src/lib/professional-identity/cv/application-source";
 import { computeCvReadiness } from "../src/lib/professional-identity/cv/readiness";
@@ -276,20 +277,27 @@ const WALLIN = identity({
   ],
 });
 
-const bundleOf = (id: ProfessionalIdentityV1, excludedIds: readonly string[] = []) =>
+/** `undefined` keeps everything, which is what the picker starts from. An
+ *  explicit array is the allowlist the server would intersect. */
+const bundleOf = (id: ProfessionalIdentityV1, includedIds?: readonly string[]) =>
   buildCvSourceBundle({
     identity: id,
     locale: "sv",
     includeCareerInsight: false,
     targetJobText: null,
-    excludedIds,
+    includedIds,
   });
+
+/** Everything this person has, minus the named ids -- the shape most of the
+ *  assertions below want to express, said once. */
+const allBut = (id: ProfessionalIdentityV1, ...off: string[]) =>
+  selectableIds(bundleOf(id)).filter((x) => !off.includes(x));
 
 const documentOf = (
   id: ProfessionalIdentityV1,
-  excludedIds: readonly string[] = [],
+  includedIds?: readonly string[],
   contact = NO_CV_CONTACT,
-) => buildFactualCvDocument(bundleOf(id, excludedIds), buildCvTrustAnnotations(id, TODAY), contact);
+) => buildFactualCvDocument(bundleOf(id, includedIds), buildCvTrustAnnotations(id, TODAY), contact);
 
 const markupOf = (...args: Parameters<typeof documentOf>) =>
   renderToStaticMarkup(<CvDocumentView document={documentOf(...args)} />);
@@ -301,7 +309,7 @@ const markupOf = (...args: Parameters<typeof documentOf>) =>
 group("SELECTION — a deselected fact is absent, not merely undrawn");
 {
   const all = bundleOf(WALLIN);
-  const trimmed = bundleOf(WALLIN, ["e-past", "c-ov", "c-en"]);
+  const trimmed = bundleOf(WALLIN, allBut(WALLIN, "e-past", "c-ov", "c-en"));
 
   ck(
     "everything the person has is included until they say otherwise",
@@ -334,7 +342,7 @@ group("SELECTION — a deselected fact is absent, not merely undrawn");
     !citable.has("e-past") && !citable.has("c-ov") && citable.has("e-current"),
   );
 
-  const text = visibleText(markupOf(WALLIN, ["e-past", "c-ov", "c-en"]));
+  const text = visibleText(markupOf(WALLIN, allBut(WALLIN, "e-past", "c-ov", "c-en")));
   ck(
     "the rendered document does not print it",
     !text.includes("Stadsvakt") &&
@@ -353,76 +361,88 @@ group("SELECTION — a deselected fact is absent, not merely undrawn");
   );
 }
 
-group("SELECTION — changing it on a SAVED CV changes nothing else");
+group("SELECTION — it fails CLOSED, and the reasoning is in the failure mode");
 {
-  const saved = bundleOf(WALLIN, ["e-past"]);
+  const everything = selectableIds(bundleOf(WALLIN));
 
-  // The profile has moved since: the employer name was corrected and a new
-  // language was recorded. Neither was asked for.
-  const moved = identity({
-    ...WALLIN,
-    employment: WALLIN.employment.map((e) =>
-      e.id === "e-current" ? { ...e, employerName: "Nordic Security Group AB" } : e,
-    ),
-    claims: [...WALLIN.claims, claim({ id: "c-ar", claimType: "language", title: "Arabiska" })],
-  });
-  const full = bundleOf(moved);
-
-  const added = reselectSavedBundle(saved, full, [], ["e-past"]);
+  // THE PROPERTY THAT REPLACED AN EXCLUSION LIST. A request that arrives
+  // empty, truncated, corrupted or replayed must not produce a fuller
+  // document than the person asked for. Under the old model an empty list
+  // meant "remove nothing" and disclosed everything; here it means "include
+  // nothing" and is refused.
   ck(
-    "putting one employment back puts exactly that employment back",
-    added.employment.length === 2 && added.employment.some((e) => e.id === "e-past"),
+    "an EMPTY request includes nothing",
+    bundleOf(WALLIN, []).employment.length === 0 && bundleOf(WALLIN, []).languages.length === 0,
   );
   ck(
-    "it does NOT quietly accept an unrelated correction made since the CV was saved",
-    added.employment.find((e) => e.id === "e-current")?.employerName === "Nordic Security AB",
+    "and is refused as having no professional history, rather than quietly widened",
+    !selectionHasHistory(bundleOf(WALLIN), []),
   );
   ck(
-    "and it does NOT quietly add a record nobody asked for",
-    !added.languages.some((c) => c.id === "c-ar"),
+    "a request naming only ids this person does not have includes nothing",
+    bundleOf(WALLIN, ["e-not-mine", "c-not-mine"]).employment.length === 0,
   );
-  ck("employment stays newest-first after a re-selection", added.employment[0]?.id === "e-current");
+  ck(
+    "a TRUNCATED request produces a smaller CV, never a larger one",
+    bundleOf(WALLIN, everything.slice(0, 2)).employment.length <= 2,
+  );
+  ck(
+    "and the full request is still the full CV",
+    bundleOf(WALLIN, everything).employment.length === 2,
+  );
 
-  const removed = reselectSavedBundle(saved, full, ["c-en"], []);
+  // `undefined` is not the same request as `[]`, and collapsing them is how
+  // the fail-open would come back through a default parameter.
   ck(
-    "removing is a pure filter over the snapshot -- nothing is read, nothing else moves",
-    !removed.languages.some((c) => c.id === "c-en") &&
-      removed.employment.find((e) => e.id === "e-current")?.employerName === "Nordic Security AB",
+    "no selection at all keeps everything -- the picker's starting state",
+    keepOnly(bundleOf(WALLIN).employment, undefined).length === 2 &&
+      keepOnly(bundleOf(WALLIN).employment, []).length === 0,
   );
 }
 
-group("SELECTION — the stored exclusion list survives a refresh");
+group("SELECTION — the app holds no second implementation of the rule");
 {
-  // THE REGRESSION THIS PINS. `reconcileStoredPresentation` prunes exclusions
-  // for records that no longer exist. Pruned against the FILTERED bundle it
-  // would prune every one of them -- because a filtered bundle contains, by
-  // construction, none of the excluded ids -- and the next "update from
-  // profile" would silently put the person's whole profile back on the CV.
-  const filtered = bundleOf(WALLIN, ["e-past"]);
-  const stored = { ...factualStoredPresentation(filtered), excludedIds: ["e-past"] };
-
-  const wrong = reconcileStoredPresentation(stored, filtered).presentation;
+  // The SAVED bundle is rebuilt by cv_save, in SQL, in the same statement
+  // that writes the row. A TypeScript reconciler would be a second copy of a
+  // rule whose whole point is that there is one -- and the second copy is the
+  // one that drifts.
+  const storedSrc = read("src/lib/professional-identity/cv/stored.ts");
   ck(
-    "pruning against the filtered bundle would lose the exclusion (the bug)",
-    wrong.excludedIds.length === 0,
+    "there is no TypeScript reconciler to disagree with cv_save",
+    !/export function reconcileStoredPresentation/.test(storedSrc),
+  );
+  ck(
+    "and no stored exclusion list to go stale against the records it names",
+    !/excludedIds\s*[:,]/.test(storedSrc),
   );
 
-  const right = reconcileStoredPresentation(
-    stored,
-    filtered,
-    selectableIds(bundleOf(WALLIN)),
-  ).presentation;
-  ck("pruning against everything the person HAS keeps it", right.excludedIds.includes("e-past"));
-
+  const storeSrc = read("src/lib/professional-identity/cv/cv-store.functions.ts");
+  // THE BOUNDARY. Every write is an RPC; a direct table write from the
+  // application would be the defect this whole correction closed, rebuilt one
+  // layer up.
   ck(
-    "an exclusion for a record that is genuinely gone is dropped rather than kept forever",
-    pruneExclusions(["e-past", "e-deleted"], selectableIds(bundleOf(WALLIN))).join() === "e-past",
+    "no CV write reaches cv_documents directly",
+    !/from\("cv_documents"\)[\s\S]{0,200}\.(insert|update|delete|upsert)/.test(storeSrc),
+  );
+  for (const fn of ["cv_create", "cv_save", "cv_refresh_from_profile", "cv_delete"]) {
+    ck(`writes go through ${fn}`, storeSrc.includes(`rpc("${fn}"`));
+  }
+  ck(
+    "every write carries the revision the caller was looking at",
+    (storeSrc.match(/_expected_updated_at/g) ?? []).length >= 3,
+  );
+  ck(
+    "and creation carries an operation id, so a lost response cannot duplicate it",
+    storeSrc.includes("_operation_id"),
   );
 }
 
 group("SELECTION — the person is told what is NOT on the CV");
 {
-  const omitted = omittedFacts(bundleOf(WALLIN), bundleOf(WALLIN, ["e-past", "c-ov"]));
+  const omitted = omittedFacts(
+    bundleOf(WALLIN),
+    bundleOf(WALLIN, allBut(WALLIN, "e-past", "c-ov")),
+  );
   ck("both omissions are reported", omitted.length === 2);
   ck(
     "and named by something a person recognises, never by an id",
@@ -440,7 +460,7 @@ group("SELECTION — the person is told what is NOT on the CV");
 group("SELECTION — a CV with no professional history is refused BEFORE the button");
 {
   const all = bundleOf(WALLIN);
-  const noHistory = ["e-current", "e-past", "c-gy"];
+  const noHistory = allBut(WALLIN, "e-current", "e-past", "c-gy");
   ck(
     "unticking every employment and education leaves no history",
     !selectionHasHistory(all, noHistory),
@@ -453,10 +473,10 @@ group("SELECTION — a CV with no professional history is refused BEFORE the but
     "skills and languages do not stand in for a career -- the same rule readiness.ts states",
     !selectionHasHistory(all, noHistory) && bundleOf(WALLIN, noHistory).languages.length === 2,
   );
-  ck("one employment is enough", selectionHasHistory(all, ["e-past", "c-gy"]));
+  ck("one employment is enough", selectionHasHistory(all, ["e-past"]));
   ck(
     "so is education alone, for somebody entering the industry",
-    selectionHasHistory(all, ["e-current", "e-past"]),
+    selectionHasHistory(all, ["c-gy"]),
   );
 }
 
@@ -791,17 +811,10 @@ group("CONTACT — reused, opt-in, and never a verified claim");
     !headerBeforeSections.includes("Verifierad") &&
       !headerBeforeSections.includes("Verifieringsuppgift"),
   );
-  // Structural, not a regex over field names: a payload that TRIES to carry a
-  // verification state is parsed, and the state is gone on the other side.
-  const contactAttempt = cvEditSchema.parse({
-    cvId: "00000000-0000-4000-8000-000000000000",
-    contact: { email: "karin@example.se", verified: true, assertionLevel: "verified" },
-  });
-  ck(
-    "a payload claiming a contact detail is verified loses the claim at the boundary",
-    !("verified" in (contactAttempt.contact ?? {})) &&
-      !("assertionLevel" in (contactAttempt.contact ?? {})),
-  );
+  // The structural version of the same statement lives in the AUTHORSHIP
+  // group below, where the whole save payload is parsed from a hostile
+  // object. Here the point is only that nothing near the contact line on the
+  // PAGE carries a verification mark.
 }
 
 group("CONTACT — the work location is a place, not a code");
@@ -872,11 +885,7 @@ group("AUTHORSHIP — manual text inherits nothing from a verified fact");
     tailoringRationale: "Ordnad kronologiskt.",
   });
   ck("a drafted headline is marked as drafted", aiStored.authorship.headline === "ai");
-  const edited = applyCvEdit(
-    aiStored,
-    { cvId: "00000000-0000-4000-8000-000000000000", headline: "Väktare, Malmö" },
-    b,
-  );
+  const edited = applyPersonEdit(aiStored, { headline: "Väktare, Malmö" });
   ck("editing it makes it the person's own", edited.authorship.headline === "person");
   ck("and leaves the untouched summary alone", edited.authorship.summary === "ai");
 }
@@ -884,7 +893,6 @@ group("AUTHORSHIP — manual text inherits nothing from a verified fact");
 group("AUTHORSHIP — a regenerated draft cannot undo the person's choices");
 {
   const settings = {
-    excludedIds: ["e-past"],
     contact: { email: "karin@example.se", phone: "", showEmail: true, showPhone: false },
   };
   const stored = storedFromAiPresentation(
@@ -897,16 +905,29 @@ group("AUTHORSHIP — a regenerated draft cannot undo the person's choices");
     },
     settings,
   );
-  ck("the deselection survives a new draft", stored.excludedIds.includes("e-past"));
   ck(
-    "and so does the contact choice",
+    "the contact choice survives a new draft",
     stored.contact.showEmail === true && stored.contact.email === "karin@example.se",
   );
+  // WHICH FACTS a CV carries is not in the presentation at all any more: the
+  // bundle IS the selection, and it is rebuilt in SQL from an allowlist the
+  // PERSON sent. So a draft has no field through which it could put a fact
+  // back on somebody's CV, which is stronger than carrying the choice across.
   ck(
-    "the model has no field it could have written either into",
+    "and a draft has no field through which it could change what the CV carries",
+    !("excludedIds" in stored) && !("includedIds" in stored),
+  );
+  ck(
+    "the model's own output schema has none either",
     !(
       "excludedIds" in
-      { headline: "", summary: "", experience: [], emphasisedClaimIds: [], tailoringRationale: "" }
+      {
+        headline: "",
+        summary: "",
+        experience: [],
+        emphasisedClaimIds: [],
+        tailoringRationale: "",
+      }
     ),
   );
 }
@@ -914,32 +935,24 @@ group("AUTHORSHIP — a regenerated draft cannot undo the person's choices");
 group("AUTHORSHIP — a contact edit is not a factual correction");
 {
   const b = bundleOf(WALLIN);
-  const edited = applyCvEdit(
-    factualStoredPresentation(b),
-    {
-      cvId: "00000000-0000-4000-8000-000000000000",
-      contact: { phone: "070-000 00 00", showPhone: true },
-    },
-    b,
-  );
+  const stored = factualStoredPresentation(b, {
+    contact: { email: "", phone: "", showEmail: false, showPhone: false },
+  });
+  const edited = applyPersonEdit(stored, { headline: "Väktare, Malmö" });
+  ck("a wording edit changes the wording", edited.headline === "Väktare, Malmö");
   ck(
-    "the contact detail is stored",
-    edited.contact.phone === "070-000 00 00" && edited.contact.showPhone,
-  );
-  ck("the email is left alone", edited.contact.email === "");
-  ck(
-    "and no authorship flag was invented for it",
+    "and invents no authorship key for anything it did not touch",
     Object.keys(edited.authorship).sort().join() === "bullets,headline,summary",
   );
 
-  // THE EDITING CONTRACT, RESTATED OVER THE FIELDS THAT WERE ADDED.
+  // ── THE EDITING CONTRACT, ASSERTED BY PARSING A HOSTILE PAYLOAD ─────
   //
-  // Asserted by parsing a hostile payload rather than by inspecting field
-  // names, because the property that matters is what SURVIVES the boundary.
-  // A client that posts an employer name gets it dropped; there is nowhere
-  // for a factual correction to arrive through this door.
-  const hostile = cvEditSchema.parse({
+  // Over what SURVIVES the boundary rather than over field names, because
+  // that is the property that matters. A client that posts an employer name
+  // gets it dropped; there is nowhere for a factual correction to arrive.
+  const hostile = cvSavePayloadSchema.parse({
     cvId: "00000000-0000-4000-8000-000000000000",
+    expectedUpdatedAt: "2026-09-08T00:00:00Z",
     headline: "Väktare",
     employerName: "Företag Som Inte Finns AB",
     roleTitle: "Säkerhetschef",
@@ -950,7 +963,10 @@ group("AUTHORSHIP — a contact edit is not a factual correction");
     institution: "Ett Universitet",
     credentialTitle: "En Behörighet",
     assertionLevel: "verified",
+    ownerUserId: "99999999-9999-4999-8999-999999999999",
+    contact: { email: "karin@example.se", verified: true },
   }) as Record<string, unknown>;
+
   ck(
     "an edit that tries to carry a factual correction loses it at the boundary",
     [
@@ -965,12 +981,24 @@ group("AUTHORSHIP — a contact edit is not a factual correction");
       "assertionLevel",
     ].every((f) => !(f in hostile)),
   );
-  ck("while the wording it was allowed to change survives", hostile.headline === "Väktare");
-  const fields = Object.keys(cvEditSchema.shape);
   ck(
-    "what the payload gained is presentation only",
-    fields.includes("contact") && fields.includes("locale"),
+    "a payload claiming a contact detail is verified loses the claim",
+    !("verified" in ((hostile.contact ?? {}) as Record<string, unknown>)),
   );
+  // THE ONE THAT MATTERS MOST. There is no holder id in any payload, so there
+  // is nothing for a client to send: the owner comes from auth.uid(), in SQL.
+  ck(
+    "and there is no owner field in either payload -- the owner is auth.uid()",
+    !("ownerUserId" in hostile) &&
+      !Object.keys(cvCreatePayloadSchema.shape).some((f) => /owner|holder|user/i.test(f)) &&
+      !Object.keys(cvSavePayloadSchema.shape).some((f) => /owner|holder|user/i.test(f)),
+  );
+  ck(
+    "every save names the revision it was made against",
+    "expectedUpdatedAt" in cvSavePayloadSchema.shape,
+  );
+  ck("and every creation names an operation id", "operationId" in cvCreatePayloadSchema.shape);
+  ck("the wording it was allowed to change survives", hostile.headline === "Väktare");
 }
 
 /* ================================================================== */
@@ -1144,11 +1172,21 @@ group("BOUNDARIES — the CV writes nothing it does not own");
   // in the renderer would pass every visual test and reintroduce the leak
   // into the employer's copy of the bundle.
   const bundleSrc = read("src/lib/professional-identity/cv/source-bundle.ts");
-  ck("selection is applied while the bundle is built", bundleSrc.includes("withoutExcluded"));
+  ck("selection is applied while the bundle is built", bundleSrc.includes("keepOnly("));
   const viewSrc = read("src/components/professional-identity/CvDocumentView.tsx");
   ck(
     "and the renderer holds no selection filter of its own",
-    !/excludedIds|withoutExcluded|isExcluded/.test(viewSrc),
+    !/includedIds|excludedIds|keepOnly/.test(viewSrc),
+  );
+  // The TypeScript build is the PREVIEW's copy. The stored bundle is built by
+  // cv_source_bundle, in SQL, which is where the intersection is a boundary
+  // rather than a display choice -- the file says so, so a future reader does
+  // not mistake this module for the enforcement point.
+  ck(
+    "and the module says which of the two copies is the boundary",
+    read("src/lib/professional-identity/cv/selection.ts").includes(
+      "deliberately NOT the enforcement point",
+    ),
   );
 
   // The trust channel stays separate from the bundle the model receives.
@@ -1172,5 +1210,7 @@ if (fails.length > 0) {
   process.exit(1);
 }
 console.log(
-  "cv-pilot:check OK (selection is absence not concealment, lapsed credentials say so, drafts and archived merits stay out, contact details are opt-in and unverified, both languages, thin and long careers, no second write path)",
+  "cv-pilot:check OK (selection fails closed, lapsed credentials say so, drafts and archived merits stay out, " +
+    "contact details are opt-in and unverified, no owner or fact ever crosses the payload boundary, " +
+    "every write is revision-checked and idempotent, both languages, thin and long careers, no second write path)",
 );

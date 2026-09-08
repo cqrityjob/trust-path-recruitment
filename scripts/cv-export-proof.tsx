@@ -292,7 +292,12 @@ const EMPTY: ProfessionalIdentityV1 = {
   workSubJurisdiction: null,
   employment: [],
   claims: [],
-  discovery: { hasCompletedReport: false, snapshotId: null, generatedAt: null, namesCareers: false },
+  discovery: {
+    hasCompletedReport: false,
+    snapshotId: null,
+    generatedAt: null,
+    namesCareers: false,
+  },
   workload: {
     applicationCount: 0,
     assessmentAssignmentCount: 0,
@@ -466,14 +471,42 @@ const CHEF: ProfessionalIdentityV1 = {
       verificationMethod: "source_confirmation",
       verifiedOn: "2023-01-01",
     }),
-    claim({ id: "c-ssg", title: "SSG Entre", issuerName: "SSG", issuedOn: "2023-01-01", validUntil: "2027-01-01" }),
-    claim({ id: "c-iso", title: "ISO 27001 Lead Implementer", issuerName: "PECB", issuedOn: "2020-05-01" }),
-    claim({ id: "c-hlr", claimType: "training", title: "HLR och första hjälpen", issuerName: "Röda Korset", issuedOn: "2025-02-01", validUntil: "2027-02-01" }),
-    claim({ id: "c-uni", claimType: "education", title: "Kandidatexamen i kriminologi", issuerName: "Stockholms universitet", issuedOn: "2003-06-01" }),
+    claim({
+      id: "c-ssg",
+      title: "SSG Entre",
+      issuerName: "SSG",
+      issuedOn: "2023-01-01",
+      validUntil: "2027-01-01",
+    }),
+    claim({
+      id: "c-iso",
+      title: "ISO 27001 Lead Implementer",
+      issuerName: "PECB",
+      issuedOn: "2020-05-01",
+    }),
+    claim({
+      id: "c-hlr",
+      claimType: "training",
+      title: "HLR och första hjälpen",
+      issuerName: "Röda Korset",
+      issuedOn: "2025-02-01",
+      validUntil: "2027-02-01",
+    }),
+    claim({
+      id: "c-uni",
+      claimType: "education",
+      title: "Kandidatexamen i kriminologi",
+      issuerName: "Stockholms universitet",
+      issuedOn: "2003-06-01",
+    }),
     claim({ id: "c-sv", claimType: "language", title: "Svenska", skillLevel: "modersmål" }),
     claim({ id: "c-en", claimType: "language", title: "Engelska", skillLevel: "C1" }),
     claim({ id: "c-de", claimType: "language", title: "Tyska", skillLevel: "B1" }),
-    claim({ id: "c-risk", claimType: "specialisation", title: "Riskanalys och kontinuitetsplanering" }),
+    claim({
+      id: "c-risk",
+      claimType: "specialisation",
+      title: "Riskanalys och kontinuitetsplanering",
+    }),
     claim({ id: "c-lead", claimType: "practical_skill", title: "Ledning av larmcentral" }),
   ],
 };
@@ -506,7 +539,7 @@ interface Case {
   readonly key: string;
   readonly identity: ProfessionalIdentityV1;
   readonly locale: "sv" | "en";
-  readonly excludedIds?: readonly string[];
+  readonly includedIds?: readonly string[];
   readonly contact?: { email: string; phone: string; showEmail: boolean; showPhone: boolean };
 }
 
@@ -528,8 +561,11 @@ const CASES: readonly Case[] = [
     key: "selected-en",
     identity: WALLIN,
     locale: "en",
-    // Two facts taken off. They must be absent from the FILE.
-    excludedIds: ["e-past", "c-en"],
+    // Two facts left off. They must be absent from the FILE. Expressed as an
+    // allowlist because that is what the product now sends: the list says
+    // what to include, so a truncated one produces a smaller CV rather than
+    // a fuller one. See selection.ts.
+    includedIds: ["e-current", "c-vu1", "c-ov", "c-gy", "c-sv", "c-cctv"],
     contact: { email: "karin.wallin@example.se", phone: "", showEmail: true, showPhone: false },
   },
 ];
@@ -540,7 +576,7 @@ function pageHtml(c: Case): string {
     locale: c.locale,
     includeCareerInsight: false,
     targetJobText: null,
-    excludedIds: c.excludedIds ?? [],
+    includedIds: c.includedIds,
   });
   const doc = buildFactualCvDocument(
     bundle,
@@ -595,10 +631,7 @@ group("vaktare — the lapsed authorisation");
   ck("the expired licence is named", has(p, "Ordningsvaktsförordnande"));
   ck("its validity date is printed", has(p, "Giltig t.o.m. 2026-03-31"));
   ck("and it is called expired, in a word", has(p, "Utgången"));
-  ck(
-    "the verifier who once approved it is NOT named beside it",
-    !has(p, "Länsstyrelsen i Skåne"),
-  );
+  ck("the verifier who once approved it is NOT named beside it", !has(p, "Länsstyrelsen i Skåne"));
 
   ck("the credential still in date is named", has(p, "Väktarutbildning VU1"));
   ck("it keeps its verification mark", has(p, "Verifierad"));
@@ -606,8 +639,14 @@ group("vaktare — the lapsed authorisation");
   ck("with the verifier named", has(p, "BYA"));
 
   ck("the confirmed employment carries its attribution", has(p, "Nordic Security AB"));
-  ck("the ended employment is present, with the month it ended", has(p, "Stadsvakt i Malmö AB") && has(p, "2022-02"));
-  ck("the contact details the person switched on are printed", has(p, "karin.wallin@example.se") && has(p, "070-123 45 67"));
+  ck(
+    "the ended employment is present, with the month it ended",
+    has(p, "Stadsvakt i Malmö AB") && has(p, "2022-02"),
+  );
+  ck(
+    "the contact details the person switched on are printed",
+    has(p, "karin.wallin@example.se") && has(p, "070-123 45 67"),
+  );
   ck("the work country is a country, not a code", has(p, "Sverige"));
   ck("the verification legend prints with the document", has(p, "sköldrad"));
   ck("the document dates itself", has(p, TODAY));
@@ -626,9 +665,15 @@ group("selected-en — deselected facts are absent from the FILE");
   ck("the deselected language is not in the PDF", !has(p, "Engelska"));
   ck("the language that was kept is", has(p, "Svenska"));
   ck("the kept employment is still there", has(p, "Nordic Security AB"));
-  ck("the document is in English", has(p, "Experience") && has(p, "Credentials and authorisations"));
+  ck(
+    "the document is in English",
+    has(p, "Experience") && has(p, "Credentials and authorisations"),
+  );
   ck("including the country", has(p, "Sweden"));
-  ck("and the expired licence still says so, in English", has(p, "Expired") && has(p, "Valid until 2026-03-31"));
+  ck(
+    "and the expired licence still says so, in English",
+    has(p, "Expired") && has(p, "Valid until 2026-03-31"),
+  );
   ck("the phone was left off and is absent", !has(p, "070-123"));
   ck("the email was switched on and is present", has(p, "karin.wallin@example.se"));
 }
@@ -651,10 +696,16 @@ group("chef — a long career paginates without losing anything");
   ck("the long unbroken name survives", has(p, "Bengt-Åke Sjölund-Wikströmsson"));
   const employers = CHEF.employment.map((e) => e.employerName);
   const missing = employers.filter((name) => !has(p, name));
-  ck(`all ${employers.length} employers are in the file (missing: ${missing.length})`, missing.length === 0);
+  ck(
+    `all ${employers.length} employers are in the file (missing: ${missing.length})`,
+    missing.length === 0,
+  );
   const claims = CHEF.claims.map((c) => c.title);
   const missingClaims = claims.filter((t) => !has(p, t));
-  ck(`all ${claims.length} credentials, languages and skills are in the file`, missingClaims.length === 0);
+  ck(
+    `all ${claims.length} credentials, languages and skills are in the file`,
+    missingClaims.length === 0,
+  );
   ck("the footer reached the last page rather than being cut", has(p, "uppdateras inte"));
 
   // An employment and the line saying who confirmed it must not be split
@@ -678,4 +729,6 @@ if (fails.length > 0) {
   for (const f of fails) console.error(`  · ${f}`);
   process.exit(1);
 }
-console.log("cv-export:proof OK (four real PDFs, selectable text, expiry stated, deselected facts absent, pagination intact)");
+console.log(
+  "cv-export:proof OK (four real PDFs, selectable text, expiry stated, deselected facts absent, pagination intact)",
+);

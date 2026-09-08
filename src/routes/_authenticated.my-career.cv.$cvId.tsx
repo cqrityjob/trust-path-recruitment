@@ -65,9 +65,9 @@ import {
   CvLanguageChoice,
   CvSelectionPicker,
   EMPTY_CV_CONTACT_FORM,
-  selectionHasHistory,
   type CvContactForm,
 } from "@/components/professional-identity/CvComposer";
+import { selectableIds, selectionHasHistory } from "@/lib/professional-identity/cv/selection";
 import { L, Lf, Lp, type Lang } from "@/components/professional-identity/copy";
 import {
   CV,
@@ -78,11 +78,9 @@ import {
 import { useT } from "@/i18n/context";
 import {
   deleteMyCv,
-  editMyCv,
   getMyCv,
   refreshMyCvFromProfile,
-  saveCvDraft,
-  setMyCvSelection,
+  saveMyCv,
 } from "@/lib/professional-identity/cv/cv-store.functions";
 import { generateMyCv } from "@/lib/professional-identity/cv/cv.functions";
 
@@ -124,10 +122,19 @@ function CvDetailPage() {
    *  announce unsaved changes they never made. */
   const [contactBaseline, setContactBaseline] = useState<CvContactForm>(EMPTY_CV_CONTACT_FORM);
   const [docLocale, setDocLocale] = useState<"sv" | "en">(l);
-  /** Ids the person has unticked in edit mode but not saved yet. Held apart
-   *  from the stored exclusions so "unsaved changes" can mean what it says
-   *  and so nothing is written until the save button is pressed. */
-  const [unticked, setUnticked] = useState<readonly string[]>([]);
+  /**
+   * The facts this CV would carry after the pending edit.
+   *
+   * Seeded from what it carries NOW -- the saved bundle IS the selection --
+   * and sent as an allowlist the server intersects. Held in state rather than
+   * written on each tick so that "unsaved changes" means what it says and one
+   * save covers the contents and the wording together.
+   */
+  const [includedIds, setIncludedIds] = useState<readonly string[]>([]);
+  /** Set when a write was refused because somebody else wrote first. The
+   *  screen then stops offering to save and offers to reload instead: there
+   *  is no version of "try again" that does not discard the other change. */
+  const [conflict, setConflict] = useState<"changed" | null>(null);
 
   // Seed the form from the saved row once it arrives, and again whenever the
   // server's copy changes underneath us (an update-from-profile, say).
@@ -153,7 +160,8 @@ function CvDetailPage() {
     setContact(seededContact);
     setContactBaseline(seededContact);
     setDocLocale(cv.data.locale);
-    setUnticked([]);
+    setIncludedIds(selectableIds(cv.data.bundle));
+    setConflict(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedAt, editing]);
 
@@ -163,7 +171,7 @@ function CvDetailPage() {
     if (headline !== cv.data.presentation.headline) return true;
     if (summary !== cv.data.presentation.summary) return true;
     if (docLocale !== cv.data.locale) return true;
-    if (unticked.length > 0) return true;
+    if (includedIds.length !== selectableIds(cv.data.bundle).length) return true;
     if (
       contact.email !== contactBaseline.email ||
       contact.phone !== contactBaseline.phone ||
@@ -175,39 +183,61 @@ function CvDetailPage() {
     return cv.data.presentation.experience.some(
       (e) => (bullets[e.sourceId] ?? "") !== e.bullets.join("\n"),
     );
-  }, [cv.data, title, headline, summary, bullets, contact, contactBaseline, docLocale, unticked]);
+  }, [
+    cv.data,
+    title,
+    headline,
+    summary,
+    bullets,
+    contact,
+    contactBaseline,
+    docLocale,
+    includedIds,
+  ]);
 
-  /* -- what this CV carries ------------------------------------------ */
-  const reselect = useServerFn(setMyCvSelection);
-  const changeSelection = useMutation({
-    mutationFn: (next: { excludedIds: string[]; addIds: string[] }) =>
-      reselect({ data: { cvId, ...next } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
-      await queryClient.invalidateQueries({ queryKey: ["cv", "list"] });
-    },
-  });
+  /**
+   * The revision this screen is looking at.
+   *
+   * Sent with every write. A second tab open since this morning holds an
+   * older one, and its save would otherwise discard whatever happened in
+   * between without telling anybody -- the database refuses it with
+   * CV_CHANGED, nothing is written, and the banner below offers a reload.
+   */
+  const revision = cv.data?.updatedAt ?? "";
 
-  const edit = useServerFn(editMyCv);
+  /** What this CV carries right now. The saved bundle IS the selection, so
+   *  there is no stored list to consult and none to go stale. */
+  const carriedIds = (): string[] => (cv.data ? [...selectableIds(cv.data.bundle)] : []);
+
+  /** One place to notice a lost race, so every write reacts the same way. */
+  const noteRefusal = (error: unknown) => {
+    if (error instanceof Error && /\bCV_CHANGED\b/.test(error.message)) setConflict("changed");
+  };
+
+  /* -- ONE save: contents, wording and settings together -------------- */
+  //
+  // It was two writes from two round trips -- a selection write and a wording
+  // write -- and a failure between them left a document half-saved, with the
+  // facts changed and the sentences about them not. `cv_save` builds and
+  // validates everything before it touches the row, so a refusal at any point
+  // leaves the CV exactly as it was and every word the person typed is still
+  // on screen in front of them.
+  const save = useServerFn(saveMyCv);
   const saveEdits = useMutation({
-    mutationFn: async () => {
-      // Contents FIRST, wording second. Removing an employment drops its
-      // bullets server-side, so writing the bullets first would save text
-      // that the next statement immediately discards -- and a failure between
-      // the two would leave the person looking at a CV whose wording had
-      // been saved and whose contents had not.
-      if (unticked.length > 0) {
-        const merged = new Set([...(cv.data?.presentation.excludedIds ?? []), ...unticked]);
-        await reselect({ data: { cvId, excludedIds: [...merged], addIds: [] } });
-      }
-      return edit({
+    mutationFn: () =>
+      save({
         data: {
           cvId,
+          expectedUpdatedAt: revision,
           title,
           locale: docLocale,
+          purpose: cv.data?.purpose ?? "general",
+          targetJobText: cv.data?.bundle.targetJobText ?? null,
+          includeCareerInsight: (cv.data?.bundle.careerInsight ?? null) !== null,
+          includedIds: [...includedIds],
+          contact,
           headline,
           summary,
-          contact,
           bullets: Object.entries(bullets).map(([sourceId, text]) => ({
             sourceId,
             // A blank line is a paragraph break somebody typed, not a
@@ -218,16 +248,40 @@ function CvDetailPage() {
               .filter((b) => b.length > 0),
           })),
         },
-      });
-    },
+      }),
     onMutate: () => setSaveState("saving"),
     onSuccess: async () => {
       setSaveState("saved");
-      setUnticked([]);
       await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
       await queryClient.invalidateQueries({ queryKey: ["cv", "list"] });
     },
-    onError: () => setSaveState("failed"),
+    onError: (error) => {
+      setSaveState("failed");
+      noteRefusal(error);
+    },
+  });
+
+  /** Put one fact back on this CV. The allowlist gains an id and everything
+   *  else about the document is left alone. */
+  const addOmitted = useMutation({
+    mutationFn: (factId: string) =>
+      save({
+        data: {
+          cvId,
+          expectedUpdatedAt: revision,
+          locale: cv.data?.locale ?? l,
+          purpose: cv.data?.purpose ?? "general",
+          targetJobText: cv.data?.bundle.targetJobText ?? null,
+          includeCareerInsight: (cv.data?.bundle.careerInsight ?? null) !== null,
+          includedIds: [...carriedIds(), factId],
+          contact: cv.data?.presentation.contact ?? EMPTY_CV_CONTACT_FORM,
+        },
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
+      await queryClient.invalidateQueries({ queryKey: ["cv", "list"] });
+    },
+    onError: noteRefusal,
   });
 
   /* -- regeneration: propose, never overwrite ------------------------ */
@@ -240,27 +294,27 @@ function CvDetailPage() {
           targetJobText: cv.data?.bundle.targetJobText ?? null,
           includeCareerInsight: (cv.data?.bundle.careerInsight ?? null) !== null,
           locale: cv.data?.locale ?? l,
-          // The same contents the saved CV carries. A regenerated draft that
-          // silently reached across a deselected employment would be the
-          // model editing a choice that is not its to make.
-          excludedIds: [...(cv.data?.presentation.excludedIds ?? [])],
+          // Exactly the facts the saved CV carries. A regenerated draft that
+          // reached across a fact the person left off would be the model
+          // editing a choice that is not its to make.
+          includedIds: [...carriedIds()],
           contact: cv.data?.presentation.contact ?? EMPTY_CV_CONTACT_FORM,
         },
       }),
   });
 
-  const save = useServerFn(saveCvDraft);
   const acceptProposal = useMutation({
     mutationFn: () =>
       save({
         data: {
           cvId,
+          expectedUpdatedAt: revision,
           title,
           purpose: cv.data?.purpose ?? "general",
           targetJobText: cv.data?.bundle.targetJobText ?? null,
           includeCareerInsight: (cv.data?.bundle.careerInsight ?? null) !== null,
           locale: cv.data?.locale ?? l,
-          excludedIds: [...(cv.data?.presentation.excludedIds ?? [])],
+          includedIds: [...carriedIds()],
           contact: cv.data?.presentation.contact ?? EMPTY_CV_CONTACT_FORM,
           presentation: propose.data?.presentation ?? null,
           providerMode: propose.data?.providerMode ?? null,
@@ -272,27 +326,43 @@ function CvDetailPage() {
       propose.reset();
       await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
     },
+    onError: noteRefusal,
   });
 
   /* -- update from profile ------------------------------------------- */
   const refresh = useServerFn(refreshMyCvFromProfile);
   const updateFromProfile = useMutation({
-    mutationFn: () => refresh({ data: { cvId } }),
+    mutationFn: () => refresh({ data: { cvId, expectedUpdatedAt: revision } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
     },
+    onError: noteRefusal,
   });
 
   /* -- delete --------------------------------------------------------- */
   const [confirmDelete, setConfirmDelete] = useState(false);
   const remove = useServerFn(deleteMyCv);
   const destroy = useMutation({
-    mutationFn: () => remove({ data: { cvId } }),
+    mutationFn: () => remove({ data: { cvId, expectedUpdatedAt: revision } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["cv", "list"] });
       void navigate({ to: "/my-career/cv" });
     },
+    onError: noteRefusal,
   });
+
+  /* -- leaving with unsaved work -------------------------------------- */
+  //
+  // A person who has rewritten three bullet points and clicks the browser's
+  // back button loses all of it, silently. `beforeunload` is the only hook a
+  // page has for that, and it costs nothing when there is nothing to lose:
+  // the listener is only attached while `dirty` is true.
+  useEffect(() => {
+    if (!dirty || !editing) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, editing]);
 
   /* -- what to render -------------------------------------------------- */
 
@@ -386,7 +456,10 @@ function CvDetailPage() {
                     className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
                   >
                     <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    {L(editing ? CV.editDone : CV.editPresentation, l)}
+                    {L(
+                      editing ? (dirty ? CV.editCloseUnsaved : CV.editDone) : CV.editPresentation,
+                      l,
+                    )}
                   </button>
                 </div>
                 {/* The button opens the browser's own print dialog, and the
@@ -398,6 +471,31 @@ function CvDetailPage() {
                 </p>
               </div>
             </div>
+
+            {/* -- somebody else wrote first ---------------------------- */}
+            {conflict === "changed" && (
+              <section
+                role="alert"
+                className="no-print mt-6 rounded-xl border border-border border-l-[3px] border-l-destructive bg-card p-5"
+              >
+                <h2 className="text-sm font-semibold text-foreground">{L(CV.changedTitle, l)}</h2>
+                <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  {L(CV.changedBody, l)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConflict(null);
+                    setEditing(false);
+                    void cv.refetch();
+                  }}
+                  className="mt-4 inline-flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)]"
+                >
+                  <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                  {L(CV.changedReload, l)}
+                </button>
+              </section>
+            )}
 
             {/* -- the profile has moved -------------------------------- */}
             {drift?.hasChanges && (
@@ -439,12 +537,6 @@ function CvDetailPage() {
               </section>
             )}
 
-            {(updateFromProfile.data?.droppedIds.length ?? 0) > 0 && (
-              <p role="status" className="no-print mt-4 text-sm text-muted-foreground">
-                {Lp(CV_COUNTED.dropped, l, updateFromProfile.data!.droppedIds.length)}
-              </p>
-            )}
-
             {/* -- what this CV leaves out ------------------------------
                 A saved CV that is missing a licence looks identical whether
                 the person took it off or never noticed it was absent, and
@@ -474,28 +566,21 @@ function CvDetailPage() {
                       </span>
                       <button
                         type="button"
-                        disabled={changeSelection.isPending}
-                        onClick={() =>
-                          changeSelection.mutate({
-                            excludedIds: (cv.data?.presentation.excludedIds ?? []).filter(
-                              (id) => id !== fact.id,
-                            ),
-                            addIds: [fact.id],
-                          })
-                        }
+                        disabled={addOmitted.isPending}
+                        onClick={() => addOmitted.mutate(fact.id)}
                         className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-3.5 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-60"
                       >
-                        {changeSelection.isPending ? (
+                        {addOmitted.isPending ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                         ) : (
                           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                         )}
-                        {L(changeSelection.isPending ? CV.omittedSaving : CV.omittedAdd, l)}
+                        {L(addOmitted.isPending ? CV.omittedSaving : CV.omittedAdd, l)}
                       </button>
                     </li>
                   ))}
                 </ul>
-                {changeSelection.isError && (
+                {addOmitted.isError && (
                   <p role="alert" className="mt-3 text-sm text-destructive">
                     {L(CV.omittedFailed, l)}
                   </p>
@@ -571,13 +656,13 @@ function CvDetailPage() {
                     <div className="mt-3">
                       <CvSelectionPicker
                         bundle={cv.data.bundle}
-                        excludedIds={unticked}
-                        onChange={setUnticked}
+                        includedIds={includedIds}
+                        onChange={setIncludedIds}
                         lang={l}
                         disabled={saveEdits.isPending}
                       />
                     </div>
-                    {!selectionHasHistory(cv.data.bundle, unticked) && (
+                    {!selectionHasHistory(cv.data.bundle, includedIds) && (
                       <p role="alert" className="mt-2 text-xs font-medium text-destructive">
                         {L(CV.selectNoHistory, l)}
                       </p>
@@ -644,7 +729,7 @@ function CvDetailPage() {
                     disabled={
                       saveEdits.isPending ||
                       !dirty ||
-                      !selectionHasHistory(cv.data.bundle, unticked)
+                      !selectionHasHistory(cv.data.bundle, includedIds)
                     }
                     onClick={() => saveEdits.mutate()}
                     className="gap-1.5"
@@ -708,7 +793,15 @@ function CvDetailPage() {
                   </button>
                 ) : (
                   <span className="inline-flex flex-wrap items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">{L(CV.deleteConfirm, l)}</span>
+                    <span className="max-w-md text-muted-foreground">
+                      {L(CV.deleteConfirm, l)}{" "}
+                      {/* An employer's copy is a historical artefact of an
+                          application they already received. Deleting the
+                          editable document does not reach it, and somebody
+                          about to press Delete is entitled to know that in
+                          both languages rather than to find out later. */}
+                      {L(CV.deleteKeepsApplications, l)}
+                    </span>
                     <button
                       type="button"
                       disabled={destroy.isPending}
@@ -722,7 +815,10 @@ function CvDetailPage() {
                       onClick={() => setConfirmDelete(false)}
                       className="min-h-9 px-2 text-sm text-muted-foreground hover:text-foreground"
                     >
-                      {L(CV.proposalDiscard, l)}
+                      {/* "Keep this CV", not "Keep my saved CV" borrowed from
+                          the regeneration dialog: a cancel label has to name
+                          what cancelling does HERE. */}
+                      {L(CV.deleteCancel, l)}
                     </button>
                   </span>
                 )}

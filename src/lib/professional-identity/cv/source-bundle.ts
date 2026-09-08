@@ -33,12 +33,13 @@
 //     alongside the trust annotations -- see `document.ts` -- for the same
 //     reason that provenance does: text a model never receives is text a
 //     model cannot weave into a sentence.
-//   * Anything the person took OFF this CV. `excludedIds` is applied while
-//     the bundle is built, so a deselected employment is absent from the
-//     model's input, from the validator's allowlist, from the rendered page,
-//     from the print export AND from the copy an employer receives with a
-//     job application. `selection.ts` explains why hiding it later would not
-//     have been the same thing.
+//   * Anything the person did not select. `includedIds` is applied while the
+//     bundle is built, so a fact left off is absent from the model's input,
+//     from the validator's allowlist, from the rendered page and from the
+//     print export. The copy an employer receives is built in SQL from the
+//     SQL-built bundle, which applies the same allowlist at the boundary --
+//     see 20261102090000. `selection.ts` explains why hiding it in the
+//     renderer would not have been the same thing.
 //
 // ── WHY EVERY FACT HAS AN ID ───────────────────────────────────────────
 //
@@ -46,7 +47,7 @@
 // not in this bundle is a fabricated citation, and `validation.ts` rejects
 // the whole run for one.
 
-import { withoutExcluded, type CvExcludedIds } from "./selection";
+import { keepOnly, type CvIncludedIds } from "./selection";
 import {
   CREDENTIAL_CLAIM_TYPES,
   EDUCATION_CLAIM_TYPES,
@@ -168,17 +169,23 @@ export interface BuildCvSourceBundleInput {
   readonly includeCareerInsight: boolean;
   readonly targetJobText: string | null;
   /**
-   * Facts the person took OFF this CV.
+   * The facts the person asked to put ON this CV.
    *
-   * Applied here rather than in the renderer, and `selection.ts` sets out
-   * why at length: a saved bundle is copied onto a job application and is
-   * employer-readable, so a fact hidden by a renderer would still be in the
-   * row the employer can read. Excluding it here means the model never sees
-   * it, the validator will not accept a citation of it, the document cannot
-   * draw it and the application snapshot does not contain it -- one absence,
-   * inherited everywhere, rather than five filters that must agree.
+   * `undefined` keeps everything, which is the picker's starting state. An
+   * EMPTY ARRAY keeps nothing, and readiness then refuses the result.
+   *
+   * ── THIS IS THE PREVIEW'S COPY OF A RULE, NOT THE RULE ───────────────
+   *
+   * The bundle that gets STORED is built in SQL by `cv_source_bundle`, which
+   * intersects the same array with rows the caller owns. This one exists so
+   * the person can see what they will get before they ask for it, and so the
+   * model receives no fact the finished document will not carry.
+   *
+   * `selection.ts` explains why it is an allowlist and not an exclusion list,
+   * and 20261102090000 explains why a filter that lived only here was worth
+   * nothing at all.
    */
-  readonly excludedIds?: CvExcludedIds;
+  readonly includedIds?: CvIncludedIds;
 }
 
 /**
@@ -190,7 +197,7 @@ export interface BuildCvSourceBundleInput {
  */
 export function buildCvSourceBundle(input: BuildCvSourceBundleInput): CvSourceBundle {
   const { identity, locale, includeCareerInsight } = input;
-  const excluded = input.excludedIds ?? [];
+  const included = input.includedIds;
 
   const target = input.targetJobText?.trim();
 
@@ -208,7 +215,7 @@ export function buildCvSourceBundle(input: BuildCvSourceBundleInput): CvSourceBu
       currentProfession: identity.currentProfessionSlug ?? identity.currentProfessionOther,
       yearsOfExperience: identity.yearsOfExperience,
     },
-    employment: withoutExcluded(
+    employment: keepOnly(
       newestFirst(identity.employment).map((e) => ({
         id: e.id,
         employerName: e.employerName,
@@ -218,23 +225,20 @@ export function buildCvSourceBundle(input: BuildCvSourceBundleInput): CvSourceBu
         employmentType: e.employmentType,
         assertionLevel: e.assertionLevel,
       })),
-      excluded,
+      included,
     ),
-    education: withoutExcluded(
+    education: keepOnly(
       claimsOfType(identity.claims, EDUCATION_CLAIM_TYPES).map(toFactClaim),
-      excluded,
+      included,
     ),
-    credentials: withoutExcluded(
+    credentials: keepOnly(
       claimsOfType(identity.claims, CREDENTIAL_CLAIM_TYPES).map(toFactClaim),
-      excluded,
+      included,
     ),
-    skills: withoutExcluded(
-      claimsOfType(identity.claims, SKILL_CLAIM_TYPES).map(toFactClaim),
-      excluded,
-    ),
-    languages: withoutExcluded(
+    skills: keepOnly(claimsOfType(identity.claims, SKILL_CLAIM_TYPES).map(toFactClaim), included),
+    languages: keepOnly(
       claimsOfType(identity.claims, LANGUAGE_CLAIM_TYPES).map(toFactClaim),
-      excluded,
+      included,
     ),
     careerInsight:
       includeCareerInsight && identity.discovery.hasCompletedReport && identity.discovery.snapshotId

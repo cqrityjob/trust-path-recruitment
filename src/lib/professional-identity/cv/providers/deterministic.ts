@@ -27,11 +27,7 @@
 // "what a badly-behaved one would" — which is why the hostile cases in the
 // guard script are written by hand instead.
 
-import type {
-  AiProvider,
-  AiRequest,
-  AiResponse,
-} from "@/lib/interview-intelligence/ai/provider";
+import type { AiProvider, AiRequest, AiResponse } from "@/lib/interview-intelligence/ai/provider";
 import type { CvSourceBundle } from "../source-bundle";
 
 /** Fixed connective words. Never a fact, never a number. */
@@ -45,8 +41,7 @@ const PHRASES = {
     summaryIn: "med erfarenhet från",
     summaryClose:
       "Underlaget nedan är hämtat från de uppgifter du själv har registrerat i CQrityjob.",
-    rationale:
-      "Sammanställd i kronologisk ordning från dina registrerade uppgifter, utan tillägg.",
+    rationale: "Sammanställd i kronologisk ordning från dina registrerade uppgifter, utan tillägg.",
     rationaleTargeted:
       "Ordnad efter den roll du angav, med dina mest relevanta registrerade uppdrag först.",
   },
@@ -59,7 +54,8 @@ const PHRASES = {
     summaryIn: "with experience from",
     summaryClose:
       "The material below is taken from the information you have recorded in CQrityjob yourself.",
-    rationale: "Arranged in chronological order from your recorded information, with nothing added.",
+    rationale:
+      "Arranged in chronological order from your recorded information, with nothing added.",
     rationaleTargeted:
       "Ordered against the role you supplied, with your most relevant recorded engagements first.",
   },

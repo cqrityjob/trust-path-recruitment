@@ -60,9 +60,9 @@ const generateSchema = z.object({
   /** Opt-IN. An assessment insight on a CV is a choice the person makes. */
   includeCareerInsight: z.boolean().default(false),
   locale: z.enum(["sv", "en"]).default("sv"),
-  /** What the person took off this CV. Applied while the bundle is built,
-   *  so a deselected employment is not in the provider request either. */
-  excludedIds: cvSelectionSchema,
+  /** The facts to put ON this CV. Applied while the bundle is built, so a
+   *  fact the person left off is not in the provider request either. */
+  includedIds: cvSelectionSchema,
   /** Rendered on the preview so the person reviews the document they will
    *  actually save. Never reaches the bundle, so never reaches a prompt. */
   contact: storedContactSchema,
@@ -188,7 +188,7 @@ export const generateMyCv = createServerFn({ method: "POST" })
       // A "general" CV never carries the advert, even if one was sent.
       // Purpose is the person's stated intent and it decides what is used.
       targetJobText: data.purpose === "targeted" ? data.targetJobText : null,
-      excludedIds: data.excludedIds,
+      includedIds: data.includedIds,
     });
     const contact = resolveCvContact(data.contact);
 
