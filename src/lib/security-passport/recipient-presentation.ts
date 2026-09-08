@@ -37,6 +37,8 @@ import { effectiveAssertionLevel, isLegacyUnsupportedProvenance } from "./proven
 import {
   credentialPresentationOf,
   describeTrust,
+  employmentTrustLine,
+  trustLevelWordKey,
   presentationWordKeyOf,
   provenanceLabelKeys,
   publicTrustLevel,
@@ -45,12 +47,24 @@ import {
   type PublicTrustLevel,
 } from "./trust-presentation";
 import type { PassportCopyKey } from "./i18n";
-import type { RecipientPayloadActive } from "./packages";
+import { presentationKeyOf, type RecipientPayloadActive } from "./packages";
 import type { AssertionLevel, Claim, IsoDate, LifecycleState } from "./types";
+
+/** The three levels a stored assertion may be. Anything else — a value from a
+ *  newer build, or nothing at all — is UNKNOWN, and is presented as nothing. */
+const KNOWN_ASSERTIONS: readonly AssertionLevel[] = [
+  "self_declared",
+  "document_provided",
+  "verified",
+];
 import { validityOf } from "./validity";
 
 export interface RecipientCredential {
-  readonly id: string;
+  /** The payload's presentation key, never a database identifier. Used as the
+   *  React key, as the `data-recipient-credential` hook and as the id the
+   *  identity engine derives titles against — all of which need uniqueness
+   *  within one render and nothing more. */
+  readonly key: string;
   readonly title: string;
   /** Taxonomy code, or null for a free-text credential. */
   readonly code: string | null;
@@ -98,12 +112,42 @@ export interface RecipientCredential {
 }
 
 export interface RecipientExperience {
-  readonly id: string;
+  readonly key: string;
   readonly employer: string;
   readonly role: string;
   readonly startedOn: IsoDate;
   readonly endedOn: IsoDate | null;
   readonly jurisdiction: string | null;
+  /** The STORED standing, or null when the share did not say.
+   *
+   *  ── WHY THIS IS HERE AT ALL ──────────────────────────────────────────
+   *
+   *  It used not to be. The payload carried `assertion`, this model dropped
+   *  it, and the recipient view passed a hard-coded `assertionLevel:
+   *  "verified"` into the trust engine for every employment. So an employment
+   *  the holder had entered themselves — but which still carried decision
+   *  metadata from an approval that was later withdrawn — was described to a
+   *  stranger as confirmed by the employer named in it. The engine was right;
+   *  it was being lied to. */
+  readonly assertion: AssertionLevel | null;
+  readonly lifecycle: LifecycleState | null;
+  /** The DECIDER, and the act. Null when the share did not say — which is
+   *  every package share, because no package emits employment provenance. */
+  readonly verifiedBy: string | null;
+  readonly verificationMethod: string | null;
+  /** self_declared · documented · source_verified, or NULL when the standing
+   *  could not be established from what the share carried. Derived once, here,
+   *  through the same engine the credentials use — never in a renderer. */
+  readonly level: PublicTrustLevel | null;
+  /** The word beside the employment, or null when there is nothing true to
+   *  say. Null and "self_declared" are different: one is silence, the other is
+   *  a statement. */
+  readonly statusWordKey: PassportCopyKey | null;
+  /** The attribution sentence in EMPLOYMENT's own register — "Anställningen är
+   *  bekräftad av X" for an employer's own confirmation, "Dokument granskat av
+   *  CQrityjob" for a review — or null when no decider may be named. */
+  readonly trustLineSv: string | null;
+  readonly trustLineEn: string | null;
 }
 
 export interface RecipientPresentation {
@@ -131,6 +175,10 @@ export interface RecipientPresentation {
    *  sees — which is the UAE-wide reading the Dubai pack refuses. */
   readonly subJurisdiction: string | null;
   readonly packageCode: string;
+  /** The language the holder chose for this recipient, or null for the
+   *  reader's own. Carried, never applied here: this module produces a model,
+   *  and choosing words from it is the renderer's job. */
+  readonly locale: "sv" | "en" | null;
   /** "credential" when the holder shared exactly one credential. */
   readonly focus: "passport" | "credential";
   readonly purpose: string | null;
@@ -140,8 +188,32 @@ export interface RecipientPresentation {
   readonly lastUpdated: string;
   readonly credentials: readonly RecipientCredential[];
   readonly experience: readonly RecipientExperience[];
-  /** 0 when the package does not disclose a tenure total. */
-  readonly verifiedExperienceDays: number;
+  /** The employment total the share carries, in days. 0 when it carries none.
+   *
+   *  Read it with `employmentDaysBasis`, ALWAYS: the same field is computed
+   *  two different ways depending on the package, and the two may not wear the
+   *  same heading. */
+  readonly confirmedEmploymentDays: number;
+  /** WHAT THE NUMBER ABOVE IS MADE OF.
+   *
+   *  `employer_confirmed`      a chosen-merit share. `sp_selected_merits_payload`
+   *                            counts only selected periods backed by an
+   *                            employer attestation whose decider is a real
+   *                            employer, so the number is confirmed employment
+   *                            time and may be called that.
+   *  `reviewed_or_confirmed`   one of the five older packages. Those sum every
+   *                            period that reached `verified`, which includes a
+   *                            CQrityjob document review. The number is real,
+   *                            but calling it confirmed employment time would
+   *                            attribute to an employer a confirmation no
+   *                            employer gave.
+   *
+   *  The distinction is in the database, not here; this only carries which
+   *  rule produced the figure so the heading can be true. */
+  readonly employmentDaysBasis: "employer_confirmed" | "reviewed_or_confirmed";
+  /** When the server last re-read this record. Null on a preview, which
+   *  re-reads nothing, and on a payload from before 20261101090000. */
+  readonly checkedAt: string | null;
   /** True when at least one disclosed credential is no longer current. */
   readonly containsExpired: boolean;
   /** True when the package disclosed nothing at all. */
@@ -158,9 +230,12 @@ export interface RecipientPresentation {
  *  fields are filled with the values that mean "not disclosed". None of them
  *  affects derivation: the engine reads the code, the jurisdiction, the
  *  evidence and the dates, all four of which the payload does carry. */
-function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number]): Claim {
+function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number], index: number): Claim {
   return {
-    id: c.id,
+    // The presentation key stands in for the id here too. The identity engine
+    // needs a value that is unique within this one derivation; it never
+    // resolves it against anything.
+    id: presentationKeyOf(c, index, "c"),
     claimType: c.type as Claim["claimType"],
     credentialCode: c.credential_code,
     skillCode: null,
@@ -210,7 +285,7 @@ export function buildRecipientPresentation(
    *  table; a caller that HAS them should pass them. */
   rules: readonly TitleRule[] = MIRRORED_TITLE_RULES,
 ): RecipientPresentation {
-  const credentials: RecipientCredential[] = payload.verified_claims.map((c) => {
+  const credentials: RecipientCredential[] = payload.verified_claims.map((c, index) => {
     const assertion = c.assertion as AssertionLevel;
     const validity = validityOf(c.lifecycle as LifecycleState, c.valid_until, evaluationOn);
     // Interpreted ONCE. Every recipient surface -- the page, the card, the
@@ -236,7 +311,7 @@ export function buildRecipientPresentation(
       }),
     );
     return {
-      id: c.id,
+      key: presentationKeyOf(c, index, "c"),
       title: c.title,
       code: c.credential_code,
       presentation,
@@ -262,19 +337,63 @@ export function buildRecipientPresentation(
     };
   });
 
-  const experience: RecipientExperience[] = payload.verified_experience.map((e) => ({
-    id: e.id,
-    employer: e.employer,
-    role: e.role,
-    startedOn: e.started_on,
-    endedOn: e.ended_on,
-    jurisdiction: e.jurisdiction,
-  }));
+  const experience: RecipientExperience[] = payload.verified_experience.map((e, index) => {
+    // THE STORED LEVEL, or nothing. A share that did not say leaves this null
+    // and every derivation below returns null with it — the state is unknown,
+    // and unknown is not a quiet synonym for verified.
+    const assertion = KNOWN_ASSERTIONS.includes(e.assertion as AssertionLevel)
+      ? (e.assertion as AssertionLevel)
+      : null;
+    const lifecycle = (e.lifecycle as LifecycleState | undefined) ?? null;
+    const verifiedBy = e.verifier_organisation ?? null;
+    const verificationMethod = e.verification_method ?? null;
+
+    // The same engine the credentials go through, given the REAL level and the
+    // subject it is about. `subjectKind: "employment"` is what lets an
+    // employer confirmation reach source-confirmed at all, and what keeps an
+    // issuer confirmation from doing so.
+    const trust =
+      assertion === null
+        ? null
+        : describeTrust({
+            assertionLevel: assertion,
+            lifecycleState: lifecycle,
+            verifierName: verifiedBy,
+            verificationMethod,
+            subjectKind: "employment",
+          });
+
+    const level = trust ? publicTrustLevel(trust) : null;
+    return {
+      key: presentationKeyOf(e, index, "e"),
+      employer: e.employer,
+      role: e.role,
+      startedOn: e.started_on,
+      endedOn: e.ended_on,
+      jurisdiction: e.jurisdiction,
+      assertion,
+      lifecycle,
+      verifiedBy,
+      verificationMethod,
+      level,
+      statusWordKey: level === null ? null : trustLevelWordKey(level),
+      // Null for a self-declared employment even when stale decision metadata
+      // is still attached: `describeTrust` refuses to name a decider for a
+      // level that is not verified, which is exactly the upgrade this model
+      // used to perform by passing "verified" for everything.
+      trustLineSv: trust ? employmentTrustLine(trust, "sv") : null,
+      trustLineEn: trust ? employmentTrustLine(trust, "en") : null,
+    };
+  });
 
   // Derived from the disclosed claims alone. A recipient sees a title exactly
   // when the credentials in front of them support it — never because the
   // holder's profile said so, and never for a credential the package withheld.
   const identity = deriveVerifiedIdentity(
+    // `.map(toDomainClaim)` — Array.map supplies the index, which is the
+    // fallback the presentation key needs. CLAIMS ONLY: an employment period
+    // reaches the identity engine through no path, which
+    // passport-trust-source:check asserts on this exact call.
     payload.verified_claims.map(toDomainClaim),
     rules,
     evaluationOn,
@@ -293,6 +412,10 @@ export function buildRecipientPresentation(
     jurisdiction: payload.jurisdiction,
     subJurisdiction: payload.sub_jurisdiction ?? null,
     packageCode: payload.package,
+    // Narrowed rather than trusted: the column is CHECK-constrained to the two
+    // values, and a payload that somehow carried a third would fall back to
+    // the reader's own language rather than to a locale nothing can render.
+    locale: payload.locale === "sv" || payload.locale === "en" ? payload.locale : null,
     focus: payload.focus ?? "passport",
     purpose: payload.purpose,
     expiresAt: payload.expires_at,
@@ -300,7 +423,10 @@ export function buildRecipientPresentation(
     lastUpdated: payload.last_updated,
     credentials,
     experience,
-    verifiedExperienceDays: payload.verified_experience_days,
+    confirmedEmploymentDays: payload.verified_experience_days,
+    employmentDaysBasis:
+      payload.package === "selected_merits" ? "employer_confirmed" : "reviewed_or_confirmed",
+    checkedAt: payload.checked_at ?? null,
     containsExpired: credentials.some((c) => c.lifecycle === "expired"),
     isEmpty:
       credentials.length === 0 && experience.length === 0 && payload.verified_experience_days === 0,

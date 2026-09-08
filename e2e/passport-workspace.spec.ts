@@ -506,8 +506,9 @@ async function mount(
       case "getMyPassportProfileBasics":
         return ok(route, null);
 
-      // /passport/share
-      case "listMyDisclosures":
+      // /passport/share — the holder's own list of links. The sharing screen
+      // reads this one now (PR #197); the old package list is gone.
+      case "listMyShares":
         return ok(route, []);
 
       // /passport/credentials/new
@@ -524,7 +525,13 @@ async function mount(
       case "getCredentialPrivateFields":
         return ok(route, null);
       case "searchAttestableEmployers":
-        return ok(route, []);
+        // The REAL shape. `[]` is not what this function returns, and a route
+        // that does `suggestions: r.suggestions` on it sets `undefined` — so
+        // the employment entry page crashed inside its own error boundary
+        // whenever the debounced search happened to resolve before the
+        // assertion. A stub that answers in the wrong shape is a test that
+        // passes for the wrong reason on a good day.
+        return ok(route, { suggestions: [], truncated: false, linkedEmployer: null });
 
       // /my-career/cv
       case "prepareMyCv":
@@ -931,7 +938,10 @@ test.describe("Security Passport — the workspace", () => {
     await mount(page, MIXED);
     await ready(page);
     await page.locator('[data-cta="share"]').click();
-    await landed(page, { url: /\/passport\/share$/, heading: /Dela ditt Passport/ });
+    // "Dela ditt Security Passport" since PR #197 — the screen names the
+    // product, because a holder arriving from the overview has to recognise
+    // what they are about to send.
+    await landed(page, { url: /\/passport\/share$/, heading: /Dela ditt Security Passport/ });
   });
 
   test("10e · the CV link lands on the CV list", async ({ page }) => {

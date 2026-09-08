@@ -1,0 +1,2 @@
+-- Hosted-ledger marker only. This version records an apply that was rolled
+-- back and superseded by 20260905054603. It contains no executable SQL.

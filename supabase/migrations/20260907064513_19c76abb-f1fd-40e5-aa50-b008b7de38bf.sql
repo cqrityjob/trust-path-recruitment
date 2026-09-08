@@ -1,2 +1,2 @@
 -- Hosted-ledger marker only. The applied SQL is represented by canonical
--- migration 20261101090000. This file contains no executable SQL.
+-- migration 20261030090000. This file contains no executable SQL.

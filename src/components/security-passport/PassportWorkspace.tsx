@@ -41,6 +41,8 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { isArchivedMerit, type LifecycleState } from "@/lib/security-passport/types";
 import { formatIsoDay, formatIsoDayRange } from "@/lib/security-passport/format";
+import { MERIT_STATUS_KEY } from "@/lib/security-passport/merit-status";
+import { MeritStatusChip } from "./MeritStatusChip";
 import type {
   ReviewReadState,
   PassportWorkspace as Workspace,
@@ -189,75 +191,9 @@ function StatusFigure({
 /* One merit                                                           */
 /* ------------------------------------------------------------------ */
 
-const STATUS_KEY: Readonly<Record<WorkspaceMeritStatus, PassportCopyKey>> = {
-  // "We could not establish whether anybody is reviewing this." NOT a trust
-  // level and not a downgrade: the holder's own statement is as true as it
-  // ever was, and what is missing is the review state. The word says exactly
-  // that rather than borrowing "Egen uppgift", which would let a pending
-  // merit sit among the ordinary ones and read as settled.
-  unknown: "ws.merit.status.unknown",
-  added_by_you: "ws.merit.status.added_by_you",
-  document_provided: "ws.merit.status.document_provided",
-  verification_requested: "ws.merit.status.verification_requested",
-  clarification_needed: "ws.merit.status.clarification_needed",
-  documented: "ws.merit.status.documented",
-  verified: "ws.merit.status.verified",
-  expired: "ws.merit.status.expired",
-};
-
-/**
- * The status pill.
- *
- * Words first: every state is spelled out, and the tone is a border and a
- * text colour that repeat what the word already says. Nothing here is
- * legible only in colour, which is the rule the credential symbol system
- * already holds itself to.
- *
- * ── AN ARCHIVED MERIT WEARS ITS LIFECYCLE, NOT A TRUST WORD ───────────
- *
- * The shared labeller refuses every trust word to a row whose lifecycle has
- * moved on — correctly, because an expired credential is not currently a
- * verified one. What is left is `added_by_you`, and printing "Self-reported"
- * against a credential CQrityjob really did review, under a heading that
- * says the entry is archived, understates what happened to it.
- *
- * So an archived row says what is actually true of it TODAY: it expired, it
- * was revoked, it was superseded, it is disputed. No trust claim is made
- * either way, which is the honest answer for a row that has none standing.
- * The machine-readable `data-merit-status` still carries the shared label,
- * so nothing downstream has to know about this.
- */
-function StatusPill({
-  label,
-  lifecycleState,
-}: {
-  label: WorkspaceMeritStatus;
-  lifecycleState: LifecycleState;
-}) {
-  const { pt } = usePassportCopy();
-  const archived = isArchivedMerit(lifecycleState);
-  const tone = archived
-    ? "border-border text-muted-foreground"
-    : label === "verified"
-      ? "border-emerald-600/40 text-emerald-700 dark:text-emerald-400"
-      : label === "documented"
-        ? "border-sky-600/40 text-sky-700 dark:text-sky-400"
-        : label === "clarification_needed" || label === "expired"
-          ? "border-amber-600/50 text-amber-700 dark:text-amber-400"
-          : "border-border text-muted-foreground";
-  return (
-    <span
-      data-merit-status={label}
-      data-merit-lifecycle={lifecycleState}
-      className={cn(
-        "inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-        tone,
-      )}
-    >
-      {archived ? pt(`lifecycle.${lifecycleState}` as const) : pt(STATUS_KEY[label])}
-    </span>
-  );
-}
+// The status chip and its copy table live in MeritStatusChip.tsx now. The
+// sharing screen puts the same word beside the same merit, and two copies of
+// one mapping would have been two trust vocabularies inside one product.
 
 /**
  * One merit as a row.
@@ -297,7 +233,7 @@ function MeritRow({ merit }: { merit: WorkspaceMerit }) {
         aria-label={`${pt(merit.typeKey)}: ${title} — ${
           isArchivedMerit(merit.lifecycleState)
             ? pt(`lifecycle.${merit.lifecycleState}` as const)
-            : pt(STATUS_KEY[merit.label])
+            : pt(MERIT_STATUS_KEY[merit.label])
         }`}
         className={cn(
           // A LIST ROW, not a card. The list is one object with many entries;
@@ -328,7 +264,7 @@ function MeritRow({ merit }: { merit: WorkspaceMerit }) {
           </span>
         </span>
         <span className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
-          <StatusPill label={merit.label} lifecycleState={merit.lifecycleState} />
+          <MeritStatusChip status={merit.label} lifecycleState={merit.lifecycleState} />
           <ArrowRight
             aria-hidden="true"
             className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"

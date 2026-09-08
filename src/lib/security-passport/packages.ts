@@ -25,6 +25,11 @@ export const DISCLOSURE_PACKAGE_CODES = [
   "verified_experience",
   "employer_review",
   "full_verification",
+  // The holder's own list. Not a package in the sense the other five are —
+  // its contents are `sp_disclosure_items`, not a contract — but it is a
+  // `package_code` value in the database and every reader keys on that, so it
+  // belongs in the same closed set.
+  "selected_merits",
 ] as const;
 
 export type DisclosurePackageCode = (typeof DISCLOSURE_PACKAGE_CODES)[number];
@@ -148,6 +153,17 @@ export const LIVE_PACKAGES: readonly LivePackage[] = [
   },
 ];
 
+/**
+ * The five FIXED contracts. `selected_merits` is deliberately absent.
+ *
+ * Every entry here promises the same contents to every recipient of that
+ * package, which is what makes an includes/excludes list truthful. A selected
+ * share promises whatever the holder ticked, so printing a fixed list over it
+ * would describe a contract it does not have — the recipient page says "the
+ * holder chose these" instead, and the merits below it are the list.
+ *
+ * Callers that look a code up here must therefore handle `undefined`.
+ */
 export function livePackage(code: DisclosurePackageCode): LivePackage {
   const found = LIVE_PACKAGES.find((p) => p.code === code);
   if (!found) throw new Error(`Unknown disclosure package: ${code}`);
@@ -162,7 +178,28 @@ export function livePackage(code: DisclosurePackageCode): LivePackage {
  *  page cannot read a field the function does not produce, and so adding a
  *  field to the payload is a deliberate, reviewable change in both places. */
 export interface RecipientClaim {
-  readonly id: string;
+  /** A PRESENTATION key — `c1`, `c2` — and never the row's database id.
+   *
+   *  A uuid printed into anonymous JSON reaches the DOM, a screenshot, an
+   *  analytics payload and a support ticket, and it is a durable internal
+   *  identifier a stranger has no use for: it survives revocation, it is the
+   *  same value in two different shares, and it correlates one recipient's
+   *  copy with another's. The ordinal is what a renderer and the identity
+   *  engine actually need, and it says nothing.
+   *
+   *  ── WHY BOTH FIELDS ARE OPTIONAL ────────────────────────────────────
+   *
+   *  `sp_get_disclosure` reshapes ONLY a `selected_merits` payload. That is
+   *  deliberate and it is what made the schema safe to apply before this code
+   *  shipped: every one of the five older packages, and the employer's
+   *  application panel, keeps the byte-identical payload it had, `id` and all.
+   *
+   *  So a payload carries `key` OR `id`, never neither, and which one depends
+   *  on the package. `presentationKeyOf` picks, in one place, and the model
+   *  above it has a single non-optional `key` so nothing downstream has to
+   *  know this. */
+  readonly key?: string;
+  readonly id?: string;
   readonly type: string;
   readonly title: string;
   /** Supported-credential taxonomy code (VU1 / VU2 / OV / SV), or null for a
@@ -199,14 +236,39 @@ export interface RecipientClaim {
 }
 
 export interface RecipientPeriod {
-  readonly id: string;
+  /** A presentation key — `e1`, `e2` — or the row id for a package payload.
+   *  See `RecipientClaim.key`. */
+  readonly key?: string;
+  readonly id?: string;
   readonly employer: string;
   readonly role: string;
   readonly started_on: string;
   readonly ended_on: string | null;
   readonly jurisdiction: string | null;
-  readonly assertion: string;
-  readonly lifecycle: string;
+  /** The STORED standing, and the only thing that may decide what a reader is
+   *  told about this employment.
+   *
+   *  Optional because "the share did not say" is a real state and must be
+   *  distinguishable from any level. A missing value is UNKNOWN, and unknown
+   *  is presented as nothing at all — never as verified, which is what the
+   *  recipient view assumed before it was fixed. */
+  readonly assertion?: string;
+  readonly lifecycle?: string;
+  /** WHICH ACT verified this employment, and who performed it.
+   *
+   *  Emitted by `sp_selected_merits_payload` only. The five fixed packages
+   *  send neither, which is why both are OPTIONAL rather than nullable: a
+   *  missing key means "this share does not say", and the recipient page
+   *  renders nothing at all for it. A `null` VALUE would mean "verified, and
+   *  the decision record names nobody", which is a different fact and is also
+   *  rendered as nothing — but by a different route.
+   *
+   *  The distinction they exist for: an employment reaches `verified` either
+   *  because the employer confirmed a fact they were party to, or because
+   *  CQrityjob read a contract. Calling the second one "confirmed by Company
+   *  X" attributes to the employer an act it never performed. */
+  readonly verifier_organisation?: string | null;
+  readonly verification_method?: string | null;
 }
 
 export interface RecipientPayloadActive {
@@ -221,10 +283,24 @@ export interface RecipientPayloadActive {
    *  every pre-Phase-9 share was. */
   readonly focus?: "passport" | "credential";
   readonly purpose: string | null;
+  /** The language the HOLDER chose for this recipient, where they chose one.
+   *
+   *  A share is addressed to one person, and the holder knows which language
+   *  that person reads; the recipient is a stranger with no preference stored
+   *  here. Null or absent means the reader's own language, which is what every
+   *  share created before 20261101090000 has. */
+  readonly locale?: string | null;
   readonly expires_at: string | null;
   /** When the holder authorised this disclosure. Added by
    *  20260904090000; older payloads may not carry it. */
   readonly authorised_at?: string | null;
+  /** When the SERVER last re-read this record, stamped by
+   *  `sp_get_disclosure`.
+   *
+   *  The page used to print `new Date()` from the visitor's own machine beside
+   *  the words "checked", so a skewed clock made the product assert something
+   *  it had not observed. Absent on a preview, which re-reads nothing. */
+  readonly checked_at?: string | null;
   readonly last_updated: string;
   readonly holder: string | null;
   readonly privacy_mode: string;
@@ -247,3 +323,24 @@ export interface RecipientPayloadUnavailable {
 }
 
 export type RecipientPayload = RecipientPayloadActive | RecipientPayloadUnavailable;
+
+/**
+ * The key a renderer should use for one disclosed row.
+ *
+ * `selected_merits` carries an ordinal `key` and no `id`; the five older
+ * packages carry `id` and no `key`. Both need a value that is unique within
+ * one render, and neither renderer should have to know which kind of share it
+ * is looking at — so the choice is made once, here.
+ *
+ * The ordinal fallback exists for the impossible third case: a payload that
+ * carries neither. Returning a positional key keeps the page rendering rather
+ * than colliding every row on `undefined`, and it cannot leak anything,
+ * because there was nothing to leak.
+ */
+export function presentationKeyOf(
+  row: { readonly key?: string; readonly id?: string },
+  ordinal: number,
+  prefix: "c" | "e",
+): string {
+  return row.key ?? row.id ?? `${prefix}${ordinal + 1}`;
+}
