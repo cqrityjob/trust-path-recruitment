@@ -849,6 +849,29 @@ jobs:
       - name: CV pilot flow check
         run: bun run cv-pilot:check
 
+      # WHAT LEAVES THIS PRODUCT WHEN SOMEBODY ASKS FOR AN AI DRAFT.
+      #
+      # The generator used to hand the whole source bundle to the provider as
+      # `governedContext: { facts: bundle }` -- which carried the person's
+      # name and the primary keys of their sp_experience_periods, sp_claims
+      # and cd_report_snapshots rows. Any two requests carrying the same uuid
+      # are joinable to the same human being, forever, in whatever the
+      # provider logs.
+      #
+      # The projection replaced that with document-local ordinal keys, and
+      # this asserts the property on the SERIALIZED REQUEST rather than on
+      # the object: a RecordingProvider captures what would actually be sent
+      # and the guard proves no name, no uuid of any shape and no snapshot id
+      # appears in it -- then that the keys map back to real ids on the way
+      # home, and that an invented key still rejects the whole run instead of
+      # being quietly dropped.
+      #
+      # It runs here rather than nowhere: it existed and passed for a week
+      # while no CI job invoked it, which makes it documentation and not a
+      # gate.
+      - name: CV provider data minimisation check
+        run: bun run cv-provider-minimisation:check
+
       # THE SIGNED-IN CANDIDATE'S CHROME AND VOCABULARY. Until PR 3 the
       # product had one navigation -- the marketing site's -- and served it
       # to people inside their own workspace: six items, none of them the

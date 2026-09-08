@@ -421,12 +421,39 @@ group("SELECTION — the app holds no second implementation of the rule");
   );
 
   const storeSrc = read("src/lib/professional-identity/cv/cv-store.functions.ts");
-  // THE BOUNDARY. Every write is an RPC; a direct table write from the
-  // application would be the defect this whole correction closed, rebuilt one
-  // layer up.
+  // ── THE BOUNDARY, AND WHY THIS ASSERTION GOT STRICTER ────────────────
+  //
+  // Every write is an RPC. A direct table write from the application would be
+  // the defect this whole correction closed, rebuilt one layer up.
+  //
+  // This used to look for a write verb within 200 characters of
+  // `from("cv_documents")`, which is a proximity heuristic and not a
+  // boundary: a builder split across a few more lines, a table name held in a
+  // variable, or a write to any OTHER table would all have walked past it.
+  //
+  // It matters more now than it did when it was written. Phase 1 is applied
+  // and deliberately leaves the direct grants in place; phase 3
+  // (20261103090000_cv_documents_lockdown.sql) revokes them. So this
+  // assertion is the thing that says the application will still work after
+  // the lockdown -- and a proximity match is not something to hang that on.
+  //
+  // So: NO PostgREST write verb anywhere in the module, at all. The four
+  // entry points below are the only way a row changes, and each is named.
+  const writeVerbs = [...storeSrc.matchAll(/\.\s*(insert|update|upsert|delete)\s*\(/g)].map(
+    (m) => m[1],
+  );
   ck(
-    "no CV write reaches cv_documents directly",
-    !/from\("cv_documents"\)[\s\S]{0,200}\.(insert|update|delete|upsert)/.test(storeSrc),
+    "the CV store contains no PostgREST write of any kind",
+    writeVerbs.length === 0,
+    writeVerbs.join(", "),
+  );
+  // And every `.from()` in the module is a read, so a future edit cannot
+  // reach the table by a route the verb list above does not name.
+  const tables = [...storeSrc.matchAll(/\.from\((.*?)\)/g)].map((m) => m[1]);
+  ck(
+    "and every table it touches, it only reads",
+    tables.every((t) => t === '"cv_documents"'),
+    tables.join(", "),
   );
   for (const fn of ["cv_create", "cv_save", "cv_refresh_from_profile", "cv_delete"]) {
     ck(`writes go through ${fn}`, storeSrc.includes(`rpc("${fn}"`));

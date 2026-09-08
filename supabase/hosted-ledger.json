@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-08T06:59:53Z",
-  "readBy": "PR #198 owner-approved migration-history reconciliation",
+  "readAt": "2026-09-08T11:17:37Z",
+  "readBy": "PR #199 application phase - read-only list_migrations after #201 was merged and applied hosted",
   "versions": [
     {
       "version": "20260716153446",
@@ -1083,6 +1083,10 @@
     {
       "version": "20261101090000",
       "name": "sp_selected_merit_sharing"
+    },
+    {
+      "version": "20261102090000",
+      "name": "cv_documents_controlled_writes"
     }
   ]
 }
