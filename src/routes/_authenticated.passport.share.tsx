@@ -129,6 +129,12 @@ const CREATE_ERROR_KEY: Readonly<Record<ShareErrorCode, PassportCopyKey>> = {
   unsupported_locale: "sel.error.locale",
   request_key_required: "sel.error.create",
   request_key_conflict: "sel.error.conflict",
+  // The database refuses these three too. None of them is reachable from this
+  // screen — it always sends a boolean and never a purpose — so each takes the
+  // generic sentence rather than copy for a state a holder cannot produce.
+  revoke_choice_required: "sel.error.create",
+  purpose_too_long: "sel.error.create",
+  recipient_hint_too_long: "sel.error.create",
   share_not_replaceable: "sel.error.notReplaceable",
   no_passport: "sc.needPassport",
   not_authenticated: "sel.error.create",

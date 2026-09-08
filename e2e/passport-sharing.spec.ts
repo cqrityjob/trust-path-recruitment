@@ -999,6 +999,63 @@ test.describe("Security Passport — the recipient link", () => {
     await shoot(page, "recipient-unavailable");
   });
 
+  test("20 · a legacy package share still renders, id and all", async ({ page }) => {
+    // `sp_get_disclosure` reshapes ONLY a chosen-merit share: the five older
+    // packages keep the byte-identical payload they had, which is what made
+    // the schema safe to apply before this code shipped. So the page has to
+    // read BOTH shapes — `key` for a selected share, `id` for a package one —
+    // and this is the shape nothing else in the suite exercises.
+    await mount(page, "/p/abcdef0123456789", {
+      publicPayload: {
+        status: "active",
+        package: "public_card",
+        focus: "passport",
+        purpose: null,
+        expires_at: "2026-10-07T09:00:00Z",
+        authorised_at: "2026-09-07T09:00:00Z",
+        last_updated: "2026-09-07T09:00:00Z",
+        holder: "Selma Delare (fiktiv)",
+        privacy_mode: "full_name",
+        profession_slug: null,
+        jurisdiction: "SE",
+        sub_jurisdiction: null,
+        verified_claims: [
+          {
+            id: "3f1c2d40-0000-4000-8000-000000000001",
+            type: "training",
+            title: "Väktarutbildning 1 (VU1)",
+            credential_code: "VU1",
+            issuer: "Utbildaren AB (fiktiv)",
+            jurisdiction: "SE",
+            sub_jurisdiction: null,
+            scope_limited: false,
+            authorisation_scope: null,
+            issued_on: "2024-03-01",
+            valid_until: null,
+            assertion: "verified",
+            lifecycle: "active",
+            verified_at: "2024-03-10T00:00:00Z",
+            verifier_organisation: "CQrityjob",
+            verification_method: "document_review",
+          },
+        ],
+        verified_experience: [],
+        verified_experience_days: 0,
+      },
+    });
+
+    await expect(page.locator("[data-recipient-view]")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("[data-recipient-credential]")).toHaveCount(1);
+    await expect(page.locator("[data-recipient-view]")).toContainText("Väktarutbildning 1 (VU1)");
+    await expect(page.locator("[data-recipient-view]")).toContainText("Dokumenterad");
+    // No check time, because a package payload carries none — and the page
+    // must omit the row rather than print a blank or the visitor's clock.
+    await expect(page.locator("[data-recipient-view]")).not.toContainText(
+      "Länkstatus kontrollerad",
+    );
+    expect(pageErrors).toEqual([]);
+  });
+
   test("15 · the recipient page fits every width", async ({ page }) => {
     await mount(page, "/p/abcdef0123456789", { publicPayload: recipientPayload("sv") });
     await expect(page.locator("[data-recipient-view]")).toBeVisible({ timeout: 30_000 });

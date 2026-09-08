@@ -21,6 +21,9 @@ export type ShareErrorCode =
   | "unsupported_locale"
   | "request_key_required"
   | "request_key_conflict"
+  | "revoke_choice_required"
+  | "purpose_too_long"
+  | "recipient_hint_too_long"
   | "share_not_replaceable"
   | "no_passport"
   | "not_authenticated"
@@ -34,6 +37,9 @@ const CODES: readonly (readonly [string, ShareErrorCode])[] = [
   ["SP_UNSUPPORTED_LOCALE", "unsupported_locale"],
   ["SP_REQUEST_KEY_REQUIRED", "request_key_required"],
   ["SP_REQUEST_KEY_CONFLICT", "request_key_conflict"],
+  ["SP_REVOKE_CHOICE_REQUIRED", "revoke_choice_required"],
+  ["SP_PURPOSE_TOO_LONG", "purpose_too_long"],
+  ["SP_RECIPIENT_HINT_TOO_LONG", "recipient_hint_too_long"],
   ["SP_SHARE_NOT_REPLACEABLE", "share_not_replaceable"],
   ["SP_NO_PASSPORT", "no_passport"],
   ["SP_NOT_AUTHENTICATED", "not_authenticated"],

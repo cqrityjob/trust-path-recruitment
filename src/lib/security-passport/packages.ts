@@ -187,10 +187,19 @@ export interface RecipientClaim {
    *  copy with another's. The ordinal is what a renderer and the identity
    *  engine actually need, and it says nothing.
    *
-   *  `sp_get_disclosure` strips `id` and substitutes this for whichever
-   *  branch built the payload, so the guarantee does not depend on the
-   *  builder a given share happened to use. */
-  readonly key: string;
+   *  ── WHY BOTH FIELDS ARE OPTIONAL ────────────────────────────────────
+   *
+   *  `sp_get_disclosure` reshapes ONLY a `selected_merits` payload. That is
+   *  deliberate and it is what made the schema safe to apply before this code
+   *  shipped: every one of the five older packages, and the employer's
+   *  application panel, keeps the byte-identical payload it had, `id` and all.
+   *
+   *  So a payload carries `key` OR `id`, never neither, and which one depends
+   *  on the package. `presentationKeyOf` picks, in one place, and the model
+   *  above it has a single non-optional `key` so nothing downstream has to
+   *  know this. */
+  readonly key?: string;
+  readonly id?: string;
   readonly type: string;
   readonly title: string;
   /** Supported-credential taxonomy code (VU1 / VU2 / OV / SV), or null for a
@@ -227,8 +236,10 @@ export interface RecipientClaim {
 }
 
 export interface RecipientPeriod {
-  /** A presentation key — `e1`, `e2`. See `RecipientClaim.key`. */
-  readonly key: string;
+  /** A presentation key — `e1`, `e2` — or the row id for a package payload.
+   *  See `RecipientClaim.key`. */
+  readonly key?: string;
+  readonly id?: string;
   readonly employer: string;
   readonly role: string;
   readonly started_on: string;
@@ -305,3 +316,24 @@ export interface RecipientPayloadUnavailable {
 }
 
 export type RecipientPayload = RecipientPayloadActive | RecipientPayloadUnavailable;
+
+/**
+ * The key a renderer should use for one disclosed row.
+ *
+ * `selected_merits` carries an ordinal `key` and no `id`; the five older
+ * packages carry `id` and no `key`. Both need a value that is unique within
+ * one render, and neither renderer should have to know which kind of share it
+ * is looking at — so the choice is made once, here.
+ *
+ * The ordinal fallback exists for the impossible third case: a payload that
+ * carries neither. Returning a positional key keeps the page rendering rather
+ * than colliding every row on `undefined`, and it cannot leak anything,
+ * because there was nothing to leak.
+ */
+export function presentationKeyOf(
+  row: { readonly key?: string; readonly id?: string },
+  ordinal: number,
+  prefix: "c" | "e",
+): string {
+  return row.key ?? row.id ?? `${prefix}${ordinal + 1}`;
+}

@@ -45,7 +45,7 @@ import {
   type PublicTrustLevel,
 } from "./trust-presentation";
 import type { PassportCopyKey } from "./i18n";
-import type { RecipientPayloadActive } from "./packages";
+import { presentationKeyOf, type RecipientPayloadActive } from "./packages";
 import type { AssertionLevel, Claim, IsoDate, LifecycleState } from "./types";
 import { validityOf } from "./validity";
 
@@ -181,12 +181,12 @@ export interface RecipientPresentation {
  *  fields are filled with the values that mean "not disclosed". None of them
  *  affects derivation: the engine reads the code, the jurisdiction, the
  *  evidence and the dates, all four of which the payload does carry. */
-function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number]): Claim {
+function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number], index: number): Claim {
   return {
     // The presentation key stands in for the id here too. The identity engine
     // needs a value that is unique within this one derivation; it never
     // resolves it against anything.
-    id: c.key,
+    id: presentationKeyOf(c, index, "c"),
     claimType: c.type as Claim["claimType"],
     credentialCode: c.credential_code,
     skillCode: null,
@@ -236,7 +236,7 @@ export function buildRecipientPresentation(
    *  table; a caller that HAS them should pass them. */
   rules: readonly TitleRule[] = MIRRORED_TITLE_RULES,
 ): RecipientPresentation {
-  const credentials: RecipientCredential[] = payload.verified_claims.map((c) => {
+  const credentials: RecipientCredential[] = payload.verified_claims.map((c, index) => {
     const assertion = c.assertion as AssertionLevel;
     const validity = validityOf(c.lifecycle as LifecycleState, c.valid_until, evaluationOn);
     // Interpreted ONCE. Every recipient surface -- the page, the card, the
@@ -262,7 +262,7 @@ export function buildRecipientPresentation(
       }),
     );
     return {
-      key: c.key,
+      key: presentationKeyOf(c, index, "c"),
       title: c.title,
       code: c.credential_code,
       presentation,
@@ -288,8 +288,8 @@ export function buildRecipientPresentation(
     };
   });
 
-  const experience: RecipientExperience[] = payload.verified_experience.map((e) => ({
-    key: e.key,
+  const experience: RecipientExperience[] = payload.verified_experience.map((e, index) => ({
+    key: presentationKeyOf(e, index, "e"),
     employer: e.employer,
     role: e.role,
     startedOn: e.started_on,
@@ -307,6 +307,10 @@ export function buildRecipientPresentation(
   // when the credentials in front of them support it — never because the
   // holder's profile said so, and never for a credential the package withheld.
   const identity = deriveVerifiedIdentity(
+    // `.map(toDomainClaim)` — Array.map supplies the index, which is the
+    // fallback the presentation key needs. CLAIMS ONLY: an employment period
+    // reaches the identity engine through no path, which
+    // passport-trust-source:check asserts on this exact call.
     payload.verified_claims.map(toDomainClaim),
     rules,
     evaluationOn,

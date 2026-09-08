@@ -43,6 +43,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { orNull } from "./rpc";
 import type { RecipientPayload } from "./packages";
 
 /** One share, as the holder's own list shows it. */
@@ -86,7 +87,10 @@ export const previewSelectedShare = createServerFn({ method: "POST" })
       _claim_ids: data.claimIds,
       _experience_ids: data.experienceIds,
       _expires_days: data.expiresDays,
-      _purpose: null,
+      // `orNull` because the generated signature has no nullability for
+      // parameters, and this screen carries no purpose. The function's own
+      // contract accepts NULL and only length-checks a value that is present.
+      _purpose: orNull<string>(null),
       _locale: data.locale,
     });
     if (error) throw new Error(error.message);
@@ -123,8 +127,8 @@ export const createSelectedShare = createServerFn({ method: "POST" })
       _claim_ids: data.claimIds,
       _experience_ids: data.experienceIds,
       _expires_days: data.expiresDays,
-      _purpose: null,
-      _recipient_hint: null,
+      _purpose: orNull<string>(null),
+      _recipient_hint: orNull<string>(null),
       _locale: data.locale,
       _request_key: data.requestKey,
     });

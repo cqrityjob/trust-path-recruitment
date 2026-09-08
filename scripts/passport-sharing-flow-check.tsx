@@ -561,6 +561,13 @@ for (const forbidden of [
 }
 
 ck(
+  "4.1a the confirmed-employment duration counts employer confirmations only",
+  /request_kind = 'employer_attestation'/.test(migration) &&
+    /d2\.verification_method = 'employer_confirmation'/.test(migration) &&
+    /lower\(btrim\(d2\.decider_organisation\)\) <> 'cqrityjob'/.test(migration),
+);
+
+ck(
   "4.2 the exact authorisation scope is withheld from a chosen-scope share",
   /'authorisation_scope', NULL/.test(
     migration.slice(
@@ -580,6 +587,27 @@ ck(
 ck(
   "4.2a the anonymous read strips row identifiers and substitutes an ordinal",
   /row\.value - 'id'/.test(migration) && /'key', coalesce\(row\.value ->> 'key'/.test(migration),
+);
+// SCOPED TO selected_merits, and that scoping is what made the schema safe to
+// apply before this code shipped: the five older packages and the employer's
+// application panel keep the byte-identical payload they had.
+ck(
+  "4.2a1 and it reshapes ONLY a chosen-merit share",
+  /IF _d\.package_code = 'selected_merits' THEN[\s\S]{0,1400}RETURN _payload \|\| jsonb_build_object\('checked_at', now\(\)\);/.test(
+    migration,
+  ) && /END IF;\s*\n\s*RETURN _payload;\s*\nEND; \$function\$;/.test(migration),
+);
+// So the model has to read both shapes, in one place, and neither renderer
+// should have to know which kind of share it is looking at.
+ck(
+  "4.2a2 the model resolves a key from either shape, once",
+  /export function presentationKeyOf\(/.test(read("src/lib/security-passport/packages.ts")) &&
+    /presentationKeyOf\(c, index, "c"\)/.test(
+      read("src/lib/security-passport/recipient-presentation.ts"),
+    ) &&
+    /presentationKeyOf\(e, index, "e"\)/.test(
+      read("src/lib/security-passport/recipient-presentation.ts"),
+    ),
 );
 ck(
   "4.2b the builder emits a presentation key and never an id",

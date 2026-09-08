@@ -8,13 +8,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
   frontier: { file: string; hostedState: string; evidenceSource?: string }[];
 };
 
-// The schema half of PR #197. It is deliberately NOT applied: the application
-// half calls sp_create_selected_disclosure / sp_preview_selected_disclosure and
-// is blocked by schema-first-release-check until this is applied hosted and
-// recorded as `applied` WITH evidence. Remove this entry at the same moment
-// that recording happens — an empty expected set is the steady state, and a
-// name left here after the fact would hide a genuinely stuck migration.
-const expectedPending: string[] = ["20261101090000_sp_selected_merit_sharing.sql"];
+// Empty is the steady state, and it is where the set belongs again: the schema
+// half of PR #197 was applied to owner production on 2026-09-08 and is now
+// recorded `applied` with evidence, so leaving its name here would hide a
+// genuinely stuck migration behind an expectation.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
@@ -27,6 +25,10 @@ const hostedIdentities = [
   "20261028090000_admin_cancel_assignment_error_contract.sql",
   "20261030090000_sp_trust_source_containment.sql",
   "20261031090000_sp_passport_first_merit.sql",
+  // Applied 2026-09-08 as hosted 20260908043205 / b315714c-…; the canonical
+  // file stays in the active path because it is the reviewed record of what
+  // production ran.
+  "20261101090000_sp_selected_merit_sharing.sql",
 ];
 const retiredCanonicalIdentities = [
   "20261021090000_scp_option_order_per_attempt.sql",
@@ -39,6 +41,9 @@ const retiredCanonicalIdentities = [
   "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
   "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
   "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
+  // Lovable's generated copy of 20261101090000. Same statements, applied once
+  // already; keeping it active would make a clean replay run them twice.
+  "20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql",
 ];
 const parked = [
   "20261022090000_scp_vaktare_v1_content_review.sql",
