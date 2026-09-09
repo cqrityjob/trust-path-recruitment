@@ -5,8 +5,9 @@ const mutations: readonly Mutation[] = [
     id: "EMPLOYER-TILE-UNGATED",
     defect: "an unavailable employer service becomes a live destination",
     file: "src/routes/employers.tsx",
-    find: "<article key={title}",
-    replace: '<Link to="/employers/recruitment" key={title}',
+    find: 'className="flex min-h-full flex-col rounded-2xl border border-[var(--cq-border)] bg-white p-5 shadow-sm"',
+    replace:
+      'to="/employers/recruitment" className="flex min-h-full flex-col rounded-2xl border border-[var(--cq-border)] bg-white p-5 shadow-sm"',
     guard: "about:check",
     expect: "employer tiles are unlinked",
   },
