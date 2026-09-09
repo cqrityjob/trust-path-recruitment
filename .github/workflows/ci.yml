@@ -201,6 +201,27 @@ jobs:
       - name: Public assessment auth and buffer check
         run: bun run public-assessment-auth:check
 
+      # THE SHARE-TOKEN TRANSPORT, WHICH WAS NOT RUNNING IN CI AT ALL.
+      #
+      # `passport-share-transport:check` has existed since the token was moved
+      # out of the URL, and it has never been wired into a job -- so the guard
+      # protecting the one hop that hands over a bearer capability was only
+      # ever run by hand. It asserts the 302, the navigation-id Location, the
+      # three security headers and the cookie's five attributes.
+      - name: Passport share transport check
+        run: bun run passport-share-transport:check
+
+      # NEGATIVE CONTROLS -- proof that the guards above would notice.
+      #
+      # Each mutation introduces the exact defect a guard exists to catch and
+      # requires that guard to fail with a named diagnostic. A guard that
+      # passes with the defect applied fails the CONTROL, which is the only
+      # way an assertion that has quietly stopped testing anything becomes
+      # visible. Every mutated file is restored byte-for-byte and the run ends
+      # by asserting the working tree is clean.
+      - name: Negative controls
+        run: bun run negative-controls:all
+
       # ONE FACT, ONE WRITER, AND A JOURNEY THAT MAY CHANGE. Current
       # profession used to be writable from both "Din karriärprofil" and the
       # Passport's "Mina uppgifter", into two tables, with nothing keeping
