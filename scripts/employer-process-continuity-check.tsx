@@ -35,6 +35,16 @@ import path from "node:path";
 import { mock } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+// TYPES ONLY, and statically. The values still arrive through the dynamic
+// imports below -- they have to, because the router mock must be installed
+// before the components load -- but `P.SomeType` in type position needs a real
+// namespace, and a `const` from `await import` is not one. Erased at compile
+// time, so it loads nothing early.
+import type {
+  ContinuityCapabilities,
+  ProcessProjection,
+  TrackRead,
+} from "../src/lib/employer-continuity/process-projection";
 
 // <Link> needs a live router and renders nothing under renderToStaticMarkup.
 // Params AND search are resolved faithfully, because half of what this guard
@@ -81,6 +91,11 @@ const P = await import("../src/lib/employer-continuity/process-projection");
 const { ProcessContinuityStrip } =
   await import("../src/components/employer/ProcessContinuityStrip");
 
+/** The case-status union, taken from the shape the projection accepts rather
+ *  than redeclared, so a status added to the runtime cannot leave this file
+ *  quietly comparing against a stale list. */
+type CaseStatusLiteral = Case["status"];
+
 const root = process.cwd();
 let failures = 0;
 let passes = 0;
@@ -103,7 +118,7 @@ const read = (rel: string) => readFileSync(path.join(root, rel), "utf8");
  *  it is the stronger one: a status added to CASE_FLOW appears here without
  *  anybody remembering to add it, and every exhaustiveness assertion below
  *  immediately covers it. */
-const CASE_FLOW: readonly string[] = (() => {
+const CASE_FLOW: readonly CaseStatusLiteral[] = (() => {
   const src = read("src/lib/interview-intelligence/runtime.functions.ts");
   const block = src.slice(
     src.indexOf("export const CASE_FLOW"),
@@ -114,8 +129,21 @@ const CASE_FLOW: readonly string[] = (() => {
     console.error("  FAIL  CASE_FLOW could not be parsed from runtime.functions.ts");
     process.exit(1);
   }
-  return flow;
+  // The parse yields strings; the fixtures want the runtime's own union. The
+  // assertion that these ARE that union is the exhaustiveness check further
+  // down -- every parsed status must have a presentation state -- so the cast
+  // is narrowed by a test rather than by a promise.
+  return flow as CaseStatusLiteral[];
 })();
+
+/** Every status a case can hold, which is CASE_FLOW plus one.
+ *
+ *  `cancelled` is deliberately absent from CASE_FLOW -- that constant is the
+ *  ORDER a case moves through, and a cancellation is not a step in it. It is
+ *  still a status the projection must map and the surfaces must render, so the
+ *  exhaustiveness assertions below run over both. Written once, because the
+ *  two lists drifting apart is how a status stops being covered. */
+const ALL_CASE_STATUSES: readonly CaseStatusLiteral[] = [...CASE_FLOW, "cancelled"];
 
 /** Source with comments stripped, so a guard never trips on the prose that
  *  explains the rule it checks. */
@@ -200,27 +228,23 @@ function iCase(over: Partial<Case> = {}): Case {
   } as Case;
 }
 
-const ALL_CAPS: P.ContinuityCapabilities = {
-  canAssignAssessment: true,
+const ALL_CAPS: ContinuityCapabilities = {
   canReviewAssessment: true,
-  canPlanInterview: true,
   canShareAssessmentBrief: true,
 };
-const NO_CAPS: P.ContinuityCapabilities = {
-  canAssignAssessment: false,
+const NO_CAPS: ContinuityCapabilities = {
   canReviewAssessment: false,
-  canPlanInterview: false,
   canShareAssessmentBrief: false,
 };
 
 function project(
   opts: {
     appStatus?: string;
-    aRead?: P.TrackRead;
-    iRead?: P.TrackRead;
+    aRead?: TrackRead;
+    iRead?: TrackRead;
     assessments?: Assessment[];
     cases?: Case[];
-    caps?: P.ContinuityCapabilities;
+    caps?: ContinuityCapabilities;
   } = {},
 ) {
   const aRead = opts.aRead ?? "ready";
@@ -239,7 +263,7 @@ function project(
 const html = (node: React.ReactElement, lang: "sv" | "en" = "sv") =>
   renderToStaticMarkup(React.createElement(I18nProvider, { initialLang: lang } as never, node));
 
-const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
+const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   html(
     React.createElement(ProcessContinuityStrip, {
       projection,
@@ -752,15 +776,43 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   });
   ok(cannotShare.nextAction.kind === "awaitColleague", "12 · a member is not offered the share");
 
-  // The four capabilities are distinct inputs, not one boolean.
+  // The capabilities are distinct inputs, not one boolean.
   const proj = codeOnly(read(COMPONENTS.projection));
-  for (const c of [
-    "canAssignAssessment",
-    "canReviewAssessment",
-    "canPlanInterview",
-    "canShareAssessmentBrief",
-  ]) {
+  for (const c of ["canReviewAssessment", "canShareAssessmentBrief"]) {
     ok(proj.includes(c), `12 · ${c} is its own capability`);
+  }
+
+  // EVERY DECLARED CAPABILITY IS ACTUALLY READ.
+  //
+  // Two of them were not. `canAssignAssessment` and `canPlanInterview` were
+  // declared on the interface, computed by the caller and passed in on every
+  // render, and consulted by no branch -- left over from an earlier draft in
+  // which the projection proposed those two as next steps. A capability that
+  // nothing reads is worse than none: it reads as a permission check that is
+  // happening, and would go on looking like enforcement long after it had
+  // stopped being consulted.
+  //
+  // Parsed from the interface so a field added and forgotten fails here rather
+  // than sitting in the type looking meaningful.
+  {
+    const at = proj.indexOf("export interface ContinuityCapabilities");
+    const block = proj.slice(at, proj.indexOf("}", at));
+    const declared = [...block.matchAll(/readonly (\w+): boolean;/g)].map((m) => m[1]);
+    ok(declared.length > 0, "12 · the capability interface is parseable");
+    const ladder = proj.slice(proj.indexOf("function deriveNextAction"));
+    for (const c of declared) {
+      ok(ladder.includes(`cap.${c}`), `12 · ${c} is read by the next-step ladder`);
+    }
+    // And the caller passes exactly those, so nothing is computed for nobody.
+    const callerAt = codeOnly(read(ROUTES.application)).indexOf("capabilities: {");
+    const callerBlock = codeOnly(read(ROUTES.application)).slice(callerAt, callerAt + 400);
+    for (const c of declared) {
+      ok(callerBlock.includes(`${c}:`), `12 · the candidate page supplies ${c}`);
+    }
+    ok(
+      !callerBlock.includes("canAssignAssessment") && !callerBlock.includes("canPlanInterview"),
+      "12 · and computes no capability the projection does not read",
+    );
   }
   // The candidate page reads each from its own contract.
   const app = codeOnly(read(ROUTES.application));
@@ -813,7 +865,7 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   // And behaviourally: every reachable action is one of the operational set.
   const OPERATIONAL = new Set(members);
   let allOperational = true;
-  for (const cs of [...CASE_FLOW, "cancelled"]) {
+  for (const cs of ALL_CASE_STATUSES) {
     for (const a of [
       [],
       [attempt()],
@@ -825,7 +877,7 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
       for (const caps of [ALL_CAPS, NO_CAPS]) {
         const p = project({
           assessments: a as Assessment[],
-          cases: [iCase({ status: cs as Case["status"], reportFinalised: cs === "reported" })],
+          cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
           caps,
         });
         if (!OPERATIONAL.has(p.nextAction.kind)) allOperational = false;
@@ -1060,7 +1112,7 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   const tree = read("src/routeTree.gen.ts");
   const stripSrc = read(COMPONENTS.strip);
   const literals = [...stripSrc.matchAll(/to="(\/employer\/[^"]+)"/g)].map((m) => m[1]);
-  ok(literals.length >= 5, "21 · the strip's destinations are route literals");
+  ok(literals.length >= 4, "21 · the strip's destinations are route literals");
   for (const lit of new Set(literals)) {
     // The generated tree records paths without the file-route prefix.
     const p = lit.replace("/employer/$employerSlug", "");
@@ -1075,6 +1127,48 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   for (const k of kinds) {
     ok(stripSrc.includes(`case "${k}":`), `21 · the strip handles the "${k}" destination`);
   }
+
+  // AND EVERY DESTINATION IS REACHABLE.
+  //
+  // The other half of the same property, and the half that was missing: an
+  // `interviewNew` member sat in the union with a branch in the strip that no
+  // state could ever reach, left behind when the "plan an interview" action
+  // was removed for the funnel rule. A destination nothing produces reads as a
+  // route the projection can send somebody to, and it cannot.
+  //
+  // Proven by exhausting the state space and collecting what actually comes
+  // out, rather than by reading the ladder.
+  {
+    const produced = new Set<string>();
+    for (const cs of ALL_CASE_STATUSES) {
+      for (const a of [
+        [],
+        [attempt()],
+        [attempt({ answered: 2 })],
+        [attempt({ reviewsOutstanding: 1 })],
+        [attempt({ attemptStatus: "scored" })],
+        [attempt({ reportAvailable: true })],
+      ]) {
+        for (const caps of [ALL_CAPS, NO_CAPS]) {
+          for (const aRead of ["ready", "loading", "failed", "refused"] as const) {
+            const p = project({
+              assessments: a as Assessment[],
+              cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
+              aRead,
+              caps,
+            });
+            produced.add(p.nextAction.destination.kind);
+          }
+        }
+      }
+    }
+    // "none" is produced by every waiting and failed state; the rest must each
+    // have at least one state that reaches them.
+    for (const k of kinds) {
+      ok(produced.has(k), `21 · some state actually produces the "${k}" destination`);
+    }
+    ok(!kinds.includes("interviewNew"), "21 · and the dead interviewNew member is gone");
+  }
 }
 
 /* ================================================================== */
@@ -1086,12 +1180,12 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   const NAME = "Anna Testsson";
   const EMAIL = "anna@example.test";
   let clean = true;
-  for (const cs of [...CASE_FLOW, "cancelled"]) {
+  for (const cs of ALL_CASE_STATUSES) {
     for (const caps of [ALL_CAPS, NO_CAPS]) {
       const out = strip(
         project({
           assessments: [attempt({ reviewsOutstanding: 1 })],
-          cases: [iCase({ status: cs as Case["status"], reportFinalised: cs === "reported" })],
+          cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
           caps,
         }),
       );
@@ -1153,7 +1247,7 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   for (const cs of CASE_FLOW) {
     const p = project({
       assessments: [attempt({ reviewsOutstanding: 1 })],
-      cases: [iCase({ status: cs as Case["status"], reportFinalised: cs === "reported" })],
+      cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
     });
     const s = strip(p, "sv");
     const e = strip(p, "en");
@@ -1179,7 +1273,7 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
 {
   // Every case status the runtime can produce has a presentation state, and
   // none of them is "unknown".
-  for (const s of [...CASE_FLOW, "cancelled"]) {
+  for (const s of ALL_CASE_STATUSES) {
     ok(P.interviewStateOf(s) !== "unknown", `T · case status "${s}" has a presentation state`);
   }
   ok(
@@ -1202,7 +1296,7 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   // The full cross-product produces exactly one action, always defined.
   let total = 0;
   let defined = 0;
-  for (const cs of [...CASE_FLOW, "cancelled"]) {
+  for (const cs of ALL_CASE_STATUSES) {
     for (const a of [
       [],
       [attempt()],
@@ -1216,7 +1310,7 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
             total += 1;
             const p = project({
               assessments: a as Assessment[],
-              cases: [iCase({ status: cs as Case["status"], reportFinalised: cs === "reported" })],
+              cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
               aRead,
               iRead,
               caps,
@@ -1225,7 +1319,7 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
             // Determinism: the same inputs twice give the same answer.
             const again = project({
               assessments: a as Assessment[],
-              cases: [iCase({ status: cs as Case["status"], reportFinalised: cs === "reported" })],
+              cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
               aRead,
               iRead,
               caps,
@@ -1250,10 +1344,10 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
     "nothingOutstanding",
   ];
   let silentClean = true;
-  for (const cs of [...CASE_FLOW, "cancelled"]) {
+  for (const cs of ALL_CASE_STATUSES) {
     for (const caps of [ALL_CAPS, NO_CAPS]) {
       for (const aRead of ["ready", "failed", "loading"] as const) {
-        const p = project({ cases: [iCase({ status: cs as Case["status"] })], aRead, caps });
+        const p = project({ cases: [iCase({ status: cs })], aRead, caps });
         if (SILENT.includes(p.nextAction.kind) && p.nextAction.destination.kind !== "none") {
           silentClean = false;
         }
@@ -1263,15 +1357,17 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   ok(silentClean, "T · a waiting or failed state never carries a call to action");
 
   // The action a case produces matches the state it is in, one to one.
-  const EXPECTED: Record<string, string> = {
+  // Keyed by the runtime's own union rather than by `string`, so a status that
+  // is renamed breaks this table instead of quietly never being exercised.
+  const EXPECTED: Partial<Record<CaseStatusLiteral, string>> = {
     prep_approved: "startInterview",
     interview_in_progress: "continueInterview",
     interview_complete: "assessInterviewEvidence",
     evidence_review: "assessInterviewEvidence",
     assessed: "reviewReportMaterial",
   };
-  for (const [status, expected] of Object.entries(EXPECTED)) {
-    const p = project({ cases: [iCase({ status: status as Case["status"] })] });
+  for (const [status, expected] of Object.entries(EXPECTED) as [CaseStatusLiteral, string][]) {
+    const p = project({ cases: [iCase({ status })] });
     ok(p.nextAction.kind === expected, `T · ${status} proposes ${expected}`);
   }
   // A reported case with a real report row opens it; without one, it does not

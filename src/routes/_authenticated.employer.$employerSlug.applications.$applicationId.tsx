@@ -322,17 +322,24 @@ function Candidate360({
   // Every capability is read from the contract that governs ITS OWN action,
   // never from one role label standing in for four different rules:
   //
-  //   assign an assessment    scp_assign_from_application wants owner/admin
   //   review responses        a reviewer seat AND no conflict, per attempt,
   //                           from the same board the review workspace uses
   //   share a scored brief    scp_employer_assessment_pipeline computes
   //                           can_release as scored AND not yet released AND
   //                           owner/admin -- so for a brief_ready attempt this
   //                           is exactly the owner/admin half
-  //   plan an interview       scp_iv_create_case accepts any active member
   //
-  // None of these is enforcement; each destination and each write re-decides.
-  // What they buy is a page that does not offer work the database will refuse.
+  // TWO, not four. Assigning an assessment (owner/admin) and planning an
+  // interview (any active member) are also capability-gated, but not HERE:
+  // the projection proposes neither as a next step, because neither process is
+  // required and naming one would make the spine a funnel. Their controls are
+  // gated at their own call sites -- `canAssign` on the assessment panel
+  // below, and the interview section's own start link -- which is where a
+  // control's permission belongs. Passing them in anyway would have read as a
+  // permission check that was happening when nothing consulted it.
+  //
+  // None of this is enforcement; each destination and each write re-decides.
+  // What it buys is a page that does not offer work the database will refuse.
   const leadBasis = assessmentTrack.leadAttemptId
     ? ((reviewBoardQuery.data ?? []).find((b) => b.attemptId === assessmentTrack.leadAttemptId)
         ?.basis ?? null)
@@ -344,10 +351,8 @@ function Candidate360({
     interview: interviewTrack,
     report: reportTrack,
     capabilities: {
-      canAssignAssessment: canAssign,
       canReviewAssessment: leadBasis === "authorised" || leadBasis === "break_glass",
       canShareAssessmentBrief: canAssign,
-      canPlanInterview: true,
     },
   });
   const nextStatuses = status ? (EMPLOYER_NEXT_STATUSES[status] ?? []) : [];

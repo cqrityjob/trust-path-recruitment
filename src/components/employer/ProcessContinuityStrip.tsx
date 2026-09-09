@@ -136,9 +136,33 @@ const NEXT_CTA: Partial<Record<NextActionKind, TranslationKey>> = {
  *
  *  A discriminated union in, a typed `<Link>` out, and no template string
  *  anywhere: a route that is renamed or removed breaks the build here rather
- *  than producing a link that 404s in a recruiter's hands. The application id
- *  is a PATH PARAMETER on the two application-scoped destinations and a search
- *  parameter nowhere, so no candidate identity travels in a query string. */
+ *  than producing a link that 404s in a recruiter's hands.
+ *
+ *  ── WHERE THE APPLICATION ID TRAVELS, AND WHAT IT MEANS ────────────────
+ *
+ *  It travels as a SEARCH PARAMETER on the review destination
+ *  (`?application=<uuid>`), because the review route has no application in its
+ *  path and would otherwise have no way to return to the candidate it was
+ *  opened from. An earlier version of this comment claimed the id was never a
+ *  search parameter, which was simply untrue of the code beneath it.
+ *
+ *  What that parameter is:
+ *
+ *    * NAVIGATION CONTEXT. It answers "where do I go back to", and nothing
+ *      else on the destination is fetched with it.
+ *    * NOT AUTHORITY. It grants no access and widens nothing. The review route
+ *      validates it as a uuid and uses it for one link; the queue below it is
+ *      scoped entirely by the database, and scp_complete_human_review
+ *      re-decides on write. A hand-edited value costs a wrong "back" link and
+ *      reveals not one word of anybody's answers.
+ *    * RE-VERIFIED AT THE FAR END. Every destination re-establishes its own
+ *      authorisation on arrival from the caller's own membership, exactly as
+ *      it does for somebody who navigated there directly.
+ *
+ *  What never travels: a candidate's name, an email address, an internal title
+ *  or any other human-readable label. Only opaque server-issued identifiers
+ *  reach a URL, which the E1 guard asserts by rendering every reachable state
+ *  and inspecting every href it draws. */
 function DestinationLink({
   destination,
   employerSlug,
@@ -201,18 +225,6 @@ function DestinationLink({
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId/report"
           params={{ employerSlug, caseId: destination.caseId }}
-          className={cls}
-        >
-          {label}
-          {icon}
-        </Link>
-      );
-    case "interviewNew":
-      return (
-        <Link
-          to="/employer/$employerSlug/interview-intelligence/new"
-          params={{ employerSlug }}
-          search={{ applicationId, jobId: undefined }}
           className={cls}
         >
           {label}

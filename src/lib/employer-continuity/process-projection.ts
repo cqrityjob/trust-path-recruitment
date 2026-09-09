@@ -412,14 +412,20 @@ export type WaitingOn = "employer" | "candidate" | "colleague" | "nobody" | "unk
 
 /** Where the action goes, as a canonical typed destination the route tree
  *  already contains. Expressed as a discriminated union rather than a string
- *  so a destination that stops existing is a type error, not a 404. */
+ *  so a destination that stops existing is a type error, not a 404.
+ *
+ *  Every member below is REACHABLE: some branch of `deriveNextAction` produces
+ *  it. An `interviewNew` member used to sit here, left behind when the
+ *  "plan an interview" action was removed for the funnel rule -- a destination
+ *  nothing could produce, and a branch in the strip that could never run. A
+ *  dead member of this union is not harmless: it reads as a route the
+ *  projection can send somebody to, and it cannot. */
 export type ActionDestination =
   | { readonly kind: "none" }
   | { readonly kind: "assessmentReview"; readonly attemptId: string }
   | { readonly kind: "assessmentParticipants" }
   | { readonly kind: "interviewCase"; readonly caseId: string }
-  | { readonly kind: "interviewReport"; readonly caseId: string }
-  | { readonly kind: "interviewNew" };
+  | { readonly kind: "interviewReport"; readonly caseId: string };
 
 export interface NextAction {
   readonly kind: NextActionKind;
@@ -435,17 +441,34 @@ export interface NextAction {
  *
  * They are inputs, not decisions: this module does not know how they were
  * obtained and cannot widen them. UI hiding is not enforcement — every
- * destination below re-decides on arrival, and every write re-decides in the
+ * destination re-decides on arrival, and every write re-decides in the
  * database.
+ *
+ * ── ONLY THE CAPABILITIES THIS MODULE ACTUALLY READS ────────────────────
+ *
+ * There were four. `canAssignAssessment` and `canPlanInterview` were declared
+ * here, computed by the caller and passed in on every render, and never read
+ * by a single branch below — left over from an earlier draft in which the
+ * projection proposed "send an assessment" and "plan an interview" as next
+ * steps. Those two actions were removed because they made the spine a funnel:
+ * neither process is required, and naming one of them as THE next step invents
+ * a sequence the product does not have.
+ *
+ * A capability that nothing reads is worse than no capability at all. It reads
+ * as a permission check that is happening, invites the next reader to trust it,
+ * and would go on looking like enforcement long after it had stopped being
+ * consulted. The two controls those fields described still exist — the assign
+ * button inside the assessment panel, the start link inside the interview
+ * section — each gated by its own capability at its own call site, which is
+ * where a control's permission belongs.
  */
 export interface ContinuityCapabilities {
-  /** scp_assign_from_application requires owner/admin. */
-  readonly canAssignAssessment: boolean;
-  /** A reviewer seat with no conflict, from scp_employer_review_board. */
+  /** A reviewer seat with no conflict for THIS attempt, from the same
+   *  scp_employer_review_board the review workspace reads. */
   readonly canReviewAssessment: boolean;
-  /** scp_iv_create_case accepts any active member. */
-  readonly canPlanInterview: boolean;
-  /** Sharing a scored brief requires owner/admin. */
+  /** Sharing a scored brief: scp_employer_assessment_pipeline computes
+   *  can_release as scored AND not yet released AND owner/admin, so for a
+   *  brief_ready attempt this is exactly the owner/admin half. */
   readonly canShareAssessmentBrief: boolean;
 }
 

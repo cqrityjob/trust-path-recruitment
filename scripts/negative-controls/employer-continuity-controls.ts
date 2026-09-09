@@ -256,6 +256,29 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "22 · no URL the strip draws carries a name, an address or anything but an opaque id",
   },
 
+  /* ---- False capability and destination signals --------------------- */
+  {
+    id: "E1-CAPABILITY-NOBODY-READS",
+    defect:
+      "a capability is declared and passed on every render but consulted by no branch, so it reads as a permission check that is happening when nothing is checking it",
+    file: PROJECTION,
+    find: "export interface ContinuityCapabilities {",
+    replace:
+      "export interface ContinuityCapabilities {\n  /** scp_assign_from_application requires owner/admin. */\n  readonly canAssignAssessment: boolean;",
+    guard: E1,
+    expect: "12 · canAssignAssessment is read by the next-step ladder",
+  },
+  {
+    id: "E1-DESTINATION-NOBODY-PRODUCES",
+    defect:
+      "a destination stays in the union, and in the strip's switch, after the last branch that could produce it stops doing so",
+    file: PROJECTION,
+    find: '          destination: { kind: "assessmentParticipants" },',
+    replace: "          destination: NO_DESTINATION,",
+    guard: E1,
+    expect: '21 · some state actually produces the "assessmentParticipants" destination',
+  },
+
   /* ---- Counter units ----------------------------------------------- */
   {
     id: "E1-COUNTER-UNIT-MISMATCH",
