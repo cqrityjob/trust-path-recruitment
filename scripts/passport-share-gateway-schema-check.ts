@@ -7,6 +7,7 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 const migration = read("supabase/migrations/20261104090000_passport_share_gateway.sql");
 const rollback = read("supabase/rollback/20261104090000_passport_share_gateway_rollback.sql");
 const test = read("supabase/tests/security_passport_share_gateway_test.sql");
+const phase5Test = read("supabase/tests/security_passport_phase5_test.sql");
 const dbTest = read("scripts/db-test.sh");
 const releaseState = read("supabase/release-state.json");
 const frontier = read("scripts/release-frontier-check.ts");
@@ -46,6 +47,10 @@ for (const fn of ["sp_share_gateway_issue", "sp_share_gateway_consume", "sp_get_
 assert(test.includes("B8 a handoff is single-use"), "runtime suite proves replay refusal");
 assert(test.includes("C4 revocation immediately closes"), "runtime suite proves immediate revocation");
 assert(test.includes("D1 application-scoped disclosures"), "runtime suite proves application exclusion");
+assert(
+  phase5Test.includes("'sp_get_disclosure_session','sp_share_gateway_consume','sp_share_gateway_issue'"),
+  "the legacy search-path allowlist names all three digest-using gateway functions",
+);
 assert(dbTest.includes("share-gateway rollback and re-apply"), "database runner proves rollback and re-apply");
 assert(dbTest.includes("security_passport_share_gateway_test.sql"), "database runner executes the gateway suite");
 assert(releaseState.includes('"file": "20261104090000_passport_share_gateway.sql"'), "release state names the pending migration");

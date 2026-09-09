@@ -531,7 +531,8 @@ SELECT pg_temp.ok(
       AND p.prosecdef
       AND p.proconfig IS NOT NULL
       AND p.proconfig @> ARRAY['search_path=public, extensions'])
-    = ARRAY['sp_create_credential_disclosure','sp_create_disclosure','sp_get_disclosure']::name[],
-  '9.3 and exactly those three SECURITY DEFINER functions widened their search_path');
+    = ARRAY['sp_create_credential_disclosure','sp_create_disclosure','sp_get_disclosure',
+            'sp_get_disclosure_session','sp_share_gateway_consume','sp_share_gateway_issue']::name[],
+  '9.3 and exactly the six digest-using SECURITY DEFINER functions widened their search_path');
 
 \echo '    ok  Security Passport Phase 5 assertions passed'

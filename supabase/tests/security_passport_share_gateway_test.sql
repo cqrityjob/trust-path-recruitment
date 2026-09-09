@@ -177,7 +177,8 @@ UPDATE public.sp_disclosures
    SET revoked_at = NULL
  WHERE id = 'e7100000-0000-4000-8000-000000000001';
 UPDATE public.sp_share_sessions
-   SET expires_at = now() - interval '1 second'
+   SET created_at = now() - interval '31 minutes',
+       expires_at = now() - interval '1 second'
  WHERE session_hash = encode(digest(repeat('d', 64), 'sha256'), 'hex');
 
 SELECT pg_temp.ok(
