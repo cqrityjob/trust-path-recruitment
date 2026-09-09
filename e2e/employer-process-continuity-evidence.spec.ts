@@ -162,7 +162,21 @@ test("10 · the English mobile journey at 375", async ({ page }) => {
   // a claim.
   const cta = strip(page).getByRole("link").first();
   await expect(cta).toBeVisible({ timeout: 15_000 });
-  await cta.focus();
+
+  // REACHED BY KEYBOARD, not by locator.focus().
+  //
+  // The ring is a `focus-visible` style, and Chromium does not apply
+  // `:focus-visible` to focus set programmatically -- so a capture taken after
+  // .focus() shows a focused control with no ring and proves the opposite of
+  // what it claims. Tabbing to it is also the stronger evidence: it shows the
+  // control is REACHABLE in the focus order, not merely focusable.
+  await page.locator("body").click({ position: { x: 2, y: 2 } });
+  let reached = false;
+  for (let i = 0; i < 60 && !reached; i += 1) {
+    await page.keyboard.press("Tab");
+    reached = await cta.evaluate((el) => el === document.activeElement);
+  }
+  expect(reached).toBe(true);
   await expect(cta).toBeFocused();
   await page.screenshot({ path: `${OUT}/11-en-375-primary-action-focus.png` });
 });
