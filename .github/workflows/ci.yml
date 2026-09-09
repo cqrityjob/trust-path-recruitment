@@ -1153,6 +1153,10 @@ jobs:
       # ships and is reproducible for that image.
       - name: Install poppler
         run: |
+          # ubuntu-latest currently carries an unrelated Google Chrome apt
+          # source. If Google publishes Release and Packages out of sync,
+          # apt-get fails before this job can install Ubuntu's poppler package.
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends poppler-utils
           pdftotext -v
@@ -1217,7 +1221,12 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Install Chromium
-        run: bunx playwright install --with-deps chromium
+        run: |
+          # Playwright's dependency installer runs apt-get update. Remove the
+          # unrelated preconfigured Chrome source so a transient mismatch in
+          # Google's repository cannot block installation from Ubuntu.
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list
+          bunx playwright install --with-deps chromium
 
       # The dev server, on a pinned port so the spec's default base URL is
       # the one it actually gets. `--strictPort` makes a port clash a failure
