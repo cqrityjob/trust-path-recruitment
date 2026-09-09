@@ -935,10 +935,33 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
   }
   // And the candidate's own results reach preparation only as separately
   // labelled follow-up areas, which is the existing contract.
-  ok(
-    codeOnly(read("src/lib/interview-intelligence/context.ts")).includes('"assessment_follow_up"'),
-    "18 · assessment-derived areas keep their own source label",
-  );
+  // Asserted against the UNION, not against the bare string. The reason also
+  // appears in the mapping table below the type, so a check for the string
+  // alone went on passing after the union member was deleted -- a dead
+  // assertion the negative control caught, and this replaces. The union is
+  // what makes the label a distinct, exhaustively-handled kind of thing
+  // rather than free text.
+  {
+    const ctxSrc = codeOnly(read("src/lib/interview-intelligence/context.ts"));
+    const at = ctxSrc.indexOf("export type FollowUpReason");
+    const union = at < 0 ? "" : ctxSrc.slice(at, ctxSrc.indexOf(";", at));
+    ok(
+      union.includes('"assessment_follow_up"'),
+      "18 · assessment-derived areas keep their own source label",
+    );
+    ok(
+      union.includes('"limited_evidence"') && union.includes('"requirement_to_cover"'),
+      "18 · and the advert-derived kinds stay separate from it",
+    );
+    // Grouped by reason where they are rendered, so an area the candidate's
+    // results produced cannot be presented among the advert's own.
+    ok(
+      codeOnly(read("src/components/employer/interview/InterviewContextPanel.tsx")).includes(
+        "REASON_ORDER",
+      ),
+      "18 · and are grouped by reason where they are rendered",
+    );
+  }
 }
 
 /* ================================================================== */
