@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
-import { BrandMark } from "@/components/patterns/BrandMark";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
@@ -63,7 +63,8 @@ export function SiteFooter() {
               className="inline-flex min-h-[44px] items-center gap-2 rounded-md font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              <BrandMark />
+              <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
+              <span className="text-base">{t("brand.name")}</span>
             </Link>
             {/* The brand principle, once. It used to appear twice in this
                 footer -- as `footer.tagline` beside the mark and again as

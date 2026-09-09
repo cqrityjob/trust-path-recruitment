@@ -1,6 +1,13 @@
 import type { ReactNode } from "react";
-import { PublicShell } from "@/components/patterns/PublicShell";
+import { SiteHeader } from "./SiteHeader";
+import { SiteFooter } from "./SiteFooter";
 
 export function SiteLayout({ children }: { children: ReactNode }) {
-  return <PublicShell>{children}</PublicShell>;
+  return (
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="flex-1">{children}</main>
+      <SiteFooter />
+    </div>
+  );
 }
