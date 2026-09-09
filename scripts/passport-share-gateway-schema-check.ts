@@ -53,8 +53,9 @@ assert(
 );
 assert(dbTest.includes("share-gateway rollback and re-apply"), "database runner proves rollback and re-apply");
 assert(dbTest.includes("security_passport_share_gateway_test.sql"), "database runner executes the gateway suite");
-assert(releaseState.includes('"file": "20261104090000_passport_share_gateway.sql"'), "release state names the pending migration");
-assert(frontier.includes('"20261104090000_passport_share_gateway.sql"'), "release frontier expects exactly this pending migration");
+assert(releaseState.includes('"file": "20261104090000_passport_share_gateway.sql"'), "release state names the applied migration");
+assert(releaseState.includes('"hostedState": "applied"'), "release state records hosted application");
+assert(frontier.includes("const expectedPending: string[] = [];"), "release frontier is empty after hosted application");
 
 console.log(`\n${checks} checks, ${failures.length} failures`);
 if (failures.length) {

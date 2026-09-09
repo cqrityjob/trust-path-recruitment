@@ -214,6 +214,9 @@ jobs:
       - name: Passport share gateway schema check
         run: bun run passport-share-gateway-schema:check
 
+      - name: Passport share gateway transport check
+        run: bun run passport-share-gateway-transport:check
+
       # NEGATIVE CONTROLS -- proof that the guards above would notice.
       #
       # Each mutation introduces the exact defect a guard exists to catch and

@@ -12,7 +12,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import type { RecipientPayload } from "./packages";
-import { shareTokenFromCookieHeader } from "./share-transport";
+import { shareSessionFromCookieHeader, shareTokenFromCookieHeader } from "./share-transport";
 
 /** A token is 32 random bytes rendered as hex. Anything else is rejected
  *  before it reaches the database — cheap, and it keeps malformed input out
@@ -52,10 +52,11 @@ export const getPublicDisclosureFromCookie = createServerFn({ method: "POST" })
   // shares apart — see share-transport.ts for the substitution this prevents.
   .validator((data: unknown) => z.object({ navigationId: z.string().max(64) }).parse(data))
   .handler(async ({ data }): Promise<RecipientPayload> => {
-    const token = shareTokenFromCookieHeader(
-      getRequest()?.headers?.get("cookie"),
-      data.navigationId,
-    );
+    const request = getRequest();
+    const cookie = request?.headers?.get("cookie");
+    const session = shareSessionFromCookieHeader(cookie, data.navigationId);
+    if (session) return readForSession(session);
+    const token = shareTokenFromCookieHeader(cookie, data.navigationId);
     // Absent, malformed, mismatched or expired cookie renders exactly as a
     // revoked token, a guessed token and a throttled request do. A recipient
     // whose cookie has lapsed reopens their link and gets a fresh one.
@@ -71,4 +72,12 @@ async function readForToken(token: string): Promise<RecipientPayload> {
 
   const { readDisclosureByToken } = await import("./public-disclosure.server");
   return readDisclosureByToken(token, hint);
+}
+
+async function readForSession(session: string): Promise<RecipientPayload> {
+  const request = getRequest();
+  const forwarded = request?.headers?.get("x-forwarded-for") ?? "";
+  const hint = forwarded.split(",")[0]?.trim() || "unknown";
+  const { readDisclosureBySession } = await import("./public-disclosure.server");
+  return readDisclosureBySession(session, hint);
 }

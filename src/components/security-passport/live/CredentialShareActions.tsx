@@ -73,9 +73,9 @@ export function CredentialShareActions({
 
   const issued = monthYear(subject.issuedOn);
   const expires = monthYear(subject.validUntil);
-  // The share token is the public identifier. The holder's own reference
-  // number is private and never leaves the database.
-  const credentialId = shareUrl ? (shareUrl.split("/p/")[1] ?? "").slice(0, 12) : "";
+  // A bearer capability is not an identifier. Leave LinkedIn's optional
+  // credential-id field empty rather than copying any part of the token.
+  const credentialId = "";
 
   const rows: readonly { labelKey: PassportCopyKey; value: string }[] = [
     { labelKey: "cw.liName", value: subject.title },
