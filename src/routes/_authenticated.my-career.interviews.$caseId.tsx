@@ -32,7 +32,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import {
@@ -160,13 +159,13 @@ function Page() {
 
   if (q.isLoading) {
     return (
-      <SiteLayout>
+      <>
         <Section containerClassName="max-w-3xl">
           <p role="status" className="text-sm text-muted-foreground">
             {L(c("Laddar …", "Loading …"), lang)}
           </p>
         </Section>
-      </SiteLayout>
+      </>
     );
   }
 
@@ -176,7 +175,7 @@ function Page() {
   // but you may not see it" would confirm the case exists.
   if (q.isError || !q.data) {
     return (
-      <SiteLayout>
+      <>
         <Section containerClassName="max-w-3xl">
           <h1 className="text-2xl font-semibold text-foreground">
             {L(c("Intervjun är inte tillgänglig", "This interview is not available"), lang)}
@@ -197,14 +196,14 @@ function Page() {
             {L(c("Till Min karriär", "Back to My Career"), lang)}
           </Link>
         </Section>
-      </SiteLayout>
+      </>
     );
   }
 
   const d = q.data;
 
   return (
-    <SiteLayout>
+    <>
       <Section containerClassName="max-w-3xl">
         <Link to="/my-career" className="text-sm text-muted-foreground hover:underline">
           {L(c("← Min karriär", "← My Career"), lang)}
@@ -481,6 +480,6 @@ function Page() {
           </div>
         </section>
       </Section>
-    </SiteLayout>
+    </>
   );
 }

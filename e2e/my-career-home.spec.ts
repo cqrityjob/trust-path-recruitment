@@ -23,143 +23,30 @@
 //
 // Run:  E2E_BASE_URL=http://localhost:3100 bunx playwright test e2e/my-career-home.spec.ts
 
-import { test, expect, type Page, type Route } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import {
   FIXTURES,
-  fixtureById,
   work,
   history,
-  type HomeFixture,
 } from "../src/lib/professional-identity/fixtures/career-home-fixtures";
-import type { HomePresentationInput } from "../src/lib/professional-identity/home-presentation";
+import {
+  ASSIGNMENT_ID,
+  ATTEMPT_ID,
+  FAILING_ASSIGNMENT_ID,
+  LINKED_RUN_ID,
+  fail,
+  mount,
+  ok,
+  takeMountBookkeeping,
+} from "./support/career-home-harness";
 
-const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
-const USER_ID = "00000000-0000-4000-8000-000000000001";
-
-// ── THREE IDENTIFIER DOMAINS, THREE VISIBLY DIFFERENT UUIDS ───────────
-//
-// The defect this pins: `claimAssessmentAssignment` returns an
-// `assessment_runs` id (created by save_career_report), and it was being
-// routed to /academy/$attemptId — an `scp_attempts` id. Ids that looked
-// alike made the two indistinguishable in a test. These cannot be
-// confused by eye, and every assertion names which domain it expects.
-const ASSIGNMENT_ID = "aaaaaaaa-0000-4000-8000-00000000a551"; // assessment_assignments
-const LINKED_RUN_ID = "bbbbbbbb-0000-4000-8000-0000000000ce"; // assessment_runs
-const ATTEMPT_ID = "cccccccc-0000-4000-8000-00000000a11e"; // scp_attempts
-const FAILING_ASSIGNMENT_ID = "dddddddd-0000-4000-8000-00000000fa11";
-
-/** The minimum PassportSnapshot the Passport index needs to reach its ready
- *  branch, so a navigation scenario lands on a real page. */
-function passportSnapshot(f: HomeFixture) {
-  const id = f.input.identity;
-  const claims = id.state === "ready" ? id.identity.claims : [];
-  const periods = id.state === "ready" ? id.identity.employment : [];
-  return {
-    profile: {
-      displayName: "Amina Karlsson",
-      headline: "Väktare",
-      cigProfessionSlug: "vaktare",
-      jurisdictionCode: "SE",
-      subJurisdictionCode: null,
-      workLocationConfirmedAt: "2026-01-01T00:00:00Z",
-      privacyMode: "private",
-      onboardingState: "complete",
-      onboardingStep: 0,
-      onboardingAnswers: {},
-    },
-    holder: {
-      id: USER_ID,
-      displayName: "Amina Karlsson",
-      professionSlug: "vaktare",
-      identity: {
-        engineVersion: "identity-v1",
-        evaluatedOn: "2026-09-05",
-        includesSelfDeclared: true,
-        educationCompleted: [],
-        professionalCompetence: [],
-        localEligibility: [],
-        activeTitles: [],
-      },
-      jurisdictionCode: "SE",
-      subJurisdictionCode: null,
-      periods: periods.map((p) => ({
-        id: p.id,
-        employerName: p.employerName,
-        roleTitle: p.roleTitle,
-        cigProfessionSlug: null,
-        jurisdictionCode: p.jurisdictionCode,
-        employmentType: p.employmentType,
-        fteFraction: 1,
-        securityRelevance: "primary",
-        securityFraction: null,
-        startedOn: p.startedOn,
-        endedOn: p.endedOn,
-        assertionLevel: p.assertionLevel,
-        lifecycleState: "active",
-      })),
-      claims: claims.map((c) => ({
-        id: c.id,
-        claimType: c.claimType,
-        credentialCode: null,
-        skillCode: null,
-        skillLevel: c.skillLevel,
-        title: c.title,
-        claimedIssuerName: c.issuerName,
-        jurisdictionCode: "SE",
-        subJurisdictionCode: null,
-        authorisationScope: null,
-        issuedOn: c.issuedOn,
-        validFrom: null,
-        validUntil: c.validUntil,
-        assertionLevel: c.assertionLevel,
-        lifecycleState: c.lifecycleState,
-        versionNo: 1,
-        supersedesId: null,
-      })),
-      hasCareerDiscoveryResult: false,
-    },
-    eventCount: 0,
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/* Stubbing                                                            */
-/* ------------------------------------------------------------------ */
-
-type Reply = { body: unknown } | { error: string } | { hang: true };
-
-function exportOf(url: string): string | null {
-  const m = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(url);
-  if (!m) return null;
-  try {
-    const json = JSON.parse(
-      Buffer.from(m[1]!.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
-    );
-    return String(json.export ?? "").replace(/_createServerFn_handler$/, "");
-  } catch {
-    return null;
-  }
-}
-
-const ok = (body: unknown): Reply => ({ body });
-const fail = (error = "stubbed failure"): Reply => ({ error });
-const HANG: Reply = { hang: true };
-
-const src = <T>(s: { state: string; rows?: readonly T[] }): Reply =>
-  s.state === "ready" ? ok(s.rows ?? []) : s.state === "error" ? fail() : HANG;
-
-/**
- * The last mount's bookkeeping, asserted after every test.
- *
- * A per-test call would have to be remembered; an `afterEach` cannot be
- * forgotten, and it covers scenarios added later too.
- */
-let current: { errors: string[]; unmatched: string[] } | null = null;
+// The harness — the stub table, the planted session and the fixtures —
+// moved to ./support/career-home-harness.ts when the PR #211 hub evidence
+// run needed the same mount. This file keeps the scenarios and nothing
+// else; everything the comment above describes still happens, in there.
 
 test.afterEach(() => {
-  const c = current;
-  current = null;
+  const c = takeMountBookkeeping();
   if (!c) return;
   expect(
     c.unmatched,
@@ -167,219 +54,6 @@ test.afterEach(() => {
   ).toEqual([]);
   expect(c.errors, c.errors.join("\n")).toEqual([]);
 });
-
-/** The stub table for one fixture. Any scenario may override entries. */
-function repliesFor(f: HomeFixture): Record<string, Reply> {
-  const i: HomePresentationInput = f.input;
-  const identity =
-    i.identity.state === "ready"
-      ? ok(i.identity.identity)
-      : i.identity.state === "error"
-        ? fail("identity failed")
-        : HANG;
-  const profile =
-    i.jobFilter.state === "family"
-      ? ok({
-          hasProfile: true,
-          profile: {
-            profileVersion: "career-profile-for-jobs-v1",
-            familyScores: { [i.jobFilter.familyId]: { currentFit: 0.8, potential: 0.9 } },
-          },
-          runId: "run-cd-1",
-          completedAt: "2026-08-20T09:00:00Z",
-        })
-      : i.jobFilter.state === "none"
-        ? ok({ hasProfile: false })
-        : HANG;
-  return {
-    getMyProfessionalIdentity: identity,
-    listMyCvs: ok(Array.from({ length: i.savedCvCount ?? 0 }, (_, n) => ({ id: `cv-${n}` }))),
-    getV31Availability: ok({ available: i.careerDiscoveryOpen === true }),
-    getV31TesterStatus: ok({ allowed: i.careerDiscoveryOpen === true }),
-    getActiveCareerReport: i.activeReportError
-      ? fail()
-      : i.activeReport
-        ? ok(i.activeReport)
-        : HANG,
-    getStoredDiscoveryReport: i.storedReportError
-      ? fail()
-      : i.storedReport
-        ? ok(i.storedReport)
-        : HANG,
-    listAssessmentRuns: src(i.legacyRuns),
-    listMyDiscoveryReports:
-      i.discoveryReports.state === "ready"
-        ? ok({ reports: i.discoveryReports.rows })
-        : i.discoveryReports.state === "error"
-          ? fail()
-          : HANG,
-    listAcademyWork: src(i.academyWork),
-    claimAssessmentInvitations: ok({ bound: 0, expired: 0 }),
-    getMyAssessmentHistory: src(i.assessmentHistory),
-    getMyLinkableAssignments: ok([]),
-    listMyApplications: src(i.applications),
-    listMyInterviews: src(i.interviews),
-    listMyVerificationRequests:
-      f.requests === "error"
-        ? fail("verification read failed")
-        : f.requests
-          ? ok({ requests: f.requests, decisions: [] })
-          : HANG,
-    getMyCareerProfileForJobs: profile,
-    // ── DESTINATIONS ────────────────────────────────────────────────
-    // The two routes a scenario navigates to. Stubbed in the base table so
-    // a click-through cannot leave an unstubbed read behind.
-    getMySavedReport: ok({
-      run: { id: LINKED_RUN_ID, completedAt: "2026-07-01T09:00:00Z", status: "completed" },
-      // A run with no stored report renders the route's "legacy empty"
-      // state — a real destination state that proves the route resolved
-      // THIS run id, without inventing an engine result.
-      report: null,
-    }),
-    getMyPassport: ok(passportSnapshot(f)),
-    ensureMyPassport: ok({ created: false }),
-    getRegulatedCredentialAvailability: ok({
-      state: "open",
-      jurisdictionCode: "SE",
-      subJurisdictionCode: null,
-      marketPackCode: "SE-CORE",
-      types: [],
-    }),
-    // header chrome
-    countMyAcademyWork: ok({ total: 0, actionable: 0 }),
-    countMyReviewQueue: ok(0),
-    listMyEmployerWorkspaces: ok([]),
-    trackV31FunnelEvent: ok({ recorded: false }),
-  };
-}
-
-async function mount(
-  page: Page,
-  fixtureId: string,
-  opts: {
-    lang?: "sv" | "en";
-    overrides?: Record<string, Reply | ((route: Route) => Promise<void>)>;
-    jobs?: unknown[];
-  } = {},
-) {
-  const f = fixtureById(fixtureId);
-  if (!f) throw new Error(`unknown fixture ${fixtureId}`);
-  const replies = { ...repliesFor(f), ...(opts.overrides ?? {}) };
-  const unmatched: string[] = [];
-
-  await page.addInitScript(
-    ({ ref, lang, userId }) => {
-      try {
-        localStorage.setItem("cqrityjob.lang", lang);
-        localStorage.setItem(
-          `sb-${ref}-auth-token`,
-          JSON.stringify({
-            access_token: "stub-access-token",
-            refresh_token: "stub-refresh-token",
-            token_type: "bearer",
-            expires_in: 3600 * 24 * 365,
-            expires_at: Math.floor(Date.now() / 1000) + 3600 * 24 * 365,
-            user: {
-              id: userId,
-              aud: "authenticated",
-              email: "amina@example.test",
-              user_metadata: { display_name: "Amina" },
-              app_metadata: {},
-            },
-          }),
-        );
-      } catch {
-        /* ignore */
-      }
-    },
-    { ref: SUPABASE_REF, lang: opts.lang ?? "sv", userId: USER_ID },
-  );
-
-  await page.route("**/_serverFn/**", async (route) => {
-    const name = exportOf(route.request().url()) ?? "?";
-    const reply = replies[name];
-    if (process.env.E2E_DEBUG)
-      console.log(
-        `[rpc] ${name} -> ${reply ? ("hang" in reply ? "hang" : "error" in reply ? "500" : "200") : "UNMATCHED"}`,
-      );
-    if (!reply) {
-      // An unstubbed server function is a HOLE IN THE TEST, not a passing
-      // case: answering it with `null` let a query silently succeed with
-      // nothing and hid whichever read the scenario forgot. It fails loudly,
-      // and every scenario asserts the list stayed empty.
-      unmatched.push(name);
-      return route.fulfill({
-        status: 500,
-        contentType: "text/plain",
-        body: `UNSTUBBED_SERVER_FN:${name}`,
-      });
-    }
-    if (typeof reply === "function") return reply(route);
-    if ("hang" in reply) return; // never answers: the query stays pending
-    if ("error" in reply)
-      return route.fulfill({ status: 500, contentType: "text/plain", body: reply.error });
-    // The client unwraps `{ result, error, context }` from every server
-    // function response; a bare value would read as `undefined`.
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ result: reply.body, error: null, context: {} }),
-    });
-  });
-
-  // Supabase: the auth "who am I" call, and the two direct REST reads.
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
-    const url = route.request().url();
-    if (url.includes("/auth/v1/user")) {
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          id: USER_ID,
-          aud: "authenticated",
-          email: "amina@example.test",
-          user_metadata: { display_name: "Amina" },
-          app_metadata: {},
-        }),
-      });
-    }
-    if (url.includes("/rest/v1/jobs")) {
-      const rows = f.input.jobs.state === "ready" ? (opts.jobs ?? f.input.jobs.rows) : null;
-      if (f.input.jobs.state === "error")
-        return route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({ message: "stubbed" }),
-        });
-      if (rows === null) return; // hang
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(rows),
-      });
-    }
-    if (url.includes("/rest/v1/employers")) {
-      return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-    }
-    return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-  });
-
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(String(e)));
-  page.on("console", (m) => {
-    if (process.env.E2E_DEBUG) console.log(`[page:${m.type()}] ${m.text().slice(0, 300)}`);
-    // A 500 from a stub IS the scenario ("this read failed"); the browser's
-    // own "Failed to load resource" line for it is not a page defect.
-    if (m.type() === "error" && !/favicon|funnel event|Failed to load resource/i.test(m.text()))
-      errors.push(m.text());
-  });
-
-  await page.goto(`${BASE}/my-career`, { waitUntil: "domcontentloaded" });
-  await page.locator("[data-career-header]").waitFor({ timeout: 20_000 });
-  await page.waitForTimeout(600);
-  current = { errors, unmatched };
-  return { f, errors, unmatched };
-}
 
 const settled = async (page: Page) => {
   await page.waitForTimeout(400);
@@ -393,12 +67,13 @@ test.describe("/my-career — the real route", () => {
   test("1 · career report ready while history is still loading: no disclosure, no crash", async ({
     page,
   }) => {
+    // #211: the career picture is a hub MODULE now, not a full section.
+    // What is asserted is unchanged — the analysis renders from the frozen
+    // report while the history read is still pending, and the earlier-
+    // analyses disclosure does not open onto a list nobody has counted.
     const { errors } = await mount(page, "history_loading");
-    await expect(page.locator("[data-career-direction]")).toHaveAttribute(
-      "data-career-state",
-      "ready",
-    );
-    await expect(page.locator("[data-top-role]")).toContainText("Säkerhetssamordnare");
+    const discovery = page.locator('[data-hub-module="discovery"]');
+    await expect(discovery).toContainText("Säkerhetssamordnare");
     await expect(page.locator("[data-earlier-reports]")).toHaveCount(0);
     expect(errors, errors.join("\n")).toEqual([]);
   });
@@ -423,47 +98,67 @@ test.describe("/my-career — the real route", () => {
       "unavailable",
     );
     await expect(page.locator("[data-passport-summary] [data-retry]")).toBeVisible();
-    await expect(page.locator("[data-career-direction]")).toHaveAttribute(
-      "data-career-state",
-      "ready",
+    // The four hub modules are fed by reads that ANSWERED, so a failed
+    // identity read costs the header and the Passport figures and nothing
+    // else. This is the property the whole "each source stands on its own"
+    // design exists for, asserted at the new granularity.
+    await expect(page.locator('[data-hub-module="discovery"]')).toContainText(
+      "Säkerhetssamordnare",
     );
-    await expect(page.locator("[data-job-recommendations]")).toHaveAttribute(
-      "data-jobs-state",
-      "filtered",
-    );
-    await expect(page.locator("[data-active-applications]")).toHaveText(/1 aktiv ansökan/);
+    await expect(page.locator('[data-hub-module="applications"]')).toContainText("1 aktiv ansökan");
     await expect(page.locator("[data-loading]")).toHaveCount(0);
+    // A hub module stuck in its skeleton is the same defect one level down.
+    await expect(page.locator("[data-hub-loading]")).toHaveCount(0);
     expect(errors, errors.join("\n")).toEqual([]);
   });
 
-  test("3 · no career profile: general jobs, never presented as matching", async ({ page }) => {
-    await mount(page, "general_jobs");
-    const jobs = page.locator("[data-job-recommendations]");
-    await expect(jobs).toHaveAttribute("data-jobs-state", "general");
-    await expect(jobs).toContainText("Utforska lediga jobb inom säkerhetsbranschen.");
-    await expect(jobs).not.toContainText(/matchar din inriktning|yrkesinriktning som framgår/);
-    await expect(jobs.locator("[data-job-row]")).toHaveCount(3);
-  });
-
-  test("4 · family-filtered jobs, attributed to the career analysis", async ({ page }) => {
-    await mount(page, "eight_unverified");
-    const jobs = page.locator("[data-job-recommendations]");
-    await expect(jobs).toHaveAttribute("data-jobs-state", "filtered");
-    await expect(jobs).toContainText(
-      "Urvalet bygger på den yrkesinriktning som framgår av din karriäranalys.",
-    );
-    await expect(jobs).not.toContainText(/yrkesområde du har angett/);
-  });
-
-  test("5 · jobs query failure: unavailable with retry and the jobs page, never 'no matching jobs'", async ({
+  // ── 3, 4 AND 5: THE SAME RULE, ONE LEVEL SMALLER ────────────────────
+  //
+  // The overview used to list three open roles and had to be careful never
+  // to present UNFILTERED vacancies as matching the candidate. #211 took
+  // the list to /jobs, which is where a list of jobs belongs, and left one
+  // conditional link behind: "see open roles in this area", offered ONLY
+  // when the frozen analysis named a career family AND that family has
+  // vacancies right now.
+  //
+  // So the rule survives in a stronger form — the hub cannot present
+  // unfiltered jobs as matching, because it presents no jobs at all — and
+  // these three tests pin the condition from both sides. 4 is the positive
+  // control; without it, 3 and 5 would pass against a link that had simply
+  // been deleted.
+  test("3 · no career profile: no career-filtered jobs link is offered at all", async ({
     page,
   }) => {
+    await mount(page, "general_jobs");
+    const discovery = page.locator('[data-hub-module="discovery"]');
+    await expect(discovery).toBeVisible();
+    await expect(discovery.locator("[data-hub-jobs]")).toHaveCount(0);
+    // And nothing on the page claims a match it cannot support.
+    await expect(page.locator("main")).not.toContainText(
+      /matchar din inriktning|yrkesinriktning som framgår/,
+    );
+  });
+
+  test("4 · family-filtered jobs: the link is offered, inside the analysis module, carrying the family", async ({
+    page,
+  }) => {
+    await mount(page, "eight_unverified");
+    const link = page.locator('[data-hub-module="discovery"] [data-hub-jobs]');
+    await expect(link).toBeVisible();
+    // The family the ANALYSIS named, carried as a search param — not a
+    // query string inside `to`, which the router would not parse.
+    await expect(link).toHaveAttribute("href", "/jobs?family=guarding");
+  });
+
+  test("5 · jobs query failure: no link, and never 'no matching jobs'", async ({ page }) => {
     await mount(page, "partial_failure");
-    const jobs = page.locator("[data-job-recommendations]");
-    await expect(jobs).toHaveAttribute("data-jobs-state", "unavailable");
-    await expect(jobs.locator("[data-retry]")).toBeVisible();
-    await expect(jobs.locator('a[href="/jobs"]')).toBeVisible();
-    await expect(jobs).not.toContainText("Vi hittade inga jobb");
+    // A failed read is not an empty result. The hub withholds the link
+    // rather than offering one into a list it could not count, and says
+    // nothing at all about vacancies.
+    await expect(page.locator("[data-hub-jobs]")).toHaveCount(0);
+    await expect(page.locator("main")).not.toContainText("Vi hittade inga jobb");
+    // The module itself is unaffected: the jobs read is not the analysis.
+    await expect(page.locator('[data-hub-module="discovery"]')).toBeVisible();
   });
 
   test("6 · a pending emailed invitation appears during the same visit", async ({ page }) => {
@@ -505,10 +200,13 @@ test.describe("/my-career — the real route", () => {
     await expect(page.locator('[data-next-action="primary"] [data-primary-meta]')).toContainText(
       "Begärt av Nordväkt AB",
     );
-    // And the tests list does not pretend it does not exist.
-    await expect(page.locator("[data-tests-and-results]")).toContainText(
-      "Testet visas som rekommenderat nästa steg ovan.",
-    );
+    // #211: the tests LIST left the overview for /academy, which is the
+    // page that owns it; that the list does not then pretend the test does
+    // not exist is asserted against the component, over these same
+    // fixtures, by my-career-premium-overview:check. What this spec still
+    // proves is the part that is timing and cannot be proved statically:
+    // the claim ran, the list was refetched, and the invitation became the
+    // recommended step on THIS visit.
   });
 
   test("7 · a recruitment test names the requesting organisation and the role, never an employer of the applicant", async ({
@@ -540,17 +238,12 @@ test.describe("/my-career — the real route", () => {
       "/academy/training/tr-1",
     );
     await expect(primary.locator("[data-primary-meta]")).toContainText("Tilldelat av Nordväkt AB");
-    await expect(page.locator("[data-development] [data-training-row]")).toHaveAttribute(
-      "data-featured-above",
-      "",
-    );
-    await expect(page.locator("[data-development]")).toContainText(
-      "Utbildningen visas som rekommenderat nästa steg ovan.",
-    );
-    // Training never leaks into tests.
-    await expect(page.locator("[data-tests-and-results]")).toContainText(
-      "Ingen arbetsgivare har bett dig göra ett test.",
-    );
+    // The training and tests SECTIONS moved to /academy with #211. That a
+    // featured row says so rather than vanishing, and that training never
+    // leaks into tests, is asserted against those components over these
+    // same fixtures by my-career-premium-overview:check.
+    await expect(page.locator("[data-development]")).toHaveCount(0);
+    await expect(page.locator("[data-tests-and-results]")).toHaveCount(0);
   });
 
   test("9 · the sole open test is the recommended step and the tests list does not claim no test exists", async ({
@@ -558,9 +251,9 @@ test.describe("/my-career — the real route", () => {
   }) => {
     await mount(page, "sole_primary_test");
     await expect(page.locator('[data-next-action="primary"]')).toContainText("Slutför testet");
-    const tests = page.locator("[data-tests-and-results]");
-    await expect(tests).toContainText("Testet visas som rekommenderat nästa steg ovan.");
-    await expect(tests).not.toContainText("Ingen arbetsgivare har bett dig göra ett test.");
+    // No disclosure on the page opens onto nothing — the rule that kept
+    // "Tidigare karriäranalyser" and "Senaste aktivitet" from becoming two
+    // empty summaries when #211 folded them away.
     await expect(page.locator("details:not([open])").filter({ hasText: /^$/ })).toHaveCount(0);
   });
 
@@ -569,26 +262,19 @@ test.describe("/my-career — the real route", () => {
   }) => {
     await mount(page, "released_and_waiting");
     const primary = page.locator('[data-next-action="primary"]');
+    // A released result is NOT the recommended step. It is the rule that
+    // stops the ladder telling somebody to go and read something.
     await expect(primary).not.toHaveAttribute("data-state-key", /read_released_report/);
-    const tests = page.locator("[data-tests-and-results]");
-    await expect(tests.locator('[data-test-row="released"]')).toHaveCount(1);
-    await expect(tests.locator('[data-test-row="released"]')).toContainText("Delat med dig");
-    await expect(tests.locator('[data-test-link="att-released"]')).toHaveAttribute(
-      "href",
-      "/academy/report/att-released",
-    );
-    await expect(tests).not.toContainText(/Nytt för dig|oläst/i);
-    await expect(tests).toContainText("3 tester väntar på resultat från arbetsgivaren.");
-    // The expired attempt is neither waiting nor released.
-    await expect(tests.locator('[data-test-row="unknown"]')).toHaveCount(1);
-    await expect(tests.locator('[data-test-row="unknown"]')).toContainText("(expired)");
-    await expect(tests).toContainText("blir inte en merit i ditt Security Passport");
-    // Applications: the withdrawn one, updated most recently, never leads.
-    await expect(page.locator("[data-active-applications]")).toHaveText("4 aktiva ansökningar");
-    await expect(page.locator("[data-latest-application]")).toContainText(
-      "Väktare, Stockholm · Nordväkt AB",
-    );
-    await expect(page.locator("[data-latest-application]")).not.toContainText("Återkallad");
+    // The released row, the waiting count, the expired attempt and the
+    // "not a merit" sentence are properties of the tests section, which is
+    // on /academy since #211 and asserted against its component by
+    // my-career-premium-overview:check over this same fixture.
+    await expect(page.locator("[data-tests-and-results]")).toHaveCount(0);
+    // Applications: the withdrawn one, updated most recently, never leads
+    // the count or the status. The hub module is where that shows now.
+    const apps = page.locator('[data-hub-module="applications"]');
+    await expect(apps).toContainText("4 aktiva ansökningar");
+    await expect(apps).not.toContainText("Återkallad");
   });
 
   test("11 · a reviewer's question opens the exact merit", async ({ page }) => {
@@ -606,7 +292,21 @@ test.describe("/my-career — the real route", () => {
   }) => {
     await mount(page, "established");
     const passport = page.locator("[data-passport-summary]");
-    await expect(passport.locator('[data-merit-count="registered"]')).toContainText("6");
+    // ── A STALE EXPECTATION, RED ON main BEFORE #211 ──────────────────
+    //
+    // "Registrerade" meant `addedCount` — every current merit — when this
+    // line was written. PR #189's containment made the six figures
+    // MUTUALLY EXCLUSIVE and gave the total its own name, so "Registrerade"
+    // is now the self-reported rung alone. The card was right and the
+    // assertion was six months out of date; it asserted 6 against a
+    // rendered 2 and had been failing ever since.
+    //
+    // Both are asserted now, which is the assertion that could not have
+    // gone stale silently: the TOTAL is 6, the self-reported rung is 2, and
+    // the five exclusive figures below add up to the total.
+    await expect(passport.locator('[data-merit-count="total-current"]')).toContainText("6");
+    await expect(passport.locator('[data-merit-count="registered"]')).toContainText("2");
+    await expect(passport.locator('[data-merit-count="under-review"]')).toContainText("1");
     // PR #189: both standing approvals in this fixture are CQrityjob document
     // reviews. A review is a decision and it is not the source confirming the
     // merit, so the card counts them as documented and leaves the verified

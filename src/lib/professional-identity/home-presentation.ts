@@ -35,6 +35,8 @@ import type {
   MyAssessmentRow,
 } from "@/lib/security-competency/assessment-lifecycle.functions";
 import type { ActiveReport } from "@/lib/career-discovery/active-report.functions";
+import type { CvSummary } from "./cv/cv-store.functions";
+import type { ShareRecord } from "@/lib/security-passport/selected-sharing.functions";
 import type { StoredReportResult } from "@/lib/career-discovery/stored-report.functions";
 import {
   computeNextBestActions,
@@ -114,7 +116,22 @@ export interface HomePresentationInput {
   readonly legacyRuns: Source<LegacyRunRow>;
   readonly discoveryReports: Source<DiscoveryReportRow>;
   readonly preferredName?: string | null;
+  /** How many CVs are saved. Feeds the tools ladder, which needs only the
+   *  count. Kept beside `savedCvs` rather than derived from it: the ladder
+   *  has read it since #190 and every fixture supplies it. */
   readonly savedCvCount?: number;
+  /** The saved CVs themselves, for the hub's CV module — it names the most
+   *  recent one and when it changed, which a count cannot do.
+   *
+   *  OPTIONAL, and absent is not empty: a caller that does not supply it
+   *  falls back to `savedCvCount`, so every surface built before the hub
+   *  keeps working and none of them reports "no CV" for somebody with
+   *  three. */
+  readonly savedCvs?: Source<CvSummary>;
+  /** Every link share the holder has, for the hub's Sharing module.
+   *  Absent means the read has not answered — a module in a loading state,
+   *  never "you have shared nothing". */
+  readonly shares?: Source<ShareRecord>;
   readonly careerDiscoveryOpen?: boolean;
   readonly now: Date;
 }
@@ -283,6 +300,59 @@ export type ApplicationsModel =
       readonly interviewCount: number;
     };
 
+/* ---- the hub's two remaining modules -------------------------------- */
+
+/**
+ * The CV module.
+ *
+ * `none` is said only when the read ANSWERED with nothing. A count-only
+ * caller reaches `ready` with `latest: null`, which is honest: it knows
+ * how many there are and nothing about the newest one.
+ */
+export type CvModel =
+  | { readonly state: "loading" }
+  | { readonly state: "unavailable" }
+  | { readonly state: "none" }
+  | {
+      readonly state: "ready";
+      readonly count: number;
+      /** Newest by `updatedAt`. Null when only a count was supplied. */
+      readonly latest: {
+        readonly cvId: string;
+        readonly title: string;
+        readonly updatedAt: string;
+      } | null;
+    };
+
+/**
+ * The Sharing module.
+ *
+ * ── WHAT IT COUNTS, AND WHAT IT REFUSES TO ────────────────────────────
+ *
+ * ACTIVE links only — the ones a recipient could open right now. Expired
+ * and revoked shares are deliberately not folded into the figure: a holder
+ * asking "who can see my Passport" is asking about the first set, and a
+ * number that included the other two would answer a question nobody asked
+ * with a larger, more alarming figure.
+ *
+ * The share record also carries `accessCount`, and this module does NOT
+ * carry it out. It counts every open including the holder's own preview,
+ * so it is not a read receipt, and a dashboard figure has no room for that
+ * distinction — see the share screen, which states it in full.
+ */
+export type SharingModel =
+  | { readonly state: "loading" }
+  | { readonly state: "unavailable" }
+  | { readonly state: "none" }
+  | {
+      readonly state: "ready";
+      readonly activeCount: number;
+      /** The soonest expiry among the active links, so the module can say
+       *  when the holder next loses one. Null when an active share has no
+       *  expiry at all. */
+      readonly nextExpiryAt: string | null;
+    };
+
 /* ---- tools, activity, history -------------------------------------- */
 
 export type ToolKey = "cv" | "career_card" | "professions" | "profile";
@@ -342,6 +412,8 @@ export interface CareerHomeViewModel {
   readonly earlierReports: EarlierReportsModel;
   readonly jobs: JobsModel;
   readonly applications: ApplicationsModel;
+  readonly cv: CvModel;
+  readonly sharing: SharingModel;
   readonly employerWork: EmployerWorkModel;
   readonly tools: readonly ToolItem[];
   readonly activity: ActivityModel;
@@ -879,6 +951,47 @@ export function buildCareerHomeViewModel(input: HomePresentationInput): CareerHo
     };
   })();
 
+  /* ---- the CV module ----------------------------------------------------- */
+
+  const cvModel: CvModel = (() => {
+    const source = input.savedCvs;
+    if (source) {
+      if (source.state === "loading") return { state: "loading" };
+      if (source.state === "error") return { state: "unavailable" };
+      if (source.rows.length === 0) return { state: "none" };
+      // `listMyCvs` orders by updated_at descending, but a model that
+      // depended on a caller's ORDER BY would report the wrong document the
+      // first time somebody paginated or cached differently.
+      const newest = source.rows.reduce((a, b) => (b.updatedAt > a.updatedAt ? b : a));
+      return {
+        state: "ready",
+        count: source.rows.length,
+        latest: { cvId: newest.cvId, title: newest.title, updatedAt: newest.updatedAt },
+      };
+    }
+    if (input.savedCvCount === undefined) return { state: "loading" };
+    if (input.savedCvCount === 0) return { state: "none" };
+    return { state: "ready", count: input.savedCvCount, latest: null };
+  })();
+
+  /* ---- the Sharing module ------------------------------------------------ */
+
+  const sharingModel: SharingModel = (() => {
+    const source = input.shares;
+    if (!source || source.state === "loading") return { state: "loading" };
+    if (source.state === "error") return { state: "unavailable" };
+    // The server derives `state` so the holder's list and the recipient
+    // page cannot disagree about which of the three a share is in. This
+    // reads that decision rather than re-deciding it from the dates.
+    const active = source.rows.filter((s) => s.state === "active");
+    if (active.length === 0) return { state: "none" };
+    const expiries = active
+      .map((s) => s.expiresAt)
+      .filter((v): v is string => typeof v === "string" && v.length > 0)
+      .sort();
+    return { state: "ready", activeCount: active.length, nextExpiryAt: expiries[0] ?? null };
+  })();
+
   /* ---- career tools ------------------------------------------------------ */
 
   const tools: ToolItem[] = [];
@@ -993,6 +1106,8 @@ export function buildCareerHomeViewModel(input: HomePresentationInput): CareerHo
     earlierReports,
     jobs,
     applications: applicationsModel,
+    cv: cvModel,
+    sharing: sharingModel,
     employerWork,
     tools,
     activity,

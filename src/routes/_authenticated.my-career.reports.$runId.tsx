@@ -9,6 +9,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+// chrome={false} on every use below: this route lives under /my-career,
+// whose shell (_authenticated.my-career.tsx) mounts <SiteLayout> and the
+// hub's section strip for everything beneath it. AssessmentLayout's own
+// <SiteLayout> would be the second one on the page — two headers, two
+// footers. The rhythm and the widths it supplies are unchanged.
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { EngineResultView } from "@/components/assessment/result/engine-view";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
@@ -39,7 +44,7 @@ function SavedReportPage() {
 
   if (query.isLoading) {
     return (
-      <AssessmentLayout narrow>
+      <AssessmentLayout narrow chrome={false}>
         <p className="text-sm text-muted-foreground">{t("sca.report.loading")}</p>
       </AssessmentLayout>
     );
@@ -47,7 +52,7 @@ function SavedReportPage() {
 
   if (query.isError || !query.data?.run) {
     return (
-      <AssessmentLayout narrow>
+      <AssessmentLayout narrow chrome={false}>
         <p className="text-sm text-foreground">{t("sca.report.notFound")}</p>
         <div className="mt-6">
           <Link to="/my-career" className="text-sm font-medium text-accent hover:underline">
@@ -60,7 +65,7 @@ function SavedReportPage() {
 
   if (!query.data.report) {
     return (
-      <AssessmentLayout narrow>
+      <AssessmentLayout narrow chrome={false}>
         <p className="text-sm text-foreground">{t("sca.report.legacyEmpty")}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <PrimaryButton onClick={() => navigate({ to: "/security-career-assessment" })}>
@@ -85,7 +90,7 @@ function SavedReportPage() {
   });
 
   return (
-    <AssessmentLayout>
+    <AssessmentLayout chrome={false}>
       {/* Screen-hidden, print-visible header: title, date, version metadata.
           See src/styles.css @media print for .print-only / .no-print. */}
       <div className="print-only">

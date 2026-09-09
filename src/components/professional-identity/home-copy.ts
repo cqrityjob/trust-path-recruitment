@@ -542,3 +542,125 @@ export const GREETING = {
 } as const;
 
 export type { Copy, PluralCopy };
+
+/* ------------------------------------------------------------------ */
+/* The hub — the six areas, and the compact status of four of them     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * ── WHY THE LABELS ARE HERE AND NOT IN THE DICTIONARY ─────────────────
+ *
+ * candidate-app-nav.ts keeps the PRIMARY navigation's labels in
+ * dictionaries.ts, because those five strings are chrome read on every
+ * page of the product by several components. These six are read by one
+ * component on one area, which is exactly the case copy.ts describes as
+ * belonging beside its screen — the same rule that put the Passport
+ * shell's own tab labels in the Passport's copy module.
+ *
+ * The names themselves are NOT new. "Karriäranalys" is what CAREER.view
+ * has called the result since the vocabulary cleanup, "Security Passport"
+ * and "CV" are the product names, and one-name-per-product is asserted
+ * over this file by candidate-app-navigation:check.
+ */
+export const HUB = {
+  navAria: c("Min karriär – avsnitt", "My Career — sections"),
+  sections: {
+    overview: c("Översikt", "Overview"),
+    passport: c("Security Passport", "Security Passport"),
+    cv: c("CV", "CV"),
+    // The RESULT, which is what a tab points at. "Career Discovery" is the
+    // product that produces it and stays the product's name; a Swedish
+    // string may not say it, and T15 asserts that.
+    discovery: c("Karriäranalys", "Career analysis"),
+    applications: c("Ansökningar", "Applications"),
+    // The screen where a holder decides what leaves their Passport. Named
+    // for the decision, not for the link it produces.
+    sharing: c("Delning", "Sharing"),
+  },
+} as const;
+
+/**
+ * The compact status modules.
+ *
+ * ── EACH ONE SAYS WHAT IS TRUE AND STOPS ──────────────────────────────
+ *
+ * A hub module has room for one fact, so the fact has to be the right
+ * one. None of these is a percentage, a score or a completion bar: the
+ * overview reports STATE — how many, how recent, what is open — and the
+ * destination holds the detail. "You have no saved CV yet" and "your CVs
+ * could not be loaded" are different sentences for different situations,
+ * and neither is ever shown while a read is still in flight.
+ */
+export const HUB_TILE = {
+  loading: c("Hämtar…", "Loading…"),
+  unavailable: c("Kunde inte hämtas just nu.", "Could not be loaded right now."),
+  retry: COMMON.retry,
+
+  cv: {
+    title: c("CV", "CV"),
+    none: c(
+      "Du har inget sparat CV ännu. Ett CV byggs av de meriter du redan har registrerat.",
+      "You have no saved CV yet. A CV is built from the merits you have already recorded.",
+    ),
+    saved: cp(c("1 sparat CV", "1 saved CV"), c("{0} sparade CV", "{0} saved CVs")),
+    latest: c("Senast ändrat {0}", "Last changed {0}"),
+    create: c("Skapa mitt första CV", "Create my first CV"),
+    open: c("Öppna mina CV", "Open my CVs"),
+  },
+
+  discovery: {
+    title: c("Karriäranalys", "Career analysis"),
+    none: c(
+      "Du har inte gjort karriäranalysen ännu.",
+      "You have not taken the career analysis yet.",
+    ),
+    // Career Discovery is gated on a tester allowlist for the signed-in
+    // run. Saying "start it" to somebody who cannot is a dead end wearing
+    // a primary button, so the closed state says what is true instead.
+    closed: c(
+      "Karriäranalysen är inte öppen för nya deltagare just nu.",
+      "The career analysis is not open to new participants right now.",
+    ),
+    // A result EXISTS and this build cannot render it. It is not "not
+    // taken yet", and telling somebody who answered twenty-eight questions
+    // that they never did is the worst thing this module could say.
+    unreadable: c(
+      "Du har ett resultat, men det kan inte visas i den här versionen.",
+      "You have a result, but it cannot be shown in this version.",
+    ),
+    completed: c("Genomförd {0}", "Completed {0}"),
+    topRole: c("Närmast din profil: {0}", "Closest to your profile: {0}"),
+    noRolesNamed: c(
+      "Analysen namnger inga enskilda yrken.",
+      "The analysis names no individual professions.",
+    ),
+    start: c("Gör karriäranalysen", "Take the career analysis"),
+    open: c("Se hela karriäranalysen", "See the full career analysis"),
+    jobs: c("Se lediga jobb inom området", "See open roles in this area"),
+  },
+
+  applications: {
+    title: c("Ansökningar", "Applications"),
+    none: c("Du har inte sökt något jobb ännu.", "You have not applied for anything yet."),
+    findJobs: c("Hitta jobb", "Find jobs"),
+    open: c("Följ mina ansökningar", "Track my applications"),
+  },
+
+  sharing: {
+    title: c("Delning", "Sharing"),
+    none: c(
+      "Du har ingen aktiv delningslänk. Du bestämmer vad som delas och kan återkalla en länk när som helst.",
+      "You have no active share link. You decide what is shared and can revoke a link at any time.",
+    ),
+    active: cp(
+      c("1 aktiv delningslänk", "1 active share link"),
+      c("{0} aktiva delningslänkar", "{0} active share links"),
+    ),
+    // The count is of links the holder created and has not revoked. It is
+    // NOT a read receipt and must never be described as one — the access
+    // count on a share includes the holder's own preview.
+    nextExpiry: c("Nästa upphör {0}", "Next expires {0}"),
+    create: c("Dela valda meriter", "Share selected merits"),
+    open: c("Hantera mina delningslänkar", "Manage my share links"),
+  },
+} as const;

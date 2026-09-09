@@ -85,7 +85,20 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
     // Career Discovery, the Career Journey and the saved Career Analysis
     // are all reached from here and all belong to it in the information
     // architecture, so they keep My Career lit rather than lighting
-    // nothing. /my-career/applications is the deliberate exception below.
+    // nothing.
+    //
+    // ── AND SO DO APPLICATIONS, SINCE #211 ─────────────────────────────
+    //
+    // /my-career/applications used to be listed under "Hitta jobb" below,
+    // on the reasoning that opportunities and applications are two halves
+    // of one thing in the candidate's head. That was defensible while the
+    // page stood on its own. It stopped being defensible when My Career
+    // got a shell: the page now renders inside the hub, under a strip with
+    // "Ansökningar" marked as the current section, and the primary
+    // navigation was simultaneously announcing "Hitta jobb" as the current
+    // page — the reader told, by two navigations, that they were in two
+    // places. The longest-prefix entry is gone from the jobs item and this
+    // prefix covers it.
     routeIds: [
       "/_authenticated/my-career",
       "/_authenticated/journey",
@@ -109,12 +122,10 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
     key: "jobs",
     to: "/jobs",
     labelKey: "nav.findJobs",
-    // Opportunities AND applications — the two halves of the same thing
-    // in the candidate's head. /my-career/applications lives under the
-    // My Career URL for ownership reasons, and is longer than the
-    // My Career prefix above, so longest-match puts it here where a
-    // candidate expects it.
-    routeIds: ["/jobs", "/_authenticated/my-career/applications"],
+    // Vacancies. Applications used to be listed here too; since #211 they
+    // are a section of the My Career hub and light My Career — see the
+    // note on that item.
+    routeIds: ["/jobs"],
   },
   {
     key: "exploreProfessions",

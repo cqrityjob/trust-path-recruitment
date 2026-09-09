@@ -41,12 +41,20 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
-// The page is the route plus the four modules it hands the gate to: the
-// career direction section, the view model, the ladder that withholds the
-// action, and the copy the closed state is said in.
+// The page is the route plus the modules it hands the gate to: the hub's
+// career module (#211) and the career direction section it replaced there,
+// the view model, the ladder that withholds the action, and the copy the
+// closed state is said in.
+//
+// BOTH sections are read, and deliberately: CareerDirectionSection is still
+// the career picture on the dev preview and is still where the full closed
+// state is written, while the hub module is what a candidate now meets on
+// /my-career. A gate honoured in one and not the other is the same dead
+// door this guard was written for.
 const PAGE = join(ROOT, "src/routes/_authenticated.my-career.index.tsx");
 const src = [
   PAGE,
+  join(ROOT, "src/components/professional-identity/HubStatusGrid.tsx"),
   join(ROOT, "src/components/professional-identity/CareerDirectionSection.tsx"),
   join(ROOT, "src/lib/professional-identity/home-presentation.ts"),
   join(ROOT, "src/lib/professional-identity/next-best-action.ts"),
@@ -107,8 +115,17 @@ const ctaBlocks = src.split("/security-career-assessment");
 // First element is the text before the first occurrence — not a CTA.
 assert(ctaBlocks.length - 1 >= 3, "the page still has the assessment CTAs to gate");
 assert(
-  /closed=\{assessmentClosed\}/.test(src) && /closed\s*\?/.test(src),
+  // `careerClosed` on the hub grid, `closed` on the section — the same
+  // answer from the same query, named for the module it lands in.
+  /(career)?[Cc]losed=\{assessmentClosed\}/.test(src) && /closed\s*\?/.test(src),
   "the CTAs branch on the gate rather than rendering unconditionally",
+);
+// The hub's own refusal: a career module that cannot be started offers no
+// button at all, rather than a disabled-looking one or a live link into a
+// screen that says no.
+assert(
+  /career\.state === "none" && !careerClosed && \(/.test(src),
+  "the hub's start-the-analysis link is withheld when the gate said no",
 );
 // The no-report state must branch on the gate rather than always offering the
 // test. The owner-approved dashboard removed the "Recommended next step" card

@@ -56,7 +56,6 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { CvDocumentView } from "@/components/professional-identity/CvDocumentView";
@@ -399,7 +398,7 @@ function CvDetailPage() {
     updateFromProfile.isPending || saveEdits.isPending || destroy.isPending || addOmitted.isPending;
 
   return (
-    <SiteLayout>
+    <>
       <Container className="py-10 md:py-14">
         <Link
           to="/my-career/cv"
@@ -1007,6 +1006,6 @@ function CvDetailPage() {
           </>
         )}
       </Container>
-    </SiteLayout>
+    </>
   );
 }

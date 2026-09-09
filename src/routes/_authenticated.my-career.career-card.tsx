@@ -36,7 +36,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
@@ -174,7 +173,7 @@ function CareerCardPage() {
   const failed = active.isError || report.isError;
 
   return (
-    <SiteLayout>
+    <>
       <Container className="py-10 md:py-14">
         <Link
           to="/my-career"
@@ -266,6 +265,6 @@ function CareerCardPage() {
           </div>
         )}
       </Container>
-    </SiteLayout>
+    </>
   );
 }

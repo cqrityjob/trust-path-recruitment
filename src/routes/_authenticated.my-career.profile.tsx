@@ -45,7 +45,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, BadgeCheck, CircleDashed, ExternalLink } from "lucide-react";
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
 import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCareerProfileCard";
 import { ProfessionalIdentityHeader } from "@/components/professional-identity/ProfessionalIdentityHeader";
@@ -251,7 +250,7 @@ function ProfilePage() {
   const completeness = identity ? computeProfileCompleteness(identity) : null;
 
   return (
-    <SiteLayout>
+    <>
       <Container className="py-10 md:py-14">
         {query.isPending && <p className="text-sm text-muted-foreground">{L(COPY.loading, l)}</p>}
 
@@ -399,6 +398,6 @@ function ProfilePage() {
           </div>
         )}
       </Container>
-    </SiteLayout>
+    </>
   );
 }

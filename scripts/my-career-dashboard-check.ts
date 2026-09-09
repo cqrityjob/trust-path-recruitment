@@ -134,7 +134,10 @@ expect(
 // The no-report state is a real state, not a missing branch, and the section
 // carries the gate's answer so it can say why the analysis is closed.
 expect(
-  /state: "none"/.test(model) && /closed=\{assessmentClosed\}/.test(routeCode),
+  // #211: the gate reaches the career module as `careerClosed` on the hub
+  // grid. Same answer, same source, same requirement — a "no report yet"
+  // state that can say WHY it cannot be started.
+  /state: "none"/.test(model) && /careerClosed=\{assessmentClosed\}/.test(routeCode),
   `${routePath}: the home must resolve an explicit no-report state carrying the gate.`,
 );
 

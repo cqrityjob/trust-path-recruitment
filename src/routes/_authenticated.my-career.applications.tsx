@@ -9,7 +9,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -80,7 +79,7 @@ function MyApplicationsPage() {
   const rows: MyApplicationRow[] = query.data ?? [];
 
   return (
-    <SiteLayout>
+    <>
       <Section containerClassName="max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
@@ -181,6 +180,6 @@ function MyApplicationsPage() {
           )}
         </div>
       </Section>
-    </SiteLayout>
+    </>
   );
 }

@@ -21,7 +21,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, ArrowRight, FileText, Loader2, Plus, RefreshCcw, Sparkles } from "lucide-react";
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
 import { L, Lf, type Lang } from "@/components/professional-identity/copy";
 import { CV, CV_MISSING_FIELD } from "@/components/professional-identity/cv-copy";
@@ -86,7 +85,7 @@ function CvListPage() {
   const cvs = list.data ?? [];
 
   return (
-    <SiteLayout>
+    <>
       <Container className="py-10 md:py-14">
         <Link
           to="/my-career"
@@ -233,6 +232,6 @@ function CvListPage() {
           </>
         )}
       </Container>
-    </SiteLayout>
+    </>
   );
 }
