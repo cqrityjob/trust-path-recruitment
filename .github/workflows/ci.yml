@@ -1004,6 +1004,8 @@ jobs:
       - name: Public homepage check
         run: bun run public-homepage:check
 
+      - name: About, employers and contact check
+        run: bun run about:check
 
       - name: Production build
         run: bun run build
