@@ -170,9 +170,9 @@ export function linkedInProfileEntries(
   shareUrl: string,
   lang: PassportLang,
 ): readonly LinkedInProfileEntry[] {
-  // The share token is the public identifier. Twelve characters is enough to
-  // be recognisable in a support conversation and is not the whole secret.
-  const credentialId = (shareUrl.split("/p/")[1] ?? "").slice(0, 12);
+  // A bearer capability is not a credential identifier. LinkedIn accepts the
+  // id as optional, so omit it rather than disclosing even a token prefix.
+  const credentialId = "";
 
   return holder.claims.flatMap((claim) => {
     if (!eligible(claim)) return [];

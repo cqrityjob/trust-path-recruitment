@@ -196,11 +196,16 @@ for (const file of passportFiles) {
     "public-disclosure.server.ts must never read a table directly — only sp_get_disclosure.",
   );
   const rpcNames = [...src.matchAll(/\.rpc\(\s*["']([a-z_]+)["']/g)].map((m) => m[1]);
-  const allowed = new Set(["sp_get_disclosure", "sp_throttle_public_access"]);
+  const allowed = new Set([
+    "sp_get_disclosure",
+    "sp_get_disclosure_session",
+    "sp_share_gateway_consume",
+    "sp_throttle_public_access",
+  ]);
   for (const name of rpcNames) {
     expect(
       allowed.has(name),
-      `public-disclosure.server.ts may only call sp_get_disclosure and sp_throttle_public_access — found ${name}.`,
+      `public-disclosure.server.ts may only call the reviewed disclosure gateway RPCs — found ${name}.`,
     );
   }
   expect(

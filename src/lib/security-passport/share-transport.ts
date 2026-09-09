@@ -81,23 +81,29 @@
 // is POSTed to `/_serverFn/<hash>`. So that is the path the cookie is scoped
 // to. A capability should travel only to the boundary that validates it.
 //
-// ── WHAT THIS DELIBERATELY DOES NOT CLAIM ──────────────────────────────
+// ── LEGACY LINKS ───────────────────────────────────────────────────────
 //
-// The token is still in the first HTTP request line, so it remains visible to
-// the host's own request/edge logs. That is unavoidable for ANY link-borne
-// capability — it is what a link is — and it is a different surface, with
-// different access, from the product analytics this closes.
+// New links enter through the Supabase fragment gateway and never send the
+// durable token in an HTTP request URL. The redirect below remains only so
+// links already sent as `/p/<token>` do not break during the transition. It
+// still protects those links from page analytics, but their first request can
+// remain visible to the host's edge logs. Do not use it to build a new link.
 
 import { createHash } from "node:crypto";
 
 /** Where the disclosure server function lives. The cookie is scoped here and
  *  nowhere else, so no other request carries the token. */
 export const SHARE_COOKIE_PATH = "/_serverFn";
+export const SHARE_HANDOFF_PATH = "/p/handoff";
 
 /** Cookie name for one share. Suffixed with the navigation id so two open
  *  shares hold two cookies rather than overwriting each other. */
 export function shareCookieName(navigationId: string): string {
   return `sp_share_${navigationId}`;
+}
+
+export function shareSessionCookieName(navigationId: string): string {
+  return `sp_session_${navigationId}`;
 }
 
 /** Long enough to read a Passport and reload it, short enough that a shared
@@ -128,6 +134,14 @@ export function isNavigationId(value: string): boolean {
  */
 export function navigationIdFor(token: string): string {
   return createHash("sha256").update(`sp-nav:${token}`).digest("hex").slice(0, 32);
+}
+
+export function sessionNavigationIdFor(session: string): string {
+  return createHash("sha256").update(`sp-session-nav:${session}`).digest("hex").slice(0, 32);
+}
+
+export function hashShareSecret(secret: string): string {
+  return createHash("sha256").update(secret).digest("hex");
 }
 
 /**
@@ -171,6 +185,19 @@ export function buildShareCookie(token: string, secure: boolean): string {
   return parts.join("; ");
 }
 
+export function buildShareSessionCookie(session: string, secure: boolean): string {
+  const navigationId = sessionNavigationIdFor(session);
+  const parts = [
+    `${shareSessionCookieName(navigationId)}=${session}`,
+    `Path=${SHARE_COOKIE_PATH}`,
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${SHARE_COOKIE_MAX_AGE_SECONDS}`,
+  ];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
+}
+
 /**
  * The token this request carries FOR THE SHARE THE TAB IS ON.
  *
@@ -195,6 +222,22 @@ export function shareTokenFromCookieHeader(
     // holds, so a mismatch means the pair was tampered with or crossed. Refuse
     // rather than resolve a share the id does not actually name.
     return navigationIdFor(value) === navigationId ? value : null;
+  }
+  return null;
+}
+
+export function shareSessionFromCookieHeader(
+  header: string | null | undefined,
+  navigationId: string,
+): string | null {
+  if (!header || !isNavigationId(navigationId)) return null;
+  const wanted = shareSessionCookieName(navigationId);
+  for (const pair of header.split(";")) {
+    const eq = pair.indexOf("=");
+    if (eq === -1 || pair.slice(0, eq).trim() !== wanted) continue;
+    const value = pair.slice(eq + 1).trim();
+    if (!isShareToken(value)) return null;
+    return sessionNavigationIdFor(value) === navigationId ? value : null;
   }
   return null;
 }

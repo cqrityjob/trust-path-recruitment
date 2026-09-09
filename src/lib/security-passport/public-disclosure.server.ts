@@ -22,8 +22,9 @@
 // neither see nor throttle. Moving it here removes anon's database
 // execution entirely and puts a real rate limit in front of it.
 //
-// This file must never gain a second query. If something else needs the
-// service role, it needs a different justification and a different file.
+// This file may call only the reviewed disclosure RPC family: legacy token
+// reads, gateway handoff consumption, session reads, and the shared throttle.
+// It must never read a table directly or grow an unrelated service-role use.
 
 import type { RecipientPayload } from "./packages";
 
@@ -76,6 +77,39 @@ export async function readDisclosureByToken(
     } as never,
   );
 
+  if (error || !data) return { status: "unavailable" };
+  return data as unknown as RecipientPayload;
+}
+
+export async function consumeShareHandoff(handoff: string, sessionHash: string): Promise<boolean> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const result = await supabaseAdmin.rpc(
+    "sp_share_gateway_consume" as never,
+    { _handoff: handoff, _session_hash: sessionHash } as never,
+  );
+  return !result.error && result.data === true;
+}
+
+export async function readDisclosureBySession(
+  session: string,
+  clientHint: string,
+): Promise<RecipientPayload> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const hash = await clientHash(clientHint);
+  const throttle = await supabaseAdmin.rpc(
+    "sp_throttle_public_access" as never,
+    {
+      _client_hash: hash,
+      _limit: THROTTLE_LIMIT,
+      _window_seconds: THROTTLE_WINDOW_SECONDS,
+    } as never,
+  );
+  if (throttle.error || throttle.data === false) return { status: "unavailable" };
+
+  const { data, error } = await supabaseAdmin.rpc(
+    "sp_get_disclosure_session" as never,
+    { _session: session } as never,
+  );
   if (error || !data) return { status: "unavailable" };
   return data as unknown as RecipientPayload;
 }

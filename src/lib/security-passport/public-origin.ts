@@ -35,6 +35,7 @@
 
 /** The canonical public origin, matching sitemap[.]xml.ts and seo.ts. */
 const FALLBACK_ORIGIN = "https://trust-path-recruitment.lovable.app";
+const FALLBACK_GATEWAY_ORIGIN = "https://wrygicdfxwjnrugduxnt.supabase.co";
 
 /** Hosts that must never appear in a link handed to a third party. A share
  *  URL on one of these is unreachable for a crawler and short-lived for a
@@ -67,5 +68,17 @@ export function publicShareOrigin(): string {
  *  this shape is built, so the sharing centre and the single-credential
  *  share cannot drift apart. */
 export function publicShareUrl(token: string): string {
-  return `${publicShareOrigin()}/p/${token}`;
+  return `${publicShareGatewayOrigin()}/functions/v1/passport-share#${token}`;
+}
+
+/** The Supabase entry origin for new share links. The durable bearer token is
+ *  carried only in the URL fragment, which browsers never send in the first
+ *  HTTP request or in the Referer header. */
+export function publicShareGatewayOrigin(): string {
+  const configured = import.meta.env?.VITE_SUPABASE_URL;
+  if (typeof configured === "string" && configured.trim() !== "") {
+    const trimmed = configured.trim().replace(/\/+$/, "");
+    if (/^https:\/\//i.test(trimmed) && !isEphemeralHost(trimmed)) return trimmed;
+  }
+  return FALLBACK_GATEWAY_ORIGIN;
 }

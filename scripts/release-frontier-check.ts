@@ -19,7 +19,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // received both through the official Supabase GitHub integration after their
 // reviewed PRs merged. release-state.json and hosted-ledger.json record the
 // production evidence, so main correctly has no expected pending migration.
-const expectedPending: string[] = ["20261104090000_passport_share_gateway.sql"];
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

@@ -1,1 +1,4 @@
 project_id = "wrygicdfxwjnrugduxnt"
+
+[functions.passport-share]
+verify_jwt = false

@@ -2,7 +2,17 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { buildShareRedirect, shareTokenFromPath } from "./lib/security-passport/share-transport";
+import { randomBytes } from "node:crypto";
+import {
+  buildShareRedirect,
+  buildShareSessionCookie,
+  hashShareSecret,
+  isShareToken,
+  sessionNavigationIdFor,
+  shareTokenFromPath,
+  SHARE_HANDOFF_PATH,
+  shareViewPath,
+} from "./lib/security-passport/share-transport";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -17,6 +27,52 @@ async function getServerEntry(): Promise<ServerEntry> {
     );
   }
   return serverEntryPromise;
+}
+
+async function consumeShareHandoffRequest(request: Request): Promise<Response> {
+  const unavailableId = randomBytes(16).toString("hex");
+  const unavailable = () =>
+    new Response(null, {
+      status: 303,
+      headers: {
+        Location: shareViewPath(unavailableId),
+        "Cache-Control": "private, no-store",
+        "X-Robots-Tag": "noindex, nofollow, noarchive",
+        "Referrer-Policy": "no-referrer",
+      },
+    });
+  if (request.method !== "POST") return unavailable();
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (!Number.isFinite(contentLength) || contentLength > 2048) return unavailable();
+  const contentType = request.headers.get("content-type") ?? "";
+  if (
+    !contentType.startsWith("application/x-www-form-urlencoded") &&
+    !contentType.startsWith("multipart/form-data")
+  )
+    return unavailable();
+  const form = await request.formData();
+  const handoff = form.get("handoff");
+  if (typeof handoff !== "string" || !isShareToken(handoff)) return unavailable();
+
+  const session = randomBytes(32).toString("hex");
+  try {
+    const { consumeShareHandoff } =
+      await import("./lib/security-passport/public-disclosure.server");
+    if (!(await consumeShareHandoff(handoff, hashShareSecret(session)))) return unavailable();
+  } catch {
+    return unavailable();
+  }
+  const navigationId = sessionNavigationIdFor(session);
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: shareViewPath(navigationId),
+      "Set-Cookie": buildShareSessionCookie(session, new URL(request.url).protocol === "https:"),
+      "Cache-Control": "private, no-store",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
 }
 
 // h3 swallows in-handler throws into a normal 500 Response with body
@@ -48,6 +104,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      if (new URL(request.url).pathname === SHARE_HANDOFF_PATH) {
+        return consumeShareHandoffRequest(request);
+      }
       // A share token must never reach a rendered document. See
       // lib/security-passport/share-transport.ts for why this is here, in
       // front of the SSR handler, rather than anywhere in the page: the host
