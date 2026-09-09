@@ -144,14 +144,16 @@ SET search_path = public, extensions
 AS $function$
 DECLARE
   _session_id uuid;
-  _d public.sp_disclosures%ROWTYPE;
+  _disclosure_id uuid;
+  _package_code text;
   _payload jsonb;
 BEGIN
   IF coalesce(_session, '') !~ '^[0-9a-f]{64}$' THEN
     RETURN jsonb_build_object('status', 'unavailable');
   END IF;
 
-  SELECT s.id, d INTO _session_id, _d
+  SELECT s.id, d.id, d.package_code
+    INTO _session_id, _disclosure_id, _package_code
     FROM public.sp_share_sessions s
     JOIN public.sp_disclosures d ON d.id = s.disclosure_id
    WHERE s.session_hash = encode(digest(_session, 'sha256'), 'hex')
@@ -170,16 +172,16 @@ BEGIN
    WHERE id = _session_id;
   UPDATE public.sp_disclosures
      SET access_count = access_count + 1
-   WHERE id = _d.id;
+   WHERE id = _disclosure_id;
   INSERT INTO public.sp_disclosure_accesses (disclosure_id)
-  VALUES (_d.id);
+  VALUES (_disclosure_id);
 
-  _payload := public.sp_disclosure_payload(_d.id);
+  _payload := public.sp_disclosure_payload(_disclosure_id);
   IF _payload ->> 'status' <> 'active' THEN
     RETURN jsonb_build_object('status', 'unavailable');
   END IF;
 
-  IF _d.package_code = 'selected_merits' THEN
+  IF _package_code = 'selected_merits' THEN
     _payload := jsonb_set(_payload, '{verified_claims}', coalesce((
       SELECT jsonb_agg((row.value - 'id')
                        || jsonb_build_object('key', coalesce(row.value ->> 'key', 'c' || row.ord))
