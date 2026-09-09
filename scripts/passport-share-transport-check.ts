@@ -189,10 +189,47 @@ assert(
 );
 // A 302 has no body, so there is nothing for the host to inject a script into.
 assert(redirect.body === null, "the redirect has no body, so no script can run on it");
+// ── THE HEADERS ON THE ONE HOP THAT HANDS OVER A CAPABILITY ───────────
+//
+// The labels below are the diagnostics the negative-control runner matches
+// on. They are written as the requirement, not as a description, so a failure
+// line tells a reader what the value must be rather than only that it moved.
 assert(
-  redirect.headers.get("cache-control") === "no-store",
-  "no shared cache may keep a response that sets a capability",
+  redirect.headers.get("cache-control") === "private, no-store",
+  'Cache-Control must be "private, no-store"',
 );
+assert(
+  (redirect.headers.get("x-robots-tag") ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .includes("noarchive"),
+  "X-Robots-Tag must include noarchive",
+);
+assert(
+  redirect.headers.get("x-robots-tag") === "noindex, nofollow, noarchive",
+  "X-Robots-Tag is exactly noindex, nofollow, noarchive",
+);
+assert(
+  /^\/p\/[0-9a-f]{32}$/.test(redirect.headers.get("location") ?? ""),
+  "Location is /p/<32 lowercase hex>",
+);
+// `Secure` is conditional on the request context, so both directions are
+// asserted -- a cookie that is always Secure breaks the http dev stack, and
+// one that never is leaks the capability over plain http.
+{
+  const secureCookie = buildShareRedirect(A, true).headers.get("set-cookie") ?? "";
+  const plainCookie = buildShareRedirect(A, false).headers.get("set-cookie") ?? "";
+  const has = (c: string, attr: string) =>
+    c
+      .split(";")
+      .map((p) => p.trim().toLowerCase())
+      .includes(attr.toLowerCase());
+  assert(has(secureCookie, "HttpOnly"), "the cookie is HttpOnly");
+  assert(has(secureCookie, "SameSite=Lax"), "the cookie is SameSite=Lax");
+  assert(has(secureCookie, "Max-Age=1800"), "the cookie expires after 1800 seconds");
+  assert(has(secureCookie, "Secure"), "the cookie is Secure in a secure context");
+  assert(!has(plainCookie, "Secure"), "and is not Secure in a plain-http context");
+}
 assert(
   (redirect.headers.get("referrer-policy") ?? "").includes("no-referrer"),
   "nothing downstream carries the token onward as a referrer",

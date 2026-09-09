@@ -668,6 +668,98 @@ ok(
 );
 
 // =========================================================================
+group("6 \u00b7 safeReturnPath refuses every CR/LF form, at every encoding depth");
+// =========================================================================
+//
+// A return path is interpolated into a Location header and into client-side
+// navigation. A line terminator that survives to either point splits the
+// header or the statement, which is response splitting. The four layers in
+// safe-redirect.ts each refuse a different depth, and each is asserted here
+// DIRECTLY as well as through safeReturnPath -- because end to end they
+// overlap, and a test that only calls safeReturnPath cannot tell which layer
+// did the work. Deleting the raw layer would leave every end-to-end case
+// still failing closed, so an end-to-end-only test would pass and the
+// deletion would ship.
+//
+// Cases 16 and 17 carry the real U+2028 and U+2029 characters.
+
+const {
+  safeReturnPath: srp,
+  rawHasLineBreak,
+  decodedOnceHasLineBreak,
+  decodedTwiceHasLineBreak,
+  hasEncodedLineBreak,
+} = await import("../src/lib/auth/safe-redirect");
+
+const CRLF_FALLBACK = "/my-career";
+const CRLF_CASES: ReadonlyArray<readonly [number, string]> = [
+  [1, "/a\r\n/b"],
+  [2, "/a\n/b"],
+  [3, "/a\r/b"],
+  [4, "/a%0d%0a/b"],
+  [5, "/a%0D%0A/b"],
+  [6, "/a%0d%0A/b"],
+  [7, "/a%0a/b"],
+  [8, "/a%0d/b"],
+  [9, "/a%250d%250a/b"],
+  [10, "/a%250D%250A/b"],
+  [11, "/a%250d%0a/b"],
+  [12, "/a%0d%250a/b"],
+  [13, "/a\r%0a/b"],
+  [14, "/a%250a\n/b"],
+  [15, "/a%25250d%25250a/b"],
+  [16, "/a\u2028/b"],
+  [17, "/a\u2029/b"],
+  [18, "/a%0d%0aSet-Cookie:x=1"],
+];
+
+for (const [n, input] of CRLF_CASES) {
+  ok(srp(input, CRLF_FALLBACK) === CRLF_FALLBACK, `6.1 CR/LF input falls back: case ${n}`);
+}
+
+// Layer attribution. The label on each is the diagnostic a reviewer sees when
+// that layer stops doing its job, so it is written as the defect, not the
+// expectation.
+ok(rawHasLineBreak("/a\r\n/b"), "raw CR/LF accepted: case 1");
+ok(rawHasLineBreak("/a\n/b"), "raw CR/LF accepted: case 2");
+ok(rawHasLineBreak("/a\u2028/b"), "raw CR/LF accepted: case 16");
+ok(rawHasLineBreak("/a\u2029/b"), "raw CR/LF accepted: case 17");
+ok(decodedOnceHasLineBreak("/a%0d%0a/b"), "single-encoded CR/LF accepted: case 4");
+ok(decodedOnceHasLineBreak("/a%0a/b"), "single-encoded CR/LF accepted: case 7");
+ok(decodedOnceHasLineBreak("/a%0d%0aSet-Cookie:x=1"), "single-encoded CR/LF accepted: case 18");
+ok(decodedTwiceHasLineBreak("/a%250d%250a/b"), "double-encoded CR/LF accepted: case 9");
+ok(decodedTwiceHasLineBreak("/a%250D%250A/b"), "double-encoded CR/LF accepted: case 10");
+ok(hasEncodedLineBreak("/a%25250d%25250a/b"), "encoded CR/LF pattern accepted: case 15");
+
+// A malformed escape cannot be inspected, so it is refused rather than guessed.
+ok(srp("/a%/b", CRLF_FALLBACK) === CRLF_FALLBACK, "6.2 a malformed percent escape falls back");
+ok(srp("/a%zz/b", CRLF_FALLBACK) === CRLF_FALLBACK, "6.3 a non-hex escape falls back");
+
+// The hardening must not have started rejecting ordinary destinations, and
+// must return the RAW value rather than a decoded or normalised one.
+for (const good of ["/my-career", "/passport", "/my-career/cv/new", "/jobs?q=v%C3%A4ktare"]) {
+  ok(srp(good, CRLF_FALLBACK) === good, `6.4 a legitimate path is returned unchanged: ${good}`);
+}
+ok(
+  srp("/jobs?q=a%2Fb", CRLF_FALLBACK) === "/jobs?q=a%2Fb",
+  "6.5 the RAW value is returned, never a decoded one",
+);
+
+// Every pre-existing rejection stays rejected.
+for (const hostile of [
+  "https://evil.test/x",
+  "//evil.test",
+  "/\\evil.test",
+  "\\evil.test",
+  "/a\\b",
+  "/login",
+  "/login?redirect=/login",
+]) {
+  ok(srp(hostile, CRLF_FALLBACK) === CRLF_FALLBACK, `6.6 pre-existing rejection holds: ${hostile}`);
+}
+ok(srp("a".repeat(501), CRLF_FALLBACK) === CRLF_FALLBACK, "6.7 an over-long value falls back");
+
+// =========================================================================
 console.log("");
 if (failures > 0) {
   console.error(`FAILED: ${failures} of ${checks} checks failed.`);

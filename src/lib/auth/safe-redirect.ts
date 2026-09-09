@@ -22,9 +22,95 @@ export const AUTH_SURFACES: readonly string[] = [
   "/reset-password",
 ];
 
+/** CR, LF and the two Unicode line terminators.
+ *
+ *  U+2028 and U+2029 are here because they terminate a line for a JavaScript
+ *  parser and for some header writers even though they are not CR or LF, so a
+ *  check that names only \r and \n has a gap exactly where a value gets
+ *  interpolated into a script or a header. */
+const LINE_BREAKING = /[\r\n\u2028\u2029]/;
+
+/** Any depth of percent-encoded CR or LF: %0d, %250d, %25250d, and the LF
+ *  forms, in either case. */
+const ENCODED_LINE_BREAK = /%(25)*0[ad]/i;
+
+/**
+ * Percent-decode once, for INSPECTION only.
+ *
+ * Returns null when the value is not decodable — a malformed escape such as a
+ * lone "%" or "%zz" makes `decodeURIComponent` throw, and a caller that cannot
+ * be decoded cannot be inspected, so it is refused rather than guessed at.
+ *
+ * The decoded value is never returned to a caller and never navigated to.
+ */
+function decodeOnceForInspection(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+// ── FOUR LAYERS, EXPORTED SEPARATELY, AND WHY ─────────────────────────────
+//
+// These read as redundant end to end, and for most inputs they are: a raw
+// "\r" survives decoding, so the once-decoded layer would catch it even if
+// the raw layer were deleted. That overlap is the point of defence in depth,
+// but it also means a test that only calls safeReturnPath cannot tell which
+// layer did the work — delete the raw check and every case still fails
+// closed, so the test still passes and the deletion ships.
+//
+// So each layer is its own exported predicate and each is asserted directly.
+// A guard can then prove that the raw layer is load-bearing without having to
+// find an input that ONLY the raw layer catches, which for this class of
+// input does not exist.
+//
+// They are exported for that reason and no other. `safeReturnPath` remains
+// the only function a caller should use to decide a destination.
+
+/** Layer 1 — a line terminator in the value exactly as supplied. */
+export function rawHasLineBreak(raw: string): boolean {
+  return LINE_BREAKING.test(raw);
+}
+
+/** Layer 2 — what one downstream decoder would see. Undecodable is a break:
+ *  a value that cannot be inspected is not a value that can be trusted. */
+export function decodedOnceHasLineBreak(raw: string): boolean {
+  const once = decodeOnceForInspection(raw);
+  if (once === null) return true;
+  return LINE_BREAKING.test(once);
+}
+
+/** Layer 3 — what two decoders in series would see. */
+export function decodedTwiceHasLineBreak(raw: string): boolean {
+  const once = decodeOnceForInspection(raw);
+  if (once === null) return true;
+  const twice = decodeOnceForInspection(once);
+  if (twice === null) return true;
+  return LINE_BREAKING.test(twice);
+}
+
+/** Layer 4 — any remaining encoding depth, read off the raw string.
+ *
+ *  Decoding twice is not decoding forever: a value encoded three times passes
+ *  layers 2 and 3 with no terminator in sight and is then handed to something
+ *  that decodes once more. This layer refuses the shape regardless of depth. */
+export function hasEncodedLineBreak(raw: string): boolean {
+  return ENCODED_LINE_BREAK.test(raw);
+}
+
 export function safeReturnPath(raw: string | null | undefined, fallback: string): string {
   if (!raw) return fallback;
   if (raw.length > 500) return fallback;
+
+  // The value returned at the end is always `raw`. The layers below decode
+  // only to inspect; if a decoded form were returned, this function would be
+  // performing the unescaping it exists to defend against.
+  if (rawHasLineBreak(raw)) return fallback;
+  if (decodedOnceHasLineBreak(raw)) return fallback;
+  if (decodedTwiceHasLineBreak(raw)) return fallback;
+  if (hasEncodedLineBreak(raw)) return fallback;
+
   // Must start with a single "/" — rejects protocol-relative ("//evil.com"),
   // absolute URLs ("https://..."), and anything not path-shaped.
   if (!raw.startsWith("/") || raw.startsWith("//")) return fallback;

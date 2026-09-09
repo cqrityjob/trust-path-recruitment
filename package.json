@@ -17,6 +17,8 @@
     "my-career-experience:check": "bun run scripts/my-career-experience-check.tsx",
     "my-career-premium-overview:check": "bun run scripts/my-career-premium-overview-check.tsx",
     "passport-share-transport:check": "bun run scripts/passport-share-transport-check.ts", 
+    "negative-controls:p0a": "bun run scripts/negative-controls/p0a-controls.ts",
+    "negative-controls:all": "bun run negative-controls:p0a",
     "passport-skill-contract:check": "bun run scripts/passport-skill-contract-check.ts", 
     "v31-evidence-payload:check": "bun run scripts/v31-evidence-payload-check.ts", 
     "passport-separation:check": "bun run scripts/passport-separation-check.ts",

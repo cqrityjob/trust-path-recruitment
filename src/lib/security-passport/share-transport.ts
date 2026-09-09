@@ -202,9 +202,18 @@ export function shareTokenFromCookieHeader(
 /**
  * The 302 that moves the token out of the URL and into a per-share cookie.
  *
- * `Cache-Control: no-store` because this response carries a credential in a
- * header; a shared cache holding it would hand one recipient's capability to
- * the next visitor.
+ * `Cache-Control: private, no-store` because this response carries a
+ * credential in a header. `no-store` already forbids storing it; `private`
+ * additionally names the response as belonging to one user, which is what a
+ * shared cache reads first. Belt and braces on the one hop that hands over a
+ * capability -- a shared cache holding it would give one recipient's Passport
+ * to the next visitor.
+ *
+ * `noarchive` joins `noindex, nofollow` because the first two govern indexing
+ * and link-following; they do not stop a crawler that already fetched the URL
+ * from offering a cached copy. A share link is private correspondence, and a
+ * cached copy of a redirect that sets a capability is the same leak by a
+ * slower route.
  */
 export function buildShareRedirect(token: string, secure: boolean): Response {
   return new Response(null, {
@@ -212,10 +221,10 @@ export function buildShareRedirect(token: string, secure: boolean): Response {
     headers: {
       Location: shareViewPath(navigationIdFor(token)),
       "Set-Cookie": buildShareCookie(token, secure),
-      "Cache-Control": "no-store",
+      "Cache-Control": "private, no-store",
       // A share link is private correspondence; it was already noindex on the
       // page, and the hop says so too rather than relying on the destination.
-      "X-Robots-Tag": "noindex, nofollow",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
       // Nothing downstream of this response carries the token onward.
       "Referrer-Policy": "no-referrer",
     },
