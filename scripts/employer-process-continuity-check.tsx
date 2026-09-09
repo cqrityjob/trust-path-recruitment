@@ -319,10 +319,24 @@ const strip = (projection: P.ProcessProjection, lang: "sv" | "en" = "sv") =>
 /* ================================================================== */
 {
   const panel = codeOnly(read(COMPONENTS.panel));
-  ok(
-    panel.includes("search={{ application: applicationId }}"),
-    "3 · the review carries the application it was opened from",
-  );
+  // Scoped to the REVIEW link. The released-brief link a few lines above
+  // carries the same `search` line, so a whole-file check for it went on
+  // passing after the review's was deleted -- a dead assertion the negative
+  // control caught, and this replaces.
+  {
+    const at = panel.indexOf('to="/employer/$employerSlug/assessments/reviews/$attemptId"');
+    const block = at < 0 ? "" : panel.slice(at, at + 400);
+    ok(
+      block.includes("search={{ application: applicationId }}"),
+      "3 · the review carries the application it was opened from",
+    );
+    const briefAt = panel.indexOf('to="/employer/$employerSlug/assessments/results/$attemptId"');
+    const briefBlock = briefAt < 0 ? "" : panel.slice(briefAt, briefAt + 400);
+    ok(
+      briefBlock.includes("search={{ application: applicationId }}"),
+      "3 · and so does the released brief",
+    );
+  }
   ok(
     codeOnly(read(ROUTES.reviewAttempt)).includes("z.string().uuid().optional().catch(undefined)"),
     "3 · and the review route validates it as a uuid",
