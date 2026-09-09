@@ -31,16 +31,27 @@ import {
   listContentLibrary,
   type ApplicationAssessment,
 } from "@/lib/security-competency/academy-employer.functions";
+import { assessmentStageOf } from "@/lib/employer-continuity/process-projection";
 
 /** The five states an employer needs to tell apart, derived from the attempt
  *  rather than stored: a status column that can disagree with the attempt is a
- *  status column that eventually does. */
+ *  status column that eventually does.
+ *
+ *  The DERIVATION moved to the continuity projection and this is now only the
+ *  wording for it. That is the point: the panel, the list chip and the process
+ *  strip previously each decided the stage for themselves, so three surfaces
+ *  could describe one attempt three ways. There is one decision now, and this
+ *  map turns it into the words the panel has always used. */
+const STAGE_LABEL: Record<ReturnType<typeof assessmentStageOf>, TranslationKey> = {
+  invited: "journey.stage.invited",
+  in_progress: "journey.stage.started",
+  under_review: "journey.stage.under_review",
+  brief_ready: "journey.stage.ready_to_release",
+  brief_released: "journey.stage.report_available",
+};
+
 function stageOf(a: ApplicationAssessment): TranslationKey {
-  if (a.reportAvailable) return "journey.stage.report_available";
-  if (a.attemptStatus === "scored") return "journey.stage.ready_to_release";
-  if (a.reviewsOutstanding > 0) return "journey.stage.under_review";
-  if (a.answered > 0) return "journey.stage.started";
-  return "journey.stage.invited";
+  return STAGE_LABEL[assessmentStageOf(a)];
 }
 
 // The refusals this panel can actually produce, each said as the thing the
@@ -142,15 +153,42 @@ export function ApplicationAssessmentPanel({
   const rows = assessments.data ?? [];
   const options = library.data ?? [];
 
+  // ── A READ THAT FAILED IS NOT AN ABSENCE ────────────────────────────
+  //
+  // This block used to be `rows.length === 0 && options.length === 0 -> null`,
+  // over `assessments.data ?? []`. So an assessment read that failed, or that
+  // RLS refused, rendered as either nothing at all or as the sentence "no
+  // assessment has been sent for this application" -- a statement about the
+  // candidate, made from a fact about us. A recruiter would have chased a
+  // candidate who had already answered.
+  //
+  // Loading, failure and refusal now each say what they are, and none of them
+  // can be mistaken for zero. Absence is still silence when it is genuinely
+  // absence and there is nothing to offer.
+  if (assessments.isLoading) {
+    return (
+      <PanelFrame>
+        <p role="status" className="mt-2 text-[13px] text-muted-foreground">
+          {t("continuity.assessment.loading")}
+        </p>
+      </PanelFrame>
+    );
+  }
+
+  if (assessments.isError) {
+    return (
+      <PanelFrame>
+        <p role="alert" className="mt-2 text-[13px] text-foreground">
+          {t("employer.candidate.assessment.unavailable")}
+        </p>
+      </PanelFrame>
+    );
+  }
+
   if (rows.length === 0 && options.length === 0) return null;
 
   return (
-    <div className="mt-3 rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-accent">
-        <ClipboardCheck className="h-3.5 w-3.5" aria-hidden="true" />
-        {t("journey.assessment")}
-      </p>
-
+    <PanelFrame>
       {rows.length > 0 ? (
         <ul className="mt-2.5 space-y-2">
           {rows.map((a) => (
@@ -171,6 +209,7 @@ export function ApplicationAssessmentPanel({
                 <ReviewAction
                   employerSlug={employerSlug}
                   attemptId={a.attemptId}
+                  applicationId={applicationId}
                   responsesOpen={a.reviewsOutstanding}
                   basis={board.data?.find((b) => b.attemptId === a.attemptId)?.basis ?? null}
                   isReviewer={capability.data?.isReviewer ?? false}
@@ -220,6 +259,22 @@ export function ApplicationAssessmentPanel({
           {t(ASSIGN_ERROR[failed] ?? "journey.assignFailed")}
         </p>
       )}
+    </PanelFrame>
+  );
+}
+
+/** The panel's shell, so loading, failure and content are visibly the same
+ *  object. Extracted precisely because they used not to be: the failure case
+ *  had no frame at all, because it had no case. */
+function PanelFrame({ children }: { children: React.ReactNode }) {
+  const { t } = useT();
+  return (
+    <div className="mt-3 rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-3">
+      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-accent">
+        <ClipboardCheck className="h-3.5 w-3.5" aria-hidden="true" />
+        {t("journey.assessment")}
+      </p>
+      {children}
     </div>
   );
 }
@@ -240,6 +295,7 @@ export function ApplicationAssessmentPanel({
 function ReviewAction({
   employerSlug,
   attemptId,
+  applicationId,
   responsesOpen,
   basis,
   isReviewer,
@@ -247,6 +303,9 @@ function ReviewAction({
 }: {
   employerSlug: string;
   attemptId: string;
+  /** Carried so the review returns to this candidate rather than to the queue.
+   *  Navigation only -- the review workspace authorises itself. */
+  applicationId: string;
   responsesOpen: number;
   basis: string | null;
   isReviewer: boolean;
@@ -260,6 +319,7 @@ function ReviewAction({
       <Link
         to="/employer/$employerSlug/assessments/reviews/$attemptId"
         params={{ employerSlug, attemptId }}
+        search={{ application: applicationId }}
         className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
@@ -337,17 +397,35 @@ function ReviewAction({
 // It renders NOTHING when there is no assessment: absence of a chip means "not
 // assigned", which the list's own column heading already says, and an
 // "inte tilldelad" badge on nineteen rows is noise rather than information.
-export function ApplicationAssessmentChip({ applicationId }: { applicationId: string }) {
+export function ApplicationAssessmentChip({
+  employerId,
+  applicationId,
+}: {
+  employerId: string;
+  applicationId: string;
+}) {
   const { t } = useT();
   const listFn = useServerFn(listApplicationAssessments);
 
-  // Same cache key as the panel, so opening the candidate costs no second
-  // fetch and the two surfaces can never disagree about the stage.
+  // THE SAME cache key as the panel. It said so in a comment and was not: the
+  // panel keys on ["employer", employerId, "application", id, "assessments"]
+  // and this keyed on ["employer", "application", id, "assessments"], so the
+  // list badge and the candidate page held two independent copies of one
+  // attempt and could show two different stages -- and the panel's own
+  // invalidation after an assign never reached the row the recruiter came
+  // from. `employerId` is passed in for exactly that reason; the list already
+  // holds it.
   const assessments = useQuery({
-    queryKey: ["employer", "application", applicationId, "assessments"],
+    queryKey: ["employer", employerId, "application", applicationId, "assessments"],
     queryFn: () => listFn({ data: { applicationId } }),
   });
 
+  // A failed read renders nothing, which is what this chip renders for "not
+  // assigned" too. That is correct HERE and only here: the chip is an
+  // enrichment on a row whose own status comes from the applications read, it
+  // makes no claim in its absence, and the column heading already says what a
+  // missing chip means. The candidate page is where a failed read is reported,
+  // because that is where a recruiter acts on it.
   const rows = assessments.data ?? [];
   if (rows.length === 0) return null;
 

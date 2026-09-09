@@ -28,6 +28,7 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
+  assessedQuestionCount,
   CaseStatusChip,
   WorkflowNav,
   Chip,
@@ -37,6 +38,8 @@ import {
   PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
 import { getInterviewCase } from "@/lib/interview-intelligence/runtime.functions";
+import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
+import { processLinkage } from "@/lib/employer-continuity/process-projection";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/",
@@ -45,12 +48,28 @@ export const Route = createFileRoute(
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { t } = useT();
+  const { t, lang } = useT();
 
   const getFn = useServerFn(getInterviewCase);
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
     queryFn: () => getFn({ data: { caseId } }),
+    retry: false,
+  });
+
+  // The ADVERTISED role, from the application this case is bound to.
+  //
+  // The same governed read the preparation screen makes, on the same cache
+  // key, so the two screens cannot name the role differently. It is needed
+  // here because the overview used to print the interview GUIDE's name (or,
+  // failing that, the case's internal title) under a label reading "Roll" --
+  // three different concepts wearing one word. A guide is a governed
+  // instrument, an internal title is bookkeeping, and neither is the job the
+  // candidate applied for.
+  const contextFn = useServerFn(getInterviewCaseContext);
+  const contextQ = useQuery({
+    queryKey: ["ii", "context", caseId],
+    queryFn: () => contextFn({ data: { caseId } }),
     retry: false,
   });
 
@@ -88,6 +107,21 @@ function Page() {
   const d = q.data;
   if (!d) return shell(<State kind="loading" />);
 
+  // The role, said only when we actually know it. A guide's name and an
+  // internal title are NOT fallbacks for it: the honest answer to "which
+  // advertised role is this" is sometimes that there is not one.
+  const contextRole = contextQ.data
+    ? ((lang === "en" ? contextQ.data.roleEn : contextQ.data.roleSv) ?? contextQ.data.roleSv)
+    : null;
+  const advertisedRole = contextQ.isLoading
+    ? t("continuity.assessment.loading")
+    : contextQ.isError
+      ? t("continuity.report.unavailable")
+      : (contextRole ?? t("continuity.role.unknown"));
+
+  // Recruitment-linked, or standalone. One persisted identifier decides it.
+  const linkage = processLinkage(d.applicationId);
+
   // Where the recruiter goes next, in their words rather than the schema's.
   // Read from the same map every other screen uses, so the overview can never
   // send someone somewhere the stage header would not.
@@ -97,18 +131,37 @@ function Page() {
   // or a score: this measures how far the WORK has got, not the candidate.
   const answered = (d.session?.questions ?? []).filter((x) => x.state === "answered").length;
   const awaiting = d.proposals.filter((p) => p.reviewState === "pending").length;
-  const assessed = d.assessments.length;
+  // DISTINCT questions, because the card beneath it counts questions. See
+  // assessedQuestionCount: two assessors on one question is one question.
+  const assessed = assessedQuestionCount(d.assessments);
   const openFindings = d.findings.filter((f) => f.resolutionState !== "resolved").length;
 
   const candidateSources = d.sources.filter((s) => s.kind !== "role_description");
 
   return shell(
     <>
-      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
+      {/* THE WAY BACK.
+       *
+       *  Every work surface under this case breadcrumbs HERE, so this is the
+       *  one place the return path to the recruitment record has to exist --
+       *  and it did not. A recruiter who came from a candidate could reach the
+       *  interview and never get back without the browser's own Back button.
+       *  The application id is the case's OWN persisted column, read by the
+       *  server; the URL asserts nothing. */}
+      <nav aria-label={t("iiu.breadcrumbs")} className="flex flex-wrap gap-4 text-sm">
+        {d.applicationId && (
+          <Link
+            to="/employer/$employerSlug/applications/$applicationId"
+            params={{ employerSlug, applicationId: d.applicationId }}
+            className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
+          >
+            {t("continuity.backToApplication")}
+          </Link>
+        )}
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
-          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
+          className="inline-flex min-h-11 items-center text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
         >
           {t("iiu.ov.backtolist")}
         </Link>
@@ -119,12 +172,51 @@ function Page() {
         <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
           {d.candidateDisplayName}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("iiu.ov.role")}: {d.packName ?? d.title}
-        </p>
+
+        {/* THREE FACTS, THREE LABELS.
+         *
+         *  Role is the advert the candidate applied to. The guide is the
+         *  governed instrument the interview is run from, pinned to a content
+         *  hash. The internal title is the recruiter's own bookkeeping. Printing
+         *  any of them under another's name is how an interview ends up filed
+         *  against a role nobody advertised. */}
+        <dl className="mt-1.5 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm">
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-muted-foreground">{t("continuity.role.advertised")}:</dt>
+            <dd className="font-medium text-foreground">{advertisedRole}</dd>
+          </div>
+          {d.packName && (
+            <div className="flex items-baseline gap-1.5">
+              <dt className="text-muted-foreground">{t("continuity.role.guide")}:</dt>
+              <dd className="text-muted-foreground">{d.packName}</dd>
+            </div>
+          )}
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-muted-foreground">{t("continuity.role.caseTitle")}:</dt>
+            <dd className="text-muted-foreground">{d.title}</dd>
+          </div>
+        </dl>
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CaseStatusChip status={d.status} />
+          {/* PROCESS TYPE, on the surface rather than in the reader's head.
+           *
+           *  Decided from the case's own persisted application_id and from
+           *  nothing else -- not the candidate's name, not an address, not the
+           *  guide that was chosen. A standalone interview is a first-class,
+           *  supported thing; what it must never be is mistakeable for one
+           *  bound to an application. */}
+          <Chip tone={linkage === "recruitmentLinked" ? "work" : "neutral"}>
+            {linkage === "recruitmentLinked"
+              ? t("continuity.type.linked")
+              : t("continuity.type.standaloneInterview")}
+          </Chip>
         </div>
+        <p className="mt-2 max-w-[72ch] text-xs leading-relaxed text-muted-foreground">
+          {linkage === "recruitmentLinked"
+            ? t("continuity.type.linkedBody")
+            : t("continuity.type.standaloneBody")}
+        </p>
       </header>
 
       {/* ---- What to do next, and why ---------------------------------

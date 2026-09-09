@@ -4803,8 +4803,12 @@ export const dictionaries = {
     "iiu.status.interview_in_progress": "Intervju pågår",
     "iiu.status.interview_complete": "Underlag granskas",
     "iiu.status.evidence_review": "Underlag granskas",
-    "iiu.status.assessed": "Rapport redo",
-    "iiu.status.reported": "Rapport klar",
+    // NOT "Rapport redo". `assessed` means a human has finished assessing and
+    // the material for a report exists; no report does. The two words were near
+    // synonyms beside "Rapport klar", so a recruiter scanning a list read a case
+    // that owed work as one that had finished.
+    "iiu.status.assessed": "Rapportunderlag redo",
+    "iiu.status.reported": "Rapport fastställd",
     "iiu.status.cancelled": "Avbruten",
     "iiu.label.pilot_hypothesis": "Pilothypotes",
     "iiu.label.content_validated": "Innehållsvaliderad",
@@ -5782,7 +5786,10 @@ export const dictionaries = {
     "iiu.rp.blk.cta": "Gå tillbaka till bedömning",
     "iiu.ix.active": "Aktiva intervjuer",
     "iiu.ix.awaiting": "Väntar på din granskning",
-    "iiu.ix.done": "Färdiga rapporter",
+    // Counts `reported` and only `reported` -- a row in scp_interview_reports
+    // with status = final. "Färdiga" invited the reader to include the cases
+    // that merely have material.
+    "iiu.ix.done": "Fastställda rapporter",
     "iiu.ix.empty":
       "Inga intervjuer ännu. Planera en för att förbereda, genomföra och dokumentera en kompetensbaserad intervju.",
     "iiu.ix.caption": "Intervjuer med status och väntande granskning",
@@ -5816,6 +5823,114 @@ export const dictionaries = {
     "iiu.ix.boundary.title": "Vad produkten inte gör",
     "iiu.ix.boundary.body":
       "Ingen totalpoäng, ingen rangordning, ingen automatisk rekommendation och inget anställningsbeslut. Underlaget är beslutsstöd; beslutet fattas och dokumenteras av behörig människa hos er.",
+
+    // ── Process continuity (E1) ─────────────────────────────────────────
+    //
+    // One vocabulary for four separate lifecycles. Every string below names a
+    // state that already exists in the database; none of them is a combined
+    // status, and none of them says anything about the candidate.
+    "continuity.heading": "Processen för den här ansökan",
+    "continuity.lede":
+      "Fyra separata processer, var och en med sin egen status. Bedömning och intervju är valfria och styrs av er process — de ändrar aldrig ansökans steg automatiskt.",
+    "continuity.track.application": "Ansökan",
+    "continuity.track.assessment": "Bedömning",
+    "continuity.track.interview": "Intervju",
+    "continuity.track.report": "Rapport",
+
+    // Assessment presentation states.
+    "continuity.assessment.loading": "Hämtar …",
+    "continuity.assessment.unavailable": "Kunde inte hämtas",
+    "continuity.assessment.refused": "Du saknar behörighet att se detta",
+    "continuity.assessment.none": "Ingen bedömning skickad",
+
+    // Interview presentation states.
+    "continuity.interview.loading": "Hämtar …",
+    "continuity.interview.unavailable": "Kunde inte hämtas",
+    "continuity.interview.refused": "Du saknar behörighet att se detta",
+    "continuity.interview.none": "Ingen intervju planerad",
+    "continuity.interview.preparing": "Förbereds",
+    "continuity.interview.readyToInterview": "Klar att genomföras",
+    "continuity.interview.interviewing": "Pågår",
+    "continuity.interview.evidenceReview": "Underlag att bekräfta",
+    "continuity.interview.reportMaterialReady": "Rapportunderlag redo",
+    "continuity.interview.reportFinalised": "Rapport fastställd",
+    "continuity.interview.cancelled": "Avbruten",
+    "continuity.interview.unknown": "Okänt läge",
+
+    // Report availability. "Underlag" and "fastställd rapport" are different
+    // things and this is the one place the product says so out loud.
+    "continuity.report.loading": "Hämtar …",
+    "continuity.report.unavailable": "Kunde inte hämtas",
+    "continuity.report.refused": "Du saknar behörighet att se detta",
+    "continuity.report.none": "Ingen rapport",
+    "continuity.report.materialReady": "Rapportunderlag redo för granskning",
+    "continuity.report.finalised": "Fastställd rapport finns",
+
+    // The single next action. Operational only: nothing here recommends,
+    // ranks or judges a candidate.
+    "continuity.next.heading": "Nästa steg",
+    "continuity.next.loading": "Hämtar processens läge …",
+    "continuity.next.unavailable.assessment":
+      "Bedömningens läge kunde inte hämtas, så vi föreslår inget nästa steg. Övriga delar nedan stämmer.",
+    "continuity.next.unavailable.interview":
+      "Intervjuns läge kunde inte hämtas, så vi föreslår inget nästa steg. Övriga delar nedan stämmer.",
+    "continuity.next.unavailable.both":
+      "Varken bedömningens eller intervjuns läge kunde hämtas, så vi föreslår inget nästa steg.",
+    "continuity.next.retry": "Försök igen",
+    "continuity.next.reviewInterviewEvidence":
+      "Det finns intervjuunderlag som ingen människa har granskat ännu.",
+    "continuity.next.reviewInterviewEvidence.cta": "Öppna intervjun",
+    "continuity.next.reviewAssessmentResponses": "Kandidatens svar väntar på din granskning.",
+    "continuity.next.reviewAssessmentResponses.cta": "Granska svaren",
+    "continuity.next.reviewReportMaterial":
+      "Bedömningen är klar. Granska rapportunderlaget innan rapporten fastställs.",
+    "continuity.next.reviewReportMaterial.cta": "Öppna rapportunderlaget",
+    "continuity.next.startInterview": "Intervjun är förberedd och kan genomföras.",
+    "continuity.next.startInterview.cta": "Öppna intervjun",
+    "continuity.next.continueInterview": "Intervjun är påbörjad och väntar på nästa steg.",
+    "continuity.next.continueInterview.cta": "Fortsätt intervjun",
+    "continuity.next.assessInterviewEvidence":
+      "Intervjun är genomförd. Underlaget behöver bekräftas och bedömas av en människa.",
+    "continuity.next.assessInterviewEvidence.cta": "Öppna bedömningen",
+    "continuity.next.prepareInterview": "Intervjun är skapad men inte förberedd ännu.",
+    "continuity.next.prepareInterview.cta": "Förbered intervjun",
+    "continuity.next.shareAssessmentBrief": "Bedömningen är rättad. Kandidatunderlaget kan delas.",
+    "continuity.next.shareAssessmentBrief.cta": "Gå till Kandidater",
+    "continuity.next.awaitCandidateAssessment":
+      "Inget att göra just nu — bedömningen ligger hos kandidaten.",
+    "continuity.next.awaitColleague":
+      "Nästa steg kräver en kollega med rätt behörighet i er organisation.",
+    "continuity.next.openFinalisedReport": "Rapporten är fastställd och kan öppnas.",
+    "continuity.next.openFinalisedReport.cta": "Öppna rapporten",
+    "continuity.next.nothingStarted":
+      "Varken bedömning eller intervju har startats. Ingen av dem krävs — ansökan kan avgöras utan båda.",
+    "continuity.next.nothingOutstanding":
+      "Inget väntar i processen. Beslutet om ansökan tas längre ned på sidan.",
+
+    // Process type. Said on every recruitment-linked and standalone surface,
+    // because a reader must never have to guess which one they are looking at.
+    "continuity.type.linked": "Kopplad till ansökan",
+    "continuity.type.linkedBody":
+      "Den här processen är kopplad till en ansökan i er organisation. Kandidat, jobb och ansökan hämtas från ansökan — inget behöver skrivas in igen.",
+    "continuity.type.standalone": "Fristående process",
+    "continuity.type.standaloneInterview": "Fristående intervju",
+    "continuity.type.standaloneBody":
+      "Den här processen är inte kopplad till någon ansökan på CQrityjob. Kandidat- och rolluppgifter kommer från det som skrevs in här.",
+    "continuity.backToApplication": "Tillbaka till ansökan",
+    "continuity.openApplication": "Öppna ansökan",
+
+    // Interview role identity. The advertised role, the internal case title and
+    // the interview guide are three different things.
+    "continuity.role.advertised": "Roll",
+    "continuity.role.unknown": "Ingen annonserad roll",
+    "continuity.role.guide": "Intervjuguide",
+    "continuity.role.caseTitle": "Intern rubrik",
+    "employer.candidate.assessment.unavailable":
+      "Bedömningarna för den här ansökan kunde inte hämtas just nu. Det betyder inte att ingen bedömning har skickats — ladda om sidan för att försöka igen.",
+    "employer.candidate.structuredInterview.unavailable":
+      "Intervjuerna för den här ansökan kunde inte hämtas just nu. Det betyder inte att ingen intervju är planerad — försök igen innan du planerar en ny.",
+    "iiu.new.prefill.unavailable":
+      "Uppgifterna från ansökan kunde inte hämtas, så fälten nedan är tomma. Intervjun kopplas ändå till ansökan när den skapas.",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -10332,8 +10447,9 @@ export const dictionaries = {
     "iiu.status.interview_in_progress": "Interview in progress",
     "iiu.status.interview_complete": "Material under review",
     "iiu.status.evidence_review": "Material under review",
-    "iiu.status.assessed": "Report ready",
-    "iiu.status.reported": "Report complete",
+    // See the Swedish note: "Report ready" described report MATERIAL as a report.
+    "iiu.status.assessed": "Report material ready",
+    "iiu.status.reported": "Report finalised",
     "iiu.status.cancelled": "Cancelled",
     "iiu.label.pilot_hypothesis": "Pilot hypothesis",
     "iiu.label.content_validated": "Content validated",
@@ -11299,7 +11415,7 @@ export const dictionaries = {
     "iiu.rp.blk.cta": "Back to assessment",
     "iiu.ix.active": "Active interviews",
     "iiu.ix.awaiting": "Waiting for your review",
-    "iiu.ix.done": "Completed reports",
+    "iiu.ix.done": "Finalised reports",
     "iiu.ix.empty":
       "No interviews yet. Plan one to prepare, conduct and document a competency-based interview.",
     "iiu.ix.caption": "Interviews with status and pending review",
@@ -11333,6 +11449,117 @@ export const dictionaries = {
     "iiu.ix.boundary.title": "What this product does not do",
     "iiu.ix.boundary.body":
       "No total score, no ranking, no automatic recommendation and no hiring decision. This is decision support; the decision is made and documented by an authorised person at your organisation.",
+
+    // ── Process continuity (E1) ─────────────────────────────────────────
+    //
+    // One vocabulary for four separate lifecycles. Every string below names a
+    // state that already exists in the database; none of them is a combined
+    // status, and none of them says anything about the candidate.
+    "continuity.heading": "This application's process",
+    "continuity.lede":
+      "Four separate processes, each with its own status. Assessment and interview are optional and follow your own process — neither ever changes the application's stage automatically.",
+    "continuity.track.application": "Application",
+    "continuity.track.assessment": "Assessment",
+    "continuity.track.interview": "Interview",
+    "continuity.track.report": "Report",
+
+    // Assessment presentation states.
+    "continuity.assessment.loading": "Loading …",
+    "continuity.assessment.unavailable": "Could not be loaded",
+    "continuity.assessment.refused": "You are not authorised to see this",
+    "continuity.assessment.none": "No assessment sent",
+
+    // Interview presentation states.
+    "continuity.interview.loading": "Loading …",
+    "continuity.interview.unavailable": "Could not be loaded",
+    "continuity.interview.refused": "You are not authorised to see this",
+    "continuity.interview.none": "No interview planned",
+    "continuity.interview.preparing": "In preparation",
+    "continuity.interview.readyToInterview": "Ready to be held",
+    "continuity.interview.interviewing": "In progress",
+    "continuity.interview.evidenceReview": "Material to confirm",
+    "continuity.interview.reportMaterialReady": "Report material ready",
+    "continuity.interview.reportFinalised": "Report finalised",
+    "continuity.interview.cancelled": "Cancelled",
+    "continuity.interview.unknown": "Unrecognised state",
+
+    // Report availability. "Report material" and "finalised report" are
+    // different things and this is the one place the product says so out loud.
+    "continuity.report.loading": "Loading …",
+    "continuity.report.unavailable": "Could not be loaded",
+    "continuity.report.refused": "You are not authorised to see this",
+    "continuity.report.none": "No report",
+    "continuity.report.materialReady": "Report material ready for review",
+    "continuity.report.finalised": "Finalised report available",
+
+    // The single next action. Operational only: nothing here recommends,
+    // ranks or judges a candidate.
+    "continuity.next.heading": "Next step",
+    "continuity.next.loading": "Loading the process state …",
+    "continuity.next.unavailable.assessment":
+      "The assessment state could not be loaded, so no next step is proposed. Everything else below is accurate.",
+    "continuity.next.unavailable.interview":
+      "The interview state could not be loaded, so no next step is proposed. Everything else below is accurate.",
+    "continuity.next.unavailable.both":
+      "Neither the assessment nor the interview state could be loaded, so no next step is proposed.",
+    "continuity.next.retry": "Try again",
+    "continuity.next.reviewInterviewEvidence":
+      "There is interview material that no person has reviewed yet.",
+    "continuity.next.reviewInterviewEvidence.cta": "Open the interview",
+    "continuity.next.reviewAssessmentResponses":
+      "The candidate's responses are waiting for your review.",
+    "continuity.next.reviewAssessmentResponses.cta": "Review the responses",
+    "continuity.next.reviewReportMaterial":
+      "The assessment is complete. Review the report material before the report is finalised.",
+    "continuity.next.reviewReportMaterial.cta": "Open the report material",
+    "continuity.next.startInterview": "The interview is prepared and can be held.",
+    "continuity.next.startInterview.cta": "Open the interview",
+    "continuity.next.continueInterview":
+      "The interview has started and is waiting on its next step.",
+    "continuity.next.continueInterview.cta": "Continue the interview",
+    "continuity.next.assessInterviewEvidence":
+      "The interview has been held. Its material needs a person to confirm and assess it.",
+    "continuity.next.assessInterviewEvidence.cta": "Open the assessment",
+    "continuity.next.prepareInterview": "The interview has been created but not prepared yet.",
+    "continuity.next.prepareInterview.cta": "Prepare the interview",
+    "continuity.next.shareAssessmentBrief":
+      "The assessment has been marked. The candidate brief can be shared.",
+    "continuity.next.shareAssessmentBrief.cta": "Go to Candidates",
+    "continuity.next.awaitCandidateAssessment":
+      "Nothing to do right now — the assessment is with the candidate.",
+    "continuity.next.awaitColleague":
+      "The next step needs a colleague with the right authorisation in your organisation.",
+    "continuity.next.openFinalisedReport": "The report has been finalised and can be opened.",
+    "continuity.next.openFinalisedReport.cta": "Open the report",
+    "continuity.next.nothingStarted":
+      "Neither an assessment nor an interview has been started. Neither is required — the application can be decided without both.",
+    "continuity.next.nothingOutstanding":
+      "Nothing is pending in the process. The decision on the application is taken further down this page.",
+
+    // Process type. Said on every recruitment-linked and standalone surface,
+    // because a reader must never have to guess which one they are looking at.
+    "continuity.type.linked": "Linked to an application",
+    "continuity.type.linkedBody":
+      "This process is linked to an application in your organisation. Candidate, job and application come from that application — nothing needs to be typed in again.",
+    "continuity.type.standalone": "Standalone process",
+    "continuity.type.standaloneInterview": "Standalone interview",
+    "continuity.type.standaloneBody":
+      "This process is not connected to a CQrityjob application. The candidate and role details are the ones entered here.",
+    "continuity.backToApplication": "Back to the application",
+    "continuity.openApplication": "Open the application",
+
+    // Interview role identity. The advertised role, the internal case title and
+    // the interview guide are three different things.
+    "continuity.role.advertised": "Role",
+    "continuity.role.unknown": "No advertised role",
+    "continuity.role.guide": "Interview guide",
+    "continuity.role.caseTitle": "Internal title",
+    "employer.candidate.assessment.unavailable":
+      "The assessments for this application could not be loaded right now. That does not mean none has been sent — reload the page to try again.",
+    "employer.candidate.structuredInterview.unavailable":
+      "The interviews for this application could not be loaded right now. That does not mean none is planned — try again before you plan a new one.",
+    "iiu.new.prefill.unavailable":
+      "The details from the application could not be loaded, so the fields below are empty. The interview is still linked to the application when it is created.",
   },
 } as const;
 

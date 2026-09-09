@@ -32,6 +32,7 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
+  assessedQuestionCount,
   CaseHeader,
   Chip,
   LevelZeroNote,
@@ -289,7 +290,8 @@ function Page() {
 
   // Work completion, never performance. "5 of 8 assessed" says how far the
   // recruiter has got; it says nothing whatever about Marcus Lindqvist.
-  const done = d.assessments.length;
+  // Questions with a judgement, not judgement ROWS. See assessedQuestionCount.
+  const done = assessedQuestionCount(d.assessments);
   const total = d.questions.length;
   const openItems = d.findings.filter((f) => f.resolutionState !== "resolved");
   // Editable until the record is released. The database supersedes rather than
@@ -878,16 +880,17 @@ function Page() {
               </div>
             )}
 
-            {d.status === "evidence_review" && d.assessments.length === d.questions.length && (
-              <button
-                type="button"
-                className={`${PRIMARY_BUTTON} mt-6`}
-                onClick={() => finishAssessing.mutate()}
-                disabled={finishAssessing.isPending}
-              >
-                {t("iiu.ev.done")}
-              </button>
-            )}
+            {d.status === "evidence_review" &&
+              assessedQuestionCount(d.assessments) === d.questions.length && (
+                <button
+                  type="button"
+                  className={`${PRIMARY_BUTTON} mt-6`}
+                  onClick={() => finishAssessing.mutate()}
+                  disabled={finishAssessing.isPending}
+                >
+                  {t("iiu.ev.done")}
+                </button>
+              )}
           </Section>
         </div>
 

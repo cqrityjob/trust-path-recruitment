@@ -50,8 +50,21 @@ function Page() {
 
   const cases = q.data?.cases ?? [];
   const awaiting = cases.filter((c) => c.proposalsAwaitingReview > 0);
+  // `assessed` IS active: a human has assessed and the report still has to be
+  // reviewed and locked, which is outstanding work. `reported` never is -- a
+  // finalised report is a frozen document, not a case in flight.
   const active = cases.filter((c) => !["reported", "cancelled"].includes(c.status));
+  // Counts `reported`, and only `reported`. A case at `assessed` has report
+  // MATERIAL and is not counted here, which is what the corrected label above
+  // it now says out loud.
   const done = cases.filter((c) => c.status === "reported");
+
+  // A NUMBER IS A CLAIM. Three zeros under three labels is a complete,
+  // confident statement that this employer has no interviews -- and it was
+  // what the page said while the read was still in flight, and what it kept
+  // saying if the read failed, because `q.data?.cases ?? []` cannot tell those
+  // apart from an empty list. The counts are withheld until they are known.
+  const countsKnown = q.isSuccess;
 
   return (
     <EmployerAppShell
@@ -75,9 +88,23 @@ function Page() {
       </header>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <Stat label={t("iiu.ix.active")} value={active.length} />
-        <Stat label={t("iiu.ix.awaiting")} value={awaiting.length} tone="attention" />
-        <Stat label={t("iiu.ix.done")} value={done.length} tone="confirmed" />
+        <Stat
+          label={t("iiu.ix.active")}
+          value={countsKnown ? active.length : null}
+          unknown={q.isError ? t("continuity.report.unavailable") : undefined}
+        />
+        <Stat
+          label={t("iiu.ix.awaiting")}
+          value={countsKnown ? awaiting.length : null}
+          unknown={q.isError ? t("continuity.report.unavailable") : undefined}
+          tone="attention"
+        />
+        <Stat
+          label={t("iiu.ix.done")}
+          value={countsKnown ? done.length : null}
+          unknown={q.isError ? t("continuity.report.unavailable") : undefined}
+          tone="confirmed"
+        />
       </div>
 
       <div className="mt-6">
@@ -187,14 +214,21 @@ function Page() {
   );
 }
 
+/** One count. `value` is null while the number is genuinely not known -- the
+ *  read is in flight or it failed -- and an em dash is drawn instead, because
+ *  a zero there is a lie about the employer's own work. */
 function Stat({
   label,
   value,
   tone = "neutral",
+  unknown,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   tone?: "neutral" | "attention" | "confirmed";
+  /** Said under the dash when the read FAILED, so the reader can tell a
+   *  loading page from a broken one. */
+  unknown?: string;
 }) {
   const border =
     tone === "attention"
@@ -204,8 +238,13 @@ function Stat({
         : "border-border";
   return (
     <div className={`rounded-lg border ${border} bg-muted/20 p-4`}>
-      <p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+      <p className="text-2xl font-semibold tabular-nums text-foreground">
+        {value === null ? <span aria-hidden="true">—</span> : value}
+      </p>
       <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+      {value === null && unknown && (
+        <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">{unknown}</p>
+      )}
     </div>
   );
 }

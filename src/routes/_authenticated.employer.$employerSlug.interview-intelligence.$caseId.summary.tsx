@@ -26,6 +26,7 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
+  assessedQuestionCount,
   CaseHeader,
   WorkflowNav,
   State,
@@ -209,10 +210,14 @@ function Page() {
           />
           <ScanRow
             glyph="★"
-            tone={d.assessments.length === d.questions.length ? "confirmed" : "attention"}
+            tone={
+              assessedQuestionCount(d.assessments) === d.questions.length
+                ? "confirmed"
+                : "attention"
+            }
             title={t("iiu.sm.row.assessed")}
             description={t("iiu.sm.row.assessed.body")}
-            count={d.assessments.length}
+            count={assessedQuestionCount(d.assessments)}
             countLabel={`${t("iiu.sm.of")} ${d.questions.length}`}
             action={assessLink(t("iiu.sm.goto"))}
           />

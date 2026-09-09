@@ -763,6 +763,21 @@ jobs:
       - name: Interview recruiter workflow check
         run: bun run interview-recruiter-workflow:check
 
+      # E1: does one application stay one process?
+      #
+      # Substantial continuity already existed -- the application anchors the
+      # recruitment chain, the interview stores its application, the context
+      # bridge reads it. What this guards is that the chain stays JOINED: that
+      # assessment and interview return to the application they came from, that
+      # the four lifecycles have no code path between them, that report
+      # MATERIAL is never counted as a report, that a failed read is never
+      # rendered as a zero and a refusal never as an empty list, and that the
+      # single next action stays operational and never becomes a hiring
+      # opinion. The projection behind it is pure, so the presentation mappings
+      # are asserted exhaustively rather than sampled.
+      - name: Employer process continuity check (E1)
+        run: bun run employer-process-continuity:check
+
       # The real model adapter, proved against a fake transport with no
       # credential and no network. Transport failures retry a bounded number of
       # times; a returned-but-unusable answer is NEVER retried, because

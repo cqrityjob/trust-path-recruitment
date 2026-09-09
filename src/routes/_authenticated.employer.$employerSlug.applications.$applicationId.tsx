@@ -78,8 +78,19 @@ import {
 } from "@/lib/job-intelligence/application-status";
 import {
   getApplicationCandidate,
+  getEmployerReviewBoard,
+  getMyReviewCapability,
+  listApplicationAssessments,
   type ApplicationCandidate,
 } from "@/lib/security-competency/academy-employer.functions";
+import { ProcessContinuityStrip } from "@/components/employer/ProcessContinuityStrip";
+import {
+  projectAssessmentTrack,
+  projectInterviewTrack,
+  projectProcess,
+  projectReportTrack,
+  type TrackRead,
+} from "@/lib/employer-continuity/process-projection";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/applications/$applicationId",
@@ -168,6 +179,48 @@ function Candidate360({
     queryFn: () => interviewCasesFn({ data: { employerId, applicationId } }),
   });
   const interviewCases = interviewCasesQuery.data?.cases ?? [];
+
+  // ── THE PROCESS SPINE ───────────────────────────────────────────────
+  //
+  // Three reads, and not one of them new: every query below shares its cache
+  // key with the panel or the section further down this page that already
+  // made it, so the strip costs zero additional fetches and cannot disagree
+  // with the sections it summarises.
+  //
+  // What the strip adds is the ANSWER a recruiter opens this page for -- where
+  // are the four processes, and what is the one thing to do -- computed by a
+  // pure projection that writes nothing, stores nothing and derives no track
+  // from another.
+  const assessmentsFn = useServerFn(listApplicationAssessments);
+  const boardFn = useServerFn(getEmployerReviewBoard);
+  const capabilityFn = useServerFn(getMyReviewCapability);
+
+  const assessmentsQuery = useQuery({
+    queryKey: ["employer", employerId, "application", applicationId, "assessments"],
+    queryFn: () => assessmentsFn({ data: { applicationId } }),
+  });
+  const reviewBoardQuery = useQuery({
+    queryKey: ["academy", "review-board", employerId],
+    queryFn: () => boardFn({ data: { employerId } }),
+  });
+  const reviewCapabilityQuery = useQuery({
+    queryKey: ["academy", "my-review-capability", employerId],
+    queryFn: () => capabilityFn({ data: { employerId } }),
+  });
+
+  // How a read WENT, kept apart from what it found. `refused` is not inferred:
+  // there is no client-side way to tell a policy refusal from any other
+  // failure here, and guessing would be the same lie in the other direction.
+  // Both are reported as "could not be read", which is what we actually know.
+  const readOf = (q: { isLoading: boolean; isError: boolean }): TrackRead =>
+    q.isLoading ? "loading" : q.isError ? "failed" : "ready";
+
+  const assessmentTrack = projectAssessmentTrack(
+    readOf(assessmentsQuery),
+    assessmentsQuery.data ?? [],
+  );
+  const interviewTrack = projectInterviewTrack(readOf(interviewCasesQuery), interviewCases);
+  const reportTrack = projectReportTrack(readOf(interviewCasesQuery), interviewCases);
 
   // ── WHERE THE HIRED PERSON NOW LIVES ──────────────────────────────────
   //
@@ -263,6 +316,40 @@ function Candidate360({
 
   const c: ApplicationCandidate = query.data;
   const status = asApplicationStatus(c.applicationStatus);
+
+  // ── THE PROJECTION ──────────────────────────────────────────────────
+  //
+  // Every capability is read from the contract that governs ITS OWN action,
+  // never from one role label standing in for four different rules:
+  //
+  //   assign an assessment    scp_assign_from_application wants owner/admin
+  //   review responses        a reviewer seat AND no conflict, per attempt,
+  //                           from the same board the review workspace uses
+  //   share a scored brief    scp_employer_assessment_pipeline computes
+  //                           can_release as scored AND not yet released AND
+  //                           owner/admin -- so for a brief_ready attempt this
+  //                           is exactly the owner/admin half
+  //   plan an interview       scp_iv_create_case accepts any active member
+  //
+  // None of these is enforcement; each destination and each write re-decides.
+  // What they buy is a page that does not offer work the database will refuse.
+  const leadBasis = assessmentTrack.leadAttemptId
+    ? ((reviewBoardQuery.data ?? []).find((b) => b.attemptId === assessmentTrack.leadAttemptId)
+        ?.basis ?? null)
+    : null;
+
+  const projection = projectProcess({
+    application: { read: "ready", status: c.applicationStatus },
+    assessment: assessmentTrack,
+    interview: interviewTrack,
+    report: reportTrack,
+    capabilities: {
+      canAssignAssessment: canAssign,
+      canReviewAssessment: leadBasis === "authorised" || leadBasis === "break_glass",
+      canShareAssessmentBrief: canAssign,
+      canPlanInterview: true,
+    },
+  });
   const nextStatuses = status ? (EMPLOYER_NEXT_STATUSES[status] ?? []) : [];
   const jobTitle = pickTitle(c.jobTitleSv, c.jobTitleEn, lang) ?? t("employer.candidate.noJob");
   const name = c.displayName ?? t("employer.applications.anonymousCandidate");
@@ -318,6 +405,23 @@ function Candidate360({
           )}
         </div>
       </header>
+
+      {/* ── The process, before anything long ────────────────────────
+          Candidate, role, application status and the one next step are all
+          above the fold at 1440px and on a 375px phone. The method, the CV,
+          the Passport boundary and the governance notes are all still on this
+          page, below, where a reader who wants them will look. */}
+      <ProcessContinuityStrip
+        projection={projection}
+        employerSlug={employerSlug}
+        applicationId={applicationId}
+        onRetry={() => {
+          // Re-runs only the reads that failed, and stays on this route: a
+          // retry must never cost the recruiter their place.
+          if (assessmentsQuery.isError) void assessmentsQuery.refetch();
+          if (interviewCasesQuery.isError) void interviewCasesQuery.refetch();
+        }}
+      />
 
       {actionError && (
         <div
@@ -530,6 +634,26 @@ function Candidate360({
           <p role="status" className="mt-4 text-sm text-muted-foreground">
             {t("employer.candidate.structuredInterview.loading")}
           </p>
+        ) : interviewCasesQuery.isError ? (
+          /* A failed read is reported as a failed read.
+           *
+           *  This branch did not exist: the list came from `data?.cases ?? []`,
+           *  so an error fell into the empty state below and told the recruiter
+           *  that no interview had been planned -- under a button offering to
+           *  plan one. Starting a second interview for a candidate who already
+           *  has one is a real harm, and it was one keystroke away. */
+          <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-6">
+            <p role="alert" className="text-sm text-foreground">
+              {t("employer.candidate.structuredInterview.unavailable")}
+            </p>
+            <button
+              type="button"
+              onClick={() => void interviewCasesQuery.refetch()}
+              className="mt-3 inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("continuity.next.retry")}
+            </button>
+          </div>
         ) : interviewCases.length === 0 ? (
           <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-6">
             <p className="text-sm text-muted-foreground">
