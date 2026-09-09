@@ -881,15 +881,25 @@ group("T13 · no empty container; the earlier-reports collection");
 group("T14 · the page order, and the Passport early");
 {
   const route = code(read("src/routes/_authenticated.my-career.index.tsx"));
+  // ── #211: FIVE THINGS, NOT NINE ─────────────────────────────────────
+  //
+  // This list used to name nine mounted sections, which is exactly what
+  // #211 corrected: six of them were full product pages restated on an
+  // overview, and the page was 2838px tall at 1440 as a result. The order
+  // that mattered is the one still asserted here — who you are, the one
+  // next step, then the evidence — followed by the four status modules
+  // and the activity log, which is now folded away.
+  //
+  // The retired sections are NOT deleted from the product; each is on the
+  // page that owns it, and each keeps its own component and its own
+  // rendering guarantees, asserted elsewhere in this file and in
+  // my-career-experience-check.
   const order = [
     "<CareerPageHeader",
     "<NextBestAction",
     "<PassportSummary",
-    "<CareerDirectionSection",
-    "<JobRecommendations",
-    "<EmployerProcesses",
-    "<DevelopmentSection",
-    "<CareerTools",
+    "<HubStatusGrid",
+    "<LinkEarlierResult",
     "<RecentActivity",
   ];
   const positions = order.map((tag) => route.indexOf(tag));
@@ -898,6 +908,17 @@ group("T14 · the page order, and the Passport early");
     positions.every((p, i) => p >= 0 && (i === 0 || p > positions[i - 1]!)),
     positions.join(","),
   );
+  // The six that left must not creep back onto the overview: a hub that
+  // regrows one full product section regrows all of them.
+  for (const tag of [
+    "<CareerDirectionSection",
+    "<JobRecommendations",
+    "<EmployerProcesses",
+    "<DevelopmentSection",
+    "<CareerTools",
+  ]) {
+    ck(`${tag} is on its own page, not on the overview`, !route.includes(tag));
+  }
   ck("no CSS reordering", !/\border-(first|last|\d)\b|\blg:order-/.test(route));
   ck(
     "the canonical academy reads are used: claim, then list",

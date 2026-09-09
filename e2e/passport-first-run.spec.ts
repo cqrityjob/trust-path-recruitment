@@ -631,6 +631,21 @@ async function mountSignedOut(
     db.calls[name] = (db.calls[name] ?? 0) + 1;
     if (name === "getMyPassport") return ok(route, snapshot());
     if (name === "listMyVerificationRequests") return ok(route, { requests: [], decisions: [] });
+    // ── THE HEADER'S OWN THREE READS ────────────────────────────────
+    //
+    // Scenarios 24, 25 and 26 do not stop at the auth form: they SIGN IN
+    // and land on /passport, which mounts the site header, which asks
+    // these three the moment it has a session. The signed-in mount below
+    // has always answered them; this one did not, so the two scenarios
+    // that complete a sign-in have been failing on the unmatched list
+    // since the candidate app navigation shipped.
+    //
+    // Zeroes and an empty list: a brand-new account has no assigned work,
+    // no review queue and no organisation, which is exactly the state
+    // these scenarios are about.
+    if (name === "countMyAcademyWork") return ok(route, { total: 0, actionable: 0 });
+    if (name === "countMyReviewQueue") return ok(route, 0);
+    if (name === "listMyEmployerWorkspaces") return ok(route, []);
     if (name === "getRegulatedCredentialAvailability")
       return ok(route, {
         state: "open",

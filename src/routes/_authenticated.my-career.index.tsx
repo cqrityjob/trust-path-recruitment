@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import {
   getActiveCareerReport,
@@ -20,11 +19,7 @@ import { useT } from "@/i18n/context";
 import { CareerPageHeader } from "@/components/professional-identity/CareerPageHeader";
 import { NextBestAction } from "@/components/professional-identity/NextBestAction";
 import { PassportSummary } from "@/components/professional-identity/PassportSummary";
-import { CareerDirectionSection } from "@/components/professional-identity/CareerDirectionSection";
-import { JobRecommendations } from "@/components/professional-identity/JobRecommendations";
-import { EmployerProcesses } from "@/components/professional-identity/EmployerProcesses";
-import { DevelopmentSection } from "@/components/professional-identity/DevelopmentSection";
-import { CareerTools } from "@/components/professional-identity/CareerTools";
+import { HubStatusGrid } from "@/components/professional-identity/HubStatusGrid";
 import { RecentActivity } from "@/components/professional-identity/RecentActivity";
 import { LinkEarlierResult } from "@/components/professional-identity/LinkEarlierResult";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
@@ -41,6 +36,7 @@ import {
 import { useNextActionAnalytics } from "@/lib/professional-identity/next-action-analytics";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
 import { listMyCvs } from "@/lib/professional-identity/cv/cv-store.functions";
+import { listMyShares } from "@/lib/security-passport/selected-sharing.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyLinkableAssignments } from "@/lib/job-intelligence/assessment-assignments.functions";
 import { listMyApplications } from "@/lib/job-intelligence/applications.functions";
@@ -54,19 +50,36 @@ import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import type { CareerProfileForJobsV1 } from "@/lib/career-intelligence-engine/profile-for-jobs";
 import { L, type Copy } from "@/components/professional-identity/copy";
-import { CAREER } from "@/components/professional-identity/home-copy";
+import { ACTIVITY, CAREER } from "@/components/professional-identity/home-copy";
 
 /**
- * /my-career — the personal career home.
+ * /my-career — the hub's OVERVIEW.
  *
  * ONE PERSON → ONE PROFESSIONAL IDENTITY → ONE MOST IMPORTANT NEXT STEP.
  *
  * Three questions, answered in this order, above the fold: who am I in the
  * security industry (CareerPageHeader), what is my one most useful step
  * (NextBestAction), and what has actually been established about me
- * (PassportSummary). The Passport is the durable evidence layer; tests,
- * results, training and applications are processes around it, laid out
- * further down as rows.
+ * (PassportSummary). That part is #190's and is unchanged.
+ *
+ * ── WHAT #211 TOOK OFF THIS PAGE ───────────────────────────────────────
+ *
+ * Six full product sections. The career picture, three open roles, an
+ * applications block, a tests block, a training block and a four-row tools
+ * list stood below the fold, in full, one after another — 2838px at 1440,
+ * with the CV buried 1425px down inside "Karriärverktyg" and sharing
+ * nowhere on the page in either language.
+ *
+ * None of it was wrong; all of it was in the wrong place. Every one of
+ * those sections has a page that owns it, and the shell above this route
+ * now names all six. What is left here is the identity, the one next step,
+ * the Passport's figures and FOUR STATUS LINES — one per remaining area,
+ * each with one way in.
+ *
+ * The reads did not shrink with the page, and must not: the ladder that
+ * decides the next step reasons about tests, training, interviews and
+ * applications, so all of those are still read here and still fed into the
+ * one view model. What changed is what is DRAWN.
  *
  * ── ONE VIEW MODEL, EVERY SOURCE ON ITS OWN ────────────────────────────
  *
@@ -145,6 +158,25 @@ function MyCareerPage() {
   const cvsQ = useQuery({
     queryKey: ["cv", "list"],
     queryFn: () => loadCvs(),
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  // ── ACTIVE SHARE LINKS — the same read the share screen uses ────────
+  //
+  // `listMyShares` is the share screen's own read, so the hub's figure and
+  // the list at /passport/share are derived from one query and one
+  // server-side `state` decision rather than from two opinions about what
+  // "active" means. The screen loads it into its own state rather than
+  // through react-query, so nothing is shared through the cache and this
+  // key is the hub's alone.
+  //
+  // One retry, like the CV read: the module gates nothing, but "could not
+  // be read" is a worse answer than a second attempt would have been.
+  const loadShares = useServerFn(listMyShares);
+  const sharesQ = useQuery({
+    queryKey: ["passport", "my-shares"],
+    queryFn: () => loadShares(),
     staleTime: 60_000,
     retry: 1,
   });
@@ -348,6 +380,8 @@ function MyCareerPage() {
         discoveryReports: sourceOf(discoveryReportsQ.data?.reports, discoveryReportsQ.isError),
         preferredName,
         savedCvCount: cvsQ.data?.length,
+        savedCvs: sourceOf(cvsQ.data, cvsQ.isError),
+        shares: sourceOf(sharesQ.data, sharesQ.isError),
         careerDiscoveryOpen: assessmentOpen,
         now: new Date(),
       }),
@@ -378,6 +412,9 @@ function MyCareerPage() {
       discoveryReportsQ.isError,
       preferredName,
       cvsQ.data,
+      cvsQ.isError,
+      sharesQ.data,
+      sharesQ.isError,
       assessmentOpen,
     ],
   );
@@ -394,94 +431,112 @@ function MyCareerPage() {
   }, [stateKey, analytics]);
 
   const retryIdentity = () => void identityQ.refetch();
-  const analysisHref =
-    model.career.state === "ready" || model.career.state === "legacy"
-      ? model.career.reportHref
-      : null;
 
   return (
-    <SiteLayout>
-      <Section className="py-8 md:py-10" containerClassName="max-w-[1240px]">
-        {/* 1 · Who am I */}
-        <CareerPageHeader profile={model.profile} onRetry={retryIdentity} />
+    <Section className="py-8 md:py-10" containerClassName="max-w-[1240px]">
+      {/* 1 · Who am I */}
+      <CareerPageHeader profile={model.profile} onRetry={retryIdentity} />
 
-        {/* 2 · The one next step, 3 · the Passport — two columns on desktop,
-            one column at 375 in source order. */}
-        <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <NextBestAction
-              next={model.nextAction}
-              onRetry={retryIdentity}
-              onPrimaryClick={(key, destination) => analytics.click(key as never, destination)}
-            />
-          </div>
-          <div className="lg:col-span-5">
-            <PassportSummary
-              passport={model.passport}
-              onRetry={() => {
-                void identityQ.refetch();
-                void verificationsQ.refetch();
-              }}
-            />
-          </div>
+      {/* 2 · The one next step, 3 · the Passport — two columns on desktop,
+          one column at 375 in source order. Unchanged from #190: this is
+          the lifecycle-aware recommendation and the trust figures it is
+          reasoning about, and neither was the problem. */}
+      <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <NextBestAction
+            // h-full on the SECTION. Both cards' <article> already had it,
+            // so the article was stretching to a wrapper that was not
+            // stretching itself — which is why the pair has been visibly
+            // ragged since #190 despite items-stretch on the row.
+            className="h-full"
+            next={model.nextAction}
+            onRetry={retryIdentity}
+            onPrimaryClick={(key, destination) => analytics.click(key as never, destination)}
+          />
         </div>
+        <div className="lg:col-span-5">
+          <PassportSummary
+            className="h-full"
+            passport={model.passport}
+            onRetry={() => {
+              void identityQ.refetch();
+              void verificationsQ.refetch();
+            }}
+          />
+        </div>
+      </div>
 
-        {/* 4 · Where this career could go */}
-        <CareerDirectionSection
-          career={model.career}
-          closed={assessmentClosed}
-          onRetry={() => {
-            void activeQ.refetch();
-            void storedReportQ.refetch();
-          }}
-          className="mt-10"
-        >
-          {model.earlierReports.state === "ready" && model.earlierReports.count > 0 && (
-            <details className="mt-4 border-t border-border pt-2" data-earlier-reports>
-              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                {say(CAREER.earlier)} ({model.earlierReports.count})
-              </summary>
-              <div className="mt-2">
-                <ReportHistoryList
-                  legacyRuns={model.earlierReports.legacyRuns as never}
-                  discoveryReports={model.earlierReports.discoveryReports}
-                />
-              </div>
-            </details>
-          )}
-        </CareerDirectionSection>
+      {/* 4 · The other four areas, one fact each.
+          Every one of these was a full product section here until #211.
+          The DETAIL moved to the page that owns it; what is left is the
+          state and the way in. */}
+      <HubStatusGrid
+        cv={model.cv}
+        career={model.career}
+        careerClosed={assessmentClosed}
+        // Offered ONLY when the analysis named a family AND that family
+        // has open roles right now: `filtered` is the model's word for
+        // both. A link that lands on "no results" is not a dead route, but
+        // it is a dead promise, and the hub makes one promise per module.
+        careerJobsFamilyId={model.jobs.state === "filtered" ? (familyId ?? null) : null}
+        applications={model.applications}
+        sharing={model.sharing}
+        onRetryCv={() => void cvsQ.refetch()}
+        onRetryCareer={() => {
+          void activeQ.refetch();
+          void storedReportQ.refetch();
+        }}
+        onRetryApplications={() => void myApplicationsQ.refetch()}
+        onRetrySharing={() => void sharesQ.refetch()}
+        className="mt-8"
+      />
 
-        {/* 5 · Open roles */}
-        <JobRecommendations
-          jobs={model.jobs}
-          analysisHref={analysisHref}
-          onRetry={() => void jobsQ.refetch()}
-          className="mt-10"
-        />
+      {/* 5 · A result taken before this account existed. Renders nothing
+          when there is nothing to link, which is almost always — it is an
+          offer, not a section. */}
+      <LinkEarlierResult rows={linkableQ.data ?? []} onLinked={onLinked} />
 
-        {/* 6 · Applications, tests and results */}
-        <EmployerProcesses
-          applications={model.applications}
-          work={model.employerWork}
-          onRetryApplications={() => void myApplicationsQ.refetch()}
-          onRetryWork={() => {
-            void academyWorkQ.refetch();
-            void historyQ.refetch();
-          }}
-          className="mt-10"
-        >
-          <LinkEarlierResult rows={linkableQ.data ?? []} onLinked={onLinked} />
-        </EmployerProcesses>
+      {/* 6 and 7 · The two things that are neither a status nor a step.
+          Folded away in one quiet block at the foot of the page: each
+          costs a row until somebody asks for it, and neither is what
+          anybody opened their career home to read. */}
+      <div className="mt-8 space-y-3">
+        {/* 6 · Every earlier analysis — v3 reports AND legacy v2.1 runs, in
+          one chronological list.
+          It stays HERE rather than moving to /security-career-assessment/
+          history, which is the destination the module links to for a
+          report: that page lists v3 reports only, so a candidate whose
+          earlier result is a v2.1 run would lose it entirely. Folded away,
+          conditional on there actually being one, and never opening onto
+          an empty list. */}
+        {model.earlierReports.state === "ready" && model.earlierReports.count > 0 && (
+          <details className="border-t border-border pt-3" data-earlier-reports>
+            <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {say(CAREER.earlier)} ({model.earlierReports.count})
+            </summary>
+            <div className="mt-2">
+              <ReportHistoryList
+                legacyRuns={model.earlierReports.legacyRuns as never}
+                discoveryReports={model.earlierReports.discoveryReports}
+              />
+            </div>
+          </details>
+        )}
 
-        {/* 7 · Training and development — only when there is any */}
-        <DevelopmentSection work={model.employerWork} className="mt-10" />
-
-        {/* 8 · Career tools */}
-        <CareerTools tools={model.tools} className="mt-10" />
-
-        {/* 9 · What happened */}
-        <RecentActivity activity={model.activity} className="mt-10" />
-      </Section>
-    </SiteLayout>
+        {/* 7 · What happened, folded away.
+          Activity is the one thing on the overview that is neither a
+          status nor a next step: nobody opens their career home to read a
+          log. It keeps its place and its reads and costs one row until
+          somebody asks for it. */}
+        {(model.activity.items.length > 0 || model.activity.partial) && (
+          <details className="border-t border-border pt-3" data-hub-activity>
+            <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {say(ACTIVITY.heading)}
+            </summary>
+            <RecentActivity activity={model.activity} className="mt-2 border-t-0 pt-0" />
+          </details>
+        )}
+      </div>
+    </Section>
   );
 }

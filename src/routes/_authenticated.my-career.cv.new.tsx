@@ -54,7 +54,6 @@ import {
   Save,
   ShieldAlert,
 } from "lucide-react";
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { CvDocumentView } from "@/components/professional-identity/CvDocumentView";
@@ -233,7 +232,7 @@ function CvNewPage() {
   const rejectedOnSave = (persist.data?.violations.length ?? 0) > 0;
 
   return (
-    <SiteLayout>
+    <>
       <Container className="py-10 md:py-14">
         <Link
           to="/my-career/cv"
@@ -610,6 +609,6 @@ function CvNewPage() {
           </div>
         )}
       </Container>
-    </SiteLayout>
+    </>
   );
 }

@@ -1579,6 +1579,22 @@ console.log("\n8 · boundaries");
     // listed here anyway, because that is what this assertion is for: the
     // surface grows in a diff somebody approves, never quietly.
     "src/components/jobs/ApplyInternalDialog.tsx",
+    // ── TWO TYPE-ONLY IMPORTERS, ADDED BY #211 ────────────────────────
+    //
+    // Both take `import type { CvSummary }` and nothing else. A type import
+    // is erased at build time, so neither adds a runtime dependency on
+    // cv_documents and neither widens what a release actually needs.
+    //
+    // They are listed rather than filtered out because this assertion's
+    // whole value is that the surface changes in a diff somebody reads. A
+    // rule that quietly excluded type imports would be a rule that has to
+    // be right about every future import, and the failure mode of getting
+    // it wrong is silence.
+    //
+    // The view model builds the hub's CV module from the list; the fixture
+    // module builds synthetic rows of it.
+    "src/lib/professional-identity/home-presentation.ts",
+    "src/lib/professional-identity/fixtures/career-home-fixtures.ts",
   ].sort();
   const actual = [...new Set([...importers, ...namingIt])].sort();
   ck(

@@ -11,6 +11,8 @@
 import type { CandidateInterviewRow } from "@/lib/interview-intelligence/candidate.functions";
 import type { MyApplicationRow } from "@/lib/job-intelligence/applications.functions";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
+import type { ShareRecord } from "@/lib/security-passport/selected-sharing.functions";
+import type { CvSummary } from "../cv/cv-store.functions";
 import type { AcademyWorkItem } from "@/lib/security-competency/academy-training.functions";
 import type { MyAssessmentRow } from "@/lib/security-competency/assessment-lifecycle.functions";
 import type { MyVerificationRequest } from "@/lib/security-passport/verification.functions";
@@ -182,6 +184,35 @@ export function interview(
   };
 }
 
+/** One link share, as `listMyShares` returns it. `state` is the SERVER's
+ *  decision — the fixture states it rather than deriving it from the dates,
+ *  because that is the relationship the real read has. */
+export function share(over: Partial<ShareRecord> & { id: string }): ShareRecord {
+  return {
+    createdAt: "2026-09-01T09:00:00Z",
+    expiresAt: "2026-10-01T09:00:00Z",
+    revokedAt: null,
+    accessCount: 0,
+    state: "active",
+    meritCount: 3,
+    currentMeritCount: 3,
+    ...over,
+  };
+}
+
+/** One saved CV, as `listMyCvs` returns it. */
+export function savedCv(over: Partial<CvSummary> & { cvId: string }): CvSummary {
+  return {
+    title: "Väktare – Nordvakt AB",
+    purpose: "targeted",
+    locale: "sv",
+    origin: "factual",
+    updatedAt: "2026-09-03T11:20:00Z",
+    createdAt: "2026-08-01T09:00:00Z",
+    ...over,
+  };
+}
+
 export function job(over: Partial<PublicJobCard> & { id: string; slug: string }): PublicJobCard {
   return {
     title_sv: "Väktare, Stockholm",
@@ -325,6 +356,7 @@ export const OLDER_LEGACY_RUN: LegacyRunRow = {
 
 export type FixtureId =
   | "new_user"
+  | "first_merit"
   | "eight_unverified"
   | "under_verification"
   | "assessment_deadline"
@@ -339,7 +371,8 @@ export type FixtureId =
   | "history_loading"
   | "legacy_report"
   | "partial_failure"
-  | "identity_failed";
+  | "identity_failed"
+  | "hub_active";
 
 export interface HomeFixture {
   readonly id: FixtureId;
@@ -581,6 +614,42 @@ export const FIXTURES: readonly HomeFixture[] = [
       activeReport: ACTIVE_NONE,
       preferredName: null,
       savedCvCount: 0,
+      careerDiscoveryOpen: true,
+      now: FIXTURE_NOW,
+    },
+  },
+  {
+    // The FIRST-MERIT state the pilot journey passes through: one
+    // credential recorded, nothing reviewed, no analysis, no CV, no share.
+    // Everything after this point in the journey is still empty, and the
+    // hub has to say so four different times without any of them reading
+    // as a failure.
+    id: "first_merit",
+    description:
+      "One merit saved and nothing else: the state a candidate is in the moment after their first save.",
+    requests: REQS_NONE,
+    input: {
+      identity: {
+        state: "ready",
+        identity: identity({
+          ...BASE_PROFESSIONAL,
+          hasPassport: true,
+          // EXACTLY one merit. BASE_PROFESSIONAL carries an employment
+          // period, and a period IS a merit — leaving it in would have made
+          // "one merit saved" a fixture with two, which is the kind of
+          // detail a screenshot quietly teaches somebody wrongly.
+          employment: [],
+          claims: [claim("c1", { title: "Väktarutbildning grundkurs (VU1)" })],
+        }),
+      },
+      verificationAttention: attentionOf(REQS_NONE),
+      ...READY_EMPTY,
+      jobFilter: { state: "none" },
+      activeReport: ACTIVE_NONE,
+      preferredName: "Amina",
+      savedCvCount: 0,
+      savedCvs: { state: "ready", rows: [] },
+      shares: { state: "ready", rows: [] },
       careerDiscoveryOpen: true,
       now: FIXTURE_NOW,
     },
@@ -913,6 +982,65 @@ export const FIXTURES: readonly HomeFixture[] = [
       discoveryReports: { state: "ready", rows: [CURRENT_V3_ROW, EARLIER_V3_ROW] },
       legacyRuns: { state: "ready", rows: [LEGACY_RUN] },
       savedCvCount: 1,
+      savedCvs: { state: "ready", rows: [savedCv({ cvId: "cv-1" })] },
+      careerDiscoveryOpen: true,
+    },
+  },
+  {
+    // Every area of the hub occupied at once, which is the state the
+    // owner's visual review needs and which no other fixture reaches: a
+    // saved CV, a completed analysis, active applications AND a live share
+    // link. The revoked and expired shares are here so the module can be
+    // seen counting only the active one.
+    id: "hub_active",
+    description:
+      "Every hub area occupied: a saved CV, a career analysis, active applications and one live share link beside a revoked and an expired one.",
+    // REQS_NONE, deliberately. REQS_ESTABLISHED names claims v1/v2/d1,
+    // which belong to the 'established' identity and not to this one — the
+    // attention model would then be derived from reviews of merits this
+    // person does not hold. Nobody would see it, and the figures would
+    // still render; a fixture whose halves disagree is exactly how a
+    // screenshot ends up teaching somebody something untrue.
+    requests: REQS_NONE,
+    input: {
+      ...PROFESSIONAL_BASE,
+      verificationAttention: attentionOf(REQS_NONE),
+      applications: {
+        state: "ready",
+        rows: [
+          application({ id: "a1", status: "reviewing", updatedAt: "2026-09-03T09:00:00Z" }),
+          application({
+            id: "a2",
+            status: "interview",
+            jobTitleSv: "Larmoperatör, Malmö",
+            jobTitleEn: "Alarm operator, Malmö",
+            employerName: "Syd Larm",
+            createdAt: "2026-08-20T09:00:00Z",
+            updatedAt: "2026-08-29T09:00:00Z",
+          }),
+        ],
+      },
+      savedCvCount: 2,
+      savedCvs: {
+        state: "ready",
+        rows: [
+          savedCv({ cvId: "cv-1" }),
+          savedCv({
+            cvId: "cv-2",
+            title: "Allmänt CV",
+            purpose: "general",
+            updatedAt: "2026-07-14T09:00:00Z",
+          }),
+        ],
+      },
+      shares: {
+        state: "ready",
+        rows: [
+          share({ id: "sh-1", expiresAt: "2026-10-01T09:00:00Z", accessCount: 2 }),
+          share({ id: "sh-2", state: "revoked", revokedAt: "2026-08-20T09:00:00Z" }),
+          share({ id: "sh-3", state: "expired", expiresAt: "2026-08-01T09:00:00Z" }),
+        ],
+      },
       careerDiscoveryOpen: true,
     },
   },

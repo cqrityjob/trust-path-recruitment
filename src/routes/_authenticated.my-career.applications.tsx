@@ -9,7 +9,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -80,8 +79,12 @@ function MyApplicationsPage() {
   const rows: MyApplicationRow[] = query.data ?? [];
 
   return (
-    <SiteLayout>
-      <Section containerClassName="max-w-3xl">
+    <>
+      {/* py-20 md:py-28 is Section's default and is right for a marketing
+          page. Inside the My Career shell it put a screen of nothing
+          between the section strip and the heading. The Passport shell
+          made the same correction when it became a product shell. */}
+      <Section className="py-10 md:py-14" containerClassName="max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
             {t("candidate.applications.heading")}
@@ -181,6 +184,6 @@ function MyApplicationsPage() {
           )}
         </div>
       </Section>
-    </SiteLayout>
+    </>
   );
 }

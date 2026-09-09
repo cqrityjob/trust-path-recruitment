@@ -583,9 +583,21 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await page.locator("[data-share-cta]").click();
     await expect(page.locator("[data-share-created]")).toBeVisible({ timeout: 20_000 });
 
-    // The link the holder actually sends, on the canonical public origin.
+    // ── A STALE ASSERTION, RED SINCE #207 ──────────────────────────
+    //
+    // This asserted `<origin>/p/<64 hex>`, which is the shape the link had
+    // BEFORE the private share transport landed. #207 moved the durable
+    // bearer token into the URL FRAGMENT behind the Supabase gateway —
+    // `<gateway>/functions/v1/passport-share#<token>` — precisely so the
+    // token never appears in a request line, a server log or a Referer
+    // header. The product was right and this line was a release behind it.
+    //
+    // Both halves are asserted now: the gateway path AND the token in the
+    // fragment. A regression to a path-carried token fails the second
+    // half, which is the half that matters.
     const link = await page.locator("[data-share-link]").inputValue();
-    expect(link).toMatch(/\/p\/[0-9a-f]{64}$/);
+    expect(link).toMatch(/^https:\/\/[^/]+\/functions\/v1\/passport-share#[0-9a-f]{64}$/);
+    expect(link).not.toMatch(/\/p\/[0-9a-f]{64}/);
 
     // The expiry the holder chose, stated — as a localised date, because an
     // ISO string is not what a person reads.

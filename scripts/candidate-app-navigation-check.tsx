@@ -295,10 +295,16 @@ group("3 · current location survives nesting");
     ["/jobs/", "jobs"],
     ["/jobs/$slug", "jobs"],
     ["/jobs/profession/$professionSlug", "jobs"],
-    // Applications are a JOBS concept to the person holding them, even
-    // though the row is owned under the My Career URL. Longest prefix
-    // wins, which is why this does not silently fall back to My Career.
-    ["/_authenticated/my-career/applications", "jobs"],
+    // ── #211: APPLICATIONS MOVED BACK TO MY CAREER ────────────────────
+    //
+    // They were a JOBS concept here, on the reasoning that opportunities
+    // and applications are two halves of one thing. What changed is not
+    // the reasoning but the page: /my-career/applications now renders
+    // inside the My Career hub shell, under a section strip that marks
+    // "Ansökningar" as the current section. With the old mapping the
+    // primary navigation marked "Hitta jobb" at the same time, so the two
+    // navigations on one screen disagreed about where the reader was.
+    ["/_authenticated/my-career/applications", "myCareer"],
   ];
   for (const [routeId, expected] of CASES) {
     ck(
