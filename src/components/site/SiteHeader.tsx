@@ -7,7 +7,6 @@ import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { BrandMark } from "@/components/patterns/BrandMark";
 import { resolveCandidateNav, type CandidateNavKey } from "./candidate-app-nav";
 import { CandidateAppNav } from "./CandidateAppNav";
 import { supabase } from "@/integrations/supabase/client";
@@ -339,7 +338,7 @@ export function SiteHeader() {
         <Container className="flex h-9 items-center justify-between text-[11px] font-medium tracking-wide">
           <span className="inline-flex min-w-0 items-center gap-2">
             <ShieldCheck
-              className="h-3 w-3 shrink-0 text-[#F7F4ED]"
+              className="h-3 w-3 shrink-0 text-[color:var(--gold)]"
               strokeWidth={2}
               aria-hidden="true"
             />
@@ -381,7 +380,8 @@ export function SiteHeader() {
             style={{ fontFamily: "var(--font-display)" }}
             onClick={() => setOpen(false)}
           >
-            <BrandMark />
+            <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
+            <span className="text-base leading-none">{t("brand.name")}</span>
           </Link>
 
           {appMode ? (
