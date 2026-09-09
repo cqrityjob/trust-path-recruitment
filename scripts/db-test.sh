@@ -4415,6 +4415,62 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# Supabase -> Lovable share gateway. This is the schema-only half: the current
+# link flow remains active until this suite is hosted and independently
+# verified, after which the application can switch to the fragment entry.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport share-gateway assertions"
+set +e
+SPGW_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_share_gateway_test.sql 2>&1)"
+SPGW_RC=$?
+set -e
+
+echo "$SPGW_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPGW_PASSED="$(echo "$SPGW_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPGW_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the share-gateway suite exited with code ${SPGW_RC}." >&2
+  echo "$SPGW_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport share gateway"
+else
+  echo "    ok  ${SPGW_PASSED} share-gateway assertions passed"
+  if [ "$SPGW_PASSED" -lt 25 ]; then
+    echo "FAIL: expected at least 25 share-gateway assertions, only ${SPGW_PASSED} ran." >&2
+    suite_failed "Security Passport share gateway (assertion shortfall: floor 25)"
+  fi
+fi
+
+# The schema foundation must be independently reversible without touching an
+# existing disclosure, then safely re-applicable for the remaining suites.
+echo "==> Proving share-gateway rollback and re-apply"
+SPGW_DISCLOSURE_BEFORE="$(psql -Atq -d "$TEST_DB" -c "SELECT count(*) FROM public.sp_disclosures WHERE id='e7100000-0000-4000-8000-000000000001'")"
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261104090000_passport_share_gateway_rollback.sql
+
+SPGW_ROLLBACK_STATE="$(psql -Atq -d "$TEST_DB" -c "SELECT (to_regclass('public.sp_share_handoffs') IS NULL)::int || '|' || (to_regclass('public.sp_share_sessions') IS NULL)::int || '|' || (to_regprocedure('public.sp_share_gateway_issue(text,text)') IS NULL)::int || '|' || (to_regprocedure('public.sp_share_gateway_consume(text,text)') IS NULL)::int || '|' || (to_regprocedure('public.sp_get_disclosure_session(text)') IS NULL)::int")"
+SPGW_DISCLOSURE_AFTER="$(psql -Atq -d "$TEST_DB" -c "SELECT count(*) FROM public.sp_disclosures WHERE id='e7100000-0000-4000-8000-000000000001'")"
+
+if [ "$SPGW_ROLLBACK_STATE" != "1|1|1|1|1" ]; then
+  echo "FAIL: share-gateway rollback left schema objects behind: ${SPGW_ROLLBACK_STATE}" >&2
+  suite_failed "Security Passport share gateway rollback"
+fi
+if [ "$SPGW_DISCLOSURE_BEFORE" != "1" ] || [ "$SPGW_DISCLOSURE_AFTER" != "1" ]; then
+  echo "FAIL: share-gateway rollback changed the existing disclosure." >&2
+  suite_failed "Security Passport share gateway rollback data preservation"
+fi
+
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261104090000_passport_share_gateway.sql
+SPGW_REAPPLY_STATE="$(psql -Atq -d "$TEST_DB" -c "SELECT (to_regclass('public.sp_share_handoffs') IS NOT NULL)::int || '|' || (to_regclass('public.sp_share_sessions') IS NOT NULL)::int || '|' || (to_regprocedure('public.sp_share_gateway_issue(text,text)') IS NOT NULL)::int || '|' || (to_regprocedure('public.sp_share_gateway_consume(text,text)') IS NOT NULL)::int || '|' || (to_regprocedure('public.sp_get_disclosure_session(text)') IS NOT NULL)::int")"
+if [ "$SPGW_REAPPLY_STATE" != "1|1|1|1|1" ]; then
+  echo "FAIL: share-gateway migration did not re-apply completely: ${SPGW_REAPPLY_STATE}" >&2
+  suite_failed "Security Passport share gateway re-apply"
+else
+  echo "    ok  rollback preserved the disclosure and re-apply restored all five objects"
+fi
+
 
 # ---------------------------------------------------------------------------
 # Two callers, one request key.
