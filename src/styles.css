@@ -533,6 +533,265 @@
   }
 }
 
+/* CQrityjob premium public experience. Kept as an additive layer so document
+ * and print styling remain isolated from the website rollout. */
+:root {
+  --cq-navy: #071a36;
+  --cq-navy-hover: #0b2646;
+  --cq-blue: #1479b8;
+  --cq-blue-hover: #106197;
+  --cq-blue-ink: #12699f;
+  --cq-ivory: #f7f4ed;
+  --cq-ice: #f0f7fa;
+  --cq-text: #101828;
+  --cq-text-muted: #475467;
+  --cq-border: #d8e1ea;
+  --cq-on-navy-muted: #c7c8c8;
+  --cq-on-navy-line: #afb3b6;
+  --cq-stack-1: 4px;
+  --cq-stack-2: 8px;
+  --cq-stack-3: 16px;
+  --cq-stack-4: 24px;
+  --cq-stack-5: 40px;
+  --cq-stack-6: 64px;
+  --cq-section-y: 80px;
+  --cq-w-page: 1152px;
+  --cq-w-prose: 65ch;
+  --cq-radius-sm: 6px;
+  --cq-radius-md: 10px;
+  --cq-radius-lg: 16px;
+  --cq-radius-scene: 20px;
+  --cq-shadow-sm: 0 1px 2px rgba(7, 26, 54, 0.05), 0 1px 3px rgba(7, 26, 54, 0.04);
+  --cq-shadow-md: 0 4px 12px -2px rgba(7, 26, 54, 0.06), 0 2px 4px -2px rgba(7, 26, 54, 0.04);
+  --cq-shadow-lg: 0 12px 32px -8px rgba(7, 26, 54, 0.1), 0 4px 8px -4px rgba(7, 26, 54, 0.05);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --cq-section-y: 112px;
+  }
+}
+
+.cq-page {
+  width: min(100%, calc(var(--cq-w-page) + 48px));
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+@media (min-width: 768px) {
+  .cq-page {
+    width: min(100%, calc(var(--cq-w-page) + 64px));
+    padding-inline: 32px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .cq-page {
+    width: min(100%, calc(var(--cq-w-page) + 80px));
+    padding-inline: 40px;
+  }
+}
+
+.cq-section-band {
+  padding-block: var(--cq-section-y);
+}
+.cq-h1 {
+  font-family: "Sora", sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+.cq-h2 {
+  font-family: "Sora", sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+.cq-h3 {
+  font-family: "Sora", sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.cq-lede {
+  font-size: 18px;
+  line-height: 1.55;
+}
+.cq-body {
+  font-size: 16px;
+  line-height: 1.6;
+}
+.cq-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.cq-caption {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (min-width: 768px) {
+  .cq-h1 {
+    font-size: 56px;
+  }
+  .cq-h2 {
+    font-size: 40px;
+  }
+  .cq-h3 {
+    font-size: 28px;
+  }
+  .cq-lede {
+    font-size: 20px;
+  }
+  .cq-caption {
+    font-size: 14px;
+  }
+}
+
+.cq-button-primary,
+.cq-button-secondary {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--cq-radius-md);
+  padding-inline: 20px;
+  font-weight: 600;
+  transition:
+    background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cq-button-primary {
+  background: var(--cq-navy);
+  color: #fff;
+}
+.cq-button-primary:hover {
+  background: var(--cq-navy-hover);
+  box-shadow: var(--cq-shadow-md);
+}
+.cq-button-secondary {
+  border: 1px solid var(--cq-border);
+  color: var(--cq-text);
+}
+.cq-button-secondary:hover {
+  border-color: var(--cq-blue);
+  background: var(--cq-ice);
+}
+.cq-button-primary:focus-visible,
+.cq-button-secondary:focus-visible,
+.cq-link:focus-visible {
+  outline: 2px solid var(--cq-blue);
+  outline-offset: 2px;
+}
+.cq-link {
+  color: var(--cq-blue-ink);
+  text-underline-offset: 3px;
+}
+.cq-link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+.cq-product-scene {
+  border: 1px solid var(--cq-border);
+  border-radius: var(--cq-radius-scene);
+  background: rgba(255, 255, 255, 0.86);
+  padding: 20px;
+  box-shadow: var(--cq-shadow-lg);
+}
+.cq-scene-icon {
+  display: inline-flex;
+  height: 36px;
+  width: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--cq-ice);
+  color: var(--cq-blue-ink);
+}
+.cq-scene-icon > svg {
+  height: 18px;
+  width: 18px;
+}
+
+.cq-trust-path {
+  display: grid;
+  gap: 28px;
+}
+.cq-trust-path__stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 16px;
+}
+.cq-trust-path__stage:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: -28px;
+  width: 2px;
+  background: var(--cq-blue);
+}
+.cq-trust-path__node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 32px;
+  width: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--cq-navy);
+  color: var(--cq-ivory);
+  font-size: 12px;
+  font-weight: 700;
+}
+.cq-trust-path--dark .cq-trust-path__stage:not(:last-child)::after {
+  background: var(--cq-on-navy-line);
+}
+.cq-trust-path--dark .cq-trust-path__node {
+  background: var(--cq-ivory);
+  color: var(--cq-navy);
+}
+
+@media (min-width: 768px) {
+  .cq-product-scene {
+    padding: 24px;
+  }
+  .cq-trust-path {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .cq-trust-path__stage {
+    grid-template-columns: 1fr;
+    grid-template-rows: 38px auto;
+    gap: 14px;
+  }
+  .cq-trust-path__stage:not(:last-child)::after {
+    left: 32px;
+    right: -20px;
+    top: 15px;
+    bottom: auto;
+    height: 2px;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cq-button-primary,
+  .cq-button-secondary {
+    transition: none;
+  }
+}
+
 @media screen {
   /* Paired with `.screen-fold` in the print block above. Hiding happens here
    * and only here, so a printed page cannot inherit a collapsed section. */
