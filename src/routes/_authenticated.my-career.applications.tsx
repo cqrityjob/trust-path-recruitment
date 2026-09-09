@@ -80,7 +80,11 @@ function MyApplicationsPage() {
 
   return (
     <>
-      <Section containerClassName="max-w-3xl">
+      {/* py-20 md:py-28 is Section's default and is right for a marketing
+          page. Inside the My Career shell it put a screen of nothing
+          between the section strip and the heading. The Passport shell
+          made the same correction when it became a product shell. */}
+      <Section className="py-10 md:py-14" containerClassName="max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
             {t("candidate.applications.heading")}

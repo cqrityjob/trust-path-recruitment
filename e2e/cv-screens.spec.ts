@@ -38,7 +38,9 @@ import {
 test.beforeEach(resetStubTracking);
 test.afterEach(assertNoUnstubbedServerFns);
 
-const OUT = "artifacts/cv-screens";
+// Scratch by default. CV_SHOTS points it at a reviewable directory when the
+// screens are being captured as evidence for a pull request.
+const OUT = process.env.CV_SHOTS ?? "artifacts/cv-screens";
 
 const SIZES = [
   { tag: "1440", width: 1440, height: 900 },

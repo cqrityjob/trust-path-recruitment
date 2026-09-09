@@ -634,6 +634,11 @@ export const FIXTURES: readonly HomeFixture[] = [
         identity: identity({
           ...BASE_PROFESSIONAL,
           hasPassport: true,
+          // EXACTLY one merit. BASE_PROFESSIONAL carries an employment
+          // period, and a period IS a merit — leaving it in would have made
+          // "one merit saved" a fixture with two, which is the kind of
+          // detail a screenshot quietly teaches somebody wrongly.
+          employment: [],
           claims: [claim("c1", { title: "Väktarutbildning grundkurs (VU1)" })],
         }),
       },
@@ -990,10 +995,16 @@ export const FIXTURES: readonly HomeFixture[] = [
     id: "hub_active",
     description:
       "Every hub area occupied: a saved CV, a career analysis, active applications and one live share link beside a revoked and an expired one.",
-    requests: REQS_ESTABLISHED,
+    // REQS_NONE, deliberately. REQS_ESTABLISHED names claims v1/v2/d1,
+    // which belong to the 'established' identity and not to this one — the
+    // attention model would then be derived from reviews of merits this
+    // person does not hold. Nobody would see it, and the figures would
+    // still render; a fixture whose halves disagree is exactly how a
+    // screenshot ends up teaching somebody something untrue.
+    requests: REQS_NONE,
     input: {
       ...PROFESSIONAL_BASE,
-      verificationAttention: attentionOf(REQS_ESTABLISHED),
+      verificationAttention: attentionOf(REQS_NONE),
       applications: {
         state: "ready",
         rows: [

@@ -936,6 +936,25 @@ jobs:
       - name: Candidate app navigation and terminology check
         run: bun run candidate-app-navigation:check
 
+      # The My Career hub (#211). The primary navigation above got the
+      # candidate a door into their own workspace; this is the correction
+      # one level in. /my-career was a single page nine sections tall --
+      # 2838px at 1440, the CV 1425px down inside "Karriärverktyg" and
+      # sharing not on the page at all -- so every destination existed and
+      # nothing said so.
+      #
+      # The properties that make the hub work are all invisible to the type
+      # checker: six areas once each in order, current location resolving
+      # by LONGEST match so /passport/share marks Sharing and not the
+      # Passport, four visibly different non-content states per module
+      # (loading, empty, unavailable, ready), one primary action per module
+      # that CHANGES with the state, no box that is secretly a link, and
+      # the Career Discovery tester gate honoured so no module offers a
+      # door the route refuses. Asserted against rendered markup and the
+      # generated route table.
+      - name: My Career hub check
+        run: bun run my-career-hub:check
+
       # The public header's entry points -- one door in, one way to create
       # an account, "Arbetsgivare" as information and never as an action.
       # This guard has existed since the unified-account work and was never

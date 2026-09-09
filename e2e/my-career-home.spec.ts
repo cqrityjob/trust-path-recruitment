@@ -604,6 +604,67 @@ test.describe("/my-career — the real route", () => {
     await expect(page.locator("[data-primary-cta]")).toHaveCount(1);
   });
 
+  // ── THE HUB'S OWN ACCESSIBILITY, IN A BROWSER ──────────────────────
+  //
+  // my-career-hub:check proves aria-current, the weight and the rule from
+  // rendered markup. It cannot prove that a keyboard can REACH the tabs, or
+  // that reaching one draws a visible ring, or that the page has exactly one
+  // <h1> once every query has answered. Those are what this is for.
+  test("hub · the section strip is reachable by keyboard, with a visible ring", async ({
+    page,
+  }) => {
+    await mount(page, "hub_active");
+    await page.locator("[data-hub-status-grid]").waitFor();
+
+    // Exactly one h1, after everything has settled — not one per module and
+    // not zero because the header is still a skeleton.
+    await expect(page.locator("h1")).toHaveCount(1);
+
+    // Tab from the top of the document until the first hub tab has focus.
+    // A strip that a keyboard cannot get to is not navigation.
+    await page.evaluate(() => document.body.focus());
+    let reached = false;
+    for (let i = 0; i < 40 && !reached; i += 1) {
+      await page.keyboard.press("Tab");
+      reached = await page.evaluate(
+        () => document.activeElement?.getAttribute("data-hub-key") === "overview",
+      );
+    }
+    expect(reached, "the first hub tab was not reachable within 40 tab stops").toBe(true);
+
+    // Focus must be VISIBLE. The class is the contract the design system
+    // renders; an element focused with no focus style is a keyboard user
+    // navigating blind.
+    const focusClass = await page.evaluate(() => document.activeElement?.className ?? "");
+    expect(focusClass).toMatch(/focus-visible:outline/);
+
+    // And the rest of the strip follows, in order, on plain Tab.
+    for (const key of ["passport", "cv", "discovery", "applications", "sharing"]) {
+      await page.keyboard.press("Tab");
+      await expect
+        .poll(() => page.evaluate(() => document.activeElement?.getAttribute("data-hub-key")))
+        .toBe(key);
+    }
+  });
+
+  // ── EVERY MODULE'S ACTION IS A REAL LINK ───────────────────────────
+  //
+  // "No dead button, no dead card." A control that looks actionable and
+  // navigates nowhere is the failure; asserted by CLICKING, because an href
+  // that resolves in the route table and 404s in the router passes a static
+  // check.
+  test("hub · every module action navigates somewhere real", async ({ page }) => {
+    await mount(page, "new_user", { overrides: { listMyShares: ok([]), listMyCvs: ok([]) } });
+    await page.locator("[data-hub-status-grid]").waitFor();
+    const hrefs = await page
+      .locator("[data-hub-go]")
+      .evaluateAll((els) => els.map((e) => e.getAttribute("href")));
+    expect(hrefs).toHaveLength(4);
+    expect(hrefs.every((h) => typeof h === "string" && h.startsWith("/"))).toBe(true);
+    // No two modules offer the same destination: four modules, four places.
+    expect(new Set(hrefs).size).toBe(4);
+  });
+
   for (const f of FIXTURES) {
     test(`fixture ${f.id}: mounts without a page error, exactly one primary CTA, no permanent skeleton`, async ({
       page,
