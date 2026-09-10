@@ -261,7 +261,7 @@ const MORE: readonly Mutation[] = [
     defect:
       "a member who may not finalise is shown no marker at all rather than being told it is somebody else's act",
     file: SEQ,
-    find: '    if (step === "finalise" && !p.canFinalise)\n      return { step, state: "notPermitted" as const };',
+    find: '    if (step === "finalise" && !p.canFinalise) return { step, state: "notPermitted" as const };',
     replace: "    // removed",
     guard: E4,
     expect: "1.9 a member who may not finalise is TOLD so",
