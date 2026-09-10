@@ -2042,13 +2042,17 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     "16.13d and a manifest that does not describe the artifact publishes nothing",
   );
   const verify = read("scripts/e4-evidence-verify.ts");
+  // KEYED ON THE CODE, NOT ON THE MESSAGE. Its own control showed why: a
+  // mutation that turned a check into `if (false)` left the refusal sentence
+  // sitting in the file, and an assertion looking for that sentence went on
+  // passing with the check disabled.
   for (const [needle, what] of [
-    ["does not match its recorded digest", "every recorded digest is recomputed from the bytes"],
-    ["was never taken", "every capture the walk claims is required by name"],
-    ["too small to be a screenshot", "an empty PNG is not counted as a capture"],
-    ["no trace was retained", "a trace must exist even on a green run"],
-    ["but this job ran on", "the head recorded is the head the job ran on"],
-    ["the walk did not pass", "a failed test refuses the artifact"],
+    ["sha256(buf) !== entry.sha256", "every recorded digest is recomputed from the bytes"],
+    ["if (!captures.has(name))", "every capture the walk claims is required by name"],
+    ["entry.bytes < 5_000", "an empty PNG is not counted as a capture"],
+    ["traces.length === 0", "a trace must exist even on a green run"],
+    ["manifest.head !== expectedHead", "the head recorded is the head the job ran on"],
+    ["if (!spec.ok)", "a failed test refuses the artifact"],
   ] as const) {
     ok(verify.includes(needle), `16.13e the verifier checks that ${what}`);
   }
