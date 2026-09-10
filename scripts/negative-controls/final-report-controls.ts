@@ -625,7 +625,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the inventory stops being printed, so a reviewer who cannot download the artifact has no way to see what was in it or to check a copy against it",
     file: VERIFY,
-    find: 'console.log("\n  EVERY FILE (sha256 · bytes · path)");',
+    find: 'console.log("\\n  EVERY FILE (sha256 · bytes · path)");',
     replace: "  // inventory not printed",
     guard: E4,
     expect: "16.13f and prints the whole inventory to the job log",
