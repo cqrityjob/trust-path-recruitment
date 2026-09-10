@@ -79,7 +79,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "  const read = resolveSourceRead({ referenced: true, error, hasRow: Boolean(data) });",
     replace: '  const read: SourceRead = error ? "absent" : data ? "ok" : "absent";',
     guard: E3,
-    expect: "the advert's reader never writes",
+    expect: "the advert's reader delegates its read outcome",
   },
   {
     id: "E3-ADVERT-MISSING-ROW-AS-ABSENCE",
