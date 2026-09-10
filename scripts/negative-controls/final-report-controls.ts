@@ -714,12 +714,13 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "E4-EVIDENCE-SPEC-WRITES-ANYWHERE",
-    defect: "the evidence spec's database side-effects stop refusing a non-loopback host",
-    file: "e2e/employer-final-report-evidence.spec.ts",
-    find: "  if (!/^(127\\.0\\.0\\.1|localhost)$/.test(PG.host)) {\n    throw new Error(`E4 evidence writes only to the local stack, not ${PG.host}`);\n  }",
-    replace: "  // any host",
+    defect:
+      "the loopback test is applied to a literal instead of the host actually parsed from the URL, so it passes for every host and the refusal never fires",
+    file: EVIDENCE_SPEC,
+    find: "if (!/^(127\\.0\\.0\\.1|localhost)$/.test(url.hostname)) {",
+    replace: 'if (!/^(127\\.0\\.0\\.1|localhost)$/.test("127.0.0.1")) {',
     guard: E4,
-    expect: "13.2 and its database side-effects refuse any host that is not loopback",
+    expect: "13.2 and its database side-effects test the host PARSED FROM THE URL for loopback",
   },
 
   /* ---- The rollback ----------------------------------------------- */

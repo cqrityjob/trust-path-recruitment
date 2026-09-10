@@ -1780,10 +1780,13 @@ console.log(
     /test\.skip\(!LOCAL/.test(spec) && /localhost\|127\\\.0\\\.0\\\.1/.test(spec),
     "13.1 the evidence spec runs only against a local stack, on localhost",
   );
+  // KEYED ON THE TEST, NOT ON THE MESSAGE. Its own control showed why: the
+  // refusal sentence appears in a comment as well as in the code, so a
+  // whole-file grep for it went on passing with the check itself removed.
+  // What matters is that the host actually PARSED FROM THE URL is tested.
   ok(
-    /E4 evidence writes only to the local stack/.test(spec) &&
-      /127\\\.0\\\.0\\\.1\|localhost/.test(spec),
-    "13.2 and its database side-effects refuse any host that is not loopback",
+    spec.includes(String.raw`/^(127\.0\.0\.1|localhost)$/.test(url.hostname)`),
+    "13.2 and its database side-effects test the host PARSED FROM THE URL for loopback",
   );
   for (const [needle, state] of [
     ['data-testid="fr-disagree"', "both assessors and their disagreement"],
@@ -2051,8 +2054,12 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     /CLI SURFACE REFUSED: this CLI documents no --output\/-o flag/.test(wf),
     "16.26b and that `-o env`, which the configuration is derived through, is offered",
   );
+  // KEYED ON THE ASSIGNMENT. Its own control caught this: the comment above
+  // the field names it too, so testing for the word alone passed with the
+  // field deleted.
   ok(
-    /supabaseCliPinned/.test(manifest) && /E4_SUPABASE_CLI_PINNED/.test(wf),
+    /supabaseCliPinned:\s*process\.env\.E4_SUPABASE_CLI_PINNED/.test(manifest) &&
+      /E4_SUPABASE_CLI_PINNED/.test(wf),
     "16.27 the manifest records the pinned version beside the one that actually ran",
   );
 
