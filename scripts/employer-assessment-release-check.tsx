@@ -541,17 +541,42 @@ function pRow(over: Partial<PipelineRow> & { attemptId: string }): PipelineRow {
   // THE PRODUCT INVARIANT, ON THE COPY ITSELF. The withheld side must name a
   // total, a ranking and a recommendation explicitly: a recruiter left to infer
   // whether the product produces one will assume it does.
-  const withheld = R.CANDIDATE_DOES_NOT_RECEIVE.map(
-    (k) =>
-      `${sv[`academy.participants.boundary.withheld.${k}`]} ${en[`academy.participants.boundary.withheld.${k}`]}`,
-  ).join(" ");
-  for (const [needle, label] of [
-    ["poäng|score", "a total score"],
-    ["rangordning|ranking", "a ranking"],
-    ["rekommendation|recommendation", "a recommendation"],
-    ["godkänt|pass", "pass/fail"],
+  //
+  // PER LANGUAGE, not over the concatenation of both. Joining the two and
+  // grepping the result means a sentence deleted from the English still
+  // matches on the Swedish, and half the pilot is shown a boundary that has
+  // stopped naming the thing it exists to name.
+  for (const [dict, lang, needles] of [
+    [
+      sv,
+      "sv",
+      [
+        ["poäng", "a total score"],
+        ["rangordning", "a ranking"],
+        ["rekommendation", "a recommendation"],
+        ["godkänt", "pass/fail"],
+      ],
+    ],
+    [
+      en,
+      "en",
+      [
+        ["score", "a total score"],
+        ["ranking", "a ranking"],
+        ["recommendation", "a recommendation"],
+        ["pass", "pass/fail"],
+      ],
+    ],
   ] as const) {
-    ok(new RegExp(needle, "i").test(withheld), `5 · the withheld side names ${label} explicitly`);
+    const withheld = R.CANDIDATE_DOES_NOT_RECEIVE.map(
+      (k) => dict[`academy.participants.boundary.withheld.${k}`],
+    ).join(" ");
+    for (const [needle, label] of needles) {
+      ok(
+        new RegExp(needle, "i").test(withheld),
+        `5 · [${lang}] the withheld side names ${label} explicitly`,
+      );
+    }
   }
 
   // AND THE SHARED SIDE PROMISES NONE OF THEM. This is the assertion that
@@ -641,10 +666,17 @@ function pRow(over: Partial<PipelineRow> & { attemptId: string }): PipelineRow {
 
   // A FAILED READ IS NOT AN ABSENT DOCUMENT. The one place a reader would be
   // most inclined to believe it was.
+  // The JSX OPENER, not the identifier. `previewSrc.includes("preview.isError")`
+  // went on passing when the branch was disabled with `{false && ...}` -- the
+  // failed-read-as-absence defect, wearing the assertion's own words.
   ok(
-    previewSrc.includes("preview.isError") &&
+    previewSrc.includes("{preview.isError && (") &&
       previewSrc.includes("academy.participants.preview.unavailable"),
-    "6 · a failed preview read says it failed",
+    "6 · a failed preview read says it failed, in a branch that can actually run",
+  );
+  ok(
+    !/\{\s*(false|0|null|undefined)\s*&&/.test(previewSrc),
+    "6 · and no branch of the preview is disabled by a falsy literal",
   );
   ok(
     previewSrc.includes("academy.participants.preview.notReleased"),
@@ -714,13 +746,18 @@ function pRow(over: Partial<PipelineRow> & { attemptId: string }): PipelineRow {
   );
 
   // THE COPY PROPERTY, asserted against the file the original lives in.
+  //
+  // Against `statements` and not `sql`: the apply-time DO block QUOTES each of
+  // these fragments in order to forbid its absence, so a grep over the whole
+  // file is satisfied by the proof that the property holds rather than by the
+  // property holding. Reading the statements is what makes the assertion real.
   for (const fragment of [
     "'[]'::jsonb",
     "LEFT JOIN public.scp_report_versions",
     "audience = 'participant'",
     "public.scp_audience_brief(s.brief)",
   ]) {
-    ok(sql.includes(fragment), `7 · the issuer read carries ${fragment}`);
+    ok(statements.includes(fragment), `7 · the issuer read carries ${fragment}`);
     ok(participantSql.includes(fragment), `7 · exactly as scp_participant_report does`);
   }
   // The one thing it must NOT carry: the stored severities.
@@ -819,9 +856,20 @@ function pRow(over: Partial<PipelineRow> & { attemptId: string }): PipelineRow {
   const success = routeSrc.indexOf("onSuccess");
   const error = routeSrc.indexOf("onError");
   ok(success > 0 && error > success, "8 · the mutation has both handlers");
+  // Located inside the alreadyReleased BRANCH rather than anywhere after
+  // `onError`. The looser form went on passing when the branch was replaced
+  // with a bare `return;`, because `refreshAfterRelease` still appeared
+  // further down the file.
+  const branchStart = routeSrc.indexOf('result.kind === "alreadyReleased"');
+  ok(branchStart > 0, "8 · the already-released branch exists");
+  // To the branch's own closing brace. Slicing to the next `setNotice(` cut
+  // it off at its FIRST line, which made the slice empty and the assertion
+  // vacuous in the opposite direction.
+  const branch = routeSrc.slice(branchStart, routeSrc.indexOf("\n      }", branchStart));
+  ok(branch.includes("refreshAfterRelease"), "8 · and the already-released path refreshes too");
   ok(
-    routeSrc.slice(error).includes("refreshAfterRelease"),
-    "8 · and the already-released path refreshes too",
+    branch.includes("confirmed"),
+    "8 · and converges on the same confirmed sentence once the row comes back",
   );
 
   // SINGLE FLIGHT, both halves. The ref is the synchronous half that survives

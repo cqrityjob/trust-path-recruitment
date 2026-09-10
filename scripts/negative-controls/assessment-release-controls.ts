@@ -67,8 +67,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the participants route stops validating the attempt, so the link carries a parameter the destination discards",
     file: ROUTE,
-    find: "  attempt: z.string().uuid().catch(undefined as unknown as string).optional(),",
-    replace: "",
+    find: "  attempt: z\n    .string()\n    .uuid()\n    .catch(undefined as unknown as string)\n    .optional(),",
+    replace: "  attempt: z.string().optional(),",
     guard: E2,
     expect: "the participants route validates the attempt as a uuid",
   },
@@ -116,7 +116,7 @@ const MUTATIONS: readonly Mutation[] = [
     replace:
       '  if (row) return { kind: "confirmed", releasedAt: row.releasedAt ?? "" };\n  return { kind: "writtenNotConfirmed" };',
     guard: E2,
-    expect: "a row that does NOT carry a release time is not a success",
+    expect: "a row that does NOT carry one is not a success",
   },
   {
     id: "E2-FAILED-READBACK-AS-SUCCESS",
@@ -265,7 +265,7 @@ const MUTATIONS: readonly Mutation[] = [
     file: PREVIEW,
     find: "  const previewFn = useServerFn(getParticipantReportAsIssuer);",
     replace:
-      "  // scp_report_snapshots\n  const previewFn = useServerFn(getParticipantReportAsIssuer);",
+      '  const previewFn = async (a: { data: { attemptId: string } }) =>\n    ({ table: "scp_report_snapshots", id: a.data.attemptId }) as never;',
     guard: E2,
     expect: "and never at the snapshot table",
   },
