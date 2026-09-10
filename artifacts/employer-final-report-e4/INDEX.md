@@ -45,8 +45,8 @@ person's name, and every identifier visible in a URL is an opaque
 server-issued uuid.
 
 The screenshots SUPPORT the assertions; they do not replace them. The
-behavioural proof is `scripts/employer-final-report-check.tsx` (366 assertions,
-wired into the CI `verify` job, with 65 negative controls in
+behavioural proof is `scripts/employer-final-report-check.tsx` (534 assertions,
+wired into the CI `verify` job, with 141 negative controls in
 `scripts/negative-controls/final-report-controls.ts`) and the SQL suite
 `supabase/tests/scp_iv_report_basis_integrity_test.sql` (run by
 `scripts/db-test.sh`, which also applies the rollback for real and re-applies
