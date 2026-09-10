@@ -244,6 +244,96 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "15.13 and states that the migration's apply-time proof was not weakened",
   },
 
+  {
+    id: "E4-WALK-REPORTS-TO-THE-TERMINAL-ONLY",
+    defect:
+      "the walk stops writing a machine-readable result, so `manifest.results` -- which the manifest calls the authoritative answer to which states were exercised -- is null on every run and reads as 'nothing ran'",
+    file: EVIDENCE_WF,
+    find: "            --reporter=list,json,html",
+    replace: "            --reporter=list",
+    guard: E4,
+    expect: "16.36 the walk writes a machine-readable result the manifest can actually read",
+  },
+  {
+    id: "E4-SERVER-LOG-NEVER-SCANNED",
+    defect:
+      "the server log is collected after the leak scan instead of before it, so a request log -- exactly where a token ends up by accident -- is published unread",
+    file: EVIDENCE_WF,
+    find: "      - name: Collect the server log",
+    replace: "      - name: Collect the server log afterwards",
+    guard: E4,
+    expect: "16.37 the server log is collected into the artifact BEFORE the leak scan reads it",
+  },
+
+  /* ---- Whose token is it --------------------------------------------- *
+   *
+   * A trace records the network, so it carries the stack's anon key and the
+   * signed-in user's bearer token. Refusing every JWT would make a trace
+   * unpublishable; allowing every JWT would make the scan pointless. The rule
+   * is "minted by THIS run's throwaway stack", and each control below turns
+   * it back into one of the two useless extremes.
+   */
+  {
+    id: "E4-LEAK-SCAN-ALLOWS-ANY-JWT",
+    defect:
+      "the scan allows every JWT rather than only those this run's throwaway stack minted, so a hosted anon or service-role key inside a trace is published",
+    file: SCAN,
+    find: "        if (mintedByLocalStack(m[0], ctx.local)) {",
+    replace: "        if (true) {",
+    guard: E4,
+    expect: "17.12 a token from ANYWHERE ELSE is still refused",
+  },
+  {
+    id: "E4-LEAK-SCAN-TRUSTS-AN-UNKNOWN-STACK",
+    defect:
+      "with no local identity known the scan allows JWTs instead of failing closed, so running it anywhere the stack identity is missing publishes every token",
+    file: SCAN,
+    find: "  if (id.issuer !== null) {",
+    replace: "  if (id.issuer === null) return true;\n  if (id.issuer !== null) {",
+    guard: E4,
+    expect: "17.13 and with no local identity known the scan FAILS CLOSED",
+  },
+  {
+    id: "E4-LEAK-SCAN-STOPS-AT-THE-FIRST-JWT",
+    defect:
+      "the JWT sweep stops at the first match again, so a hosted token hides behind an allowed local one in the same trace and is published",
+    file: SCAN,
+    find: "      while ((m = JWT_PATTERN.exec(text)) !== null && budget-- > 0) {",
+    replace: "      if ((m = JWT_PATTERN.exec(text)) !== null && budget-- > 0) {",
+    guard: E4,
+    expect: "17.14 and a foreign token cannot hide behind an allowed one in the same file",
+  },
+  {
+    id: "E4-LOCAL-ALLOWANCE-APPLIED-SILENTLY",
+    defect:
+      "allowed local tokens stop being counted, so the exception is applied without anybody being told — which is how an exception becomes a hole",
+    file: SCAN,
+    find: "          ctx.allowedLocalTokens += 1;",
+    replace: "          // not counted",
+    guard: E4,
+    expect: "17.15 every allowance is COUNTED",
+  },
+  {
+    id: "E4-STACK-IDENTITY-HARDCODED",
+    defect:
+      "the local issuer is written down as a constant instead of read from the running stack's own anon key, so it goes stale and either blocks every run or trusts the wrong issuer",
+    file: SCAN,
+    find: '    if (payload && typeof payload.iss === "string" && payload.iss.length > 0) issuer = payload.iss;',
+    replace: '    issuer = "supabase-demo";',
+    guard: E4,
+    expect: "17.9 the local stack's issuer is read from its own anon key",
+  },
+  {
+    id: "E4-WALK-TIMEOUT-SMALLER-THAN-ITS-WAITS",
+    defect:
+      "the walk's test budget drops below the waits inside it, so an assertion timeout can never be honoured and a still-rendering page is reported as a missing element -- the exact failure the first real run produced",
+    file: EVIDENCE_SPEC,
+    find: "test.describe.configure({ timeout: 240_000 });",
+    replace: "test.describe.configure({ timeout: 30_000 });",
+    guard: E4,
+    expect: "13.2b and every wait inside it fits",
+  },
+
   /* ---- The stack the evidence is taken against ----------------------- *
    *
    * The first run of the evidence workflow failed replaying the migration

@@ -176,6 +176,10 @@ jobs:
             echo "VITE_JOBS_ENABLED=true"
             echo "VITE_CIG_LIFECYCLE_ENFORCED=true"
           } > .env.local
+          # The key NAMES this CLI version publishes, values withheld. Run 1
+          # was written against a remembered surface; this records the real
+          # one so the next change is made against fact.
+          echo "supabase status -o env publishes: $(cut -d= -f1 /tmp/supabase-status.env | sort | tr '\n' ' ')"
           echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
           echo "db_url=${DB_URL}" >> "$GITHUB_OUTPUT"
 
@@ -323,7 +327,19 @@ jobs:
           # spec parses every field it needs from this and refuses anything
           # that is not loopback.
           E4_DATABASE_URL: ${{ steps.local.outputs.db_url }}
-        run: bunx playwright test e2e/employer-final-report-evidence.spec.ts --project=chromium --workers=1
+          # The repository config reports to the terminal only, which is right
+          # for a developer and wrong for an artifact: `manifest.results` --
+          # the authoritative answer to which states were actually exercised
+          # -- was always null, and playwright-report/ never existed at all.
+          # Set here rather than in playwright.config.ts so no other suite's
+          # behaviour changes.
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
+          PLAYWRIGHT_HTML_REPORT: playwright-report
+          PLAYWRIGHT_HTML_OPEN: never
+        run: |
+          bunx playwright test e2e/employer-final-report-evidence.spec.ts \
+            --project=chromium --workers=1 \
+            --reporter=list,json,html
 
       # ── WHY THE HEAD SHA IS PASSED IN ─────────────────────────────────
       #
@@ -334,6 +350,16 @@ jobs:
       # the artifact belonged to another commit. It did not. The manifest was
       # wrong about which commit it was describing, which is the one thing a
       # manifest may not be wrong about.
+      # Into the artifact rather than only the job log, and BEFORE the scan,
+      # so it is hashed by the manifest and read by the leak scan like every
+      # other evidence file. A server log records requests; it is exactly the
+      # kind of file a secret ends up in by accident.
+      - name: Collect the server log
+        if: always()
+        run: |
+          mkdir -p artifacts/employer-final-report-e4
+          cp /tmp/dev-server.log artifacts/employer-final-report-e4/dev-server.log || true
+
       - name: Build the evidence manifest
         if: always()
         env:
@@ -351,7 +377,29 @@ jobs:
       - name: Scan the evidence for anything that must not leave
         id: leak_scan
         if: always()
-        run: bun run scripts/e4-evidence-scan.ts
+        run: |
+          set -euo pipefail
+          # ── WHY THE STACK'S OWN IDENTITY IS HANDED TO THE SCAN ────────
+          #
+          # A trace records the network, and every request the browser makes
+          # carries the stack's anon key and the signed-in user's access
+          # token. Both are JWTs. "Refuse every JWT" would mean this pipeline
+          # can never publish a trace at all -- and a control that makes the
+          # evidence impossible is a control that gets deleted.
+          #
+          # So the scan is told how to recognise a token THIS run's throwaway
+          # stack minted, and refuses every other JWT. Read straight from the
+          # status file rather than through a step output, so no value passes
+          # through anything that renders it. Nothing here prints them.
+          if [ -f /tmp/supabase-status.env ]; then
+            set -a
+            # shellcheck disable=SC1091
+            . /tmp/supabase-status.env
+            set +a
+            export E4_LOCAL_ANON_KEY="${ANON_KEY:-}"
+            export E4_LOCAL_JWT_SECRET="${JWT_SECRET:-}"
+          fi
+          bun run scripts/e4-evidence-scan.ts
 
       # ── WHY THIS IS NOT `if: always()` ────────────────────────────────
       #
@@ -376,9 +424,12 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+      # Tailed, not cat. The dev server emits thousands of deprecation
+      # warnings, and dumping all of them buries the actual failure and makes
+      # every later diagnosis expensive. The whole log travels in the artifact.
       - name: Server log
         if: failure()
-        run: cat /tmp/dev-server.log || true
+        run: tail -n 80 /tmp/dev-server.log || true
 
       - name: Stop the local stack
         if: always()

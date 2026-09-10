@@ -60,6 +60,20 @@ test.skip(
   "Evidence is captured only against localhost.",
 );
 
+// ── A BUDGET THE WALK CAN ACTUALLY FIT IN ──────────────────────────────
+//
+// Playwright's default test timeout is 30 s, and it caps everything inside
+// the test. The Swedish walk allows 45 s for the sign-in redirect alone and
+// 45 s for the finalisation readback, so those waits could never be honoured:
+// the test deadline fired first and reported "element(s) not found" for a
+// <main> that was simply still rendering. An assertion timeout larger than
+// the test's own budget is not a longer wait, it is a false one.
+//
+// Set here rather than in playwright.config.ts, so no other suite's timing
+// changes. This walk signs in, previews, is refused for a stale preview,
+// previews again, finalises, reloads and reads back a corrected version.
+test.describe.configure({ timeout: 240_000 });
+
 const OUT = "artifacts/employer-final-report-e4";
 const PASSWORD = "LocalJourney!2026";
 const OWNER = "journey@local.test";

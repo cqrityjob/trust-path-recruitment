@@ -80,6 +80,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { crc32, deflateRawSync, gzipSync } from "node:zlib";
+import { createHmac } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { mock } from "bun:test";
@@ -1788,6 +1789,21 @@ console.log(
     spec.includes(String.raw`/^(127\.0\.0\.1|localhost)$/.test(url.hostname)`),
     "13.2 and its database side-effects test the host PARSED FROM THE URL for loopback",
   );
+  // AN ASSERTION TIMEOUT LARGER THAN THE TEST'S OWN BUDGET IS A FALSE ONE.
+  // The walk allowed 45 s for the sign-in redirect inside Playwright's 30 s
+  // default test timeout, so the deadline fired first and reported a missing
+  // <main> for a page that was simply still rendering. Found by running it.
+  const budgetMatch = spec.match(/test\.describe\.configure\(\{ timeout: ([\d_]+) \}\)/);
+  const budget = Number((budgetMatch?.[1] ?? "0").replace(/_/g, ""));
+  ok(budget > 0, `13.2a the evidence walk declares a test budget (${budget || "none"})`);
+  const waits = [...spec.replace(budgetMatch?.[0] ?? "", "").matchAll(/timeout: ([\d_]+)/g)].map(
+    (m) => Number(m[1].replace(/_/g, "")),
+  );
+  const longest = waits.length > 0 ? Math.max(...waits) : 0;
+  ok(
+    budget > longest,
+    `13.2b and every wait inside it fits — the budget is ${budget}ms and the longest wait is ${longest}ms`,
+  );
   for (const [needle, state] of [
     ['data-testid="fr-disagree"', "both assessors and their disagreement"],
     [
@@ -2109,6 +2125,32 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
       /PGPASSWORD: pg\.password/.test(evSpec),
     "16.35 the password comes from the validated URL, never a literal in a file anyone can read",
   );
+
+  // ── THE ARTIFACT MUST CONTAIN WHAT IT CLAIMS ───────────────────────
+  //
+  // The repository's Playwright config reports to the terminal only. The
+  // manifest calls `results` "the authoritative answer to which states were
+  // actually exercised" and was getting null every time, and
+  // playwright-report/ -- which the upload lists and the leak scan reads --
+  // never existed. A manifest field that is structurally always null is worse
+  // than an absent one: it reads as "nothing ran".
+  ok(
+    /--reporter=list,json,html/.test(wf) &&
+      /PLAYWRIGHT_JSON_OUTPUT_NAME: test-results\/results\.json/.test(wf),
+    "16.36 the walk writes a machine-readable result the manifest can actually read",
+  );
+  ok(
+    /PLAYWRIGHT_HTML_REPORT: playwright-report/.test(wf),
+    "16.36b and the HTML report the artifact promises",
+  );
+  // The server log records requests, so it is exactly the kind of file a
+  // secret reaches by accident. It goes into the artifact, and it goes in
+  // before the scan reads it — not only into the job log.
+  const collectAt = wf.indexOf("Collect the server log");
+  ok(
+    collectAt > 0 && collectAt < scanAt,
+    "16.37 the server log is collected into the artifact BEFORE the leak scan reads it",
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -2315,6 +2357,94 @@ console.log("\n17. The leak scan, PROVEN on planted leaks — not asserted by gr
     );
   } finally {
     rmSync(tmp, { recursive: true, force: true });
+  }
+
+  /* ── whose token is it: the allowance, and its limits ──────────────── */
+  //
+  // A trace records the network, so every trace carries the stack's anon key
+  // and the signed-in user's bearer token, both JWTs. Refusing every JWT
+  // would make this pipeline structurally unable to publish a trace, which is
+  // how a safety control ends up deleted. So a JWT is refused UNLESS it can be
+  // shown to have been minted by the throwaway stack the job just created.
+  //
+  // These assertions run that rule rather than reading it: a token from the
+  // local stack is allowed, and a token that merely looks similar is not.
+  {
+    const secret = "e4-synthetic-local-stack-secret";
+    const mint = (payload: Record<string, unknown>, withSecret: string) => {
+      const h = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+      const p = Buffer.from(JSON.stringify(payload)).toString("base64url");
+      const sig = createHmac("sha256", withSecret).update(`${h}.${p}`).digest("base64url");
+      return `${h}.${p}.${sig}`;
+    };
+    const localAnon = mint({ iss: "e4-local-demo", role: "anon" }, secret);
+    const localSession = mint({ iss: "e4-local-demo", role: "authenticated", sub: "u1" }, secret);
+    const hosted = mint({ iss: "https://example.supabase.co/auth/v1", role: "anon" }, "other");
+
+    const identity = S.localStackIdentity({
+      E4_LOCAL_ANON_KEY: localAnon,
+      E4_LOCAL_JWT_SECRET: secret,
+    } as NodeJS.ProcessEnv);
+    ok(
+      identity.issuer === "e4-local-demo",
+      `17.9 the local stack's issuer is read from its own anon key, not written down (${identity.issuer ?? "none"})`,
+    );
+
+    const traceOf = (token: string) =>
+      makeZip([
+        {
+          name: "0-trace.network",
+          data: Buffer.from(`{"headers":[{"name":"apikey","value":"${token}"}]}`),
+        },
+      ]);
+    const findingsFor = (token: string, id: Parameters<typeof S.mintedByLocalStack>[1]) => {
+      const found: import("./e4-evidence-scan").Finding[] = [];
+      S.scanBuffer("test-results/case/trace.zip", traceOf(token), found, 0, {
+        local: id,
+        allowedLocalTokens: 0,
+      });
+      return found.filter((f) => f.what === "a JWT");
+    };
+
+    ok(
+      findingsFor(localAnon, identity).length === 0,
+      "17.10 the stack's own anon key inside a trace is allowed — otherwise no trace could ever be published",
+    );
+    ok(
+      findingsFor(localSession, identity).length === 0,
+      "17.11 and a session token that stack signed, proven by its signature",
+    );
+    ok(
+      findingsFor(hosted, identity).length === 1,
+      "17.12 a token from ANYWHERE ELSE is still refused — the allowance is 'this run's stack', not 'anything JWT-shaped'",
+    );
+    ok(
+      findingsFor(localSession, { issuer: null, secret: null, anonKey: null }).length === 1,
+      "17.13 and with no local identity known the scan FAILS CLOSED, refusing every JWT",
+    );
+    // A foreign token must not be able to hide behind a local one: `exec`
+    // finds one match per pattern, so the JWT sweep has to be global.
+    const mixed = makeZip([
+      {
+        name: "0-trace.network",
+        data: Buffer.from(`{"apikey":"${localAnon}","authorization":"Bearer ${hosted}"}`),
+      },
+    ]);
+    const mixedFound: import("./e4-evidence-scan").Finding[] = [];
+    S.scanBuffer("test-results/case/trace.zip", mixed, mixedFound, 0, {
+      local: identity,
+      allowedLocalTokens: 0,
+    });
+    ok(
+      mixedFound.filter((f) => f.what === "a JWT").length === 1,
+      "17.14 and a foreign token cannot hide behind an allowed one in the same file",
+    );
+    const ctx = { local: identity, allowedLocalTokens: 0 };
+    S.scanBuffer("t.zip", traceOf(localAnon), [], 0, ctx);
+    ok(
+      ctx.allowedLocalTokens === 1,
+      "17.15 every allowance is COUNTED, so it is said out loud rather than applied silently",
+    );
   }
 
   /* ── a clean artifact is not refused ───────────────────────────────── */

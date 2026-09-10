@@ -33,6 +33,7 @@
  */
 
 import { gunzipSync, inflateRawSync, inflateSync } from "node:zlib";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -62,6 +63,95 @@ export const PATTERNS: readonly (readonly [RegExp, string])[] = [
     "a hosted credential name",
   ],
 ];
+
+/* ------------------------------------------------------------------ */
+/* Whose token is it?                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * ── WHY A JWT IS NOT ALWAYS A LEAK ─────────────────────────────────────
+ *
+ * A Playwright trace records the network, and every PostgREST request the
+ * browser makes carries the stack's anon key as a header and the signed-in
+ * user's access token as a bearer. Both are JWTs. So a rule of "refuse every
+ * JWT" means this pipeline can never publish a trace — and a safety control
+ * that makes the evidence impossible is a control that gets deleted.
+ *
+ * The distinction that actually matters is not "is it a JWT" but "is it a
+ * credential to something real". A token minted by the throwaway stack this
+ * job created three minutes ago and destroys on the way out is not: it is
+ * loopback-only, it holds nothing but synthetic fixture rows, and it stops
+ * existing when the job ends.
+ *
+ * So a JWT is REFUSED unless it can be shown to have been minted by THIS
+ * RUN'S stack, and "shown" means one of two things, both derived at run time
+ * from the running stack rather than from a constant written down here:
+ *
+ *   - its HMAC-SHA256 signature verifies against that stack's JWT secret; or
+ *   - it carries the same issuer as that stack's own anon key.
+ *
+ * With neither available the scan FAILS CLOSED and refuses every JWT, which
+ * is what happens on a developer machine that runs the scan by hand.
+ *
+ * A hosted token fails both tests: a hosted project's issuer names the
+ * project, and its signature is made with a secret this job never sees.
+ */
+
+export interface LocalStackIdentity {
+  /** The `iss` claim of the running stack's own anon key. */
+  readonly issuer: string | null;
+  /** That stack's JWT secret, when it publishes one. */
+  readonly secret: string | null;
+  /** The anon key itself, matched exactly. */
+  readonly anonKey: string | null;
+}
+
+function decodeSegment(seg: string): Record<string, unknown> | null {
+  try {
+    const json = Buffer.from(seg.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const value: unknown = JSON.parse(json);
+    return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Read the running stack's identity from the environment the workflow set. */
+export function localStackIdentity(env: NodeJS.ProcessEnv = process.env): LocalStackIdentity {
+  const anonKey = env.E4_LOCAL_ANON_KEY?.trim() || null;
+  const secret = env.E4_LOCAL_JWT_SECRET?.trim() || null;
+  let issuer: string | null = null;
+  if (anonKey) {
+    const parts = anonKey.split(".");
+    const payload = parts.length === 3 ? decodeSegment(parts[1]) : null;
+    if (payload && typeof payload.iss === "string" && payload.iss.length > 0) issuer = payload.iss;
+  }
+  return { issuer, secret, anonKey };
+}
+
+/** True only for a token this run's own throwaway stack minted. */
+export function mintedByLocalStack(token: string, id: LocalStackIdentity): boolean {
+  if (id.anonKey !== null && token === id.anonKey) return true;
+
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+
+  if (id.secret !== null) {
+    const expected = createHmac("sha256", id.secret)
+      .update(`${parts[0]}.${parts[1]}`)
+      .digest("base64url");
+    const a = Buffer.from(expected);
+    const b = Buffer.from(parts[2]);
+    if (a.length === b.length && timingSafeEqual(a, b)) return true;
+  }
+
+  if (id.issuer !== null) {
+    const payload = decodeSegment(parts[1]);
+    if (payload && payload.iss === id.issuer) return true;
+  }
+
+  return false;
+}
 
 /* ------------------------------------------------------------------ */
 /* Reading what is actually in a file                                  */
@@ -173,35 +263,67 @@ function inflatedIfPossible(buf: Buffer): string | null {
 /* The scan                                                            */
 /* ------------------------------------------------------------------ */
 
-function match(where: string, text: string, findings: Finding[]): void {
+/** How many of this run's own local tokens were allowed through. Counted so
+ *  the allowance is VISIBLE in the job log rather than silent — an exception
+ *  nobody is told about is how an exception becomes a hole. */
+export interface ScanContext {
+  readonly local: LocalStackIdentity;
+  allowedLocalTokens: number;
+}
+
+const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g;
+
+function match(where: string, text: string, findings: Finding[], ctx: ScanContext): void {
   for (const [pattern, what] of PATTERNS) {
+    // Every JWT, not just the first: with an allowance for this run's own
+    // tokens, stopping at the first match would let a foreign token hide
+    // behind a local one in the same file.
+    if (what === "a JWT") {
+      JWT_PATTERN.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      let budget = 500;
+      while ((m = JWT_PATTERN.exec(text)) !== null && budget-- > 0) {
+        if (mintedByLocalStack(m[0], ctx.local)) {
+          ctx.allowedLocalTokens += 1;
+          continue;
+        }
+        findings.push({ where, what, excerpt: `${m[0].slice(0, 24)}…` });
+      }
+      continue;
+    }
     const m = pattern.exec(text);
     if (m) findings.push({ where, what, excerpt: `${m[0].slice(0, 24)}…` });
   }
 }
 
 /** One file, inspected as deeply as it goes. `depth` bounds archive nesting. */
-export function scanBuffer(where: string, buf: Buffer, findings: Finding[], depth = 0): void {
+export function scanBuffer(
+  where: string,
+  buf: Buffer,
+  findings: Finding[],
+  depth = 0,
+  ctx: ScanContext = { local: localStackIdentity(), allowedLocalTokens: 0 },
+): void {
   // 1 · the bytes as text. Catches plain text, and anything a binary format
   //     happens to store uncompressed (PNG text chunks, for one).
   const asText = buf.toString("latin1");
-  match(where, asText, findings);
+  match(where, asText, findings, ctx);
 
   // 2 · base64 attachments embedded in it.
   for (const decoded of embeddedBase64(buf.toString("utf8"))) {
-    match(`${where} → embedded base64`, decoded, findings);
+    match(`${where} → embedded base64`, decoded, findings, ctx);
   }
 
   // 3 · gzip.
   const gz = inflatedIfPossible(buf);
-  if (gz !== null) match(`${where} → gzip`, gz, findings);
+  if (gz !== null) match(`${where} → gzip`, gz, findings, ctx);
 
   // 4 · zip entries, inflated. THE case this scanner exists for: a trace.zip
   //     records the network, and a token inside it is invisible in the
   //     compressed bytes.
   if (depth < 2 && buf.length > 4 && buf.readUInt32LE(0) === 0x04034b50) {
     for (const entry of zipEntries(buf)) {
-      scanBuffer(`${where} → ${entry.name}`, entry.content, findings, depth + 1);
+      scanBuffer(`${where} → ${entry.name}`, entry.content, findings, depth + 1, ctx);
     }
   }
 }
@@ -229,23 +351,35 @@ function walk(rel: string, base: string = root): string[] {
 export function scanDirectories(
   dirs: readonly string[],
   base: string = root,
-): { findings: Finding[]; scanned: number } {
+  ctx: ScanContext = { local: localStackIdentity(), allowedLocalTokens: 0 },
+): { findings: Finding[]; scanned: number; allowedLocalTokens: number } {
   const findings: Finding[] = [];
   let scanned = 0;
   for (const dir of dirs) {
     for (const rel of walk(dir, base)) {
-      scanBuffer(rel, readFileSync(path.join(base, rel)), findings);
+      scanBuffer(rel, readFileSync(path.join(base, rel)), findings, 0, ctx);
       scanned += 1;
     }
   }
-  return { findings, scanned };
+  return { findings, scanned, allowedLocalTokens: ctx.allowedLocalTokens };
 }
 
 /* ------------------------------------------------------------------ */
 
 if (import.meta.main) {
-  const { findings, scanned } = scanDirectories(DIRS);
+  const local = localStackIdentity();
+  const { findings, scanned, allowedLocalTokens } = scanDirectories(DIRS, root, {
+    local,
+    allowedLocalTokens: 0,
+  });
   console.log(`e4 evidence scan — ${scanned} file(s) under ${DIRS.join(", ")}`);
+  console.log(
+    `  local stack identity: issuer ${local.issuer ?? "(none)"}, ` +
+      `jwt secret ${local.secret ? "known" : "(none)"}, anon key ${local.anonKey ? "known" : "(none)"}`,
+  );
+  // Said out loud, every run. An exception nobody is told about is how an
+  // exception becomes a hole.
+  console.log(`  ${allowedLocalTokens} token(s) allowed as minted by THIS run's throwaway stack`);
 
   if (findings.length > 0) {
     console.error("\nREFUSED: the evidence carries something that must not be published.\n");
