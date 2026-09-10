@@ -625,7 +625,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the inventory stops being printed, so a reviewer who cannot download the artifact has no way to see what was in it or to check a copy against it",
     file: VERIFY,
-    find: '  console.log("\\n  EVERY FILE (sha256 · bytes · path)");',
+    find: 'console.log("\n  EVERY FILE (sha256 · bytes · path)");',
     replace: "  // inventory not printed",
     guard: E4,
     expect: "16.13f and prints the whole inventory to the job log",
@@ -679,8 +679,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the workflow stops passing the pull request's head sha, so the manifest silently falls back to the merge commit",
     file: EVIDENCE_WF,
-    find: "          E4_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}",
-    replace: "          E4_HEAD_SHA: ${{ github.sha }}",
+    find: "          E4_SUPABASE_CLI_PINNED: ${{ env.SUPABASE_CLI_VERSION }}\n          E4_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}",
+    replace:
+      "          E4_SUPABASE_CLI_PINNED: ${{ env.SUPABASE_CLI_VERSION }}\n          E4_HEAD_SHA: ${{ github.sha }}",
     guard: E4,
     expect: "16.22 and the workflow hands it that head from the event",
   },
