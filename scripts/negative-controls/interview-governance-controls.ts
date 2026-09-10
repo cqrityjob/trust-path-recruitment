@@ -27,6 +27,7 @@ const CONTEXT_FN = "src/lib/interview-intelligence/context.functions.ts";
 const NOTICE = "src/lib/interview-intelligence/candidate-notice.ts";
 const PANEL = "src/components/employer/interview/InterviewContextPanel.tsx";
 const OUTCOME = "src/components/employer/interview/InterviewContextOutcome.tsx";
+const OUTCOME_HELPERS = "src/lib/interview-intelligence/context-outcome.ts";
 const NOTICE_PANEL = "src/components/employer/interview/CandidateNoticePanel.tsx";
 const PREPARE =
   "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.prepare.tsx";
@@ -198,7 +199,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E3-CONTEXT-OF-MANUFACTURES-A-CONTEXT",
     defect:
       "the shared helper defaults an unhappy result to an empty context, so every screen renders a set of claims nobody earned",
-    file: OUTCOME,
+    file: OUTCOME_HELPERS,
     find: '  return result?.kind === "context" ? result.context : null;',
     replace:
       '  return result?.kind === "context"\n    ? result.context\n    : ({ link: "standalone", reads: {} } as unknown as InterviewContext);',
@@ -209,11 +210,67 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E3-USABLE-MEANS-MERELY-PRESENT",
     defect:
       "'usable' becomes 'an object arrived', so an approval is offered against requirements nobody read",
-    file: OUTCOME,
+    file: OUTCOME_HELPERS,
     find: '  return c.link !== "linkedUnreadable";',
     replace: "  return true;",
     guard: E3,
     expect: "although it IS an object",
+  },
+  {
+    // The other direction of the same rule. A helper that answers "no" to
+    // everything is as wrong as one that answers "yes": it withholds the
+    // approval a recruiter is entitled to on a case where nothing failed.
+    id: "E3-STANDALONE-TREATED-AS-UNUSABLE",
+    defect:
+      "a genuine standalone case -- no application, so nothing to read and nothing that failed -- is reported unusable, and the recruiter can never approve a preparation for it",
+    file: OUTCOME_HELPERS,
+    find: '  return c.link !== "linkedUnreadable";',
+    replace: '  return c.link !== "linkedUnreadable" && c.link !== "standalone";',
+    guard: E3,
+    expect: "a standalone case IS usable",
+  },
+  {
+    // Fail-closed on an unknown member: a result the build has never seen
+    // must not become a context.
+    id: "E3-UNKNOWN-RESULT-BECOMES-A-CONTEXT",
+    defect:
+      "contextOf stops asking WHICH member arrived and treats any object carrying a context field as a context, so a member added later is rendered rather than refused",
+    file: OUTCOME_HELPERS,
+    find: '  return result?.kind === "context" ? result.context : null;',
+    replace:
+      "  return (result as { context?: InterviewContext } | null | undefined)?.context ?? null;",
+    guard: E3,
+    // NOT "contextOf returns null for a failure": every unhappy member the
+    // guard used to feed it carries no `context` field at all, so this
+    // mutation returns null for those too and that assertion stays green.
+    // The assertion this defect actually trips is the one that hands it an
+    // unhappy member WITH a context attached.
+    expect: "because the KIND decides",
+  },
+  {
+    // The module boundary itself. Putting the helper back into the component
+    // file is the regression this correction exists to prevent.
+    id: "E3-HELPER-MOVED-BACK-INTO-THE-COMPONENT",
+    defect:
+      "the pure answers are re-exported from the component file again, so it exports both a component and a plain function and Fast Refresh stops reloading it reliably",
+    file: OUTCOME,
+    find: 'import { Nothing, Section } from "./InterviewLayout";',
+    replace:
+      'import { Nothing, Section } from "./InterviewLayout";\nexport { contextIsUsable, contextOf } from "@/lib/interview-intelligence/context-outcome";',
+    guard: E3,
+    expect: "the component file neither defines nor re-exports them",
+  },
+  {
+    // And the rule may not be silenced instead of followed.
+    id: "E3-BOUNDARY-RULE-SILENCED",
+    defect:
+      "the Fast Refresh rule is disabled in the component file rather than followed, so the boundary can rot silently",
+    file: OUTCOME_HELPERS,
+    find: 'import type { InterviewContext, InterviewContextResult } from "./context";',
+    replace:
+      '/* eslint-disable react-refresh/only-export-components */\nimport type { InterviewContext, InterviewContextResult } from "./context";',
+    guard: E3,
+    expect: "neither file silences the rule",
   },
   {
     id: "E3-APPROVAL-OFFERED-WITHOUT-CONTEXT",

@@ -79,8 +79,12 @@ const { InterviewContextPanel } =
   await import("../src/components/employer/interview/InterviewContextPanel");
 const { CandidateNoticePanel } =
   await import("../src/components/employer/interview/CandidateNoticePanel");
-const { ContextUnavailable, contextOf, contextIsUsable } =
+const { ContextUnavailable } =
   await import("../src/components/employer/interview/InterviewContextOutcome");
+// The two pure answers live beside the projection they are about, not in the
+// component file: see src/lib/interview-intelligence/context-outcome.ts.
+const { contextOf, contextIsUsable } =
+  await import("../src/lib/interview-intelligence/context-outcome");
 
 const root = process.cwd();
 let failures = 0;
@@ -103,6 +107,7 @@ const CONTEXT_FN = "src/lib/interview-intelligence/context.functions.ts";
 const NOTICE = "src/lib/interview-intelligence/candidate-notice.ts";
 const PANEL = "src/components/employer/interview/InterviewContextPanel.tsx";
 const OUTCOME = "src/components/employer/interview/InterviewContextOutcome.tsx";
+const OUTCOME_HELPERS = "src/lib/interview-intelligence/context-outcome.ts";
 const NOTICE_PANEL = "src/components/employer/interview/CandidateNoticePanel.tsx";
 const CASE_INDEX =
   "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
@@ -708,9 +713,68 @@ const baseInput: ContextInput = {
     contextOf({ kind: "caseNotFoundOrRefused" }) === null,
     "5 · and for a case that cannot be reached",
   );
+
+  // WHICH member arrived, not merely whether something context-shaped is
+  // attached to it.
+  //
+  // Found by its own negative control: every fixture above is a member with
+  // no `context` field at all, so a helper rewritten as
+  // `result?.context ?? null` passed all of them. The union has three members
+  // today and will have more; the day one of them carries a context for its
+  // own reasons -- a superseded case, a case read from a stale cache -- a
+  // helper that reads the FIELD instead of the KIND starts rendering it as
+  // the context of this interview. These two fixtures are deliberately
+  // impossible today, which is the point: they fail closed in advance.
   ok(
-    !/\?\?\s*(standaloneContext|emptyContext)/.test(codeOnly(read(OUTCOME))),
+    contextOf({
+      kind: "caseReadFailed",
+      context: C.standaloneContext("X"),
+    } as unknown as Parameters<typeof contextOf>[0]) === null,
+    "5 · and for an unhappy member that happens to carry a context, because the KIND decides",
+  );
+  ok(
+    contextOf({
+      kind: "somethingAddedLater",
+      context: C.standaloneContext("X"),
+    } as unknown as Parameters<typeof contextOf>[0]) === null,
+    "5 · and for a member this build has never heard of, which fails closed rather than rendering",
+  );
+  ok(
+    !/\?\?\s*(standaloneContext|emptyContext)/.test(codeOnly(read(OUTCOME_HELPERS))),
     "5 · and never defaults to an empty context, which would be a set of unearned claims",
+  );
+
+  // THE MODULE BOUNDARY THESE TWO ANSWERS LIVE ON.
+  //
+  // They are pure and three routes plus this guard call them. Kept in the
+  // component file they would make it a module that exports both a component
+  // and a plain function, which Fast Refresh cannot reload reliably -- so the
+  // component file renders and this module decides. The rule is followed, not
+  // silenced: an eslint-disable here would be the defect.
+  const helpers = read(OUTCOME_HELPERS);
+  ok(
+    /export function contextOf\(/.test(helpers) &&
+      /export function contextIsUsable\(/.test(helpers),
+    "5 · both answers are exported from the pure module beside the projection",
+  );
+  const outcomeSrc = read(OUTCOME);
+  ok(
+    !/export (function|const) (contextOf|contextIsUsable)\b/.test(outcomeSrc) &&
+      !/export \{[^}]*context(Of|IsUsable)/.test(outcomeSrc),
+    "5 · and the component file neither defines nor re-exports them",
+  );
+  const outcomeExports = outcomeSrc.match(/^export .*/gm) ?? [];
+  const nonComponentExports = outcomeExports.filter(
+    (line) =>
+      !/^export function [A-Z]/.test(line) && !/^export type |^export interface /.test(line),
+  );
+  ok(
+    outcomeExports.length > 0 && nonComponentExports.length === 0,
+    `5 · the component file exports React components only, so Fast Refresh stays reliable (${nonComponentExports.join(" | ")})`,
+  );
+  ok(
+    !/eslint-disable/.test(outcomeSrc) && !/eslint-disable/.test(helpers),
+    "5 · and neither file silences the rule that says so",
   );
 
   // The preparation screen withholds APPROVAL, and says why.
@@ -1017,7 +1081,7 @@ const baseInput: ContextInput = {
 /* 9 · Nothing here became a judgement about the person               */
 /* ================================================================== */
 {
-  for (const file of [CONTEXT, CONTEXT_FN, NOTICE, OUTCOME, NOTICE_PANEL]) {
+  for (const file of [CONTEXT, CONTEXT_FN, NOTICE, OUTCOME, OUTCOME_HELPERS, NOTICE_PANEL]) {
     const src = codeOnly(read(file));
     for (const [pattern, label] of [
       [/\bscore\b|totalScore|scoreValue/i, "a score"],
@@ -1031,6 +1095,10 @@ const baseInput: ContextInput = {
   }
   ok(existsSync(path.join(root, NOTICE)), "9 · the notice projection exists");
   ok(existsSync(path.join(root, OUTCOME)), "9 · and so does the shared result helper");
+  ok(
+    existsSync(path.join(root, OUTCOME_HELPERS)),
+    "9 · and the pure module the two answers live in",
+  );
 }
 
 /* ------------------------------------------------------------------ */

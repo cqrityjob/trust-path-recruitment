@@ -54,11 +54,8 @@ import {
 } from "@/components/employer/interview/InterviewLayout";
 import { InterviewContextPanel } from "@/components/employer/interview/InterviewContextPanel";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
-import {
-  ContextUnavailable,
-  contextOf,
-  contextIsUsable,
-} from "@/components/employer/interview/InterviewContextOutcome";
+import { ContextUnavailable } from "@/components/employer/interview/InterviewContextOutcome";
+import { contextIsUsable, contextOf } from "@/lib/interview-intelligence/context-outcome";
 import {
   addCaseSource,
   approvePreparation,
