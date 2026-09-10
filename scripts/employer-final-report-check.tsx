@@ -93,6 +93,16 @@ await mock.module("@tanstack/react-router", () => ({
 const { I18nProvider } = await import("../src/i18n/context");
 const { dictionaries } = await import("../src/i18n/dictionaries");
 const F = await import("../src/lib/interview-intelligence/final-report");
+// `F` is a value binding from a dynamic import, so it cannot be used as a
+// type namespace. The types come from a type-only import, which is erased at
+// compile time and therefore does not load the module ahead of the
+// mock.module calls above.
+import type {
+  FinaliseOutcome,
+  FinalReportReadback,
+  ReportPreview,
+  ReportProgress,
+} from "../src/lib/interview-intelligence/final-report";
 const Panels = await import("../src/components/employer/interview/FinalReportSequence");
 const { FinalReportDocument } =
   await import("../src/components/employer/interview/FinalReportDocument");
@@ -173,7 +183,7 @@ const PANEL = "src/components/employer/interview/FinalReportSequence.tsx";
 const DOCUMENT = "src/components/employer/interview/FinalReportDocument.tsx";
 const FINALISATION = "src/components/employer/interview/ReportFinalisation.tsx";
 
-const readbackRow = (over: Partial<F.FinalReportReadback> = {}): F.FinalReportReadback => ({
+const readbackRow = (over: Partial<FinalReportReadback> = {}): FinalReportReadback => ({
   reportId: "r1",
   versionNumber: 2,
   status: "final",
@@ -216,7 +226,7 @@ console.log("\n1. The sequence: seven acts, exactly one current");
           for (const isFinal of [false, true]) {
             for (const canFinalise of [false, true]) {
               combos += 1;
-              const p: F.ReportProgress = {
+              const p: ReportProgress = {
                 requirementCount,
                 assessedCount,
                 outstandingCount,
@@ -248,7 +258,7 @@ console.log("\n1. The sequence: seven acts, exactly one current");
   );
   ok(doneNeverAfterCurrent, "1.7 nothing after the current act is ever marked done");
 
-  const finalP: F.ReportProgress = {
+  const finalP: ReportProgress = {
     requirementCount: 8,
     assessedCount: 8,
     outstandingCount: 0,
@@ -260,7 +270,7 @@ console.log("\n1. The sequence: seven acts, exactly one current");
     F.currentStep(finalP) === "readback",
     "1.8 once a report is final, reading it back is the act",
   );
-  const memberP: F.ReportProgress = { ...finalP, isFinal: false, canFinalise: false };
+  const memberP: ReportProgress = { ...finalP, isFinal: false, canFinalise: false };
   ok(
     F.reportSteps(memberP).some((v) => v.step === "finalise" && v.state === "notPermitted"),
     "1.9 a member who may not finalise is TOLD so, rather than shown nothing",
@@ -269,7 +279,7 @@ console.log("\n1. The sequence: seven acts, exactly one current");
     F.currentStep(memberP) === "previewReport",
     "1.10 and their current act is previewing, not an action they cannot take",
   );
-  const emptyPack: F.ReportProgress = {
+  const emptyPack: ReportProgress = {
     requirementCount: 0,
     assessedCount: 0,
     outstandingCount: 0,
@@ -287,7 +297,7 @@ console.log("\n1. The sequence: seven acts, exactly one current");
 console.log("\n2. Finalising is a courtesy gate over a server rule, behind a preview");
 /* ══════════════════════════════════════════════════════════════════════ */
 {
-  const base: F.ReportProgress = {
+  const base: ReportProgress = {
     requirementCount: 8,
     assessedCount: 8,
     outstandingCount: 0,
@@ -314,14 +324,14 @@ console.log("\n2. Finalising is a courtesy gate over a server rule, behind a pre
 
   // The preview gate: the identity the button sends is the identity the
   // owner read. Without a preview there is no identity to send.
-  const preview: F.ReportPreview = {
+  const preview: ReportPreview = {
     payload: F.parseReportPayload({}),
     basisHash: "b".repeat(64),
     contentHash: "c".repeat(64),
     blockerCount: 0,
     blockers: [],
   };
-  const idle: F.FinaliseOutcome = { kind: "idle" };
+  const idle: FinaliseOutcome = { kind: "idle" };
   ok(
     F.finaliseEnabledWithPreview(base, preview, idle),
     "2.8 with a preview in hand, an assessed, unblocked case may finalise",
@@ -375,11 +385,23 @@ console.log("\n2. Finalising is a courtesy gate over a server rule, behind a pre
       `2.19 ${JSON.stringify(m)} is a failure that claims nothing`,
     );
   }
+  // Every message the database can raise, mapped, and NONE of them lands on
+  // an outcome the screen renders as a written report. Read off the mapping
+  // at runtime rather than asserted over a hand-written list, so a new
+  // error that mapped to `confirmed` would be caught here.
+  const errorKinds = [
+    "SCP_IV_STALE_PREVIEW",
+    "SCP_IV_PREVIEW_REQUIRED",
+    "SCP_IV_REPORT_BLOCKED",
+    "SCP_IV_FINALISE_ROLE",
+    "connection reset",
+    "",
+  ].map((m) => F.finaliseErrorOutcome(m).kind as string);
   ok(
-    (["stalePreview", "previewRequired", "blocked", "refused", "failed"] as const).every(
-      (k) => k !== "confirmed" && k !== "writtenNotConfirmed",
-    ),
-    "2.20 and no error path can be read as a written report",
+    errorKinds.length === 6 &&
+      !errorKinds.includes("confirmed") &&
+      !errorKinds.includes("writtenNotConfirmed"),
+    `2.20 and no error path can be read as a written report (${[...new Set(errorKinds)].join(", ")})`,
   );
 }
 
@@ -417,9 +439,14 @@ console.log("\n3. A readback may only claim what it checked");
       `3.11 ${String(code)} is a failure, not a refusal`,
     );
   }
+  // Same shape, for the readback: every code the mapping knows, and none of
+  // them becomes `none`. `none` is a claim that no report was finalised.
+  const readbackKinds = ["42501", "PGRST301", "PGRST116", "08006", "57014", "XX000", ""].map(
+    (c) => F.readbackErrorOutcome(c).kind as string,
+  );
   ok(
-    (["refused", "failed"] as const).every((k) => k !== "none"),
-    "3.12 and no error path can produce `none` — a failed read is never rendered as no report",
+    readbackKinds.length === 7 && !readbackKinds.includes("none"),
+    `3.12 and no error path can produce \`none\` — a failed read is never rendered as no report (${[...new Set(readbackKinds)].join(", ")})`,
   );
 
   // The finalising actor: a person, never a uuid.
@@ -641,7 +668,7 @@ console.log("\n5. The readback panel renders what is true, in both languages");
 console.log("\n6. The sequence renders as words, not as weight alone");
 /* ══════════════════════════════════════════════════════════════════════ */
 {
-  const p: F.ReportProgress = {
+  const p: ReportProgress = {
     requirementCount: 8,
     assessedCount: 8,
     outstandingCount: 0,
