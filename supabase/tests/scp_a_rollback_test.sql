@@ -222,6 +222,9 @@ DROP TABLE IF EXISTS public.scp_research_claims                  CASCADE;
 DROP TABLE IF EXISTS public.scp_research_sources                 CASCADE;
 
 DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, uuid);
+-- 20261107090000: the employer final report's governed readback.
+DROP FUNCTION IF EXISTS public.scp_iv_final_report(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_report_versions(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_mark_assessed(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_report_blockers(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_record_assessment(uuid, uuid, integer, text, text, text);

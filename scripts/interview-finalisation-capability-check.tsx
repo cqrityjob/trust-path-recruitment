@@ -231,6 +231,12 @@ ok(pendingMarkup.includes(sv["iiu.rp.finalising"]), "· and says so");
 // on the LAST of them, and asserts that no definition in the history ever
 // dropped it. 20261020090000 (evidence reliability) legitimately redefines the
 // function to make finalising idempotent; the boundary travelled with it.
+// 20261107090000 (report basis integrity) redefines it again, to hash the
+// basis with core sha256, to name the recruitment the report belongs to, and
+// to classify each evidence item by what kind of thing it is. The boundary
+// travelled with that one too, which is what the assertions below check --
+// this list is an allowlist of REVIEWED redefinitions, not a licence for the
+// next one.
 const migrationFiles = readdirSync(path.join(root, "supabase/migrations"))
   .filter((f) => f.endsWith(".sql"))
   .sort();
@@ -248,8 +254,9 @@ ok(
   "E · scp_iv_finalise_report is first defined by the runtime migration",
 );
 ok(
-  definitions.length === 2 &&
-    definitions[1].file === "20261020090000_scp_interview_evidence_reliability.sql",
+  definitions.length === 3 &&
+    definitions[1].file === "20261020090000_scp_interview_evidence_reliability.sql" &&
+    definitions[2].file === "20261107090000_scp_iv_report_basis_integrity.sql",
   `E · every redefinition of scp_iv_finalise_report is a known, reviewed one (found ${definitions.length})`,
 );
 const finaliseFn = definitions[definitions.length - 1].body;
