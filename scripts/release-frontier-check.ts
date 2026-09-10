@@ -19,7 +19,17 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // received both through the official Supabase GitHub integration after their
 // reviewed PRs merged. release-state.json and hosted-ledger.json record the
 // production evidence, so main correctly has no expected pending migration.
-const expectedPending: string[] = [];
+//
+// 20261105090000_scp_participant_report_issuer_preview EARNS its place here:
+// E2 adds the read by which an owner or admin of the commissioning
+// organisation sees the participant document before sharing it irreversibly,
+// and this branch carries the code that calls it. It is pending because the
+// repository's schema-first policy applies the migration BEFORE the code that
+// depends on it, so the name is removed from this list -- not left behind --
+// once the owner project has it and release-state.json records the evidence.
+const expectedPending: string[] = [
+  "20261105090000_scp_participant_report_issuer_preview.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
