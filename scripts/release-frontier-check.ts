@@ -27,8 +27,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // repository's schema-first policy applies the migration BEFORE the code that
 // depends on it, so the name is removed from this list -- not left behind --
 // once the owner project has it and release-state.json records the evidence.
+//
+// 20261106090000_scp_iv_candidate_summary earns its place on the same terms:
+// E4 adds the candidate-safe interview summary as its own server contract --
+// the employer report already had one, the candidate had nothing -- and this
+// branch carries the code that calls it.
 const expectedPending: string[] = [
   "20261105090000_scp_participant_report_issuer_preview.sql",
+  "20261106090000_scp_iv_candidate_summary.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
