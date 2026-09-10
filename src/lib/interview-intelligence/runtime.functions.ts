@@ -10,6 +10,7 @@
 // provider, and no key is ever shipped to one.
 
 import { createServerFn } from "@tanstack/react-start";
+import type { FinalReportReadback } from "./final-report";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -2747,3 +2748,120 @@ export const getProcessQuality = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return { quality: (row as ProcessQuality | null) ?? null };
   });
+
+/* ------------------------------------------------------------------ */
+/* The employer final report — governed readback                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Read the finalised report back through its own contract.
+ *
+ * NOT a `.from("scp_interview_reports")` select. The RPC recomputes the digest
+ * from the stored basis and returns the verdict beside the stored hash, which
+ * is the difference between a report that CLAIMS integrity and one that has
+ * been checked. It is also employer-scoped by scp_iv_can_read_case, so the
+ * candidate cannot reach it — the employer final report is never shared with
+ * the candidate, and this is one of the places that is enforced rather than
+ * promised.
+ *
+ * A refusal and a breakage are told apart by the caller on the error code:
+ * one is a person's problem and the other is worth retrying, and neither is
+ * "there is no report".
+ */
+export const getFinalReportReadback = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(
+    async ({ context, data }): Promise<{ readonly report: FinalReportReadback | null }> => {
+      const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {
+        _case_id: data.caseId,
+      });
+      if (error) {
+        const e = new Error(error.message) as Error & { code?: string };
+        e.code = error.code;
+        throw e;
+      }
+      const row = (Array.isArray(rows) ? rows[0] : null) as
+        | {
+            report_id: string;
+            version_number: number;
+            status: string;
+            finalised_at: string | null;
+            finalised_by: string | null;
+            content_hash: string | null;
+            content_hash_algorithm: string;
+            recomputed_hash: string | null;
+            hash_verified: boolean;
+          }
+        | null
+        | undefined;
+      if (!row) return { report: null };
+      return {
+        report: {
+          reportId: row.report_id,
+          versionNumber: row.version_number,
+          status: row.status,
+          finalisedAt: row.finalised_at,
+          finalisedBy: row.finalised_by,
+          contentHash: row.content_hash,
+          contentHashAlgorithm: row.content_hash_algorithm,
+          recomputedHash: row.recomputed_hash,
+          hashVerified: row.hash_verified,
+        },
+      };
+    },
+  );
+
+/**
+ * Every finalised version, newest first.
+ *
+ * This is how a reader sees that a correction created a NEW version and did
+ * not overwrite the previous one. Facts and identity only: no payload, because
+ * listing the history is not reading every report ever finalised.
+ */
+export const getReportVersions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(
+    async ({ context, data }): Promise<{ readonly versions: readonly ReportVersion[] }> => {
+      const { data: rows, error } = await context.supabase.rpc("scp_iv_report_versions", {
+        _case_id: data.caseId,
+      });
+      if (error) {
+        const e = new Error(error.message) as Error & { code?: string };
+        e.code = error.code;
+        throw e;
+      }
+      const list = (Array.isArray(rows) ? rows : []) as Array<{
+        report_id: string;
+        version_number: number;
+        status: string;
+        finalised_at: string | null;
+        finalised_by: string | null;
+        content_hash: string | null;
+        content_hash_algorithm: string;
+      }>;
+      return {
+        versions: list.map((r) => ({
+          reportId: r.report_id,
+          versionNumber: r.version_number,
+          status: r.status,
+          finalisedAt: r.finalised_at,
+          finalisedBy: r.finalised_by,
+          contentHash: r.content_hash,
+          contentHashAlgorithm: r.content_hash_algorithm,
+        })),
+      };
+    },
+  );
+
+/** One finalised version, as the history read returns it. */
+export interface ReportVersion {
+  readonly reportId: string;
+  readonly versionNumber: number;
+  readonly status: string;
+  readonly finalisedAt: string | null;
+  readonly finalisedBy: string | null;
+  readonly contentHash: string | null;
+  readonly contentHashAlgorithm: string;
+}

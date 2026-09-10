@@ -23,6 +23,22 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import { canFinaliseInterviewReport } from "@/lib/interview-intelligence/capability";
+import {
+  FinaliseBoundary,
+  FinalReportReadbackPanel,
+  ReportSequence,
+  ReportVersionList,
+} from "@/components/employer/interview/FinalReportSequence";
+import {
+  readbackErrorOutcome,
+  readbackOutcome,
+  type ReadbackOutcome,
+  type ReportProgress,
+} from "@/lib/interview-intelligence/final-report";
+import {
+  getFinalReportReadback,
+  getReportVersions,
+} from "@/lib/interview-intelligence/runtime.functions";
 import { ReportFinalisation } from "@/components/employer/interview/ReportFinalisation";
 import { InterviewOutcome } from "@/components/employer/interview/InterviewOutcome";
 import {
@@ -100,6 +116,19 @@ function Page() {
     queryFn: () => qualityFn({ data: { caseId } }),
     retry: false,
   });
+  // The GOVERNED readback. Not a table select: the RPC recomputes the digest
+  // from the stored basis and returns the verdict, which is the difference
+  // between a report that claims integrity and one that has been checked.
+  const readback = useQuery({
+    queryKey: ["ii", "finalReport", caseId],
+    queryFn: () => getFinalReportReadback({ data: { caseId } }),
+    retry: false,
+  });
+  const versions = useQuery({
+    queryKey: ["ii", "reportVersions", caseId],
+    queryFn: () => getReportVersions({ data: { caseId } }),
+    retry: false,
+  });
   const draft = useMutation({
     mutationFn: () => draftFn({ data: { caseId } }),
   });
@@ -114,6 +143,11 @@ function Page() {
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["ii"] });
+      // Finalising is not finished when the mutation resolves. Both governed
+      // reads are refetched so the page states the version, the actor and the
+      // verified digest from the SERVER rather than from having just asked.
+      void readback.refetch();
+      void versions.refetch();
     },
   });
 
@@ -181,6 +215,29 @@ function Page() {
     eventAt("interview_completed") ??
     eventAt("interview_started");
   const interviewers = (d.session?.interviewerNames ?? "").trim();
+
+  // Where the recruitment owner is in the work, from what the server already
+  // reported. Requirements come from the pinned pack, so a case with none has
+  // nothing to finalise -- and an empty blocker list on such a case must not
+  // read as "ready".
+  const progress: ReportProgress = {
+    requirementCount: d.questions.length,
+    assessedCount: new Set(d.assessments.map((a) => a.questionId)).size,
+    outstandingCount: d.findings.filter((f) =>
+      ["open", "needs_verification", "unresolved_difference"].includes(f.resolutionState),
+    ).length,
+    blockerCount: d.blockers.length,
+    isFinal,
+    canFinalise,
+  };
+
+  // Six states, five of which are not "here is your report". A refused read
+  // and a broken read are told apart, and NEITHER is rendered as "none".
+  const readbackState: ReadbackOutcome = readback.isLoading
+    ? { kind: "loading" }
+    : readback.isError
+      ? readbackErrorOutcome((readback.error as { code?: string } | null)?.code ?? null)
+      : readbackOutcome(readback.data?.report ?? null);
 
   const questionByCode = new Map(d.questions.map((qq) => [qq.code, qq]));
   const requirementByCode = new Map(d.competencies.map((c) => [c.code, c]));
@@ -254,6 +311,22 @@ function Page() {
           employerSlug={employerSlug}
           caseId={caseId}
         />
+      </div>
+
+      {/* ---- The employer final report: sequence, boundary, readback ----
+           The canonical output of this process. The ladder says where the
+           recruitment owner is and what the ONE next act is; the boundary
+           says what finalising does and, just as importantly, that it shares
+           nothing with the candidate; the readback proves which version was
+           finalised rather than asserting it. */}
+      <div className="mt-6 max-w-4xl space-y-4">
+        <ReportSequence progress={progress} />
+        {!isFinal && <FinaliseBoundary />}
+        <FinalReportReadbackPanel
+          outcome={readbackState}
+          onRetry={() => void readback.refetch()}
+        />
+        <ReportVersionList versions={versions.data?.versions ?? []} />
       </div>
 
       {/* ---- What the report will be built from ----
