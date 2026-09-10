@@ -350,6 +350,40 @@ const baseInput: ContextInput = {
       literals.every((l) => l === "absent" || l === "ok"),
       `2b · and ${source}'s reader never writes "refused" or "failed" by hand`,
     );
+
+    // ── AND `absent` IS NEVER WRITTEN ON A FAILURE PATH ──────────────
+    //
+    // Allowing the literal anywhere in a reader was too weak, and a negative
+    // control proved it: `readAssessment`'s error branch was changed to
+    // `read: "absent"` -- a failed read reported as an application with no
+    // assessment, the original defect -- and every assertion above went on
+    // passing, because a reader is legitimately allowed to write `absent` on
+    // its no-reference path.
+    //
+    // The rule is about WHERE. Each `if (error…)` and each `catch` block is
+    // sliced out by brace matching and required to delegate, because those are
+    // exactly the branches on which an absence would be a lie.
+    for (const m of body.matchAll(
+      /(if \(\s*(?:error|err|snapErr|appErr)\b[^)]*\)\s*\{|catch\s*\([^)]*\)\s*\{)/g,
+    )) {
+      const from = (m.index ?? 0) + m[0].length;
+      let depth = 1;
+      let i = from;
+      while (i < body.length && depth > 0) {
+        if (body[i] === "{") depth += 1;
+        else if (body[i] === "}") depth -= 1;
+        i += 1;
+      }
+      const branch = body.slice(from, i);
+      ok(
+        !/read:\s*"(ok|absent)"/.test(branch),
+        `2b · ${source}'s reader never writes an absence on a failure path`,
+      );
+      ok(
+        branch.includes("resolveSourceRead(") || !branch.includes("read:"),
+        `2b · and every failure path of ${source}'s reader delegates its outcome`,
+      );
+    }
   }
 
   // The application branch, which lives in the handler rather than in a reader.
