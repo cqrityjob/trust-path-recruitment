@@ -169,9 +169,10 @@ const MORE: readonly Mutation[] = [
     defect:
       "the readback throws away the error code, so a refusal and a breakage become the same thing to the screen",
     file: RUNTIME,
-    find: "      if (error) {\n        const e = new Error(error.message) as Error & { code?: string };\n        e.code = error.code;\n        throw e;\n      }\n      const row = (Array.isArray(rows) ? rows[0] : null) as",
+    find:
+      "    if (error) {\n      const e = new Error(error.message) as Error & { code?: string };\n      e.code = error.code;\n      throw e;\n    }\n    const row = (Array.isArray(rows) ? rows[0] : null) as",
     replace:
-      "      if (error) {\n        throw new Error(error.message);\n      }\n      const row = (Array.isArray(rows) ? rows[0] : null) as",
+      "    if (error) {\n      throw new Error(error.message);\n    }\n    const row = (Array.isArray(rows) ? rows[0] : null) as",
     guard: E4,
     expect: "9.6 and preserves the error code",
   },
