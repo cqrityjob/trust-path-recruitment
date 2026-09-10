@@ -425,7 +425,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: '    .replace(/eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}/g, "«token»")',
     replace: '    .replace(/\\u0000/g, "")',
     guard: E4,
-    expect: "17.23c and the surrounding text is redacted",
+    expect: "17.23c and a token beside it is masked WHOLE",
   },
   {
     id: "E4-WALK-KEEPS-NO-TRACE",
