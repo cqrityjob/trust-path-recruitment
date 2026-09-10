@@ -38,6 +38,7 @@ const DICT = "src/i18n/dictionaries.ts";
 const EVIDENCE_WF = ".github/workflows/e4-evidence.yml";
 const SCAN = "scripts/e4-evidence-scan.ts";
 const MANIFEST = "scripts/e4-evidence-manifest.ts";
+const EVIDENCE_SPEC = "e2e/employer-final-report-evidence.spec.ts";
 
 const E4 = "employer-final-report:check";
 
@@ -112,6 +113,135 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "        if: always()",
     guard: E4,
     expect: "16.13b and the upload happens only if the scan PASSED",
+  },
+
+  /* ---- A reproducible evidence environment --------------------------- *
+   *
+   * `version: latest` makes the environment float: a CLI release changes the
+   * local stack's images, its default privileges or its command surface, and
+   * a run that stops matching an earlier one reads as a code change rather
+   * than a tool change.
+   */
+  {
+    id: "E4-CLI-VERSION-FLOATS",
+    defect:
+      "the Supabase CLI is asked for `latest`, so the evidence environment changes under the workflow and two runs of the same commit can disagree for reasons no commit explains",
+    file: EVIDENCE_WF,
+    find: '  SUPABASE_CLI_VERSION: "2.117.0"',
+    replace: '  SUPABASE_CLI_VERSION: "latest"',
+    guard: E4,
+    expect: "16.24 the Supabase CLI is pinned to an exact reviewed version",
+  },
+  {
+    id: "E4-CLI-PIN-NEVER-VERIFIED",
+    defect:
+      "the run stops checking that the installed CLI is the pinned one, so the pin becomes a comment and a silently different tool produces the evidence",
+    file: EVIDENCE_WF,
+    find: '            echo "CLI PIN REFUSED: asked for ${SUPABASE_CLI_VERSION}, got ${installed}" >&2',
+    replace: '            echo "note: a different CLI installed, carrying on" >&2',
+    guard: E4,
+    expect: "16.25 and the run refuses to continue if the installed CLI is not the pinned one",
+  },
+  {
+    id: "E4-CLI-SURFACE-ASSUMED",
+    defect:
+      "the commands this job depends on are no longer proven to exist in the pinned version, so a surface change fails half an hour in with an unhelpful message",
+    file: EVIDENCE_WF,
+    find: "          for c in start stop status db; do",
+    replace: "          for c in ; do",
+    guard: E4,
+    expect: "16.26 the run proves `supabase start` exists in that version",
+  },
+  {
+    id: "E4-MANIFEST-HIDES-THE-PIN",
+    defect:
+      "the manifest stops recording the pinned version, so a reader cannot tell whether the CLI that produced the artifact was the one the workflow asked for",
+    file: MANIFEST,
+    find: "    supabaseCliPinned: process.env.E4_SUPABASE_CLI_PINNED || null,",
+    replace: "    // pinned version not recorded",
+    guard: E4,
+    expect: "16.27 the manifest records the pinned version beside the one that actually ran",
+  },
+
+  /* ---- One description of the database ------------------------------- *
+   *
+   * The walk writes to a database. Being told which one twice -- once by the
+   * validated URL and once by defaults written from memory -- is not
+   * redundancy: two descriptions can disagree, and the way that failure
+   * presents is writing to the wrong database.
+   */
+  {
+    id: "E4-WORKFLOW-HARDCODES-THE-DATABASE",
+    defect:
+      "the walk is handed a hardcoded host, a guessed port and a literal password again instead of the URL the isolation gate proved is loopback",
+    file: EVIDENCE_WF,
+    find: "          E4_DATABASE_URL: ${{ steps.local.outputs.db_url }}",
+    replace:
+      '          E4_PGHOST: 127.0.0.1\n          E4_PGPORT: "54322"\n          E4_PGPASSWORD: postgres',
+    guard: E4,
+    expect: "16.28 the walk is handed the SAME database URL the isolation gate validated",
+  },
+  {
+    id: "E4-SPEC-GUESSES-THE-DATABASE",
+    defect:
+      "the spec gives the database URL a default, so a missing or unset value no longer stops the walk -- it proceeds against whatever the default happens to name",
+    file: EVIDENCE_SPEC,
+    find: "  const raw = process.env.E4_DATABASE_URL;",
+    replace:
+      '  const raw = process.env.E4_DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";',
+    guard: E4,
+    expect: "16.31 the spec reads exactly one URL and gives it NO default",
+  },
+  {
+    id: "E4-SPEC-ACCEPTS-A-HOSTED-DATABASE",
+    defect:
+      "the spec stops refusing a non-loopback host, so one wrong environment variable points a MUTATING walk -- it finalises reports and writes findings -- at a hosted project",
+    file: EVIDENCE_SPEC,
+    find: "    throw new Error(`E4 evidence writes only to the local stack, not ${url.hostname}`);",
+    replace: "    // any host will do",
+    guard: E4,
+    expect: "16.32 it refuses a parsed host that is not loopback",
+  },
+  {
+    id: "E4-SPEC-ACCEPTS-THE-OWNER-PROJECT",
+    defect: "the spec stops refusing a URL naming the owner production project by name",
+    file: EVIDENCE_SPEC,
+    find: '    throw new Error("E4 evidence refuses a database URL naming the owner production project.");',
+    replace: "    // the owner project ref is allowed through",
+    guard: E4,
+    expect: "16.33 and refuses the owner project ref by name",
+  },
+  {
+    id: "E4-SPEC-GUESSES-THE-PORT",
+    defect:
+      "the spec falls back to a guessed port when the URL names none, so it writes to whatever is listening there",
+    find: '    throw new Error("E4_DATABASE_URL names no port, and nothing here may guess one.");',
+    file: EVIDENCE_SPEC,
+    replace: '    url.port = "54322";',
+    guard: E4,
+    expect: "16.34 and refuses to guess a port",
+  },
+
+  /* ---- The debt the evidence pipeline found --------------------------- */
+  {
+    id: "E4-REPLAY-DEBT-NOT-RECORDED",
+    defect:
+      "the stock-local replay incompatibility is dropped from the record, so a pre-existing defect that blocks anyone reproducing this schema locally is known only to whoever read the workflow comments",
+    file: "docs/employer/employer-final-report-product-truth.md",
+    find: "#### D · The migration history does not replay on a stock local Supabase stack",
+    replace: "#### D · A note about local development",
+    guard: E4,
+    expect: "15.8 the record names limitation D",
+  },
+  {
+    id: "E4-REPLAY-DEBT-CLAIMS-A-FIX",
+    defect:
+      "the record stops saying the migration's apply-time proof was left intact, which is what separates 'we worked around a defect and wrote it down' from 'we weakened a guarantee to get a green run'",
+    file: "docs/employer/employer-final-report-product-truth.md",
+    find: "apply-time proof is **not weakened**",
+    replace: "apply-time proof was adjusted",
+    guard: E4,
+    expect: "15.13 and states that the migration's apply-time proof was not weakened",
   },
 
   /* ---- The stack the evidence is taken against ----------------------- *

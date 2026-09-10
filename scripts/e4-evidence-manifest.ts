@@ -137,6 +137,11 @@ const manifest = {
   migrationTreeSha256: migrations.digest,
 
   toolchain: {
+    // BOTH, on purpose. `supabaseCliPinned` is what the workflow asked for;
+    // `supabaseCli` is what actually ran. A pin is only worth anything if the
+    // run proves it took, so a reader of the artifact can compare them
+    // without taking the workflow's word for it.
+    supabaseCliPinned: process.env.E4_SUPABASE_CLI_PINNED || null,
     supabaseCli: version("supabase", ["--version"]),
     docker: version("docker", ["--version"]),
     node: version("node", ["--version"]),

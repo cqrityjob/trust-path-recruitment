@@ -32,6 +32,28 @@ on:
       - ".github/workflows/e4-evidence.yml"
   workflow_dispatch:
 
+# ── THE PINNED SUPABASE CLI ─────────────────────────────────────────────
+#
+# ONE LITERAL, and it is a version rather than `latest`. This workflow's whole
+# claim is that the evidence is reproducible: the same commit, replayed
+# against the same schema, on the same stack, produces the same document. A
+# floating `latest` breaks that silently -- a CLI release changes the local
+# stack's images, its default privileges or its command surface, and a run
+# that no longer matches an earlier one looks like a code change rather than a
+# tool change.
+#
+# 2.117.0 is what `latest` resolved to on 2026-09-10 in run 1, recorded from
+# that run's own `supabase --version`. Its command surface was read from the
+# same run: `db` is present in the subcommand list, `start` and `stop` were
+# invoked successfully, and the global flag `--output, -o` documents `env` as
+# a choice, which is what `supabase status -o env` relies on. The step below
+# re-verifies all of that at run time rather than trusting this paragraph.
+#
+# DO NOT bump this silently. A new version is a change to the evidence
+# environment and belongs in a commit that says so.
+env:
+  SUPABASE_CLI_VERSION: "2.117.0"
+
 # Least privilege. This job reads the repository and writes an artifact; it
 # never needs anything else, and it must never be able to push.
 permissions:
@@ -69,19 +91,53 @@ jobs:
       - name: Set up the Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: ${{ env.SUPABASE_CLI_VERSION }}
 
       # ── WHAT THE INSTALLED CLI ACTUALLY SUPPORTS ──────────────────────
       #
-      # Recorded rather than assumed: the command surface has changed between
+      # Verified rather than assumed. The command surface has changed between
       # CLI releases, and a workflow written against a remembered surface
-      # fails at 03:00 with an unhelpful message. The manifest carries the
-      # version so a reader of the artifact knows which surface produced it.
-      - name: Record the CLI surface
+      # fails with an unhelpful message half an hour in.
+      #
+      # A pin nobody checks is a comment, so the first thing this does is
+      # prove the version that actually installed is the version asked for.
+      # Then it proves each command this job depends on exists. Run 1 piped
+      # the help through `head -40`, which cut the subcommand list off at
+      # `login` -- so `start`, `stop` and `status` were never actually shown.
+      # The whole surface is printed now.
+      - name: Verify and record the CLI surface
         run: |
-          supabase --version
-          supabase --help | head -40
+          set -euo pipefail
+          installed="$(supabase --version)"
+          echo "supabase CLI: ${installed} (pinned ${SUPABASE_CLI_VERSION})"
           docker --version
+
+          if [ "${installed}" != "${SUPABASE_CLI_VERSION}" ]; then
+            echo "CLI PIN REFUSED: asked for ${SUPABASE_CLI_VERSION}, got ${installed}" >&2
+            exit 1
+          fi
+
+          supabase --help > /tmp/supabase-help.txt
+          cat /tmp/supabase-help.txt
+
+          # The commands this job actually runs, each proven to exist.
+          for c in start stop status db; do
+            if ! grep -qE "^[[:space:]]+${c}[[:space:]]" /tmp/supabase-help.txt; then
+              echo "CLI SURFACE REFUSED: 'supabase ${c}' is not in this CLI's command list" >&2
+              exit 1
+            fi
+          done
+
+          # `supabase status -o env` is how the local configuration is derived.
+          if ! grep -qE '\-\-output, -o' /tmp/supabase-help.txt; then
+            echo "CLI SURFACE REFUSED: this CLI documents no --output/-o flag" >&2
+            exit 1
+          fi
+          if ! grep -E '\-\-output, -o' /tmp/supabase-help.txt | grep -q 'env'; then
+            echo "CLI SURFACE REFUSED: --output does not offer 'env', which status parsing needs" >&2
+            exit 1
+          fi
+          supabase db --help > /dev/null
 
       # ── ISOLATION, BEFORE ANY FIXTURE OR BROWSER RUNS ─────────────────
       #
@@ -260,9 +316,13 @@ jobs:
         env:
           E2E_LOCAL_STACK: "1"
           E2E_BASE_URL: http://localhost:3117
-          E4_PGHOST: 127.0.0.1
-          E4_PGPORT: "54322"
-          E4_PGPASSWORD: postgres
+          # THE SAME URL THE ISOLATION GATE PROVED IS LOOPBACK, and the only
+          # description of the database in this job. It replaced a hardcoded
+          # host, a guessed port and a literal password -- a second source of
+          # truth whose failure mode is writing to the wrong database. The
+          # spec parses every field it needs from this and refuses anything
+          # that is not loopback.
+          E4_DATABASE_URL: ${{ steps.local.outputs.db_url }}
         run: bunx playwright test e2e/employer-final-report-evidence.spec.ts --project=chromium --workers=1
 
       # ── WHY THE HEAD SHA IS PASSED IN ─────────────────────────────────
@@ -278,6 +338,7 @@ jobs:
         if: always()
         env:
           API_URL: ${{ steps.local.outputs.api_url }}
+          E4_SUPABASE_CLI_PINNED: ${{ env.SUPABASE_CLI_VERSION }}
           E4_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           E4_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
           E4_MERGE_SHA: ${{ github.sha }}

@@ -55,12 +55,13 @@ conclusion".
 **Not invented here:** no owner-conclusion field in client state, no implication
 in copy that the report contains one, and no migration in #216.
 
-### Limitations A, B and C — stated, not invented, and not migrated in #216
+### Limitations A, B, C and D — stated, not invented, and not migrated in #216
 
-These are the three capabilities the review asked about. Each one is **absent
-from the schema today**. None of them is a defect introduced by #216, none is
-worked around in the UI or in client state, and **none of them is implemented
-through a migration in #216**. Each is future **schema-first** work: a column and a
+A, B and C are the three capabilities the review asked about; each is **absent
+from the schema today**. D is release debt the evidence pipeline uncovered.
+None of them is a defect introduced by #216, none is worked around in the UI or
+in client state, and **none of them is implemented through a migration in
+#216**. Each is future **schema-first** work: a column and a
 governed RPC first, reviewed on its own, and only then a screen.
 
 #### A · A recruitment-owner-authored conclusion
@@ -111,8 +112,56 @@ member**. `scp_iv_finalise_previewed_report` is gated on
   it, which would tell an owner their explanation was recorded when nothing
   persisted it.
 
-All three are stated here so the owner can decide whether the pilot needs them
-before the interview product goes further.
+#### D · The migration history does not replay on a stock local Supabase stack
+
+**Release debt, not a product capability — and found by the evidence pipeline
+rather than by review.** The first run of `.github/workflows/e4-evidence.yml`
+stopped here:
+
+```
+ERROR: SCP_FACET_PROOF: the release function grants moved
+  at 20260905053809_scp_release_facet_resolution.sql
+```
+
+That migration revokes from `PUBLIC, anon` and then proves, at apply time,
+that neither `anon` nor `service_role` may execute
+`scp_release_attempt_report`. On a stock `supabase start`, the `postgres`
+role's default privileges for functions in `public` grant EXECUTE to `anon`,
+`authenticated` **and** `service_role`, so a revoke naming only `PUBLIC` and
+`anon` leaves `service_role` holding a direct grant and the migration refuses
+itself.
+
+The owner project does not look like that. Read from it, read-only:
+
+|                                       |                                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `anon` may execute                    | no                                                                                               |
+| `authenticated` may execute           | yes                                                                                              |
+| `service_role` may execute            | **no**                                                                                           |
+| `pg_default_acl`, `public`, functions | `supabase_admin` → postgres, anon, authenticated, service_role · `postgres` → **postgres, anon** |
+
+Migrations run as `postgres`, whose default function privileges there name
+only `postgres` and `anon`. So the hosted schema was built with no implicit
+grant to `authenticated` or `service_role`, and every grant it holds was
+written by a migration deliberately. The repository's own SQL suite replays
+the same history on a bare cluster with no default ACLs at all, and passes.
+
+- _Consequence today:_ anyone who runs `supabase start` on a fresh checkout
+  cannot replay this repository's schema. The evidence workflow works around
+  it by setting the hosted privilege baseline first and proving it took, which
+  makes that stack **more** faithful to production, not less.
+- _Why not here:_ every honest fix is a migration — a revoke naming
+  `service_role`, or an apply-time proof that tolerates an implicit grant it
+  does not depend on — and **#216 adds no migration**. The migration's
+  apply-time proof is **not weakened**; nothing in this PR touches
+  `supabase/` at all.
+- _What it needs:_ its own schema-and-release review, deciding whether the
+  correct baseline is the hosted one (and the local default privileges are the
+  anomaly) or whether the proof should accept both.
+
+All four are stated here so the owner can decide whether the pilot needs them
+before the interview product goes further. A, B and C are product capability
+gaps; D is release debt.
 
 ---
 

@@ -2016,6 +2016,92 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     /mergeSha:/.test(manifest) && /E4_MERGE_SHA: \$\{\{ github\.sha \}\}/.test(wf),
     "16.23 with the merge commit recorded separately rather than hidden",
   );
+
+  // ── A REPRODUCIBLE ENVIRONMENT ─────────────────────────────────────
+  //
+  // `version: latest` makes the evidence environment float. A CLI release
+  // changes the local stack's images, its default privileges or its command
+  // surface, and a run that stops matching an earlier one reads as a code
+  // change rather than a tool change. So the version is a literal, and the
+  // run proves the literal took -- a pin nobody verifies is a comment.
+  const pin = wf.match(/SUPABASE_CLI_VERSION:\s*"(\d+\.\d+\.\d+)"/);
+  ok(
+    pin !== null,
+    `16.24 the Supabase CLI is pinned to an exact reviewed version (${pin?.[1] ?? "no exact version found"})`,
+  );
+  ok(
+    !/version:\s*latest/.test(wfSteps),
+    "16.24b and setup-cli is never asked for `latest` — a floating tool is not a reproducible environment",
+  );
+  ok(
+    /version: \$\{\{ env\.SUPABASE_CLI_VERSION \}\}/.test(wf),
+    "16.24c with the version written once, so a bump cannot half-apply",
+  );
+  ok(
+    /CLI PIN REFUSED/.test(wf),
+    "16.25 and the run refuses to continue if the installed CLI is not the pinned one",
+  );
+  for (const c of ["start", "stop", "status", "db"] as const) {
+    ok(
+      new RegExp(`for c in [^\n]*\\b${c}\\b`).test(wf),
+      `16.26 the run proves \`supabase ${c}\` exists in that version rather than assuming it`,
+    );
+  }
+  ok(
+    /CLI SURFACE REFUSED: this CLI documents no --output\/-o flag/.test(wf),
+    "16.26b and that `-o env`, which the configuration is derived through, is offered",
+  );
+  ok(
+    /supabaseCliPinned/.test(manifest) && /E4_SUPABASE_CLI_PINNED/.test(wf),
+    "16.27 the manifest records the pinned version beside the one that actually ran",
+  );
+
+  // ── ONE DESCRIPTION OF THE DATABASE ────────────────────────────────
+  //
+  // The walk writes to a database. It used to be told which one twice: once
+  // by the URL the isolation gate derives and proves is loopback, and once by
+  // E4_PGHOST/E4_PGPORT/E4_PGPASSWORD defaults written from memory in the
+  // spec. Two descriptions can disagree, and the way that failure presents is
+  // writing to the wrong database.
+  const evSpec = read("e2e/employer-final-report-evidence.spec.ts");
+  // Comments stripped for the BAN: the block explaining why the old variables
+  // were removed has to be able to name them, or the change cannot be
+  // documented where the next reader will look.
+  const evSpecCode = codeOnly(evSpec);
+  ok(
+    /E4_DATABASE_URL: \$\{\{ steps\.local\.outputs\.db_url \}\}/.test(wf),
+    "16.28 the walk is handed the SAME database URL the isolation gate validated",
+  );
+  ok(
+    !/E4_PGHOST|E4_PGPORT|E4_PGPASSWORD/.test(wf),
+    "16.29 and no host, port or password is written into the workflow beside it",
+  );
+  ok(
+    !/E4_PGHOST|E4_PGPORT|E4_PGPASSWORD/.test(evSpecCode),
+    "16.30 nor read from a second set of variables in the spec",
+  );
+  ok(
+    /process\.env\.E4_DATABASE_URL/.test(evSpec) && !/E4_DATABASE_URL\s*(\?\?|\|\|)/.test(evSpec),
+    "16.31 the spec reads exactly one URL and gives it NO default — a missing value stops, a wrong default proceeds",
+  );
+  ok(
+    /E4 evidence writes only to the local stack, not \$\{url\.hostname\}/.test(evSpec),
+    "16.32 it refuses a parsed host that is not loopback",
+  );
+  ok(
+    /refuses a database URL naming the owner production project/.test(evSpec) &&
+      /OWNER_PROJECT_REF = "wrygicdfxwjnrugduxnt"/.test(evSpec),
+    "16.33 and refuses the owner project ref by name",
+  );
+  ok(
+    /names no port, and nothing here may guess one/.test(evSpec),
+    "16.34 and refuses to guess a port",
+  );
+  ok(
+    !/PGPASSWORD: "postgres"|PGPASSWORD: process\.env\.E4_PGPASSWORD/.test(evSpec) &&
+      /PGPASSWORD: pg\.password/.test(evSpec),
+    "16.35 the password comes from the validated URL, never a literal in a file anyone can read",
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -2327,6 +2413,10 @@ console.log("\n15. What finalising MEANS: locking a basis, not authoring a concl
       "#### C · A persisted correction reason for a new report version",
       "C · the correction reason for a version",
     ],
+    [
+      "#### D · The migration history does not replay on a stock local Supabase stack",
+      "D · the replay incompatibility the evidence pipeline found",
+    ],
   ] as const) {
     ok(truth.includes(heading), `15.8 the record names limitation ${what}`);
   }
@@ -2340,6 +2430,24 @@ console.log("\n15. What finalising MEANS: locking a basis, not authoring a concl
   ok(
     /schema-first/i.test(truth),
     "15.10 and that closing them is schema-first work — a column and a governed RPC before a screen",
+  );
+  // D is the one the evidence pipeline found rather than the review. It must
+  // be recorded as debt awaiting its own schema-and-release review, and it
+  // must say that the migration's apply-time proof was NOT weakened to get a
+  // green run — weakening a proof to make a pipeline pass is how a guarantee
+  // quietly stops being one.
+  ok(
+    truthFlat.includes("SCP_FACET_PROOF: the release function grants moved"),
+    "15.12 D names the exact failure rather than describing it vaguely",
+  );
+  ok(
+    truthFlat.includes("apply-time proof is not weakened") ||
+      truthFlat.includes("apply-time proof is **not weakened**"),
+    "15.13 and states that the migration's apply-time proof was not weakened to make the pipeline green",
+  );
+  ok(
+    truthFlat.includes("its own schema-and-release review"),
+    "15.14 and that it awaits its own schema and release review",
   );
   // C's "forbidden meanwhile": collecting a correction reason the database
   // cannot keep would tell an owner their explanation was recorded when

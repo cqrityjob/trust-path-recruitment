@@ -36,13 +36,14 @@
  *     as history. The screen offers no correction control once a report is
  *     final; correction is a governed act the page then reads back.
  *
- * Reproduce (see artifacts/employer-final-report-e4/INDEX.md):
- *   psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
- *        -f scripts/fixtures/interview-journey-fixture.sql
- *   psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
- *        -f scripts/fixtures/employer-final-report-fixture.sql
+ * Reproduce (see artifacts/employer-final-report-e4/INDEX.md). The database
+ * URL comes from the running stack, and is never typed out here -- see the
+ * note above E4_DATABASE_URL for why:
+ *   DB_URL=$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')
+ *   psql "$DB_URL" -f scripts/fixtures/interview-journey-fixture.sql
+ *   psql "$DB_URL" -f scripts/fixtures/employer-final-report-fixture.sql
  *   bun run dev -- --port 3117 --strictPort
- *   E2E_LOCAL_STACK=1 E2E_BASE_URL=http://localhost:3117 \
+ *   E2E_LOCAL_STACK=1 E2E_BASE_URL=http://localhost:3117 E4_DATABASE_URL="$DB_URL" \
  *     bunx playwright test e2e/employer-final-report-evidence.spec.ts --project=chromium
  */
 
@@ -70,32 +71,101 @@ const TITLE_SV = "E4 evidens · Väktare Väst";
 const TITLE_EN = "E4 evidence · Guard East";
 
 /* ---- The local database, and only the local database ------------------ */
+//
+// ── ONE SOURCE OF TRUTH, AND WHY ───────────────────────────────────────
+//
+// This block used to read E4_PGHOST, E4_PGPORT and E4_PGPASSWORD with
+// "127.0.0.1", "54322" and "postgres" as DEFAULTS. That was a second
+// description of the stack, written from memory, sitting beside the one the
+// workflow derives from `supabase status` and then proves is loopback.
+//
+// Two descriptions of a database can disagree, and the way that failure
+// presents is writing to the wrong database. A default is worse than a
+// missing value for exactly this reason: a missing value stops, a wrong
+// default proceeds. The port in particular was a guess that happened to be
+// right, and the password was a literal in a file anyone can read.
+//
+// So there is one input: E4_DATABASE_URL, handed in already validated, with
+// no default and no fallback to the checked-in .env -- which points at the
+// owner project. Every field psql needs is parsed from it here, once, and
+// the parse refuses anything that is not a loopback Postgres URL.
 
-const PG = {
-  host: process.env.E4_PGHOST ?? "127.0.0.1",
-  port: process.env.E4_PGPORT ?? "54322",
-  user: "postgres",
-  db: "postgres",
-};
+const OWNER_PROJECT_REF = "wrygicdfxwjnrugduxnt";
 
-/** Run one statement against the local stack's Postgres. Refuses any host
- *  that is not loopback: this file must never be able to write to a hosted
- *  project by misconfiguration. */
-function sql(statement: string): string {
-  if (!/^(127\.0\.0\.1|localhost)$/.test(PG.host)) {
-    throw new Error(`E4 evidence writes only to the local stack, not ${PG.host}`);
+interface LocalDatabase {
+  readonly host: string;
+  readonly port: string;
+  readonly user: string;
+  readonly db: string;
+  readonly password: string;
+}
+
+let parsed: LocalDatabase | null = null;
+
+/** The local stack's database, parsed from the one URL that was validated
+ *  upstream. Throws rather than guessing: see the note above. */
+function localDatabase(): LocalDatabase {
+  if (parsed) return parsed;
+
+  const raw = process.env.E4_DATABASE_URL;
+  if (!raw) {
+    throw new Error(
+      "E4 evidence needs E4_DATABASE_URL — the local stack's own database URL. " +
+        "There is deliberately no default: a guessed host, port or password is a " +
+        "second source of truth about which database this writes to.",
+    );
   }
+  if (raw.includes(OWNER_PROJECT_REF)) {
+    throw new Error("E4 evidence refuses a database URL naming the owner production project.");
+  }
+
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("E4_DATABASE_URL is not a URL.");
+  }
+  if (!/^postgres(ql)?:$/.test(url.protocol)) {
+    throw new Error(`E4_DATABASE_URL is not a Postgres URL: ${url.protocol}`);
+  }
+  if (!/^(127\.0\.0\.1|localhost)$/.test(url.hostname)) {
+    throw new Error(`E4 evidence writes only to the local stack, not ${url.hostname}`);
+  }
+  if (!url.port) {
+    throw new Error("E4_DATABASE_URL names no port, and nothing here may guess one.");
+  }
+  if (!url.username || !url.password) {
+    throw new Error("E4_DATABASE_URL carries no credentials, and none is written down here.");
+  }
+  const db = url.pathname.replace(/^\//, "");
+  if (!db) {
+    throw new Error("E4_DATABASE_URL names no database.");
+  }
+
+  parsed = {
+    host: url.hostname,
+    port: url.port,
+    user: decodeURIComponent(url.username),
+    db,
+    password: decodeURIComponent(url.password),
+  };
+  return parsed;
+}
+
+/** Run one statement against the local stack's Postgres. */
+function sql(statement: string): string {
+  const pg = localDatabase();
   return execFileSync(
     "psql",
     [
       "-h",
-      PG.host,
+      pg.host,
       "-p",
-      PG.port,
+      pg.port,
       "-U",
-      PG.user,
+      pg.user,
       "-d",
-      PG.db,
+      pg.db,
       "-v",
       "ON_ERROR_STOP=1",
       "-At",
@@ -103,7 +173,7 @@ function sql(statement: string): string {
       statement,
     ],
     {
-      env: { ...process.env, PGPASSWORD: process.env.E4_PGPASSWORD ?? "postgres" },
+      env: { ...process.env, PGPASSWORD: pg.password },
       encoding: "utf8",
     },
   ).trim();
