@@ -246,7 +246,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "  _case_id uuid, _expected_basis_hash text, _draft_run_id uuid)",
     replace: "  _case_id uuid, _expected_basis_hash text DEFAULT NULL, _draft_run_id uuid)",
     guard: E4,
-    expect: "8.36 finalisation takes the identity the owner previewed",
+    expect: "8.36 the preview-bound finalisation is a separately named contract",
   },
   {
     id: "E4-STALE-PREVIEW-ACCEPTED",
