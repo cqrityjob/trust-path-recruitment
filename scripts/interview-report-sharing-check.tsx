@@ -465,8 +465,13 @@ const en = dictionaries.en as Record<string, string>;
 
   // THE TYPE HAS NO FIELD FOR ANY OF IT. This is what makes the absence
   // structural rather than a discipline somebody has to keep.
+  //
+  // From CandidateSummaryArea, not from CandidateSummaryPayload: the per-area
+  // shape is where a level or a rationale would actually be added, and slicing
+  // from the payload alone skipped it -- which a negative control proved by
+  // adding both and going undetected.
   const payloadType = runtime.slice(
-    runtime.indexOf("export interface CandidateSummaryPayload"),
+    runtime.indexOf("export interface CandidateSummaryArea"),
     runtime.indexOf("export interface CandidateSummary {"),
   );
   ok(payloadType.length > 0, "5 · the payload type is where it is expected to be");

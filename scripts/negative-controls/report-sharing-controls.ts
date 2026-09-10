@@ -194,7 +194,7 @@ const MUTATIONS: readonly Mutation[] = [
     replace:
       "      payload: (function mapCandidateSummaryPayload2(x: unknown) {\n        return x as never;\n      })(r.payload),",
     guard: E4,
-    expect: "the candidate's own read imports it rather than writing a second",
+    expect: "which it does not define",
   },
   {
     id: "E4-DOCUMENT-IGNORES-THE-REQUESTED-LANGUAGE",
@@ -213,8 +213,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "any read-back counts as confirmation, so a refetch that returned nothing still prints 'shared'",
     file: RELEASE,
-    find: '  if (released) {\n    return {\n      kind: "confirmed",',
-    replace: '  if (true) {\n    return {\n      kind: "confirmed",',
+    find: '  if (released) {\n    return {\n      kind: "confirmed",\n      versionNumber: released.versionNumber,\n      releasedAt: released.releasedAt,\n    };\n  }',
+    replace:
+      '  if (true) {\n    return {\n      kind: "confirmed",\n      versionNumber: released?.versionNumber ?? 0,\n      releasedAt: released?.releasedAt ?? "",\n    };\n  }',
     guard: E4,
     expect: "a read-back that produced nothing is NOT a confirmation",
   },
@@ -295,8 +296,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "sharing is read from the case holding material rather than from the one with a report — a case that cannot have a summary",
     file: PROJECTION,
-    find: '    candidateSharing: !finalised\n      ? "notApplicable"',
-    replace: '    candidateSharing: !material\n      ? "notApplicable"',
+    find: '    candidateSharing: !finalised\n      ? "notApplicable"\n      : finalised.candidateSummaryVersion !== null\n        ? "shared"\n        : "notShared",',
+    replace:
+      '    candidateSharing: !material\n      ? "notApplicable"\n      : material.candidateSummaryVersion !== null\n        ? "shared"\n        : "notShared",',
     guard: E4,
     expect: "sharing is read from the finalised case",
   },
