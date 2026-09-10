@@ -240,7 +240,12 @@ const MUTATIONS: readonly Mutation[] = [
     replace:
       "  return (result as { context?: InterviewContext } | null | undefined)?.context ?? null;",
     guard: E3,
-    expect: "contextOf returns null for a failure",
+    // NOT "contextOf returns null for a failure": every unhappy member the
+    // guard used to feed it carries no `context` field at all, so this
+    // mutation returns null for those too and that assertion stays green.
+    // The assertion this defect actually trips is the one that hands it an
+    // unhappy member WITH a context attached.
+    expect: "because the KIND decides",
   },
   {
     // The module boundary itself. Putting the helper back into the component
