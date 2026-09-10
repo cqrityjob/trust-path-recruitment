@@ -556,7 +556,8 @@ const MUTATIONS: readonly Mutation[] = [
     find: "  writeFileSync(`${OUT}/timings.json`",
     replace: "  void String(`${OUT}/nothing.json`",
     guard: E4,
-    expect: "13.2d each test's duration and each phase's duration are recorded",
+    expect:
+      "13.2d each test's duration and each step's duration are recorded beside the captures under ONE key",
   },
 
   /* ---- Does the artifact contain what the manifest says? -------------- */
