@@ -88,8 +88,19 @@ jobs:
       # Fail-closed: every one of these is a reason to stop, not a warning.
       # The checked-in .env points at the owner project, so the job builds its
       # own .env.local and then PROVES the values it will use are loopback.
-      - name: Start the local Supabase stack
-        run: supabase start
+      # Started with the migration history HELD BACK, because `supabase start`
+      # would otherwise replay it before anything has had a chance to match the
+      # privilege baseline below -- and the replay fails on a stock stack. See
+      # the next step but one for the evidence.
+      - name: Start the local Supabase stack, history held back
+        run: |
+          set -euo pipefail
+          mv supabase/migrations /tmp/e4-migrations
+          mkdir -p supabase/migrations
+          supabase start
+          rmdir supabase/migrations
+          mv /tmp/e4-migrations supabase/migrations
+          test -d supabase/migrations
 
       - name: Derive the local configuration
         id: local
@@ -150,10 +161,74 @@ jobs:
 
           echo "isolation OK — API $API_URL, DB loopback, no hosted credential present"
 
-      # The migrations, replayed the way the repository replays them, so the
-      # stack the browser walks is the schema this PR is built on.
+      # ── WHY THE PRIVILEGE BASELINE IS SET BEFORE THE REPLAY ───────────
+      #
+      # The first run of this workflow failed here, and the failure is worth
+      # writing down rather than working around:
+      #
+      #   ERROR: SCP_FACET_PROOF: the release function grants moved
+      #   at 20260905053809_scp_release_facet_resolution.sql
+      #
+      # That migration REVOKEs from `PUBLIC, anon` and then proves, at apply
+      # time, that anon and service_role cannot execute the function. On a
+      # STOCK `supabase start`, the postgres role's default privileges for
+      # functions in `public` grant EXECUTE to anon, authenticated AND
+      # service_role, so a REVOKE naming only PUBLIC and anon leaves
+      # service_role holding a direct grant and the migration refuses itself.
+      #
+      # The owner project does not look like that. Read from it, read-only:
+      #
+      #   anon_exec=false  authenticated_exec=true  service_role_exec=false
+      #   pg_default_acl (schema public, functions):
+      #     supabase_admin => postgres=X | anon=X | authenticated=X | service_role=X
+      #     postgres       => postgres=X | anon=X
+      #
+      # Migrations run as `postgres`, and postgres's default function
+      # privileges there name only postgres and anon. So the hosted schema was
+      # built with NO implicit grant to authenticated or service_role, and
+      # every grant it has was written by a migration on purpose. The
+      # repository's own SQL suite replays the same history on a bare cluster,
+      # which has no default ACLs at all, and passes.
+      #
+      # Matching that baseline therefore makes this stack MORE faithful to
+      # production, not less. It is asserted rather than assumed: the step
+      # fails if the baseline is not what it set out to be.
+      #
+      # The underlying defect -- a migration whose own proof cannot survive a
+      # stock Supabase local stack -- is pre-existing, is present on main, and
+      # is NOT fixed here, because #216 adds no migration.
+      - name: Match the hosted privilege baseline
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
+          ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+            REVOKE EXECUTE ON FUNCTIONS FROM authenticated, service_role;
+          SQL
+          acl=$(psql "$DB_URL" -tAc "SELECT coalesce(array_to_string(d.defaclacl,' | '),'(none)') FROM pg_default_acl d JOIN pg_namespace n ON n.oid = d.defaclnamespace WHERE n.nspname='public' AND d.defaclobjtype='f' AND pg_get_userbyid(d.defaclrole)='postgres'")
+          echo "postgres default function ACL in public: ${acl:-(none)}"
+          case "$acl" in
+            *authenticated*|*service_role*)
+              echo "BASELINE REFUSED: an implicit grant survived, so the replay would not match production" >&2
+              exit 1 ;;
+          esac
+
+      # The migrations, replayed in order, as `postgres` -- the role the owner
+      # project's own history was applied as. Not `supabase db reset`, which
+      # recreates the database and re-establishes the stock default privileges
+      # the step above exists to correct.
       - name: Replay the migration history
-        run: supabase db reset --no-seed
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          n=0
+          for f in supabase/migrations/*.sql; do
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f" || { echo "FAILED: $f" >&2; exit 1; }
+            n=$((n+1))
+          done
+          echo "replayed ${n} migration(s)"
 
       - name: Seed the synthetic fixtures
         env:
@@ -190,10 +265,23 @@ jobs:
           E4_PGPASSWORD: postgres
         run: bunx playwright test e2e/employer-final-report-evidence.spec.ts --project=chromium --workers=1
 
+      # ── WHY THE HEAD SHA IS PASSED IN ─────────────────────────────────
+      #
+      # On a pull_request event GITHUB_SHA is the EPHEMERAL MERGE COMMIT, not
+      # the pull request's head. The first run recorded a0191d50 while the PR
+      # head was d7b3e197, so a reviewer following the manifest's own
+      # instruction -- compare `head` with the PR head -- would have concluded
+      # the artifact belonged to another commit. It did not. The manifest was
+      # wrong about which commit it was describing, which is the one thing a
+      # manifest may not be wrong about.
       - name: Build the evidence manifest
         if: always()
         env:
           API_URL: ${{ steps.local.outputs.api_url }}
+          E4_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          E4_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          E4_MERGE_SHA: ${{ github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
         run: bun run scripts/e4-evidence-manifest.ts
 
       # Secrets never reach an artifact. This runs BEFORE the upload and fails

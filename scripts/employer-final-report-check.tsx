@@ -1901,8 +1901,28 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
 
   // A real stack, not a bare database: Auth and PostgREST are the point.
   ok(
-    /supabase start/.test(wf) && /supabase db reset/.test(wf),
-    "16.8 it starts the full local stack and replays the migration history",
+    /supabase start/.test(wf) && /for f in supabase\/migrations\/\*\.sql/.test(wf),
+    "16.8 it starts the full local stack and replays every migration in order",
+  );
+  // The replay must happen on a database whose implicit grants match the
+  // owner project's, or a migration's own apply-time proof refuses itself and
+  // no evidence is produced at all. Read from production, read-only: the
+  // postgres role's default function privileges there name postgres and anon,
+  // and nothing else.
+  const baselineAt = wf.indexOf("Match the hosted privilege baseline");
+  const replayAt = wf.indexOf("Replay the migration history");
+  ok(
+    baselineAt > 0 && baselineAt < replayAt,
+    "16.8b the privilege baseline is set BEFORE the replay",
+  );
+  ok(
+    /REVOKE EXECUTE ON FUNCTIONS FROM authenticated, service_role/.test(wf) &&
+      /BASELINE REFUSED/.test(wf),
+    "16.8c and it is proven rather than assumed — the step fails if an implicit grant survives",
+  );
+  ok(
+    !/supabase db reset/.test(wfSteps),
+    "16.8d and the replay is not `supabase db reset`, which would recreate the database and restore the stock grants",
   );
   ok(/supabase stop --no-backup/.test(wf), "16.9 and stops it");
   const stopAt = wf.indexOf("Stop the local stack");
@@ -1979,6 +1999,23 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     ok(manifest.includes(`${key}:`), `16.19 the manifest records ${key}`);
   }
   ok(/sha256: sha256\(readFileSync/.test(manifest), "16.20 and a SHA-256 for every evidence file");
+  // THE MANIFEST MUST NAME THE COMMIT UNDER REVIEW. On a pull_request event
+  // GITHUB_SHA is the ephemeral merge commit, not the pull request's head, so
+  // a manifest built from it always disagrees with the head a reviewer is
+  // looking at. The first run of this workflow recorded exactly that.
+  const headLine = manifest.slice(manifest.indexOf("head:"), manifest.indexOf("mergeSha:"));
+  ok(
+    /E4_HEAD_SHA/.test(headLine),
+    "16.21 the manifest's head is the PULL REQUEST's head, not the merge commit GITHUB_SHA names",
+  );
+  ok(
+    /E4_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/.test(wf),
+    "16.22 and the workflow hands it that head from the event",
+  );
+  ok(
+    /mergeSha:/.test(manifest) && /E4_MERGE_SHA: \$\{\{ github\.sha \}\}/.test(wf),
+    "16.23 with the merge commit recorded separately rather than hidden",
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */

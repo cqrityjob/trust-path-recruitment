@@ -98,13 +98,24 @@ const manifest = {
   repository: process.env.GITHUB_REPOSITORY ?? "(local run)",
   pullRequest:
     process.env.GITHUB_EVENT_NAME === "pull_request" ? (process.env.GITHUB_REF_NAME ?? null) : null,
-  pullRequestNumber: process.env.PR_NUMBER ?? null,
+  pullRequestNumber: process.env.PR_NUMBER || null,
 
   // What a reviewer compares against the PR head. If these differ, the
   // artifact belongs to another commit.
-  head: process.env.GITHUB_SHA ?? version("git", ["rev-parse", "HEAD"]),
+  //
+  // NOT GITHUB_SHA. On a pull_request event that variable is the ephemeral
+  // MERGE commit GitHub builds to test the pull request, not the pull
+  // request's head -- so a manifest that recorded it would never match the
+  // head a reviewer is looking at, and would look like evidence from another
+  // commit every single time. The workflow passes the real head in, and the
+  // merge commit is recorded separately and honestly.
+  head: process.env.E4_HEAD_SHA ?? process.env.GITHUB_SHA ?? version("git", ["rev-parse", "HEAD"]),
+  mergeSha: process.env.E4_MERGE_SHA ?? null,
   base: process.env.GITHUB_BASE_REF ?? null,
-  baseSha: version("git", ["rev-parse", "origin/main"]),
+  // A pull_request checkout is shallow and has no origin/main ref, so asking
+  // git for one produced "unavailable (...)" rather than a sha. The event
+  // knows it; ask the event.
+  baseSha: process.env.E4_BASE_SHA || version("git", ["rev-parse", "origin/main"]),
 
   workflowRunId: process.env.GITHUB_RUN_ID ?? null,
   workflowRunAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,

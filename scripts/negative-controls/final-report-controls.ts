@@ -37,6 +37,7 @@ const DB_TEST = "scripts/db-test.sh";
 const DICT = "src/i18n/dictionaries.ts";
 const EVIDENCE_WF = ".github/workflows/e4-evidence.yml";
 const SCAN = "scripts/e4-evidence-scan.ts";
+const MANIFEST = "scripts/e4-evidence-manifest.ts";
 
 const E4 = "employer-final-report:check";
 
@@ -111,6 +112,60 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "        if: always()",
     guard: E4,
     expect: "16.13b and the upload happens only if the scan PASSED",
+  },
+
+  /* ---- The stack the evidence is taken against ----------------------- *
+   *
+   * The first run of the evidence workflow failed replaying the migration
+   * history, because a migration's own apply-time grant proof cannot survive
+   * a stock `supabase start`: its default function privileges grant EXECUTE
+   * to service_role, and a REVOKE naming only PUBLIC and anon leaves that
+   * grant standing. The owner project has no such implicit grant -- read
+   * read-only from production -- so matching it is what makes the evidence
+   * faithful. Both controls below restore a stack that cannot produce
+   * evidence at all.
+   */
+  {
+    id: "E4-REPLAY-SKIPS-THE-PRIVILEGE-BASELINE",
+    defect:
+      "the replay runs against a stock Supabase stack, whose implicit service_role grant does not match the owner project and makes a migration refuse itself at apply time",
+    file: EVIDENCE_WF,
+    find: "      - name: Match the hosted privilege baseline",
+    replace: "      - name: Take the stock grants and hope they match production",
+    guard: E4,
+    expect: "16.8b the privilege baseline is set BEFORE the replay",
+  },
+  {
+    id: "E4-REPLAY-BACK-TO-DB-RESET",
+    defect:
+      "the replay goes back to `supabase db reset`, which recreates the database and restores exactly the stock default privileges the baseline step exists to correct",
+    file: EVIDENCE_WF,
+    find: "          for f in supabase/migrations/*.sql; do",
+    replace: "          supabase db reset --no-seed; for f in /dev/null; do",
+    guard: E4,
+    expect: "16.8d and the replay is not `supabase db reset`",
+  },
+
+  /* ---- The manifest must name the commit under review ----------------- */
+  {
+    id: "E4-MANIFEST-NAMES-THE-MERGE-COMMIT",
+    defect:
+      "the manifest records GITHUB_SHA, which on a pull_request event is the ephemeral merge commit and never the pull request's head -- so a reviewer following the manifest's own instruction concludes the artifact belongs to another commit",
+    file: MANIFEST,
+    find: "  head: process.env.E4_HEAD_SHA ?? process.env.GITHUB_SHA",
+    replace: "  head: process.env.GITHUB_SHA",
+    guard: E4,
+    expect: "16.21 the manifest's head is the PULL REQUEST's head",
+  },
+  {
+    id: "E4-WORKFLOW-WITHHOLDS-THE-HEAD-SHA",
+    defect:
+      "the workflow stops passing the pull request's head sha, so the manifest silently falls back to the merge commit",
+    file: EVIDENCE_WF,
+    find: "          E4_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}",
+    replace: "          E4_HEAD_SHA: ${{ github.sha }}",
+    guard: E4,
+    expect: "16.22 and the workflow hands it that head from the event",
   },
 
   /* ---- The leak scan must actually READ what it scans ----------------- *
