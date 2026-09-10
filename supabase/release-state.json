@@ -538,7 +538,9 @@
       "note": "SCHEMA-ONLY SHARE GATEWAY FOUNDATION. Adds two hash-only, forced-RLS tables with no policies or browser grants and three service-role-only SECURITY DEFINER functions. A live disclosure token can issue a 90-second single-use handoff; consuming it binds a separately generated session hash for at most 30 minutes; reading the session rechecks disclosure revocation and expiry on every request and preserves existing access accounting and selected-merit identifier removal. No raw disclosure token, handoff or session secret is stored. Existing links and application code are untouched, so this migration is safe alone. After hosted application and read-only verification, a separate application PR may deploy the Supabase fragment-entry function and switch generated links from Lovable /p/<token> to the gateway."
     }, 
     {
-      "hostedState": "pending", 
+      "hostedState": "applied", 
+      "evidenceSource": "Applied automatically through the official Supabase GitHub integration to owner production wrygicdfxwjnrugduxnt after PR #213 merged to main as 9d36f6a64cb31aa2380ed4e6c38e75281ace0596 on 2026-09-10, and confirmed independently by the owner. Recorded canonically in supabase_migrations.schema_migrations as version 20261105090000, name scp_participant_report_issuer_preview. Read-only postflight on the same production read (2026-09-10) verified: both functions exist and are SECURITY DEFINER with proconfig 'search_path=public, pg_temp'; scp_participant_report_for_issuer(uuid) is exactly one function; anon executes neither and authenticated executes both; and pg_get_functiondef of the preview contains no 's.safety_flags', so the issuer preview still carries no employer-only safety flag. hosted-ledger.json was refreshed from the same read to 272 rows.", 
+      
       "file": "20261105090000_scp_participant_report_issuer_preview.sql", 
       "introduces": [
         {
@@ -555,7 +557,9 @@
       "rollback": "supabase/rollback/20261105090000_scp_participant_report_issuer_preview_rollback.sql"
     }, 
     {
-      "hostedState": "pending", 
+      "hostedState": "applied", 
+      "evidenceSource": "Applied automatically through the official Supabase GitHub integration to owner production wrygicdfxwjnrugduxnt after PR #213 merged to main as 9d36f6a64cb31aa2380ed4e6c38e75281ace0596 on 2026-09-10, and confirmed independently by the owner. Recorded canonically in supabase_migrations.schema_migrations as version 20261107090000, name scp_iv_report_basis_integrity. Read-only postflight on the same production read (2026-09-10) verified the EXPAND state: scp_iv_finalise_report is exactly one function with pronargs 2 / pronargdefaults 1 and identity arguments (_case_id uuid, _draft_run_id uuid), its definition still containing md5(_payload::text) and containing neither SCP_IV_STALE_PREVIEW nor scp_iv_build_report_basis -- the legacy contract the deployed application calls, untouched, EXECUTE-able by authenticated and not by anon; scp_iv_finalise_previewed_report is exactly one function with pronargs 3 / pronargdefaults 0 and identity arguments (_case_id uuid, _expected_basis_hash text, _draft_run_id uuid), carrying SCP_IV_STALE_PREVIEW, EXECUTE-able by authenticated and not by anon; scp_iv_preview_report, scp_iv_build_report_basis, scp_iv_final_report, scp_iv_report_version, scp_iv_report_versions, scp_iv_content_hash, scp_iv_basis_hash and scp_employer_report_identity all exist with the reviewed arities and a pinned search_path; the builder is NOT EXECUTE-able by authenticated and the preview is NOT EXECUTE-able by anon; and scp_interview_reports carries both new columns, content_hash_algorithm and basis_hash. The legacy contract is deliberately retained and is dropped only by the separate owner-approved CONTRACT migration described in docs/release/scp-iv-finalise-report-contract-cleanup.md. hosted-ledger.json was refreshed from the same read to 272 rows.", 
+      
       "file": "20261107090000_scp_iv_report_basis_integrity.sql", 
       "introduces": [
         {

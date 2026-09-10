@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-09T11:40:36Z",
-  "readBy": "Post-merge read-only verification of the share gateway foundation; canonical migration 20261104090000 applied by the official Supabase GitHub integration",
+  "readAt": "2026-09-10T16:35:11Z",
+  "readBy": "Post-merge read-only verification for PR #214 reconciliation: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #213 merged to main as 9d36f6a64cb31aa2380ed4e6c38e75281ace0596 and Lovable published. 272 rows; canonical 20261105090000 scp_participant_report_issuer_preview and 20261107090000 scp_iv_report_basis_integrity are both recorded under their canonical versions.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1095,6 +1095,14 @@
     {
       "version": "20261104090000",
       "name": "passport_share_gateway"
+    },
+    {
+      "version": "20261105090000",
+      "name": "scp_participant_report_issuer_preview"
+    },
+    {
+      "version": "20261107090000",
+      "name": "scp_iv_report_basis_integrity"
     }
   ]
 }
