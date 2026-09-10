@@ -96,9 +96,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the scan reports a finding and exits zero, so a leak becomes a log line nobody reads instead of a red build",
     file: SCAN,
-    find: "  process.exit(1);\n}\n\n// An empty artifact uploaded green is worse than no artifact",
+    find: "    process.exit(1);\n  }\n\n  // An empty artifact uploaded green is worse than no artifact",
     replace:
-      "  process.exit(0);\n}\n\n// An empty artifact uploaded green is worse than no artifact",
+      "    process.exit(0);\n  }\n\n  // An empty artifact uploaded green is worse than no artifact",
     guard: E4,
     expect: "16.17 and a leak fails the job rather than being redacted quietly",
   },
