@@ -1057,7 +1057,7 @@ const baseInput: ContextInput = {
     "8 · and a read that did not land has a third answer",
   );
 
-  // Who can access, and that a summary may be shared. Both were absent.
+  // Who can access, and WHAT STAYS ON THE EMPLOYER'S SIDE.
   ok(page.includes('aria-labelledby="ci-access"'), "8 · the page says who can see the material");
   for (const needle of [
     "Behöriga personer hos arbetsgivaren",
@@ -1065,16 +1065,74 @@ const baseInput: ContextInput = {
   ]) {
     ok(read(CANDIDATE_PAGE).includes(needle), `8 · in both languages ("${needle.slice(0, 20)}…")`);
   }
-  for (const needle of ["dela en sammanfattning", "share a summary"]) {
+
+  // ── THE PROMISE THAT MAY NOT COME BACK ────────────────────────────
+  //
+  // This page used to tell a candidate the employer "may choose to share a
+  // summary of the interview with you". Nothing in this product can produce
+  // one: the candidate-summary feature was removed, and the employer final
+  // report is decision support the product owner decided is NOT shared with
+  // the candidate. A person reading that sentence waits for a document that
+  // is never coming, and then reads the silence as the employer having
+  // chosen not to share -- a decision nobody made.
+  //
+  // What is banned is the PROMISE -- "may choose to share a summary" and the
+  // model element that carried it -- and not the noun itself: the page's own
+  // denial has to be able to say the word "summary" out loud, or it cannot
+  // deny anything. A ban on the noun would forbid the correction along with
+  // the defect.
+  const noticeSrc = read(NOTICE);
+  const panelSrc = read(NOTICE_PANEL);
+  for (const [needle, where, src] of [
+    // `page` is comment-stripped: the ban is on what the page SAYS to a
+    // person, and the comment recording why the promise was removed has to be
+    // able to quote it.
+    ["dela en sammanfattning", "the candidate page", page],
+    ["share a summary", "the candidate page", page],
+    ["kan välja att dela", "the candidate page", page],
+    ["may choose to share", "the candidate page", page],
+    ["summaryMayBeShared", "the notice model", noticeSrc],
+    ["summaryMayBeShared", "the notice panel", panelSrc],
+    ["summaryMayBeShared", "the dictionaries", read("src/i18n/dictionaries.ts")],
+  ] as const) {
     ok(
-      read(CANDIDATE_PAGE).includes(needle),
-      `8 · and that a summary MAY be shared, as a possibility rather than a promise`,
+      !src.includes(needle),
+      `8 · ${where} promises no interview summary ("${needle}") -- no governed contract shares one`,
     );
   }
-  // Never automatically. The sentence has to carry that, or it is a promise.
-  for (const needle of ["inte automatiskt", "not shared automatically"]) {
-    ok(read(CANDIDATE_PAGE).includes(needle), "8 · and that it is not automatic");
+
+  // What it says INSTEAD, in both languages: the boundary, which is true
+  // today and stays true without any future capability.
+  for (const needle of [
+    "visas inte här",
+    "are not shown here",
+    "färdigställer sin rapport betyder inte att den delas",
+    "finalising their report does not share it",
+    "lovar ingen sammanfattning",
+    "promises you no summary",
+  ]) {
+    ok(
+      read(CANDIDATE_PAGE).includes(needle),
+      `8 · and states the boundary instead ("${needle.slice(0, 28)}…")`,
+    );
   }
+
+  // The notice model carries the boundary as an element of its own, so a
+  // surface cannot quietly stop saying it.
+  ok(
+    (N.NOTICE_ELEMENTS as readonly string[]).includes("employerMaterialNotShared"),
+    "8 · and the notice model names that boundary as one of its elements",
+  );
+
+  // E2 IS NOT COLLATERAL. The assessment RESULT is a separate, genuinely
+  // governed document with its own release path, shared only by an explicit
+  // human decision. Nothing above may deny it exists.
+  ok(
+    !/ingen bedömning delas|no assessment (is|will be) shared|delas aldrig med dig/i.test(
+      read(CANDIDATE_PAGE),
+    ),
+    "8 · while saying nothing that would deny the separately governed assessment result",
+  );
 }
 
 /* ================================================================== */

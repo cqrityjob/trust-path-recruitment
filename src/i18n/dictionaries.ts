@@ -5778,7 +5778,8 @@ export const dictionaries = {
     "iin.el.humanConfirms": "Att en människa måste granska och bekräfta uppgifterna",
     "iin.el.aiDoesNotDecide": "Att AI inte fattar anställningsbeslutet",
     "iin.el.whoCanAccess": "Vem som kan komma åt materialet",
-    "iin.el.summaryMayBeShared": "Att en kandidatsäker sammanfattning kan komma att delas",
+    "iin.el.employerMaterialNotShared":
+      "Att arbetsgivarens egna bedömningar, anteckningar och slutrapport inte visas för kandidaten",
     "iin.el.retention": "Hur länge materialet sparas",
     "iin.el.contact": "Vart frågor och rättelser ska skickas",
     "iic.linkedUnreadable": "Den här intervjun hör till en ansökan som inte kunde läsas.",
@@ -11687,7 +11688,8 @@ export const dictionaries = {
     "iin.el.humanConfirms": "That a human must review and confirm the evidence",
     "iin.el.aiDoesNotDecide": "That AI does not make the employment decision",
     "iin.el.whoCanAccess": "Who can access the material",
-    "iin.el.summaryMayBeShared": "That a candidate-safe summary may later be shared",
+    "iin.el.employerMaterialNotShared":
+      "That employer assessments, notes and the final report are not shown to the candidate",
     "iin.el.retention": "How long the material is kept",
     "iin.el.contact": "Where questions and corrections go",
     "iic.linkedUnreadable": "This interview belongs to an application that could not be read.",

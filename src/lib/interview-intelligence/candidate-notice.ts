@@ -73,8 +73,25 @@ export const NOTICE_ELEMENTS = [
   "aiDoesNotDecide",
   /** Who can reach the material. */
   "whoCanAccess",
-  /** Whether a candidate-safe summary may later be shared with them. */
-  "summaryMayBeShared",
+  /** That the employer's own interview material is NOT shown to them here.
+   *
+   *  This element used to be "whether a candidate-safe summary may later be
+   *  shared". There is no governed contract that shares one: the
+   *  candidate-summary feature was removed, and the employer final report is
+   *  a decision-support document the product owner decided is NOT shared with
+   *  the candidate. Saying a summary "may" be shared invited a person to wait
+   *  for something nothing in this product can produce.
+   *
+   *  What IS true, and is what a person is entitled to know, is the boundary:
+   *  the employer's interview assessments, notes and final report stay on the
+   *  employer's side. That is a fact about this product today, so it is
+   *  always statable.
+   *
+   *  It says nothing about the ASSESSMENT RESULT. That is a separate,
+   *  genuinely governed document with its own release path
+   *  (scp_release_attempt_report), shared only by an explicit human decision,
+   *  and this element neither promises nor denies it. */
+  "employerMaterialNotShared",
   /** The configured retention information -- or that there is none. */
   "retention",
   /** Where questions and correction requests go. */
@@ -189,10 +206,11 @@ export function projectCandidateNotice(input: NoticeInput): NoticeStates {
     // of this case's configuration.
     whoCanAccess: "stated",
 
-    // Whether a candidate-safe summary MAY later be shared. Stated as a
-    // possibility and never as a promise: nothing in this product releases one
-    // automatically, and the page says the employer decides.
-    summaryMayBeShared: "stated",
+    // The boundary, which is a property of the product and not of this
+    // case's configuration: the employer's interview assessments, notes and
+    // final report are not shown on the candidate's page, and finalising a
+    // report does not share it. Always statable, because it is always true.
+    employerMaterialNotShared: "stated",
 
     // ── THE ONE THIS FILE EXISTS FOR ─────────────────────────────────
     //
