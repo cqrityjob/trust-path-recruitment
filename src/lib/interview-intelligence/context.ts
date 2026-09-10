@@ -117,11 +117,186 @@ export interface FollowUpArea {
  *  CQrityjob CV and must not imply that it does. */
 export type CvPresence = "cqrityjob_cv" | "external" | "unreadable" | "none";
 
+/* ------------------------------------------------------------------ */
+/* How each source read went, and how the case read went               */
+/* ------------------------------------------------------------------ */
+//
+// ── THE DEFECT THIS SECTION EXISTS BECAUSE OF ───────────────────────────
+//
+// This model had ONE field for the whole question -- `linked: boolean` -- and
+// the read that filled it answered five materially different situations with
+// the same two values:
+//
+//   the case names no application            -> linked: false
+//   the case names one and it cannot be read -> linked: false   ← WRONG
+//   the advert read failed                   -> requirements: []
+//   the advert read was refused              -> requirements: []
+//   the assessment read failed               -> assessmentPending: false
+//
+// Every one of those is the same defect wearing a different hat: a read that
+// did not succeed rendered as a fact about the world. The second is the worst,
+// because it is not merely an omission -- it is an ASSERTION. A recruiter
+// preparing for an interview with an application behind it was told, in the
+// product's own words, that this was a standalone interview with no advertised
+// role. They then prepared for a conversation about a role the system had, and
+// had simply failed to fetch.
+//
+// So every source carries how its own read went, and there is no code path
+// that turns a failure into an absence. The three unhappy members are distinct
+// on purpose: "refused" is a permission answer a recruiter can act on (ask an
+// admin), "failed" is a transient one they can retry, and "absent" is the only
+// one that is a statement about the world.
+
+/** How ONE source read went. */
+export type SourceRead =
+  /** Read, and there is something there. */
+  | "ok"
+  /** Read, and there is genuinely nothing. The ONLY member that asserts
+   *  anything about the world. */
+  | "absent"
+  /** The database refused this caller. Not an absence: somebody else can see
+   *  it, and the surface says so rather than implying it does not exist. */
+  | "refused"
+  /** The read broke. Nothing is known either way, and the surface must not
+   *  pretend otherwise. */
+  | "failed";
+
+/* ------------------------------------------------------------------ */
+/* Deciding one source's read outcome                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A refusal and a breakage, told apart.
+ *
+ * These are different answers to the recruiter. "You are not allowed to see
+ * this" is actionable -- ask an admin, or accept it -- and retrying will never
+ * change it. "Something went wrong" is transient and a retry is exactly the
+ * right response. Rendering both as one message trains people to retry
+ * permissions they will never be granted, and to give up on outages that would
+ * have cleared.
+ *
+ * Postgres answers `42501` for insufficient_privilege; PostgREST wraps its own
+ * codes around the same class. Everything else is a BREAKAGE, which is the
+ * safe default: a code this product has never seen must not be reported as a
+ * decision somebody made.
+ */
+const REFUSAL_CODES = new Set(["42501", "PGRST301", "PGRST116"]);
+
+export function classifyReadError(
+  error: { code?: string | null; message?: string } | null | undefined,
+): SourceRead {
+  if (!error) return "ok";
+  if (REFUSAL_CODES.has(String(error.code ?? ""))) return "refused";
+  // A message-level fallback, because one of the four readers goes through a
+  // server function that throws a plain Error rather than returning a
+  // PostgREST envelope.
+  if (
+    /permission denied|insufficient_privilege|not authoris|not authoriz/i.test(
+      String(error.message ?? ""),
+    )
+  )
+    return "refused";
+  return "failed";
+}
+
+/**
+ * How ONE source read went, from the three facts its reader actually has.
+ *
+ * ── WHY THIS IS A FUNCTION AND NOT THREE `if`s PER READER ───────────────
+ *
+ * Because it lives in the server module, where nothing can exercise it: the
+ * four readers each talk to PostgREST, so the only guard available to them is
+ * one that greps their source. A negative control proved exactly what that is
+ * worth -- four separate mutations, each turning a failed read back into an
+ * absence inside a reader, and every one of them went undetected because the
+ * assertions were reading text rather than running code.
+ *
+ * So the decision is here, pure, and exercised exhaustively.
+ *
+ * The three inputs are the only three things that matter, and the order is the
+ * point:
+ *
+ *   NOT REFERENCED   the record above did not name one. The ONLY input that
+ *                    may produce `absent`, which is the only member that
+ *                    asserts anything about the world.
+ *   ERRORED          classified, never assumed.
+ *   NO ROW           it was named, the read succeeded, and nothing came back:
+ *                    the row is gone or RLS withheld it. `refused` rather than
+ *                    `absent`, because a reference that resolves to nothing is
+ *                    not the same as no reference.
+ */
+export function resolveSourceRead(opts: {
+  /** The record above named one of these at all. */
+  readonly referenced: boolean;
+  readonly error: { code?: string | null; message?: string } | null | undefined;
+  readonly hasRow: boolean;
+}): SourceRead {
+  if (!opts.referenced) return "absent";
+  if (opts.error) return classifyReadError(opts.error);
+  return opts.hasRow ? "ok" : "refused";
+}
+
+/** Whether this interview belongs to an application, as three answers.
+ *
+ *  `standalone` is a real, supported, first-class case -- an employer may
+ *  interview for a role with no advert -- and it must never be reachable by
+ *  accident, which is exactly what `linkedUnreadable` exists to prevent. */
+export type LinkState =
+  /** The case names no application. Nothing failed; there is nothing to link. */
+  | "standalone"
+  /** The case names an application and it was read. */
+  | "linked"
+  /** The case names an application and the read did NOT succeed. The
+   *  identifier is known; the record behind it is not. Everything downstream
+   *  of it is unavailable rather than empty. */
+  | "linkedUnreadable";
+
+/** How each source of this briefing read. Never inferred from whether its
+ *  content is empty: an advert with no stated requirements and an advert
+ *  nobody could fetch produce the same empty list and are not the same fact. */
+export interface ContextReads {
+  readonly application: SourceRead;
+  readonly job: SourceRead;
+  readonly cv: SourceRead;
+  readonly assessment: SourceRead;
+}
+
+/**
+ * The whole answer to "what does CQrityjob hold about this interview".
+ *
+ * A union rather than a nullable context, because the four unhappy answers are
+ * not degraded contexts -- they are the absence of one, and each needs its own
+ * sentence. `getInterviewCaseContext` used to THROW for three of them, with
+ * three different `Error` messages that the three consuming screens then
+ * pattern-matched on by substring.
+ */
+export type InterviewContextResult =
+  | { readonly kind: "context"; readonly context: InterviewContext }
+  /**
+   * The case row came back empty.
+   *
+   * "Not there" and "not yours" are ONE answer here and that is deliberate:
+   * `scp_interview_cases` is under RLS, so a case belonging to another
+   * employer returns no row exactly as a deleted one does. Distinguishing them
+   * would mean telling a stranger that a case exists, which is the thing RLS
+   * is preventing. The member is named for what is actually known.
+   */
+  | { readonly kind: "caseNotFoundOrRefused" }
+  /** The case read itself broke. Nothing is known about the case at all --
+   *  including whether it exists. */
+  | { readonly kind: "caseReadFailed" };
+
 export interface InterviewContext {
   readonly version: typeof CONTEXT_BRIDGE_VERSION;
-  /** False when the case was created without an application. Everything below
-   *  is then empty and the surface says so plainly. */
-  readonly linked: boolean;
+  /** Whether this interview belongs to an application, in three answers.
+   *
+   *  This was `linked: boolean`, and the boolean was the defect: an
+   *  application that could not be READ produced `false`, which every surface
+   *  rendered as "standalone interview, no advertised role" -- an assertion,
+   *  about a case that had an application all along. */
+  readonly link: LinkState;
+  /** How each source read. Carried beside the content, never derived from it. */
+  readonly reads: ContextReads;
 
   readonly candidateName: string;
   readonly roleSv: string | null;
@@ -219,6 +394,13 @@ export interface ContextInput {
   readonly cv: ContextCvInput | null;
   readonly assessment: ContextAssessmentInput | null;
   readonly assessmentPending: boolean;
+  /** How each of the four reads went.
+   *
+   *  REQUIRED, with no default. A default would be `"ok"`, and a caller that
+   *  forgot to pass one would silently declare a failed read successful --
+   *  which is the entire defect this field exists to make impossible. The
+   *  compiler asks instead. */
+  readonly reads: ContextReads;
 }
 
 // ── DERIVATION ────────────────────────────────────────────────────────────
@@ -446,19 +628,39 @@ function followUpAreas(
   return out;
 }
 
-/** The empty context, for a case that was not created from an application.
- *  A first-class state: an employer may legitimately interview for a role that
- *  has no advert, and the screen must not read as broken when they do. */
-export function unlinkedContext(candidateName: string): InterviewContext {
+/** The empty context, with the reason for its emptiness attached.
+ *
+ *  ── WHY THIS TAKES A LINK STATE ────────────────────────────────────────
+ *
+ *  There used to be one `unlinkedContext(name)`, and the server function
+ *  returned it for TWO situations: a case that names no application, and a
+ *  case that names one whose read did not succeed. The first is a supported
+ *  product state. The second is an outage, and it was being rendered as the
+ *  first -- so a recruiter with an application, an advert and a released
+ *  assessment behind their interview was told there was no advertised role.
+ *
+ *  The two callers now have to say which one they are, and the type will not
+ *  let them avoid the question. `standalone` is the only value that produces a
+ *  screen asserting there is nothing to link. */
+export function emptyContext(
+  candidateName: string,
+  link: Exclude<LinkState, "linked">,
+  reads: ContextReads,
+): InterviewContext {
   return {
     version: CONTEXT_BRIDGE_VERSION,
-    linked: false,
+    link,
+    reads,
     candidateName,
     roleSv: null,
     roleEn: null,
     applicationStatus: null,
     appliedAt: null,
-    cvPresence: "none",
+    // "none" is a CLAIM, and it may only be made when the reads say so. A CV
+    // whose read was refused is `unreadable`, which the type already has a
+    // word for and which the surface already renders as an absence of
+    // knowledge rather than an absence of a document.
+    cvPresence: reads.cv === "ok" || reads.cv === "absent" ? "none" : "unreadable",
     cvSubmittedAt: null,
     assessmentReleasedAt: null,
     assessmentPending: false,
@@ -468,8 +670,29 @@ export function unlinkedContext(candidateName: string): InterviewContext {
   };
 }
 
+/** A case that names no application at all.
+ *
+ *  Every read is `absent` and none of them failed, which is the whole
+ *  difference between this and `linkedUnreadable`: there was nothing to fetch,
+ *  so nothing could fail to be fetched. */
+export function standaloneContext(candidateName: string): InterviewContext {
+  return emptyContext(candidateName, "standalone", {
+    application: "absent",
+    job: "absent",
+    cv: "absent",
+    assessment: "absent",
+  });
+}
+
 export function buildInterviewContext(input: ContextInput): InterviewContext {
-  if (!input.application) return unlinkedContext(input.candidateName);
+  // No application ROW. Which of the two reasons that is comes from the read,
+  // never from the absence: `absent` means the case named no application,
+  // anything else means it named one nobody could fetch.
+  if (!input.application) {
+    return input.reads.application === "absent"
+      ? standaloneContext(input.candidateName)
+      : emptyContext(input.candidateName, "linkedUnreadable", input.reads);
+  }
 
   const { application, job, cv, assessment } = input;
 
@@ -480,7 +703,8 @@ export function buildInterviewContext(input: ContextInput): InterviewContext {
 
   return {
     version: CONTEXT_BRIDGE_VERSION,
-    linked: true,
+    link: "linked",
+    reads: input.reads,
     candidateName: input.candidateName,
     roleSv: clean(job?.titleSv ?? application.jobTitleSv) || null,
     roleEn: clean(job?.titleEn ?? application.jobTitleEn) || null,

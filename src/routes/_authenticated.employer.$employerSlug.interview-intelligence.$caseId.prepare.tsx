@@ -54,6 +54,8 @@ import {
 } from "@/components/employer/interview/InterviewLayout";
 import { InterviewContextPanel } from "@/components/employer/interview/InterviewContextPanel";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
+import { ContextUnavailable } from "@/components/employer/interview/InterviewContextOutcome";
+import { contextIsUsable, contextOf } from "@/lib/interview-intelligence/context-outcome";
 import {
   addCaseSource,
   approvePreparation,
@@ -377,13 +379,28 @@ function Page() {
 
                   Read live and stored nowhere: it briefs the interview, it is
                   not part of its record. */}
-              <InterviewContextPanel
-                context={contextQ.data ?? null}
-                employerSlug={employerSlug}
-                applicationId={d.applicationId}
-                isLoading={contextQ.isLoading}
-                isError={contextQ.isError}
-              />
+              {/* The context, or the reason there is none.
+                  `contextOf` returns null for every unhappy answer rather
+                  than an empty context, because an empty context is a set of
+                  CLAIMS -- no role, no requirements, nothing to explore -- and
+                  none of them is known to be true when a read did not land. */}
+              {contextOf(contextQ.data) ? (
+                <InterviewContextPanel
+                  context={contextOf(contextQ.data)}
+                  employerSlug={employerSlug}
+                  applicationId={d.applicationId}
+                  isLoading={false}
+                  isError={false}
+                  onRetry={() => void contextQ.refetch()}
+                />
+              ) : (
+                <ContextUnavailable
+                  result={contextQ.data}
+                  isLoading={contextQ.isLoading}
+                  isError={contextQ.isError}
+                  onRetry={() => void contextQ.refetch()}
+                />
+              )}
               <Rule />
 
               {/* ---- Setting the case up ----
@@ -691,14 +708,44 @@ function Page() {
                               <p>{interviewErrorMessage(approve.error, t)}</p>
                             </Panel>
                           )}
-                          <button
-                            type="button"
-                            className={`${PRIMARY_BUTTON} mt-3`}
-                            onClick={() => approve.mutate(d.plan!.id)}
-                            disabled={approve.isPending}
-                          >
-                            {t("iiu.pp.approve.title")}
-                          </button>
+                          {/* ── AN APPROVAL THAT RESTS ON A READ THAT DID NOT
+                                LAND ────────────────────────────────────────
+                            *
+                            *  Approving a plan is a human saying "this is what
+                            *  we will ask, against this role". When the
+                            *  application behind the case could not be read,
+                            *  the role, its requirements and the released
+                            *  assessment are all unknown -- and the screen
+                            *  above them was rendering that as a standalone
+                            *  interview with nothing to inherit. Approving on
+                            *  the strength of that is approving a plan built
+                            *  from an absence somebody mistook for a fact.
+                            *
+                            *  So the control is withheld while the context is
+                            *  unusable, and the reason is stated. Not a
+                            *  greyed-out button: an explanation, and the same
+                            *  retry the panel above offers. Nothing here is
+                            *  enforcement -- scp_iv_approve_preparation
+                            *  re-decides -- it is the screen declining to
+                            *  invite a decision nobody can make well. */}
+                          {contextIsUsable(contextQ.data) ? (
+                            <button
+                              type="button"
+                              className={`${PRIMARY_BUTTON} mt-3`}
+                              onClick={() => approve.mutate(d.plan!.id)}
+                              disabled={approve.isPending}
+                            >
+                              {t("iiu.pp.approve.title")}
+                            </button>
+                          ) : (
+                            <Panel
+                              tone="governance"
+                              role="status"
+                              title={t("iiu.pp.approve.blockedTitle")}
+                            >
+                              <p>{t("iiu.pp.approve.blockedBody")}</p>
+                            </Panel>
+                          )}
                         </div>
                       )}
                     </div>

@@ -39,6 +39,7 @@ import {
   reportInterviewFactualError,
   type CandidateInterviewStatus,
 } from "@/lib/interview-intelligence/candidate.functions";
+import { projectCandidateNotice } from "@/lib/interview-intelligence/candidate-notice";
 
 export const Route = createFileRoute("/_authenticated/my-career/interviews/$caseId")({
   ssr: false,
@@ -202,6 +203,27 @@ function Page() {
 
   const d = q.data;
 
+  // Which of the eleven things this person is entitled to understand can
+  // actually be said. Only `retention` varies per case today; the projection
+  // exists so that a twelfth element cannot be added without both surfaces
+  // being made to answer for it, and so a guard can assert none of them has
+  // quietly stopped being said.
+  const notice = projectCandidateNotice({
+    employerName: d.employerName,
+    roleTitle: d.roleTitle,
+    roleRead: d.roleTitle ? "ok" : "absent",
+    sourceKinds: d.sources.map((x) => x.kind),
+    transcriptInUse: d.transcriptInUse,
+    retainUntil: d.retainUntil,
+    // The candidate read returns the whole detail object or throws, so a
+    // successful query means this field was read. There is no partial answer
+    // to distinguish here -- and saying so is better than passing a value that
+    // implies the distinction exists.
+    retentionRead: "ok",
+    correctionPathAvailable: true,
+  });
+  const retention = notice.retention;
+
   return (
     <>
       <Section containerClassName="max-w-3xl">
@@ -353,12 +375,77 @@ function Page() {
             </p>
           )}
 
-          {d.retainUntil && (
+          {/* ── HOW LONG THIS IS KEPT ──────────────────────────────────
+           *
+           *  Always said, in one of three ways, and never by saying nothing.
+           *
+           *  `retain_until` has exactly one writer -- the transcript-basis
+           *  confirmation, which requires a date before a recording may be
+           *  processed at all. Every case WITHOUT a transcript therefore has
+           *  none, and this region used to render as an absence: no line, no
+           *  heading, no gap. A person told which of their material is in
+           *  use, who confirms it, what the AI does and does not do, and how
+           *  to correct a mistake, and told nothing at all about retention,
+           *  reasonably concludes that retention is simply not part of what
+           *  this page covers -- rather than that nobody has decided.
+           *
+           *  No period is invented to fill it, and no promise is made on the
+           *  employer's behalf. The honest sentence is that they have not set
+           *  one, and the reader is told where to ask. */}
+          {retention === "stated" && d.retainUntil ? (
             <p className="mt-3 text-sm text-muted-foreground">
               {L(c("Sparas till och med", "Kept until"), lang)}{" "}
               <span className="tabular-nums text-foreground">{d.retainUntil}</span>
             </p>
+          ) : retention === "notConfigured" ? (
+            <p className="mt-3 rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground">
+              {L(
+                c(
+                  "Arbetsgivaren har inte angett hur länge det här materialet sparas. CQrityjob anger ingen tid åt dem. Du kan fråga arbetsgivaren, och du kan använda formuläret nedan.",
+                  "The employer has not stated how long this material is kept. CQrityjob does not set a period on their behalf. You can ask the employer, and you can use the form below.",
+                ),
+                lang,
+              )}
+            </p>
+          ) : (
+            <p
+              role="status"
+              className="mt-3 rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground"
+            >
+              {L(
+                c(
+                  "Uppgiften om hur länge materialet sparas kunde inte hämtas just nu. Det betyder inte att ingen tid är angiven — bara att vi inte kunde läsa den.",
+                  "How long this material is kept could not be fetched just now. That does not mean no period is set — only that we could not read it.",
+                ),
+                lang,
+              )}
+            </p>
           )}
+        </section>
+
+        {/* ── Who can reach this, and what may be shared with you ────── */}
+        <section className="mt-8" aria-labelledby="ci-access">
+          <h2 id="ci-access" className="text-lg font-semibold text-foreground">
+            {L(c("Vem kan se det här", "Who can see this"), lang)}
+          </h2>
+          <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
+            {L(
+              c(
+                "Behöriga personer hos arbetsgivaren som arbetar med den här rekryteringen, och du själv på den här sidan. Ingen annan arbetsgivare kan nå det, och andra kandidater kan det inte heller.",
+                "Authorised people at the employer who are working on this recruitment, and you, on this page. No other employer can reach it, and neither can other candidates.",
+              ),
+              lang,
+            )}
+          </p>
+          <p className="mt-3 max-w-[68ch] text-sm text-muted-foreground">
+            {L(
+              c(
+                "Arbetsgivaren kan välja att dela en sammanfattning av intervjun med dig. Den delas inte automatiskt — det är ett eget beslut som en människa hos arbetsgivaren fattar, och den innehåller inte deras interna anteckningar eller bedömningar.",
+                "The employer may choose to share a summary of the interview with you. It is not shared automatically — it is a separate decision a person at the employer makes, and it does not contain their internal notes or ratings.",
+              ),
+              lang,
+            )}
+          </p>
         </section>
 
         {/* ── Correcting a fact ── */}

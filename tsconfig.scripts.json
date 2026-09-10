@@ -94,6 +94,14 @@
     // naming them, with no error, because nothing typechecked the file.
     "scripts/employer-process-continuity-check.tsx",
     "scripts/negative-controls/employer-continuity-controls.ts",
+    // The E3 context-governance guard and its controls, on the same terms:
+    // new, no pre-existing type debt, and the guard CALLS buildInterviewContext
+    // and the candidate-notice model with typed fixtures. Its whole subject is
+    // that a read which did not land is not an absence -- a fixture that
+    // silently stopped matching the outcome union would assert nothing at all,
+    // which is exactly the failure this file exists to prevent.
+    "scripts/interview-context-governance-check.tsx",
+    "scripts/negative-controls/interview-governance-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"

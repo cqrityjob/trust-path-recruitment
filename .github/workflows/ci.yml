@@ -778,6 +778,20 @@ jobs:
       - name: Employer process continuity check (E1)
         run: bun run employer-process-continuity:check
 
+      # E3: the context an interview inherits, and what the CANDIDATE is told.
+      #
+      # The bridge already read the application, the advert and the assessment.
+      # What this guards is that a read which did NOT LAND is never rendered as
+      # an absence: a refused or failed application read is `linkedUnreadable`
+      # and not "standalone interview", a refused or failed advert read gets
+      # its own sentence and not "no advertised role", and approval stays
+      # unavailable while the role or application context cannot be read. It
+      # also guards the candidate notice: retention is described from what the
+      # employer actually recorded, and a missing period, consent or legal
+      # basis is said to be missing rather than invented.
+      - name: Interview context governance check (E3)
+        run: bun run interview-context-governance:check
+
       # The real model adapter, proved against a fake transport with no
       # credential and no network. Transport failures retry a bounded number of
       # times; a returned-but-unusable answer is NEVER retried, because

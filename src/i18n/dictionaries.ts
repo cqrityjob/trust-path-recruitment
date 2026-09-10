@@ -5619,6 +5619,60 @@ export const dictionaries = {
     "iic.error.hint":
       "Intervjun går att förbereda ändå. Att underlaget saknas här betyder inte att " +
       "kandidaten saknar material — försök igen, eller öppna ansökan direkt.",
+    // ── E3: en läsning som inte gick igenom är inte ett faktum ────────
+    "iiu.pp.approve.blockedTitle": "Planen kan inte godkännas just nu",
+    "iiu.pp.approve.blockedBody":
+      "Ansökan som den här intervjun hör till kunde inte läsas, så rollen, dess krav och ett eventuellt delat bedömningsunderlag är okända. Att godkänna planen nu vore att godkänna den mot ett underlag som inte hämtades. Läs om ovan och försök igen.",
+    // ── E3: vad den intervjuade kan se ────────────────────────────────
+    "iin.heading": "Vad kandidaten kan se om den här intervjun",
+    "iin.lede":
+      "Kandidaten läser det här på sin egen sida. Det finns ingen separat utskickad information — den här sidan är informationen. Listan visar vad produkten kan berätta, och vad den inte kan.",
+    "iin.stated": "Det här får kandidaten veta",
+    "iin.gaps.title": "Det här kan kandidaten inte få veta",
+    "iin.state.notConfigured": "inte angivet av er",
+    "iin.state.unknown": "kunde inte läsas",
+    "iin.none": "Ingenting kan visas för kandidaten just nu.",
+    "iin.retention.howToSet":
+      "Lagringstiden sätts när ni bekräftar rättslig grund för inspelning eller utskrift av intervjun. Utan det steget finns ingen angiven tid, och kandidaten får veta just det — CQrityjob hittar inte på någon tid åt er.",
+    "iin.footnote":
+      "Den här listan säger vad produkten kan berätta för kandidaten. Den säger inte att informationen är tillräcklig enligt lag. Innehållet och den rättsliga grunden behöver granskas juridiskt innan pilot med skarpa kandidater.",
+    "iin.el.whoInitiated": "Vilken organisation som tagit initiativ till intervjun",
+    "iin.el.whichRole": "Vilken roll eller ansökan det gäller",
+    "iin.el.purpose": "Varför uppgifterna samlas in",
+    "iin.el.whatIsRecorded": "Vilka slags uppgifter som kan registreras",
+    "iin.el.aiProposes": "Att AI kan strukturera och föreslå material",
+    "iin.el.humanConfirms": "Att en människa måste granska och bekräfta uppgifterna",
+    "iin.el.aiDoesNotDecide": "Att AI inte fattar anställningsbeslutet",
+    "iin.el.whoCanAccess": "Vem som kan komma åt materialet",
+    "iin.el.summaryMayBeShared": "Att en kandidatsäker sammanfattning kan komma att delas",
+    "iin.el.retention": "Hur länge materialet sparas",
+    "iin.el.contact": "Vart frågor och rättelser ska skickas",
+    "iic.linkedUnreadable": "Den här intervjun hör till en ansökan som inte kunde läsas.",
+    "iic.linkedUnreadable.refused.hint":
+      "Ansökan finns, men din behörighet räcker inte för att läsa den. Be en ägare eller administratör hos er om åtkomst. Det är inte en fristående intervju.",
+    "iic.linkedUnreadable.failed.hint":
+      "Ansökan finns, men läsningen misslyckades. Ingenting nedan är hämtat från den. Försök igen — det är inte en fristående intervju.",
+    "iic.retry": "Försök läsa igen",
+    "iic.field.roleRefused": "Kan inte visas",
+    "iic.field.roleUnavailable": "Kunde inte hämtas",
+    "iic.known.partial": "Det som finns kunde inte hämtas i sin helhet.",
+    "iic.known.partial.hint":
+      "En eller flera källor svarade inte. Listan är därför inte tom — den är ofullständig.",
+    "iic.explore.partial": "Underlaget för det här avsnittet är ofullständigt.",
+    "iic.explore.partial.hint":
+      "Annonsens krav eller det delade bedömningsunderlaget kunde inte hämtas, så listan säger inte att det saknas områden att gå igenom.",
+    "iic.assessment.refused": "Bedömningsunderlaget kan inte visas för dig.",
+    "iic.assessment.refused.hint":
+      "Det säger ingenting om huruvida ett underlag finns. Be en ägare eller administratör hos er.",
+    "iic.assessment.failed": "Bedömningsunderlaget kunde inte hämtas.",
+    "iic.assessment.failed.hint":
+      "Det säger ingenting om huruvida ett underlag finns. Ladda om sidan för att försöka igen.",
+    "iic.caseUnavailable.notFound": "Intervjun kunde inte öppnas.",
+    "iic.caseUnavailable.notFound.hint":
+      "Antingen finns den inte, eller så hör den till en annan organisation. Systemet skiljer inte på de två — att göra det skulle avslöja att ärendet finns.",
+    "iic.caseUnavailable.failed": "Intervjun kunde inte läsas.",
+    "iic.caseUnavailable.failed.hint":
+      "Läsningen misslyckades. Ingenting är känt om ärendet, inte ens om det finns. Försök igen.",
     "iic.unlinked": "Den här intervjun är inte kopplad till någon ansökan.",
     "iic.unlinked.hint":
       "Det är i sin ordning: en intervju kan hållas för en roll som inte är utannonserad. " +
@@ -11343,6 +11397,60 @@ export const dictionaries = {
     "iic.error.hint":
       "You can still prepare the interview. A briefing missing here does not mean the " +
       "candidate submitted nothing — try again, or open the application directly.",
+    // ── E3: a read that did not go through is not a fact ──────────────
+    "iiu.pp.approve.blockedTitle": "The plan cannot be approved right now",
+    "iiu.pp.approve.blockedBody":
+      "The application this interview belongs to could not be read, so the role, its requirements and any shared assessment material are unknown. Approving the plan now would be approving it against material that was never fetched. Re-read above and try again.",
+    // ── E3: what the interviewed person can see ───────────────────────
+    "iin.heading": "What the candidate can see about this interview",
+    "iin.lede":
+      "The candidate reads this on their own page. There is no separate notice sent out — that page is the notice. The list shows what the product can tell them, and what it cannot.",
+    "iin.stated": "The candidate is told this",
+    "iin.gaps.title": "The candidate cannot be told this",
+    "iin.state.notConfigured": "not set by you",
+    "iin.state.unknown": "could not be read",
+    "iin.none": "Nothing can be shown to the candidate right now.",
+    "iin.retention.howToSet":
+      "The retention period is set when you confirm a lawful basis for recording or transcribing the interview. Without that step there is no period, and the candidate is told exactly that — CQrityjob does not invent one on your behalf.",
+    "iin.footnote":
+      "This list says what the product can tell the candidate. It does not say the information is sufficient in law. The content and the lawful basis need legal review before any pilot with real candidates.",
+    "iin.el.whoInitiated": "Which organisation initiated the interview",
+    "iin.el.whichRole": "Which role or application it concerns",
+    "iin.el.purpose": "Why the information is being collected",
+    "iin.el.whatIsRecorded": "Which kinds of information may be recorded",
+    "iin.el.aiProposes": "That AI may structure and propose material",
+    "iin.el.humanConfirms": "That a human must review and confirm the evidence",
+    "iin.el.aiDoesNotDecide": "That AI does not make the employment decision",
+    "iin.el.whoCanAccess": "Who can access the material",
+    "iin.el.summaryMayBeShared": "That a candidate-safe summary may later be shared",
+    "iin.el.retention": "How long the material is kept",
+    "iin.el.contact": "Where questions and corrections go",
+    "iic.linkedUnreadable": "This interview belongs to an application that could not be read.",
+    "iic.linkedUnreadable.refused.hint":
+      "The application is there; your permissions do not reach it. Ask an owner or admin in your organisation. This is not a standalone interview.",
+    "iic.linkedUnreadable.failed.hint":
+      "The application is there and the read failed. Nothing below was taken from it. Try again — this is not a standalone interview.",
+    "iic.retry": "Try reading again",
+    "iic.field.roleRefused": "Cannot be shown",
+    "iic.field.roleUnavailable": "Could not be fetched",
+    "iic.known.partial": "What exists could not be fetched in full.",
+    "iic.known.partial.hint":
+      "One or more sources did not answer. The list is therefore not empty — it is incomplete.",
+    "iic.explore.partial": "The material behind this section is incomplete.",
+    "iic.explore.partial.hint":
+      "The advert's requirements or the shared assessment material could not be fetched, so this list is not saying there is nothing to cover.",
+    "iic.assessment.refused": "The assessment material cannot be shown to you.",
+    "iic.assessment.refused.hint":
+      "That says nothing about whether any exists. Ask an owner or admin in your organisation.",
+    "iic.assessment.failed": "The assessment material could not be fetched.",
+    "iic.assessment.failed.hint":
+      "That says nothing about whether any exists. Reload the page to try again.",
+    "iic.caseUnavailable.notFound": "This interview could not be opened.",
+    "iic.caseUnavailable.notFound.hint":
+      "Either it does not exist, or it belongs to another organisation. The system does not tell the two apart — doing so would confirm that the case exists.",
+    "iic.caseUnavailable.failed": "This interview could not be read.",
+    "iic.caseUnavailable.failed.hint":
+      "The read failed. Nothing is known about the case, not even whether it exists. Try again.",
     "iic.unlinked": "This interview is not linked to an application.",
     "iic.unlinked.hint":
       "That is a normal case: an interview may be held for a role that was never advertised. " +

@@ -39,6 +39,9 @@ import {
 } from "@/components/employer/interview/InterviewUi";
 import { getInterviewCase } from "@/lib/interview-intelligence/runtime.functions";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
+import type { SourceRead } from "@/lib/interview-intelligence/context";
+import { contextOf } from "@/lib/interview-intelligence/context-outcome";
+import { CandidateNoticePanel } from "@/components/employer/interview/CandidateNoticePanel";
 import { processLinkage } from "@/lib/employer-continuity/process-projection";
 
 export const Route = createFileRoute(
@@ -110,14 +113,42 @@ function Page() {
   // The role, said only when we actually know it. A guide's name and an
   // internal title are NOT fallbacks for it: the honest answer to "which
   // advertised role is this" is sometimes that there is not one.
-  const contextRole = contextQ.data
-    ? ((lang === "en" ? contextQ.data.roleEn : contextQ.data.roleSv) ?? contextQ.data.roleSv)
-    : null;
+  const ctx = contextOf(contextQ.data);
+  const contextRole = ctx ? ((lang === "en" ? ctx.roleEn : ctx.roleSv) ?? ctx.roleSv) : null;
+
+  // ── "WE DO NOT KNOW" IS NOT "THERE IS NONE" ────────────────────────
+  //
+  // `t("continuity.role.unknown")` is a claim: it says this case has no
+  // advertised role. It used to be the answer to every situation except a
+  // hard query failure -- including a case whose application could not be
+  // read, and a case whose ADVERT could not be read. Both of those have a
+  // role; we had merely failed to fetch it.
   const advertisedRole = contextQ.isLoading
     ? t("continuity.assessment.loading")
-    : contextQ.isError
+    : contextQ.isError || !ctx
       ? t("continuity.report.unavailable")
-      : (contextRole ?? t("continuity.role.unknown"));
+      : contextRole
+        ? contextRole
+        : ctx.link === "linkedUnreadable"
+          ? t("iic.field.roleUnavailable")
+          : ctx.reads.job === "refused"
+            ? t("iic.field.roleRefused")
+            : ctx.reads.job === "failed"
+              ? t("iic.field.roleUnavailable")
+              : t("continuity.role.unknown");
+
+  /** How the ROLE read went, for the candidate-notice projection.
+   *
+   *  Kept out of the JSX because it is four cases and a nested ternary in a
+   *  prop is where a wrong answer hides. `absent` is the only value that means
+   *  "there is no advertised role", and only a standalone case may produce it. */
+  const noticeRoleRead: SourceRead = !ctx
+    ? "failed"
+    : ctx.link === "standalone"
+      ? "absent"
+      : ctx.link === "linkedUnreadable"
+        ? ctx.reads.application
+        : ctx.reads.job;
 
   // Recruitment-linked, or standalone. One persisted identifier decides it.
   const linkage = processLinkage(d.applicationId);
@@ -304,6 +335,38 @@ function Page() {
             ))}
           </ul>
         </section>
+      </div>
+
+      {/* ---- What the candidate can see -------------------------------
+           Below the recruiter's own work, because it is not a task -- and
+           above the method disclosure, because it IS about this case.
+
+           A recruiter had no way to find out what the interviewed person is
+           told, because the notice is that person's own signed-in page and is
+           scoped to them. So they could reasonably believe the product had
+           explained retention, when in fact it had told the candidate that no
+           retention date has been set. Same projection, same eleven elements,
+           same order as the candidate's page. */}
+      <div className="mt-8 max-w-4xl">
+        <CandidateNoticePanel
+          input={{
+            employerName: ws.workspace!.employerName,
+            roleTitle: contextRole,
+            // The advert's own read outcome, so a role nobody could FETCH is
+            // not reported to the recruiter as a role that does not exist.
+            //
+            //   standalone         there is genuinely no advert  -> absent
+            //   linked             the advert's own read decides -> reads.job
+            //   linkedUnreadable   the application never arrived -> its reason
+            //   no context at all  we know nothing               -> failed
+            roleRead: noticeRoleRead,
+            sourceKinds: candidateSources.map((x) => x.kind),
+            transcriptInUse: d.sources.some((x) => x.kind === "transcript"),
+            retainUntil: d.retainUntil,
+            retentionRead: "ok",
+            correctionPathAvailable: true,
+          }}
+        />
       </div>
 
       {/* ---- The method, available rather than unavoidable -------------
