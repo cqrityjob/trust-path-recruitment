@@ -753,7 +753,25 @@ export type WaitingOn = "employer" | "candidate" | "colleague" | "nobody" | "unk
 export type ActionDestination =
   | { readonly kind: "none" }
   | { readonly kind: "assessmentReview"; readonly attemptId: string }
-  | { readonly kind: "assessmentParticipants" }
+  /** The candidates list, opened ON one exact attempt.
+   *
+   *  ── THE DEFECT THIS FIELD EXISTS BECAUSE OF ────────────────────────
+   *
+   *  This member used to carry nothing. The ladder had already chosen WHICH
+   *  attempt was ready to share -- `assessment.releaseAttemptId`, selected by
+   *  that action's own predicate and the shared tie-break -- and then threw
+   *  the answer away, sending the recruiter to a filtered list and asking them
+   *  to find it again. With one ready attempt that was merely rude. With two,
+   *  the list offers two identical buttons and the projection's careful choice
+   *  of which one has waited longest is invisible: the recruiter picks, and
+   *  the record that actually gets shared is whichever card they happened to
+   *  read first.
+   *
+   *  A destination that names a set is not a destination for an action about
+   *  one record. So the attempt travels, the list opens focused on it, and a
+   *  link that names an attempt this employer cannot see says so rather than
+   *  silently showing everything. */
+  | { readonly kind: "assessmentParticipants"; readonly attemptId: string }
   | { readonly kind: "interviewCase"; readonly caseId: string }
   | { readonly kind: "interviewReport"; readonly caseId: string };
 
@@ -1004,7 +1022,9 @@ function deriveNextAction(
       ? {
           kind: "shareAssessmentBrief",
           waitingOn: "employer",
-          destination: { kind: "assessmentParticipants" },
+          // The attempt the ladder just matched on, not the row's attempt and
+          // not a filter that happens to contain it.
+          destination: { kind: "assessmentParticipants", attemptId: assessment.releaseAttemptId },
           unavailableTrack: null,
         }
       : {

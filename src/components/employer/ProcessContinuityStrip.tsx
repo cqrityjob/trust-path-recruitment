@@ -207,7 +207,19 @@ function DestinationLink({
         <Link
           to="/employer/$employerSlug/assessments/participants"
           params={{ employerSlug }}
-          search={{ state: "ready_to_release" as const }}
+          // The attempt travels beside the filter, and it is the attempt that
+          // matters: the filter narrows a list, the attempt names the record
+          // this action is about. The list opens focused on it, and refuses to
+          // pretend it found it when it did not.
+          //
+          // An opaque server-issued attempt id, exactly like the review
+          // destination's -- no name, no address, no title. It is navigation
+          // context and not authority: the list is scoped entirely by
+          // scp_employer_assessment_pipeline, and scp_release_attempt_report
+          // re-decides owner/admin and the attempt's own state on write. A
+          // hand-edited value reaches a card this employer cannot see, which
+          // is why the destination has a state for exactly that.
+          search={{ state: "ready_to_release" as const, attempt: destination.attemptId }}
           className={cls}
         >
           {label}

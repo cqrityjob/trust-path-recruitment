@@ -5551,6 +5551,65 @@ elif [ "$SPRC_PASSED" -lt 4 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# E2 — the employer reads the document the CANDIDATE received.
+#
+# 20261105090000 adds one read (scp_participant_report_for_issuer) and the
+# predicate behind it. The suite proves it is a copy of the participant read
+# rather than a re-rendering of it, that it returns strictly less than the
+# employer read the same caller already has, and that release authority --
+# owner or admin, active seat -- is exactly what it requires.
+#
+# It also asserts the rollback: both functions drop cleanly and the audience
+# contracts they were added beside survive untouched.
+# ---------------------------------------------------------------------------
+echo "==> Running E2 issuer participant-preview assertions"
+set +e
+E2PP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/scp_participant_report_issuer_preview_test.sql 2>&1)"
+E2PP_RC=$?
+set -e
+
+echo "$E2PP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+E2PP_PASSED="$(echo "$E2PP_OUT" | grep -c "ok  " || true)"
+E2PP_FAILED=0
+
+if [ "$E2PP_RC" -ne 0 ]; then
+  echo "FAIL: the E2 issuer-preview suite exited with code ${E2PP_RC}." >&2
+  echo "$E2PP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  E2PP_FAILED=1
+else
+  echo "    ok  ${E2PP_PASSED} E2 issuer participant-preview assertions passed"
+  if [ "$E2PP_PASSED" -lt 26 ]; then
+    echo "FAIL: expected at least 26 E2 issuer-preview assertions, only ${E2PP_PASSED} ran." >&2
+    E2PP_FAILED=1
+  fi
+fi
+
+# The rollback, on a throwaway copy of the schema state: dropping the two
+# functions must leave the audience contracts they were added beside intact.
+# Run LAST of the E2 checks, and in its own transaction, so nothing after it
+# reads a schema with the preview removed.
+set +e
+E2PP_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -1 -c "
+  \set ON_ERROR_STOP on
+  BEGIN;
+  \i supabase/rollback/20261105090000_scp_participant_report_issuer_preview_rollback.sql
+  ROLLBACK;" 2>&1)"
+E2PP_RB_RC=$?
+set -e
+if [ "$E2PP_RB_RC" -ne 0 ] || ! echo "$E2PP_RB" | grep -q "SCP_ISSUER_PREVIEW_ROLLBACK ok"; then
+  echo "FAIL: the E2 issuer-preview rollback did not verify." >&2
+  echo "$E2PP_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  E2PP_FAILED=1
+else
+  echo "    ok  the E2 issuer-preview rollback drops both functions and leaves the audience contracts"
+fi
+
+if [ "$E2PP_FAILED" -ne 0 ]; then
+  suite_failed "E2 issuer participant-preview"
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 if [ "${KEEP_TEST_DB:-0}" = "1" ]; then
@@ -5631,5 +5690,6 @@ echo "              ${RACE_PASSED} concurrent-decision assertions,"
 echo "              ${SPFM_PASSED} first-merit assertions,"
 echo "              ${FMR_PASSED} concurrent first-merit assertions,"
 echo "              ${TWO_OPS_PASSED} two-operation first-merit race assertions,"
-echo "              ${SPRC_PASSED} rollback correction assertions"
+echo "              ${SPRC_PASSED} rollback correction assertions,"
+echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions"
 echo "===================================================="

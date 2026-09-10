@@ -491,6 +491,13 @@ DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
 -- the Phase 2b unwind further down.
 DROP FUNCTION IF EXISTS public.scp_participant_report(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_report(uuid) CASCADE;
+-- E2 (20261105090000): the issuer's read of the participant document, and the
+-- release-authority predicate behind it. Added to this unwind because the
+-- assertion below requires that NO scp_ function survives a full PR-A
+-- rollback -- a new function that is not listed here fails that sweep, which
+-- is exactly the reminder it is meant to be.
+DROP FUNCTION IF EXISTS public.scp_participant_report_for_issuer(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_report_issuer_admin(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_audience_brief(jsonb) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_report_snapshot_readable(text, uuid, uuid) CASCADE;
 -- Part F (20260820120000). The decision table references scp_attempts, so it

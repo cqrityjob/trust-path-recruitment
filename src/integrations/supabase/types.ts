@@ -15050,6 +15050,22 @@ export type Database = {
           subject_id: string
         }[]
       }
+      scp_participant_report_for_issuer: {
+        Args: { _attempt_id: string }
+        Returns: {
+          attempt_id: string
+          audience: string
+          brief: Json
+          context: Json
+          id: string
+          limitations_en: string[]
+          limitations_sv: string[]
+          payload: Json
+          released_at: string
+          safety_flags: Json
+          subject_id: string
+        }[]
+      }
       scp_record_employer_decision: {
         Args: {
           _action: string
@@ -15100,6 +15116,10 @@ export type Database = {
           rule_version: string
           step: string
         }[]
+      }
+      scp_report_issuer_admin: {
+        Args: { _issuer_organization_id: string }
+        Returns: boolean
       }
       scp_report_snapshot_readable: {
         Args: {
