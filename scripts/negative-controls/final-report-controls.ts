@@ -660,14 +660,14 @@ const MUTATIONS: readonly Mutation[] = [
     replace:
       '    await shot(page, "15-en-1440-two-assessors-disagreement");\n    await page.screenshot({',
     guard: E4,
-    expect: "13.2k the disagreement capture is clipped to the disagreement",
+    expect: "13.2k the disagreement capture is clipped to the assessors SECTION",
   },
   {
     id: "E4-LONG-WALK-RECORDS-NO-STEPS",
     defect:
       "the 31-second Swedish walk stops recording step durations, so a stall in the longest test is hidden by the budget that makes the test possible",
     file: EVIDENCE_SPEC,
-    find: '  mark(t, "01 · before a preview, the act is not offered");',
+    find: '  mark("01 · before a preview, the act is not offered");',
     replace: "  // step no longer recorded",
     guard: E4,
     expect: "13.2j EVERY capture's own step is timed",

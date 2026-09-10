@@ -356,22 +356,38 @@ const timings: Timing[] = [];
  * the same record, and the long Swedish walk uses `mark` because wrapping its
  * seven numbered steps would have buried the thing being read.
  */
+// ── ONE KEY PER TEST ──────────────────────────────────────────────────
+//
+// The step records used a short label and the whole-test record used the
+// Playwright title, so nothing joined them: the verifier saw six tests that
+// had recorded a total and no steps, and refused the artifact. It was right
+// to. Both now take the name from `test.info()`, so there is one key and no
+// way for the two halves to drift apart again.
 const marks = new Map<string, number>();
-function mark(testName: string, step: string): void {
+
+function mark(step: string): void {
+  const testName = test.info().title;
   const now = Date.now();
   const previous = marks.get(testName) ?? now;
   timings.push({ test: testName, step, ms: now - previous });
   marks.set(testName, now);
 }
 
-async function phase<T>(testName: string, step: string, body: () => Promise<T>): Promise<T> {
+async function phase<T>(step: string, body: () => Promise<T>): Promise<T> {
+  const testName = test.info().title;
   const started = Date.now();
   try {
     return await body();
   } finally {
     timings.push({ test: testName, step, ms: Date.now() - started });
+    marks.set(testName, Date.now());
   }
 }
+
+// The clock starts before the first step, so the first duration is real.
+test.beforeEach(() => {
+  marks.set(test.info().title, Date.now());
+});
 
 test.afterEach(async ({ page }, info) => {
   await recordIssuedTokens(page).catch(() => 0);
@@ -406,13 +422,11 @@ async function tabTo(page: Page, target: ReturnType<Page["locator"]>) {
 test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history", async ({
   page,
 }) => {
-  const t = "01-07 · SWEDISH DESKTOP 1440";
-  mark(t, "start");
   await page.setViewportSize({ width: 1440, height: 1000 });
   const caseSv = caseIdFor(TITLE_SV);
   expect(caseSv).toMatch(/^[0-9a-f-]{36}$/);
   await signIn(page, OWNER);
-  mark(t, "sign in as the owner");
+  mark("sign in as the owner");
 
   // 01. Before a preview: the act is offered only as "preview first".
   await page.goto(reportUrl(caseSv));
@@ -422,7 +436,7 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   await expect(finaliseBtn).toBeDisabled();
   await expectNoOverflow(page);
   await shot(page, "01-sv-1440-preview-first");
-  mark(t, "01 · before a preview, the act is not offered");
+  mark("01 · before a preview, the act is not offered");
 
   // 02. THE EXACT PREVIEW: the server's own basis, rendered by the document
   //     component. Both assessors, their disagreement, the bound assessment
@@ -439,7 +453,7 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   await expect(preview.locator('[data-testid="fr-cls-passport_disclosure"]').first()).toBeVisible();
   await expect(finaliseBtn).toBeEnabled();
   await shot(page, "02-sv-1440-exact-preview-two-assessors");
-  mark(t, "02 · the exact preview, both assessors");
+  mark("02 · the exact preview, both assessors");
 
   // 03. THE BASIS MOVES, and the server refuses the stale identity. Nothing
   //     is written; the finalise control is withdrawn until a fresh preview.
@@ -450,7 +464,7 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   await expect(finaliseBtn).toBeDisabled();
   await expect(doc(page, "final")).toHaveCount(0);
   await shot(page, "03-sv-1440-stale-preview-refused");
-  mark(t, "03 · the basis moved, the server refused");
+  mark("03 · the basis moved, the server refused");
 
   // 04. A fresh preview, then ONE explicit human finalisation.
   await previewBtn.click();
@@ -458,7 +472,7 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   await expect(finaliseBtn).toBeEnabled();
   await tabTo(page, finaliseBtn);
   await page.screenshot({ path: `${OUT}/04-sv-1440-finalise-focused.png` });
-  mark(t, "04 · the act reached by keyboard");
+  mark("04 · the act reached by keyboard");
   await page.keyboard.press("Enter");
 
   // 05. THE IMMUTABLE REPORT, rendered from the governed readback: verified
@@ -471,7 +485,7 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   await expect(previewBtn).toHaveCount(0);
   await expectNoOverflow(page);
   await shot(page, "05-sv-1440-immutable-final-v1");
-  mark(t, "05 · finalised, and read back verified");
+  mark("05 · finalised, and read back verified");
 
   // 06. A correction is a NEW version; the previous one is kept and can be
   //     opened. Version 2 is produced through the governed RPCs (see the
@@ -482,7 +496,7 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   const openV1 = main(page).getByRole("button", { name: /^Öppna version 1$/ });
   await expect(openV1).toBeVisible();
   await shot(page, "06-sv-1440-two-versions");
-  mark(t, "06 · a correction made version 2");
+  mark("06 · a correction made version 2");
 
   // 07. Version 1 opened as history: the earlier immutable document, marked
   //     superseded, with the finaliser it had.
@@ -493,15 +507,14 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   await expect(history.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
   await expect(main(page)).toContainText(/Visar version 1/);
   await shot(page, "07-sv-1440-historical-version-opened");
-  mark(t, "07 · version 1 still readable");
+  mark("07 · version 1 still readable");
 });
 
 test("08 · a member: the whole report, and not the act", async ({ page }) => {
-  const t = "08 · MEMBER";
   await page.setViewportSize({ width: 1440, height: 1000 });
   const caseEn = caseIdFor(TITLE_EN);
-  await phase(t, "sign in as a member", () => signIn(page, MEMBER));
-  await phase(t, "the act is not offered", async () => {
+  await phase("sign in as a member", () => signIn(page, MEMBER));
+  await phase("the act is not offered", async () => {
     await page.goto(reportUrl(caseEn));
     await expect(main(page)).toContainText(/Görs av ägare eller administratör/, {
       timeout: 30_000,
@@ -513,14 +526,13 @@ test("08 · a member: the whole report, and not the act", async ({ page }) => {
 
 test("09 · the candidate is denied, and is not told a report exists", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  const t = "09 · CANDIDATE";
   const caseSv = caseIdFor(TITLE_SV);
-  await phase(t, "sign in as the candidate", () => signIn(page, CANDIDATE));
+  await phase("sign in as the candidate", () => signIn(page, CANDIDATE));
   await page.goto(reportUrl(caseSv));
   // Whatever the shell does with a slug this person holds no seat for, the
   // report itself must not be on the page: no document in any mode, no
   // finalise control, and no candidate-facing sharing of any kind.
-  await phase(t, "no report is on the page", async () => {
+  await phase("no report is on the page", async () => {
     await page.waitForLoadState("networkidle");
     await expect(page.locator("article[data-report-mode]")).toHaveCount(0);
     await expect(
@@ -534,11 +546,9 @@ test("09 · the candidate is denied, and is not told a report exists", async ({ 
 
 test("10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  const t = "10-13 · ENGLISH MOBILE 375";
-  mark(t, "start");
   const caseEn = caseIdFor(TITLE_EN);
   await signIn(page, OWNER);
-  mark(t, "sign in as the owner");
+  mark("sign in as the owner");
   await page.goto(reportUrl(caseEn));
   await expect(main(page)).toContainText(/Förhandsgranska|Preview/, { timeout: 30_000 });
   // Scoped to the visible language group: at 375 there is a second copy inside
@@ -555,7 +565,7 @@ test("10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable", asy
   await expect(finaliseBtn).toBeDisabled();
   await expectNoOverflow(page);
   await shot(page, "10-en-375-preview-first");
-  mark(t, "10 · before a preview, in English");
+  mark("10 · before a preview, in English");
 
   // 11. The exact preview in English, on a phone: both assessors, the
   //     disagreement stated, the disclosure marked "not verified here".
@@ -567,12 +577,12 @@ test("10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable", asy
   await expect(preview).toContainText(/Guard East/);
   await expectNoOverflow(page);
   await shot(page, "11-en-375-exact-preview");
-  mark(t, "11 · the exact preview, in English");
+  mark("11 · the exact preview, in English");
 
   // 12. The finalise control reached by keyboard, ring visible.
   await tabTo(page, finaliseBtn);
   await page.screenshot({ path: `${OUT}/12-en-375-finalise-focused.png` });
-  mark(t, "12 · the act reached by keyboard");
+  mark("12 · the act reached by keyboard");
 
   // 13. Finalised, on a phone, in English: the immutable report with the
   //     finaliser named, and no sideways scroll anywhere on the page.
@@ -583,7 +593,7 @@ test("10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable", asy
   await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
   await expectNoOverflow(page);
   await shot(page, "13-en-375-immutable-final");
-  mark(t, "13 · finalised, on a phone, in English");
+  mark("13 · finalised, on a phone, in English");
 });
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -601,16 +611,15 @@ test("10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable", asy
 // renders completely in both languages at both widths.
 
 test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", async ({ page }) => {
-  const t = "14-15 · ENGLISH DESKTOP 1440";
   await page.setViewportSize({ width: 1440, height: 1000 });
   const caseEn = caseIdFor(TITLE_EN);
-  await phase(t, "sign in as the owner", () => signIn(page, OWNER));
-  await phase(t, "open the report", async () => {
+  await phase("sign in as the owner", () => signIn(page, OWNER));
+  await phase("open the report", async () => {
     await page.goto(reportUrl(caseEn));
     await expect(doc(page, "final")).toBeVisible({ timeout: 60_000 });
   });
 
-  await phase(t, "switch to English", async () => {
+  await phase("switch to English", async () => {
     await page
       .getByRole("group", { name: /Språk|Language/i })
       .locator("visible=true")
@@ -622,7 +631,7 @@ test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", a
 
   // 14. The immutable document in English at desktop width: the digest
   //     recomputed and matching, the version, the finaliser named and dated.
-  await phase(t, "read the immutable document", async () => {
+  await phase("read the immutable document", async () => {
     const final = doc(page, "final");
     await expect(final).toBeVisible({ timeout: 30_000 });
     await expect(final).toContainText(/Finalised and immutable/);
@@ -636,7 +645,7 @@ test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", a
 
   // 15. Both assessors and their disagreement, in English, at 1440 — the
   //     state the whole report exists to carry, in the other language.
-  await phase(t, "both assessors and the disagreement", async () => {
+  await phase("both assessors and the disagreement", async () => {
     const final = doc(page, "final");
     const disagreement = final.locator('[data-testid="fr-disagree"]');
     await expect(disagreement).toBeVisible();
@@ -645,30 +654,32 @@ test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", a
     await expectNoOverflow(page);
     // CLIPPED TO THE THING IT IS EVIDENCE OF, not another full page.
     //
-    // This was a full-page capture, and the verifier's digest listing showed
-    // it was byte-for-byte identical to capture 14: two captures claiming to
-    // show different things were the same image, and the artifact was one
-    // file larger for nothing. A capture that duplicates another proves
-    // nothing it does not already prove.
-    await disagreement.screenshot({
-      path: `${OUT}/15-en-1440-two-assessors-disagreement.png`,
-    });
+    // It was a full-page capture, and the verifier's digest listing showed it
+    // byte-for-byte identical to capture 14: two captures claiming to show
+    // different things were the same image. Clipping it to the disagreement
+    // BADGE was the other mistake -- 2 051 bytes of a one-line span, which
+    // the verifier then refused as too small to be a screenshot, correctly.
+    //
+    // Section 4 is the thing this capture claims: every assessor for every
+    // requirement, with the disagreement stated among them.
+    await page
+      .locator("#fr-assessments")
+      .screenshot({ path: `${OUT}/15-en-1440-two-assessors-disagreement.png` });
   });
 });
 
 test("16-17 · SWEDISH MOBILE 375 · version 2 and the history it kept", async ({ page }) => {
-  const t = "16-17 · SWEDISH MOBILE 375";
   await page.setViewportSize({ width: 375, height: 812 });
   const caseSv = caseIdFor(TITLE_SV);
-  await phase(t, "sign in as the owner", () => signIn(page, OWNER));
-  await phase(t, "open the corrected report", async () => {
+  await phase("sign in as the owner", () => signIn(page, OWNER));
+  await phase("open the corrected report", async () => {
     await page.goto(reportUrl(caseSv));
     await expect(main(page)).toContainText(/Version 2/, { timeout: 60_000 });
   });
 
   // 16. The corrected report on a phone, in Swedish: version 2, the finaliser
   //     named, the digest verified, and nothing scrolling sideways.
-  await phase(t, "read version 2", async () => {
+  await phase("read version 2", async () => {
     const final = doc(page, "final");
     await expect(final).toBeVisible({ timeout: 30_000 });
     await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
@@ -679,7 +690,7 @@ test("16-17 · SWEDISH MOBILE 375 · version 2 and the history it kept", async (
 
   // 17. THE PREVIOUS VERSION IS STILL READABLE. A correction added a version;
   //     it did not replace one. Opened on a phone, in Swedish.
-  await phase(t, "open version 1 from the history", async () => {
+  await phase("open version 1 from the history", async () => {
     const openV1 = main(page).getByRole("button", { name: /^Öppna version 1$/ });
     await expect(openV1).toBeVisible({ timeout: 30_000 });
     await openV1.click();
