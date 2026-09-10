@@ -228,8 +228,45 @@ BEGIN
   END IF;
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- The MIXED case, asserted rather than created.
+-- ---------------------------------------------------------------------------
+-- The E1 review's blocker was an application holding a case with a FINALISED
+-- report and another case at `assessed` -- report material a human still owes
+-- a review. The overview picked the finished case as its lead and announced
+-- that the report was ready to open, hiding the outstanding work entirely.
+--
+-- The journey fixture's application 9e...e001 already holds exactly that pair,
+-- and its report is a REAL one: written by scp_iv_finalise_report, with its
+-- own content hash. A hand-built report row here would prove only that the
+-- strip can render a row this file wrote, so nothing is created -- the state
+-- is CHECKED, and the walk fails loudly if it ever stops being true rather
+-- than quietly capturing a screenshot of something else.
+DO $$
+DECLARE
+  v_app  uuid := '9e000000-0000-4000-8000-00000000e001';
+  v_final int;
+  v_material int;
+BEGIN
+  SELECT count(*) INTO v_final
+    FROM public.scp_interview_cases c
+    JOIN public.scp_interview_reports r ON r.case_id = c.id AND r.status = 'final'
+   WHERE c.application_id = v_app;
+
+  SELECT count(*) INTO v_material
+    FROM public.scp_interview_cases c
+   WHERE c.application_id = v_app AND c.status = 'assessed';
+
+  IF v_final < 1 OR v_material < 1 THEN
+    RAISE EXCEPTION
+      'SCP_E1_FIXTURE_NO_MIXED_CASE: application % must hold at least one finalised report (found %) AND at least one case at assessed (found %); evidence capture 05 depends on that pair.',
+      v_app, v_final, v_material;
+  END IF;
+END $$;
+
 COMMIT;
 
 \echo 'OK: E1 continuity fixture applied.'
 \echo '    a1 linked + interview under way, a2 linked + report material,'
-\echo '    a3 linked + nothing started, c3 standalone.'
+\echo '    a3 linked + nothing started, c3 standalone,'
+\echo '    and the journey application 9e...e001 verified as the MIXED case.'

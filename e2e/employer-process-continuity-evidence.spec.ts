@@ -96,9 +96,17 @@ test("01-06 · the Swedish desktop walk", async ({ page }) => {
   await openApplication(page, F.appMaterial);
   await shot(page, "04-sv-1440-report-material-ready");
 
-  // 5. A finalised report, which is.
+  // 5. THE MIXED CASE: a finalised report in one case, report material still
+  //    awaiting review in another. The capture must show the outstanding work
+  //    at the top AND the finished report named in the same row -- both are
+  //    true, and the earlier version of this screenshot showed only the
+  //    second, which is the defect the review found.
   await openApplication(page, F.appFinalised);
-  await shot(page, "05-sv-1440-report-finalised");
+  await expect(strip(page)).toContainText(/Rapportunderlag redo för granskning/, {
+    timeout: 30_000,
+  });
+  await expect(strip(page)).toContainText(/fastställd rapport finns i ett annat case/);
+  await shot(page, "05-sv-1440-report-material-and-finalised");
 
   // 6. An intentionally standalone interview.
   await page.goto(`/employer/${SLUG}/interview-intelligence/${F.caseStandalone}`);

@@ -179,9 +179,22 @@ test.describe("E1 · the distinctions", () => {
     await expect(strip).toContainText(/Rapportunderlag redo/);
     await expect(strip).not.toContainText(/Fastställd rapport finns/);
 
-    // The case that really was finalised: a report, and the strip says report.
+    // THE MIXED CASE. This application holds both: a case with a REAL finalised
+    // report, and another at `assessed` whose material a human still owes a
+    // review. The strip used to name the finished one and announce that the
+    // report could be opened, hiding the outstanding work; it must now lead
+    // with the work AND still say the finished report exists.
     await openApplication(page, F.appFinalised);
-    await expect(stripOf(page)).toContainText(/Fastställd rapport finns/);
+    const mixed = stripOf(page);
+    await expect(mixed).toContainText(/Rapportunderlag redo för granskning/);
+    await expect(mixed).toContainText(/fastställd rapport finns i ett annat case/);
+    // The next step is the outstanding work, not the finished document.
+    await expect(mixed).toContainText(/Granska rapportunderlaget/);
+    await expect(mixed).not.toContainText(/Rapporten är fastställd och kan öppnas/);
+    // And the interview row names the case that owes work, saying how many
+    // cases it is one of rather than pretending to be all of them.
+    await expect(mixed).toContainText(/Rapportunderlag redo/);
+    await expect(mixed).toContainText(/intervjuer totalt/);
 
     // And the list counter counts only the second one.
     await page.goto(`/employer/${SLUG}/interview-intelligence`);

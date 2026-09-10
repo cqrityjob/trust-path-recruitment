@@ -637,6 +637,20 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
     ),
     "9 · which is exported from the one place the chip draws it",
   );
+  // A row that names one of several records says how many, in that track's own
+  // noun. Without it a reader has no way to know the other records exist.
+  for (const k of ["continuity.track.assessmentCount", "continuity.track.interviewCount"]) {
+    ok(stripSrc.includes(k), `9 · the ${k} suffix is wired`);
+    ok(typeof sv[`${k}.one`] === "string", `9 · ${k} has a singular`);
+    ok(typeof sv[`${k}.other`] === "string", `9 · ${k} has a plural`);
+    ok(typeof en[`${k}.other`] === "string", `9 · ${k} has both languages`);
+  }
+  ok(
+    stripSrc.includes('alsoCount={assessment.read === "ready" ? assessment.attemptCount : 0}') &&
+      stripSrc.includes('alsoCount={interview.read === "ready" ? interview.caseCount : 0}'),
+    "9 · and counts only what was actually read",
+  );
+
   // The lead status is carried through the projection so the label CANNOT be
   // re-derived from the presentation state.
   ok(

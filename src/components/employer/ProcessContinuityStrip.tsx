@@ -311,14 +311,31 @@ export function ProcessContinuityStrip({
           is what this is: a term and the state of it. */}
       <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
         <TrackRow term={t("continuity.track.application")} value={applicationWord} />
+        {/* ONE ROW, SEVERAL RECORDS.
+         *
+         *  A row names one record, and an application can hold several
+         *  assessment attempts or interview cases. The row now names the
+         *  record needing the most ATTENTION rather than the furthest along,
+         *  so a finished one can no longer speak for an application that still
+         *  owes work — but the others are still not visible in a single line,
+         *  and a reader has no way to know they exist.
+         *
+         *  So where there is more than one, the row says how many. Not a
+         *  status and not a link: a count, so the sentence reads "this is one
+         *  of three" rather than "this is all there is". Each record's own
+         *  state is in its own section further down the page. */}
         <TrackRow
           term={t("continuity.track.assessment")}
           value={t(ASSESSMENT_LABEL[assessment.state])}
+          alsoCount={assessment.read === "ready" ? assessment.attemptCount : 0}
+          countKey="continuity.track.assessmentCount"
           degraded={assessment.read === "failed" || assessment.read === "refused"}
         />
         <TrackRow
           term={t("continuity.track.interview")}
           value={interviewWord}
+          alsoCount={interview.read === "ready" ? interview.caseCount : 0}
+          countKey="continuity.track.interviewCount"
           degraded={interview.read === "failed" || interview.read === "refused"}
         />
         <TrackRow
