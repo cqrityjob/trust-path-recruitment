@@ -70,7 +70,17 @@
  * Deterministic, offline, no database, no network.
  */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { crc32, deflateRawSync, gzipSync } from "node:zlib";
+import os from "node:os";
 import path from "node:path";
 import { mock } from "bun:test";
 import React from "react";
@@ -1904,6 +1914,15 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
   const scanAt = wf.indexOf("Scan the evidence for anything that must not leave");
   const uploadAt = wf.indexOf("Upload the evidence");
   ok(scanAt > 0 && scanAt < uploadAt, "16.13 the leak scan runs BEFORE the upload");
+  // FOUND WHILE WRITING SECTION 17. Running before the upload is not enough
+  // if the upload runs anyway: the step was `if: always()`, so a failing scan
+  // turned the job red AND published the artifact. The scan has to be a gate,
+  // not an opinion.
+  const uploadIf = wf.slice(uploadAt, uploadAt + 220);
+  ok(
+    /if:.*steps\.leak_scan\.outcome == 'success'/.test(uploadIf),
+    "16.13b and the upload happens only if the scan PASSED — a red scan must publish nothing",
+  );
   ok(/if-no-files-found: error/.test(wf), "16.14 and an empty artifact is an error, not a pass");
   ok(/retention-days: 30/.test(wf), "16.15 retention is stated");
 
@@ -1960,6 +1979,232 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     ok(manifest.includes(`${key}:`), `16.19 the manifest records ${key}`);
   }
   ok(/sha256: sha256\(readFileSync/.test(manifest), "16.20 and a SHA-256 for every evidence file");
+}
+
+/* ══════════════════════════════════════════════════════════════════════ */
+console.log("\n17. The leak scan, PROVEN on planted leaks — not asserted by grep");
+/* ══════════════════════════════════════════════════════════════════════ */
+{
+  // ── THE DEFECT THIS SECTION EXISTS BECAUSE OF ──────────────────────
+  //
+  // The first scanner read every byte as latin1 and called that "scanning
+  // binaries". Section 16 agreed it looked for a JWT -- because the string
+  // "eyJ" appears in its source -- and passed. Both were wrong, and the
+  // disproof took one line: a JWT written into a file and then zipped is NOT
+  // PRESENT in the zip's bytes, because DEFLATE replaces it. The artifact
+  // file most likely to carry a token is trace.zip, because a trace records
+  // the network, and trace.zip was exactly the file the scan could not read.
+  //
+  // A guard that greps a scanner's source proves a string is present. It does
+  // not prove the scanner works. So this section RUNS the real scanner over
+  // four leaks planted where a real one would actually hide, and requires
+  // each to be found BY THE MECHANISM THAT SHOULD FIND IT -- the finding's
+  // `where` names the path it was reached through, so "found it in the raw
+  // bytes by luck" cannot pass for "decompressed it and looked".
+  //
+  // Every planted value below is synthetic. The JWT and the service-role
+  // reference are assembled from parts rather than written as literals, so
+  // this file never contains a token-shaped or credential-shaped string that
+  // a repository secret scan would have to triage.
+  const S = await import("./e4-evidence-scan");
+
+  /** A real zip: local headers, deflated entries, and a central directory —
+   *  the same structure the scanner has to walk to see inside a trace. */
+  const makeZip = (entries: readonly { name: string; data: Buffer; store?: boolean }[]): Buffer => {
+    const locals: Buffer[] = [];
+    const centrals: Buffer[] = [];
+    let offset = 0;
+    for (const e of entries) {
+      const method = e.store ? 0 : 8;
+      const body = e.store ? e.data : deflateRawSync(e.data);
+      const name = Buffer.from(e.name, "utf8");
+      const sum = crc32(e.data);
+
+      const local = Buffer.alloc(30);
+      local.writeUInt32LE(0x04034b50, 0);
+      local.writeUInt16LE(20, 4);
+      local.writeUInt16LE(method, 8);
+      local.writeUInt32LE(sum, 14);
+      local.writeUInt32LE(body.length, 18);
+      local.writeUInt32LE(e.data.length, 22);
+      local.writeUInt16LE(name.length, 26);
+      locals.push(local, name, body);
+
+      const central = Buffer.alloc(46);
+      central.writeUInt32LE(0x02014b50, 0);
+      central.writeUInt16LE(20, 4);
+      central.writeUInt16LE(20, 6);
+      central.writeUInt16LE(method, 10);
+      central.writeUInt32LE(sum, 16);
+      central.writeUInt32LE(body.length, 20);
+      central.writeUInt32LE(e.data.length, 24);
+      central.writeUInt16LE(name.length, 28);
+      central.writeUInt32LE(offset, 42);
+      centrals.push(central, name);
+
+      offset += 30 + name.length + body.length;
+    }
+    const cd = Buffer.concat(centrals);
+    const eocd = Buffer.alloc(22);
+    eocd.writeUInt32LE(0x06054b50, 0);
+    eocd.writeUInt16LE(entries.length, 8);
+    eocd.writeUInt16LE(entries.length, 10);
+    eocd.writeUInt32LE(cd.length, 12);
+    eocd.writeUInt32LE(offset, 16);
+    return Buffer.concat([...locals, cd, eocd]);
+  };
+
+  // Assembled from parts on purpose — see the note above.
+  const FAKE_JWT = [
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    "eyJzdWIiOiJzeW50aGV0aWMifQ",
+    "c3ludGhldGljLXNpZ25hdHVyZQ",
+  ].join(".");
+  const FAKE_ROLE = ["service", "role"].join("_");
+  const OWNER_REF = "wrygicdfxwjnrugduxnt";
+  const HOSTED_URL = "https://" + OWNER_REF + ".supabase.co";
+
+  /* ── leak 1 · a JWT inside trace.zip ─────────────────────────────── */
+  const traceZip = makeZip([
+    {
+      name: "trace.trace",
+      data: Buffer.from(
+        `{"type":"resource-snapshot","headers":[{"name":"authorization","value":"Bearer ${FAKE_JWT}"}]}`,
+      ),
+    },
+    { name: "0-trace.network", data: Buffer.from("nothing interesting here\n".repeat(20)) },
+  ]);
+  ok(
+    !traceZip.toString("latin1").includes(FAKE_JWT),
+    "17.0 the planted trace really is compressed — the JWT is NOT in the zip's raw bytes, which is why reading them as text proved nothing",
+  );
+  {
+    const found: import("./e4-evidence-scan").Finding[] = [];
+    S.scanBuffer("test-results/case/trace.zip", traceZip, found);
+    const hit = found.find((f) => f.what === "a JWT");
+    ok(
+      hit !== undefined && hit.where.includes("trace.trace"),
+      `17.1 a JWT inside trace.zip is found, and found by inflating the entry that carries it (${found.map((f) => `${f.what} @ ${f.where}`).join("; ") || "nothing found"})`,
+    );
+  }
+
+  /* ── leak 2 · a service-role value base64-embedded in the HTML report ─ */
+  const attachment = Buffer.from(
+    JSON.stringify({
+      note: "synthetic Playwright attachment",
+      key: FAKE_ROLE,
+      padding: "x".repeat(64),
+    }),
+  ).toString("base64");
+  const htmlReport = Buffer.from(
+    `<!doctype html><title>Playwright report</title><script>window.playwrightReportBase64="data:application/zip;base64,${attachment}";</script>`,
+  );
+  ok(
+    !htmlReport.toString("latin1").includes(FAKE_ROLE),
+    "17.0b the planted report really is encoded — the value is NOT readable in the HTML itself",
+  );
+  {
+    const found: import("./e4-evidence-scan").Finding[] = [];
+    S.scanBuffer("playwright-report/index.html", htmlReport, found);
+    const hit = found.find((f) => f.what === "a service-role reference");
+    ok(
+      hit !== undefined && hit.where.includes("embedded base64"),
+      `17.2 a service-role value embedded as base64 in the Playwright HTML report is decoded and found (${found.map((f) => `${f.what} @ ${f.where}`).join("; ") || "nothing found"})`,
+    );
+  }
+
+  /* ── leak 3 · the owner project ref inside a gzipped network log ──── */
+  const networkLog = gzipSync(
+    Buffer.from(
+      `GET https://${OWNER_REF}.supabase.co/rest/v1/scp_interview_reports 200\n`.repeat(4),
+    ),
+  );
+  ok(
+    !networkLog.toString("latin1").includes(OWNER_REF),
+    "17.0c the planted network log really is gzipped — the project ref is NOT in its raw bytes",
+  );
+  {
+    const found: import("./e4-evidence-scan").Finding[] = [];
+    S.scanBuffer("test-results/network.log.gz", networkLog, found);
+    const hit = found.find((f) => f.what === "the owner production project ref");
+    ok(
+      hit !== undefined && hit.where.includes("gzip"),
+      `17.3 the owner project ref inside a compressed network log is inflated and found (${found.map((f) => `${f.what} @ ${f.where}`).join("; ") || "nothing found"})`,
+    );
+  }
+
+  /* ── leak 4 · a hosted Supabase URL inside a NESTED artifact file ──── */
+  const innerZip = makeZip([
+    { name: "nested/resource.json", data: Buffer.from(`{"url":"${HOSTED_URL}/auth/v1/token"}`) },
+  ]);
+  const nestedZip = makeZip([
+    { name: "attachments/inner.zip", data: innerZip },
+    { name: "readme.txt", data: Buffer.from("an attachment inside an attachment\n".repeat(8)) },
+  ]);
+  {
+    const found: import("./e4-evidence-scan").Finding[] = [];
+    S.scanBuffer("test-results/case/attachment.zip", nestedZip, found);
+    const hit = found.find((f) => f.what === "a hosted Supabase URL");
+    ok(
+      hit !== undefined && hit.where.includes("inner.zip") && hit.where.includes("resource.json"),
+      `17.4 a hosted Supabase URL one archive deeper is still found — nesting is walked, not just the top level (${found.map((f) => `${f.what} @ ${f.where}`).join("; ") || "nothing found"})`,
+    );
+  }
+
+  /* ── and the same four, reached the way the job reaches them ───────── */
+  //
+  // scanBuffer proves the readers work. This proves the WALK reaches them:
+  // real files, in a real directory tree, scanned by the exported entry point
+  // the workflow step calls. A scanner that reads perfectly but is pointed at
+  // the wrong directory publishes the secret just the same.
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "e4-leak-proof-"));
+  try {
+    mkdirSync(path.join(tmp, "test-results/case"), { recursive: true });
+    mkdirSync(path.join(tmp, "playwright-report"), { recursive: true });
+    writeFileSync(path.join(tmp, "test-results/case/trace.zip"), traceZip);
+    writeFileSync(path.join(tmp, "test-results/case/attachment.zip"), nestedZip);
+    writeFileSync(path.join(tmp, "test-results/network.log.gz"), networkLog);
+    writeFileSync(path.join(tmp, "playwright-report/index.html"), htmlReport);
+
+    const { findings, scanned } = S.scanDirectories(["test-results", "playwright-report"], tmp);
+    ok(scanned === 4, `17.5 the walk read every planted file (${scanned} of 4)`);
+    for (const what of [
+      "a JWT",
+      "a service-role reference",
+      "the owner production project ref",
+      "a hosted Supabase URL",
+    ]) {
+      ok(
+        findings.some((f) => f.what === what),
+        `17.6 the walk refuses ${what}`,
+      );
+    }
+    ok(
+      findings.every((f) => !f.excerpt.includes(FAKE_JWT)),
+      "17.7 and the report of a finding is an excerpt, never the whole secret — a leak report must not be a second copy of the leak",
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+
+  /* ── a clean artifact is not refused ───────────────────────────────── */
+  //
+  // The other half of the claim. A scan that fails everything is not a safety
+  // control, it is an outage, and it would be quietly disabled within a week.
+  {
+    const found: import("./e4-evidence-scan").Finding[] = [];
+    S.scanBuffer(
+      "artifacts/employer-final-report-e4/01-preview.png",
+      makeZip([
+        { name: "report.json", data: Buffer.from('{"version":2,"finalised_by":"Anna Lindqvist"}') },
+      ]),
+      found,
+    );
+    ok(
+      found.length === 0,
+      `17.8 an artifact carrying nothing sensitive passes (${found.map((f) => f.what).join(", ")})`,
+    );
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -2026,6 +2271,48 @@ console.log("\n15. What finalising MEANS: locking a basis, not authoring a concl
     ok(truth.includes(needle), `15.6 the product-truth record states ${what}`);
   }
   ok(/NOT SCHEDULED/.test(truth), "15.7 and that the CONTRACT step is still not scheduled");
+
+  // ── THE THREE LIMITATIONS, NAMED AS LIMITATIONS ────────────────────
+  //
+  // The review asked three questions about the owner's conclusion. The honest
+  // answers are "absent", "governed differently" and "absent" -- and an honest
+  // answer that is only true in a reviewer's memory is not written down. Each
+  // has to be named in the record, said to be schema-first work, and said NOT
+  // to be migrated in this PR, so that nobody later reads #216 as having
+  // settled it.
+  for (const [heading, what] of [
+    ["#### A · A recruitment-owner-authored conclusion", "A · the owner-authored conclusion"],
+    [
+      "#### B · The role and governance of the panel conclusion",
+      "B · who may write the panel conclusion",
+    ],
+    [
+      "#### C · A persisted correction reason for a new report version",
+      "C · the correction reason for a version",
+    ],
+  ] as const) {
+    ok(truth.includes(heading), `15.8 the record names limitation ${what}`);
+  }
+  // Read from the prose with markdown emphasis and line wrapping removed, so
+  // the claim is asserted rather than the typography.
+  const truthFlat = truth.replace(/\*\*/g, "").replace(/\s+/g, " ");
+  ok(
+    truthFlat.includes("none of them is implemented through a migration in #216"),
+    "15.9 and says plainly that none of the three is implemented through a migration in #216",
+  );
+  ok(
+    /schema-first/i.test(truth),
+    "15.10 and that closing them is schema-first work — a column and a governed RPC before a screen",
+  );
+  // C's "forbidden meanwhile": collecting a correction reason the database
+  // cannot keep would tell an owner their explanation was recorded when
+  // nothing persisted it. supersede_reason exists for ASSESSMENTS, which do
+  // have the column; no report surface may claim the same for a version.
+  const reportSurfaces = read(FINALISATION) + read(DOCUMENT) + read(ROUTE);
+  ok(
+    !/(correctionReason|correction_reason|supersedeReason|reportSupersede)/i.test(reportSurfaces),
+    "15.11 and no report surface collects a correction reason the schema cannot persist",
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */

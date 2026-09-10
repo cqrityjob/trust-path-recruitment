@@ -36,6 +36,7 @@ const ROLLBACK = "supabase/rollback/20261107090000_scp_iv_report_basis_integrity
 const DB_TEST = "scripts/db-test.sh";
 const DICT = "src/i18n/dictionaries.ts";
 const EVIDENCE_WF = ".github/workflows/e4-evidence.yml";
+const SCAN = "scripts/e4-evidence-scan.ts";
 
 const E4 = "employer-final-report:check";
 
@@ -94,12 +95,81 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E4-LEAK-SCAN-REDACTS-QUIETLY",
     defect:
       "the scan reports a finding and exits zero, so a leak becomes a log line nobody reads instead of a red build",
-    file: "scripts/e4-evidence-scan.ts",
+    file: SCAN,
     find: "  process.exit(1);\n}\n\n// An empty artifact uploaded green is worse than no artifact",
     replace:
       "  process.exit(0);\n}\n\n// An empty artifact uploaded green is worse than no artifact",
     guard: E4,
-    expect: "16.17 and fails the job rather than redacting quietly",
+    expect: "16.17 and a leak fails the job rather than being redacted quietly",
+  },
+  {
+    id: "E4-UPLOAD-IGNORES-THE-SCAN-VERDICT",
+    defect:
+      "the upload runs on always(), so a leak turns the job red AND publishes the artifact anyway -- the scan becomes an opinion and the secret is downloadable by anyone who can read the pull request",
+    file: EVIDENCE_WF,
+    find: "        if: always() && steps.leak_scan.outcome == 'success'",
+    replace: "        if: always()",
+    guard: E4,
+    expect: "16.13b and the upload happens only if the scan PASSED",
+  },
+
+  /* ---- The leak scan must actually READ what it scans ----------------- *
+   *
+   * Each of these disables ONE reader. The guard proves the scan works by
+   * RUNNING it over planted leaks, so a scanner that stops decompressing
+   * stops passing -- which is the whole point, because the first version of
+   * this file read every byte as latin1, called that "scanning binaries",
+   * and could not see a JWT inside a trace.
+   */
+  {
+    id: "E4-LEAK-SCAN-BLIND-INSIDE-A-ZIP",
+    defect:
+      "zip entries are no longer inflated, so a JWT inside trace.zip -- the artifact file most likely to carry one, because a trace records the network -- is invisible and is published",
+    file: SCAN,
+    find: "inflateRawSync(raw)",
+    replace: "Buffer.alloc(0)",
+    guard: E4,
+    expect: "17.1 a JWT inside trace.zip is found",
+  },
+  {
+    id: "E4-LEAK-SCAN-BLIND-TO-EMBEDDED-BASE64",
+    defect:
+      "base64 attachments are no longer decoded, so a service-role value embedded in the Playwright HTML report is published unread",
+    file: SCAN,
+    find: "/[A-Za-z0-9+/]{80,}={0,2}/g",
+    replace: "/[A-Za-z0-9+/]{8000,}={0,2}/g",
+    guard: E4,
+    expect: "17.2 a service-role value embedded as base64",
+  },
+  {
+    id: "E4-LEAK-SCAN-BLIND-TO-GZIP",
+    defect:
+      "compressed logs are no longer inflated, so the owner project ref inside a gzipped network log is published",
+    file: SCAN,
+    find: 'if (buf[0] === 0x1f && buf[1] === 0x8b) return gunzipSync(buf).toString("utf8");',
+    replace: "if (buf[0] === 0x1f && buf[1] === 0x8b) return null;",
+    guard: E4,
+    expect: "17.3 the owner project ref inside a compressed network log",
+  },
+  {
+    id: "E4-LEAK-SCAN-STOPS-AT-THE-TOP-LEVEL",
+    defect:
+      "nesting is no longer walked, so a hosted Supabase URL in an attachment inside an attachment is published",
+    file: SCAN,
+    find: "if (depth < 2 && buf.length > 4",
+    replace: "if (depth < 1 && buf.length > 4",
+    guard: E4,
+    expect: "17.4 a hosted Supabase URL one archive deeper is still found",
+  },
+  {
+    id: "E4-LEAK-SCAN-WALKS-NOTHING",
+    defect:
+      "the walk stops descending into subdirectories, so the readers all work and the scan is pointed at nothing -- test-results/<case>/trace.zip is never opened and the artifact is published unscanned",
+    file: SCAN,
+    find: "if (statSync(path.join(base, child)).isDirectory()) out.push(...walk(child, base));",
+    replace: "if (statSync(path.join(base, child)).isDirectory()) continue;",
+    guard: E4,
+    expect: "17.5 the walk read every planted file",
   },
   {
     id: "E4-EMPTY-ARTIFACT-PUBLISHED-GREEN",

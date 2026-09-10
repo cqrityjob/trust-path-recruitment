@@ -200,11 +200,23 @@ jobs:
       # the job rather than redacting quietly, because a leak nobody is told
       # about is worse than a red build.
       - name: Scan the evidence for anything that must not leave
+        id: leak_scan
         if: always()
         run: bun run scripts/e4-evidence-scan.ts
 
+      # ── WHY THIS IS NOT `if: always()` ────────────────────────────────
+      #
+      # It was, and that was wrong. `always()` on the upload meant a failing
+      # leak scan turned the job red AND published the artifact anyway: the
+      # scan became an opinion, and the secret was downloadable by anyone who
+      # could read the pull request. The gate now says what it means -- upload
+      # only when the scan actually passed.
+      #
+      # It is still `always()`-based rather than plain success(), because a
+      # FAILED WALK must still publish its evidence: a failure's screenshots
+      # and trace are how somebody finds out why. A failed SCAN must not.
       - name: Upload the evidence
-        if: always()
+        if: always() && steps.leak_scan.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: e4-evidence-${{ github.event.pull_request.number || github.run_id }}-${{ github.run_attempt }}
