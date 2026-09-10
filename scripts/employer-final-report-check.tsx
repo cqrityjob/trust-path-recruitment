@@ -1843,7 +1843,7 @@ console.log(
   );
   // A capture that duplicates another is not a second piece of evidence.
   ok(
-    /locator\("#fr-assessments"\)\s*\.screenshot\(/.test(spec),
+    /locator\('section\[aria-labelledby="fr-assessments"\]'\)\s*\.screenshot\(/.test(spec),
     "13.2k the disagreement capture is clipped to the assessors SECTION — not a full page identical to the one before it, and not a one-line badge too small to read",
   );
   // BOTH LANGUAGES AT BOTH WIDTHS. The manifest declares two locales and two
@@ -2088,6 +2088,7 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     ["if (!spec.ok)", "a failed test refuses the artifact"],
     ["names.length > 1", "no capture is a byte-for-byte duplicate of another"],
     ["recorded no step durations", "every test recorded how its time was spent"],
+    ['faulted ? "REFUSED"', "a capture it rejected is not also printed as ok"],
   ] as const) {
     ok(verify.includes(needle), `16.13e the verifier checks that ${what}`);
   }

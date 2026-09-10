@@ -189,12 +189,15 @@ console.log(
 );
 console.log(`  traces            ${traces.length}`);
 
+// A capture is only "ok" if nothing was found wrong with it. The table used
+// to print "ok" beside a file the refusal below then rejected, which reads as
+// a contradiction and makes a reader trust the wrong half.
 console.log("\n  CAPTURES (name · bytes · sha256 · what it shows)");
 for (const [name, what] of REQUIRED_CAPTURES) {
   const e = captures.get(name);
-  console.log(
-    `    ${e ? "ok " : "MISSING "} ${name}  ${e?.bytes ?? "-"}  ${e?.sha256 ?? "-"}  ${what}`,
-  );
+  const faulted = problems.some((p) => p.includes(name));
+  const marker = e === undefined ? "MISSING" : faulted ? "REFUSED" : "ok     ";
+  console.log(`    ${marker}  ${name}  ${e?.bytes ?? "-"}  ${e?.sha256 ?? "-"}  ${what}`);
 }
 
 console.log("\n  EVERY FILE (sha256 · bytes · path)");

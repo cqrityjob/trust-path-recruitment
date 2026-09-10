@@ -662,8 +662,13 @@ test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", a
     //
     // Section 4 is the thing this capture claims: every assessor for every
     // requirement, with the disagreement stated among them.
+    // `#fr-assessments` is the HEADING -- the Section component puts the id on
+    // its <h3> and points the <section> at it with aria-labelledby. Clipping
+    // to the id captured a one-line title, 2 955 bytes, which the verifier
+    // refused for the same reason it refused the badge. The section itself is
+    // what shows every assessor.
     await page
-      .locator("#fr-assessments")
+      .locator('section[aria-labelledby="fr-assessments"]')
       .screenshot({ path: `${OUT}/15-en-1440-two-assessors-disagreement.png` });
   });
 });

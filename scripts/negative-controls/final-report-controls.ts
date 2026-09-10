@@ -655,10 +655,10 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "E4-CAPTURE-15-DUPLICATES-CAPTURE-14",
     defect:
-      "the disagreement capture is clipped to the one-line badge instead of the assessors section, so it is 2 kB of a single span and shows neither assessor -- the shape of the mistake the verifier caught",
+      "the disagreement capture is clipped to the section's HEADING id instead of the section, so it is 3 kB of a one-line title and shows neither assessor -- the shape of the mistake the verifier caught twice",
     file: EVIDENCE_SPEC,
-    find: '      .locator("#fr-assessments")',
-    replace: "      .locator('[data-testid=\"fr-disagree\"]')",
+    find: "      .locator('section[aria-labelledby=\"fr-assessments\"]')",
+    replace: '      .locator("#fr-assessments")',
     guard: E4,
     expect: "13.2k the disagreement capture is clipped to the assessors SECTION",
   },
@@ -671,6 +671,17 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "  // step no longer recorded",
     guard: E4,
     expect: "13.2j EVERY capture's own step is timed",
+  },
+
+  {
+    id: "E4-VERIFIER-PRINTS-OK-FOR-A-REFUSED-CAPTURE",
+    defect:
+      "the captures table prints ok beside a file the refusal below rejects, so the two halves of the same report contradict each other and a reader trusts the wrong one",
+    file: VERIFY,
+    find: "  const faulted = problems.some((p) => p.includes(name));",
+    replace: "  const faulted = false;",
+    guard: E4,
+    expect: "16.13e the verifier checks that a capture it rejected is not also printed as ok",
   },
 
   /* ---- The stack the evidence is taken against ----------------------- *
