@@ -1845,10 +1845,14 @@ console.log(
   // "Verified: the digest was recomputed" when the product says "Checked:".
   // Each cost a full pipeline run and told nobody anything true. The walk
   // proves the sentence is RENDERED; section 10 proves what it says.
+  // COUNTED, not merely present. Its own control showed why: with three
+  // places asserting this sentence, removing one lookup left the others and
+  // a "does it appear anywhere" test went on passing.
+  const svLookups = (spec.match(/copy\("sv", "iir\.readback\.verified"\)/g) ?? []).length;
+  const enLookups = (spec.match(/copy\("en", "iir\.readback\.verified"\)/g) ?? []).length;
   ok(
-    /copy\("sv", "iir\.readback\.verified"\)/.test(spec) &&
-      /copy\("en", "iir\.readback\.verified"\)/.test(spec),
-    "13.2g the walk reads the verified-digest sentence from the dictionary in BOTH languages, rather than typing out a translation",
+    svLookups >= 2 && enLookups >= 1,
+    `13.2g EVERY walk asserting the verified-digest sentence reads it from the dictionary — ${svLookups} Swedish, ${enLookups} English (expected at least 2 and 1)`,
   );
   ok(
     !/Kontrollerad: summan räknades om|Verified: the digest was recomputed/.test(codeOnly(spec)),
