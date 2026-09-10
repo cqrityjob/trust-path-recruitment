@@ -2722,7 +2722,7 @@ if [ "$BI_RC" -ne 0 ]; then
   BI_FAILED=1
 else
   echo "    ok  ${BI_PASSED} employer final-report basis assertions passed"
-  if [ "$BI_PASSED" -lt 47 ]; then
+  if [ "$BI_PASSED" -lt 90 ]; then
     echo "FAIL: expected at least 45 basis assertions, only ${BI_PASSED} ran." >&2
     BI_FAILED=1
   fi
