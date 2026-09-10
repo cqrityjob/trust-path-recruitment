@@ -20,18 +20,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // reviewed PRs merged. release-state.json and hosted-ledger.json record the
 // production evidence, so main correctly has no expected pending migration.
 //
-// 20261105090000_scp_participant_report_issuer_preview EARNS its place here:
-// it is the read by which an owner or admin of the commissioning organisation
-// sees the participant document before sharing an assessment result
-// irreversibly, and E2 carries the code that calls it.
+// 20261105090000_scp_participant_report_issuer_preview and
+// 20261107090000_scp_iv_report_basis_integrity are APPLIED. Both reached the
+// owner project through the official Supabase GitHub integration after #213
+// merged to main as 9d36f6a6, are recorded in supabase_migrations under their
+// canonical versions, and were verified read-only afterwards.
+// release-state.json and hosted-ledger.json carry that production evidence,
+// so this branch correctly expects no pending migration: the schema is ahead
+// of the code, which is the order the schema-first policy exists to keep.
 //
-// It is pending because the repository's schema-first policy applies a
-// migration BEFORE the code that depends on it. The name comes OFF this list
-// -- rather than being left behind -- once the owner project has the migration
-// and release-state.json records the production evidence.
-const expectedPending: string[] = [
-  "20261105090000_scp_participant_report_issuer_preview.sql",
-];
+// Their names come OFF this list rather than being left behind, because a
+// resolved name here hides the next genuinely stuck migration behind an
+// expectation -- the failure this list exists to prevent.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
