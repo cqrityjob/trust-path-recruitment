@@ -260,7 +260,7 @@ const MUTATIONS: readonly Mutation[] = [
       "the server log is collected after the leak scan instead of before it, so a request log -- exactly where a token ends up by accident -- is published unread",
     file: EVIDENCE_WF,
     find: "      - name: Collect the server log",
-    replace: "      - name: Collect the server log afterwards",
+    replace: "      - name: Gather the server log at the very end instead",
     guard: E4,
     expect: "16.37 the server log is collected into the artifact BEFORE the leak scan reads it",
   },
