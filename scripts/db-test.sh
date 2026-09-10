@@ -2617,6 +2617,151 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# E2 — the employer reads the document the CANDIDATE received.
+#
+# 20261105090000 adds one read (scp_participant_report_for_issuer) and the
+# predicate behind it. The suite proves it is a copy of the participant read
+# rather than a re-rendering of it, that it returns strictly less than the
+# employer read the same caller already has, and that release authority --
+# owner or admin, active seat -- is exactly what it requires.
+#
+# It also asserts the rollback: both functions drop cleanly and the audience
+# contracts they were added beside survive untouched.
+# ---------------------------------------------------------------------------
+echo "==> Running E2 issuer participant-preview assertions"
+set +e
+E2PP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/scp_participant_report_issuer_preview_test.sql 2>&1)"
+E2PP_RC=$?
+set -e
+
+echo "$E2PP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+E2PP_PASSED="$(echo "$E2PP_OUT" | grep -c "ok  " || true)"
+E2PP_FAILED=0
+
+if [ "$E2PP_RC" -ne 0 ]; then
+  echo "FAIL: the E2 issuer-preview suite exited with code ${E2PP_RC}." >&2
+  echo "$E2PP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  E2PP_FAILED=1
+else
+  echo "    ok  ${E2PP_PASSED} E2 issuer participant-preview assertions passed"
+  if [ "$E2PP_PASSED" -lt 26 ]; then
+    echo "FAIL: expected at least 26 E2 issuer-preview assertions, only ${E2PP_PASSED} ran." >&2
+    E2PP_FAILED=1
+  fi
+fi
+
+# The rollback, on a throwaway copy of the schema state: dropping the two
+# functions must leave the audience contracts they were added beside intact.
+# Run LAST of the E2 checks, and in its own transaction, so nothing after it
+# reads a schema with the preview removed.
+# NOT `psql -c "... \i ..."`: backslash commands are a psql client feature and
+# -c does not run them. The rollback is applied for real and the migration is
+# re-applied afterwards, which also proves the migration is re-appliable -- the
+# property a rollback is worth nothing without.
+set +e
+E2PP_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261105090000_scp_participant_report_issuer_preview_rollback.sql 2>&1)"
+E2PP_RB_RC=$?
+set -e
+if [ "$E2PP_RB_RC" -ne 0 ] || ! echo "$E2PP_RB" | grep -q "SCP_ISSUER_PREVIEW_ROLLBACK ok"; then
+  echo "FAIL: the E2 issuer-preview rollback did not verify." >&2
+  echo "$E2PP_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  E2PP_FAILED=1
+else
+  echo "    ok  the E2 issuer-preview rollback drops both functions and leaves the audience contracts"
+fi
+
+set +e
+E2RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/migrations/20261105090000_scp_participant_report_issuer_preview.sql 2>&1)"
+E2RE_RC=$?
+set -e
+if [ "$E2RE_RC" -ne 0 ] || ! echo "$E2RE" | grep -q "SCP_ISSUER_PREVIEW_PROOF ok"; then
+  echo "FAIL: the E2 migration does not re-apply over the rolled-back state." >&2
+  echo "$E2RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  E2PP_FAILED=1
+else
+  echo "    ok  and the E2 migration re-applies cleanly over the rolled-back state"
+fi
+
+if [ "$E2PP_FAILED" -ne 0 ]; then
+  suite_failed "E2 issuer participant-preview"
+fi
+
+# ---------------------------------------------------------------------------
+# The employer final report — a provable basis and a governed readback.
+#
+# 20261107090000 replaces the md5 content hash with core sha256, records which
+# algorithm produced it, names the recruitment and the assessment material the
+# report belongs to, classifies every evidence item by what KIND of thing it
+# is, and adds the two governed reads that prove which version was finalised.
+#
+# The suite walks a real case to a finalised report with a level, a rationale
+# and an uncertainty note, corrects it into a second version, and proves the
+# first survives byte-for-byte. It also proves the candidate cannot reach the
+# employer report by any route.
+#
+# It also applies the rollback for real and re-applies the migration, which is
+# the property a rollback is worth nothing without.
+# ---------------------------------------------------------------------------
+echo "==> Running employer final-report basis assertions"
+set +e
+BI_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/scp_iv_report_basis_integrity_test.sql 2>&1)"
+BI_RC=$?
+set -e
+
+echo "$BI_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+BI_PASSED="$(echo "$BI_OUT" | grep -c "ok  " || true)"
+BI_FAILED=0
+
+if [ "$BI_RC" -ne 0 ]; then
+  echo "FAIL: the employer final-report basis suite exited with code ${BI_RC}." >&2
+  echo "$BI_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  BI_FAILED=1
+else
+  echo "    ok  ${BI_PASSED} employer final-report basis assertions passed"
+  if [ "$BI_PASSED" -lt 90 ]; then
+    echo "FAIL: expected at least 45 basis assertions, only ${BI_PASSED} ran." >&2
+    BI_FAILED=1
+  fi
+fi
+
+# NOT `psql -c "... \i ..."`: backslash commands are a psql client feature and
+# -c does not run them. Applied for real, then the migration re-applied.
+set +e
+BI_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261107090000_scp_iv_report_basis_integrity_rollback.sql 2>&1)"
+BI_RB_RC=$?
+set -e
+if [ "$BI_RB_RC" -ne 0 ] || ! echo "$BI_RB" | grep -q "SCP_IV_REPORT_BASIS_ROLLBACK ok"; then
+  echo "FAIL: the employer final-report basis rollback did not verify." >&2
+  echo "$BI_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  BI_FAILED=1
+else
+  echo "    ok  the basis rollback drops both reads and keeps the algorithm column"
+fi
+
+set +e
+BI_RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/migrations/20261107090000_scp_iv_report_basis_integrity.sql 2>&1)"
+BI_RE_RC=$?
+set -e
+if [ "$BI_RE_RC" -ne 0 ] || ! echo "$BI_RE" | grep -q "SCP_IV_REPORT_BASIS_PROOF ok"; then
+  echo "FAIL: the basis migration does not re-apply over the rolled-back state." >&2
+  echo "$BI_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  BI_FAILED=1
+else
+  echo "    ok  and the basis migration re-applies cleanly over the rolled-back state"
+fi
+
+if [ "$BI_FAILED" -ne 0 ]; then
+  suite_failed "employer final-report basis"
+fi
+
+
+# ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
 set +e
 ROLLBACK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_a_rollback_test.sql 2>&1)"
@@ -5631,5 +5776,7 @@ echo "              ${RACE_PASSED} concurrent-decision assertions,"
 echo "              ${SPFM_PASSED} first-merit assertions,"
 echo "              ${FMR_PASSED} concurrent first-merit assertions,"
 echo "              ${TWO_OPS_PASSED} two-operation first-merit race assertions,"
-echo "              ${SPRC_PASSED} rollback correction assertions"
+echo "              ${SPRC_PASSED} rollback correction assertions,"
+echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
+              ${BI_PASSED} employer final-report basis assertions"
 echo "===================================================="

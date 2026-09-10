@@ -1,5 +1,6 @@
 /**
- * The security boundary: a member calling scp_iv_finalise_report directly.
+ * The security boundary: a member calling scp_iv_finalise_report, or
+ * scp_iv_finalise_previewed_report, directly.
  *
  * ── WHY THIS EXISTS SEPARATELY FROM THE UI GUARD ───────────────────────
  *
@@ -79,7 +80,12 @@ async function callAs(
     await tx`SELECT set_config('request.jwt.claims',
       json_build_object('sub', ${userId}::text, 'role', 'authenticated')::text, true)`;
     await tx.unsafe(`SET LOCAL ROLE authenticated`);
-    await tx`SELECT public.scp_iv_finalise_report(${caseId}::uuid)`;
+    // Both contracts of the EXPAND phase, each in turn: the legacy call the
+    // deployed application makes, and the preview-bound one with a placeholder
+    // basis hash -- the role check precedes the preview check, and the refusal
+    // a member receives must be the role's, not the hash's.
+    await tx`SELECT public.scp_iv_finalise_report(_case_id := ${caseId}::uuid, _draft_run_id := NULL)`;
+    await tx`SELECT public.scp_iv_finalise_previewed_report(${caseId}::uuid, 'not-a-preview', NULL)`;
     return null;
   } catch (err) {
     // Bun's driver puts its own tag in `code` (ERR_POSTGRES_SERVER_ERROR) and

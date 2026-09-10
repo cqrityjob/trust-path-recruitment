@@ -53,6 +53,16 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', _u::text, true);
 END $$;
 
+-- 20261107090000: finalising requires the basis hash of a preview. This is how
+-- the product finalises -- preview, then finalise exactly that -- so the suite
+-- walks the same two steps. The role-boundary probes below still call the RPC
+-- directly with a placeholder hash, because the role check precedes the hash
+-- check and that ordering is what they assert.
+CREATE OR REPLACE FUNCTION pg_temp.finalise(_case uuid) RETURNS uuid LANGUAGE sql AS $$
+  SELECT public.scp_iv_finalise_previewed_report(_case,
+           (SELECT basis_hash FROM public.scp_iv_preview_report(_case)), NULL);
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Fixture
 -- ---------------------------------------------------------------------------
@@ -269,7 +279,7 @@ BEGIN
     'ER2.3 a note nobody confirmed is evidence nowhere');
   PERFORM pg_temp.ok(
     position('scp_interview_evidence_proposals' in
-      pg_get_functiondef('public.scp_iv_finalise_report(uuid, uuid)'::regprocedure)) = 0,
+      pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0,
     'ER2.4 the report builder does not read the proposals table at all');
 
   -- Human confirmation, then the same click again.
@@ -377,7 +387,7 @@ BEGIN
              WHERE code = 'ASSESSMENT_PREDATES_MATERIAL' AND message LIKE 'Q1 %'),
     'ER4.3 the report is blocked: Q1 has material its assessment never saw');
   PERFORM pg_temp.must_fail(
-    format('SELECT public.scp_iv_finalise_report(%L)', e.case1),
+    format('SELECT pg_temp.finalise(%L)', e.case1),
     'ASSESSMENT_PREDATES_MATERIAL',
     'ER4.4 finalising is refused for the same reason, inside the same transaction');
   SELECT id INTO _live FROM public.scp_interview_assessments
@@ -420,8 +430,8 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM pg_temp.become('81000000-0000-4000-8000-0000000000a1');
 
-  _r1 := public.scp_iv_finalise_report(e.case1);
-  _r2 := public.scp_iv_finalise_report(e.case1);
+  _r1 := pg_temp.finalise(e.case1);
+  _r2 := pg_temp.finalise(e.case1);
   PERFORM pg_temp.ok(_r1 = _r2, 'ER5.1 finalising twice returns the same report');
   SELECT count(*) INTO _n FROM public.scp_interview_reports WHERE case_id = e.case1;
   PERFORM pg_temp.ok(_n = 1, 'ER5.2 one report version, not two');
@@ -455,10 +465,10 @@ BEGIN
        FROM public.scp_interview_reports WHERE id = _r1),
     'ER5.7 the locked report is byte-identical after evidence, assessment, note, job and case changes');
   PERFORM pg_temp.ok(
-    position('job_applications' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, uuid)'::regprocedure)) = 0
-    AND position('sp_claims' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, uuid)'::regprocedure)) = 0
-    AND position('cv_documents' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, uuid)'::regprocedure)) = 0
-    AND position('session_notes' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, uuid)'::regprocedure)) = 0,
+    position('job_applications' in pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0
+    AND position('sp_claims' in pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0
+    AND position('cv_documents' in pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0
+    AND position('session_notes' in pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0,
     'ER5.8 the report builder never reads the application, Passport, CV or note tables');
 
   PERFORM pg_temp.must_fail(
@@ -487,7 +497,7 @@ BEGIN
 
   -- The material changed, so a NEW version can be produced -- and the old one
   -- stays exactly what it was.
-  _r3 := public.scp_iv_finalise_report(e.case1);
+  _r3 := pg_temp.finalise(e.case1);
   PERFORM pg_temp.ok(_r3 <> _r1, 'ER5.14 changed material yields a new report version, never a rewrite');
   PERFORM pg_temp.ok(
     (SELECT status = 'superseded' AND payload = _payload AND content_hash = _hash
@@ -522,7 +532,7 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM pg_temp.become('81000000-0000-4000-8000-0000000000a2');
   PERFORM pg_temp.must_fail(
-    format('SELECT public.scp_iv_finalise_report(%L)', e.case1),
+    format('SELECT public.scp_iv_finalise_previewed_report(%L, %L, NULL)', e.case1, 'not-a-preview'),
     'SCP_IV_FINALISE_ROLE',
     'ER6.1 a member cannot finalise, by direct RPC');
   PERFORM pg_temp.ok(
@@ -569,7 +579,7 @@ BEGIN
     format('SELECT public.scp_iv_mark_assessed(%L)', e.case1),
     'SCP_IV_NOT_CASE_MEMBER', 'ER7.8 B cannot move A''s case');
   PERFORM pg_temp.must_fail(
-    format('SELECT public.scp_iv_finalise_report(%L)', e.case1),
+    format('SELECT public.scp_iv_finalise_previewed_report(%L, %L, NULL)', e.case1, 'not-a-preview'),
     'SCP_IV_FINALISE_ROLE', 'ER7.9 B cannot finalise A''s report');
   -- B's OWN case, citing A's note: the guard, not the membership check, is
   -- what refuses this one.

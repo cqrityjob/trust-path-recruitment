@@ -231,6 +231,12 @@ ok(pendingMarkup.includes(sv["iiu.rp.finalising"]), "· and says so");
 // on the LAST of them, and asserts that no definition in the history ever
 // dropped it. 20261020090000 (evidence reliability) legitimately redefines the
 // function to make finalising idempotent; the boundary travelled with it.
+// 20261107090000 (report basis integrity) redefines it again, to hash the
+// basis with core sha256, to name the recruitment the report belongs to, and
+// to classify each evidence item by what kind of thing it is. The boundary
+// travelled with that one too, which is what the assertions below check --
+// this list is an allowlist of REVIEWED redefinitions, not a licence for the
+// next one.
 const migrationFiles = readdirSync(path.join(root, "supabase/migrations"))
   .filter((f) => f.endsWith(".sql"))
   .sort();
@@ -252,6 +258,26 @@ ok(
     definitions[1].file === "20261020090000_scp_interview_evidence_reliability.sql",
   `E · every redefinition of scp_iv_finalise_report is a known, reviewed one (found ${definitions.length})`,
 );
+// EXPAND → CUTOVER → CONTRACT. 20261107090000 adds the preview-bound
+// finalisation under its OWN name and leaves scp_iv_finalise_report(uuid,
+// uuid) -- the function the deployed application calls -- untouched, neither
+// dropped nor redefined, until a separate owner-approved CONTRACT migration.
+// Both functions carry the same owner/admin boundary, so both are checked.
+const BASIS_MIGRATION = "supabase/migrations/20261107090000_scp_iv_report_basis_integrity.sql";
+const basisSql = read(BASIS_MIGRATION);
+const previewedAt = basisSql.indexOf(
+  "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_previewed_report(",
+);
+ok(
+  previewedAt > 0,
+  "E · the preview-bound finalisation is a separately named contract, scp_iv_finalise_previewed_report",
+);
+ok(
+  !/DROP FUNCTION IF EXISTS public\.scp_iv_finalise_report\(/.test(basisSql) &&
+    !basisSql.includes("CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report("),
+  "E · and the basis migration neither drops nor redefines the legacy scp_iv_finalise_report the deployed application calls",
+);
+if (previewedAt > 0) definitions.push({ file: path.basename(BASIS_MIGRATION), body: basisSql.slice(previewedAt) });
 const finaliseFn = definitions[definitions.length - 1].body;
 
 for (const def of definitions) {
