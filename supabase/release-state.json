@@ -536,6 +536,60 @@
       "evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt through the official Supabase GitHub integration after the schema PR merged on 2026-09-09, recorded canonically as version 20261104090000, name passport_share_gateway. Re-verified read-only through the Supabase management boundary before application work began: both gateway tables have RLS and FORCE RLS enabled, have zero policies and zero rows, and neither anon nor authenticated has SELECT. All three functions are SECURITY DEFINER with search_path=public,extensions; service_role alone can execute them, while anon and authenticated cannot. No application request or production write was used for this verification.",
       "rollback": "supabase/rollback/20261104090000_passport_share_gateway_rollback.sql",
       "note": "SCHEMA-ONLY SHARE GATEWAY FOUNDATION. Adds two hash-only, forced-RLS tables with no policies or browser grants and three service-role-only SECURITY DEFINER functions. A live disclosure token can issue a 90-second single-use handoff; consuming it binds a separately generated session hash for at most 30 minutes; reading the session rechecks disclosure revocation and expiry on every request and preserves existing access accounting and selected-merit identifier removal. No raw disclosure token, handoff or session secret is stored. Existing links and application code are untouched, so this migration is safe alone. After hosted application and read-only verification, a separate application PR may deploy the Supabase fragment-entry function and switch generated links from Lovable /p/<token> to the gateway."
+    }, 
+    {
+      "hostedState": "pending", 
+      "file": "20261105090000_scp_participant_report_issuer_preview.sql", 
+      "introduces": [
+        {
+          "object": "scp_report_issuer_admin", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_participant_report_for_issuer", 
+          "kind": "function"
+        }
+      ], 
+      "note": "E2 -- THE EMPLOYER READS THE DOCUMENT THE CANDIDATE RECEIVED. Two pure additions: a predicate that answers whether the caller is an active owner or admin of the organisation that COMMISSIONED an attempt (the same authority scp_release_attempt_report requires to release at all), and a read that returns the PARTICIPANT document of a released attempt to such a caller. The read is column-for-column the projection scp_participant_report already returns -- same LEFT JOIN for template continuity (20260904171840), same '[]'::jsonb safety flags, same scp_audience_brief with every mean and spread removed -- so an employer verifying what a candidate received sees the document rather than a re-rendering of it. It discloses strictly LESS about the candidate than scp_employer_report, which the same caller already holds: the employer document carries severities and this one carries none. Creates no table, column, enum or writer; touches no policy, no grant on any other object, and NOT scp_report_snapshot_readable -- widening that would hand the participant document to every active member of every organisation. Zero rows before release, because the document does not exist until scp_release_attempt_report writes it.", 
+      "verify": "SELECT p.proname, p.prosecdef, array_to_string(p.proconfig, ',') FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('scp_report_issuer_admin','scp_participant_report_for_issuer') ORDER BY 1;  -- expect two rows, prosecdef t, proconfig containing search_path. Then: SELECT has_function_privilege('anon','public.scp_participant_report_for_issuer(uuid)'::regprocedure,'EXECUTE'), has_function_privilege('authenticated','public.scp_participant_report_for_issuer(uuid)'::regprocedure,'EXECUTE');  -- expect f|t. Then: SELECT position('s.safety_flags' in pg_get_functiondef('public.scp_participant_report_for_issuer(uuid)'::regprocedure));  -- expect 0. The migration asserts all of this at apply time and raises SCP_ISSUER_PREVIEW on failure; a successful apply logs NOTICE SCP_ISSUER_PREVIEW_PROOF ok.", 
+      "rollback": "supabase/rollback/20261105090000_scp_participant_report_issuer_preview_rollback.sql"
+    }, 
+    {
+      "hostedState": "pending", 
+      "file": "20261106090000_scp_iv_candidate_summary.sql", 
+      "introduces": [
+        {
+          "object": "scp_iv_candidate_summaries", 
+          "kind": "table"
+        }, 
+        {
+          "object": "scp_iv_build_candidate_summary", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_preview_candidate_summary", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_release_candidate_summary", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_my_candidate_summary", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_released_candidate_summary", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_application_summary_releases", 
+          "kind": "function"
+        }
+      ], 
+      "note": "E4 -- THE CANDIDATE-SAFE INTERVIEW SUMMARY. One interview produces two documents for two audiences; this adds the second. scp_iv_candidate_summaries is a frozen, versioned, content-hashed row with RLS ENABLED, NO POLICY and NO client grant, so the six functions are its only doors and a direct read is refused rather than filtered. scp_iv_build_candidate_summary is the SINGLE producer of the payload and is not client-executable; the preview and the release both call it, so they cannot drift. It reads exactly two tables -- scp_interview_pack_competencies (governed, authored content) and scp_interview_evidence (the candidate's own confirmed statements) -- and the migration asserts at apply time that it reads none of scp_interview_assessments, _findings, _evidence_proposals, _session_notes, _source_passages, _ai_runs or _rating_anchors, and carries no original_excerpt, correction_note, confirmed_by or level. NO REQUIREMENT RATING REACHES THE CANDIDATE, structurally. Releasing requires an active owner or admin (the seat scp_iv_finalise_report requires), REFUSES until a final employer report exists, is idempotent on identical content, and supersedes rather than rewrites on a change. Finalisation does NOT trigger it: the migration asserts that scp_iv_finalise_report does not call the release. scp_iv_application_summary_releases returns the FACT only (case, version, date -- no payload, no hash) to any active member, so the employer process strip can tell 'finalised' from 'finalised and shared'. Adds one event name, candidate_summary_released, to scp_interview_case_events. Changes no existing table, function, policy or grant. There is deliberately NO revocation: a superseding release is the supported correction.", 
+      "verify": "SELECT c.relname, c.relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname='scp_iv_candidate_summaries';  -- expect one row, t. Then: SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='scp_iv_candidate_summaries';  -- expect 0. Then: SELECT has_table_privilege('anon','public.scp_iv_candidate_summaries','SELECT'), has_table_privilege('authenticated','public.scp_iv_candidate_summaries','SELECT');  -- expect f|f. Then: SELECT has_function_privilege('authenticated','public.scp_iv_build_candidate_summary(uuid)'::regprocedure,'EXECUTE');  -- expect f. Then: SELECT p.proname, p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND (p.proname LIKE 'scp_iv_%candidate_summary%' OR p.proname='scp_iv_application_summary_releases') ORDER BY 1;  -- expect six rows, all prosecdef t. The migration asserts all of this at apply time and raises SCP_IV_SUMMARY on failure; a successful apply logs NOTICE SCP_IV_CANDIDATE_SUMMARY_PROOF ok.", 
+      "rollback": "supabase/rollback/20261106090000_scp_iv_candidate_summary_rollback.sql"
     }
   ], 
   "policyVersion": 2, 

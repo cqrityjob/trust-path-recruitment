@@ -143,8 +143,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 126,
-    'pre-rollback: 126 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest)');
+        AND table_name LIKE 'scp\_%') = 127,
+    'pre-rollback: 127 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 candidate summary)');
 END $$;
 
 -- PR-R1 (20261027090000) unwinds first, newest first: the private computation
@@ -297,6 +297,17 @@ DROP FUNCTION IF EXISTS public.scp_iv_pack_competency_pack(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_question_pack(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_employer_may_read_pack(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_plan_case(uuid);
+-- E4 (20261106090000): the candidate-safe interview summary, and the table it
+-- freezes into. Listed HERE rather than with the audience reads further down,
+-- because the sweep immediately below requires that no scp_iv_ function
+-- survive the Phase 2 unwind -- which is exactly the reminder it exists to be.
+DROP TABLE    IF EXISTS public.scp_iv_candidate_summaries CASCADE;
+DROP FUNCTION IF EXISTS public.scp_iv_application_summary_releases(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_iv_released_candidate_summary(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_iv_my_candidate_summary(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_iv_release_candidate_summary(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_iv_preview_candidate_summary(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_iv_build_candidate_summary(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_iv_source_case(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_session_case(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_can_write_case(uuid);
@@ -491,6 +502,13 @@ DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
 -- the Phase 2b unwind further down.
 DROP FUNCTION IF EXISTS public.scp_participant_report(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_report(uuid) CASCADE;
+-- E2 (20261105090000): the issuer's read of the participant document, and the
+-- release-authority predicate behind it. Added to this unwind because the
+-- assertion below requires that NO scp_ function survives a full PR-A
+-- rollback -- a new function that is not listed here fails that sweep, which
+-- is exactly the reminder it is meant to be.
+DROP FUNCTION IF EXISTS public.scp_participant_report_for_issuer(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_report_issuer_admin(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_audience_brief(jsonb) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_report_snapshot_readable(text, uuid, uuid) CASCADE;
 -- Part F (20260820120000). The decision table references scp_attempts, so it
