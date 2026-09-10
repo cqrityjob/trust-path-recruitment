@@ -269,8 +269,12 @@ ok(
     sv["iiu.status.evidence_review"] === "Underlag granskas",
   "C · interview_complete and evidence_review read Underlag granskas",
 );
-ok(sv["iiu.status.assessed"] === "Rapport redo", "C · assessed reads Rapport redo");
-ok(sv["iiu.status.reported"] === "Rapport klar", "C · reported reads Rapport klar");
+// CORRECTED IN E1. "Rapport redo" beside "Rapport klar" made the two adjacent
+// states near synonyms, and `assessed` -- which has report MATERIAL and owes a
+// human review -- read as a finished report. The pair is now unambiguous, and
+// the E1 continuity guard asserts that no surface counts one as the other.
+ok(sv["iiu.status.assessed"] === "Rapportunderlag redo", "C · assessed reads Rapportunderlag redo");
+ok(sv["iiu.status.reported"] === "Rapport fastställd", "C · reported reads Rapport fastställd");
 
 // Source: the internal identifiers that were reaching screens, and where each
 // now belongs. None of them may be rendered on an ordinary recruiter screen;

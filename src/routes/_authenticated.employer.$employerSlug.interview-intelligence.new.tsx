@@ -29,6 +29,7 @@ import {
   listStartableInterviewPacks,
 } from "@/lib/interview-intelligence/runtime.functions";
 import { getApplicationInterviewStart } from "@/lib/interview-intelligence/context.functions";
+import { processLinkage } from "@/lib/employer-continuity/process-projection";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/new",
@@ -113,6 +114,11 @@ function Page() {
   // hand-edited query string.
   const effectiveJobId = prefill.data?.jobId ?? jobId ?? null;
 
+  // Recruitment-linked, or standalone. Decided by the presence of a validated
+  // application id and by nothing else -- never by the candidate name in the
+  // field below, never by the guide that gets chosen.
+  const linkage = processLinkage(applicationId);
+
   const create = useMutation({
     mutationFn: () =>
       createFn({
@@ -182,11 +188,28 @@ function Page() {
       activeSection="interviewIntelligence"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
-      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
+      {/* Back to where this was started from, when it was started from an
+       *  application. Cancelling into the interview list is the right exit for
+       *  somebody who came from the list and the wrong one for somebody who
+       *  came from a candidate -- and until now everybody got the list. */}
+      <nav aria-label={t("iiu.breadcrumbs")} className="flex flex-wrap gap-4 text-sm">
+        {applicationId && (
+          <Link
+            to="/employer/$employerSlug/applications/$applicationId"
+            params={{ employerSlug, applicationId }}
+            className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
+          >
+            {t("continuity.backToApplication")}
+          </Link>
+        )}
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
-          className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
+          className={
+            applicationId
+              ? "inline-flex min-h-11 items-center text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              : "inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
+          }
         >
           {t("iiu.ov.backtolist")}
         </Link>
@@ -198,6 +221,40 @@ function Page() {
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
         {t("iiu.new.lead")}
       </p>
+
+      {/* WHICH KIND OF INTERVIEW THIS IS ABOUT TO BE.
+       *
+       *  Said before the form rather than discovered after it. The two are
+       *  genuinely different records with different governance, and a recruiter
+       *  who does not know which one they are creating cannot choose. The
+       *  answer comes from the validated `applicationId` in the URL -- which is
+       *  navigation context and NOT authority: scp_iv_create_case re-checks
+       *  that the application belongs to this employer and raises
+       *  SCP_IV_CROSS_TENANT_APPLICATION otherwise, and the job the case pins
+       *  is read from the application by the server, never from the query
+       *  string. */}
+      <div className="mt-4 max-w-3xl">
+        <Panel
+          tone={linkage === "recruitmentLinked" ? "work" : "neutral"}
+          title={
+            linkage === "recruitmentLinked"
+              ? t("continuity.type.linked")
+              : t("continuity.type.standaloneInterview")
+          }
+        >
+          <p>
+            {linkage === "recruitmentLinked"
+              ? t("continuity.type.linkedBody")
+              : t("continuity.type.standaloneBody")}
+          </p>
+          {/* What was actually retrieved, named. A form that filled itself in
+              and said nothing about where the words came from is a form the
+              recruiter cannot trust or correct. */}
+          {linkage === "recruitmentLinked" && prefill.isError && (
+            <p role="alert">{t("iiu.new.prefill.unavailable")}</p>
+          )}
+        </Panel>
+      </div>
 
       {packs.isLoading && (
         <div className="mt-6">

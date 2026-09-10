@@ -505,7 +505,7 @@ function ApplicationsList({
                         {t("employer.applications.evidence.cv")}
                       </button>
                     )}
-                    <ApplicationAssessmentChip applicationId={r.id} />
+                    <ApplicationAssessmentChip employerId={employerId} applicationId={r.id} />
                   </div>
 
                   <span className="inline-flex flex-none rounded-full border border-border px-2 py-0.5 text-xs font-medium">

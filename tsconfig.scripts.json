@@ -86,6 +86,15 @@
     // a fixture that silently stops matching the model's input is exactly
     // the failure this file exists to prevent.
     "scripts/my-career-premium-overview-check.tsx",
+    // The E1 continuity guard and its controls, on the same terms: new, no
+    // pre-existing type debt, and the guard CALLS projectProcess with typed
+    // fixtures. It was left out on its first pass and immediately proved the
+    // point this file makes -- two capability fields were removed from
+    // ContinuityCapabilities and the guard's own ALL_CAPS/NO_CAPS went on
+    // naming them, with no error, because nothing typechecked the file.
+    "scripts/employer-process-continuity-check.tsx",
+    "scripts/negative-controls/employer-continuity-controls.ts",
+    "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
   ],

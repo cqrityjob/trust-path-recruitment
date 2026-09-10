@@ -159,7 +159,13 @@ export function State({
   );
 }
 
-const STATUS_LABEL: Record<string, TranslationKey> = {
+/** The case status, in the recruiter's words.
+ *
+ *  EXPORTED because the process strip on the application page shows the same
+ *  state, and a second vocabulary for it is a contradiction a reader meets on
+ *  one screen: the strip said "Klar att genomföras" beside a chip reading
+ *  "Redo för intervju", for one status, six inches apart. One map, one word. */
+export const CASE_STATUS_LABEL: Record<string, TranslationKey> = {
   draft: "iiu.status.draft",
   sources_ready: "iiu.status.sources_ready",
   prep_generated: "iiu.status.prep_generated",
@@ -189,7 +195,7 @@ export function CaseStatusChip({ status }: { status: string }) {
   const { t } = useT();
   return (
     <Chip tone={STATUS_TONE[status] ?? "neutral"} srPrefix={t("iiu.chip.status")}>
-      {uiLabel(STATUS_LABEL, status, t)}
+      {uiLabel(CASE_STATUS_LABEL, status, t)}
     </Chip>
   );
 }
@@ -1067,6 +1073,33 @@ const STAGES_DONE: Record<string, number> = {
 
 export function stageOf(status: string): Stage | null {
   return STAGE_OF_STATUS[status] ?? null;
+}
+
+/** How many of the guide's questions have been assessed.
+ *
+ *  ── THE UNIT PROBLEM THIS EXISTS TO FIX ────────────────────────────────
+ *
+ *  Every surface counted `assessments.length` and compared it to
+ *  `questions.length`. Those are two different units. The live-row uniqueness
+ *  on scp_interview_assessments is (case_id, question_id, ASSESSOR_id), so a
+ *  panel of two assessors working through eight questions produces sixteen
+ *  live rows -- and the overview read "16 av 8", the summary's card never
+ *  turned green, and the assessment screen's completeness gate
+ *  (`length === questions.length`) could never fire at all, so a panel case
+ *  could not reach the control it unlocks.
+ *
+ *  The denominator is QUESTIONS IN THE PINNED GUIDE. The numerator is
+ *  therefore DISTINCT QUESTIONS with at least one live assessment. Counting
+ *  distinct question ids is not a rounding-down: a question two people have
+ *  assessed is one question assessed, which is exactly what the label
+ *  "Bedömda krav" / "Requirements assessed" claims.
+ *
+ *  It lives here, beside the other shared derivations, because four surfaces
+ *  read it and four private copies is how they came to disagree. */
+export function assessedQuestionCount(
+  assessments: readonly { readonly questionId: string }[],
+): number {
+  return new Set(assessments.map((a) => a.questionId)).size;
 }
 
 /** The two halves of Assess. Shown only while the recruiter is inside that

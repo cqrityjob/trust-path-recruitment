@@ -23,6 +23,7 @@
 // a single word of anybody's answer. The id is a bookmark, never a claim.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
@@ -35,16 +36,37 @@ import {
   type PipelineRow,
 } from "@/lib/security-competency/assessment-lifecycle.functions";
 
+// ── HOW THE REVIEW KNOWS WHERE IT CAME FROM ───────────────────────────
+//
+// The same way the released brief at /assessments/results/$attemptId does, and
+// deliberately not a second mechanism. The attempt-to-application edge lives on
+// assessment_assignments, and reading it here would mean traversing
+// scp_attempts -- a table an employer member cannot select, because attempts
+// belong to the person who sat them. So the surface that KNOWS the application
+// passes it, and this page renders the way back only when it has one.
+//
+// It is NAVIGATION CONTEXT AND NOTHING ELSE. Nothing on this page is fetched
+// with it, nothing is authorised by it, and the review queue below is scoped
+// entirely by the database: an application id typed into the URL by hand costs
+// a wrong "back" link and reveals not one word of anybody's answers. Malformed
+// values are caught to `undefined` rather than throwing, because a pasted URL
+// should cost the return link, never the work.
+const searchSchema = z.object({
+  application: z.string().uuid().optional().catch(undefined),
+});
+
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/assessments/reviews/$attemptId",
 )({
   ssr: false,
   component: ReviewAttemptRoute,
   errorComponent: EmployerErrorState,
+  validateSearch: (search) => searchSchema.parse(search),
 });
 
 function ReviewAttemptRoute() {
   const { employerSlug, attemptId } = Route.useParams();
+  const { application } = Route.useSearch();
   return (
     <AcademyPage employerSlug={employerSlug}>
       {(ws) => (
@@ -52,6 +74,7 @@ function ReviewAttemptRoute() {
           employerId={ws.employerId}
           employerSlug={ws.employerSlug}
           attemptId={attemptId}
+          applicationId={application ?? null}
         />
       )}
     </AcademyPage>
@@ -62,10 +85,15 @@ function ReviewAttempt({
   employerId,
   employerSlug,
   attemptId,
+  applicationId,
 }: {
   employerId: string;
   employerSlug: string;
   attemptId: string;
+  /** The application this review was opened from, when it was opened from one.
+   *  Null for a review reached from the queue, which is a real and supported
+   *  case -- the queue is pseudonymous by design. */
+  applicationId: string | null;
 }) {
   const { t, lang } = useT();
   const pipelineFn = useServerFn(getEmployerAssessmentPipeline);
@@ -88,15 +116,33 @@ function ReviewAttempt({
 
   return (
     <>
-      <Link
-        to="/employer/$employerSlug/assessments/reviews"
-        params={{ employerSlug }}
-        search={{ scope: "mine" as const }}
-        className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        {t("academy.reviews.backToQueue")}
-      </Link>
+      {/* Back to where the reviewer actually came from.
+       *
+       *  Opened from a candidate, the queue is not the way back: it is a
+       *  different place, and landing there is how a recruiter loses the
+       *  person they were working on. The queue link stays for everyone who
+       *  arrived from it. */}
+      <nav aria-label={t("academy.reviews.backToQueue")} className="mb-4 flex flex-wrap gap-4">
+        {applicationId && (
+          <Link
+            to="/employer/$employerSlug/applications/$applicationId"
+            params={{ employerSlug, applicationId }}
+            className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            {t("continuity.backToApplication")}
+          </Link>
+        )}
+        <Link
+          to="/employer/$employerSlug/assessments/reviews"
+          params={{ employerSlug }}
+          search={{ scope: "mine" as const }}
+          className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {!applicationId && <ArrowLeft className="h-4 w-4" aria-hidden="true" />}
+          {t("academy.reviews.backToQueue")}
+        </Link>
+      </nav>
 
       <AcademyHeading
         title={assessment}

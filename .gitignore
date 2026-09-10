@@ -62,4 +62,22 @@ pw.shots.mjs
 # `bun run cv-export:proof` writes real PDFs here so a human can look at the
 # thing a candidate would send. Regenerated on demand from the fixtures in the
 # script, so the files themselves are evidence rather than source.
-/artifacts/
+# Written as `/artifacts/*` rather than `/artifacts/`: git does not descend
+# into an excluded DIRECTORY, so a negation for something inside one never
+# matches. Excluding the contents instead leaves the directory itself
+# traversable, which is what makes the exception below possible at all.
+/artifacts/*
+
+# ONE EXCEPTION, on review's explicit request.
+#
+# The E1 continuity captures are committed so the browser evidence is readable
+# in the pull request itself rather than only on the machine that produced it:
+# several of the states they show -- report material beside a finalised report,
+# a failed read that does not become a zero, a standalone process -- are the
+# whole point of the change and cannot be read off the diff.
+#
+# They are regenerated, not hand-made: INDEX.md carries the exact HEAD, the
+# fixture commands and the Playwright command, and re-running it against the
+# same tree reproduces them. A directory is re-included before its contents,
+# because git cannot un-ignore a file inside an excluded directory.
+!/artifacts/employer-continuity-e1/
