@@ -2588,6 +2588,32 @@ console.log("\n17. The leak scan, PROVEN on planted leaks — not asserted by gr
       /if: always\(\) && steps\.leak_scan\.outcome == 'success'/.test(wf),
       "17.23 and a refusal prevents the upload rather than merely colouring the job red",
     );
+
+    // ── A FINDING YOU CANNOT LOCATE IS A FINDING YOU CANNOT FIX ──────
+    //
+    // One run refused an artifact over three strings in two files, and
+    // nothing said which FIELD carried them; the diagnosis took a separate
+    // reproduction. The report carries the neighbourhood now — redacted
+    // BEFORE it is trimmed, so widening the report cannot widen the leak.
+    {
+      const planted = Buffer.from(
+        `{"toolchain":{"note":"built against wrygicdfxwjnrugduxnt"},"token":"${anonKey}"}`,
+      );
+      const found: import("./e4-evidence-scan").Finding[] = [];
+      S.scanBuffer("artifacts/employer-final-report-e4/manifest.json", planted, found, 0, {
+        allow,
+        allowedLocalTokens: 0,
+      });
+      const ref = found.find((f) => f.what.startsWith("the owner production project ref"));
+      ok(
+        ref !== undefined && /"toolchain"/.test(ref.context) && /"note"/.test(ref.context),
+        `17.23b a finding names the field that carried it, not only the file (${ref?.context ?? "no context"})`,
+      );
+      ok(
+        ref !== undefined && !ref.context.includes(anonKey) && ref.context.includes("«token»"),
+        `17.23c and a token beside it is masked WHOLE, not cut in half and printed (${ref?.context ?? "no context"})`,
+      );
+    }
     // 12 · no raw token, no secret, no allowlist in the artifact
     ok(
       !/E4_LOCAL_JWT_SECRET|JWT_SECRET/.test(read("scripts/e4-evidence-scan.ts")),

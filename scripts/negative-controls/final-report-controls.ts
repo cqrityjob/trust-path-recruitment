@@ -412,8 +412,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a finding names only the file, so an artifact is refused over a string nobody can find and the leak cannot be fixed at its source",
     file: SCAN,
-    find: "  return text\n    .slice(from, to)",
-    replace: '  return "";\n  return text\n    .slice(from, to)',
+    find: "  const at = redacted.indexOf(needle);",
+    replace: '  return "";\n  const at = redacted.indexOf(needle);',
     guard: E4,
     expect: "17.23b a finding names the field that carried it",
   },
