@@ -133,6 +133,87 @@ END; $$;
 REVOKE ALL ON FUNCTION public.scp_iv_guard_report_immutable() FROM PUBLIC, anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────
+-- 2b · A finding can be recorded again.
+--
+--     Found by the E4 browser-evidence fixture. The origin guard from
+--     20261020090000 is attached to scp_interview_findings as well as to the
+--     two evidence tables, and opens with `IF NEW.note_id IS NOT NULL` --
+--     a column findings do not have. plpgsql resolves the field when the
+--     statement runs, so EVERY insert or update on scp_interview_findings
+--     has raised "record new has no field note_id" since that migration:
+--     scp_iv_record_findings cannot write, and the report's `unresolved`
+--     section could only ever be empty. No suite inserted a finding, so
+--     nothing noticed.
+--
+--     The note branch is now entered only for the two tables that carry the
+--     column, exactly as the dimension and competency branches already were.
+--     Nothing else in the guard changes. This is a defect fix and the
+--     rollback leaves it in place.
+-- ─────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.scp_iv_guard_evidence_origin_in_case()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  _note_case uuid; _passage_case uuid; _dim_question uuid;
+  _comp_pack uuid; _case_pack uuid;
+BEGIN
+  -- Findings carry no note link. plpgsql resolves the record's note field
+  -- when the statement first runs, so the branch is entered only for the two
+  -- tables that have the column; on scp_interview_findings it would raise
+  -- "record new has no field" for every row, whatever its content.
+  IF TG_TABLE_NAME IN ('scp_interview_evidence_proposals', 'scp_interview_evidence') THEN
+    IF NEW.note_id IS NOT NULL THEN
+      SELECT s.case_id INTO _note_case
+        FROM public.scp_interview_session_notes n
+        JOIN public.scp_interview_sessions s ON s.id = n.session_id
+       WHERE n.id = NEW.note_id;
+      IF _note_case IS NULL OR _note_case <> NEW.case_id THEN
+        RAISE EXCEPTION
+          'SCP_IV_EVIDENCE_ORIGIN_MISMATCH: the cited interview note belongs to a different case. Evidence never travels between interviews.'
+          USING ERRCODE = 'check_violation';
+      END IF;
+    END IF;
+  END IF;
+
+  IF NEW.source_passage_id IS NOT NULL THEN
+    SELECT src.case_id INTO _passage_case
+      FROM public.scp_interview_source_passages p
+      JOIN public.scp_interview_case_sources src ON src.id = p.source_id
+     WHERE p.id = NEW.source_passage_id;
+    IF _passage_case IS NULL OR _passage_case <> NEW.case_id THEN
+      RAISE EXCEPTION
+        'SCP_IV_EVIDENCE_ORIGIN_MISMATCH: the cited source passage belongs to a different case. Evidence never travels between interviews.'
+        USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+
+  -- Findings carry a question and a passage but no dimension or competency.
+  IF TG_TABLE_NAME IN ('scp_interview_evidence_proposals', 'scp_interview_evidence') THEN
+    IF NEW.evidence_dimension_id IS NOT NULL THEN
+      SELECT d.question_id INTO _dim_question
+        FROM public.scp_interview_evidence_dimensions d WHERE d.id = NEW.evidence_dimension_id;
+      IF _dim_question IS NULL OR _dim_question <> NEW.question_id THEN
+        RAISE EXCEPTION
+          'SCP_IV_EVIDENCE_DIMENSION_MISMATCH: the evidence dimension belongs to a different question.'
+          USING ERRCODE = 'check_violation';
+      END IF;
+    END IF;
+    IF NEW.pack_competency_id IS NOT NULL THEN
+      SELECT c.pack_version_id INTO _comp_pack
+        FROM public.scp_interview_pack_competencies c WHERE c.id = NEW.pack_competency_id;
+      SELECT pack_version_id INTO _case_pack
+        FROM public.scp_interview_cases WHERE id = NEW.case_id;
+      IF _comp_pack IS NULL OR _case_pack IS NULL OR _comp_pack <> _case_pack THEN
+        RAISE EXCEPTION
+          'SCP_IV_EVIDENCE_COMPETENCY_MISMATCH: the requirement belongs to a pack this case did not pin.'
+          USING ERRCODE = 'check_violation';
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END; $$;
+
+-- ─────────────────────────────────────────────────────────────────────────
 -- 3 · The hash rules, written once.
 -- ─────────────────────────────────────────────────────────────────────────
 
@@ -296,6 +377,7 @@ BEGIN
                               'context', er.context)::text, 'UTF8')), 'hex'))
                    FROM public.scp_employer_report(at.id) er
                    JOIN public.scp_employer_report_identity(at.id) ident ON ident.snapshot_id = er.id
+                  ORDER BY er.id
                   LIMIT 1))
              ORDER BY at.id)
         FROM public.assessment_assignments asg
@@ -747,7 +829,7 @@ GRANT EXECUTE ON FUNCTION public.scp_iv_report_versions(uuid) TO authenticated;
 -- ─────────────────────────────────────────────────────────────────────────
 
 DO $proof$
-DECLARE _src text; _build text; _preview text; _fn text;
+DECLARE _src text; _build text; _preview text; _fn text; _i int;
 BEGIN
   FOR _fn IN SELECT unnest(ARRAY['content_hash_algorithm','basis_hash']) LOOP
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns
@@ -827,6 +909,13 @@ BEGIN
   IF position('jsonb_agg(DISTINCT' in _build) > 0 THEN
     RAISE EXCEPTION 'SCP_IV_BASIS: the builder uses jsonb_agg(DISTINCT ...), whose order is not declared';
   END IF;
+  -- No LIMIT 1 anywhere in the builder without an ORDER BY immediately
+  -- above it: a LIMIT over an undeclared order is the heap choosing.
+  FOR _i IN 1 .. array_length(regexp_split_to_array(_build, 'LIMIT 1'), 1) - 1 LOOP
+    IF right((regexp_split_to_array(_build, 'LIMIT 1'))[_i], 400) !~ 'ORDER BY' THEN
+      RAISE EXCEPTION 'SCP_IV_BASIS: a LIMIT 1 in the builder has no ORDER BY above it';
+    END IF;
+  END LOOP;
   -- The basis names the recruitment, the interview, and the assessment
   -- RESULT through the assessment domain's own governed projection, bound
   -- to the exact snapshot and version.
@@ -903,6 +992,14 @@ BEGIN
    WHERE n.nspname='public' AND p.proname='scp_iv_guard_report_immutable';
   IF _src !~ 'IF OLD\.status = ''superseded'' THEN' THEN
     RAISE EXCEPTION 'SCP_IV_BASIS: a superseded version is still editable';
+  END IF;
+
+  -- 2b: the origin guard no longer reads a column findings do not have.
+  SELECT prosrc INTO _src FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'scp_iv_guard_evidence_origin_in_case';
+  IF position('NEW.note_id' in _src) < position('TG_TABLE_NAME IN (''scp_interview_evidence_proposals'', ''scp_interview_evidence'')' in _src)
+     OR position('TG_TABLE_NAME IN (''scp_interview_evidence_proposals'', ''scp_interview_evidence'')' in _src) = 0 THEN
+    RAISE EXCEPTION 'SCP_IV_BASIS: the origin guard still reads NEW.note_id on scp_interview_findings';
   END IF;
 
   RAISE NOTICE 'SCP_IV_REPORT_BASIS_PROOF ok';

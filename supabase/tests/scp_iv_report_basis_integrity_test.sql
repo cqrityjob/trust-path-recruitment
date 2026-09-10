@@ -287,6 +287,25 @@ BEGIN
          (_case, _q1, 'human_authored', _pp1, 'Självdeklarerad kurs.', _a1, now() - interval '3 minutes');
   UPDATE bi SET pp1 = _pp1, pp2 = _pp2;
 
+  -- (b) Two findings, the unresolved difference inserted SECOND but dated
+  --     FIRST, so heap order is again the reverse of the declared order.
+  --     Findings are written by scp_iv_record_findings from an AI run; the
+  --     rows are written directly here because the run is not under test --
+  --     and because, until this migration, NO row could be written to this
+  --     table at all: the origin guard read NEW.note_id, which findings do
+  --     not have. This insert is the proof the guard is fixed.
+  INSERT INTO public.scp_interview_findings
+    (case_id, finding_kind, statement, rationale, question_id, claim_class,
+     resolution_state, human_state, human_actor_id, human_actor_at, created_at)
+  VALUES (_case, 'verification', 'Certifikatets giltighetstid behöver kontrolleras.',
+          'Utanför intervjun.', _q1, 'ai_inference', 'needs_verification', 'confirmed', _a1, now(),
+          now() - interval '1 minute'),
+         (_case, 'contradiction', 'Anställningsåret skiljer sig mellan CV och samtal.',
+          'Två källor anger olika år.', _q1, 'ai_inference', 'unresolved_difference', 'confirmed', _a1, now(),
+          now() - interval '2 minutes'),
+         (_case, 'gap', 'Löst fynd som inte skall synas.', NULL, _q1, 'ai_inference',
+          'resolved', 'confirmed', _a1, now(), now() - interval '3 minutes');
+
 END $$;
 
 -- ###########################################################################
@@ -426,6 +445,16 @@ BEGIN
     'B2.8 uncertainty is carried rather than rounded away');
   PERFORM pg_temp.ok(jsonb_typeof(_p -> 'unresolved') = 'array',
     'B2.9 missing or contradictory material has its own place');
+  PERFORM pg_temp.ok(
+    jsonb_array_length(_p -> 'unresolved') = 2
+    AND _p -> 'unresolved' -> 0 ->> 'state' = 'unresolved_difference'
+    AND _p -> 'unresolved' -> 1 ->> 'state' = 'needs_verification'
+    AND (SELECT count(*) FROM jsonb_array_elements(_p -> 'unresolved') u WHERE u ->> 'state' = 'resolved') = 0,
+    'B2.9b the two OPEN findings are carried in created order, the resolved one is not, and a finding can be written at all');
+  PERFORM pg_temp.ok(
+    (SELECT bool_and(u ->> 'category' = 'missing_or_contradictory')
+       FROM jsonb_array_elements(_p -> 'unresolved') u),
+    'B2.9c and each is categorised as missing or contradictory material, never as a judgement');
   PERFORM pg_temp.ok(
     (SELECT count(*) FROM jsonb_array_elements(_p -> 'sources') s WHERE (s ->> 'disclosure_backed')::boolean) = 1,
     'B2.10 the Passport source is marked as disclosure-backed, and nothing else is');
