@@ -483,8 +483,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the Swedish verified-digest assertion stops reading the dictionary, so the two languages drift apart again",
     file: EVIDENCE_SPEC,
-    find: '  await expect(main(page)).toContainText(copy("sv", "iir.readback.verified"));',
-    replace: "  await expect(main(page)).toContainText(/Kontrollerad/);",
+    find: '  await expect(main(page)).toContainText(copy("sv", "iir.readback.verified"));\n  await expect(main(page)).toContainText(/Version 1/);',
+    replace:
+      "  await expect(main(page)).toContainText(/Kontrollerad/);\n  await expect(main(page)).toContainText(/Version 1/);",
     guard: E4,
     expect:
       "13.2g the walk reads the verified-digest sentence from the dictionary in BOTH languages",
