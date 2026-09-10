@@ -63,12 +63,27 @@ const REVIEW_QUEUE = "src/components/academy/ReviewQueue.tsx";
 // that states nobody reaches by hand can be rendered and read — see
 // scripts/assessment-panels-render-check.tsx.
 const PANELS = "src/components/academy/AttemptPanels.tsx";
+// E2 moved two things OUT of the route, and this guard follows them rather
+// than losing the assertion:
+//
+//   * the release error mapping, so that a code the product has never seen
+//     falls to `failed` instead of into whichever branch happened to be last,
+//     and so the readiness rule can be stated on the card BEFORE the click;
+//   * the participant's report document, so the employer's pre-release preview
+//     and the candidate's own page render the same markup and cannot drift.
+//
+// Both are stronger where they now are. What must not happen is this file
+// going on printing "ok" because the phrase it greps for moved house.
+const RELEASE = "src/lib/employer-continuity/assessment-release.ts";
+const CANDIDATE_DOC = "src/components/academy/CandidateReportDocument.tsx";
 
 const runtime = stripComments(read(RUNTIME));
 const report = stripComments(read(REPORT));
 const candidates = stripComments(read(CANDIDATES));
 const reviewQueue = stripComments(read(REVIEW_QUEUE));
 const panels = stripComments(read(PANELS));
+const release = stripComments(read(RELEASE));
+const candidateDoc = stripComments(read(CANDIDATE_DOC));
 
 const sv = dictionaries.sv as Record<string, string>;
 const en = dictionaries.en as Record<string, string>;
@@ -424,17 +439,22 @@ console.log("\n7. Submission stays single-flight and idempotent");
 // ---------------------------------------------------------------------------
 console.log("\n8. Sharing a brief twice is not a failure");
 {
+  // The code is now classified once, as data, in assessment-release.ts, and
+  // the handler branches on the OUTCOME. Both halves are asserted: the mapping
+  // must send this code to `alreadyReleased`, and the branch must treat that
+  // outcome as the success it is.
   check(
     "8.1 SCP_ALREADY_RELEASED is treated as the success it is",
-    /code === "SCP_ALREADY_RELEASED"[\s\S]{0,300}releaseAlready/.test(candidates),
+    /SCP_ALREADY_RELEASED: \{ kind: "alreadyReleased" \}/.test(release) &&
+      /result\.kind === "alreadyReleased"[\s\S]{0,300}releaseAlready/.test(candidates),
   );
   check(
     "8.2 it refetches the row rather than leaving a stale one",
-    /code === "SCP_ALREADY_RELEASED"[\s\S]{0,300}invalidateQueries/.test(candidates),
+    /result\.kind === "alreadyReleased"[\s\S]{0,300}refreshAfterRelease\(\)/.test(candidates),
   );
   check(
     "8.3 it does not fall through to the failure message",
-    /code === "SCP_ALREADY_RELEASED"[\s\S]{0,320}return;/.test(candidates),
+    /result\.kind === "alreadyReleased"[\s\S]{0,400}return;/.test(candidates),
   );
   // Single-flight, now by a ref rather than by the disabled attribute alone.
   // PR-V2 moved the confirmation into ConfirmAction (an alert dialog), and a
@@ -468,7 +488,8 @@ console.log("\n8. Sharing a brief twice is not a failure");
   // The readiness gate itself is unchanged and stays the database's.
   check(
     "8.6 releasing still requires the database's own readiness condition",
-    candidates.includes("SCP_RELEASE_BEFORE_SCORED"),
+    /SCP_RELEASE_BEFORE_SCORED: \{ kind: "blocked" \}/.test(release) &&
+      /result\.kind === "blocked"[\s\S]{0,120}releaseBlocked/.test(candidates),
   );
 }
 
@@ -533,7 +554,7 @@ console.log("\n10. Recruitment is not addressed in workforce words");
   check(
     "10.4 the report title and reason fork with it",
     /candidate \? "academy\.report\.titleRecruitment"/.test(report) &&
-      /candidate \? "academy\.report\.whyBodyRecruitment"/.test(report),
+      /candidate \? "academy\.report\.whyBodyRecruitment"/.test(candidateDoc),
   );
 
   // And the recruitment wording is actually free of the workforce claims.
