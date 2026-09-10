@@ -226,8 +226,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the workflow can omit the deny value and the mutating walk carries on without its explicit production-project refusal",
     file: EVIDENCE_SPEC,
-    find:
-      '    throw new Error(\n      "E4 evidence needs E4_FORBIDDEN_PROJECT_REF so the owner production project is refused by name.",\n    );',
+    find: '    throw new Error(\n      "E4 evidence needs E4_FORBIDDEN_PROJECT_REF so the owner production project is refused by name.",\n    );',
     replace: "    // missing deny value is accepted",
     guard: E4,
     expect: "16.33c a missing deny value fails closed, and a matching database URL is refused",
