@@ -2371,10 +2371,15 @@ export const finaliseReport = createServerFn({ method: "POST" })
     // The draft run is recorded as PROVENANCE, not as content. What gets
     // published is assembled by the database from confirmed evidence and
     // recorded human assessments -- the same builder the preview used.
-    const { data: id, error } = await context.supabase.rpc("scp_iv_finalise_report", {
+    // CUTOVER: the preview-bound contract, by its own name. The legacy
+    // scp_iv_finalise_report(uuid, uuid) still exists in the database for the
+    // bundle deployed before this release; nothing here calls it, and a
+    // separate owner-approved CONTRACT migration drops it afterwards. All
+    // three arguments are passed: the function has no default to fall back on.
+    const { data: id, error } = await context.supabase.rpc("scp_iv_finalise_previewed_report", {
       _case_id: data.caseId,
       _expected_basis_hash: data.expectedBasisHash,
-      _draft_run_id: data.draftRunId ?? undefined,
+      _draft_run_id: data.draftRunId ?? null,
     });
     if (error) {
       // The message carries the rule that refused (SCP_IV_STALE_PREVIEW,

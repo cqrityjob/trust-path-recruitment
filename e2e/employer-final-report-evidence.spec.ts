@@ -150,12 +150,12 @@ SELECT c.id, 'verification', 'Certifikatets giltighetstid behöver kontrolleras.
 
 /** After version 1: the owner authors more evidence, re-assesses the
  *  question, previews and finalises again -- every step through the governed
- *  RPCs, so version 2 is one scp_iv_finalise_report produced. */
+ *  RPCs, so version 2 is one scp_iv_finalise_previewed_report produced. */
 const correctToVersionTwo = () =>
   asOwner(`
   PERFORM public.scp_iv_author_evidence(_case, _q1, 'Kompletterande underlag efter färdigställande.', NULL, NULL, NULL);
   PERFORM public.scp_iv_record_assessment(_case, _q1, 3, 'Bekräftat efter komplettering.', NULL, 'Komplettering.');
-  PERFORM public.scp_iv_finalise_report(_case, (SELECT basis_hash FROM public.scp_iv_preview_report(_case)));`);
+  PERFORM public.scp_iv_finalise_previewed_report(_case, (SELECT basis_hash FROM public.scp_iv_preview_report(_case)), NULL);`);
 
 /* ---- The browser -------------------------------------------------------- */
 

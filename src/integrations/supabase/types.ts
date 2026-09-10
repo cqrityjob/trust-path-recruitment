@@ -14773,8 +14773,12 @@ export type Database = {
         Args: { _reason: string; _source_id: string }
         Returns: undefined
       }
+      scp_iv_finalise_previewed_report: {
+        Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }
+        Returns: string
+      }
       scp_iv_finalise_report: {
-        Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id?: string }
+        Args: { _case_id: string; _draft_run_id?: string }
         Returns: string
       }
       scp_iv_final_report: {

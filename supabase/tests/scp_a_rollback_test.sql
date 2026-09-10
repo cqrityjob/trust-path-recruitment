@@ -224,7 +224,7 @@ DROP TABLE IF EXISTS public.scp_research_sources                 CASCADE;
 DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, uuid);
 -- 20261107090000: preview-then-finalise, the shared builder, the hash rules
 -- and the governed readbacks.
-DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, text, uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_finalise_previewed_report(uuid, text, uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_preview_report(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_build_report_basis(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_final_report(uuid);

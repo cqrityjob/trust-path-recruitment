@@ -70,7 +70,7 @@
  * Deterministic, offline, no database, no network.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { mock } from "bun:test";
 import React from "react";
@@ -760,7 +760,8 @@ console.log(
   const proofAt = raw.indexOf("DO $proof$");
   const statements = sqlOnly(proofAt === -1 ? raw : raw.slice(0, proofAt));
   const builder = functionBody(statements, "scp_iv_build_report_basis");
-  const finalise = functionBody(statements, "scp_iv_finalise_report");
+  const finalise = functionBody(statements, "scp_iv_finalise_previewed_report");
+  const legacy = functionBody(statements, "scp_iv_finalise_report");
   const preview = functionBody(statements, "scp_iv_preview_report");
   const readback = functionBody(statements, "scp_iv_final_report");
   const version = functionBody(statements, "scp_iv_report_version");
@@ -999,12 +1000,38 @@ console.log(
     "8.35 preview and finalisation call the SAME builder",
   );
   ok(
-    /scp_iv_finalise_report\(\s*_case_id uuid,\s*_expected_basis_hash text,/.test(statements),
-    "8.36 finalisation takes the identity the owner previewed — required, with no default",
+    /scp_iv_finalise_previewed_report\(\s*_case_id uuid,\s*_expected_basis_hash text,\s*_draft_run_id uuid\)/.test(
+      statements,
+    ),
+    "8.36 the preview-bound finalisation is a separately named contract that takes the previewed identity — required, no default on any argument",
+  );
+  // EXPAND: the legacy two-argument function the deployed application calls
+  // is neither dropped nor redefined here. It goes in a separate, owner-
+  // approved CONTRACT migration, after the cut-over is deployed and verified.
+  ok(
+    !/DROP FUNCTION IF EXISTS public\.scp_iv_finalise_report\(/.test(statements) &&
+      legacy.length === 0 &&
+      !/ALTER FUNCTION public\.scp_iv_finalise_report\(/.test(statements),
+    "8.37 and the migration neither drops, redefines nor alters the legacy scp_iv_finalise_report(uuid, uuid) the deployed application calls",
+  );
+  const proof = raw.slice(proofAt);
+  ok(
+    /proname='scp_iv_finalise_report' AND p\.pronargs = 2/.test(proof) &&
+      /proname='scp_iv_finalise_previewed_report' AND p\.pronargs = 3/.test(proof) &&
+      /has_function_privilege\('authenticated', 'public\.scp_iv_finalise_report\(uuid, uuid\)', 'EXECUTE'\)/.test(
+        proof,
+      ),
+    "8.37b and the apply-time proof asserts BOTH contracts exist and the legacy one stays executable by the deployed application",
   );
   ok(
-    /DROP FUNCTION IF EXISTS public\.scp_iv_finalise_report\(uuid, uuid\)/.test(statements),
-    "8.37 and the old two-argument signature, which took no identity, is dropped",
+    /pronargdefaults = 0/.test(proof),
+    "8.37c and that the previewed contract has no defaulted argument, so PostgREST cannot resolve it ambiguously",
+  );
+  const cleanup = read("docs/release/scp-iv-finalise-report-contract-cleanup.md");
+  ok(
+    cleanup.includes("NOT SCHEDULED") &&
+      cleanup.includes("DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, uuid)"),
+    "8.37d the CONTRACT step — dropping the legacy function — is documented as a separate, unscheduled, owner-approved migration",
   );
   ok(
     /IF _expected_basis_hash IS NULL OR btrim\(_expected_basis_hash\) = '' THEN[\s\S]{0,120}SCP_IV_PREVIEW_REQUIRED/.test(
@@ -1114,8 +1141,10 @@ console.log("\n9. The client reads it through the contract, not around it");
     "9.16 it REQUIRES the previewed identity — an empty one does not validate",
   );
   ok(
-    /_expected_basis_hash:\s*data\.expectedBasisHash/.test(finSlice),
-    "9.17 and passes it to the database, which re-decides",
+    /rpc\("scp_iv_finalise_previewed_report",\s*\{[^}]*_expected_basis_hash:\s*data\.expectedBasisHash[^}]*_draft_run_id:\s*data\.draftRunId \?\? null/.test(
+      finSlice,
+    ),
+    "9.17 and passes it, with all three arguments, to the previewed contract, which re-decides",
   );
   ok(
     /e\.code = error\.code/.test(finSlice) || /\.message/.test(finSlice),
@@ -1662,14 +1691,14 @@ console.log("\n12. The rollback restores the previous finalisation, and is exerc
 {
   const rb = sqlOnly(read(ROLLBACK));
   ok(
-    /DROP FUNCTION IF EXISTS public\.scp_iv_finalise_report\(uuid, text, uuid\)/.test(rb),
-    "12.1 the rollback drops the three-argument finalisation",
+    /DROP FUNCTION IF EXISTS public\.scp_iv_finalise_previewed_report\(uuid, text, uuid\)/.test(rb),
+    "12.1 the rollback drops the previewed finalisation",
   );
   ok(
-    /CREATE OR REPLACE FUNCTION public\.scp_iv_finalise_report\(_case_id uuid, _draft_run_id uuid DEFAULT NULL\)/.test(
-      rb,
-    ),
-    "12.2 and restores the previous two-argument one, as documented",
+    !/DROP FUNCTION IF EXISTS public\.scp_iv_finalise_report\(/.test(rb) &&
+      !/CREATE OR REPLACE FUNCTION public\.scp_iv_finalise_report\(/.test(rb) &&
+      /proname='scp_iv_finalise_report' AND p\.pronargs = 2/.test(rb),
+    "12.2 and neither drops nor redefines the legacy finalisation — it was never touched — but asserts it is still there for the deployed application",
   );
   for (const fn of [
     "scp_iv_preview_report(uuid)",
@@ -1767,6 +1796,61 @@ console.log(
   ok(
     /BLOCKED/.test(index) === /_pending_/.test(index),
     "13.9 and calls #216 blocked exactly while no captures exist — never complete on an empty directory",
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════ */
+console.log("\n14. CUTOVER: no runtime path calls the legacy finalisation");
+/* ══════════════════════════════════════════════════════════════════════ */
+{
+  // Every application source file, not only the one the finalise server
+  // function lives in: a legacy call anywhere in src/ would finalise without
+  // a preview and would break the moment the CONTRACT migration lands.
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const full = path.join(dir, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else if (/\.(ts|tsx)$/.test(name)) files.push(full);
+    }
+  };
+  walk(path.join(root, "src"));
+  const legacyCallers = files.filter((f) =>
+    /rpc\(\s*["']scp_iv_finalise_report["']/.test(codeOnly(readFileSync(f, "utf8"))),
+  );
+  ok(files.length > 100, `14.0 the application source was walked (${files.length} files)`);
+  ok(
+    legacyCallers.length === 0,
+    `14.1 no application file calls rpc("scp_iv_finalise_report") — the legacy contract is for the bundle deployed before this release (${legacyCallers.map((f) => path.relative(root, f)).join(", ")})`,
+  );
+  const previewedCallers = files.filter((f) =>
+    /rpc\(\s*["']scp_iv_finalise_previewed_report["']/.test(codeOnly(readFileSync(f, "utf8"))),
+  );
+  ok(
+    previewedCallers.length === 1 && previewedCallers[0].endsWith("runtime.functions.ts"),
+    "14.2 exactly one server function calls the previewed contract",
+  );
+  const types = read("src/integrations/supabase/types.ts");
+  ok(
+    /scp_iv_finalise_previewed_report:\s*\{\s*Args:\s*\{\s*_case_id: string; _expected_basis_hash: string; _draft_run_id: string \| null\s*\}/.test(
+      types,
+    ),
+    "14.3 the client types declare the previewed contract with all three arguments",
+  );
+  ok(
+    /scp_iv_finalise_report:\s*\{\s*Args:\s*\{\s*_case_id: string; _draft_run_id\?: string\s*\}/.test(
+      types,
+    ),
+    "14.4 and the legacy contract's type is the two-argument one — it is what the database still has, and it is not what this release calls",
+  );
+  // The evidence spec's governed correction step goes through the previewed
+  // contract too: nothing on this branch finalises without a preview.
+  const spec = codeOnly(read("e2e/employer-final-report-evidence.spec.ts"));
+  ok(
+    /scp_iv_finalise_previewed_report\(_case, \(SELECT basis_hash FROM public\.scp_iv_preview_report\(_case\)\), NULL\)/.test(
+      spec,
+    ) && !/scp_iv_finalise_report\(/.test(spec),
+    "14.5 the evidence walk's governed correction finalises through the previewed contract only",
   );
 }
 

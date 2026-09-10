@@ -36,7 +36,7 @@
 --
 -- It deliberately writes NO report row. A hand-built final report would prove
 -- the screen can render a row this file wrote rather than one
--- scp_iv_finalise_report produced; the browser walk finalises for real.
+-- scp_iv_finalise_previewed_report produced; the browser walk finalises for real.
 --
 -- Idempotent: a second run finds the cases by title and leaves them alone.
 --

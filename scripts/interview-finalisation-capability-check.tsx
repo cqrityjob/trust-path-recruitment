@@ -299,11 +299,31 @@ ok(
   "E · scp_iv_finalise_report is first defined by the runtime migration",
 );
 ok(
-  definitions.length === 3 &&
-    definitions[1].file === "20261020090000_scp_interview_evidence_reliability.sql" &&
-    definitions[2].file === "20261107090000_scp_iv_report_basis_integrity.sql",
+  definitions.length === 2 &&
+    definitions[1].file === "20261020090000_scp_interview_evidence_reliability.sql",
   `E · every redefinition of scp_iv_finalise_report is a known, reviewed one (found ${definitions.length})`,
 );
+// EXPAND → CUTOVER → CONTRACT. 20261107090000 adds the preview-bound
+// finalisation under its OWN name and leaves scp_iv_finalise_report(uuid,
+// uuid) -- the function the deployed application calls -- untouched, neither
+// dropped nor redefined, until a separate owner-approved CONTRACT migration.
+// Both functions carry the same owner/admin boundary, so both are checked.
+const BASIS_MIGRATION = "supabase/migrations/20261107090000_scp_iv_report_basis_integrity.sql";
+const basisSql = read(BASIS_MIGRATION);
+const previewedAt = basisSql.indexOf(
+  "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_previewed_report(",
+);
+ok(
+  previewedAt > 0,
+  "E · the preview-bound finalisation is a separately named contract, scp_iv_finalise_previewed_report",
+);
+ok(
+  !/DROP FUNCTION IF EXISTS public\.scp_iv_finalise_report\(/.test(basisSql) &&
+    !basisSql.includes("CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report("),
+  "E · and the basis migration neither drops nor redefines the legacy scp_iv_finalise_report the deployed application calls",
+);
+if (previewedAt > 0)
+  definitions.push({ file: path.basename(BASIS_MIGRATION), body: basisSql.slice(previewedAt) });
 const finaliseFn = definitions[definitions.length - 1].body;
 
 for (const def of definitions) {

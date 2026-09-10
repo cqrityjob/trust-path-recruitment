@@ -59,8 +59,8 @@ END $$;
 -- directly with a placeholder hash, because the role check precedes the hash
 -- check and that ordering is what they assert.
 CREATE OR REPLACE FUNCTION pg_temp.finalise(_case uuid) RETURNS uuid LANGUAGE sql AS $$
-  SELECT public.scp_iv_finalise_report(_case,
-           (SELECT basis_hash FROM public.scp_iv_preview_report(_case)));
+  SELECT public.scp_iv_finalise_previewed_report(_case,
+           (SELECT basis_hash FROM public.scp_iv_preview_report(_case)), NULL);
 $$;
 
 -- ---------------------------------------------------------------------------
@@ -279,7 +279,7 @@ BEGIN
     'ER2.3 a note nobody confirmed is evidence nowhere');
   PERFORM pg_temp.ok(
     position('scp_interview_evidence_proposals' in
-      pg_get_functiondef('public.scp_iv_finalise_report(uuid, text, uuid)'::regprocedure)) = 0,
+      pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0,
     'ER2.4 the report builder does not read the proposals table at all');
 
   -- Human confirmation, then the same click again.
@@ -465,10 +465,10 @@ BEGIN
        FROM public.scp_interview_reports WHERE id = _r1),
     'ER5.7 the locked report is byte-identical after evidence, assessment, note, job and case changes');
   PERFORM pg_temp.ok(
-    position('job_applications' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, text, uuid)'::regprocedure)) = 0
-    AND position('sp_claims' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, text, uuid)'::regprocedure)) = 0
-    AND position('cv_documents' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, text, uuid)'::regprocedure)) = 0
-    AND position('session_notes' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, text, uuid)'::regprocedure)) = 0,
+    position('job_applications' in pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0
+    AND position('sp_claims' in pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0
+    AND position('cv_documents' in pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0
+    AND position('session_notes' in pg_get_functiondef('public.scp_iv_finalise_previewed_report(uuid, text, uuid)'::regprocedure)) = 0,
     'ER5.8 the report builder never reads the application, Passport, CV or note tables');
 
   PERFORM pg_temp.must_fail(
@@ -532,7 +532,7 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM pg_temp.become('81000000-0000-4000-8000-0000000000a2');
   PERFORM pg_temp.must_fail(
-    format('SELECT public.scp_iv_finalise_report(%L, %L)', e.case1, 'not-a-preview'),
+    format('SELECT public.scp_iv_finalise_previewed_report(%L, %L, NULL)', e.case1, 'not-a-preview'),
     'SCP_IV_FINALISE_ROLE',
     'ER6.1 a member cannot finalise, by direct RPC');
   PERFORM pg_temp.ok(
@@ -579,7 +579,7 @@ BEGIN
     format('SELECT public.scp_iv_mark_assessed(%L)', e.case1),
     'SCP_IV_NOT_CASE_MEMBER', 'ER7.8 B cannot move A''s case');
   PERFORM pg_temp.must_fail(
-    format('SELECT public.scp_iv_finalise_report(%L, %L)', e.case1, 'not-a-preview'),
+    format('SELECT public.scp_iv_finalise_previewed_report(%L, %L, NULL)', e.case1, 'not-a-preview'),
     'SCP_IV_FINALISE_ROLE', 'ER7.9 B cannot finalise A''s report');
   -- B's OWN case, citing A's note: the guard, not the membership check, is
   -- what refuses this one.

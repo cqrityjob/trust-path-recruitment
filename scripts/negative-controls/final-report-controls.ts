@@ -243,9 +243,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the previewed identity becomes optional on the finalisation function, so a client can finalise what nobody previewed",
     file: MIGRATION,
-    find: "  _case_id uuid, _expected_basis_hash text, _draft_run_id uuid DEFAULT NULL)",
-    replace:
-      "  _case_id uuid, _expected_basis_hash text DEFAULT NULL, _draft_run_id uuid DEFAULT NULL)",
+    find: "  _case_id uuid, _expected_basis_hash text, _draft_run_id uuid)",
+    replace: "  _case_id uuid, _expected_basis_hash text DEFAULT NULL, _draft_run_id uuid)",
     guard: E4,
     expect: "8.36 finalisation takes the identity the owner previewed",
   },
@@ -325,15 +324,65 @@ const MUTATIONS: readonly Mutation[] = [
 
   /* ---- The rollback ----------------------------------------------- */
   {
-    id: "E4-ROLLBACK-DOES-NOT-RESTORE",
+    id: "E4-ROLLBACK-DROPS-THE-LEGACY",
     defect:
-      "the rollback drops the new finalisation but restores the previous one under another name, leaving no scp_iv_finalise_report at all",
+      "the rollback drops the legacy two-argument finalisation as well, which the migration never touched -- leaving the deployed application with no finalisation at all",
     file: ROLLBACK,
-    find: "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report(_case_id uuid, _draft_run_id uuid DEFAULT NULL)",
+    find: "DROP FUNCTION IF EXISTS public.scp_iv_finalise_previewed_report(uuid, text, uuid);",
     replace:
-      "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report_previous(_case_id uuid, _draft_run_id uuid DEFAULT NULL)",
+      "DROP FUNCTION IF EXISTS public.scp_iv_finalise_previewed_report(uuid, text, uuid);\nDROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, uuid);",
     guard: E4,
-    expect: "12.2 and restores the previous two-argument one",
+    expect: "12.2 and neither drops nor redefines the legacy finalisation",
+  },
+  {
+    id: "E4-MIGRATION-DROPS-THE-LEGACY",
+    defect:
+      "the migration drops the legacy two-argument finalisation, so the deployed application breaks the moment the schema is applied -- the release-blocking defect the review found, restored",
+    file: MIGRATION,
+    find: "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_previewed_report(",
+    replace:
+      "DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, uuid);\nCREATE OR REPLACE FUNCTION public.scp_iv_finalise_previewed_report(",
+    guard: E4,
+    expect: "8.37 and the migration neither drops, redefines nor alters the legacy",
+  },
+  {
+    id: "E4-MIGRATION-REDEFINES-THE-LEGACY",
+    defect:
+      "the migration redefines the legacy function under its old name, changing the contract the deployed application calls",
+    file: MIGRATION,
+    find: "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_previewed_report(",
+    replace: "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report(",
+    guard: E4,
+    expect: "8.36 the preview-bound finalisation is a separately named contract",
+  },
+  {
+    id: "E4-PROOF-STOPS-CHECKING-THE-LEGACY",
+    defect: "the apply-time proof no longer asserts the legacy contract survives the migration",
+    file: MIGRATION,
+    find: "  IF NOT has_function_privilege('authenticated', 'public.scp_iv_finalise_report(uuid, uuid)', 'EXECUTE') THEN\n    RAISE EXCEPTION 'SCP_IV_BASIS: the deployed application can no longer execute the legacy finalisation';\n  END IF;",
+    replace: "",
+    guard: E4,
+    expect: "8.37b and the apply-time proof asserts BOTH contracts exist",
+  },
+  {
+    id: "E4-LEGACY-CALL-RESTORED",
+    defect:
+      "the application calls the legacy two-argument finalisation again, so it finalises without a preview and breaks when the CONTRACT migration lands",
+    file: RUNTIME,
+    find: 'await context.supabase.rpc("scp_iv_finalise_previewed_report", {',
+    replace: 'await context.supabase.rpc("scp_iv_finalise_report", {',
+    guard: E4,
+    expect: '14.1 no application file calls rpc("scp_iv_finalise_report")',
+  },
+  {
+    id: "E4-LEGACY-CALL-ELSEWHERE",
+    defect: "a second application path finalises through the legacy contract",
+    file: ROUTE,
+    find: "  const previewFn = useServerFn(previewReport);",
+    replace:
+      '  const previewFn = useServerFn(previewReport);\n  void (() => supabaseBrowser.rpc("scp_iv_finalise_report", { _case_id: caseId }));',
+    guard: E4,
+    expect: '14.1 no application file calls rpc("scp_iv_finalise_report")',
   },
   {
     id: "E4-ROLLBACK-NOT-EXERCISED",
