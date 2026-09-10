@@ -240,9 +240,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E4-MANIFEST-DROPS-THE-HEAD",
     defect:
       "the manifest stops recording the HEAD, so nobody can tell whether the captures belong to the commit under review",
-    file: "scripts/e4-evidence-manifest.ts",
-    find: '  head: process.env.GITHUB_SHA ?? version("git", ["rev-parse", "HEAD"]),',
-    replace: '  capturedFrom: process.env.GITHUB_SHA ?? version("git", ["rev-parse", "HEAD"]),',
+    file: MANIFEST,
+    find: "  head: process.env.E4_HEAD_SHA ??",
+    replace: "  capturedFrom: process.env.E4_HEAD_SHA ??",
     guard: E4,
     expect: "16.19 the manifest records head",
   },
