@@ -668,9 +668,9 @@ const MUTATIONS: readonly Mutation[] = [
       "the 31-second Swedish walk stops recording step durations, so a stall in the longest test is hidden by the budget that makes the test possible",
     file: EVIDENCE_SPEC,
     find: '  mark(t, "01 · before a preview, the act is not offered");',
-    replace: "",
+    replace: "  // step no longer recorded",
     guard: E4,
-    expect: "13.2j EVERY routed test records how its time was spent",
+    expect: "13.2j EVERY routed test records a duration for at least every capture it takes",
   },
 
   /* ---- The stack the evidence is taken against ----------------------- *
@@ -1137,7 +1137,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E4-EVIDENCE-CALLED-COMPLETE-WITHOUT-CAPTURES",
     defect: "the evidence index stops calling the phase blocked while no capture exists",
     file: "artifacts/employer-final-report-e4/INDEX.md",
-    find: "**STATUS: BLOCKED — no captures exist yet.**",
+    find: "**STATUS: BLOCKED — no captures exist yet in this directory.**",
     replace: "**STATUS: complete.**",
     guard: E4,
     expect: "13.9 and calls #216 blocked exactly while no captures exist",

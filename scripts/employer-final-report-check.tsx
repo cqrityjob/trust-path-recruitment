@@ -1817,15 +1817,25 @@ console.log(
   // durations for two of six, and not for the 31-second walk — the one where
   // a hidden stall would matter most.
   const testTitles = [...spec.matchAll(/^test\("([^"]+)"/gm)].map((m) => m[1]);
-  const instrumented = testTitles.filter((title) => {
+  // AT LEAST ONE RECORD PER CAPTURE. Its own control showed that "does this
+  // test record anything" is too weak: with seven steps recorded, deleting
+  // one left six and the assertion went on passing. Every numbered capture is
+  // a step somebody may need to see the duration of.
+  const underRecorded: string[] = [];
+  for (const title of testTitles) {
     const from = spec.indexOf(`test("${title}"`);
     const nextIdx = spec.indexOf('\ntest("', from + 1);
     const body = spec.slice(from, nextIdx === -1 ? spec.length : nextIdx);
-    return /await phase\(t,|mark\(t, "/.test(body);
-  });
+    const capturesTaken =
+      (body.match(/await shot\(page,/g) ?? []).length +
+      (body.match(/\.screenshot\(\{/g) ?? []).length;
+    const recorded =
+      (body.match(/await phase\(t,/g) ?? []).length + (body.match(/mark\(t, "/g) ?? []).length;
+    if (recorded < capturesTaken) underRecorded.push(`${title} (${recorded} < ${capturesTaken})`);
+  }
   ok(
-    testTitles.length > 0 && instrumented.length === testTitles.length,
-    `13.2j EVERY routed test records how its time was spent — ${instrumented.length} of ${testTitles.length}`,
+    testTitles.length > 0 && underRecorded.length === 0,
+    `13.2j EVERY routed test records a duration for at least every capture it takes — ${underRecorded.join("; ") || "all do"}`,
   );
   // A capture that duplicates another is not a second piece of evidence.
   ok(
