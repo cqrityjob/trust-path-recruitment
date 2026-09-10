@@ -3642,6 +3642,75 @@ export const dictionaries = {
     "academy.participants.releaseConfirmPending": "Delar …",
     "academy.participants.releaseExplain":
       "Granskningen är klar. Att dela låser underlaget som en oföränderlig version, gör det läsbart för behöriga i din organisation, ger personen sin egen kopia och gör det möjligt att be om personens identitet. Steget går inte att ångra.",
+    // ── E2: arriving for ONE attempt ──────────────────────────────────
+    "academy.participants.focus.badge": "Öppnad för den här åtgärden",
+    "academy.participants.focus.title": "Du kom hit för ett bestämt testtillfälle",
+    "academy.participants.focus.body":
+      "Kortet nedan är det testtillfälle åtgärden gällde. Det visas först, oavsett vilket filter som är valt.",
+    "academy.participants.focus.clear": "Visa hela listan i stället",
+    "academy.participants.focus.notInReachTitle": "Det testtillfället finns inte i den här listan",
+    "academy.participants.focus.notInReachBody":
+      "Länken pekade på ett testtillfälle som inte finns bland de kandidater du kan se här. Det kan ha återkallats, höra till en annan organisation, eller så är länken gammal. Övriga kandidater visas nedan.",
+    // ── E2: varför det går, eller inte går, att dela ───────────────────
+    "academy.participants.readiness.title": "Varför det går att dela nu",
+    "academy.participants.readiness.ready":
+      "Alla svar är granskade av en människa och resultatet är sammanställt. Ingenting är delat med kandidaten ännu.",
+    "academy.participants.readiness.reviewsOutstanding":
+      "{open} av {total} svar väntar fortfarande på en granskare. Resultatet kan inte delas innan granskningen är klar.",
+    "academy.participants.readiness.notScored":
+      "Testet är inte färdigt än. Det finns inget resultat att dela.",
+    "academy.participants.readiness.notPermitted":
+      "Resultatet är klart att delas, men delning görs av en ägare eller administratör hos er. Du kan be en kollega med den behörigheten.",
+    "academy.participants.readiness.released": "Delat med kandidaten {date}.",
+    "academy.participants.readiness.releasedByUnknown":
+      "Vem som delade visas inte här. Delningen finns i organisationens händelselogg.",
+    // ── E2: vad kandidaten får, och inte får ───────────────────────────
+    "academy.participants.boundary.title": "Det här är vad kandidaten får se",
+    "academy.participants.boundary.sharedTitle": "Kandidaten får se",
+    "academy.participants.boundary.withheldTitle": "Kandidaten får inte se",
+    "academy.participants.boundary.shared.whatWasAssessed": "Vad som bedömdes, och hur",
+    "academy.participants.boundary.shared.plainLanguageResult":
+      "Resultatet beskrivet i klarspråk, utan siffror",
+    "academy.participants.boundary.shared.strengthsWithEvidence":
+      "Styrkor som bedömningen ger stöd för",
+    "academy.participants.boundary.shared.developmentAreas": "Utvecklingsområden",
+    "academy.participants.boundary.shared.limitations":
+      "Vad bedömningen inte säger något om, och hur säker den är",
+    "academy.participants.boundary.shared.releaseDateAndVersion":
+      "Datum och version för det som delades",
+    "academy.participants.boundary.withheld.reviewerNotes": "Granskarnas interna anteckningar",
+    "academy.participants.boundary.withheld.reviewerConflicts": "Uppgifter om jävsprövning",
+    "academy.participants.boundary.withheld.employerRatings": "Era interna bedömningar",
+    "academy.participants.boundary.withheld.internalReasoning": "Ert interna resonemang",
+    "academy.participants.boundary.withheld.otherCandidates": "Andra kandidater",
+    "academy.participants.boundary.withheld.scoringKeys": "Rättningsnycklar och facit",
+    "academy.participants.boundary.withheld.auditMetadata": "Spårnings- och säkerhetsdata",
+    "academy.participants.boundary.withheld.hiringRecommendation":
+      "Rekommendation om anställning — den finns inte, varken här eller där",
+    "academy.participants.boundary.withheld.totalScoreOrRanking":
+      "Totalpoäng, rangordning eller godkänt/underkänt — ingenting sådant produceras",
+    "academy.participants.boundary.note":
+      "Beslutet fattas av er. Underlaget är ett stöd för det beslutet och innehåller ingen rekommendation.",
+    // ── E2: vad delningen faktiskt gjorde ──────────────────────────────
+    "academy.participants.outcome.confirmed": "Delat med kandidaten {date}.",
+    "academy.participants.outcome.writtenNotConfirmed":
+      "Delningen är gjord, men listan kunde inte läsas om för att bekräfta den. Gör ingenting om igen — delning är enkelriktad. Läs om för att se den uppdaterade statusen.",
+    "academy.participants.outcome.recheck": "Läs om",
+    "academy.participants.outcome.refused":
+      "Delning kräver ägare eller administratör. Servern nekade steget.",
+    // ── E2: förhandsgranskning av kandidatens egen kopia ───────────────
+    "academy.participants.preview.open": "Visa exakt vad kandidaten ser",
+    "academy.participants.preview.close": "Stäng förhandsvisningen",
+    "academy.participants.preview.title": "Kandidatens egen kopia",
+    "academy.participants.preview.lede":
+      "Det här är samma dokument som kandidaten läser, hämtat från samma källa. Det är inte en omskrivning.",
+    "academy.participants.preview.loading": "Hämtar kandidatens kopia …",
+    "academy.participants.preview.unavailable":
+      "Kandidatens kopia kunde inte hämtas just nu. Det säger ingenting om huruvida den är delad.",
+    "academy.participants.preview.notReleased":
+      "Det finns ingen delad kopia att visa. Kandidatens dokument skapas när du delar.",
+    "academy.participants.preview.beforeRelease":
+      "Kandidatens dokument skrivs i samma steg som delningen. Före delning finns det ingenting att visa — listan ovanför säger i stället exakt vad som kommer att delas och vad som inte kommer att delas.",
     "academy.participants.openReportRecruitment": "Öppna kandidatunderlag",
     "academy.participants.reassess": "Boka omprövning",
     "academy.participants.reassessmentScheduled": "En omprövning har tilldelats.",
@@ -9311,6 +9380,75 @@ export const dictionaries = {
     "academy.participants.releaseConfirmPending": "Sharing …",
     "academy.participants.releaseExplain":
       "Review is complete. Sharing freezes the material as an immutable version, makes it readable by authorised people in your organisation, gives the person their own copy, and allows the person's identity to be requested. The step cannot be undone.",
+    // ── E2: arriving for ONE attempt ──────────────────────────────────
+    "academy.participants.focus.badge": "Opened for this action",
+    "academy.participants.focus.title": "You came here for one specific attempt",
+    "academy.participants.focus.body":
+      "The card below is the attempt the action was about. It is shown first, whichever filter is selected.",
+    "academy.participants.focus.clear": "Show the whole list instead",
+    "academy.participants.focus.notInReachTitle": "That attempt is not in this list",
+    "academy.participants.focus.notInReachBody":
+      "The link named an attempt that is not among the candidates you can see here. It may have been withdrawn, it may belong to another organisation, or the link may be old. The other candidates are shown below.",
+    // ── E2: why it can, or cannot, be shared ──────────────────────────
+    "academy.participants.readiness.title": "Why this can be shared now",
+    "academy.participants.readiness.ready":
+      "Every response has been reviewed by a person and the result is complete. Nothing has been shared with the candidate yet.",
+    "academy.participants.readiness.reviewsOutstanding":
+      "{open} of {total} responses are still waiting on a reviewer. The result cannot be shared until the review is finished.",
+    "academy.participants.readiness.notScored":
+      "The assessment is not finished yet. There is no result to share.",
+    "academy.participants.readiness.notPermitted":
+      "The result is ready to share, but sharing is done by an owner or admin in your organisation. You can ask a colleague who holds that role.",
+    "academy.participants.readiness.released": "Shared with the candidate on {date}.",
+    "academy.participants.readiness.releasedByUnknown":
+      "Who shared it is not shown here. The sharing is recorded in the organisation's event log.",
+    // ── E2: what the candidate gets, and does not get ─────────────────
+    "academy.participants.boundary.title": "This is what the candidate will see",
+    "academy.participants.boundary.sharedTitle": "The candidate will see",
+    "academy.participants.boundary.withheldTitle": "The candidate will not see",
+    "academy.participants.boundary.shared.whatWasAssessed": "What was assessed, and how",
+    "academy.participants.boundary.shared.plainLanguageResult":
+      "The result in plain language, without numbers",
+    "academy.participants.boundary.shared.strengthsWithEvidence":
+      "Strengths the assessment supports",
+    "academy.participants.boundary.shared.developmentAreas": "Development areas",
+    "academy.participants.boundary.shared.limitations":
+      "What the assessment does not speak to, and how certain it is",
+    "academy.participants.boundary.shared.releaseDateAndVersion":
+      "The date and version of what was shared",
+    "academy.participants.boundary.withheld.reviewerNotes": "Reviewers' internal notes",
+    "academy.participants.boundary.withheld.reviewerConflicts": "Conflict-of-interest checks",
+    "academy.participants.boundary.withheld.employerRatings": "Your internal ratings",
+    "academy.participants.boundary.withheld.internalReasoning": "Your internal reasoning",
+    "academy.participants.boundary.withheld.otherCandidates": "Other candidates",
+    "academy.participants.boundary.withheld.scoringKeys": "Scoring keys and answer keys",
+    "academy.participants.boundary.withheld.auditMetadata": "Audit and security data",
+    "academy.participants.boundary.withheld.hiringRecommendation":
+      "A hiring recommendation — there is none, here or there",
+    "academy.participants.boundary.withheld.totalScoreOrRanking":
+      "A total score, a ranking or a pass/fail — none of these is produced",
+    "academy.participants.boundary.note":
+      "The decision is yours. The material supports that decision and contains no recommendation.",
+    // ── E2: what the release actually did ─────────────────────────────
+    "academy.participants.outcome.confirmed": "Shared with the candidate on {date}.",
+    "academy.participants.outcome.writtenNotConfirmed":
+      "The sharing is done, but the list could not be re-read to confirm it. Do not do it again — sharing is one-way. Re-read to see the updated status.",
+    "academy.participants.outcome.recheck": "Re-read",
+    "academy.participants.outcome.refused":
+      "Sharing requires an owner or admin. The server refused the step.",
+    // ── E2: previewing the candidate's own copy ───────────────────────
+    "academy.participants.preview.open": "Show exactly what the candidate sees",
+    "academy.participants.preview.close": "Close the preview",
+    "academy.participants.preview.title": "The candidate's own copy",
+    "academy.participants.preview.lede":
+      "This is the same document the candidate reads, from the same source. It is not a rewrite of it.",
+    "academy.participants.preview.loading": "Fetching the candidate's copy …",
+    "academy.participants.preview.unavailable":
+      "The candidate's copy could not be fetched just now. That says nothing about whether it is shared.",
+    "academy.participants.preview.notReleased":
+      "There is no shared copy to show. The candidate's document is created when you share.",
+    "academy.participants.preview.beforeRelease":
+      "The candidate's document is written in the same step as the sharing. Before sharing there is nothing to show — the list above says instead exactly what will and will not be shared.",
     "academy.participants.openReportRecruitment": "Open candidate brief",
     "academy.participants.reassess": "Schedule reassessment",
     "academy.participants.reassessmentScheduled": "A reassessment has been assigned.",

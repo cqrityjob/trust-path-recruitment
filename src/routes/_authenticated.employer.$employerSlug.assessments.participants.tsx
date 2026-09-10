@@ -90,6 +90,20 @@ import {
   type PipelineRow,
 } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { LifecycleChip } from "@/components/academy/LifecycleChip";
+import {
+  focusAttempt,
+  orderWithFocus,
+  releaseGate,
+  releaseErrorOutcome,
+  releaseReadback,
+  releaseControlEnabled,
+  CANDIDATE_RECEIVES,
+  CANDIDATE_DOES_NOT_RECEIVE,
+  type FocusOutcome,
+  type ReleaseGate,
+  type ReleaseOutcome,
+} from "@/lib/employer-continuity/assessment-release";
+import { CandidateCopyPreview } from "@/components/academy/CandidateCopyPreview";
 
 // ── ARRIVING FROM A NUMBER ────────────────────────────────────────────
 //
@@ -110,12 +124,42 @@ const STATE_FILTERS = [
 ] as const;
 type StateFilter = (typeof STATE_FILTERS)[number];
 
-// Optional, not defaulted. A defaulted search param becomes a REQUIRED prop on
-// every <Link> to this route, which would mean the twelve links that do not
-// care about the filter all have to name it. Absent means "all", decided once
-// where the filter is read.
+// ── ARRIVING FOR ONE RECORD ───────────────────────────────────────────
+//
+// `state` narrows a LIST. `attempt` names a RECORD, and the two are not the
+// same kind of thing at all.
+//
+// The E1 continuity strip proposes "share the candidate material" for an
+// application, and it has already decided WHICH attempt that action is about:
+// the one whose brief is ready and which has waited longest, chosen by that
+// action's own predicate. Until now it threw the answer away and linked to
+// `?state=ready_to_release` -- a filtered list. With one ready attempt that
+// merely made the recruiter find it again. With two it made the projection's
+// choice invisible: two identical buttons, and whichever card the recruiter
+// read first is the result that got shared.
+//
+// So the attempt travels. It is an opaque server-issued id and NOT authority:
+// the list is scoped entirely by scp_employer_assessment_pipeline, which
+// returns this employer's rows and no others, and scp_release_attempt_report
+// re-decides owner/admin, scored-ness and prior release on the write. A
+// hand-edited value names an attempt that is not in the reachable set, and
+// `focusAttempt` has a state for exactly that: the page says the record could
+// not be found rather than silently showing the whole list as though nothing
+// had been asked for.
+//
+// Both are optional and neither is defaulted: a defaulted search param becomes
+// a REQUIRED prop on every <Link> to this route, which would mean the twelve
+// links that care about neither have to name both. Absent `state` means "all",
+// decided once where the filter is read.
 const searchSchema = z.object({
   state: z.enum(STATE_FILTERS).catch("all").optional(),
+  // `.catch(undefined)`, so a malformed id is "no record requested" rather
+  // than a validation failure on a page that would otherwise have rendered.
+  attempt: z
+    .string()
+    .uuid()
+    .catch(undefined as unknown as string)
+    .optional(),
 });
 
 /** `active` is the one filter that is not a lifecycle state: the Oversikt card
@@ -238,14 +282,29 @@ function Candidates({
   // how another page hands this one a subject: a card on Oversikt links here
   // with the state it was counting. That also makes the view shareable and
   // survivable across a reload, which local state is not.
-  const state: StateFilter = Route.useSearch().state ?? "all";
+  const search = Route.useSearch();
+  const state: StateFilter = search.state ?? "all";
   const navigate = Route.useNavigate();
 
+  /** Every recruitment row this employer can see, before the filter.
+   *
+   *  The focus below is resolved against THIS and not against the filtered
+   *  view, and the difference is the whole point: "your chip hides it" and "it
+   *  is not there" are different sentences, and answering the first with the
+   *  second is how a link that worked perfectly reads as broken. */
+  const reachable = (rows: PipelineRow[]) => rows.filter((r) => r.useCase === "recruitment");
+
   const visible = (rows: PipelineRow[]) => {
-    const recruitment = rows.filter((r) => r.useCase === "recruitment");
+    const recruitment = reachable(rows);
     const matched =
       state === "all" ? recruitment : recruitment.filter((r) => MATCHES[state](r.lifecycleState));
-    return [...matched].sort(byUrgency);
+    const sorted = [...matched].sort(byUrgency);
+    // The record the caller asked for goes first and is always present,
+    // whatever the filter says. A recruiter who arrives from "share this
+    // result" and finds a list without it — because a colleague was faster and
+    // the chip still says ready_to_release — has hit the dead end this unit
+    // exists to remove.
+    return orderWithFocus(sorted, recruitment, focusAttempt(search.attempt, recruitment));
   };
 
   return (
@@ -327,31 +386,90 @@ function Candidates({
           )
         }
       >
-        {(rows) => (
-          <div className="space-y-3">
-            {visible(rows).map((p) => (
-              <CandidateCard
-                key={p.attemptId}
-                row={p}
-                employerId={employerId}
-                employerSlug={employerSlug}
-                applicationId={(p.assignmentId && applications.data?.[p.assignmentId]) || null}
-                candidate={
-                  (p.assignmentId && identified.get(applications.data?.[p.assignmentId] ?? "")) ||
-                  null
-                }
-                canManage={canManage}
+        {(rows) => {
+          const focus = focusAttempt(search.attempt, reachable(rows));
+          return (
+            <div className="space-y-3">
+              <FocusNotice
+                focus={focus}
+                onClear={() => void navigate({ search: { state }, replace: true })}
               />
-            ))}
-          </div>
-        )}
+              {visible(rows).map((p) => (
+                <CandidateCard
+                  key={p.attemptId}
+                  row={p}
+                  focused={focus.kind === "focused" && focus.attemptId === p.attemptId}
+                  employerId={employerId}
+                  employerSlug={employerSlug}
+                  applicationId={(p.assignmentId && applications.data?.[p.assignmentId]) || null}
+                  candidate={
+                    (p.assignmentId && identified.get(applications.data?.[p.assignmentId] ?? "")) ||
+                    null
+                  }
+                  canManage={canManage}
+                />
+              ))}
+            </div>
+          );
+        }}
       </AcademyQueryState>
     </>
   );
 }
 
+/** What arriving for ONE record says, above the list.
+ *
+ *  Three outcomes, three answers, and the third is the one that had to exist:
+ *  a link naming an attempt this employer cannot see used to produce a
+ *  perfectly ordinary list, and the recruiter had no way to know the thing
+ *  they came for was not in it. */
+function FocusNotice({ focus, onClear }: { focus: FocusOutcome; onClear: () => void }) {
+  const { t } = useT();
+  if (focus.kind === "noneRequested") return null;
+
+  if (focus.kind === "notInReach") {
+    return (
+      <div
+        role="status"
+        className="rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-4"
+      >
+        <p className="text-[13px] font-semibold text-foreground">
+          {t("academy.participants.focus.notInReachTitle")}
+        </p>
+        <p className="mt-1.5 max-w-[74ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.participants.focus.notInReachBody")}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role="status"
+      className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 rounded-[12px] border border-accent bg-[color:var(--surface-subtle)] p-4"
+    >
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold text-foreground">
+          {t("academy.participants.focus.title")}
+        </p>
+        <p className="mt-1.5 max-w-[74ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.participants.focus.body")}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onClear}
+        className="inline-flex h-11 shrink-0 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        {t("academy.participants.focus.clear")}
+      </button>
+    </div>
+  );
+}
+
 function CandidateCard({
   row,
+  focused,
   employerId,
   employerSlug,
   applicationId,
@@ -359,6 +477,9 @@ function CandidateCard({
   canManage,
 }: {
   row: PipelineRow;
+  /** This is the record the caller came for. Changes the card's border and
+   *  adds one badge; it grants nothing and hides nothing. */
+  focused: boolean;
   employerId: string;
   employerSlug: string;
   /** The application this assignment came from, when it came from one. */
@@ -400,6 +521,21 @@ function CandidateCard({
   // the page behind it cannot be clicked. It replaced an inline panel that
   // did none of that.
   const [confirmRelease, setConfirmRelease] = useState(false);
+  // ── WHAT THE RELEASE ACTUALLY DID ──────────────────────────────────
+  //
+  // Not "the mutation settled". The mutation settling is what the code used to
+  // treat as the end of the story: the queries were invalidated, the card
+  // re-rendered, and if the refetch had failed it re-rendered from the STALE
+  // row -- still offering to share a result that had just been shared, and
+  // telling nobody that the irreversible thing they asked for had happened.
+  //
+  // So the outcome is decided by the ROW READ BACK, and the case where the
+  // write landed and the read did not has its own state and its own sentence.
+  const [outcome, setOutcome] = useState<ReleaseOutcome>({ kind: "idle" });
+  // Whether the employer has asked to look at the candidate's own copy. Off by
+  // default: it is a document about a person, and opening it is a deliberate
+  // act rather than something that happens because a card scrolled past.
+  const [showPreview, setShowPreview] = useState(false);
   // Single-flight for the release itself. A ref, not state: it updates
   // synchronously, so a second activation of the confirm button that lands
   // before React re-renders still sees it. The state flag alone missed that
@@ -415,18 +551,55 @@ function CandidateCard({
     onSuccess: (r) => setIdentity(r?.email ?? t("academy.participants.identityRefused")),
   });
 
+  /** Everything the release touches, refetched, and the row read back.
+   *
+   *  ── WHY THE E1 KEYS ARE HERE ───────────────────────────────────────
+   *
+   *  Sharing a result changes what FOUR surfaces say, and only one of them is
+   *  this page. The application's continuity strip reads the attempt through
+   *  `["employer", id, "application", appId, "assessments"]` and would go on
+   *  proposing "share the candidate material" — pointing at an attempt that
+   *  had just been shared — until something else happened to invalidate it.
+   *  The applications list carries the same badge. Both are named below.
+   *
+   *  `refetchQueries` rather than `invalidateQueries` for the pipeline itself,
+   *  because the answer is needed NOW: the read-back is what decides whether
+   *  the recruiter is told this worked. */
+  const refreshAfterRelease = async (): Promise<PipelineRow | null> => {
+    await qc.refetchQueries({ queryKey: ["academy", "participants", employerId] });
+    void qc.invalidateQueries({ queryKey: ["academy", "review-pressure"] });
+    void qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
+    if (applicationId) {
+      void qc.invalidateQueries({
+        queryKey: ["employer", employerId, "application", applicationId, "assessments"],
+      });
+    }
+    const rows = qc.getQueryData<PipelineRow[]>(["academy", "participants", employerId]);
+    return rows?.find((r) => r.attemptId === row.attemptId) ?? null;
+  };
+
   const releaseM = useMutation({
     mutationFn: () => release({ data: { attemptId: row.attemptId } }),
     onSettled: () => {
       releasingRef.current = false;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setConfirmRelease(false);
-      void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
+      // The write returned. That is NOT yet success: read the row back and let
+      // it say so. `releaseReadback` answers `confirmed` only when the row
+      // carries a release time, and `writtenNotConfirmed` — which is not a
+      // failure and must not be retried — for everything else.
+      try {
+        setOutcome(releaseReadback(await refreshAfterRelease()));
+      } catch {
+        setOutcome({ kind: "writtenNotConfirmed" });
+      }
     },
     onError: (e: unknown) => {
       setConfirmRelease(false);
       const code = (e as { code?: string }).code ?? "";
+      const result = releaseErrorOutcome(code);
+      setOutcome(result);
       // ── ALREADY SHARED IS NOT A FAILURE ────────────────────────────────
       //
       // Sharing is one-way and the database says so: a second call raises
@@ -437,16 +610,22 @@ function CandidateCard({
       // The button is single-flight, so this is not a double click. It is the
       // reply that got lost on the way back, the second tab, and the second
       // admin who pressed it a moment later. All three are the success case
-      // arriving late, and the row is refetched exactly as it would have been.
-      if (code === "SCP_ALREADY_RELEASED") {
+      // arriving late, and the row is read back exactly as it would have been —
+      // which is also what turns this into a `confirmed` outcome once the
+      // refetch lands, so the two paths converge on the same sentence.
+      if (result.kind === "alreadyReleased") {
         setNotice(t("academy.participants.releaseAlready"));
-        void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
+        void refreshAfterRelease().then((r) => {
+          if (r?.releasedAt) setOutcome({ kind: "confirmed", releasedAt: r.releasedAt });
+        });
         return;
       }
       setNotice(
-        code === "SCP_RELEASE_BEFORE_SCORED"
+        result.kind === "blocked"
           ? t("academy.participants.releaseBlocked")
-          : t("academy.participants.releaseFailed"),
+          : result.kind === "refused"
+            ? t("academy.participants.outcome.refused")
+            : t("academy.participants.releaseFailed"),
       );
     },
   });
@@ -495,9 +674,28 @@ function CandidateCard({
   });
 
   const canShare = row.canRelease && canManage;
+  // The release lifecycle of THIS attempt, with the reason attached, decided
+  // in one pure place rather than re-inferred from three booleans here.
+  const gate = releaseGate(row);
+  const shareEnabled = releaseControlEnabled(gate, outcome) && canManage;
 
   return (
-    <article className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
+    <article
+      className={
+        focused
+          ? "rounded-[14px] border-2 border-accent bg-card p-5 shadow-[var(--shadow-xs)]"
+          : "rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]"
+      }
+    >
+      {/* The focused card names itself in words as well as in colour. A border
+          is not an affordance a screen reader or a colour-blind reader can
+          use, and this card claims to be the answer to "which record was that
+          action about". */}
+      {focused && (
+        <p className="mb-3 inline-flex items-center rounded-[7px] border border-accent px-2.5 py-1 text-[12px] font-semibold text-foreground">
+          {t("academy.participants.focus.badge")}
+        </p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           {/* The candidate leads, because the card is about a person: their
@@ -612,14 +810,19 @@ function CandidateCard({
             gives the candidate their own copy and unlocks the identity
             request, and because none of it can be undone, the confirmation
             below says so before anything happens. */}
-        {state === "ready_to_release" && canShare && (
+        {gate.kind === "ready" && canShare && (
           <button
             type="button"
             onClick={() => {
               setNotice(null);
               setConfirmRelease(true);
             }}
-            disabled={releaseM.isPending}
+            // Two halves of one rule, and they must agree: `shareEnabled` is
+            // the declarative half (the gate is `ready` and no release is in
+            // flight or already done) and `releasingRef` below is the
+            // synchronous half that survives a second activation landing
+            // before React re-renders.
+            disabled={!shareEnabled || releaseM.isPending}
             className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <Send className="h-4 w-4" aria-hidden="true" />
@@ -706,13 +909,88 @@ function CandidateCard({
           )}
       </div>
 
+      {/* ── WHY THIS CAN, OR CANNOT, BE SHARED ─────────────────────────
+       *
+       *  Said on every card that has a release story at all, not only on the
+       *  one with a button. "The button is not there" is a question the card
+       *  should already have answered, and the two answers that used to go
+       *  unsaid are the two that matter: a colleague still owes a review, or
+       *  this reader is not the one who may share. */}
+      <ReleaseReadiness gate={gate} />
+
+      {/* ── AND WHAT THE CANDIDATE WILL RECEIVE ────────────────────────
+       *
+       *  At the decision point, not in a policy page. Both halves enumerated,
+       *  because "the candidate will see a summary" is not enough to decide
+       *  with — and because the half that is NOT shared is the half a
+       *  recruiter is actually uncertain about. */}
+      {gate.kind === "ready" && canShare && <CandidateBoundary />}
+
       {/* What sharing actually does, before the click rather than after it.
           The confirmation below repeats it at the moment of the decision; this
           is the sentence that lets somebody decide not to click at all. */}
-      {state === "ready_to_release" && canShare && (
+      {gate.kind === "ready" && canShare && (
         <p className="mt-3 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
           {t("academy.participants.releaseExplain")}
         </p>
+      )}
+
+      {/* ── WHAT THE RELEASE DID, READ BACK ────────────────────────────
+       *
+       *  `confirmed` is printed on the strength of a row that carries a
+       *  release time. `writtenNotConfirmed` is the case that had no sentence
+       *  at all: the irreversible write landed and the read did not, so the
+       *  card says exactly that and offers to look again rather than offering
+       *  to share again. */}
+      {outcome.kind === "confirmed" && (
+        <p role="status" className="mt-3 text-[13px] leading-relaxed text-foreground">
+          {t("academy.participants.outcome.confirmed").replace(
+            "{date}",
+            new Date(outcome.releasedAt).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE"),
+          )}
+        </p>
+      )}
+      {outcome.kind === "writtenNotConfirmed" && (
+        <div role="status" className="mt-3">
+          <p className="max-w-[74ch] text-[13px] leading-relaxed text-foreground">
+            {t("academy.participants.outcome.writtenNotConfirmed")}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              void refreshAfterRelease().then((r) => setOutcome(releaseReadback(r)));
+            }}
+            className="mt-2 inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {t("academy.participants.outcome.recheck")}
+          </button>
+        </div>
+      )}
+
+      {/* ── SHOW EXACTLY WHAT THE CANDIDATE SEES ───────────────────────
+       *
+       *  Offered once a document exists, and only to a reader who could have
+       *  created it: scp_participant_report_for_issuer requires the same
+       *  active owner/admin seat that releasing requires, and returns nothing
+       *  to anybody else. Before release there is no document, and the card
+       *  says so instead of offering a control that would return nothing. */}
+      {canShare && gate.kind === "released" && !showPreview && (
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          className="mt-3 inline-flex h-11 items-center gap-1.5 rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Eye className="h-4 w-4" aria-hidden="true" />
+          {t("academy.participants.preview.open")}
+        </button>
+      )}
+      {canShare && gate.kind === "ready" && (
+        <p className="mt-3 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
+          {t("academy.participants.preview.beforeRelease")}
+        </p>
+      )}
+      {showPreview && (
+        <CandidateCopyPreview attemptId={row.attemptId} onClose={() => setShowPreview(false)} />
       )}
 
       {canManage && row.releasedAt && !reassessmentAvailable && (
@@ -793,6 +1071,107 @@ function CandidateCard({
         </div>
       )}
     </article>
+  );
+}
+
+/** Why this attempt can, or cannot, be shared right now.
+ *
+ *  One sentence per gate member, and every member has one. The two that used
+ *  to have none are `reviewsOutstanding` — where the card said nothing about
+ *  the colleague who owes the work — and `notPermitted`, where the absence of
+ *  a button was the only explanation offered for a permission the reader does
+ *  not hold.
+ *
+ *  The numbers on `reviewsOutstanding` are the pipeline's own counts. Nothing
+ *  here judges an answer, and nothing here is a score. */
+function ReleaseReadiness({ gate }: { gate: ReleaseGate }) {
+  const { t, lang } = useT();
+
+  const body = (() => {
+    switch (gate.kind) {
+      case "ready":
+        return t("academy.participants.readiness.ready");
+      case "reviewsOutstanding":
+        return t("academy.participants.readiness.reviewsOutstanding")
+          .replace("{open}", String(gate.open))
+          .replace("{total}", String(gate.total));
+      case "notScored":
+        return t("academy.participants.readiness.notScored");
+      case "notPermitted":
+        return t("academy.participants.readiness.notPermitted");
+      case "released":
+        return t("academy.participants.readiness.released").replace(
+          "{date}",
+          new Date(gate.releasedAt).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE"),
+        );
+    }
+  })();
+
+  return (
+    <div className="mt-4 rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-4">
+      <p className="text-[13px] font-semibold text-foreground">
+        {t("academy.participants.readiness.title")}
+      </p>
+      <p className="mt-1.5 max-w-[74ch] text-[13px] leading-relaxed text-muted-foreground">
+        {body}
+      </p>
+      {/* Who released it is not in this read. Saying so is better than leaving
+          a reader to assume the product does not record it: it does, in the
+          organisation's event log, and this list simply does not carry it. */}
+      {gate.kind === "released" && (
+        <p className="mt-1.5 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
+          {t("academy.participants.readiness.releasedByUnknown")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** What the candidate will and will not receive, both halves enumerated.
+ *
+ *  The lists are `CANDIDATE_RECEIVES` and `CANDIDATE_DOES_NOT_RECEIVE` from
+ *  the release projection, so the deterministic guard can assert what is in
+ *  them — that nothing on the shared side promises something the participant
+ *  document does not contain, and that the withheld side names a total, a
+ *  ranking and a recommendation explicitly rather than leaving a reader to
+ *  wonder whether the product produces one. */
+function CandidateBoundary() {
+  const { t } = useT();
+  return (
+    <div className="mt-3 rounded-[10px] border border-border p-4">
+      <p className="text-[13px] font-semibold text-foreground">
+        {t("academy.participants.boundary.title")}
+      </p>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <div>
+          <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("academy.participants.boundary.sharedTitle")}
+          </h4>
+          <ul className="mt-2 space-y-1.5">
+            {CANDIDATE_RECEIVES.map((k) => (
+              <li key={k} className="text-[13px] leading-relaxed text-foreground">
+                {t(`academy.participants.boundary.shared.${k}` as TranslationKey)}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("academy.participants.boundary.withheldTitle")}
+          </h4>
+          <ul className="mt-2 space-y-1.5">
+            {CANDIDATE_DOES_NOT_RECEIVE.map((k) => (
+              <li key={k} className="text-[13px] leading-relaxed text-muted-foreground">
+                {t(`academy.participants.boundary.withheld.${k}` as TranslationKey)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <p className="mt-3 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
+        {t("academy.participants.boundary.note")}
+      </p>
+    </div>
   );
 }
 

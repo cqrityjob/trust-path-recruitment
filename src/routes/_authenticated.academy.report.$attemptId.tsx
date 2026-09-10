@@ -32,7 +32,10 @@ import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { AssessmentPanel } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
-import { ReportContextPanel } from "@/components/academy/ReportContextPanel";
+import {
+  CandidateReportDocument,
+  CandidateReportRights,
+} from "@/components/academy/CandidateReportDocument";
 import { logAcademyError } from "@/lib/security-competency/rpc-errors";
 import {
   EvidenceCoverage,
@@ -162,145 +165,11 @@ function ParticipantReport() {
         {new Date(r.releasedAt).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE")}
       </p>
 
-      <p className="mt-4 max-w-[62ch] rounded-[12px] bg-[color:var(--surface-subtle)] p-4 text-[13px] leading-relaxed text-muted-foreground">
-        {t("academy.report.whatThisIs")}
-      </p>
-
-      {/* Why this happened, in the participant's own terms and before anything
-          is said about them. The employer report opens with lineage; this one
-          opens with a reason, because those are the two audiences' first
-          questions and they are not the same question. */}
-      <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold text-foreground">{t("academy.report.whyTitle")}</h2>
-        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t(candidate ? "academy.report.whyBodyRecruitment" : "academy.report.whyBody")}
-        </p>
-        <p className="mt-3 max-w-[70ch] text-[13px] leading-relaxed text-foreground">
-          {t("academy.report.humanDecides")}
-        </p>
-        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t("academy.report.notInability")}
-        </p>
-        {/* Two different facts, and conflating them was the defect. A review
-            happening is routine — twelve of the eighteen items are classified
-            safety-critical, so it happens to everybody. A reviewer actually
-            FINDING something is not routine, and only that gets said. */}
-        {r.context?.humanReviewOccurred && (
-          <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-            {t("academy.report.humanReviewOccurred")}
-          </p>
-        )}
-        {r.context?.safetyConcernPresent && (
-          <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-foreground">
-            {t("academy.report.safetyConcernNoted")}
-          </p>
-        )}
-      </section>
-
-      {/* Same component as the employer surface, fed the participant's own
-          frozen context -- which carries no lifecycle status, no review counts
-          and no scoring model version, because the database never put them
-          there. */}
-      <ReportContextPanel context={r.context} reportId={r.id} releasedAt={r.releasedAt} />
-
-      {/* The participant snapshot carries no severity-bearing flags by design,
-          so this renders nothing here. It stays because the component is the
-          one place that decides how a safety notice looks, and a future
-          participant-safe notice belongs in it rather than beside it. */}
-      <SafetyFlagNotice count={r.safetyFlags.length} />
-
-      <EvidenceCoverage
-        observations={
-          r.context?.evidenceObservations ?? r.lines.reduce((n, l) => n + l.observations, 0)
-        }
-        contexts={r.context?.evidenceContexts ?? 1}
-        bodyKey="academy.coverage.participantBody"
-      />
-
-      {/* What the assessment was made of, and the distinction that matters most
-          to the person who sat it: what we watched them do, and what they told
-          us about themselves. Said in the participant's own report, in the same
-          words the employer sees. */}
-      {r.brief && r.brief.modules.length > 0 && (
-        <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold text-foreground">{t("report.modulesDone")}</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {r.brief.modules.map((m) => (
-              <li
-                key={m.blockKey}
-                className="inline-flex items-center gap-1.5 rounded-[8px] border border-border px-2.5 py-1 text-xs text-foreground"
-              >
-                {lang === "en" ? m.nameEn : m.nameSv}
-                <span className="text-muted-foreground">
-                  {m.answered}/{m.items}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <h3 className="mt-5 text-sm font-semibold text-foreground">
-            {t("report.observedVsSelf")}
-          </h3>
-          <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-            {t("report.observedVsSelfBody")}
-          </p>
-        </section>
-      )}
-
-      {/* Their own answers, given back to them. No numbers: the participant
-          brief carries the pattern and the count and deliberately not the mean
-          or the spread, so there is nothing here that could be read as a mark
-          out of ten. */}
-      {r.brief && r.brief.selfReported.length > 0 && (
-        <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold text-foreground">{t("report.selfReported")}</h2>
-          <p className="mt-1.5 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-            {t("report.selfReportedLede")}
-          </p>
-          <ul className="mt-4">
-            {r.brief.selfReported.map((sr) => (
-              <li
-                key={sr.domainKey}
-                className="border-b border-border py-3 last:border-b-0 last:pb-0"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className="text-sm font-medium text-foreground">
-                    {lang === "en" ? sr.domainEn : sr.domainSv}
-                  </h3>
-                  <p className="text-[13px] text-foreground">
-                    {t(`brief.pattern.${sr.pattern}` as TranslationKey)}
-                  </p>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {sr.items} {t("brief.questionsAnswered")}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
-        <h2 className="mb-2 text-sm font-semibold text-foreground">
-          {t("academy.report.competencies")}
-        </h2>
-        {r.lines.length === 0 ? (
-          <NoEvidenceState
-            title={t("academy.report.noEvidenceTitle")}
-            body={t("academy.report.noEvidenceBody")}
-          />
-        ) : (
-          r.lines.map((l) => (
-            <EvidenceStateRow
-              key={l.competencyCode}
-              name={lang === "en" ? l.competencyNameEn : l.competencyNameSv}
-              state={l.evidenceState}
-              observations={l.observations}
-              prompt={lang === "en" ? l.reflectionEn : l.reflectionSv}
-              humanReviewed={l.humanReviewed}
-            />
-          ))
-        )}
-      </section>
+      {/* The released document itself, rendered by the component the employer's
+          "show exactly what the candidate sees" preview also calls. One piece
+          of markup, two surfaces: the preview is a guarantee only while it is
+          impossible for the two to differ. */}
+      <CandidateReportDocument report={r} />
 
       {(recs.data?.length ?? 0) > 0 && (
         <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
@@ -352,17 +221,7 @@ function ParticipantReport() {
         )}
       </section>
 
-      <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold text-foreground">{t("academy.report.rightsTitle")}</h2>
-        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t("academy.report.rightsBody")}
-        </p>
-        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t("academy.report.rightsContact")}
-        </p>
-      </section>
-
-      <ReportLimitations items={limitations} />
+      <CandidateReportRights report={r} />
     </AssessmentLayout>
   );
 }

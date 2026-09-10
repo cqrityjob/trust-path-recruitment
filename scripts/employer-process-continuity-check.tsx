@@ -1016,11 +1016,32 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
         `9a · destination field ${f} is an action target`,
       );
     }
+    // Every ATTEMPT destination the ladder builds is likewise an action target.
+    //
+    // This used to pin the set to exactly `reviewAttemptId`, because the review
+    // was the only destination that named an attempt: "share the candidate
+    // material" linked to a FILTERED LIST and threw away the attempt the
+    // ladder had just chosen. E2 gives that action its own record, so the
+    // assertion is now the same one the case destinations get -- an action
+    // target, never a presentation record -- rather than a list of one.
     const attemptIds = [...ladder.matchAll(/attemptId: assessment\.(\w+)/g)].map((m) => m[1]);
-    ok(attemptIds.length > 0, "9a · the ladder builds at least one attempt destination");
+    ok(
+      attemptIds.length >= 2,
+      "9a · the ladder builds an attempt destination for review AND for release",
+    );
     for (const f of attemptIds) {
-      ok(f === "reviewAttemptId", `9a · attempt destination field ${f} is the review attempt`);
+      ok(
+        /AttemptId$/.test(f) && !f.startsWith("presentation"),
+        `9a · attempt destination field ${f} is an action target`,
+      );
     }
+    // Named explicitly as well as by shape: the release action must open the
+    // attempt whose brief is ready, and nothing else. A regression that pointed
+    // it at `presentationAttemptId` would still end in "AttemptId".
+    ok(
+      attemptIds.includes("reviewAttemptId") && attemptIds.includes("releaseAttemptId"),
+      "9a · and they are exactly the review attempt and the release attempt",
+    );
   }
 }
 

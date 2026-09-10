@@ -1359,39 +1359,96 @@ export const getAcademyReport = createServerFn({ method: "GET" })
     if (error) throw fail(error.message, "report_read_failed");
     const row = (Array.isArray(rows) ? rows[0] : undefined) as RpcRow | undefined;
     if (!row) return null;
+    return mapReportSnapshot(row);
+  });
 
-    return {
-      id: String(row.id),
-      attemptId: String(row.attempt_id),
-      subjectId: String(row.subject_id),
-      audience: row.audience as ReportSnapshot["audience"],
-      releasedAt: String(row.released_at),
-      context: mapContext(row.context as RpcRow | null),
-      brief: mapBrief(row.brief as RpcRow | null),
-      lines: (Array.isArray(row.payload) ? (row.payload as RpcRow[]) : []).map((x) => ({
-        competencyCode: String(x.competency_code),
-        competencyNameSv: String(x.competency_name_sv),
-        competencyNameEn: String(x.competency_name_en),
-        evidenceState: x.evidence_state as CompetencyLine["evidenceState"],
-        observations: Number(x.observations ?? 0),
-        sourceTypes: Array.isArray(x.source_types) ? (x.source_types as string[]) : [],
-        behaviourSv: x.behaviour_sv ? String(x.behaviour_sv) : null,
-        behaviourEn: x.behaviour_en ? String(x.behaviour_en) : null,
-        followupSv: x.followup_sv ? String(x.followup_sv) : null,
-        followupEn: x.followup_en ? String(x.followup_en) : null,
-        reflectionSv: x.reflection_sv ? String(x.reflection_sv) : null,
-        reflectionEn: x.reflection_en ? String(x.reflection_en) : null,
-        humanReviewed: Boolean(x.human_reviewed),
-      })),
-      safetyFlags: (Array.isArray(row.safety_flags) ? (row.safety_flags as RpcRow[]) : []).map(
-        (f) => ({
-          severity: (f.severity as string | null) ?? null,
-          observedAt: String(f.observed_at),
-        }),
-      ),
-      limitationsSv: Array.isArray(row.limitations_sv) ? (row.limitations_sv as string[]) : [],
-      limitationsEn: Array.isArray(row.limitations_en) ? (row.limitations_en as string[]) : [],
-    };
+/** One snapshot row -> one `ReportSnapshot`, for every audience entry point.
+ *
+ *  Extracted from `getAcademyReport` when a THIRD entry point appeared
+ *  (`getParticipantReportAsIssuer`, E2). The whole safety argument for that
+ *  one is that an employer previewing a candidate's document sees the
+ *  document rather than a re-rendering of it, and a second copy of this
+ *  mapper — differing by one field, a year later — is precisely how a
+ *  re-rendering comes into existence without anybody deciding to write one.
+ *
+ *  It maps and does not filter. What each audience may see was decided in the
+ *  database, by the entry point that returned the row. */
+function mapReportSnapshot(row: RpcRow): ReportSnapshot {
+  return {
+    id: String(row.id),
+    attemptId: String(row.attempt_id),
+    subjectId: String(row.subject_id),
+    audience: row.audience as ReportSnapshot["audience"],
+    releasedAt: String(row.released_at),
+    context: mapContext(row.context as RpcRow | null),
+    brief: mapBrief(row.brief as RpcRow | null),
+    lines: (Array.isArray(row.payload) ? (row.payload as RpcRow[]) : []).map((x) => ({
+      competencyCode: String(x.competency_code),
+      competencyNameSv: String(x.competency_name_sv),
+      competencyNameEn: String(x.competency_name_en),
+      evidenceState: x.evidence_state as CompetencyLine["evidenceState"],
+      observations: Number(x.observations ?? 0),
+      sourceTypes: Array.isArray(x.source_types) ? (x.source_types as string[]) : [],
+      behaviourSv: x.behaviour_sv ? String(x.behaviour_sv) : null,
+      behaviourEn: x.behaviour_en ? String(x.behaviour_en) : null,
+      followupSv: x.followup_sv ? String(x.followup_sv) : null,
+      followupEn: x.followup_en ? String(x.followup_en) : null,
+      reflectionSv: x.reflection_sv ? String(x.reflection_sv) : null,
+      reflectionEn: x.reflection_en ? String(x.reflection_en) : null,
+      humanReviewed: Boolean(x.human_reviewed),
+    })),
+    safetyFlags: (Array.isArray(row.safety_flags) ? (row.safety_flags as RpcRow[]) : []).map(
+      (f) => ({
+        severity: (f.severity as string | null) ?? null,
+        observedAt: String(f.observed_at),
+      }),
+    ),
+    limitationsSv: Array.isArray(row.limitations_sv) ? (row.limitations_sv as string[]) : [],
+    limitationsEn: Array.isArray(row.limitations_en) ? (row.limitations_en as string[]) : [],
+  };
+}
+
+/**
+ * The document the CANDIDATE received, read by the employer who commissioned it.
+ *
+ * ── WHY THIS IS NOT `getAcademyReport({ audience: "participant" })` ─────
+ *
+ * Because that call returns nothing to an employer, and it is right not to:
+ * scp_report_snapshot_readable admits the SUBJECT to the participant document
+ * and nobody else, and widening it would hand every active member of every
+ * organisation the report of every person they ever assessed.
+ *
+ * This is the narrow answer to a narrow question — "what exactly did we tell
+ * them?" — asked by the one role that is entitled to ask it, because it is the
+ * role that decided to tell them. scp_participant_report_for_issuer
+ * (20261105090000) requires the same active owner/admin seat that
+ * scp_release_attempt_report requires to release at all, and returns the SAME
+ * projection as the participant's own read: the same LEFT JOIN, the same empty
+ * safety-flag array, the same audience brief with every mean and spread
+ * removed. A copy rather than a re-rendering, and the database suite asserts
+ * the two documents are byte-for-byte identical.
+ *
+ * ── WHY NULL IS NOT AN ERROR, AND WHY AN ERROR IS NOT NULL ──────────────
+ *
+ * Null means one thing: there is no released participant document for you to
+ * read. That covers "not released yet" and "you are not an issuer admin",
+ * which the entry point deliberately does not distinguish. A FAILED read
+ * throws, exactly as `getAcademyReport` throws, for the reason recorded there:
+ * a surface that renders an outage as "nothing to see" tells the reader
+ * something false at the moment they are least able to check it.
+ */
+export const getParticipantReportAsIssuer = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<ReportSnapshot | null> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_participant_report_for_issuer", {
+      _attempt_id: data.attemptId,
+    });
+    if (error) throw fail(error.message, "participant_preview_read_failed");
+    const row = (Array.isArray(rows) ? rows[0] : undefined) as RpcRow | undefined;
+    if (!row) return null;
+    return mapReportSnapshot(row);
   });
 
 export const getDevelopmentRecommendations = createServerFn({ method: "GET" })
