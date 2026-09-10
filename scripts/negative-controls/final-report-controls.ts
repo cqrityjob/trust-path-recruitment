@@ -158,9 +158,10 @@ const MORE: readonly Mutation[] = [
     defect:
       "the readback selects the reports table directly, so nothing recomputes the digest and integrity is asserted rather than checked",
     file: RUNTIME,
-    find: 'const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {\n        _case_id: data.caseId,\n      });',
+    find:
+      '    const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {\n      _case_id: data.caseId,\n    });',
     replace:
-      'const { data: rows, error } = await context.supabase\n        .from("scp_interview_reports")\n        .select("*")\n        .eq("case_id", data.caseId);',
+      '    const { data: rows, error } = await context.supabase\n      .from("scp_interview_reports")\n      .select("*")\n      .eq("case_id", data.caseId);',
     guard: E4,
     expect: "9.1 the readback goes through the governed RPC",
   },
