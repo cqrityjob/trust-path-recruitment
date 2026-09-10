@@ -1917,9 +1917,23 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
   ] as const) {
     ok(scan.includes(needle), `16.16 the scan looks for ${what}`);
   }
+  // SLICED TO THE LEAK BRANCH. Found by its own negative control: the file
+  // has two `process.exit(1)` calls -- one for a leak, one for an empty
+  // artifact -- so a whole-file test went on passing when the leak branch
+  // alone was changed to exit zero. Each refusal is asserted where it lives.
+  const leakBranch = scan.slice(
+    scan.indexOf("REFUSED: the evidence carries"),
+    scan.indexOf("An empty artifact uploaded green"),
+  );
+  ok(leakBranch.length > 0, "16.17a the leak branch was located");
   ok(
-    /process\.exit\(1\)/.test(scan) && /REFUSED/.test(scan),
-    "16.17 and fails the job rather than redacting quietly",
+    /process\.exit\(1\)/.test(leakBranch),
+    "16.17 and a leak fails the job rather than being redacted quietly",
+  );
+  const emptyBranch = scan.slice(scan.indexOf("no screenshot was captured"));
+  ok(
+    /process\.exit\(1\)/.test(emptyBranch),
+    "16.17b and an empty artifact fails it too, in its own branch",
   );
   ok(
     /no screenshot was captured/.test(scan),
