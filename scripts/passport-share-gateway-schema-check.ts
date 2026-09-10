@@ -55,7 +55,23 @@ assert(dbTest.includes("share-gateway rollback and re-apply"), "database runner 
 assert(dbTest.includes("security_passport_share_gateway_test.sql"), "database runner executes the gateway suite");
 assert(releaseState.includes('"file": "20261104090000_passport_share_gateway.sql"'), "release state names the applied migration");
 assert(releaseState.includes('"hostedState": "applied"'), "release state records hosted application");
-assert(frontier.includes("const expectedPending: string[] = [];"), "release frontier is empty after hosted application");
+// This used to require the whole expectedPending list to be literally empty.
+// That reads as "the gateway migration was taken off the list once it was
+// applied" -- which is the real invariant -- but it also fails the moment any
+// UNRELATED migration is legitimately waiting, which says nothing about this
+// one. Assert the thing that is actually meant: the gateway migration, having
+// been applied hosted, is not still declared as pending.
+const expectedPendingBlock = (() => {
+  const at = frontier.indexOf("const expectedPending: string[] = [");
+  if (at === -1) return null;
+  const end = frontier.indexOf("];", at);
+  return end === -1 ? null : frontier.slice(at, end + 2);
+})();
+assert(expectedPendingBlock !== null, "release frontier declares an expectedPending list");
+assert(
+  !expectedPendingBlock!.includes("20261104090000_passport_share_gateway.sql"),
+  "the applied gateway migration is no longer declared pending",
+);
 
 console.log(`\n${checks} checks, ${failures.length} failures`);
 if (failures.length) {

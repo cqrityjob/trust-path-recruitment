@@ -86,8 +86,13 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E1-TITLE-AS-ROLE",
     defect: "the interview guide's name is printed as the advertised role again",
     file: II_CASE,
-    find: '      : (contextRole ?? t("continuity.role.unknown"));',
-    replace: "      : (contextRole ?? d.packName ?? d.title);",
+    // E3 replaced the single `?? t("continuity.role.unknown")` fallback with a
+    // ladder that tells an unreadable application and a refused or failed
+    // advert apart from a case that genuinely has no advertised role. The
+    // defect is the same one: the LAST rung -- the only branch that may say
+    // "no advertised role" -- starts borrowing the guide's name instead.
+    find: '              : t("continuity.role.unknown");',
+    replace: "              : (d.packName ?? d.title);",
     guard: E1,
     expect: "4 · and never borrows the internal title or the guide's name",
   },
@@ -361,7 +366,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a destination stays in the union, and in the strip's switch, after the last branch that could produce it stops doing so",
     file: PROJECTION,
-    find: '          destination: { kind: "assessmentParticipants" },',
+    find:
+      '          destination: { kind: "assessmentParticipants", attemptId: assessment.releaseAttemptId },',
     replace: "          destination: NO_DESTINATION,",
     guard: E1,
     expect: '21 · some state actually produces the "assessmentParticipants" destination',
