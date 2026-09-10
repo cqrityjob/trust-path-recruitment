@@ -5836,6 +5836,13 @@ export const dictionaries = {
     "continuity.track.assessment": "Bedömning",
     "continuity.track.interview": "Intervju",
     "continuity.track.report": "Rapport",
+    // How many records the row is one of. A row names ONE record and an
+    // application can hold several; without this a reader has no way to know
+    // the others exist.
+    "continuity.track.assessmentCount.one": "bedömning totalt",
+    "continuity.track.assessmentCount.other": "bedömningar totalt",
+    "continuity.track.interviewCount.one": "intervju totalt",
+    "continuity.track.interviewCount.other": "intervjuer totalt",
 
     // Assessment presentation states.
     "continuity.assessment.loading": "Hämtar …",
@@ -5865,6 +5872,12 @@ export const dictionaries = {
     "continuity.report.none": "Ingen rapport",
     "continuity.report.materialReady": "Rapportunderlag redo för granskning",
     "continuity.report.finalised": "Fastställd rapport finns",
+    // BOTH, because both are true of different cases. The outstanding work
+    // leads, because it is what a person has to do; the finished report is
+    // named in the same breath, because it exists and may already have
+    // informed a decision.
+    "continuity.report.materialAndFinalised":
+      "Rapportunderlag redo för granskning · fastställd rapport finns i ett annat case",
 
     // The single next action. Operational only: nothing here recommends,
     // ranks or judges a candidate.
@@ -11462,6 +11475,10 @@ export const dictionaries = {
     "continuity.track.assessment": "Assessment",
     "continuity.track.interview": "Interview",
     "continuity.track.report": "Report",
+    "continuity.track.assessmentCount.one": "assessment in total",
+    "continuity.track.assessmentCount.other": "assessments in total",
+    "continuity.track.interviewCount.one": "interview in total",
+    "continuity.track.interviewCount.other": "interviews in total",
 
     // Assessment presentation states.
     "continuity.assessment.loading": "Loading …",
@@ -11491,6 +11508,8 @@ export const dictionaries = {
     "continuity.report.none": "No report",
     "continuity.report.materialReady": "Report material ready for review",
     "continuity.report.finalised": "Finalised report available",
+    "continuity.report.materialAndFinalised":
+      "Report material ready for review · a finalised report exists in another case",
 
     // The single next action. Operational only: nothing here recommends,
     // ranks or judges a candidate.

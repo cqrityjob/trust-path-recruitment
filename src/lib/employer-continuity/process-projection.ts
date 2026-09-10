@@ -78,6 +78,112 @@ export interface ApplicationTrack {
 }
 
 /* ------------------------------------------------------------------ */
+/* Choosing ONE record out of several                                  */
+/* ------------------------------------------------------------------ */
+//
+// ── THE DEFECT THIS SECTION EXISTS BECAUSE OF ───────────────────────────
+//
+// An application can carry several interview cases and several assessment
+// attempts, and the strip has one row and one action for each track. The first
+// version answered both questions with a single "lead" record, chosen as the
+// FURTHEST ALONG -- and then summed the outstanding work across every record
+// and pointed the action at that lead.
+//
+// Both halves were wrong, and they were wrong in the direction that hides
+// work:
+//
+//   * A case at `reported` outranked a case at `assessed`, so an application
+//     with one finished report and one report-underlag awaiting review
+//     announced "the report has been finalised and can be opened" and offered
+//     no path to the work a human still owed. The ladder's own priority rule
+//     said the opposite; the ranking overruled it before the ladder ran.
+//   * `proposalsAwaitingReview` was summed over every case while the action
+//     opened the lead case, so "3 pieces of material to review" could send a
+//     recruiter to a case with none of them.
+//   * The same two faults on the assessment side: a released brief outranked
+//     an attempt still awaiting review, and the review action opened the
+//     released attempt rather than the one with responses outstanding.
+//
+// ── THE FIX: TWO KINDS OF SELECTION, NEVER ONE ──────────────────────────
+//
+//   PRESENTATION  which record the status ROW names. One row, several records,
+//                 so something must be chosen -- and what it must never do is
+//                 let a terminal record speak for an application that still
+//                 owes work. Ordered by ATTENTION, not by progress.
+//
+//   ACTION        which record a given action opens. Chosen by the predicate
+//                 for THAT action and nothing else: the case with pending
+//                 proposals, the attempt with responses outstanding, the case
+//                 holding report material, the attempt whose brief is ready to
+//                 share. Never a general "lead".
+//
+// The tracks below therefore carry a presentation record AND one field per
+// action, and the ladder reads only the action fields. A destination can no
+// longer be the record that merely happened to rank highest.
+
+/**
+ * THE TIE-BREAK, written once.
+ *
+ * Every selection here picks from a SET, and a set has no order.
+ * `listInterviewCasesForApplication` happens to return newest-first today;
+ * nothing may depend on that, because a projection whose answer changes with
+ * the order it was handed is not deterministic and cannot be reasoned about.
+ *
+ * So: the record that has WAITED LONGEST wins, and where two have waited
+ * exactly as long the lower id wins. The first half is the useful rule — the
+ * oldest outstanding work is the work to do first. The second exists only to
+ * make the order TOTAL, so one set always gives one answer whatever sequence
+ * it arrives in. The guard asserts that property by shuffling the input.
+ */
+function oldestOf<T>(
+  rows: readonly T[],
+  idOf: (row: T) => string,
+  waitingSinceOf: (row: T) => string,
+): T | null {
+  let best: T | null = null;
+  for (const row of rows) {
+    if (best === null) {
+      best = row;
+      continue;
+    }
+    const a = waitingSinceOf(row);
+    const b = waitingSinceOf(best);
+    if (a < b || (a === b && idOf(row) < idOf(best))) best = row;
+  }
+  return best;
+}
+
+/**
+ * The record the status row names: the one needing the most attention, and
+ * among equals the one that has waited longest.
+ *
+ * Rank first and time second, in that order, because "which of these needs a
+ * person" is a stronger claim than "which of these is older".
+ */
+function mostAttention<T>(
+  rows: readonly T[],
+  rankOf: (row: T) => number,
+  idOf: (row: T) => string,
+  waitingSinceOf: (row: T) => string,
+): T | null {
+  let best: T | null = null;
+  let bestRank = -Infinity;
+  for (const row of rows) {
+    const rank = rankOf(row);
+    if (best === null || rank > bestRank) {
+      best = row;
+      bestRank = rank;
+      continue;
+    }
+    if (rank < bestRank) continue;
+    const a = waitingSinceOf(row);
+    const b = waitingSinceOf(best);
+    if (a < b || (a === b && idOf(row) < idOf(best))) best = row;
+  }
+  return best;
+}
+
+/* ------------------------------------------------------------------ */
 /* Track 2 — assessment participation and review                       */
 /* ------------------------------------------------------------------ */
 
@@ -103,23 +209,53 @@ export type AssessmentState =
 
 export interface AssessmentTrack {
   readonly read: TrackRead;
+  /** THE ROW'S state, and only the row's. Never a destination, and never the
+   *  thing the ladder branches on: see the selection section above. */
   readonly state: AssessmentState;
   /** How many candidate responses are waiting on a human reviewer, summed
    *  across this application's attempts. Zero whenever the read did not
-   *  succeed — and `state` says so, so the number is never read alone. */
+   *  succeed — and `state` says so, so the number is never read alone.
+   *
+   *  It is a SUM, so the attempt it opens must be chosen by the same
+   *  predicate that produced it. `reviewAttemptId` below is that attempt; the
+   *  presentation attempt is not, and using it was the defect. */
   readonly responsesAwaitingReview: number;
-  /** The attempt the state above describes: the furthest-along one. Null when
-   *  there is none, or when the read did not succeed. */
-  readonly leadAttemptId: string | null;
+  /** The attempt the ROW describes. Presentation only — deliberately not named
+   *  `lead`, because a general lead is exactly what must never be used as a
+   *  destination. Null when there is none, or when the read did not succeed. */
+  readonly presentationAttemptId: string | null;
+
+  // ── ACTION TARGETS ──────────────────────────────────────────────────
+  //
+  // One field per action the ladder can propose, each selected by that
+  // action's OWN predicate and the shared tie-break. Null means "no attempt
+  // is in that state", which is also how the ladder knows not to propose it.
+
+  /** Responses are waiting on a human reviewer here. */
+  readonly reviewAttemptId: string | null;
+  /** Scored, and the candidate brief has not been shared yet. */
+  readonly releaseAttemptId: string | null;
+  /** Assigned or under way: the candidate owes the next move here. */
+  readonly awaitingCandidateAttemptId: string | null;
+  /** A released brief exists here. Terminal, and carried so the row can say
+   *  so even while it names an attempt that still owes work. */
+  readonly releasedAttemptId: string | null;
+  /** How many attempts this application has. Shown only so a second attempt
+   *  is not invisible behind a row that can name one; it is not a status. */
+  readonly attemptCount: number;
 }
 
 /**
  * Which of the five stages one attempt is at.
  *
- * Order matters and is the existing order: a released brief outranks a scored
- * attempt, which outranks outstanding reviews, which outranks progress. It is
- * exported because the panel and the chip render from it too — one derivation,
- * three surfaces, no possibility of three answers.
+ * The order inside this function is about ONE attempt and is unchanged: a
+ * released brief is further along than a scored one, which is further along
+ * than one with reviews outstanding. It is exported because the panel and the
+ * chip render from it too — one derivation, three surfaces, no possibility of
+ * three answers.
+ *
+ * Do not confuse it with ASSESSMENT_ATTENTION below, which is about choosing
+ * BETWEEN attempts and runs in very nearly the opposite direction.
  */
 export function assessmentStageOf(
   a: ApplicationAssessment,
@@ -131,13 +267,34 @@ export function assessmentStageOf(
   return "invited";
 }
 
-const ASSESSMENT_RANK: Record<ReturnType<typeof assessmentStageOf>, number> = {
-  invited: 0,
-  in_progress: 1,
-  under_review: 2,
+/** Which attempt the ROW should name, when there are several.
+ *
+ *  ORDERED BY ATTENTION, which is close to the reverse of progress: an attempt
+ *  awaiting review outranks one that is merely scored, which outranks one the
+ *  candidate is still sitting, and a RELEASED brief — the only terminal state
+ *  here — ranks below all of them. That inversion is the point. Ranked by
+ *  progress, one released attempt spoke for an application that still owed a
+ *  reviewer ten responses, and the row read "Slutförd".
+ *
+ *  The released attempt is not lost: `releasedAttemptId` carries it, and the
+ *  panel below the strip lists every attempt with its own stage. */
+const ASSESSMENT_ATTENTION: Record<ReturnType<typeof assessmentStageOf>, number> = {
+  under_review: 4,
   brief_ready: 3,
-  brief_released: 4,
+  in_progress: 2,
+  invited: 1,
+  brief_released: 0,
 };
+
+const EMPTY_ASSESSMENT = {
+  responsesAwaitingReview: 0,
+  presentationAttemptId: null,
+  reviewAttemptId: null,
+  releaseAttemptId: null,
+  awaitingCandidateAttemptId: null,
+  releasedAttemptId: null,
+  attemptCount: 0,
+} as const;
 
 export function projectAssessmentTrack(
   read: TrackRead,
@@ -147,26 +304,58 @@ export function projectAssessmentTrack(
     return {
       read,
       state: read === "loading" ? "loading" : read === "refused" ? "refused" : "unavailable",
-      responsesAwaitingReview: 0,
-      leadAttemptId: null,
+      ...EMPTY_ASSESSMENT,
     };
   }
   if (assessments.length === 0) {
-    return { read, state: "none", responsesAwaitingReview: 0, leadAttemptId: null };
+    return { read, state: "none", ...EMPTY_ASSESSMENT };
   }
-  // The furthest-along attempt speaks for the application, exactly as the list
-  // chip already chose it. A candidate with two assessments is rare, and the
-  // panel below the strip still shows every one of them.
-  const lead = assessments.reduce((best, a) =>
-    ASSESSMENT_RANK[assessmentStageOf(a)] > ASSESSMENT_RANK[assessmentStageOf(best)] ? a : best,
+
+  const id = (a: ApplicationAssessment) => a.attemptId;
+  // How long this attempt has been waiting. `invitedAt` is when the clock
+  // started for the candidate and for everybody after them, and it is the one
+  // timestamp every attempt has.
+  const since = (a: ApplicationAssessment) => a.invitedAt;
+  const inStage = (...stages: ReturnType<typeof assessmentStageOf>[]) =>
+    assessments.filter((a) => stages.includes(assessmentStageOf(a)));
+
+  // Each action's target, by that action's OWN predicate.
+  //
+  // `reviewAttemptId` is deliberately not "the attempt in the under_review
+  // STAGE": the stage function ranks a scored or released attempt above
+  // outstanding reviews, so an attempt can hold responses a human owes and not
+  // be in that stage. The sum below counts `reviewsOutstanding` on every
+  // attempt, so the attempt this opens is chosen by the same field.
+  const review = oldestOf(
+    assessments.filter((a) => a.reviewsOutstanding > 0),
+    id,
+    since,
   );
+  const release = oldestOf(inStage("brief_ready"), id, since);
+  const awaitingCandidate = oldestOf(inStage("invited", "in_progress"), id, since);
+  const released = oldestOf(inStage("brief_released"), id, since);
+
+  // And the row's attempt, by attention.
+  const presentation = mostAttention(
+    assessments,
+    (a) => ASSESSMENT_ATTENTION[assessmentStageOf(a)],
+    id,
+    since,
+  );
+
   return {
     read,
-    state: assessmentStageOf(lead),
+    state: presentation ? assessmentStageOf(presentation) : "none",
     // Summed across attempts, because the work is per response and a reviewer
-    // owes all of it. `state` is the lead attempt's; this is the application's.
+    // owes all of it. The attempt it opens is `reviewAttemptId`, chosen by the
+    // same predicate — never the presentation attempt.
     responsesAwaitingReview: assessments.reduce((n, a) => n + a.reviewsOutstanding, 0),
-    leadAttemptId: lead.attemptId,
+    presentationAttemptId: presentation ? id(presentation) : null,
+    reviewAttemptId: review ? id(review) : null,
+    releaseAttemptId: release ? id(release) : null,
+    awaitingCandidateAttemptId: awaitingCandidate ? id(awaitingCandidate) : null,
+    releasedAttemptId: released ? id(released) : null,
+    attemptCount: assessments.length,
   };
 }
 
@@ -215,42 +404,111 @@ export function interviewStateOf(status: string): InterviewState {
   return INTERVIEW_STATE_OF[status as CaseStatus] ?? "unknown";
 }
 
-/** How far along a case is, for picking the one that speaks for the
- *  application. Cancelled ranks below everything live, so a cancelled case
- *  never hides an active one. */
-const INTERVIEW_RANK: Record<InterviewState, number> = {
+/** Which case the ROW should name, when there are several.
+ *
+ *  ORDERED BY ATTENTION, not by progress. This ordering used to run the other
+ *  way — `reportFinalised` was the top rank — and that single line produced
+ *  the defect this section exists for: an application with one finished report
+ *  and one case at `assessed` announced that the report was finalised and
+ *  could be opened, and offered no route at all to the report material a human
+ *  still owed a review. The ladder's own rule put that work above a finished
+ *  report; the ranking had already overruled it.
+ *
+ *  So a case that owes a person something outranks one that is done:
+ *
+ *    reportMaterialReady  a human owes it a review and a decision to finalise
+ *    evidenceReview       a human owes it confirmation and assessment
+ *    interviewing         a conversation is open
+ *    readyToInterview     prepared, waiting to be held
+ *    preparing            created, not yet ready
+ *    unknown              a status this build does not recognise. Above the
+ *                         terminal ones ON PURPOSE: an unrecognised state is
+ *                         not known to be finished, and ranking it below a
+ *                         finalised report is how a newly added status would
+ *                         become invisible.
+ *    reportFinalised      terminal, and still fully reported by the report
+ *                         track and by `finalisedCaseId`
+ *    cancelled            terminal and inert
+ *
+ *  Nothing is lost by the inversion. The report row reads every case, so a
+ *  finalised report is still announced while the interview row names the case
+ *  that owes work; `caseCount` says how many cases there are; and the section
+ *  below the strip lists every one of them with its own chip. */
+const INTERVIEW_ATTENTION: Record<InterviewState, number> = {
   loading: -1,
   unavailable: -1,
   refused: -1,
   none: -1,
-  unknown: 0,
   cancelled: 0,
-  preparing: 1,
-  readyToInterview: 2,
-  interviewing: 3,
-  evidenceReview: 4,
-  reportMaterialReady: 5,
-  reportFinalised: 6,
+  reportFinalised: 1,
+  unknown: 2,
+  preparing: 3,
+  readyToInterview: 4,
+  interviewing: 5,
+  evidenceReview: 6,
+  reportMaterialReady: 7,
 };
 
 export interface InterviewTrack {
   readonly read: TrackRead;
+  /** THE ROW'S state, and only the row's. Never a destination, and never the
+   *  thing the ladder branches on: see the selection section above. */
   readonly state: InterviewState;
   /** AI-proposed evidence nobody has looked at yet, across this application's
-   *  cases. Process work, never anything about the candidate. */
-  readonly proposalsAwaitingReview: number;
-  readonly leadCaseId: string | null;
-  /** The lead case's status EXACTLY as the runtime holds it.
+   *  cases. Process work, never anything about the candidate.
    *
-   *  Carried so the surface can render the runtime's own word for it -- the
-   *  same word the case chip and the interview list use -- instead of a second
-   *  vocabulary for one state. `state` above drives the logic; this drives the
-   *  label. Null whenever the read did not succeed or there is no case. */
-  readonly leadStatus: string | null;
+   *  It is a SUM, so the case it opens must be chosen by the same predicate
+   *  that produced it. `proposalsCaseId` below is that case; the presentation
+   *  case is not, and using it was the defect. */
+  readonly proposalsAwaitingReview: number;
+  /** The case the ROW describes. Presentation only — deliberately not named
+   *  `lead`, because a general lead is exactly what must never be used as a
+   *  destination. */
+  readonly presentationCaseId: string | null;
+  /** The presentation case's status EXACTLY as the runtime holds it.
+   *
+   *  Carried so the surface can render the runtime's own word for it — the
+   *  same word the case chip and the interview list use — instead of a second
+   *  vocabulary for one state. `state` above drives nothing but the row; this
+   *  drives its label. Null whenever the read did not succeed or there is no
+   *  case. */
+  readonly presentationStatus: string | null;
+
+  // ── ACTION TARGETS ──────────────────────────────────────────────────
+  //
+  // One field per action the ladder can propose, each selected by that
+  // action's OWN predicate and the shared tie-break. Null means "no case is
+  // in that state", which is also how the ladder knows not to propose it.
+
+  /** AI-proposed evidence is waiting for a human here. */
+  readonly proposalsCaseId: string | null;
+  /** Report material exists here and awaits review before finalisation. */
+  readonly reportMaterialCaseId: string | null;
+  /** The interview has been held; its material needs confirming and assessing. */
+  readonly evidenceReviewCaseId: string | null;
+  /** A conversation is open here. */
+  readonly interviewingCaseId: string | null;
+  /** Prepared and waiting to be held. */
+  readonly readyToInterviewCaseId: string | null;
+  /** Created, not yet prepared. */
+  readonly preparingCaseId: string | null;
   /** How many cases this application has. Shown only so a second interview is
-   *  not invisible; it is not a status. */
+   *  not invisible behind a row that can name one; it is not a status. */
   readonly caseCount: number;
 }
+
+const EMPTY_INTERVIEW = {
+  proposalsAwaitingReview: 0,
+  presentationCaseId: null,
+  presentationStatus: null,
+  proposalsCaseId: null,
+  reportMaterialCaseId: null,
+  evidenceReviewCaseId: null,
+  interviewingCaseId: null,
+  readyToInterviewCaseId: null,
+  preparingCaseId: null,
+  caseCount: 0,
+} as const;
 
 export function projectInterviewTrack(
   read: TrackRead,
@@ -260,33 +518,59 @@ export function projectInterviewTrack(
     return {
       read,
       state: read === "loading" ? "loading" : read === "refused" ? "refused" : "unavailable",
-      proposalsAwaitingReview: 0,
-      leadCaseId: null,
-      leadStatus: null,
-      caseCount: 0,
+      ...EMPTY_INTERVIEW,
     };
   }
   if (cases.length === 0) {
-    return {
-      read,
-      state: "none",
-      proposalsAwaitingReview: 0,
-      leadCaseId: null,
-      leadStatus: null,
-      caseCount: 0,
-    };
+    return { read, state: "none", ...EMPTY_INTERVIEW };
   }
-  const lead = cases.reduce((best, c) =>
-    INTERVIEW_RANK[interviewStateOf(c.status)] > INTERVIEW_RANK[interviewStateOf(best.status)]
-      ? c
-      : best,
+
+  const id = (c: ApplicationInterviewCase) => c.id;
+  // How long this case has been sitting in the state it is in. `updatedAt` is
+  // the runtime's own last-touched stamp, so the case nobody has moved for
+  // longest is the one that has waited longest.
+  const since = (c: ApplicationInterviewCase) => c.updatedAt;
+  const inState = (state: InterviewState) =>
+    cases.filter((c) => interviewStateOf(c.status) === state);
+
+  // Each action's target, by that action's OWN predicate.
+  //
+  // `proposalsCaseId` is chosen by the very field the sum below counts, so the
+  // number the strip shows and the case its action opens can never be about
+  // different cases. It is deliberately independent of the case's STATE: a
+  // case can hold pending proposals in more than one status, and the work is
+  // owed wherever it sits.
+  const proposals = oldestOf(
+    cases.filter((c) => c.proposalsAwaitingReview > 0),
+    id,
+    since,
   );
+  const reportMaterial = oldestOf(inState("reportMaterialReady"), id, since);
+  const evidenceReview = oldestOf(inState("evidenceReview"), id, since);
+  const interviewing = oldestOf(inState("interviewing"), id, since);
+  const readyToInterview = oldestOf(inState("readyToInterview"), id, since);
+  const preparing = oldestOf(inState("preparing"), id, since);
+
+  // And the row's case, by attention.
+  const presentation = mostAttention(
+    cases,
+    (c) => INTERVIEW_ATTENTION[interviewStateOf(c.status)],
+    id,
+    since,
+  );
+
   return {
     read,
-    state: interviewStateOf(lead.status),
+    state: presentation ? interviewStateOf(presentation.status) : "none",
     proposalsAwaitingReview: cases.reduce((n, c) => n + c.proposalsAwaitingReview, 0),
-    leadCaseId: lead.id,
-    leadStatus: lead.status,
+    presentationCaseId: presentation ? id(presentation) : null,
+    presentationStatus: presentation ? presentation.status : null,
+    proposalsCaseId: proposals ? id(proposals) : null,
+    reportMaterialCaseId: reportMaterial ? id(reportMaterial) : null,
+    evidenceReviewCaseId: evidenceReview ? id(evidenceReview) : null,
+    interviewingCaseId: interviewing ? id(interviewing) : null,
+    readyToInterviewCaseId: readyToInterview ? id(readyToInterview) : null,
+    preparingCaseId: preparing ? id(preparing) : null,
     caseCount: cases.length,
   };
 }
@@ -313,13 +597,30 @@ export type ReportAvailability =
   | "refused"
   | "none"
   | "materialReady"
-  | "finalised";
+  | "finalised"
+  /**
+   * BOTH, in different cases — one report has been finalised AND another case
+   * holds material a human still owes a review.
+   *
+   * A member of its own rather than a choice between the two, because both
+   * facts are true and dropping either one misleads. Reporting only
+   * `finalised` said the reporting work was over when it was not; reporting
+   * only `materialReady` would deny a document that exists, is immutable and
+   * may already have informed a decision.
+   */
+  | "materialAndFinalised";
 
 export interface ReportTrack {
   readonly read: TrackRead;
   readonly availability: ReportAvailability;
-  /** The case whose finalised report may be opened. Null unless one exists. */
+  /** The case whose finalised report may be opened. Null unless one exists.
+   *  Chosen with the shared tie-break, so several finalised reports resolve to
+   *  one answer whatever order they arrived in. */
   readonly finalisedCaseId: string | null;
+  /** The case whose report material awaits review. Null unless one exists.
+   *  Carried separately from `finalisedCaseId` precisely so one cannot stand
+   *  in for the other. */
+  readonly materialCaseId: string | null;
 }
 
 export function projectReportTrack(
@@ -331,18 +632,47 @@ export function projectReportTrack(
       read,
       availability: read === "loading" ? "loading" : read === "refused" ? "refused" : "unavailable",
       finalisedCaseId: null,
+      materialCaseId: null,
     };
   }
-  // A finalised report is a row in scp_interview_reports, not a case status.
-  const finalised = cases.find((c) => c.reportFinalised) ?? null;
-  if (finalised) return { read, availability: "finalised", finalisedCaseId: finalised.id };
+
+  const id = (c: ApplicationInterviewCase) => c.id;
+  const since = (c: ApplicationInterviewCase) => c.updatedAt;
+
+  // A finalised report is a ROW in scp_interview_reports, not a case status: a
+  // case can read `reported` and have no final report, and that is not a
+  // report. Both of these read the whole list -- this track never had a "lead"
+  // and must not acquire one.
+  const finalised = oldestOf(
+    cases.filter((c) => c.reportFinalised),
+    id,
+    since,
+  );
   // Material, and only material. `assessed` is the runtime saying a human has
   // finished assessing; it is not a report and is never counted as one.
-  const material = cases.some((c) => c.status === "assessed");
+  const material = oldestOf(
+    cases.filter((c) => interviewStateOf(c.status) === "reportMaterialReady"),
+    id,
+    since,
+  );
+
+  // Both, one, or neither -- said as it is. The first branch is the mixed case
+  // the review found: a finished report in one case and unreviewed material in
+  // another, which the earlier `find` collapsed into "finalised" and hid.
+  const availability: ReportAvailability =
+    material && finalised
+      ? "materialAndFinalised"
+      : material
+        ? "materialReady"
+        : finalised
+          ? "finalised"
+          : "none";
+
   return {
     read,
-    availability: material ? "materialReady" : "none",
-    finalisedCaseId: null,
+    availability,
+    finalisedCaseId: finalised ? id(finalised) : null,
+    materialCaseId: material ? id(material) : null,
   };
 }
 
@@ -554,14 +884,29 @@ function deriveNextAction(
     };
   }
 
+  // ── EVERY BRANCH BELOW READS AN ACTION TARGET ──────────────────────
+  //
+  // Not `interview.state`, not `assessment.state`, and never a general lead.
+  // Those describe the ROW; a row describes one record and an application can
+  // hold several, so branching on them let the record that merely ranked
+  // highest decide both whether work existed and where the recruiter was sent.
+  //
+  // Each `…CaseId` / `…AttemptId` below is null exactly when no record is in
+  // that state, so `!== null` is both "is there work of this kind" and "which
+  // record has it", answered by the same predicate. Nothing else can drift
+  // between the two.
+
   // ── 2. Evidence a human has not looked at ──────────────────────────
   // First because it is the only work in the product where a machine has
-  // proposed something and no person has yet agreed or disagreed.
-  if (interview.proposalsAwaitingReview > 0 && interview.leadCaseId) {
+  // proposed something and no person has yet agreed or disagreed. The case
+  // opened is the one holding the proposals -- selected by the very field the
+  // count sums, so the number and the destination cannot be about different
+  // cases.
+  if (interview.proposalsCaseId) {
     return {
       kind: "reviewInterviewEvidence",
       waitingOn: "employer",
-      destination: { kind: "interviewCase", caseId: interview.leadCaseId },
+      destination: { kind: "interviewCase", caseId: interview.proposalsCaseId },
       unavailableTrack: null,
     };
   }
@@ -570,12 +915,17 @@ function deriveNextAction(
   // Capability-checked against the review board, not against a role label:
   // an owner who sat the assessment themselves may not review it, and the
   // honest answer there is that a colleague must.
-  if (assessment.state === "under_review" && assessment.responsesAwaitingReview > 0) {
-    return cap.canReviewAssessment && assessment.leadAttemptId
+  //
+  // The condition is the ATTEMPT, not the row's stage. It used to read
+  // `assessment.state === "under_review"`, so a released brief on another
+  // attempt -- which outranked the one under review -- made this branch
+  // invisible and the outstanding responses with it.
+  if (assessment.reviewAttemptId) {
+    return cap.canReviewAssessment
       ? {
           kind: "reviewAssessmentResponses",
           waitingOn: "employer",
-          destination: { kind: "assessmentReview", attemptId: assessment.leadAttemptId },
+          destination: { kind: "assessmentReview", attemptId: assessment.reviewAttemptId },
           unavailableTrack: null,
         }
       : {
@@ -588,12 +938,15 @@ function deriveNextAction(
 
   // ── 4. Report material waiting to be reviewed and locked ───────────
   // Deliberately ABOVE "open the finalised report": a case that has material
-  // pending owes work, and a different case having finished does not excuse it.
-  if (interview.state === "reportMaterialReady" && interview.leadCaseId) {
+  // pending owes work, and a DIFFERENT case having finished does not excuse
+  // it. That sentence was already here and was already the intent; what made
+  // it false was the row's ranking putting the finalised case first, so this
+  // branch never ran. It now reads the case that actually holds material.
+  if (interview.reportMaterialCaseId) {
     return {
       kind: "reviewReportMaterial",
       waitingOn: "employer",
-      destination: { kind: "interviewReport", caseId: interview.leadCaseId },
+      destination: { kind: "interviewReport", caseId: interview.reportMaterialCaseId },
       unavailableTrack: null,
     };
   }
@@ -605,45 +958,48 @@ function deriveNextAction(
   // and neither is one whose evidence is waiting to be assessed. Collapsing
   // them told a recruiter their interview was "påbörjad" on the day it was
   // approved -- and disagreed with the chip beside it.
-  if (interview.leadCaseId) {
-    if (interview.state === "readyToInterview") {
-      return {
-        kind: "startInterview",
-        waitingOn: "employer",
-        destination: { kind: "interviewCase", caseId: interview.leadCaseId },
-        unavailableTrack: null,
-      };
-    }
-    if (interview.state === "interviewing") {
-      return {
-        kind: "continueInterview",
-        waitingOn: "employer",
-        destination: { kind: "interviewCase", caseId: interview.leadCaseId },
-        unavailableTrack: null,
-      };
-    }
-    if (interview.state === "evidenceReview") {
-      return {
-        kind: "assessInterviewEvidence",
-        waitingOn: "employer",
-        destination: { kind: "interviewCase", caseId: interview.leadCaseId },
-        unavailableTrack: null,
-      };
-    }
+  //
+  // In the order a person meets them: evidence to assess, then a conversation
+  // to continue, then one to hold.
+  if (interview.evidenceReviewCaseId) {
+    return {
+      kind: "assessInterviewEvidence",
+      waitingOn: "employer",
+      destination: { kind: "interviewCase", caseId: interview.evidenceReviewCaseId },
+      unavailableTrack: null,
+    };
+  }
+  if (interview.interviewingCaseId) {
+    return {
+      kind: "continueInterview",
+      waitingOn: "employer",
+      destination: { kind: "interviewCase", caseId: interview.interviewingCaseId },
+      unavailableTrack: null,
+    };
+  }
+  if (interview.readyToInterviewCaseId) {
+    return {
+      kind: "startInterview",
+      waitingOn: "employer",
+      destination: { kind: "interviewCase", caseId: interview.readyToInterviewCaseId },
+      unavailableTrack: null,
+    };
   }
 
   // ── 6. An interview that has been created but not prepared ─────────
-  if (interview.state === "preparing" && interview.leadCaseId) {
+  if (interview.preparingCaseId) {
     return {
       kind: "prepareInterview",
       waitingOn: "employer",
-      destination: { kind: "interviewCase", caseId: interview.leadCaseId },
+      destination: { kind: "interviewCase", caseId: interview.preparingCaseId },
       unavailableTrack: null,
     };
   }
 
   // ── 7. A scored assessment whose brief nobody has shared ───────────
-  if (assessment.state === "brief_ready") {
+  // The attempt again, not the row: a released brief elsewhere used to outrank
+  // a scored one and hide this.
+  if (assessment.releaseAttemptId) {
     return cap.canShareAssessmentBrief
       ? {
           kind: "shareAssessmentBrief",
@@ -661,8 +1017,10 @@ function deriveNextAction(
 
   // ── 8. Waiting on the candidate ────────────────────────────────────
   // A statement, not a call to action. The employer has nothing to do here and
-  // must not be given a button that implies otherwise.
-  if (assessment.state === "invited" || assessment.state === "in_progress") {
+  // must not be given a button that implies otherwise. Same correction: an
+  // attempt the candidate is still sitting is no longer hidden by a released
+  // brief on another attempt.
+  if (assessment.awaitingCandidateAttemptId) {
     return {
       kind: "awaitCandidateAssessment",
       waitingOn: "candidate",
@@ -672,7 +1030,13 @@ function deriveNextAction(
   }
 
   // ── 9. A finished report, and nothing outstanding ──────────────────
-  if (report.availability === "finalised" && report.finalisedCaseId) {
+  //
+  // Reached only once every branch above has declined, which is what makes
+  // "and nothing outstanding" true rather than hopeful. Keyed on the ID rather
+  // than on the availability enum: `materialAndFinalised` is also a finalised
+  // report, and a branch that tested the enum would have to be remembered
+  // every time a member is added.
+  if (report.finalisedCaseId) {
     return {
       kind: "openFinalisedReport",
       waitingOn: "nobody",
@@ -692,7 +1056,7 @@ function deriveNextAction(
   // pending and that both are optional; the two controls that START them are
   // where they have always been, inside their own modules, each already gated
   // by its own capability.
-  if (assessment.state === "none" && interview.state === "none") {
+  if (assessment.attemptCount === 0 && interview.caseCount === 0) {
     return {
       kind: "nothingStarted",
       waitingOn: "nobody",

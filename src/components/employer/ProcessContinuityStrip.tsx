@@ -29,7 +29,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowRight, Clock, UserRound } from "lucide-react";
-import { useT } from "@/i18n/context";
+import { useT, type PluralKey } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   APPLICATION_STATUS_LABEL_KEY,
@@ -91,6 +91,11 @@ const REPORT_LABEL: Record<ReportAvailability, TranslationKey> = {
   none: "continuity.report.none",
   materialReady: "continuity.report.materialReady",
   finalised: "continuity.report.finalised",
+  // BOTH, said in one line, because both are true. The outstanding work comes
+  // first because it is what a person has to do; the finished report is named
+  // in the same breath because it exists, is immutable, and may already have
+  // informed a decision.
+  materialAndFinalised: "continuity.report.materialAndFinalised",
 };
 
 /** The sentence under "Nästa steg", per action. Total for the same reason. */
@@ -284,8 +289,8 @@ export function ProcessContinuityStrip({
   // intervju", for one status, and a reader has no way to know those are the
   // same fact.
   const interviewWord =
-    interview.read === "ready" && interview.leadStatus
-      ? t(CASE_STATUS_LABEL[interview.leadStatus] ?? INTERVIEW_LABEL[interview.state])
+    interview.read === "ready" && interview.presentationStatus
+      ? t(CASE_STATUS_LABEL[interview.presentationStatus] ?? INTERVIEW_LABEL[interview.state])
       : t(INTERVIEW_LABEL[interview.state]);
 
   return (
@@ -378,11 +383,21 @@ function TrackRow({
   term,
   value,
   degraded = false,
+  alsoCount = 0,
+  countKey,
 }: {
   term: string;
   value: string;
   degraded?: boolean;
+  /** How many records this track holds in total. The suffix appears only when
+   *  there is more than one, because "1 of 1" is noise. */
+  alsoCount?: number;
+  /** The noun for those records, in this track's own words: attempts are
+   *  assessments and cases are interviews, and one generic word for both would
+   *  be the sort of flattening this product spends its time undoing. */
+  countKey?: PluralKey;
 }) {
+  const { tp } = useT();
   return (
     <div className="flex flex-wrap items-baseline gap-x-2 text-[13px]">
       <dt className="font-medium text-muted-foreground">{term}</dt>
@@ -393,6 +408,11 @@ function TrackRow({
           <AlertTriangle className="mr-1 inline h-3.5 w-3.5 align-[-2px]" aria-hidden="true" />
         )}
         {value}
+        {alsoCount > 1 && countKey && (
+          <span className="ml-1.5 text-muted-foreground">
+            ({alsoCount} {tp(countKey, alsoCount)})
+          </span>
+        )}
       </dd>
     </div>
   );

@@ -340,8 +340,17 @@ function Candidate360({
   //
   // None of this is enforcement; each destination and each write re-decides.
   // What it buys is a page that does not offer work the database will refuse.
-  const leadBasis = assessmentTrack.leadAttemptId
-    ? ((reviewBoardQuery.data ?? []).find((b) => b.attemptId === assessmentTrack.leadAttemptId)
+  // THE BASIS FOR THE ATTEMPT THE ACTION WOULD OPEN.
+  //
+  // `scp_employer_review_board` answers per ATTEMPT -- an owner may review one
+  // and be conflicted out of another, because they sat that one themselves. So
+  // the basis has to be read for the attempt the review action actually
+  // targets, which is `reviewAttemptId`: the attempt with responses
+  // outstanding. It used to be read for a general "lead" attempt, which on an
+  // application with several attempts could be a different one entirely --
+  // answering "may you review THAT?" about a question nobody asked.
+  const reviewBasis = assessmentTrack.reviewAttemptId
+    ? ((reviewBoardQuery.data ?? []).find((b) => b.attemptId === assessmentTrack.reviewAttemptId)
         ?.basis ?? null)
     : null;
 
@@ -351,7 +360,7 @@ function Candidate360({
     interview: interviewTrack,
     report: reportTrack,
     capabilities: {
-      canReviewAssessment: leadBasis === "authorised" || leadBasis === "break_glass",
+      canReviewAssessment: reviewBasis === "authorised" || reviewBasis === "break_glass",
       canShareAssessmentBrief: canAssign,
     },
   });

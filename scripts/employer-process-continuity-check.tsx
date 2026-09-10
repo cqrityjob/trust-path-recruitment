@@ -260,6 +260,21 @@ function project(
   });
 }
 
+/** Every ordering of a small list.
+ *
+ *  Used to prove the projection is order-independent. Three records is nine
+ *  orderings once repeated for both tracks -- small enough to exhaust, which
+ *  is better than sampling for a property that is either true or not. */
+function permutations<T>(rows: readonly T[]): T[][] {
+  if (rows.length <= 1) return [[...rows]];
+  const out: T[][] = [];
+  for (let i = 0; i < rows.length; i += 1) {
+    const rest = [...rows.slice(0, i), ...rows.slice(i + 1)];
+    for (const tail of permutations(rest)) out.push([rows[i], ...tail]);
+  }
+  return out;
+}
+
 const html = (node: React.ReactElement, lang: "sv" | "en" = "sv") =>
   renderToStaticMarkup(React.createElement(I18nProvider, { initialLang: lang } as never, node));
 
@@ -613,7 +628,7 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
     ok(stripSrc.includes(k), `9 · the strip names the assessment state with ${k}`);
   }
   ok(
-    stripSrc.includes("CASE_STATUS_LABEL[interview.leadStatus]"),
+    stripSrc.includes("CASE_STATUS_LABEL[interview.presentationStatus]"),
     "9 · and names the interview state with the runtime's own label",
   );
   ok(
@@ -625,9 +640,360 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   // The lead status is carried through the projection so the label CANNOT be
   // re-derived from the presentation state.
   ok(
-    codeOnly(read(COMPONENTS.projection)).includes("readonly leadStatus: string | null;"),
+    codeOnly(read(COMPONENTS.projection)).includes("readonly presentationStatus: string | null;"),
     "9 · the projection carries the runtime status for that purpose",
   );
+}
+
+/* ================================================================== */
+/* 9a · MULTI-RECORD: no record hides another, no action opens the wrong */
+/*      one                                                             */
+/* ================================================================== */
+//
+// An application can hold several interview cases and several assessment
+// attempts. The first version answered "what state is this in" and "where does
+// the action go" with ONE record, chosen as the furthest along -- so a
+// finished record spoke for an application that still owed work, and a summed
+// count pointed at a record that held none of it.
+//
+// Every scenario the review named is exercised here, by IDENTITY: it is not
+// enough that an action of the right KIND is proposed, it must open the exact
+// record that holds the work.
+{
+  // Distinct ids and distinct timestamps, so "which one" is always answerable
+  // and the tie-break never has to be guessed at.
+  const OLDEST = "2026-01-01T00:00:00Z";
+  const MIDDLE = "2026-02-01T00:00:00Z";
+  const NEWEST = "2026-03-01T00:00:00Z";
+
+  const C = {
+    reported: "cccccccc-0000-4000-8000-00000000000a",
+    assessed: "cccccccc-0000-4000-8000-00000000000b",
+    proposals: "cccccccc-0000-4000-8000-00000000000c",
+    ready: "cccccccc-0000-4000-8000-00000000000d",
+    preparing: "cccccccc-0000-4000-8000-00000000000e",
+  } as const;
+  const A = {
+    released: "aaaaaaaa-0000-4000-8000-00000000000a",
+    review: "aaaaaaaa-0000-4000-8000-00000000000b",
+    scored: "aaaaaaaa-0000-4000-8000-00000000000c",
+    sitting: "aaaaaaaa-0000-4000-8000-00000000000d",
+  } as const;
+
+  /* ---- 1 · reported + assessed --------------------------------------
+   *
+   * THE REPORTED CASE OF THE REVIEW, and the one screenshot 05 shows. A
+   * finished report in one case and report material in another. Before the
+   * fix the row read "Rapport fastställd", the next step read "the report has
+   * been finalised and can be opened", and the review a human owed had no
+   * route at all. */
+  {
+    const cases = [
+      iCase({
+        id: C.reported,
+        status: "reported",
+        reportFinalised: true,
+        reportContentHash: "abc",
+        updatedAt: NEWEST,
+      }),
+      iCase({ id: C.assessed, status: "assessed", updatedAt: MIDDLE }),
+    ];
+    const p = project({ cases });
+    ok(
+      p.nextAction.kind === "reviewReportMaterial",
+      "9a · outstanding work outranks a finished report",
+    );
+    ok(
+      p.nextAction.destination.kind === "interviewReport" &&
+        p.nextAction.destination.caseId === C.assessed,
+      "9a · and opens the case holding the material, not the finished one",
+    );
+    ok(
+      p.interview.state === "reportMaterialReady",
+      "9a · the interview row names the case that owes work",
+    );
+    ok(p.interview.presentationCaseId === C.assessed, "9a · and that is the presentation case");
+    // The finished report is not denied. Both facts, in one row.
+    ok(
+      p.report.availability === "materialAndFinalised",
+      "9a · the report row reports BOTH the material and the finalised report",
+    );
+    ok(p.report.finalisedCaseId === C.reported, "9a · naming the finalised case");
+    ok(p.report.materialCaseId === C.assessed, "9a · and the material case, separately");
+    ok(p.needsHumanAttention, "9a · and the application still needs a human");
+  }
+
+  /* ---- 2 · pending proposals on a lower-ranked case ------------------
+   *
+   * The proposals sit on a case at `interview_complete`; another case ranks
+   * higher on every ordering this module has ever had. The count is a sum, so
+   * the destination must come from the same predicate. */
+  {
+    const cases = [
+      iCase({ id: C.assessed, status: "assessed", updatedAt: NEWEST }),
+      iCase({
+        id: C.proposals,
+        status: "interview_complete",
+        proposalsAwaitingReview: 3,
+        updatedAt: MIDDLE,
+      }),
+    ];
+    const p = project({ cases });
+    ok(p.interview.proposalsAwaitingReview === 3, "9a · proposals are summed across cases");
+    ok(p.nextAction.kind === "reviewInterviewEvidence", "9a · unreviewed material comes first");
+    ok(
+      p.nextAction.destination.kind === "interviewCase" &&
+        p.nextAction.destination.caseId === C.proposals,
+      "9a · and opens the case the proposals are actually on",
+    );
+    ok(p.interview.proposalsCaseId === C.proposals, "9a · which the track names on its own");
+  }
+
+  /* ---- 3 · released assessment + another attempt awaiting review -----
+   *
+   * A released brief used to outrank an attempt with responses outstanding,
+   * so the review branch never ran and the responses were invisible. */
+  {
+    const assessments = [
+      attempt({
+        attemptId: A.released,
+        attemptStatus: "scored",
+        reportAvailable: true,
+        invitedAt: NEWEST,
+      }),
+      attempt({ attemptId: A.review, answered: 5, reviewsOutstanding: 4, invitedAt: MIDDLE }),
+    ];
+    const p = project({ assessments });
+    ok(p.assessment.responsesAwaitingReview === 4, "9a · responses are summed across attempts");
+    ok(
+      p.nextAction.kind === "reviewAssessmentResponses",
+      "9a · a released brief does not hide responses awaiting review",
+    );
+    ok(
+      p.nextAction.destination.kind === "assessmentReview" &&
+        p.nextAction.destination.attemptId === A.review,
+      "9a · and the review opens the attempt with the responses",
+    );
+    ok(p.assessment.state === "under_review", "9a · the row names the attempt that owes work");
+    ok(p.assessment.releasedAttemptId === A.released, "9a · the released attempt is still carried");
+  }
+
+  /* ---- 4 · released assessment + an attempt ready to release ---------
+   *
+   * Requirement 5's second limb. Nothing is waiting on a reviewer; one attempt
+   * is scored and unshared, and another has already been released. */
+  {
+    const assessments = [
+      attempt({
+        attemptId: A.released,
+        attemptStatus: "scored",
+        reportAvailable: true,
+        invitedAt: OLDEST,
+      }),
+      attempt({ attemptId: A.scored, attemptStatus: "scored", invitedAt: MIDDLE }),
+    ];
+    const p = project({ assessments });
+    ok(
+      p.nextAction.kind === "shareAssessmentBrief",
+      "9a · a released brief does not hide another ready to share",
+    );
+    ok(p.assessment.releaseAttemptId === A.scored, "9a · naming the attempt to share");
+    // And the same scenario for somebody who may not share it.
+    const member = project({
+      assessments,
+      caps: { ...ALL_CAPS, canShareAssessmentBrief: false },
+    });
+    ok(
+      member.nextAction.kind === "awaitColleague",
+      "9a · and a member is told a colleague must, rather than shown nothing",
+    );
+  }
+
+  /* ---- 5 · released assessment + an attempt the candidate is sitting -
+   *
+   * Requirement 5's third limb: candidate completion must not be hidden
+   * either. */
+  {
+    const assessments = [
+      attempt({
+        attemptId: A.released,
+        attemptStatus: "scored",
+        reportAvailable: true,
+        invitedAt: OLDEST,
+      }),
+      attempt({ attemptId: A.sitting, answered: 2, invitedAt: MIDDLE }),
+    ];
+    const p = project({ assessments });
+    ok(
+      p.nextAction.kind === "awaitCandidateAssessment",
+      "9a · a released brief does not hide an attempt still with the candidate",
+    );
+    ok(p.assessment.awaitingCandidateAttemptId === A.sitting, "9a · naming that attempt");
+    ok(p.nextAction.waitingOn === "candidate", "9a · and says who it is waiting on");
+  }
+
+  /* ---- 6 · several attempts, exactly one needs work ------------------
+   *
+   * Four attempts in four states. The review action must open the one with
+   * responses outstanding and no other, whatever else is present. */
+  {
+    const assessments = [
+      attempt({
+        attemptId: A.released,
+        attemptStatus: "scored",
+        reportAvailable: true,
+        invitedAt: OLDEST,
+      }),
+      attempt({ attemptId: A.scored, attemptStatus: "scored", invitedAt: MIDDLE }),
+      attempt({ attemptId: A.sitting, answered: 1, invitedAt: NEWEST }),
+      attempt({ attemptId: A.review, answered: 9, reviewsOutstanding: 2, invitedAt: NEWEST }),
+    ];
+    const p = project({ assessments });
+    ok(
+      p.nextAction.destination.kind === "assessmentReview" &&
+        p.nextAction.destination.attemptId === A.review,
+      "9a · with four attempts the review opens exactly the one that needs it",
+    );
+    ok(p.assessment.attemptCount === 4, "9a · and the row says how many there are");
+  }
+
+  /* ---- 7 · terminal records alone still behave --------------------- */
+  {
+    const p = project({
+      cases: [iCase({ id: C.reported, status: "reported", reportFinalised: true })],
+    });
+    ok(
+      p.nextAction.kind === "openFinalisedReport" &&
+        p.nextAction.destination.kind === "interviewReport" &&
+        p.nextAction.destination.caseId === C.reported,
+      "9a · a finished report on its own is still offered",
+    );
+    ok(p.report.availability === "finalised", "9a · and reported as finalised, not as mixed");
+    ok(!p.needsHumanAttention, "9a · with nobody owing anything");
+  }
+
+  /* ---- 8 · a cancelled case never speaks for an active one ---------- */
+  {
+    const p = project({
+      cases: [
+        iCase({ id: C.reported, status: "cancelled", updatedAt: NEWEST }),
+        iCase({ id: C.ready, status: "prep_approved", updatedAt: MIDDLE }),
+      ],
+    });
+    ok(
+      p.interview.state === "readyToInterview",
+      "9a · a cancelled case does not speak for the row",
+    );
+    ok(
+      p.nextAction.kind === "startInterview" &&
+        p.nextAction.destination.kind === "interviewCase" &&
+        p.nextAction.destination.caseId === C.ready,
+      "9a · and the action opens the live case",
+    );
+  }
+
+  /* ---- 9 · determinism: the answer does not depend on input order ---
+   *
+   * A set has no order, and the server's ordering is not part of the
+   * contract. Every permutation of the same records must give byte-identical
+   * output, or "deterministic" is a word rather than a property. */
+  {
+    const cases = [
+      iCase({ id: C.reported, status: "reported", reportFinalised: true, updatedAt: NEWEST }),
+      iCase({ id: C.assessed, status: "assessed", updatedAt: MIDDLE }),
+      iCase({
+        id: C.proposals,
+        status: "evidence_review",
+        proposalsAwaitingReview: 1,
+        updatedAt: OLDEST,
+      }),
+    ];
+    const expected = JSON.stringify(project({ cases }));
+    let stable = true;
+    for (const perm of permutations(cases)) {
+      if (JSON.stringify(project({ cases: perm })) !== expected) stable = false;
+    }
+    ok(stable, "9a · every permutation of the same cases gives the same projection");
+
+    const attempts = [
+      attempt({
+        attemptId: A.released,
+        attemptStatus: "scored",
+        reportAvailable: true,
+        invitedAt: NEWEST,
+      }),
+      attempt({ attemptId: A.review, reviewsOutstanding: 1, invitedAt: MIDDLE }),
+      attempt({ attemptId: A.scored, attemptStatus: "scored", invitedAt: OLDEST }),
+    ];
+    const expectedA = JSON.stringify(project({ assessments: attempts }));
+    let stableA = true;
+    for (const perm of permutations(attempts)) {
+      if (JSON.stringify(project({ assessments: perm })) !== expectedA) stableA = false;
+    }
+    ok(stableA, "9a · and every permutation of the same attempts");
+  }
+
+  /* ---- 10 · the tie-break is oldest-first, then id ------------------ */
+  {
+    const p = project({
+      cases: [
+        iCase({ id: C.ready, status: "assessed", updatedAt: NEWEST }),
+        iCase({ id: C.assessed, status: "assessed", updatedAt: OLDEST }),
+      ],
+    });
+    ok(
+      p.interview.reportMaterialCaseId === C.assessed,
+      "9a · between equals, the record that has waited longest wins",
+    );
+    // Same timestamp: the lower id breaks it, so the order is total.
+    const tied = project({
+      cases: [
+        iCase({ id: C.ready, status: "assessed", updatedAt: OLDEST }),
+        iCase({ id: C.assessed, status: "assessed", updatedAt: OLDEST }),
+      ],
+    });
+    ok(
+      tied.interview.reportMaterialCaseId === C.assessed,
+      "9a · and an exact tie is broken by the lower id",
+    );
+  }
+
+  /* ---- 11 · no action target is ever the presentation record by
+   *           accident -------------------------------------------------
+   *
+   * The structural half: the ladder must not read a presentation field. */
+  {
+    const proj = codeOnly(read(COMPONENTS.projection));
+    const ladder = proj.slice(proj.indexOf("function deriveNextAction"));
+    for (const forbidden of [
+      "presentationCaseId",
+      "presentationAttemptId",
+      "presentationStatus",
+      "leadCaseId",
+      "leadAttemptId",
+    ]) {
+      ok(!ladder.includes(forbidden), `9a · the ladder never reads ${forbidden}`);
+    }
+    // And it must not branch on the ROW's state either, which is what let a
+    // higher-ranked record decide whether work existed at all.
+    ok(
+      !/interview\.state ===/.test(ladder) && !/assessment\.state ===/.test(ladder),
+      "9a · nor branches on a row state",
+    );
+    // Every destination the ladder builds is an action target.
+    const ids = [...ladder.matchAll(/caseId: (?:interview|report)\.(\w+)/g)].map((m) => m[1]);
+    for (const f of ids) {
+      ok(
+        /CaseId$/.test(f) && !f.startsWith("presentation"),
+        `9a · destination field ${f} is an action target`,
+      );
+    }
+    const attemptIds = [...ladder.matchAll(/attemptId: assessment\.(\w+)/g)].map((m) => m[1]);
+    ok(attemptIds.length > 0, "9a · the ladder builds at least one attempt destination");
+    for (const f of attemptIds) {
+      ok(f === "reviewAttemptId", `9a · attempt destination field ${f} is the review attempt`);
+    }
+  }
 }
 
 /* ================================================================== */
@@ -818,7 +1184,7 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   const app = codeOnly(read(ROUTES.application));
   ok(app.includes("getEmployerReviewBoard"), "12 · review authority comes from the board");
   ok(
-    app.includes('leadBasis === "authorised" || leadBasis === "break_glass"'),
+    app.includes('reviewBasis === "authorised" || reviewBasis === "break_glass"'),
     "12 · using the board's own basis values",
   );
   // UI hiding is never described as enforcement.

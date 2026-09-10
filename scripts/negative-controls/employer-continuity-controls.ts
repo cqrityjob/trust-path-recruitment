@@ -256,6 +256,88 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "22 · no URL the strip draws carries a name, an address or anything but an opaque id",
   },
 
+  /* ---- Multi-record: hidden work, and wrong destinations ------------ */
+  //
+  // Seven mutations, each isolating ONE way an application with several
+  // records can lie. They are separate on purpose: end to end several of them
+  // produce the same visible symptom, and a single control would leave the
+  // others free to come back unnoticed.
+  {
+    id: "E1-TERMINAL-CASE-HIDES-WORK",
+    defect:
+      "a finished report outranks report material again, so a case at `assessed` is invisible and the strip announces the finished report instead",
+    file: PROJECTION,
+    find: "  cancelled: 0,\n  reportFinalised: 1,\n  unknown: 2,\n  preparing: 3,\n  readyToInterview: 4,\n  interviewing: 5,\n  evidenceReview: 6,\n  reportMaterialReady: 7,",
+    replace:
+      "  cancelled: 0,\n  unknown: 1,\n  preparing: 2,\n  readyToInterview: 3,\n  interviewing: 4,\n  evidenceReview: 5,\n  reportMaterialReady: 6,\n  reportFinalised: 7,",
+    guard: E1,
+    expect: "9a · the interview row names the case that owes work",
+  },
+  {
+    id: "E1-TERMINAL-ATTEMPT-HIDES-WORK",
+    defect:
+      "a released brief outranks an attempt awaiting review again, so the row reads Slutford while a reviewer owes ten responses",
+    file: PROJECTION,
+    find: "  under_review: 4,\n  brief_ready: 3,\n  in_progress: 2,\n  invited: 1,\n  brief_released: 0,",
+    replace:
+      "  brief_released: 4,\n  brief_ready: 3,\n  under_review: 2,\n  in_progress: 1,\n  invited: 0,",
+    guard: E1,
+    expect: "9a · the row names the attempt that owes work",
+  },
+  {
+    id: "E1-PROPOSALS-WRONG-DESTINATION",
+    defect:
+      "the evidence action opens the presentation case again, so a summed proposal count sends the recruiter to a case holding none of it",
+    file: PROJECTION,
+    find: '      destination: { kind: "interviewCase", caseId: interview.proposalsCaseId },',
+    replace: '      destination: { kind: "interviewCase", caseId: interview.presentationCaseId! },',
+    guard: E1,
+    expect: "9a · and opens the case the proposals are actually on",
+  },
+  {
+    id: "E1-REVIEW-WRONG-DESTINATION",
+    defect:
+      "the assessment review opens the presentation attempt again, so a summed response count opens an attempt with no responses outstanding",
+    file: PROJECTION,
+    find: '          destination: { kind: "assessmentReview", attemptId: assessment.reviewAttemptId },',
+    replace:
+      '          destination: { kind: "assessmentReview", attemptId: assessment.presentationAttemptId! },',
+    guard: E1,
+    expect: "9a · and the review opens the attempt with the responses",
+  },
+  {
+    id: "E1-REPORT-MATERIAL-WRONG-DESTINATION",
+    defect:
+      "the report-material action opens the presentation case, which in the mixed case is the FINALISED report rather than the material awaiting review",
+    file: PROJECTION,
+    find: '      destination: { kind: "interviewReport", caseId: interview.reportMaterialCaseId },',
+    replace:
+      '      destination: { kind: "interviewReport", caseId: interview.presentationCaseId! },',
+    guard: E1,
+    expect: "9a · and opens the case holding the material, not the finished one",
+  },
+  {
+    id: "E1-MIXED-REPORT-COLLAPSED",
+    defect:
+      "a finalised report swallows the report material again, so the report row denies work that is outstanding in another case",
+    file: PROJECTION,
+    find: '    material && finalised\n      ? "materialAndFinalised"\n      : material',
+    replace: '    finalised\n      ? "finalised"\n      : material',
+    guard: E1,
+    expect: "9a · the report row reports BOTH the material and the finalised report",
+  },
+  {
+    id: "E1-SELECTION-NOT-DETERMINISTIC",
+    defect:
+      "record selection falls back to whatever order the server happened to return, so the same application projects differently between two reads",
+    file: PROJECTION,
+    find: "    const a = waitingSinceOf(row);\n    const b = waitingSinceOf(best);\n    if (a < b || (a === b && idOf(row) < idOf(best))) best = row;\n  }\n  return best;\n}\n\n/**\n * The record the status row names",
+    replace:
+      "    void waitingSinceOf;\n    void idOf;\n  }\n  return best;\n}\n\n/**\n * The record the status row names",
+    guard: E1,
+    expect: "9a · every permutation of the same cases gives the same projection",
+  },
+
   /* ---- False capability and destination signals --------------------- */
   {
     id: "E1-CAPABILITY-NOBODY-READS",
