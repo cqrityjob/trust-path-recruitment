@@ -670,7 +670,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: '  mark(t, "01 · before a preview, the act is not offered");',
     replace: "  // step no longer recorded",
     guard: E4,
-    expect: "13.2j EVERY routed test records a duration for at least every capture it takes",
+    expect: "13.2j EVERY capture's own step is timed",
   },
 
   /* ---- The stack the evidence is taken against ----------------------- *

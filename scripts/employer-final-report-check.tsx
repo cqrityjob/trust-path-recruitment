@@ -1817,25 +1817,28 @@ console.log(
   // durations for two of six, and not for the 31-second walk — the one where
   // a hidden stall would matter most.
   const testTitles = [...spec.matchAll(/^test\("([^"]+)"/gm)].map((m) => m[1]);
-  // AT LEAST ONE RECORD PER CAPTURE. Its own control showed that "does this
-  // test record anything" is too weak: with seven steps recorded, deleting
-  // one left six and the assertion went on passing. Every numbered capture is
-  // a step somebody may need to see the duration of.
-  const underRecorded: string[] = [];
-  for (const title of testTitles) {
-    const from = spec.indexOf(`test("${title}"`);
-    const nextIdx = spec.indexOf('\ntest("', from + 1);
-    const body = spec.slice(from, nextIdx === -1 ? spec.length : nextIdx);
-    const capturesTaken =
-      (body.match(/await shot\(page,/g) ?? []).length +
-      (body.match(/\.screenshot\(\{/g) ?? []).length;
-    const recorded =
-      (body.match(/await phase\(t,/g) ?? []).length + (body.match(/mark\(t, "/g) ?? []).length;
-    if (recorded < capturesTaken) underRecorded.push(`${title} (${recorded} < ${capturesTaken})`);
-  }
+  // EVERY CAPTURE, STRUCTURALLY. Counting was too weak twice over: "does the
+  // test record anything" passed with a step deleted, and "at least as many
+  // records as captures" passed too, because the sign-in and start marks left
+  // slack. What matters is that each capture's own step was timed, so that is
+  // what is checked: a capture is covered when it sits inside a `phase`
+  // closure, or when the very next line records a mark.
+  // Only inside the tests: the `shot` helper's own body is the definition of
+  // a capture, not a capture.
+  const specLines = spec.slice(spec.indexOf('test("')).split("\n");
+  const uncovered: string[] = [];
+  specLines.forEach((line, i) => {
+    if (!/await shot\(page, "|\.screenshot\(\{/.test(line)) return;
+    const insideAPhase = /^ {4,}/.test(line);
+    if (insideAPhase) return;
+    const following = specLines.slice(i + 1, i + 4).join(" ");
+    if (!/mark\(t, "/.test(following)) {
+      uncovered.push((line.match(/"([^"]+)"/) ?? [, `line ${i + 1}`])[1] as string);
+    }
+  });
   ok(
-    testTitles.length > 0 && underRecorded.length === 0,
-    `13.2j EVERY routed test records a duration for at least every capture it takes — ${underRecorded.join("; ") || "all do"}`,
+    uncovered.length === 0,
+    `13.2j EVERY capture's own step is timed — uncovered: ${uncovered.join(", ") || "none"}`,
   );
   // A capture that duplicates another is not a second piece of evidence.
   ok(
