@@ -257,6 +257,24 @@ export interface ApplicationInterviewCase {
    * there is nothing immutable to refer to.
    */
   readonly reportContentHash: string | null;
+  /**
+   * Whether a candidate-safe summary has been shared with the interviewed
+   * person for this case, and which version.
+   *
+   * ── WHY THE FACT AND NOT THE DOCUMENT ────────────────────────────────
+   *
+   * The continuity strip has to be able to say "the report is finalised and
+   * nothing has been shared with the candidate", which is a materially
+   * different state from "shared on 3 March" -- and until E4 it could say
+   * neither, because a finalised report was the end of what it knew.
+   *
+   * `scp_iv_application_summary_releases` returns three scalars and no
+   * payload, to any active member: the same audience that already sees
+   * `reportFinalised` beside it. The document itself is owner/admin-only and
+   * is read elsewhere.
+   */
+  readonly candidateSummaryVersion: number | null;
+  readonly candidateSummaryReleasedAt: string | null;
 }
 
 const applicationInput = z.object({
@@ -308,6 +326,28 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
         }
       }
 
+      // One call for the whole application, exactly as everything else here is
+      // read. Best-effort in the same way the proposal and report counts are:
+      // losing it costs the strip one distinction, never the page. It is
+      // reported as "not shared" on failure -- and that is the ONE place in
+      // this file where a failed read becomes an absence, so it is worth being
+      // explicit about why it is acceptable here and not elsewhere: the
+      // employer already knows what they have shared, the strip's own report
+      // row still says the report is finalised, and nothing about the
+      // candidate is asserted either way. It costs a nudge, not a fact.
+      const summaries = new Map<string, { version: number; releasedAt: string }>();
+      {
+        const { data: rel } = await db.rpc("scp_iv_application_summary_releases", {
+          _application_id: data.applicationId,
+        });
+        for (const r of (rel ?? []) as Array<Record<string, unknown>>) {
+          summaries.set(String(r.case_id), {
+            version: Number(r.version_number),
+            releasedAt: String(r.released_at),
+          });
+        }
+      }
+
       const cases = (rows ?? []).map((r) => {
         const version = Array.isArray(r.scp_interview_pack_versions)
           ? r.scp_interview_pack_versions[0]
@@ -327,6 +367,8 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
           proposalsAwaitingReview: pending.get(r.id as string) ?? 0,
           reportFinalised: finalised.has(r.id as string),
           reportContentHash: hashes.get(r.id as string) ?? null,
+          candidateSummaryVersion: summaries.get(r.id as string)?.version ?? null,
+          candidateSummaryReleasedAt: summaries.get(r.id as string)?.releasedAt ?? null,
         };
       });
 
@@ -2368,6 +2410,177 @@ export const finaliseReport = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { reportId: id as unknown as string };
+  });
+
+/* ------------------------------------------------------------------ */
+/* The candidate-safe summary (E4)                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The document the interviewed person may receive.
+ *
+ * ── WHY THIS IS NOT A NARROWED EMPLOYER REPORT ─────────────────────────
+ *
+ * One interview produces two outputs for two audiences, and the brief is
+ * explicit that the candidate's must not be the employer's with sections
+ * hidden. It is not: `scp_iv_build_candidate_summary` (20261106090000) reads
+ * two tables -- the pinned pack's governed competency definitions, and the
+ * candidate's own confirmed evidence excerpts -- and the migration asserts at
+ * apply time that it reads none of the employer-only ones. No level, no
+ * rationale, no uncertainty note, no reviewer identity, no finding, no
+ * proposal, no note, no passage, no AI run.
+ *
+ * The shape below is therefore the whole of it, and it is deliberately small.
+ */
+export interface CandidateSummaryArea {
+  readonly code: string;
+  readonly name: string;
+  readonly definition: string;
+  /** The person's own words, as a named human confirmed them. */
+  readonly yourExamples: readonly { readonly statement: string }[];
+  /** Whether any confirmed example exists for this area.
+   *
+   *  A COUNT OF EVIDENCE and nothing else: not a score, not compared with
+   *  anything, no threshold. The surface says "you gave concrete examples
+   *  here" or "we did not reach one here", both of which are statements about
+   *  the conversation rather than about the person -- and the document's own
+   *  limitations say so. */
+  readonly covered: boolean;
+}
+
+export interface CandidateSummaryPayload {
+  readonly schemaVersion: string;
+  readonly employerName: string | null;
+  readonly roleTitle: string | null;
+  readonly method: string | null;
+  readonly scopeSv: string;
+  readonly scopeEn: string;
+  readonly areas: readonly CandidateSummaryArea[];
+  readonly limitationsSv: readonly string[];
+  readonly limitationsEn: readonly string[];
+  readonly decisionSv: string;
+  readonly decisionEn: string;
+}
+
+export interface CandidateSummary {
+  readonly id: string | null;
+  readonly versionNumber: number | null;
+  readonly releasedAt: string | null;
+  readonly contentHash: string | null;
+  readonly payload: CandidateSummaryPayload;
+}
+
+/** One payload shape, mapped once.
+ *
+ *  Three callers reach this -- the employer's preview, the employer's
+ *  verification read and the candidate's own read -- and the whole guarantee
+ *  is that all three see the same document. A second mapper is how a copy
+ *  stops being one. */
+export function mapCandidateSummaryPayload(raw: unknown): CandidateSummaryPayload {
+  const p = (raw ?? {}) as Record<string, unknown>;
+  const strings = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  const interview = (p.interview ?? {}) as Record<string, unknown>;
+  return {
+    schemaVersion: String(p.schema_version ?? ""),
+    employerName: (interview.employer_name as string | null) ?? null,
+    roleTitle: (interview.role_title as string | null) ?? null,
+    method: (interview.method as string | null) ?? null,
+    scopeSv: String(interview.scope_sv ?? ""),
+    scopeEn: String(interview.scope_en ?? ""),
+    areas: (Array.isArray(p.areas) ? (p.areas as Record<string, unknown>[]) : []).map((a) => ({
+      code: String(a.code ?? ""),
+      name: String(a.name ?? ""),
+      definition: String(a.definition ?? ""),
+      yourExamples: (Array.isArray(a.your_examples)
+        ? (a.your_examples as Record<string, unknown>[])
+        : []
+      ).map((e) => ({ statement: String(e.statement ?? "") })),
+      covered: Boolean(a.covered),
+    })),
+    limitationsSv: strings(p.limitations_sv),
+    limitationsEn: strings(p.limitations_en),
+    decisionSv: String(p.decision_sv ?? ""),
+    decisionEn: String(p.decision_en ?? ""),
+  };
+}
+
+/**
+ * What the candidate WOULD receive, if it were shared now.
+ *
+ * Writes nothing, and is built by the same database function the release
+ * calls -- so the preview cannot drift from the thing previewed. The database
+ * suite asserts the two payloads are byte-for-byte identical.
+ *
+ * Carries no release metadata, because there is no release: `id`,
+ * `versionNumber`, `releasedAt` and `contentHash` are null, and the surface
+ * says "this is what would be shared" rather than "this was shared".
+ */
+export const previewCandidateSummary = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(async ({ context, data }): Promise<CandidateSummary> => {
+    const { data: raw, error } = await context.supabase.rpc("scp_iv_preview_candidate_summary", {
+      _case_id: data.caseId,
+    });
+    if (error) throw new Error(error.message);
+    return {
+      id: null,
+      versionNumber: null,
+      releasedAt: null,
+      contentHash: null,
+      payload: mapCandidateSummaryPayload(raw),
+    };
+  });
+
+/**
+ * Share it with the interviewed person.
+ *
+ * A SECOND explicit act. Finalising the employer report is a precondition --
+ * the database refuses with SCP_IV_SUMMARY_BEFORE_REPORT until one exists --
+ * and never a trigger: `scp_iv_finalise_report` does not call this, and the
+ * migration asserts at apply time that it does not.
+ *
+ * Idempotent on identical content: two clicks are one share, and a retry after
+ * a lost response finds the share it already made. A CHANGED summary becomes
+ * version N+1 and supersedes the previous one rather than rewriting it.
+ */
+export const releaseCandidateSummary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(async ({ context, data }): Promise<{ readonly summaryId: string }> => {
+    const { data: id, error } = await context.supabase.rpc("scp_iv_release_candidate_summary", {
+      _case_id: data.caseId,
+    });
+    if (error) throw new Error(error.message);
+    return { summaryId: id as unknown as string };
+  });
+
+/**
+ * What was ACTUALLY shared, read back.
+ *
+ * The employer's verification read, so "here is what we shared" is the
+ * document rather than a description of it -- and so the release can be
+ * confirmed by a read rather than by the write having returned. Null means
+ * nothing is released, which is a real answer and not a failure.
+ */
+export const getReleasedCandidateSummary = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(async ({ context, data }): Promise<CandidateSummary | null> => {
+    const { data: rows, error } = await context.supabase.rpc("scp_iv_released_candidate_summary", {
+      _case_id: data.caseId,
+    });
+    if (error) throw new Error(error.message);
+    const r = (Array.isArray(rows) ? rows[0] : undefined) as Record<string, unknown> | undefined;
+    if (!r) return null;
+    return {
+      id: String(r.id),
+      versionNumber: Number(r.version_number),
+      releasedAt: String(r.released_at),
+      contentHash: String(r.content_hash ?? ""),
+      payload: mapCandidateSummaryPayload(r.payload),
+    };
   });
 
 /**

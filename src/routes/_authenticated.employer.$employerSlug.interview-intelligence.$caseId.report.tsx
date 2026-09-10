@@ -25,6 +25,7 @@ import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-worksp
 import { canFinaliseInterviewReport } from "@/lib/interview-intelligence/capability";
 import { ReportFinalisation } from "@/components/employer/interview/ReportFinalisation";
 import { InterviewOutcome } from "@/components/employer/interview/InterviewOutcome";
+import { CandidateSummaryRelease } from "@/components/employer/interview/CandidateSummaryRelease";
 import {
   CaseStatusChip,
   WorkflowNav,
@@ -657,6 +658,21 @@ function Page() {
           </section>
         </article>
       )}
+
+      {/* ---- The OTHER document this interview produces ----
+           One interview, two audiences. Everything above is private decision
+           support; this is the account the interviewed person may receive,
+           and it is a separate document rather than the one above with
+           sections hidden.
+
+           Placed after the report and never before it: the sequence is
+           review, finalise, preview, share, and the database refuses the last
+           until the report is final. It is rendered even when it is not yet
+           possible, because a recruiter who has just locked their report is
+           exactly the person who should learn that a second, optional step
+           exists -- and that nothing has been shared with anybody by the act
+           they have just performed. */}
+      <CandidateSummaryRelease caseId={caseId} reportIsFinal={isFinal} canRelease={canFinalise} />
 
       {/* ---- Method support: the interviewer's own conduct ----
            The interviewer reviews their OWN conduct. Nothing here is stored as

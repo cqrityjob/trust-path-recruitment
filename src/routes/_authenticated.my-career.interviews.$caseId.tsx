@@ -40,6 +40,8 @@ import {
   type CandidateInterviewStatus,
 } from "@/lib/interview-intelligence/candidate.functions";
 import { projectCandidateNotice } from "@/lib/interview-intelligence/candidate-notice";
+import { getMyInterviewSummary } from "@/lib/interview-intelligence/candidate.functions";
+import { CandidateSummaryDocument } from "@/components/employer/interview/CandidateSummaryDocument";
 
 export const Route = createFileRoute("/_authenticated/my-career/interviews/$caseId")({
   ssr: false,
@@ -138,7 +140,7 @@ const SOURCE_KIND: Record<string, Copy> = {
 
 function Page() {
   const { caseId } = Route.useParams();
-  const { lang } = useT();
+  const { t, lang } = useT();
 
   const detailFn = useServerFn(getMyInterviewDetail);
   const reportFn = useServerFn(reportInterviewFactualError);
@@ -146,6 +148,16 @@ function Page() {
   const q = useQuery({
     queryKey: ["my-career", "interview", caseId],
     queryFn: () => detailFn({ data: { caseId } }),
+  });
+
+  // The shared summary, when there is one. Its own query: most interviews will
+  // not have one, and a summary that is simply not shared must not make the
+  // rest of this page fail to load.
+  const summaryFn = useServerFn(getMyInterviewSummary);
+  const summary = useQuery({
+    queryKey: ["my-career", "interview-summary", caseId],
+    queryFn: () => summaryFn({ data: { caseId } }),
+    retry: false,
   });
 
   const [wrong, setWrong] = useState("");
@@ -420,6 +432,76 @@ function Page() {
                 lang,
               )}
             </p>
+          )}
+        </section>
+
+        {/* ── The summary, when the employer has shared one ──────────
+         *
+         *  Most interviews will not have one, and that is not a failure of
+         *  anything: sharing is a separate decision the employer makes after
+         *  finalising their own report, and nothing releases it
+         *  automatically. So an absent summary says exactly that, and does
+         *  not imply anybody was supposed to share one.
+         *
+         *  A FAILED read is kept apart, for the same reason every read in
+         *  this codebase is: "your employer has not shared one" is a
+         *  statement about the employer, and an outage of ours is in no
+         *  position to make it. */}
+        <section className="mt-8" aria-labelledby="ci-summary">
+          <h2 id="ci-summary" className="text-lg font-semibold text-foreground">
+            {L(c("Sammanfattning av intervjun", "Summary of the interview"), lang)}
+          </h2>
+          {summary.isLoading && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {L(c("Hämtar …", "Fetching …"), lang)}
+            </p>
+          )}
+          {summary.isError && (
+            <p role="alert" className="mt-2 max-w-[68ch] text-sm text-foreground">
+              {L(
+                c(
+                  "Vi kunde inte hämta någon sammanfattning just nu. Det betyder inte att arbetsgivaren inte har delat någon — bara att vi inte kunde läsa den.",
+                  "We could not fetch a summary just now. That does not mean the employer has not shared one — only that we could not read it.",
+                ),
+                lang,
+              )}
+            </p>
+          )}
+          {!summary.isLoading && !summary.isError && !summary.data && (
+            <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
+              {L(
+                c(
+                  "Arbetsgivaren har inte delat någon sammanfattning av den här intervjun. Det är ett eget beslut de fattar, och de är inte skyldiga att göra det.",
+                  "The employer has not shared a summary of this interview. That is a separate decision they make, and they are not obliged to.",
+                ),
+                lang,
+              )}
+            </p>
+          )}
+          {summary.data && (
+            <div className="mt-3 rounded-lg border border-border p-5">
+              {/* WHICH VERSION. A corrected summary supersedes the one before
+                  it, and a reader who cannot tell which they are looking at
+                  cannot tell whether anything changed. */}
+              <p className="mb-4 text-xs text-muted-foreground">
+                {t("iics.version")
+                  .replace("{n}", String(summary.data.versionNumber ?? 1))
+                  .replace(
+                    "{date}",
+                    summary.data.releasedAt
+                      ? new Date(summary.data.releasedAt).toLocaleDateString(
+                          lang === "en" ? "en-GB" : "sv-SE",
+                        )
+                      : "—",
+                  )}
+              </p>
+              {/* The SAME component the employer's preview renders. The
+                  preview is a guarantee only while the two cannot differ. */}
+              <CandidateSummaryDocument
+                payload={summary.data.payload}
+                lang={lang === "en" ? "en" : "sv"}
+              />
+            </div>
           )}
         </section>
 

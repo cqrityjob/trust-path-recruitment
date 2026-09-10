@@ -5624,6 +5624,71 @@ export const dictionaries = {
     "iiu.pp.approve.blockedBody":
       "Ansökan som den här intervjun hör till kunde inte läsas, så rollen, dess krav och ett eventuellt delat bedömningsunderlag är okända. Att godkänna planen nu vore att godkänna den mot ett underlag som inte hämtades. Läs om ovan och försök igen.",
     // ── E3: vad den intervjuade kan se ────────────────────────────────
+    // ── E4: kandidatens sammanfattning ───────────────────────────────
+    // ── E4: förhandsgranska, dela, läs tillbaka ──────────────────────
+    "iicr.heading": "Sammanfattning till kandidaten",
+    "iicr.lede":
+      "Kandidatens sammanfattning är ett eget dokument, inte er rapport med avsnitt dolda. Den delas bara om ni väljer att dela den.",
+    "iicr.step.review": "1. Granska underlaget",
+    "iicr.step.finalise": "2. Fastställ er rapport",
+    "iicr.step.preview": "3. Förhandsgranska kandidatens version",
+    "iicr.step.release": "4. Dela med kandidaten",
+    "iicr.state.done": "klart",
+    "iicr.state.current": "nu",
+    "iicr.state.todo": "återstår",
+    "iicr.state.blocked": "ej möjligt än",
+    "iicr.blocked": "Er rapport är inte fastställd än.",
+    "iicr.blocked.hint":
+      "En sammanfattning av en intervju vars rapport fortfarande skrivs är en sammanfattning av ett beslut ingen har fattat. Fastställ rapporten först.",
+    "iicr.notPermitted": "Delning görs av en ägare eller administratör hos er.",
+    "iicr.notPermitted.hint":
+      "Ni kan förhandsgranska vad kandidaten skulle få se, men själva delningen görs av en kollega med den behörigheten.",
+    "iicr.released": "Delad med kandidaten {date} (version {n}).",
+    "iicr.released.body":
+      "Kandidaten läser exakt den här versionen. Senare ändringar i ärendet ändrar den inte — en rättad sammanfattning delas som en ny version och ersätter den här.",
+    "iicr.readFailed": "Det gick inte att läsa om vad som är delat.",
+    "iicr.readFailed.hint":
+      "Det säger ingenting om huruvida något är delat. Ladda om sidan för att försöka igen.",
+    "iicr.preview.open": "Visa kandidatens version",
+    "iicr.preview.close": "Stäng förhandsvisningen",
+    "iicr.preview.title": "Så här skulle den se ut",
+    "iicr.preview.lede":
+      "Det här är dokumentet som skulle delas, byggt av samma funktion som delningen använder. Ingenting är delat än.",
+    "iicr.preview.releasedTitle": "Det här ser kandidaten",
+    "iicr.preview.releasedLede":
+      "Det här är exakt det dokument kandidaten läser, hämtat från den delade versionen.",
+    "iicr.preview.loading": "Hämtar …",
+    "iicr.preview.failed":
+      "Förhandsvisningen kunde inte hämtas just nu. Det säger ingenting om vad som är delat.",
+    "iicr.release": "Dela med kandidaten",
+    "iicr.release.explain":
+      "Delning ger personen tillgång till dokumentet ovan i sitt eget konto. Den innehåller inga nivåer, inga interna anteckningar och ingen rekommendation.",
+    "iicr.confirm.title": "Dela sammanfattningen med kandidaten?",
+    "iicr.confirm.body":
+      "Personen får läsa dokumentet ovan i sitt eget konto. Versionen låses som den är — senare ändringar i ärendet ändrar den inte, och det finns inget sätt att ta tillbaka den. En rättelse delas som en ny version.",
+    "iicr.confirm.action": "Ja, dela sammanfattningen",
+    "iicr.confirm.cancel": "Avbryt",
+    "iicr.confirm.working": "Delar …",
+    "iicr.outcome.confirmed": "Delad med kandidaten {date} (version {n}).",
+    "iicr.outcome.writtenNotConfirmed":
+      "Delningen är gjord, men den kunde inte läsas tillbaka för att bekräftas. Gör ingenting om igen — delning är enkelriktad. Läs om för att se den aktuella statusen.",
+    "iicr.outcome.recheck": "Läs om",
+    "iicr.outcome.refused": "Delning kräver ägare eller administratör. Servern nekade steget.",
+    "iicr.outcome.reportNotFinal": "Rapporten är inte fastställd. Servern nekade delningen.",
+    "iicr.outcome.failed": "Sammanfattningen kunde inte delas.",
+    // ── E4: vad den intervjuade kan se ────────────────────────────────
+    "continuity.track.candidateSummary": "Till kandidaten",
+    "continuity.candidateSummary.shared": "Sammanfattning delad (v{n})",
+    // INTE en uppgift. En arbetsgivare får fastställa en rapport och inte dela
+    // något; raden säger vad som gäller, inte vad någon borde göra.
+    "continuity.candidateSummary.notShared": "Ingen sammanfattning delad",
+    "iics.heading": "Sammanfattning av din intervju",
+    "iics.areas": "Det här handlade samtalet om",
+    "iics.yourExamples": "Det du berättade",
+    "iics.notCovered":
+      "Vi hann inte fram till ett konkret exempel på det här området. Det säger ingenting om din erfarenhet.",
+    "iics.limitations": "Vad den här sammanfattningen inte är",
+    "iics.version": "Version {n}, delad {date}",
     "iin.heading": "Vad kandidaten kan se om den här intervjun",
     "iin.lede":
       "Kandidaten läser det här på sin egen sida. Det finns ingen separat utskickad information — den här sidan är informationen. Listan visar vad produkten kan berätta, och vad den inte kan.",
@@ -11402,6 +11467,71 @@ export const dictionaries = {
     "iiu.pp.approve.blockedBody":
       "The application this interview belongs to could not be read, so the role, its requirements and any shared assessment material are unknown. Approving the plan now would be approving it against material that was never fetched. Re-read above and try again.",
     // ── E3: what the interviewed person can see ───────────────────────
+    // ── E4: the candidate's summary ──────────────────────────────────
+    // ── E4: preview, share, read back ────────────────────────────────
+    "iicr.heading": "Summary for the candidate",
+    "iicr.lede":
+      "The candidate's summary is its own document, not your report with sections hidden. It is shared only if you choose to share it.",
+    "iicr.step.review": "1. Review the material",
+    "iicr.step.finalise": "2. Finalise your report",
+    "iicr.step.preview": "3. Preview the candidate's version",
+    "iicr.step.release": "4. Share with the candidate",
+    "iicr.state.done": "done",
+    "iicr.state.current": "now",
+    "iicr.state.todo": "remaining",
+    "iicr.state.blocked": "not yet possible",
+    "iicr.blocked": "Your report is not final yet.",
+    "iicr.blocked.hint":
+      "A summary of an interview whose report is still being written is a summary of a decision nobody has made. Finalise the report first.",
+    "iicr.notPermitted": "Sharing is done by an owner or admin in your organisation.",
+    "iicr.notPermitted.hint":
+      "You can preview what the candidate would see; the sharing itself is done by a colleague who holds that role.",
+    "iicr.released": "Shared with the candidate on {date} (version {n}).",
+    "iicr.released.body":
+      "The candidate reads exactly this version. Later changes to the case do not alter it — a corrected summary is shared as a new version and supersedes this one.",
+    "iicr.readFailed": "What has been shared could not be re-read.",
+    "iicr.readFailed.hint":
+      "That says nothing about whether anything is shared. Reload the page to try again.",
+    "iicr.preview.open": "Show the candidate's version",
+    "iicr.preview.close": "Close the preview",
+    "iicr.preview.title": "This is how it would look",
+    "iicr.preview.lede":
+      "This is the document that would be shared, built by the same function the sharing uses. Nothing has been shared yet.",
+    "iicr.preview.releasedTitle": "This is what the candidate sees",
+    "iicr.preview.releasedLede":
+      "This is exactly the document the candidate reads, fetched from the shared version.",
+    "iicr.preview.loading": "Fetching …",
+    "iicr.preview.failed":
+      "The preview could not be fetched just now. That says nothing about what has been shared.",
+    "iicr.release": "Share with the candidate",
+    "iicr.release.explain":
+      "Sharing gives the person access to the document above in their own account. It contains no levels, no internal notes and no recommendation.",
+    "iicr.confirm.title": "Share the summary with the candidate?",
+    "iicr.confirm.body":
+      "The person will be able to read the document above in their own account. The version is frozen as it is — later changes to the case do not alter it, and there is no way to take it back. A correction is shared as a new version.",
+    "iicr.confirm.action": "Yes, share the summary",
+    "iicr.confirm.cancel": "Cancel",
+    "iicr.confirm.working": "Sharing …",
+    "iicr.outcome.confirmed": "Shared with the candidate on {date} (version {n}).",
+    "iicr.outcome.writtenNotConfirmed":
+      "The sharing is done, but it could not be read back to confirm it. Do not do it again — sharing is one-way. Re-read to see the current status.",
+    "iicr.outcome.recheck": "Re-read",
+    "iicr.outcome.refused": "Sharing requires an owner or admin. The server refused the step.",
+    "iicr.outcome.reportNotFinal": "The report is not final. The server refused the sharing.",
+    "iicr.outcome.failed": "The summary could not be shared.",
+    // ── E4: what the interviewed person can see ───────────────────────
+    "continuity.track.candidateSummary": "To the candidate",
+    "continuity.candidateSummary.shared": "Summary shared (v{n})",
+    // NOT a task. An employer may finalise a report and share nothing; the row
+    // says what is true, not what somebody ought to do.
+    "continuity.candidateSummary.notShared": "No summary shared",
+    "iics.heading": "Summary of your interview",
+    "iics.areas": "What the conversation was about",
+    "iics.yourExamples": "What you described",
+    "iics.notCovered":
+      "We did not get to a concrete example in this area. That says nothing about your experience.",
+    "iics.limitations": "What this summary is not",
+    "iics.version": "Version {n}, shared {date}",
     "iin.heading": "What the candidate can see about this interview",
     "iin.lede":
       "The candidate reads this on their own page. There is no separate notice sent out — that page is the notice. The list shows what the product can tell them, and what it cannot.",

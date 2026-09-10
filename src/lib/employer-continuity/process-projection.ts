@@ -610,6 +610,31 @@ export type ReportAvailability =
    */
   | "materialAndFinalised";
 
+/**
+ * Whether the interviewed person has been given anything (E4).
+ *
+ * ── WHY THIS IS ITS OWN DIMENSION AND NOT A SIXTH `availability` ────────
+ *
+ * Because it is a different question about a different audience, and folding
+ * it into `availability` would make the two answerable only together. A
+ * finalised report with nothing shared and a finalised report with a summary
+ * shared are the SAME state of the employer's own work; they differ only in
+ * what somebody else can see. The strip has to be able to say both.
+ *
+ * It is also the state most likely to be misread as an obligation, so the
+ * copy that renders it says the sharing is optional. Nothing in this product
+ * releases a summary automatically and nothing ever will without somebody
+ * changing scp_iv_release_candidate_summary.
+ */
+export type CandidateSharing =
+  /** No finalised report yet: sharing is not a question that arises. */
+  | "notApplicable"
+  /** A report is final and nothing has been shared. NOT a task, and not a
+   *  failure -- an employer may finalise a report and share nothing. */
+  | "notShared"
+  /** Shared, with the version the person is currently reading. */
+  | "shared";
+
 export interface ReportTrack {
   readonly read: TrackRead;
   readonly availability: ReportAvailability;
@@ -621,6 +646,11 @@ export interface ReportTrack {
    *  Carried separately from `finalisedCaseId` precisely so one cannot stand
    *  in for the other. */
   readonly materialCaseId: string | null;
+  /** What the interviewed person can see, kept apart from what the employer
+   *  has done. */
+  readonly candidateSharing: CandidateSharing;
+  /** The version the person is reading, when one is shared. Null otherwise. */
+  readonly candidateSummaryVersion: number | null;
 }
 
 export function projectReportTrack(
@@ -633,6 +663,10 @@ export function projectReportTrack(
       availability: read === "loading" ? "loading" : read === "refused" ? "refused" : "unavailable",
       finalisedCaseId: null,
       materialCaseId: null,
+      // A read that did not land knows nothing about sharing either. It is
+      // NOT "nothing has been shared", which would be a claim.
+      candidateSharing: "notApplicable",
+      candidateSummaryVersion: null,
     };
   }
 
@@ -673,6 +707,16 @@ export function projectReportTrack(
     availability,
     finalisedCaseId: finalised ? id(finalised) : null,
     materialCaseId: material ? id(material) : null,
+    // Read from the FINALISED case, and only from it. Sharing is a property of
+    // the document that exists; a summary attached to a case whose report is
+    // not final cannot be produced (the database refuses), so looking anywhere
+    // else would be looking for something that cannot be there.
+    candidateSharing: !finalised
+      ? "notApplicable"
+      : finalised.candidateSummaryVersion !== null
+        ? "shared"
+        : "notShared",
+    candidateSummaryVersion: finalised?.candidateSummaryVersion ?? null,
   };
 }
 
