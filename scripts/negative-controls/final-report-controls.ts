@@ -487,8 +487,7 @@ const MUTATIONS: readonly Mutation[] = [
     replace:
       "  await expect(main(page)).toContainText(/Kontrollerad/);\n  await expect(main(page)).toContainText(/Version 1/);",
     guard: E4,
-    expect:
-      "13.2g the walk reads the verified-digest sentence from the dictionary in BOTH languages",
+    expect: "13.2g EVERY walk asserting the verified-digest sentence reads it from the dictionary",
   },
 
   /* ---- All four language-and-viewport combinations -------------------- */
