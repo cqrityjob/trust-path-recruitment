@@ -1858,6 +1858,20 @@ console.log(
     !/Kontrollerad: summan räknades om|Verified: the digest was recomputed/.test(codeOnly(spec)),
     "13.2h and no hand-typed copy of it survives anywhere in the walk",
   );
+  // ── AND THE COPY ITSELF IS THE CURRENT ONE ─────────────────────────
+  //
+  // Kept from the repository owner's fix for the same failure, restated
+  // against the dictionary. Reading the sentence from the dictionary makes
+  // the walk agree with the product by construction, which is worth nothing
+  // if the DICTIONARY is the thing that went stale. This asserts the English
+  // entry is the wording the product ships, and that the obsolete phrasing
+  // the evidence used to expect survives nowhere.
+  const enVerified = (dictionaries.en as Record<string, string>)["iir.readback.verified"] ?? "";
+  ok(
+    /^Checked: the digest was recomputed/.test(enVerified) &&
+      !/Verified: the digest was recomputed/.test(read("src/i18n/dictionaries.ts")),
+    `13.2i the English verified-digest copy is the current one, and the obsolete translation is gone (${enVerified})`,
+  );
   for (const [needle, state] of [
     ['data-testid="fr-disagree"', "both assessors and their disagreement"],
     [

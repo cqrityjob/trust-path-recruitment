@@ -504,6 +504,21 @@ const MUTATIONS: readonly Mutation[] = [
       "13.2f the English-desktop walk waits on the structural final document before changing language, not on stale translated copy",
   },
   {
+    // KEPT FROM THE REPOSITORY OWNER'S FIX, RE-AIMED. Their control mutated
+    // the literal the walk used to assert; the walk reads the dictionary now,
+    // so the literal is gone and the defect they were guarding against has
+    // moved. What can still go stale is the DICTIONARY, so that is what this
+    // mutates: the product copy regressing to the obsolete wording.
+    id: "E4-ENGLISH-DIGEST-COPY-REGRESSES-TO-OBSOLETE-WORDING",
+    defect:
+      "the English verified-digest sentence reverts to the obsolete Verified wording, so the product ships copy the evidence record says was replaced",
+    file: DICT,
+    find: '"Checked: the digest was recomputed from the stored basis and matches."',
+    replace: '"Verified: the digest was recomputed from the stored basis and matches."',
+    guard: E4,
+    expect: "13.2i the English verified-digest copy is the current one",
+  },
+  {
     id: "E4-WALK-SKIPS-ENGLISH-DESKTOP",
     defect:
       "the English desktop walk is dropped, so the manifest still declares two locales and two viewports while only three of the four combinations are ever routed",
