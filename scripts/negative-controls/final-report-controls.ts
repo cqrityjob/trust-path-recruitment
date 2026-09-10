@@ -654,11 +654,10 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "E4-CAPTURE-15-DUPLICATES-CAPTURE-14",
     defect:
-      "the disagreement capture goes back to a full-page screenshot, which is byte-identical to the capture taken immediately before it -- the artifact grows and proves nothing more",
+      "the disagreement capture is clipped to the one-line badge instead of the assessors section, so it is 2 kB of a single span and shows neither assessor -- the shape of the mistake the verifier caught",
     file: EVIDENCE_SPEC,
-    find: "    await disagreement.screenshot({",
-    replace:
-      '    await shot(page, "15-en-1440-two-assessors-disagreement");\n    await page.screenshot({',
+    find: '      .locator("#fr-assessments")',
+    replace: "      .locator('[data-testid=\"fr-disagree\"]')",
     guard: E4,
     expect: "13.2k the disagreement capture is clipped to the assessors SECTION",
   },
