@@ -487,7 +487,7 @@ if (import.meta.main) {
   );
   // Said out loud, every run. An exception nobody is told about is how an
   // exception becomes a hole.
-  console.log(`  ${allowedLocalTokens} token(s) allowed as minted by THIS run's throwaway stack`);
+  console.log(`  ${allowedLocalTokens} token(s) allowed by EXACT DIGEST MATCH against that list`);
 
   if (findings.length > 0) {
     console.error("\nREFUSED: the evidence carries something that must not be published.\n");

@@ -1840,6 +1840,20 @@ console.log(
       !/Slutförd/.test(englishDesktopBeforeSwitch),
     "13.2f the English-desktop walk waits on the structural final document before changing language, not on stale translated copy",
   );
+  // TWICE A RUN HAS FAILED ON A HAND-WRITTEN TRANSLATION rather than on a
+  // defect: once on a Swedish status word that does not exist, once on
+  // "Verified: the digest was recomputed" when the product says "Checked:".
+  // Each cost a full pipeline run and told nobody anything true. The walk
+  // proves the sentence is RENDERED; section 10 proves what it says.
+  ok(
+    /copy\("sv", "iir\.readback\.verified"\)/.test(spec) &&
+      /copy\("en", "iir\.readback\.verified"\)/.test(spec),
+    "13.2g the walk reads the verified-digest sentence from the dictionary in BOTH languages, rather than typing out a translation",
+  );
+  ok(
+    !/Kontrollerad: summan räknades om|Verified: the digest was recomputed/.test(codeOnly(spec)),
+    "13.2h and no hand-typed copy of it survives anywhere in the walk",
+  );
   for (const [needle, state] of [
     ['data-testid="fr-disagree"', "both assessors and their disagreement"],
     [

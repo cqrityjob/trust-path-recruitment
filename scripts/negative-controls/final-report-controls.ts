@@ -468,6 +468,28 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "16.36d no report embeds the commit body or a contributor's email",
   },
 
+  {
+    id: "E4-WALK-TYPES-OUT-A-TRANSLATION",
+    defect:
+      "the walk hand-writes the English verified-digest sentence again instead of reading it from the dictionary, so a copy edit fails the evidence run for a wording mismatch rather than a defect -- which has already happened twice",
+    file: EVIDENCE_SPEC,
+    find: '    await expect(main(page)).toContainText(copy("en", "iir.readback.verified"));',
+    replace: "    await expect(main(page)).toContainText(/Verified: the digest was recomputed/);",
+    guard: E4,
+    expect: "13.2h and no hand-typed copy of it survives anywhere in the walk",
+  },
+  {
+    id: "E4-WALK-DROPS-THE-DICTIONARY-LOOKUP",
+    defect:
+      "the Swedish verified-digest assertion stops reading the dictionary, so the two languages drift apart again",
+    file: EVIDENCE_SPEC,
+    find: '  await expect(main(page)).toContainText(copy("sv", "iir.readback.verified"));',
+    replace: "  await expect(main(page)).toContainText(/Kontrollerad/);",
+    guard: E4,
+    expect:
+      "13.2g the walk reads the verified-digest sentence from the dictionary in BOTH languages",
+  },
+
   /* ---- All four language-and-viewport combinations -------------------- */
   {
     id: "E4-ENGLISH-DESKTOP-WAITS-ON-STALE-SWEDISH-COPY",

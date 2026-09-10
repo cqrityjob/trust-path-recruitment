@@ -51,6 +51,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { appendFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { dictionaries } from "../src/i18n/dictionaries";
 import { mkdirSync } from "node:fs";
 
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
@@ -266,6 +267,29 @@ async function signIn(page: Page, email: string) {
   await recordIssuedTokens(page);
 }
 
+/**
+ * A sentence the application actually ships, in the language asked for.
+ *
+ * ── WHY THIS IS NOT TYPED OUT ──────────────────────────────────────────
+ *
+ * Twice now a run has failed on a hand-written translation rather than on a
+ * defect: once waiting for a Swedish status word that does not exist, and
+ * once for "Verified: the digest was recomputed" when the product says
+ * "Checked: the digest was recomputed from the stored basis and matches."
+ * Both cost a full pipeline run and neither told anybody anything true.
+ *
+ * The walk's job is to prove the sentence IS RENDERED on this screen, in this
+ * language, at this width. What the sentence says is a separate claim, and it
+ * has its own home: `employer-final-report:check` section 10 asserts the
+ * wording, that both languages are complete, and that they differ. Splitting
+ * it this way means a copy edit updates one place and breaks neither.
+ */
+const copy = (lang: "sv" | "en", key: string): string => {
+  const value = (dictionaries[lang] as Record<string, string>)[key];
+  if (!value) throw new Error(`E4 evidence: no ${lang} copy for ${key}`);
+  return value;
+};
+
 const main = (page: Page) => page.locator("main").first();
 const doc = (page: Page, mode: "preview" | "final" | "history") =>
   page.locator(`article[data-report-mode="${mode}"]`);
@@ -420,7 +444,7 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   const final = doc(page, "final");
   await expect(final).toBeVisible({ timeout: 45_000 });
   await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
-  await expect(main(page)).toContainText(/Kontrollerad: summan räknades om/);
+  await expect(main(page)).toContainText(copy("sv", "iir.readback.verified"));
   await expect(main(page)).toContainText(/Version 1/);
   await expect(previewBtn).toHaveCount(0);
   await expectNoOverflow(page);
@@ -564,7 +588,7 @@ test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", a
     await expect(final).toContainText(/Finalised and immutable/);
     await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
     await expect(main(page)).toContainText(/Version 1/);
-    await expect(main(page)).toContainText(/Verified: the digest was recomputed/);
+    await expect(main(page)).toContainText(copy("en", "iir.readback.verified"));
     await expect(main(page).getByRole("button", { name: /^Preview the report$/ })).toHaveCount(0);
     await expectNoOverflow(page);
     await shot(page, "14-en-1440-immutable-final");
@@ -598,7 +622,7 @@ test("16-17 · SWEDISH MOBILE 375 · version 2 and the history it kept", async (
     const final = doc(page, "final");
     await expect(final).toBeVisible({ timeout: 30_000 });
     await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
-    await expect(main(page)).toContainText(/Kontrollerad: summan räknades om/);
+    await expect(main(page)).toContainText(copy("sv", "iir.readback.verified"));
     await expectNoOverflow(page);
     await shot(page, "16-sv-375-version-two");
   });
