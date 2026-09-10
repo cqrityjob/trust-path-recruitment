@@ -37,6 +37,7 @@ const DB_TEST = "scripts/db-test.sh";
 const DICT = "src/i18n/dictionaries.ts";
 const EVIDENCE_WF = ".github/workflows/e4-evidence.yml";
 const SCAN = "scripts/e4-evidence-scan.ts";
+const VERIFY = "scripts/e4-evidence-verify.ts";
 const MANIFEST = "scripts/e4-evidence-manifest.ts";
 const EVIDENCE_SPEC = "e2e/employer-final-report-evidence.spec.ts";
 
@@ -556,6 +557,78 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "  void String(`${OUT}/nothing.json`",
     guard: E4,
     expect: "13.2d each test's duration and each phase's duration are recorded",
+  },
+
+  /* ---- Does the artifact contain what the manifest says? -------------- */
+  {
+    id: "E4-ARTIFACT-NEVER-VERIFIED",
+    defect:
+      "the artifact is uploaded without checking that the manifest describes it, so a manifest that is wrong about its own contents becomes a false assurance in the one place a reviewer looks",
+    file: EVIDENCE_WF,
+    find: "      - name: Verify the artifact against its own manifest",
+    replace: "      - name: Take the manifest at its word",
+    guard: E4,
+    expect: "16.13c the artifact is verified BEFORE it is uploaded",
+  },
+  {
+    id: "E4-UPLOAD-IGNORES-THE-VERIFIER",
+    defect:
+      "the upload stops depending on the verifier, so an artifact that does not match its manifest is published anyway",
+    file: EVIDENCE_WF,
+    find: " && steps.verify.outcome == 'success'",
+    replace: "",
+    guard: E4,
+    expect: "16.13d and a manifest that does not describe the artifact publishes nothing",
+  },
+  {
+    id: "E4-VERIFIER-TRUSTS-THE-RECORDED-DIGESTS",
+    defect:
+      "the verifier stops recomputing digests, so the manifest can say anything about the bytes it ships",
+    file: VERIFY,
+    find: "  if (sha256(buf) !== entry.sha256) {",
+    replace: "  if (false) {",
+    guard: E4,
+    expect: "16.13e the verifier checks that every recorded digest is recomputed from the bytes",
+  },
+  {
+    id: "E4-VERIFIER-ACCEPTS-A-MISSING-CAPTURE",
+    defect:
+      "a capture the walk claims to take can go missing without failing the run, so the artifact quietly shrinks",
+    file: VERIFY,
+    find: "  if (!captures.has(name)) problems.push(`the capture ${name}.png was never taken`);",
+    replace: "  void name;",
+    guard: E4,
+    expect: "16.13e the verifier checks that every capture the walk claims is required by name",
+  },
+  {
+    id: "E4-VERIFIER-ACCEPTS-A-FAILED-WALK",
+    defect:
+      "a failed test no longer refuses the artifact, so evidence of a journey that did not complete is published as if it had",
+    file: VERIFY,
+    find: "    if (!spec.ok) problems.push(`the walk did not pass: ${spec.title}`);",
+    replace: "    void spec;",
+    guard: E4,
+    expect: "16.13e the verifier checks that a failed test refuses the artifact",
+  },
+  {
+    id: "E4-VERIFIER-ACCEPTS-ANOTHER-COMMIT",
+    defect:
+      "the manifest's head is no longer compared with the commit the job ran on, so an artifact from another commit is published as evidence for this one",
+    file: VERIFY,
+    find: "if (expectedHead && manifest.head !== expectedHead) {",
+    replace: "if (false) {",
+    guard: E4,
+    expect: "16.13e the verifier checks that the head recorded is the head the job ran on",
+  },
+  {
+    id: "E4-VERIFIER-PRINTS-NOTHING",
+    defect:
+      "the inventory stops being printed, so a reviewer who cannot download the artifact has no way to see what was in it or to check a copy against it",
+    file: VERIFY,
+    find: '  console.log("\\n  EVERY FILE (sha256 · bytes · path)");',
+    replace: "  // inventory not printed",
+    guard: E4,
+    expect: "16.13f and prints the whole inventory to the job log",
   },
 
   /* ---- The stack the evidence is taken against ----------------------- *

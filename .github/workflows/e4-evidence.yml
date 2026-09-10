@@ -430,6 +430,24 @@ jobs:
       # It is still `always()`-based rather than plain success(), because a
       # FAILED WALK must still publish its evidence: a failure's screenshots
       # and trace are how somebody finds out why. A failed SCAN must not.
+      # ── DOES THE ARTIFACT CONTAIN WHAT THE MANIFEST SAYS? ─────────────
+      #
+      # The manifest lists every file with a SHA-256 and asks a reviewer to
+      # believe it; nothing checked that those digests describe the bytes
+      # about to be uploaded, that the head recorded is the head this job ran
+      # on, or that the captures the walk claims to take were taken.
+      #
+      # It also prints the whole inventory to the job log. That is deliberate:
+      # a reviewer who cannot download the artifact -- an egress policy, an
+      # expired retention, a phone -- can still read what was in it, and can
+      # check a downloaded copy against this listing afterwards.
+      - name: Verify the artifact against its own manifest
+        id: verify
+        if: always()
+        env:
+          E4_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bun run scripts/e4-evidence-verify.ts
+
       # Destroyed BEFORE the upload, and before anything else can read it.
       # It holds digests rather than tokens, so it leaks nothing either way --
       # but a file whose whole purpose ends with the scan should not outlive
@@ -444,7 +462,7 @@ jobs:
           test ! -f "$f" && echo "allowlist destroyed"
 
       - name: Upload the evidence
-        if: always() && steps.leak_scan.outcome == 'success'
+        if: always() && steps.leak_scan.outcome == 'success' && steps.verify.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: e4-evidence-${{ github.event.pull_request.number || github.run_id }}-${{ github.run_attempt }}

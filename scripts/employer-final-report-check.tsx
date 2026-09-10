@@ -2030,6 +2030,32 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     /if:.*steps\.leak_scan\.outcome == 'success'/.test(uploadIf),
     "16.13b and the upload happens only if the scan PASSED — a red scan must publish nothing",
   );
+  // ── AND ONLY IF THE ARTIFACT MATCHES ITS OWN MANIFEST ──────────────
+  //
+  // The manifest lists every file with a digest and asks a reviewer to
+  // believe it. An artifact that misdescribes itself is worse than none: it
+  // is a false assurance in the one place a reviewer looks for assurance.
+  const verifyAt = wf.indexOf("Verify the artifact against its own manifest");
+  ok(verifyAt > 0 && verifyAt < uploadAt, "16.13c the artifact is verified BEFORE it is uploaded");
+  ok(
+    /steps\.verify\.outcome == 'success'/.test(uploadIf),
+    "16.13d and a manifest that does not describe the artifact publishes nothing",
+  );
+  const verify = read("scripts/e4-evidence-verify.ts");
+  for (const [needle, what] of [
+    ["does not match its recorded digest", "every recorded digest is recomputed from the bytes"],
+    ["was never taken", "every capture the walk claims is required by name"],
+    ["too small to be a screenshot", "an empty PNG is not counted as a capture"],
+    ["no trace was retained", "a trace must exist even on a green run"],
+    ["but this job ran on", "the head recorded is the head the job ran on"],
+    ["the walk did not pass", "a failed test refuses the artifact"],
+  ] as const) {
+    ok(verify.includes(needle), `16.13e the verifier checks that ${what}`);
+  }
+  ok(
+    /EVERY FILE \(sha256 · bytes · path\)/.test(verify) && /CAPTURES \(name/.test(verify),
+    "16.13f and prints the whole inventory to the job log, for a reviewer who cannot download it",
+  );
   ok(/if-no-files-found: error/.test(wf), "16.14 and an empty artifact is an error, not a pass");
   ok(/retention-days: 30/.test(wf), "16.15 retention is stated");
 
