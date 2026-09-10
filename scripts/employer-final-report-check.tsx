@@ -1820,9 +1820,23 @@ console.log(
     /Captured at HEAD/.test(index) && (/_pending_/.test(index) || /[0-9a-f]{40}/.test(index)),
     "13.8 the index names the HEAD the captures were taken at, or says plainly that none exist yet",
   );
+  // KEYED ON THE STATUS LINE, not on the word appearing anywhere.
+  //
+  // Its own negative control caught this: the file explains elsewhere that
+  // renaming or removing the BLOCKED requirement is not acceptable, so once a
+  // second occurrence of the word existed, replacing the STATUS line with
+  // "complete" left `/BLOCKED/` true and the assertion went on passing. The
+  // status of this phase is what the FIRST line claims, and that is what is
+  // read here.
+  const statusLine = (index.match(/^\*\*STATUS:.*$/m) ?? [""])[0];
+  ok(statusLine.length > 0, "13.9a the index opens with a STATUS line");
   ok(
-    /BLOCKED/.test(index) === /_pending_/.test(index),
+    /BLOCKED/.test(statusLine) === /_pending_/.test(index),
     "13.9 and calls #216 blocked exactly while no captures exist — never complete on an empty directory",
+  );
+  ok(
+    !/_pending_/.test(index) || /no captures exist yet/.test(statusLine),
+    "13.9b and says so in words a reader cannot mistake for a formality",
   );
 }
 
