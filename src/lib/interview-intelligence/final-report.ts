@@ -115,8 +115,7 @@ export function reportSteps(p: ReportProgress): readonly StepView[] {
   return REPORT_STEPS.map((step, i) => {
     if (i < at) return { step, state: "done" as const };
     if (i === at) return { step, state: "current" as const };
-    if (step === "finalise" && !p.canFinalise)
-      return { step, state: "notPermitted" as const };
+    if (step === "finalise" && !p.canFinalise) return { step, state: "notPermitted" as const };
     return { step, state: "ahead" as const };
   });
 }
@@ -202,8 +201,7 @@ export function finaliseEnabled(p: ReportProgress, busy: boolean): boolean {
   if (busy) return false;
   if (p.isFinal) return false;
   if (!p.canFinalise) return false;
-  return p.blockerCount === 0 && p.requirementCount > 0
-    && p.assessedCount >= p.requirementCount;
+  return p.blockerCount === 0 && p.requirementCount > 0 && p.assessedCount >= p.requirementCount;
 }
 
 /* ------------------------------------------------------------------ */

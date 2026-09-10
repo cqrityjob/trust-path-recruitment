@@ -2771,46 +2771,44 @@ export const getProcessQuality = createServerFn({ method: "GET" })
 export const getFinalReportReadback = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
-  .handler(
-    async ({ context, data }): Promise<{ readonly report: FinalReportReadback | null }> => {
-      const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {
-        _case_id: data.caseId,
-      });
-      if (error) {
-        const e = new Error(error.message) as Error & { code?: string };
-        e.code = error.code;
-        throw e;
-      }
-      const row = (Array.isArray(rows) ? rows[0] : null) as
-        | {
-            report_id: string;
-            version_number: number;
-            status: string;
-            finalised_at: string | null;
-            finalised_by: string | null;
-            content_hash: string | null;
-            content_hash_algorithm: string;
-            recomputed_hash: string | null;
-            hash_verified: boolean;
-          }
-        | null
-        | undefined;
-      if (!row) return { report: null };
-      return {
-        report: {
-          reportId: row.report_id,
-          versionNumber: row.version_number,
-          status: row.status,
-          finalisedAt: row.finalised_at,
-          finalisedBy: row.finalised_by,
-          contentHash: row.content_hash,
-          contentHashAlgorithm: row.content_hash_algorithm,
-          recomputedHash: row.recomputed_hash,
-          hashVerified: row.hash_verified,
-        },
-      };
-    },
-  );
+  .handler(async ({ context, data }): Promise<{ readonly report: FinalReportReadback | null }> => {
+    const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {
+      _case_id: data.caseId,
+    });
+    if (error) {
+      const e = new Error(error.message) as Error & { code?: string };
+      e.code = error.code;
+      throw e;
+    }
+    const row = (Array.isArray(rows) ? rows[0] : null) as
+      | {
+          report_id: string;
+          version_number: number;
+          status: string;
+          finalised_at: string | null;
+          finalised_by: string | null;
+          content_hash: string | null;
+          content_hash_algorithm: string;
+          recomputed_hash: string | null;
+          hash_verified: boolean;
+        }
+      | null
+      | undefined;
+    if (!row) return { report: null };
+    return {
+      report: {
+        reportId: row.report_id,
+        versionNumber: row.version_number,
+        status: row.status,
+        finalisedAt: row.finalised_at,
+        finalisedBy: row.finalised_by,
+        contentHash: row.content_hash,
+        contentHashAlgorithm: row.content_hash_algorithm,
+        recomputedHash: row.recomputed_hash,
+        hashVerified: row.hash_verified,
+      },
+    };
+  });
 
 /**
  * Every finalised version, newest first.
@@ -2822,38 +2820,36 @@ export const getFinalReportReadback = createServerFn({ method: "GET" })
 export const getReportVersions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
-  .handler(
-    async ({ context, data }): Promise<{ readonly versions: readonly ReportVersion[] }> => {
-      const { data: rows, error } = await context.supabase.rpc("scp_iv_report_versions", {
-        _case_id: data.caseId,
-      });
-      if (error) {
-        const e = new Error(error.message) as Error & { code?: string };
-        e.code = error.code;
-        throw e;
-      }
-      const list = (Array.isArray(rows) ? rows : []) as Array<{
-        report_id: string;
-        version_number: number;
-        status: string;
-        finalised_at: string | null;
-        finalised_by: string | null;
-        content_hash: string | null;
-        content_hash_algorithm: string;
-      }>;
-      return {
-        versions: list.map((r) => ({
-          reportId: r.report_id,
-          versionNumber: r.version_number,
-          status: r.status,
-          finalisedAt: r.finalised_at,
-          finalisedBy: r.finalised_by,
-          contentHash: r.content_hash,
-          contentHashAlgorithm: r.content_hash_algorithm,
-        })),
-      };
-    },
-  );
+  .handler(async ({ context, data }): Promise<{ readonly versions: readonly ReportVersion[] }> => {
+    const { data: rows, error } = await context.supabase.rpc("scp_iv_report_versions", {
+      _case_id: data.caseId,
+    });
+    if (error) {
+      const e = new Error(error.message) as Error & { code?: string };
+      e.code = error.code;
+      throw e;
+    }
+    const list = (Array.isArray(rows) ? rows : []) as Array<{
+      report_id: string;
+      version_number: number;
+      status: string;
+      finalised_at: string | null;
+      finalised_by: string | null;
+      content_hash: string | null;
+      content_hash_algorithm: string;
+    }>;
+    return {
+      versions: list.map((r) => ({
+        reportId: r.report_id,
+        versionNumber: r.version_number,
+        status: r.status,
+        finalisedAt: r.finalised_at,
+        finalisedBy: r.finalised_by,
+        contentHash: r.content_hash,
+        contentHashAlgorithm: r.content_hash_algorithm,
+      })),
+    };
+  });
 
 /** One finalised version, as the history read returns it. */
 export interface ReportVersion {

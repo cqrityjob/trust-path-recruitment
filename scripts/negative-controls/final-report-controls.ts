@@ -170,17 +170,19 @@ const MORE: readonly Mutation[] = [
       "the readback throws away the error code, so a refusal and a breakage become the same thing to the screen",
     file: RUNTIME,
     find: "      if (error) {\n        const e = new Error(error.message) as Error & { code?: string };\n        e.code = error.code;\n        throw e;\n      }\n      const row = (Array.isArray(rows) ? rows[0] : null) as",
-    replace: "      if (error) {\n        throw new Error(error.message);\n      }\n      const row = (Array.isArray(rows) ? rows[0] : null) as",
+    replace:
+      "      if (error) {\n        throw new Error(error.message);\n      }\n      const row = (Array.isArray(rows) ? rows[0] : null) as",
     guard: E4,
     expect: "9.6 and preserves the error code",
   },
   {
     id: "E4-FAILED-READ-IS-A-ZERO",
     defect:
-      "a failed or refused read is reported as `none`, so an outage renders as \"no report has been finalised\"",
+      'a failed or refused read is reported as `none`, so an outage renders as "no report has been finalised"',
     file: SEQ,
     find: 'export function readbackErrorOutcome(code: string | null | undefined): ReadbackOutcome {\n  return code && REFUSAL_CODES.has(code) ? { kind: "refused" } : { kind: "failed" };\n}',
-    replace: 'export function readbackErrorOutcome(_code: string | null | undefined): ReadbackOutcome {\n  return { kind: "none" };\n}',
+    replace:
+      'export function readbackErrorOutcome(_code: string | null | undefined): ReadbackOutcome {\n  return { kind: "none" };\n}',
     guard: E4,
     expect: "3.10 42501 is a refusal",
   },
@@ -199,7 +201,8 @@ const MORE: readonly Mutation[] = [
     defect: "an unverified readback is treated as trustworthy enough to present as the report",
     file: SEQ,
     find: 'export function readbackIsTrustworthy(o: ReadbackOutcome): boolean {\n  return o.kind === "verified";\n}',
-    replace: 'export function readbackIsTrustworthy(o: ReadbackOutcome): boolean {\n  return o.kind === "verified" || o.kind === "notVerified";\n}',
+    replace:
+      'export function readbackIsTrustworthy(o: ReadbackOutcome): boolean {\n  return o.kind === "verified" || o.kind === "notVerified";\n}',
     guard: E4,
     expect: "3.5 a mismatch is not",
   },
@@ -218,7 +221,8 @@ const MORE: readonly Mutation[] = [
     defect: "a digest mismatch is styled but never announced, so a screen reader never hears it",
     file: PANEL,
     find: '        <p role="alert" className="mt-1 text-sm text-foreground">\n          {t("iir.readback.notVerified")}',
-    replace: '        <p className="mt-1 text-sm text-foreground">\n          {t("iir.readback.notVerified")}',
+    replace:
+      '        <p className="mt-1 text-sm text-foreground">\n          {t("iir.readback.notVerified")}',
     guard: E4,
     expect: "9.15 and a mismatch is announced rather than only styled",
   },
@@ -228,8 +232,8 @@ const MORE: readonly Mutation[] = [
     id: "E4-TWO-STEPS-CURRENT",
     defect: "more than one act is current, so the page stops offering ONE clear next action",
     file: SEQ,
-    find: "    if (i === at) return { step, state: \"current\" as const };",
-    replace: "    if (i === at || i === at + 1) return { step, state: \"current\" as const };",
+    find: '    if (i === at) return { step, state: "current" as const };',
+    replace: '    if (i === at || i === at + 1) return { step, state: "current" as const };',
     guard: E4,
     expect: "1.5 exactly one act is current, in every combination",
   },
@@ -313,11 +317,10 @@ const MORE: readonly Mutation[] = [
   },
   {
     id: "E4-SEQUENCE-COLOUR-ONLY",
-    defect:
-      "the current act loses its aria-current, leaving weight and colour as the only signal",
+    defect: "the current act loses its aria-current, leaving weight and colour as the only signal",
     file: PANEL,
     find: '            aria-current={v.state === "current" ? "step" : undefined}',
-    replace: "            data-current={v.state === \"current\" ? \"step\" : undefined}",
+    replace: '            data-current={v.state === "current" ? "step" : undefined}',
     guard: E4,
     expect: "6.2 sv: and marked for a screen reader",
   },
@@ -349,7 +352,8 @@ const MORE: readonly Mutation[] = [
     find: '    "iir.seq.finalise": "Färdigställ rapporten",',
     replace: '    "iir.seq.finalise": "Färdigställ rapporten och rangordna kandidaten",',
     guard: E4,
-    expect: "10.5 and no string outside the \"does not do\" list mentions a recommendation or ranking",
+    expect:
+      '10.5 and no string outside the "does not do" list mentions a recommendation or ranking',
   },
 ];
 

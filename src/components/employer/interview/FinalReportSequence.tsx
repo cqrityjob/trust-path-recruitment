@@ -143,7 +143,10 @@ export function FinalReportReadbackPanel({
 
   if (outcome.kind === "idle" || outcome.kind === "loading") {
     return (
-      <section aria-labelledby="iir-rb" className="mt-4 rounded-lg border border-border bg-card p-4">
+      <section
+        aria-labelledby="iir-rb"
+        className="mt-4 rounded-lg border border-border bg-card p-4"
+      >
         <h3 id="iir-rb" className="text-base font-semibold text-foreground">
           {t("iir.readback.title")}
         </h3>
@@ -182,7 +185,10 @@ export function FinalReportReadbackPanel({
 
   if (outcome.kind === "none") {
     return (
-      <section aria-labelledby="iir-rb" className="mt-4 rounded-lg border border-border bg-card p-4">
+      <section
+        aria-labelledby="iir-rb"
+        className="mt-4 rounded-lg border border-border bg-card p-4"
+      >
         <h3 id="iir-rb" className="text-base font-semibold text-foreground">
           {t("iir.readback.title")}
         </h3>
@@ -215,7 +221,9 @@ export function FinalReportReadbackPanel({
 
       <dl className="mt-2.5 space-y-1 text-sm">
         <div className="flex flex-wrap gap-x-2">
-          <dt className="text-muted-foreground">{t("iir.readback.version").replace("{n}", String(r.versionNumber))}</dt>
+          <dt className="text-muted-foreground">
+            {t("iir.readback.version").replace("{n}", String(r.versionNumber))}
+          </dt>
         </div>
         {r.finalisedAt && (
           <div className="flex flex-wrap gap-x-2">
@@ -235,7 +243,9 @@ export function FinalReportReadbackPanel({
         </div>
       </dl>
 
-      {verified && <p className="mt-2 text-sm text-muted-foreground">{t("iir.readback.verified")}</p>}
+      {verified && (
+        <p className="mt-2 text-sm text-muted-foreground">{t("iir.readback.verified")}</p>
+      )}
       {r.contentHashAlgorithm === "md5" && (
         <p className="mt-1.5 text-sm text-muted-foreground">{t("iir.readback.legacyAlgo")}</p>
       )}
@@ -254,7 +264,10 @@ export function ReportVersionList({ versions }: { readonly versions: readonly Re
   const { t } = useT();
   if (versions.length === 0) return null;
   return (
-    <section aria-labelledby="iir-vers" className="mt-4 rounded-lg border border-border bg-card p-4">
+    <section
+      aria-labelledby="iir-vers"
+      className="mt-4 rounded-lg border border-border bg-card p-4"
+    >
       <h3 id="iir-vers" className="text-base font-semibold text-foreground">
         {t("iir.versions.title")}
       </h3>

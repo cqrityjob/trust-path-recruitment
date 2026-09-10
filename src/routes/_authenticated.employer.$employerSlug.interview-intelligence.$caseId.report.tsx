@@ -322,10 +322,7 @@ function Page() {
       <div className="mt-6 max-w-4xl space-y-4">
         <ReportSequence progress={progress} />
         {!isFinal && <FinaliseBoundary />}
-        <FinalReportReadbackPanel
-          outcome={readbackState}
-          onRetry={() => void readback.refetch()}
-        />
+        <FinalReportReadbackPanel outcome={readbackState} onRetry={() => void readback.refetch()} />
         <ReportVersionList versions={versions.data?.versions ?? []} />
       </div>
 
