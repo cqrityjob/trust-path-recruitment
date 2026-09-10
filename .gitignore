@@ -86,3 +86,8 @@ pw.shots.mjs
 # artifacts/employer-final-report-e4/INDEX.md carries the HEAD, the fixture
 # commands and the Playwright command that regenerate them.
 !/artifacts/employer-final-report-e4/
+# ...except the manifest, which every evidence RUN produces. It is a record of
+# one workflow run -- its HEAD, its toolchain, its file digests -- and belongs
+# in that run's artifact, not in the repository, where a stale copy would
+# describe a commit nobody is looking at.
+/artifacts/employer-final-report-e4/manifest.json

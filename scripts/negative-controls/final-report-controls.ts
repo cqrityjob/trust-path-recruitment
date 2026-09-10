@@ -35,10 +35,155 @@ const MIGRATION = "supabase/migrations/20261107090000_scp_iv_report_basis_integr
 const ROLLBACK = "supabase/rollback/20261107090000_scp_iv_report_basis_integrity_rollback.sql";
 const DB_TEST = "scripts/db-test.sh";
 const DICT = "src/i18n/dictionaries.ts";
+const EVIDENCE_WF = ".github/workflows/e4-evidence.yml";
 
 const E4 = "employer-final-report:check";
 
 const MUTATIONS: readonly Mutation[] = [
+  /* ---- The evidence pipeline's own safety ---------------------------- */
+  {
+    id: "E4-EVIDENCE-JOB-USES-PULL-REQUEST-TARGET",
+    defect:
+      "the evidence job runs on pull_request_target, so pull-request code executes with the base repository's secrets and write token",
+    file: EVIDENCE_WF,
+    find: "on:\n  pull_request:\n    branches:",
+    replace: "on:\n  pull_request_target:\n    branches:",
+    guard: E4,
+    expect: "16.1 the evidence job never uses pull_request_target",
+  },
+  {
+    id: "E4-EVIDENCE-JOB-KEEPS-CREDENTIALS",
+    defect: "the checkout keeps the workflow token, so anything the job runs could push",
+    file: EVIDENCE_WF,
+    find: "          persist-credentials: false",
+    replace: "          persist-credentials: true",
+    guard: E4,
+    expect: "16.3 the checkout leaves no pushable credential",
+  },
+  {
+    id: "E4-ISOLATION-GATE-AFTER-THE-FIXTURE",
+    defect:
+      "the loopback check moves after the fixture, so a misconfigured stack is written to before anything verifies where it points",
+    file: EVIDENCE_WF,
+    find: "      - name: Refuse anything that is not loopback",
+    replace: "      - name: Check loopback later, after the data is already written",
+    guard: E4,
+    expect: "16.5 there is an isolation gate",
+  },
+  {
+    id: "E4-LOOPBACK-CHECK-ACCEPTS-ANY-HOST",
+    defect:
+      "the API URL check accepts any host, so the walk can sign in and finalise against the owner project",
+    file: EVIDENCE_WF,
+    find: "            http://127.0.0.1:*|http://localhost:*) : ;;",
+    replace: "            *) : ;;",
+    guard: E4,
+    expect: "16.7 the API URL must be loopback",
+  },
+  {
+    id: "E4-LEAK-SCAN-AFTER-THE-UPLOAD",
+    defect:
+      "the artifact is uploaded before it is scanned, so a leak is published and then noticed",
+    file: EVIDENCE_WF,
+    find: "      - name: Scan the evidence for anything that must not leave",
+    replace: "      - name: Scan the evidence afterwards, once it is already public",
+    guard: E4,
+    expect: "16.13 the leak scan runs BEFORE the upload",
+  },
+  {
+    id: "E4-LEAK-SCAN-REDACTS-QUIETLY",
+    defect:
+      "the scan reports a finding and exits zero, so a leak becomes a log line nobody reads instead of a red build",
+    file: "scripts/e4-evidence-scan.ts",
+    find: "  process.exit(1);\n}\n\n// An empty artifact uploaded green is worse than no artifact",
+    replace:
+      "  process.exit(0);\n}\n\n// An empty artifact uploaded green is worse than no artifact",
+    guard: E4,
+    expect: "16.17 and fails the job rather than redacting quietly",
+  },
+  {
+    id: "E4-EMPTY-ARTIFACT-PUBLISHED-GREEN",
+    defect:
+      "an artifact with no screenshot is published as evidence, so the checks list shows evidence that does not exist",
+    file: EVIDENCE_WF,
+    find: "          if-no-files-found: error",
+    replace: "          if-no-files-found: ignore",
+    guard: E4,
+    expect: "16.14 and an empty artifact is an error, not a pass",
+  },
+  {
+    id: "E4-MANIFEST-DROPS-THE-HEAD",
+    defect:
+      "the manifest stops recording the HEAD, so nobody can tell whether the captures belong to the commit under review",
+    file: "scripts/e4-evidence-manifest.ts",
+    find: '  head: process.env.GITHUB_SHA ?? version("git", ["rev-parse", "HEAD"]),',
+    replace: '  capturedFrom: process.env.GITHUB_SHA ?? version("git", ["rev-parse", "HEAD"]),',
+    guard: E4,
+    expect: "16.19 the manifest records head",
+  },
+  {
+    id: "E4-WALK-RUNS-IN-PARALLEL",
+    defect:
+      "the walk runs with default workers, so two of them share one database, race the version counter and assert against each other's reports",
+    file: EVIDENCE_WF,
+    find: " --project=chromium --workers=1",
+    replace: " --project=chromium",
+    guard: E4,
+    expect: "16.11 the walk runs serially",
+  },
+  /* ---- What finalising MEANS ---------------------------------------- */
+  {
+    id: "E4-FINALISING-CLAIMS-A-CONCLUSION",
+    defect:
+      "finalising is described as approving a conclusion, which the model does not hold: the only persisted conclusion is the PANEL's, written by any case member, and a case without a panel has none at all",
+    file: SEQ,
+    find: '  "recordsWhoAndWhen",',
+    replace: '  "recordsWhoAndWhen",\n  "approvesTheConclusion",',
+    guard: E4,
+    expect: "15.1 what finalising DOES is stated as locking a basis",
+  },
+  {
+    id: "E4-OWNER-CONCLUSION-INVENTED-IN-COPY",
+    defect:
+      "the effects copy starts calling the frozen basis the owner's conclusion, so a reader believes a named human authored a judgement the record does not contain",
+    file: DICT,
+    find: '    "iir.effects.freezesTheBasis": "The basis is frozen exactly as it stands now",',
+    replace:
+      '    "iir.effects.freezesTheBasis": "Your conclusion is approved and frozen exactly as it stands now",',
+    guard: E4,
+    expect: "15.2 en: and the rendered copy says so too",
+  },
+  {
+    id: "E4-PANEL-PROSE-RELABELLED-AS-THE-OWNERS",
+    defect:
+      "the panel's conclusion is relabelled as the recruitment owner's, although scp_iv_panel_conclude is gated on any case member and finalisation on owner/admin -- two different people",
+    file: DICT,
+    find: '    "iir.doc.panel.title": "Panel conclusion",',
+    replace: '    "iir.doc.panel.title": "The recruitment owner\'s conclusion",',
+    guard: E4,
+    expect: "15.3 en: the only persisted conclusion is labelled the PANEL",
+  },
+  {
+    id: "E4-OWNER-CONCLUSION-IN-CLIENT-STATE",
+    defect:
+      "an owner conclusion is manufactured in client state, so the document looks more decisive than the governed model actually is",
+    file: SEQ,
+    find: "export function actorLabel(r: {",
+    replace:
+      "export function ownerConclusion(): string | null {\n  return null;\n}\n\nexport function actorLabel(r: {",
+    guard: E4,
+    expect: "15.4 and no owner conclusion is manufactured in client state",
+  },
+  {
+    id: "E4-LIMITATION-QUIETLY-DROPPED",
+    defect:
+      "the product-truth record stops saying that no recruitment-owner conclusion exists, so the gap becomes something only the schema knows",
+    file: "docs/employer/employer-final-report-product-truth.md",
+    find: "**There is no server-owned, persisted recruitment-owner conclusion.**",
+    replace: "**The recruitment owner records their conclusion.**",
+    guard: E4,
+    expect: "15.6 the product-truth record states the missing owner conclusion",
+  },
   /* ---- The digest ------------------------------------------------- */
   {
     id: "E4-HASH-BACK-TO-MD5",

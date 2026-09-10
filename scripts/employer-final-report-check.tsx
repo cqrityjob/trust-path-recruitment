@@ -1841,6 +1841,180 @@ console.log(
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
+console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to publish a secret");
+/* ══════════════════════════════════════════════════════════════════════ */
+{
+  // The workflow that produces the routed evidence is itself part of the
+  // safety argument: it signs a person in, finalises reports and writes
+  // findings. Every control below is a reason the walk cannot reach the owner
+  // project or publish something that must not leave, and each one is worth
+  // asserting because each one is a single line somebody could delete.
+  const WF = ".github/workflows/e4-evidence.yml";
+  const wf = read(WF);
+  // YAML comments stripped for the BANS: the workflow's own header explains
+  // why it never uses pull_request_target and needs no secret, and a ban that
+  // matched the explanation would forbid documenting the decision.
+  const wfSteps = wf.replace(/^\s*#.*$/gm, "");
+
+  ok(!/pull_request_target/.test(wfSteps), "16.1 the evidence job never uses pull_request_target");
+  ok(
+    /permissions:\s*\n\s*contents: read/.test(wf),
+    "16.2 and runs with contents: read and nothing more",
+  );
+  ok(/persist-credentials: false/.test(wf), "16.3 the checkout leaves no pushable credential");
+  ok(
+    !/secrets\./.test(wfSteps),
+    "16.4 and the job requires no secret at all — a job that needs none cannot leak one",
+  );
+
+  // The isolation gate, before any fixture or browser runs.
+  const gateAt = wf.indexOf("Refuse anything that is not loopback");
+  const fixtureAt = wf.indexOf("Seed the synthetic fixtures");
+  const browserAt = wf.indexOf("Capture the routed evidence");
+  ok(gateAt > 0, "16.5 there is an isolation gate");
+  ok(
+    gateAt < fixtureAt && gateAt < browserAt,
+    "16.6 and it runs BEFORE the fixture and before the browser",
+  );
+  for (const [needle, what] of [
+    ["ISOLATION REFUSED", "it fails closed with a named refusal"],
+    ["http://127.0.0.1:*|http://localhost:*", "the API URL must be loopback"],
+    ["postgresql://*@127.0.0.1:*|postgresql://*@localhost:*", "so must the database URL"],
+    ["wrygicdfxwjnrugduxnt", "the owner project ref is refused by name"],
+    [
+      "SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY",
+      "no hosted credential may be set",
+    ],
+  ] as const) {
+    ok(wf.includes(needle), `16.7 ${what}`);
+  }
+
+  // A real stack, not a bare database: Auth and PostgREST are the point.
+  ok(
+    /supabase start/.test(wf) && /supabase db reset/.test(wf),
+    "16.8 it starts the full local stack and replays the migration history",
+  );
+  ok(/supabase stop --no-backup/.test(wf), "16.9 and stops it");
+  const stopAt = wf.indexOf("Stop the local stack");
+  ok(/if: always\(\)/.test(wf.slice(stopAt, stopAt + 200)), "16.10 even when the walk failed");
+  ok(/--workers=1/.test(wf), "16.11 the walk runs serially — two workers would race one database");
+  ok(/E2E_LOCAL_STACK: "1"/.test(wf), "16.12 and only with the local-stack gate set");
+
+  // The artifact cannot be published blind.
+  const scanAt = wf.indexOf("Scan the evidence for anything that must not leave");
+  const uploadAt = wf.indexOf("Upload the evidence");
+  ok(scanAt > 0 && scanAt < uploadAt, "16.13 the leak scan runs BEFORE the upload");
+  ok(/if-no-files-found: error/.test(wf), "16.14 and an empty artifact is an error, not a pass");
+  ok(/retention-days: 30/.test(wf), "16.15 retention is stated");
+
+  const scan = read("scripts/e4-evidence-scan.ts");
+  for (const [needle, what] of [
+    ["wrygicdfxwjnrugduxnt", "the owner project ref"],
+    ["supabase\\.co", "a hosted Supabase URL"],
+    ["eyJ", "a JWT"],
+    ["service_role", "a service-role reference"],
+    ["sbp_", "a Supabase access token"],
+  ] as const) {
+    ok(scan.includes(needle), `16.16 the scan looks for ${what}`);
+  }
+  ok(
+    /process\.exit\(1\)/.test(scan) && /REFUSED/.test(scan),
+    "16.17 and fails the job rather than redacting quietly",
+  );
+  ok(
+    /no screenshot was captured/.test(scan),
+    "16.18 an artifact with no capture is refused — green and empty is worse than absent",
+  );
+
+  const manifest = read("scripts/e4-evidence-manifest.ts");
+  for (const key of [
+    "head",
+    "baseSha",
+    "workflowRunId",
+    "workflowRunUrl",
+    "capturedAtUtc",
+    "specSha256",
+    "workflowSha256",
+    "migrationTreeSha256",
+    "supabaseCli",
+    "playwright",
+    "locales",
+    "viewports",
+    "results",
+    "evidence",
+  ]) {
+    ok(manifest.includes(`${key}:`), `16.19 the manifest records ${key}`);
+  }
+  ok(/sha256: sha256\(readFileSync/.test(manifest), "16.20 and a SHA-256 for every evidence file");
+}
+
+/* ══════════════════════════════════════════════════════════════════════ */
+console.log("\n15. What finalising MEANS: locking a basis, not authoring a conclusion");
+/* ══════════════════════════════════════════════════════════════════════ */
+{
+  // ── THE FINDING THIS SECTION EXISTS FOR ────────────────────────────
+  //
+  // There is no server-owned, persisted recruitment-owner conclusion. The
+  // only conclusion the model holds is the PANEL's, and the two acts are
+  // gated on different roles: scp_iv_panel_conclude checks
+  // scp_iv_can_write_case (any case member), while finalisation checks
+  // ARRAY['owner','admin']. The concluding human and the finalising human
+  // need not be the same person, and a case with no panel carries no human
+  // conclusion at all.
+  //
+  // So clicking Finalise means "an authorised owner locked this basis as the
+  // record". It does NOT mean they authored or approved a conclusion. The
+  // screen must not imply otherwise, and nothing may manufacture an owner
+  // conclusion in client state to make the document look more decisive than
+  // the model actually is.
+  const dictSrc = read("src/i18n/dictionaries.ts");
+  const effects = F.FINALISE_EFFECTS as readonly string[];
+  ok(
+    !effects.some((e) => /conclusion|verdict|approve|decide|judgement/i.test(e)),
+    `15.1 what finalising DOES is stated as locking a basis, never as approving a conclusion (${effects.join(", ")})`,
+  );
+  for (const lang of ["sv", "en"] as const) {
+    const d = dictionaries[lang] as Record<string, string>;
+    const effectCopy = effects.map((e) => d[`iir.effects.${e}`] ?? "").join(" ");
+    ok(
+      effectCopy.length > 0 &&
+        !/slutsats|bedömning av kandidaten|conclusion|verdict|approv/i.test(effectCopy),
+      `15.2 ${lang}: and the rendered copy says so too`,
+    );
+  }
+  // The panel's prose is labelled as the PANEL's, never as the owner's.
+  for (const lang of ["sv", "en"] as const) {
+    const d = dictionaries[lang] as Record<string, string>;
+    ok(
+      /panel/i.test(d["iir.doc.panel.title"] ?? ""),
+      `15.3 ${lang}: the only persisted conclusion is labelled the PANEL's`,
+    );
+  }
+  ok(
+    !/ownerConclusion|owner_conclusion|recruiterConclusion|finaliserConclusion/i.test(
+      read("src/lib/interview-intelligence/final-report.ts") +
+        read(DOCUMENT) +
+        read(RUNTIME) +
+        read(ROUTE),
+    ),
+    "15.4 and no owner conclusion is manufactured in client state — the model has none to carry",
+  );
+  ok(!/iir\.doc\.owner(Conclusion|Verdict)/.test(dictSrc), "15.5 nor invented as copy");
+  // The limitation is written down where an owner will find it, rather than
+  // left as something only the schema knows.
+  const truth = read("docs/employer/employer-final-report-product-truth.md");
+  for (const [needle, what] of [
+    ["no server-owned, persisted recruitment-owner conclusion", "the missing owner conclusion"],
+    ["No correction reason is persisted for a report version", "the missing correction reason"],
+    ["different", "that the concluding and finalising roles differ"],
+    ["owner risk-acceptance item", "the legacy compatibility window"],
+  ] as const) {
+    ok(truth.includes(needle), `15.6 the product-truth record states ${what}`);
+  }
+  ok(/NOT SCHEDULED/.test(truth), "15.7 and that the CONTRACT step is still not scheduled");
+}
+
+/* ══════════════════════════════════════════════════════════════════════ */
 console.log("\n14. CUTOVER: no runtime path calls the legacy finalisation");
 /* ══════════════════════════════════════════════════════════════════════ */
 {
