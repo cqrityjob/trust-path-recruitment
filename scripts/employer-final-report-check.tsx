@@ -828,8 +828,8 @@ console.log(
     "8.8d and to a digest of the released content, so a later re-release cannot pass as this one",
   );
   ok(
-    /'findings',\s*er\.safety_flags/.test(builder),
-    "8.8e the released findings are carried, not just named",
+    /'findings',\s*er\.safety_flags,\s*'context',\s*er\.context,\s*'limitations_sv'/.test(builder),
+    "8.8e the released findings are carried in the bound result itself, not just digested",
   );
 
   /* ---- 8.9–8.11 · classified evidence ------------------------------- */
@@ -1239,13 +1239,9 @@ console.log("\n10. Swedish and English are both complete, and differ");
     `10.5 and no string outside the "does not do" list mentions a recommendation or ranking (${offending.join(", ")})`,
   );
   ok(
-    /verifier|verified|kontroller/i.test(
-      sv["iir.doc.cls.passport_disclosure"] + en["iir.doc.cls.passport_disclosure"],
-    ) &&
-      /ej verifierad|not verified/i.test(
-        sv["iir.doc.cls.passport_disclosure"] + " " + en["iir.doc.cls.passport_disclosure"],
-      ),
-    "10.6 the Passport disclosure badge says in words that it was NOT verified here",
+    /ej verifierad/i.test(sv["iir.doc.cls.passport_disclosure"]) &&
+      /not verified/i.test(en["iir.doc.cls.passport_disclosure"]),
+    "10.6 the Passport disclosure badge says in words, in each language, that it was NOT verified here",
   );
 }
 

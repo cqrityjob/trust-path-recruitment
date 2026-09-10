@@ -129,7 +129,7 @@ const MUTATIONS: readonly Mutation[] = [
     replace:
       "                          'findings', '[]'::jsonb,\n                          'context', er.context,\n",
     guard: E4,
-    expect: "8.8e the released findings are carried, not just named",
+    expect: "8.8e the released findings are carried in the bound result itself",
   },
   {
     id: "E4-SNAPSHOT-TABLE-READ-DIRECTLY",
@@ -493,7 +493,7 @@ const MORE: readonly Mutation[] = [
     find: '    "iir.doc.cls.passport_disclosure": "Passport disclosure (not verified here)",',
     replace: '    "iir.doc.cls.passport_disclosure": "Verified Passport material",',
     guard: E4,
-    expect: "10.6 the Passport disclosure badge says in words that it was NOT verified here",
+    expect: "10.6 the Passport disclosure badge says in words, in each language",
   },
   {
     id: "E4-UNNAMED-ACTOR-PRINTS-A-UUID",
