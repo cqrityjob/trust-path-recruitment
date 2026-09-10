@@ -22,7 +22,7 @@ import path from "node:path";
 import {
   buildInterviewContext,
   normaliseRequirements,
-  unlinkedContext,
+  standaloneContext,
   type ContextAssessmentInput,
   type ContextCvInput,
   type ContextInput,
@@ -186,6 +186,9 @@ const base: ContextInput = {
   cv: cqrityjobCv,
   assessment,
   assessmentPending: false,
+  // E3: how each read went, carried beside the content. The happy fixture
+  // says all four landed; the assertions below vary one at a time.
+  reads: { application: "ok", job: "ok", cv: "ok", assessment: "ok" },
 };
 
 /* ================================================================== */
@@ -194,7 +197,7 @@ const base: ContextInput = {
 
 const full = buildInterviewContext(base);
 
-ok(full.linked, "A · a case with an application produces a linked context");
+ok(full.link === "linked", "A · a case with an application produces a linked context");
 ok(full.candidateName === "Anna Lind", "A · the candidate is carried through");
 ok(full.appliedAt === "2026-08-01T09:00:00Z", "A · the application date is carried through");
 ok(full.applicationStatus === "in_review", "A · the application status is carried through");
@@ -270,7 +273,7 @@ const external = buildInterviewContext({
   cv: { presence: "external", submittedAt: "2026-08-01T09:00:00Z", document: null },
 });
 
-ok(external.linked, "D · an uploaded CV still produces a linked context");
+ok(external.link === "linked", "D · an uploaded CV still produces a linked context");
 ok(external.cvPresence === "external", "D · an uploaded CV is named as what it is");
 ok(external.requirements.length > 0, "D · the role requirements survive an external CV");
 ok(
@@ -381,7 +384,7 @@ ok(
 
 const noAssessment = buildInterviewContext({ ...base, assessment: null });
 
-ok(noAssessment.linked, "F · a case with no assessment still produces a linked context");
+ok(noAssessment.link === "linked", "F · a case with no assessment still produces a linked context");
 ok(noAssessment.assessmentReleasedAt === null, "F · no release date is claimed");
 ok(
   noAssessment.followUps.every((f) => f.reason === "requirement_to_cover"),
@@ -779,13 +782,72 @@ ok(
 /* Supporting behaviour                                                */
 /* ================================================================== */
 
-// An unlinked case is a first-class state, not an error: an employer may
+// A STANDALONE case is a first-class state, not an error: an employer may
 // interview for a role that was never advertised.
-const unlinked = buildInterviewContext({ ...base, application: null });
-ok(!unlinked.linked, "· a case with no application produces an unlinked context");
-ok(unlinked.requirements.length === 0, "· an unlinked context asserts no requirements");
-ok(unlinked.followUps.length === 0, "· an unlinked context asserts no follow-ups");
-ok(unlinkedContext("X").candidateName === "X", "· the unlinked context still names the candidate");
+//
+// E3 made the distinction below load-bearing. `application: null` no longer
+// decides on its own what happened -- the READ does. With the application read
+// reported `absent` there was nothing to fetch, and standalone is true. With
+// it reported `refused` or `failed` there WAS an application, and the same
+// null now produces `linkedUnreadable`. Both are asserted, because the whole
+// defect was that they used to be one answer.
+const standalone = buildInterviewContext({
+  ...base,
+  application: null,
+  reads: { application: "absent", job: "absent", cv: "absent", assessment: "absent" },
+});
+ok(standalone.link === "standalone", "· a case with no application produces a standalone context");
+ok(standalone.requirements.length === 0, "· a standalone context asserts no requirements");
+ok(standalone.followUps.length === 0, "· a standalone context asserts no follow-ups");
+ok(
+  standaloneContext("X").candidateName === "X",
+  "· the standalone context still names the candidate",
+);
+ok(
+  standaloneContext("X").reads.application === "absent",
+  "· and records that there was nothing to read, rather than that a read failed",
+);
+
+for (const failedRead of ["refused", "failed"] as const) {
+  const unreadable = buildInterviewContext({
+    ...base,
+    application: null,
+    reads: { application: failedRead, job: "failed", cv: "failed", assessment: "failed" },
+  });
+  ok(
+    unreadable.link === "linkedUnreadable",
+    `· an application the read reported "${failedRead}" is linkedUnreadable, NOT standalone`,
+  );
+  ok(
+    unreadable.reads.application === failedRead,
+    `· and the reason "${failedRead}" survives to the surface`,
+  );
+  // THE ASSERTION THE WHOLE DEFECT TURNED ON. A recruiter must never be told
+  // there is no advertised role because a read of ours did not land.
+  ok(
+    unreadable.link !== "standalone",
+    `· so no surface can render "${failedRead}" as an interview with no application`,
+  );
+  // And the CV must not be claimed absent either: "none" is a statement.
+  ok(
+    unreadable.cvPresence === "unreadable",
+    `· and the CV reads as unreadable rather than as absent under "${failedRead}"`,
+  );
+}
+
+// A LINKED context carries its reads through untouched, so a surface can tell
+// an advert with no requirements from an advert nobody fetched.
+const jobFailed = buildInterviewContext({
+  ...base,
+  job: null,
+  reads: { application: "ok", job: "failed", cv: "ok", assessment: "ok" },
+});
+ok(jobFailed.link === "linked", "· a failed advert read does not unlink the case");
+ok(jobFailed.reads.job === "failed", "· and the advert's own read outcome is carried");
+ok(
+  jobFailed.requirements.length === 0,
+  "· the requirement list is empty, which is why the read outcome beside it is the only thing that makes it honest",
+);
 
 // jobs.requirements is jsonb written by importers of several generations.
 ok(normaliseRequirements(["a", "b"]).length === 2, "· a string array normalises");

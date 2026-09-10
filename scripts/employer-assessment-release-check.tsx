@@ -448,7 +448,7 @@ function pRow(over: Partial<PipelineRow> & { attemptId: string }): PipelineRow {
     const html = renderToStaticMarkup(
       React.createElement(
         I18nProvider,
-        { initial: lang } as never,
+        { initialLang: lang } as never,
         React.createElement(ProcessContinuityStrip, {
           projection: proj,
           employerSlug: "acme",

@@ -427,6 +427,10 @@ export interface CaseDetail {
   readonly validationLabel: string | null;
   readonly packContentHash: string | null;
   readonly transcriptConfirmedAt: string | null;
+  /** The date after which this case's material is no longer kept, when one has
+   *  been set. Null means NOT CONFIGURED, and the surfaces say so rather than
+   *  rendering nothing -- see candidate-notice.ts. */
+  readonly retainUntil: string | null;
   readonly sources: readonly {
     readonly id: string;
     readonly kind: string;
@@ -691,7 +695,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
     const caseRes = await db
       .from("scp_interview_cases")
       .select(
-        "id, employer_id, title, candidate_display_name, application_id, job_id, status, pack_version_id, pack_content_hash, transcript_lawful_basis_confirmed_at, scp_interview_pack_versions(content_status, validation_label, scp_interview_packs(name_sv))",
+        "id, employer_id, title, candidate_display_name, application_id, job_id, status, pack_version_id, pack_content_hash, transcript_lawful_basis_confirmed_at, retain_until, scp_interview_pack_versions(content_status, validation_label, scp_interview_packs(name_sv))",
       )
       .eq("id", caseId)
       .maybeSingle();
@@ -1004,6 +1008,15 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       validationLabel: version?.validation_label ?? null,
       packContentHash: (c.pack_content_hash as string) ?? null,
       transcriptConfirmedAt: (c.transcript_lawful_basis_confirmed_at as string) ?? null,
+      // E3. Read so the employer can be shown the same retention answer the
+      // CANDIDATE is shown -- including when there is none. It has exactly one
+      // writer (scp_iv_confirm_transcript_basis, which requires a date before
+      // a transcript may be processed), so every case without a transcript has
+      // none, and until now nobody on either side was told that.
+      //
+      // One column off a row the caller already reads under RLS. No new
+      // policy, no new grant, no new read path.
+      retainUntil: (c.retain_until as string) ?? null,
       sources: sourceRows.map((s) => ({
         id: s.id as string,
         kind: s.source_kind as string,

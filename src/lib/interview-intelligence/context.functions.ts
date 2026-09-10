@@ -53,13 +53,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getApplicationSubmittedCv } from "@/lib/job-intelligence/applications.functions";
 import {
   buildInterviewContext,
+  emptyContext,
   normaliseRequirements,
-  unlinkedContext,
+  standaloneContext,
   type ContextAssessmentInput,
   type ContextCvInput,
   type ContextJobInput,
+  type ContextReads,
   type CvPresence,
-  type InterviewContext,
+  type InterviewContextResult,
+  type SourceRead,
 } from "./context";
 
 const caseInput = z.object({ caseId: z.string().uuid() });
@@ -77,54 +80,129 @@ const str = (v: unknown): string | null =>
 const strArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "") : [];
 
+/* ------------------------------------------------------------------ */
+/* Classifying a PostgREST failure                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A refusal and a breakage, told apart.
+ *
+ * These are different answers to the recruiter. "You are not allowed to see
+ * this" is actionable -- ask an admin, or accept it -- and retrying will never
+ * change it. "Something went wrong" is transient and a retry is exactly the
+ * right response. Rendering both as one message trains people to retry
+ * permissions they will never be granted, and to give up on outages that would
+ * have cleared.
+ *
+ * Postgres answers `42501` for insufficient_privilege; PostgREST wraps its own
+ * `PGRST301` (JWT problems) and `PGRST116` around the same class. Everything
+ * else is a breakage, which is the safe default: a code this product has never
+ * seen must not be reported as a decision somebody made.
+ */
+const REFUSAL_CODES = new Set(["42501", "PGRST301", "PGRST116"]);
+
+function classify(error: { code?: string | null; message?: string } | null): SourceRead {
+  if (!error) return "ok";
+  const code = String(error.code ?? "");
+  if (REFUSAL_CODES.has(code)) return "refused";
+  // A message-level fallback, because `getApplicationSubmittedCv` throws a
+  // plain Error rather than returning a PostgREST envelope.
+  if (
+    /permission denied|insufficient_privilege|not authoris|not authoriz/i.test(
+      String(error.message ?? ""),
+    )
+  )
+    return "refused";
+  return "failed";
+}
+
 /**
  * Everything the interview is entitled to inherit from its application.
  *
- * Returns an UNLINKED context rather than throwing when the case names no
- * application. That is a real and supported case — an employer interviewing
- * for a role with no advert — and it renders as a stated absence, not an
- * error.
+ * ── WHAT CHANGED, AND WHY IT HAD TO ────────────────────────────────────
  *
- * Each enrichment is best-effort in exactly the way the candidate page's
- * timeline is: losing the assessment brief must not cost the recruiter the
- * role requirements as well. A failure is logged and its section comes back
- * empty; the surface then says that section is unavailable, which is true,
- * rather than saying there is nothing there, which would not be.
+ * This function used to answer five materially different situations with two
+ * values, and the collapse was not cosmetic:
+ *
+ *   * a case whose APPLICATION could not be read returned `unlinkedContext`,
+ *     which every consuming screen renders as "standalone interview, no
+ *     advertised role". Not an omission -- an ASSERTION, and a false one: the
+ *     application was there, and the read had failed;
+ *   * a failed or refused ADVERT read returned `null`, which became an empty
+ *     requirements list, which reads as an advert that states no requirements;
+ *   * a failed ASSESSMENT read returned `pending: false`, which reads as an
+ *     application with no assessment;
+ *   * the case read's own two failure modes both threw a bare `Error`, and the
+ *     three consuming screens told them apart by substring-matching the
+ *     message.
+ *
+ * Now every source reports how ITS read went, and the top-level answer is a
+ * union. There is no path by which a failure becomes an absence, because
+ * `buildInterviewContext` decides `standalone` from `reads.application ===
+ * "absent"` and from nothing else.
+ *
+ * Each enrichment is still best-effort in the way the candidate page's
+ * timeline is -- losing the assessment brief must not cost the recruiter the
+ * role requirements as well. What changed is what the surface is then told.
  */
 export const getInterviewCaseContext = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
-  .handler(async ({ context, data }): Promise<InterviewContext> => {
+  .handler(async ({ context, data }): Promise<InterviewContextResult> => {
     const db = context.supabase;
 
     // THE GATE. RLS answers this, so "not yours" and "not there" are the same
-    // answer and neither confirms the case exists.
+    // answer and neither confirms the case exists. The result member is named
+    // for what is actually known rather than for one of the two guesses.
     const caseRes = await db
       .from("scp_interview_cases")
       .select("id, employer_id, application_id, job_id, candidate_display_name")
       .eq("id", data.caseId)
       .maybeSingle();
-    if (caseRes.error) throw new Error(caseRes.error.message);
-    if (!caseRes.data) throw new Error("INTERVIEW_CASE_NOT_FOUND");
+    if (caseRes.error) {
+      console.error("[interview-context] case read failed", caseRes.error);
+      return { kind: "caseReadFailed" };
+    }
+    if (!caseRes.data) return { kind: "caseNotFoundOrRefused" };
 
     const c = caseRes.data as Row;
     const candidateName = String(c.candidate_display_name ?? "");
     const applicationId = str(c.application_id);
     const employerId = String(c.employer_id);
 
-    if (!applicationId) return unlinkedContext(candidateName);
+    // NO application named. The one situation in which "standalone" is true,
+    // and the only path that reaches it.
+    if (!applicationId) {
+      return { kind: "context", context: standaloneContext(candidateName) };
+    }
 
     // ── The application ────────────────────────────────────────────────
     const { data: appRows, error: appErr } = await db.rpc("scp_application_candidate", {
       _application_id: applicationId,
     });
-    if (appErr) throw new Error(appErr.message);
     const a = (Array.isArray(appRows) ? appRows[0] : appRows) as Row | undefined;
-    // The case says it has an application and the application read says
-    // otherwise. That is a link to a row this caller may not read (or one that
-    // has since been deleted), and the honest answer is the unlinked context —
-    // not a partly-filled one implying we know more than we do.
-    if (!a) return unlinkedContext(candidateName);
+
+    // THE DEFECT, CORRECTED. The case says it has an application and the read
+    // did not produce one. That is a row this caller may not read, a row that
+    // has been deleted, or a read that broke -- and NONE of them is "this
+    // interview has no application". The link is `linkedUnreadable`, every
+    // downstream section is unavailable rather than empty, and the surface
+    // says what it cannot show.
+    if (appErr || !a) {
+      if (appErr) console.error("[interview-context] application unavailable", appErr);
+      return {
+        kind: "context",
+        context: emptyContext(candidateName, "linkedUnreadable", {
+          // `absent` only when the read SUCCEEDED and produced no row -- which
+          // for an application id taken from the case row means the row is
+          // gone or refused, so it is still not a standalone interview.
+          application: appErr ? classify(appErr) : "refused",
+          job: "failed",
+          cv: "failed",
+          assessment: "failed",
+        }),
+      };
+    }
 
     const application = {
       status: String(a.application_status ?? ""),
@@ -145,14 +223,23 @@ export const getInterviewCaseContext = createServerFn({ method: "GET" })
       readAssessment(db, applicationId),
     ]);
 
-    return buildInterviewContext({
-      candidateName,
-      application,
-      job,
-      cv,
-      assessment: assessment.brief,
-      assessmentPending: assessment.pending,
-    });
+    return {
+      kind: "context",
+      context: buildInterviewContext({
+        candidateName,
+        application,
+        job: job.value,
+        cv: cv.value,
+        assessment: assessment.brief,
+        assessmentPending: assessment.pending,
+        reads: {
+          application: "ok",
+          job: job.read,
+          cv: cv.read,
+          assessment: assessment.read,
+        },
+      }),
+    };
   });
 
 /* ------------------------------------------------------------------ */
@@ -228,12 +315,25 @@ export const getApplicationInterviewStart = createServerFn({ method: "GET" })
  *  `employer_id` is in the filter as well as the id. RLS on `jobs` already
  *  scopes this, and the redundancy is deliberate: a policy loosened later for
  *  a public job board must not silently widen what an interview inherits. */
+/** One source read, with its outcome attached.
+ *
+ *  The three helpers below used to return `T | null`, and `null` meant three
+ *  different things: nothing to read, a refusal, and a breakage. The caller
+ *  could not tell them apart, so the surface could not either -- which is how
+ *  a failed advert read reached a recruiter as an advert stating no
+ *  requirements. */
+interface Sourced<T> {
+  readonly value: T | null;
+  readonly read: SourceRead;
+}
+
 async function readJob(
   db: Db,
   jobId: string | null,
   employerId: string,
-): Promise<ContextJobInput | null> {
-  if (!jobId) return null;
+): Promise<Sourced<ContextJobInput>> {
+  // The application names no job. A real answer, and the only `absent` here.
+  if (!jobId) return { value: null, read: "absent" };
   const { data, error } = await db
     .from("jobs")
     .select(
@@ -245,24 +345,30 @@ async function readJob(
     .maybeSingle();
   if (error) {
     console.error("[interview-context] job requirements unavailable", error);
-    return null;
+    return { value: null, read: classify(error) };
   }
-  if (!data) return null;
+  // The application names a job and the read produced no row: it is gone, or
+  // this employer's own filter excluded it. Either way the requirements are
+  // NOT known, and an empty list would say they are known to be empty.
+  if (!data) return { value: null, read: "refused" };
   // `jobs` is not in the generated Database types as a selectable shape this
   // narrow, so the typed client widens the result rather than describing it.
   // Through `unknown`, because the two types genuinely do not overlap and a
   // direct assertion would be the compiler agreeing to something untrue.
   const j = data as unknown as Row;
   return {
-    titleSv: str(j.title_sv),
-    titleEn: str(j.title_en),
-    requirements: normaliseRequirements(j.requirements),
-    formalRequirements: strArray(j.formal_requirement_ids),
-    languageRequirements: strArray(j.language_requirements),
-    experienceLevel: str(j.experience_level),
-    regulated: Boolean(j.regulated),
-    securityVettingMentioned: Boolean(j.security_vetting_mentioned),
-    drivingLicenceRequired: Boolean(j.driving_licence_required),
+    read: "ok",
+    value: {
+      titleSv: str(j.title_sv),
+      titleEn: str(j.title_en),
+      requirements: normaliseRequirements(j.requirements),
+      formalRequirements: strArray(j.formal_requirement_ids),
+      languageRequirements: strArray(j.language_requirements),
+      experienceLevel: str(j.experience_level),
+      regulated: Boolean(j.regulated),
+      securityVettingMentioned: Boolean(j.security_vetting_mentioned),
+      drivingLicenceRequired: Boolean(j.driving_licence_required),
+    },
   };
 }
 
@@ -275,7 +381,7 @@ async function readJob(
  *  the application page shows can never disagree — and the omissions that read
  *  makes (the candidate's private title for the document above all) hold here
  *  without being restated. */
-async function readCv(applicationId: string): Promise<ContextCvInput | null> {
+async function readCv(applicationId: string): Promise<Sourced<ContextCvInput>> {
   try {
     const submitted = await getApplicationSubmittedCv({ data: { applicationId } });
     const presence: CvPresence = submitted.unreadable
@@ -284,13 +390,18 @@ async function readCv(applicationId: string): Promise<ContextCvInput | null> {
         ? "cqrityjob_cv"
         : "external";
     return {
-      presence,
-      submittedAt: submitted.submittedAt,
-      document: submitted.document,
+      read: "ok",
+      value: {
+        presence,
+        submittedAt: submitted.submittedAt,
+        document: submitted.document,
+      },
     };
   } catch (err) {
     console.error("[interview-context] submitted CV unavailable", err);
-    return null;
+    // This one throws a plain Error rather than a PostgREST envelope, so the
+    // classification falls to the message check inside `classify`.
+    return { value: null, read: classify(err as { message?: string }) };
   }
 }
 
@@ -310,17 +421,24 @@ async function readCv(applicationId: string): Promise<ContextCvInput | null> {
 async function readAssessment(
   db: Db,
   applicationId: string,
-): Promise<{ brief: ContextAssessmentInput | null; pending: boolean }> {
+): Promise<{ brief: ContextAssessmentInput | null; pending: boolean; read: SourceRead }> {
   const { data: rows, error } = await db.rpc("scp_application_assessments", {
     _application_id: applicationId,
   });
   if (error) {
     console.error("[interview-context] application assessments unavailable", error);
-    return { brief: null, pending: false };
+    // `pending: false` here used to mean "no assessment is on its way", which
+    // is a claim this read is in no position to make. It still returns false,
+    // because there is no third value for a boolean -- but `read` now carries
+    // the reason, and the surface renders the section as unavailable rather
+    // than as empty. The boolean is no longer read alone.
+    return { brief: null, pending: false, read: classify(error) };
   }
 
   const attempts = (Array.isArray(rows) ? rows : []) as Row[];
-  if (attempts.length === 0) return { brief: null, pending: false };
+  // Genuinely none. The only `absent` on this path, and the only state that
+  // may be rendered as "no assessment has been sent".
+  if (attempts.length === 0) return { brief: null, pending: false, read: "absent" };
 
   // Newest released attempt. `released_at` rather than `report_available`,
   // because the snapshot's existence is what this read depends on.
@@ -330,7 +448,9 @@ async function readAssessment(
 
   const pending = released.length === 0;
   const attemptId = str(released[0]?.attempt_id);
-  if (!attemptId) return { brief: null, pending };
+  // Attempts exist and none is released. A complete, correct answer: the
+  // recruiter is told one is on its way, and that IS the state.
+  if (!attemptId) return { brief: null, pending, read: "ok" };
 
   // The employer read contract (scp_employer_report, 20261024090000): the
   // released employer document, already stripped of everything internal --
@@ -344,20 +464,20 @@ async function readAssessment(
   });
   if (snapErr) {
     console.error("[interview-context] released brief unavailable", snapErr);
-    return { brief: null, pending };
+    return { brief: null, pending, read: classify(snapErr) };
   }
   // The entry point returns nothing for a snapshot issued by another
   // organisation, and "released to somebody else" is correctly
   // indistinguishable from "not released" here.
   const snap = (Array.isArray(docs) ? docs[0] : undefined) as Row | undefined;
-  if (!snap) return { brief: null, pending };
+  if (!snap) return { brief: null, pending, read: "ok" };
 
   const b = ((snap as Row).brief ?? null) as Row | null;
   // An employer-audience snapshot with no brief predates 20260830093000. The
   // competency report still exists and the employer can still read it on the
   // assessment page; this briefing simply has nothing governed to show, and
   // says so rather than assembling something out of the older payload.
-  if (!b) return { brief: null, pending };
+  if (!b) return { brief: null, pending, read: "ok" };
 
   const observedRows = Array.isArray(b.observed) ? (b.observed as Row[]) : [];
   // `interview_guide` is the brief's own ordered selection of PUBLISHED
@@ -368,6 +488,7 @@ async function readAssessment(
 
   return {
     pending: false,
+    read: "ok",
     brief: {
       releasedAt: String((snap as Row).released_at ?? ""),
       observed: observedRows.map((o) => ({

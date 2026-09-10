@@ -60,6 +60,7 @@ import {
   setSessionState,
 } from "@/lib/interview-intelligence/runtime.functions";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
+import { contextOf } from "@/components/employer/interview/InterviewContextOutcome";
 import type { FollowUpReason } from "@/lib/interview-intelligence/context";
 
 export const Route = createFileRoute(
@@ -483,7 +484,24 @@ function Page() {
     ...(question?.probes ?? []).filter((p) => CLARIFY_PURPOSES.includes(p.purpose)),
     ...d.generalProbes.filter((p) => CLARIFY_PURPOSES.includes(p.purpose)),
   ];
-  const contextAreas = contextQ.data?.linked ? contextQ.data.followUps : [];
+  // The briefing areas, and whether their absence means anything.
+  //
+  // `contextQ.data?.linked ? ... : []` produced an empty list for a case whose
+  // application could not be read, and the panel below then rendered nothing
+  // at all -- silently, mid-interview, with no indication that there had been
+  // something to show. An interviewer cannot tell "no areas to keep in mind"
+  // from "we did not fetch them" by looking at a gap.
+  const liveContext = contextOf(contextQ.data);
+  const contextAreas = liveContext?.link === "linked" ? liveContext.followUps : [];
+  // Whether the SILENCE is honest. True only when we actually know there is
+  // nothing; anything else says so in a sentence.
+  const contextAreasKnown =
+    liveContext?.link === "standalone" ||
+    (liveContext?.link === "linked" &&
+      liveContext.reads.job !== "failed" &&
+      liveContext.reads.job !== "refused" &&
+      liveContext.reads.assessment !== "failed" &&
+      liveContext.reads.assessment !== "refused");
   const contextHidden = Math.max(0, contextAreas.length - CONTEXT_AREAS_SHOWN);
   const completed = session.status === "completed";
 
@@ -1065,6 +1083,18 @@ function Page() {
                       {t("iic.more").replace("{n}", String(contextHidden))}
                     </p>
                   )}
+                </SupportGroup>
+              )}
+
+              {/* NOTHING TO SHOW, AND WHY. An empty briefing used to render as
+                  an absent panel, which is indistinguishable from a briefing
+                  that was never fetched -- during the interview itself, when
+                  the interviewer has the least opportunity to go and check. */}
+              {contextAreas.length === 0 && !contextAreasKnown && (
+                <SupportGroup title={t("iiu.lv.context.areas")}>
+                  <p role="status" className="text-[11px] leading-relaxed text-foreground">
+                    {t("iic.explore.partial")}
+                  </p>
                 </SupportGroup>
               )}
 

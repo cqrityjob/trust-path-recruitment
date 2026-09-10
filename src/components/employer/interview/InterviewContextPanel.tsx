@@ -45,6 +45,7 @@ import type {
   FollowUpArea,
   FollowUpReason,
   InterviewContext,
+  SourceRead,
 } from "@/lib/interview-intelligence/context";
 import { Disclosure, Eyebrow, Field, Nothing, Section, Surface } from "./InterviewLayout";
 
@@ -226,12 +227,17 @@ export function InterviewContextPanel({
   applicationId,
   isLoading,
   isError,
+  onRetry,
 }: {
   context: InterviewContext | null;
   employerSlug: string;
   applicationId: string | null;
   isLoading: boolean;
   isError: boolean;
+  /** Re-runs the context read without leaving the route. Offered only where a
+   *  retry could change the answer: a refusal is a decision, and a button that
+   *  invites somebody to keep asking is a button that wastes their time. */
+  onRetry?: () => void;
 }) {
   const { t, lang } = useT();
 
@@ -254,10 +260,45 @@ export function InterviewContextPanel({
       </Section>
     );
 
-  if (!context.linked)
+  // ── STANDALONE, AND THE THING IT MUST NOT BE CONFUSED WITH ────────
+  //
+  // `standalone` is a supported product state: an employer may interview for
+  // a role that has no advert, and this panel says so plainly. It used to be
+  // reachable by a second route -- a case that HAD an application whose read
+  // did not succeed -- and on that route the sentence was false in the most
+  // damaging way available: it told a recruiter there was no advertised role
+  // when there was one, and they prepared accordingly.
+  if (context.link === "standalone")
     return (
       <Section id="ii-context" title={t("iic.heading")} description={t("iic.lede")}>
         <Nothing hint={t("iic.unlinked.hint")}>{t("iic.unlinked")}</Nothing>
+      </Section>
+    );
+
+  // The other route, now saying what it actually is: there IS an application,
+  // and we could not read it. Nothing below is claimed, and the retry is
+  // offered because a breakage may clear.
+  if (context.link === "linkedUnreadable")
+    return (
+      <Section id="ii-context" title={t("iic.heading")} description={t("iic.lede")}>
+        <Nothing
+          hint={t(
+            context.reads.application === "refused"
+              ? "iic.linkedUnreadable.refused.hint"
+              : "iic.linkedUnreadable.failed.hint",
+          )}
+        >
+          {t("iic.linkedUnreadable")}
+        </Nothing>
+        {onRetry && context.reads.application !== "refused" && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-3 inline-flex min-h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {t("iic.retry")}
+          </button>
+        )}
       </Section>
     );
 
@@ -286,7 +327,20 @@ export function InterviewContextPanel({
       <Surface muted>
         <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field label={t("iic.field.candidate")}>{context.candidateName}</Field>
-          <Field label={t("iic.field.role")}>{role ?? t("iic.field.noRole")}</Field>
+          <Field label={t("iic.field.role")}>
+            {role ??
+              t(
+                // THREE ANSWERS, NOT TWO. "No advertised role" is a claim, and
+                // it may only be made when the advert was actually read.
+                context.reads.job === "absent"
+                  ? "iic.field.noRole"
+                  : context.reads.job === "refused"
+                    ? "iic.field.roleRefused"
+                    : context.reads.job === "failed"
+                      ? "iic.field.roleUnavailable"
+                      : "iic.field.noRole",
+              )}
+          </Field>
           <Field label={t("iic.field.applied")}>
             {context.appliedAt ? context.appliedAt.slice(0, 10) : "—"}
           </Field>
@@ -300,10 +354,12 @@ export function InterviewContextPanel({
       <div className="mt-6">
         <Eyebrow>{t("iic.known")}</Eyebrow>
         <div className="mt-2 space-y-3">
-          {known.length === 0 ? (
+          {known.length > 0 ? (
+            <FactList facts={known} lang={lang} />
+          ) : context.reads.cv === "ok" || context.reads.cv === "absent" ? (
             <Nothing hint={t("iic.known.none.hint")}>{t("iic.known.none")}</Nothing>
           ) : (
-            <FactList facts={known} lang={lang} />
+            <Nothing hint={t("iic.known.partial.hint")}>{t("iic.known.partial")}</Nothing>
           )}
 
           {/* The cover note is the candidate's own prose and can run long.
@@ -320,6 +376,7 @@ export function InterviewContextPanel({
           <AssessmentState
             releasedAt={context.assessmentReleasedAt}
             pending={context.assessmentPending}
+            read={context.reads.assessment}
           />
         </div>
       </div>
@@ -331,10 +388,20 @@ export function InterviewContextPanel({
           {t("iic.explore.note")}
         </p>
         <div className="mt-2">
-          {context.followUps.length === 0 ? (
+          {context.followUps.length > 0 ? (
+            <FollowUpList areas={context.followUps} lang={lang} />
+          ) : /* An empty list is only "nothing to explore" when BOTH sources
+                 that feed it were actually read. The advert contributes the
+                 requirements to cover and the released brief contributes the
+                 governed guide; if either did not come back, the honest
+                 sentence is that the list is incomplete, not that it is
+                 empty. */
+          context.reads.job === "ok" &&
+            context.reads.assessment !== "failed" &&
+            context.reads.assessment !== "refused" ? (
             <Nothing>{t("iic.explore.none")}</Nothing>
           ) : (
-            <FollowUpList areas={context.followUps} lang={lang} />
+            <Nothing hint={t("iic.explore.partial.hint")}>{t("iic.explore.partial")}</Nothing>
           )}
         </div>
       </div>
@@ -379,8 +446,24 @@ function CvPresenceLine({
  *
  *  Silence here would be read as "no assessment", which is wrong when one is
  *  assigned and unreleased, and unhelpful when there genuinely is none. */
-function AssessmentState({ releasedAt, pending }: { releasedAt: string | null; pending: boolean }) {
+function AssessmentState({
+  releasedAt,
+  pending,
+  read,
+}: {
+  releasedAt: string | null;
+  pending: boolean;
+  read: SourceRead;
+}) {
   const { t } = useT();
+  // FIRST, and before anything is said about what exists. `pending: false`
+  // used to reach this function from a FAILED read and render as "no
+  // assessment has been sent" -- a statement about the candidate made on the
+  // strength of an outage of ours.
+  if (read === "refused")
+    return <Nothing hint={t("iic.assessment.refused.hint")}>{t("iic.assessment.refused")}</Nothing>;
+  if (read === "failed")
+    return <Nothing hint={t("iic.assessment.failed.hint")}>{t("iic.assessment.failed")}</Nothing>;
   if (releasedAt)
     return (
       <p className="text-xs leading-relaxed text-muted-foreground">

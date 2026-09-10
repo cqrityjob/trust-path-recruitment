@@ -386,9 +386,27 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
     ctx.includes("const jobId = str(a.job_id);"),
     "4 · the interview's job is read from the application row, not the request",
   );
+  // A case that names no application yields the STANDALONE context, and only
+  // that path may reach it.
+  //
+  // E3 split what used to be one `unlinkedContext(name)` in two, because the
+  // server function returned it for two situations: a case with no
+  // application, and a case whose application could not be READ. The second
+  // rendered as "standalone interview, no advertised role" -- an assertion,
+  // about a case that had an application all along. The assertion here is
+  // therefore now BOTH halves: the happy path reaches `standaloneContext`, and
+  // the unreadable path reaches something else.
   ok(
-    ctx.includes("if (!applicationId) return unlinkedContext(candidateName)"),
-    "4 · and a case with no application yields an unlinked context, never a guess",
+    ctx.includes('return { kind: "context", context: standaloneContext(candidateName) }'),
+    "4 · and a case with no application yields the standalone context, never a guess",
+  );
+  ok(
+    /if \(appErr \|\| !a\)[\s\S]{0,600}?linkedUnreadable/.test(ctx),
+    "4 · while an application that could NOT be read is linkedUnreadable, never standalone",
+  );
+  ok(
+    !/if \(!a\) return unlinkedContext|if \(!a\) return standaloneContext/.test(ctx),
+    "4 · and no path turns an unreadable application into a case without one",
   );
   const iiCase = codeOnly(read(ROUTES.iiCase));
   ok(
@@ -407,9 +425,32 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   // be reconciled with the advert it came from.
   ok(!/\{d\.packName \?\? d\.title\}/.test(iiCase), "4 · the guide is not printed as the role");
   ok(iiCase.includes("{advertisedRole}"), "4 · the advertised role is its own value");
+  // The role's LAST resort is "no advertised role" and never a title.
+  //
+  // The window is wider than it was because E3 put three answers in front of
+  // it: an unreadable application, a refused advert read and a failed advert
+  // read each have their own sentence now, and only a successfully read advert
+  // with no title reaches the original one. What must never appear anywhere in
+  // that chain is `packName` or `title`.
   ok(
-    /advertisedRole =[\s\S]{0,400}?continuity\.role\.unknown/.test(iiCase),
+    /advertisedRole =[\s\S]{0,1400}?continuity\.role\.unknown/.test(iiCase),
     "4 · which falls back to 'no advertised role', never to a title",
+  );
+  const roleChain = iiCase.slice(
+    iiCase.indexOf("const advertisedRole ="),
+    iiCase.indexOf("const linkage ="),
+  );
+  ok(roleChain.length > 0, "4 · the role chain is where it is expected to be");
+  ok(
+    !/packName|d\.title/.test(roleChain),
+    "4 · and no branch of it reaches for the guide's name or the internal title",
+  );
+  // A READ THAT DID NOT LAND IS NOT A ROLE-LESS CASE. `continuity.role.unknown`
+  // says this case has no advertised role; it must not be the answer to an
+  // application or an advert nobody could fetch.
+  ok(
+    roleChain.includes("linkedUnreadable") && roleChain.includes("reads.job"),
+    "4 · and an unread application or advert gets its own answer rather than 'no advertised role'",
   );
   // Scoped to the DERIVATION, because the render legitimately names the guide
   // and the internal title a few lines later -- under their own labels, which
