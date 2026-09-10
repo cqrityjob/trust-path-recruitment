@@ -121,6 +121,25 @@ for (const [name, entry] of captures) {
     problems.push(`${name}.png is only ${entry.bytes} bytes — too small to be a screenshot`);
 }
 
+/* ── 3b · no capture is a duplicate of another ─────────────────────── */
+//
+// FOUND BY READING THE INVENTORY. Captures 14 and 15 came back byte-for-byte
+// identical: two entries claiming to show different things were the same
+// image, and the artifact was one file larger for nothing. A capture that
+// duplicates another proves nothing the other does not already prove, and
+// listing it as separate evidence overstates what was captured.
+const byDigest = new Map<string, string[]>();
+for (const [name, entry] of captures) {
+  byDigest.set(entry.sha256, [...(byDigest.get(entry.sha256) ?? []), name]);
+}
+for (const [digest, names] of byDigest) {
+  if (names.length > 1) {
+    problems.push(
+      `${names.join(" and ")} are the same image (${digest.slice(0, 16)}…) — one of them shows nothing the other does not`,
+    );
+  }
+}
+
 /* ── 4 · both languages at both widths are represented ─────────────── */
 for (const marker of ["-sv-1440-", "-en-1440-", "-sv-375-", "-en-375-"]) {
   const seen = [...captures.keys()].filter((n) => n.includes(marker)).length;
@@ -131,6 +150,26 @@ for (const marker of ["-sv-1440-", "-en-1440-", "-sv-375-", "-en-375-"]) {
 const traces = evidence.filter((e) => e.file.endsWith("trace.zip"));
 if (traces.length === 0) {
   problems.push("no trace was retained, so nothing records what the browser actually did");
+}
+
+/* ── 6 · every test recorded how its time was spent ───────────────── */
+//
+// A 240 s budget is only honest if a hang stays visible inside it. The first
+// green run recorded per-step durations for two of six tests, and not for the
+// 31-second walk — the one where a hidden stall would matter most.
+const timingsFile = path.join(root, OUT, "timings.json");
+const timings: { test: string; step: string; ms: number }[] = existsSync(timingsFile)
+  ? (JSON.parse(readFileSync(timingsFile, "utf8")) as { test: string; step: string; ms: number }[])
+  : [];
+if (timings.length === 0) {
+  problems.push("no durations were recorded, so a hang would be invisible inside the budget");
+}
+const testsSeen = new Set(timings.map((t) => t.test));
+for (const name of testsSeen) {
+  const steps = timings.filter((t) => t.test === name && !t.step.startsWith("·"));
+  if (steps.length === 0) {
+    problems.push(`${name} recorded no step durations, only a total`);
+  }
 }
 
 /* ── the inventory, printed in full ────────────────────────────────── */
@@ -164,13 +203,7 @@ for (const e of [...evidence].sort((a, b) => a.file.localeCompare(b.file))) {
 }
 
 /* ── the walk's own results and timings, so a hang is visible ──────── */
-const timingsPath = path.join(root, OUT, "timings.json");
-if (existsSync(timingsPath)) {
-  const timings = JSON.parse(readFileSync(timingsPath, "utf8")) as {
-    test: string;
-    step: string;
-    ms: number;
-  }[];
+if (timings.length > 0) {
   console.log("\n  DURATIONS (ms · test · step)");
   for (const t of timings) {
     console.log(`    ${String(t.ms).padStart(7)}  ${t.test}  ${t.step}`);

@@ -1813,6 +1813,25 @@ console.log(
     /timings\.json/.test(spec) && /info\.duration/.test(spec),
     "13.2d each test's duration and each phase's duration are recorded beside the captures, so a hang cannot hide inside a generous budget",
   );
+  // EVERY test, not merely some. The first green run recorded per-step
+  // durations for two of six, and not for the 31-second walk — the one where
+  // a hidden stall would matter most.
+  const testTitles = [...spec.matchAll(/^test\("([^"]+)"/gm)].map((m) => m[1]);
+  const instrumented = testTitles.filter((title) => {
+    const from = spec.indexOf(`test("${title}"`);
+    const nextIdx = spec.indexOf('\ntest("', from + 1);
+    const body = spec.slice(from, nextIdx === -1 ? spec.length : nextIdx);
+    return /await phase\(t,|mark\(t, "/.test(body);
+  });
+  ok(
+    testTitles.length > 0 && instrumented.length === testTitles.length,
+    `13.2j EVERY routed test records how its time was spent — ${instrumented.length} of ${testTitles.length}`,
+  );
+  // A capture that duplicates another is not a second piece of evidence.
+  ok(
+    /await disagreement\.screenshot\(\{/.test(spec),
+    "13.2k the disagreement capture is clipped to the disagreement, not another full page identical to the one before it",
+  );
   // BOTH LANGUAGES AT BOTH WIDTHS. The manifest declares two locales and two
   // viewports, which is a claim about FOUR combinations; the first matrix
   // walked two of them and half the claim rested on nothing.
@@ -2053,6 +2072,8 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     ["traces.length === 0", "a trace must exist even on a green run"],
     ["manifest.head !== expectedHead", "the head recorded is the head the job ran on"],
     ["if (!spec.ok)", "a failed test refuses the artifact"],
+    ["names.length > 1", "no capture is a byte-for-byte duplicate of another"],
+    ["recorded no step durations", "every test recorded how its time was spent"],
   ] as const) {
     ok(verify.includes(needle), `16.13e the verifier checks that ${what}`);
   }

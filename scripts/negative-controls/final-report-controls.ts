@@ -631,6 +631,48 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "16.13f and prints the whole inventory to the job log",
   },
 
+  {
+    id: "E4-VERIFIER-ACCEPTS-DUPLICATE-CAPTURES",
+    defect:
+      "two captures may be byte-for-byte identical without failing the run, so the artifact lists as separate evidence an image that shows nothing another does not -- which is exactly what the first green run produced",
+    file: VERIFY,
+    find: "  if (names.length > 1) {",
+    replace: "  if (false) {",
+    guard: E4,
+    expect: "16.13e the verifier checks that no capture is a byte-for-byte duplicate of another",
+  },
+  {
+    id: "E4-VERIFIER-ACCEPTS-AN-UNTIMED-TEST",
+    defect:
+      "a test may record only a total with no step durations, so a stall inside a 240 s budget is indistinguishable from work",
+    file: VERIFY,
+    find: "    problems.push(`${name} recorded no step durations, only a total`);",
+    replace: "    void name;",
+    guard: E4,
+    expect: "16.13e the verifier checks that every test recorded how its time was spent",
+  },
+  {
+    id: "E4-CAPTURE-15-DUPLICATES-CAPTURE-14",
+    defect:
+      "the disagreement capture goes back to a full-page screenshot, which is byte-identical to the capture taken immediately before it -- the artifact grows and proves nothing more",
+    file: EVIDENCE_SPEC,
+    find: "    await disagreement.screenshot({",
+    replace:
+      '    await shot(page, "15-en-1440-two-assessors-disagreement");\n    await page.screenshot({',
+    guard: E4,
+    expect: "13.2k the disagreement capture is clipped to the disagreement",
+  },
+  {
+    id: "E4-LONG-WALK-RECORDS-NO-STEPS",
+    defect:
+      "the 31-second Swedish walk stops recording step durations, so a stall in the longest test is hidden by the budget that makes the test possible",
+    file: EVIDENCE_SPEC,
+    find: '  mark(t, "01 · before a preview, the act is not offered");',
+    replace: "",
+    guard: E4,
+    expect: "13.2j EVERY routed test records how its time was spent",
+  },
+
   /* ---- The stack the evidence is taken against ----------------------- *
    *
    * The first run of the evidence workflow failed replaying the migration
