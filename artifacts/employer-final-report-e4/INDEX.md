@@ -5,14 +5,48 @@ thirteen captures below have been taken from the real routed application,
 signed in as the fixture accounts, against a LOCAL Supabase stack, and
 committed to this directory with the provenance table filled in.
 
-The environment this branch was built in has no container runtime, so the
-local Supabase stack (`supabase start`) cannot run there. The CI "CV browser"
-job signs in against the **hosted** project through the checked-in `.env`,
-and no browser walk that writes recruitment records, finalises reports or
-creates sign-in credentials may be run against that. The captures therefore
-have to be produced on a machine with the local stack — a laptop, or a CI
-job that starts `supabase` in a service container — and this file updated
-with the HEAD they were taken at.
+## The blocker, re-checked on 2026-09-10
+
+Re-tested after #213, #214 and #215 merged, in case the environment had
+changed. It has not:
+
+| Requirement | State |
+| --- | --- |
+| Chromium + Playwright | **available** (`/opt/pw-browsers`) |
+| Docker daemon | **absent** — the client is installed but `/var/run/docker.sock` does not exist |
+| Supabase CLI | **absent** |
+| Local stack on 54321 / 54322 | **not listening** |
+| Reachable backend | the owner's **production** project only |
+
+So the browser half is ready and the backend half is not. The only database
+this environment can reach is production, and this walk is **mutating**: it
+creates sign-in credentials, walks a case, finalises reports and writes
+findings. Running it against production is forbidden and would be wrong
+regardless — so it has not been run, and no capture has been fabricated.
+
+A bare PostgreSQL 16 cluster is available locally and is what
+`scripts/db-test.sh` uses, but it is not a Supabase stack: no GoTrue, no
+PostgREST, no storage. The application cannot sign a person in against it.
+
+### The safest executable route, in order of preference
+
+1. **A CI job with `supabase` in a service container.** `supabase start`
+   needs a Docker daemon, which GitHub-hosted runners have. This is the
+   only route that produces the evidence without a human laptop and
+   without touching production. It is also the route that keeps the
+   evidence reproducible on every future change.
+2. **A developer laptop with Docker + the Supabase CLI**, following the
+   Reproduce section below verbatim. Fastest to a first capture; not
+   reproducible in CI afterwards.
+3. **An ephemeral Supabase branch project** (`create_branch`), seeded by
+   replaying `supabase/migrations` and then the two fixtures. This costs
+   money, needs owner approval, and is a *hosted* project — so it is
+   acceptable only because it is a throwaway branch and never the owner
+   production project. Listed third for that reason.
+
+What is **not** acceptable: pointing the walk at production, weakening the
+`E2E_LOCAL_STACK` gate, relaxing the spec's loopback-only refusal, or
+renaming or removing this BLOCKED requirement to make a guard green.
 
 Everything the walk shows is synthetic. No real candidate, name, address, CV,
 Passport or production record appears in any capture, no filename contains a
