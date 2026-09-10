@@ -9401,7 +9401,7 @@ export const dictionaries = {
       "The result is ready to share, but sharing is done by an owner or admin in your organisation. You can ask a colleague who holds that role.",
     "academy.participants.readiness.released": "Shared with the candidate on {date}.",
     "academy.participants.readiness.releasedByUnknown":
-      "Who shared it is not shown here. The release is in the organisation's event log.",
+      "Who shared it is not shown here. The sharing is recorded in the organisation's event log.",
     // ── E2: what the candidate gets, and does not get ─────────────────
     "academy.participants.boundary.title": "This is what the candidate will see",
     "academy.participants.boundary.sharedTitle": "The candidate will see",
