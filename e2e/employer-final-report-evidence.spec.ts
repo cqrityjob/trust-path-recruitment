@@ -49,6 +49,8 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { appendFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
@@ -251,6 +253,9 @@ async function signIn(page: Page, email: string) {
   await page.locator('input[type="password"]').first().fill(PASSWORD);
   await page.locator('form button[type="submit"]').first().click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 45_000 });
+  // The token this browser was just issued, by digest. Recorded here rather
+  // than only at the end, so a token that rotates mid-walk is still known.
+  await recordIssuedTokens(page);
 }
 
 const main = (page: Page) => page.locator("main").first();
@@ -261,6 +266,71 @@ const reportUrl = (id: string) => `/employer/${SLUG}/interview-intelligence/${id
 async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
 }
+
+/* ---- The tokens this run actually produced ---------------------------- */
+//
+// ── WHY THE WALK RECORDS THEM ──────────────────────────────────────────
+//
+// Every request the browser makes carries the stack's anon key and the
+// signed-in user's access token, and a Playwright trace records the network.
+// The leak scan publishes a JWT only when that exact token was observed in
+// this run, so the walk has to say which tokens those were.
+//
+// DIGESTS ONLY. The allowlist never holds a token, so it leaks nothing even
+// if it were published — and it lives outside the artifact directory and is
+// destroyed before the upload anyway.
+
+const ALLOWLIST = process.env.E4_TOKEN_ALLOWLIST ?? null;
+
+async function recordIssuedTokens(page: Page): Promise<number> {
+  if (ALLOWLIST === null) return 0;
+  const tokens = await page.evaluate(() => {
+    const found: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key === null) continue;
+      const value = window.localStorage.getItem(key);
+      if (value === null) continue;
+      const matches = value.match(/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g);
+      if (matches !== null) found.push(...matches);
+    }
+    return found;
+  });
+  for (const token of tokens) {
+    appendFileSync(ALLOWLIST, `${createHash("sha256").update(token, "utf8").digest("hex")}\n`, {
+      mode: 0o600,
+    });
+  }
+  return tokens.length;
+}
+
+/* ---- How long each phase took ----------------------------------------- */
+//
+// A 240 s budget is only honest if a hang is still visible inside it. Every
+// phase is timed and written beside the captures, so "the walk passed" can be
+// read as "and nothing sat waiting for three minutes".
+
+interface Timing {
+  test: string;
+  step: string;
+  ms: number;
+}
+const timings: Timing[] = [];
+
+async function phase<T>(testName: string, step: string, body: () => Promise<T>): Promise<T> {
+  const started = Date.now();
+  try {
+    return await body();
+  } finally {
+    timings.push({ test: testName, step, ms: Date.now() - started });
+  }
+}
+
+test.afterEach(async ({ page }, info) => {
+  await recordIssuedTokens(page).catch(() => 0);
+  timings.push({ test: info.title, step: "· whole test", ms: info.duration });
+  writeFileSync(`${OUT}/timings.json`, `${JSON.stringify(timings, null, 2)}\n`, "utf8");
+});
 
 /** No horizontal overflow: the document must never scroll sideways, at any
  *  width. Asserted, because a capture cannot show what is off-screen. */
@@ -286,7 +356,9 @@ async function tabTo(page: Page, target: ReturnType<Page["locator"]>) {
   await expect(target).toBeFocused();
 }
 
-test("01-07 · the Swedish desktop walk: preview, stale, finalise, history", async ({ page }) => {
+test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const caseSv = caseIdFor(TITLE_SV);
   expect(caseSv).toMatch(/^[0-9a-f-]{36}$/);
@@ -395,7 +467,7 @@ test("09 · the candidate is denied, and is not told a report exists", async ({ 
   await shot(page, "09-sv-1440-candidate-denied");
 });
 
-test("10-13 · the English mobile walk at 375", async ({ page }) => {
+test("10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const caseEn = caseIdFor(TITLE_EN);
   await signIn(page, OWNER);
@@ -440,4 +512,99 @@ test("10-13 · the English mobile walk at 375", async ({ page }) => {
   await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
   await expectNoOverflow(page);
   await shot(page, "13-en-375-immutable-final");
+});
+
+/* ══════════════════════════════════════════════════════════════════════ */
+/* The two combinations the first matrix left out                        */
+/* ══════════════════════════════════════════════════════════════════════ */
+//
+// The manifest declares two locales and two viewports, which is a claim about
+// FOUR combinations. The walk covered Swedish at 1440 and English at 375, so
+// half the claim rested on nothing. These two close it.
+//
+// Both read a report that is ALREADY final — the Swedish case at version 2
+// from 01-07, the English case at version 1 from 10-13 — because a second
+// finalisation of the same case is refused, correctly, by the server. Reading
+// back is what these combinations exist to show: that the immutable document
+// renders completely in both languages at both widths.
+
+test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", async ({ page }) => {
+  const t = "14-15 · ENGLISH DESKTOP 1440";
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const caseEn = caseIdFor(TITLE_EN);
+  await phase(t, "sign in as the owner", () => signIn(page, OWNER));
+  await phase(t, "open the report", async () => {
+    await page.goto(reportUrl(caseEn));
+    await expect(main(page)).toContainText(/Slutförd|Finalised/, { timeout: 60_000 });
+  });
+
+  await phase(t, "switch to English", async () => {
+    await page
+      .getByRole("group", { name: /Språk|Language/i })
+      .locator("visible=true")
+      .first()
+      .getByRole("button", { name: /^en$/i })
+      .click();
+    await expect(main(page)).toContainText(/Finalised and immutable/, { timeout: 30_000 });
+  });
+
+  // 14. The immutable document in English at desktop width: the digest
+  //     recomputed and matching, the version, the finaliser named and dated.
+  await phase(t, "read the immutable document", async () => {
+    const final = doc(page, "final");
+    await expect(final).toBeVisible({ timeout: 30_000 });
+    await expect(final).toContainText(/Finalised and immutable/);
+    await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
+    await expect(main(page)).toContainText(/Version 1/);
+    await expect(main(page)).toContainText(/Verified: the digest was recomputed/);
+    await expect(main(page).getByRole("button", { name: /^Preview the report$/ })).toHaveCount(0);
+    await expectNoOverflow(page);
+    await shot(page, "14-en-1440-immutable-final");
+  });
+
+  // 15. Both assessors and their disagreement, in English, at 1440 — the
+  //     state the whole report exists to carry, in the other language.
+  await phase(t, "both assessors and the disagreement", async () => {
+    const final = doc(page, "final");
+    await expect(final.locator('[data-testid="fr-disagree"]')).toBeVisible();
+    await expect(final).toContainText(/The assessors do not agree/);
+    await expect(final).toContainText(/Passport disclosure \(not verified here\)/);
+    await expectNoOverflow(page);
+    await shot(page, "15-en-1440-two-assessors-disagreement");
+  });
+});
+
+test("16-17 · SWEDISH MOBILE 375 · version 2 and the history it kept", async ({ page }) => {
+  const t = "16-17 · SWEDISH MOBILE 375";
+  await page.setViewportSize({ width: 375, height: 812 });
+  const caseSv = caseIdFor(TITLE_SV);
+  await phase(t, "sign in as the owner", () => signIn(page, OWNER));
+  await phase(t, "open the corrected report", async () => {
+    await page.goto(reportUrl(caseSv));
+    await expect(main(page)).toContainText(/Version 2/, { timeout: 60_000 });
+  });
+
+  // 16. The corrected report on a phone, in Swedish: version 2, the finaliser
+  //     named, the digest verified, and nothing scrolling sideways.
+  await phase(t, "read version 2", async () => {
+    const final = doc(page, "final");
+    await expect(final).toBeVisible({ timeout: 30_000 });
+    await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
+    await expect(main(page)).toContainText(/Kontrollerad: summan räknades om/);
+    await expectNoOverflow(page);
+    await shot(page, "16-sv-375-version-two");
+  });
+
+  // 17. THE PREVIOUS VERSION IS STILL READABLE. A correction added a version;
+  //     it did not replace one. Opened on a phone, in Swedish.
+  await phase(t, "open version 1 from the history", async () => {
+    const openV1 = main(page).getByRole("button", { name: /^Öppna version 1$/ });
+    await expect(openV1).toBeVisible({ timeout: 30_000 });
+    await openV1.click();
+    const history = doc(page, "history");
+    await expect(history).toBeVisible({ timeout: 30_000 });
+    await expect(history).toContainText(/Tidigare version — ersatt/);
+    await expectNoOverflow(page);
+    await shot(page, "17-sv-375-history-version-one");
+  });
 });

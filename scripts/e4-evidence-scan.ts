@@ -33,7 +33,7 @@
  */
 
 import { gunzipSync, inflateRawSync, inflateSync } from "node:zlib";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -69,46 +69,88 @@ export const PATTERNS: readonly (readonly [RegExp, string])[] = [
 /* ------------------------------------------------------------------ */
 
 /**
- * ── WHY A JWT IS NOT ALWAYS A LEAK ─────────────────────────────────────
+ * ── WHY A JWT IS NOT ALWAYS A LEAK, AND WHAT IS ACTUALLY TRUSTED ───────
  *
- * A Playwright trace records the network, and every PostgREST request the
- * browser makes carries the stack's anon key as a header and the signed-in
- * user's access token as a bearer. Both are JWTs. So a rule of "refuse every
- * JWT" means this pipeline can never publish a trace — and a safety control
+ * A Playwright trace records the network, and every request the browser makes
+ * carries the stack's anon key as a header and the signed-in user's access
+ * token as a bearer. Both are JWTs. A rule of "refuse every JWT" therefore
+ * means this pipeline can never publish a trace at all — and a safety control
  * that makes the evidence impossible is a control that gets deleted.
  *
- * The distinction that actually matters is not "is it a JWT" but "is it a
- * credential to something real". A token minted by the throwaway stack this
- * job created three minutes ago and destroys on the way out is not: it is
- * loopback-only, it holds nothing but synthetic fixture rows, and it stops
- * existing when the job ends.
+ * ── WHAT THIS DELIBERATELY DOES NOT DO ─────────────────────────────────
  *
- * So a JWT is REFUSED unless it can be shown to have been minted by THIS
- * RUN'S stack, and "shown" means one of two things, both derived at run time
- * from the running stack rather than from a constant written down here:
+ * An earlier version accepted a token whose ISSUER matched the local stack's
+ * anon key issuer. That was a bypass, and a plain one: `iss` is a claim the
+ * token makes about itself. Anyone who can write a file into the artifact can
+ * write a token that claims any issuer, with no signature at all, and it would
+ * have been published. The same objection applies to `aud`, to a project ref
+ * and to a hostname. NOTHING SELF-DECLARED IS TRUSTED HERE.
  *
- *   - its HMAC-SHA256 signature verifies against that stack's JWT secret; or
- *   - it carries the same issuer as that stack's own anon key.
+ * Accepting any validly-signed local token was not enough either: a
+ * service-role token signed by the local stack is still a service-role token,
+ * and service-role credentials are never publishable evidence.
  *
- * With neither available the scan FAILS CLOSED and refuses every JWT, which
- * is what happens on a developer machine that runs the scan by hand.
+ * ── WHAT IS TRUSTED ────────────────────────────────────────────────────
  *
- * A hosted token fails both tests: a hosted project's issuer names the
- * project, and its signature is made with a secret this job never sees.
+ * Exactly one thing: that a byte-for-byte identical token was OBSERVED IN
+ * THIS RUN. The workflow writes the SHA-256 of the anon key the browser will
+ * use; the walk appends the SHA-256 of each access token the browser was
+ * actually issued. A JWT in the evidence is published only when its own
+ * SHA-256 is on that list.
+ *
+ * That makes expiry, subject, issuer and audience irrelevant rather than
+ * merely unchecked: a forged token cannot be on the list, because the list
+ * holds digests of tokens this run's own stack handed to this run's own
+ * browser. No signature verification is needed, and no JWT secret is read,
+ * so no secret exists in this process to leak.
+ *
+ * On top of that, one rule that no allowlist entry can override: a token
+ * whose role is `service_role` is refused, always.
+ *
+ * With no allowlist the set is empty and every JWT is refused — which is what
+ * happens when somebody runs this scan by hand.
  */
 
-export interface LocalStackIdentity {
-  /** The `iss` claim of the running stack's own anon key. */
-  readonly issuer: string | null;
-  /** That stack's JWT secret, when it publishes one. */
-  readonly secret: string | null;
-  /** The anon key itself, matched exactly. */
-  readonly anonKey: string | null;
+/** SHA-256 digests of the tokens this run legitimately produced. */
+export interface TokenAllowlist {
+  readonly digests: ReadonlySet<string>;
+  /** Where it was read from, for the log. Never its contents. */
+  readonly source: string | null;
 }
 
-function decodeSegment(seg: string): Record<string, unknown> | null {
+export const EMPTY_ALLOWLIST: TokenAllowlist = { digests: new Set(), source: null };
+
+const sha256hex = (value: string) => createHash("sha256").update(value, "utf8").digest("hex");
+
+/**
+ * Read this run's allowlist. It lives OUTSIDE the artifact directory and is
+ * destroyed before the upload, so it is never published; it holds digests
+ * only, so even if it were, no token could be recovered from it.
+ */
+export function loadTokenAllowlist(env: NodeJS.ProcessEnv = process.env): TokenAllowlist {
+  const file = env.E4_TOKEN_ALLOWLIST?.trim();
+  if (!file || !existsSync(file)) return EMPTY_ALLOWLIST;
   try {
-    const json = Buffer.from(seg.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const digests = new Set(
+      readFileSync(file, "utf8")
+        .split("\n")
+        .map((line) => line.trim().toLowerCase())
+        .filter((line) => /^[0-9a-f]{64}$/.test(line)),
+    );
+    return { digests, source: file };
+  } catch {
+    // Fail closed: an unreadable allowlist allows nothing.
+    return EMPTY_ALLOWLIST;
+  }
+}
+
+function jwtClaims(token: string): Record<string, unknown> | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const json = Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString(
+      "utf8",
+    );
     const value: unknown = JSON.parse(json);
     return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : null;
   } catch {
@@ -116,41 +158,32 @@ function decodeSegment(seg: string): Record<string, unknown> | null {
   }
 }
 
-/** Read the running stack's identity from the environment the workflow set. */
-export function localStackIdentity(env: NodeJS.ProcessEnv = process.env): LocalStackIdentity {
-  const anonKey = env.E4_LOCAL_ANON_KEY?.trim() || null;
-  const secret = env.E4_LOCAL_JWT_SECRET?.trim() || null;
-  let issuer: string | null = null;
-  if (anonKey) {
-    const parts = anonKey.split(".");
-    const payload = parts.length === 3 ? decodeSegment(parts[1]) : null;
-    if (payload && typeof payload.iss === "string" && payload.iss.length > 0) issuer = payload.iss;
-  }
-  return { issuer, secret, anonKey };
+export interface TokenVerdict {
+  readonly allowed: boolean;
+  /** Why, in words a reader can act on. Never contains the token. */
+  readonly reason: string;
 }
 
-/** True only for a token this run's own throwaway stack minted. */
-export function mintedByLocalStack(token: string, id: LocalStackIdentity): boolean {
-  if (id.anonKey !== null && token === id.anonKey) return true;
-
-  const parts = token.split(".");
-  if (parts.length !== 3) return false;
-
-  if (id.secret !== null) {
-    const expected = createHmac("sha256", id.secret)
-      .update(`${parts[0]}.${parts[1]}`)
-      .digest("base64url");
-    const a = Buffer.from(expected);
-    const b = Buffer.from(parts[2]);
-    if (a.length === b.length && timingSafeEqual(a, b)) return true;
+/** May this token be published? Only if this run produced it, and never if it
+ *  is a service-role token. */
+export function tokenIsPublishable(token: string, allow: TokenAllowlist): TokenVerdict {
+  const claims = jwtClaims(token);
+  if (claims === null) {
+    return {
+      allowed: false,
+      reason: "the token could not be parsed, so nothing about it is known",
+    };
   }
-
-  if (id.issuer !== null) {
-    const payload = decodeSegment(parts[1]);
-    if (payload && payload.iss === id.issuer) return true;
+  // No allowlist entry overrides this. A service-role token signed by the
+  // throwaway stack is still a service-role token, and it has no business in
+  // a browser trace at all: its presence is itself the finding.
+  if (claims.role === "service_role") {
+    return { allowed: false, reason: "a service-role token is never publishable evidence" };
   }
-
-  return false;
+  if (!allow.digests.has(sha256hex(token))) {
+    return { allowed: false, reason: "this exact token was not observed in this run" };
+  }
+  return { allowed: true, reason: "exact digest match against this run's own tokens" };
 }
 
 /* ------------------------------------------------------------------ */
@@ -267,7 +300,7 @@ function inflatedIfPossible(buf: Buffer): string | null {
  *  the allowance is VISIBLE in the job log rather than silent — an exception
  *  nobody is told about is how an exception becomes a hole. */
 export interface ScanContext {
-  readonly local: LocalStackIdentity;
+  readonly allow: TokenAllowlist;
   allowedLocalTokens: number;
 }
 
@@ -283,11 +316,16 @@ function match(where: string, text: string, findings: Finding[], ctx: ScanContex
       let m: RegExpExecArray | null;
       let budget = 500;
       while ((m = JWT_PATTERN.exec(text)) !== null && budget-- > 0) {
-        if (mintedByLocalStack(m[0], ctx.local)) {
+        const verdict = tokenIsPublishable(m[0], ctx.allow);
+        if (verdict.allowed) {
           ctx.allowedLocalTokens += 1;
           continue;
         }
-        findings.push({ where, what, excerpt: `${m[0].slice(0, 24)}…` });
+        findings.push({
+          where,
+          what: `${what} — ${verdict.reason}`,
+          excerpt: `${m[0].slice(0, 24)}…`,
+        });
       }
       continue;
     }
@@ -302,7 +340,7 @@ export function scanBuffer(
   buf: Buffer,
   findings: Finding[],
   depth = 0,
-  ctx: ScanContext = { local: localStackIdentity(), allowedLocalTokens: 0 },
+  ctx: ScanContext = { allow: loadTokenAllowlist(), allowedLocalTokens: 0 },
 ): void {
   // 1 · the bytes as text. Catches plain text, and anything a binary format
   //     happens to store uncompressed (PNG text chunks, for one).
@@ -351,7 +389,7 @@ function walk(rel: string, base: string = root): string[] {
 export function scanDirectories(
   dirs: readonly string[],
   base: string = root,
-  ctx: ScanContext = { local: localStackIdentity(), allowedLocalTokens: 0 },
+  ctx: ScanContext = { allow: loadTokenAllowlist(), allowedLocalTokens: 0 },
 ): { findings: Finding[]; scanned: number; allowedLocalTokens: number } {
   const findings: Finding[] = [];
   let scanned = 0;
@@ -367,15 +405,31 @@ export function scanDirectories(
 /* ------------------------------------------------------------------ */
 
 if (import.meta.main) {
-  const local = localStackIdentity();
+  const allow = loadTokenAllowlist();
+
+  // The allowlist must not be inside anything about to be published. It holds
+  // digests rather than tokens, so publishing it would leak nothing -- but a
+  // file that must be destroyed before upload has no business living where
+  // the upload looks.
+  if (allow.source !== null) {
+    const rel = path.relative(root, path.resolve(allow.source));
+    if (!rel.startsWith("..") && DIRS.some((d) => rel === d || rel.startsWith(`${d}/`))) {
+      console.error(
+        "\nREFUSED: this run's token allowlist is inside the artifact directory.\n" +
+          "It is destroyed before upload; it must not be somewhere the upload reads.",
+      );
+      process.exit(1);
+    }
+  }
+
   const { findings, scanned, allowedLocalTokens } = scanDirectories(DIRS, root, {
-    local,
+    allow,
     allowedLocalTokens: 0,
   });
   console.log(`e4 evidence scan — ${scanned} file(s) under ${DIRS.join(", ")}`);
   console.log(
-    `  local stack identity: issuer ${local.issuer ?? "(none)"}, ` +
-      `jwt secret ${local.secret ? "known" : "(none)"}, anon key ${local.anonKey ? "known" : "(none)"}`,
+    `  allowlist: ${allow.digests.size} digest(s) of tokens observed in this run` +
+      `${allow.source === null ? " (none supplied — every JWT will be refused)" : ""}`,
   );
   // Said out loud, every run. An exception nobody is told about is how an
   // exception becomes a hole.

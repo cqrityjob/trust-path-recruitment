@@ -80,7 +80,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { crc32, deflateRawSync, gzipSync } from "node:zlib";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { mock } from "bun:test";
@@ -1804,6 +1804,29 @@ console.log(
     budget > longest,
     `13.2b and every wait inside it fits — the budget is ${budget}ms and the longest wait is ${longest}ms`,
   );
+  // A LONG BUDGET IS ONLY HONEST IF A HANG IS STILL VISIBLE INSIDE IT.
+  ok(
+    !/waitForTimeout|setTimeout\(|sleep\(/.test(codeOnly(spec)),
+    "13.2c and it contains no arbitrary sleep — every wait is on a semantic application state",
+  );
+  ok(
+    /timings\.json/.test(spec) && /info\.duration/.test(spec),
+    "13.2d each test's duration and each phase's duration are recorded beside the captures, so a hang cannot hide inside a generous budget",
+  );
+  // BOTH LANGUAGES AT BOTH WIDTHS. The manifest declares two locales and two
+  // viewports, which is a claim about FOUR combinations; the first matrix
+  // walked two of them and half the claim rested on nothing.
+  for (const combination of [
+    "SWEDISH DESKTOP 1440",
+    "ENGLISH DESKTOP 1440",
+    "SWEDISH MOBILE 375",
+    "ENGLISH MOBILE 375",
+  ]) {
+    ok(
+      new RegExp(`^test\\("[^"]*${combination}`, "m").test(spec),
+      `13.2e the walk covers ${combination} as a routed test of its own`,
+    );
+  }
   for (const [needle, state] of [
     ['data-testid="fr-disagree"', "both assessors and their disagreement"],
     [
@@ -2253,7 +2276,7 @@ console.log("\n17. The leak scan, PROVEN on planted leaks — not asserted by gr
   {
     const found: import("./e4-evidence-scan").Finding[] = [];
     S.scanBuffer("test-results/case/trace.zip", traceZip, found);
-    const hit = found.find((f) => f.what === "a JWT");
+    const hit = found.find((f) => f.what.startsWith("a JWT"));
     ok(
       hit !== undefined && hit.where.includes("trace.trace"),
       `17.1 a JWT inside trace.zip is found, and found by inflating the entry that carries it (${found.map((f) => `${f.what} @ ${f.where}`).join("; ") || "nothing found"})`,
@@ -2347,7 +2370,7 @@ console.log("\n17. The leak scan, PROVEN on planted leaks — not asserted by gr
       "a hosted Supabase URL",
     ]) {
       ok(
-        findings.some((f) => f.what === what),
+        findings.some((f) => f.what.startsWith(what)),
         `17.6 the walk refuses ${what}`,
       );
     }
@@ -2359,92 +2382,224 @@ console.log("\n17. The leak scan, PROVEN on planted leaks — not asserted by gr
     rmSync(tmp, { recursive: true, force: true });
   }
 
-  /* ── whose token is it: the allowance, and its limits ──────────────── */
+  /* ── WHOSE TOKEN IS IT: the twelve cases, executed ─────────────────── */
   //
-  // A trace records the network, so every trace carries the stack's anon key
-  // and the signed-in user's bearer token, both JWTs. Refusing every JWT
-  // would make this pipeline structurally unable to publish a trace, which is
-  // how a safety control ends up deleted. So a JWT is refused UNLESS it can be
-  // shown to have been minted by the throwaway stack the job just created.
+  // ── THE BYPASS THIS REPLACED ───────────────────────────────────────
   //
-  // These assertions run that rule rather than reading it: a token from the
-  // local stack is allowed, and a token that merely looks similar is not.
+  // The first version of this allowance accepted a token whose ISSUER matched
+  // the local stack's. `iss` is a claim a token makes about itself, so anyone
+  // who could write a file into the artifact could write an unsigned token
+  // claiming that issuer and have it published. Accepting any validly-signed
+  // local token was no better: a service-role token signed by the throwaway
+  // stack is still a service-role token.
+  //
+  // Nothing self-declared is trusted now. A JWT is published only when its
+  // own SHA-256 is on the list of tokens THIS RUN produced, and never when
+  // its role is service_role. Each case below RUNS the scanner.
   {
+    const wf = read(".github/workflows/e4-evidence.yml");
     const secret = "e4-synthetic-local-stack-secret";
-    const mint = (payload: Record<string, unknown>, withSecret: string) => {
+    const mint = (payload: Record<string, unknown>, withSecret: string | null) => {
       const h = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
       const p = Buffer.from(JSON.stringify(payload)).toString("base64url");
-      const sig = createHmac("sha256", withSecret).update(`${h}.${p}`).digest("base64url");
+      const sig =
+        withSecret === null
+          ? "bm90LWEtc2lnbmF0dXJl"
+          : createHmac("sha256", withSecret).update(`${h}.${p}`).digest("base64url");
       return `${h}.${p}.${sig}`;
     };
-    const localAnon = mint({ iss: "e4-local-demo", role: "anon" }, secret);
-    const localSession = mint({ iss: "e4-local-demo", role: "authenticated", sub: "u1" }, secret);
+    const ISS = "e4-local-demo";
+    const now = Math.floor(Date.now() / 1000);
+
+    const anonKey = mint({ iss: ISS, role: "anon", exp: now + 3600 }, secret);
+    const userToken = mint(
+      {
+        iss: ISS,
+        role: "authenticated",
+        sub: "9e000000-0000-4000-8000-000000000001",
+        exp: now + 3600,
+      },
+      secret,
+    );
+    const serviceToken = mint({ iss: ISS, role: "service_role", exp: now + 3600 }, secret);
+    const forgedSignature = mint(
+      { iss: ISS, role: "authenticated", sub: "x", exp: now + 3600 },
+      "wrong",
+    );
+    const unsigned = mint({ iss: ISS, role: "authenticated", sub: "x", exp: now + 3600 }, null);
+    const unknownUser = mint(
+      { iss: ISS, role: "authenticated", sub: "nobody", exp: now + 3600 },
+      secret,
+    );
+    const expired = mint({ iss: ISS, role: "authenticated", sub: "u", exp: now - 3600 }, secret);
     const hosted = mint({ iss: "https://example.supabase.co/auth/v1", role: "anon" }, "other");
 
-    const identity = S.localStackIdentity({
-      E4_LOCAL_ANON_KEY: localAnon,
-      E4_LOCAL_JWT_SECRET: secret,
-    } as NodeJS.ProcessEnv);
+    // The allowlist this run would have written: digests of the two tokens
+    // actually issued, and nothing else.
+    const digest = (t: string) => createHash("sha256").update(t, "utf8").digest("hex");
+    const allowFile = path.join(
+      mkdtempSync(path.join(os.tmpdir(), "e4-allowlist-")),
+      "allowlist.txt",
+    );
+    writeFileSync(allowFile, `${digest(anonKey)}\n${digest(userToken)}\n`, { mode: 0o600 });
+    const allow = S.loadTokenAllowlist({ E4_TOKEN_ALLOWLIST: allowFile } as NodeJS.ProcessEnv);
     ok(
-      identity.issuer === "e4-local-demo",
-      `17.9 the local stack's issuer is read from its own anon key, not written down (${identity.issuer ?? "none"})`,
+      allow.digests.size === 2,
+      `17.9 the allowlist is read as exact digests of this run's own tokens (${allow.digests.size})`,
     );
 
-    const traceOf = (token: string) =>
+    /** Plant one token inside a real trace.zip and scan it. */
+    const jwtFindingsIn = (buf: Buffer, list: import("./e4-evidence-scan").TokenAllowlist) => {
+      const found: import("./e4-evidence-scan").Finding[] = [];
+      S.scanBuffer("test-results/case/trace.zip", buf, found, 0, {
+        allow: list,
+        allowedLocalTokens: 0,
+      });
+      return found.filter((f) => f.what.startsWith("a JWT"));
+    };
+    const traceOf = (...tokens: string[]) =>
       makeZip([
         {
           name: "0-trace.network",
-          data: Buffer.from(`{"headers":[{"name":"apikey","value":"${token}"}]}`),
+          data: Buffer.from(
+            JSON.stringify({
+              entries: tokens.map((t) => ({ headers: [{ name: "authorization", value: t }] })),
+            }),
+          ),
         },
       ]);
-    const findingsFor = (token: string, id: Parameters<typeof S.mintedByLocalStack>[1]) => {
+
+    // 1 · the exact anon key the browser used
+    ok(
+      jwtFindingsIn(traceOf(anonKey), allow).length === 0,
+      "17.10 the exact local anon key is accepted — otherwise no trace could ever be published",
+    );
+    // 2 · the exact token of an expected synthetic user
+    ok(
+      jwtFindingsIn(traceOf(userToken), allow).length === 0,
+      "17.11 and the exact access token a synthetic fixture user was issued in this run",
+    );
+    // 3 · correct issuer, invalid signature
+    ok(
+      jwtFindingsIn(traceOf(forgedSignature), allow).length === 1,
+      "17.12 a token with the right issuer but a bad signature is REFUSED — issuer is a self-declared claim",
+    );
+    // 4 · unsigned, claiming the local issuer
+    ok(
+      jwtFindingsIn(traceOf(unsigned), allow).length === 1,
+      "17.13 an UNSIGNED token claiming the local issuer is refused — the bypass this policy replaced",
+    );
+    // 5 · a validly signed service_role token
+    const serviceFindings = jwtFindingsIn(traceOf(serviceToken), allow);
+    ok(
+      serviceFindings.length === 1 &&
+        /service-role token is never publishable/.test(serviceFindings[0].what),
+      "17.14 a VALIDLY SIGNED service-role token is refused, and refused for being service-role",
+    );
+    // 5b · and no allowlist entry can override that
+    const withService = S.loadTokenAllowlist({
+      E4_TOKEN_ALLOWLIST: (() => {
+        const f = path.join(mkdtempSync(path.join(os.tmpdir(), "e4-allow2-")), "a.txt");
+        writeFileSync(f, `${digest(serviceToken)}\n`, { mode: 0o600 });
+        return f;
+      })(),
+    } as NodeJS.ProcessEnv);
+    ok(
+      jwtFindingsIn(traceOf(serviceToken), withService).length === 1,
+      "17.15 even ON the allowlist — no entry may override the service-role rule",
+    );
+    {
+      const counted = { allow, allowedLocalTokens: 0 };
+      S.scanBuffer("t.zip", traceOf(anonKey), [], 0, counted);
+      ok(
+        counted.allowedLocalTokens === 1,
+        "17.15b every allowance is COUNTED, so it is said out loud rather than applied silently",
+      );
+    }
+    // 6 · a validly signed token for a user this run never signed in
+    ok(
+      jwtFindingsIn(traceOf(unknownUser), allow).length === 1,
+      "17.16 a validly signed token for an unknown user is refused — signing is not observation",
+    );
+    // 7 · expired
+    ok(
+      jwtFindingsIn(traceOf(expired), allow).length === 1,
+      "17.17 an expired locally signed token is refused — it was never observed, so its expiry never arises",
+    );
+    // 8 · a foreign token AFTER an allowed one, same file
+    ok(
+      jwtFindingsIn(traceOf(anonKey, hosted), allow).length === 1,
+      "17.18 a foreign token AFTER an allowed one in the same file is still found",
+    );
+    // 9 · inside trace.zip (every case above is; stated as its own assertion)
+    ok(
+      !traceOf(hosted).toString("latin1").includes(hosted) &&
+        jwtFindingsIn(traceOf(hosted), allow).length === 1,
+      "17.19 all of which is read INSIDE trace.zip, whose bytes do not contain the token at all",
+    );
+    // 10 · nested gzip and base64
+    {
+      const gz = gzipSync(Buffer.from(`GET /rest/v1 authorization: Bearer ${hosted}`));
       const found: import("./e4-evidence-scan").Finding[] = [];
-      S.scanBuffer("test-results/case/trace.zip", traceOf(token), found, 0, {
-        local: id,
+      S.scanBuffer("test-results/net.log.gz", gz, found, 0, { allow, allowedLocalTokens: 0 });
+      ok(
+        found.some((f) => f.what.startsWith("a JWT")),
+        "17.20 a foreign token inside gzip is found",
+      );
+      const b64 = Buffer.from(
+        `<script>window.report="${Buffer.from(`{"token":"${hosted}","pad":"${"x".repeat(64)}"}`).toString("base64")}";</script>`,
+      );
+      const found2: import("./e4-evidence-scan").Finding[] = [];
+      S.scanBuffer("playwright-report/index.html", b64, found2, 0, {
+        allow,
         allowedLocalTokens: 0,
       });
-      return found.filter((f) => f.what === "a JWT");
-    };
-
+      ok(
+        found2.some((f) => f.what.startsWith("a JWT") && f.where.includes("embedded base64")),
+        "17.21 and inside base64 embedded in the HTML report",
+      );
+      // Nested archive, unchanged by the new policy.
+      const inner = makeZip([{ name: "n/r.json", data: Buffer.from(`{"t":"${hosted}"}`) }]);
+      const outer = makeZip([{ name: "attachments/inner.zip", data: inner }]);
+      ok(
+        jwtFindingsIn(outer, allow).length === 1,
+        "17.22 and one archive deeper — the content-aware scan is not weakened by the token policy",
+      );
+    }
+    // 11 · a failed scan prevents the upload (asserted on the workflow at 16.13b)
     ok(
-      findingsFor(localAnon, identity).length === 0,
-      "17.10 the stack's own anon key inside a trace is allowed — otherwise no trace could ever be published",
+      /if: always\(\) && steps\.leak_scan\.outcome == 'success'/.test(wf),
+      "17.23 and a refusal prevents the upload rather than merely colouring the job red",
+    );
+    // 12 · no raw token, no secret, no allowlist in the artifact
+    ok(
+      !/E4_LOCAL_JWT_SECRET|JWT_SECRET/.test(read("scripts/e4-evidence-scan.ts")),
+      "17.24 the scan reads no JWT secret at all, so no secret exists in that process to leak",
     );
     ok(
-      findingsFor(localSession, identity).length === 0,
-      "17.11 and a session token that stack signed, proven by its signature",
+      /RUNNER_TEMP\/e4-token-allowlist\.txt/.test(wf) &&
+        !/artifacts\/employer-final-report-e4\/[^\s]*allowlist/.test(wf),
+      "17.25 the allowlist lives outside the artifact directory",
+    );
+    ok(/install -m 600 \/dev\/null/.test(wf), "17.26 created with restrictive permissions");
+    const destroyAt = wf.indexOf("Destroy this run's token allowlist");
+    ok(
+      destroyAt > 0 && destroyAt < wf.indexOf("Upload the evidence"),
+      "17.27 and destroyed BEFORE the upload",
     );
     ok(
-      findingsFor(hosted, identity).length === 1,
-      "17.12 a token from ANYWHERE ELSE is still refused — the allowance is 'this run's stack', not 'anything JWT-shaped'",
+      /this run's token allowlist is inside the artifact directory/.test(
+        read("scripts/e4-evidence-scan.ts"),
+      ),
+      "17.28 with the scan itself refusing an allowlist that sits where the upload looks",
     );
+    const specSrc = read("e2e/employer-final-report-evidence.spec.ts");
     ok(
-      findingsFor(localSession, { issuer: null, secret: null, anonKey: null }).length === 1,
-      "17.13 and with no local identity known the scan FAILS CLOSED, refusing every JWT",
+      /createHash\("sha256"\)\.update\(token, "utf8"\)\.digest\("hex"\)/.test(specSrc) &&
+        !/appendFileSync\([^)]*token\s*\}/.test(specSrc),
+      "17.29 and the walk recording DIGESTS, never a token",
     );
-    // A foreign token must not be able to hide behind a local one: `exec`
-    // finds one match per pattern, so the JWT sweep has to be global.
-    const mixed = makeZip([
-      {
-        name: "0-trace.network",
-        data: Buffer.from(`{"apikey":"${localAnon}","authorization":"Bearer ${hosted}"}`),
-      },
-    ]);
-    const mixedFound: import("./e4-evidence-scan").Finding[] = [];
-    S.scanBuffer("test-results/case/trace.zip", mixed, mixedFound, 0, {
-      local: identity,
-      allowedLocalTokens: 0,
-    });
-    ok(
-      mixedFound.filter((f) => f.what === "a JWT").length === 1,
-      "17.14 and a foreign token cannot hide behind an allowed one in the same file",
-    );
-    const ctx = { local: identity, allowedLocalTokens: 0 };
-    S.scanBuffer("t.zip", traceOf(localAnon), [], 0, ctx);
-    ok(
-      ctx.allowedLocalTokens === 1,
-      "17.15 every allowance is COUNTED, so it is said out loud rather than applied silently",
-    );
+    rmSync(path.dirname(allowFile), { recursive: true, force: true });
   }
 
   /* ── a clean artifact is not refused ───────────────────────────────── */

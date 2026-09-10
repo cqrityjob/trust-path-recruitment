@@ -267,62 +267,135 @@ const MUTATIONS: readonly Mutation[] = [
 
   /* ---- Whose token is it --------------------------------------------- *
    *
-   * A trace records the network, so it carries the stack's anon key and the
-   * signed-in user's bearer token. Refusing every JWT would make a trace
-   * unpublishable; allowing every JWT would make the scan pointless. The rule
-   * is "minted by THIS run's throwaway stack", and each control below turns
-   * it back into one of the two useless extremes.
+   * A trace records the network, so it carries the anon key and the signed-in
+   * user's bearer token. Refusing every JWT would make a trace unpublishable;
+   * accepting anything self-declared is a bypass. The rule is "this exact
+   * token came out of this run, and is not service-role".
    */
   {
-    id: "E4-LEAK-SCAN-ALLOWS-ANY-JWT",
+    id: "E4-TOKEN-POLICY-TRUSTS-THE-ISSUER",
     defect:
-      "the scan allows every JWT rather than only those this run's throwaway stack minted, so a hosted anon or service-role key inside a trace is published",
+      "the scan accepts a token because its ISSUER matches, which is a claim the token makes about itself -- an unsigned forgery naming the local issuer is published",
     file: SCAN,
-    find: "        if (mintedByLocalStack(m[0], ctx.local)) {",
-    replace: "        if (true) {",
+    find: "  if (!allow.digests.has(sha256hex(token))) {",
+    replace:
+      '  if (claims.iss === "e4-local-demo") return { allowed: true, reason: "issuer matches" };\n  if (!allow.digests.has(sha256hex(token))) {',
     guard: E4,
-    expect: "17.12 a token from ANYWHERE ELSE is still refused",
+    expect: "17.13 an UNSIGNED token claiming the local issuer is refused",
   },
   {
-    id: "E4-LEAK-SCAN-TRUSTS-AN-UNKNOWN-STACK",
+    id: "E4-TOKEN-POLICY-ALLOWS-SERVICE-ROLE",
     defect:
-      "with no local identity known the scan allows JWTs instead of failing closed, so running it anywhere the stack identity is missing publishes every token",
+      "a service-role token becomes publishable, so the one credential class that must never leave can leave",
     file: SCAN,
-    find: "  if (id.issuer !== null) {",
-    replace: "  if (id.issuer === null) return true;\n  if (id.issuer !== null) {",
+    find: 'if (claims.role === "service_role") {',
+    replace: "if (false) {",
     guard: E4,
-    expect: "17.13 and with no local identity known the scan FAILS CLOSED",
+    expect: "17.14 a VALIDLY SIGNED service-role token is refused",
+  },
+  {
+    id: "E4-TOKEN-POLICY-CHECKS-ROLE-AFTER-THE-ALLOWLIST",
+    defect:
+      "the allowlist is consulted before the service-role rule, so an allowlisted service-role token is published and the rule stops being absolute",
+    file: SCAN,
+    find: "  const claims = jwtClaims(token);",
+    replace:
+      '  if (allow.digests.has(sha256hex(token))) return { allowed: true, reason: "on the list" };\n  const claims = jwtClaims(token);',
+    guard: E4,
+    expect: "17.15 even ON the allowlist",
+  },
+  {
+    id: "E4-TOKEN-POLICY-OPEN-ON-PARSE-FAILURE",
+    defect:
+      "a token whose payload cannot be parsed is allowed instead of refused, so anything that defeats the parser is published",
+    file: SCAN,
+    find: '    return { allowed: false, reason: "the token could not be parsed, so nothing about it is known" };',
+    replace: '    return { allowed: true, reason: "unparseable, letting it through" };',
+    guard: E4,
+    expect: "17.13 an UNSIGNED token claiming the local issuer is refused",
+  },
+  {
+    id: "E4-ALLOWLIST-UNREADABLE-MEANS-ALLOW-ALL",
+    defect:
+      "an unreadable allowlist stops meaning 'allow nothing' and starts meaning 'allow everything'",
+    file: SCAN,
+    find: "        .filter((line) => /^[0-9a-f]{64}$/.test(line)),",
+    replace: "        .filter(() => false),",
+    guard: E4,
+    expect: "17.9 the allowlist is read as exact digests",
   },
   {
     id: "E4-LEAK-SCAN-STOPS-AT-THE-FIRST-JWT",
     defect:
-      "the JWT sweep stops at the first match again, so a hosted token hides behind an allowed local one in the same trace and is published",
+      "the JWT sweep stops at the first match, so a foreign token hides behind an allowed local one in the same trace and is published",
     file: SCAN,
     find: "      while ((m = JWT_PATTERN.exec(text)) !== null && budget-- > 0) {",
     replace: "      if ((m = JWT_PATTERN.exec(text)) !== null && budget-- > 0) {",
     guard: E4,
-    expect: "17.14 and a foreign token cannot hide behind an allowed one in the same file",
+    expect: "17.18 a foreign token AFTER an allowed one in the same file is still found",
   },
   {
     id: "E4-LOCAL-ALLOWANCE-APPLIED-SILENTLY",
     defect:
-      "allowed local tokens stop being counted, so the exception is applied without anybody being told — which is how an exception becomes a hole",
+      "allowed tokens stop being counted, so the exception is applied without anybody being told -- which is how an exception becomes a hole",
     file: SCAN,
     find: "          ctx.allowedLocalTokens += 1;",
     replace: "          // not counted",
     guard: E4,
-    expect: "17.15 every allowance is COUNTED",
+    expect: "17.15b every allowance is COUNTED",
   },
   {
-    id: "E4-STACK-IDENTITY-HARDCODED",
+    id: "E4-ALLOWLIST-INSIDE-THE-ARTIFACT",
     defect:
-      "the local issuer is written down as a constant instead of read from the running stack's own anon key, so it goes stale and either blocks every run or trusts the wrong issuer",
-    file: SCAN,
-    find: '    if (payload && typeof payload.iss === "string" && payload.iss.length > 0) issuer = payload.iss;',
-    replace: '    issuer = "supabase-demo";',
+      "the allowlist is written into the artifact directory, where the upload reads and the manifest hashes it",
+    file: EVIDENCE_WF,
+    find: '          install -m 600 /dev/null "$RUNNER_TEMP/e4-token-allowlist.txt"',
+    replace:
+      '          install -m 600 /dev/null "artifacts/employer-final-report-e4/allowlist.txt"',
     guard: E4,
-    expect: "17.9 the local stack's issuer is read from its own anon key",
+    expect: "17.25 the allowlist lives outside the artifact directory",
   },
+  {
+    id: "E4-ALLOWLIST-WORLD-READABLE",
+    defect: "the allowlist is created with default permissions instead of 0600",
+    file: EVIDENCE_WF,
+    find: "          install -m 600 /dev/null",
+    replace: "          touch",
+    guard: E4,
+    expect: "17.26 created with restrictive permissions",
+  },
+  {
+    id: "E4-ALLOWLIST-OUTLIVES-THE-UPLOAD",
+    defect:
+      "the allowlist is destroyed after the upload rather than before it, so it exists while the artifact is being published",
+    file: EVIDENCE_WF,
+    find: "      - name: Destroy this run's token allowlist",
+    replace: "      - name: Tidy up the temporary files at the very end",
+    guard: E4,
+    expect: "17.27 and destroyed BEFORE the upload",
+  },
+  {
+    id: "E4-SCAN-READS-A-JWT-SECRET",
+    defect:
+      "the scan takes a JWT secret again, putting a signing key in the one process whose whole job is to look at things that must not be published",
+    file: SCAN,
+    find: "  const file = env.E4_TOKEN_ALLOWLIST?.trim();",
+    replace:
+      "  const unused = env.JWT_SECRET;\n  void unused;\n  const file = env.E4_TOKEN_ALLOWLIST?.trim();",
+    guard: E4,
+    expect: "17.24 the scan reads no JWT secret at all",
+  },
+  {
+    id: "E4-WALK-RECORDS-RAW-TOKENS",
+    defect:
+      "the walk writes raw tokens into the allowlist instead of their digests, so a file full of live bearer tokens sits on the runner",
+    file: EVIDENCE_SPEC,
+    find: '    appendFileSync(ALLOWLIST, `${createHash("sha256").update(token, "utf8").digest("hex")}\\n`, {',
+    replace: "    appendFileSync(ALLOWLIST, `${token}\\n`, {",
+    guard: E4,
+    expect: "17.29 and the walk recording DIGESTS, never a token",
+  },
+
   {
     id: "E4-WALK-TIMEOUT-SMALLER-THAN-ITS-WAITS",
     defect:
@@ -332,6 +405,47 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "test.describe.configure({ timeout: 30_000 });",
     guard: E4,
     expect: "13.2b and every wait inside it fits",
+  },
+
+  /* ---- All four language-and-viewport combinations -------------------- */
+  {
+    id: "E4-WALK-SKIPS-ENGLISH-DESKTOP",
+    defect:
+      "the English desktop walk is dropped, so the manifest still declares two locales and two viewports while only three of the four combinations are ever routed",
+    file: EVIDENCE_SPEC,
+    find: 'test("14-15 · ENGLISH DESKTOP 1440',
+    replace: 'test.skip("14-15 · english desktop dropped',
+    guard: E4,
+    expect: "13.2e the walk covers ENGLISH DESKTOP 1440",
+  },
+  {
+    id: "E4-WALK-SKIPS-SWEDISH-MOBILE",
+    defect: "the Swedish mobile walk is dropped, leaving the fourth combination unrouted",
+    file: EVIDENCE_SPEC,
+    find: 'test("16-17 · SWEDISH MOBILE 375',
+    replace: 'test.skip("16-17 · swedish mobile dropped',
+    guard: E4,
+    expect: "13.2e the walk covers SWEDISH MOBILE 375",
+  },
+  {
+    id: "E4-WALK-SLEEPS-INSTEAD-OF-WAITING",
+    defect:
+      "the walk waits on the clock instead of on an application state, so it passes or fails on how loaded the runner is and a generous budget hides a hang",
+    file: EVIDENCE_SPEC,
+    find: '  await page.waitForLoadState("networkidle");',
+    replace: "  await page.waitForTimeout(5000);",
+    guard: E4,
+    expect: "13.2c and it contains no arbitrary sleep",
+  },
+  {
+    id: "E4-WALK-RECORDS-NO-DURATIONS",
+    defect:
+      "phase and test durations stop being recorded, so a step that hangs for three minutes inside a 240 s budget is indistinguishable from one that took a second",
+    file: EVIDENCE_SPEC,
+    find: "  writeFileSync(`${OUT}/timings.json`",
+    replace: "  void String(`${OUT}/nothing.json`",
+    guard: E4,
+    expect: "13.2d each test's duration and each phase's duration are recorded",
   },
 
   /* ---- The stack the evidence is taken against ----------------------- *

@@ -314,6 +314,32 @@ jobs:
           done
           echo "the dev server did not come up"; cat /tmp/dev-server.log; exit 1
 
+      # ── THIS RUN'S TOKEN ALLOWLIST ────────────────────────────────────
+      #
+      # A trace records the network, so it carries the anon key and the
+      # signed-in user's bearer token. The leak scan publishes a JWT only when
+      # that EXACT token was observed in this run, so the run has to say which
+      # tokens those were.
+      #
+      # DIGESTS ONLY, and nothing here prints a token. The file lives outside
+      # the artifact directory, is created 0600, and is destroyed before the
+      # upload. The walk appends the digest of each access token the browser
+      # is actually issued.
+      #
+      # Nothing self-declared is trusted: not an issuer, not an audience, not
+      # a project ref. Only "this exact byte sequence came out of this run".
+      - name: Open this run's token allowlist
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null "$RUNNER_TEMP/e4-token-allowlist.txt"
+          set -a
+          # shellcheck disable=SC1091
+          . /tmp/supabase-status.env
+          set +a
+          printf '%s' "${ANON_KEY}" | sha256sum | cut -d' ' -f1 \
+            >> "$RUNNER_TEMP/e4-token-allowlist.txt"
+          echo "allowlist opened with $(wc -l < "$RUNNER_TEMP/e4-token-allowlist.txt") digest(s)"
+
       # Serial, one worker: the walk finalises reports and asserts version
       # numbers, and two workers sharing one database would race each other.
       - name: Capture the routed evidence
@@ -327,6 +353,7 @@ jobs:
           # spec parses every field it needs from this and refuses anything
           # that is not loopback.
           E4_DATABASE_URL: ${{ steps.local.outputs.db_url }}
+          E4_TOKEN_ALLOWLIST: ${{ runner.temp }}/e4-token-allowlist.txt
           # The repository config reports to the terminal only, which is right
           # for a developer and wrong for an artifact: `manifest.results` --
           # the authoritative answer to which states were actually exercised
@@ -377,29 +404,12 @@ jobs:
       - name: Scan the evidence for anything that must not leave
         id: leak_scan
         if: always()
-        run: |
-          set -euo pipefail
-          # ── WHY THE STACK'S OWN IDENTITY IS HANDED TO THE SCAN ────────
-          #
-          # A trace records the network, and every request the browser makes
-          # carries the stack's anon key and the signed-in user's access
-          # token. Both are JWTs. "Refuse every JWT" would mean this pipeline
-          # can never publish a trace at all -- and a control that makes the
-          # evidence impossible is a control that gets deleted.
-          #
-          # So the scan is told how to recognise a token THIS run's throwaway
-          # stack minted, and refuses every other JWT. Read straight from the
-          # status file rather than through a step output, so no value passes
-          # through anything that renders it. Nothing here prints them.
-          if [ -f /tmp/supabase-status.env ]; then
-            set -a
-            # shellcheck disable=SC1091
-            . /tmp/supabase-status.env
-            set +a
-            export E4_LOCAL_ANON_KEY="${ANON_KEY:-}"
-            export E4_LOCAL_JWT_SECRET="${JWT_SECRET:-}"
-          fi
-          bun run scripts/e4-evidence-scan.ts
+        env:
+          # The digests of the tokens this run produced. No secret is passed:
+          # the scan verifies no signature and reads no JWT secret, so there
+          # is nothing in that process to leak.
+          E4_TOKEN_ALLOWLIST: ${{ runner.temp }}/e4-token-allowlist.txt
+        run: bun run scripts/e4-evidence-scan.ts
 
       # ── WHY THIS IS NOT `if: always()` ────────────────────────────────
       #
@@ -412,6 +422,19 @@ jobs:
       # It is still `always()`-based rather than plain success(), because a
       # FAILED WALK must still publish its evidence: a failure's screenshots
       # and trace are how somebody finds out why. A failed SCAN must not.
+      # Destroyed BEFORE the upload, and before anything else can read it.
+      # It holds digests rather than tokens, so it leaks nothing either way --
+      # but a file whose whole purpose ends with the scan should not outlive
+      # it. `shred` where available, so the bytes go rather than the name.
+      - name: Destroy this run's token allowlist
+        if: always()
+        run: |
+          f="$RUNNER_TEMP/e4-token-allowlist.txt"
+          if [ -f "$f" ]; then
+            shred -u "$f" 2>/dev/null || rm -f "$f"
+          fi
+          test ! -f "$f" && echo "allowlist destroyed"
+
       - name: Upload the evidence
         if: always() && steps.leak_scan.outcome == 'success'
         uses: actions/upload-artifact@v4
