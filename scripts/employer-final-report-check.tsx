@@ -2167,7 +2167,7 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     "16.36b and the HTML report the artifact promises",
   );
   ok(
-    /--trace on/.test(wf),
+    /--trace on/.test(wfSteps),
     "16.36c the walk retains a trace even when it passes — a green run has no failures, so trace-on-failure would publish none at all",
   );
   // Playwright embeds the HEAD commit -- subject, FULL BODY, author name and

@@ -316,14 +316,38 @@ export interface ScanContext {
 
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g;
 
-/** The neighbourhood of a match, with anything token-shaped masked out. */
+/**
+ * The neighbourhood of a match, with anything token-shaped masked out.
+ *
+ * ── WHY IT REDACTS BEFORE IT TRIMS ─────────────────────────────────────
+ *
+ * The first version sliced a narrow window and redacted what was inside it.
+ * A token that began inside the window and ran past its end was therefore cut
+ * in half, no longer looked like a token, and was printed raw — so the report
+ * that exists to make a leak locatable leaked. Its own control caught it.
+ *
+ * A wide window is redacted first, and only then trimmed to something a
+ * person can read. A token cannot be half-masked, because the masking never
+ * sees half of one.
+ */
 function contextAround(text: string, index: number, length: number): string {
-  const from = Math.max(0, index - 70);
-  const to = Math.min(text.length, index + length + 70);
-  return text
-    .slice(from, to)
+  const PAD = 1500;
+  const WIDTH = 70;
+  const needle = text.slice(index, index + length);
+  const window = text.slice(Math.max(0, index - PAD), Math.min(text.length, index + length + PAD));
+  const redacted = window
     .replace(/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, "«token»")
     .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, "«blob»")
+    // Anything else long and mixed-case-with-digits: a key, an id, an opaque
+    // string. A kebab-case path segment is all lower case and survives, which
+    // is what makes the context worth reading.
+    .replace(/[A-Za-z0-9_-]{40,}/g, (run) =>
+      /[a-z]/.test(run) && /[A-Z]/.test(run) && /[0-9]/.test(run) ? "«opaque»" : run,
+    );
+  const at = redacted.indexOf(needle);
+  const centre = at >= 0 ? at : Math.floor(redacted.length / 2);
+  return redacted
+    .slice(Math.max(0, centre - WIDTH), Math.min(redacted.length, centre + needle.length + WIDTH))
     .replace(/\s+/g, " ")
     .trim();
 }
