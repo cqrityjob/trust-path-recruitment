@@ -36,7 +36,6 @@ const CANDIDATE_PAGE = "src/routes/_authenticated.my-career.interviews.$caseId.t
 
 const E3 = "interview-context-governance:check";
 const E1 = "employer-process-continuity:check";
-const BRIDGE = "interview-context-bridge:check";
 
 const MUTATIONS: readonly Mutation[] = [
   /* ---- The unreadable application as a standalone interview -------- */
@@ -58,7 +57,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "          application: resolveSourceRead({\n            referenced: true,\n            error: appErr,\n            hasRow: Boolean(a),\n          }),",
     replace: '          application: "absent",',
     guard: E3,
-    expect: "no row because the read said",
+    expect: "`absent` is never written by hand",
   },
   {
     id: "E3-EMPTY-CONTEXT-CLAIMS-NO-CV",
@@ -78,9 +77,9 @@ const MUTATIONS: readonly Mutation[] = [
       "THE ORIGINAL DEFECT: a failed advert read reports as an advert that states no requirements",
     file: CONTEXT_FN,
     find: "  const read = resolveSourceRead({ referenced: true, error, hasRow: Boolean(data) });",
-    replace: '  const read: SourceRead = "absent";',
+    replace: '  const read: SourceRead = error ? "absent" : data ? "ok" : "absent";',
     guard: E3,
-    expect: "an advert read that said",
+    expect: "the advert's reader never writes",
   },
   {
     id: "E3-ADVERT-MISSING-ROW-AS-ABSENCE",
@@ -90,7 +89,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "  const read = resolveSourceRead({ referenced: true, error, hasRow: Boolean(data) });",
     replace: '  const read: SourceRead = error ? "failed" : data ? "ok" : "absent";',
     guard: E3,
-    expect: "an advert read that said",
+    expect: "the advert's reader delegates its read outcome",
   },
   {
     id: "E3-ASSESSMENT-READ-FAILURE-AS-ABSENCE",
@@ -100,7 +99,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "    return {\n      brief: null,\n      pending: false,\n      read: resolveSourceRead({ referenced: true, error, hasRow: false }),\n    };",
     replace: '    return { brief: null, pending: false, read: "absent" };',
     guard: E3,
-    expect: "never renders as no assessment",
+    expect: "the released assessment's reader never writes",
   },
   {
     id: "E3-CV-READ-FAILURE-AS-ABSENCE",
@@ -108,8 +107,8 @@ const MUTATIONS: readonly Mutation[] = [
     file: CONTEXT_FN,
     find: "    return {\n      value: null,\n      read: resolveSourceRead({\n        referenced: true,\n        error: err as { message?: string },\n        hasRow: false,\n      }),\n    };",
     replace: '    return { value: null, read: "absent" };',
-    guard: BRIDGE,
-    expect: "the CV reads as unreadable rather than as absent",
+    guard: E3,
+    expect: "the CV's reader delegates its read outcome",
   },
 
   /* ---- The case read's failure modes ------------------------------- */
@@ -136,7 +135,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E3-UNKNOWN-FAILURE-CALLED-A-REFUSAL",
     defect:
       "an unrecognised failure is classified as a refusal, so an outage is reported as a decision somebody made and the retry is withheld",
-    file: CONTEXT_FN,
+    file: CONTEXT,
     find: '  return "failed";\n}',
     replace: '  return "refused";\n}',
     guard: E3,
@@ -193,7 +192,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: '  if (read === "refused")',
     replace: '  if (false && read === "refused")',
     guard: E3,
-    expect: "never renders as no assessment",
+    expect: "the released assessment's reader never writes",
   },
   {
     id: "E3-CONTEXT-OF-MANUFACTURES-A-CONTEXT",

@@ -313,14 +313,67 @@ const baseInput: ContextInput = {
     "2b · the privilege SQLSTATE is a refusal",
   );
 
-  // EVERY READER GOES THROUGH IT. A reader that decided for itself is a reader
-  // this section cannot speak for.
+  // EVERY READER GOES THROUGH IT, NAMED ONE AT A TIME.
+  //
+  // A count of call sites catches a reader that stopped delegating, but it
+  // reports "found 4 call sites" -- which tells nobody WHICH source has begun
+  // lying about its own failures. Each reader is sliced out and asserted on
+  // its own, so the diagnostic names the source.
   const fn = codeOnly(read(CONTEXT_FN));
-  const calls = (fn.match(/resolveSourceRead\(/g) ?? []).length;
-  ok(calls >= 5, `2b · every source reader delegates the decision (found ${calls} call sites)`);
+
+  /** One function body, from its declaration to the next one. */
+  const bodyOf = (name: string): string => {
+    const start = fn.indexOf(name);
+    if (start < 0) return "";
+    const rest = fn.slice(start + name.length);
+    const next = rest.search(/\nasync function |\nfunction |\nexport const /);
+    return next < 0 ? rest : rest.slice(0, next);
+  };
+
+  for (const [decl, source] of [
+    ["async function readJob", "the advert"],
+    ["async function readCv", "the CV"],
+    ["async function readAssessment", "the released assessment"],
+  ] as const) {
+    const body = bodyOf(decl);
+    ok(body.length > 0, `2b · ${source}'s reader is where it is expected to be`);
+    ok(
+      body.includes("resolveSourceRead("),
+      `2b · ${source}'s reader delegates its read outcome rather than deciding it`,
+    );
+    // A literal outcome is allowed in two places: `absent`, for a reference
+    // that was never made, and `ok` on a path that has already established the
+    // read landed. `refused` and `failed` are never a reader's to write --
+    // that is where four separate defects hid.
+    const literals = [...body.matchAll(/read:\s*"(ok|absent|refused|failed)"/g)].map((m) => m[1]);
+    ok(
+      literals.every((l) => l === "absent" || l === "ok"),
+      `2b · and ${source}'s reader never writes "refused" or "failed" by hand`,
+    );
+  }
+
+  // The application branch, which lives in the handler rather than in a reader.
   ok(
-    !/read:\s*"failed"\s*[,}]/.test(fn.slice(fn.indexOf("async function readJob"))),
-    "2b · and none of them writes a read outcome by hand",
+    /application: resolveSourceRead\(/.test(fn),
+    "2b · the application's read outcome is delegated too",
+  );
+  // `absent` is the one value that must never be written by hand here: it means
+  // "this case names no application", and the whole defect was a branch that
+  // said so about a case that named one. `ok` IS written by hand, on the branch
+  // that has already established the row came back -- so that literal is
+  // asserted to be inside the successful branch rather than forbidden.
+  ok(
+    !/application:\s*"absent"/.test(fn),
+    "2b · and `absent` is never written by hand -- it would mean a case with no application",
+  );
+  const happy = fn.slice(fn.indexOf("const [job, cv, assessment] = await Promise.all"));
+  ok(
+    /application: "ok"/.test(happy),
+    "2b · the one hand-written `ok` is on the branch that already has the application row",
+  );
+  ok(
+    !/application: "ok"/.test(fn.slice(0, fn.indexOf("const [job, cv, assessment]"))),
+    "2b · and nowhere before it",
   );
 }
 
