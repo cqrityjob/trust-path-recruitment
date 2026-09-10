@@ -1827,6 +1827,19 @@ console.log(
       `13.2e the walk covers ${combination} as a routed test of its own`,
     );
   }
+  const englishDesktop = spec.slice(
+    spec.indexOf('test("14-15 · ENGLISH DESKTOP 1440'),
+    spec.indexOf('test("16-17 · SWEDISH MOBILE 375'),
+  );
+  const englishDesktopBeforeSwitch = englishDesktop.slice(
+    0,
+    englishDesktop.indexOf('"switch to English"'),
+  );
+  ok(
+    /expect\(doc\(page, "final"\)\)\.toBeVisible/.test(englishDesktopBeforeSwitch) &&
+      !/Slutförd/.test(englishDesktopBeforeSwitch),
+    "13.2f the English-desktop walk waits on the structural final document before changing language, not on stale translated copy",
+  );
   for (const [needle, state] of [
     ['data-testid="fr-disagree"', "both assessors and their disagreement"],
     [
@@ -2135,9 +2148,20 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     "16.32 it refuses a parsed host that is not loopback",
   );
   ok(
-    /refuses a database URL naming the owner production project/.test(evSpec) &&
-      /OWNER_PROJECT_REF = "wrygicdfxwjnrugduxnt"/.test(evSpec),
-    "16.33 and refuses the owner project ref by name",
+    /E4_FORBIDDEN_PROJECT_REF: wrygicdfxwjnrugduxnt/.test(wf) &&
+      /OWNER_PROJECT_REF = process\.env\.E4_FORBIDDEN_PROJECT_REF/.test(evSpecCode),
+    "16.33 the workflow supplies the exact forbidden owner-project ref to the spec at runtime",
+  );
+  ok(
+    !/wrygicdfxwjnrugduxnt/.test(evSpecCode),
+    "16.33b the trace-captured spec source does not embed the production project ref",
+  );
+  ok(
+    /if \(!OWNER_PROJECT_REF\)\s*\{\s*throw new Error/.test(evSpecCode) &&
+      /if \(raw\.includes\(OWNER_PROJECT_REF\)\)\s*\{\s*throw new Error\("E4 evidence refuses a database URL naming the owner production project\."\)/.test(
+        evSpecCode,
+      ),
+    "16.33c a missing deny value fails closed, and a matching database URL is refused",
   );
   ok(
     /names no port, and nothing here may guess one/.test(evSpec),

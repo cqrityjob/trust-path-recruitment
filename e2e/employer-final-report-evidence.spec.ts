@@ -106,7 +106,10 @@ const TITLE_EN = "E4 evidence · Guard East";
 // owner project. Every field psql needs is parsed from it here, once, and
 // the parse refuses anything that is not a loopback Postgres URL.
 
-const OWNER_PROJECT_REF = "wrygicdfxwjnrugduxnt";
+// Playwright traces retain this spec's source. Keep the production identifier
+// out of that trace: the workflow supplies the exact forbidden value at
+// runtime, while this spec fails closed if it is missing.
+const OWNER_PROJECT_REF = process.env.E4_FORBIDDEN_PROJECT_REF;
 
 interface LocalDatabase {
   readonly host: string;
@@ -129,6 +132,11 @@ function localDatabase(): LocalDatabase {
       "E4 evidence needs E4_DATABASE_URL — the local stack's own database URL. " +
         "There is deliberately no default: a guessed host, port or password is a " +
         "second source of truth about which database this writes to.",
+    );
+  }
+  if (!OWNER_PROJECT_REF) {
+    throw new Error(
+      "E4 evidence needs E4_FORBIDDEN_PROJECT_REF so the owner production project is refused by name.",
     );
   }
   if (raw.includes(OWNER_PROJECT_REF)) {
@@ -535,7 +543,7 @@ test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", a
   await phase(t, "sign in as the owner", () => signIn(page, OWNER));
   await phase(t, "open the report", async () => {
     await page.goto(reportUrl(caseEn));
-    await expect(main(page)).toContainText(/Slutförd|Finalised/, { timeout: 60_000 });
+    await expect(doc(page, "final")).toBeVisible({ timeout: 60_000 });
   });
 
   await phase(t, "switch to English", async () => {

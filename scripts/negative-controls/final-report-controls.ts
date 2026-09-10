@@ -209,7 +209,28 @@ const MUTATIONS: readonly Mutation[] = [
     find: '    throw new Error("E4 evidence refuses a database URL naming the owner production project.");',
     replace: "    // the owner project ref is allowed through",
     guard: E4,
-    expect: "16.33 and refuses the owner project ref by name",
+    expect: "16.33c a missing deny value fails closed, and a matching database URL is refused",
+  },
+  {
+    id: "E4-SPEC-EMBEDS-THE-OWNER-PROJECT-REF",
+    defect:
+      "the production project ref is embedded in the Playwright spec again, so every trace carries it in a source resource and the scanner must refuse the artifact",
+    file: EVIDENCE_SPEC,
+    find: "const OWNER_PROJECT_REF = process.env.E4_FORBIDDEN_PROJECT_REF;",
+    replace: 'const OWNER_PROJECT_REF = "wrygicdfxwjnrugduxnt";',
+    guard: E4,
+    expect: "16.33b the trace-captured spec source does not embed the production project ref",
+  },
+  {
+    id: "E4-SPEC-OWNER-PROJECT-DENY-VALUE-MAY-BE-MISSING",
+    defect:
+      "the workflow can omit the deny value and the mutating walk carries on without its explicit production-project refusal",
+    file: EVIDENCE_SPEC,
+    find:
+      '    throw new Error(\n      "E4 evidence needs E4_FORBIDDEN_PROJECT_REF so the owner production project is refused by name.",\n    );',
+    replace: "    // missing deny value is accepted",
+    guard: E4,
+    expect: "16.33c a missing deny value fails closed, and a matching database URL is refused",
   },
   {
     id: "E4-SPEC-GUESSES-THE-PORT",
@@ -449,6 +470,18 @@ const MUTATIONS: readonly Mutation[] = [
   },
 
   /* ---- All four language-and-viewport combinations -------------------- */
+  {
+    id: "E4-ENGLISH-DESKTOP-WAITS-ON-STALE-SWEDISH-COPY",
+    defect:
+      "the English-desktop walk waits for an obsolete Swedish status word before it can switch to English, so correct current copy fails the evidence run",
+    file: EVIDENCE_SPEC,
+    find: '    await expect(doc(page, "final")).toBeVisible({ timeout: 60_000 });',
+    replace:
+      "    await expect(main(page)).toContainText(/Slutförd|Finalised/, { timeout: 60_000 });",
+    guard: E4,
+    expect:
+      "13.2f the English-desktop walk waits on the structural final document before changing language, not on stale translated copy",
+  },
   {
     id: "E4-WALK-SKIPS-ENGLISH-DESKTOP",
     defect:
