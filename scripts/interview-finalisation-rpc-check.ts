@@ -79,7 +79,9 @@ async function callAs(
     await tx`SELECT set_config('request.jwt.claims',
       json_build_object('sub', ${userId}::text, 'role', 'authenticated')::text, true)`;
     await tx.unsafe(`SET LOCAL ROLE authenticated`);
-    await tx`SELECT public.scp_iv_finalise_report(${caseId}::uuid)`;
+    // A placeholder basis hash: the role check precedes the preview check, and
+    // the refusal a member receives must be the role's, not the hash's.
+    await tx`SELECT public.scp_iv_finalise_report(${caseId}::uuid, 'not-a-preview')`;
     return null;
   } catch (err) {
     // Bun's driver puts its own tag in `code` (ERR_POSTGRES_SERVER_ERROR) and

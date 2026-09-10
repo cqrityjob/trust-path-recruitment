@@ -222,9 +222,16 @@ DROP TABLE IF EXISTS public.scp_research_claims                  CASCADE;
 DROP TABLE IF EXISTS public.scp_research_sources                 CASCADE;
 
 DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, uuid);
--- 20261107090000: the employer final report's governed readback.
+-- 20261107090000: preview-then-finalise, the shared builder, the hash rules
+-- and the governed readbacks.
+DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, text, uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_preview_report(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_build_report_basis(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_final_report(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_report_version(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_report_versions(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_content_hash(jsonb);
+DROP FUNCTION IF EXISTS public.scp_iv_basis_hash(jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_mark_assessed(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_report_blockers(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_record_assessment(uuid, uuid, integer, text, text, text);
@@ -494,6 +501,8 @@ DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
 -- the Phase 2b unwind further down.
 DROP FUNCTION IF EXISTS public.scp_participant_report(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_report(uuid) CASCADE;
+-- 20261107090000: the assessment-domain identity projection the interview report binds to.
+DROP FUNCTION IF EXISTS public.scp_employer_report_identity(uuid) CASCADE;
 -- E2 (20261105090000): the issuer's read of the participant document, and the
 -- release-authority predicate behind it. Added to this unwind because the
 -- assertion below requires that NO scp_ function survives a full PR-A

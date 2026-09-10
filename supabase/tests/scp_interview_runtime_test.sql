@@ -392,7 +392,8 @@ BEGIN
   PERFORM public.scp_iv_mark_assessed(_case);
 
   -- 9. The report
-  _report := public.scp_iv_finalise_report(_case);
+  _report := public.scp_iv_finalise_report(_case,
+               (SELECT basis_hash FROM public.scp_iv_preview_report(_case)));
   PERFORM pg_temp.ok(
     (SELECT status FROM public.scp_interview_cases WHERE id = _case) = 'reported',
     'R2.19 the case reaches reported');

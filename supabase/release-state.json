@@ -569,10 +569,38 @@
         {
           "object": "content_hash_algorithm", 
           "kind": "column"
+        }, 
+        {
+          "object": "basis_hash", 
+          "kind": "column"
+        }, 
+        {
+          "object": "scp_iv_build_report_basis", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_preview_report", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_report_version", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_content_hash", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_iv_basis_hash", 
+          "kind": "function"
+        }, 
+        {
+          "object": "scp_employer_report_identity", 
+          "kind": "function"
         }
       ], 
-      "note": "EMPLOYER FINAL REPORT -- A PROVABLE BASIS AND A GOVERNED READBACK. The employer final report is the canonical output of the assessment and interview process: an authorised recruitment owner reviews it, explicitly finalises it, and uses it as decision support. It is never an automatic recommendation, ranking, total score, pass/fail or employment decision, and it is never shared with the candidate. Three additions. (1) The content hash becomes core sha256 instead of md5, and a nullable content_hash_algorithm column records which algorithm produced the stored value; NULL means md5, because scp_iv_guard_report_immutable rightly refuses to let any already-finalised row be rewritten even to annotate it. sha256() is pg_catalog, NOT pgcrypto digest() -- 20260811100000 and 20260817150000 are both scar tissue from an extension that could not resolve under a pinned search_path, and finalising a report is a core path. (2) The snapshot now names the recruitment it belongs to (application id, job id, and the ADVERT's own titles from jobs, never the case's internal title) and the assessment material the process ran on, by attempt identity only. (3) Every evidence item carries a classification derived solely from identifiers the row already holds, so a reader can tell a candidate statement from an interviewer observation from verified material; a human level is labelled human_interpretation rather than presented as a further fact. Also hardens the immutability guard: a SUPERSEDED version was editable, which defeated preserving the previous version. Adds no table. Reads no live application, Passport, CV or note table (ER5.8), and names no assessment snapshot table (TR12.3).", 
-      "verify": "SELECT p.proname, p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('scp_iv_final_report','scp_iv_report_versions') ORDER BY 1;  -- expect two rows, prosecdef t. Then: SELECT has_function_privilege('anon','public.scp_iv_final_report(uuid)'::regprocedure,'EXECUTE');  -- expect f. Then: SELECT position('sha256(' in pg_get_functiondef('public.scp_iv_finalise_report(uuid,uuid)'::regprocedure)) > 0, position('md5(' in pg_get_functiondef('public.scp_iv_finalise_report(uuid,uuid)'::regprocedure)) = 0;  -- expect t|t. Then: SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_reports' AND column_name='content_hash_algorithm';  -- expect one row. The migration asserts all of this at apply time and raises SCP_IV_BASIS on failure; a successful apply logs NOTICE SCP_IV_REPORT_BASIS_PROOF ok.", 
+      "note": "EMPLOYER FINAL REPORT -- A PROVABLE, DETERMINISTIC BASIS; PREVIEW THAT EQUALS FINALISATION; EVERY ASSESSOR; A GOVERNED READBACK. The employer final report is the canonical output of the assessment and interview process: an authorised recruitment owner reviews it, explicitly finalises it, and uses it as decision support. Never an automatic recommendation, ranking, total score, pass/fail or employment decision; never shared with the candidate. (1) Every LIVE human assessment reaches the report in a fixed order (assessor, moment, id) with the panel's concluded prose beside them and disagreement stated; the LIMIT-1-without-ORDER-BY selection is gone. (2) Every aggregate is ordered on immutable keys, so the same basis yields the same bytes, digest and version whatever the heap order; the suite proves it by rewriting rows in place. (3) A Passport passage is classified neutrally as passport_disclosure: the interview side persists no per-claim provenance and the builder must not read the claim table (ER5.8), so verification is not claimed. (4) The assessment RESULT travels: for each attempt on the application, the released employer document through scp_employer_report and the new domain-owned scp_employer_report_identity, bound to snapshot id, report version, release moment and a sha256 of the projected content; TR12.3 holds. (5) Core sha256 (pg_catalog, not pgcrypto) with content_hash_algorithm recorded; NULL means md5 and is never backfilled because a finalised report is immutable. (6) One builder, scp_iv_build_report_basis, serves scp_iv_preview_report and scp_iv_finalise_report(uuid, text, uuid); the two-argument finalisation is REPLACED, finalisation requires the previewed basis hash and refuses SCP_IV_STALE_PREVIEW when the basis moved. (7) Readbacks recompute the digest and resolve the finalising actor to a display name and account address; scp_iv_report_version opens a specific historical version. (8) The immutability guard now protects superseded versions. Rollback restores the 20261020090000 finalisation and the 20260920090000 guard verbatim and keeps both nullable columns.", 
+      "verify": "SELECT p.proname, p.pronargs FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('scp_iv_finalise_report','scp_iv_preview_report','scp_iv_build_report_basis','scp_iv_final_report','scp_iv_report_version','scp_iv_report_versions','scp_employer_report_identity') ORDER BY 1;  -- expect seven rows, scp_iv_finalise_report with pronargs 3 and no pronargs-2 row. Then: SELECT has_function_privilege('authenticated','public.scp_iv_build_report_basis(uuid)'::regprocedure,'EXECUTE'), has_function_privilege('anon','public.scp_iv_preview_report(uuid)'::regprocedure,'EXECUTE');  -- expect f|f. Then: SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_reports' AND column_name IN ('content_hash_algorithm','basis_hash');  -- expect two rows. The migration asserts all of this at apply time and raises SCP_IV_BASIS on failure; a successful apply logs NOTICE SCP_IV_REPORT_BASIS_PROOF ok.", 
       "rollback": "supabase/rollback/20261107090000_scp_iv_report_basis_integrity_rollback.sql"
     }
   ], 
