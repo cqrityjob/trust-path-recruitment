@@ -1025,7 +1025,10 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
     // assertion is now the same one the case destinations get -- an action
     // target, never a presentation record -- rather than a list of one.
     const attemptIds = [...ladder.matchAll(/attemptId: assessment\.(\w+)/g)].map((m) => m[1]);
-    ok(attemptIds.length >= 2, "9a · the ladder builds an attempt destination for review AND for release");
+    ok(
+      attemptIds.length >= 2,
+      "9a · the ladder builds an attempt destination for review AND for release",
+    );
     for (const f of attemptIds) {
       ok(
         /AttemptId$/.test(f) && !f.startsWith("presentation"),
