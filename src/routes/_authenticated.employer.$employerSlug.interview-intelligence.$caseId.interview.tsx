@@ -60,7 +60,7 @@ import {
   setSessionState,
 } from "@/lib/interview-intelligence/runtime.functions";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
-import { contextOf } from "@/components/employer/interview/InterviewContextOutcome";
+import { contextOf } from "@/lib/interview-intelligence/context-outcome";
 import type { FollowUpReason } from "@/lib/interview-intelligence/context";
 
 export const Route = createFileRoute(

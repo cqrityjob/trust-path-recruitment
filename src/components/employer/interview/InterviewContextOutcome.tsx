@@ -16,48 +16,21 @@
 //
 // ── WHAT IT REFUSES TO DO ───────────────────────────────────────────────
 //
-// It never produces a context. `contextOf` returns null for every unhappy
+// It never produces a context. `contextOf`, in
+// @/lib/interview-intelligence/context-outcome, returns null for every unhappy
 // answer, and the caller must then render `<ContextUnavailable>` rather than
 // an empty context — because an empty context is a set of claims (no role, no
 // requirements, nothing to explore) and none of those claims is known to be
 // true.
+//
+// Those two pure answers -- `contextOf` and `contextIsUsable` -- live in that
+// module rather than here, so this file exports React components only and
+// Fast Refresh stays reliable. The decision moved; nothing about it changed.
 
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
-import type {
-  InterviewContext,
-  InterviewContextResult,
-} from "@/lib/interview-intelligence/context";
+import type { InterviewContextResult } from "@/lib/interview-intelligence/context";
 import { Nothing, Section } from "./InterviewLayout";
-
-/** The context, or null — and null is NOT a context.
- *
- *  Deliberately not `?? emptyContext(...)`: a caller that wants to render
- *  something has to reach for `<ContextUnavailable>` and say which answer it
- *  got. The default would be the defect. */
-export function contextOf(
-  result: InterviewContextResult | null | undefined,
-): InterviewContext | null {
-  return result?.kind === "context" ? result.context : null;
-}
-
-/** Whether an action that DEPENDS on the context may be offered.
- *
- *  ── WHY THIS IS NOT `context !== null` ──────────────────────────────
- *
- *  A `linkedUnreadable` context is a real object with a candidate name and
- *  fifteen empty fields. A screen that treats "I have an object" as "I have
- *  the context" would offer to prepare an interview against requirements it
- *  never read — and the recruiter would approve a preparation built on an
- *  advert nobody fetched.
- *
- *  So the question is not whether an object arrived. It is whether the
- *  application behind this case is actually known. */
-export function contextIsUsable(result: InterviewContextResult | null | undefined): boolean {
-  const c = contextOf(result);
-  if (!c) return false;
-  return c.link !== "linkedUnreadable";
-}
 
 /** Why the context is not here, said in the screen's own layout.
  *
