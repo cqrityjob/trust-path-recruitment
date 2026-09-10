@@ -713,6 +713,32 @@ const baseInput: ContextInput = {
     contextOf({ kind: "caseNotFoundOrRefused" }) === null,
     "5 · and for a case that cannot be reached",
   );
+
+  // WHICH member arrived, not merely whether something context-shaped is
+  // attached to it.
+  //
+  // Found by its own negative control: every fixture above is a member with
+  // no `context` field at all, so a helper rewritten as
+  // `result?.context ?? null` passed all of them. The union has three members
+  // today and will have more; the day one of them carries a context for its
+  // own reasons -- a superseded case, a case read from a stale cache -- a
+  // helper that reads the FIELD instead of the KIND starts rendering it as
+  // the context of this interview. These two fixtures are deliberately
+  // impossible today, which is the point: they fail closed in advance.
+  ok(
+    contextOf({
+      kind: "caseReadFailed",
+      context: C.standaloneContext("X"),
+    } as unknown as Parameters<typeof contextOf>[0]) === null,
+    "5 · and for an unhappy member that happens to carry a context, because the KIND decides",
+  );
+  ok(
+    contextOf({
+      kind: "somethingAddedLater",
+      context: C.standaloneContext("X"),
+    } as unknown as Parameters<typeof contextOf>[0]) === null,
+    "5 · and for a member this build has never heard of, which fails closed rather than rendering",
+  );
   ok(
     !/\?\?\s*(standaloneContext|emptyContext)/.test(codeOnly(read(OUTCOME_HELPERS))),
     "5 · and never defaults to an empty context, which would be a set of unearned claims",
