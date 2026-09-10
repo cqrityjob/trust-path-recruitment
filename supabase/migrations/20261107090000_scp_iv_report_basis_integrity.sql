@@ -69,9 +69,28 @@
 -- even to annotate it. content_hash_algorithm and basis_hash are NULLABLE and
 -- NULL means "finalised before this was recorded".
 --
--- ADDITIVE, except that scp_iv_finalise_report(uuid, uuid) is REPLACED by a
--- signature that requires the previewed basis hash. The rollback restores the
--- 20261020090000 function and guard verbatim.
+-- ── EXPAND → CUTOVER → CONTRACT ────────────────────────────────────────
+--
+-- ADDITIVE, without exception. The deployed application calls
+-- scp_iv_finalise_report(uuid, uuid) until the cut-over release ships, so
+-- that function is left exactly as 20261020090000 defined it: not dropped,
+-- not redefined, not taught to manufacture a preview hash. The preview-bound
+-- finalisation is a SEPARATELY NAMED contract,
+-- scp_iv_finalise_previewed_report(uuid, text, uuid), with no overload and no
+-- defaulted argument, so PostgREST resolves each name to exactly one
+-- function. The proof block asserts that BOTH contracts exist after apply.
+--
+--   EXPAND    this migration: both contracts live side by side.
+--   CUTOVER   the application release that calls only the previewed
+--             contract (the E4 code branch).
+--   CONTRACT  a separate, owner-approved migration that drops the legacy
+--             two-argument function -- only after the cut-over is deployed,
+--             the deployed bundle is verified to call the new contract, a
+--             real preview/finalise/readback journey has succeeded and no
+--             legacy call remains. See docs/release/scp-iv-finalise-report-contract-cleanup.md.
+--
+-- The rollback drops what this migration added and restores the guard;
+-- it never touches the legacy function, which it never dropped.
 -- =============================================================================
 
 -- ─────────────────────────────────────────────────────────────────────────
@@ -272,8 +291,8 @@ GRANT EXECUTE ON FUNCTION public.scp_employer_report_identity(uuid) TO authentic
 --     what the owner reads is what the owner locks.
 --
 --     Not client-executable. It is reached only through scp_iv_preview_report
---     (anyone who may read the case) and scp_iv_finalise_report (owner or
---     admin), both SECURITY DEFINER.
+--     (anyone who may read the case) and scp_iv_finalise_previewed_report
+--     (owner or admin), both SECURITY DEFINER.
 --
 --     Every jsonb_agg carries an ORDER BY ending in an immutable id. jsonb
 --     normalises object keys; it does NOT normalise array order, and a
@@ -569,18 +588,24 @@ GRANT EXECUTE ON FUNCTION public.scp_iv_preview_report(uuid) TO authenticated;
 -- ─────────────────────────────────────────────────────────────────────────
 -- 6 · Finalisation. Requires the basis hash the owner previewed.
 --
---     The two-argument signature is REPLACED, not overloaded: an overload
---     that finalised without a preview would be a way to finalise what was
---     never read. The guards travel in the same order as before -- the case
---     lock, the owner/admin requirement, the blocker sweep -- and the preview
---     check sits after them, so a member learns nothing about a case's
---     readiness or basis by probing this call.
+--     A SEPARATE NAME, not an overload of scp_iv_finalise_report and not a
+--     replacement of it: the deployed application keeps calling the
+--     two-argument function until the cut-over release, and an overload
+--     sharing that name would leave PostgREST to pick between them. No
+--     argument has a default, so the name resolves to exactly one function
+--     for exactly one argument list. The guards travel in the same order as
+--     the legacy function's -- the case lock, the owner/admin requirement,
+--     the blocker sweep -- and the preview check sits after them, so a
+--     member learns nothing about a case's readiness or basis by probing
+--     this call.
+--
+--     The legacy function is NOT taught to accept or manufacture a preview
+--     hash. It remains the temporary legacy production contract, to be
+--     dropped by the separate CONTRACT migration.
 -- ─────────────────────────────────────────────────────────────────────────
 
-DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, uuid);
-
-CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report(
-  _case_id uuid, _expected_basis_hash text, _draft_run_id uuid DEFAULT NULL)
+CREATE OR REPLACE FUNCTION public.scp_iv_finalise_previewed_report(
+  _case_id uuid, _expected_basis_hash text, _draft_run_id uuid)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   _c public.scp_interview_cases%ROWTYPE;
@@ -681,8 +706,8 @@ BEGIN
   RETURN _report_id;
 END; $$;
 
-REVOKE ALL ON FUNCTION public.scp_iv_finalise_report(uuid, text, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.scp_iv_finalise_report(uuid, text, uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.scp_iv_finalise_previewed_report(uuid, text, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_finalise_previewed_report(uuid, text, uuid) TO authenticated, service_role;
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 7 · The governed readback.
@@ -839,16 +864,36 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- The two-argument finalisation is GONE: there is no way to finalise what
-  -- was never previewed.
-  IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-              WHERE n.nspname='public' AND p.proname='scp_iv_finalise_report' AND p.pronargs = 2) THEN
-    RAISE EXCEPTION 'SCP_IV_BASIS: the preview-less finalisation still exists';
+  -- EXPAND: both contracts exist during the transition. The legacy
+  -- two-argument function is exactly one function, still executable by the
+  -- deployed application, and has NOT been taught to manufacture or accept a
+  -- preview hash. The previewed contract is exactly one function under its
+  -- own name, with three arguments and no default.
+  IF (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+       WHERE n.nspname='public' AND p.proname='scp_iv_finalise_report') <> 1 THEN
+    RAISE EXCEPTION 'SCP_IV_BASIS: scp_iv_finalise_report must remain exactly one function during the transition';
   END IF;
   SELECT p.prosrc INTO _src FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-   WHERE n.nspname='public' AND p.proname='scp_iv_finalise_report' AND p.pronargs = 3;
+   WHERE n.nspname='public' AND p.proname='scp_iv_finalise_report' AND p.pronargs = 2;
   IF _src IS NULL THEN
-    RAISE EXCEPTION 'SCP_IV_BASIS: scp_iv_finalise_report(uuid, text, uuid) is missing';
+    RAISE EXCEPTION 'SCP_IV_BASIS: the legacy scp_iv_finalise_report(uuid, uuid) the deployed application calls is missing';
+  END IF;
+  IF position('scp_iv_basis_hash' in _src) > 0 OR position('SCP_IV_STALE_PREVIEW' in _src) > 0
+     OR position('scp_iv_build_report_basis' in _src) > 0 OR position('md5(_payload::text)' in _src) = 0 THEN
+    RAISE EXCEPTION 'SCP_IV_BASIS: the legacy finalisation was altered; it must stay the 20261020090000 contract until the CONTRACT migration drops it';
+  END IF;
+  IF NOT has_function_privilege('authenticated', 'public.scp_iv_finalise_report(uuid, uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'SCP_IV_BASIS: the deployed application can no longer execute the legacy finalisation';
+  END IF;
+  IF (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+       WHERE n.nspname='public' AND p.proname='scp_iv_finalise_previewed_report') <> 1 THEN
+    RAISE EXCEPTION 'SCP_IV_BASIS: scp_iv_finalise_previewed_report must be exactly one function';
+  END IF;
+  SELECT p.prosrc INTO _src FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname='public' AND p.proname='scp_iv_finalise_previewed_report' AND p.pronargs = 3
+     AND p.pronargdefaults = 0;
+  IF _src IS NULL THEN
+    RAISE EXCEPTION 'SCP_IV_BASIS: scp_iv_finalise_previewed_report(uuid, text, uuid) without defaults is missing';
   END IF;
   SELECT p.prosrc INTO _build FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
    WHERE n.nspname='public' AND p.proname='scp_iv_build_report_basis';
@@ -963,7 +1008,7 @@ BEGIN
     RAISE EXCEPTION 'SCP_IV_BASIS: the builder is directly executable by a client';
   END IF;
   FOR _fn IN SELECT unnest(ARRAY[
-      'public.scp_iv_preview_report(uuid)', 'public.scp_iv_finalise_report(uuid, text, uuid)',
+      'public.scp_iv_preview_report(uuid)', 'public.scp_iv_finalise_previewed_report(uuid, text, uuid)',
       'public.scp_iv_final_report(uuid)', 'public.scp_iv_report_version(uuid)',
       'public.scp_iv_report_versions(uuid)', 'public.scp_employer_report_identity(uuid)']) LOOP
     IF has_function_privilege('anon', _fn, 'EXECUTE') THEN

@@ -57,8 +57,8 @@ END $$;
 
 -- Preview, then finalise exactly that: the product's own two steps.
 CREATE OR REPLACE FUNCTION pg_temp.finalise(_case uuid) RETURNS uuid LANGUAGE sql AS $$
-  SELECT public.scp_iv_finalise_report(_case,
-           (SELECT basis_hash FROM public.scp_iv_preview_report(_case)));
+  SELECT public.scp_iv_finalise_previewed_report(_case,
+           (SELECT basis_hash FROM public.scp_iv_preview_report(_case)), NULL);
 $$;
 
 -- ---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ BEGIN
   PERFORM pg_temp.ok(_pv.blocker_count = 0 AND jsonb_typeof(_pv.blockers) = 'array',
     'B0.2 and says what still blocks, which here is nothing');
 
-  _r := public.scp_iv_finalise_report(b.case1, _pv.basis_hash);
+  _r := public.scp_iv_finalise_previewed_report(b.case1, _pv.basis_hash, NULL);
   UPDATE bi SET r1 = _r;
   SELECT * INTO _row FROM public.scp_interview_reports WHERE id = _r;
   UPDATE bi SET hash1 = _row.content_hash, basis1 = _row.basis_hash;
@@ -665,7 +665,7 @@ BEGIN
   PERFORM pg_temp.ok(_n = 0, 'B7.6 another employer cannot read it');
   PERFORM pg_temp.must_fail(format('SELECT * FROM public.scp_iv_preview_report(%L)', b.case1),
     'SCP_IV_NOT_CASE_MEMBER', 'B7.7 nor preview it');
-  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_report(%L, %L)', b.case1, 'not-a-preview'),
+  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_previewed_report(%L, %L, NULL)', b.case1, 'not-a-preview'),
     'SCP_IV_FINALISE_ROLE', 'B7.8 nor finalise it -- and the refusal is the role''s, before any hash is looked at');
   RESET ROLE;
 
@@ -713,7 +713,7 @@ BEGIN
   -- one and the same basis.
   SELECT * INTO _pv1 FROM public.scp_iv_preview_report(b.case1);
   _before := _pv1.payload;
-  _rA := public.scp_iv_finalise_report(b.case1, _pv1.basis_hash);
+  _rA := public.scp_iv_finalise_previewed_report(b.case1, _pv1.basis_hash, NULL);
   SELECT count(*) INTO _n FROM public.scp_interview_reports WHERE case_id = b.case1;
   SELECT q INTO _q1 FROM jsonb_array_elements(_before -> 'questions') q WHERE q ->> 'code' = 'Q1';
 
@@ -766,7 +766,7 @@ BEGIN
     'B8.5 after the heap is reordered the payload is BYTE-IDENTICAL');
   PERFORM pg_temp.ok(_pv2.basis_hash = _pv1.basis_hash AND _pv2.content_hash = _pv1.content_hash,
     'B8.6 and so are both digests');
-  _rB := public.scp_iv_finalise_report(b.case1, _pv2.basis_hash);
+  _rB := public.scp_iv_finalise_previewed_report(b.case1, _pv2.basis_hash, NULL);
   PERFORM pg_temp.ok(_rB = _rA,
     'B8.7 finalising again returns the SAME report -- no version was created for a reordered heap');
   PERFORM pg_temp.ok((SELECT count(*) FROM public.scp_interview_reports WHERE case_id = b.case1) = _n,
@@ -790,9 +790,9 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM pg_temp.become('8a000000-0000-4000-8000-0000000000a1');
 
-  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_report(%L, NULL)', b.case1),
+  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_previewed_report(%L, NULL, NULL)', b.case1),
     'SCP_IV_PREVIEW_REQUIRED', 'B9.1 finalising with no preview identity is refused');
-  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_report(%L, %L)', b.case1, ''),
+  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_previewed_report(%L, %L, NULL)', b.case1, ''),
     'SCP_IV_PREVIEW_REQUIRED', 'B9.2 and so is an empty one');
 
   SELECT * INTO _pv FROM public.scp_iv_preview_report(b.case1);
@@ -801,20 +801,122 @@ BEGIN
   PERFORM public.scp_iv_author_evidence(b.case1, b.q2, 'Nytt underlag mellan förhandsgranskning och färdigställande.', NULL, NULL, NULL);
   PERFORM public.scp_iv_record_assessment(b.case1, b.q2, 1, 'Något underlag nu.', NULL, 'Nytt underlag.');
   SELECT count(*) INTO _n FROM public.scp_interview_reports WHERE case_id = b.case1;
-  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_report(%L, %L)', b.case1, _stale),
+  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_previewed_report(%L, %L, NULL)', b.case1, _stale),
     'SCP_IV_STALE_PREVIEW', 'B9.3 a stale preview is refused explicitly -- the owner is told to preview again');
   PERFORM pg_temp.ok((SELECT count(*) FROM public.scp_interview_reports WHERE case_id = b.case1) = _n,
     'B9.4 and the refusal wrote no version');
-  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_report(%L, %L)', b.case1, 'not-a-preview'),
+  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_previewed_report(%L, %L, NULL)', b.case1, 'not-a-preview'),
     'SCP_IV_STALE_PREVIEW', 'B9.5 a fabricated identity is refused the same way');
 
   SELECT * INTO _pv FROM public.scp_iv_preview_report(b.case1);
   PERFORM pg_temp.ok(_pv.basis_hash <> _stale, 'B9.6 a fresh preview carries a new identity');
-  _r := public.scp_iv_finalise_report(b.case1, _pv.basis_hash);
+  _r := public.scp_iv_finalise_previewed_report(b.case1, _pv.basis_hash, NULL);
   PERFORM pg_temp.ok(_r <> b.r2 AND (SELECT payload = _pv.payload AND basis_hash = _pv.basis_hash
                                         FROM public.scp_interview_reports WHERE id = _r),
     'B9.7 finalising the fresh preview produces a NEW version, byte-identical to that preview');
   RESET ROLE;
+END $$;
+
+-- ###########################################################################
+DO $$ BEGIN RAISE NOTICE 'GROUP BC — EXPAND: the legacy contract the deployed application calls still works'; END $$;
+-- ###########################################################################
+-- The application on main calls rpc("scp_iv_finalise_report", {_case_id,
+-- _draft_run_id}) and will go on doing so until the cut-over release ships.
+-- This group calls that EXACT signature after the migration, with named
+-- arguments as PostgREST binds them, and then proves the two contracts
+-- coexist without confusing each other.
+DO $$
+DECLARE b bi%ROWTYPE; _before int; _legacy uuid; _again uuid; _rb record; _pv record; _new uuid;
+BEGIN
+  SELECT * INTO b FROM bi;
+
+  -- BC.0: exactly one function under each name, and the previewed one has no
+  -- defaulted argument, so neither name can resolve ambiguously.
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = 'scp_iv_finalise_report') = 1
+    AND (SELECT p.pronargs FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE n.nspname = 'public' AND p.proname = 'scp_iv_finalise_report') = 2,
+    'BC.0 scp_iv_finalise_report is exactly one function, with two arguments, after the migration');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = 'scp_iv_finalise_previewed_report') = 1
+    AND (SELECT p.pronargs = 3 AND p.pronargdefaults = 0 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE n.nspname = 'public' AND p.proname = 'scp_iv_finalise_previewed_report'),
+    'BC.0b and scp_iv_finalise_previewed_report is exactly one function, three arguments, no default');
+  PERFORM pg_temp.ok(
+    position('scp_iv_basis_hash' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, uuid)'::regprocedure)) = 0
+    AND position('SCP_IV_STALE_PREVIEW' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, uuid)'::regprocedure)) = 0
+    AND position('md5(_payload::text)' in pg_get_functiondef('public.scp_iv_finalise_report(uuid, uuid)'::regprocedure)) > 0,
+    'BC.0c the legacy function is the 20261020090000 body: it neither requires nor manufactures a preview hash');
+
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.become('8a000000-0000-4000-8000-0000000000a1');
+  SELECT count(*) INTO _before FROM public.scp_iv_report_versions(b.case1);
+
+  -- BC.1: the exact deployed call. The case already carries previewed
+  -- versions; the legacy call must still finalise, as a further version.
+  _legacy := public.scp_iv_finalise_report(_case_id := b.case1, _draft_run_id := NULL);
+  PERFORM pg_temp.ok(_legacy IS NOT NULL,
+    'BC.1 the exact legacy call rpc(scp_iv_finalise_report, {_case_id, _draft_run_id}) still finalises after the migration');
+  PERFORM pg_temp.ok(
+    (SELECT status FROM public.scp_interview_cases WHERE id = b.case1) = 'reported',
+    'BC.2 and the case is reported');
+  SELECT * INTO _rb FROM public.scp_iv_final_report(b.case1);
+  PERFORM pg_temp.ok(
+    _rb.report_id = _legacy AND _rb.version_number = _before + 1 AND _rb.status = 'final',
+    'BC.3 the legacy version is the current one, numbered after the previewed versions');
+  PERFORM pg_temp.ok(
+    _rb.content_hash_algorithm = 'md5' AND _rb.basis_hash IS NULL AND _rb.hash_verified,
+    'BC.4 the governed readback names it md5, carries no basis identity, and still verifies it');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.scp_iv_report_versions(b.case1)) = _before + 1
+    AND (SELECT count(*) FROM public.scp_iv_report_versions(b.case1) v WHERE v.status = 'final') = 1,
+    'BC.5 the history grew by one and has one current version');
+
+  -- BC.6: the legacy call is idempotent on its own terms.
+  _again := public.scp_iv_finalise_report(_case_id := b.case1, _draft_run_id := NULL);
+  PERFORM pg_temp.ok(_again = _legacy
+    AND (SELECT count(*) FROM public.scp_iv_report_versions(b.case1)) = _before + 1,
+    'BC.6 a repeated legacy call returns the same report and adds no version');
+
+  -- BC.7: the previewed contract still works AFTER a legacy version, and
+  -- supersedes it. The basis differs from the legacy payload, so this is a
+  -- new version with a sha256 digest and a basis identity.
+  SELECT * INTO _pv FROM public.scp_iv_preview_report(b.case1);
+  _new := public.scp_iv_finalise_previewed_report(b.case1, _pv.basis_hash, NULL);
+  SELECT * INTO _rb FROM public.scp_iv_final_report(b.case1);
+  PERFORM pg_temp.ok(
+    _rb.report_id = _new AND _new <> _legacy AND _rb.version_number = _before + 2
+    AND _rb.content_hash_algorithm = 'sha256' AND _rb.basis_hash = _pv.basis_hash AND _rb.hash_verified,
+    'BC.7 the previewed contract supersedes the legacy version with a sha256, basis-bound version');
+  PERFORM pg_temp.ok(
+    (SELECT status FROM public.scp_iv_report_version(_legacy)) = 'superseded'
+    AND (SELECT hash_verified FROM public.scp_iv_report_version(_legacy)),
+    'BC.8 and the legacy version is kept, superseded and still verifiable');
+
+  -- BC.9: the previewed contract cannot be reached through the legacy name,
+  -- and the legacy one cannot be handed a hash: neither name is an overload.
+  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_report(%L, %L, NULL)', b.case1, _pv.basis_hash),
+    'does not exist', 'BC.9 scp_iv_finalise_report(uuid, text, uuid) does not exist');
+  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_previewed_report(%L, NULL)', b.case1),
+    'does not exist', 'BC.9b scp_iv_finalise_previewed_report(uuid, uuid) does not exist');
+
+  -- BC.10: the legacy call keeps its own boundary: a member is refused.
+  PERFORM pg_temp.become('8a000000-0000-4000-8000-0000000000a2');
+  PERFORM pg_temp.must_fail(format('SELECT public.scp_iv_finalise_report(_case_id := %L, _draft_run_id := NULL)', b.case1),
+    'SCP_IV_FINALISE_ROLE', 'BC.10 the legacy contract still refuses a member');
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  PERFORM set_config('request.jwt.claim.sub', NULL, true);
+
+  -- BC.11: anon may execute neither.
+  PERFORM pg_temp.ok(
+    NOT has_function_privilege('anon', 'public.scp_iv_finalise_report(uuid, uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'public.scp_iv_finalise_previewed_report(uuid, text, uuid)', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'public.scp_iv_finalise_report(uuid, uuid)', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'public.scp_iv_finalise_previewed_report(uuid, text, uuid)', 'EXECUTE'),
+    'BC.11 anon may execute neither contract; authenticated may execute both during the transition');
 END $$;
 
 -- ###########################################################################

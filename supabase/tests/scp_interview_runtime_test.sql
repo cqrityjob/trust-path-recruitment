@@ -391,9 +391,13 @@ BEGIN
 
   PERFORM public.scp_iv_mark_assessed(_case);
 
-  -- 9. The report
-  _report := public.scp_iv_finalise_report(_case,
-               (SELECT basis_hash FROM public.scp_iv_preview_report(_case)));
+  -- 9. The report -- through the LEGACY contract, exactly as the deployed
+  --    application calls it (rpc scp_iv_finalise_report with _case_id and
+  --    _draft_run_id). 20261107090000 adds scp_iv_finalise_previewed_report
+  --    beside this function and must leave this call working until the
+  --    separate CONTRACT migration; this suite is one of the two places that
+  --    prove it (the other is group BC of scp_iv_report_basis_integrity_test).
+  _report := public.scp_iv_finalise_report(_case_id := _case, _draft_run_id := NULL);
   PERFORM pg_temp.ok(
     (SELECT status FROM public.scp_interview_cases WHERE id = _case) = 'reported',
     'R2.19 the case reaches reported');
