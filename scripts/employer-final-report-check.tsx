@@ -2166,6 +2166,17 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     /PLAYWRIGHT_HTML_REPORT: playwright-report/.test(wf),
     "16.36b and the HTML report the artifact promises",
   );
+  ok(
+    /--trace on/.test(wf),
+    "16.36c the walk retains a trace even when it passes — a green run has no failures, so trace-on-failure would publish none at all",
+  );
+  // Playwright embeds the HEAD commit -- subject, FULL BODY, author name and
+  // email -- into every report's metadata when CI is set, and these reports
+  // are downloadable by anyone who can read the pull request.
+  ok(
+    /captureGitInfo: \{ commit: false, diff: false \}/.test(read("playwright.config.ts")),
+    "16.36d no report embeds the commit body or a contributor's email address",
+  );
   // The server log records requests, so it is exactly the kind of file a
   // secret reaches by accident. It goes into the artifact, and it goes in
   // before the scan reads it — not only into the job log.

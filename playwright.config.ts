@@ -15,6 +15,19 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [["list"]],
+
+  // ── NO GIT METADATA IN A PUBLISHED REPORT ────────────────────────────
+  //
+  // Playwright embeds the HEAD commit -- subject, FULL BODY, author name and
+  // email -- into `config.metadata.gitCommit` of every report when CI is set.
+  // Those reports are uploaded as artifacts anyone who can read the pull
+  // request may download, so a commit body becomes published text and a
+  // contributor's email address becomes a published email address.
+  //
+  // The E4 evidence pipeline found this the hard way: its leak scan refused
+  // an artifact whose Playwright JSON carried strings that only ever appeared
+  // in a commit message. Nothing about a test result needs the commit body.
+  captureGitInfo: { commit: false, diff: false },
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     trace: "retain-on-failure",

@@ -364,8 +364,12 @@ jobs:
           PLAYWRIGHT_HTML_REPORT: playwright-report
           PLAYWRIGHT_HTML_OPEN: never
         run: |
+          # --trace on, not the config's retain-on-failure. A green run
+          # produces no failures and therefore no traces, so the artifact the
+          # review is meant to inspect would contain none at all. A trace is
+          # evidence of what the browser actually did; that is the point.
           bunx playwright test e2e/employer-final-report-evidence.spec.ts \
-            --project=chromium --workers=1 \
+            --project=chromium --workers=1 --trace on \
             --reporter=list,json,html
 
       # ── WHY THE HEAD SHA IS PASSED IN ─────────────────────────────────

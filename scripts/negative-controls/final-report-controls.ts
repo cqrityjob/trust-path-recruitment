@@ -407,6 +407,47 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "13.2b and every wait inside it fits",
   },
 
+  {
+    id: "E4-FINDING-CANNOT-BE-LOCATED",
+    defect:
+      "a finding names only the file, so an artifact is refused over a string nobody can find and the leak cannot be fixed at its source",
+    file: SCAN,
+    find: "  return text\n    .slice(from, to)",
+    replace: '  return "";\n  return text\n    .slice(from, to)',
+    guard: E4,
+    expect: "17.23b a finding names the field that carried it",
+  },
+  {
+    id: "E4-FINDING-CONTEXT-LEAKS-A-TOKEN",
+    defect:
+      "the surrounding text is reported unredacted, so widening the report to make a finding locatable widens the leak instead",
+    file: SCAN,
+    find: '    .replace(/eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}/g, "«token»")',
+    replace: '    .replace(/\\u0000/g, "")',
+    guard: E4,
+    expect: "17.23c and the surrounding text is redacted",
+  },
+  {
+    id: "E4-WALK-KEEPS-NO-TRACE",
+    defect:
+      "the walk falls back to trace-on-failure, so a green run publishes an artifact with no trace in it at all and there is nothing to inspect",
+    file: EVIDENCE_WF,
+    find: "--project=chromium --workers=1 --trace on \\",
+    replace: "--project=chromium --workers=1 \\",
+    guard: E4,
+    expect: "16.36c the walk retains a trace even when it passes",
+  },
+  {
+    id: "E4-REPORT-EMBEDS-THE-COMMIT-BODY",
+    defect:
+      "Playwright re-embeds the HEAD commit -- subject, full body, author name and email -- into every report's metadata, so a commit message and a contributor's address become published text in a downloadable artifact",
+    file: "playwright.config.ts",
+    find: "  captureGitInfo: { commit: false, diff: false },",
+    replace: "  captureGitInfo: { commit: true, diff: false },",
+    guard: E4,
+    expect: "16.36d no report embeds the commit body or a contributor's email",
+  },
+
   /* ---- All four language-and-viewport combinations -------------------- */
   {
     id: "E4-WALK-SKIPS-ENGLISH-DESKTOP",

@@ -47,6 +47,16 @@ export interface Finding {
   readonly what: string;
   /** A short, safe excerpt — never the whole secret. */
   readonly excerpt: string;
+  /**
+   * A little of what surrounded it, so the leak can be fixed AT ITS SOURCE
+   * rather than guessed at. Run 4 refused an artifact over three strings in
+   * a manifest and nobody could say which field carried them; a finding you
+   * cannot locate is a finding you cannot fix.
+   *
+   * Redacted: anything token-shaped in the surrounding text is masked, so
+   * widening the report cannot widen the leak.
+   */
+  readonly context: string;
 }
 
 export const PATTERNS: readonly (readonly [RegExp, string])[] = [
@@ -306,6 +316,18 @@ export interface ScanContext {
 
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g;
 
+/** The neighbourhood of a match, with anything token-shaped masked out. */
+function contextAround(text: string, index: number, length: number): string {
+  const from = Math.max(0, index - 70);
+  const to = Math.min(text.length, index + length + 70);
+  return text
+    .slice(from, to)
+    .replace(/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, "«token»")
+    .replace(/[A-Za-z0-9+/]{40,}={0,2}/g, "«blob»")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function match(where: string, text: string, findings: Finding[], ctx: ScanContext): void {
   for (const [pattern, what] of PATTERNS) {
     // Every JWT, not just the first: with an allowance for this run's own
@@ -325,12 +347,20 @@ function match(where: string, text: string, findings: Finding[], ctx: ScanContex
           where,
           what: `${what} — ${verdict.reason}`,
           excerpt: `${m[0].slice(0, 24)}…`,
+          context: contextAround(text, m.index, m[0].length),
         });
       }
       continue;
     }
     const m = pattern.exec(text);
-    if (m) findings.push({ where, what, excerpt: `${m[0].slice(0, 24)}…` });
+    if (m) {
+      findings.push({
+        where,
+        what,
+        excerpt: `${m[0].slice(0, 24)}…`,
+        context: contextAround(text, m.index, m[0].length),
+      });
+    }
   }
 }
 
@@ -437,7 +467,10 @@ if (import.meta.main) {
 
   if (findings.length > 0) {
     console.error("\nREFUSED: the evidence carries something that must not be published.\n");
-    for (const f of findings) console.error(`  - ${f.where}: ${f.what} (matched "${f.excerpt}")`);
+    for (const f of findings) {
+      console.error(`  - ${f.where}: ${f.what} (matched "${f.excerpt}")`);
+      console.error(`      …${f.context}…`);
+    }
     console.error(
       "\nNothing was uploaded. Fix the leak at its source -- do not redact the\n" +
         "artifact and upload it anyway: a redaction nobody is told about is how a\n" +
