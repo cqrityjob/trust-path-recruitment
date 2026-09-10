@@ -5598,7 +5598,8 @@ export const dictionaries = {
     "iir.doc.identity.version": "Version {n}",
     "iir.doc.identity.finalisedAt": "Färdigställd {date}",
     "iir.doc.identity.by": "Färdigställd av {who}",
-    "iir.doc.identity.byUnknown": "Färdigställd av en behörig person vars konto inte längre kan namnges.",
+    "iir.doc.identity.byUnknown":
+      "Färdigställd av en behörig person vars konto inte längre kan namnges.",
     "iir.doc.identity.basis": "Underlagets identitet",
     "iir.doc.identity.content": "Innehållssumma ({algo})",
     "iir.doc.s.recruitment": "Rekrytering",
@@ -5613,7 +5614,8 @@ export const dictionaries = {
     "iir.doc.s.assessmentMaterial": "Testunderlag som processen byggde på",
     "iir.doc.assessment.none": "Inget test är kopplat till ansökan.",
     "iir.doc.assessment.attempt": "Testomgång",
-    "iir.doc.assessment.notReleased": "Inget arbetsgivardokument är frisläppt för den här omgången.",
+    "iir.doc.assessment.notReleased":
+      "Inget arbetsgivardokument är frisläppt för den här omgången.",
     "iir.doc.assessment.bound": "Bundet till dokument {id}, frisläppt {date}",
     "iir.doc.assessment.competency": "Kompetensområde",
     "iir.doc.assessment.maturity": "Mognadsnivå",
@@ -5645,7 +5647,8 @@ export const dictionaries = {
     "iir.doc.unresolved.none": "Inget öppet.",
     "iir.doc.audit.title": "Spårbarhet: underlag och innehållssummor",
     "iir.doc.s.ai": "AI:s roll",
-    "iir.doc.ai.runs": "{n} AI-körningar bidrog med förslag; varje uppgift är bekräftad av en människa.",
+    "iir.doc.ai.runs":
+      "{n} AI-körningar bidrog med förslag; varje uppgift är bekräftad av en människa.",
     "iir.fin.previewFirst": "Förhandsgranska rapporten innan den kan färdigställas.",
     "iir.fin.preview": "Förhandsgranska rapporten",
     "iir.fin.previewing": "Läser rapporten …",
@@ -5660,7 +5663,8 @@ export const dictionaries = {
     "iir.fin.writtenNotConfirmed":
       "Färdigställandet gick igenom men kunde inte läsas tillbaka. Upprepa inte. Läs rapporten igen.",
     "iir.readback.actor": "Färdigställd av {who}",
-    "iir.readback.actorUnknown": "Färdigställd av en behörig person vars konto inte längre kan namnges.",
+    "iir.readback.actorUnknown":
+      "Färdigställd av en behörig person vars konto inte längre kan namnges.",
     "iir.versions.open": "Öppna version {n}",
     "iir.versions.showing": "Visar version {n}",
     "iir.versions.backToCurrent": "Tillbaka till gällande version",
@@ -11488,8 +11492,7 @@ export const dictionaries = {
     "iir.readback.refused":
       "You are not permitted to read this report. That does not mean no report exists.",
     "iir.readback.failedTitle": "The report could not be read",
-    "iir.readback.failed":
-      "The read failed. That does not mean no report exists. Try again.",
+    "iir.readback.failed": "The read failed. That does not mean no report exists. Try again.",
     "iir.readback.retry": "Try again",
     "iir.readback.legacyAlgo":
       "This version was finalised before the algorithm was recorded and uses md5.",
@@ -11510,7 +11513,8 @@ export const dictionaries = {
     "iir.doc.identity.version": "Version {n}",
     "iir.doc.identity.finalisedAt": "Finalised on {date}",
     "iir.doc.identity.by": "Finalised by {who}",
-    "iir.doc.identity.byUnknown": "Finalised by an authorised person whose account can no longer be named.",
+    "iir.doc.identity.byUnknown":
+      "Finalised by an authorised person whose account can no longer be named.",
     "iir.doc.identity.basis": "Basis identity",
     "iir.doc.identity.content": "Content digest ({algo})",
     "iir.doc.s.recruitment": "Recruitment",
@@ -11572,7 +11576,8 @@ export const dictionaries = {
     "iir.fin.writtenNotConfirmed":
       "Finalising went through but could not be read back. Do not repeat it. Read the report again.",
     "iir.readback.actor": "Finalised by {who}",
-    "iir.readback.actorUnknown": "Finalised by an authorised person whose account can no longer be named.",
+    "iir.readback.actorUnknown":
+      "Finalised by an authorised person whose account can no longer be named.",
     "iir.versions.open": "Open version {n}",
     "iir.versions.showing": "Showing version {n}",
     "iir.versions.backToCurrent": "Back to the current version",
