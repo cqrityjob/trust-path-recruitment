@@ -192,7 +192,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: '  if (read === "refused")',
     replace: '  if (false && read === "refused")',
     guard: E3,
-    expect: "the released assessment's reader never writes",
+    expect: "never renders as no assessment",
   },
   {
     id: "E3-CONTEXT-OF-MANUFACTURES-A-CONTEXT",
