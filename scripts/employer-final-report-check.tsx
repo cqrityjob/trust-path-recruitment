@@ -1840,6 +1840,11 @@ console.log(
       !/Slutförd/.test(englishDesktopBeforeSwitch),
     "13.2f the English-desktop walk waits on the structural final document before changing language, not on stale translated copy",
   );
+  ok(
+    /Checked: the digest was recomputed/.test(englishDesktop) &&
+      !/Verified: the digest was recomputed/.test(englishDesktop),
+    "13.2g the English evidence asserts the current checked-digest copy rather than an obsolete translation",
+  );
   for (const [needle, state] of [
     ['data-testid="fr-disagree"', "both assessors and their disagreement"],
     [

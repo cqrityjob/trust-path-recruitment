@@ -564,7 +564,7 @@ test("14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English", a
     await expect(final).toContainText(/Finalised and immutable/);
     await expect(final.locator('[data-testid="fr-actor"]')).toContainText(/Journey Testare/);
     await expect(main(page)).toContainText(/Version 1/);
-    await expect(main(page)).toContainText(/Verified: the digest was recomputed/);
+    await expect(main(page)).toContainText(/Checked: the digest was recomputed/);
     await expect(main(page).getByRole("button", { name: /^Preview the report$/ })).toHaveCount(0);
     await expectNoOverflow(page);
     await shot(page, "14-en-1440-immutable-final");

@@ -482,6 +482,18 @@ const MUTATIONS: readonly Mutation[] = [
       "13.2f the English-desktop walk waits on the structural final document before changing language, not on stale translated copy",
   },
   {
+    id: "E4-ENGLISH-DIGEST-ASSERTION-USES-OBSOLETE-COPY",
+    defect:
+      "the English walk expects the obsolete Verified wording even though the routed product truth says Checked, so correct current copy is reported as a failure",
+    file: EVIDENCE_SPEC,
+    find: "    await expect(main(page)).toContainText(/Checked: the digest was recomputed/);",
+    replace:
+      "    await expect(main(page)).toContainText(/Verified: the digest was recomputed/);",
+    guard: E4,
+    expect:
+      "13.2g the English evidence asserts the current checked-digest copy rather than an obsolete translation",
+  },
+  {
     id: "E4-WALK-SKIPS-ENGLISH-DESKTOP",
     defect:
       "the English desktop walk is dropped, so the manifest still declares two locales and two viewports while only three of the four combinations are ever routed",
