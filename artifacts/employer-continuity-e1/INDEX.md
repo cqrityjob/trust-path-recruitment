@@ -10,13 +10,13 @@ and every identifier visible in a URL is an opaque server-issued uuid.
 The screenshots SUPPORT the assertions; they do not replace them. The
 behavioural proof is `e2e/employer-process-continuity.spec.ts` (22 tests across
 chromium and mobile-375) and `scripts/employer-process-continuity-check.tsx`
-(390 assertions, wired into the CI `verify` job).
+(458 assertions, wired into the CI `verify` job).
 
 ## Provenance
 
 | | |
 |---|---|
-| **Captured at HEAD** | `573fa19ac345c531dc862f46d6a7392180a6ec28` |
+| **Captured at HEAD** | `09e67d7183630a721b5ae21b0835ba9581f51c51` |
 | Branch | `claude/employer-process-continuity-e1` |
 | Base | `origin/main` `e435705722d06446cb8755ca532c3062df070a94` |
 | Backend | local Supabase only (`http://127.0.0.1:54321`, Postgres on `54322`) via `.env.local` |
@@ -89,10 +89,33 @@ A case at `assessed`. The interview row reads `Rapportunderlag redo` and the
 report row `Rapportunderlag redo för granskning`. **No finalised report is
 claimed**, and the chip further down the page uses the same words as the strip.
 
-### 05 · `05-sv-1440-report-finalised.png` — finalised report
-A case with a real `scp_interview_reports` row at `final`: `Fastställd rapport
-finns`, and the action opens it. Read together, 04 and 05 are the distinction
-between report *material* and a report.
+### 05 · `05-sv-1440-report-material-and-finalised.png` — the MIXED case
+**The capture the multi-record correction exists for.** This application holds
+two interview cases: one with a real `scp_interview_reports` row at `final`, and
+one at `assessed` whose material a human still owes a review.
+
+Before the fix the strip ranked the finished case highest, the report row read
+`Fastställd rapport finns`, the next step read *"the report has been finalised
+and can be opened"*, and the outstanding review had no route at all.
+
+The capture now shows all of it at once, and every part of it is true:
+
+* **Intervju** — `Rapportunderlag redo (2 intervjuer totalt)`. The row names the
+  case that owes work, and says it is one of two rather than pretending to be
+  both.
+* **Rapport** — `Rapportunderlag redo för granskning · fastställd rapport finns i
+  ett annat case`. Both facts in one line. The outstanding work leads because it
+  is what a person has to do; the finished report is named in the same breath
+  because it exists, is immutable and may already have informed a decision.
+* **Nästa steg** — *"Bedömningen är klar. Granska rapportunderlaget innan
+  rapporten fastställs"*, opening the case that holds the **material**, not the
+  finished one.
+* Further down, each case still carries its own chip — `Rapportunderlag redo`
+  and `Rapport fastställd` — and the decision block still links the finalised
+  report by its content hash.
+
+Read together, 04 and 05 are the distinction between report *material* and a
+report: 04 where only material exists, 05 where both do.
 
 ### 06 · `06-sv-1440-standalone-interview.png` — standalone process
 An intentionally standalone interview: `Fristående intervju`, `Ingen annonserad
@@ -141,7 +164,13 @@ Opaque ids only. These appear in URLs; nothing else does.
 | Linked, interview `assessed` — material, no report | `e1000000-…-aa02` | `e1000000-…-cc02` | 04 |
 | Linked, nothing started | `e1000000-…-aa03` | — | 07, 09 |
 | Standalone — `application_id` NULL | — | `e1000000-…-cc03` | 06 |
-| Linked, real finalised report (journey fixture) | `9e000000-…-e001` | `d4a40c8c-…-6d04` | 05 |
+| **Mixed**: a finalised report AND a case at `assessed` (journey fixture) | `9e000000-…-e001` | `d4a40c8c-…` (final report) + `047ce788-…` (`assessed`) | 05 |
 
 Accounts: `journey@local.test` (owner) and `interviewer@local.test` (member),
 both synthetic, both local-only, both created by the journey fixture.
+
+The mixed pair behind capture 05 is **verified, not created**: the E1 fixture
+raises `SCP_E1_FIXTURE_NO_MIXED_CASE` if that application ever stops holding
+both a finalised report and a case at `assessed`, so the capture cannot silently
+become a screenshot of something else. Its report was written by
+`scp_iv_finalise_report`, not by a fixture.
