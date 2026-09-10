@@ -119,6 +119,7 @@
     "negative-controls:final-report": "bun run scripts/negative-controls/final-report-controls.ts",
     "negative-controls:employer-continuity": "bun run scripts/negative-controls/employer-continuity-controls.ts",
     "e2e:employer-continuity": "playwright test e2e/employer-process-continuity.spec.ts --project=chromium --project=mobile-375",
+    "e2e:employer-final-report-evidence": "playwright test e2e/employer-final-report-evidence.spec.ts --project=chromium",
         "employer-recruitment-flow:check": "bun run scripts/employer-recruitment-flow-check.ts",
     "employer-journey:check": "bun run scripts/employer-journey-guard-check.ts",
     "employer-registration:check": "bun run scripts/employer-registration-check.tsx",

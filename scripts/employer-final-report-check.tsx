@@ -1026,6 +1026,37 @@ console.log(
   );
 }
 
+{
+  // The report's `unresolved` section reads scp_interview_findings, and until
+  // this migration no row could be written to that table: the origin guard
+  // from 20261020090000 read NEW.note_id, a column findings do not have. The
+  // note branch must be entered only for the two tables that carry it.
+  const raw = read(MIGRATION);
+  const proofAt = raw.indexOf("DO $proof$");
+  const statements = sqlOnly(proofAt === -1 ? raw : raw.slice(0, proofAt));
+  const guard = functionBody(statements, "scp_iv_guard_evidence_origin_in_case");
+  ok(guard.length > 0, "8.41a the evidence-origin guard is re-declared here");
+  const noteAt = guard.indexOf("NEW.note_id");
+  const tableAt = guard.indexOf(
+    "IF TG_TABLE_NAME IN ('scp_interview_evidence_proposals', 'scp_interview_evidence') THEN",
+  );
+  ok(
+    noteAt > 0 && tableAt > 0 && tableAt < noteAt,
+    "8.41 the guard reads the note link only on the two tables that have one — so a finding can be written at all",
+  );
+  ok(
+    /scp_interview_findings_origin_in_case/.test(
+      read("supabase/migrations/20261020090000_scp_interview_evidence_reliability.sql"),
+    ),
+    "8.41b and the guard is still attached to findings, so the fix is a fix and not a detachment",
+  );
+  const suite = read("supabase/tests/scp_iv_report_basis_integrity_test.sql");
+  ok(
+    /INSERT INTO public\.scp_interview_findings/.test(suite) && /B2\.9b/.test(suite),
+    "8.41c and the SQL suite writes findings and asserts they reach the report's unresolved section",
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════════════ */
 console.log("\n9. The client reads it through the contract, not around it");
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -1667,6 +1698,75 @@ console.log("\n12. The rollback restores the previous finalisation, and is exerc
   ok(
     /-f supabase\/migrations\/20261107090000_scp_iv_report_basis_integrity\.sql/.test(dbTest),
     "12.7 and re-applies the migration afterwards, so re-apply is exercised too",
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════ */
+console.log(
+  "\n13. The browser evidence: specified, fixtured, local-only, and honest about its state",
+);
+/* ══════════════════════════════════════════════════════════════════════ */
+{
+  const spec = read("e2e/employer-final-report-evidence.spec.ts");
+  const fixture = read("scripts/fixtures/employer-final-report-fixture.sql");
+  const index = read("artifacts/employer-final-report-e4/INDEX.md");
+  ok(
+    /test\.skip\(!LOCAL/.test(spec) && /localhost\|127\\\.0\\\.0\\\.1/.test(spec),
+    "13.1 the evidence spec runs only against a local stack, on localhost",
+  );
+  ok(
+    /E4 evidence writes only to the local stack/.test(spec) &&
+      /127\\\.0\\\.0\\\.1\|localhost/.test(spec),
+    "13.2 and its database side-effects refuse any host that is not loopback",
+  );
+  for (const [needle, state] of [
+    ['data-testid="fr-disagree"', "both assessors and their disagreement"],
+    [
+      "Fördröjd eskalering i scenario 2",
+      "the bound assessment finding beside the interview evidence",
+    ],
+    ["Anställningsåret för den senaste tjänsten", "unresolved material"],
+    ['doc(page, "preview")', "the exact preview"],
+    ["Underlaget har ändrats", "the stale-preview refusal"],
+    ['press("Enter")', "an explicit human finalisation by keyboard"],
+    ['doc(page, "final")', "the immutable report rendered from the readback"],
+    ['doc(page, "history")', "a historical version opened"],
+    ["CANDIDATE", "the candidate denied"],
+    ["Görs av ägare eller administratör", "a member not offered the act"],
+    ["The assessors do not agree", "English"],
+    ["width: 375", "mobile 375"],
+    ["expectNoOverflow", "no horizontal overflow"],
+    ["toBeFocused", "keyboard focus"],
+  ] as const) {
+    ok(spec.includes(needle), `13.3 the spec covers ${state}`);
+  }
+  ok(
+    /SCP_E4_FIXTURE_WRONG_DATABASE/.test(fixture) && /supabase_admin/.test(fixture),
+    "13.4 the fixture refuses to run against anything but the local development database",
+  );
+  ok(
+    /scp_iv_create_case\(/.test(fixture) &&
+      /scp_iv_mark_assessed\(/.test(fixture) &&
+      !/INSERT INTO public\.scp_interview_reports/.test(fixture),
+    "13.5 the fixture walks the case through the governed RPCs and writes no report row",
+  );
+  ok(
+    /assertion_level, lifecycle_state/.test(fixture) &&
+      /'self_declared'/.test(fixture) &&
+      /'verified'/.test(fixture),
+    "13.6 and carries one self-declared and one verified Passport claim in the same case",
+  );
+  ok(
+    /already present as/.test(fixture),
+    "13.7 and is idempotent: a second run finds the cases and leaves them alone",
+  );
+  ok(
+    /Captured at HEAD/.test(index) && (/_pending_/.test(index) || /[0-9a-f]{40}/.test(index)),
+    "13.8 the index names the HEAD the captures were taken at, or says plainly that none exist yet",
+  );
+  ok(
+    /BLOCKED/.test(index) === /_pending_/.test(index),
+    "13.9 and calls #216 blocked exactly while no captures exist — never complete on an empty directory",
   );
 }
 

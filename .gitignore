@@ -81,3 +81,8 @@ pw.shots.mjs
 # same tree reproduces them. A directory is re-included before its contents,
 # because git cannot un-ignore a file inside an excluded directory.
 !/artifacts/employer-continuity-e1/
+
+# The E4 final-report captures, for the same reason and under the same rules:
+# artifacts/employer-final-report-e4/INDEX.md carries the HEAD, the fixture
+# commands and the Playwright command that regenerate them.
+!/artifacts/employer-final-report-e4/

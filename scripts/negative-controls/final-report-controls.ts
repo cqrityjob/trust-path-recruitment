@@ -293,6 +293,36 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "8.21 and a superseded version is immutable too",
   },
 
+  /* ---- A finding can be written ------------------------------------ */
+  {
+    id: "E4-FINDINGS-GUARD-READS-A-MISSING-COLUMN",
+    defect:
+      "the origin guard reads NEW.note_id on every table again, so no row can be written to scp_interview_findings and the report's unresolved section is always empty -- the defect the fixture found, restored",
+    file: MIGRATION,
+    find: "  IF TG_TABLE_NAME IN ('scp_interview_evidence_proposals', 'scp_interview_evidence') THEN\n    IF NEW.note_id IS NOT NULL THEN",
+    replace: "  IF true THEN\n    IF NEW.note_id IS NOT NULL THEN",
+    guard: E4,
+    expect: "8.41 the guard reads the note link only on the two tables that have one",
+  },
+  {
+    id: "E4-EVIDENCE-CALLED-COMPLETE-WITHOUT-CAPTURES",
+    defect: "the evidence index stops calling the phase blocked while no capture exists",
+    file: "artifacts/employer-final-report-e4/INDEX.md",
+    find: "**STATUS: BLOCKED — no captures exist yet.**",
+    replace: "**STATUS: complete.**",
+    guard: E4,
+    expect: "13.9 and calls #216 blocked exactly while no captures exist",
+  },
+  {
+    id: "E4-EVIDENCE-SPEC-WRITES-ANYWHERE",
+    defect: "the evidence spec's database side-effects stop refusing a non-loopback host",
+    file: "e2e/employer-final-report-evidence.spec.ts",
+    find: "  if (!/^(127\\.0\\.0\\.1|localhost)$/.test(PG.host)) {\n    throw new Error(`E4 evidence writes only to the local stack, not ${PG.host}`);\n  }",
+    replace: "  // any host",
+    guard: E4,
+    expect: "13.2 and its database side-effects refuse any host that is not loopback",
+  },
+
   /* ---- The rollback ----------------------------------------------- */
   {
     id: "E4-ROLLBACK-DOES-NOT-RESTORE",
