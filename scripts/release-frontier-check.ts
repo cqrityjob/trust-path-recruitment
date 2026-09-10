@@ -20,18 +20,21 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // reviewed PRs merged. release-state.json and hosted-ledger.json record the
 // production evidence, so main correctly has no expected pending migration.
 //
-// 20261105090000_scp_participant_report_issuer_preview EARNS its place here:
-// E2 adds the read by which an owner or admin of the commissioning
-// organisation sees the participant document before sharing it irreversibly,
-// and this branch carries the code that calls it. It is pending because the
-// repository's schema-first policy applies the migration BEFORE the code that
-// depends on it, so the name is removed from this list -- not left behind --
-// once the owner project has it and release-state.json records the evidence.
+// Two migrations EARN their place here, both released by the E2--E4 work:
 //
-// 20261106090000_scp_iv_candidate_summary earns its place on the same terms:
-// E4 adds the candidate-safe interview summary as its own server contract --
-// the employer report already had one, the candidate had nothing -- and this
-// branch carries the code that calls it.
+//   20261105090000_scp_participant_report_issuer_preview -- the read by which
+//   an owner or admin of the commissioning organisation sees the participant
+//   document before sharing it irreversibly.
+//
+//   20261106090000_scp_iv_candidate_summary -- the candidate-safe interview
+//   summary as its own server contract. The employer report already had one;
+//   the candidate had nothing, so a candidate summary could otherwise only
+//   have been the employer report with sections hidden in the browser.
+//
+// They are pending because the repository's schema-first policy applies a
+// migration BEFORE the code that depends on it. Each name comes OFF this list
+// -- rather than being left behind -- once the owner project has the migration
+// and release-state.json records the production evidence.
 const expectedPending: string[] = [
   "20261105090000_scp_participant_report_issuer_preview.sql",
   "20261106090000_scp_iv_candidate_summary.sql",
