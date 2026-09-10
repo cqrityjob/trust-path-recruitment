@@ -1,9 +1,9 @@
 /**
- * E1 employer-continuity negative controls — seventeen mutations.
+ * E1 employer-continuity negative controls — thirty-three mutations.
  *
  * ── WHY THESE EXIST ────────────────────────────────────────────────────
  *
- * The E1 guard asserts that one application stays one process. None of its 352
+ * The E1 guard asserts that one application stays one process. None of its 450
  * assertions, on its own, proves it would NOTICE if that stopped being true: a
  * regex that no longer matches, a table test over a union that lost a member,
  * or an assertion whose subject was renamed all go on printing "ok".
@@ -97,9 +97,8 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E1-MATERIAL-COUNTED-AS-FINAL",
     defect: "a case at `assessed` is presented as having a finalised report",
     file: PROJECTION,
-    find: '  const material = cases.some((c) => c.status === "assessed");',
-    replace:
-      '  const material = false;\n  if (cases.some((c) => c.status === "assessed"))\n    return { read, availability: "finalised", finalisedCaseId: cases[0]?.id ?? null };',
+    find: '    cases.filter((c) => interviewStateOf(c.status) === "reportMaterialReady"),',
+    replace: "    cases.filter(() => false),",
     guard: E1,
     expect: "7 · assessed yields report MATERIAL",
   },
@@ -127,9 +126,8 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E1-FAILED-READ-AS-ZERO",
     defect: "a failed interview read is presented as an application with no interview",
     file: PROJECTION,
-    find: '      state: read === "loading" ? "loading" : read === "refused" ? "refused" : "unavailable",\n      proposalsAwaitingReview: 0,',
-    replace:
-      '      state: read === "loading" ? "loading" : "none",\n      proposalsAwaitingReview: 0,',
+    find: '      state: read === "loading" ? "loading" : read === "refused" ? "refused" : "unavailable",\n      ...EMPTY_INTERVIEW,',
+    replace: '      state: read === "loading" ? "loading" : "none",\n      ...EMPTY_INTERVIEW,',
     guard: E1,
     expect: 'a failed interview read is not "none"',
   },
@@ -158,8 +156,8 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E1-MEMBER-OFFERED-FORBIDDEN-ACTION",
     defect: "the review is offered to somebody the board has not authorised",
     file: PROJECTION,
-    find: "    return cap.canReviewAssessment && assessment.leadAttemptId",
-    replace: "    return assessment.leadAttemptId",
+    find: "    return cap.canReviewAssessment\n      ? {",
+    replace: "    return true\n      ? {",
     guard: E1,
     expect: "12 · a non-reviewer is told a colleague must act",
   },
@@ -258,6 +256,14 @@ const MUTATIONS: readonly Mutation[] = [
 
   /* ---- Multi-record: hidden work, and wrong destinations ------------ */
   //
+  // The three "wrong destination" mutations point an action at a real but
+  // WRONG action field -- the released attempt instead of the one under
+  // review, the finalised case instead of the one holding material -- rather
+  // than at a presentation field. Both are defects, but only this form
+  // isolates the BEHAVIOURAL assertion: naming a presentation field trips the
+  // structural check first, and a control that fires on a structural check
+  // proves nothing about whether the identity assertions still work.
+  //
   // Seven mutations, each isolating ONE way an application with several
   // records can lie. They are separate on purpose: end to end several of them
   // produce the same visible symptom, and a single control would leave the
@@ -287,32 +293,32 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "E1-PROPOSALS-WRONG-DESTINATION",
     defect:
-      "the evidence action opens the presentation case again, so a summed proposal count sends the recruiter to a case holding none of it",
+      "the evidence action opens a different case's id, so a summed proposal count sends the recruiter to a case holding none of it",
     file: PROJECTION,
     find: '      destination: { kind: "interviewCase", caseId: interview.proposalsCaseId },',
-    replace: '      destination: { kind: "interviewCase", caseId: interview.presentationCaseId! },',
+    replace:
+      '      destination: { kind: "interviewCase", caseId: interview.reportMaterialCaseId! },',
     guard: E1,
     expect: "9a · and opens the case the proposals are actually on",
   },
   {
     id: "E1-REVIEW-WRONG-DESTINATION",
     defect:
-      "the assessment review opens the presentation attempt again, so a summed response count opens an attempt with no responses outstanding",
+      "the assessment review opens the RELEASED attempt, so a summed response count opens an attempt with no responses outstanding",
     file: PROJECTION,
     find: '          destination: { kind: "assessmentReview", attemptId: assessment.reviewAttemptId },',
     replace:
-      '          destination: { kind: "assessmentReview", attemptId: assessment.presentationAttemptId! },',
+      '          destination: { kind: "assessmentReview", attemptId: assessment.releasedAttemptId! },',
     guard: E1,
     expect: "9a · and the review opens the attempt with the responses",
   },
   {
     id: "E1-REPORT-MATERIAL-WRONG-DESTINATION",
     defect:
-      "the report-material action opens the presentation case, which in the mixed case is the FINALISED report rather than the material awaiting review",
+      "the report-material action opens the FINALISED case rather than the one holding the material awaiting review",
     file: PROJECTION,
     find: '      destination: { kind: "interviewReport", caseId: interview.reportMaterialCaseId },',
-    replace:
-      '      destination: { kind: "interviewReport", caseId: interview.presentationCaseId! },',
+    replace: '      destination: { kind: "interviewReport", caseId: report.finalisedCaseId! },',
     guard: E1,
     expect: "9a · and opens the case holding the material, not the finished one",
   },

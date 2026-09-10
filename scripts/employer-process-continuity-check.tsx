@@ -898,14 +898,26 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
    * contract. Every permutation of the same records must give byte-identical
    * output, or "deterministic" is a word rather than a property. */
   {
+    // TWO RECORDS IN THE SAME STATE, deliberately. A set holding exactly one
+    // record per state gives the selector no choice to get wrong, so any
+    // selector at all -- including "whatever arrived first" -- satisfies it.
+    // Both fixtures here were written that way and proved nothing; the
+    // negative control is what said so.
     const cases = [
       iCase({ id: C.reported, status: "reported", reportFinalised: true, updatedAt: NEWEST }),
       iCase({ id: C.assessed, status: "assessed", updatedAt: MIDDLE }),
+      iCase({ id: C.ready, status: "assessed", updatedAt: OLDEST }),
       iCase({
         id: C.proposals,
         status: "evidence_review",
         proposalsAwaitingReview: 1,
         updatedAt: OLDEST,
+      }),
+      iCase({
+        id: C.preparing,
+        status: "evidence_review",
+        proposalsAwaitingReview: 2,
+        updatedAt: NEWEST,
       }),
     ];
     const expected = JSON.stringify(project({ cases }));
@@ -915,6 +927,7 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
     }
     ok(stable, "9a · every permutation of the same cases gives the same projection");
 
+    // Two attempts awaiting review, and two scored, for the same reason.
     const attempts = [
       attempt({
         attemptId: A.released,
@@ -923,6 +936,7 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
         invitedAt: NEWEST,
       }),
       attempt({ attemptId: A.review, reviewsOutstanding: 1, invitedAt: MIDDLE }),
+      attempt({ attemptId: A.sitting, reviewsOutstanding: 3, invitedAt: OLDEST }),
       attempt({ attemptId: A.scored, attemptStatus: "scored", invitedAt: OLDEST }),
     ];
     const expectedA = JSON.stringify(project({ assessments: attempts }));
