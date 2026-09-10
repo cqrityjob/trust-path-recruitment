@@ -1833,7 +1833,8 @@ console.log(
     if (insideAPhase) return;
     const following = specLines.slice(i + 1, i + 4).join(" ");
     if (!/mark\(t, "/.test(following)) {
-      uncovered.push((line.match(/"([^"]+)"/) ?? [, `line ${i + 1}`])[1] as string);
+      const named = line.match(/"([^"]+)"/);
+      uncovered.push(named === null ? `line ${i + 1}` : named[1]);
     }
   });
   ok(
