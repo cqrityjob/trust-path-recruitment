@@ -233,7 +233,14 @@ export function FinalReportReadbackPanel({
           </div>
         )}
         <div className="flex flex-wrap gap-x-2">
-          <dd className="text-muted-foreground">{t("iir.readback.finalisedBy")}</dd>
+          <dd className="text-muted-foreground" data-testid="rb-actor">
+            {r.finalisedByName?.trim() || r.finalisedByEmail?.trim()
+              ? t("iir.readback.actor").replace(
+                  "{who}",
+                  (r.finalisedByName?.trim() || r.finalisedByEmail?.trim()) as string,
+                )
+              : t("iir.readback.actorUnknown")}
+          </dd>
         </div>
         <div className="mt-1.5">
           <dt className="text-muted-foreground">
@@ -260,7 +267,17 @@ export function FinalReportReadbackPanel({
  * version N exactly as it was. A reader who cannot see the previous version
  * has only this page's word for that.
  */
-export function ReportVersionList({ versions }: { readonly versions: readonly ReportVersion[] }) {
+export function ReportVersionList({
+  versions,
+  showing,
+  onOpen,
+}: {
+  readonly versions: readonly ReportVersion[];
+  /** The version currently rendered, so the list can say so in words. */
+  readonly showing: number | null;
+  /** Open an earlier version, by report id; null returns to the current one. */
+  readonly onOpen: (reportId: string | null) => void;
+}) {
   const { t } = useT();
   if (versions.length === 0) return null;
   return (
@@ -283,6 +300,27 @@ export function ReportVersionList({ versions }: { readonly versions: readonly Re
             </span>
             {v.finalisedAt && (
               <span className="text-muted-foreground">{v.finalisedAt.slice(0, 10)}</span>
+            )}
+            {(v.finalisedByName?.trim() || v.finalisedByEmail?.trim()) && (
+              <span className="text-muted-foreground">
+                · {v.finalisedByName?.trim() || v.finalisedByEmail?.trim()}
+              </span>
+            )}
+            {showing === v.versionNumber ? (
+              <span
+                className="text-xs uppercase tracking-wide text-muted-foreground"
+                aria-current="true"
+              >
+                {t("iir.versions.showing").replace("{n}", String(v.versionNumber))}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onOpen(v.status === "final" ? null : v.reportId)}
+                className="rounded-md border border-border px-2 py-0.5 text-xs font-medium text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {t("iir.versions.open").replace("{n}", String(v.versionNumber))}
+              </button>
             )}
           </li>
         ))}

@@ -10,7 +10,7 @@
 // provider, and no key is ever shipped to one.
 
 import { createServerFn } from "@tanstack/react-start";
-import type { FinalReportReadback } from "./final-report";
+import { parseReportPayload, type FinalReportReadback, type ReportPreview } from "./final-report";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -2356,18 +2356,33 @@ export const markAssessed = createServerFn({ method: "POST" })
 export const finaliseReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) =>
-    z.object({ caseId: z.string().uuid(), draftRunId: z.string().uuid().nullish() }).parse(d),
+    z
+      .object({
+        caseId: z.string().uuid(),
+        /** The basis hash of the preview the owner read. Required: what is
+         *  finalised must be what was previewed, and the server refuses
+         *  anything else. */
+        expectedBasisHash: z.string().min(1),
+        draftRunId: z.string().uuid().nullish(),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }): Promise<{ readonly reportId: string }> => {
     // The draft run is recorded as PROVENANCE, not as content. What gets
     // published is assembled by the database from confirmed evidence and
-    // recorded human assessments; the model's draft language is attached so a
-    // later reader can see that a draft existed and which run produced it.
+    // recorded human assessments -- the same builder the preview used.
     const { data: id, error } = await context.supabase.rpc("scp_iv_finalise_report", {
       _case_id: data.caseId,
+      _expected_basis_hash: data.expectedBasisHash,
       _draft_run_id: data.draftRunId ?? undefined,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      // The message carries the rule that refused (SCP_IV_STALE_PREVIEW,
+      // SCP_IV_REPORT_BLOCKED, ...); the client classifies on it.
+      const e = new Error(error.message) as Error & { code?: string };
+      e.code = error.code;
+      throw e;
+    }
     return { reportId: id as unknown as string };
   });
 
@@ -2780,34 +2795,8 @@ export const getFinalReportReadback = createServerFn({ method: "GET" })
       e.code = error.code;
       throw e;
     }
-    const row = (Array.isArray(rows) ? rows[0] : null) as
-      | {
-          report_id: string;
-          version_number: number;
-          status: string;
-          finalised_at: string | null;
-          finalised_by: string | null;
-          content_hash: string | null;
-          content_hash_algorithm: string;
-          recomputed_hash: string | null;
-          hash_verified: boolean;
-        }
-      | null
-      | undefined;
-    if (!row) return { report: null };
-    return {
-      report: {
-        reportId: row.report_id,
-        versionNumber: row.version_number,
-        status: row.status,
-        finalisedAt: row.finalised_at,
-        finalisedBy: row.finalised_by,
-        contentHash: row.content_hash,
-        contentHashAlgorithm: row.content_hash_algorithm,
-        recomputedHash: row.recomputed_hash,
-        hashVerified: row.hash_verified,
-      },
-    };
+    const row = (Array.isArray(rows) ? rows[0] : null) as ReadbackRow | null | undefined;
+    return { report: row ? mapReadbackRow(row) : null };
   });
 
 /**
@@ -2835,8 +2824,11 @@ export const getReportVersions = createServerFn({ method: "GET" })
       status: string;
       finalised_at: string | null;
       finalised_by: string | null;
+      finalised_by_name: string | null;
+      finalised_by_email: string | null;
       content_hash: string | null;
       content_hash_algorithm: string;
+      basis_hash: string | null;
     }>;
     return {
       versions: list.map((r) => ({
@@ -2845,19 +2837,128 @@ export const getReportVersions = createServerFn({ method: "GET" })
         status: r.status,
         finalisedAt: r.finalised_at,
         finalisedBy: r.finalised_by,
+        finalisedByName: r.finalised_by_name,
+        finalisedByEmail: r.finalised_by_email,
         contentHash: r.content_hash,
         contentHashAlgorithm: r.content_hash_algorithm,
+        basisHash: r.basis_hash,
       })),
     };
   });
 
-/** One finalised version, as the history read returns it. */
+/**
+ * One specific finalised-or-superseded version, by id, verified: how an
+ * authorised reader opens what was finalised in March after a correction in
+ * April. Employer-scoped by the same rule as every other report read.
+ */
+export const getReportVersion = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({ reportId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }): Promise<{ readonly report: FinalReportReadback | null }> => {
+    const { data: rows, error } = await context.supabase.rpc("scp_iv_report_version", {
+      _report_id: data.reportId,
+    });
+    if (error) {
+      const e = new Error(error.message) as Error & { code?: string };
+      e.code = error.code;
+      throw e;
+    }
+    const row = (Array.isArray(rows) ? rows[0] : null) as ReadbackRow | null | undefined;
+    return { report: row ? mapReadbackRow(row) : null };
+  });
+
+/**
+ * The preview: the complete payload the owner will finalise, its basis
+ * identity and its digest, produced by the SAME builder finalisation uses.
+ * Writes nothing and records nothing.
+ */
+export const previewReport = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(async ({ context, data }): Promise<{ readonly preview: ReportPreview }> => {
+    const { data: rows, error } = await context.supabase.rpc("scp_iv_preview_report", {
+      _case_id: data.caseId,
+    });
+    if (error) {
+      const e = new Error(error.message) as Error & { code?: string };
+      e.code = error.code;
+      throw e;
+    }
+    const row = (Array.isArray(rows) ? rows[0] : null) as
+      | {
+          payload: unknown;
+          basis_hash: string;
+          content_hash: string;
+          blocker_count: number;
+          blockers: unknown;
+        }
+      | null
+      | undefined;
+    if (!row) throw new Error("SCP_IV_PREVIEW_EMPTY: the preview returned no row");
+    const blockers = (Array.isArray(row.blockers) ? row.blockers : []) as Array<{
+      code?: unknown;
+      message?: unknown;
+    }>;
+    return {
+      preview: {
+        payload: parseReportPayload(row.payload),
+        basisHash: row.basis_hash,
+        contentHash: row.content_hash,
+        blockerCount: row.blocker_count,
+        blockers: blockers.map((b) => ({
+          code: String(b.code ?? ""),
+          message: String(b.message ?? ""),
+        })),
+      },
+    };
+  });
+
 export interface ReportVersion {
   readonly reportId: string;
   readonly versionNumber: number;
   readonly status: string;
   readonly finalisedAt: string | null;
   readonly finalisedBy: string | null;
+  readonly finalisedByName: string | null;
+  readonly finalisedByEmail: string | null;
   readonly contentHash: string | null;
   readonly contentHashAlgorithm: string;
+  readonly basisHash: string | null;
+}
+
+interface ReadbackRow {
+  report_id: string;
+  case_id: string;
+  version_number: number;
+  status: string;
+  finalised_at: string | null;
+  finalised_by: string | null;
+  finalised_by_name: string | null;
+  finalised_by_email: string | null;
+  content_hash: string | null;
+  content_hash_algorithm: string;
+  basis_hash: string | null;
+  recomputed_hash: string | null;
+  hash_verified: boolean;
+  payload: unknown;
+}
+
+/** One mapper for the readback and for a version opened by id, so the two
+ *  cannot disagree about what a row means. The payload is parsed here, once. */
+function mapReadbackRow(row: ReadbackRow): FinalReportReadback {
+  return {
+    reportId: row.report_id,
+    versionNumber: row.version_number,
+    status: row.status,
+    finalisedAt: row.finalised_at,
+    finalisedBy: row.finalised_by,
+    finalisedByName: row.finalised_by_name,
+    finalisedByEmail: row.finalised_by_email,
+    contentHash: row.content_hash,
+    contentHashAlgorithm: row.content_hash_algorithm,
+    basisHash: row.basis_hash,
+    recomputedHash: row.recomputed_hash,
+    hashVerified: row.hash_verified,
+    payload: row.payload == null ? null : parseReportPayload(row.payload),
+  };
 }

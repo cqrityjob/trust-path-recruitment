@@ -137,10 +137,19 @@ export interface FinalReportReadback {
   readonly status: string;
   readonly finalisedAt: string | null;
   readonly finalisedBy: string | null;
+  /** The governed actor, resolved: a display name where the account has
+   *  one, and the account address either way. A uuid is an identity, not an
+   *  answer to "who did this". */
+  readonly finalisedByName: string | null;
+  readonly finalisedByEmail: string | null;
   readonly contentHash: string | null;
   readonly contentHashAlgorithm: string;
+  /** The identity the owner previewed and then finalised. */
+  readonly basisHash: string | null;
   readonly recomputedHash: string | null;
   readonly hashVerified: boolean;
+  /** The exact basis that was finalised, parsed. */
+  readonly payload: ReportPayload | null;
 }
 
 export type ReadbackOutcome =
@@ -228,3 +237,378 @@ export const FINALISE_NON_EFFECTS = [
 
 export type FinaliseEffect = (typeof FINALISE_EFFECTS)[number];
 export type FinaliseNonEffect = (typeof FINALISE_NON_EFFECTS)[number];
+
+/* ------------------------------------------------------------------ */
+/* Preview, and finalising exactly what was previewed                  */
+/* ------------------------------------------------------------------ */
+
+/** What a preview returns: the complete payload, its basis identity, its
+ *  content digest, and what still blocks finalisation. */
+export interface ReportPreview {
+  readonly payload: ReportPayload;
+  readonly basisHash: string;
+  readonly contentHash: string;
+  readonly blockerCount: number;
+  readonly blockers: readonly { readonly code: string; readonly message: string }[];
+}
+
+export type FinaliseOutcome =
+  | { readonly kind: "idle" }
+  | { readonly kind: "finalising" }
+  /** The call returned AND the readback verified a version. */
+  | { readonly kind: "confirmed"; readonly reportId: string }
+  /** The call returned; the readback has not (yet) verified it. Irreversible
+   *  work that succeeded; do not repeat it. */
+  | { readonly kind: "writtenNotConfirmed"; readonly reportId: string }
+  /** SCP_IV_STALE_PREVIEW — the basis moved between preview and the act.
+   *  Nothing was written. The owner must preview again and read what changed. */
+  | { readonly kind: "stalePreview" }
+  /** SCP_IV_PREVIEW_REQUIRED — the act was attempted with no preview identity.
+   *  A client that reaches this has a bug; the server refused regardless. */
+  | { readonly kind: "previewRequired" }
+  /** SCP_IV_REPORT_BLOCKED — the server's own readiness rule. */
+  | { readonly kind: "blocked" }
+  /** SCP_IV_FINALISE_ROLE — the database re-decided and said no. */
+  | { readonly kind: "refused" }
+  | { readonly kind: "failed" };
+
+/** The messages scp_iv_finalise_report actually raises, mapped once, by
+ *  prefix. Data rather than a chain of `if`s, and an unknown message falls to
+ *  `failed`, which claims nothing. */
+const FINALISE_ERROR: readonly (readonly [string, FinaliseOutcome])[] = [
+  ["SCP_IV_STALE_PREVIEW", { kind: "stalePreview" }],
+  ["SCP_IV_PREVIEW_REQUIRED", { kind: "previewRequired" }],
+  ["SCP_IV_REPORT_BLOCKED", { kind: "blocked" }],
+  ["SCP_IV_FINALISE_ROLE", { kind: "refused" }],
+];
+
+export function finaliseErrorOutcome(message: string | null | undefined): FinaliseOutcome {
+  const m = message ?? "";
+  for (const [prefix, outcome] of FINALISE_ERROR) if (m.includes(prefix)) return outcome;
+  return { kind: "failed" };
+}
+
+/**
+ * Whether the finalise control does anything if pressed.
+ *
+ * Nothing may be finalised that has not been previewed: the identity the
+ * button sends is the identity the owner read. A courtesy, never a boundary —
+ * scp_iv_finalise_report re-decides role, blockers and basis on every call.
+ */
+export function finaliseEnabledWithPreview(
+  p: ReportProgress,
+  preview: ReportPreview | null,
+  outcome: FinaliseOutcome,
+): boolean {
+  if (!finaliseEnabled(p, outcome.kind === "finalising")) return false;
+  if (!preview || preview.blockerCount > 0) return false;
+  // A stale preview is not a preview: the owner must read again first.
+  if (outcome.kind === "stalePreview") return false;
+  return true;
+}
+
+/* ------------------------------------------------------------------ */
+/* The payload, as a typed view model                                  */
+/* ------------------------------------------------------------------ */
+//
+// One parser, used for a preview, the current final report and a historical
+// version alike. The document renders THIS and nothing else: no live case
+// detail, no live notes, no live competencies. If it is not in the payload the
+// server produced, it is not in the locked document.
+
+export type EvidenceClassification =
+  | "interviewer_observation"
+  | "candidate_statement"
+  | "candidate_supplied_document"
+  | "passport_disclosure"
+  | "employer_supplied_material"
+  | "unclassified"
+  | "unattributed";
+
+export interface ReportEvidence {
+  readonly id: string;
+  readonly excerpt: string;
+  readonly origin: string;
+  readonly confirmedBy: string | null;
+  readonly confirmedAt: string | null;
+  readonly wasCorrected: boolean;
+  readonly classification: EvidenceClassification;
+}
+
+export interface ReportAssessment {
+  readonly id: string;
+  readonly level: number;
+  readonly rationale: string;
+  readonly uncertainty: string | null;
+  readonly assessorId: string;
+  readonly assessedAt: string | null;
+  readonly anchorSv: string | null;
+  readonly anchorEn: string | null;
+  readonly levelMeaningSv: string | null;
+  readonly levelMeaningEn: string | null;
+  readonly kind: string;
+}
+
+export interface ReportQuestion {
+  readonly id: string;
+  readonly code: string;
+  readonly order: number;
+  readonly promptSv: string;
+  readonly promptEn: string | null;
+  readonly requirement: {
+    readonly code: string;
+    readonly nameSv: string;
+    readonly nameEn: string | null;
+  } | null;
+  readonly evidence: readonly ReportEvidence[];
+  readonly assessments: readonly ReportAssessment[];
+  readonly assessorCount: number;
+  readonly levelsAgree: boolean;
+}
+
+export interface ReportEmployerAssessment {
+  readonly snapshotId: string;
+  readonly reportVersionId: string | null;
+  readonly releasedAt: string | null;
+  readonly competencies: readonly {
+    readonly competencyCode: string;
+    readonly maturityLevel: string;
+    readonly thresholdVersion: string | null;
+  }[];
+  readonly findings: readonly {
+    readonly finding: string;
+    readonly severity: string | null;
+    readonly observedAt: string | null;
+  }[];
+  readonly limitationsSv: readonly string[];
+  readonly limitationsEn: readonly string[];
+  readonly snapshotHash: string;
+}
+
+export interface ReportAssessmentMaterial {
+  readonly attemptId: string;
+  readonly assignmentId: string;
+  readonly attemptStatus: string;
+  readonly employerReport: ReportEmployerAssessment | null;
+}
+
+export interface ReportPayload {
+  readonly candidate: string;
+  readonly internalTitle: string;
+  readonly statusAtReport: string | null;
+  readonly packNameSv: string | null;
+  readonly packNameEn: string | null;
+  readonly packVersionNumber: number | null;
+  readonly packContentHash: string | null;
+  readonly applicationId: string | null;
+  readonly jobId: string | null;
+  readonly advertisedRoleSv: string | null;
+  readonly advertisedRoleEn: string | null;
+  readonly interview: readonly {
+    readonly startedAt: string | null;
+    readonly completedAt: string | null;
+    readonly interviewerNames: string | null;
+  }[];
+  readonly assessmentMaterial: readonly ReportAssessmentMaterial[];
+  readonly sources: readonly {
+    readonly id: string;
+    readonly kind: string;
+    readonly label: string;
+    readonly disclosureBacked: boolean;
+  }[];
+  readonly questions: readonly ReportQuestion[];
+  readonly panel: {
+    readonly state: string;
+    readonly conclusion: string | null;
+    readonly concludedAt: string | null;
+    readonly memberCount: number;
+  } | null;
+  readonly unresolved: readonly {
+    readonly id: string;
+    readonly kind: string;
+    readonly statement: string;
+    readonly state: string;
+  }[];
+  readonly aiStatement: string | null;
+  readonly aiRuns: number;
+  readonly decisionBoundary: string | null;
+}
+
+type J = Record<string, unknown>;
+const obj = (v: unknown): J => (v && typeof v === "object" && !Array.isArray(v) ? (v as J) : {});
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
+const num = (v: unknown, d = 0): number => (typeof v === "number" ? v : d);
+const strs = (v: unknown): string[] => arr(v).filter((x): x is string => typeof x === "string");
+
+const CLASSIFICATIONS: readonly EvidenceClassification[] = [
+  "interviewer_observation",
+  "candidate_statement",
+  "candidate_supplied_document",
+  "passport_disclosure",
+  "employer_supplied_material",
+  "unclassified",
+  "unattributed",
+];
+
+/**
+ * From the server's payload to the view model. Total: an unknown
+ * classification becomes `unclassified` rather than a crash or a silent
+ * promotion, and every array defaults to empty rather than to undefined. Never
+ * invents a value: what the payload does not carry stays null.
+ */
+export function parseReportPayload(raw: unknown): ReportPayload {
+  const p = obj(raw);
+  const c = obj(p.case);
+  const r = obj(p.recruitment);
+  const ai = obj(p.ai_disclosure);
+  const panel = p.panel && typeof p.panel === "object" ? obj(p.panel) : null;
+  return {
+    candidate: str(c.candidate) ?? "",
+    internalTitle: str(c.title) ?? "",
+    statusAtReport: str(c.status_at_report),
+    packNameSv: str(c.pack_name_sv),
+    packNameEn: str(c.pack_name_en),
+    packVersionNumber: typeof c.pack_version_number === "number" ? c.pack_version_number : null,
+    packContentHash: str(obj(p.pinned).pack_content_hash),
+    applicationId: str(r.application_id),
+    jobId: str(r.job_id),
+    advertisedRoleSv: str(r.advertised_role_sv),
+    advertisedRoleEn: str(r.advertised_role_en),
+    interview: arr(p.interview).map((x) => {
+      const s = obj(x);
+      return {
+        startedAt: str(s.started_at),
+        completedAt: str(s.completed_at),
+        interviewerNames: str(s.interviewer_names),
+      };
+    }),
+    assessmentMaterial: arr(p.assessment_material).map((x) => {
+      const m = obj(x);
+      const er =
+        m.employer_report && typeof m.employer_report === "object" ? obj(m.employer_report) : null;
+      return {
+        attemptId: str(m.attempt_id) ?? "",
+        assignmentId: str(m.assignment_id) ?? "",
+        attemptStatus: str(m.attempt_status) ?? "",
+        employerReport: er
+          ? {
+              snapshotId: str(er.snapshot_id) ?? "",
+              reportVersionId: str(er.report_version_id),
+              releasedAt: str(er.released_at),
+              competencies: arr(er.competencies).map((y) => {
+                const k = obj(y);
+                return {
+                  competencyCode: str(k.competency_code) ?? "",
+                  maturityLevel: str(k.maturity_level) ?? "",
+                  thresholdVersion: str(k.threshold_version),
+                };
+              }),
+              findings: arr(er.findings).map((y) => {
+                const f = obj(y);
+                return {
+                  finding: str(f.finding) ?? "",
+                  severity: str(f.severity),
+                  observedAt: str(f.observed_at),
+                };
+              }),
+              limitationsSv: strs(er.limitations_sv),
+              limitationsEn: strs(er.limitations_en),
+              snapshotHash: str(er.snapshot_hash) ?? "",
+            }
+          : null,
+      };
+    }),
+    sources: arr(p.sources).map((x) => {
+      const s = obj(x);
+      return {
+        id: str(s.id) ?? "",
+        kind: str(s.kind) ?? "",
+        label: str(s.label) ?? "",
+        disclosureBacked: s.disclosure_backed === true,
+      };
+    }),
+    questions: arr(p.questions).map((x) => {
+      const q = obj(x);
+      const req = q.requirement && typeof q.requirement === "object" ? obj(q.requirement) : null;
+      return {
+        id: str(q.id) ?? "",
+        code: str(q.code) ?? "",
+        order: num(q.order),
+        promptSv: str(q.prompt_sv) ?? "",
+        promptEn: str(q.prompt_en),
+        requirement:
+          req && str(req.code)
+            ? {
+                code: str(req.code) ?? "",
+                nameSv: str(req.name_sv) ?? "",
+                nameEn: str(req.name_en),
+              }
+            : null,
+        evidence: arr(q.evidence).map((y) => {
+          const e = obj(y);
+          const cl = str(e.classification);
+          return {
+            id: str(e.id) ?? "",
+            excerpt: str(e.excerpt) ?? "",
+            origin: str(e.origin) ?? "",
+            confirmedBy: str(e.confirmed_by),
+            confirmedAt: str(e.confirmed_at),
+            wasCorrected: e.was_corrected === true,
+            classification: (CLASSIFICATIONS as readonly string[]).includes(cl ?? "")
+              ? (cl as EvidenceClassification)
+              : "unclassified",
+          };
+        }),
+        assessments: arr(q.assessments).map((y) => {
+          const a = obj(y);
+          return {
+            id: str(a.id) ?? "",
+            level: num(a.level, -1),
+            rationale: str(a.rationale) ?? "",
+            uncertainty: str(a.uncertainty),
+            assessorId: str(a.assessor_id) ?? "",
+            assessedAt: str(a.assessed_at),
+            anchorSv: str(a.anchor_sv),
+            anchorEn: str(a.anchor_en),
+            levelMeaningSv: str(a.level_meaning_sv),
+            levelMeaningEn: str(a.level_meaning_en),
+            kind: str(a.kind) ?? "",
+          };
+        }),
+        assessorCount: num(q.assessor_count),
+        levelsAgree: q.levels_agree !== false,
+      };
+    }),
+    panel: panel
+      ? {
+          state: str(panel.state) ?? "",
+          conclusion: str(panel.conclusion),
+          concludedAt: str(panel.concluded_at),
+          memberCount: num(panel.member_count),
+        }
+      : null,
+    unresolved: arr(p.unresolved).map((x) => {
+      const u = obj(x);
+      return {
+        id: str(u.id) ?? "",
+        kind: str(u.kind) ?? "",
+        statement: str(u.statement) ?? "",
+        state: str(u.state) ?? "",
+      };
+    }),
+    aiStatement: str(ai.statement),
+    aiRuns: arr(ai.runs).length,
+    decisionBoundary: str(p.decision_boundary),
+  };
+}
+
+/** The finalising actor, resolved: a display name where the account has one,
+ *  the account address otherwise, and null when neither can be resolved any
+ *  more -- which the caller states in words rather than printing a uuid. */
+export function actorLabel(r: {
+  readonly finalisedByName: string | null;
+  readonly finalisedByEmail: string | null;
+}): string | null {
+  return r.finalisedByName?.trim() || r.finalisedByEmail?.trim() || null;
+}

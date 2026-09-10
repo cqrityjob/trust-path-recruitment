@@ -17,7 +17,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
@@ -29,30 +29,32 @@ import {
   ReportSequence,
   ReportVersionList,
 } from "@/components/employer/interview/FinalReportSequence";
+import { FinalReportDocument } from "@/components/employer/interview/FinalReportDocument";
 import {
+  finaliseEnabledWithPreview,
+  finaliseErrorOutcome,
   readbackErrorOutcome,
   readbackOutcome,
+  type FinaliseOutcome,
   type ReadbackOutcome,
+  type ReportPreview,
   type ReportProgress,
 } from "@/lib/interview-intelligence/final-report";
 import {
   getFinalReportReadback,
+  getReportVersion,
   getReportVersions,
+  previewReport,
 } from "@/lib/interview-intelligence/runtime.functions";
 import { ReportFinalisation } from "@/components/employer/interview/ReportFinalisation";
-import { InterviewOutcome } from "@/components/employer/interview/InterviewOutcome";
 import {
   CaseStatusChip,
   WorkflowNav,
   Chip,
-  LevelZeroNote,
-  MaterialBadge,
   Panel,
-  ShortDate,
   State,
   blockerMessage,
   interviewErrorMessage,
-  uiLabel,
   GovernedGuidance,
   ProviderModeNote,
   WithheldPanel,
@@ -62,7 +64,6 @@ import {
   Disclosure,
   Eyebrow,
   Field,
-  FactRow,
   Nothing,
   Section,
   Surface,
@@ -80,13 +81,6 @@ export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/report",
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
 
-const FINDING_LABEL: Record<string, TranslationKey> = {
-  gap: "iiu.find.gap",
-  unclear: "iiu.find.unclear",
-  contradiction: "iiu.find.contradiction",
-  verification: "iiu.find.verification",
-};
-
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
@@ -102,7 +96,9 @@ function Page() {
   // report it already made if nothing changed.
   const finaliseOnce = useMemo(
     () =>
-      singleFlight((v: { caseId: string; draftRunId: string | null }) => finaliseFn({ data: v })),
+      singleFlight((v: { caseId: string; expectedBasisHash: string; draftRunId: string | null }) =>
+        finaliseFn({ data: v }),
+      ),
     [finaliseFn],
   );
 
@@ -135,19 +131,58 @@ function Page() {
   // The draft run travels with the finalisation as provenance. It contributes
   // no text: what is published is assembled from confirmed evidence and the
   // recorded human assessments, exactly as it is without a draft.
+  // ── PREVIEW, AND THE IDENTITY IT HANDS THE OWNER ────────────────────
+  // The preview is the document itself, produced by the same server function
+  // finalisation uses. Its basis hash is what the finalise call sends back, so
+  // the owner finalises exactly what they read -- and the server refuses
+  // anything else.
+  const previewFn = useServerFn(previewReport);
+  const preview = useMutation({
+    mutationFn: () => previewFn({ data: { caseId } }),
+    onSuccess: () => setOutcome({ kind: "idle" }),
+  });
+  const previewInHand: ReportPreview | null = preview.data?.preview ?? null;
+  const [outcome, setOutcome] = useState<FinaliseOutcome>({ kind: "idle" });
+
+  // An earlier version opened from the history. Null means the current one.
+  const [openVersion, setOpenVersion] = useState<string | null>(null);
+  const versionFn = useServerFn(getReportVersion);
+  const opened = useQuery({
+    queryKey: ["ii", "reportVersion", openVersion],
+    queryFn: () => versionFn({ data: { reportId: openVersion as string } }),
+    enabled: openVersion !== null,
+    retry: false,
+  });
+
   const finalise = useMutation({
-    mutationFn: () =>
-      finaliseOnce({
+    mutationFn: () => {
+      if (!previewInHand) throw new Error("SCP_IV_PREVIEW_REQUIRED");
+      return finaliseOnce({
         caseId,
+        expectedBasisHash: previewInHand.basisHash,
         draftRunId: draft.data?.status === "succeeded" ? draft.data.runId : null,
-      }),
-    onSuccess: () => {
+      });
+    },
+    onMutate: () => setOutcome({ kind: "finalising" }),
+    onSuccess: async (r) => {
       void qc.invalidateQueries({ queryKey: ["ii"] });
-      // Finalising is not finished when the mutation resolves. Both governed
-      // reads are refetched so the page states the version, the actor and the
-      // verified digest from the SERVER rather than from having just asked.
-      void readback.refetch();
-      void versions.refetch();
+      // Finalising is not finished when the mutation resolves. It is finished
+      // when the governed readback comes back carrying the version and a
+      // verified digest. Anything less is `writtenNotConfirmed`, which is not
+      // a failure and must not be retried.
+      const [rb] = await Promise.all([readback.refetch(), versions.refetch()]);
+      const row = rb.data?.report ?? null;
+      setOutcome(
+        row && row.reportId === r.reportId && row.hashVerified
+          ? { kind: "confirmed", reportId: r.reportId }
+          : { kind: "writtenNotConfirmed", reportId: r.reportId },
+      );
+      preview.reset();
+    },
+    onError: (e: unknown) => {
+      // The message names the rule that refused. A stale preview withdraws the
+      // control until the owner reads again; nothing was written.
+      setOutcome(finaliseErrorOutcome((e as { message?: string } | null)?.message));
     },
   });
 
@@ -239,43 +274,6 @@ function Page() {
       ? readbackErrorOutcome((readback.error as { code?: string } | null)?.code ?? null)
       : readbackOutcome(readback.data?.report ?? null);
 
-  const questionByCode = new Map(d.questions.map((qq) => [qq.code, qq]));
-  const requirementByCode = new Map(d.competencies.map((c) => [c.code, c]));
-  const reqName = (c: { nameSv: string; nameEn: string | null }) =>
-    (lang === "en" ? c.nameEn : c.nameSv) ?? c.nameSv;
-
-  const payloadQuestions = Array.isArray(payload?.questions)
-    ? (payload.questions as Array<Record<string, unknown>>)
-    : [];
-  const unresolved = Array.isArray(payload?.unresolved)
-    ? (payload.unresolved as Array<Record<string, unknown>>)
-    : [];
-  const followUp = unresolved.filter((u) => String(u.kind) !== "verification");
-  const toVerify = unresolved.filter((u) => String(u.kind) === "verification");
-  // The interviewer's own words, from the interview record. Not part of the
-  // frozen payload, and not presented as if it were: this is the interview's
-  // own note trail, which a human wrote and nothing generated.
-  const comments = (d.session?.notes ?? []).filter(
-    (n) => n.noteKind === "closing_summary" || n.noteKind === "process",
-  );
-
-  /** Every assessed question, grouped under the role requirement it explores.
-   *  The assessment is recorded per question; the requirement is what the
-   *  question is FOR, and grouping by it is what makes the section an
-   *  assessment against requirements rather than a list of questions. */
-  const byRequirement = d.competencies
-    .map((c) => ({
-      requirement: c,
-      entries: payloadQuestions.filter(
-        (pq) => questionByCode.get(String(pq.code))?.competencyCodes[0] === c.code,
-      ),
-    }))
-    .filter((g) => g.entries.length > 0);
-  const ungrouped = payloadQuestions.filter((pq) => {
-    const code = questionByCode.get(String(pq.code))?.competencyCodes[0];
-    return !code || !requirementByCode.has(code);
-  });
-
   return shell(
     <>
       <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
@@ -323,7 +321,38 @@ function Page() {
         <ReportSequence progress={progress} />
         {!isFinal && <FinaliseBoundary />}
         <FinalReportReadbackPanel outcome={readbackState} onRetry={() => void readback.refetch()} />
-        <ReportVersionList versions={versions.data?.versions ?? []} />
+        <ReportVersionList
+          versions={versions.data?.versions ?? []}
+          showing={
+            openVersion !== null
+              ? (opened.data?.report?.versionNumber ?? null)
+              : readbackState.kind === "verified"
+                ? readbackState.report.versionNumber
+                : null
+          }
+          onOpen={(id) => setOpenVersion(id)}
+        />
+        {outcome.kind === "writtenNotConfirmed" && (
+          <p role="alert" className="text-sm text-foreground">
+            {t("iir.fin.writtenNotConfirmed")}
+          </p>
+        )}
+        {(outcome.kind === "blocked" ||
+          outcome.kind === "refused" ||
+          outcome.kind === "failed" ||
+          outcome.kind === "previewRequired") && (
+          <p role="alert" className="text-sm text-foreground">
+            {t(
+              outcome.kind === "blocked"
+                ? "iir.fin.blocked"
+                : outcome.kind === "refused"
+                  ? "iir.fin.refused"
+                  : outcome.kind === "previewRequired"
+                    ? "iir.fin.previewRequired"
+                    : "iir.fin.failed",
+            )}
+          </p>
+        )}
       </div>
 
       {/* ---- What the report will be built from ----
@@ -338,10 +367,25 @@ function Page() {
         <Section
           id="s-preview"
           title={t("iiu.rp.preview.title")}
-          description={t("iiu.rp.preview.body")}
+          description={t("iir.doc.preview.lede")}
           className="mt-8 max-w-4xl"
         >
-          <InterviewOutcome d={d} employerSlug={employerSlug} caseId={caseId} />
+          {/* THE PREVIEW IS THE DOCUMENT. Produced by the server's own builder
+               -- the one finalisation calls -- and rendered by the same
+               component the finalised report is rendered by. Not a live
+               rendering of the case, and not a second copy that can drift. */}
+          {previewInHand ? (
+            <FinalReportDocument
+              payload={previewInHand.payload}
+              mode={{ kind: "preview", preview: previewInHand }}
+            />
+          ) : preview.isError ? (
+            <p role="alert" className="text-sm text-foreground">
+              {t("iir.readback.failed")}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("iir.fin.previewFirst")}</p>
+          )}
         </Section>
       )}
 
@@ -451,6 +495,10 @@ function Page() {
                   answered from the same membership row the database reads. */}
               <ReportFinalisation
                 canFinalise={canFinalise}
+                previewed={previewInHand !== null && outcome.kind !== "stalePreview"}
+                onPreview={() => preview.mutate()}
+                isPreviewing={preview.isPending}
+                stale={outcome.kind === "stalePreview"}
                 onFinalise={() => finalise.mutate()}
                 isPending={finalise.isPending}
                 employerSlug={employerSlug}
@@ -494,238 +542,48 @@ function Page() {
       )}
 
       {/* ---- The document ---- */}
-      {isFinal && payload && (
-        <article
-          aria-labelledby="s-report"
-          className="mt-10 max-w-4xl rounded-xl border border-border bg-card px-5 py-7 sm:px-9 sm:py-10"
-        >
-          <header className="border-b border-border pb-6">
-            <h2
-              id="s-report"
-              className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
-            >
-              {t("iiu.rp.doc.title")}
-            </h2>
-            <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-              {t("iiu.rp.doc.lead")}
-            </p>
-            <div className="mt-6">
-              <FactRow>
-                <Field label={t("iiu.rp.doc.candidate")}>{d.candidateDisplayName}</Field>
-                <Field label={t("iiu.rp.doc.role")}>{d.packName ?? d.title}</Field>
-                <Field label={t("iiu.rp.doc.date")}>
-                  <ShortDate iso={interviewDate} />
-                </Field>
-                {interviewers !== "" && (
-                  <Field label={t("iiu.rp.doc.interviewer")}>{interviewers}</Field>
-                )}
-                <Field label={t("iiu.rp.doc.status")}>
-                  {t("iiu.rp.final")}
-                  {report ? ` · ${t("iiu.rp.doc.version")} ${report.versionNumber}` : ""}
-                </Field>
-              </FactRow>
-            </div>
-          </header>
-
-          {/* ---- 1 · Scope ---- */}
-          <DocSection
-            ordinal={1}
-            id="d-scope"
-            title={t("iiu.rp.s.scope")}
-            body={t("iiu.rp.s.scope.body")}
+      {/* ---- The finalised report, from the readback and nothing else ----
+           Rendered ONLY from a verified readback: the server recomputed the
+           digest and it matched. A mismatch, a refusal or a failure is stated
+           by the readback panel above and renders no document, because a
+           document that might not be what was finalised is worse than none. */}
+      {openVersion !== null ? (
+        <div className="mt-10 max-w-4xl">
+          <button
+            type="button"
+            onClick={() => setOpenVersion(null)}
+            className="mb-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              <Field label={t("iiu.rp.rollpaket")}>{d.packName ?? "—"}</Field>
-              <Field label={t("iiu.rp.doc.questions")}>{payloadQuestions.length}</Field>
-              <Field label={t("iiu.rp.doc.sources")} wide>
-                {Array.isArray(payload.sources) && (payload.sources as unknown[]).length > 0 ? (
-                  <ul className="space-y-0.5">
-                    {(payload.sources as Array<Record<string, unknown>>).map((src, i) => (
-                      <li key={i}>{String(src.label)}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  "—"
-                )}
-              </Field>
-            </dl>
-          </DocSection>
-
-          {/* ---- 2 · The candidate's own examples ---- */}
-          <DocSection
-            ordinal={2}
-            id="d-examples"
-            title={t("iiu.rp.s.examples")}
-            body={t("iiu.rp.s.examples.body")}
-          >
-            <ol className="space-y-6">
-              {payloadQuestions.map((qq) => {
-                const evidence = (qq.evidence ?? []) as Array<Record<string, unknown>>;
-                return (
-                  <li key={`ex-${String(qq.code)}`}>
-                    <p className="text-sm font-medium leading-relaxed text-foreground">
-                      <span className="mr-2 font-mono text-xs text-muted-foreground">
-                        {String(qq.code)}
-                      </span>
-                      {String(qq.prompt)}
-                    </p>
-                    {evidence.length === 0 ? (
-                      <p className="mt-2 text-sm italic text-muted-foreground">
-                        {t("iiu.rp.doc.noexamples")}
-                      </p>
-                    ) : (
-                      <ul className="mt-2.5 space-y-2">
-                        {evidence.map((e, i) => (
-                          <li
-                            key={i}
-                            className="border-l-2 border-teal-700/40 pl-4 text-sm leading-relaxed text-foreground"
-                          >
-                            {String(e.excerpt)}
-                            {e.was_corrected === true && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                {t("iiu.rp.correctedbyreviewer")}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-            <p className="mt-5 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
-              {t("iiu.rp.doc.nomaterial")}
+            {t("iir.versions.backToCurrent")}
+          </button>
+          {opened.isLoading ? (
+            <p className="text-sm text-muted-foreground">{t("iir.readback.loading")}</p>
+          ) : opened.data?.report &&
+            opened.data.report.hashVerified &&
+            opened.data.report.payload ? (
+            <FinalReportDocument
+              payload={opened.data.report.payload}
+              mode={{
+                kind: opened.data.report.status === "final" ? "final" : "history",
+                readback: opened.data.report,
+              }}
+            />
+          ) : (
+            <p role="alert" className="text-sm text-foreground">
+              {t(opened.isError ? "iir.readback.failed" : "iir.readback.notVerified")}
             </p>
-          </DocSection>
-
-          {/* ---- 3 · What a person concluded, against what the role asks ---- */}
-          <DocSection
-            ordinal={3}
-            id="d-assessment"
-            title={t("iiu.rp.s.assessment")}
-            body={t("iiu.rp.s.assessment.body")}
-          >
-            <div className="space-y-7">
-              {byRequirement.map((group) => (
-                <section key={group.requirement.id}>
-                  <h4 className="flex items-baseline gap-2 text-sm font-semibold text-foreground">
-                    <span aria-hidden="true" className="font-mono text-xs text-muted-foreground">
-                      {group.requirement.code}
-                    </span>
-                    {reqName(group.requirement)}
-                  </h4>
-                  <div className="mt-2.5 space-y-3">
-                    {group.entries.map((qq) => (
-                      <AssessmentEntry key={`as-${String(qq.code)}`} entry={qq} t={t} />
-                    ))}
-                  </div>
-                </section>
-              ))}
-              {ungrouped.map((qq) => (
-                <AssessmentEntry key={`un-${String(qq.code)}`} entry={qq} t={t} />
-              ))}
-            </div>
-            {/* Said once for the section rather than under every level-0 entry.
-                Seven copies of the same amber paragraph is not seven times the
-                emphasis; it is a document that looks like it is shouting. */}
-            {payloadQuestions.some(
-              (qq) => Number((qq.assessment as Record<string, unknown> | null)?.level) === 0,
-            ) && (
-              <div className="mt-5 max-w-[70ch]">
-                <LevelZeroNote />
-              </div>
-            )}
-          </DocSection>
-
-          {/* ---- 4 · Still open ---- */}
-          <DocSection ordinal={4} id="d-followup" title={t("iiu.rp.s.followup")}>
-            {followUp.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("iiu.rp.s.followup.none")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {followUp.map((f, i) => (
-                  <li key={i} className="text-sm leading-relaxed">
-                    {/* The payload stores the enum. "contradiction" is a
-                        database value, not a word an employer reads in a
-                        document about a person. */}
-                    <Chip tone="attention">{uiLabel(FINDING_LABEL, String(f.kind), t)}</Chip>{" "}
-                    <span className="text-foreground">{String(f.statement)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </DocSection>
-
-          {/* ---- 5 · Checked elsewhere, never in a conversation ---- */}
-          <DocSection ordinal={5} id="d-verify" title={t("iiu.rp.s.verify")}>
-            {toVerify.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("iiu.rp.s.verify.none")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {toVerify.map((f, i) => (
-                  <li key={i} className="text-sm leading-relaxed">
-                    <MaterialBadge state="verify" />{" "}
-                    <span className="text-foreground">{String(f.statement)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </DocSection>
-
-          {/* ---- 6 · The interviewer's own words ---- */}
-          <DocSection
-            ordinal={6}
-            id="d-comments"
-            title={t("iiu.rp.s.comments")}
-            body={t("iiu.rp.s.comments.body")}
-          >
-            {comments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("iiu.rp.s.comments.none")}</p>
-            ) : (
-              <ul className="space-y-3">
-                {comments.map((n) => (
-                  <li
-                    key={n.id}
-                    className="whitespace-pre-line text-sm leading-relaxed text-foreground"
-                  >
-                    {n.body}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </DocSection>
-
-          {/* ---- The boundary this product exists to hold ----
-               No control, disabled or otherwise. There is no employment-decision
-               data model in the interview domain, and a greyed-out button would
-               claim there is one coming. */}
-          <section aria-labelledby="d-decision" className="mt-9 border-t border-border pt-6">
-            <h3 id="d-decision" className="text-base font-semibold text-foreground">
-              {t("iiu.rp.s.decision")}
-            </h3>
-            <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-foreground">
-              {t("iiu.rp.decision.boundary")}
-            </p>
-            {payload.decision_boundary ? (
-              <div className="mt-4 border-l-2 border-border pl-4">
-                <Eyebrow>{t("iiu.rp.doc.locked.wording")}</Eyebrow>
-                <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-                  {String(payload.decision_boundary)}
-                </p>
-              </div>
-            ) : null}
-          </section>
-
-          <section aria-labelledby="d-ai" className="mt-7 border-t border-border pt-6">
-            <h3 id="d-ai" className="text-base font-semibold text-foreground">
-              {t("iiu.pp.airole.short")}
-            </h3>
-            <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-              {String((payload.ai_disclosure as Record<string, unknown>)?.statement ?? "")}
-            </p>
-          </section>
-        </article>
+          )}
+        </div>
+      ) : (
+        readbackState.kind === "verified" &&
+        readbackState.report.payload && (
+          <div className="mt-10 max-w-4xl">
+            <FinalReportDocument
+              payload={readbackState.report.payload}
+              mode={{ kind: "final", readback: readbackState.report }}
+            />
+          </div>
+        )
       )}
 
       {/* ---- Method support: the interviewer's own conduct ----
@@ -942,71 +800,5 @@ function SelfReview({
         rows={guidance.filter((g) => g.surface === "trace_closure")}
       />
     </>
-  );
-}
-
-/** One numbered section of the document. */
-function DocSection({
-  ordinal,
-  id,
-  title,
-  body,
-  children,
-}: {
-  ordinal: number;
-  id: string;
-  title: string;
-  body?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section aria-labelledby={id} className="mt-9 border-t border-border pt-6 first:border-t-0">
-      <h3 id={id} className="flex items-baseline gap-2.5 text-base font-semibold text-foreground">
-        <span aria-hidden="true" className="text-sm tabular-nums text-muted-foreground">
-          {ordinal}.
-        </span>
-        {title}
-      </h3>
-      {body && (
-        <p className="mt-1.5 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">{body}</p>
-      )}
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
-
-/** One recorded human assessment, as the frozen payload holds it. */
-function AssessmentEntry({
-  entry,
-  t,
-}: {
-  entry: Record<string, unknown>;
-  t: (key: Parameters<ReturnType<typeof useT>["t"]>[0]) => string;
-}) {
-  const assessment = entry.assessment as Record<string, unknown> | null;
-  if (!assessment) return null;
-  const level = Number(assessment.level);
-  return (
-    <div className="rounded-lg border border-border bg-muted/20 p-3.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <Chip>{String(entry.code)}</Chip>
-        <Chip tone={level === 0 ? "attention" : "confirmed"} srPrefix={t("iiu.rp.humanassessment")}>
-          {t("iiu.ev.level")} {level} — {String(assessment.level_meaning ?? "")}
-        </Chip>
-      </div>
-      <p className="mt-2.5 text-sm leading-relaxed text-foreground">
-        {String(assessment.rationale)}
-      </p>
-      {assessment.uncertainty ? (
-        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-          <span className="font-medium">{t("iiu.ev.uncertainty")}</span>
-          {String(assessment.uncertainty)}
-        </p>
-      ) : null}
-      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-        <span className="font-medium">{t("iiu.ev.ankare")}</span>
-        {String(assessment.anchor)}
-      </p>
-    </div>
   );
 }

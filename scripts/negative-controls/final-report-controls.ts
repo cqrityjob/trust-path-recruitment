@@ -4,7 +4,7 @@
  * ── WHY THESE EXIST ────────────────────────────────────────────────────
  *
  * employer-final-report-check asserts that the canonical output of this
- * process is provable. None of its 157 assertions, on its own, proves it would
+ * process is provable. None of its assertions, on its own, proves it would
  * NOTICE if that stopped being true: a regex that no longer matches, a table
  * test over a union that lost a member, or an assertion whose subject was
  * renamed all go on printing "ok".
@@ -13,8 +13,9 @@
  * prevent -- the real defect, in the real file, in the shape a careless edit
  * would actually produce -- and requires a named guard to fail with a named
  * diagnostic. Several are the ORIGINAL defect restored verbatim: the md5
- * hash, the basis that did not name the recruitment, the evidence that all
- * looked the same.
+ * hash, the one assessor chosen by LIMIT 1 with no ORDER BY, the aggregate
+ * with no ORDER BY, the Passport disclosure called verified, the finalisation
+ * that took no previewed identity, the report drawn from live data.
  *
  * The harness restores every file byte-for-byte and verifies the tree is clean
  * afterwards. See scripts/negative-controls/runner.ts.
@@ -26,10 +27,13 @@ import { runControls, type Mutation } from "./runner";
 
 const SEQ = "src/lib/interview-intelligence/final-report.ts";
 const PANEL = "src/components/employer/interview/FinalReportSequence.tsx";
+const DOCUMENT = "src/components/employer/interview/FinalReportDocument.tsx";
 const ROUTE =
   "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx";
 const RUNTIME = "src/lib/interview-intelligence/runtime.functions.ts";
 const MIGRATION = "supabase/migrations/20261107090000_scp_iv_report_basis_integrity.sql";
+const ROLLBACK = "supabase/rollback/20261107090000_scp_iv_report_basis_integrity_rollback.sql";
+const DB_TEST = "scripts/db-test.sh";
 const DICT = "src/i18n/dictionaries.ts";
 
 const E4 = "employer-final-report:check";
@@ -40,27 +44,37 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E4-HASH-BACK-TO-MD5",
     defect: "the finalised basis is hashed with md5 again, the original defect restored",
     file: MIGRATION,
-    find: "  _hash := encode(sha256(_payload::text::bytea), 'hex');",
+    find: "  _hash := public.scp_iv_content_hash(_payload);",
     replace: "  _hash := md5(_payload::text);",
     guard: E4,
-    expect: "8.2 and md5 is gone from the write path",
+    expect: "8.2 md5 is gone from the write path",
   },
   {
     id: "E4-HASH-VIA-PGCRYPTO",
     defect:
       "the digest goes through pgcrypto's digest(), which cannot resolve under a pinned search_path on the hosted project",
     file: MIGRATION,
-    find: "  _hash := encode(sha256(_payload::text::bytea), 'hex');",
-    replace: "  _hash := encode(digest(_payload::text, 'sha256'), 'hex');",
+    find: "  SELECT encode(sha256(convert_to(_payload::text, 'UTF8')), 'hex');",
+    replace: "  SELECT encode(digest(_payload::text, 'sha256'), 'hex');",
     guard: E4,
     expect: "8.3 and it does NOT use pgcrypto digest()",
+  },
+  {
+    id: "E4-HASH-OVER-BYTEA-CAST",
+    defect:
+      "the digest is taken over text::bytea, which parses bytea escape syntax and fails on a payload containing a quote",
+    file: MIGRATION,
+    find: "  SELECT encode(sha256(convert_to(_payload::text, 'UTF8')), 'hex');",
+    replace: "  SELECT encode(sha256(_payload::text::bytea), 'hex');",
+    guard: E4,
+    expect: "8.1b and nothing casts text to bytea",
   },
   {
     id: "E4-ALGORITHM-NOT-RECORDED",
     defect: "the stored hash no longer says which algorithm produced it",
     file: MIGRATION,
-    find: "          _hash, 'sha256', _c.pack_version_id",
-    replace: "          _hash, NULL, _c.pack_version_id",
+    find: "          _hash, 'sha256', _basis, _c.pack_version_id, _c.pack_content_hash,",
+    replace: "          _hash, NULL, _basis, _c.pack_version_id, _c.pack_content_hash,",
     guard: E4,
     expect: "8.5 as sha256 on every new finalisation",
   },
@@ -95,6 +109,92 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "8.8 and the assessment material the process ran on",
   },
 
+  /* ---- The assessment RESULT, bound ------------------------------- */
+  {
+    id: "E4-RESULT-NOT-BOUND-TO-VERSION",
+    defect:
+      "the released result is carried without the release version it came from, so a later re-release could pass as this one",
+    file: MIGRATION,
+    find: "                          'report_version_id', ident.report_version_id,",
+    replace: "                          'unbound', NULL,",
+    guard: E4,
+    expect: "8.8c bound to the exact snapshot, release version and release time",
+  },
+  {
+    id: "E4-FINDINGS-NAMED-NOT-CARRIED",
+    defect:
+      "the assessment material is named but its released findings are dropped -- the report says an assessment happened and not what it found",
+    file: MIGRATION,
+    find: "                          'findings', er.safety_flags,\n                          'context', er.context,\n",
+    replace:
+      "                          'findings', '[]'::jsonb,\n                          'context', er.context,\n",
+    guard: E4,
+    expect: "8.8e the released findings are carried, not just named",
+  },
+  {
+    id: "E4-SNAPSHOT-TABLE-READ-DIRECTLY",
+    defect:
+      "the builder reads the assessment snapshot table itself instead of the assessment domain's governed projection (TR12.3)",
+    file: MIGRATION,
+    find: "                   FROM public.scp_employer_report(at.id) er",
+    replace:
+      "                   FROM (SELECT s.id, s.payload, s.brief, s.safety_flags, s.context, s.limitations_sv, s.limitations_en FROM public.scp_report_snapshots s WHERE s.attempt_id = at.id) er",
+    guard: E4,
+    expect: "8.13 and no scp_iv_ function names the assessment snapshot or evidence table (TR12.3)",
+  },
+
+  /* ---- Every assessor, in a declared order ------------------------ */
+  {
+    id: "E4-ONE-ASSESSOR-BY-HEAP",
+    defect:
+      "one assessment per question is picked with LIMIT 1 and no ORDER BY -- the original defect, where the heap chose whose judgement became the employer's report",
+    file: MIGRATION,
+    find: "               'assessor_count', (",
+    replace:
+      "               'assessment', (SELECT to_jsonb(a) FROM public.scp_interview_assessments a WHERE a.case_id = _case_id AND a.question_id = q.id AND a.superseded_by IS NULL LIMIT 1),\n               'assessor_count', (",
+    guard: E4,
+    expect: "8.25 no assessment is picked with LIMIT 1",
+  },
+  {
+    id: "E4-ASSESSORS-IN-HEAP-ORDER",
+    defect:
+      "the assessments aggregate loses its ORDER BY, so which assessor comes first -- and the digest -- depends on physical row order",
+    file: MIGRATION,
+    find: "                        ORDER BY a.assessor_id, a.assessed_at, a.id)",
+    replace: "                        )",
+    guard: E4,
+    expect: "8.27 in an order declared by who assessed, when, and an immutable id",
+  },
+  {
+    id: "E4-AGGREGATE-UNORDERED",
+    defect:
+      "the evidence aggregate loses its ORDER BY, so the same case can produce two payloads with two digests",
+    file: MIGRATION,
+    find: "                        ORDER BY ev.confirmed_at, ev.id)",
+    replace: "                        )",
+    guard: E4,
+    expect: "8.31 and every one of them carries an ORDER BY inside its own parentheses",
+  },
+  {
+    id: "E4-TIEBREAKER-DROPPED",
+    defect:
+      "the evidence ORDER BY loses its immutable tie-breaker, so two items confirmed in the same instant can swap places between two builds",
+    file: MIGRATION,
+    find: "                        ORDER BY ev.confirmed_at, ev.id)",
+    replace: "                        ORDER BY ev.confirmed_at)",
+    guard: E4,
+    expect: "8.32 and each ORDER BY ends in an immutable tie-breaker",
+  },
+  {
+    id: "E4-LIMIT-WITHOUT-ORDER",
+    defect: "a LIMIT 1 in the builder is left without an ORDER BY above it",
+    file: MIGRATION,
+    find: "                  ORDER BY er.id\n                  LIMIT 1))",
+    replace: "                  LIMIT 1))",
+    guard: E4,
+    expect: "8.34 and every LIMIT 1 left in the builder sits under an ORDER BY",
+  },
+
   /* ---- Evidence that all looks the same ---------------------------- */
   {
     id: "E4-EVIDENCE-UNCLASSIFIED",
@@ -105,6 +205,16 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "                          'unused_field',",
     guard: E4,
     expect: "8.9 every evidence item is classified",
+  },
+  {
+    id: "E4-DISCLOSURE-CALLED-VERIFIED",
+    defect:
+      "a line from a Passport disclosure is classified as verified material on the strength of its source kind alone -- the original defect restored",
+    file: MIGRATION,
+    find: "WHEN 'passport_disclosure'   THEN 'passport_disclosure'",
+    replace: "WHEN 'passport_disclosure'   THEN 'verified_material'",
+    guard: E4,
+    expect: "8.11b a Passport disclosure is classified as what it is",
   },
   {
     id: "E4-LEVEL-PRESENTED-AS-FACT",
@@ -125,6 +235,39 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "                            ELSE 'interviewer_observation'",
     guard: E4,
     expect: "8.11 an item with no source link is reported as unattributed",
+  },
+
+  /* ---- Preview equals finalisation --------------------------------- */
+  {
+    id: "E4-FINALISE-TAKES-NO-IDENTITY",
+    defect:
+      "the previewed identity becomes optional on the finalisation function, so a client can finalise what nobody previewed",
+    file: MIGRATION,
+    find: "  _case_id uuid, _expected_basis_hash text, _draft_run_id uuid DEFAULT NULL)",
+    replace:
+      "  _case_id uuid, _expected_basis_hash text DEFAULT NULL, _draft_run_id uuid DEFAULT NULL)",
+    guard: E4,
+    expect: "8.36 finalisation takes the identity the owner previewed",
+  },
+  {
+    id: "E4-STALE-PREVIEW-ACCEPTED",
+    defect:
+      "the comparison between the previewed identity and the basis about to be locked is short-circuited, so a stale preview finalises",
+    file: MIGRATION,
+    find: "  IF _expected_basis_hash <> _basis THEN",
+    replace: "  IF false THEN",
+    guard: E4,
+    expect: "8.38 finalisation refuses without an identity and refuses a stale one",
+  },
+  {
+    id: "E4-PREVIEW-IS-ANOTHER-BUILDER",
+    defect:
+      "the preview stops calling the builder finalisation calls, so what the owner reads and what is locked are two code paths again",
+    file: MIGRATION,
+    find: "  _p := public.scp_iv_build_report_basis(_case_id);",
+    replace: "  _p := jsonb_build_object('case', jsonb_build_object('candidate', 'preview'));",
+    guard: E4,
+    expect: "8.35 preview and finalisation call the SAME builder",
   },
 
   /* ---- The invariants the schema already held ---------------------- */
@@ -149,17 +292,39 @@ const MUTATIONS: readonly Mutation[] = [
     guard: E4,
     expect: "8.21 and a superseded version is immutable too",
   },
+
+  /* ---- The rollback ----------------------------------------------- */
+  {
+    id: "E4-ROLLBACK-DOES-NOT-RESTORE",
+    defect:
+      "the rollback drops the new finalisation but restores the previous one under another name, leaving no scp_iv_finalise_report at all",
+    file: ROLLBACK,
+    find: "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report(_case_id uuid, _draft_run_id uuid DEFAULT NULL)",
+    replace:
+      "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_report_previous(_case_id uuid, _draft_run_id uuid DEFAULT NULL)",
+    guard: E4,
+    expect: "12.2 and restores the previous two-argument one",
+  },
+  {
+    id: "E4-ROLLBACK-NOT-EXERCISED",
+    defect:
+      "the suite stops applying the rollback and merely reads a constant, so rollback is described rather than exercised",
+    file: DB_TEST,
+    find: '  -f supabase/rollback/20261107090000_scp_iv_report_basis_integrity_rollback.sql 2>&1)"',
+    replace: '  -c "SELECT \'SCP_IV_REPORT_BASIS_ROLLBACK ok\'" 2>&1)"',
+    guard: E4,
+    expect: "12.6 the suite APPLIES the rollback and reads its proof",
+  },
 ];
 
-/* ---- The readback -------------------------------------------------- */
+/* ---- The readback and the client ---------------------------------- */
 const MORE: readonly Mutation[] = [
   {
     id: "E4-READBACK-IS-A-TABLE-SELECT",
     defect:
       "the readback selects the reports table directly, so nothing recomputes the digest and integrity is asserted rather than checked",
     file: RUNTIME,
-    find:
-      '    const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {\n      _case_id: data.caseId,\n    });',
+    find: '    const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {\n      _case_id: data.caseId,\n    });',
     replace:
       '    const { data: rows, error } = await context.supabase\n      .from("scp_interview_reports")\n      .select("*")\n      .eq("case_id", data.caseId);',
     guard: E4,
@@ -170,12 +335,41 @@ const MORE: readonly Mutation[] = [
     defect:
       "the readback throws away the error code, so a refusal and a breakage become the same thing to the screen",
     file: RUNTIME,
-    find:
-      "    if (error) {\n      const e = new Error(error.message) as Error & { code?: string };\n      e.code = error.code;\n      throw e;\n    }\n    const row = (Array.isArray(rows) ? rows[0] : null) as",
+    find: '    const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {\n      _case_id: data.caseId,\n    });\n    if (error) {\n      const e = new Error(error.message) as Error & { code?: string };\n      e.code = error.code;\n      throw e;\n    }',
     replace:
-      "    if (error) {\n      throw new Error(error.message);\n    }\n    const row = (Array.isArray(rows) ? rows[0] : null) as",
+      '    const { data: rows, error } = await context.supabase.rpc("scp_iv_final_report", {\n      _case_id: data.caseId,\n    });\n    if (error) {\n      throw new Error(error.message);\n    }',
     guard: E4,
     expect: "9.6 and preserves the error code",
+  },
+  {
+    id: "E4-ACTOR-NOT-CARRIED-TO-THE-SCREEN",
+    defect:
+      "the readback mapping drops the governed name and address, so the screen has only an account id to show for who finalised",
+    file: RUNTIME,
+    find: "    finalisedByName: row.finalised_by_name,\n    finalisedByEmail: row.finalised_by_email,",
+    replace: "    finalisedByName: null,\n    finalisedByEmail: null,",
+    guard: E4,
+    expect: "9.5b and the actor's name and address",
+  },
+  {
+    id: "E4-FINALISE-WITHOUT-HASH",
+    defect:
+      "the server function stops requiring the previewed identity, so the client can send an empty one and the database's check is met with a blank",
+    file: RUNTIME,
+    find: "        expectedBasisHash: z.string().min(1),",
+    replace: "        expectedBasisHash: z.string().optional(),",
+    guard: E4,
+    expect: "9.16 it REQUIRES the previewed identity",
+  },
+  {
+    id: "E4-IDENTITY-NOT-FROM-THE-PREVIEW",
+    defect:
+      "the identity sent to finalisation is no longer the one from the preview in hand, so the screen could lock something the owner did not read",
+    file: ROUTE,
+    find: "        expectedBasisHash: previewInHand.basisHash,",
+    replace: '        expectedBasisHash: "recomputed-elsewhere",',
+    guard: E4,
+    expect: "9.19 the identity sent is the identity of the preview IN HAND",
   },
   {
     id: "E4-FAILED-READ-IS-A-ZERO",
@@ -208,6 +402,141 @@ const MORE: readonly Mutation[] = [
     guard: E4,
     expect: "3.5 a mismatch is not",
   },
+  {
+    id: "E4-ACTOR-FALLS-BACK-TO-A-PLACEHOLDER",
+    defect:
+      "an actor that cannot be resolved is given a placeholder string, which the screen would print as if it were a name",
+    file: SEQ,
+    find: "  return r.finalisedByName?.trim() || r.finalisedByEmail?.trim() || null;",
+    replace: '  return r.finalisedByName?.trim() || r.finalisedByEmail?.trim() || "unknown";',
+    guard: E4,
+    expect: "3.15 and null, never a uuid, when neither can be resolved",
+  },
+
+  /* ---- The preview gate -------------------------------------------- */
+  {
+    id: "E4-NO-PREVIEW-STILL-FINALISES",
+    defect:
+      "the finalise control is enabled with no preview in hand, so there is no identity to send",
+    file: SEQ,
+    find: "  if (!preview || preview.blockerCount > 0) return false;",
+    replace: "  if (preview && preview.blockerCount > 0) return false;",
+    guard: E4,
+    expect: "2.9 with NO preview in hand it may not",
+  },
+  {
+    id: "E4-STALE-PREVIEW-STILL-COUNTS",
+    defect:
+      "a preview the server called stale still enables the finalise control, inviting the owner to send the same stale identity again",
+    file: SEQ,
+    find: '  if (outcome.kind === "stalePreview") return false;',
+    replace: "  // a stale preview is treated as current",
+    guard: E4,
+    expect: "2.10 and a preview the server called stale is not a preview",
+  },
+  {
+    id: "E4-STALE-IS-JUST-A-FAILURE",
+    defect:
+      "SCP_IV_STALE_PREVIEW is no longer told apart from a breakage, so the owner is not told to preview again",
+    file: SEQ,
+    find: '  ["SCP_IV_STALE_PREVIEW", { kind: "stalePreview" }],\n',
+    replace: "",
+    guard: E4,
+    expect: "2.15 SCP_IV_STALE_PREVIEW is a stale preview",
+  },
+  {
+    id: "E4-STALE-NOT-RENDERED",
+    defect:
+      "the stale state no longer reaches the finalisation control, so the screen shows nothing when the server refuses",
+    file: ROUTE,
+    find: '                stale={outcome.kind === "stalePreview"}',
+    replace: "                stale={false}",
+    guard: E4,
+    expect: "9.23 a stale preview reaches the finalisation control as a state",
+  },
+
+  /* ---- The document ------------------------------------------------ */
+  {
+    id: "E4-DOCUMENT-READS-LIVE",
+    defect:
+      "the document component starts querying, so a 'locked' report can render live case data rather than the finalised payload",
+    file: DOCUMENT,
+    find: 'import { useT } from "@/i18n/context";',
+    replace:
+      'import { useT } from "@/i18n/context";\nimport { useQuery } from "@tanstack/react-query";',
+    guard: E4,
+    expect: "11.35 the document imports no server function, query or client",
+  },
+  {
+    id: "E4-ONE-ASSESSOR-RENDERED",
+    defect:
+      "the document renders only the first assessor, so a two-person panel reads as one judgement",
+    file: DOCUMENT,
+    find: "                  {q.assessments.map((a) => (",
+    replace: "                  {q.assessments.slice(0, 1).map((a) => (",
+    guard: E4,
+    expect: "11.7 sv: BOTH assessors' rationales are on the page",
+  },
+  {
+    id: "E4-DISAGREEMENT-HIDDEN",
+    defect: "the parser reports every panel as agreeing, so disagreement is never stated",
+    file: SEQ,
+    find: "        levelsAgree: q.levels_agree !== false,",
+    replace: "        levelsAgree: true,",
+    guard: E4,
+    expect: "11.2 and the disagreement",
+  },
+  {
+    id: "E4-DISCLOSURE-BADGE-SAYS-VERIFIED",
+    defect: "the Passport disclosure badge claims the material was verified",
+    file: DICT,
+    find: '    "iir.doc.cls.passport_disclosure": "Passport disclosure (not verified here)",',
+    replace: '    "iir.doc.cls.passport_disclosure": "Verified Passport material",',
+    guard: E4,
+    expect: "10.6 the Passport disclosure badge says in words that it was NOT verified here",
+  },
+  {
+    id: "E4-UNNAMED-ACTOR-PRINTS-A-UUID",
+    defect: "an actor that cannot be named is printed as the account id",
+    file: DOCUMENT,
+    find: '                  : t("iir.doc.identity.byUnknown")}',
+    replace:
+      '                  : t("iir.doc.identity.by").replace("{who}", readback.finalisedBy ?? "")}',
+    guard: E4,
+    expect: "11.39 sv: and never printed as an account id",
+  },
+  {
+    id: "E4-PREVIEW-IS-NOT-THE-DOCUMENT",
+    defect:
+      "the preview mounting is fed something other than the server's preview, so what the owner reads is not what is locked",
+    file: ROUTE,
+    find: '              mode={{ kind: "preview", preview: previewInHand }}',
+    replace:
+      '              mode={{ kind: "final", readback: readbackState.kind === "verified" ? readbackState.report : (null as never) }}',
+    guard: E4,
+    expect: "9.21 the preview mounting is fed the server's preview",
+  },
+  {
+    id: "E4-HISTORY-RENDERED-UNVERIFIED",
+    defect: "an opened earlier version is rendered without its digest having recomputed",
+    file: ROUTE,
+    find: "            opened.data.report.hashVerified &&\n",
+    replace: "",
+    guard: E4,
+    expect: "9.27 an opened historical version is rendered only when its digest recomputes",
+  },
+  {
+    id: "E4-DOCUMENT-NOT-MOUNTED",
+    defect:
+      "the current final report is disabled behind a falsy literal and the page shows no document",
+    file: ROUTE,
+    find: "              payload={readbackState.report.payload}",
+    replace: "              payload={(false && readbackState.report.payload) as never}",
+    guard: E4,
+    expect: "9.22 and the final and historical mountings are fed the readback's exact payload",
+  },
+
+  /* ---- The readback panel ------------------------------------------ */
   {
     id: "E4-REFUSAL-OFFERS-A-RETRY",
     defect:
@@ -312,8 +641,8 @@ const MORE: readonly Mutation[] = [
     defect:
       "finalising no longer refetches the readback, so success is printed from having asked rather than from the server",
     file: ROUTE,
-    find: "      void readback.refetch();",
-    replace: "      // no refetch",
+    find: "      const [rb] = await Promise.all([readback.refetch(), versions.refetch()]);",
+    replace: "      const [rb] = await Promise.all([versions.refetch()]);",
     guard: E4,
     expect: "9.9 finalising refetches the readback",
   },

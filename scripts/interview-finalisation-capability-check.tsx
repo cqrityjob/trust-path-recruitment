@@ -129,13 +129,22 @@ ok(
 /** The I18nProvider defaults to Swedish on the server. English is rendered by
  *  reading the dictionary directly for the strings that must differ, because a
  *  guard that only ever reads one language proves parity of nothing. */
-const render = (canFinalise: boolean) =>
+// Finalising requires a preview of the current basis (20261107090000): the
+// identity the button sends is the identity the owner read. So the "idle"
+// owner branch is rendered WITH a preview in hand -- that is the state in
+// which the control is legitimately enabled -- and the two states in which it
+// must be withdrawn, no preview and a stale preview, are rendered and asserted
+// separately below.
+const render = (canFinalise: boolean, opts: { previewed?: boolean; stale?: boolean } = {}) =>
   renderToStaticMarkup(
     <I18nProvider>
       <ReportFinalisation
         canFinalise={canFinalise}
         onFinalise={() => {}}
+        onPreview={() => {}}
         isPending={false}
+        previewed={opts.previewed ?? true}
+        stale={opts.stale ?? false}
         employerSlug="test-employer"
         caseId="00000000-0000-4000-8000-000000000001"
       />
@@ -144,6 +153,8 @@ const render = (canFinalise: boolean) =>
 
 const ownerMarkup = render(true);
 const memberMarkup = render(false);
+const unpreviewedMarkup = render(true, { previewed: false });
+const staleMarkup = render(true, { previewed: true, stale: true });
 
 const sv = dictionaries.sv as Record<string, string>;
 const en = dictionaries.en as Record<string, string>;
@@ -159,6 +170,40 @@ ok(!hasDisabledAttr(ownerMarkup), "A/B · and it is not disabled when idle");
 ok(
   ownerMarkup.includes(sv["iiu.rp.confirm"]),
   "A/B · the irreversibility confirmation is shown with it",
+);
+
+// ── A/B' · nothing is finalised that was not previewed ──────────────
+// The finalise button is the LAST button in the block; the preview button
+// precedes it. Both are asserted by position so a disabled preview button
+// cannot satisfy an assertion about the finalise one.
+const lastButton = (markup: string) => {
+  const parts = markup.split("<button");
+  return parts.length > 1 ? "<button" + parts[parts.length - 1] : "";
+};
+ok(
+  hasDisabledAttr(lastButton(unpreviewedMarkup)),
+  "A/B' · with NO preview in hand the finalise control is disabled",
+);
+ok(
+  unpreviewedMarkup.includes(sv["iir.fin.previewFirst"]),
+  "A/B' · and the screen says a preview comes first, in words",
+);
+ok(unpreviewedMarkup.includes(sv["iir.fin.preview"]), "A/B' · and offers the preview");
+ok(
+  !hasDisabledAttr(lastButton(ownerMarkup)) && ownerMarkup.includes(sv["iir.fin.previewed"]),
+  "A/B' · with a current preview in hand the control is enabled and the screen says what will be finalised is what is shown",
+);
+ok(
+  hasDisabledAttr(lastButton(staleMarkup)),
+  "A/B' · after a STALE preview the control is withdrawn again",
+);
+ok(
+  staleMarkup.includes(sv["iir.fin.staleTitle"]) && staleMarkup.includes('role="alert"'),
+  "A/B' · and the stale state is announced, not only styled",
+);
+ok(
+  !staleMarkup.includes(sv["iir.fin.previewed"]),
+  "A/B' · and a stale preview is never described as current",
 );
 
 // ── C · an ordinary member sees NO actionable finalise control ──────

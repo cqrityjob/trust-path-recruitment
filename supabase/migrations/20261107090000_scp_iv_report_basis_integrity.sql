@@ -296,6 +296,7 @@ BEGIN
                               'context', er.context)::text, 'UTF8')), 'hex'))
                    FROM public.scp_employer_report(at.id) er
                    JOIN public.scp_employer_report_identity(at.id) ident ON ident.snapshot_id = er.id
+                  ORDER BY er.id
                   LIMIT 1))
              ORDER BY at.id)
         FROM public.assessment_assignments asg
@@ -747,7 +748,7 @@ GRANT EXECUTE ON FUNCTION public.scp_iv_report_versions(uuid) TO authenticated;
 -- ─────────────────────────────────────────────────────────────────────────
 
 DO $proof$
-DECLARE _src text; _build text; _preview text; _fn text;
+DECLARE _src text; _build text; _preview text; _fn text; _i int;
 BEGIN
   FOR _fn IN SELECT unnest(ARRAY['content_hash_algorithm','basis_hash']) LOOP
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns
@@ -827,6 +828,13 @@ BEGIN
   IF position('jsonb_agg(DISTINCT' in _build) > 0 THEN
     RAISE EXCEPTION 'SCP_IV_BASIS: the builder uses jsonb_agg(DISTINCT ...), whose order is not declared';
   END IF;
+  -- No LIMIT 1 anywhere in the builder without an ORDER BY immediately
+  -- above it: a LIMIT over an undeclared order is the heap choosing.
+  FOR _i IN 1 .. array_length(regexp_split_to_array(_build, 'LIMIT 1'), 1) - 1 LOOP
+    IF right((regexp_split_to_array(_build, 'LIMIT 1'))[_i], 400) !~ 'ORDER BY' THEN
+      RAISE EXCEPTION 'SCP_IV_BASIS: a LIMIT 1 in the builder has no ORDER BY above it';
+    END IF;
+  END LOOP;
   -- The basis names the recruitment, the interview, and the assessment
   -- RESULT through the assessment domain's own governed projection, bound
   -- to the exact snapshot and version.
