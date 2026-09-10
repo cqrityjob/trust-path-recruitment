@@ -361,8 +361,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a destination stays in the union, and in the strip's switch, after the last branch that could produce it stops doing so",
     file: PROJECTION,
-    find:
-      '          destination: { kind: "assessmentParticipants", attemptId: assessment.releaseAttemptId },',
+    find: '          destination: { kind: "assessmentParticipants", attemptId: assessment.releaseAttemptId },',
     replace: "          destination: NO_DESTINATION,",
     guard: E1,
     expect: '21 · some state actually produces the "assessmentParticipants" destination',
