@@ -2088,7 +2088,7 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     ["if (!spec.ok)", "a failed test refuses the artifact"],
     ["names.length > 1", "no capture is a byte-for-byte duplicate of another"],
     ["recorded no step durations", "every test recorded how its time was spent"],
-    ['faulted ? "REFUSED"', "a capture it rejected is not also printed as ok"],
+    ["problems.some((p) => p.includes(name))", "a capture it rejected is not also printed as ok"],
   ] as const) {
     ok(verify.includes(needle), `16.13e the verifier checks that ${what}`);
   }
