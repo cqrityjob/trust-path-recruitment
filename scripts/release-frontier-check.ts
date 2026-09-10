@@ -31,7 +31,6 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // and release-state.json records the production evidence.
 const expectedPending: string[] = [
   "20261105090000_scp_participant_report_issuer_preview.sql",
-  "20261106090000_scp_iv_candidate_summary.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

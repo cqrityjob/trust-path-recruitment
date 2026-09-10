@@ -234,14 +234,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # + 3 TRUST conduct layer: the six-step conduct sequence, the named prohibited
 #   techniques, and the Target/Ready/Trace guidance. Deterministic governed
 #   content read by a human -- the Understand stage still permits zero AI tasks.
-# + scp_iv_candidate_summaries (20261106090000): the candidate-safe summary of
-#   an interview, frozen at release. Deliberately its own table rather than an
-#   audience column on scp_interview_reports: one interview produces two
-#   documents for two audiences, and neither may be a filtered view of the
-#   other. It holds no level, no reviewer identity, no finding and no AI
-#   wording, and has no client read at all.
-if [ "$SCP_TABLES" -ne 127 ]; then
-  echo "FAIL: expected 127 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 candidate summary), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 126 ]; then
+  echo "FAIL: expected 126 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -2693,80 +2687,6 @@ fi
 
 if [ "$E2PP_FAILED" -ne 0 ]; then
   suite_failed "E2 issuer participant-preview"
-fi
-
-# ---------------------------------------------------------------------------
-# E4 — the candidate-safe interview summary.
-#
-# 20261106090000 adds one table, five functions and one event name. The suite
-# walks a real case to a finalised report and proves the five properties the
-# unit exists for: the report is a precondition and never a trigger, the
-# preview is byte-identical to what the release then writes, the document
-# carries governed areas and the candidate's own words and NOTHING carrying a
-# level or a reviewer, a re-release is idempotent and a changed one supersedes,
-# and every principal except an owner or admin is refused.
-# ---------------------------------------------------------------------------
-echo "==> Running E4 candidate-summary assertions"
-set +e
-E4CS_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
-  -f supabase/tests/scp_iv_candidate_summary_test.sql 2>&1)"
-E4CS_RC=$?
-set -e
-
-echo "$E4CS_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
-E4CS_PASSED="$(echo "$E4CS_OUT" | grep -c "ok  " || true)"
-E4CS_FAILED=0
-
-if [ "$E4CS_RC" -ne 0 ]; then
-  echo "FAIL: the E4 candidate-summary suite exited with code ${E4CS_RC}." >&2
-  echo "$E4CS_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  E4CS_FAILED=1
-else
-  echo "    ok  ${E4CS_PASSED} E4 candidate-summary assertions passed"
-  if [ "$E4CS_PASSED" -lt 50 ]; then
-    echo "FAIL: expected at least 50 E4 candidate-summary assertions, only ${E4CS_PASSED} ran." >&2
-    E4CS_FAILED=1
-  fi
-fi
-
-# ── THE ROLLBACK, AND THE RE-APPLY ─────────────────────────────────────
-#
-# Run LAST, and NOT inside a wrapping transaction: this rollback file manages
-# its own (it has to -- it deletes ledger rows before it can restore the event
-# constraint). A nested BEGIN/ROLLBACK around it does not undo it, because its
-# own COMMIT commits first. So it is applied for real, asserted, and the
-# migration is then re-applied over the rolled-back state -- which also proves
-# the migration is re-appliable, the property a rollback is worth nothing
-# without.
-echo "==> Verifying the E4 candidate-summary rollback"
-set +e
-E4RB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
-  -f supabase/rollback/20261106090000_scp_iv_candidate_summary_rollback.sql 2>&1)"
-E4RB_RC=$?
-set -e
-if [ "$E4RB_RC" -ne 0 ] || ! echo "$E4RB_OUT" | grep -q "SCP_IV_SUMMARY_ROLLBACK ok"; then
-  echo "FAIL: the E4 candidate-summary rollback did not verify." >&2
-  echo "$E4RB_OUT" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
-  E4CS_FAILED=1
-else
-  echo "    ok  the rollback drops the table and all five functions, and restores the event vocabulary"
-fi
-
-set +e
-E4RE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
-  -f supabase/migrations/20261106090000_scp_iv_candidate_summary.sql 2>&1)"
-E4RE_RC=$?
-set -e
-if [ "$E4RE_RC" -ne 0 ] || ! echo "$E4RE_OUT" | grep -q "SCP_IV_CANDIDATE_SUMMARY_PROOF ok"; then
-  echo "FAIL: the E4 migration does not re-apply over the rolled-back state." >&2
-  echo "$E4RE_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
-  E4CS_FAILED=1
-else
-  echo "    ok  and the migration re-applies cleanly over the rolled-back state"
-fi
-
-if [ "$E4CS_FAILED" -ne 0 ]; then
-  suite_failed "E4 candidate summary"
 fi
 
 # ---------------------------------------------------------------------------
@@ -5785,6 +5705,5 @@ echo "              ${SPFM_PASSED} first-merit assertions,"
 echo "              ${FMR_PASSED} concurrent first-merit assertions,"
 echo "              ${TWO_OPS_PASSED} two-operation first-merit race assertions,"
 echo "              ${SPRC_PASSED} rollback correction assertions,"
-echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,"
-echo "              ${E4CS_PASSED} E4 candidate-summary assertions"
+echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions"
 echo "===================================================="

@@ -14678,14 +14678,6 @@ export type Database = {
         }
         Returns: string
       }
-      scp_iv_application_summary_releases: {
-        Args: { _application_id: string }
-        Returns: {
-          case_id: string
-          released_at: string
-          version_number: number
-        }[]
-      }
       scp_iv_approve_prep_plan: {
         Args: { _note?: string; _plan_id: string }
         Returns: undefined
@@ -14721,10 +14713,6 @@ export type Database = {
           role_title: string
           updated_at: string
         }[]
-      }
-      scp_iv_build_candidate_summary: {
-        Args: { _case_id: string }
-        Returns: Json
       }
       scp_iv_case_employer: { Args: { _case_id: string }; Returns: string }
       scp_iv_case_start_basis: {
@@ -14795,17 +14783,6 @@ export type Database = {
         Args: { _case_id: string }
         Returns: undefined
       }
-      scp_iv_my_candidate_summary: {
-        Args: { _case_id: string }
-        Returns: {
-          case_id: string
-          content_hash: string
-          id: string
-          payload: Json
-          released_at: string
-          version_number: number
-        }[]
-      }
       scp_iv_open_pilot_available: {
         Args: { _pack_version_id: string }
         Returns: boolean
@@ -14838,10 +14815,6 @@ export type Database = {
         }[]
       }
       scp_iv_plan_case: { Args: { _plan_id: string }; Returns: string }
-      scp_iv_preview_candidate_summary: {
-        Args: { _case_id: string }
-        Returns: Json
-      }
       scp_iv_question_pack: { Args: { _question_id: string }; Returns: string }
       scp_iv_record_assessment: {
         Args: {
@@ -14895,21 +14868,6 @@ export type Database = {
       scp_iv_record_role_requirements: {
         Args: { _items: Json; _run_id: string }
         Returns: number
-      }
-      scp_iv_release_candidate_summary: {
-        Args: { _case_id: string }
-        Returns: string
-      }
-      scp_iv_released_candidate_summary: {
-        Args: { _case_id: string }
-        Returns: {
-          case_id: string
-          content_hash: string
-          id: string
-          payload: Json
-          released_at: string
-          version_number: number
-        }[]
       }
       scp_iv_report_blockers: {
         Args: { _case_id: string }

@@ -355,32 +355,6 @@ export function ProcessContinuityStrip({
           value={t(REPORT_LABEL[report.availability])}
           degraded={report.read === "failed" || report.read === "refused"}
         />
-        {/* ── WHAT THE INTERVIEWED PERSON CAN SEE (E4) ────────────────
-         *
-         *  Its own row, because it is its own question about a different
-         *  audience. "Finalised" and "finalised, and the person has been sent
-         *  a summary" are the same state of the EMPLOYER'S work and different
-         *  states of what somebody else knows, and a strip that reported only
-         *  the first would leave a recruiter unable to answer the question a
-         *  candidate is most likely to ask them.
-         *
-         *  Absent entirely until a report is final: sharing is not a question
-         *  that arises before then, and an empty row saying "not shared" about
-         *  an interview that has not been reported on reads as a task. */}
-        {report.candidateSharing !== "notApplicable" && (
-          <TrackRow
-            term={t("continuity.track.candidateSummary")}
-            value={
-              report.candidateSharing === "shared"
-                ? t("continuity.candidateSummary.shared").replace(
-                    "{n}",
-                    String(report.candidateSummaryVersion ?? 1),
-                  )
-                : t("continuity.candidateSummary.notShared")
-            }
-            degraded={false}
-          />
-        )}
       </dl>
 
       {/* ── The one next step ──────────────────────────────────────────

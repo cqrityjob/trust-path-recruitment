@@ -16,11 +16,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-// ONE payload shape and ONE mapper, shared with the employer's preview and
-// verification reads. The whole guarantee of the candidate summary is that all
-// three surfaces see the same document; a second mapper here -- differing by
-// one field, a year later -- is how a copy stops being one.
-import { mapCandidateSummaryPayload, type CandidateSummary } from "./runtime.functions";
 
 /**
  * The four states a candidate is told about, and nothing finer.
@@ -110,49 +105,6 @@ export const getMyInterviewDetail = createServerFn({ method: "GET" })
       })),
       transcriptInUse: Boolean(d.transcript_in_use),
       retainUntil: (d.retain_until as string | null) ?? null,
-    };
-  });
-
-/**
- * The summary of an interview about them, when the employer has shared one.
- *
- * ── WHY NULL IS A REAL ANSWER HERE ──────────────────────────────────────
- *
- * Most interviews will not have one, and that is not a failure of anything.
- * Releasing a summary is a separate, explicit decision an employer owner or
- * admin makes after finalising their own report; nothing releases it
- * automatically and nothing ever will without somebody changing
- * scp_iv_release_candidate_summary. So `null` means "the employer has not
- * shared one", the page says exactly that, and it does not imply they were
- * supposed to.
- *
- * `scp_iv_my_candidate_summary` binds to `scp_interview_cases
- * .candidate_user_id` -- never to a name, an address or a role title -- and
- * returns nothing for a case that is not this person's. It cannot return a
- * superseded version: a corrected summary supersedes the one before it, and
- * what the candidate reads is always the current one, with its version number
- * on it so they can see which.
- */
-export const getMyInterviewSummary = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => caseInput.parse(d))
-  .handler(async ({ context, data }): Promise<CandidateSummary | null> => {
-    const { data: rows, error } = await context.supabase.rpc("scp_iv_my_candidate_summary", {
-      _case_id: data.caseId,
-    });
-    // A FAILED READ IS NOT AN UNSHARED SUMMARY. Throwing is what lets the page
-    // tell the person "we could not fetch it" instead of "your employer has
-    // not shared one", which would be a statement about the employer made on
-    // the strength of an outage of ours.
-    if (error) throw new Error(error.message);
-    const r = (Array.isArray(rows) ? rows[0] : undefined) as Record<string, unknown> | undefined;
-    if (!r) return null;
-    return {
-      id: String(r.id),
-      versionNumber: Number(r.version_number),
-      releasedAt: String(r.released_at),
-      contentHash: String(r.content_hash ?? ""),
-      payload: mapCandidateSummaryPayload(r.payload),
     };
   });
 
