@@ -2121,9 +2121,17 @@ console.log("\n16. The evidence pipeline: isolated, fail-closed, and unable to p
     /E4_HEAD_SHA/.test(headLine),
     "16.21 the manifest's head is the PULL REQUEST's head, not the merge commit GITHUB_SHA names",
   );
+  // COUNTED. Two steps are handed the head — the manifest and the verifier —
+  // and its own control showed that testing "does it appear" let one of them
+  // be switched to the merge commit while the assertion went on passing.
+  const headUses = (
+    wf.match(/E4_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g) ??
+    []
+  ).length;
+  const headMentions = (wf.match(/E4_HEAD_SHA:/g) ?? []).length;
   ok(
-    /E4_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/.test(wf),
-    "16.22 and the workflow hands it that head from the event",
+    headUses === headMentions && headUses >= 2,
+    `16.22 EVERY step handed a head sha is handed the PULL REQUEST's, from the event — ${headUses} of ${headMentions}`,
   );
   ok(
     /mergeSha:/.test(manifest) && /E4_MERGE_SHA: \$\{\{ github\.sha \}\}/.test(wf),

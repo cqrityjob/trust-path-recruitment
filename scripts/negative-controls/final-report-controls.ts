@@ -683,7 +683,7 @@ const MUTATIONS: readonly Mutation[] = [
     replace:
       "          E4_SUPABASE_CLI_PINNED: ${{ env.SUPABASE_CLI_VERSION }}\n          E4_HEAD_SHA: ${{ github.sha }}",
     guard: E4,
-    expect: "16.22 and the workflow hands it that head from the event",
+    expect: "16.22 EVERY step handed a head sha is handed the PULL REQUEST's, from the event",
   },
 
   /* ---- The leak scan must actually READ what it scans ----------------- *
