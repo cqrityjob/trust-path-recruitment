@@ -309,10 +309,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a token whose payload cannot be parsed is allowed instead of refused, so anything that defeats the parser is published",
     file: SCAN,
-    find: '    return { allowed: false, reason: "the token could not be parsed, so nothing about it is known" };',
+    find: '    return {\n      allowed: false,\n      reason: "the token could not be parsed, so nothing about it is known",\n    };',
     replace: '    return { allowed: true, reason: "unparseable, letting it through" };',
     guard: E4,
-    expect: "17.13 an UNSIGNED token claiming the local issuer is refused",
+    expect: "17.13b a JWT-shaped string whose payload cannot be parsed is refused",
   },
   {
     id: "E4-ALLOWLIST-UNREADABLE-MEANS-ALLOW-ALL",

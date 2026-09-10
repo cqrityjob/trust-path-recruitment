@@ -2489,6 +2489,12 @@ console.log("\n17. The leak scan, PROVEN on planted leaks — not asserted by gr
       jwtFindingsIn(traceOf(unsigned), allow).length === 1,
       "17.13 an UNSIGNED token claiming the local issuer is refused — the bypass this policy replaced",
     );
+    // 3b · fail closed when nothing about the token can be established
+    const unparseable = `${Buffer.from(JSON.stringify({ alg: "HS256" })).toString("base64url")}.AAAAAAAAAAAAAAAA.c2lnbmF0dXJl`;
+    ok(
+      jwtFindingsIn(traceOf(unparseable), allow).length === 1,
+      "17.13b a JWT-shaped string whose payload cannot be parsed is refused — nothing is known about it, so it fails closed",
+    );
     // 5 · a validly signed service_role token
     const serviceFindings = jwtFindingsIn(traceOf(serviceToken), allow);
     ok(
