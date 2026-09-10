@@ -139,7 +139,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: '  return "failed";\n}',
     replace: '  return "refused";\n}',
     guard: E3,
-    expect: "an unrecognised failure falls to failed, never to refused",
+    expect: "an unrecognised code falls to failed, never to refused",
   },
   {
     id: "E3-UNKNOWN-RESULT-MEMBER-AS-ABSENCE",
