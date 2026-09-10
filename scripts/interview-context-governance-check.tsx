@@ -238,6 +238,93 @@ const baseInput: ContextInput = {
 }
 
 /* ================================================================== */
+/* 2b · The per-source decision, exercised rather than grepped        */
+/* ================================================================== */
+{
+  // ── WHY THIS SECTION EXISTS ─────────────────────────────────────────
+  //
+  // The four readers live in a server module that talks to PostgREST, so the
+  // only guard available to them was one that greps their source. A negative
+  // control proved what that was worth: four separate mutations, each turning
+  // a failed read back into an absence inside a reader, and every one of them
+  // went undetected because the assertions read text instead of running code.
+  //
+  // The decision is a pure function now, and this exercises it over every
+  // combination of the three facts a reader has.
+
+  const errors = [
+    null,
+    { code: "42501", message: "permission denied for table jobs" },
+    { code: "PGRST301", message: "JWT expired" },
+    { code: "PGRST116", message: "no rows" },
+    { code: "57014", message: "canceling statement due to statement timeout" },
+    { code: null, message: "fetch failed" },
+    { code: "XX000", message: "internal error" },
+    { message: "permission denied" },
+  ];
+
+  for (const referenced of [true, false]) {
+    for (const error of errors) {
+      for (const hasRow of [true, false]) {
+        const r = C.resolveSourceRead({ referenced, error, hasRow });
+
+        // NOT REFERENCED IS THE ONLY ROUTE TO `absent`. Everything else is
+        // about a record that was named, and a named record that cannot be
+        // produced is not an absent one.
+        if (!referenced) {
+          ok(r === "absent", "2b · a source nothing referenced is absent, whatever else is true");
+          continue;
+        }
+        ok(r !== "absent", "2b · a REFERENCED source is never reported as absent");
+
+        if (error) {
+          const refusal =
+            error.code === "42501" ||
+            error.code === "PGRST301" ||
+            error.code === "PGRST116" ||
+            /permission denied/.test(error.message ?? "");
+          ok(
+            r === (refusal ? "refused" : "failed"),
+            `2b · ${error.code ?? "(no code)"} classifies as ${refusal ? "refused" : "failed"}`,
+          );
+          continue;
+        }
+
+        // Named, read cleanly, and nothing came back: gone or withheld.
+        ok(
+          r === (hasRow ? "ok" : "refused"),
+          `2b · a clean read with${hasRow ? "" : "out"} a row is ${hasRow ? "ok" : "refused"}`,
+        );
+      }
+    }
+  }
+
+  // AN UNRECOGNISED FAILURE MUST NOT BECOME A REFUSAL. `refused` says somebody
+  // made a decision, and it withholds the retry that would have cleared an
+  // outage.
+  ok(
+    C.classifyReadError({ code: "NOBODY_HAS_SEEN_THIS" }) === "failed",
+    "2b · an unrecognised code falls to failed, never to refused",
+  );
+  ok(C.classifyReadError(null) === "ok", "2b · no error is not a failure");
+  ok(C.classifyReadError(undefined) === "ok", "2b · and neither is an absent one");
+  ok(
+    C.classifyReadError({ code: "42501" }) === "refused",
+    "2b · the privilege SQLSTATE is a refusal",
+  );
+
+  // EVERY READER GOES THROUGH IT. A reader that decided for itself is a reader
+  // this section cannot speak for.
+  const fn = codeOnly(read(CONTEXT_FN));
+  const calls = (fn.match(/resolveSourceRead\(/g) ?? []).length;
+  ok(calls >= 5, `2b · every source reader delegates the decision (found ${calls} call sites)`);
+  ok(
+    !/read:\s*"failed"\s*[,}]/.test(fn.slice(fn.indexOf("async function readJob"))),
+    "2b · and none of them writes a read outcome by hand",
+  );
+}
+
+/* ================================================================== */
 /* 3 · The server contract: results, not thrown messages              */
 /* ================================================================== */
 {
@@ -269,19 +356,18 @@ const baseInput: ContextInput = {
     "3 · and only a case naming NO application reaches standalone",
   );
 
-  // Refusal and breakage are told apart, because they are different answers to
-  // the recruiter: one is actionable, the other is retryable.
-  ok(fn.includes("REFUSAL_CODES"), "3 · a refusal is classified rather than guessed");
-  ok(/42501/.test(fn), "3 · on the privilege SQLSTATE");
+  // Refusal and breakage are told apart -- see section 2b, which exercises the
+  // decision rather than reading it. What this section asserts is that the
+  // server module still DELEGATES to it: the classifier moved into context.ts
+  // precisely so that it could be run, and a reader that quietly grew its own
+  // copy would be back outside anything that can test it.
   ok(
-    /function classify\(/.test(fn),
-    "3 · through one classifier, so the four readers cannot disagree",
+    !/const REFUSAL_CODES|function classify\(/.test(fn),
+    "3 · the server module keeps no classifier of its own",
   );
-  // An unknown code must fall to `failed`, which claims nothing — never to
-  // `refused`, which claims somebody made a decision.
   ok(
-    /return "failed";\s*\}/.test(fn),
-    "3 · and an unrecognised failure falls to failed, never to refused",
+    fn.includes("resolveSourceRead("),
+    "3 · it delegates to the pure one, which section 2b exercises",
   );
 
   // No service-role client, still.
@@ -798,8 +884,13 @@ const baseInput: ContextInput = {
   );
   // THE DEFECT: `{d.retainUntil && (...)}` rendered nothing at all for every
   // case without a transcript.
+  //
+  // Matched on `&&` OR `?`, because the defect's shape is "the region is
+  // entered only when there is a date" and a ternary expresses that just as
+  // well as a short-circuit. A control that reintroduced it as a ternary
+  // slipped past the narrower form of this assertion.
   ok(
-    !/\{d\.retainUntil && \(/.test(page),
+    !/\{\s*d\.retainUntil\s*(&&|\?)/.test(page),
     "8 · and no longer renders retention only when there is a date",
   );
   ok(

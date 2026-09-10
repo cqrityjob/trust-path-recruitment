@@ -161,6 +161,81 @@ export type SourceRead =
    *  pretend otherwise. */
   | "failed";
 
+/* ------------------------------------------------------------------ */
+/* Deciding one source's read outcome                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A refusal and a breakage, told apart.
+ *
+ * These are different answers to the recruiter. "You are not allowed to see
+ * this" is actionable -- ask an admin, or accept it -- and retrying will never
+ * change it. "Something went wrong" is transient and a retry is exactly the
+ * right response. Rendering both as one message trains people to retry
+ * permissions they will never be granted, and to give up on outages that would
+ * have cleared.
+ *
+ * Postgres answers `42501` for insufficient_privilege; PostgREST wraps its own
+ * codes around the same class. Everything else is a BREAKAGE, which is the
+ * safe default: a code this product has never seen must not be reported as a
+ * decision somebody made.
+ */
+const REFUSAL_CODES = new Set(["42501", "PGRST301", "PGRST116"]);
+
+export function classifyReadError(
+  error: { code?: string | null; message?: string } | null | undefined,
+): SourceRead {
+  if (!error) return "ok";
+  if (REFUSAL_CODES.has(String(error.code ?? ""))) return "refused";
+  // A message-level fallback, because one of the four readers goes through a
+  // server function that throws a plain Error rather than returning a
+  // PostgREST envelope.
+  if (
+    /permission denied|insufficient_privilege|not authoris|not authoriz/i.test(
+      String(error.message ?? ""),
+    )
+  )
+    return "refused";
+  return "failed";
+}
+
+/**
+ * How ONE source read went, from the three facts its reader actually has.
+ *
+ * ── WHY THIS IS A FUNCTION AND NOT THREE `if`s PER READER ───────────────
+ *
+ * Because it lives in the server module, where nothing can exercise it: the
+ * four readers each talk to PostgREST, so the only guard available to them is
+ * one that greps their source. A negative control proved exactly what that is
+ * worth -- four separate mutations, each turning a failed read back into an
+ * absence inside a reader, and every one of them went undetected because the
+ * assertions were reading text rather than running code.
+ *
+ * So the decision is here, pure, and exercised exhaustively.
+ *
+ * The three inputs are the only three things that matter, and the order is the
+ * point:
+ *
+ *   NOT REFERENCED   the record above did not name one. The ONLY input that
+ *                    may produce `absent`, which is the only member that
+ *                    asserts anything about the world.
+ *   ERRORED          classified, never assumed.
+ *   NO ROW           it was named, the read succeeded, and nothing came back:
+ *                    the row is gone or RLS withheld it. `refused` rather than
+ *                    `absent`, because a reference that resolves to nothing is
+ *                    not the same as no reference.
+ */
+export function resolveSourceRead(opts: {
+  /** The record above named one of these at all. */
+  readonly referenced: boolean;
+  readonly error: { code?: string | null; message?: string } | null | undefined;
+  readonly hasRow: boolean;
+}): SourceRead {
+  if (!opts.referenced) return "absent";
+  if (opts.error) return classifyReadError(opts.error);
+  return opts.hasRow ? "ok" : "refused";
+}
+
 /** Whether this interview belongs to an application, as three answers.
  *
  *  `standalone` is a real, supported, first-class case -- an employer may

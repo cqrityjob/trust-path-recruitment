@@ -55,6 +55,7 @@ import {
   buildInterviewContext,
   emptyContext,
   normaliseRequirements,
+  resolveSourceRead,
   standaloneContext,
   type ContextAssessmentInput,
   type ContextCvInput,
@@ -79,42 +80,6 @@ const str = (v: unknown): string | null =>
 
 const strArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "") : [];
-
-/* ------------------------------------------------------------------ */
-/* Classifying a PostgREST failure                                     */
-/* ------------------------------------------------------------------ */
-
-/**
- * A refusal and a breakage, told apart.
- *
- * These are different answers to the recruiter. "You are not allowed to see
- * this" is actionable -- ask an admin, or accept it -- and retrying will never
- * change it. "Something went wrong" is transient and a retry is exactly the
- * right response. Rendering both as one message trains people to retry
- * permissions they will never be granted, and to give up on outages that would
- * have cleared.
- *
- * Postgres answers `42501` for insufficient_privilege; PostgREST wraps its own
- * `PGRST301` (JWT problems) and `PGRST116` around the same class. Everything
- * else is a breakage, which is the safe default: a code this product has never
- * seen must not be reported as a decision somebody made.
- */
-const REFUSAL_CODES = new Set(["42501", "PGRST301", "PGRST116"]);
-
-function classify(error: { code?: string | null; message?: string } | null): SourceRead {
-  if (!error) return "ok";
-  const code = String(error.code ?? "");
-  if (REFUSAL_CODES.has(code)) return "refused";
-  // A message-level fallback, because `getApplicationSubmittedCv` throws a
-  // plain Error rather than returning a PostgREST envelope.
-  if (
-    /permission denied|insufficient_privilege|not authoris|not authoriz/i.test(
-      String(error.message ?? ""),
-    )
-  )
-    return "refused";
-  return "failed";
-}
 
 /**
  * Everything the interview is entitled to inherit from its application.
@@ -196,7 +161,14 @@ export const getInterviewCaseContext = createServerFn({ method: "GET" })
           // `absent` only when the read SUCCEEDED and produced no row -- which
           // for an application id taken from the case row means the row is
           // gone or refused, so it is still not a standalone interview.
-          application: appErr ? classify(appErr) : "refused",
+          // Referenced (the case named an application), so `absent` is
+          // structurally unreachable here: whatever happened, this is NOT a
+          // case without an application.
+          application: resolveSourceRead({
+            referenced: true,
+            error: appErr,
+            hasRow: Boolean(a),
+          }),
           job: "failed",
           cv: "failed",
           assessment: "failed",
@@ -333,7 +305,9 @@ async function readJob(
   employerId: string,
 ): Promise<Sourced<ContextJobInput>> {
   // The application names no job. A real answer, and the only `absent` here.
-  if (!jobId) return { value: null, read: "absent" };
+  // Narrowed with an explicit null check rather than a boolean, so `jobId` is
+  // a string by the time the filter below uses it.
+  if (jobId === null) return { value: null, read: "absent" };
   const { data, error } = await db
     .from("jobs")
     .select(
@@ -343,14 +317,12 @@ async function readJob(
     .eq("id", jobId)
     .eq("employer_id", employerId)
     .maybeSingle();
-  if (error) {
-    console.error("[interview-context] job requirements unavailable", error);
-    return { value: null, read: classify(error) };
-  }
-  // The application names a job and the read produced no row: it is gone, or
-  // this employer's own filter excluded it. Either way the requirements are
-  // NOT known, and an empty list would say they are known to be empty.
-  if (!data) return { value: null, read: "refused" };
+  if (error) console.error("[interview-context] job requirements unavailable", error);
+  // The three facts, and one place that decides what they mean. A job that was
+  // named and produced no row is gone or withheld -- NOT an advert with nothing
+  // in it, which an empty requirements list would otherwise say.
+  const read = resolveSourceRead({ referenced: true, error, hasRow: Boolean(data) });
+  if (read !== "ok") return { value: null, read };
   // `jobs` is not in the generated Database types as a selectable shape this
   // narrow, so the typed client widens the result rather than describing it.
   // Through `unknown`, because the two types genuinely do not overlap and a
@@ -400,8 +372,15 @@ async function readCv(applicationId: string): Promise<Sourced<ContextCvInput>> {
   } catch (err) {
     console.error("[interview-context] submitted CV unavailable", err);
     // This one throws a plain Error rather than a PostgREST envelope, so the
-    // classification falls to the message check inside `classify`.
-    return { value: null, read: classify(err as { message?: string }) };
+    // classification falls to the message check inside `classifyReadError`.
+    return {
+      value: null,
+      read: resolveSourceRead({
+        referenced: true,
+        error: err as { message?: string },
+        hasRow: false,
+      }),
+    };
   }
 }
 
@@ -432,7 +411,11 @@ async function readAssessment(
     // because there is no third value for a boolean -- but `read` now carries
     // the reason, and the surface renders the section as unavailable rather
     // than as empty. The boolean is no longer read alone.
-    return { brief: null, pending: false, read: classify(error) };
+    return {
+      brief: null,
+      pending: false,
+      read: resolveSourceRead({ referenced: true, error, hasRow: false }),
+    };
   }
 
   const attempts = (Array.isArray(rows) ? rows : []) as Row[];
@@ -464,7 +447,11 @@ async function readAssessment(
   });
   if (snapErr) {
     console.error("[interview-context] released brief unavailable", snapErr);
-    return { brief: null, pending, read: classify(snapErr) };
+    return {
+      brief: null,
+      pending,
+      read: resolveSourceRead({ referenced: true, error: snapErr, hasRow: false }),
+    };
   }
   // The entry point returns nothing for a snapshot issued by another
   // organisation, and "released to somebody else" is correctly

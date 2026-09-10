@@ -55,7 +55,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the server function itself falls back to standalone when the application read produces nothing",
     file: CONTEXT_FN,
-    find: '          application: appErr ? classify(appErr) : "refused",',
+    find: "          application: resolveSourceRead({\n            referenced: true,\n            error: appErr,\n            hasRow: Boolean(a),\n          }),",
     replace: '          application: "absent",',
     guard: E3,
     expect: "no row because the read said",
@@ -77,9 +77,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "THE ORIGINAL DEFECT: a failed advert read reports as an advert that states no requirements",
     file: CONTEXT_FN,
-    find: "    return { value: null, read: classify(error) };\n  }\n  // The application names a job and the read produced no row",
-    replace:
-      '    return { value: null, read: "absent" };\n  }\n  // The application names a job and the read produced no row',
+    find: "  const read = resolveSourceRead({ referenced: true, error, hasRow: Boolean(data) });",
+    replace: '  const read: SourceRead = "absent";',
     guard: E3,
     expect: "an advert read that said",
   },
@@ -88,8 +87,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a job row the employer filter excluded reports as an advert with nothing in it, rather than as one that could not be reached",
     file: CONTEXT_FN,
-    find: '  if (!data) return { value: null, read: "refused" };',
-    replace: '  if (!data) return { value: null, read: "absent" };',
+    find: "  const read = resolveSourceRead({ referenced: true, error, hasRow: Boolean(data) });",
+    replace: '  const read: SourceRead = error ? "failed" : data ? "ok" : "absent";',
     guard: E3,
     expect: "an advert read that said",
   },
@@ -98,7 +97,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "THE ORIGINAL DEFECT: a failed assessment read reports as 'no assessment has been sent'",
     file: CONTEXT_FN,
-    find: "    return { brief: null, pending: false, read: classify(error) };",
+    find: "    return {\n      brief: null,\n      pending: false,\n      read: resolveSourceRead({ referenced: true, error, hasRow: false }),\n    };",
     replace: '    return { brief: null, pending: false, read: "absent" };',
     guard: E3,
     expect: "never renders as no assessment",
@@ -107,7 +106,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E3-CV-READ-FAILURE-AS-ABSENCE",
     defect: "a CV read that threw reports as an application submitted without one",
     file: CONTEXT_FN,
-    find: "    return { value: null, read: classify(err as { message?: string }) };",
+    find: "    return {\n      value: null,\n      read: resolveSourceRead({\n        referenced: true,\n        error: err as { message?: string },\n        hasRow: false,\n      }),\n    };",
     replace: '    return { value: null, read: "absent" };',
     guard: BRIDGE,
     expect: "the CV reads as unreadable rather than as absent",
@@ -202,7 +201,8 @@ const MUTATIONS: readonly Mutation[] = [
       "the shared helper defaults an unhappy result to an empty context, so every screen renders a set of claims nobody earned",
     file: OUTCOME,
     find: '  return result?.kind === "context" ? result.context : null;',
-    replace: '  return result?.kind === "context" ? result.context : standaloneContext("");',
+    replace:
+      '  return result?.kind === "context"\n    ? result.context\n    : ({ link: "standalone", reads: {} } as unknown as InterviewContext);',
     guard: E3,
     expect: "contextOf returns null for a failure",
   },
@@ -356,7 +356,8 @@ const MUTATIONS: readonly Mutation[] = [
       "the context read acquires a service-role client, which would make every downstream RLS check decorative",
     file: CONTEXT_FN,
     find: "    const db = context.supabase;",
-    replace: "    const db = context.supabase; // service_role",
+    replace:
+      "    const db = (context as { service_role?: typeof context.supabase }).service_role ?? context.supabase;",
     guard: E3,
     expect: "still holds no service-role client",
   },
