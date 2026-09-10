@@ -79,7 +79,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "  const read = resolveSourceRead({ referenced: true, error, hasRow: Boolean(data) });",
     replace: '  const read: SourceRead = error ? "absent" : data ? "ok" : "absent";',
     guard: E3,
-    expect: "the advert's reader never writes",
+    expect: "the advert's reader delegates its read outcome",
   },
   {
     id: "E3-ADVERT-MISSING-ROW-AS-ABSENCE",
@@ -99,7 +99,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "    return {\n      brief: null,\n      pending: false,\n      read: resolveSourceRead({ referenced: true, error, hasRow: false }),\n    };",
     replace: '    return { brief: null, pending: false, read: "absent" };',
     guard: E3,
-    expect: "the released assessment's reader never writes",
+    expect: "never writes an absence on a failure path",
   },
   {
     id: "E3-CV-READ-FAILURE-AS-ABSENCE",
@@ -108,7 +108,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "    return {\n      value: null,\n      read: resolveSourceRead({\n        referenced: true,\n        error: err as { message?: string },\n        hasRow: false,\n      }),\n    };",
     replace: '    return { value: null, read: "absent" };',
     guard: E3,
-    expect: "the CV's reader delegates its read outcome",
+    expect: "never writes an absence on a failure path",
   },
 
   /* ---- The case read's failure modes ------------------------------- */
@@ -139,7 +139,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: '  return "failed";\n}',
     replace: '  return "refused";\n}',
     guard: E3,
-    expect: "an unrecognised failure falls to failed, never to refused",
+    expect: "an unrecognised code falls to failed, never to refused",
   },
   {
     id: "E3-UNKNOWN-RESULT-MEMBER-AS-ABSENCE",
