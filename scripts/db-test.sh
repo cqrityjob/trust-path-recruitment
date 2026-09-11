@@ -2832,7 +2832,7 @@ SQL
 )"
 BGR_SETUP_RC=$?
 set -e
-BGR_PACK="$(echo "$BGR_SETUP" | grep -oE 'PACK=[0-9a-f-]{36}' | head -1 | cut -d= -f2)"
+BGR_PACK="$(echo "$BGR_SETUP" | grep -oE 'PACK=[0-9a-f-]{36}' | head -1 | cut -d= -f2 || true)"
 if [ "$BGR_SETUP_RC" -ne 0 ] || [ -z "$BGR_PACK" ]; then
   echo "FAIL: the BESKT race setup failed." >&2
   echo "$BGR_SETUP" | grep -iE "ERROR:|FEL:" | head -5 >&2
@@ -2870,8 +2870,10 @@ SQL
   BGR_B_MS=$(( (BGR_B_END - BGR_B_START) / 1000000 ))
 
   BGR_COUNT="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.beskt_method_versions where pack_id = '${BGR_PACK}';")"
-  BGR_ID_A="$(grep -oE 'VID=[0-9a-f-]{36}' /tmp/bgr_a.out | head -1 | cut -d= -f2)"
-  BGR_ID_B="$(grep -oE 'VID=[0-9a-f-]{36}' /tmp/bgr_b.out | head -1 | cut -d= -f2)"
+  # B is expected to carry NO version id; under set -e / pipefail an empty
+  # grep must not end the run.
+  BGR_ID_A="$(grep -oE 'VID=[0-9a-f-]{36}' /tmp/bgr_a.out | head -1 | cut -d= -f2 || true)"
+  BGR_ID_B="$(grep -oE 'VID=[0-9a-f-]{36}' /tmp/bgr_b.out | head -1 | cut -d= -f2 || true)"
 
   if [ -z "$BGR_ID_A" ]; then
     echo "FAIL: session A did not create the first version." >&2
