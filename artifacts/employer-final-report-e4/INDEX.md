@@ -1,43 +1,39 @@
 # E4 · Employer final report — browser evidence
 
-**STATUS: BLOCKED — no captures exist yet in this directory.** The routed
-walk now runs in CI and its artifact carries all seventeen, but none of them
-is committed here and no human has looked at one. #216 is not complete until
-both are true.
+**STATUS: ACCEPTED.** The routed evidence for #216 was independently
+downloaded and reviewed on exact HEAD
+`0b9dde32b62170dda361d6e7d5015cfdc9ce4372`.
 
-## Why it is blocked, as of 2026-09-10
+## Acceptance record — 2026-09-11
 
-The reason CHANGED, and the old one is no longer true, so it is recorded here
-rather than left to mislead.
+The CI artifact is the canonical evidence package. Keeping a second copy of
+the same generated PNGs in Git would add binary history without strengthening
+the proof: the package is bound to the run and commit below, its archive
+SHA-256 was recomputed after download, and its internal manifest recomputes
+every included file.
 
-**The old blocker is solved.** This environment has no Docker daemon and no
-Supabase CLI, so the walk could not be run here at all. Route 1 from the list
-below — a CI job that starts a real local Supabase stack — was built as
-`.github/workflows/e4-evidence.yml`, and it works: six routed tests green
-against a loopback-only stack, both languages at both widths, the artifact
-scanned clean and uploaded.
+| Check | Accepted result |
+| --- | --- |
+| Workflow run | `34564244413` · run 19 · success |
+| Artifact | `e4-evidence-216-1` · ID `10185505021` · 21,474,020 bytes |
+| Archive SHA-256 | `545290cb92e438d4144aa8efe2aaca5799c4e39b995ef5b313329f5476f6bdb3` |
+| Walk | 6 passed · 0 failed · 0 skipped · 0 flaky |
+| Captures | 17 reviewed · both languages · both widths |
+| Traces | 6 archives opened and integrity-checked · no recorded page, console or action errors |
+| Manifest | 53 files recomputed and matched |
+| Leak scan | clean |
+| Visual corrections verified | stale refusal clears after fresh preview; the complete active Report stage is visible at 375 px |
 
-**What remains.** Two things, and neither is a matter of running the walk
-again:
+The two defects found during the first independent review were corrected on
+this HEAD and protected by routed regression assertions. Capture 04 now shows
+the enabled, keyboard-focused finalise control without the superseded refusal.
+Capture 10 now shows all four workflow stages, including the complete active
+`Report` label.
 
-|                                        |                                                                                                                                                                                                                                                             |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The captures are not in this directory | The evidence job runs pull-request code with `contents: read` and no credentials, so it cannot push them, and giving it write access to make this easier would be a worse trade than the inconvenience                                                      |
-| Nobody has looked at them              | The session that built this pipeline cannot download the artifact: GitHub serves an artifact zip by redirecting to `productionresultssa1.blob.core.windows.net`, and that container's egress policy denies the host — `CONNECT tunnel failed, response 403` |
-
-So the last acceptance step is a human one: download the artifact, look at the
-seventeen captures and the traces, and then commit them here with the
-provenance table filled in. Until that happens this file says BLOCKED, and it
-says so because that is what is true — not as a formality.
-
-**Where the artifact is.** Every run prints its own full inventory to the job
-log — every file with its SHA-256, every capture with what it shows, every
-phase duration and the per-test results — so a reviewer can check a downloaded
-copy against that listing rather than taking it on trust.
-
-What is **not** acceptable: pointing the walk at production, weakening the
-`E2E_LOCAL_STACK` gate, relaxing the spec's loopback-only refusal, or
-renaming or removing this BLOCKED requirement to make a guard green.
+The artifact is retained by GitHub Actions until 2026-10-11. The run, artifact
+ID, exact commit and digests are recorded here so the reviewed bytes cannot be
+silently substituted. Generated captures are not committed as source files;
+the signed CI run and content-addressed manifest are the evidence record.
 
 Everything the walk shows is synthetic. No real candidate, name, address, CV,
 Passport or production record appears in any capture, no filename contains a
@@ -45,8 +41,8 @@ person's name, and every identifier visible in a URL is an opaque
 server-issued uuid.
 
 The screenshots SUPPORT the assertions; they do not replace them. The
-behavioural proof is `scripts/employer-final-report-check.tsx` (534 assertions,
-wired into the CI `verify` job, with 141 negative controls in
+behavioural proof is `scripts/employer-final-report-check.tsx` (539 assertions,
+wired into the CI `verify` job, with 146 negative controls in
 `scripts/negative-controls/final-report-controls.ts`) and the SQL suite
 `supabase/tests/scp_iv_report_basis_integrity_test.sql` (run by
 `scripts/db-test.sh`, which also applies the rollback for real and re-applies
@@ -56,7 +52,7 @@ the migration).
 
 |                      |                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------ |
-| **Captured at HEAD** | _pending_ — nothing is committed here yet                                            |
+| **Captured at HEAD** | `0b9dde32b62170dda361d6e7d5015cfdc9ce4372` — reviewed and accepted                                            |
 | Branch               | `claude/interview-report-sharing-e4`                                                 |
 | Base                 | `main`                                                                               |
 | Backend              | local Supabase only (`http://127.0.0.1:54321`, Postgres on `54322`) via `.env.local` |
