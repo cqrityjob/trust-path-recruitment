@@ -186,6 +186,14 @@ function Page() {
     },
   });
 
+  // A successful fresh preview retires the refusal that prompted it. Reset the
+  // mutation before starting the preview so the old error cannot remain beside
+  // a newly enabled finalise control.
+  const previewCurrent = () => {
+    finalise.reset();
+    preview.mutate();
+  };
+
   if (ws.isLoading)
     return (
       <div className="mx-auto max-w-2xl px-4 py-16">
@@ -496,7 +504,7 @@ function Page() {
               <ReportFinalisation
                 canFinalise={canFinalise}
                 previewed={previewInHand !== null && outcome.kind !== "stalePreview"}
-                onPreview={() => preview.mutate()}
+                onPreview={previewCurrent}
                 isPreviewing={preview.isPending}
                 stale={outcome.kind === "stalePreview"}
                 onFinalise={() => finalise.mutate()}
