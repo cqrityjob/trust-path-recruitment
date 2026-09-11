@@ -470,6 +470,10 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   await previewBtn.click();
   await expect(preview).toContainText(/Certifikatets giltighetstid/, { timeout: 30_000 });
   await expect(finaliseBtn).toBeEnabled();
+  // The successful preview retires the old refusal. A stale error beside an
+  // enabled irreversible action is a contradiction, even if the action works.
+  await expect(main(page).getByText(/^Rapporten kunde inte slutföras$/)).toHaveCount(0);
+  await expect(main(page)).not.toContainText(/the basis changed since it was previewed/i);
   await tabTo(page, finaliseBtn);
   await page.screenshot({ path: `${OUT}/04-sv-1440-finalise-focused.png` });
   mark("04 · the act reached by keyboard");
@@ -564,6 +568,14 @@ test("10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable", asy
   await expect(previewBtn).toBeVisible({ timeout: 15_000 });
   await expect(finaliseBtn).toBeDisabled();
   await expectNoOverflow(page);
+  // No document overflow is not enough: an internally scrolling workflow row
+  // can still clip the current stage. The full active label must be visible.
+  const currentStage = main(page).locator('nav[aria-label] [aria-current="step"]').first();
+  await expect(currentStage).toContainText(/Report/);
+  const currentStageBox = await currentStage.boundingBox();
+  expect(currentStageBox).not.toBeNull();
+  expect(currentStageBox?.x ?? -1).toBeGreaterThanOrEqual(0);
+  expect((currentStageBox?.x ?? 376) + (currentStageBox?.width ?? 0)).toBeLessThanOrEqual(375);
   await shot(page, "10-en-375-preview-first");
   mark("10 · before a preview, in English");
 
