@@ -115,6 +115,10 @@
     // pattern list stopped matching, would be worse than absent.
     "scripts/e4-evidence-manifest.ts",
     "scripts/e4-evidence-scan.ts",
+    // BESKT PR1: the architecture contract and its mutation controls are
+    // executable release gates and therefore typechecked on their own terms.
+    "scripts/beskt-architecture-contract-check.ts",
+    "scripts/negative-controls/beskt-architecture-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
