@@ -1963,7 +1963,7 @@ console.log(
   );
   ok(
     !accepted ||
-      (/Application-code HEAD[\s\S]*`[0-9a-f]{40}`/.test(index) &&
+      (/Captured at HEAD[\s\S]*`[0-9a-f]{40}` — reviewed and accepted/.test(index) &&
         /Artifact[\s\S]*ID `[0-9]+`/.test(index) &&
         /Archive SHA-256[\s\S]*`[0-9a-f]{64}`/.test(index) &&
         /Captures \| 17 reviewed/.test(index) &&
