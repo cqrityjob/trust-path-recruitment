@@ -690,6 +690,16 @@ jobs:
       - name: Interview Intelligence pack contract check
         run: bun run interview-pack-contract:check
 
+      # BESKT PR1: locks the product as a recruitment method beside the
+      # assessment library, reusing Interview Intelligence without inheriting
+      # its 0–4 scoring contract. The paired controls plant the prohibited
+      # alternatives and require this computation to refuse them.
+      - name: BESKT architecture contract check
+        run: bun run beskt-architecture:check
+
+      - name: BESKT architecture negative controls
+        run: bun run negative-controls:beskt
+
       # The same invariants, one layer up: what the Role Interview Builder
       # actually RENDERS. Asserts that every required state (loading, error,
       # empty, permission-denied, incomplete draft, published, suspended,
