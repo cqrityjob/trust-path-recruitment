@@ -481,7 +481,7 @@ check(
   const v = functionBody(functionText(sql, "beskt_method_validate") ?? "");
   const statesLiteral = /_evidence_states text\[\] := ARRAY\[([\s\S]*?)\];/.exec(v);
   const states = statesLiteral
-    ? [...statesLiteral[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
+    ? [...statesLiteral[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1])
     : [];
   check(
     evidenceStates.length === 7 &&
@@ -495,7 +495,7 @@ check(
   const tableStates =
     /evidence_state text NOT NULL CHECK \(evidence_state IN \(([\s\S]*?)\)\)/.exec(sql);
   const tableList = tableStates
-    ? [...tableStates[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
+    ? [...tableStates[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1])
     : [];
   check(
     tableList.length === 7 && tableList.every((s, i) => s === evidenceStates[i]),
@@ -519,7 +519,9 @@ check(
     "BESKT-DB-ANCHOR-COMPONENTS: the component checks test the real columns in both languages",
   );
   const gatesLiteral = /_review_gates text\[\] := ARRAY\[([\s\S]*?)\];/.exec(v);
-  const gates = gatesLiteral ? [...gatesLiteral[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]) : [];
+  const gates = gatesLiteral
+    ? [...gatesLiteral[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1])
+    : [];
   check(
     requiredReviews.length === 5 &&
       gates.length === 5 &&
@@ -532,7 +534,7 @@ check(
   );
   const tableGates = /gate text NOT NULL CHECK \(gate IN \(([\s\S]*?)\)\)/.exec(sql);
   const tableGateList = tableGates
-    ? [...tableGates[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
+    ? [...tableGates[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1])
     : [];
   check(
     tableGateList.length === 5 && tableGateList.every((g, i) => g === requiredReviews[i]),
@@ -555,7 +557,7 @@ check(
   const activationTable =
     /requirement_key text NOT NULL CHECK \(requirement_key IN \(([\s\S]*?)\)\)/.exec(sql);
   const activationList = activationTable
-    ? [...activationTable[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
+    ? [...activationTable[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1])
     : [];
   check(
     activation.length === 3 &&
@@ -571,7 +573,7 @@ check(
     "BESKT-DB-MODE-ESCALATION: the validator re-proves on the stored graph that no recruitment-support rule reaches or reads security-vetting content",
   );
   check(
-    /WITH RECURSIVE walk AS[\s\S]*?SELECT 1 FROM walk WHERE walk\.node = walk\.origin\) THEN\s+RETURN QUERY SELECT 'ROUTE_CYCLE'/.test(
+    /WITH RECURSIVE walk AS[\s\S]*?SELECT 1 FROM walk WHERE walk\.node = walk\.origin\) THEN\s+RETURN QUERY SELECT 'ROUTE_CYCLE'::text, 'blocking'::text/.test(
       v,
     ) && /SELECT 'ROUTE_TARGET_UNREACHABLE', 'blocking'/.test(v),
     "BESKT-DB-ROUTING: cycles and unreachable targets block publication",
@@ -583,7 +585,7 @@ check(
   );
   const fieldsLiteral = /_observation_fields text\[\] := ARRAY\[([\s\S]*?)\];/.exec(v);
   const fields = fieldsLiteral
-    ? [...fieldsLiteral[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
+    ? [...fieldsLiteral[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1])
     : [];
   check(
     observationFields.length === 10 &&
