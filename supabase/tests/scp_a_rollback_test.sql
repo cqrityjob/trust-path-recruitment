@@ -151,27 +151,30 @@ BEGIN
   RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 2 unwinds first';
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'beskt\_%' ESCAPE '\') = 12,
-    'pre-rollback: the twelve beskt_ tables exist');
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'beskt\_%' ESCAPE '\') = 13,
+    'pre-rollback: the thirteen beskt_ tables exist');
 END $$;
 
 DROP TRIGGER IF EXISTS scp_interview_packs_kind_immutable ON public.scp_interview_packs;
 DROP TRIGGER IF EXISTS scp_interview_pack_versions_role_interview_only ON public.scp_interview_pack_versions;
 DROP FUNCTION IF EXISTS public.beskt_lock_version(uuid, integer);
-DROP TABLE IF EXISTS public.beskt_method_events           CASCADE;
-DROP TABLE IF EXISTS public.beskt_method_reviews          CASCADE;
-DROP TABLE IF EXISTS public.beskt_routing_rules           CASCADE;
-DROP TABLE IF EXISTS public.beskt_prompts                 CASCADE;
-DROP TABLE IF EXISTS public.beskt_item_options            CASCADE;
-DROP TABLE IF EXISTS public.beskt_items                   CASCADE;
-DROP TABLE IF EXISTS public.beskt_sections                CASCADE;
-DROP TABLE IF EXISTS public.beskt_observation_fields      CASCADE;
-DROP TABLE IF EXISTS public.beskt_evidence_anchors        CASCADE;
-DROP TABLE IF EXISTS public.beskt_activation_requirements CASCADE;
-DROP TABLE IF EXISTS public.beskt_exposure_profiles       CASCADE;
-DROP TABLE IF EXISTS public.beskt_method_versions         CASCADE;
+DROP TABLE IF EXISTS public.beskt_method_events;
+DROP TABLE IF EXISTS public.beskt_method_reviews;
+DROP TABLE IF EXISTS public.beskt_governance_grants;
+DROP TABLE IF EXISTS public.beskt_routing_rules;
+DROP TABLE IF EXISTS public.beskt_prompts;
+DROP TABLE IF EXISTS public.beskt_item_options;
+DROP TABLE IF EXISTS public.beskt_items;
+DROP TABLE IF EXISTS public.beskt_sections;
+DROP TABLE IF EXISTS public.beskt_observation_fields;
+DROP TABLE IF EXISTS public.beskt_evidence_anchors;
+DROP TABLE IF EXISTS public.beskt_activation_requirements;
+DROP TABLE IF EXISTS public.beskt_exposure_profiles;
+DROP TABLE IF EXISTS public.beskt_method_versions;
 DROP FUNCTION IF EXISTS public.beskt_readable_published_versions();
 DROP FUNCTION IF EXISTS public.beskt_published_method(uuid);
+DROP FUNCTION IF EXISTS public.beskt_revoke_governance(uuid, uuid, text);
+DROP FUNCTION IF EXISTS public.beskt_grant_governance(uuid, uuid, text, text, timestamptz);
 DROP FUNCTION IF EXISTS public.beskt_retire_version(uuid, uuid, integer, text);
 DROP FUNCTION IF EXISTS public.beskt_suspend_version(uuid, uuid, integer, text);
 DROP FUNCTION IF EXISTS public.beskt_publish_version(uuid, uuid, integer, text);
@@ -185,14 +188,17 @@ DROP FUNCTION IF EXISTS public.beskt_record_event(uuid, uuid, text, text, text, 
 DROP FUNCTION IF EXISTS public.beskt_request_hash(jsonb);
 DROP FUNCTION IF EXISTS public.beskt_resolve_item_sequence(uuid, uuid, text, jsonb);
 DROP FUNCTION IF EXISTS public.beskt_can_read_version(uuid);
+DROP FUNCTION IF EXISTS public.beskt_reader_access_classes(uuid);
+DROP FUNCTION IF EXISTS public.beskt_holds_grant(uuid, text);
 DROP FUNCTION IF EXISTS public.beskt_method_validate(uuid, boolean);
 DROP FUNCTION IF EXISTS public.beskt_method_content_hash(uuid);
 DROP FUNCTION IF EXISTS public.beskt_canonical_content(uuid);
-DROP FUNCTION IF EXISTS public.beskt_sorted_array_text(text[]);
+DROP FUNCTION IF EXISTS public.beskt_sorted_array(text[]);
 DROP FUNCTION IF EXISTS public.beskt_text_claims_deception_cue(text);
 DROP FUNCTION IF EXISTS public.beskt_wording_is_neutral(text);
 DROP FUNCTION IF EXISTS public.beskt_prompt_stage(text);
 DROP FUNCTION IF EXISTS public.beskt_guard_review_insert();
+DROP FUNCTION IF EXISTS public.beskt_guard_grants_append_only();
 DROP FUNCTION IF EXISTS public.beskt_guard_events_append_only();
 DROP FUNCTION IF EXISTS public.beskt_guard_reviews_append_only();
 DROP FUNCTION IF EXISTS public.beskt_guard_child_row();
@@ -201,6 +207,16 @@ DROP FUNCTION IF EXISTS public.beskt_guard_version_transition();
 DROP FUNCTION IF EXISTS public.beskt_guard_version_insert();
 DROP FUNCTION IF EXISTS public.beskt_guard_role_interview_version();
 DROP FUNCTION IF EXISTS public.beskt_guard_pack_kind_immutable();
+-- The Phase 1 editor policies no longer name pack_kind, so the column goes
+-- without CASCADE, exactly as in the rollback file.
+DROP POLICY IF EXISTS scp_interview_packs_editor_insert ON public.scp_interview_packs;
+DROP POLICY IF EXISTS scp_interview_packs_editor_update ON public.scp_interview_packs;
+CREATE POLICY scp_interview_packs_editor_insert ON public.scp_interview_packs
+  FOR INSERT TO authenticated WITH CHECK (public.scp_interview_can_edit(auth.uid()));
+CREATE POLICY scp_interview_packs_editor_update ON public.scp_interview_packs
+  FOR UPDATE TO authenticated
+  USING (public.scp_interview_can_edit(auth.uid()))
+  WITH CHECK (public.scp_interview_can_edit(auth.uid()));
 DELETE FROM public.scp_interview_packs WHERE pack_kind = 'beskt_method';
 ALTER TABLE public.scp_interview_packs DROP CONSTRAINT IF EXISTS scp_interview_packs_role_by_kind_check;
 ALTER TABLE public.scp_interview_packs ALTER COLUMN role_id SET NOT NULL;

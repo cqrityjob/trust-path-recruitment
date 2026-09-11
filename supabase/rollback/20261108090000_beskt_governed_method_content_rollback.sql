@@ -5,8 +5,11 @@
 --
 --   * drops the two guard triggers this migration attached to the existing
 --     role-interview identity and version tables;
---   * drops the twelve beskt_* tables child-first (every FK inside the domain
---     is ON DELETE RESTRICT) and every beskt_* function;
+--   * drops the thirteen beskt_* tables child-first (every FK inside the
+--     domain is ON DELETE RESTRICT, so no CASCADE is needed or used) and
+--     every beskt_* function;
+--   * restores the two Phase 1 editor policies on scp_interview_packs
+--     verbatim;
 --   * removes the BESKT method identities from scp_interview_packs (they
 --     carry no versions once the domain is dropped), restores role_id NOT
 --     NULL and drops the additive pack_kind column with its two constraints
@@ -25,13 +28,16 @@
 --   \copy (SELECT * FROM public.beskt_method_events)   TO 'beskt_events.csv'   CSV HEADER
 --
 -- It refuses to run if anything outside the BESKT domain has grown a
--- dependency on it, or if a BESKT version is currently published.
+-- dependency on it -- a foreign key, a view, a rule, a trigger, a function
+-- signature or any other catalogue dependency that a CASCADE would otherwise
+-- remove silently -- or if a BESKT version is currently published.
 --
 -- Run inside the caller's transaction.
 
 DO $$
 DECLARE _offender text; _n integer;
 BEGIN
+  -- Foreign keys from outside the domain.
   SELECT string_agg(DISTINCT c.relname, ', ') INTO _offender
     FROM pg_constraint con
     JOIN pg_class c  ON c.oid  = con.conrelid
@@ -42,6 +48,46 @@ BEGIN
      AND c.relname NOT LIKE 'beskt\_%' ESCAPE '\';
   IF _offender IS NOT NULL THEN
     RAISE EXCEPTION 'BESKT_ROLLBACK BLOCKED: % now references the BESKT domain. Reconcile that dependency first.', _offender;
+  END IF;
+  -- Every other catalogue dependency on a BESKT relation or function from an
+  -- object that is not itself part of the domain: views, rules, triggers,
+  -- functions whose signature names a BESKT type, policies, and so on.
+  SELECT string_agg(DISTINCT d.classid::regclass::text || ' ' || d.objid::text, ', ') INTO _offender
+    FROM pg_depend d
+    JOIN pg_class rc ON rc.oid = d.refobjid AND d.refclassid = 'pg_class'::regclass
+    JOIN pg_namespace rn ON rn.oid = rc.relnamespace
+   WHERE rn.nspname = 'public' AND rc.relname LIKE 'beskt\_%' ESCAPE '\'
+     AND d.deptype IN ('n', 'a')
+     AND NOT (d.classid = 'pg_class'::regclass
+              AND (SELECT relname FROM pg_class WHERE oid = d.objid) LIKE 'beskt\_%' ESCAPE '\')
+     AND NOT (d.classid = 'pg_constraint'::regclass
+              AND (SELECT (SELECT relname FROM pg_class WHERE oid = con.conrelid) LIKE 'beskt\_%' ESCAPE '\'
+                     FROM pg_constraint con WHERE con.oid = d.objid))
+     AND NOT (d.classid = 'pg_trigger'::regclass
+              AND (SELECT (SELECT relname FROM pg_class WHERE oid = t.tgrelid) LIKE 'beskt\_%' ESCAPE '\'
+                     FROM pg_trigger t WHERE t.oid = d.objid))
+     AND NOT (d.classid = 'pg_policy'::regclass
+              AND (SELECT (SELECT relname FROM pg_class WHERE oid = p.polrelid) LIKE 'beskt\_%' ESCAPE '\'
+                     FROM pg_policy p WHERE p.oid = d.objid))
+     AND NOT (d.classid = 'pg_proc'::regclass
+              AND (SELECT proname FROM pg_proc WHERE oid = d.objid) LIKE 'beskt\_%' ESCAPE '\')
+     AND NOT (d.classid = 'pg_type'::regclass)
+     AND NOT (d.classid = 'pg_attrdef'::regclass)
+     AND NOT (d.classid = 'pg_rewrite'::regclass
+              AND (SELECT (SELECT relname FROM pg_class WHERE oid = r.ev_class) LIKE 'beskt\_%' ESCAPE '\'
+                     FROM pg_rewrite r WHERE r.oid = d.objid));
+  IF _offender IS NOT NULL THEN
+    RAISE EXCEPTION 'BESKT_ROLLBACK BLOCKED: catalogue objects outside the domain depend on it (%). A CASCADE would remove them silently; reconcile first.', _offender;
+  END IF;
+  SELECT string_agg(DISTINCT p.proname, ', ') INTO _offender
+    FROM pg_depend d
+    JOIN pg_proc rp ON rp.oid = d.refobjid AND d.refclassid = 'pg_proc'::regclass
+    JOIN pg_proc p ON p.oid = d.objid AND d.classid = 'pg_proc'::regclass
+    JOIN pg_namespace rn ON rn.oid = rp.pronamespace
+   WHERE rn.nspname = 'public' AND rp.proname LIKE 'beskt\_%' ESCAPE '\'
+     AND p.proname NOT LIKE 'beskt\_%' ESCAPE '\' AND d.deptype IN ('n', 'a');
+  IF _offender IS NOT NULL THEN
+    RAISE EXCEPTION 'BESKT_ROLLBACK BLOCKED: functions outside the domain depend on BESKT functions (%).', _offender;
   END IF;
   IF to_regclass('public.beskt_method_versions') IS NOT NULL THEN
     SELECT count(*) INTO _n FROM public.beskt_method_versions WHERE content_status = 'published';
@@ -55,25 +101,31 @@ END $$;
 DROP TRIGGER IF EXISTS scp_interview_packs_kind_immutable ON public.scp_interview_packs;
 DROP TRIGGER IF EXISTS scp_interview_pack_versions_role_interview_only ON public.scp_interview_pack_versions;
 
--- 2. The domain, child-first. beskt_lock_version returns the version row
---    type, so it goes before the table it depends on.
+-- 2. The domain, child-first and WITHOUT CASCADE: every FK points from a
+--    child dropped earlier to a parent dropped later, triggers and policies
+--    fall with their tables, and the pre-check above has already proved that
+--    nothing outside the domain depends on any of it. beskt_lock_version
+--    returns the version row type, so it goes before the table.
 DROP FUNCTION IF EXISTS public.beskt_lock_version(uuid, integer);
-DROP TABLE IF EXISTS public.beskt_method_events           CASCADE;
-DROP TABLE IF EXISTS public.beskt_method_reviews          CASCADE;
-DROP TABLE IF EXISTS public.beskt_routing_rules           CASCADE;
-DROP TABLE IF EXISTS public.beskt_prompts                 CASCADE;
-DROP TABLE IF EXISTS public.beskt_item_options            CASCADE;
-DROP TABLE IF EXISTS public.beskt_items                   CASCADE;
-DROP TABLE IF EXISTS public.beskt_sections                CASCADE;
-DROP TABLE IF EXISTS public.beskt_observation_fields      CASCADE;
-DROP TABLE IF EXISTS public.beskt_evidence_anchors        CASCADE;
-DROP TABLE IF EXISTS public.beskt_activation_requirements CASCADE;
-DROP TABLE IF EXISTS public.beskt_exposure_profiles       CASCADE;
-DROP TABLE IF EXISTS public.beskt_method_versions         CASCADE;
+DROP TABLE IF EXISTS public.beskt_method_events;
+DROP TABLE IF EXISTS public.beskt_method_reviews;
+DROP TABLE IF EXISTS public.beskt_governance_grants;
+DROP TABLE IF EXISTS public.beskt_routing_rules;
+DROP TABLE IF EXISTS public.beskt_prompts;
+DROP TABLE IF EXISTS public.beskt_item_options;
+DROP TABLE IF EXISTS public.beskt_items;
+DROP TABLE IF EXISTS public.beskt_sections;
+DROP TABLE IF EXISTS public.beskt_observation_fields;
+DROP TABLE IF EXISTS public.beskt_evidence_anchors;
+DROP TABLE IF EXISTS public.beskt_activation_requirements;
+DROP TABLE IF EXISTS public.beskt_exposure_profiles;
+DROP TABLE IF EXISTS public.beskt_method_versions;
 
 -- 3. Every beskt_* function.
 DROP FUNCTION IF EXISTS public.beskt_readable_published_versions();
 DROP FUNCTION IF EXISTS public.beskt_published_method(uuid);
+DROP FUNCTION IF EXISTS public.beskt_revoke_governance(uuid, uuid, text);
+DROP FUNCTION IF EXISTS public.beskt_grant_governance(uuid, uuid, text, text, timestamptz);
 DROP FUNCTION IF EXISTS public.beskt_retire_version(uuid, uuid, integer, text);
 DROP FUNCTION IF EXISTS public.beskt_suspend_version(uuid, uuid, integer, text);
 DROP FUNCTION IF EXISTS public.beskt_publish_version(uuid, uuid, integer, text);
@@ -87,14 +139,17 @@ DROP FUNCTION IF EXISTS public.beskt_record_event(uuid, uuid, text, text, text, 
 DROP FUNCTION IF EXISTS public.beskt_request_hash(jsonb);
 DROP FUNCTION IF EXISTS public.beskt_resolve_item_sequence(uuid, uuid, text, jsonb);
 DROP FUNCTION IF EXISTS public.beskt_can_read_version(uuid);
+DROP FUNCTION IF EXISTS public.beskt_reader_access_classes(uuid);
+DROP FUNCTION IF EXISTS public.beskt_holds_grant(uuid, text);
 DROP FUNCTION IF EXISTS public.beskt_method_validate(uuid, boolean);
 DROP FUNCTION IF EXISTS public.beskt_method_content_hash(uuid);
 DROP FUNCTION IF EXISTS public.beskt_canonical_content(uuid);
-DROP FUNCTION IF EXISTS public.beskt_sorted_array_text(text[]);
+DROP FUNCTION IF EXISTS public.beskt_sorted_array(text[]);
 DROP FUNCTION IF EXISTS public.beskt_text_claims_deception_cue(text);
 DROP FUNCTION IF EXISTS public.beskt_wording_is_neutral(text);
 DROP FUNCTION IF EXISTS public.beskt_prompt_stage(text);
 DROP FUNCTION IF EXISTS public.beskt_guard_review_insert();
+DROP FUNCTION IF EXISTS public.beskt_guard_grants_append_only();
 DROP FUNCTION IF EXISTS public.beskt_guard_events_append_only();
 DROP FUNCTION IF EXISTS public.beskt_guard_reviews_append_only();
 DROP FUNCTION IF EXISTS public.beskt_guard_child_row();
@@ -103,6 +158,18 @@ DROP FUNCTION IF EXISTS public.beskt_guard_version_transition();
 DROP FUNCTION IF EXISTS public.beskt_guard_version_insert();
 DROP FUNCTION IF EXISTS public.beskt_guard_role_interview_version();
 DROP FUNCTION IF EXISTS public.beskt_guard_pack_kind_immutable();
+
+-- 4a. The Phase 1 editor policies on the identity table, exactly as
+--     20260918090000 defined them. They no longer name pack_kind, so the
+--     column can go without CASCADE.
+DROP POLICY IF EXISTS scp_interview_packs_editor_insert ON public.scp_interview_packs;
+DROP POLICY IF EXISTS scp_interview_packs_editor_update ON public.scp_interview_packs;
+CREATE POLICY scp_interview_packs_editor_insert ON public.scp_interview_packs
+  FOR INSERT TO authenticated WITH CHECK (public.scp_interview_can_edit(auth.uid()));
+CREATE POLICY scp_interview_packs_editor_update ON public.scp_interview_packs
+  FOR UPDATE TO authenticated
+  USING (public.scp_interview_can_edit(auth.uid()))
+  WITH CHECK (public.scp_interview_can_edit(auth.uid()));
 
 -- 4. The additive discriminator comes off the identity table. BESKT
 --    identities carry no versions any more and cannot satisfy the restored
@@ -567,6 +634,11 @@ BEGIN
   END LOOP;
   IF position('scp_iv_case_start_basis' in (SELECT prosrc FROM pg_proc WHERE proname = 'scp_iv_create_case')) = 0 THEN
     RAISE EXCEPTION 'BESKT_ROLLBACK: scp_iv_create_case lost the shared start contract';
+  END IF;
+  IF (SELECT count(*) FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'scp_interview_packs'
+        AND p.policyname IN ('scp_interview_packs_editor_insert', 'scp_interview_packs_editor_update')
+        AND coalesce(p.with_check, '') LIKE '%pack_kind%') <> 0 THEN
+    RAISE EXCEPTION 'BESKT_ROLLBACK: the editor policies still name pack_kind';
   END IF;
   IF NOT has_function_privilege('authenticated', 'public.scp_iv_create_case(uuid, text, uuid, text, uuid, text, uuid, uuid)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.scp_iv_case_start_basis(uuid, uuid, uuid)', 'EXECUTE') THEN

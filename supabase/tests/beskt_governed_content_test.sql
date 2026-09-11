@@ -121,8 +121,14 @@ INSERT INTO auth.users (id, email) VALUES
   ('b2000000-0000-4000-8000-0000000000c1', 'beskt-candidate@test.local'),
   ('b2000000-0000-4000-8000-0000000000d1', 'beskt-employer-member@test.local'),
   ('b2000000-0000-4000-8000-0000000000d2', 'beskt-suspended-member@test.local'),
-  ('b2000000-0000-4000-8000-0000000000f1', 'beskt-roleless@test.local')
+  ('b2000000-0000-4000-8000-0000000000f1', 'beskt-roleless@test.local'),
+  ('b2000000-0000-4000-8000-0000000000ad', 'beskt-platform-admin@test.local'),
+  ('b2000000-0000-4000-8000-0000000000fa', 'beskt-internal-qa@test.local')
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.user_roles (user_id, role) VALUES
+  ('b2000000-0000-4000-8000-0000000000ad', 'admin')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO public.scp_content_roles (user_id, role) VALUES
   ('b2000000-0000-4000-8000-0000000000e1', 'editor'),
@@ -147,12 +153,40 @@ INSERT INTO public.employer_memberships (user_id, employer_id, role, status) VAL
   ('b2000000-0000-4000-8000-0000000000d2', 'b2000000-0000-4000-8000-00000000ee02', 'owner', 'active')
 ON CONFLICT DO NOTHING;
 
+-- Gate grants, made by the platform admin through the governed contract:
+-- each reviewer holds exactly one gate (a6 holds data_protection too, for
+-- the rejection scenario), q1 holds internal QA. Recorded in a temp table so
+-- later groups can revoke them by id.
+CREATE TEMP TABLE bk_grants (who uuid, kind text, grant_id uuid) ON COMMIT DROP;
+GRANT ALL ON bk_grants TO authenticated;
+DO $$
+DECLARE _r record; _g jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', 'b2000000-0000-4000-8000-0000000000ad', 'role', 'authenticated')::text, true);
+  PERFORM set_config('request.jwt.claim.sub', 'b2000000-0000-4000-8000-0000000000ad', true);
+  SET LOCAL ROLE authenticated;
+  FOR _r IN SELECT * FROM (VALUES
+      ('b2000000-0000-4000-8000-0000000000a1'::uuid, 'personnel_security'),
+      ('b2000000-0000-4000-8000-0000000000a2'::uuid, 'senior_hr'),
+      ('b2000000-0000-4000-8000-0000000000a3'::uuid, 'recruitment'),
+      ('b2000000-0000-4000-8000-0000000000a4'::uuid, 'employment_privacy_legal'),
+      ('b2000000-0000-4000-8000-0000000000a5'::uuid, 'data_protection'),
+      ('b2000000-0000-4000-8000-0000000000a6'::uuid, 'data_protection'),
+      ('b2000000-0000-4000-8000-0000000000fa'::uuid, 'internal_qa')) AS t(who, kind) LOOP
+    _g := public.beskt_grant_governance(gen_random_uuid(), _r.who, _r.kind, 'synthetic test mandate');
+    INSERT INTO bk_grants VALUES (_r.who, _r.kind, (_g ->> 'grant_id')::uuid);
+  END LOOP;
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  PERFORM set_config('request.jwt.claim.sub', NULL, true);
+END $$;
+
 -- Handles shared across DO blocks.
 CREATE TEMP TABLE bk (
   rec_pack uuid, rec_v uuid, rec_p1 uuid, rec_s1 uuid, rec_s2 uuid,
   rec_i1 uuid, rec_i2 uuid, rec_i3 uuid, rec_i4 uuid, rec_i5 uuid, rec_i6 uuid,
   rec_o_yes uuid, rec_o_no uuid,
-  sv_pack uuid, sv_v uuid, sv_p1 uuid, sv_p2 uuid, sv_s1 uuid, sv_i1 uuid, sv_i7 uuid,
+  sv_pack uuid, sv_v uuid, sv_p1 uuid, sv_p2 uuid, sv_s1 uuid, sv_i1 uuid, sv_i7 uuid, sv_i8 uuid,
   hash_before text, scratch text, scratch2 text, n bigint
 ) ON COMMIT DROP;
 INSERT INTO bk DEFAULT VALUES;
@@ -169,7 +203,7 @@ CREATE OR REPLACE FUNCTION pg_temp.build_method(_slug text, _mode text,
 LANGUAGE plpgsql AS $$
 DECLARE
   _pack uuid; _v uuid; _p1 uuid; _p2 uuid; _s1 uuid; _s2 uuid;
-  _i1 uuid; _i2 uuid; _i3 uuid; _i4 uuid; _i5 uuid; _i6 uuid; _i7 uuid;
+  _i1 uuid; _i2 uuid; _i3 uuid; _i4 uuid; _i5 uuid; _i6 uuid; _i7 uuid; _i8 uuid;
   _o_yes uuid; _o_no uuid;
   _r jsonb; _st text; _fk text; _k integer;
 BEGIN
@@ -318,6 +352,9 @@ BEGIN
      'cqrity_design_hypothesis', 'synthetic-fixture'),
     (_v, _p1, NULL, 'p1_closure', 15, 'closure_next_step', 'closure', 'candidate', 'information_notice',
      '{}', 'recruitment_support', 'Nästa steg är att arbetsgivaren återkommer.', 'The next step is that the employer will get back to you.',
+     'cqrity_design_hypothesis', 'synthetic-fixture'),
+    (_v, _p1, NULL, 'p1_evaluation', 16, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback',
+     '{}', 'recruitment_support', 'Gå igenom din egen intervjuteknik. Notera vilket underlag som fortfarande saknas.', 'Go through your own interviewing technique. Note the basis that is still missing.',
      'cqrity_design_hypothesis', 'synthetic-fixture');
 
   INSERT INTO public.beskt_routing_rules
@@ -393,6 +430,18 @@ BEGIN
        'security_vetting_only', 'authorised_security_function', 'cqrity_design_hypothesis', 'synthetic-fixture',
        ARRAY['suitability_inference', 'protected_trait_proxy'])
     RETURNING id INTO _i7;
+    INSERT INTO public.beskt_items
+      (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+       purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+       sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+    VALUES
+      (_v, _s1, _p2, 'protected_information_training', 7, 'Har du genomgått utbildning i informationssäkerhet?',
+       'Have you completed information security training?',
+       'Rollen hanterar skyddad information.', 'The role handles protected information.',
+       'recruitment_support', 'candidate_preparation', 'boolean', 'voluntary', true,
+       'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-fixture',
+       ARRAY['suitability_inference'])
+    RETURNING id INTO _i8;
     INSERT INTO public.beskt_prompts
       (method_version_id, exposure_profile_id, item_id, prompt_key, display_order, prompt_kind, peace_stage,
        addressee, question_form, permitted_probe_bases, permitted_mode, wording_sv, wording_en,
@@ -446,7 +495,7 @@ BEGIN
                   rec_i1 = _i1, rec_i2 = _i2, rec_i3 = _i3, rec_i4 = _i4, rec_i5 = _i5, rec_i6 = _i6,
                   rec_o_yes = _o_yes, rec_o_no = _o_no;
   ELSE
-    UPDATE bk SET sv_pack = _pack, sv_v = _v, sv_p1 = _p1, sv_p2 = _p2, sv_s1 = _s1, sv_i1 = _i1, sv_i7 = _i7;
+    UPDATE bk SET sv_pack = _pack, sv_v = _v, sv_p1 = _p1, sv_p2 = _p2, sv_s1 = _s1, sv_i1 = _i1, sv_i7 = _i7, sv_i8 = _i8;
   END IF;
   RETURN _v;
 END $$;
@@ -514,6 +563,29 @@ BEGIN
   PERFORM pg_temp.become(_who);
   SET LOCAL ROLE authenticated;
   _r := public.beskt_publish_version(_op, _v, pg_temp.revision_of(_v), 'Publicerad för test.');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  RETURN _r;
+END $$;
+
+-- Gate grants and revocations through the governed contract, as the
+-- platform admin. Used by the groups that prove gate-specific authority.
+CREATE OR REPLACE FUNCTION pg_temp.grant_kind(_who uuid, _kind text, _until timestamptz DEFAULT NULL, _op uuid DEFAULT gen_random_uuid()) RETURNS uuid
+LANGUAGE plpgsql AS $$
+DECLARE _r jsonb;
+BEGIN
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000ad');
+  SET LOCAL ROLE authenticated;
+  _r := public.beskt_grant_governance(_op, _who, _kind, 'synthetic test mandate', _until);
+  RESET ROLE; PERFORM pg_temp.nobody();
+  RETURN (_r ->> 'grant_id')::uuid;
+END $$;
+CREATE OR REPLACE FUNCTION pg_temp.revoke_grant(_id uuid, _op uuid DEFAULT gen_random_uuid()) RETURNS jsonb
+LANGUAGE plpgsql AS $$
+DECLARE _r jsonb;
+BEGIN
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000ad');
+  SET LOCAL ROLE authenticated;
+  _r := public.beskt_revoke_governance(_op, _id, 'Återkallad för test.');
   RESET ROLE; PERFORM pg_temp.nobody();
   RETURN _r;
 END $$;
@@ -782,6 +854,55 @@ BEGIN
     'B1.16 every FK inside the BESKT domain is ON DELETE RESTRICT');
 END $$;
 
+-- Owning and parent keys are immutable in every child family: a child
+-- belongs to what it was created under, in a draft as much as later.
+DO $$
+DECLARE b bk%ROWTYPE; _n integer;
+BEGIN
+  SELECT * INTO b FROM bk;
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_sections SET method_version_id = %L WHERE id = %L', b.sv_v, b.rec_s2),
+    'BESKT_PARENT_IMMUTABLE', 'B1.17 a section cannot be moved to another method version');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_exposure_profiles SET method_version_id = %L WHERE id = %L', b.sv_v, b.rec_p1),
+    'BESKT_PARENT_IMMUTABLE', 'B1.18 an exposure profile cannot be moved to another method version');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_activation_requirements SET method_version_id = %L WHERE method_version_id = %L AND requirement_key = ''lawful_basis_recorded''', b.rec_v, b.sv_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.19 an activation requirement cannot be moved to another method version');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET method_version_id = %L WHERE id = %L', b.sv_v, b.rec_i1),
+    'BESKT_PARENT_IMMUTABLE', 'B1.20 an item cannot be moved to another method version');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET section_id = %L WHERE id = %L', b.rec_s2, b.rec_i1),
+    'BESKT_PARENT_IMMUTABLE', 'B1.21 an item cannot be moved to another section of its own version either');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET exposure_profile_id = %L WHERE id = %L', b.sv_p1, b.sv_i8),
+    'BESKT_PARENT_IMMUTABLE', 'B1.22 an item cannot be re-justified under another exposure profile');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_prompts SET method_version_id = %L WHERE method_version_id = %L AND prompt_key = ''p1_open''', b.sv_v, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.23 a prompt cannot be moved to another method version');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_prompts SET exposure_profile_id = %L WHERE method_version_id = %L AND prompt_key = ''p2_open''', b.sv_p1, b.sv_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.24 a prompt cannot be moved to another exposure profile');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_prompts SET item_id = %L WHERE method_version_id = %L AND prompt_key = ''p1_probe''', b.rec_i4, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.25 a probe cannot be re-pointed at another item');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_routing_rules SET method_version_id = %L WHERE method_version_id = %L AND rule_key = ''show_context_when_reported''', b.sv_v, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.26 a routing rule cannot be moved to another method version');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_routing_rules SET target_item_id = %L WHERE method_version_id = %L AND rule_key = ''show_context_when_reported''', b.rec_i2, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.27 a routing rule cannot be re-pointed at another target item');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_routing_rules SET source_item_id = %L WHERE method_version_id = %L AND rule_key = ''show_context_when_reported''', b.rec_i1, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.28 nor at another source item');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_routing_rules SET condition_option_id = %L WHERE method_version_id = %L AND rule_key = ''show_example_when_experienced''', b.rec_o_no, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.29 nor at another condition option');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_evidence_anchors SET method_version_id = %L WHERE method_version_id = %L AND evidence_state = ''unaddressed''', b.sv_v, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.30 an evidence anchor cannot be moved to another method version');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_observation_fields SET method_version_id = %L WHERE method_version_id = %L AND field_key = ''fact''', b.sv_v, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B1.31 an observation-field definition cannot be moved to another method version');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_item_options SET item_id = %L WHERE id = %L', b.rec_i3, b.rec_o_yes),
+    'BESKT_PARENT_IMMUTABLE', 'B1.32 an option cannot be moved to another item');
+  SET LOCAL ROLE service_role;
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET method_version_id = %L WHERE id = %L', b.sv_v, b.rec_i1),
+    'BESKT_PARENT_IMMUTABLE', 'B1.33 parent immutability holds against a BYPASSRLS caller (trigger, not policy)');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_item_options SET item_id = %L WHERE id = %L', b.sv_i1, b.rec_o_yes),
+    'BESKT_PARENT_IMMUTABLE', 'B1.34 so does the option''s, across versions');
+  RESET ROLE;
+  SELECT count(*) INTO _n FROM public.beskt_items WHERE method_version_id = b.rec_v;
+  PERFORM pg_temp.ok(_n = 6 AND (SELECT count(*) FROM public.beskt_items WHERE method_version_id = b.sv_v) = 8,
+    'B1.35 every refused move left both drafts exactly as planted');
+END $$;
+
 
 DO $$ BEGIN RAISE NOTICE 'GROUP B2 — method completeness blocks publication or cannot be represented'; END $$;
 
@@ -813,7 +934,9 @@ BEGIN
   PERFORM pg_temp.ok('ITEM_PROHIBITED_INFERENCES_MISSING' = ANY (pg_temp.blockers(b.rec_v)), 'B2.5 an item without prohibited-inference metadata blocks publication');
   UPDATE public.beskt_items SET prohibited_inferences = ARRAY['suitability_inference'] WHERE id = b.rec_i1;
 
-  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET exposure_profile_id = NULL WHERE id = %L', b.rec_i1),
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_items (method_version_id, section_id, exposure_profile_id, item_key, display_order, permitted_mode, phase, answer_type, requiredness, sensitivity_class, access_class, content_provenance)
+             VALUES (%L, %L, NULL, 'unlinked_item', 9, 'recruitment_support', 'candidate_preparation', 'short_text', 'voluntary', 'ordinary', 'recruiter', 'source_stated')$q$, b.rec_v, b.rec_s1),
     'BESKT_EXPOSURE_LINK_REQUIRED', 'B2.6 an item without an exposure link cannot be represented');
   PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET permitted_mode = NULL WHERE id = %L', b.rec_i1),
     'null value', 'B2.7 an item without a mode cannot be represented');
@@ -1026,28 +1149,65 @@ BEGIN
   -- (trigger) and, with the trigger bypassed, by the validator on the stored
   -- graph.
   PERFORM pg_temp.must_fail(
-    format($q$INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, action, target_item_id)
-             VALUES (%L, 'rec_into_sv', 50, 'recruitment_support', %L, 'always', 'show', %L)$q$, b.sv_v, b.sv_i1, b.sv_i7),
-    'BESKT_ROUTE_MODE_ESCALATION', 'B2.46 a recruitment-support rule cannot route into security-vetting content');
+    format($q$INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, condition_boolean, action, target_item_id)
+             VALUES (%L, 'rec_into_sv', 50, 'recruitment_support', %L, 'boolean_equals', true, 'show', %L)$q$, b.sv_v, b.sv_i8, b.sv_i7),
+    'BESKT_ROUTE_MODE_ESCALATION', 'B2.46 a recruitment-support rule cannot route into security-vetting content of its own profile');
   PERFORM pg_temp.must_fail(
     format($q$INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, action, target_item_id)
-             VALUES (%L, 'rec_reads_sv', 50, 'recruitment_support', %L, 'always', 'show', %L)$q$, b.sv_v, b.sv_i7, b.sv_i1),
+             VALUES (%L, 'rec_reads_sv', 50, 'recruitment_support', %L, 'always', 'show', %L)$q$, b.sv_v, b.sv_i7, b.sv_i8),
     'BESKT_ROUTE_MODE_ESCALATION', 'B2.47 a recruitment-support rule cannot read a security-vetting answer either');
   ALTER TABLE public.beskt_routing_rules DISABLE TRIGGER beskt_routing_rules_child_guard;
-  INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, action, target_item_id)
-  VALUES (b.sv_v, 'forced_rec_into_sv', 50, 'recruitment_support', b.sv_i1, 'always', 'show', b.sv_i7);
+  INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, condition_boolean, action, target_item_id)
+  VALUES (b.sv_v, 'forced_rec_into_sv', 50, 'recruitment_support', b.sv_i8, 'boolean_equals', true, 'show', b.sv_i7);
   ALTER TABLE public.beskt_routing_rules ENABLE TRIGGER beskt_routing_rules_child_guard;
   PERFORM pg_temp.ok('ROUTE_RECRUITMENT_INTO_SECURITY_VETTING' = ANY (pg_temp.blockers(b.sv_v)),
     'B2.48 and if such a rule is forced into the graph, publication is blocked by the validator');
   -- Even with the rule in place, recruitment-mode routing never reveals the
-  -- security-vetting item.
+  -- security-vetting item: the security-vetting profile is refused outright
+  -- in recruitment mode, and the recruitment profile never contains it.
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
+    format('SELECT * FROM public.beskt_resolve_item_sequence(%L, %L, ''recruitment_support'', %L)', b.sv_v, b.sv_p2,
+      '{"protected_information_training": {"kind": "boolean", "value": true}}'),
+    'BESKT_MODE_NOT_PERMITTED', 'B2.49 recruitment-mode routing is refused over a security-vetting profile, whatever the rules say');
   PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
   SET LOCAL ROLE authenticated;
-  SELECT count(*) INTO _n FROM public.beskt_resolve_item_sequence(b.sv_v, b.sv_p1, 'recruitment_support', '{}'::jsonb) r WHERE r.item_id = b.sv_i7;
+  SELECT count(*) INTO _n FROM public.beskt_resolve_item_sequence(b.sv_v, b.sv_p1, 'recruitment_support',
+    '{"protected_information_training": {"kind": "boolean", "value": true}}'::jsonb) r
+    JOIN public.beskt_items i ON i.id = r.item_id WHERE i.permitted_mode = 'security_vetting_support' OR i.exposure_profile_id = b.sv_p2;
   RESET ROLE; PERFORM pg_temp.nobody();
-  PERFORM pg_temp.ok(_n = 0, 'B2.49 recruitment-mode routing never surfaces security-vetting content, whatever the rules say');
+  PERFORM pg_temp.ok(_n = 0, 'B2.49a and recruitment-mode routing over the recruitment profile surfaces no security-vetting item');
   DELETE FROM public.beskt_routing_rules WHERE method_version_id = b.sv_v AND rule_key = 'forced_rec_into_sv';
   PERFORM pg_temp.ok(pg_temp.blockers(b.sv_v) = '{}'::text[], 'B2.49b complete again');
+
+  -- Exposure profiles never cross: not by prompt, not by route, and a forced
+  -- crossing is caught by the validator and ignored by the resolver.
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_prompts (method_version_id, exposure_profile_id, item_id, prompt_key, display_order, prompt_kind, peace_stage, addressee, question_form, permitted_probe_bases, permitted_mode, content_provenance)
+             VALUES (%L, %L, %L, 'x_cross_probe', 99, 'specific_probe', 'account', 'candidate', 'neutral_clarification', ARRAY['submitted_answer'], 'security_vetting_support', 'source_stated')$q$,
+             b.sv_v, b.sv_p1, b.sv_i7),
+    'BESKT_CROSS_PROFILE_REFERENCE', 'B2.49c a prompt cannot probe an item of another exposure profile');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, action, target_item_id)
+             VALUES (%L, 'cross_profile', 51, 'security_vetting_support', %L, 'always', 'show', %L)$q$, b.sv_v, b.sv_i1, b.sv_i8),
+    'BESKT_CROSS_PROFILE_REFERENCE', 'B2.49d a routing rule cannot connect items of two exposure profiles');
+  ALTER TABLE public.beskt_routing_rules DISABLE TRIGGER beskt_routing_rules_child_guard;
+  ALTER TABLE public.beskt_prompts DISABLE TRIGGER beskt_prompts_child_guard;
+  INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, action, target_item_id)
+  VALUES (b.sv_v, 'forced_cross_profile', 51, 'security_vetting_support', b.sv_i1, 'always', 'show', b.sv_i8);
+  INSERT INTO public.beskt_prompts (method_version_id, exposure_profile_id, item_id, prompt_key, display_order, prompt_kind, peace_stage, addressee, question_form, permitted_probe_bases, permitted_mode, wording_sv, wording_en, content_provenance, source_reference)
+  VALUES (b.sv_v, b.sv_p1, b.sv_i7, 'forced_cross_probe', 99, 'specific_probe', 'account', 'candidate', 'neutral_clarification', ARRAY['submitted_answer'], 'security_vetting_support', 'Vad gjorde du?', 'What did you do?', 'source_stated', 's');
+  ALTER TABLE public.beskt_prompts ENABLE TRIGGER beskt_prompts_child_guard;
+  ALTER TABLE public.beskt_routing_rules ENABLE TRIGGER beskt_routing_rules_child_guard;
+  PERFORM pg_temp.ok('ROUTE_CROSS_PROFILE' = ANY (pg_temp.blockers(b.sv_v)) AND 'PROMPT_CROSS_PROFILE' = ANY (pg_temp.blockers(b.sv_v)),
+    'B2.49e forced cross-profile rows block publication in the validator');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_resolve_item_sequence(b.sv_v, b.sv_p2, 'security_vetting_support', '{}'::jsonb) r WHERE r.item_id = b.sv_i8;
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 1, 'B2.49f the resolver treats a forced cross-profile show rule as absent: the target keeps its unconditional place in its own profile');
+  DELETE FROM public.beskt_routing_rules WHERE method_version_id = b.sv_v AND rule_key = 'forced_cross_profile';
+  DELETE FROM public.beskt_prompts WHERE method_version_id = b.sv_v AND prompt_key = 'forced_cross_probe';
+  PERFORM pg_temp.ok(pg_temp.blockers(b.sv_v) = '{}'::text[], 'B2.49g complete again');
 END $$;
 
 -- Routing: unknown target, cycle, dead target; determinism; neutral omission.
@@ -1108,7 +1268,7 @@ BEGIN
   PERFORM pg_temp.ok(_c = '1:lone_working_experience,2:reported_incident,3:information_acknowledged',
     format('B2.55 with no answers the unconditional set appears in order (%s)', _c));
   PERFORM pg_temp.ok(_d = _c AND _e = _c,
-    'B2.56 an omitted or discuss-orally answer produces exactly the neutral sequence: no adverse branch, identical to an explicit no');
+    'B2.56 an omitted or discuss-orally answer follows the neutral unanswered routing baseline exactly: no rule fires, no adverse branch (an explicit no also fires nothing, so the sequences coincide without being the same answer)');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
     format('SELECT * FROM public.beskt_resolve_item_sequence(%L, %L, ''security_vetting_support'', ''{}'')', b.rec_v, b.rec_p1),
     'BESKT_MODE_NOT_PERMITTED', 'B2.57 a recruitment-support method cannot be resolved in security-vetting mode');
@@ -1123,14 +1283,13 @@ BEGIN
              VALUES (%L, 'omission_branch', 60, 'recruitment_support', %L, 'omitted_or_discuss_orally', 'show', %L)$q$, b.rec_v, b.rec_i1, b.rec_i2),
     'beskt_routing_rules_condition_kind_check', 'B2.60 there is no condition kind for an omitted or discuss-orally answer: by construction, not by policy');
 END $$;
-
-
 DO $$ BEGIN RAISE NOTICE 'GROUP B3 — review, hash and lifecycle'; END $$;
 
--- The canonical SHA-256: recomputable, stable across insertion order,
--- changed by any governed field, untouched by lifecycle.
+-- The canonical SHA-256: a typed jsonb document, recomputable, stable
+-- across insertion order, unambiguous under delimiter characters, changed
+-- by any governed field, untouched by lifecycle.
 DO $$
-DECLARE b bk%ROWTYPE; _h1 text; _h2 text; _h3 text; _canon text;
+DECLARE b bk%ROWTYPE; _h1 text; _h2 text; _h3 text; _hx text; _hy text; _canon jsonb; _k text;
 BEGIN
   SELECT * INTO b FROM bk;
   -- B2 edited and restored content with different wording; one governed
@@ -1138,16 +1297,34 @@ BEGIN
   PERFORM pg_temp.touch(b.rec_v);
   _h1 := public.beskt_method_content_hash(b.rec_v);
   _canon := public.beskt_canonical_content(b.rec_v);
-  PERFORM pg_temp.ok(_h1 = encode(sha256(convert_to(_canon, 'UTF8')), 'hex') AND length(_h1) = 64,
-    'B3.1 the content hash is exactly core sha256 over the canonical UTF-8 bytes, hex encoded');
+  PERFORM pg_temp.ok(_h1 = encode(sha256(convert_to(_canon::text, 'UTF8')), 'hex') AND length(_h1) = 64,
+    'B3.1 the content hash is exactly core sha256 over the canonical jsonb text in UTF-8, hex encoded');
   PERFORM pg_temp.ok(_h1 = (SELECT content_hash FROM public.beskt_method_versions WHERE id = b.rec_v),
     'B3.2 the stored hash names the planted content after the governed touch');
-  PERFORM pg_temp.ok(position('#exposure_profiles' in _canon) > 0 AND position('#items' in _canon) > 0
-    AND position('#options' in _canon) > 0 AND position('#prompts' in _canon) > 0
-    AND position('#routing_rules' in _canon) > 0 AND position('#evidence_anchors' in _canon) > 0
-    AND position('#observation_fields' in _canon) > 0 AND position('#activation_requirements' in _canon) > 0
-    AND position('#sections' in _canon) > 0,
-    'B3.3 every governed table contributes to the canonical representation');
+  PERFORM pg_temp.ok(jsonb_typeof(_canon) = 'object' AND _canon ->> 'schema' = 'beskt_canonical_content_v2'
+    AND jsonb_typeof(_canon -> 'version') = 'object',
+    'B3.3 the canonical representation is a typed jsonb document with a named schema');
+  FOREACH _k IN ARRAY ARRAY['exposure_profiles', 'activation_requirements', 'sections', 'items', 'options', 'prompts',
+                             'routing_rules', 'evidence_anchors', 'observation_fields'] LOOP
+    IF jsonb_typeof(_canon -> _k) IS DISTINCT FROM 'array' THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: B3.3b canonical collection % is missing or not an array', _k;
+    END IF;
+  END LOOP;
+  PERFORM pg_temp.ok(true, 'B3.3b every governed table contributes a named array to the canonical document');
+  PERFORM pg_temp.ok(
+    (_canon -> 'items' -> 0) ?& ARRAY['item_key', 'section_key', 'profile_key', 'wording_sv', 'wording_en', 'purpose_sv',
+                                       'purpose_en', 'answer_type', 'requiredness', 'sensitivity_class', 'access_class',
+                                       'prohibited_inferences']
+    AND (_canon -> 'prompts' -> 0) ?& ARRAY['prompt_key', 'profile_key', 'item_key', 'prompt_kind', 'peace_stage', 'wording_sv']
+    AND (_canon -> 'routing_rules' -> 0) ?& ARRAY['rule_key', 'source_item_key', 'target_item_key', 'condition_kind', 'condition_option_key', 'condition_boolean'],
+    'B3.3c every row is a record of named fields, never a positional or delimited string');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM jsonb_array_elements(_canon -> 'prompts') e WHERE jsonb_typeof(e -> 'item_key') = 'null') > 0
+    AND (SELECT count(*) FROM jsonb_array_elements(_canon -> 'prompts') e WHERE NOT (e ? 'item_key')) = 0,
+    'B3.3d an absent value is an explicit JSON null under its named field, never an omitted key');
+  PERFORM pg_temp.ok(
+    (SELECT bool_and(jsonb_typeof(e -> 'prohibited_inferences') = 'array') FROM jsonb_array_elements(_canon -> 'items') e),
+    'B3.3e set-valued fields are JSON arrays, not joined strings');
   -- Rewrite every child row physically (no-op updates move heap position).
   UPDATE public.beskt_items SET item_key = item_key WHERE method_version_id = b.rec_v;
   UPDATE public.beskt_item_options o SET option_key = o.option_key FROM public.beskt_items i WHERE i.id = o.item_id AND i.method_version_id = b.rec_v;
@@ -1160,6 +1337,37 @@ BEGIN
   UPDATE public.beskt_items SET prohibited_inferences = ARRAY['credibility_or_deception_inference', 'suitability_inference'] WHERE id = b.rec_i2;
   PERFORM pg_temp.ok(public.beskt_method_content_hash(b.rec_v) = _h1, 'B3.5 array element order is canonicalised');
   UPDATE public.beskt_items SET prohibited_inferences = ARRAY['suitability_inference', 'credibility_or_deception_inference'] WHERE id = b.rec_i2;
+
+  -- Delimiter characters cannot move content between fields: the same
+  -- characters split differently across two fields are different content.
+  FOREACH _k IN ARRAY ARRAY['|', E'\n', E'\x1f', '~', '"'] LOOP
+    UPDATE public.beskt_items SET wording_sv = 'a' || _k || 'b', wording_en = 'c' WHERE id = b.rec_i4;
+    _hx := public.beskt_method_content_hash(b.rec_v);
+    UPDATE public.beskt_items SET wording_sv = 'a', wording_en = 'b' || _k || 'c' WHERE id = b.rec_i4;
+    _hy := public.beskt_method_content_hash(b.rec_v);
+    IF _hx = _hy THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: B3.5b the field split around %L is ambiguous in the canonical hash', _k;
+    END IF;
+  END LOOP;
+  PERFORM pg_temp.ok(true, 'B3.5b two different field splits around a delimiter character (|, newline, unit separator, ~, ") give different hashes');
+  -- Nor between rows.
+  UPDATE public.beskt_item_options SET label_sv = 'Ja|Nej' WHERE id = b.rec_o_yes;
+  UPDATE public.beskt_item_options SET label_sv = 'x' WHERE id = b.rec_o_no;
+  _hx := public.beskt_method_content_hash(b.rec_v);
+  UPDATE public.beskt_item_options SET label_sv = 'Ja' WHERE id = b.rec_o_yes;
+  UPDATE public.beskt_item_options SET label_sv = 'Nej|x' WHERE id = b.rec_o_no;
+  _hy := public.beskt_method_content_hash(b.rec_v);
+  PERFORM pg_temp.ok(_hx <> _hy, 'B3.5c two different row splits of the same characters give different hashes');
+  UPDATE public.beskt_item_options SET label_sv = 'Nej' WHERE id = b.rec_o_no;
+  -- NULL and the empty string are different content.
+  UPDATE public.beskt_items SET wording_en = NULL WHERE id = b.rec_i4;
+  _hx := public.beskt_method_content_hash(b.rec_v);
+  UPDATE public.beskt_items SET wording_en = '' WHERE id = b.rec_i4;
+  _hy := public.beskt_method_content_hash(b.rec_v);
+  PERFORM pg_temp.ok(_hx <> _hy AND _hx <> _h1 AND _hy <> _h1, 'B3.5d NULL and the empty string hash differently, and both differ from the text');
+  UPDATE public.beskt_items SET wording_sv = 'Beskriv sammanhanget.', wording_en = 'Describe the context.' WHERE id = b.rec_i4;
+  PERFORM pg_temp.ok(public.beskt_method_content_hash(b.rec_v) = _h1, 'B3.5e restoring the wordings restores the hash');
+
   -- Every governed field changes it.
   UPDATE public.beskt_items SET wording_en = wording_en || ' (edited)' WHERE id = b.rec_i1;
   _h3 := public.beskt_method_content_hash(b.rec_v);
@@ -1187,15 +1395,15 @@ BEGIN
   UPDATE bk SET hash_before = _h1;
 END $$;
 
--- Five hash-bound gates, separation of duties, stale approvals, atomic
--- publication.
+-- Five gate-specific, hash-bound, cycle-bound approvals; separation of
+-- duties; stale approvals; a rejection ends the cycle; atomic publication.
 DO $$
-DECLARE b bk%ROWTYPE; _r jsonb; _events_before bigint; _rev integer; _h text;
+DECLARE b bk%ROWTYPE; _r jsonb; _events_before bigint; _rev integer; _h text; _g uuid; _cycle integer;
 BEGIN
   SELECT * INTO b FROM bk;
   -- A reviewer cannot act before submission; a roleless user never.
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a1',
-    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''personnel_security'', ''approved'', ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
     'BESKT_GATE_NOT_OPEN', 'B3.13 a review is recorded only while the version is in_review');
   -- Submission validates completeness: break, submit, fail; restore, submit.
   UPDATE public.beskt_items SET purpose_sv = NULL WHERE id = b.rec_i5;
@@ -1205,22 +1413,34 @@ BEGIN
   UPDATE public.beskt_items SET purpose_sv = 'Kandidaten ska ha fått informationen.' WHERE id = b.rec_i5;
   _r := pg_temp.submit(b.rec_v);
   PERFORM pg_temp.ok(_r ->> 'content_status' = 'in_review'
-    AND (SELECT content_status FROM public.beskt_method_versions WHERE id = b.rec_v) = 'in_review',
-    'B3.15 a complete method is submitted for the five parallel gates');
+    AND (SELECT content_status FROM public.beskt_method_versions WHERE id = b.rec_v) = 'in_review'
+    AND (_r ->> 'review_cycle')::integer = 1
+    AND (SELECT review_cycle FROM public.beskt_method_versions WHERE id = b.rec_v) = 1,
+    'B3.15 a complete method is submitted for the five parallel gates and opens review cycle 1');
 
-  -- Separation of duties.
+  -- Separation of duties and gate-specific authority.
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
     format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
     'BESKT_NOT_REVIEWER', 'B3.16 an editor holds no review gate');
   INSERT INTO public.scp_content_roles (user_id, role) VALUES ('b2000000-0000-4000-8000-0000000000e1', 'reviewer') ON CONFLICT DO NOTHING;
+  _g := pg_temp.grant_kind('b2000000-0000-4000-8000-0000000000e1', 'senior_hr');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
     format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
-    'BESKT_SELF_REVIEW', 'B3.17 the author cannot approve their own method even when given the reviewer role');
+    'BESKT_SELF_REVIEW', 'B3.17 the author cannot approve their own method even when given the reviewer role and a gate grant');
+  PERFORM pg_temp.revoke_grant(_g);
   DELETE FROM public.scp_content_roles WHERE user_id = 'b2000000-0000-4000-8000-0000000000e1' AND role = 'reviewer';
-  PERFORM pg_temp.review(b.rec_v, 'b2000000-0000-4000-8000-0000000000a1', 'personnel_security');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a1',
     format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
-    'BESKT_REVIEW_ONE_GATE_PER_REVIEWER', 'B3.18 one human approves at most one of the five gates per content hash');
+    'BESKT_GATE_NOT_GRANTED', 'B3.17b a reviewer who holds the personnel-security grant cannot approve the senior-HR gate: the reviewer role alone opens no gate');
+  _r := pg_temp.review(b.rec_v, 'b2000000-0000-4000-8000-0000000000a1', 'personnel_security');
+  PERFORM pg_temp.ok(_r ->> 'decision' = 'approved' AND (_r ->> 'review_cycle')::integer = 1
+    AND (SELECT review_cycle_at_review FROM public.beskt_method_reviews WHERE id = (_r ->> 'review_id')::uuid) = 1,
+    'B3.17c the grant holder approves exactly their gate, and the review records the cycle it belongs to');
+  _g := pg_temp.grant_kind('b2000000-0000-4000-8000-0000000000a1', 'senior_hr');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a1',
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
+    'BESKT_REVIEW_ONE_GATE_PER_REVIEWER', 'B3.18 one human approves at most one of the five gates per content hash, even holding two grants');
+  PERFORM pg_temp.revoke_grant(_g);
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a2',
     format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''product'', ''approved'', ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
     'BESKT_UNKNOWN_GATE', 'B3.19 the gate vocabulary is exactly the five PR 1 reviews');
@@ -1263,20 +1483,50 @@ BEGIN
     'REVIEW_GATE_PERSONNEL_SECURITY_NOT_APPROVED', 'B3.27 every earlier approval is stale after a content edit');
   PERFORM pg_temp.ok((SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v AND decision = 'approved') = 5,
     'B3.28 the stale approvals remain as history; they simply no longer match');
-  -- Restore the content: the hash returns to the reviewed one, and the five
-  -- approvals count again -- exactly because they bind to the hash.
+  -- Restore the content within the same cycle: the hash returns to the
+  -- reviewed one and the five approvals count again, because they bind to
+  -- this hash in this cycle.
   UPDATE public.beskt_items SET wording_en = replace(wording_en, ' (post-approval edit)', '') WHERE id = b.rec_i1;
   _r := pg_temp.touch(b.rec_v);
   PERFORM pg_temp.ok(_r ->> 'content_hash' = b.hash_before, 'B3.29 restoring the reviewed content restores the reviewed hash');
-  -- A rejection sends the version back to draft; re-submission required.
-  PERFORM pg_temp.review(b.rec_v, 'b2000000-0000-4000-8000-0000000000a6', 'data_protection', 'rejected');
-  PERFORM pg_temp.ok((SELECT content_status FROM public.beskt_method_versions WHERE id = b.rec_v) = 'draft',
+
+  -- A rejection ends the review cycle. After re-submission every gate needs
+  -- a fresh approval even though not one byte changed.
+  _r := pg_temp.review(b.rec_v, 'b2000000-0000-4000-8000-0000000000a6', 'data_protection', 'rejected');
+  PERFORM pg_temp.ok((SELECT content_status FROM public.beskt_method_versions WHERE id = b.rec_v) = 'draft'
+    AND _r ->> 'content_status' = 'draft',
     'B3.30 a rejection returns the version to draft');
-  PERFORM pg_temp.submit(b.rec_v);
+  _r := pg_temp.submit(b.rec_v);
+  _cycle := (SELECT review_cycle FROM public.beskt_method_versions WHERE id = b.rec_v);
+  PERFORM pg_temp.ok(_cycle = 2 AND (_r ->> 'review_cycle')::integer = 2
+    AND _r ->> 'content_hash' = b.hash_before
+    AND (SELECT content_hash FROM public.beskt_method_versions WHERE id = b.rec_v) = b.hash_before,
+    'B3.30b re-submission of the unchanged content opens review cycle 2 at the very same hash');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000b1',
+    format('SELECT public.beskt_publish_version(gen_random_uuid(), %L, %s, ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
+    'REVIEW_GATE_PERSONNEL_SECURITY_NOT_APPROVED', 'B3.30c publication is refused: five approvals at the identical hash from the ended cycle do not carry over');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v AND decision = 'approved'
+       AND content_hash_at_review = b.hash_before AND review_cycle_at_review = 1) = 5
+    AND (SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v AND review_cycle_at_review = 2) = 0,
+    'B3.30d the five earlier approvals are history of cycle 1; cycle 2 has none');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000b1',
+    format('SELECT public.beskt_publish_version(gen_random_uuid(), %L, %s, ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
+    'REVIEW_GATE_DATA_PROTECTION_NOT_APPROVED', 'B3.30e all five gates are named as unapproved in the new cycle, not only the first');
+  PERFORM pg_temp.approve_all(b.rec_v);
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v AND decision = 'approved' AND review_cycle_at_review = 2) = 5,
+    'B3.30f five new approvals by the five grant holders are recorded against cycle 2');
+
   -- The publisher who is also the author is refused, on a method they wrote.
+  -- That method also carries one item readable by the authorised security
+  -- function only; the read contract below proves it is refused whole to an
+  -- internal QA reader.
   DECLARE _mine uuid;
   BEGIN
     _mine := pg_temp.build_method('beskt-synthetic-author', 'recruitment_support', 'b2000000-0000-4000-8000-0000000000b2', false);
+    UPDATE public.beskt_items SET access_class = 'authorised_security_function'
+     WHERE method_version_id = _mine AND item_key = 'information_acknowledged';
     PERFORM pg_temp.submit(_mine);
     PERFORM pg_temp.approve_all(_mine);
     PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000b2',
@@ -1284,6 +1534,7 @@ BEGIN
       'BESKT_PUBLISHER_IS_AUTHOR', 'B3.31 a publisher cannot publish a method they authored, even with five approvals');
     _r := pg_temp.publish(_mine);
     PERFORM pg_temp.ok(_r ->> 'content_status' = 'published', 'B3.31b an independent publisher can');
+    UPDATE bk SET scratch = _mine::text;
   END;
   -- Publish the recruitment method for real.
   _rev := pg_temp.revision_of(b.rec_v);
@@ -1292,7 +1543,7 @@ BEGIN
     AND (_r ->> 'revision')::integer = _rev + 1
     AND _r ->> 'content_hash' = b.hash_before
     AND (SELECT published_by FROM public.beskt_method_versions WHERE id = b.rec_v) = 'b2000000-0000-4000-8000-0000000000b1',
-    'B3.32 with five current-hash approvals the publisher publishes; the hash is the reviewed hash');
+    'B3.32 with five current-hash, current-cycle approvals the publisher publishes; the hash is the reviewed hash');
   PERFORM pg_temp.ok(public.beskt_method_content_hash(b.rec_v) = b.hash_before,
     'B3.33 publication did not change the content hash');
   PERFORM pg_temp.ok(
@@ -1300,9 +1551,10 @@ BEGIN
     'B3.34 the publication is in the ledger');
 END $$;
 
--- Immutability from published onward, on the version and on every child.
+-- Immutability from published onward, on the version and on every child,
+-- including re-parenting in either direction.
 DO $$
-DECLARE b bk%ROWTYPE; _t text;
+DECLARE b bk%ROWTYPE; _t text; _v2 uuid; _p2 uuid; _s2 uuid; _i2 uuid;
 BEGIN
   SELECT * INTO b FROM bk;
   PERFORM set_config('beskt.governed_transition', 'on', true);
@@ -1351,13 +1603,73 @@ BEGIN
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
     format('SELECT public.beskt_create_method_version(gen_random_uuid(), %L, ''recruitment_support'', ''s'', ''t'', ''source_stated'')', b.rec_pack),
     'BESKT_OPEN_VERSION_EXISTS', 'B3.50 one open version per method at a time');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'beskt_method_versions'
+      AND indexname = 'beskt_method_versions_one_open_idx' AND indexdef LIKE 'CREATE UNIQUE INDEX%'
+      AND indexdef ~* 'WHERE \(content_status = ANY \(ARRAY\[''draft''::text, ''in_review''::text\]\)\)') = 1,
+    'B3.50b the one-open-version rule is also a partial unique index on the table, not only an RPC check');
+  PERFORM set_config('beskt.governed_transition', 'on', true);
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_versions (pack_id, version_number, mode, source_reference, source_document_version, content_provenance)
+             VALUES (%L, 3, 'recruitment_support', 'x', 'y', 'source_stated')$q$, b.rec_pack),
+    'beskt_method_versions_one_open_idx', 'B3.50c a second open version inserted past the RPC is refused by the index itself');
+  PERFORM set_config('beskt.governed_transition', 'off', true);
+
+  -- Re-parenting across the frozen boundary, in both directions, per family.
+  SELECT id INTO _v2 FROM public.beskt_method_versions WHERE pack_id = b.rec_pack AND version_number = 2;
+  INSERT INTO public.beskt_exposure_profiles
+    (method_version_id, profile_key, display_order, exposure_area, duties_sv, duties_en,
+     role_relevance_rationale_sv, role_relevance_rationale_en, permitted_mode, owning_review_role,
+     jurisdiction_reference, lawful_basis_reference, retention_class, access_class, content_provenance, source_reference)
+  VALUES (_v2, 'lone_working', 1, 'lone_working', 'x', 'x', 'x', 'x', 'recruitment_support', 'recruitment', 'SE', 'x',
+          'recruitment_record', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-fixture')
+  RETURNING id INTO _p2;
+  INSERT INTO public.beskt_sections (method_version_id, section_key, display_order, phase, title_sv, title_en)
+  VALUES (_v2, 'preparation', 1, 'candidate_preparation', 'x', 'x') RETURNING id INTO _s2;
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, permitted_mode, phase, answer_type,
+     requiredness, sensitivity_class, access_class, content_provenance)
+  VALUES (_v2, _s2, _p2, 'draft_item', 1, 'recruitment_support', 'candidate_preparation', 'short_text', 'voluntary',
+          'ordinary', 'recruiter', 'cqrity_design_hypothesis')
+  RETURNING id INTO _i2;
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET method_version_id = %L WHERE id = %L', _v2, b.rec_i1),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50d a published item cannot be moved under the draft: the OLD owner is checked');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_sections SET method_version_id = %L WHERE id = %L', _v2, b.rec_s2),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50e nor a published section');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_exposure_profiles SET method_version_id = %L WHERE id = %L', _v2, b.rec_p1),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50f nor a published exposure profile');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_prompts SET method_version_id = %L WHERE method_version_id = %L AND prompt_key = ''p1_open''', _v2, b.rec_v),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50g nor a published prompt');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_routing_rules SET method_version_id = %L WHERE method_version_id = %L', _v2, b.rec_v),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50h nor a published routing rule');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_evidence_anchors SET method_version_id = %L WHERE method_version_id = %L AND evidence_state = ''unaddressed''', _v2, b.rec_v),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50i nor a published evidence anchor');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_observation_fields SET method_version_id = %L WHERE method_version_id = %L AND field_key = ''fact''', _v2, b.rec_v),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50j nor a published observation-field definition');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_item_options SET item_id = %L WHERE id = %L', _i2, b.rec_o_yes),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50k nor a published option, whose owner is resolved through its item');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET method_version_id = %L WHERE id = %L', b.rec_v, _i2),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50l a draft item cannot be moved under the published version: the NEW owner is checked');
+  SET LOCAL ROLE service_role;
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET method_version_id = %L WHERE id = %L', _v2, b.rec_i1),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50m moving a published child into a draft is refused even as service_role');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_item_options SET item_id = %L WHERE id = %L', _i2, b.rec_o_yes),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.50n and so is moving a published option, as service_role');
+  RESET ROLE;
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.beskt_items WHERE method_version_id = b.rec_v) = 6
+    AND (SELECT count(*) FROM public.beskt_items WHERE method_version_id = _v2) = 1
+    AND (SELECT item_id FROM public.beskt_item_options WHERE id = b.rec_o_yes) = b.rec_i1,
+    'B3.50o every refused move left the published version and the draft exactly as they were');
 END $$;
 
--- The read contract.
+-- The read contract: governance and explicit internal QA only, whole
+-- documents only.
 DO $$
-DECLARE b bk%ROWTYPE; _doc jsonb; _n integer; _v2 uuid;
+DECLARE b bk%ROWTYPE; _doc jsonb; _n integer; _v2 uuid; _mine uuid;
 BEGIN
   SELECT * INTO b FROM bk;
+  _mine := b.scratch::uuid;
   SELECT id INTO _v2 FROM public.beskt_method_versions WHERE pack_id = b.rec_pack AND version_number = 2;
   -- Governance reader.
   PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
@@ -1374,21 +1686,61 @@ BEGIN
   PERFORM pg_temp.ok(
     NOT (_doc::text ~* '"(score|level|weight|threshold|total|rank|pass_fail|suitability|credibility|truthfulness|recommendation|risk|verdict|startable|start_route|case_id|candidate)[a-z_]*":'),
     'B3.52 the document carries no score, level, risk, verdict, candidate or start key');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM jsonb_array_elements(_doc -> 'prompts') p
+      WHERE p ->> 'peace_stage' = 'evaluation' AND p ->> 'addressee' = 'interviewer'
+        AND p ->> 'prompt_kind' = 'interviewer_self_review') = 1
+    AND NOT ((_doc -> 'prompts')::text ~* '"(score|verdict|rating|grade)[a-z_]*":'),
+    'B3.52b PEACE Evaluation is present as one interviewer-addressed self-review step and carries no candidate score or verdict');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
     format('SELECT public.beskt_published_method(%L)', _v2),
     'BESKT_NOT_PUBLISHED', 'B3.53 the read contract excludes drafts even for a governance reader');
-  -- An active member of an active employer: recruitment support yes,
-  -- security vetting no, drafts no.
-  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000d1');
+  -- Explicit internal QA: published recruitment-support content, whole
+  -- documents within its access classes, nothing else.
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000fa');
   SET LOCAL ROLE authenticated;
   _doc := public.beskt_published_method(b.rec_v);
   SELECT count(*) INTO _n FROM public.beskt_readable_published_versions() l WHERE l.method_version_id = b.rec_v;
   RESET ROLE; PERFORM pg_temp.nobody();
   PERFORM pg_temp.ok(_doc ->> 'method_version_id' = b.rec_v::text AND _n = 1,
-    'B3.54 an active employer member reads the published recruitment-support method and finds it in the listing');
-  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000d1',
+    'B3.54 an explicit internal-QA grantee reads the published recruitment-support method and finds it in the listing');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000fa');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_resolve_item_sequence(b.rec_v, b.rec_p1, 'recruitment_support', '{}');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n > 0, 'B3.54b the internal-QA grantee can resolve routing over it');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000fa',
+    format('SELECT public.beskt_published_method(%L)', _mine),
+    'BESKT_NOT_AUTHORISED', 'B3.54c a published recruitment-support method with one item for the authorised security function is refused WHOLE to internal QA, never returned in part');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000fa');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_readable_published_versions() l WHERE l.method_version_id = _mine;
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 0, 'B3.54d and it is absent from the internal-QA listing');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  _doc := public.beskt_published_method(_mine);
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_doc ->> 'method_version_id' = _mine::text
+    AND (SELECT count(*) FROM jsonb_array_elements(_doc -> 'sections') s, jsonb_array_elements(s -> 'items') i
+          WHERE i ->> 'access_class' = 'authorised_security_function') = 1,
+    'B3.54e a governance reader reads that same document whole, security-function item included');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000fa',
     format('SELECT public.beskt_published_method(%L)', _v2),
-    'BESKT_NOT_AUTHORISED', 'B3.55 an employer member cannot read a draft');
+    'BESKT_NOT_AUTHORISED', 'B3.55 internal QA cannot read a draft');
+  -- Everyone else: an active member of an active employer, a member of a
+  -- suspended employer, a candidate, a roleless user, anon.
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000d1',
+    format('SELECT public.beskt_published_method(%L)', b.rec_v),
+    'BESKT_NOT_AUTHORISED', 'B3.55b an ordinary active employer member reads nothing: synthetic_internal_only means no employer principal');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000d1');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_readable_published_versions();
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 0, 'B3.55c the listing is empty for an employer member');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000d1',
+    format('SELECT * FROM public.beskt_resolve_item_sequence(%L, %L, ''recruitment_support'', ''{}'')', b.rec_v, b.rec_p1),
+    'BESKT_NOT_AUTHORISED', 'B3.55d nor can an employer member resolve routing');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000d2',
     format('SELECT public.beskt_published_method(%L)', b.rec_v),
     'BESKT_NOT_AUTHORISED', 'B3.56 a member of a suspended employer reads nothing');
@@ -1398,18 +1750,30 @@ BEGIN
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000f1',
     format('SELECT public.beskt_published_method(%L)', b.rec_v),
     'BESKT_NOT_AUTHORISED', 'B3.58 an ordinary signed-in user reads nothing');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000f1');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_readable_published_versions();
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 0, 'B3.58b and lists nothing');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000fa');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_items;
+  _n := _n + (SELECT count(*) FROM public.beskt_method_versions) + (SELECT count(*) FROM public.beskt_governance_grants);
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 0, 'B3.58c internal QA reads zero rows through the tables: the read contract is the only door');
   PERFORM pg_temp.must_fail_as('anon', NULL,
     format('SELECT public.beskt_published_method(%L)', b.rec_v),
     'permission denied', 'B3.59 anon cannot even execute the read');
 END $$;
 
 -- Publish the security-vetting method (as a separate author-independent
--- publisher) and prove it is unreadable to employer principals and that
+-- publisher) and prove it is unreadable outside governance and that
 -- suspended / retired versions are never selectable.
 DO $$
-DECLARE b bk%ROWTYPE; _n integer; _r jsonb;
+DECLARE b bk%ROWTYPE; _n integer; _r jsonb; _v2 uuid;
 BEGIN
   SELECT * INTO b FROM bk;
+  SELECT id INTO _v2 FROM public.beskt_method_versions WHERE pack_id = b.rec_pack AND version_number = 2;
   PERFORM pg_temp.submit(b.sv_v);
   PERFORM pg_temp.approve_all(b.sv_v);
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e2',
@@ -1417,17 +1781,22 @@ BEGIN
     'BESKT_NOT_PUBLISHER', 'B3.60 a second editor is refused before authorship is even considered');
   _r := pg_temp.publish(b.sv_v);
   PERFORM pg_temp.ok(_r ->> 'content_status' = 'published', 'B3.61 the security-vetting method publishes with its three requirements and five gates');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_activation_requirements SET method_version_id = %L WHERE method_version_id = %L AND requirement_key = ''lawful_basis_recorded''', _v2, b.sv_v),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.61b a published activation requirement cannot be moved under a draft');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000d1',
     format('SELECT public.beskt_published_method(%L)', b.sv_v),
-    'BESKT_NOT_AUTHORISED', 'B3.62 an active employer member cannot read published security-vetting content: no authorised security owner relationship exists in PR 2, so it fails closed');
-  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000d1');
+    'BESKT_NOT_AUTHORISED', 'B3.62 an active employer member cannot read published security-vetting content');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000fa',
+    format('SELECT public.beskt_published_method(%L)', b.sv_v),
+    'BESKT_NOT_AUTHORISED', 'B3.62b nor can internal QA: no authorised security function exists in PR 2, so it fails closed');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000fa');
   SET LOCAL ROLE authenticated;
   SELECT count(*) INTO _n FROM public.beskt_readable_published_versions() WHERE mode = 'security_vetting_support';
   RESET ROLE; PERFORM pg_temp.nobody();
-  PERFORM pg_temp.ok(_n = 0, 'B3.63 the listing never names security-vetting content to an employer member');
-  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000d1',
+  PERFORM pg_temp.ok(_n = 0, 'B3.63 the listing never names security-vetting content to internal QA');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000fa',
     format('SELECT * FROM public.beskt_resolve_item_sequence(%L, %L, ''recruitment_support'', ''{}'')', b.sv_v, b.sv_p1),
-    'BESKT_NOT_AUTHORISED', 'B3.64 nor can routing be resolved over it by an employer member');
+    'BESKT_NOT_AUTHORISED', 'B3.64 nor can routing be resolved over it by internal QA, not even in recruitment-support mode');
   PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
   SET LOCAL ROLE authenticated;
   SELECT count(*) INTO _n FROM public.beskt_readable_published_versions();
@@ -1453,6 +1822,8 @@ BEGIN
     'BESKT_NOT_PUBLISHED', 'B3.69 the read contract refuses a suspended version');
   PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET wording_sv = ''x'' WHERE id = %L', b.sv_i7),
     'BESKT_PUBLISHED_IMMUTABLE', 'B3.70 a suspended version''s children stay frozen');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET method_version_id = %L WHERE id = %L', _v2, b.sv_i8),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.70b and cannot be moved under a draft');
   PERFORM set_config('beskt.governed_transition', 'on', true);
   PERFORM pg_temp.must_fail(
     format('UPDATE public.beskt_method_versions SET content_status = ''published'', revision = revision + 1 WHERE id = %L', b.sv_v),
@@ -1466,6 +1837,8 @@ BEGIN
     AND (SELECT count(*) FROM public.beskt_method_versions WHERE id = b.sv_v) = 1
     AND (SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = b.sv_v) = 5,
     'B3.72 a retired version remains, with its reviews and history, for governed integrity only');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_prompts SET method_version_id = %L WHERE method_version_id = %L AND prompt_key = ''p2_open''', _v2, b.sv_v),
+    'BESKT_PUBLISHED_IMMUTABLE', 'B3.72b a retired version''s children cannot be moved under a draft either');
   PERFORM set_config('beskt.governed_transition', 'on', true);
   PERFORM pg_temp.must_fail(
     format('UPDATE public.beskt_method_versions SET content_status = ''suspended'', revision = revision + 1 WHERE id = %L', b.sv_v),
@@ -1563,7 +1936,7 @@ DO $$
 DECLARE b bk%ROWTYPE; _t text; _fn record; _n integer; _v2 uuid;
   _tables text[] := ARRAY['beskt_method_versions', 'beskt_exposure_profiles', 'beskt_activation_requirements',
     'beskt_sections', 'beskt_items', 'beskt_item_options', 'beskt_prompts', 'beskt_routing_rules',
-    'beskt_evidence_anchors', 'beskt_observation_fields', 'beskt_method_reviews', 'beskt_method_events'];
+    'beskt_evidence_anchors', 'beskt_observation_fields', 'beskt_governance_grants', 'beskt_method_reviews', 'beskt_method_events'];
 BEGIN
   SELECT * INTO b FROM bk;
   SELECT id INTO _v2 FROM public.beskt_method_versions WHERE pack_id = b.rec_pack AND version_number = 2;
@@ -1572,10 +1945,10 @@ BEGIN
   -- anon or PUBLIC privilege, no write policy, no unconditional policy.
   PERFORM pg_temp.ok(
     (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'beskt\_%' ESCAPE '\') = 12
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'beskt\_%' ESCAPE '\') = 13
     AND (SELECT bool_and(c.relrowsecurity AND c.relforcerowsecurity) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
           WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'beskt\_%' ESCAPE '\'),
-    'B5.1 all twelve BESKT tables carry both ENABLE and FORCE ROW LEVEL SECURITY');
+    'B5.1 all thirteen BESKT tables carry both ENABLE and FORCE ROW LEVEL SECURITY');
   FOREACH _t IN ARRAY _tables LOOP
     IF has_table_privilege('authenticated', 'public.' || _t, 'INSERT') OR has_table_privilege('authenticated', 'public.' || _t, 'UPDATE')
        OR has_table_privilege('authenticated', 'public.' || _t, 'DELETE') OR has_table_privilege('authenticated', 'public.' || _t, 'TRUNCATE')
@@ -1587,7 +1960,7 @@ BEGIN
   PERFORM pg_temp.ok(
     (SELECT count(*) FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename LIKE 'beskt\_%' ESCAPE '\' AND p.cmd <> 'SELECT') = 0
     AND (SELECT count(*) FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename LIKE 'beskt\_%' ESCAPE '\' AND (p.qual IS NULL OR p.qual = 'true')) = 0
-    AND (SELECT count(*) FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename LIKE 'beskt\_%' ESCAPE '\') = 12,
+    AND (SELECT count(*) FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename LIKE 'beskt\_%' ESCAPE '\') = 13,
     'B5.3 exactly one governance-reader SELECT policy per table; no write policy, no unconditional policy');
 
   -- Direct DML as authenticated is refused on every table, whatever the role.
@@ -1647,7 +2020,13 @@ BEGIN
     'BESKT_NOT_AUTHORISED', 'B5.17 a roleless user cannot even read blocking reasons');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000f1',
     format('SELECT public.beskt_canonical_content(%L)', _v2),
-    'permission denied', 'B5.18 the canonical content text is internal');
+    'permission denied', 'B5.18 the canonical content document is internal');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
+    format('SELECT public.beskt_method_content_hash(%L)', _v2),
+    'permission denied', 'B5.18b the content hash function is internal even for an editor: a reader learns the hash from the read contract, never by probing ids');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000fa',
+    format('SELECT public.beskt_method_content_hash(%L)', b.rec_v),
+    'permission denied', 'B5.18c and for internal QA');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
     format('SELECT public.beskt_record_event(%L, NULL, ''published'', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ''{}'')', b.rec_pack),
     'permission denied', 'B5.19 the event writer is internal even for an editor');
@@ -1740,5 +2119,241 @@ BEGIN
     'B5.35 no BESKT table references a job, application, candidate, case, session or employer');
 END $$;
 
-\echo '    ok  BESKT governed-content assertions passed'
+
+-- The shared identity table: an editor keeps the Phase 1 direct DML on
+-- role-interview packs and gains none on BESKT method identities.
+DO $$
+DECLARE b bk%ROWTYPE; _n integer; _role uuid; _pack uuid; _name text;
+BEGIN
+  SELECT * INTO b FROM bk;
+  SELECT r.id INTO _role FROM public.scp_roles r WHERE r.slug = 'security-guard-se';
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
+    $q$INSERT INTO public.scp_interview_packs (slug, role_id, pack_kind, name_sv, purpose_sv)
+       VALUES ('b5-direct-beskt', NULL, 'beskt_method', 'Direkt', 'Syfte')$q$,
+    'row-level security', 'B5.36 an editor cannot mint a BESKT method identity by direct INSERT: the policy is scoped to role_interview');
+  _name := (SELECT name_sv FROM public.scp_interview_packs WHERE id = b.rec_pack);
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  UPDATE public.scp_interview_packs SET name_sv = 'Omdöpt direkt' WHERE id = b.rec_pack;
+  GET DIAGNOSTICS _n = ROW_COUNT;
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 0 AND (SELECT name_sv FROM public.scp_interview_packs WHERE id = b.rec_pack) = _name,
+    'B5.37 an editor''s direct UPDATE of a BESKT method identity touches zero rows: the metadata is unchanged');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  INSERT INTO public.scp_interview_packs (slug, role_id, name_sv, purpose_sv)
+  VALUES ('b5-direct-role-pack', _role, 'Direkt rollpaket', 'Syfte') RETURNING id INTO _pack;
+  UPDATE public.scp_interview_packs SET name_sv = 'Direkt rollpaket 2' WHERE id = _pack;
+  GET DIAGNOSTICS _n = ROW_COUNT;
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 1 AND (SELECT pack_kind FROM public.scp_interview_packs WHERE id = _pack) = 'role_interview',
+    'B5.38 the same editor still inserts and updates a role-interview pack directly, exactly as in Phase 1');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
+    format('UPDATE public.scp_interview_packs SET pack_kind = ''beskt_method'', role_id = NULL WHERE id = %L', _pack),
+    'SCP_INTERVIEW_PACK_KIND_IMMUTABLE', 'B5.39 an editor cannot turn a role-interview pack into a BESKT method');
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.scp_interview_packs SET name_sv = ''Omdöpt av ägaren'' WHERE id = %L', b.rec_pack),
+    'BESKT_IDENTITY_IMMUTABLE', 'B5.40 a BESKT method''s metadata is immutable outside the BESKT contract, even for the database owner');
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.scp_interview_packs SET slug = ''renamed-slug'' WHERE id = %L', b.rec_pack),
+    'BESKT_IDENTITY_IMMUTABLE', 'B5.41 so is its slug');
+  SET LOCAL ROLE service_role;
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.scp_interview_packs SET purpose_sv = ''x'' WHERE id = %L', b.rec_pack),
+    'BESKT_IDENTITY_IMMUTABLE', 'B5.42 and service_role is refused too (trigger, not policy)');
+  RESET ROLE;
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'scp_interview_packs'
+      AND p.policyname IN ('scp_interview_packs_editor_insert', 'scp_interview_packs_editor_update')
+      AND coalesce(p.qual, '') || coalesce(p.with_check, '') LIKE '%pack_kind = ''role_interview''%') = 2
+    AND (SELECT with_check FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_interview_packs'
+          AND policyname = 'scp_interview_packs_editor_update') LIKE '%pack_kind = ''role_interview''%',
+    'B5.43 both editor policies carry the role_interview scope, the UPDATE policy in USING and WITH CHECK');
+END $$;
+
+DO $$ BEGIN RAISE NOTICE 'GROUP B6 — gate-specific governance grants'; END $$;
+
+DO $$
+DECLARE b bk%ROWTYPE; _gv uuid; _r jsonb; _g uuid; _g2 uuid; _op uuid := gen_random_uuid(); _n integer; _h text; _rev integer; _cycle integer;
+BEGIN
+  SELECT * INTO b FROM bk;
+  _gv := pg_temp.build_method('beskt-synthetic-grants', 'recruitment_support', 'b2000000-0000-4000-8000-0000000000e1', false);
+  PERFORM pg_temp.submit(_gv);
+
+  -- The mapping is server-owned and auditable.
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.beskt_governance_grants g JOIN bk_grants k ON k.grant_id = g.id
+      WHERE g.granted_by = 'b2000000-0000-4000-8000-0000000000ad' AND g.source_reference = 'synthetic test mandate'
+        AND g.valid_from <= now() AND g.revoked_at IS NULL) = 7,
+    'B6.1 every planted grant records who granted it, from when, and on what authority');
+  PERFORM pg_temp.ok(
+    NOT has_table_privilege('authenticated', 'public.beskt_governance_grants', 'INSERT')
+    AND NOT has_table_privilege('authenticated', 'public.beskt_governance_grants', 'UPDATE')
+    AND NOT has_table_privilege('authenticated', 'public.beskt_governance_grants', 'DELETE')
+    AND (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = 'beskt_governance_grants' AND cmd <> 'SELECT') = 0
+    AND (SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid = 'public.beskt_governance_grants'::regclass),
+    'B6.2 no client role can write the mapping: ENABLE + FORCE RLS, no write privilege, no write policy');
+
+  -- Allowed gate, wrong gate.
+  _r := pg_temp.review(_gv, 'b2000000-0000-4000-8000-0000000000a1', 'personnel_security');
+  PERFORM pg_temp.ok(_r ->> 'decision' = 'approved', 'B6.3 a reviewer approves the gate they hold');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a2',
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''recruitment'', ''approved'', ''x'')', _gv, pg_temp.revision_of(_gv)),
+    'BESKT_GATE_NOT_GRANTED', 'B6.4 the senior-HR holder cannot approve the recruitment gate');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a2',
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''recruitment'', ''rejected'', ''x'')', _gv, pg_temp.revision_of(_gv)),
+    'BESKT_GATE_NOT_GRANTED', 'B6.5 nor reject it: a rejection is a gate decision too');
+
+  -- Revoked.
+  SELECT grant_id INTO _g FROM bk_grants WHERE who = 'b2000000-0000-4000-8000-0000000000a3' AND kind = 'recruitment';
+  _r := pg_temp.revoke_grant(_g);
+  PERFORM pg_temp.ok(
+    (SELECT revoked_by = 'b2000000-0000-4000-8000-0000000000ad' AND revoke_reason = 'Återkallad för test.' AND revoked_at IS NOT NULL
+       FROM public.beskt_governance_grants WHERE id = _g),
+    'B6.6 a revocation records who, when and why, and leaves the grant as history');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a3',
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''recruitment'', ''approved'', ''x'')', _gv, pg_temp.revision_of(_gv)),
+    'BESKT_GATE_NOT_GRANTED', 'B6.7 a revoked grant opens no gate');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+    format('SELECT public.beskt_revoke_governance(gen_random_uuid(), %L, ''igen'')', _g),
+    'BESKT_GRANT_ALREADY_REVOKED', 'B6.8 a grant is revoked once');
+  _g2 := pg_temp.grant_kind('b2000000-0000-4000-8000-0000000000a3', 'recruitment');
+  _r := pg_temp.review(_gv, 'b2000000-0000-4000-8000-0000000000a3', 'recruitment');
+  PERFORM pg_temp.ok(_r ->> 'decision' = 'approved' AND _g2 <> _g,
+    'B6.9 a fresh grant is a new row with its own provenance, and reopens the gate');
+
+  -- Expired and not-yet-valid grants, planted directly as the owner.
+  INSERT INTO public.scp_content_roles (user_id, role) VALUES ('b2000000-0000-4000-8000-0000000000e2', 'reviewer') ON CONFLICT DO NOTHING;
+  INSERT INTO public.beskt_governance_grants (user_id, grant_kind, granted_by, valid_from, valid_until, source_reference)
+  VALUES ('b2000000-0000-4000-8000-0000000000e2', 'senior_hr', 'b2000000-0000-4000-8000-0000000000ad', now() - interval '2 days', now() - interval '1 day', 'expired synthetic mandate');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e2',
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', _gv, pg_temp.revision_of(_gv)),
+    'BESKT_GATE_NOT_GRANTED', 'B6.10 an expired grant opens no gate');
+  INSERT INTO public.beskt_governance_grants (user_id, grant_kind, granted_by, valid_from, source_reference)
+  VALUES ('b2000000-0000-4000-8000-0000000000e2', 'senior_hr', 'b2000000-0000-4000-8000-0000000000ad', now() + interval '1 day', 'future synthetic mandate');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e2',
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', _gv, pg_temp.revision_of(_gv)),
+    'BESKT_GATE_NOT_GRANTED', 'B6.11 a grant that is not yet valid opens no gate');
+  PERFORM pg_temp.must_fail(
+    $q$INSERT INTO public.beskt_governance_grants (user_id, grant_kind, granted_by, valid_from, valid_until, source_reference)
+       VALUES ('b2000000-0000-4000-8000-0000000000e2', 'senior_hr', NULL, now(), now() - interval '1 second', 'x')$q$,
+    'beskt_governance_grants_validity_check', 'B6.12 a validity window cannot end before it starts');
+  DELETE FROM public.scp_content_roles WHERE user_id = 'b2000000-0000-4000-8000-0000000000e2' AND role = 'reviewer';
+
+  -- Self-review with a grant, and the internal-QA grant is not a gate.
+  _g := pg_temp.grant_kind('b2000000-0000-4000-8000-0000000000e1', 'senior_hr');
+  INSERT INTO public.scp_content_roles (user_id, role) VALUES ('b2000000-0000-4000-8000-0000000000e1', 'reviewer') ON CONFLICT DO NOTHING;
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', _gv, pg_temp.revision_of(_gv)),
+    'BESKT_SELF_REVIEW', 'B6.13 a granted gate never lets the author review their own method');
+  DELETE FROM public.scp_content_roles WHERE user_id = 'b2000000-0000-4000-8000-0000000000e1' AND role = 'reviewer';
+  PERFORM pg_temp.revoke_grant(_g);
+  INSERT INTO public.scp_content_roles (user_id, role) VALUES ('b2000000-0000-4000-8000-0000000000fa', 'reviewer') ON CONFLICT DO NOTHING;
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000fa',
+    format('SELECT public.beskt_record_review(gen_random_uuid(), %L, %s, ''senior_hr'', ''approved'', ''x'')', _gv, pg_temp.revision_of(_gv)),
+    'BESKT_GATE_NOT_GRANTED', 'B6.14 the internal-QA grant is a read grant, never a review gate');
+  DELETE FROM public.scp_content_roles WHERE user_id = 'b2000000-0000-4000-8000-0000000000fa' AND role = 'reviewer';
+
+  -- A service-role writer cannot record a gate nobody granted: the check is
+  -- in the trigger as well as the RPC.
+  SELECT content_hash, revision, review_cycle INTO _h, _rev, _cycle FROM public.beskt_method_versions WHERE id = _gv;
+  SET LOCAL ROLE service_role;
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
+             VALUES (%L, 'recruitment', 'approved', 'b2000000-0000-4000-8000-0000000000a2', 'x', %L, %s, %s)$q$, _gv, _h, _rev, _cycle),
+    'BESKT_GATE_NOT_GRANTED', 'B6.15 service_role cannot insert an approval for a gate the reviewer does not hold');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
+             VALUES (%L, 'senior_hr', 'approved', 'b2000000-0000-4000-8000-0000000000f1', 'x', %L, %s, %s)$q$, _gv, _h, _rev, _cycle),
+    'BESKT_GATE_NOT_GRANTED', 'B6.16 nor for a user who holds nothing at all');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
+             VALUES (%L, 'senior_hr', 'approved', 'b2000000-0000-4000-8000-0000000000a2', 'x', %L, %s, %s)$q$, _gv, _h, _rev, _cycle - 1),
+    'BESKT_REVIEW_HASH_MISMATCH', 'B6.17 nor an approval bound to an earlier review cycle');
+  PERFORM pg_temp.must_fail(
+    'SELECT public.beskt_grant_governance(gen_random_uuid(), ''b2000000-0000-4000-8000-0000000000f1'', ''senior_hr'', ''x'')',
+    'BESKT_NOT_AUTHENTICATED', 'B6.18 service_role without a signed-in platform admin cannot grant');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_governance_grants SET grant_kind = ''senior_hr'' WHERE id = %L', _g2),
+    'BESKT_GRANT_APPEND_ONLY', 'B6.19 service_role cannot rewrite a grant');
+  RESET ROLE;
+
+  -- Only a platform admin grants or revokes.
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
+    'SELECT public.beskt_grant_governance(gen_random_uuid(), ''b2000000-0000-4000-8000-0000000000e1'', ''senior_hr'', ''x'')',
+    'BESKT_NOT_PLATFORM_ADMIN', 'B6.20 an editor cannot grant themselves a gate');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a1',
+    'SELECT public.beskt_grant_governance(gen_random_uuid(), ''b2000000-0000-4000-8000-0000000000a1'', ''senior_hr'', ''x'')',
+    'BESKT_NOT_PLATFORM_ADMIN', 'B6.21 nor can a reviewer');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000a1',
+    format('SELECT public.beskt_revoke_governance(gen_random_uuid(), %L, ''x'')', _g2),
+    'BESKT_NOT_PLATFORM_ADMIN', 'B6.22 nor revoke');
+  PERFORM pg_temp.must_fail_as('anon', NULL,
+    'SELECT public.beskt_grant_governance(gen_random_uuid(), ''b2000000-0000-4000-8000-0000000000a1'', ''senior_hr'', ''x'')',
+    'permission denied', 'B6.23 anon cannot execute the grant RPC');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+    'SELECT public.beskt_grant_governance(gen_random_uuid(), ''b2000000-0000-4000-8000-0000000000a1'', ''product'', ''x'')',
+    'BESKT_UNKNOWN_GATE', 'B6.24 the grant vocabulary is exactly the five gates and internal_qa');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+    'SELECT public.beskt_grant_governance(gen_random_uuid(), ''b2000000-0000-4000-8000-0000000000a1'', ''senior_hr'', ''  '')',
+    'BESKT_PROVENANCE_REQUIRED', 'B6.25 a grant without provenance is refused');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+    'SELECT public.beskt_grant_governance(gen_random_uuid(), ''00000000-0000-4000-8000-000000000000'', ''senior_hr'', ''x'')',
+    'BESKT_USER_NOT_FOUND', 'B6.26 a grant names an existing user');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+    format('SELECT public.beskt_revoke_governance(gen_random_uuid(), %L, ''  '')', _g2),
+    'BESKT_REASON_REQUIRED', 'B6.27 a revocation carries a written reason');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+    'SELECT public.beskt_revoke_governance(gen_random_uuid(), ''00000000-0000-4000-8000-000000000000'', ''x'')',
+    'BESKT_GRANT_NOT_FOUND', 'B6.28 a revocation names an existing grant');
+
+  -- Append-only against the owner.
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_governance_grants SET user_id = ''b2000000-0000-4000-8000-0000000000f1'' WHERE id = %L', _g2),
+    'BESKT_GRANT_APPEND_ONLY', 'B6.29 a grant cannot be re-assigned, even by the database owner');
+  PERFORM pg_temp.must_fail(format('DELETE FROM public.beskt_governance_grants WHERE id = %L', _g2),
+    'BESKT_GRANT_APPEND_ONLY', 'B6.30 a grant is never deleted');
+  PERFORM pg_temp.must_fail(format('UPDATE public.beskt_governance_grants SET revoked_at = NULL, revoked_by = NULL, revoke_reason = NULL WHERE id = %L',
+      (SELECT grant_id FROM bk_grants WHERE who = 'b2000000-0000-4000-8000-0000000000a3')),
+    'BESKT_GRANT_APPEND_ONLY', 'B6.31 a revocation is never undone');
+
+  -- Idempotent grants: replay answers with the same grant, one row.
+  SELECT count(*) INTO _n FROM public.beskt_governance_grants;
+  _g := pg_temp.grant_kind('b2000000-0000-4000-8000-0000000000f1', 'senior_hr', NULL, _op);
+  PERFORM pg_temp.ok(pg_temp.grant_kind('b2000000-0000-4000-8000-0000000000f1', 'senior_hr', NULL, _op) = _g
+    AND (SELECT count(*) FROM public.beskt_governance_grants) = _n + 1,
+    'B6.32 replaying a grant operation returns the original grant and writes nothing');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+    format('SELECT public.beskt_grant_governance(%L, ''b2000000-0000-4000-8000-0000000000f1'', ''recruitment'', ''synthetic test mandate'')', _op),
+    'BESKT_OPERATION_PAYLOAD_MISMATCH', 'B6.33 the same operation id with another gate is refused');
+  _op := gen_random_uuid();
+  _r := pg_temp.revoke_grant(_g, _op);
+  PERFORM pg_temp.ok(pg_temp.revoke_grant(_g, _op) ->> 'grant_id' = _g::text
+    AND (SELECT revoke_operation_id FROM public.beskt_governance_grants WHERE id = _g) = _op,
+    'B6.34 replaying a revocation answers with the receipt');
+
+  -- Reads follow the grant: revoking internal QA closes the read contract.
+  PERFORM pg_temp.revoke_grant((SELECT grant_id FROM bk_grants WHERE who = 'b2000000-0000-4000-8000-0000000000fa'));
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000fa',
+    format('SELECT public.beskt_published_method(%L)', b.rec_v),
+    'BESKT_NOT_AUTHORISED', 'B6.35 a revoked internal-QA grant reads nothing any more');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000fa');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_readable_published_versions();
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 0, 'B6.36 and lists nothing');
+
+  -- Grants are readable by governance only.
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000a1');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_governance_grants;
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n > 0, 'B6.37 a governance reader can audit the mapping');
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000d1');
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO _n FROM public.beskt_governance_grants;
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_n = 0, 'B6.38 an employer member sees no grant');
+  PERFORM pg_temp.must_fail_as('anon', NULL, 'SELECT count(*) FROM public.beskt_governance_grants', 'permission denied', 'B6.39 anon cannot read the mapping');
+END $$;
+
+\echo '    BESKT governed-content assertions passed'
 ROLLBACK;

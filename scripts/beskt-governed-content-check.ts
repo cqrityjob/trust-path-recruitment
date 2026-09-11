@@ -55,13 +55,38 @@ const TABLES = [
   "beskt_routing_rules",
   "beskt_evidence_anchors",
   "beskt_observation_fields",
+  "beskt_governance_grants",
   "beskt_method_reviews",
   "beskt_method_events",
 ] as const;
 
 const CHILD_TABLES = TABLES.filter(
-  (t) => !["beskt_method_versions", "beskt_method_reviews", "beskt_method_events"].includes(t),
+  (t) =>
+    ![
+      "beskt_method_versions",
+      "beskt_governance_grants",
+      "beskt_method_reviews",
+      "beskt_method_events",
+    ].includes(t),
 );
+
+/** Every parent / owning key per child family; each is immutable. */
+const PARENT_KEYS: Record<string, readonly string[]> = {
+  beskt_exposure_profiles: ["method_version_id"],
+  beskt_activation_requirements: ["method_version_id"],
+  beskt_sections: ["method_version_id"],
+  beskt_items: ["method_version_id", "section_id", "exposure_profile_id"],
+  beskt_item_options: ["item_id"],
+  beskt_prompts: ["method_version_id", "exposure_profile_id", "item_id"],
+  beskt_routing_rules: [
+    "method_version_id",
+    "source_item_id",
+    "target_item_id",
+    "condition_option_id",
+  ],
+  beskt_evidence_anchors: ["method_version_id"],
+  beskt_observation_fields: ["method_version_id"],
+};
 
 const RESCOPED_OLD_FLOW = [
   "scp_iv_case_start_basis",
@@ -91,7 +116,10 @@ const INTERNAL_FUNCTIONS = [
   "beskt_operation_begin",
   "beskt_lock_version",
   "beskt_canonical_content",
+  "beskt_method_content_hash",
 ] as const;
+
+const ADMIN_MUTATIONS = ["beskt_grant_governance", "beskt_revoke_governance"] as const;
 
 const ANCHOR_COMPONENTS = [
   "DEFINITION",
@@ -246,7 +274,7 @@ check(
 const createdTables = [...sql.matchAll(/CREATE TABLE public\.([a-z_]+) \(/g)].map((m) => m[1]);
 check(
   createdTables.length === TABLES.length && TABLES.every((t) => createdTables.includes(t)),
-  `BESKT-DB-TABLES: exactly the twelve BESKT tables are created (${createdTables.length} found)`,
+  `BESKT-DB-TABLES: exactly the thirteen BESKT tables are created (${createdTables.length} found)`,
 );
 check(
   createdTables
@@ -454,24 +482,69 @@ check(
   );
 }
 
-// ---- hash -------------------------------------------------------------------
+// ---- hash: a typed canonical jsonb document, unambiguous by construction ----
 {
   const hash = functionBody(functionText(sql, "beskt_method_content_hash") ?? "");
-  const canon = functionBody(functionText(sql, "beskt_canonical_content") ?? "");
+  const canonFn = functionText(sql, "beskt_canonical_content") ?? "";
+  const canon = functionBody(canonFn);
   check(
-    /encode\(sha256\(convert_to\(public\.beskt_canonical_content\(_method_version_id\), 'UTF8'\)\), 'hex'\)/.test(
+    /encode\(sha256\(convert_to\(public\.beskt_canonical_content\(_method_version_id\)::text, 'UTF8'\)\), 'hex'\)/.test(
       hash,
     ) && !/md5\(|digest\(/.test(hash),
-    "BESKT-DB-HASH: the content hash is core sha256 over the canonical UTF-8 bytes, never md5 or pgcrypto",
-  );
-  const aggs = [...canon.matchAll(/string_agg\(/g)].length;
-  const ordered = [...canon.matchAll(/string_agg\([\s\S]*?E'\\n' ORDER BY /g)].length;
-  check(
-    aggs >= 9 && ordered === aggs && CHILD_TABLES.every((t) => canon.includes(`public.${t}`)),
-    "BESKT-DB-HASH: every governed table is in the canonical representation and every aggregate is explicitly ordered on stable keys",
+    "BESKT-DB-HASH: the content hash is core sha256 over the canonical jsonb text in UTF-8, never md5 or pgcrypto",
   );
   check(
-    !/content_status|revision|published_at|created_by|validation_label/.test(canon),
+    /RETURNS jsonb/.test(functionHeader(canonFn)) &&
+      /'schema', 'beskt_canonical_content_v2'/.test(canon) &&
+      !/string_agg\(|concat_ws\(|E'\\n'|E'\\x1f'|\|\| *'\|' *\|\|/.test(canon),
+    "BESKT-DB-HASH: the canonical representation is a typed jsonb document with named fields, never a delimited string (no string_agg, concat_ws or delimiter literals)",
+  );
+  const aggs = [...canon.matchAll(/jsonb_agg\(jsonb_build_object\(/g)].length;
+  const ordered = [
+    ...canon.matchAll(/jsonb_agg\(jsonb_build_object\([\s\S]*?\)\s+ORDER BY [a-z]+\.[a-z_]+/g),
+  ].length;
+  check(
+    aggs === 9 &&
+      ordered === aggs &&
+      CHILD_TABLES.every((t) => canon.includes(`public.${t}`)) &&
+      [
+        "'exposure_profiles'",
+        "'activation_requirements'",
+        "'sections'",
+        "'items'",
+        "'options'",
+        "'prompts'",
+        "'routing_rules'",
+        "'evidence_anchors'",
+        "'observation_fields'",
+      ].every((k) => canon.includes(`${k}, coalesce((`)),
+    "BESKT-DB-HASH: every governed table is a named array in the canonical document and every aggregate is explicitly ordered on stable keys",
+  );
+  check(
+    /'prohibited_inferences', public\.beskt_sorted_array\(i\.prohibited_inferences\)/.test(canon) &&
+      /'permitted_probe_bases', public\.beskt_sorted_array\(pr\.permitted_probe_bases\)/.test(
+        canon,
+      ) &&
+      /'prohibited_inferences', public\.beskt_sorted_array\(a\.prohibited_inferences\)/.test(
+        canon,
+      ) &&
+      /SELECT coalesce\(\(SELECT jsonb_agg\(x ORDER BY x\) FROM unnest\(_arr\) AS u\(x\)\), '\[\]'::jsonb\);/.test(
+        functionBody(functionText(sql, "beskt_sorted_array") ?? ""),
+      ),
+    "BESKT-DB-HASH: set-valued fields are sorted JSON arrays, so element order cannot change the hash",
+  );
+  check(
+    /'wording_sv', i\.wording_sv, 'wording_en', i\.wording_en/.test(canon) &&
+      /'item_key', i\.item_key, 'section_key', s\.section_key, 'profile_key', p\.profile_key/.test(
+        canon,
+      ) &&
+      /'condition_option_key', o\.option_key, 'condition_boolean', r\.condition_boolean/.test(
+        canon,
+      ),
+    "BESKT-DB-HASH: every value sits under its own named key (a NULL is an explicit JSON null, an empty string stays a string)",
+  );
+  check(
+    !/content_status|revision|published_at|created_by|validation_label|review_cycle/.test(canon),
     "BESKT-DB-HASH: lifecycle columns are excluded from the canonical representation",
   );
 }
@@ -526,11 +599,11 @@ check(
     requiredReviews.length === 5 &&
       gates.length === 5 &&
       gates.every((g, i) => g === requiredReviews[i]) &&
-      /FOREACH _gate IN ARRAY _review_gates LOOP[\s\S]*?rv\.gate = _gate\s+AND rv\.decision = 'approved'\s+AND rv\.content_hash_at_review = _hash\)/.test(
+      /FOREACH _gate IN ARRAY _review_gates LOOP[\s\S]*?rv\.gate = _gate\s+AND rv\.decision = 'approved'\s+AND rv\.content_hash_at_review = _hash\s+AND rv\.review_cycle_at_review = _v\.review_cycle\)/.test(
         v,
       ) &&
       /_hash := public\.beskt_method_content_hash\(_method_version_id\);\s+FOREACH _gate/.test(v),
-    "BESKT-DB-REVIEW-GATES: all five PR 1 reviews must be approved at the CURRENT content hash",
+    "BESKT-DB-REVIEW-GATES: all five PR 1 reviews must be approved at the CURRENT content hash in the CURRENT review cycle",
   );
   const tableGates = /gate text NOT NULL CHECK \(gate IN \(([\s\S]*?)\)\)/.exec(sql);
   const tableGateList = tableGates
@@ -599,6 +672,32 @@ check(
   );
 }
 
+// ---- PEACE: Evaluation is an interviewer-oriented governed step ---------------
+{
+  check(
+    /peace_stage text NOT NULL CHECK \(peace_stage IN \(\s*'planning', 'engage_explain', 'account', 'closure', 'evaluation'\)\)/.test(
+      sql,
+    ) &&
+      /CONSTRAINT beskt_prompts_interviewer_stages_check\s+CHECK \(\(peace_stage IN \('planning', 'evaluation'\)\) = \(addressee = 'interviewer'\)\)/.test(
+        sql,
+      ) &&
+      /WHEN 'interviewer_self_review'\s+THEN 'evaluation'/.test(
+        functionBody(functionText(sql, "beskt_prompt_stage") ?? ""),
+      ) &&
+      /'closure_next_step', 'interviewer_self_review'\];/.test(
+        functionBody(functionText(sql, "beskt_method_validate") ?? ""),
+      ),
+    "BESKT-DB-PEACE-EVALUATION: Evaluation is a fixed PEACE stage addressed to the interviewer only, bound to interviewer_self_review, and required by the validator",
+  );
+  check(
+    !tableColumns(sql, "beskt_prompts").some((c) => FORBIDDEN_COLUMN.test(c)) &&
+      !/'evaluation'[^;]*?(score|verdict|rating|grade)/i.test(
+        functionBody(functionText(sql, "beskt_published_method") ?? ""),
+      ),
+    "BESKT-DB-PEACE-EVALUATION: the evaluation step carries no candidate score, verdict, rating or grade",
+  );
+}
+
 // ---- routing: structure and neutrality ---------------------------------------
 {
   check(
@@ -638,6 +737,26 @@ check(
   );
 }
 
+// ---- the shared identity table: no direct-DML bypass ----------------------------
+{
+  check(
+    /CREATE POLICY scp_interview_packs_editor_insert ON public\.scp_interview_packs\s+FOR INSERT TO authenticated\s+WITH CHECK \(public\.scp_interview_can_edit\(auth\.uid\(\)\) AND pack_kind = 'role_interview'\);/.test(
+      sql,
+    ) &&
+      /CREATE POLICY scp_interview_packs_editor_update ON public\.scp_interview_packs\s+FOR UPDATE TO authenticated\s+USING \(public\.scp_interview_can_edit\(auth\.uid\(\)\) AND pack_kind = 'role_interview'\)\s+WITH CHECK \(public\.scp_interview_can_edit\(auth\.uid\(\)\) AND pack_kind = 'role_interview'\);/.test(
+        sql,
+      ),
+    "BESKT-DB-PACK-DML: the editor INSERT and UPDATE policies on scp_interview_packs are scoped to role_interview in USING and WITH CHECK",
+  );
+  const kind = functionBody(functionText(sql, "beskt_guard_pack_kind_immutable") ?? "");
+  check(
+    /IF OLD\.pack_kind = 'beskt_method'\s+AND coalesce\(current_setting\('beskt\.governed_transition', true\), ''\) <> 'on'\s+AND \(to_jsonb\(NEW\) - 'created_at'\) IS DISTINCT FROM \(to_jsonb\(OLD\) - 'created_at'\) THEN\s+RAISE EXCEPTION\s+'BESKT_IDENTITY_IMMUTABLE/.test(
+      kind,
+    ),
+    "BESKT-DB-PACK-DML: a BESKT method identity is immutable outside the governed contract, for every caller",
+  );
+}
+
 // ---- guards: cross-version, mode escalation, immutability, append-only ------
 {
   const g = functionBody(functionText(sql, "beskt_guard_child_row") ?? "");
@@ -659,6 +778,66 @@ check(
     ),
     "BESKT-DB-MODE-ESCALATION: the child guard refuses a recruitment-support rule that reaches or reads security-vetting content at write time",
   );
+  check(
+    /IF _item_profile IS DISTINCT FROM NEW\.exposure_profile_id THEN\s+RAISE EXCEPTION 'BESKT_CROSS_PROFILE_REFERENCE/.test(
+      g,
+    ) &&
+      /IF _src\.exposure_profile_id IS DISTINCT FROM _tgt\.exposure_profile_id THEN\s+RAISE EXCEPTION 'BESKT_CROSS_PROFILE_REFERENCE/.test(
+        g,
+      ) &&
+      /SELECT i\.method_version_id, i\.exposure_profile_id INTO _other, _item_profile\s+FROM public\.beskt_items i WHERE i\.id = NEW\.item_id;/.test(
+        g,
+      ),
+    "BESKT-DB-CROSS-PROFILE: the child guard refuses a prompt probing another profile's item and a routing rule connecting two profiles",
+  );
+  const v = functionBody(functionText(sql, "beskt_method_validate") ?? "");
+  check(
+    /SELECT 'PROMPT_CROSS_PROFILE', 'blocking',[\s\S]{0,400}?i\.exposure_profile_id <> pr\.exposure_profile_id/.test(
+      v,
+    ) &&
+      /SELECT 'ROUTE_CROSS_PROFILE', 'blocking',[\s\S]{0,400}?si\.exposure_profile_id <> ti\.exposure_profile_id/.test(
+        v,
+      ),
+    "BESKT-DB-CROSS-PROFILE: the validator re-proves on the stored graph that no prompt and no rule crosses an exposure profile",
+  );
+  const r = functionBody(functionText(sql, "beskt_resolve_item_sequence") ?? "");
+  check(
+    /IF _r\.source_profile <> _exposure_profile_id OR _r\.target_profile <> _exposure_profile_id\s+OR NOT _r\.target_permitted THEN\s+CONTINUE;/.test(
+      r,
+    ) &&
+      /JOIN public\.beskt_items si ON si\.id = r\.source_item_id\s+WHERE r\.method_version_id = _method_version_id\s+AND r\.target_item_id = i\.id AND r\.action = 'show'\s+AND si\.exposure_profile_id = _exposure_profile_id/.test(
+        r,
+      ),
+    "BESKT-DB-CROSS-PROFILE: the resolver neither fires a cross-profile rule nor lets one hide an item from its own profile's unconditional set",
+  );
+  check(
+    /IF TG_OP = 'UPDATE' THEN _old_version_id := OLD\.method_version_id; END IF;/.test(g) &&
+      /SELECT i\.method_version_id INTO _old_version_id FROM public\.beskt_items i WHERE i\.id = OLD\.item_id;/.test(
+        g,
+      ) &&
+      /IF TG_OP = 'UPDATE' AND _old_version_id IS DISTINCT FROM _version_id THEN\s+SELECT v\.content_status INTO _status FROM public\.beskt_method_versions v WHERE v\.id = _old_version_id;\s+IF _status IS NULL OR _status NOT IN \('draft', 'in_review'\) THEN\s+RAISE EXCEPTION\s+'BESKT_PUBLISHED_IMMUTABLE/.test(
+        g,
+      ),
+    "BESKT-DB-REPARENT: on UPDATE the child guard resolves the OLD owner as well as the NEW one and refuses to move a child away from a frozen version",
+  );
+  for (const t of CHILD_TABLES) {
+    const keys = PARENT_KEYS[t] ?? [];
+    const ok = keys.every((k) => {
+      if (k === "method_version_id") {
+        return /ELSIF NEW\.method_version_id IS DISTINCT FROM OLD\.method_version_id THEN\s+RAISE EXCEPTION 'BESKT_PARENT_IMMUTABLE/.test(
+          g,
+        );
+      }
+      const re = new RegExp(
+        `IF TG_TABLE_NAME = '${t}' THEN[\\s\\S]{0,400}?NEW\\.${k} IS DISTINCT FROM OLD\\.${k}[\\s\\S]{0,300}?RAISE EXCEPTION 'BESKT_PARENT_IMMUTABLE`,
+      );
+      return re.test(g);
+    });
+    check(
+      ok,
+      `BESKT-DB-REPARENT: ${t} keeps ${keys.join(", ")} immutable on UPDATE (BESKT_PARENT_IMMUTABLE)`,
+    );
+  }
   check(
     /IF _status NOT IN \('draft', 'in_review'\) THEN\s+RAISE EXCEPTION\s+'BESKT_PUBLISHED_IMMUTABLE/.test(
       g,
@@ -714,13 +893,79 @@ check(
       /AND r\.gate <> NEW\.gate\) THEN\s+RAISE EXCEPTION\s+'BESKT_REVIEW_ONE_GATE_PER_REVIEWER/.test(
         rv,
       ) &&
-      /IF NEW\.content_hash_at_review IS DISTINCT FROM _v\.content_hash\s+OR NEW\.revision_at_review IS DISTINCT FROM _v\.revision THEN/.test(
+      /IF NEW\.content_hash_at_review IS DISTINCT FROM _v\.content_hash\s+OR NEW\.revision_at_review IS DISTINCT FROM _v\.revision\s+OR NEW\.review_cycle_at_review IS DISTINCT FROM _v\.review_cycle THEN/.test(
         rv,
       ) &&
       /IF _v\.created_by IS NOT NULL AND _v\.created_by = auth\.uid\(\) THEN\s+RAISE EXCEPTION 'BESKT_PUBLISHER_IS_AUTHOR/.test(
         functionBody(functionText(sql, "beskt_publish_version") ?? ""),
       ),
-    "BESKT-DB-REVIEW-GATES: separation of duties — no self-review, one gate per reviewer per hash, hash-bound reviews, author never publishes",
+    "BESKT-DB-REVIEW-GATES: separation of duties — no self-review, one gate per reviewer per hash, hash- and cycle-bound reviews, author never publishes",
+  );
+  check(
+    /IF NOT public\.beskt_holds_grant\(NEW\.reviewer_id, NEW\.gate\) THEN\s+RAISE EXCEPTION\s+'BESKT_GATE_NOT_GRANTED/.test(
+      rv,
+    ) &&
+      /IF NOT public\.beskt_holds_grant\(auth\.uid\(\), _gate\) THEN\s+RAISE EXCEPTION 'BESKT_GATE_NOT_GRANTED/.test(
+        functionBody(functionText(sql, "beskt_record_review") ?? ""),
+      ),
+    "BESKT-DB-GATE-GRANTS: a review gate is recorded only by a holder of an active grant for exactly that gate, checked in the RPC and again in the row trigger",
+  );
+  const holds = functionBody(functionText(sql, "beskt_holds_grant") ?? "");
+  check(
+    /g\.user_id = _user_id\s+AND g\.grant_kind = _grant_kind\s+AND g\.revoked_at IS NULL\s+AND g\.valid_from <= now\(\)\s+AND \(g\.valid_until IS NULL OR g\.valid_until > now\(\)\)/.test(
+      holds,
+    ),
+    "BESKT-DB-GATE-GRANTS: a grant counts only for its exact kind, unrevoked, inside its validity window",
+  );
+  const grantsDdl = sql.slice(
+    sql.indexOf("CREATE TABLE public.beskt_governance_grants ("),
+    sql.indexOf(");", sql.indexOf("CREATE TABLE public.beskt_governance_grants (")),
+  );
+  check(
+    /grant_kind text NOT NULL CHECK \(grant_kind IN \(\s*'personnel_security', 'senior_hr', 'recruitment',\s*'employment_privacy_legal', 'data_protection',\s*'internal_qa'\)\)/.test(
+      grantsDdl,
+    ) &&
+      /granted_by uuid REFERENCES auth\.users\(id\)/.test(grantsDdl) &&
+      /valid_from timestamptz NOT NULL DEFAULT now\(\)/.test(grantsDdl) &&
+      /source_reference text NOT NULL CHECK \(length\(btrim\(source_reference\)\) > 0\)/.test(
+        grantsDdl,
+      ) &&
+      /revoked_at timestamptz,\s+revoked_by uuid REFERENCES auth\.users\(id\)/.test(grantsDdl) &&
+      /CHECK \(valid_until IS NULL OR valid_until > valid_from\)/.test(grantsDdl),
+    "BESKT-DB-GATE-GRANTS: the mapping records exact gate, grantor, provenance, validity and revocation, server-side",
+  );
+  const ga = functionBody(functionText(sql, "beskt_guard_grants_append_only") ?? "");
+  check(
+    /CREATE TRIGGER beskt_governance_grants_append_only\s+BEFORE UPDATE OR DELETE ON public\.beskt_governance_grants/.test(
+      sql,
+    ) &&
+      /IF TG_OP = 'DELETE' THEN\s+RAISE EXCEPTION 'BESKT_GRANT_APPEND_ONLY/.test(ga) &&
+      /IF OLD\.revoked_at IS NOT NULL\s+OR NEW\.revoked_at IS NULL\s+OR \(to_jsonb\(NEW\) - 'revoked_at' - 'revoked_by' - 'revoke_reason' - 'revoke_operation_id'\)\s+IS DISTINCT FROM \(to_jsonb\(OLD\) - 'revoked_at' - 'revoked_by' - 'revoke_reason' - 'revoke_operation_id'\) THEN\s+RAISE EXCEPTION 'BESKT_GRANT_APPEND_ONLY/.test(
+        ga,
+      ),
+    "BESKT-DB-GATE-GRANTS: a grant is never deleted or rewritten; the only permitted change is one revocation",
+  );
+  for (const m of ADMIN_MUTATIONS) {
+    const body = functionBody(functionText(sql, m) ?? "");
+    check(
+      /IF auth\.uid\(\) IS NULL THEN\s+RAISE EXCEPTION 'BESKT_NOT_AUTHENTICATED/.test(body) &&
+        /IF NOT public\.is_platform_admin\(auth\.uid\(\)\) THEN\s+RAISE EXCEPTION 'BESKT_NOT_PLATFORM_ADMIN/.test(
+          body,
+        ) &&
+        /pg_advisory_xact_lock\(hashtextextended\('beskt_operation:' \|\| _operation_id::text, 0\)\)/.test(
+          body,
+        ) &&
+        /BESKT_OPERATION_ACTOR_MISMATCH/.test(body) &&
+        /BESKT_OPERATION_PAYLOAD_MISMATCH/.test(body),
+      `BESKT-DB-GATE-GRANTS: ${m} is a platform-admin-only, idempotent governed mutation`,
+    );
+  }
+  check(
+    /IF NEW\.grant_kind <> OLD\.grant_kind/.test(ga) === false &&
+      !/GRANT (INSERT|UPDATE|DELETE|ALL) ON public\.beskt_governance_grants TO authenticated/.test(
+        sql,
+      ),
+    "BESKT-DB-GATE-GRANTS: no client role holds a write privilege on the mapping",
   );
 }
 
@@ -789,6 +1034,36 @@ check(
       `BESKT-DB-STALE-REVISION: ${m} takes an operation id${REVISION_MUTATIONS.includes(m) ? " and a required expected revision" : ""}`,
     );
   }
+  const create = functionBody(functionText(sql, "beskt_create_method_version") ?? "");
+  const methodLockAt = create.indexOf(
+    "PERFORM pg_advisory_xact_lock(hashtextextended('beskt_method:' || _pack_id::text, 0));",
+  );
+  const openCheckAt = create.indexOf(
+    "WHERE v.pack_id = _pack_id AND v.content_status IN ('draft', 'in_review')) THEN",
+  );
+  check(
+    methodLockAt > 0 && openCheckAt > methodLockAt && /BESKT_OPEN_VERSION_EXISTS/.test(create),
+    "BESKT-DB-ONE-OPEN-VERSION: the per-method advisory lock is taken BEFORE the open-version check, so two concurrent creates serialise",
+  );
+  check(
+    /CREATE UNIQUE INDEX beskt_method_versions_one_open_idx\s+ON public\.beskt_method_versions \(pack_id\)\s+WHERE content_status IN \('draft', 'in_review'\);/.test(
+      sql,
+    ),
+    "BESKT-DB-ONE-OPEN-VERSION: a partial unique index on the table is the last line of defence",
+  );
+  const submit = functionBody(functionText(sql, "beskt_submit_for_review") ?? "");
+  check(
+    /review_cycle = _v\.review_cycle \+ 1/.test(submit) &&
+      /review_cycle integer NOT NULL DEFAULT 0 CHECK \(review_cycle >= 0\)/.test(sql) &&
+      /review_cycle_at_review integer NOT NULL/.test(sql) &&
+      /revision_at_review, review_cycle_at_review\)\s+VALUES \(_method_version_id, _gate, _decision, auth\.uid\(\), btrim\(_rationale\), _hash, _v\.revision, _v\.review_cycle\)/.test(
+        functionBody(functionText(sql, "beskt_record_review") ?? ""),
+      ) &&
+      /IF _decision = 'rejected' THEN\s+_new_status := 'draft';/.test(
+        functionBody(functionText(sql, "beskt_record_review") ?? ""),
+      ),
+    "BESKT-DB-REVIEW-CYCLE: every submission opens a new review cycle, every review records the cycle it belongs to, and a rejection ends the cycle",
+  );
   const publish = functionBody(functionText(sql, "beskt_publish_version") ?? "");
   const lockAt = publish.indexOf("beskt_lock_version(");
   const validateAt = publish.indexOf("FROM public.beskt_method_validate(_method_version_id, true)");
@@ -818,9 +1093,26 @@ check(
   const can = functionBody(functionText(sql, "beskt_can_read_version") ?? "");
   check(
     /AND v\.content_status = 'published'\s+AND v\.mode = 'recruitment_support'/.test(can) &&
-      /employer_is_active_status\(em\.employer_id\)/.test(can) &&
-      /scp_interview_can_read\(auth\.uid\(\)\)/.test(can),
-    "BESKT-DB-READ-CONTRACT: employer principals reach published recruitment-support content only; security-vetting content fails closed",
+      /public\.beskt_holds_grant\(auth\.uid\(\), 'internal_qa'\)/.test(can) &&
+      /scp_interview_can_read\(auth\.uid\(\)\)/.test(can) &&
+      !/employer_memberships|employer_is_active_status|employer_id|candidate/.test(can),
+    "BESKT-DB-READ-CONTRACT: synthetic_internal_only — governance readers and explicit internal-QA grantees only; no employer, candidate or roleless branch exists",
+  );
+  check(
+    /NOT EXISTS \(\s+SELECT 1 FROM public\.beskt_exposure_profiles p\s+WHERE p\.method_version_id = _method_version_id\s+AND NOT \(p\.access_class = ANY \(public\.beskt_reader_access_classes\(auth\.uid\(\)\)\)\)\)/.test(
+      can,
+    ) &&
+      /NOT EXISTS \(\s+SELECT 1 FROM public\.beskt_items i\s+WHERE i\.method_version_id = _method_version_id\s+AND NOT \(i\.access_class = ANY \(public\.beskt_reader_access_classes\(auth\.uid\(\)\)\)\)\)/.test(
+        can,
+      ),
+    "BESKT-DB-READ-CONTRACT: access_class is enforced on every profile and item of the document, so a document is never returned in part",
+  );
+  const classes = functionBody(functionText(sql, "beskt_reader_access_classes") ?? "");
+  check(
+    /WHEN public\.beskt_holds_grant\(_user_id, 'internal_qa'\) THEN\s+ARRAY\['recruiter', 'beskt_interviewer', 'independent_assessor', 'accountable_process_owner'\]/.test(
+      classes,
+    ) && /ELSE '\{\}'::text\[\]/.test(classes),
+    "BESKT-DB-READ-CONTRACT: internal QA never holds the authorised_security_function class; everyone else holds no class",
   );
   const pub = functionBody(functionText(sql, "beskt_published_method") ?? "");
   check(
@@ -856,11 +1148,36 @@ check(
 
 // ---- no application, hosted or deployment change -----------------------------
 {
-  const srcFiles = walk(join(ROOT, "src")).filter((f) => /\.(ts|tsx)$/.test(f));
+  const TYPES = join(ROOT, "src/integrations/supabase/types.ts");
+  const ROLE_PACKS = join(ROOT, "src/lib/interview-intelligence/role-packs.functions.ts");
+  const srcFiles = walk(join(ROOT, "src")).filter((f) => /\.(ts|tsx)$/.test(f) && f !== TYPES);
   const offenders = srcFiles.filter((f) => /\bbeskt_/i.test(read(f)));
   check(
     offenders.length === 0,
-    `BESKT-DB-NO-APP-CODE: no application file references the BESKT schema (${offenders.length} offender(s))`,
+    `BESKT-DB-NO-APP-CODE: no application file calls the BESKT schema; only the generated types describe it (${offenders.length} offender(s))`,
+  );
+  const types = read(TYPES);
+  check(
+    TABLES.every((t) => types.includes(`      ${t}: {`)) &&
+      /scp_interview_packs: \{\s+Row: \{[\s\S]*?pack_kind: string[\s\S]*?role_id: string \| null/.test(
+        types,
+      ) &&
+      [
+        "beskt_create_method",
+        "beskt_publish_version",
+        "beskt_published_method",
+        "beskt_readable_published_versions",
+        "beskt_grant_governance",
+        "beskt_revoke_governance",
+      ].every((f) => types.includes(`      ${f}: {`)),
+    "BESKT-DB-TYPES: the generated Supabase types carry pack_kind, the nullable role_id, every BESKT table and the BESKT RPCs",
+  );
+  const rolePacks = read(ROLE_PACKS);
+  check(
+    /\.from\("scp_interview_packs"\)\s+\.select\("id, slug, name_sv, name_en, purpose_sv, created_at"\)\s+\.not\("role_id", "is", null\)/.test(
+      rolePacks,
+    ),
+    "BESKT-DB-PACK-DML: listRolePacks() lists role-interview packs only (a BESKT method carries no canonical role)",
   );
   const fnDir = join(ROOT, "supabase/functions");
   const fnOffenders = existsSync(fnDir)
@@ -895,27 +1212,62 @@ check(
 {
   const suite = existsSync(SUITE) ? read(SUITE) : "";
   check(
-    ["GROUP B0", "GROUP B0b", "GROUP B1", "GROUP B2", "GROUP B3", "GROUP B4", "GROUP B5"].every(
-      (g) => suite.includes(g),
-    ) &&
+    [
+      "GROUP B0",
+      "GROUP B0b",
+      "GROUP B1",
+      "GROUP B2",
+      "GROUP B3",
+      "GROUP B4",
+      "GROUP B5",
+      "GROUP B6",
+    ].every((g) => suite.includes(g)) &&
       [
         "B0b.2",
         "B0b.11",
         "B1.7",
+        "B1.20",
+        "B1.32",
         "B2.24",
         "B2.25",
         "B2.40",
         "B2.48",
+        "B2.49c",
+        "B2.49d",
+        "B2.49f",
         "B2.51",
         "B2.56",
+        "B3.3c",
+        "B3.5b",
+        "B3.5d",
+        "B3.17",
+        "B3.17b",
         "B3.21",
         "B3.27",
+        "B3.30c",
+        "B3.30f",
+        "B3.50c",
+        "B3.50d",
+        "B3.50m",
+        "B3.52b",
+        "B3.54c",
+        "B3.55b",
         "B3.62",
         "B4.3",
         "B4.7",
         "B5.1",
+        "B5.18b",
         "B5.30",
+        "B5.36",
+        "B5.40",
+        "B6.4",
+        "B6.7",
+        "B6.10",
+        "B6.13",
+        "B6.15",
+        "B6.35",
       ].every((l) => suite.includes(l)) &&
+      !/\\echo[^\n]*ok {2}/.test(suite) &&
       /ROLLBACK;\s*$/.test(suite),
     "BESKT-DB-SUITE: the behaviour suite exists with every group and the material assertions, and rolls back",
   );
@@ -933,17 +1285,60 @@ check(
       db.includes('grep -q "BESKT_GOVERNED_CONTENT_ROLLBACK ok"') &&
       db.includes('grep -q "BESKT_GOVERNED_CONTENT_PROOF ok"') &&
       floor !== null &&
-      Number(floor[1]) >= 150,
+      Number(floor[1]) >= 380,
     "BESKT-DB-SUITE: db-test.sh runs the suite with a floor, applies the rollback file for real, reads its proof and re-applies the migration",
   );
+  const raceAt = db.indexOf('echo "==> Running BESKT one-open-version race"');
   check(
-    read(ROLLBACK_SUITE).includes("beskt_method_versions") &&
-      read(ROLLBACK_SUITE).includes("DROP COLUMN IF EXISTS pack_kind"),
-    "BESKT-DB-SUITE: the documented rollback procedure unwinds BESKT first",
+    raceAt > suiteAt &&
+      raceAt < rollbackAt &&
+      /psql -tAq -d "\$TEST_DB" -f "\$BGR_A" > \/tmp\/bgr_a\.out 2>&1 &/.test(db) &&
+      /SELECT pg_sleep\(3\);\s*COMMIT;\s*SQL\s+cat > "\$BGR_B"/.test(db) &&
+      db.includes('grep -q "BESKT_OPEN_VERSION_EXISTS" /tmp/bgr_b.out') &&
+      /if \[ "\$BGR_B_MS" -lt 1500 \]; then/.test(db) &&
+      db.includes('if [ "$BGR_COUNT" != "1" ]; then'),
+    "BESKT-DB-ONE-OPEN-VERSION: db-test.sh races two real sessions on one method and requires the second to wait, be refused, and leave exactly one version",
+  );
+  const rbSuite = read(ROLLBACK_SUITE);
+  check(
+    TABLES.every((t) => rbSuite.includes(`DROP TABLE IF EXISTS public.${t};`)) &&
+      rbSuite.includes(
+        "DROP FUNCTION IF EXISTS public.beskt_revoke_governance(uuid, uuid, text);",
+      ) &&
+      rbSuite.includes("DROP COLUMN IF EXISTS pack_kind") &&
+      !/DROP TABLE IF EXISTS public\.beskt_[a-z_]+\s+CASCADE;/.test(rbSuite),
+    "BESKT-DB-SUITE: the documented rollback procedure unwinds BESKT first, with the same drop set as the rollback file and no CASCADE",
   );
   const rb = existsSync(ROLLBACK) ? sqlOnly(read(ROLLBACK)) : "";
+  const rbDrops = TABLES.map((t) => rb.indexOf(`DROP TABLE IF EXISTS public.${t};`));
+  const rbOrder = [
+    "beskt_method_events",
+    "beskt_method_reviews",
+    "beskt_governance_grants",
+    "beskt_routing_rules",
+    "beskt_prompts",
+    "beskt_item_options",
+    "beskt_items",
+    "beskt_sections",
+    "beskt_observation_fields",
+    "beskt_evidence_anchors",
+    "beskt_activation_requirements",
+    "beskt_exposure_profiles",
+    "beskt_method_versions",
+  ].map((t) => rb.indexOf(`DROP TABLE IF EXISTS public.${t};`));
   check(
-    TABLES.every((t) => new RegExp(`DROP TABLE IF EXISTS public\\.${t}\\s+CASCADE;`).test(rb)) &&
+    rbDrops.every((i) => i > 0) &&
+      rbOrder.every((at, i) => i === 0 || at > rbOrder[i - 1]) &&
+      !/CASCADE;/.test(rb.replace(/--[^\n]*/g, "")) &&
+      /pg_depend/.test(rb) &&
+      /BESKT_ROLLBACK BLOCKED: catalogue objects outside the domain depend on it/.test(rb) &&
+      rb.indexOf(
+        "DROP POLICY IF EXISTS scp_interview_packs_editor_update ON public.scp_interview_packs;",
+      ) < rb.indexOf("ALTER TABLE public.scp_interview_packs DROP COLUMN IF EXISTS pack_kind;"),
+    "BESKT-DB-ROLLBACK: the rollback checks catalogue dependencies first, drops child-first in an explicit order without CASCADE, and restores the identity policies before dropping pack_kind",
+  );
+  check(
+    TABLES.every((t) => new RegExp(`DROP TABLE IF EXISTS public\\.${t};`).test(rb)) &&
       /ALTER TABLE public\.scp_interview_packs ALTER COLUMN role_id SET NOT NULL;/.test(rb) &&
       /ALTER TABLE public\.scp_interview_packs DROP COLUMN IF EXISTS pack_kind;/.test(rb) &&
       RESCOPED_OLD_FLOW.every((f) => {

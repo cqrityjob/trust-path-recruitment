@@ -2795,11 +2795,118 @@ if [ "$BG_RC" -ne 0 ]; then
   BG_FAILED=1
 else
   echo "    ok  ${BG_PASSED} BESKT governed-content assertions passed"
-  if [ "$BG_PASSED" -lt 190 ]; then
-    echo "FAIL: expected at least 190 BESKT governed-content assertions, only ${BG_PASSED} ran." >&2
+  if [ "$BG_PASSED" -lt 380 ]; then
+    echo "FAIL: expected at least 380 BESKT governed-content assertions, only ${BG_PASSED} ran." >&2
     echo "      A suite that silently stops running assertions is worse than one that fails." >&2
     BG_FAILED=1
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# One open version per method, under a REAL race: two sessions, two
+# operation ids, one method, genuinely in flight at once. Session A creates
+# the version and holds its transaction open; session B starts while A is
+# uncommitted, so a plain "is there an open version?" check would see none.
+# The per-method advisory lock is taken BEFORE that check, so B waits for A
+# to commit and is then refused with BESKT_OPEN_VERSION_EXISTS. Exactly one
+# version exists afterwards. The elapsed time of B proves it waited rather
+# than ran after A; a sequential imitation would answer in milliseconds.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT one-open-version race"
+BGR_FAILED=0
+BGR_PASSED=0
+BGR_EDITOR="b2000000-0000-4000-8000-00000000cc01"
+BGR_A="$(mktemp)"; BGR_B="$(mktemp)"
+
+set +e
+BGR_SETUP="$(psql -v ON_ERROR_STOP=1 -tAq -d "$TEST_DB" <<SQL 2>&1
+INSERT INTO auth.users (id, email) VALUES ('${BGR_EDITOR}', 'beskt-race-editor@test.local') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.scp_content_roles (user_id, role) VALUES ('${BGR_EDITOR}', 'editor') ON CONFLICT (user_id, role) DO NOTHING;
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${BGR_EDITOR}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${BGR_EDITOR}', true);
+SET LOCAL ROLE authenticated;
+SELECT 'PACK=' || (public.beskt_create_method(gen_random_uuid(), 'beskt-race-method', 'SYNTETISK racemetod', 'Syntetiskt testinnehåll. Inte en produktmetod.') ->> 'pack_id');
+COMMIT;
+SQL
+)"
+BGR_SETUP_RC=$?
+set -e
+BGR_PACK="$(echo "$BGR_SETUP" | grep -oE 'PACK=[0-9a-f-]{36}' | head -1 | cut -d= -f2)"
+if [ "$BGR_SETUP_RC" -ne 0 ] || [ -z "$BGR_PACK" ]; then
+  echo "FAIL: the BESKT race setup failed." >&2
+  echo "$BGR_SETUP" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  BGR_FAILED=1
+else
+  cat > "$BGR_A" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${BGR_EDITOR}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${BGR_EDITOR}', true);
+SET LOCAL ROLE authenticated;
+SELECT 'VID=' || (public.beskt_create_method_version(gen_random_uuid(), '${BGR_PACK}'::uuid, 'recruitment_support',
+  'synthetic-race', 'race-1', 'cqrity_design_hypothesis') ->> 'method_version_id') AS marked;
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+  cat > "$BGR_B" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${BGR_EDITOR}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${BGR_EDITOR}', true);
+SET LOCAL ROLE authenticated;
+SELECT 'VID=' || (public.beskt_create_method_version(gen_random_uuid(), '${BGR_PACK}'::uuid, 'recruitment_support',
+  'synthetic-race', 'race-2', 'cqrity_design_hypothesis') ->> 'method_version_id') AS marked;
+COMMIT;
+SQL
+
+  psql -tAq -d "$TEST_DB" -f "$BGR_A" > /tmp/bgr_a.out 2>&1 &
+  BGR_PID=$!
+  # Long enough for A to be inside its transaction, holding the method lock
+  # with its version inserted but uncommitted.
+  sleep 1
+  BGR_B_START="$(date +%s%N)"
+  psql -tAq -d "$TEST_DB" -f "$BGR_B" > /tmp/bgr_b.out 2>&1 || true
+  BGR_B_END="$(date +%s%N)"
+  wait "$BGR_PID" || true
+  BGR_B_MS=$(( (BGR_B_END - BGR_B_START) / 1000000 ))
+
+  BGR_COUNT="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.beskt_method_versions where pack_id = '${BGR_PACK}';")"
+  BGR_ID_A="$(grep -oE 'VID=[0-9a-f-]{36}' /tmp/bgr_a.out | head -1 | cut -d= -f2)"
+  BGR_ID_B="$(grep -oE 'VID=[0-9a-f-]{36}' /tmp/bgr_b.out | head -1 | cut -d= -f2)"
+
+  if [ -z "$BGR_ID_A" ]; then
+    echo "FAIL: session A did not create the first version." >&2
+    head -5 /tmp/bgr_a.out >&2
+    BGR_FAILED=1
+  else
+    echo "    ok  session A created the method's first open version and held its transaction"
+    BGR_PASSED=$(( BGR_PASSED + 1 ))
+  fi
+  if [ -n "$BGR_ID_B" ] || ! grep -q "BESKT_OPEN_VERSION_EXISTS" /tmp/bgr_b.out; then
+    echo "FAIL: session B was not refused with BESKT_OPEN_VERSION_EXISTS while A's version was uncommitted." >&2
+    head -5 /tmp/bgr_b.out >&2
+    BGR_FAILED=1
+  else
+    echo "    ok  session B, started while A was uncommitted, was refused with BESKT_OPEN_VERSION_EXISTS"
+    BGR_PASSED=$(( BGR_PASSED + 1 ))
+  fi
+  if [ "$BGR_B_MS" -lt 1500 ]; then
+    echo "FAIL: session B answered after ${BGR_B_MS} ms; it did not wait on the method lock, so this was not a race." >&2
+    BGR_FAILED=1
+  else
+    echo "    ok  session B waited ${BGR_B_MS} ms on the per-method lock taken before the open-version check"
+    BGR_PASSED=$(( BGR_PASSED + 1 ))
+  fi
+  if [ "$BGR_COUNT" != "1" ]; then
+    echo "FAIL: two concurrent version creations produced ${BGR_COUNT} versions, not 1." >&2
+    BGR_FAILED=1
+  else
+    echo "    ok  exactly one version exists for the method"
+    BGR_PASSED=$(( BGR_PASSED + 1 ))
+  fi
+fi
+rm -f "$BGR_A" "$BGR_B"
+if [ "$BGR_FAILED" -ne 0 ]; then
+  BG_FAILED=1
 fi
 
 # Applied for real, then the migration re-applied (-f, never -c "\i").
@@ -2828,6 +2935,13 @@ if [ "$BG_RE_RC" -ne 0 ] || ! echo "$BG_RE" | grep -q "BESKT_GOVERNED_CONTENT_PR
 else
   echo "    ok  and the BESKT migration re-applies cleanly over the rolled-back state"
 fi
+
+# The race fixture: the rollback above dropped its version with the domain
+# and deleted its identity; the planted principal goes too.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" <<SQL
+DELETE FROM public.scp_content_roles WHERE user_id = '${BGR_EDITOR}';
+DELETE FROM auth.users WHERE id = '${BGR_EDITOR}';
+SQL
 
 if [ "$BG_FAILED" -ne 0 ]; then
   suite_failed "BESKT governed content"
@@ -5852,5 +5966,6 @@ echo "              ${TWO_OPS_PASSED} two-operation first-merit race assertions,
 echo "              ${SPRC_PASSED} rollback correction assertions,"
 echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
               ${BI_PASSED} employer final-report basis assertions,
-              ${BG_PASSED} BESKT governed-content assertions"
+              ${BG_PASSED} BESKT governed-content assertions,
+              ${BGR_PASSED} BESKT one-open-version race assertions"
 echo "===================================================="

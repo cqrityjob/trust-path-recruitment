@@ -446,6 +446,806 @@ export type Database = {
         }
         Relationships: []
       }
+      beskt_activation_requirements: {
+        Row: {
+          id: string
+          method_version_id: string
+          requirement_key: string
+          satisfied_by_role: string
+          statement_en: string
+          statement_sv: string
+        }
+        Insert: {
+          id?: string
+          method_version_id: string
+          requirement_key: string
+          satisfied_by_role: string
+          statement_en: string
+          statement_sv: string
+        }
+        Update: {
+          id?: string
+          method_version_id?: string
+          requirement_key?: string
+          satisfied_by_role?: string
+          statement_en?: string
+          statement_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_activation_requirements_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_evidence_anchors: {
+        Row: {
+          counter_evidence_and_protective_factors_en: string | null
+          counter_evidence_and_protective_factors_sv: string | null
+          definition_en: string | null
+          definition_sv: string | null
+          evidence_state: string
+          exclusion_criteria_en: string | null
+          exclusion_criteria_sv: string | null
+          id: string
+          inclusion_criteria_en: string | null
+          inclusion_criteria_sv: string | null
+          method_version_id: string
+          prohibited_inferences: string[]
+          required_next_action: string | null
+          supporting_evidence_examples_en: string | null
+          supporting_evidence_examples_sv: string | null
+        }
+        Insert: {
+          counter_evidence_and_protective_factors_en?: string | null
+          counter_evidence_and_protective_factors_sv?: string | null
+          definition_en?: string | null
+          definition_sv?: string | null
+          evidence_state: string
+          exclusion_criteria_en?: string | null
+          exclusion_criteria_sv?: string | null
+          id?: string
+          inclusion_criteria_en?: string | null
+          inclusion_criteria_sv?: string | null
+          method_version_id: string
+          prohibited_inferences?: string[]
+          required_next_action?: string | null
+          supporting_evidence_examples_en?: string | null
+          supporting_evidence_examples_sv?: string | null
+        }
+        Update: {
+          counter_evidence_and_protective_factors_en?: string | null
+          counter_evidence_and_protective_factors_sv?: string | null
+          definition_en?: string | null
+          definition_sv?: string | null
+          evidence_state?: string
+          exclusion_criteria_en?: string | null
+          exclusion_criteria_sv?: string | null
+          id?: string
+          inclusion_criteria_en?: string | null
+          inclusion_criteria_sv?: string | null
+          method_version_id?: string
+          prohibited_inferences?: string[]
+          required_next_action?: string | null
+          supporting_evidence_examples_en?: string | null
+          supporting_evidence_examples_sv?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_evidence_anchors_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_exposure_profiles: {
+        Row: {
+          access_class: string
+          content_provenance: string
+          display_order: number
+          duties_en: string | null
+          duties_sv: string | null
+          exposure_area: string
+          id: string
+          jurisdiction_reference: string | null
+          lawful_basis_reference: string | null
+          method_version_id: string
+          owning_review_role: string
+          permitted_mode: string
+          profile_key: string
+          retention_class: string
+          role_relevance_rationale_en: string | null
+          role_relevance_rationale_sv: string | null
+          security_sensitive_role_attestation_reference: string | null
+          source_reference: string | null
+        }
+        Insert: {
+          access_class: string
+          content_provenance: string
+          display_order: number
+          duties_en?: string | null
+          duties_sv?: string | null
+          exposure_area: string
+          id?: string
+          jurisdiction_reference?: string | null
+          lawful_basis_reference?: string | null
+          method_version_id: string
+          owning_review_role: string
+          permitted_mode: string
+          profile_key: string
+          retention_class: string
+          role_relevance_rationale_en?: string | null
+          role_relevance_rationale_sv?: string | null
+          security_sensitive_role_attestation_reference?: string | null
+          source_reference?: string | null
+        }
+        Update: {
+          access_class?: string
+          content_provenance?: string
+          display_order?: number
+          duties_en?: string | null
+          duties_sv?: string | null
+          exposure_area?: string
+          id?: string
+          jurisdiction_reference?: string | null
+          lawful_basis_reference?: string | null
+          method_version_id?: string
+          owning_review_role?: string
+          permitted_mode?: string
+          profile_key?: string
+          retention_class?: string
+          role_relevance_rationale_en?: string | null
+          role_relevance_rationale_sv?: string | null
+          security_sensitive_role_attestation_reference?: string | null
+          source_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_exposure_profiles_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_governance_grants: {
+        Row: {
+          grant_kind: string
+          grant_operation_id: string | null
+          granted_at: string
+          granted_by: string | null
+          id: string
+          revoke_operation_id: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source_reference: string
+          user_id: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          grant_kind: string
+          grant_operation_id?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          revoke_operation_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          source_reference: string
+          user_id: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          grant_kind?: string
+          grant_operation_id?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          revoke_operation_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          source_reference?: string
+          user_id?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      beskt_item_options: {
+        Row: {
+          display_order: number
+          id: string
+          item_id: string
+          label_en: string | null
+          label_sv: string | null
+          option_key: string
+        }
+        Insert: {
+          display_order: number
+          id?: string
+          item_id: string
+          label_en?: string | null
+          label_sv?: string | null
+          option_key: string
+        }
+        Update: {
+          display_order?: number
+          id?: string
+          item_id?: string
+          label_en?: string | null
+          label_sv?: string | null
+          option_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_item_options_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_items: {
+        Row: {
+          access_class: string
+          answer_type: string
+          content_provenance: string
+          discuss_orally_allowed: boolean
+          display_order: number
+          exposure_profile_id: string
+          id: string
+          item_key: string
+          method_version_id: string
+          permitted_mode: string
+          phase: string
+          prohibited_inferences: string[]
+          purpose_en: string | null
+          purpose_sv: string | null
+          requiredness: string
+          section_id: string
+          sensitivity_class: string
+          source_reference: string | null
+          wording_en: string | null
+          wording_sv: string | null
+        }
+        Insert: {
+          access_class: string
+          answer_type: string
+          content_provenance: string
+          discuss_orally_allowed?: boolean
+          display_order: number
+          exposure_profile_id: string
+          id?: string
+          item_key: string
+          method_version_id: string
+          permitted_mode: string
+          phase: string
+          prohibited_inferences?: string[]
+          purpose_en?: string | null
+          purpose_sv?: string | null
+          requiredness: string
+          section_id: string
+          sensitivity_class: string
+          source_reference?: string | null
+          wording_en?: string | null
+          wording_sv?: string | null
+        }
+        Update: {
+          access_class?: string
+          answer_type?: string
+          content_provenance?: string
+          discuss_orally_allowed?: boolean
+          display_order?: number
+          exposure_profile_id?: string
+          id?: string
+          item_key?: string
+          method_version_id?: string
+          permitted_mode?: string
+          phase?: string
+          prohibited_inferences?: string[]
+          purpose_en?: string | null
+          purpose_sv?: string | null
+          requiredness?: string
+          section_id?: string
+          sensitivity_class?: string
+          source_reference?: string | null
+          wording_en?: string | null
+          wording_sv?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_items_exposure_profile_id_fkey"
+            columns: ["exposure_profile_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_exposure_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beskt_items_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beskt_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_method_events: {
+        Row: {
+          actor_id: string | null
+          at: string
+          content_hash: string | null
+          event: string
+          id: string
+          metadata: Json
+          method_version_id: string | null
+          new_status: string | null
+          operation_id: string | null
+          pack_id: string
+          previous_status: string | null
+          reason: string | null
+          request_hash: string | null
+          result: Json | null
+          revision: number | null
+          seq: number
+        }
+        Insert: {
+          actor_id?: string | null
+          at?: string
+          content_hash?: string | null
+          event: string
+          id?: string
+          metadata?: Json
+          method_version_id?: string | null
+          new_status?: string | null
+          operation_id?: string | null
+          pack_id: string
+          previous_status?: string | null
+          reason?: string | null
+          request_hash?: string | null
+          result?: Json | null
+          revision?: number | null
+          seq?: number
+        }
+        Update: {
+          actor_id?: string | null
+          at?: string
+          content_hash?: string | null
+          event?: string
+          id?: string
+          metadata?: Json
+          method_version_id?: string | null
+          new_status?: string | null
+          operation_id?: string | null
+          pack_id?: string
+          previous_status?: string | null
+          reason?: string | null
+          request_hash?: string | null
+          result?: Json | null
+          revision?: number | null
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_method_events_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beskt_method_events_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_method_reviews: {
+        Row: {
+          content_hash_at_review: string
+          decided_at: string
+          decision: string
+          gate: string
+          id: string
+          method_version_id: string
+          rationale: string
+          review_cycle_at_review: number
+          reviewer_id: string
+          revision_at_review: number
+        }
+        Insert: {
+          content_hash_at_review: string
+          decided_at?: string
+          decision: string
+          gate: string
+          id?: string
+          method_version_id: string
+          rationale: string
+          review_cycle_at_review: number
+          reviewer_id: string
+          revision_at_review: number
+        }
+        Update: {
+          content_hash_at_review?: string
+          decided_at?: string
+          decision?: string
+          gate?: string
+          id?: string
+          method_version_id?: string
+          rationale?: string
+          review_cycle_at_review?: number
+          reviewer_id?: string
+          revision_at_review?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_method_reviews_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_method_versions: {
+        Row: {
+          content_hash: string | null
+          content_hash_algorithm: string
+          content_provenance: string
+          content_status: string
+          created_at: string
+          created_by: string | null
+          id: string
+          locale_en: string
+          locale_sv: string
+          mode: string
+          pack_id: string
+          published_at: string | null
+          published_by: string | null
+          release_scope: string
+          retired_at: string | null
+          retired_by: string | null
+          retired_reason: string | null
+          review_cycle: number
+          revision: number
+          source_document_version: string
+          source_reference: string
+          summary_en: string | null
+          summary_sv: string | null
+          suspended_at: string | null
+          suspended_by: string | null
+          suspended_reason: string | null
+          updated_at: string
+          validation_label: string
+          version_number: number
+        }
+        Insert: {
+          content_hash?: string | null
+          content_hash_algorithm?: string
+          content_provenance: string
+          content_status?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          locale_en?: string
+          locale_sv?: string
+          mode: string
+          pack_id: string
+          published_at?: string | null
+          published_by?: string | null
+          release_scope?: string
+          retired_at?: string | null
+          retired_by?: string | null
+          retired_reason?: string | null
+          review_cycle?: number
+          revision?: number
+          source_document_version: string
+          source_reference: string
+          summary_en?: string | null
+          summary_sv?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
+          updated_at?: string
+          validation_label?: string
+          version_number: number
+        }
+        Update: {
+          content_hash?: string | null
+          content_hash_algorithm?: string
+          content_provenance?: string
+          content_status?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          locale_en?: string
+          locale_sv?: string
+          mode?: string
+          pack_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          release_scope?: string
+          retired_at?: string | null
+          retired_by?: string | null
+          retired_reason?: string | null
+          review_cycle?: number
+          revision?: number
+          source_document_version?: string
+          source_reference?: string
+          summary_en?: string | null
+          summary_sv?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
+          updated_at?: string
+          validation_label?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_method_versions_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_observation_fields: {
+        Row: {
+          definition_en: string | null
+          definition_sv: string | null
+          field_key: string
+          id: string
+          is_judgement: boolean
+          label_en: string | null
+          label_sv: string | null
+          method_version_id: string
+          ordinal: number
+          recorded_by: string
+        }
+        Insert: {
+          definition_en?: string | null
+          definition_sv?: string | null
+          field_key: string
+          id?: string
+          is_judgement: boolean
+          label_en?: string | null
+          label_sv?: string | null
+          method_version_id: string
+          ordinal: number
+          recorded_by: string
+        }
+        Update: {
+          definition_en?: string | null
+          definition_sv?: string | null
+          field_key?: string
+          id?: string
+          is_judgement?: boolean
+          label_en?: string | null
+          label_sv?: string | null
+          method_version_id?: string
+          ordinal?: number
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_observation_fields_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_prompts: {
+        Row: {
+          addressee: string
+          content_provenance: string
+          display_order: number
+          exposure_profile_id: string
+          id: string
+          item_id: string | null
+          method_version_id: string
+          peace_stage: string
+          permitted_mode: string
+          permitted_probe_bases: string[]
+          prompt_key: string
+          prompt_kind: string
+          question_form: string
+          source_reference: string | null
+          wording_en: string | null
+          wording_sv: string | null
+        }
+        Insert: {
+          addressee: string
+          content_provenance: string
+          display_order: number
+          exposure_profile_id: string
+          id?: string
+          item_id?: string | null
+          method_version_id: string
+          peace_stage: string
+          permitted_mode: string
+          permitted_probe_bases?: string[]
+          prompt_key: string
+          prompt_kind: string
+          question_form: string
+          source_reference?: string | null
+          wording_en?: string | null
+          wording_sv?: string | null
+        }
+        Update: {
+          addressee?: string
+          content_provenance?: string
+          display_order?: number
+          exposure_profile_id?: string
+          id?: string
+          item_id?: string | null
+          method_version_id?: string
+          peace_stage?: string
+          permitted_mode?: string
+          permitted_probe_bases?: string[]
+          prompt_key?: string
+          prompt_kind?: string
+          question_form?: string
+          source_reference?: string | null
+          wording_en?: string | null
+          wording_sv?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_prompts_exposure_profile_id_fkey"
+            columns: ["exposure_profile_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_exposure_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beskt_prompts_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beskt_prompts_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_routing_rules: {
+        Row: {
+          action: string
+          applies_mode: string
+          condition_boolean: boolean | null
+          condition_kind: string
+          condition_option_id: string | null
+          evaluation_order: number
+          id: string
+          method_version_id: string
+          rule_key: string
+          source_item_id: string
+          target_item_id: string
+        }
+        Insert: {
+          action: string
+          applies_mode: string
+          condition_boolean?: boolean | null
+          condition_kind: string
+          condition_option_id?: string | null
+          evaluation_order: number
+          id?: string
+          method_version_id: string
+          rule_key: string
+          source_item_id: string
+          target_item_id: string
+        }
+        Update: {
+          action?: string
+          applies_mode?: string
+          condition_boolean?: boolean | null
+          condition_kind?: string
+          condition_option_id?: string | null
+          evaluation_order?: number
+          id?: string
+          method_version_id?: string
+          rule_key?: string
+          source_item_id?: string
+          target_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_routing_rules_condition_option_id_fkey"
+            columns: ["condition_option_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_item_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beskt_routing_rules_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beskt_routing_rules_source_item_id_fkey"
+            columns: ["source_item_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beskt_routing_rules_target_item_id_fkey"
+            columns: ["target_item_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beskt_sections: {
+        Row: {
+          display_order: number
+          id: string
+          method_version_id: string
+          phase: string
+          section_key: string
+          title_en: string | null
+          title_sv: string | null
+        }
+        Insert: {
+          display_order: number
+          id?: string
+          method_version_id: string
+          phase: string
+          section_key: string
+          title_en?: string | null
+          title_sv?: string | null
+        }
+        Update: {
+          display_order?: number
+          id?: string
+          method_version_id?: string
+          phase?: string
+          section_key?: string
+          title_en?: string | null
+          title_sv?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beskt_sections_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beta_feedback: {
         Row: {
           category: string
@@ -8157,8 +8957,9 @@ export type Database = {
           id: string
           name_en: string | null
           name_sv: string
+          pack_kind: string
           purpose_sv: string
-          role_id: string
+          role_id: string | null
           slug: string
         }
         Insert: {
@@ -8167,8 +8968,9 @@ export type Database = {
           id?: string
           name_en?: string | null
           name_sv: string
+          pack_kind?: string
           purpose_sv: string
-          role_id: string
+          role_id?: string | null
           slug: string
         }
         Update: {
@@ -8177,8 +8979,9 @@ export type Database = {
           id?: string
           name_en?: string | null
           name_sv?: string
+          pack_kind?: string
           purpose_sv?: string
-          role_id?: string
+          role_id?: string | null
           slug?: string
         }
         Relationships: [
@@ -13696,6 +14499,234 @@ export type Database = {
         }[]
       }
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
+      beskt_can_read_version: {
+        Args: { _method_version_id: string }
+        Returns: boolean
+      }
+      beskt_canonical_content: {
+        Args: { _method_version_id: string }
+        Returns: Json
+      }
+      beskt_create_method: {
+        Args: {
+          _name_en?: string
+          _name_sv: string
+          _operation_id: string
+          _purpose_sv: string
+          _slug: string
+        }
+        Returns: Json
+      }
+      beskt_create_method_version: {
+        Args: {
+          _content_provenance: string
+          _mode: string
+          _operation_id: string
+          _pack_id: string
+          _source_document_version: string
+          _source_reference: string
+          _summary_en?: string
+          _summary_sv?: string
+        }
+        Returns: Json
+      }
+      beskt_grant_governance: {
+        Args: {
+          _grant_kind: string
+          _operation_id: string
+          _source_reference: string
+          _user_id: string
+          _valid_until?: string
+        }
+        Returns: Json
+      }
+      beskt_holds_grant: {
+        Args: { _grant_kind: string; _user_id: string }
+        Returns: boolean
+      }
+      beskt_lock_version: {
+        Args: { _expected_revision: number; _method_version_id: string }
+        Returns: {
+          content_hash: string | null
+          content_hash_algorithm: string
+          content_provenance: string
+          content_status: string
+          created_at: string
+          created_by: string | null
+          id: string
+          locale_en: string
+          locale_sv: string
+          mode: string
+          pack_id: string
+          published_at: string | null
+          published_by: string | null
+          release_scope: string
+          retired_at: string | null
+          retired_by: string | null
+          retired_reason: string | null
+          review_cycle: number
+          revision: number
+          source_document_version: string
+          source_reference: string
+          summary_en: string | null
+          summary_sv: string | null
+          suspended_at: string | null
+          suspended_by: string | null
+          suspended_reason: string | null
+          updated_at: string
+          validation_label: string
+          version_number: number
+        }
+      }
+      beskt_method_content_hash: {
+        Args: { _method_version_id: string }
+        Returns: string
+      }
+      beskt_method_validate: {
+        Args: { _method_version_id: string; _require_reviews?: boolean }
+        Returns: {
+          code: string
+          message: string
+          severity: string
+        }[]
+      }
+      beskt_operation_begin: {
+        Args: { _operation_id: string; _request_hash: string }
+        Returns: Json
+      }
+      beskt_prompt_stage: {
+        Args: { _prompt_kind: string }
+        Returns: string
+      }
+      beskt_publish_version: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _reason?: string
+        }
+        Returns: Json
+      }
+      beskt_published_method: {
+        Args: { _method_version_id: string }
+        Returns: Json
+      }
+      beskt_readable_published_versions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          content_hash: string
+          method_version_id: string
+          mode: string
+          name_en: string
+          name_sv: string
+          pack_id: string
+          pack_slug: string
+          release_scope: string
+          validation_label: string
+          version_number: number
+        }[]
+      }
+      beskt_reader_access_classes: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
+      beskt_record_event: {
+        Args: {
+          _content_hash: string
+          _event: string
+          _metadata?: Json
+          _method_version_id: string
+          _new_status: string
+          _operation_id: string
+          _pack_id: string
+          _previous_status: string
+          _reason: string
+          _request_hash: string
+          _result: Json
+          _revision: number
+        }
+        Returns: string
+      }
+      beskt_record_review: {
+        Args: {
+          _decision: string
+          _expected_revision: number
+          _gate: string
+          _method_version_id: string
+          _operation_id: string
+          _rationale: string
+        }
+        Returns: Json
+      }
+      beskt_request_hash: {
+        Args: { _request: Json }
+        Returns: string
+      }
+      beskt_resolve_item_sequence: {
+        Args: {
+          _answers?: Json
+          _exposure_profile_id: string
+          _method_version_id: string
+          _mode: string
+        }
+        Returns: {
+          item_id: string
+          item_key: string
+          section_key: string
+          sequence_position: number
+        }[]
+      }
+      beskt_retire_version: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _reason: string
+        }
+        Returns: Json
+      }
+      beskt_revoke_governance: {
+        Args: { _grant_id: string; _operation_id: string; _reason: string }
+        Returns: Json
+      }
+      beskt_sorted_array: {
+        Args: { _arr: string[] }
+        Returns: Json
+      }
+      beskt_submit_for_review: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      beskt_suspend_version: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _reason: string
+        }
+        Returns: Json
+      }
+      beskt_text_claims_deception_cue: {
+        Args: { _text: string }
+        Returns: boolean
+      }
+      beskt_touch_draft: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _summary?: string
+        }
+        Returns: Json
+      }
+      beskt_wording_is_neutral: {
+        Args: { _wording: string }
+        Returns: boolean
+      }
       cd_assert_session_writable: {
         Args: { _caller: string; _session_id: string }
         Returns: undefined
