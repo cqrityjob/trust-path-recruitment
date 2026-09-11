@@ -700,6 +700,17 @@ jobs:
       - name: BESKT architecture negative controls
         run: bun run negative-controls:beskt
 
+      # BESKT PR 2: the governed method-content spine. Reads the migration,
+      # the rollback, the SQL suite and the release bookkeeping structurally:
+      # FORCE RLS on every BESKT table, no anon execute, the pack_kind scope
+      # on every old-flow function, the seven evidence states and seven anchor
+      # components against PR 1's JSON, the five hash-bound gates, the three
+      # security-vetting requirements, replay-before-CAS, append-only history,
+      # no scoring column or key, no candidate runtime table, no application
+      # code, nothing hosted. Its planted controls run in negative-controls:all.
+      - name: BESKT governed-content guard
+        run: bun run beskt-governed-content:check
+
       # The same invariants, one layer up: what the Role Interview Builder
       # actually RENDERS. Asserts that every required state (loading, error,
       # empty, permission-denied, incomplete draft, published, suspended,

@@ -119,6 +119,12 @@
     // executable release gates and therefore typechecked on their own terms.
     "scripts/beskt-architecture-contract-check.ts",
     "scripts/negative-controls/beskt-architecture-controls.ts",
+    // BESKT PR2: the governed-content guard parses the migration's function
+    // bodies and DDL and compares array literals against the ADR's JSON; a
+    // parser that silently stopped matching would report a contract it never
+    // read.
+    "scripts/beskt-governed-content-check.ts",
+    "scripts/negative-controls/beskt-governed-content-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"

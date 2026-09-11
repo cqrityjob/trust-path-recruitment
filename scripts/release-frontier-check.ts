@@ -32,7 +32,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Their names come OFF this list rather than being left behind, because a
 // resolved name here hides the next genuinely stuck migration behind an
 // expectation -- the failure this list exists to prevent.
-const expectedPending: string[] = [];
+// 20261108090000_beskt_governed_method_content is PENDING: BESKT PR 2 is a
+// schema-only branch awaiting review. It is recorded `pending` in
+// release-state.json with its objects and its rollback, and it comes OFF this
+// list the moment the owner project has applied it and evidence is recorded.
+const expectedPending: string[] = ["20261108090000_beskt_governed_method_content.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

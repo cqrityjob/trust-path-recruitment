@@ -2762,6 +2762,79 @@ fi
 
 
 # ---------------------------------------------------------------------------
+# BESKT PR 2 — governed method content, deterministic routing and publication
+# gates (20261108090000).
+#
+# The suite plants a clearly synthetic BESKT method inside its own
+# transaction and executes real operations against it: the role-interview
+# flow is byte-for-byte compatible and closed to BESKT; every child belongs
+# to its own version; every mandatory field, evidence state, anchor component
+# and security-vetting gate blocks publication on its own; routing is
+# deterministic and neutral to omission; five hash-bound human gates,
+# separation of duties, stale approvals, atomic publication, immutability;
+# idempotent replay before compare-and-swap; and the whole RLS/grant/definer
+# matrix. Everything rolls back.
+#
+# It then applies the rollback for real and re-applies the migration, which
+# is the property a rollback is worth nothing without.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT governed-content assertions"
+set +e
+BG_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/beskt_governed_content_test.sql 2>&1)"
+BG_RC=$?
+set -e
+
+echo "$BG_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+BG_PASSED="$(echo "$BG_OUT" | grep -c "ok  " || true)"
+BG_FAILED=0
+
+if [ "$BG_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT governed-content suite exited with code ${BG_RC}." >&2
+  echo "$BG_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  BG_FAILED=1
+else
+  echo "    ok  ${BG_PASSED} BESKT governed-content assertions passed"
+  if [ "$BG_PASSED" -lt 190 ]; then
+    echo "FAIL: expected at least 190 BESKT governed-content assertions, only ${BG_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    BG_FAILED=1
+  fi
+fi
+
+# Applied for real, then the migration re-applied (-f, never -c "\i").
+set +e
+BG_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql 2>&1)"
+BG_RB_RC=$?
+set -e
+if [ "$BG_RB_RC" -ne 0 ] || ! echo "$BG_RB" | grep -q "BESKT_GOVERNED_CONTENT_ROLLBACK ok"; then
+  echo "FAIL: the BESKT governed-content rollback did not verify." >&2
+  echo "$BG_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  BG_FAILED=1
+else
+  echo "    ok  the BESKT rollback drops the domain, removes pack_kind and restores the five role-interview functions"
+fi
+
+set +e
+BG_RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/migrations/20261108090000_beskt_governed_method_content.sql 2>&1)"
+BG_RE_RC=$?
+set -e
+if [ "$BG_RE_RC" -ne 0 ] || ! echo "$BG_RE" | grep -q "BESKT_GOVERNED_CONTENT_PROOF ok"; then
+  echo "FAIL: the BESKT migration does not re-apply over the rolled-back state." >&2
+  echo "$BG_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  BG_FAILED=1
+else
+  echo "    ok  and the BESKT migration re-applies cleanly over the rolled-back state"
+fi
+
+if [ "$BG_FAILED" -ne 0 ]; then
+  suite_failed "BESKT governed content"
+fi
+
+
+# ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
 set +e
 ROLLBACK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_a_rollback_test.sql 2>&1)"
@@ -5778,5 +5851,6 @@ echo "              ${FMR_PASSED} concurrent first-merit assertions,"
 echo "              ${TWO_OPS_PASSED} two-operation first-merit race assertions,"
 echo "              ${SPRC_PASSED} rollback correction assertions,"
 echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
-              ${BI_PASSED} employer final-report basis assertions"
+              ${BI_PASSED} employer final-report basis assertions,
+              ${BG_PASSED} BESKT governed-content assertions"
 echo "===================================================="
