@@ -1073,6 +1073,7 @@ const PREPARE =
   "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.prepare.tsx";
 const REPORT =
   "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx";
+const DOCUMENT = "src/components/employer/interview/FinalReportDocument.tsx";
 
 {
   const assess = read(ASSESS);
@@ -1242,34 +1243,68 @@ const REPORT =
 }
 
 {
+  // The report is a DOCUMENT rendered by one component from the server's
+  // payload -- the same component for the exact preview, the current final
+  // and an opened historical version. The route mounts it; it does not
+  // assemble a locked report out of live case reads.
   const report = read(REPORT);
+  const doc = read(DOCUMENT);
+  ok(
+    report.includes("<FinalReportDocument") && !report.includes('t("iiu.rp.s.comments")'),
+    "the report route must mount FinalReportDocument and stop assembling a locked report from live case reads",
+  );
+  for (const mode of ["preview", "final", "history"]) {
+    ok(
+      new RegExp(`"${mode}"`).test(report.slice(report.indexOf("<FinalReportDocument"))),
+      `the route no longer renders the document in mode ${mode}`,
+    );
+  }
   // The employment decision is a stated boundary, never a control. There is no
   // employment-decision data model in this domain, and a disabled button would
   // promise one is coming.
   ok(
-    report.includes('t("iiu.rp.s.decision")') && report.includes('t("iiu.rp.decision.boundary")'),
+    doc.includes('t("iiu.rp.s.decision")') && doc.includes('t("iiu.rp.decision.boundary")'),
     "the report no longer states that the employment decision is recorded elsewhere",
   );
-  const decisionBlock = report.slice(
-    report.indexOf('aria-labelledby="d-decision"'),
-    report.indexOf('aria-labelledby="d-ai"'),
+  const decisionBlock = doc.slice(
+    doc.indexOf('aria-labelledby="d-decision"'),
+    doc.indexOf('aria-labelledby="d-ai"'),
   );
   ok(
     decisionBlock.length > 0 && !/<button|<input|<select|disabled/.test(decisionBlock),
     "the employment-decision section acquired a control — this engine records no decision",
   );
-  // The six document sections, in order.
+  // The document's sections, in order: what was recruited for, the released
+  // assessment result bound to it, what the candidate said and showed, how
+  // every assessor read it, what is still open, then the boundary and the
+  // AI's role.
   const order = [
-    "iiu.rp.s.scope",
-    "iiu.rp.s.examples",
-    "iiu.rp.s.assessment",
-    "iiu.rp.s.followup",
-    "iiu.rp.s.verify",
-    "iiu.rp.s.comments",
-  ].map((k) => report.indexOf(`t("${k}")`));
+    "iir.doc.s.recruitment",
+    "iir.doc.s.assessmentMaterial",
+    "iir.doc.s.evidence",
+    "iir.doc.s.assessments",
+    "iir.doc.s.unresolved",
+    "iiu.rp.s.decision",
+    "iir.doc.s.ai",
+  ].map((k) => doc.indexOf(`t("${k}")`));
   ok(
     order.every((i) => i > 0) && order.every((v, i) => i === 0 || v > order[i - 1]),
-    "the report's six sections are missing or out of order",
+    "the report document's sections are missing or out of order",
+  );
+  // Checksums are integrity facts for an auditor. In the document they live
+  // under the audit details, after the AI section, never in the body.
+  const auditAt = doc.indexOf('data-testid="fr-audit"');
+  ok(auditAt > doc.indexOf('aria-labelledby="d-ai"'), "the document lost its audit details block");
+  const body = doc.slice(doc.indexOf("<article"), auditAt);
+  for (const term of ["contentHash", "basisHash", "snapshotHash", "content_hash"]) {
+    ok(
+      !body.includes(term),
+      `the report document renders ${term} above the audit details — a checksum is an integrity fact for an auditor, not report content`,
+    );
+  }
+  ok(
+    doc.slice(auditAt).includes("contentHash") && doc.slice(auditAt).includes("basisHash"),
+    "the document's audit details lost the digests that prove which version was finalised",
   );
 }
 

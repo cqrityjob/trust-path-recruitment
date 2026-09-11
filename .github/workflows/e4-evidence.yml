@@ -1,0 +1,485 @@
+name: E4 employer final report — routed browser evidence
+
+# ── WHY THIS IS A WORKFLOW OF ITS OWN ───────────────────────────────────
+#
+# #216 finalises an employer report: an irreversible, versioned, immutable
+# act. The deterministic guards prove a great deal about it and prove nothing
+# about the routed application a recruitment owner actually uses. The only
+# honest way to close that gap is to walk the real screens, signed in, against
+# a real Auth + PostgREST + RLS stack.
+#
+# It cannot live in ci.yml's existing browser job, because that job signs in
+# against the HOSTED project through the checked-in .env. This walk is
+# MUTATING -- it creates sign-in credentials, walks a case, finalises reports
+# and writes findings -- so it must never reach the owner project. Everything
+# below exists to make that impossible rather than merely unintended.
+#
+# ── WHY IT IS A SEPARATE FILE ───────────────────────────────────────────
+#
+# So the isolation controls are read in one place, and so a failure here is
+# legible as "the evidence did not hold" rather than lost among 110 static
+# checks.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "e2e/**"
+      - "scripts/fixtures/**"
+      - "supabase/migrations/**"
+      - ".github/workflows/e4-evidence.yml"
+  workflow_dispatch:
+
+# ── THE PINNED SUPABASE CLI ─────────────────────────────────────────────
+#
+# ONE LITERAL, and it is a version rather than `latest`. This workflow's whole
+# claim is that the evidence is reproducible: the same commit, replayed
+# against the same schema, on the same stack, produces the same document. A
+# floating `latest` breaks that silently -- a CLI release changes the local
+# stack's images, its default privileges or its command surface, and a run
+# that no longer matches an earlier one looks like a code change rather than a
+# tool change.
+#
+# 2.117.0 is what `latest` resolved to on 2026-09-10 in run 1, recorded from
+# that run's own `supabase --version`. Its command surface was read from the
+# same run: `db` is present in the subcommand list, `start` and `stop` were
+# invoked successfully, and the global flag `--output, -o` documents `env` as
+# a choice, which is what `supabase status -o env` relies on. The step below
+# re-verifies all of that at run time rather than trusting this paragraph.
+#
+# DO NOT bump this silently. A new version is a change to the evidence
+# environment and belongs in a commit that says so.
+env:
+  SUPABASE_CLI_VERSION: "2.117.0"
+
+# Least privilege. This job reads the repository and writes an artifact; it
+# never needs anything else, and it must never be able to push.
+permissions:
+  contents: read
+
+concurrency:
+  group: e4-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: E4 routed browser evidence (isolated local stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    # NEVER pull_request_target: this job checks out and runs pull-request
+    # code, so it must have the fork's permissions and none of the base
+    # repository's secrets.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # No credentials left in the checkout, so nothing this job runs can
+          # push with the workflow token.
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Set up the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      # ── WHAT THE INSTALLED CLI ACTUALLY SUPPORTS ──────────────────────
+      #
+      # Verified rather than assumed. The command surface has changed between
+      # CLI releases, and a workflow written against a remembered surface
+      # fails with an unhelpful message half an hour in.
+      #
+      # A pin nobody checks is a comment, so the first thing this does is
+      # prove the version that actually installed is the version asked for.
+      # Then it proves each command this job depends on exists. Run 1 piped
+      # the help through `head -40`, which cut the subcommand list off at
+      # `login` -- so `start`, `stop` and `status` were never actually shown.
+      # The whole surface is printed now.
+      - name: Verify and record the CLI surface
+        run: |
+          set -euo pipefail
+          installed="$(supabase --version)"
+          echo "supabase CLI: ${installed} (pinned ${SUPABASE_CLI_VERSION})"
+          docker --version
+
+          if [ "${installed}" != "${SUPABASE_CLI_VERSION}" ]; then
+            echo "CLI PIN REFUSED: asked for ${SUPABASE_CLI_VERSION}, got ${installed}" >&2
+            exit 1
+          fi
+
+          supabase --help > /tmp/supabase-help.txt
+          cat /tmp/supabase-help.txt
+
+          # The commands this job actually runs, each proven to exist.
+          for c in start stop status db; do
+            if ! grep -qE "^[[:space:]]+${c}[[:space:]]" /tmp/supabase-help.txt; then
+              echo "CLI SURFACE REFUSED: 'supabase ${c}' is not in this CLI's command list" >&2
+              exit 1
+            fi
+          done
+
+          # `supabase status -o env` is how the local configuration is derived.
+          if ! grep -qE '\-\-output, -o' /tmp/supabase-help.txt; then
+            echo "CLI SURFACE REFUSED: this CLI documents no --output/-o flag" >&2
+            exit 1
+          fi
+          if ! grep -E '\-\-output, -o' /tmp/supabase-help.txt | grep -q 'env'; then
+            echo "CLI SURFACE REFUSED: --output does not offer 'env', which status parsing needs" >&2
+            exit 1
+          fi
+          supabase db --help > /dev/null
+
+      # ── ISOLATION, BEFORE ANY FIXTURE OR BROWSER RUNS ─────────────────
+      #
+      # Fail-closed: every one of these is a reason to stop, not a warning.
+      # The checked-in .env points at the owner project, so the job builds its
+      # own .env.local and then PROVES the values it will use are loopback.
+      # Started with the migration history HELD BACK, because `supabase start`
+      # would otherwise replay it before anything has had a chance to match the
+      # privilege baseline below -- and the replay fails on a stock stack. See
+      # the next step but one for the evidence.
+      - name: Start the local Supabase stack, history held back
+        run: |
+          set -euo pipefail
+          mv supabase/migrations /tmp/e4-migrations
+          mkdir -p supabase/migrations
+          supabase start
+          rmdir supabase/migrations
+          mv /tmp/e4-migrations supabase/migrations
+          test -d supabase/migrations
+
+      - name: Derive the local configuration
+        id: local
+        run: |
+          set -euo pipefail
+          supabase status -o env > /tmp/supabase-status.env
+          # shellcheck disable=SC1091
+          set -a; . /tmp/supabase-status.env; set +a
+          {
+            echo "SUPABASE_URL=${API_URL}"
+            echo "VITE_SUPABASE_URL=${API_URL}"
+            echo "SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}"
+            echo "SUPABASE_PROJECT_ID=local-e4-evidence"
+            echo "VITE_SUPABASE_PROJECT_ID=local-e4-evidence"
+            echo "VITE_EMPLOYER_PORTAL_ENABLED=true"
+            echo "VITE_JOBS_ENABLED=true"
+            echo "VITE_CIG_LIFECYCLE_ENFORCED=true"
+          } > .env.local
+          # The key NAMES this CLI version publishes, values withheld. Run 1
+          # was written against a remembered surface; this records the real
+          # one so the next change is made against fact.
+          echo "supabase status -o env publishes: $(cut -d= -f1 /tmp/supabase-status.env | sort | tr '\n' ' ')"
+          echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
+          echo "db_url=${DB_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse anything that is not loopback
+        env:
+          API_URL: ${{ steps.local.outputs.api_url }}
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          fail() { echo "ISOLATION REFUSED: $1" >&2; exit 1; }
+
+          # 1 · the API the browser will use must be loopback
+          case "$API_URL" in
+            http://127.0.0.1:*|http://localhost:*) : ;;
+            *) fail "the Supabase API URL is not loopback: $API_URL" ;;
+          esac
+
+          # 2 · so must the database the fixture will write to
+          case "$DB_URL" in
+            postgresql://*@127.0.0.1:*|postgresql://*@localhost:*) : ;;
+            *) fail "the database URL is not loopback: $DB_URL" ;;
+          esac
+
+          # 3 · the owner project ref must appear nowhere in what the app will
+          #     read. config.toml carries it as a container-name prefix, which
+          #     is why this checks the RESOLVED runtime values instead.
+          if grep -q 'wrygicdfxwjnrugduxnt' .env.local; then
+            fail "the owner project ref reached .env.local"
+          fi
+          if printf '%s%s' "$API_URL" "$DB_URL" | grep -q 'wrygicdfxwjnrugduxnt'; then
+            fail "the owner project ref reached a runtime URL"
+          fi
+
+          # 4 · no hosted credential may be present at all. If any of these is
+          #     set, something has wired production into this job.
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY; do
+            if [ -n "${!v:-}" ]; then fail "$v is set; this job must need no hosted credential"; fi
+          done
+
+          echo "isolation OK — API $API_URL, DB loopback, no hosted credential present"
+
+      # ── WHY THE PRIVILEGE BASELINE IS SET BEFORE THE REPLAY ───────────
+      #
+      # The first run of this workflow failed here, and the failure is worth
+      # writing down rather than working around:
+      #
+      #   ERROR: SCP_FACET_PROOF: the release function grants moved
+      #   at 20260905053809_scp_release_facet_resolution.sql
+      #
+      # That migration REVOKEs from `PUBLIC, anon` and then proves, at apply
+      # time, that anon and service_role cannot execute the function. On a
+      # STOCK `supabase start`, the postgres role's default privileges for
+      # functions in `public` grant EXECUTE to anon, authenticated AND
+      # service_role, so a REVOKE naming only PUBLIC and anon leaves
+      # service_role holding a direct grant and the migration refuses itself.
+      #
+      # The owner project does not look like that. Read from it, read-only:
+      #
+      #   anon_exec=false  authenticated_exec=true  service_role_exec=false
+      #   pg_default_acl (schema public, functions):
+      #     supabase_admin => postgres=X | anon=X | authenticated=X | service_role=X
+      #     postgres       => postgres=X | anon=X
+      #
+      # Migrations run as `postgres`, and postgres's default function
+      # privileges there name only postgres and anon. So the hosted schema was
+      # built with NO implicit grant to authenticated or service_role, and
+      # every grant it has was written by a migration on purpose. The
+      # repository's own SQL suite replays the same history on a bare cluster,
+      # which has no default ACLs at all, and passes.
+      #
+      # Matching that baseline therefore makes this stack MORE faithful to
+      # production, not less. It is asserted rather than assumed: the step
+      # fails if the baseline is not what it set out to be.
+      #
+      # The underlying defect -- a migration whose own proof cannot survive a
+      # stock Supabase local stack -- is pre-existing, is present on main, and
+      # is NOT fixed here, because #216 adds no migration.
+      - name: Match the hosted privilege baseline
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
+          ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+            REVOKE EXECUTE ON FUNCTIONS FROM authenticated, service_role;
+          SQL
+          acl=$(psql "$DB_URL" -tAc "SELECT coalesce(array_to_string(d.defaclacl,' | '),'(none)') FROM pg_default_acl d JOIN pg_namespace n ON n.oid = d.defaclnamespace WHERE n.nspname='public' AND d.defaclobjtype='f' AND pg_get_userbyid(d.defaclrole)='postgres'")
+          echo "postgres default function ACL in public: ${acl:-(none)}"
+          case "$acl" in
+            *authenticated*|*service_role*)
+              echo "BASELINE REFUSED: an implicit grant survived, so the replay would not match production" >&2
+              exit 1 ;;
+          esac
+
+      # The migrations, replayed in order, as `postgres` -- the role the owner
+      # project's own history was applied as. Not `supabase db reset`, which
+      # recreates the database and re-establishes the stock default privileges
+      # the step above exists to correct.
+      - name: Replay the migration history
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          n=0
+          for f in supabase/migrations/*.sql; do
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f" || { echo "FAILED: $f" >&2; exit 1; }
+            n=$((n+1))
+          done
+          echo "replayed ${n} migration(s)"
+
+      - name: Seed the synthetic fixtures
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/interview-journey-fixture.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/employer-final-report-fixture.sql
+
+      - name: Install Chromium
+        run: |
+          grep -rlZ 'dl.google.com/linux/chrome' /etc/apt/sources.list.d 2>/dev/null | xargs -0r sudo rm -f
+          bunx playwright install --with-deps chromium
+
+      - name: Start the application against the local stack
+        run: |
+          set -euo pipefail
+          nohup bun run dev -- --port 3117 --strictPort > /tmp/dev-server.log 2>&1 &
+          disown
+          for i in $(seq 1 90); do
+            if curl -sfo /dev/null http://localhost:3117/; then echo "up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the dev server did not come up"; cat /tmp/dev-server.log; exit 1
+
+      # ── THIS RUN'S TOKEN ALLOWLIST ────────────────────────────────────
+      #
+      # A trace records the network, so it carries the anon key and the
+      # signed-in user's bearer token. The leak scan publishes a JWT only when
+      # that EXACT token was observed in this run, so the run has to say which
+      # tokens those were.
+      #
+      # DIGESTS ONLY, and nothing here prints a token. The file lives outside
+      # the artifact directory, is created 0600, and is destroyed before the
+      # upload. The walk appends the digest of each access token the browser
+      # is actually issued.
+      #
+      # Nothing self-declared is trusted: not an issuer, not an audience, not
+      # a project ref. Only "this exact byte sequence came out of this run".
+      - name: Open this run's token allowlist
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null "$RUNNER_TEMP/e4-token-allowlist.txt"
+          set -a
+          # shellcheck disable=SC1091
+          . /tmp/supabase-status.env
+          set +a
+          printf '%s' "${ANON_KEY}" | sha256sum | cut -d' ' -f1 \
+            >> "$RUNNER_TEMP/e4-token-allowlist.txt"
+          echo "allowlist opened with $(wc -l < "$RUNNER_TEMP/e4-token-allowlist.txt") digest(s)"
+
+      # Serial, one worker: the walk finalises reports and asserts version
+      # numbers, and two workers sharing one database would race each other.
+      - name: Capture the routed evidence
+        env:
+          E2E_LOCAL_STACK: "1"
+          E2E_BASE_URL: http://localhost:3117
+          # THE SAME URL THE ISOLATION GATE PROVED IS LOOPBACK, and the only
+          # description of the database in this job. It replaced a hardcoded
+          # host, a guessed port and a literal password -- a second source of
+          # truth whose failure mode is writing to the wrong database. The
+          # spec parses every field it needs from this and refuses anything
+          # that is not loopback.
+          E4_DATABASE_URL: ${{ steps.local.outputs.db_url }}
+          # The exact production identifier is a runtime deny value. It must
+          # not be embedded in the Playwright spec because traces retain that
+          # source file and the scanner correctly refuses the identifier.
+          E4_FORBIDDEN_PROJECT_REF: wrygicdfxwjnrugduxnt
+          E4_TOKEN_ALLOWLIST: ${{ runner.temp }}/e4-token-allowlist.txt
+          # The repository config reports to the terminal only, which is right
+          # for a developer and wrong for an artifact: `manifest.results` --
+          # the authoritative answer to which states were actually exercised
+          # -- was always null, and playwright-report/ never existed at all.
+          # Set here rather than in playwright.config.ts so no other suite's
+          # behaviour changes.
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
+          PLAYWRIGHT_HTML_REPORT: playwright-report
+          PLAYWRIGHT_HTML_OPEN: never
+        run: |
+          # --trace on, not the config's retain-on-failure. A green run
+          # produces no failures and therefore no traces, so the artifact the
+          # review is meant to inspect would contain none at all. A trace is
+          # evidence of what the browser actually did; that is the point.
+          bunx playwright test e2e/employer-final-report-evidence.spec.ts \
+            --project=chromium --workers=1 --trace on \
+            --reporter=list,json,html
+
+      # ── WHY THE HEAD SHA IS PASSED IN ─────────────────────────────────
+      #
+      # On a pull_request event GITHUB_SHA is the EPHEMERAL MERGE COMMIT, not
+      # the pull request's head. The first run recorded a0191d50 while the PR
+      # head was d7b3e197, so a reviewer following the manifest's own
+      # instruction -- compare `head` with the PR head -- would have concluded
+      # the artifact belonged to another commit. It did not. The manifest was
+      # wrong about which commit it was describing, which is the one thing a
+      # manifest may not be wrong about.
+      # Into the artifact rather than only the job log, and BEFORE the scan,
+      # so it is hashed by the manifest and read by the leak scan like every
+      # other evidence file. A server log records requests; it is exactly the
+      # kind of file a secret ends up in by accident.
+      - name: Collect the server log
+        if: always()
+        run: |
+          mkdir -p artifacts/employer-final-report-e4
+          cp /tmp/dev-server.log artifacts/employer-final-report-e4/dev-server.log || true
+
+      - name: Build the evidence manifest
+        if: always()
+        env:
+          API_URL: ${{ steps.local.outputs.api_url }}
+          E4_SUPABASE_CLI_PINNED: ${{ env.SUPABASE_CLI_VERSION }}
+          E4_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          E4_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          E4_MERGE_SHA: ${{ github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+        run: bun run scripts/e4-evidence-manifest.ts
+
+      # Secrets never reach an artifact. This runs BEFORE the upload and fails
+      # the job rather than redacting quietly, because a leak nobody is told
+      # about is worse than a red build.
+      - name: Scan the evidence for anything that must not leave
+        id: leak_scan
+        if: always()
+        env:
+          # The digests of the tokens this run produced. No secret is passed:
+          # the scan verifies no signature and reads no JWT secret, so there
+          # is nothing in that process to leak.
+          E4_TOKEN_ALLOWLIST: ${{ runner.temp }}/e4-token-allowlist.txt
+        run: bun run scripts/e4-evidence-scan.ts
+
+      # ── WHY THIS IS NOT `if: always()` ────────────────────────────────
+      #
+      # It was, and that was wrong. `always()` on the upload meant a failing
+      # leak scan turned the job red AND published the artifact anyway: the
+      # scan became an opinion, and the secret was downloadable by anyone who
+      # could read the pull request. The gate now says what it means -- upload
+      # only when the scan actually passed.
+      #
+      # It is still `always()`-based rather than plain success(), because a
+      # FAILED WALK must still publish its evidence: a failure's screenshots
+      # and trace are how somebody finds out why. A failed SCAN must not.
+      # ── DOES THE ARTIFACT CONTAIN WHAT THE MANIFEST SAYS? ─────────────
+      #
+      # The manifest lists every file with a SHA-256 and asks a reviewer to
+      # believe it; nothing checked that those digests describe the bytes
+      # about to be uploaded, that the head recorded is the head this job ran
+      # on, or that the captures the walk claims to take were taken.
+      #
+      # It also prints the whole inventory to the job log. That is deliberate:
+      # a reviewer who cannot download the artifact -- an egress policy, an
+      # expired retention, a phone -- can still read what was in it, and can
+      # check a downloaded copy against this listing afterwards.
+      - name: Verify the artifact against its own manifest
+        id: verify
+        if: always()
+        env:
+          E4_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bun run scripts/e4-evidence-verify.ts
+
+      # Destroyed BEFORE the upload, and before anything else can read it.
+      # It holds digests rather than tokens, so it leaks nothing either way --
+      # but a file whose whole purpose ends with the scan should not outlive
+      # it. `shred` where available, so the bytes go rather than the name.
+      - name: Destroy this run's token allowlist
+        if: always()
+        run: |
+          f="$RUNNER_TEMP/e4-token-allowlist.txt"
+          if [ -f "$f" ]; then
+            shred -u "$f" 2>/dev/null || rm -f "$f"
+          fi
+          test ! -f "$f" && echo "allowlist destroyed"
+
+      - name: Upload the evidence
+        if: always() && steps.leak_scan.outcome == 'success' && steps.verify.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e4-evidence-${{ github.event.pull_request.number || github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/employer-final-report-e4/
+            playwright-report/
+            test-results/
+          retention-days: 30
+          if-no-files-found: error
+
+      # Tailed, not cat. The dev server emits thousands of deprecation
+      # warnings, and dumping all of them buries the actual failure and makes
+      # every later diagnosis expensive. The whole log travels in the artifact.
+      - name: Server log
+        if: failure()
+        run: tail -n 80 /tmp/dev-server.log || true
+
+      - name: Stop the local stack
+        if: always()
+        run: supabase stop --no-backup || true

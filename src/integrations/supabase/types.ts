@@ -14773,11 +14773,78 @@ export type Database = {
         Args: { _reason: string; _source_id: string }
         Returns: undefined
       }
+      scp_iv_finalise_previewed_report: {
+        Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }
+        Returns: string
+      }
       scp_iv_finalise_report: {
         Args: { _case_id: string; _draft_run_id?: string }
         Returns: string
       }
+      scp_iv_final_report: {
+        Args: { _case_id: string }
+        Returns: {
+          report_id: string
+          case_id: string
+          version_number: number
+          status: string
+          finalised_at: string | null
+          finalised_by: string | null
+          finalised_by_name: string | null
+          finalised_by_email: string | null
+          content_hash: string | null
+          content_hash_algorithm: string
+          basis_hash: string | null
+          recomputed_hash: string | null
+          hash_verified: boolean
+          payload: Json | null
+        }[]
+      }
       scp_iv_is_case_candidate: { Args: { _case_id: string }; Returns: boolean }
+      scp_iv_preview_report: {
+        Args: { _case_id: string }
+        Returns: {
+          payload: Json
+          basis_hash: string
+          content_hash: string
+          blocker_count: number
+          blockers: Json
+        }[]
+      }
+      scp_iv_report_version: {
+        Args: { _report_id: string }
+        Returns: {
+          report_id: string
+          case_id: string
+          version_number: number
+          status: string
+          finalised_at: string | null
+          finalised_by: string | null
+          finalised_by_name: string | null
+          finalised_by_email: string | null
+          content_hash: string | null
+          content_hash_algorithm: string
+          basis_hash: string | null
+          recomputed_hash: string | null
+          hash_verified: boolean
+          payload: Json | null
+        }[]
+      }
+      scp_iv_report_versions: {
+        Args: { _case_id: string }
+        Returns: {
+          report_id: string
+          version_number: number
+          status: string
+          finalised_at: string | null
+          finalised_by: string | null
+          finalised_by_name: string | null
+          finalised_by_email: string | null
+          content_hash: string | null
+          content_hash_algorithm: string
+          basis_hash: string | null
+        }[]
+      }
       scp_iv_mark_assessed: { Args: { _case_id: string }; Returns: undefined }
       scp_iv_mark_sources_ready: {
         Args: { _case_id: string }

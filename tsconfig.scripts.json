@@ -102,6 +102,19 @@
     // which is exactly the failure this file exists to prevent.
     "scripts/interview-context-governance-check.tsx",
     "scripts/negative-controls/interview-governance-controls.ts",
+    // The E4 final-report guard and its controls, on the same terms: new, no
+    // pre-existing type debt, and the guard RENDERS FinalReportDocument and
+    // the sequence panels over a typed payload fixture and CALLS the parser.
+    // A fixture that silently stopped matching ReportPayload would assert
+    // nothing about the document a recruitment owner actually locks.
+    "scripts/employer-final-report-check.tsx",
+    "scripts/negative-controls/final-report-controls.ts",
+    // The evidence manifest and the leak scan: both run in CI on success AND
+    // failure, and both decide whether an artifact may be published. A
+    // manifest that silently stopped recording the HEAD, or a scan whose
+    // pattern list stopped matching, would be worse than absent.
+    "scripts/e4-evidence-manifest.ts",
+    "scripts/e4-evidence-scan.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"

@@ -51,7 +51,7 @@ const ELEMENT_LABEL: Record<(typeof NOTICE_ELEMENTS)[number], TranslationKey> = 
   humanConfirms: "iin.el.humanConfirms",
   aiDoesNotDecide: "iin.el.aiDoesNotDecide",
   whoCanAccess: "iin.el.whoCanAccess",
-  summaryMayBeShared: "iin.el.summaryMayBeShared",
+  employerMaterialNotShared: "iin.el.employerMaterialNotShared",
   retention: "iin.el.retention",
   contact: "iin.el.contact",
 };

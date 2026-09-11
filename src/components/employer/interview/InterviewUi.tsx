@@ -1158,7 +1158,7 @@ export function WorkflowNav({
       )}
       {/* One row, always. A journey that wraps onto two lines stops reading as
           a sequence, so it scrolls horizontally instead. */}
-      <ol className="-mb-px flex items-stretch gap-x-0.5 overflow-x-auto text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ol className="-mb-px flex items-stretch gap-x-0.5 overflow-x-auto text-xs sm:text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {STAGES.map((stage, i) => {
           const isCurrent = i === currentIdx;
           const isDone = i < done;
@@ -1192,7 +1192,7 @@ export function WorkflowNav({
           // of this row parks an invisible box past the viewport and the whole
           // document scrolls sideways at 375px.
           const base =
-            "relative inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition-colors";
+            "relative inline-flex min-h-11 items-center gap-1 whitespace-nowrap border-b-2 px-1.5 py-2.5 transition-colors sm:gap-1.5 sm:px-3";
           // The current stage is not a link. It is where the reader already
           // is, and a router link to the page you are on both says nothing
           // and takes over aria-current with its own route matching, so the

@@ -792,6 +792,23 @@ jobs:
       - name: Interview context governance check (E3)
         run: bun run interview-context-governance:check
 
+      # E4: the employer final report -- the canonical output of this process.
+      #
+      # An authorised recruitment owner reviews it, explicitly finalises it,
+      # and uses it as DECISION SUPPORT. What this guards is that the document
+      # is provable: every assessor is carried with disagreement stated rather
+      # than averaged away, the released assessment result is bound to its
+      # snapshot and version, a Passport disclosure is never promoted to
+      # "verified here", the exact preview and the finalised payload are one
+      # renderer over one payload, a stale preview is refused and announced,
+      # the finalising actor is named, and no total, ranking, recommendation
+      # or employment decision appears anywhere. It also guards the
+      # EXPAND -> CUTOVER -> CONTRACT rollout: no runtime path calls the
+      # legacy scp_iv_finalise_report, and the migration neither drops nor
+      # redefines it.
+      - name: Employer final report check (E4)
+        run: bun run employer-final-report:check
+
       # The real model adapter, proved against a fake transport with no
       # credential and no network. Transport failures retry a bounded number of
       # times; a returned-but-unusable answer is NEVER retried, because

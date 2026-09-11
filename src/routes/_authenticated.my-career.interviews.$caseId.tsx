@@ -437,11 +437,31 @@ function Page() {
               lang,
             )}
           </p>
+          {/* ── WHAT STAYS ON THE EMPLOYER'S SIDE ───────────────────────
+           *
+           *  This paragraph used to say the employer "may choose to share a
+           *  summary of the interview with you". Nothing in this product can
+           *  produce one: the candidate-summary feature was removed, and the
+           *  employer final report is decision-support the product owner
+           *  decided is NOT shared with the candidate. A person reading that
+           *  sentence would wait for a document that is never coming, and
+           *  would reasonably read silence afterwards as the employer having
+           *  chosen not to share — a decision nobody made.
+           *
+           *  So the page states the boundary instead, which is true today and
+           *  needs no future capability to stay true. If a governed sharing
+           *  capability is ever built, this paragraph changes with it and not
+           *  before.
+           *
+           *  It says nothing about the ASSESSMENT RESULT: that is a separate
+           *  document with its own release path, shared only when a person at
+           *  the employer decides to, and it is not what this section is
+           *  about. */}
           <p className="mt-3 max-w-[68ch] text-sm text-muted-foreground">
             {L(
               c(
-                "Arbetsgivaren kan välja att dela en sammanfattning av intervjun med dig. Den delas inte automatiskt — det är ett eget beslut som en människa hos arbetsgivaren fattar, och den innehåller inte deras interna anteckningar eller bedömningar.",
-                "The employer may choose to share a summary of the interview with you. It is not shared automatically — it is a separate decision a person at the employer makes, and it does not contain their internal notes or ratings.",
+                "Arbetsgivarens egna bedömningar, anteckningar och slutrapport från intervjun visas inte här. De stannar hos arbetsgivaren. Att arbetsgivaren färdigställer sin rapport betyder inte att den delas med dig, och verktyget lovar ingen sammanfattning av intervjun.",
+                "The employer's own interview assessments, notes and final report are not shown here. They stay with the employer. The employer finalising their report does not share it with you, and this tool promises you no summary of the interview.",
               ),
               lang,
             )}

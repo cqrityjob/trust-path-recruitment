@@ -39,6 +39,59 @@ const E3 = "interview-context-governance:check";
 const E1 = "employer-process-continuity:check";
 
 const MUTATIONS: readonly Mutation[] = [
+  /* ---- The interview-summary promise, which may not come back ------ */
+  {
+    id: "E3-SUMMARY-PROMISE-RETURNS",
+    defect:
+      "the candidate page tells a person the employer may choose to share a summary of the interview -- a promise no governed contract in this product can keep, so they wait for a document that is never coming and then read the silence as a decision nobody made",
+    file: CANDIDATE_PAGE,
+    find: '                "Arbetsgivarens egna bedömningar, anteckningar och slutrapport från intervjun visas inte här. De stannar hos arbetsgivaren. Att arbetsgivaren färdigställer sin rapport betyder inte att den delas med dig, och verktyget lovar ingen sammanfattning av intervjun.",',
+    replace:
+      '                "Arbetsgivaren kan välja att dela en sammanfattning av intervjun med dig.",',
+    guard: E3,
+    expect: "promises no interview summary",
+  },
+  {
+    id: "E3-SUMMARY-PROMISE-IN-ENGLISH",
+    defect:
+      "the same promise, reintroduced in English only, where a Swedish-only check would miss it",
+    file: CANDIDATE_PAGE,
+    find: '                "The employer\'s own interview assessments, notes and final report are not shown here. They stay with the employer. The employer finalising their report does not share it with you, and this tool promises you no summary of the interview.",',
+    replace:
+      '                "The employer may choose to share a summary of the interview with you.",',
+    guard: E3,
+    expect: "promises no interview summary",
+  },
+  {
+    id: "E3-BOUNDARY-ELEMENT-BECOMES-A-PROMISE",
+    defect:
+      "the notice element goes back to being 'a candidate-safe summary may be shared', so the employer panel and the candidate page both promise one again",
+    file: NOTICE,
+    find: '  "employerMaterialNotShared",',
+    replace: '  "summaryMayBeShared",',
+    guard: E3,
+    expect: "promises no interview summary",
+  },
+  {
+    id: "E3-BOUNDARY-STOPS-BEING-STATED",
+    defect:
+      "the page stops saying that the employer's assessments, notes and final report stay on the employer's side, so a candidate is left to guess what finalising a report did",
+    file: CANDIDATE_PAGE,
+    find: "visas inte här. De stannar hos arbetsgivaren.",
+    replace: "stannar hos arbetsgivaren.",
+    guard: E3,
+    expect: "states the boundary instead",
+  },
+  {
+    id: "E3-FINALISING-READ-AS-SHARING",
+    defect:
+      "the page stops saying that finalising the employer report does not share it, which is the one thing a candidate who hears the word 'report' will assume",
+    file: CANDIDATE_PAGE,
+    find: "The employer finalising their report does not share it with you, and this tool promises you no summary of the interview.",
+    replace: "This tool promises you no summary of the interview.",
+    guard: E3,
+    expect: "states the boundary instead",
+  },
   /* ---- The unreadable application as a standalone interview -------- */
   {
     id: "E3-UNREADABLE-APPLICATION-AS-STANDALONE",
