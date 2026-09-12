@@ -662,6 +662,24 @@ ok(
   /CONSTRAINT sp_credential_type_global_scope_unbound/.test(MIGRATION),
   "the global-scope constraint exists",
 );
+
+/** The CHECK expression itself.
+ *
+ *  Anchored on `ADD CONSTRAINT`, not on the first mention of the name. The
+ *  first mention is in a comment three hundred lines earlier, so slicing from
+ *  it covered the whole seed block — and the negative control that deletes
+ *  `AND jurisdiction_code IS NULL` still found the phrase, somewhere else
+ *  entirely, and the guard went on printing ok. */
+const GLOBAL_CONSTRAINT = (() => {
+  const start = MIGRATION.indexOf("ADD CONSTRAINT sp_credential_type_global_scope_unbound");
+  const end = MIGRATION.indexOf("sp_credential_type_national_scope_bound", start);
+  return start === -1 || end === -1 ? "" : MIGRATION.slice(start, end);
+})();
+ok(
+  GLOBAL_CONSTRAINT.length > 0 && GLOBAL_CONSTRAINT.length < 2000,
+  `the constraint expression was located and is ${GLOBAL_CONSTRAINT.length} chars, not a whole section`,
+);
+
 for (const clause of [
   "claim_type = 'certification'",
   "category = 'qualification'",
@@ -671,30 +689,22 @@ for (const clause of [
   "authority_id IS NULL",
   "regulated_role_id IS NULL",
 ]) {
-  const constraint = MIGRATION.slice(
-    MIGRATION.indexOf("sp_credential_type_global_scope_unbound"),
-    MIGRATION.indexOf("sp_credential_type_national_scope_bound"),
-  );
   // Anchored on a preceding non-identifier character. `.includes` was not
   // enough and the negative control proved it: "jurisdiction_code IS NULL" is
   // a SUBSTRING of "sub_jurisdiction_code IS NULL", so deleting the former
   // left the assertion passing on the latter — a dead check that would have
   // shipped a global definition free to carry a country.
   ok(
-    new RegExp(`(?<![A-Za-z0-9_])${clause.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(constraint),
+    new RegExp(`(?<![A-Za-z0-9_])${clause.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(
+      GLOBAL_CONSTRAINT,
+    ),
     `and it pins ${clause}`,
   );
 }
-{
-  const constraint = MIGRATION.slice(
-    MIGRATION.indexOf("sp_credential_type_global_scope_unbound"),
-    MIGRATION.indexOf("sp_credential_type_national_scope_bound"),
-  );
-  ok(
-    /NOT \(contributes_to && ARRAY\['local_eligibility', 'active_title'\]/.test(constraint),
-    "and it forbids any contribution to local eligibility or a professional title",
-  );
-}
+ok(
+  /NOT \(contributes_to && ARRAY\['local_eligibility', 'active_title'\]/.test(GLOBAL_CONSTRAINT),
+  "and it forbids any contribution to local eligibility or a professional title",
+);
 
 ok(
   /VALIDATE CONSTRAINT sp_credential_type_global_scope_unbound/.test(MIGRATION),
