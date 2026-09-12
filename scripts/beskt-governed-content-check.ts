@@ -337,8 +337,9 @@ for (const t of TABLES) {
     enable && force && !noForce,
     `BESKT-DB-FORCE-RLS: ${t} carries both ENABLE and FORCE ROW LEVEL SECURITY`,
   );
+  // The two authority tables also revoke service_role (see BESKT-DB-RPC-AUTHORITY).
   const revoke = new RegExp(
-    `REVOKE ALL ON public\\.${t}\\s+FROM PUBLIC, anon, authenticated;`,
+    `REVOKE ALL ON public\\.${t}\\s+FROM PUBLIC, anon, authenticated(, service_role)?;`,
   ).test(sql);
   const clientWrite = new RegExp(
     `GRANT [^;]*\\b(INSERT|UPDATE|DELETE|ALL|TRUNCATE)\\b[^;]* ON public\\.${t}\\s+TO [^;]*\\b(anon|authenticated|PUBLIC)\\b`,
@@ -1094,6 +1095,12 @@ check(
   for (const t of ["beskt_governance_grants", "beskt_method_reviews"] as const) {
     check(
       new RegExp(`GRANT SELECT ON public\\.${t}\\s+TO service_role;`).test(sql) &&
+        // Supabase's default privileges grant service_role the full set on
+        // every new table in public, so the REVOKE must name it: a GRANT
+        // SELECT alone would leave that INSERT/UPDATE/DELETE in place.
+        new RegExp(
+          `REVOKE ALL ON public\\.${t}\\s+FROM PUBLIC, anon, authenticated, service_role;`,
+        ).test(sql) &&
         !new RegExp(`GRANT ALL ON public\\.${t}\\s+TO service_role;`).test(sql) &&
         !new RegExp(
           `GRANT [^;]*\\b(INSERT|UPDATE|DELETE|ALL)\\b[^;]*ON public\\.${t}[^;]*TO [^;]*\\b(anon|authenticated|service_role)\\b`,

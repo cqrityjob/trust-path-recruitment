@@ -4404,9 +4404,13 @@ REVOKE ALL ON public.beskt_prompts                 FROM PUBLIC, anon, authentica
 REVOKE ALL ON public.beskt_routing_rules           FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.beskt_evidence_anchors        FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.beskt_observation_fields      FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON public.beskt_method_reviews          FROM PUBLIC, anon, authenticated;
+-- The two authority tables are revoked from service_role as well: Supabase's
+-- default privileges grant it the full set on every new table in public, so
+-- a GRANT SELECT alone would leave that INSERT/UPDATE/DELETE in place and a
+-- caller holding the service key could write authority directly.
+REVOKE ALL ON public.beskt_method_reviews          FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON public.beskt_method_events           FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON public.beskt_governance_grants       FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.beskt_governance_grants       FROM PUBLIC, anon, authenticated, service_role;
 
 GRANT SELECT ON public.beskt_method_versions         TO authenticated;
 GRANT SELECT ON public.beskt_exposure_profiles       TO authenticated;

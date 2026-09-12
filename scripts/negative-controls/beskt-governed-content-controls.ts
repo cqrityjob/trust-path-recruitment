@@ -1223,6 +1223,26 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BESKT-DB-RPC-AUTHORITY",
   },
   {
+    id: "BESKT-NC-DB-GRANTS-DEFAULT-PRIVILEGE",
+    defect:
+      "the revoke stops naming service_role, so Supabase's default privileges leave it INSERT on the grants",
+    file: MIG,
+    find: "REVOKE ALL ON public.beskt_governance_grants       FROM PUBLIC, anon, authenticated, service_role;",
+    replace: "REVOKE ALL ON public.beskt_governance_grants       FROM PUBLIC, anon, authenticated;",
+    guard: GUARD,
+    expect: "BESKT-DB-RPC-AUTHORITY",
+  },
+  {
+    id: "BESKT-NC-DB-REVIEWS-DEFAULT-PRIVILEGE",
+    defect:
+      "the revoke stops naming service_role, so Supabase's default privileges leave it INSERT on the reviews",
+    file: MIG,
+    find: "REVOKE ALL ON public.beskt_method_reviews          FROM PUBLIC, anon, authenticated, service_role;",
+    replace: "REVOKE ALL ON public.beskt_method_reviews          FROM PUBLIC, anon, authenticated;",
+    guard: GUARD,
+    expect: "BESKT-DB-RPC-AUTHORITY",
+  },
+  {
     id: "BESKT-NC-DB-REVIEWS-SERVICE-ROLE-WRITE",
     defect:
       "service_role regains write privilege on the reviews, so it could attribute a review to a valid grant-holder",
