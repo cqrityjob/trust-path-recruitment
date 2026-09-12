@@ -776,7 +776,7 @@ const pr2 = read(PR2_MIGRATION);
     "BCP-HARNESS: db-test.sh runs the PR 3 behaviour suite",
   );
   check(
-    /BCP_PASSED" -lt 195/.test(dbTest),
+    /BCP_PASSED" -lt 230/.test(dbTest),
     "BCP-HARNESS: with an assertion floor, so a silently shrinking suite fails",
   );
   check(

@@ -456,7 +456,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BCP-NC-SUITE-FLOOR-LOWERED",
     defect: "the behaviour-suite assertion floor is lowered so a shrinking suite passes",
     file: DB,
-    find: 'if [ "$BCP_PASSED" -lt 195 ]; then',
+    find: 'if [ "$BCP_PASSED" -lt 230 ]; then',
     replace: 'if [ "$BCP_PASSED" -lt 1 ]; then',
     guard: GUARD,
     expect: "BCP-HARNESS",
