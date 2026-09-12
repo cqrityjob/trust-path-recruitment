@@ -446,6 +446,424 @@ export type Database = {
         }
         Relationships: []
       }
+      bcp_answers: {
+        Row: {
+          answer_type: string
+          created_at: string
+          id: string
+          item_id: string
+          item_key: string
+          response_id: string
+          response_state: string
+          selected_option_keys: string[] | null
+          updated_at: string
+          value_boolean: boolean | null
+          value_date: string | null
+          value_text: string | null
+        }
+        Insert: {
+          answer_type: string
+          created_at?: string
+          id?: string
+          item_id: string
+          item_key: string
+          response_id: string
+          response_state: string
+          selected_option_keys?: string[] | null
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_date?: string | null
+          value_text?: string | null
+        }
+        Update: {
+          answer_type?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_key?: string
+          response_id?: string
+          response_state?: string
+          selected_option_keys?: string[] | null
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_date?: string | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_answers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_assignments: {
+        Row: {
+          acknowledged_at: string | null
+          application_id: string
+          assigned_at: string
+          assigned_by: string
+          available_from: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
+          candidate_user_id: string
+          created_at: string
+          due_at: string | null
+          employer_id: string
+          exposure_profile_id: string
+          first_opened_at: string | null
+          id: string
+          job_id: string
+          lifecycle_state: string
+          method_version_id: string
+          mode: string
+          notice_version: string
+          pinned_content_hash: string
+          pinned_content_hash_algorithm: string
+          pinned_release_scope: string
+          revision: number
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          application_id: string
+          assigned_at?: string
+          assigned_by: string
+          available_from?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
+          candidate_user_id: string
+          created_at?: string
+          due_at?: string | null
+          employer_id: string
+          exposure_profile_id: string
+          first_opened_at?: string | null
+          id?: string
+          job_id: string
+          lifecycle_state?: string
+          method_version_id: string
+          mode?: string
+          notice_version: string
+          pinned_content_hash: string
+          pinned_content_hash_algorithm?: string
+          pinned_release_scope: string
+          revision?: number
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          application_id?: string
+          assigned_at?: string
+          assigned_by?: string
+          available_from?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
+          candidate_user_id?: string
+          created_at?: string
+          due_at?: string | null
+          employer_id?: string
+          exposure_profile_id?: string
+          first_opened_at?: string | null
+          id?: string
+          job_id?: string
+          lifecycle_state?: string
+          method_version_id?: string
+          mode?: string
+          notice_version?: string
+          pinned_content_hash?: string
+          pinned_content_hash_algorithm?: string
+          pinned_release_scope?: string
+          revision?: number
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_assignments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_assignments_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_assignments_exposure_profile_id_fkey"
+            columns: ["exposure_profile_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_exposure_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_assignments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_assignments_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_events: {
+        Row: {
+          actor_id: string | null
+          assignment_id: string | null
+          content_hash: string | null
+          employer_id: string | null
+          event: string
+          id: string
+          metadata: Json
+          method_version_id: string | null
+          new_state: string | null
+          operation_id: string
+          previous_state: string | null
+          reason: string | null
+          recorded_at: string
+          request_hash: string
+          response_id: string | null
+          result: Json
+          revision: number | null
+        }
+        Insert: {
+          actor_id?: string | null
+          assignment_id?: string | null
+          content_hash?: string | null
+          employer_id?: string | null
+          event: string
+          id?: string
+          metadata?: Json
+          method_version_id?: string | null
+          new_state?: string | null
+          operation_id: string
+          previous_state?: string | null
+          reason?: string | null
+          recorded_at?: string
+          request_hash: string
+          response_id?: string | null
+          result: Json
+          revision?: number | null
+        }
+        Update: {
+          actor_id?: string | null
+          assignment_id?: string | null
+          content_hash?: string | null
+          employer_id?: string | null
+          event?: string
+          id?: string
+          metadata?: Json
+          method_version_id?: string | null
+          new_state?: string | null
+          operation_id?: string
+          previous_state?: string | null
+          reason?: string | null
+          recorded_at?: string
+          request_hash?: string
+          response_id?: string | null
+          result?: Json
+          revision?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_events_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_events_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_events_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_events_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_notice_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          acknowledgement_kind: string
+          assignment_id: string
+          candidate_user_id: string
+          id: string
+          locale: string
+          notice_content_hash: string
+          notice_version: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          acknowledgement_kind?: string
+          assignment_id: string
+          candidate_user_id: string
+          id?: string
+          locale: string
+          notice_content_hash: string
+          notice_version: string
+        }
+        Update: {
+          acknowledged_at?: string
+          acknowledgement_kind?: string
+          assignment_id?: string
+          candidate_user_id?: string
+          id?: string
+          locale?: string
+          notice_content_hash?: string
+          notice_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_notice_acknowledgements_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_pilot_grants: {
+        Row: {
+          created_at: string
+          employer_id: string
+          expires_on: string
+          granted_by: string
+          id: string
+          method_version_id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_reason: string | null
+          source_reference: string
+          starts_on: string
+        }
+        Insert: {
+          created_at?: string
+          employer_id: string
+          expires_on: string
+          granted_by: string
+          id?: string
+          method_version_id: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          source_reference: string
+          starts_on?: string
+        }
+        Update: {
+          created_at?: string
+          employer_id?: string
+          expires_on?: string
+          granted_by?: string
+          id?: string
+          method_version_id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_reason?: string | null
+          source_reference?: string
+          starts_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_pilot_grants_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_pilot_grants_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_responses: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          draft_slot: string | null
+          id: string
+          response_state: string
+          response_version: number
+          revision: number
+          submitted_at: string | null
+          submitted_content_hash: string | null
+          submitted_method_content_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          response_state?: string
+          response_version: number
+          revision?: number
+          submitted_at?: string | null
+          submitted_content_hash?: string | null
+          submitted_method_content_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          response_state?: string
+          response_version?: number
+          revision?: number
+          submitted_at?: string | null
+          submitted_content_hash?: string | null
+          submitted_method_content_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_responses_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beskt_activation_requirements: {
         Row: {
           id: string
@@ -14503,6 +14921,246 @@ export type Database = {
         }[]
       }
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
+      bcp_acknowledge_notice: {
+        Args: {
+          _assignment_id: string
+          _locale: string
+          _notice_content_hash: string
+          _notice_version: string
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      bcp_answers_content_hash: {
+        Args: { _response_id: string }
+        Returns: string
+      }
+      bcp_assign: {
+        Args: {
+          _application_id: string
+          _due_at?: string
+          _expected_content_hash: string
+          _exposure_profile_id: string
+          _method_version_id: string
+          _notice_version: string
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      bcp_assignable_exposure_profiles: {
+        Args: { _employer_id: string; _method_version_id: string }
+        Returns: {
+          candidate_item_count: number
+          display_order: number
+          duties_en: string
+          duties_sv: string
+          exposure_area: string
+          exposure_profile_id: string
+          profile_key: string
+          retention_class: string
+          role_relevance_rationale_en: string
+          role_relevance_rationale_sv: string
+        }[]
+      }
+      bcp_assignable_method_versions: {
+        Args: { _employer_id: string }
+        Returns: {
+          content_hash: string
+          grant_expires_on: string
+          method_version_id: string
+          mode: string
+          name_en: string
+          name_sv: string
+          pack_id: string
+          pack_slug: string
+          purpose_sv: string
+          release_scope: string
+          summary_en: string
+          summary_sv: string
+          validation_label: string
+          version_number: number
+        }[]
+      }
+      bcp_cancel: {
+        Args: { _assignment_id: string; _operation_id: string; _reason: string }
+        Returns: Json
+      }
+      bcp_candidate_assignments: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          application_id: string
+          assigned_at: string
+          assignment_id: string
+          available_from: string
+          due_at: string
+          employer_id: string
+          employer_name: string
+          job_id: string
+          job_title_en: string
+          job_title_sv: string
+          lifecycle_state: string
+          method_name_en: string
+          method_name_sv: string
+          submitted_at: string
+        }[]
+      }
+      bcp_candidate_preparation: {
+        Args: { _assignment_id: string }
+        Returns: Json
+      }
+      bcp_canonical_answers: {
+        Args: { _response_id: string }
+        Returns: Json
+      }
+      bcp_employer_assignments: {
+        Args: { _employer_id: string }
+        Returns: {
+          application_id: string
+          assigned_at: string
+          assignment_id: string
+          candidate_user_id: string
+          content_hash: string
+          due_at: string
+          job_id: string
+          job_title_en: string
+          job_title_sv: string
+          lifecycle_state: string
+          method_name_en: string
+          method_name_sv: string
+          method_version_number: number
+          submitted_at: string
+        }[]
+      }
+      bcp_employer_can_read_assignment: {
+        Args: { _assignment_id: string }
+        Returns: boolean
+      }
+      bcp_employer_readback: {
+        Args: { _assignment_id: string }
+        Returns: Json
+      }
+      bcp_grant_pilot: {
+        Args: {
+          _employer_id: string
+          _expires_on: string
+          _method_version_id: string
+          _operation_id: string
+          _source_reference: string
+        }
+        Returns: Json
+      }
+      bcp_guard_append_only: { Args: Record<PropertyKey, never>; Returns: unknown }
+      bcp_guard_answer: { Args: Record<PropertyKey, never>; Returns: unknown }
+      bcp_guard_assignment: { Args: Record<PropertyKey, never>; Returns: unknown }
+      bcp_guard_pilot_grants: { Args: Record<PropertyKey, never>; Returns: unknown }
+      bcp_guard_response: { Args: Record<PropertyKey, never>; Returns: unknown }
+      bcp_is_assignment_candidate: {
+        Args: { _assignment_id: string }
+        Returns: boolean
+      }
+      bcp_mark_opened: {
+        Args: { _assignment_id: string; _operation_id: string }
+        Returns: Json
+      }
+      bcp_notice_copy_digest: {
+        Args: { _locale: string; _notice_version: string }
+        Returns: string
+      }
+      bcp_notice_copy_keys: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      bcp_notice_descriptor: {
+        Args: { _assignment_id: string; _locale: string }
+        Returns: Json
+      }
+      bcp_notice_hash: {
+        Args: { _assignment_id: string; _locale: string }
+        Returns: string
+      }
+      bcp_notice_locales: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      bcp_notice_sections: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      bcp_notice_version: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      bcp_operation_begin: {
+        Args: { _operation_id: string; _request_hash: string }
+        Returns: Json
+      }
+      bcp_party_can_read_method_version: {
+        Args: { _method_version_id: string }
+        Returns: boolean
+      }
+      bcp_pilot_grant_active: {
+        Args: { _employer_id: string; _method_version_id: string }
+        Returns: boolean
+      }
+      bcp_record_event: {
+        Args: {
+          _assignment_id: string
+          _content_hash: string
+          _employer_id: string
+          _event: string
+          _metadata?: Json
+          _method_version_id: string
+          _new_state: string
+          _operation_id: string
+          _previous_state: string
+          _reason: string
+          _request_hash: string
+          _response_id: string
+          _result: Json
+          _revision: number
+        }
+        Returns: string
+      }
+      bcp_revoke_pilot: {
+        Args: {
+          _employer_id: string
+          _method_version_id: string
+          _operation_id: string
+          _reason: string
+        }
+        Returns: Json
+      }
+      bcp_routing_answers: { Args: { _response_id: string }; Returns: Json }
+      bcp_save_answers: {
+        Args: {
+          _answers: Json
+          _assignment_id: string
+          _expected_revision: number
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      bcp_submit: {
+        Args: {
+          _assignment_id: string
+          _expected_revision: number
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      bcp_version_is_candidate_safe: {
+        Args: { _method_version_id: string }
+        Returns: boolean
+      }
+      bcp_visible_items: {
+        Args: { _assignment_id: string; _response_id: string }
+        Returns: {
+          item_id: string
+          item_key: string
+          section_key: string
+          sequence_position: number
+        }[]
+      }
       beskt_can_read_version: {
         Args: { _method_version_id: string }
         Returns: boolean
@@ -14537,6 +15195,10 @@ export type Database = {
       beskt_evaluation_template: {
         Args: { _key: string; _locale: string }
         Returns: string
+      }
+      beskt_governance_can_read_version: {
+        Args: { _method_version_id: string }
+        Returns: boolean
       }
       beskt_grant_governance: {
         Args: {

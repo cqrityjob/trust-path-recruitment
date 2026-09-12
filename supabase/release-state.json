@@ -663,6 +663,176 @@
       "note": "SECURITY PASSPORT -- THE PILOT CATALOGUE IS READABLE BY THE ENTITLED. Schema only; introduces no object, so no application release is coupled to it. DEFECT: 20260817160000 made sp_credential_types readable to authenticated USING (is_active); 20260915090000 then added GB, GB-NI and AE-DU credential types with is_active = false and pilot_state = 'internal_pilot', and taught sp_market_access(), the claim trigger and the read model to answer 'pilot' for an entitled member -- but not the SELECT policy. A real pilot member therefore received open_pilot from the read model and ZERO catalogue rows from PostgREST, and their own claim was refused with SP_CREDENTIAL_CODE_UNKNOWN because sp_claims_credential_rules() is SECURITY INVOKER and looks the code up under the same policy. Reproduced on a full replay (docs/passport/three-market-evidence/rls-reproduction.md). CORRECTION: the policy becomes is_active OR (pilot_state = 'internal_pilot' AND sp_market_access(auth.uid(), market_pack_code) = 'pilot') OR the holder already claimed that code. Per market by construction (a GB member reads no Dubai row), anon still holds no grant, no market pack row changes, Sweden stays the only active pack. TWO PRIVACY CORRECTIONS in the same file: (2) sp_pilot_members loses every application-role grant and its self-read policy -- a holder could read the administrator's internal note and the granting/revoking actor about themselves, which the administration page promises is never shown; membership is learned through sp_market_access() only. (3) sp_is_pilot_member(uuid,text) and sp_market_access(uuid,text) answer about the caller, or about anyone for a platform administrator, or without restriction for a session with no JWT (owner, service role, harness); any other caller asking about someone else is refused with SP_PILOT_MEMBERSHIP_PRIVATE (insufficient_privilege), so holder A cannot enumerate holder B's pilot markets. The claim trigger and the catalogue policy ask about auth.uid() and are unaffected. The proof block asserts all of it. Rollback restores USING (is_active), the 20260915090000 function definitions, grants and self policy verbatim, and must run BEFORE the 20260915090000 entitlement rollback, which drops sp_market_access().",
       "verify": "SELECT qual FROM pg_policies WHERE tablename='sp_credential_types' AND policyname='sp_credential_types_read';  -- expect the expression to mention sp_market_access, is_active and sp_claims (not the bare is_active). Then: SELECT has_table_privilege('anon','public.sp_credential_types','SELECT');  -- expect f. Then: SELECT count(*) FROM public.sp_market_packs WHERE is_active;  -- expect 1 (SE). Then: SELECT has_table_privilege('authenticated','public.sp_pilot_members','SELECT'), has_column_privilege('authenticated','public.sp_pilot_members','note','SELECT');  -- expect f|f. Then: SELECT count(*) FROM pg_policy WHERE polrelid='public.sp_pilot_members'::regclass;  -- expect 0. Then: SELECT proname FROM pg_proc WHERE proname IN ('sp_is_pilot_member','sp_market_access') AND position('SP_PILOT_MEMBERSHIP_PRIVATE' in prosrc) > 0;  -- expect two rows. The migration asserts all of this at apply time and raises SP_PILOT_CATALOGUE on failure; a successful apply logs NOTICE SP_PILOT_CATALOGUE_VISIBILITY_PROOF ok.",
       "rollback": "supabase/rollback/20261109090000_sp_pilot_catalogue_visibility_rollback.sql"
+    },
+    {
+        "file": "20261110090000_bcp_candidate_preparation.sql",
+        "hostedState": "pending",
+        "introduces": [
+            {
+                "object": "bcp_pilot_grants",
+                "kind": "table"
+            },
+            {
+                "object": "bcp_assignments",
+                "kind": "table"
+            },
+            {
+                "object": "bcp_notice_acknowledgements",
+                "kind": "table"
+            },
+            {
+                "object": "bcp_responses",
+                "kind": "table"
+            },
+            {
+                "object": "bcp_answers",
+                "kind": "table"
+            },
+            {
+                "object": "bcp_events",
+                "kind": "table"
+            },
+            {
+                "object": "bcp_guard_append_only",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_guard_pilot_grants",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_guard_assignment",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_guard_response",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_guard_answer",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_pilot_grant_active",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_version_is_candidate_safe",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_is_assignment_candidate",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_employer_can_read_assignment",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_party_can_read_method_version",
+                "kind": "function"
+            },
+            {
+                "object": "beskt_governance_can_read_version",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_record_event",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_operation_begin",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_notice_version",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_notice_sections",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_notice_descriptor",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_notice_hash",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_canonical_answers",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_answers_content_hash",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_routing_answers",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_visible_items",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_grant_pilot",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_revoke_pilot",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_assign",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_mark_opened",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_acknowledge_notice",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_save_answers",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_submit",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_cancel",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_assignable_method_versions",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_assignable_exposure_profiles",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_candidate_assignments",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_candidate_preparation",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_employer_assignments",
+                "kind": "function"
+            },
+            {
+                "object": "bcp_employer_readback",
+                "kind": "function"
+            }
+        ]
     }
   ], 
   "policyVersion": 2, 
