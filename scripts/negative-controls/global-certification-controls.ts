@@ -222,6 +222,16 @@ const MUTATIONS: readonly Mutation[] = [
   },
 
   {
+    id: "GC-NC-WIDE-GRANT-SURVIVES",
+    defect: "a new table keeps the platform default's TRUNCATE, REFERENCES and TRIGGER",
+    file: MIGRATION,
+    find: "REVOKE ALL ON public.sp_certification_issuers         FROM PUBLIC, anon, authenticated;",
+    replace:
+      "REVOKE INSERT, UPDATE, DELETE ON public.sp_certification_issuers FROM PUBLIC, anon, authenticated;",
+    guard: GUARD,
+    expect: "and everything is revoked before anything is granted on sp_certification_issuers",
+  },
+  {
     id: "GC-NC-HISTORY-ERASABLE",
     defect: "a holder may DELETE their own lifecycle history",
     file: MIGRATION,

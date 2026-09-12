@@ -888,6 +888,16 @@ for (const table of [
     new RegExp(`REVOKE ALL ON public\\.${table}\\s+FROM anon`).test(MIGRATION),
     `and anon holds nothing on it`,
   );
+  // ALL is wider than the four privileges anybody thinks about: it carries
+  // TRUNCATE, which is the one row level security does not bound. Revoking ALL
+  // and granting back by name is the only form that cannot leave one behind,
+  // and the reviewer-role suite refused the replay when this file did not.
+  ok(
+    new RegExp(`REVOKE ALL ON public\\.${table}\\s+FROM PUBLIC, anon, authenticated`).test(
+      MIGRATION,
+    ),
+    `and everything is revoked before anything is granted on ${table}`,
+  );
 }
 for (const table of [
   "sp_credential_scopes",

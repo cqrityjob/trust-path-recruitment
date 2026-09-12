@@ -1460,6 +1460,27 @@ CREATE POLICY sp_claim_certification_lifecycle_owner
                  WHERE c.id = claim_id AND c.holder_user_id = auth.uid())
   );
 
+-- ── REVOKE EVERYTHING FIRST, THEN GRANT EXACTLY WHAT IS NEEDED ──────
+--
+-- Not `REVOKE INSERT, UPDATE, DELETE` on its own. The platform's ALTER DEFAULT
+-- PRIVILEGES grants ALL on a new table in `public`, and ALL is wider than the
+-- four privileges anybody thinks about: it also carries TRUNCATE, REFERENCES
+-- and TRIGGER. The first version of this file revoked the three obvious ones
+-- and left those behind, and the reviewer-role suite refused the replay —
+-- "no sp_ table grants TRUNCATE/REFERENCES/TRIGGER to anon or authenticated",
+-- a rule that exists because TRUNCATE is precisely the privilege row level
+-- security does NOT bound.
+--
+-- Revoking ALL and then granting back by name means a privilege this file did
+-- not think about cannot survive, and the next table added here inherits the
+-- discipline rather than the default.
+REVOKE ALL ON public.sp_credential_scopes             FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.sp_certification_issuers         FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.sp_certification_issuer_aliases  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.sp_certification_sources         FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.sp_certification_definitions     FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.sp_claim_certification_lifecycle FROM PUBLIC, anon, authenticated;
+
 GRANT SELECT ON public.sp_credential_scopes            TO authenticated;
 GRANT SELECT ON public.sp_certification_issuers        TO authenticated;
 GRANT SELECT ON public.sp_certification_issuer_aliases TO authenticated;
@@ -1478,6 +1499,13 @@ GRANT SELECT ON public.sp_certification_definitions    TO authenticated;
 -- which is exactly what that suite is for.
 GRANT SELECT, INSERT, UPDATE ON public.sp_claim_certification_lifecycle TO authenticated;
 
+-- Restated after the grants, so the intent is legible at the end of the block
+-- as well as the beginning: anon reaches none of this, the catalogue is
+-- migration-and-administration governed and no application role may write it,
+-- and removal is withdrawal so nobody may DELETE.
+--
+-- An issuer somebody could rename, or a definition somebody could re-point, is
+-- not a governed catalogue.
 REVOKE ALL ON public.sp_credential_scopes             FROM anon;
 REVOKE ALL ON public.sp_certification_issuers         FROM anon;
 REVOKE ALL ON public.sp_certification_issuer_aliases  FROM anon;
@@ -1485,15 +1513,8 @@ REVOKE ALL ON public.sp_certification_sources         FROM anon;
 REVOKE ALL ON public.sp_certification_definitions     FROM anon;
 REVOKE ALL ON public.sp_claim_certification_lifecycle FROM anon;
 
--- Restated rather than left to the GRANT above: the hosted project's ALTER
--- DEFAULT PRIVILEGES grants DELETE on a new table, and a local replay cannot
--- observe that. This line is the one that actually takes it away there.
 REVOKE DELETE ON public.sp_claim_certification_lifecycle FROM anon, authenticated;
 
--- The catalogue is migration-and-administration governed. A holder and an
--- ordinary reviewer may read it and may never write it: an issuer somebody
--- could rename, or a definition somebody could re-point, is not a governed
--- catalogue.
 REVOKE INSERT, UPDATE, DELETE ON public.sp_credential_scopes            FROM authenticated;
 REVOKE INSERT, UPDATE, DELETE ON public.sp_certification_issuers        FROM authenticated;
 REVOKE INSERT, UPDATE, DELETE ON public.sp_certification_issuer_aliases FROM authenticated;
@@ -1598,6 +1619,21 @@ BEGIN
      OR has_table_privilege('anon', 'public.sp_claim_certification_lifecycle', 'SELECT')
      OR has_table_privilege('anon', 'public.sp_credential_scopes', 'SELECT') THEN
     RAISE EXCEPTION 'SP_GLOBAL_CERT_ANON_READ: anon holds a grant on the new tables';
+  END IF;
+
+  -- TRUNCATE is the privilege row level security does NOT bound, and ALL
+  -- carries it. Asserted at apply time because the first version of this file
+  -- revoked the three obvious privileges and left it behind.
+  IF EXISTS (
+    SELECT 1 FROM information_schema.role_table_grants
+     WHERE table_schema = 'public'
+       AND table_name IN ('sp_credential_scopes','sp_certification_issuers',
+                          'sp_certification_issuer_aliases','sp_certification_sources',
+                          'sp_certification_definitions','sp_claim_certification_lifecycle')
+       AND grantee IN ('anon','authenticated')
+       AND privilege_type IN ('TRUNCATE','REFERENCES','TRIGGER')
+  ) THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WIDE_GRANT: a new table kept TRUNCATE, REFERENCES or TRIGGER';
   END IF;
 
   -- And no holder may DELETE their own history. Phase 8's rule, restated at
