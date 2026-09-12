@@ -1113,10 +1113,16 @@ CREATE INDEX beskt_prompts_item_idx ON public.beskt_prompts (item_id);
 
 
 -- 3.8  Deterministic routing rules. Structured data only: an explicit typed
---      condition on a stable item/option key, an explicit target, a
---      deterministic evaluation order. No expression, no jsonb action, no
---      free-text interpretation -- and no condition kind for an omitted or
---      discuss-orally answer, so a non-answer can never be a branch.
+--      condition on a stable item/option key and an explicit target. No
+--      expression, no jsonb action, no free-text interpretation -- and no
+--      condition kind for an omitted or discuss-orally answer, so a
+--      non-answer can never be a branch.
+--
+--      evaluation_order is authoring metadata: a stable, unique sequence
+--      number that gives every rule one place in the authored list and in
+--      the canonical document. The RESOLVER does not read it -- visibility
+--      is computed item by item in the governed item order -- so it cannot
+--      affect which items a candidate sees.
 CREATE TABLE public.beskt_routing_rules (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   method_version_id uuid NOT NULL REFERENCES public.beskt_method_versions(id) ON DELETE RESTRICT,
@@ -1147,7 +1153,9 @@ COMMENT ON TABLE public.beskt_routing_rules IS
   'Deterministic questionnaire routing. Depends only on the exact method '
   'version, the exact exposure profile, the chosen mode and explicit '
   'structured answers to stable item/option keys. A rule cannot read free '
-  'text, sentiment, probability or a non-answer.';
+  'text, sentiment, probability or a non-answer. evaluation_order is '
+  'authoring metadata only: the resolver computes visibility in the '
+  'governed item order and never reads it.';
 
 CREATE INDEX beskt_routing_rules_version_idx ON public.beskt_routing_rules (method_version_id, evaluation_order);
 CREATE INDEX beskt_routing_rules_source_idx ON public.beskt_routing_rules (source_item_id);
@@ -3003,8 +3011,10 @@ COMMENT ON FUNCTION public.beskt_method_validate(uuid, boolean) IS
 --
 -- The same method version, exposure profile, mode and structured answers
 -- produce exactly the same item set in exactly the same order, whatever the
--- heap order of the rows. Rules are applied in evaluation_order; the result
--- is ordered on (section order, item order, item key).
+-- heap order of the rows. Visibility is computed item by item in the
+-- governed item order (section order, item order, item key), which is also
+-- the order of the result; the resolver reads no evaluation_order, so
+-- permuting the rules cannot change what it returns.
 --
 -- Answers are a jsonb object keyed by item_key. Only two shapes can satisfy
 -- a condition:

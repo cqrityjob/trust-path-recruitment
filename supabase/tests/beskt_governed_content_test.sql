@@ -1156,8 +1156,10 @@ BEGIN
   PERFORM pg_temp.ok((SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v AND decision = 'approved') = 5,
     'B3.28 the stale approvals remain as history; they simply no longer match');
   -- Restore the content within the same cycle: the hash returns to the
-  -- reviewed one and the five approvals count again, because they bind to
-  -- this hash in this cycle.
+  -- reviewed one, but the five approvals stay stale -- they bind to the
+  -- hash, the cycle AND the revision, and the two governed touches advanced
+  -- the revision. Publishing needs five fresh approvals at the current
+  -- revision (B3.29b-B3.29d below).
   UPDATE public.beskt_items SET wording_en = replace(wording_en, ' (post-approval edit)', '') WHERE id = b.rec_i1;
   _r := pg_temp.touch(b.rec_v);
   PERFORM pg_temp.ok(_r ->> 'content_hash' = b.hash_before, 'B3.29 restoring the reviewed content restores the reviewed hash');

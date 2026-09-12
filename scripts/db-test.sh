@@ -3002,7 +3002,9 @@ SQL
     echo "    ok  (A) the version is still in_review, the stored hash is the approved one, and the bytes now differ from it: nothing was published"
     BGP_PASSED=$(( BGP_PASSED + 1 ))
   fi
-  # Restore the reviewed bytes: the five approvals bind to this hash in this cycle.
+  # Restore the reviewed bytes. Approvals bind to the hash, the review
+  # cycle AND the revision, so restoring the hash does not revive the
+  # earlier ones; this version is re-approved below before (B) publishes.
   psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "UPDATE public.beskt_items SET wording_en = replace(wording_en, ' (racing edit)', '') WHERE id = '${BGP_ITEM}';"
   # (B) publication is in flight, uncommitted, when the child edit arrives.
   cat > "$BGP_A" <<SQL
