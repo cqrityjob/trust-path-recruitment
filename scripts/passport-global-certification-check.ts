@@ -41,11 +41,11 @@ function ok(cond: boolean, name: string): void {
 }
 
 const MIGRATION = readFileSync(
-  join(root, "supabase/migrations/20261110090000_sp_global_professional_certifications.sql"),
+  join(root, "supabase/migrations/20261111090000_sp_global_professional_certifications.sql"),
   "utf8",
 );
 const ROLLBACK = readFileSync(
-  join(root, "supabase/rollback/20261110090000_sp_global_professional_certifications_rollback.sql"),
+  join(root, "supabase/rollback/20261111090000_sp_global_professional_certifications_rollback.sql"),
   "utf8",
 );
 
@@ -345,7 +345,7 @@ ok(
   "the claim trigger refuses a global certification carrying a country",
 );
 {
-  const trigger = MIGRATION.slice(MIGRATION.indexOf("ADDED 20261110090000"));
+  const trigger = MIGRATION.slice(MIGRATION.indexOf("ADDED 20261111090000"));
   ok(
     /_t\.scope_code = 'global_professional'/.test(trigger),
     "and it reads the DEFINITION's scope, not the submitted row",

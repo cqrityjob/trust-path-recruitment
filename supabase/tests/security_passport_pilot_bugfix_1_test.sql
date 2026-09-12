@@ -517,7 +517,7 @@ BEGIN
   --
   -- It was written when a market pack was the ONLY way a credential could be
   -- governed, so "market_pack_code IS NULL" and "ungoverned" were the same
-  -- sentence. 20261110090000 added a second governed route: an international
+  -- sentence. 20261111090000 added a second governed route: an international
   -- professional certification belongs to no market by DESIGN, and the
   -- constraint sp_credential_type_global_scope_unbound requires it to carry no
   -- market pack, no jurisdiction, no authority and no regulated role.

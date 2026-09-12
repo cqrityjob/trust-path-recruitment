@@ -3081,6 +3081,79 @@ fi
 # so a refusal leaves the schema untouched: still thirteen tables, still
 # every function, still pack_kind.
 # ---------------------------------------------------------------------------
+# BESKT PR 3 -- candidate preparation.
+#
+# The runtime built on top of the PR 2 content spine: assignment, notice and
+# acknowledgement, versioned responses, typed answers, idempotency,
+# compare-and-swap and the immutable submitted snapshot. Everything the suite
+# plants is synthetic and lives inside its own transaction, which is rolled
+# back, so it seeds nothing.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT candidate-preparation assertions"
+set +e
+BCP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_candidate_preparation_test.sql 2>&1)"
+BCP_RC=$?
+set -e
+BCP_PASSED="$(echo "$BCP_OUT" | grep -c "ok  " || true)"
+BCP_FAILED=0
+if [ "$BCP_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT candidate-preparation suite exited with code ${BCP_RC}." >&2
+  echo "$BCP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  BCP_FAILED=1
+else
+  echo "    ok  ${BCP_PASSED} BESKT candidate-preparation assertions passed"
+  if [ "$BCP_PASSED" -lt 230 ]; then
+    echo "FAIL: expected at least 230 BESKT candidate-preparation assertions, only ${BCP_PASSED} ran." >&2
+    BCP_FAILED=1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# The PR 3 rollback, for real, in one transaction -- then the migration
+# re-applied over the rolled-back state. It restores PR #218's three read
+# contracts verbatim, which the migration's own postflight then re-proves.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT PR 3 rollback and re-apply"
+set +e
+BCP_RB="$(psql -1 -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql 2>&1)"
+BCP_RB_RC=$?
+set -e
+if [ "$BCP_RB_RC" -ne 0 ] || ! echo "$BCP_RB" | grep -q "BESKT_CANDIDATE_PREPARATION_ROLLBACK ok"; then
+  echo "FAIL: the BESKT candidate-preparation rollback did not verify." >&2
+  echo "$BCP_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  BCP_FAILED=1
+else
+  echo "    ok  the PR 3 rollback drops only its own domain and restores the PR #218 read contracts verbatim"
+fi
+
+set +e
+BCP_RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/migrations/20261110090000_bcp_candidate_preparation.sql 2>&1)"
+BCP_RE_RC=$?
+set -e
+if [ "$BCP_RE_RC" -ne 0 ] || ! echo "$BCP_RE" | grep -q "BESKT_CANDIDATE_PREPARATION_PROOF ok"; then
+  echo "FAIL: the BESKT PR 3 migration does not re-apply over the rolled-back state." >&2
+  echo "$BCP_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  BCP_FAILED=1
+else
+  echo "    ok  and the PR 3 migration re-applies cleanly over it"
+fi
+
+if [ "$BCP_FAILED" -ne 0 ]; then
+  suite_failed "BESKT candidate preparation"
+fi
+
+# Stand PR 3 down again so PR 2 can be unwound below. This ordering is not a
+# convention: bcp_assignments holds an ON DELETE RESTRICT foreign key into
+# beskt_method_versions, so PR 2's own rollback REFUSES while PR 3 exists.
+# The dependency itself is asserted in the PR 3 suite (C11), where it is a
+# catalogue fact rather than a comment.
+psql -1 -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql >/dev/null
+
+# ---------------------------------------------------------------------------
 echo "==> Running BESKT rollback planted-dependency refusal"
 BGD_FAILED=0
 BGD_PASSED=0
@@ -3153,6 +3226,10 @@ else
   echo "    ok  and the BESKT migration re-applies cleanly over the rolled-back state"
 fi
 
+# The database ends the BESKT block in the release state: PR 2 and then PR 3.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261110090000_bcp_candidate_preparation.sql >/dev/null
+
 # The race fixtures: the rollback above dropped their versions with the
 # domain and deleted their identities; the planted principals go too.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" <<SQL
@@ -3186,9 +3263,9 @@ if [ "$ROLLBACK_RC" -ne 0 ]; then
   suite_failed "rollback verification"
 else
   echo "    ok  ${ROLLBACK_PASSED} rollback assertions passed"
-  if [ "$ROLLBACK_PASSED" -lt 26 ]; then
-    echo "FAIL: expected at least 26 rollback assertions, only ${ROLLBACK_PASSED} ran." >&2
-    suite_failed "rollback verification (assertion shortfall: floor 26)"
+  if [ "$ROLLBACK_PASSED" -lt 28 ]; then
+    echo "FAIL: expected at least 28 rollback assertions, only ${ROLLBACK_PASSED} ran." >&2
+    suite_failed "rollback verification (assertion shortfall: floor 28)"
   fi
 fi
 
@@ -3834,7 +3911,7 @@ else
 fi
 
 echo "==> Running Security Passport global professional certification assertions"
-# 20261110090000. The governed international-certification foundation: an
+# 20261111090000. The governed international-certification foundation: an
 # explicit `global_professional` scope, a separate issuer registry, the exact
 # 14 reviewed definitions, a lifecycle model that is not `valid_until`, and the
 # rule that keeps a portable certification portable
@@ -3893,7 +3970,7 @@ fi
 
 set +e
 SPGCRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20261110090000_sp_global_professional_certifications_rollback.sql 2>&1)"
+  -f supabase/rollback/20261111090000_sp_global_professional_certifications_rollback.sql 2>&1)"
 SPGCRB_RC=$?
 set -e
 if [ "$SPGCRB_RC" -ne 0 ]; then
@@ -3934,11 +4011,11 @@ fi
 
 set +e
 SPGCRF_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261110090000_sp_global_professional_certifications.sql 2>&1)"
+  -f supabase/migrations/20261111090000_sp_global_professional_certifications.sql 2>&1)"
 SPGCRF_RC=$?
 set -e
 if [ "$SPGCRF_RC" -ne 0 ] || ! echo "$SPGCRF_OUT" | grep -q "SP_GLOBAL_CERTIFICATION_PROOF ok"; then
-  echo "FAIL: 20261110090000 did not re-apply after its rollback." >&2
+  echo "FAIL: 20261111090000 did not re-apply after its rollback." >&2
   echo "$SPGCRF_OUT" | grep -iE "ERROR:|FEL:" | head -10 >&2
   suite_failed "global certification re-apply"
 else
@@ -3951,7 +4028,7 @@ set +e
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/tests/security_passport_global_certification_rollback_refusal_fixture.sql >/dev/null 2>&1
 SPGCX_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20261110090000_sp_global_professional_certifications_rollback.sql 2>&1)"
+  -f supabase/rollback/20261111090000_sp_global_professional_certifications_rollback.sql 2>&1)"
 SPGCX_RC=$?
 set -e
 SPGCX_LEFT="$(psql -tAq -d "$TEST_DB" -c "SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\_%'")"
@@ -6451,5 +6528,6 @@ echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
               ${BG_PASSED} BESKT governed-content assertions,
               ${BGR_PASSED} BESKT one-open-version race assertions,
               ${BGP_PASSED} BESKT child-write versus publication race assertions,
-              ${BGD_PASSED} BESKT rollback planted-dependency assertions"
+              ${BGD_PASSED} BESKT rollback planted-dependency assertions,
+              ${BCP_PASSED} BESKT candidate-preparation assertions"
 echo "===================================================="

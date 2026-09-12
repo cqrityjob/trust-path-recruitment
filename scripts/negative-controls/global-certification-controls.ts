@@ -21,9 +21,9 @@
  */
 import { runControls, type Mutation } from "./runner";
 
-const MIGRATION = "supabase/migrations/20261110090000_sp_global_professional_certifications.sql";
+const MIGRATION = "supabase/migrations/20261111090000_sp_global_professional_certifications.sql";
 const ROLLBACK =
-  "supabase/rollback/20261110090000_sp_global_professional_certifications_rollback.sql";
+  "supabase/rollback/20261111090000_sp_global_professional_certifications_rollback.sql";
 
 const GUARD = "passport-global-certification:check";
 

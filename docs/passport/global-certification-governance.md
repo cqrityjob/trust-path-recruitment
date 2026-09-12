@@ -1,7 +1,7 @@
 # Security Passport — international professional certifications
 
 **Phase 1 of 4 — Phase 1A, the SCHEMA release.**
-**Migration `20261110090000_sp_global_professional_certifications`.**
+**Migration `20261111090000_sp_global_professional_certifications`.**
 **Source review date: 2026-09-12.**
 
 > **This document describes a schema-only release.** It adds tables, a column,
@@ -337,7 +337,7 @@ backfill and requires the guard to catch it.
 
 ## 7. Rollback, and its limit
 
-`supabase/rollback/20261110090000_…_rollback.sql` removes exactly the objects
+`supabase/rollback/20261111090000_…_rollback.sql` removes exactly the objects
 this migration introduces: the six tables, the scope column and its two
 constraints, the three trigger functions, the fourteen definitions **by name**,
 and the relaxed plate bound. It restores `sp_claims_credential_rules` verbatim

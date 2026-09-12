@@ -1,5 +1,5 @@
 -- Roll back the governed international-certification foundation
--- (20261110090000), in reverse order.
+-- (20261111090000), in reverse order.
 --
 -- ══ WHAT IT REMOVES ════════════════════════════════════════════════════
 --
@@ -50,7 +50,7 @@ DECLARE
   _codes text;
 BEGIN
   IF to_regclass('public.sp_certification_definitions') IS NULL THEN
-    RAISE NOTICE 'SP_GLOBAL_CERT_ROLLBACK: 20261110090000 is not applied; nothing to do';
+    RAISE NOTICE 'SP_GLOBAL_CERT_ROLLBACK: 20261111090000 is not applied; nothing to do';
     RETURN;
   END IF;
 
@@ -304,7 +304,7 @@ DELETE FROM public.sp_credential_types WHERE code IN (
 -- 5. The scope column and its constraints
 -- ---------------------------------------------------------------------------
 -- Dropping the column removes the backfill with it: `scope_code` is the only
--- column 20261110090000 wrote to a pre-existing row, so the 59 rows return to
+-- column 20261111090000 wrote to a pre-existing row, so the 59 rows return to
 -- exactly the values they held before it ran.
 ALTER TABLE public.sp_credential_types
   DROP CONSTRAINT IF EXISTS sp_credential_type_global_scope_unbound;

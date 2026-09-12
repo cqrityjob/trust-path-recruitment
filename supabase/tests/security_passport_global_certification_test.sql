@@ -2,7 +2,7 @@
 -- Security Passport — the governed international-certification foundation.
 --
 -- Proves the twenty-four properties Phase 1 is defined by, against the schema
--- 20261110090000 creates, on a full migration replay.
+-- 20261111090000 creates, on a full migration replay.
 --
 -- ── HOW IT WRITES ──────────────────────────────────────────────────────
 --

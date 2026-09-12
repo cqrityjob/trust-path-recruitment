@@ -322,7 +322,7 @@ ALTER TABLE public.sp_credential_types
 
 COMMENT ON CONSTRAINT sp_credential_types_symbol_label_check
   ON public.sp_credential_types IS
-  'Relaxed from 4 to 8 by 20261110090000. A five-character mark (CISSP, '
+  'Relaxed from 4 to 8 by 20261111090000. A five-character mark (CISSP, '
   'CRISC) must be storable and rendered whole; truncating a credential''s own '
   'abbreviation is how a Passport prints something nobody awarded.';
 
@@ -1258,7 +1258,7 @@ BEGIN
       USING ERRCODE = 'foreign_key_violation';
   END IF;
 
-  -- ── ADDED 20261110090000: a portable certification stays portable ──
+  -- ── ADDED 20261111090000: a portable certification stays portable ──
   --
   -- The governed definition, not the submitted row, decides this. A caller
   -- that forges a country onto a global certification is refused here rather

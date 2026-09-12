@@ -36,15 +36,31 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // schema-only branch awaiting review. It is recorded `pending` in
 // release-state.json with its objects and its rollback, and it comes OFF this
 // list the moment the owner project has applied it and evidence is recorded.
-// 20261110090000_sp_global_professional_certifications is PENDING: Security
-// Passport Phase 1 is a schema-and-reference-data branch awaiting independent
-// review. It is recorded `pending` in release-state.json with its objects, its
-// verification queries and its rollback, and it comes OFF this list the moment
-// the owner project has applied it and evidence is recorded.
+//
+// 20261109090000_sp_pilot_catalogue_visibility is PENDING for the same reason:
+// a schema-only Security Passport correction awaiting the owner's hosted apply.
+//
+// 20261110090000_bcp_candidate_preparation is PENDING and sits BEHIND the BESKT
+// content spine: the candidate-preparation runtime hangs off it by foreign key,
+// so it can only be applied after it. Its version is 20261110 and not 20261109
+// because Supabase keys schema_migrations by the numeric prefix alone, and the
+// Passport correction above already holds 20261109090000 on main -- two files
+// sharing one version means the second is silently treated as already applied.
+// 20261111090000_sp_global_professional_certifications is PENDING: the Security
+// Passport international-certification SCHEMA, awaiting independent review and
+// the owner's hosted apply. It took 20261111 rather than 20261110 because
+// bcp_candidate_preparation reached main first and holds that version -- the
+// same one-version-one-file rule the paragraph above is about, applied to this
+// branch by the collision it warns of.
+//
+// None of the four has been applied to the owner project by this branch, and
+// each comes off this list only when it has been and the evidence is recorded
+// in release-state.json.
 const expectedPending: string[] = [
   "20261108090000_beskt_governed_method_content.sql",
   "20261109090000_sp_pilot_catalogue_visibility.sql",
-  "20261110090000_sp_global_professional_certifications.sql",
+  "20261110090000_bcp_candidate_preparation.sql",
+  "20261111090000_sp_global_professional_certifications.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
