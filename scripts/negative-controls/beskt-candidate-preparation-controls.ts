@@ -602,8 +602,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "both locales are given the same governed digest, so the Swedish and English notices hash alike and the acknowledgement stops naming which was read",
     file: MIG,
-    find: "      THEN 'e1f879e48a3c7dbb18594017a0dc36b07544139a718dceaf155bab94d7a66b34'",
-    replace: "      THEN 'c86510f74ccd8632e434e00e2524a533358c08002f4e7eaa190a5baed914fa72'",
+    find: "      THEN '37abcf8f2ef3629adda4a9eee6b5e7b4745edb2599f571375aa6ca7443da40c9'",
+    replace: "      THEN 'dd2abc9db2c26293d6ac577f860e4fcd2795ef7f62ac2bb142c8ccf7100cc4fa'",
     guard: GUARD,
     expect: "BCP-NOTICE",
   },
@@ -763,10 +763,16 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "BCP-NC-NOTICE-COPY-CHECK-RESTATES-DIGEST",
     defect:
-      "the notice-copy check stops deriving the governed digests from the migration, so the two could drift apart",
+      "the notice-copy check hardcodes the governed digests instead of deriving them from the migration, so the two can drift apart silently",
     file: "scripts/beskt-notice-copy-digest-check.ts",
-    find: "const digestBlock =",
-    replace: "const unusedDigestBlock =",
+    find: `const GOVERNED: Record<string, string | null> = {
+  "sv-SE": governedDigest("sv-SE"),
+  "en-GB": governedDigest("en-GB"),
+};`,
+    replace: `const GOVERNED: Record<string, string | null> = {
+  "sv-SE": "dd2abc9db2c26293d6ac577f860e4fcd2795ef7f62ac2bb142c8ccf7100cc4fa",
+  "en-GB": "37abcf8f2ef3629adda4a9eee6b5e7b4745edb2599f571375aa6ca7443da40c9",
+};`,
     guard: GUARD,
     expect: "BCP-REGISTRATION",
   },

@@ -1011,7 +1011,16 @@ const pr2 = read(PR2_MIGRATION);
     /createHash\("sha256"\)/.test(noticeCheck) &&
       /bcp_notice_copy_keys/.test(noticeCheck) &&
       /bcp_notice_copy_digest/.test(noticeCheck),
-    "BCP-REGISTRATION: it derives both the key list and the digests from the migration rather than restating them",
+    "BCP-REGISTRATION: it reads the key list and the digest function out of the migration",
+  );
+  // A NAME is not a derivation. The first form of this assertion only looked
+  // for the identifiers, which a rename leaves in place -- the planted control
+  // proved it dead. What actually matters is that the check never carries a
+  // digest of its own: the moment it does, it has stopped deriving and the two
+  // copies can drift.
+  check(
+    !/['"`][0-9a-f]{64}['"`]/.test(noticeCheck),
+    "BCP-REGISTRATION: and restates no digest literal of its own, so it cannot drift from the migration",
   );
   check(
     /dictionaryCarriesTheNotice/.test(noticeCheck) && /OUTSTANDING/.test(noticeCheck),
