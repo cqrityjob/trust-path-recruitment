@@ -808,6 +808,46 @@ const pr2 = read(PR2_MIGRATION);
     "BCP-HARNESS: the documented rollback procedure unwinds PR 3 before PR 2, with the same drop set",
   );
 
+  // EVERY bcp_ function the migration creates must be named, by its exact
+  // signature, in BOTH the rollback and the documented procedure. Both are
+  // hand-maintained inventories, and a hand-maintained inventory drifts: adding
+  // bcp_notice_locales() and changing bcp_notice_hash()'s arity left two
+  // functions surviving a rollback that claims nothing of PR 3 does. The
+  // suite caught it; this makes it a build failure instead.
+  const createdFunctions = Array.from(
+    bare.matchAll(/CREATE OR REPLACE FUNCTION public\.(bcp_[a-z_]+)\(([^)]*)\)/g),
+    (m) => ({
+      name: m[1],
+      // The DROP form names types only, in the order declared.
+      types: m[2]
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean)
+        .map((a) =>
+          a
+            .replace(/^_\w+\s+/, "")
+            .replace(/\s+DEFAULT[\s\S]*$/, "")
+            .trim(),
+        )
+        .join(", "),
+    }),
+  );
+  check(
+    createdFunctions.length >= 25,
+    `BCP-ROLLBACK: the migration's function inventory was read (${createdFunctions.length} found)`,
+  );
+  for (const fn of createdFunctions) {
+    const drop = `DROP FUNCTION IF EXISTS public.${fn.name}(${fn.types});`;
+    check(
+      rbBare.includes(drop),
+      `BCP-ROLLBACK: the rollback drops ${fn.name}(${fn.types}) by its exact signature`,
+    );
+    check(
+      rollbackSuite.includes(drop),
+      `BCP-HARNESS: the documented procedure drops ${fn.name}(${fn.types}) too`,
+    );
+  }
+
   const suite = read(SUITE);
   check(
     suite.trimEnd().endsWith("ROLLBACK;"),

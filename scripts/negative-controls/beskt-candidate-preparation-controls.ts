@@ -660,6 +660,27 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BCP-NOTICE",
   },
 
+  {
+    id: "BCP-NC-ROLLBACK-MISSES-A-FUNCTION",
+    defect:
+      "a function the migration creates is not dropped by the rollback, so it survives an unwind that claims nothing of PR 3 does",
+    file: RB,
+    find: "DROP FUNCTION IF EXISTS public.bcp_notice_locales();\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-ROLLBACK",
+  },
+  {
+    id: "BCP-NC-PROCEDURE-MISSES-A-FUNCTION",
+    defect:
+      "the documented rollback procedure drifts from the migration's function inventory -- exactly how the locale functions were left behind",
+    file: RB_SUITE,
+    find: "DROP FUNCTION IF EXISTS public.bcp_notice_copy_digest(text, text);\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-HARNESS",
+  },
+
   // ---- The generated database types ----------------------------------------
   {
     id: "BCP-NC-TYPES-STALE",
