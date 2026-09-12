@@ -602,11 +602,11 @@ check(
     requiredReviews.length === 5 &&
       gates.length === 5 &&
       gates.every((g, i) => g === requiredReviews[i]) &&
-      /FOREACH _gate IN ARRAY _review_gates LOOP[\s\S]*?rv\.gate = _gate\s+AND rv\.decision = 'approved'\s+AND rv\.content_hash_at_review = _hash\s+AND rv\.review_cycle_at_review = _v\.review_cycle\)/.test(
+      /FOREACH _gate IN ARRAY _review_gates LOOP[\s\S]*?rv\.gate = _gate\s+AND rv\.decision = 'approved'\s+AND rv\.content_hash_at_review = _hash\s+AND rv\.review_cycle_at_review = _v\.review_cycle\s+AND rv\.revision_at_review = _v\.revision\)/.test(
         v,
       ) &&
       /_hash := public\.beskt_method_content_hash\(_method_version_id\);\s+FOREACH _gate/.test(v),
-    "BESKT-DB-REVIEW-GATES: all five PR 1 reviews must be approved at the CURRENT content hash in the CURRENT review cycle",
+    "BESKT-DB-REVIEW-GATES: all five PR 1 reviews must be approved at the CURRENT content hash, review cycle AND review revision",
   );
   const tableGates = /gate text NOT NULL CHECK \(gate IN \(([\s\S]*?)\)\)/.exec(sql);
   const tableGateList = tableGates
@@ -705,7 +705,9 @@ check(
       ].every((t) => detector.includes(t)) &&
       /on a scale\|scale of/.test(detector) &&
       /på en skala\|skala/.test(detector),
-    "BESKT-DB-NO-SCORING: the detector reads scoring, rating, grading, ranking, suitability/verdict, pass/fail and recommendation instructions in English and Swedish",
+    ["star", "classif", "tier", "proceed", "whether"].every((t) => detector.includes(t)) &&
+      ["stjärn", "klassificer", "bedöm", "avgör", "vidare"].every((t) => detector.includes(t)),
+    "BESKT-DB-NO-SCORING: the detector reads scoring, rating, grading, ranking, stars, tiers, classification, suitability/verdict, pass/fail, recommendation and 'decide whether they proceed' instructions in English and Swedish. It is a best-effort content check over free text, NOT a proof that arbitrary prose is scoring-free: the structural guarantee is the closed Evaluation template above, and the five human gates carry the semantic review.",
   );
   const v = functionBody(functionText(sql, "beskt_method_validate") ?? "");
   check(
@@ -746,6 +748,34 @@ check(
       ),
     "BESKT-DB-PEACE-EVALUATION: the evaluation step carries no candidate score, verdict, rating or grade",
   );
+  const tpl = functionBody(functionText(sql, "beskt_evaluation_template") ?? "");
+  const g2 = functionBody(functionText(sql, "beskt_guard_child_row") ?? "");
+  check(
+    /IMMUTABLE/.test(functionHeader(functionText(sql, "beskt_evaluation_template") ?? "")) &&
+      ["method_adherence", "basis_gaps", "next_step_planning"].every((k) =>
+        tpl.includes(`'${k}'`),
+      ) &&
+      /ELSE NULL END/.test(tpl) &&
+      /evaluation_template_key text\s+CHECK \(evaluation_template_key IN \(\s*'method_adherence', 'basis_gaps', 'next_step_planning'\)\)/.test(
+        sql,
+      ) &&
+      /CONSTRAINT beskt_prompts_evaluation_template_check\s+CHECK \(\(peace_stage = 'evaluation'\) = \(evaluation_template_key IS NOT NULL\)\)/.test(
+        sql,
+      ),
+    "BESKT-DB-PEACE-EVALUATION: Evaluation names one of a CLOSED set of governed templates; the vocabulary is a CHECK and an unknown key has no text",
+  );
+  check(
+    /IF NEW\.peace_stage = 'evaluation' THEN[\s\S]*?NEW\.wording_sv IS DISTINCT FROM public\.beskt_evaluation_template\(NEW\.evaluation_template_key, 'sv'\)\s+OR NEW\.wording_en IS DISTINCT FROM public\.beskt_evaluation_template\(NEW\.evaluation_template_key, 'en'\) THEN\s+RAISE EXCEPTION\s+'BESKT_EVALUATION_NOT_TEMPLATED/.test(
+      g2,
+    ) &&
+      /IF NEW\.item_id IS NOT NULL OR coalesce\(cardinality\(NEW\.permitted_probe_bases\), 0\) <> 0 THEN\s+RAISE EXCEPTION\s+'BESKT_EVALUATION_NOT_TEMPLATED/.test(
+        g2,
+      ) &&
+      /SELECT 'PROMPT_EVALUATION_NOT_TEMPLATED', 'blocking',/.test(
+        functionBody(functionText(sql, "beskt_method_validate") ?? ""),
+      ),
+    "BESKT-DB-PEACE-EVALUATION: an Evaluation prompt's wording IS the governed template in both languages, it probes no item and grounds nothing — authored text, candidate questioning, a rating or a verdict is not representable there, and the validator re-proves it on the stored rows",
+  );
 }
 
 // ---- routing: structure and neutrality ---------------------------------------
@@ -776,16 +806,27 @@ check(
         r,
       ) &&
       !/'omitted'|'discuss_orally'/.test(r) &&
-      /ORDER BY s\.display_order, i\.display_order, i\.item_key/.test(r) &&
-      /ORDER BY r\.evaluation_order/.test(r),
+      /ORDER BY s\.display_order, i\.display_order, i\.item_key/.test(r),
     "BESKT-DB-OMISSION-NEUTRAL: the resolver fires a rule only on an explicit option or boolean answer and orders on stable keys",
   );
   check(
-    /IF NOT \(_r\.source_item_id = ANY \(_shown\)\) THEN\s+CONTINUE;\s+END IF;/.test(r) &&
-      /SELECT r\.condition_kind, r\.condition_boolean, r\.action, r\.target_item_id, r\.source_item_id,/.test(
-        r,
-      ),
+    /IF NOT \(_r\.source_item_id = ANY \(_shown\)\) THEN\s+CONTINUE;\s+END IF;/.test(r),
     "BESKT-DB-ROUTING: a rule fires only while its source item is currently shown; an answer for a hidden or skipped source is ignored",
+  );
+  // Order independence is structural: visibility is decided one item at a
+  // time in the GOVERNED order, every rule targeting that item is read, a
+  // firing skip beats a firing show, and nothing reads evaluation_order.
+  check(
+    !/r\.evaluation_order/.test(r) &&
+      /FOR _it IN\s+SELECT i\.id[\s\S]*?ORDER BY s\.display_order, i\.display_order, i\.item_key\s+LOOP/.test(
+        r,
+      ) &&
+      /AND r\.target_item_id = _it\.id/.test(r) &&
+      /IF \(NOT _has_show OR _fired_show\) AND NOT _fired_skip THEN\s+_shown := _shown \|\| _it\.id;/.test(
+        r,
+      ) &&
+      /RAISE EXCEPTION\s+'BESKT_ROUTE_NOT_ORDERED/.test(r),
+    "BESKT-DB-ROUTING-ORDER: the resolver computes visibility in the governed order and never reads evaluation_order, and refuses a graph that is not forward-only instead of resolving it from one arbitrary pass",
   );
   const cg = functionBody(functionText(sql, "beskt_guard_child_row") ?? "");
   check(
@@ -869,13 +910,10 @@ check(
   );
   const r = functionBody(functionText(sql, "beskt_resolve_item_sequence") ?? "");
   check(
-    /IF _r\.source_profile <> _exposure_profile_id OR _r\.target_profile <> _exposure_profile_id\s+OR NOT _r\.target_permitted THEN\s+CONTINUE;/.test(
-      r,
-    ) &&
-      /JOIN public\.beskt_items si ON si\.id = r\.source_item_id\s+WHERE r\.method_version_id = _method_version_id\s+AND r\.target_item_id = i\.id AND r\.action = 'show'\s+AND si\.exposure_profile_id = _exposure_profile_id/.test(
-        r,
-      ),
-    "BESKT-DB-CROSS-PROFILE: the resolver neither fires a cross-profile rule nor lets one hide an item from its own profile's unconditional set",
+    /IF _r\.source_profile <> _exposure_profile_id THEN\s+CONTINUE;\s+END IF;/.test(r) &&
+      /AND i\.exposure_profile_id = _exposure_profile_id/.test(r) &&
+      !/target_profile/.test(r),
+    "BESKT-DB-CROSS-PROFILE: the resolver considers only this profile's items and only this profile's rules, so a cross-profile rule neither fires nor hides anything",
   );
   check(
     /IF TG_OP = 'UPDATE' THEN _old_version_id := OLD\.method_version_id; END IF;/.test(g) &&
@@ -1037,7 +1075,31 @@ check(
       /IF NOT _governed THEN\s+RAISE EXCEPTION 'BESKT_GRANT_UNGOVERNED_WRITE: a governance grant is revoked only/.test(
         ga,
       ),
-    "BESKT-DB-GATE-GRANTS: a direct INSERT and a direct revocation UPDATE on the mapping are refused for every caller, service_role included, unless the governed marker is set",
+    "BESKT-DB-GATE-GRANTS: a direct INSERT and a direct revocation UPDATE on the mapping are refused unless the governed marker is set",
+  );
+  // The AUTHORITY is the privilege, not the marker: a caller that can set a
+  // custom GUC must still have no way to write the row.
+  for (const t of ["beskt_governance_grants", "beskt_method_reviews"] as const) {
+    check(
+      new RegExp(`GRANT SELECT ON public\\.${t}\\s+TO service_role;`).test(sql) &&
+        !new RegExp(`GRANT ALL ON public\\.${t}\\s+TO service_role;`).test(sql) &&
+        !new RegExp(
+          `GRANT [^;]*\\b(INSERT|UPDATE|DELETE|ALL)\\b[^;]*ON public\\.${t}[^;]*TO [^;]*\\b(anon|authenticated|service_role)\\b`,
+        ).test(sql),
+      `BESKT-DB-RPC-AUTHORITY: ${t} is SELECT-only for every client role, service_role included — the write privilege belongs to the SECURITY DEFINER RPC owner, so a caller-settable GUC grants nothing`,
+    );
+  }
+  const reviewRpc = functionBody(functionText(sql, "beskt_record_review") ?? "");
+  check(
+    /PERFORM set_config\('beskt\.review_write', 'on', true\);\s+INSERT INTO public\.beskt_method_reviews[\s\S]*?RETURNING id INTO _review_id;\s+PERFORM set_config\('beskt\.review_write', 'off', true\);/.test(
+      reviewRpc,
+    ) &&
+      [...sql.matchAll(/set_config\('beskt\.review_write', 'on', true\)/g)].length === 1 &&
+      /IF NOT _governed THEN\s+RAISE EXCEPTION\s+'BESKT_REVIEW_UNGOVERNED_WRITE/.test(rv) &&
+      /IF _governed AND NEW\.reviewer_id IS DISTINCT FROM auth\.uid\(\) THEN\s+RAISE EXCEPTION\s+'BESKT_REVIEW_NOT_OWN/.test(
+        rv,
+      ),
+    "BESKT-DB-RPC-AUTHORITY: a review row exists only when beskt_record_review wrote it for the signed-in reviewer, so no decision can exist without its lifecycle transition",
   );
   const grantRpc = functionBody(functionText(sql, "beskt_grant_governance") ?? "");
   const revokeRpc = functionBody(functionText(sql, "beskt_revoke_governance") ?? "");
@@ -1177,6 +1239,23 @@ check(
       ),
     "BESKT-DB-REVIEW-CYCLE: every submission opens a new review cycle, every review records the cycle it belongs to, and a rejection ends the cycle",
   );
+  check(
+    /rv\.revision_at_review = _v\.revision/.test(
+      functionBody(functionText(sql, "beskt_method_validate") ?? ""),
+    ) &&
+      !/revision = _v\.revision \+ 1/.test(
+        functionBody(functionText(sql, "beskt_record_review") ?? "").split(
+          "IF _decision = 'rejected'",
+        )[0],
+      ) &&
+      /SET content_status = 'draft', revision = _new_revision/.test(
+        functionBody(functionText(sql, "beskt_record_review") ?? ""),
+      ) &&
+      /revision = _v\.revision \+ 1/.test(
+        functionBody(functionText(sql, "beskt_touch_draft") ?? ""),
+      ),
+    "BESKT-DB-REVIEW-CYCLE: review revision semantics — an approval leaves the revision alone, so the five gates can be collected in parallel, while any governed touch advances it and invalidates every approval",
+  );
   const publish = functionBody(functionText(sql, "beskt_publish_version") ?? "");
   const lockAt = publish.indexOf("beskt_lock_version(");
   const validateAt = publish.indexOf("FROM public.beskt_method_validate(_method_version_id, true)");
@@ -1229,15 +1308,31 @@ check(
   );
   // Prose, deliberately read from `raw`: the normalised `sql` above strips
   // comments, and a stale comment is exactly what this check is for.
+  // Prose, deliberately read from `raw`: the normalised `sql` strips
+  // comments, and a stale comment is exactly what this check is for. No
+  // POSITIVE claim that an employer principal, a candidate or a roleless
+  // user reads PR 2 BESKT content may survive anywhere in the migration.
+  const employerClaim =
+    /(employer|candidate|roleless)[^.\n]{0,80}(reach|reaches|read|reads|receive|receives)[^.\n]{0,80}(content|method|document)/i;
+  const claimLines = raw
+    .split("\n")
+    .map((line, i) => ({ line, n: i + 1 }))
+    .filter(({ line }) => employerClaim.test(line))
+    .filter(({ line }) => !/\b(no|never|not|nothing|only|refus|denied|cannot)\b/i.test(line));
   check(
-    !/refused to employer\n--\s+principals/.test(raw) &&
+    claimLines.length === 0 &&
       !/for an employer principal\. A listing/.test(raw) &&
       !/security-vetting content is refused to employer/.test(raw) &&
+      !/Employer\n-- principals reach published recruitment-support content through the read\n-- RPC only/.test(
+        raw,
+      ) &&
       /release_scope is synthetic_internal_only, so\n--\s+only governance readers and explicit internal-QA grantees read/.test(
         raw,
       ) &&
-      /nothing at all to an employer '\s+'principal, a candidate or a roleless user/.test(raw),
-    "BESKT-DB-READ-CONTRACT: the read-contract comments describe synthetic_internal_only, not an employer-principal read path",
+      /Under\n-- release_scope = synthetic_internal_only NO employer principal, candidate\n-- or roleless user reads BESKT content at all/.test(
+        raw,
+      ),
+    `BESKT-DB-READ-CONTRACT: no comment claims an employer principal, candidate or roleless user reaches PR 2 BESKT content (${claimLines.map((c) => c.n).join(", ")})`,
   );
   const pub = functionBody(functionText(sql, "beskt_published_method") ?? "");
   check(
@@ -1303,7 +1398,9 @@ check(
     ) &&
       /beskt_method_versions: \{\s+Row: \{[\s\S]*?open_slot: string \| null[\s\S]*?\}\s+Insert: \{(?:(?!open_slot)[\s\S])*?\}\s+Update: \{(?:(?!open_slot)[\s\S])*?\}/.test(
         types,
-      ),
+      ) &&
+      /evaluation_template_key: string \| null/.test(types) &&
+      types.includes("      beskt_evaluation_template: {"),
     "BESKT-DB-TYPES: a method has many versions (isOneToOne: false) and the generated open_slot is read-only in the types",
   );
   const rolePacks = read(ROLE_PACKS);
@@ -1328,8 +1425,8 @@ check(
       entry.rollback ===
         "supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql" &&
       (entry.introduces?.length ?? 0) >= 13 &&
-      (entry.introduces ?? []).some(
-        (i) => (i as { object?: string }).object === "beskt_text_instructs_scoring",
+      ["beskt_text_instructs_scoring", "beskt_evaluation_template"].every((fn) =>
+        (entry.introduces ?? []).some((i) => (i as { object?: string }).object === fn),
       ),
     "BESKT-DB-NO-HOSTED: the migration is recorded pending (never applied) with its objects and rollback in release-state.json",
   );
@@ -1414,6 +1511,24 @@ check(
         "B2.52l",
         "B5.18d",
         "B5.18f",
+        "B5.30b",
+        "B6.9c",
+        "B6.9d3",
+        "B6.15b",
+        "B6.17b",
+        "B6.17c",
+        "B2.52f2",
+        "B2.52f3",
+        "B2.52f4",
+        "B2.52f5",
+        "B2.52p",
+        "B2.52r",
+        "B2.52u",
+        "B2.52y",
+        "B2.52za",
+        "B3.29b",
+        "B3.29c",
+        "B3.29d",
       ].every((l) => suite.includes(l)) &&
       suite.includes("\\ir beskt_governed_content_fixture.sql") &&
       existsSync(FIXTURE) &&
@@ -1436,7 +1551,7 @@ check(
       db.includes('grep -q "BESKT_GOVERNED_CONTENT_ROLLBACK ok"') &&
       db.includes('grep -q "BESKT_GOVERNED_CONTENT_PROOF ok"') &&
       floor !== null &&
-      Number(floor[1]) >= 380,
+      Number(floor[1]) >= 430,
     "BESKT-DB-SUITE: db-test.sh runs the suite with a floor, applies the rollback file for real, reads its proof and re-applies the migration",
   );
   const raceAt = db.indexOf('echo "==> Running BESKT one-open-version race"');
@@ -1495,6 +1610,7 @@ check(
         "DROP FUNCTION IF EXISTS public.beskt_revoke_governance(uuid, uuid, text);",
       ) &&
       rbSuite.includes("DROP FUNCTION IF EXISTS public.beskt_text_instructs_scoring(text);") &&
+      rbSuite.includes("DROP FUNCTION IF EXISTS public.beskt_evaluation_template(text, text);") &&
       rbSuite.includes("DROP COLUMN IF EXISTS pack_kind") &&
       !/DROP TABLE IF EXISTS public\.beskt_[a-z_]+\s+CASCADE;/.test(rbSuite),
     "BESKT-DB-SUITE: the documented rollback procedure unwinds BESKT first, with the same drop set as the rollback file and no CASCADE",
@@ -1529,6 +1645,7 @@ check(
         rb,
       ) &&
       /DROP FUNCTION IF EXISTS public\.beskt_text_instructs_scoring\(text\);/.test(rb) &&
+      /DROP FUNCTION IF EXISTS public\.beskt_evaluation_template\(text, text\);/.test(rb) &&
       rb.indexOf(
         "DROP POLICY IF EXISTS scp_interview_packs_editor_update ON public.scp_interview_packs;",
       ) < rb.indexOf("ALTER TABLE public.scp_interview_packs DROP COLUMN IF EXISTS pack_kind;"),

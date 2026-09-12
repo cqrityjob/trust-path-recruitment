@@ -331,9 +331,19 @@ BEGIN
      'cqrity_design_hypothesis', 'synthetic-fixture'),
     (_v, _p1, NULL, 'p1_closure', 15, 'closure_next_step', 'closure', 'candidate', 'information_notice',
      '{}', 'recruitment_support', 'Nästa steg är att arbetsgivaren återkommer.', 'The next step is that the employer will get back to you.',
-     'cqrity_design_hypothesis', 'synthetic-fixture'),
+     'cqrity_design_hypothesis', 'synthetic-fixture');
+
+  -- The PEACE Evaluation step: a governed template, named by key. Its wording
+  -- is not authored here -- it IS public.beskt_evaluation_template().
+  INSERT INTO public.beskt_prompts
+    (method_version_id, exposure_profile_id, item_id, prompt_key, display_order, prompt_kind, peace_stage,
+     addressee, question_form, permitted_probe_bases, permitted_mode, evaluation_template_key,
+     wording_sv, wording_en, content_provenance, source_reference)
+  VALUES
     (_v, _p1, NULL, 'p1_evaluation', 16, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback',
-     '{}', 'recruitment_support', 'Gå igenom din egen intervjuteknik. Notera vilket underlag som fortfarande saknas.', 'Go through your own interviewing technique. Note the basis that is still missing.',
+     '{}', 'recruitment_support', 'method_adherence',
+     public.beskt_evaluation_template('method_adherence', 'sv'),
+     public.beskt_evaluation_template('method_adherence', 'en'),
      'cqrity_design_hypothesis', 'synthetic-fixture');
 
   INSERT INTO public.beskt_routing_rules

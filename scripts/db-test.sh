@@ -2795,8 +2795,8 @@ if [ "$BG_RC" -ne 0 ]; then
   BG_FAILED=1
 else
   echo "    ok  ${BG_PASSED} BESKT governed-content assertions passed"
-  if [ "$BG_PASSED" -lt 380 ]; then
-    echo "FAIL: expected at least 380 BESKT governed-content assertions, only ${BG_PASSED} ran." >&2
+  if [ "$BG_PASSED" -lt 435 ]; then
+    echo "FAIL: expected at least 435 BESKT governed-content assertions, only ${BG_PASSED} ran." >&2
     echo "      A suite that silently stops running assertions is worse than one that fails." >&2
     BG_FAILED=1
   fi

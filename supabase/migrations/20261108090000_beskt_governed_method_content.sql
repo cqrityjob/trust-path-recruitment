@@ -1081,6 +1081,18 @@ CREATE TABLE public.beskt_prompts (
   wording_sv text,
   wording_en text,
 
+  -- PEACE Evaluation is not free text. An evaluation prompt names one of a
+  -- closed set of governed interviewer self-reflection templates, and the
+  -- child guard requires its wording to BE that template in both languages
+  -- (public.beskt_evaluation_template). Candidate questioning, scoring or a
+  -- verdict is therefore not representable in the Evaluation step at all --
+  -- structurally, not by keyword.
+  evaluation_template_key text
+    CHECK (evaluation_template_key IN (
+      'method_adherence', 'basis_gaps', 'next_step_planning')),
+  CONSTRAINT beskt_prompts_evaluation_template_check
+    CHECK ((peace_stage = 'evaluation') = (evaluation_template_key IS NOT NULL)),
+
   content_provenance text NOT NULL
     CHECK (content_provenance IN ('source_stated', 'derived_in_authoring', 'cqrity_design_hypothesis')),
   source_reference text,
@@ -1680,6 +1692,28 @@ BEGIN
           USING ERRCODE = 'check_violation';
       END IF;
     END IF;
+    -- PEACE Evaluation is a governed template, not authored text: the
+    -- prompt names a key from the closed set and its wording must BE that
+    -- template, in both languages. It addresses the interviewer, probes no
+    -- item and grounds nothing, so candidate questioning, a rating or a
+    -- verdict cannot be written into the Evaluation step at all.
+    IF NEW.peace_stage = 'evaluation' THEN
+      IF NEW.item_id IS NOT NULL OR coalesce(cardinality(NEW.permitted_probe_bases), 0) <> 0 THEN
+        RAISE EXCEPTION
+          'BESKT_EVALUATION_NOT_TEMPLATED: an Evaluation prompt is interviewer self-reflection; it probes no item and grounds nothing.'
+          USING ERRCODE = 'check_violation';
+      END IF;
+      IF NEW.wording_sv IS DISTINCT FROM public.beskt_evaluation_template(NEW.evaluation_template_key, 'sv')
+         OR NEW.wording_en IS DISTINCT FROM public.beskt_evaluation_template(NEW.evaluation_template_key, 'en') THEN
+        RAISE EXCEPTION
+          'BESKT_EVALUATION_NOT_TEMPLATED: the wording of an Evaluation prompt is the governed template for "%" in both languages, never authored text.',
+          NEW.evaluation_template_key USING ERRCODE = 'check_violation';
+      END IF;
+    ELSIF NEW.evaluation_template_key IS NOT NULL THEN
+      RAISE EXCEPTION
+        'BESKT_EVALUATION_NOT_TEMPLATED: only an Evaluation prompt carries an evaluation template key.'
+        USING ERRCODE = 'check_violation';
+    END IF;
     -- The stage binding is fixed by kind and recorded explicitly.
     IF NEW.peace_stage <> public.beskt_prompt_stage(NEW.prompt_kind) THEN
       RAISE EXCEPTION 'BESKT_PROMPT_STAGE_MISMATCH: prompt kind "%" belongs to stage "%", not "%".',
@@ -1837,7 +1871,9 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE _v public.beskt_method_versions%ROWTYPE;
+DECLARE
+  _v public.beskt_method_versions%ROWTYPE;
+  _governed boolean := coalesce(current_setting('beskt.review_write', true), '') = 'on';
 BEGIN
   SELECT * INTO _v FROM public.beskt_method_versions WHERE id = NEW.method_version_id;
   IF NOT FOUND THEN
@@ -1867,11 +1903,28 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
   -- The reviewer holds an active grant for exactly this gate. Checked here as
-  -- well as in the RPC, so a BYPASSRLS writer cannot record a gate nobody
-  -- granted.
+  -- well as in the RPC, so a writer that reaches the table cannot record a
+  -- gate nobody granted.
   IF NOT public.beskt_holds_grant(NEW.reviewer_id, NEW.gate) THEN
     RAISE EXCEPTION
       'BESKT_GATE_NOT_GRANTED: % holds no active grant for the % gate.', NEW.reviewer_id, NEW.gate
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  -- A review is the act of the signed-in reviewer, never a row written on
+  -- someone else's behalf.
+  IF _governed AND NEW.reviewer_id IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION
+      'BESKT_REVIEW_NOT_OWN: a review is recorded for the signed-in reviewer, not for another user.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  -- Defence in depth, never authority: the write privilege on this table
+  -- belongs to the owner of beskt_record_review (SECURITY DEFINER) and to
+  -- nobody else -- no client role, service_role included, holds INSERT. The
+  -- marker additionally refuses a row that did not come through the RPC, so
+  -- a rejection can never exist without its lifecycle transition.
+  IF NOT _governed THEN
+    RAISE EXCEPTION
+      'BESKT_REVIEW_UNGOVERNED_WRITE: a review is recorded only by beskt_record_review, never by a direct INSERT.'
       USING ERRCODE = 'insufficient_privilege';
   END IF;
   RETURN NEW;
@@ -1885,12 +1938,19 @@ CREATE TRIGGER beskt_method_reviews_insert_guard
   FOR EACH ROW EXECUTE FUNCTION public.beskt_guard_review_insert();
 
 
--- 4.7  Governance grants are written only by the two governed RPCs, which
---      set a transaction-local marker around their one INSERT or one
---      revocation UPDATE. Every other write -- a fabricated grant, a
---      revocation outside beskt_revoke_governance, a rewrite, a delete -- is
---      refused for every caller, the database owner and service_role
---      included, because a trigger fires for BYPASSRLS callers too.
+-- 4.7  Governance grants are written only by the two governed RPCs.
+--
+--      THE AUTHORITY IS THE PRIVILEGE, NOT THE MARKER. No client role holds
+--      INSERT, UPDATE or DELETE on this table -- service_role included (see
+--      section 8) -- so the only writer is the owner of the two SECURITY
+--      DEFINER RPCs. A caller that can set a custom GUC therefore gains
+--      nothing: a session that is not running inside those functions has no
+--      privilege to write the row in the first place.
+--
+--      The transaction-local marker below is defence in depth on top of that
+--      privilege: it refuses a write that did not come through the RPCs even
+--      from a role that bypasses privileges entirely (the database owner in a
+--      migration or a test). It is never consulted as authorisation.
 CREATE OR REPLACE FUNCTION public.beskt_guard_grants_append_only()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -2079,6 +2139,42 @@ GRANT EXECUTE ON FUNCTION public.beskt_text_claims_deception_cue(text) TO authen
 --      evidence anchors carrying such an instruction block publication:
 --      BESKT produces a basis for a human decision, never a score, and the
 --      Evaluation step is interviewer reflection only.
+-- 5.3a The closed set of governed PEACE Evaluation templates. The Evaluation
+--      step is interviewer self-reflection, so its wording is not authored: a
+--      prompt names a key and the guard requires the wording to be exactly
+--      this text. Nothing a later author writes can turn Evaluation into
+--      candidate questioning, a rating or a hiring verdict, because no other
+--      text is representable there.
+CREATE OR REPLACE FUNCTION public.beskt_evaluation_template(_key text, _locale text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT CASE _locale
+    WHEN 'sv' THEN CASE _key
+      WHEN 'method_adherence'   THEN 'Gå igenom din egen intervjuteknik mot metoden. Notera de frågor du ställde som inte var förberedda, samt de avsteg du gjorde från den dokumenterade rollrelevansen.'
+      WHEN 'basis_gaps'         THEN 'Notera vilket underlag som fortfarande saknas efter samtalet, samt vilken bevisstatus varje ämne befinner sig i.'
+      WHEN 'next_step_planning' THEN 'Planera nästa steg i processen utifrån det underlag som saknas, inte utifrån ett intryck av personen.'
+      ELSE NULL END
+    WHEN 'en' THEN CASE _key
+      WHEN 'method_adherence'   THEN 'Go through your own interviewing technique against the method. Note the questions you asked that were not prepared, together with any departure from the documented role relevance.'
+      WHEN 'basis_gaps'         THEN 'Note which basis is still missing after the conversation, together with the evidence state each topic is in.'
+      WHEN 'next_step_planning' THEN 'Plan the next step in the process from the basis that is missing, not from an impression of the person.'
+      ELSE NULL END
+    ELSE NULL
+  END;
+$$;
+
+REVOKE ALL ON FUNCTION public.beskt_evaluation_template(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.beskt_evaluation_template(text, text) TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.beskt_evaluation_template(text, text) IS
+  'The closed set of governed PEACE Evaluation templates. Evaluation wording '
+  'is not authored free text: a prompt names a key and the wording must be '
+  'exactly this text, so candidate questioning, scoring and verdicts are '
+  'structurally absent from the Evaluation step.';
+
 CREATE OR REPLACE FUNCTION public.beskt_text_instructs_scoring(_text text)
 RETURNS boolean
 LANGUAGE sql
@@ -2088,11 +2184,29 @@ AS $$
   SELECT _text IS NOT NULL AND (
     -- English
     _text ~* '\m(rate|rates|rated|rating|ratings|score|scores|scored|scoring|grade|grades|graded|grading|rank|ranks|ranked|ranking|suitability|suitable|unsuitable|verdict|pass/fail|pass or fail|passes|passed|fails|failed|recommend|recommends|recommended|recommendation|hire|hireable|hiring decision|shortlist|shortlisted)\M'
+    -- English: stars, tiers, classification, and "decide whether they proceed"
+    OR _text ~* '\mstars?\M'
+    OR _text ~* '\m(classif\w*|categoris\w*|categoriz\w*|tiers?|tiered|bucket\w*)\M'
+    OR _text ~* '\m(high|top)\w*\s*(,|/|\sor\s)\s*(medium|middle|mid)\w*'
+    OR _text ~* '\m(should|shall|will|would|can|may|whether|who)\s+\w*\s*(proceed|proceeds|advance|advances|progress|progresses|move forward|moves forward|move on|moves on|go on|goes on)\M'
+    OR _text ~* '\m(take|takes|taking)\s+(the\s+)?(candidate|applicant|person|them)\s+forward\M'
+    OR _text ~* '\m(decide|decides|determine|determines|judge|judges|assess|assesses|evaluate|evaluates)\s+(whether|if|the candidate|this candidate|them|the person)\M'
+    OR _text ~* '\m(one|two|three|four|five|six|seven|eight|nine|ten)\s+to\s+(two|three|four|five|six|seven|eight|nine|ten)\M'
     OR _text ~* '\m(on a scale|scale of|scale from|from|between)\s+\d+\s*(to|-|–|and)\s*\d+'
     OR _text ~* '\d+\s*out of\s*\d+'
     OR _text ~* '(\d+\s*points?\M|\mpoints?\s+(scale|out of|total)\M|\m(award|assign|give|deduct|earn|allocate)\w*\s+points?\M)'
     -- Swedish
     OR _text ~* '\m(betyg|betygsätt\w*|betygsatt\w*|poäng\w*|gradera\w*|graderas|ranka\w*|rankad\w*|rangordn\w*|lämplighet\w*|lämplig|olämplig\w*|omdöme\w*|utlåtande\w*|godkänd\w*|godkänn\w*|underkänd\w*|underkänn\w*|rekommend\w*|anställ\w*|verdikt\w*|shortlist\w*)\M'
+    -- Swedish: stars, tiers, classification, judgement of the person, and
+    -- "decide whether the person goes on"
+    OR _text ~* '\mstjärn\w*'
+    OR _text ~* '\m(klassificer\w*|kategoriser\w*|niv\w*grupp\w*|placera in)\M'
+    OR _text ~* '\m(hög|höga|toppen)\w*\s*(,|/|\soch\s|\seller\s)\s*(medel|mellan)\w*'
+    OR _text ~* '\m(bedöm|bedömer|bedöma|bedömning\w*|värdera|värderar|värdering\w*)\M'
+    OR _text ~* '\m(avgör|avgöra|avgörs|besluta|beslutar)\s+(om|huruvida)\M'
+    OR _text ~* '\m(ska|skall|bör|får|kan)\s+(gå|föras|tas|slussas)\s+vidare\M'
+    OR _text ~* '\m(vem|vilka)\s+som\s+(går|förs|tas)\s+vidare\M'
+    OR _text ~* '\m(en|ett|två|tre|fyra|fem|sex|sju|åtta|nio|tio)\s+till\s+(två|tre|fyra|fem|sex|sju|åtta|nio|tio)\M'
     OR _text ~* '\m(på en skala|skala|från|mellan)\s+\d+\s*(till|-|–|och)\s*\d+');
 $$;
 
@@ -2181,6 +2295,7 @@ AS $$
           'display_order', pr.display_order, 'prompt_kind', pr.prompt_kind, 'peace_stage', pr.peace_stage,
           'addressee', pr.addressee, 'question_form', pr.question_form,
           'permitted_probe_bases', public.beskt_sorted_array(pr.permitted_probe_bases),
+          'evaluation_template_key', pr.evaluation_template_key,
           'permitted_mode', pr.permitted_mode,
           'wording_sv', pr.wording_sv, 'wording_en', pr.wording_en,
           'content_provenance', pr.content_provenance, 'source_reference', pr.source_reference)
@@ -2819,6 +2934,20 @@ BEGIN
             OR public.beskt_text_instructs_scoring(a.supporting_evidence_examples_sv) OR public.beskt_text_instructs_scoring(a.supporting_evidence_examples_en)
             OR public.beskt_text_instructs_scoring(a.counter_evidence_and_protective_factors_sv) OR public.beskt_text_instructs_scoring(a.counter_evidence_and_protective_factors_en));
 
+  -- ---- PEACE Evaluation is a governed template, not authored text --------------
+  RETURN QUERY
+    SELECT 'PROMPT_EVALUATION_NOT_TEMPLATED', 'blocking',
+           format('Evaluation prompt %s is not one of the governed interviewer self-reflection templates, in both languages.', pr.prompt_key)
+      FROM public.beskt_prompts pr
+     WHERE pr.method_version_id = _method_version_id
+       AND pr.peace_stage = 'evaluation'
+       AND (pr.evaluation_template_key IS NULL
+            OR pr.addressee <> 'interviewer'
+            OR pr.item_id IS NOT NULL
+            OR coalesce(cardinality(pr.permitted_probe_bases), 0) <> 0
+            OR pr.wording_sv IS DISTINCT FROM public.beskt_evaluation_template(pr.evaluation_template_key, 'sv')
+            OR pr.wording_en IS DISTINCT FROM public.beskt_evaluation_template(pr.evaluation_template_key, 'en'));
+
   -- ---- routing moves forward only ---------------------------------------------
   -- Re-proved on the stored graph: a target ordered at or before its source
   -- (section, item order, key) blocks publication even if a row was forced
@@ -2844,11 +2973,12 @@ BEGIN
            AND rv.gate = _gate
            AND rv.decision = 'approved'
            AND rv.content_hash_at_review = _hash
-           AND rv.review_cycle_at_review = _v.review_cycle) THEN
+           AND rv.review_cycle_at_review = _v.review_cycle
+           AND rv.revision_at_review = _v.revision) THEN
         RETURN QUERY SELECT
           ('REVIEW_GATE_' || upper(_gate) || '_NOT_APPROVED')::text,
           'blocking'::text,
-          format('The %s review gate has not been approved for the current content in the current review cycle. If it was approved earlier, the content has changed or the version was rejected and resubmitted since, and must be reviewed again.', _gate);
+          format('The %s review gate has not been approved at the current content hash, review cycle AND review revision. If it was approved earlier, the content changed, the draft was touched, or the version was rejected and resubmitted since, and it must be reviewed again.', _gate);
       END IF;
     END LOOP;
   END IF;
@@ -2972,9 +3102,13 @@ DECLARE
   _profile_mode text;
   _profile_version uuid;
   _shown uuid[];
+  _it record;
   _r record;
   _answer jsonb;
   _fires boolean;
+  _has_show boolean;
+  _fired_show boolean;
+  _fired_skip boolean;
 BEGIN
   IF NOT public.beskt_can_read_version(_method_version_id) THEN
     RAISE EXCEPTION 'BESKT_NOT_AUTHORISED: you may not read this method version.'
@@ -3006,78 +3140,106 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
-  -- The unconditional set: every candidate-preparation item of this profile
-  -- whose mode the chosen mode permits, minus the items that only a 'show'
-  -- rule of THIS profile can reveal. A rule whose source lies in another
-  -- profile can never fire here (see the loop below), so it neither hides
-  -- nor reveals anything: cross-profile coupling is absent, not half-present.
-  SELECT coalesce(array_agg(i.id), '{}'::uuid[]) INTO _shown
-    FROM public.beskt_items i
-   WHERE i.method_version_id = _method_version_id
-     AND i.exposure_profile_id = _exposure_profile_id
-     AND i.phase = 'candidate_preparation'
-     AND (i.permitted_mode = 'recruitment_support' OR _mode = 'security_vetting_support')
-     AND NOT EXISTS (
-       SELECT 1 FROM public.beskt_routing_rules r
-        JOIN public.beskt_items si ON si.id = r.source_item_id
-        WHERE r.method_version_id = _method_version_id
-          AND r.target_item_id = i.id AND r.action = 'show'
-          AND si.exposure_profile_id = _exposure_profile_id
-          AND (r.applies_mode = 'recruitment_support' OR _mode = 'security_vetting_support'));
-
-  -- Rules in evaluation order. A later rule overrides an earlier one on the
-  -- same target, deterministically.
-  FOR _r IN
-    SELECT r.condition_kind, r.condition_boolean, r.action, r.target_item_id, r.source_item_id,
-           si.item_key AS source_key, si.exposure_profile_id AS source_profile,
-           o.option_key,
-           (ti.permitted_mode = 'recruitment_support' OR _mode = 'security_vetting_support') AS target_permitted,
-           ti.exposure_profile_id AS target_profile
+  -- ---- defensive: the rule graph must be forward-only ---------------------
+  -- Every rule's target comes after its source in the governed order: refused
+  -- at write time (BESKT_ROUTE_BACKWARD) and re-proved by the validator
+  -- (ROUTE_TARGET_BEFORE_SOURCE). The evaluation below relies on it -- it
+  -- decides one item at a time in that order, so every source is already
+  -- final when its target is considered, and the pass IS the fixed point.
+  -- A row forced past both guards is refused here rather than silently
+  -- resolved into whatever one arbitrary pass happens to produce.
+  IF EXISTS (
+    SELECT 1
       FROM public.beskt_routing_rules r
       JOIN public.beskt_items si ON si.id = r.source_item_id
+      JOIN public.beskt_sections ss ON ss.id = si.section_id
       JOIN public.beskt_items ti ON ti.id = r.target_item_id
-      LEFT JOIN public.beskt_item_options o ON o.id = r.condition_option_id
+      JOIN public.beskt_sections ts ON ts.id = ti.section_id
      WHERE r.method_version_id = _method_version_id
-       AND (r.applies_mode = 'recruitment_support' OR _mode = 'security_vetting_support')
-     ORDER BY r.evaluation_order
+       AND (ts.display_order, ti.display_order, ti.item_key)
+           <= (ss.display_order, si.display_order, si.item_key)) THEN
+    RAISE EXCEPTION
+      'BESKT_ROUTE_NOT_ORDERED: this version holds a routing rule whose target does not come after its source, so the sequence has no order-independent resolution.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  -- ---- visibility, one item at a time, in the governed order --------------
+  -- For each candidate-preparation item of this profile that the chosen mode
+  -- permits, every rule that targets it is read:
+  --
+  --   * a rule counts only when its source is ALREADY VISIBLE and its answer
+  --     matches, so an answer left over for a hidden or skipped source has no
+  --     downstream effect, and a source that becomes visible is never missed;
+  --   * an item that no show rule of this profile targets starts visible, one
+  --     that a show rule targets starts hidden;
+  --   * a firing 'skip' always wins over a firing 'show'.
+  --
+  -- Nothing here reads evaluation_order, so the resolved sequence cannot
+  -- depend on the order the rules happen to carry.
+  _shown := '{}'::uuid[];
+  FOR _it IN
+    SELECT i.id
+      FROM public.beskt_items i
+      JOIN public.beskt_sections s ON s.id = i.section_id
+     WHERE i.method_version_id = _method_version_id
+       AND i.exposure_profile_id = _exposure_profile_id
+       AND i.phase = 'candidate_preparation'
+       AND (i.permitted_mode = 'recruitment_support' OR _mode = 'security_vetting_support')
+     ORDER BY s.display_order, i.display_order, i.item_key
   LOOP
-    -- Only this profile's items are in play, and a rule can only reveal
-    -- content the chosen mode permits.
-    IF _r.source_profile <> _exposure_profile_id OR _r.target_profile <> _exposure_profile_id
-       OR NOT _r.target_permitted THEN
-      CONTINUE;
-    END IF;
-    -- A rule reads only an item that is currently shown. An answer supplied
-    -- for a hidden or skipped source is ignored, deterministically, so a
-    -- stale answer can neither reveal nor hide downstream content.
-    IF NOT (_r.source_item_id = ANY (_shown)) THEN
-      CONTINUE;
-    END IF;
-
-    _answer := _answers -> _r.source_key;
-    _fires := CASE _r.condition_kind
-      WHEN 'always' THEN true
-      WHEN 'option_selected' THEN
-        _answer IS NOT NULL
-        AND _answer ->> 'kind' = 'option'
-        AND jsonb_typeof(_answer -> 'option_keys') = 'array'
-        AND (_answer -> 'option_keys') ? _r.option_key
-      WHEN 'boolean_equals' THEN
-        _answer IS NOT NULL
-        AND _answer ->> 'kind' = 'boolean'
-        AND jsonb_typeof(_answer -> 'value') = 'boolean'
-        AND (_answer ->> 'value')::boolean = _r.condition_boolean
-      ELSE false
-    END;
-
-    IF NOT _fires THEN CONTINUE; END IF;
-
-    IF _r.action = 'show' THEN
-      IF NOT (_r.target_item_id = ANY (_shown)) THEN
-        _shown := _shown || _r.target_item_id;
+    _has_show := false;
+    _fired_show := false;
+    _fired_skip := false;
+    FOR _r IN
+      SELECT r.condition_kind, r.condition_boolean, r.action, r.source_item_id,
+             si.item_key AS source_key, si.exposure_profile_id AS source_profile,
+             o.option_key
+        FROM public.beskt_routing_rules r
+        JOIN public.beskt_items si ON si.id = r.source_item_id
+        LEFT JOIN public.beskt_item_options o ON o.id = r.condition_option_id
+       WHERE r.method_version_id = _method_version_id
+         AND r.target_item_id = _it.id
+         AND (r.applies_mode = 'recruitment_support' OR _mode = 'security_vetting_support')
+    LOOP
+      -- Only this profile's rules are in play: cross-profile coupling is
+      -- absent, not half-present.
+      IF _r.source_profile <> _exposure_profile_id THEN
+        CONTINUE;
       END IF;
-    ELSE
-      _shown := array_remove(_shown, _r.target_item_id);
+      IF _r.action = 'show' THEN
+        _has_show := true;
+      END IF;
+      IF NOT (_r.source_item_id = ANY (_shown)) THEN
+        CONTINUE;
+      END IF;
+
+      _answer := _answers -> _r.source_key;
+      _fires := CASE _r.condition_kind
+        WHEN 'always' THEN true
+        WHEN 'option_selected' THEN
+          _answer IS NOT NULL
+          AND _answer ->> 'kind' = 'option'
+          AND jsonb_typeof(_answer -> 'option_keys') = 'array'
+          AND (_answer -> 'option_keys') ? _r.option_key
+        WHEN 'boolean_equals' THEN
+          _answer IS NOT NULL
+          AND _answer ->> 'kind' = 'boolean'
+          AND jsonb_typeof(_answer -> 'value') = 'boolean'
+          AND (_answer ->> 'value')::boolean = _r.condition_boolean
+        ELSE false
+      END;
+
+      IF NOT _fires THEN CONTINUE; END IF;
+
+      IF _r.action = 'show' THEN
+        _fired_show := true;
+      ELSE
+        _fired_skip := true;
+      END IF;
+    END LOOP;
+
+    IF (NOT _has_show OR _fired_show) AND NOT _fired_skip THEN
+      _shown := _shown || _it.id;
     END IF;
   END LOOP;
 
@@ -3097,9 +3259,11 @@ GRANT EXECUTE ON FUNCTION public.beskt_resolve_item_sequence(uuid, uuid, text, j
 COMMENT ON FUNCTION public.beskt_resolve_item_sequence(uuid, uuid, text, jsonb) IS
   'Deterministic questionnaire routing over governed structured data only. '
   'Same version, profile, mode and structured answers -> same items, same '
-  'order. An omitted or discuss-orally answer fires no rule, and neither does '
-  'an answer for an item that is not currently shown. It starts nothing and '
-  'stores nothing.';
+  'order. Visibility is computed one item at a time in the governed order, so '
+  'the result never depends on evaluation_order: an omitted or '
+  'discuss-orally answer fires no rule, an answer for an item that is not '
+  'currently shown has no effect at all, and a firing skip always wins over a '
+  'firing show. It starts nothing and stores nothing.';
 
 
 -- ###########################################################################
@@ -3599,11 +3763,17 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
+  -- The write privilege on beskt_method_reviews belongs to the owner of this
+  -- SECURITY DEFINER function and to nobody else; the marker additionally
+  -- tells the row trigger that this row came through the governed path, so a
+  -- decision can never exist without the lifecycle transition below.
+  PERFORM set_config('beskt.review_write', 'on', true);
   INSERT INTO public.beskt_method_reviews
     (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review,
      revision_at_review, review_cycle_at_review)
   VALUES (_method_version_id, _gate, _decision, auth.uid(), btrim(_rationale), _hash, _v.revision, _v.review_cycle)
   RETURNING id INTO _review_id;
+  PERFORM set_config('beskt.review_write', 'off', true);
 
   IF _decision = 'rejected' THEN
     _new_status := 'draft';
@@ -4077,6 +4247,7 @@ BEGIN
           'prompt_kind', pr.prompt_kind, 'peace_stage', pr.peace_stage, 'addressee', pr.addressee,
           'question_form', pr.question_form,
           'permitted_probe_bases', to_jsonb(pr.permitted_probe_bases),
+          'evaluation_template_key', pr.evaluation_template_key,
           'permitted_mode', pr.permitted_mode,
           'wording_sv', pr.wording_sv, 'wording_en', pr.wording_en,
           'content_provenance', pr.content_provenance, 'source_reference', pr.source_reference)
@@ -4181,9 +4352,19 @@ COMMENT ON FUNCTION public.beskt_readable_published_versions() IS
 -- both the full set on every new table -- silence would be a grant), then
 -- SELECT re-granted to authenticated behind one governance-reader policy.
 -- No INSERT, UPDATE or DELETE grant or policy exists for any client role:
--- there is no authoring UI in PR 2, so there is no client writer. Employer
--- principals reach published recruitment-support content through the read
--- RPC only, never through a table.
+-- there is no authoring UI in PR 2, so there is no client writer. Under
+-- release_scope = synthetic_internal_only NO employer principal, candidate
+-- or roleless user reads BESKT content at all -- not through a table and not
+-- through the read RPC; the read contract answers governance readers and
+-- explicit internal-QA grantees only.
+--
+-- service_role is a writer for the content tables a migration or a test
+-- fixture plants, but NOT for the two tables that carry authority itself:
+-- beskt_governance_grants and beskt_method_reviews are SELECT-only for it.
+-- Those two are written exclusively by their SECURITY DEFINER RPCs, which
+-- hold the privilege through their owner. A caller that can set a custom GUC
+-- gains nothing, because the marker those RPCs set is defence in depth and
+-- never the authorisation.
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE public.beskt_method_versions         ENABLE ROW LEVEL SECURITY;
@@ -4251,9 +4432,11 @@ GRANT ALL ON public.beskt_prompts                 TO service_role;
 GRANT ALL ON public.beskt_routing_rules           TO service_role;
 GRANT ALL ON public.beskt_evidence_anchors        TO service_role;
 GRANT ALL ON public.beskt_observation_fields      TO service_role;
-GRANT ALL ON public.beskt_method_reviews          TO service_role;
+-- Authority tables: read-only even for service_role. Written only inside
+-- beskt_record_review / beskt_grant_governance / beskt_revoke_governance.
+GRANT SELECT ON public.beskt_method_reviews       TO service_role;
 GRANT ALL ON public.beskt_method_events           TO service_role;
-GRANT ALL ON public.beskt_governance_grants       TO service_role;
+GRANT SELECT ON public.beskt_governance_grants    TO service_role;
 
 -- One decision, one predicate: governance readers only. Platform content
 -- roles and platform admins; never an employer member, a candidate or anon.
@@ -4323,6 +4506,7 @@ DECLARE
   _src text;
   _fn text;
   _priv text;
+  _role text;
 BEGIN
   -- Every BESKT table exists with ENABLE and FORCE RLS, zero client write
   -- privilege, and no privilege at all for anon or PUBLIC.
@@ -4517,6 +4701,34 @@ BEGIN
   IF has_function_privilege('authenticated', 'public.beskt_holds_grant(uuid, text)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.beskt_reader_access_classes(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'BESKT_PROOF: a governance helper is executable by authenticated.';
+  END IF;
+  -- The two authority tables are written only through their SECURITY DEFINER
+  -- RPCs: no client role, service_role included, holds a write privilege.
+  FOREACH _t IN ARRAY ARRAY['beskt_governance_grants', 'beskt_method_reviews'] LOOP
+    FOREACH _priv IN ARRAY ARRAY['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE'] LOOP
+      FOREACH _role IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+        IF has_table_privilege(_role, 'public.' || _t, _priv) THEN
+          RAISE EXCEPTION 'BESKT_PROOF: % holds % on %, so a caller outside the governed RPCs could write authority.', _role, _priv, _t;
+        END IF;
+      END LOOP;
+    END LOOP;
+  END LOOP;
+  -- Reviews bind to hash, review cycle AND review revision.
+  SELECT p.prosrc INTO _src FROM pg_proc p WHERE p.proname = 'beskt_method_validate';
+  IF position('rv.revision_at_review = _v.revision' in _src) = 0 THEN
+    RAISE EXCEPTION 'BESKT_PROOF: review approvals are not bound to the review revision.';
+  END IF;
+  -- PEACE Evaluation is a closed governed template.
+  IF to_regprocedure('public.beskt_evaluation_template(text, text)') IS NULL
+     OR public.beskt_evaluation_template('method_adherence', 'sv') IS NULL
+     OR public.beskt_evaluation_template('method_adherence', 'en') IS NULL
+     OR public.beskt_evaluation_template('not_a_template', 'sv') IS NOT NULL THEN
+    RAISE EXCEPTION 'BESKT_PROOF: the governed Evaluation templates are missing or open.';
+  END IF;
+  -- The resolver is order-independent: it reads no evaluation_order.
+  SELECT p.prosrc INTO _src FROM pg_proc p WHERE p.proname = 'beskt_resolve_item_sequence';
+  IF position('r.evaluation_order' in _src) > 0 OR position('BESKT_ROUTE_NOT_ORDERED' in _src) = 0 THEN
+    RAISE EXCEPTION 'BESKT_PROOF: the resolver depends on evaluation_order or does not refuse an unordered graph.';
   END IF;
   -- The canonical representation is typed jsonb, and reviews bind to the cycle.
   SELECT p.prosrc INTO _src FROM pg_proc p WHERE p.proname = 'beskt_canonical_content';

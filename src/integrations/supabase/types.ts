@@ -1064,6 +1064,7 @@ export type Database = {
           addressee: string
           content_provenance: string
           display_order: number
+          evaluation_template_key: string | null
           exposure_profile_id: string
           id: string
           item_id: string | null
@@ -1082,6 +1083,7 @@ export type Database = {
           addressee: string
           content_provenance: string
           display_order: number
+          evaluation_template_key?: string | null
           exposure_profile_id: string
           id?: string
           item_id?: string | null
@@ -1100,6 +1102,7 @@ export type Database = {
           addressee?: string
           content_provenance?: string
           display_order?: number
+          evaluation_template_key?: string | null
           exposure_profile_id?: string
           id?: string
           item_id?: string | null
@@ -14530,6 +14533,10 @@ export type Database = {
           _summary_sv?: string
         }
         Returns: Json
+      }
+      beskt_evaluation_template: {
+        Args: { _key: string; _locale: string }
+        Returns: string
       }
       beskt_grant_governance: {
         Args: {

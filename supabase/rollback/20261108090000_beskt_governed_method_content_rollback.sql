@@ -166,6 +166,7 @@ DROP FUNCTION IF EXISTS public.beskt_method_content_hash(uuid);
 DROP FUNCTION IF EXISTS public.beskt_canonical_content(uuid);
 DROP FUNCTION IF EXISTS public.beskt_sorted_array(text[]);
 DROP FUNCTION IF EXISTS public.beskt_text_instructs_scoring(text);
+DROP FUNCTION IF EXISTS public.beskt_evaluation_template(text, text);
 DROP FUNCTION IF EXISTS public.beskt_text_claims_deception_cue(text);
 DROP FUNCTION IF EXISTS public.beskt_wording_is_neutral(text);
 DROP FUNCTION IF EXISTS public.beskt_prompt_stage(text);

@@ -598,8 +598,11 @@ BEGIN
              VALUES (%L, 'rec_reads_sv', 50, 'recruitment_support', %L, 'always', 'show', %L)$q$, b.sv_v, b.sv_i7, b.sv_i8),
     'BESKT_ROUTE_MODE_ESCALATION', 'B2.47 a recruitment-support rule cannot read a security-vetting answer either');
   ALTER TABLE public.beskt_routing_rules DISABLE TRIGGER beskt_routing_rules_child_guard;
-  INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, condition_boolean, action, target_item_id)
-  VALUES (b.sv_v, 'forced_rec_into_sv', 50, 'recruitment_support', b.sv_i8, 'boolean_equals', true, 'show', b.sv_i7);
+  -- Forward in the governed order (i7 precedes i8), so this is a mode
+  -- escalation and nothing else: the resolver's ordering pre-check is not
+  -- what refuses it.
+  INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, action, target_item_id)
+  VALUES (b.sv_v, 'forced_rec_reads_sv', 50, 'recruitment_support', b.sv_i7, 'always', 'show', b.sv_i8);
   ALTER TABLE public.beskt_routing_rules ENABLE TRIGGER beskt_routing_rules_child_guard;
   PERFORM pg_temp.ok('ROUTE_RECRUITMENT_INTO_SECURITY_VETTING' = ANY (pg_temp.blockers(b.sv_v)),
     'B2.48 and if such a rule is forced into the graph, publication is blocked by the validator');
@@ -617,7 +620,7 @@ BEGIN
     JOIN public.beskt_items i ON i.id = r.item_id WHERE i.permitted_mode = 'security_vetting_support' OR i.exposure_profile_id = b.sv_p2;
   RESET ROLE; PERFORM pg_temp.nobody();
   PERFORM pg_temp.ok(_n = 0, 'B2.49a and recruitment-mode routing over the recruitment profile surfaces no security-vetting item');
-  DELETE FROM public.beskt_routing_rules WHERE method_version_id = b.sv_v AND rule_key = 'forced_rec_into_sv';
+  DELETE FROM public.beskt_routing_rules WHERE method_version_id = b.sv_v AND rule_key = 'forced_rec_reads_sv';
   PERFORM pg_temp.ok(pg_temp.blockers(b.sv_v) = '{}'::text[], 'B2.49b complete again');
 
   -- Exposure profiles never cross: not by prompt, not by route, and a forced
@@ -730,6 +733,83 @@ BEGIN
   UPDATE public.beskt_routing_rules SET evaluation_order = 2 WHERE method_version_id = b.rec_v AND rule_key = 'show_context_when_reported';
   PERFORM pg_temp.ok(pg_temp.blockers(b.rec_v) = '{}'::text[], 'B2.52f complete again');
 
+  -- Order independence. A chain i1 -> i3 -> i4: the rule that READS i3 is
+  -- placed BEFORE and then AFTER the rule that makes i3 visible. A one-pass
+  -- resolver gives two different answers here; this one gives the same.
+  INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, condition_option_id, action, target_item_id)
+  VALUES (b.rec_v, 'chain_show_incident', 90, 'recruitment_support', b.rec_i1, 'option_selected', b.rec_o_yes, 'show', b.rec_i3);
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  SELECT string_agg(sequence_position || ':' || item_key, ',' ORDER BY sequence_position) INTO _a
+    FROM public.beskt_resolve_item_sequence(b.rec_v, b.rec_p1, 'recruitment_support',
+      '{"lone_working_experience": {"kind": "option", "option_keys": ["yes"]}, "reported_incident": {"kind": "boolean", "value": true}}');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_a = '1:lone_working_experience,2:lone_working_example,3:reported_incident,4:incident_context,5:information_acknowledged',
+    format('B2.52f1 with the dependent rule ordered BEFORE its enabler (2 against 90) the whole chain still resolves (%s)', _a));
+  UPDATE public.beskt_routing_rules SET evaluation_order = 99 WHERE method_version_id = b.rec_v AND rule_key = 'show_context_when_reported';
+  UPDATE public.beskt_routing_rules SET evaluation_order = 3 WHERE method_version_id = b.rec_v AND rule_key = 'chain_show_incident';
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  SELECT string_agg(sequence_position || ':' || item_key, ',' ORDER BY sequence_position) INTO _b2
+    FROM public.beskt_resolve_item_sequence(b.rec_v, b.rec_p1, 'recruitment_support',
+      '{"lone_working_experience": {"kind": "option", "option_keys": ["yes"]}, "reported_incident": {"kind": "boolean", "value": true}}');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_a = _b2,
+    format('B2.52f2 and identically with the orders swapped (99 against 3): the result does not depend on evaluation_order (%s)', _b2));
+  -- The enabler does not fire: the dependent rule must not fire either, in
+  -- either order, however stale the answer for its source is.
+  UPDATE public.beskt_routing_rules SET evaluation_order = 90 WHERE method_version_id = b.rec_v AND rule_key = 'chain_show_incident';
+  UPDATE public.beskt_routing_rules SET evaluation_order = 2 WHERE method_version_id = b.rec_v AND rule_key = 'show_context_when_reported';
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  SELECT string_agg(sequence_position || ':' || item_key, ',' ORDER BY sequence_position) INTO _c
+    FROM public.beskt_resolve_item_sequence(b.rec_v, b.rec_p1, 'recruitment_support',
+      '{"lone_working_experience": {"kind": "option", "option_keys": ["no"]}, "reported_incident": {"kind": "boolean", "value": true}}');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  UPDATE public.beskt_routing_rules SET evaluation_order = 3 WHERE method_version_id = b.rec_v AND rule_key = 'chain_show_incident';
+  UPDATE public.beskt_routing_rules SET evaluation_order = 99 WHERE method_version_id = b.rec_v AND rule_key = 'show_context_when_reported';
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  SELECT string_agg(sequence_position || ':' || item_key, ',' ORDER BY sequence_position) INTO _d
+    FROM public.beskt_resolve_item_sequence(b.rec_v, b.rec_p1, 'recruitment_support',
+      '{"lone_working_experience": {"kind": "option", "option_keys": ["no"]}, "reported_incident": {"kind": "boolean", "value": true}}');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_c = _d AND _c = '1:lone_working_experience,2:information_acknowledged',
+    format('B2.52f3 a stale answer for a source that never became visible opens nothing downstream, in either rule order (%s)', _c));
+  -- A firing skip wins over a firing show on the same target, whichever
+  -- order the two rules carry.
+  INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, condition_boolean, action, target_item_id)
+  VALUES (b.rec_v, 'skip_context_when_reported', 50, 'recruitment_support', b.rec_i3, 'boolean_equals', true, 'skip', b.rec_i4);
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  SELECT string_agg(sequence_position || ':' || item_key, ',' ORDER BY sequence_position) INTO _a
+    FROM public.beskt_resolve_item_sequence(b.rec_v, b.rec_p1, 'recruitment_support',
+      '{"lone_working_experience": {"kind": "option", "option_keys": ["yes"]}, "reported_incident": {"kind": "boolean", "value": true}}');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  UPDATE public.beskt_routing_rules SET evaluation_order = 5 WHERE method_version_id = b.rec_v AND rule_key = 'skip_context_when_reported';
+  UPDATE public.beskt_routing_rules SET evaluation_order = 60 WHERE method_version_id = b.rec_v AND rule_key = 'show_context_when_reported';
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000e1');
+  SET LOCAL ROLE authenticated;
+  SELECT string_agg(sequence_position || ':' || item_key, ',' ORDER BY sequence_position) INTO _b2
+    FROM public.beskt_resolve_item_sequence(b.rec_v, b.rec_p1, 'recruitment_support',
+      '{"lone_working_experience": {"kind": "option", "option_keys": ["yes"]}, "reported_incident": {"kind": "boolean", "value": true}}');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(_a = _b2 AND position('incident_context' in _a) = 0,
+    format('B2.52f4 a firing skip always wins over a firing show on the same target, in both rule orders (%s)', _a));
+  DELETE FROM public.beskt_routing_rules WHERE method_version_id = b.rec_v AND rule_key IN ('chain_show_incident', 'skip_context_when_reported');
+  UPDATE public.beskt_routing_rules SET evaluation_order = 2 WHERE method_version_id = b.rec_v AND rule_key = 'show_context_when_reported';
+  -- A graph that is not forward-only has no order-independent resolution, so
+  -- the resolver refuses it rather than answering from one arbitrary pass.
+  ALTER TABLE public.beskt_routing_rules DISABLE TRIGGER beskt_routing_rules_child_guard;
+  INSERT INTO public.beskt_routing_rules (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind, condition_boolean, action, target_item_id)
+  VALUES (b.rec_v, 'forced_backward', 70, 'recruitment_support', b.rec_i3, 'boolean_equals', true, 'show', b.rec_i1);
+  ALTER TABLE public.beskt_routing_rules ENABLE TRIGGER beskt_routing_rules_child_guard;
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000e1',
+    format('SELECT * FROM public.beskt_resolve_item_sequence(%L, %L, ''recruitment_support'', ''{}'')', b.rec_v, b.rec_p1),
+    'BESKT_ROUTE_NOT_ORDERED', 'B2.52f5 a forced backward edge makes the resolver refuse the whole version rather than resolve it non-deterministically');
+  DELETE FROM public.beskt_routing_rules WHERE method_version_id = b.rec_v AND rule_key = 'forced_backward';
+  PERFORM pg_temp.ok(pg_temp.blockers(b.rec_v) = '{}'::text[], 'B2.52f6 complete again');
+
   -- No scoring instruction can be published, in either language, whatever
   -- the field: the VALUES are read, not the keys.
   UPDATE public.beskt_items SET wording_en = 'Rate the candidate''s suitability from 1 to 5.' WHERE id = b.rec_i4;
@@ -739,18 +819,89 @@ BEGIN
   UPDATE public.beskt_items SET wording_sv = 'Beskriv sammanhanget.', purpose_en = 'Recommend whether to hire.' WHERE id = b.rec_i4;
   PERFORM pg_temp.ok('ITEM_INSTRUCTS_SCORING' = ANY (pg_temp.blockers(b.rec_v)), 'B2.52i a hiring recommendation hidden in the purpose blocks publication');
   UPDATE public.beskt_items SET purpose_en = 'Context is needed for the basis.' WHERE id = b.rec_i4;
-  UPDATE public.beskt_prompts SET wording_en = 'Grade the candidate''s answers and rank them.' WHERE method_version_id = b.rec_v AND prompt_key = 'p1_evaluation';
-  PERFORM pg_temp.ok('PROMPT_INSTRUCTS_SCORING' = ANY (pg_temp.blockers(b.rec_v)), 'B2.52j an Evaluation prompt that grades or ranks the candidate blocks publication: reflection only');
-  UPDATE public.beskt_prompts SET wording_en = 'Go through your own interviewing technique. Note the basis that is still missing.',
-                                  wording_sv = 'Avgör om kandidaten är godkänd eller underkänd.' WHERE method_version_id = b.rec_v AND prompt_key = 'p1_evaluation';
+  UPDATE public.beskt_prompts SET wording_en = 'Rate the candidate on a scale from 1 to 5.' WHERE method_version_id = b.rec_v AND prompt_key = 'p1_probe';
+  PERFORM pg_temp.ok('PROMPT_INSTRUCTS_SCORING' = ANY (pg_temp.blockers(b.rec_v)), 'B2.52j a probe that rates the candidate blocks publication');
+  UPDATE public.beskt_prompts SET wording_en = 'What did you do first in that situation?',
+                                  wording_sv = 'Avgör om kandidaten är godkänd eller underkänd.' WHERE method_version_id = b.rec_v AND prompt_key = 'p1_probe';
   PERFORM pg_temp.ok('PROMPT_INSTRUCTS_SCORING' = ANY (pg_temp.blockers(b.rec_v)), 'B2.52k a pass/fail verdict in Swedish blocks publication');
-  UPDATE public.beskt_prompts SET wording_sv = 'Gå igenom din egen intervjuteknik. Notera vilket underlag som fortfarande saknas.' WHERE method_version_id = b.rec_v AND prompt_key = 'p1_evaluation';
+  UPDATE public.beskt_prompts SET wording_sv = 'Vad gjorde du först i den situationen?' WHERE method_version_id = b.rec_v AND prompt_key = 'p1_probe';
   UPDATE public.beskt_evidence_anchors SET supporting_evidence_examples_en = 'Award 3 points for each verified example.' WHERE method_version_id = b.rec_v AND evidence_state = 'sufficiently_clarified';
   PERFORM pg_temp.ok('ANCHOR_INSTRUCTS_SCORING' = ANY (pg_temp.blockers(b.rec_v)), 'B2.52l an anchor component that awards points blocks publication');
   UPDATE public.beskt_evidence_anchors SET supporting_evidence_examples_en = 'Examples of supporting basis.', definition_sv = 'Underlaget räcker för en rekommendation om anställning.' WHERE method_version_id = b.rec_v AND evidence_state = 'sufficiently_clarified';
   PERFORM pg_temp.ok('ANCHOR_INSTRUCTS_SCORING' = ANY (pg_temp.blockers(b.rec_v)), 'B2.52m an anchor definition that turns the basis into a hiring recommendation blocks publication');
   UPDATE public.beskt_evidence_anchors SET definition_sv = 'Definition (sv) sufficiently_clarified' WHERE method_version_id = b.rec_v AND evidence_state = 'sufficiently_clarified';
   PERFORM pg_temp.ok(pg_temp.blockers(b.rec_v) = '{}'::text[], 'B2.52n complete again: neutral wording in both languages is not flagged');
+
+  -- PEACE Evaluation is a closed governed template, so scoring, a verdict or
+  -- candidate questioning is not representable there at all -- the write is
+  -- refused, not merely blocked at publication.
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.beskt_prompts SET wording_en = ''Grade the candidate''''s answers and rank them.'' WHERE method_version_id = %L AND prompt_key = ''p1_evaluation''', b.rec_v),
+    'BESKT_EVALUATION_NOT_TEMPLATED', 'B2.52p an Evaluation prompt cannot be rewritten to grade or rank the candidate: its wording is the governed template');
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.beskt_prompts SET wording_sv = ''Avgör om kandidaten är godkänd eller underkänd.'' WHERE method_version_id = %L AND prompt_key = ''p1_evaluation''', b.rec_v),
+    'BESKT_EVALUATION_NOT_TEMPLATED', 'B2.52q nor to a Swedish pass/fail verdict');
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.beskt_prompts SET wording_sv = ''Berätta hur du hanterade situationen.'', wording_en = ''Tell me how you handled the situation.'' WHERE method_version_id = %L AND prompt_key = ''p1_evaluation''', b.rec_v),
+    'BESKT_EVALUATION_NOT_TEMPLATED', 'B2.52r nor to candidate questioning that carries no scoring keyword at all: Evaluation is interviewer self-reflection by construction');
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.beskt_prompts SET item_id = %L WHERE method_version_id = %L AND prompt_key = ''p1_evaluation''', b.rec_i2, b.rec_v),
+    'BESKT_PARENT_IMMUTABLE', 'B2.52s an Evaluation prompt cannot be re-pointed at a candidate item');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_prompts (method_version_id, exposure_profile_id, item_id, prompt_key, display_order, prompt_kind, peace_stage, addressee, question_form, permitted_probe_bases, permitted_mode, evaluation_template_key, wording_sv, wording_en, content_provenance, source_reference)
+             VALUES (%L, %L, %L, 'eval_probe', 17, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback', ARRAY['submitted_answer'], 'recruitment_support', 'basis_gaps', public.beskt_evaluation_template('basis_gaps', 'sv'), public.beskt_evaluation_template('basis_gaps', 'en'), 'source_stated', 's')$q$, b.rec_v, b.rec_p1, b.rec_i2),
+    'BESKT_EVALUATION_NOT_TEMPLATED', 'B2.52t a new Evaluation prompt cannot probe an item or ground itself in an answer');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_prompts (method_version_id, exposure_profile_id, prompt_key, display_order, prompt_kind, peace_stage, addressee, question_form, permitted_mode, evaluation_template_key, wording_sv, wording_en, content_provenance, source_reference)
+             VALUES (%L, %L, 'eval_free', 18, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback', 'recruitment_support', 'basis_gaps', 'Fritt formulerad text.', 'Freely authored text.', 'source_stated', 's')$q$, b.rec_v, b.rec_p1),
+    'BESKT_EVALUATION_NOT_TEMPLATED', 'B2.52u nor carry authored wording instead of the template it names');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_prompts (method_version_id, exposure_profile_id, prompt_key, display_order, prompt_kind, peace_stage, addressee, question_form, permitted_mode, wording_sv, wording_en, content_provenance, source_reference)
+             VALUES (%L, %L, 'eval_keyless', 19, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback', 'recruitment_support', 'x', 'x', 'source_stated', 's')$q$, b.rec_v, b.rec_p1),
+    'BESKT_EVALUATION_NOT_TEMPLATED', 'B2.52v an Evaluation prompt without a template key cannot exist (the guard refuses it before the CHECK constraint does)');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_prompts (method_version_id, exposure_profile_id, prompt_key, display_order, prompt_kind, peace_stage, addressee, question_form, permitted_mode, evaluation_template_key, wording_sv, wording_en, content_provenance, source_reference)
+             VALUES (%L, %L, 'open_templated', 20, 'open_invitation', 'account', 'candidate', 'open_question', 'recruitment_support', 'basis_gaps', 'x', 'x', 'source_stated', 's')$q$, b.rec_v, b.rec_p1),
+    'BESKT_EVALUATION_NOT_TEMPLATED', 'B2.52w and no other prompt carries one');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_prompts (method_version_id, exposure_profile_id, prompt_key, display_order, prompt_kind, peace_stage, addressee, question_form, permitted_mode, evaluation_template_key, wording_sv, wording_en, content_provenance, source_reference)
+             VALUES (%L, %L, 'eval_unknown', 21, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback', 'recruitment_support', 'freeform', 'x', 'x', 'source_stated', 's')$q$, b.rec_v, b.rec_p1),
+    'BESKT_EVALUATION_NOT_TEMPLATED', 'B2.52x an author-supplied template key names no template, so it cannot be written');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid
+      WHERE t.relname = 'beskt_prompts' AND c.contype = 'c'
+        AND pg_get_constraintdef(c.oid) LIKE '%evaluation_template_key%'
+        AND pg_get_constraintdef(c.oid) LIKE '%''method_adherence''%'
+        AND pg_get_constraintdef(c.oid) LIKE '%''basis_gaps''%'
+        AND pg_get_constraintdef(c.oid) LIKE '%''next_step_planning''%') = 1
+    AND (SELECT count(*) FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid
+          WHERE t.relname = 'beskt_prompts' AND c.conname = 'beskt_prompts_evaluation_template_check') = 1
+    AND public.beskt_evaluation_template('freeform', 'sv') IS NULL,
+    'B2.52x2 the template vocabulary is a closed CHECK of exactly three governed keys, and an unknown key has no text');
+  -- Forced past the write guard, the validator still refuses to publish it.
+  ALTER TABLE public.beskt_prompts DISABLE TRIGGER beskt_prompts_child_guard;
+  UPDATE public.beskt_prompts SET wording_en = 'Rate the candidate from 1 to 5 and say who proceeds.'
+   WHERE method_version_id = b.rec_v AND prompt_key = 'p1_evaluation';
+  ALTER TABLE public.beskt_prompts ENABLE TRIGGER beskt_prompts_child_guard;
+  PERFORM pg_temp.ok('PROMPT_EVALUATION_NOT_TEMPLATED' = ANY (pg_temp.blockers(b.rec_v))
+    AND 'PROMPT_INSTRUCTS_SCORING' = ANY (pg_temp.blockers(b.rec_v)),
+    'B2.52y a forced non-template Evaluation wording blocks publication on the stored rows, structurally and by content');
+  ALTER TABLE public.beskt_prompts DISABLE TRIGGER beskt_prompts_child_guard;
+  UPDATE public.beskt_prompts SET wording_en = public.beskt_evaluation_template('method_adherence', 'en')
+   WHERE method_version_id = b.rec_v AND prompt_key = 'p1_evaluation';
+  ALTER TABLE public.beskt_prompts ENABLE TRIGGER beskt_prompts_child_guard;
+  PERFORM pg_temp.ok(pg_temp.blockers(b.rec_v) = '{}'::text[], 'B2.52z complete again');
+  -- The detector the review named: the four bypasses and a paraphrase.
+  PERFORM pg_temp.ok(
+    public.beskt_text_instructs_scoring('Assign one to five stars to the candidate.')
+    AND public.beskt_text_instructs_scoring('Sätt en till fem stjärnor på kandidaten.')
+    AND public.beskt_text_instructs_scoring('Classify the candidate as high, medium or low and decide whether they should proceed.')
+    AND public.beskt_text_instructs_scoring('Bedöm kandidaten som hög, medel eller låg och avgör om personen ska gå vidare.')
+    AND public.beskt_text_instructs_scoring('Place the candidate in one of three tiers and tell us who moves on.')
+    AND public.beskt_text_instructs_scoring('Markera vem som ska gå vidare.')
+    AND NOT public.beskt_text_instructs_scoring('This is how the conversation proceeds.')
+    AND NOT public.beskt_text_instructs_scoring('Vi går vidare till nästa fråga.'),
+    'B2.52za the detector also reads stars, tiers, high/medium/low classification and "decide whether they proceed", in both languages, without flagging ordinary process wording');
   PERFORM pg_temp.ok(
     NOT public.beskt_text_instructs_scoring('What did you do at that point?')
     AND NOT public.beskt_text_instructs_scoring('Om jag förstår dig rätt så gjorde du så här.')
@@ -1011,6 +1162,30 @@ BEGIN
   _r := pg_temp.touch(b.rec_v);
   PERFORM pg_temp.ok(_r ->> 'content_hash' = b.hash_before, 'B3.29 restoring the reviewed content restores the reviewed hash');
 
+  -- The approvals are bound to the REVISION they were given at, not only to
+  -- the hash and the cycle: the content is byte-identical to the reviewed
+  -- content and the cycle has not moved, but the draft was touched twice
+  -- since, so all five are stale and publication is refused.
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.beskt_method_reviews
+      WHERE method_version_id = b.rec_v AND decision = 'approved'
+        AND content_hash_at_review = b.hash_before AND review_cycle_at_review = 1) = 5
+    AND (SELECT max(revision_at_review) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v)
+        < (SELECT revision FROM public.beskt_method_versions WHERE id = b.rec_v)
+    AND (SELECT content_hash FROM public.beskt_method_versions WHERE id = b.rec_v) = b.hash_before
+    AND (SELECT review_cycle FROM public.beskt_method_versions WHERE id = b.rec_v) = 1,
+    'B3.29b five approvals stand at the current hash in the current cycle, but at an earlier revision: the draft was touched after they were given');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000b1',
+    format('SELECT public.beskt_publish_version(gen_random_uuid(), %L, %s, ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
+    'REVIEW_GATE_PERSONNEL_SECURITY_NOT_APPROVED',
+    'B3.29c publication is refused: a governed touch after approval invalidates every approval, even when the bytes are restored to exactly what was reviewed');
+  PERFORM pg_temp.approve_all(b.rec_v);
+  _rev := pg_temp.revision_of(b.rec_v);
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.beskt_method_reviews
+      WHERE method_version_id = b.rec_v AND decision = 'approved' AND revision_at_review = _rev) = 5,
+    'B3.29d five fresh approvals are all recorded at the SAME revision: parallel gates never invalidate each other');
+
   -- A rejection ends the review cycle. After re-submission every gate needs
   -- a fresh approval even though not one byte changed.
   _r := pg_temp.review(b.rec_v, 'b2000000-0000-4000-8000-0000000000a6', 'data_protection', 'rejected');
@@ -1027,10 +1202,10 @@ BEGIN
     format('SELECT public.beskt_publish_version(gen_random_uuid(), %L, %s, ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
     'REVIEW_GATE_PERSONNEL_SECURITY_NOT_APPROVED', 'B3.30c publication is refused: five approvals at the identical hash from the ended cycle do not carry over');
   PERFORM pg_temp.ok(
-    (SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v AND decision = 'approved'
+    (SELECT count(DISTINCT gate) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v AND decision = 'approved'
        AND content_hash_at_review = b.hash_before AND review_cycle_at_review = 1) = 5
     AND (SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = b.rec_v AND review_cycle_at_review = 2) = 0,
-    'B3.30d the five earlier approvals are history of cycle 1; cycle 2 has none');
+    'B3.30d all five gates were approved in cycle 1 and remain its history; cycle 2 has no review at all');
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000b1',
     format('SELECT public.beskt_publish_version(gen_random_uuid(), %L, %s, ''x'')', b.rec_v, pg_temp.revision_of(b.rec_v)),
     'REVIEW_GATE_DATA_PROTECTION_NOT_APPROVED', 'B3.30e all five gates are named as unapproved in the new cycle, not only the first');
@@ -1622,7 +1797,13 @@ BEGIN
     'BESKT_EVENT_APPEND_ONLY', 'B5.29 an event cannot be deleted');
   SET LOCAL ROLE service_role;
   PERFORM pg_temp.must_fail(format('DELETE FROM public.beskt_method_reviews WHERE method_version_id = %L', b.rec_v),
-    'BESKT_REVIEW_APPEND_ONLY', 'B5.30 append-only holds against a BYPASSRLS caller (trigger, not policy)');
+    'permission denied for table beskt_method_reviews',
+    'B5.30 service_role cannot delete a review: the authority tables carry no write privilege for any client role, so the governed RPC is the only writer');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
+             VALUES (%L, 'senior_hr', 'approved', 'b2000000-0000-4000-8000-0000000000a2', 'x', 'h', 1, 1)$q$, b.rec_v),
+    'permission denied for table beskt_method_reviews',
+    'B5.30b nor insert one, whatever the row says');
   PERFORM pg_temp.must_fail(format('UPDATE public.beskt_method_events SET metadata = ''{}'' WHERE method_version_id = %L', b.rec_v),
     'BESKT_EVENT_APPEND_ONLY', 'B5.31 so does the ledger');
   PERFORM pg_temp.must_fail(format('UPDATE public.beskt_items SET wording_sv = ''x'' WHERE id = %L', b.rec_i1),
@@ -1767,15 +1948,36 @@ BEGIN
     $q$INSERT INTO public.beskt_governance_grants (user_id, grant_kind, granted_by, source_reference)
        VALUES ('b2000000-0000-4000-8000-0000000000f1', 'senior_hr', 'b2000000-0000-4000-8000-0000000000ad', 'fabricated')$q$,
     'BESKT_GRANT_UNGOVERNED_WRITE', 'B6.9b a fabricated grant cannot be inserted directly, not even by the database owner');
+  -- service_role holds NO write privilege on the authority tables, so it is
+  -- refused before any trigger runs -- and setting the governed marker
+  -- itself, which it can do, changes nothing: the marker is defence in
+  -- depth, never the authorisation.
   SET LOCAL ROLE service_role;
+  PERFORM set_config('beskt.governance_grant_write', 'on', true);
   PERFORM pg_temp.must_fail(
     $q$INSERT INTO public.beskt_governance_grants (user_id, grant_kind, granted_by, source_reference)
        VALUES ('b2000000-0000-4000-8000-0000000000f1', 'senior_hr', 'b2000000-0000-4000-8000-0000000000ad', 'fabricated')$q$,
-    'BESKT_GRANT_UNGOVERNED_WRITE', 'B6.9c nor by service_role, which holds ALL on the table: the trigger fires for BYPASSRLS callers too');
+    'permission denied for table beskt_governance_grants',
+    'B6.9c nor by service_role, even with the governed marker set by itself: it holds no INSERT privilege at all');
   PERFORM pg_temp.must_fail(
     format('UPDATE public.beskt_governance_grants SET revoked_at = now(), revoked_by = ''b2000000-0000-4000-8000-0000000000ad'', revoke_reason = ''direct'' WHERE id = %L', _g2),
-    'BESKT_GRANT_UNGOVERNED_WRITE', 'B6.9d service_role cannot perform the first revocation outside beskt_revoke_governance');
+    'permission denied for table beskt_governance_grants',
+    'B6.9d service_role cannot perform the first revocation outside beskt_revoke_governance, marker or no marker');
+  PERFORM pg_temp.must_fail(
+    format('DELETE FROM public.beskt_governance_grants WHERE id = %L', _g2),
+    'permission denied for table beskt_governance_grants', 'B6.9d2 nor delete a grant');
+  PERFORM set_config('beskt.governance_grant_write', 'off', true);
   RESET ROLE;
+  PERFORM pg_temp.ok(
+    NOT has_table_privilege('service_role', 'public.beskt_governance_grants', 'INSERT')
+    AND NOT has_table_privilege('service_role', 'public.beskt_governance_grants', 'UPDATE')
+    AND NOT has_table_privilege('service_role', 'public.beskt_governance_grants', 'DELETE')
+    AND NOT has_table_privilege('service_role', 'public.beskt_method_reviews', 'INSERT')
+    AND NOT has_table_privilege('service_role', 'public.beskt_method_reviews', 'UPDATE')
+    AND NOT has_table_privilege('service_role', 'public.beskt_method_reviews', 'DELETE')
+    AND has_table_privilege('service_role', 'public.beskt_governance_grants', 'SELECT')
+    AND has_table_privilege('service_role', 'public.beskt_method_reviews', 'SELECT'),
+    'B6.9d3 the authority tables are SELECT-only for service_role: the write privilege belongs to the SECURITY DEFINER RPC owner');
   PERFORM pg_temp.must_fail(
     format('UPDATE public.beskt_governance_grants SET revoked_at = now(), revoked_by = ''b2000000-0000-4000-8000-0000000000ad'', revoke_reason = ''direct'' WHERE id = %L', _g2),
     'BESKT_GRANT_UNGOVERNED_WRITE', 'B6.9e nor can the database owner');
@@ -1825,24 +2027,57 @@ BEGIN
   -- A service-role writer cannot record a gate nobody granted: the check is
   -- in the trigger as well as the RPC.
   SELECT content_hash, revision, review_cycle INTO _h, _rev, _cycle FROM public.beskt_method_versions WHERE id = _gv;
+  -- A review row is written only by beskt_record_review. service_role is
+  -- refused by privilege -- including a review attributed to a real,
+  -- currently valid grant-holder, approved or rejected.
   SET LOCAL ROLE service_role;
+  PERFORM set_config('beskt.review_write', 'on', true);
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
+             VALUES (%L, 'senior_hr', 'approved', 'b2000000-0000-4000-8000-0000000000a2', 'Godkänd.', %L, %s, %s)$q$, _gv, _h, _rev, _cycle),
+    'permission denied for table beskt_method_reviews',
+    'B6.15 service_role cannot insert an approval attributed to a valid grant-holder, even with the governed marker set by itself');
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
+             VALUES (%L, 'senior_hr', 'rejected', 'b2000000-0000-4000-8000-0000000000a2', 'Avslag.', %L, %s, %s)$q$, _gv, _h, _rev, _cycle),
+    'permission denied for table beskt_method_reviews',
+    'B6.15b nor a rejection, which would otherwise exist without the lifecycle transition it must cause');
+  PERFORM set_config('beskt.review_write', 'off', true);
+  RESET ROLE;
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.beskt_method_reviews WHERE method_version_id = _gv AND gate = 'senior_hr') = 0
+    AND (SELECT content_status FROM public.beskt_method_versions WHERE id = _gv) = 'in_review',
+    'B6.15c neither row exists and the version did not move');
+  -- The row trigger carries the same checks for a caller that bypasses
+  -- privileges entirely (the database owner here).
   PERFORM pg_temp.must_fail(
     format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
              VALUES (%L, 'recruitment', 'approved', 'b2000000-0000-4000-8000-0000000000a2', 'x', %L, %s, %s)$q$, _gv, _h, _rev, _cycle),
-    'BESKT_GATE_NOT_GRANTED', 'B6.15 service_role cannot insert an approval for a gate the reviewer does not hold');
-  PERFORM pg_temp.must_fail(
-    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
-             VALUES (%L, 'senior_hr', 'approved', 'b2000000-0000-4000-8000-0000000000f1', 'x', %L, %s, %s)$q$, _gv, _h, _rev, _cycle),
-    'BESKT_GATE_NOT_GRANTED', 'B6.16 nor for a user who holds nothing at all');
+    'BESKT_GATE_NOT_GRANTED', 'B6.16 an approval for a gate the reviewer does not hold is refused by the row trigger too');
   PERFORM pg_temp.must_fail(
     format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
              VALUES (%L, 'senior_hr', 'approved', 'b2000000-0000-4000-8000-0000000000a2', 'x', %L, %s, %s)$q$, _gv, _h, _rev, _cycle - 1),
     'BESKT_REVIEW_HASH_MISMATCH', 'B6.17 nor an approval bound to an earlier review cycle');
   PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
+             VALUES (%L, 'senior_hr', 'approved', 'b2000000-0000-4000-8000-0000000000a2', 'x', %L, %s, %s)$q$, _gv, _h, _rev, _cycle),
+    'BESKT_REVIEW_UNGOVERNED_WRITE', 'B6.17b and an otherwise perfect row is still refused: it did not come through beskt_record_review');
+  -- Inside the governed path a review is always the act of the signed-in
+  -- reviewer: no row can be written on another grant-holder's behalf.
+  PERFORM pg_temp.become('b2000000-0000-4000-8000-0000000000a1');
+  PERFORM set_config('beskt.review_write', 'on', true);
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.beskt_method_reviews (method_version_id, gate, decision, reviewer_id, rationale, content_hash_at_review, revision_at_review, review_cycle_at_review)
+             VALUES (%L, 'senior_hr', 'approved', 'b2000000-0000-4000-8000-0000000000a2', 'x', %L, %s, %s)$q$, _gv, _h, _rev, _cycle),
+    'BESKT_REVIEW_NOT_OWN', 'B6.17c a review cannot be recorded for another user, even for a valid grant-holder');
+  PERFORM set_config('beskt.review_write', 'off', true);
+  PERFORM pg_temp.nobody();
+  SET LOCAL ROLE service_role;
+  PERFORM pg_temp.must_fail(
     'SELECT public.beskt_grant_governance(gen_random_uuid(), ''b2000000-0000-4000-8000-0000000000f1'', ''senior_hr'', ''x'')',
     'BESKT_NOT_AUTHENTICATED', 'B6.18 service_role without a signed-in platform admin cannot grant');
   PERFORM pg_temp.must_fail(format('UPDATE public.beskt_governance_grants SET grant_kind = ''senior_hr'' WHERE id = %L', _g2),
-    'BESKT_GRANT_UNGOVERNED_WRITE', 'B6.19 service_role cannot rewrite a grant');
+    'permission denied for table beskt_governance_grants', 'B6.19 service_role cannot rewrite a grant');
   RESET ROLE;
 
   -- Only a platform admin grants or revokes.
