@@ -3765,6 +3765,37 @@ fi
 # The rollback must REINSTATE the defect, verifiably, and the forward file
 # must re-apply on top of it: rollback -> policy is USING (is_active) again
 # and the suite's read assertion fails -> re-apply -> the suite passes again.
+echo "==> Running Security Passport pilot write-path assertions"
+# The hotfix after 20261109090000 made the catalogues visible. This suite is
+# the other half: a visible catalogue nobody can SAVE into is the same outage
+# with a friendlier screen. Every INSERT is built the way the application's
+# own `credentialClaimFields` builds it -- market from the definition -- and
+# the shapes the old write path produced (a British licence filed in Sweden,
+# a Dubai card with no emirate) are asserted to be refused in the same run.
+set +e
+SPWP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_pilot_write_path_test.sql 2>&1)"
+SPWP_RC=$?
+set -e
+
+echo "$SPWP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPWP_PASSED="$(echo "$SPWP_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPWP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the pilot write-path suite exited with code ${SPWP_RC}." >&2
+  echo "$SPWP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport pilot write path"
+else
+  echo "    ok  ${SPWP_PASSED} pilot write-path assertions passed"
+  # GROUP 1 (the old rows are refused) and GROUP 2 (every GB and Dubai
+  # credential saves) are the reason this suite exists. A short run that
+  # stopped before them would report success having proved nothing.
+  if [ "$SPWP_PASSED" -lt 25 ]; then
+    echo "FAIL: expected at least 25 pilot write-path assertions, only ${SPWP_PASSED} ran." >&2
+    suite_failed "Security Passport pilot write path (assertion shortfall: floor 25)"
+  fi
+fi
+
 echo "==> Verifying the pilot catalogue visibility rollback round-trips"
 set +e
 SPCVRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \

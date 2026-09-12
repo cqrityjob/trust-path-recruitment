@@ -48,14 +48,15 @@
 // callbacks; the dev harness wires fakes. That is what lets the whole form
 // be exercised and reviewed against fixtures with no database.
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MAX_DATE_ATTR, MIN_DATE_ATTR } from "@/lib/security-passport/dates";
 import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
-  clearIncompatible,
+  applyCredentialType,
   controlledTitle,
+  draftMarketIsStale,
   emptyCredentialDraft,
   fieldsFor,
   issuedOnLabelKey,
@@ -168,10 +169,22 @@ export function CredentialForm({
 }: CredentialFormProps) {
   const { pt, lang } = usePassportCopy();
 
+  // ── EVERY ENTRY PATH GOES THROUGH THE SAME HELPER ─────────────────
+  //
+  // A resumed draft, a `?code=` arrival from the catalogue, and a manual
+  // choice below all settle the same four things, so they all call
+  // `applyCredentialType`. This one used to be the exception: it set the
+  // code and nothing else, so a holder who arrived from the catalogue kept
+  // `emptyCredentialDraft()`'s "SE" under a heading that said Great Britain
+  // or Dubai, and the write was refused with a message that named neither.
   const [draft, setDraft] = useState<CredentialDraft>(() => {
-    if (initial) return initial;
-    const empty = emptyCredentialDraft();
-    return preselectCode ? { ...empty, credentialCode: preselectCode } : empty;
+    const base = initial ?? emptyCredentialDraft();
+    const code = initial ? initial.credentialCode : preselectCode;
+    const chosen = code ? (types.find((t) => t.code === code) ?? null) : null;
+    if (chosen) return applyCredentialType(base, chosen, lang);
+    // A code with no definition in this market is left on the draft: the
+    // catalogue below renders nothing selected and the holder chooses.
+    return code ? { ...base, credentialCode: code } : base;
   });
   const [errors, setErrors] = useState<readonly CredentialFieldError[]>([]);
   const summaryRef = useRef<HTMLDivElement>(null);
@@ -181,6 +194,18 @@ export function CredentialForm({
     [types, draft.credentialCode],
   );
   const visible = type ? fieldsFor(type) : null;
+
+  // ── AND THE INVARIANT IS ASSERTED, NOT ASSUMED ────────────────────
+  //
+  // If a draft ever reaches this form carrying a market its credential does
+  // not belong to — a row stored before this fix, a form rendered before its
+  // taxonomy arrived — it is corrected from the definition rather than
+  // submitted and refused. The market is not a field anyone can edit here,
+  // so this can never fight a holder's own input.
+  useEffect(() => {
+    if (!type) return;
+    setDraft((d) => (draftMarketIsStale(d, type) ? applyCredentialType(d, type, lang) : d));
+  }, [type, lang]);
 
   function set<K extends keyof CredentialDraft>(key: K, value: CredentialDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -295,32 +320,11 @@ export function CredentialForm({
               onChange={(code) => {
                 const t = types.find((x) => x.code === code);
                 if (!t) return;
-                setDraft((d) =>
-                  // Values the new credential does not ask for are dropped,
-                  // not merely hidden. A retained scope or end date would
-                  // be submitted from a field the holder can no longer see.
-                  clearIncompatible(
-                    {
-                      ...d,
-                      credentialCode: t.code,
-                      // The definition's own name. It used to be a prefill
-                      // that "stays editable" — which is how a skyddsvakt
-                      // appointment came to be called "Bajskorv".
-                      // `clearIncompatible` sets it again from the same
-                      // source for every controlled credential, and the
-                      // server sets it a third time before the write; this
-                      // is the one that makes the field show the right
-                      // thing immediately.
-                      title: typeName(t),
-                      // The credential's country comes from the credential.
-                      // Nobody chooses it, here or anywhere: a Swedish VU1
-                      // is Swedish for a holder who has moved to Dubai, and
-                      // the database refuses any other filing.
-                      jurisdictionCode: t.jurisdictionCode ?? d.jurisdictionCode,
-                    },
-                    t,
-                  ),
-                );
+                // The same helper the preselect and a resumed draft use:
+                // the code, the definition's name, the definition's market,
+                // and values the new credential does not ask for dropped
+                // rather than merely hidden.
+                setDraft((d) => applyCredentialType(d, t, lang));
               }}
             />
           </div>

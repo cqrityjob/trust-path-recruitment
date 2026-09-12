@@ -313,6 +313,29 @@ function saveErrorKey(err: unknown): PassportCopyKey {
   if (message.includes("SP_CREDENTIAL_INVALID")) return "cred.error.serverInvalid";
   if (message.includes("SP_CREDENTIAL_CODE_UNKNOWN")) return "cred.error.serverUnknownCode";
   if (message.includes("SP_CREDENTIAL_CODE_REQUIRED")) return "cred.error.selectCredential";
+  // ── THE MARKET REFUSALS ──────────────────────────────────────────
+  //
+  // These four are what a pilot holder actually met: a British licence
+  // filed in Sweden and a Dubai cadre card with no emirate were refused by
+  // `sp_claims_credential_rules`, and every one of them arrived here as
+  // "Something went wrong. Please try again."
+  //
+  // Naming them is the SECOND half of the fix, never the whole of it. The
+  // cause was that the form sent the wrong market at all, and that is fixed
+  // upstream: `applyCredentialType` settles the market on every entry path
+  // and `credentialClaimFields` reads it from the definition at write time.
+  // These sentences exist for the case that survives both — a stale tab, a
+  // taxonomy that moved under an open form — and they say reload and choose
+  // again, because that is what actually helps.
+  if (message.includes("SP_CREDENTIAL_JURISDICTION_MISMATCH"))
+    return "cred.error.serverWrongMarket";
+  if (message.includes("SP_SUB_JURISDICTION_NOT_SUPPORTED")) return "cred.error.serverWrongMarket";
+  if (message.includes("SP_SUB_JURISDICTION_REQUIRED")) return "cred.error.serverSubMarketRequired";
+  if (message.includes("SP_JURISDICTION_NOT_SUPPORTED")) return "cred.error.serverWrongMarket";
+  // A credential that is not available in the market it was filed in. The
+  // holder's own market being closed reads the same way from here.
+  if (message.includes("SP_CREDENTIAL_NOT_AVAILABLE")) return "cred.error.serverMarketClosed";
+  if (message.includes("SP_MARKET_PACK_NOT_ACTIVE")) return "cred.error.serverMarketClosed";
   return "common.error";
 }
 

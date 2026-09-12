@@ -24,7 +24,10 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   CREDENTIAL_CODE_MAX_LENGTH,
+  applyCredentialType,
   clearIncompatible,
+  credentialClaimFields,
+  draftMarketIsStale,
   emptyCredentialDraft,
   fieldsFor,
   titleIsControlled,
@@ -33,6 +36,11 @@ import {
   type CredentialType,
 } from "../src/lib/security-passport/credentials";
 import { FIXTURE_CREDENTIAL_TYPES } from "../src/lib/security-passport/fixtures/credential-types";
+import {
+  FIXTURE_AE_DU_CATALOGUE,
+  FIXTURE_GB_CATALOGUE,
+  FIXTURE_GB_NI_CATALOGUE,
+} from "../src/lib/security-passport/fixtures/market-catalogues";
 import { credentialMark } from "../src/lib/security-passport/credentials";
 import { passportCopy } from "../src/lib/security-passport/i18n";
 
@@ -599,6 +607,230 @@ console.log("\nGROUP 5 -- validity ordering is caught HERE, not by the constrain
       /(efter|after)/i.test(copy),
       `${lang}: the message says the end date must be AFTER the start date`,
     );
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   THE WRITE PATH: a credential is filed in ITS market, not the holder's
+   ══════════════════════════════════════════════════════════════════════
+
+   ── THE DEFECT ─────────────────────────────────────────────────────────
+
+   The pilot catalogues became visible and selectable, and then nothing
+   could be saved in them. "Något gick fel. Försök igen."
+
+   Choosing a credential settles which regulated market the entry belongs
+   to, and that assignment lived in exactly one place: the radio button's
+   `onChange`. A holder arriving from the catalogue with `?code=` never ran
+   it, so the draft kept `emptyCredentialDraft()`'s "SE" while the heading
+   above it, reading the definition, said Great Britain or Dubai. The write
+   path then wrote the DRAFT's country and never wrote a sub-jurisdiction at
+   all, so:
+
+     * a British licence was filed in Sweden and refused
+       (SP_CREDENTIAL_NOT_AVAILABLE: a GB credential is not available inside
+       the Swedish market);
+     * a Dubai cadre card arrived with no emirate and was refused
+       (SP_SUB_JURISDICTION_REQUIRED) even after the country was corrected by
+       hand.
+
+   Both are now decided from the taxonomy, in one helper and one mapping,
+   and this group is what keeps them there. The fixtures below are the ones
+   scripts/passport-market-catalogue-check re-parses from the migrations, so
+   the markets asserted here are the markets the database seeds.
+*/
+{
+  const ALL_TYPES: readonly CredentialType[] = [
+    ...FIXTURE_CREDENTIAL_TYPES,
+    ...FIXTURE_GB_CATALOGUE,
+    ...FIXTURE_GB_NI_CATALOGUE,
+    ...FIXTURE_AE_DU_CATALOGUE,
+  ];
+  ok(ALL_TYPES.length >= 52, `the four catalogues are loaded (${ALL_TYPES.length} credentials)`);
+
+  // ── 1. The mapping, for every credential, from the WRONG draft ──────
+  //
+  // Every draft below carries "SE" — the exact shape the defect produced —
+  // and a leftover emirate from a previous choice. Neither may survive into
+  // the row.
+  let wrongJurisdiction = 0;
+  let wrongSub = 0;
+  for (const type of ALL_TYPES) {
+    const defective: CredentialDraft = {
+      ...emptyCredentialDraft(),
+      credentialCode: type.code,
+      jurisdictionCode: "SE",
+      title: "Bajskorv",
+      issuerName: "Fiktiv myndighet",
+      validUntil: "2030-01-01",
+      authorisationScope: "Fiktivt objekt",
+    };
+    for (const mode of ["draft", "active"] as const) {
+      const row = credentialClaimFields(defective, type, mode);
+      if (row.jurisdiction_code !== type.jurisdictionCode) wrongJurisdiction += 1;
+      if (row.sub_jurisdiction_code !== type.subJurisdictionCode) wrongSub += 1;
+    }
+  }
+  ok(
+    wrongJurisdiction === 0,
+    `every credential is written in its own jurisdiction, whatever the draft said (${ALL_TYPES.length * 2} rows)`,
+  );
+  ok(
+    wrongSub === 0,
+    "every credential is written with its own sub-jurisdiction, including NULL where it has none",
+  );
+
+  // Named, so a reader sees the two that were actually broken.
+  const uk = ALL_TYPES.find((t) => t.code === "UK_SIA_LICENCE_DS");
+  const ni = ALL_TYPES.find((t) => t.code === "UK_SIA_LICENCE_VI");
+  const du = ALL_TYPES.find((t) => t.code === "AE_DU_SIRA_CARD_GUARD");
+  const vu1 = ALL_TYPES.find((t) => t.code === "VU1");
+  ok(Boolean(uk && ni && du && vu1), "the four named credentials are present in the fixtures");
+  if (uk && ni && du && vu1) {
+    const from = (t: CredentialType) =>
+      credentialClaimFields(
+        { ...emptyCredentialDraft(), credentialCode: t.code, jurisdictionCode: "SE" },
+        t,
+        "active",
+      );
+    const ukRow = from(uk);
+    ok(
+      ukRow.jurisdiction_code === "GB" && ukRow.sub_jurisdiction_code === null,
+      "THE DEFECT: a British licence is written GB / no sub-jurisdiction, not SE",
+    );
+    const niRow = from(ni);
+    ok(
+      niRow.jurisdiction_code === "GB" && niRow.sub_jurisdiction_code === "GB-NI",
+      "the Northern Ireland licence carries its own submarket, never bare GB",
+    );
+    const duRow = from(du);
+    ok(
+      duRow.jurisdiction_code === "AE" && duRow.sub_jurisdiction_code === "AE-DU",
+      "THE DEFECT: a Dubai cadre card is written AE / AE-DU, and the emirate is written at all",
+    );
+    const seRow = from(vu1);
+    ok(
+      seRow.jurisdiction_code === "SE" && seRow.sub_jurisdiction_code === null,
+      "a Swedish credential is unchanged: SE, no sub-jurisdiction",
+    );
+
+    // ── 2. A correction CLEARS the previous market ──────────────────
+    //
+    // The column is always written, never omitted, so changing a Dubai card
+    // into a British licence cannot leave AE-DU behind on the row.
+    const wasDubai = applyCredentialType(emptyCredentialDraft(), du, "sv");
+    const nowBritish = applyCredentialType(wasDubai, uk, "sv");
+    const corrected = credentialClaimFields(nowBritish, uk, "active");
+    ok(
+      corrected.jurisdiction_code === "GB" && corrected.sub_jurisdiction_code === null,
+      "correcting a Dubai card to a British licence clears the emirate from the row",
+    );
+
+    // ── 3. The helper settles the market on the ?code= path ─────────
+    for (const lang of ["sv", "en"] as const) {
+      for (const t of [uk, ni, du, vu1]) {
+        const applied = applyCredentialType(emptyCredentialDraft(), t, lang);
+        ok(
+          applied.credentialCode === t.code && applied.jurisdictionCode === t.jurisdictionCode,
+          `${lang}: applyCredentialType settles code and market for ${t.code}`,
+        );
+      }
+    }
+
+    // ── 4. A stale draft is DETECTED, not submitted ─────────────────
+    const stale: CredentialDraft = {
+      ...emptyCredentialDraft(),
+      credentialCode: du.code,
+      jurisdictionCode: "SE",
+    };
+    ok(
+      draftMarketIsStale(stale, du) &&
+        !draftMarketIsStale(applyCredentialType(stale, du, "sv"), du),
+      "a draft carrying the wrong market is detected, and is not stale once the helper has run",
+    );
+
+    // ── 5. The legacy/unregulated fallback survives ─────────────────
+    //
+    // A definition with no jurisdiction of its own keeps the holder's, which
+    // is the only case where the draft is the best answer available.
+    const legacy: CredentialType = { ...vu1, jurisdictionCode: null, subJurisdictionCode: null };
+    const legacyRow = credentialClaimFields(
+      { ...emptyCredentialDraft(), credentialCode: legacy.code, jurisdictionCode: "SE" },
+      legacy,
+      "active",
+    );
+    ok(
+      legacyRow.jurisdiction_code === "SE",
+      "a definition with no jurisdiction of its own still takes the holder's",
+    );
+    ok(
+      applyCredentialType(emptyCredentialDraft(), legacy, "sv").jurisdictionCode === "SE",
+      "and the helper leaves that draft's country alone",
+    );
+  }
+
+  // ── 6. ONE helper, used by every entry path ─────────────────────────
+  const formSrc = readFileSync(
+    join(process.cwd(), "src/components/security-passport/CredentialForm.tsx"),
+    "utf8",
+  );
+  ok(
+    /applyCredentialType\(base, chosen, lang\)/.test(formSrc),
+    "the form applies the definition on the ?code= / resumed-draft path",
+  );
+  ok(
+    /onChange=\{\(code\) => \{[\s\S]{0,400}?applyCredentialType\(d, t, lang\)/.test(formSrc),
+    "and on the manual choice path",
+  );
+  ok(
+    !/credentialCode: preselectCode/.test(formSrc),
+    "THE DEFECT: no path sets the code while leaving the market behind",
+  );
+  ok(
+    !/jurisdictionCode: t\.jurisdictionCode/.test(formSrc),
+    "and the market assignment is not restated in the component",
+  );
+
+  // ── 7. The write path owns nothing of its own ───────────────────────
+  const writeSrc = readFileSync(
+    join(process.cwd(), "src/lib/security-passport/credentials.functions.ts"),
+    "utf8",
+  );
+  ok(
+    /const fields = credentialClaimFields\(draft, type, mode\);/.test(writeSrc),
+    "saveCredential builds its row with the shared mapping",
+  );
+  ok(
+    !/jurisdiction_code: nullIfBlank\(draft\.jurisdictionCode\)/.test(writeSrc),
+    "THE DEFECT: the write path no longer takes the market from the draft",
+  );
+
+  // ── 8. The refusals are named, in both languages ────────────────────
+  const routeSrc = readFileSync(
+    join(process.cwd(), "src/routes/_authenticated.passport.credentials.new.tsx"),
+    "utf8",
+  );
+  for (const code of [
+    "SP_CREDENTIAL_JURISDICTION_MISMATCH",
+    "SP_SUB_JURISDICTION_REQUIRED",
+    "SP_SUB_JURISDICTION_NOT_SUPPORTED",
+    "SP_CREDENTIAL_NOT_AVAILABLE",
+    "SP_MARKET_PACK_NOT_ACTIVE",
+  ]) {
+    ok(routeSrc.includes(code), `the save-error mapping names ${code}`);
+  }
+  for (const lang of ["sv", "en"] as const) {
+    for (const key of [
+      "cred.error.serverWrongMarket",
+      "cred.error.serverSubMarketRequired",
+      "cred.error.serverMarketClosed",
+    ] as const) {
+      const copy = passportCopy[lang][key];
+      ok(
+        typeof copy === "string" && copy.length > 20 && !/går fel|went wrong/i.test(copy),
+        `${lang}: ${key} says something other than "something went wrong"`,
+      );
+    }
   }
 }
 
