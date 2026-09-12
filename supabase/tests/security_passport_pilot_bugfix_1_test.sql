@@ -513,9 +513,40 @@ BEGIN
       WHERE code IN ('GB','AE-DU') AND legal_review_state = 'pending') = 2,
     '6.2 and neither market''s legal review was quietly marked done');
 
+  -- ── WHAT THIS ASSERTION IS ACTUALLY FOR ──────────────────────────
+  --
+  -- It was written when a market pack was the ONLY way a credential could be
+  -- governed, so "market_pack_code IS NULL" and "ungoverned" were the same
+  -- sentence. 20261110090000 added a second governed route: an international
+  -- professional certification belongs to no market by DESIGN, and the
+  -- constraint sp_credential_type_global_scope_unbound requires it to carry no
+  -- market pack, no jurisdiction, no authority and no regulated role.
+  --
+  -- So the assertion is restated against what it protects rather than against
+  -- the one shape that used to express it, and it gets STRICTER in the
+  -- process: a row outside a market pack must now declare the international
+  -- scope AND carry a reviewed certification definition AND be unbound from
+  -- every territorial concept. Zero ungoverned credentials, as before — and
+  -- three further things that were not checked at all.
+  SELECT count(*) INTO _n FROM public.sp_credential_types t
+   WHERE t.market_pack_code IS NULL
+     AND NOT (
+       t.scope_code = 'global_professional'
+       AND t.jurisdiction_code IS NULL
+       AND t.sub_jurisdiction_code IS NULL
+       AND t.authority_id IS NULL
+       AND t.regulated_role_id IS NULL
+       AND EXISTS (SELECT 1 FROM public.sp_certification_definitions d
+                    WHERE d.credential_code = t.code)
+     );
+  PERFORM pg_temp.ok(_n = 0,
+    '6.3 no credential was added outside a market pack without the governed international scope');
+
+  -- And the pilot release itself still added none: every market-less row is
+  -- one of the fourteen reviewed international certifications.
   SELECT count(*) INTO _n FROM public.sp_credential_types
-   WHERE market_pack_code IS NULL;
-  PERFORM pg_temp.ok(_n = 0, '6.3 no credential was added outside a market pack');
+   WHERE market_pack_code IS NULL AND scope_code IS DISTINCT FROM 'global_professional';
+  PERFORM pg_temp.ok(_n = 0, '6.3b and none of them is ungoverned');
 
   -- Every new function is a capability, granted to `authenticated` where the
   -- per-caller holder/verifier check lives, and to nobody else.
