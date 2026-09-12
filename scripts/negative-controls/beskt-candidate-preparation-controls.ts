@@ -3,8 +3,8 @@
  * candidate-preparation guard must detect a planted defect in the real
  * computation — the migration's function bodies, DDL, triggers and grants,
  * the rollback's verbatim restore and drop order, the harness ordering, the
- * release bookkeeping and the application surface — never a comment and never
- * an error-message string on its own.
+ * release bookkeeping and the generated types — never a comment and never an
+ * error-message string on its own.
  *
  * Each mutation changes exactly one thing, the guard must fail with the named
  * diagnostic, and every file is restored byte-for-byte (proved by the shared
@@ -20,12 +20,7 @@ const STATE = "supabase/release-state.json";
 const PKG = "package.json";
 const TSCONFIG = "tsconfig.scripts.json";
 const CI = ".github/workflows/ci.yml";
-const DICT = "src/i18n/dictionaries.ts";
 const TYPES = "src/integrations/supabase/types.ts";
-const FUNCTIONS = "src/lib/beskt/candidate-preparation.functions.ts";
-const LIBRARY = "src/components/beskt/MethodSupportSection.tsx";
-const PANEL = "src/components/beskt/BesktApplicationPanel.tsx";
-const CANDIDATE = "src/components/beskt/CandidatePreparation.tsx";
 const GUARD = "beskt-candidate-preparation:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -516,91 +511,7 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BCP-RELEASE",
   },
 
-  // ---- The application surface ---------------------------------------------
-  {
-    id: "BCP-NC-ENGLISH-COPY-MISSING",
-    defect: "an English notice string is dropped, leaving a Swedish-only screen",
-    file: DICT,
-    find: '    "beskt.notice.may_omit_questions.title": "You may skip questions",\n',
-    replace: "",
-    guard: GUARD,
-    expect: "BCP-UI",
-  },
-  {
-    id: "BCP-NC-CALLED-A-TEST",
-    defect: "the method is described to an employer as a personality test",
-    file: DICT,
-    find: '    "beskt.library.siblingNote":\n      "Ett eget produktområde, skilt från Testbibliotekets bedömningar ovan.",',
-    replace: '    "beskt.library.siblingNote": "Ett personlighetstest för rekrytering.",',
-    guard: GUARD,
-    expect: "BCP-UI",
-  },
-  {
-    id: "BCP-NC-SCORING-CLAIM",
-    defect: "the copy starts asserting a score instead of denying one",
-    file: DICT,
-    find: '    "beskt.library.notAssessment": "Inget resultat, ingen poäng, ingen rangordning",',
-    replace: '    "beskt.library.notAssessment": "Resultatet ger poäng och rangordning",',
-    guard: GUARD,
-    expect: "BCP-NO-SCORE",
-  },
-  {
-    id: "BCP-NC-NO-EMPTY-STATE",
-    defect: "the library section drops its honest under-development state",
-    file: LIBRARY,
-    find: '              <Badge variant="secondary">{t("beskt.library.underDevelopment")}</Badge>',
-    replace: '              <Badge variant="secondary">{"\\u00a0"}</Badge>',
-    guard: GUARD,
-    expect: "BCP-UI",
-  },
-  {
-    id: "BCP-NC-DRAFT-RENDERED",
-    defect: "the employer panel stops distinguishing an absent draft from an empty one",
-    file: PANEL,
-    find: "              ) : detail.data.answers === null ? (",
-    replace: "              ) : detail.data.answers?.length === 0 ? (",
-    guard: GUARD,
-    expect: "BCP-UI",
-  },
-  {
-    id: "BCP-NC-ORAL-CONTROL-REMOVED",
-    defect: "the candidate loses the option to take a question orally",
-    file: CANDIDATE,
-    find: '            {t("beskt.answer.oral")}',
-    replace: '            {t("beskt.answer.skip")}',
-    guard: GUARD,
-    expect: "BCP-UI",
-  },
-  {
-    id: "BCP-NC-RISK-COLOUR",
-    defect: "an omission is painted as a warning",
-    file: CANDIDATE,
-    find: '            <Badge variant="outline" className="gap-1.5 font-normal">\n              {draft.state === "omitted" ? (',
-    replace:
-      '            <Badge variant="outline" className="gap-1.5 font-normal bg-red-100 text-red-700">\n              {draft.state === "omitted" ? (',
-    guard: GUARD,
-    expect: "BCP-UI",
-  },
-  {
-    id: "BCP-NC-NO-ERROR-SUMMARY",
-    defect: "the error summary stops being announced",
-    file: CANDIDATE,
-    find: '              role="alert"\n              className="mb-6 rounded-lg border border-destructive/40 bg-destructive/5 p-4"',
-    replace:
-      '              className="mb-6 rounded-lg border border-destructive/40 bg-destructive/5 p-4"',
-    guard: GUARD,
-    expect: "BCP-UI",
-  },
-  {
-    id: "BCP-NC-DIRECT-TABLE-WRITE",
-    defect: "the application layer starts writing the runtime tables directly",
-    file: FUNCTIONS,
-    find: '    const { data: row, error } = await context.supabase.rpc("bcp_cancel", {',
-    replace:
-      '    const { data: row, error } = await context.supabase.from("bcp_assignments").update({\n      lifecycle_state: "cancelled",\n    }).eq("id", data.assignmentId).select().single().then((r) => r) as never;\n    const _unused = await context.supabase.rpc("bcp_cancel", {',
-    guard: GUARD,
-    expect: "BCP-SECURITY",
-  },
+  // ---- The generated database types ----------------------------------------
   {
     id: "BCP-NC-TYPES-STALE",
     defect: "the generated types stop carrying a runtime table",

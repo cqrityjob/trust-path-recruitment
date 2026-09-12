@@ -10,7 +10,6 @@ import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { ContentLibrary } from "@/components/academy/ContentLibrary";
-import { MethodSupportSection } from "@/components/beskt/MethodSupportSection";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/assessments/library")({
   ssr: false,
@@ -24,21 +23,13 @@ function LibraryRoute() {
   return (
     <AcademyPage employerSlug={employerSlug}>
       {(ws) => (
-        <>
-          <ContentLibrary
-            employerId={ws.employerId}
-            canAssign={ws.role !== "member"}
-            area="recruitment"
-            title={t("academy.library.title")}
-            lede={t("academy.library.lede")}
-          />
-          {/* Metodstöd för rekrytering — a SIBLING product area, not another
-              row in the library above. BESKT is a structured method, not a
-              scored assessment, and the section renders its own truthful
-              state (including "under development" when nothing governed is
-              published, which in production is always). */}
-          <MethodSupportSection employerId={ws.employerId} />
-        </>
+        <ContentLibrary
+          employerId={ws.employerId}
+          canAssign={ws.role !== "member"}
+          area="recruitment"
+          title={t("academy.library.title")}
+          lede={t("academy.library.lede")}
+        />
       )}
     </AcademyPage>
   );

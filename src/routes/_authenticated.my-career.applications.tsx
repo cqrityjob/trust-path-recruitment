@@ -14,7 +14,6 @@ import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import { ApplicationPassportShare } from "@/components/jobs/ApplicationPassportShare";
-import { MyPreparations } from "@/components/beskt/MyPreparations";
 import {
   listMyApplications,
   withdrawMyApplication,
@@ -184,11 +183,6 @@ function MyApplicationsPage() {
             </ul>
           )}
         </div>
-
-        {/* BESKT preparation — part of the application journey, next to the
-            applications it belongs to. It shows a truthful state and a way
-            in, and no score, because there is none. */}
-        <MyPreparations />
       </Section>
     </>
   );

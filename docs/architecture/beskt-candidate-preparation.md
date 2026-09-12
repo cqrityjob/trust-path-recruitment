@@ -1,6 +1,8 @@
 # BESKT PR 3 — candidate preparation: runtime and release decisions
 
-**Status:** Runtime and pilot UI for candidate preparation. No hosted apply, no Lovable publish, no real data, no published method.
+**Status:** PR 3A — the candidate-preparation **database contract only**. No application code, no UI, no hosted apply, no Lovable publish, no real data, no published method.
+
+The candidate and employer surfaces that use this runtime are **PR 3B**. They are written and preserved on `claude/beskt-pr3-application-safety`, and are deliberately not in this pull request: `scripts/schema-first-release-check.ts` requires the schema half to be merged and applied on the owner project before any code that calls it becomes merge-eligible. See section 9.
 
 **Depends on:** PR #217 (`docs/architecture/beskt-recruitment-method-discovery.md`, the normative contract) and PR #218 (`docs/architecture/beskt-governed-content-schema.md`, the governed content spine). This note records the additive decisions PR 3 makes inside those contracts; it changes nothing in either.
 
@@ -8,8 +10,7 @@
 **Rollback:** `supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql`
 **Suite:** `supabase/tests/bcp_candidate_preparation_test.sql`
 **Guard / controls:** `scripts/beskt-candidate-preparation-check.ts`, `scripts/negative-controls/beskt-candidate-preparation-controls.ts`
-**Render proof:** `scripts/beskt-candidate-preparation-render-check.tsx`, `scripts/beskt-candidate-preparation-evidence.ts`
-**Routed evidence:** `e2e/beskt-candidate-preparation.spec.ts`, `scripts/local-stack/`, `scripts/fixtures/beskt-candidate-preparation-fixture.sql` (see section 9)
+**Generated types:** `src/integrations/supabase/types.ts` (describes this schema; calls nothing, which is why the schema-first guard excludes it)
 
 ## 1. Why the runtime is `bcp_` and not `beskt_`
 
@@ -86,58 +87,39 @@ Every mutation derives its actor from `auth.uid()`, authorises itself inside the
 
 Immutability is enforced by row triggers rather than policies, so it holds against every writer — a governed RPC, `service_role`, a superuser and BYPASSRLS alike.
 
-## 7. Product placement
+## 7. What this half deliberately does not contain
 
-`Testbibliotek → Metodstöd för rekrytering`: a visually distinct sibling section with its own heading, explanation and vocabulary, never another row in the assessment library. The assessment read model above it assumes test semantics — an instrument, item counts, a result somebody "got" — and BESKT has none of those.
+No component, route, translation, server function or browser test. Every one
+of them exists and is preserved on `claude/beskt-pr3-application-safety`; none
+of them may merge until the migration below is applied on the owner project,
+because Lovable rebuilds from `main` at merge while migrations run only when
+someone applies them. That gap is the 2026-08-25 outage, and
+`scripts/schema-first-release-check.ts` exists to make it unrepresentable.
 
-The section is never called a personality or suitability test, in either language, and the guard fails the build if it is. Scoring vocabulary appears only inside sentences that deny or distinguish a score, which the guard checks sentence by sentence.
-
-A preparation is started from an existing application, on that application's own page — so the control cannot be reached without a real employer, job, application and candidate. The list and the create call share one database decision, so what is offered is what `bcp_assign` accepts.
-
-**The honest empty state is the product state.** Until a governed method has passed its five human review gates and the owner has admitted an employer to the pilot, the section says the method is under development and why. No fixture publishes content into production to make the screen look complete.
+The product decisions those surfaces implement — the sibling section in
+Testbibliotek, the honest under-development empty state, starting only from an
+existing application, the candidate journey in My Career — are unchanged and
+belong in PR 3B's own note.
 
 ## 8. What PR 3 does not do
 
 No live interview execution, interviewer observation, evidence-state assessment, independent assessor workflow, panel workflow, report generation, AI analysis or summarisation, candidate scoring or ranking, suitability, credibility or deception judgement, automated employment recommendation, automatic job-application status change, security-vetting runtime, hosted apply or Lovable publish. The postflight and the guard refuse a table, column, function or code path for any of them. Those begin in PR 4.
 
-## 9. The routed evidence
+## 9. The release order this half exists to satisfy
 
-Exported components can prove layout and copy. They cannot prove that the
-screens are wired to the database, and PR 3's whole claim is about what the
-database decides. So the journey is walked in a real browser, signed in, on
-the real routes: `e2e/beskt-candidate-preparation.spec.ts`, captured in
-`artifacts/beskt-candidate-preparation/live/`.
+1. **This PR (3A)** merges: the migration, its rollback, its behaviour suite,
+   its guards and controls, its release bookkeeping and the generated types.
+   Adding a table breaks no running application, which is what makes this half
+   safe to merge first.
+2. The official Supabase GitHub integration applies
+   `20261110090000_bcp_candidate_preparation.sql` to the owner project.
+3. The hosted schema is verified read-only and the migration identity recorded.
+4. `supabase/release-state.json` records `hostedState: "applied"` with that
+   evidence, on `main`.
+5. `schema-first-release:check` is green on the updated `main`.
+6. **Only then** does PR 3B open, from a branch cut at that `main`, carrying
+   the preserved application half.
 
-Seven tests, in order, at 1440, 375 and 390, in Swedish and English: the
-library's honest state; the employer starting a preparation from an existing
-application and seeing **nothing** of a draft; the nine notices with no
-question answerable before acknowledgement; answering, saving, leaving and
-resuming with the exact same answers; one question taken orally and another
-skipped; review and a real correction; one submission after which the screen
-is read-only; the employer's readback of the submitted basis and the neutral
-states; and the two refusals — a second candidate and a member of another
-employer.
-
-Two of those steps are worth naming because they are properties, not screens:
-
-- **Routing is the database's decision.** The follow-up questions appear only
-  after the answer that opens them has been _saved_, because the item sequence
-  is resolved by PR #218's resolver over the answers actually stored. What the
-  candidate is asked is never decided in the browser, and the walk asserts the
-  order in which that becomes visible.
-- **The refusals are absences.** The wrong candidate's page carries no notice,
-  no question, no review list and none of the submitted text — not an empty
-  panel, nothing at all.
-
-The stack it runs against is described in `scripts/local-stack/README.md`. It
-is a real PostgreSQL 16 with the full migration history and the hosted
-privilege baseline, a real PostgREST enforcing the real RLS, and the real
-application — with **GoTrue substituted** by a local token endpoint, because
-in the environment this evidence was captured in no container image could be
-fetched at all. That substitution is named in the evidence index beside the
-captures rather than left for a reader to discover.
-
-The walk's traces are captured and deliberately **not** committed: a trace
-records the network and therefore carries the session's bearer token, which
-`scripts/e4-evidence-scan.ts` correctly refuses. Their digests are in
-`live/manifest.json`.
+Nothing in this note asks anyone to remember that order:
+`scripts/schema-first-release-check.ts` refuses the wrong one on the pull
+request, before it can reach a live site.

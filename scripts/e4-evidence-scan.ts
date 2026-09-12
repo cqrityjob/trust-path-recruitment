@@ -38,14 +38,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const DIRS = [
-  "artifacts/employer-final-report-e4",
-  // BESKT PR 3: the candidate-preparation captures are committed too, so
-  // they are scanned on exactly the same terms.
-  "artifacts/beskt-candidate-preparation",
-  "playwright-report",
-  "test-results",
-];
+const DIRS = ["artifacts/employer-final-report-e4", "playwright-report", "test-results"];
 
 export interface Finding {
   /** Where it was found, including the path inside an archive. */
@@ -512,11 +505,7 @@ if (import.meta.main) {
 
   // An empty artifact uploaded green is worse than no artifact: it looks like
   // evidence in the checks list and contains none.
-  // WHICH directory must be non-empty is the one this run captured for. The
-  // default is unchanged, so the E4 workflow behaves exactly as it did; a
-  // later phase that reuses this scanner (BESKT PR 3 does) names its own.
-  const captureDir = process.env.EVIDENCE_CAPTURE_DIR ?? "artifacts/employer-final-report-e4";
-  const captures = walk(captureDir).filter((f) => f.endsWith(".png"));
+  const captures = walk("artifacts/employer-final-report-e4").filter((f) => f.endsWith(".png"));
   if (captures.length === 0) {
     console.error(
       "\nREFUSED: no screenshot was captured, so there is nothing to review.\n" +

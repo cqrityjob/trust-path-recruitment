@@ -4,7 +4,7 @@
  * The database suite (supabase/tests/bcp_candidate_preparation_test.sql)
  * proves behaviour against a replayed schema, but it runs only in the database
  * job. This guard reads the migration, the rollback, the suite, the harness,
- * the application source and the release bookkeeping STRUCTURALLY, in the fast
+ * the generated types and the release bookkeeping STRUCTURALLY, in the fast
  * job, so a defect that never reaches a replay is still caught — and so every
  * material assertion has a planted negative control
  * (scripts/negative-controls/beskt-candidate-preparation-controls.ts).
@@ -40,26 +40,7 @@ const PACKAGE = join(ROOT, "package.json");
 const CI = join(ROOT, ".github/workflows/ci.yml");
 const TSCONFIG = join(ROOT, "tsconfig.scripts.json");
 const FRONTIER = join(ROOT, "scripts/release-frontier-check.ts");
-const DICTIONARIES = join(ROOT, "src/i18n/dictionaries.ts");
 const TYPES = join(ROOT, "src/integrations/supabase/types.ts");
-const FUNCTIONS = join(ROOT, "src/lib/beskt/candidate-preparation.functions.ts");
-const LIBRARY_SECTION = join(ROOT, "src/components/beskt/MethodSupportSection.tsx");
-const APPLICATION_PANEL = join(ROOT, "src/components/beskt/BesktApplicationPanel.tsx");
-const CANDIDATE_UI = join(ROOT, "src/components/beskt/CandidatePreparation.tsx");
-const MY_PREPARATIONS = join(ROOT, "src/components/beskt/MyPreparations.tsx");
-const CANDIDATE_ROUTE = join(
-  ROOT,
-  "src/routes/_authenticated.my-career.preparation.$assignmentId.tsx",
-);
-const LIBRARY_ROUTE = join(
-  ROOT,
-  "src/routes/_authenticated.employer.$employerSlug.assessments.library.tsx",
-);
-const APPLICATION_ROUTE = join(
-  ROOT,
-  "src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx",
-);
-const E2E = join(ROOT, "e2e/beskt-candidate-preparation.spec.ts");
 
 /** The six runtime tables. Named outside `beskt_` on purpose; see the migration. */
 const TABLES = [
@@ -802,159 +783,13 @@ const pr2 = read(PR2_MIGRATION);
   }
 }
 
-// ── 13. Application surface: truthful, bilingual, and never a test ────────
+// ── 13. The generated database types describe the schema being shipped ────
+//
+// types.ts DESCRIBES a schema; it does not call one, which is why both
+// schema-first-release-check.ts and release-parity-check.ts exclude it from
+// their dependency scans. It belongs with the migration it describes, not with
+// the application code that will later use it.
 {
-  const dict = read(DICTIONARIES);
-  const svBlock = dict.slice(0, dict.indexOf("  en: {"));
-  const enBlock = dict.slice(dict.indexOf("  en: {"));
-  const keyRe = /"(beskt\.[a-zA-Z0-9_.]+)":/g;
-  const sv = new Set(Array.from(svBlock.matchAll(keyRe), (m) => m[1]));
-  const en = new Set(Array.from(enBlock.matchAll(keyRe), (m) => m[1]));
-  check(sv.size > 80, `BCP-UI: the BESKT copy exists (${sv.size} keys)`);
-  check(
-    sv.size === en.size && Array.from(sv).every((k) => en.has(k)),
-    "BCP-UI: every BESKT key exists in BOTH Swedish and English",
-  );
-  for (const key of NOTICE_SECTIONS) {
-    check(
-      sv.has(`beskt.notice.${key}.title`) && sv.has(`beskt.notice.${key}.body`),
-      `BCP-UI: the notice section "${key}" has bilingual wording`,
-    );
-  }
-
-  check(
-    dict.includes('"beskt.library.title": "Metodstöd för rekrytering"'),
-    'BCP-UI: the employer section is named "Metodstöd för rekrytering"',
-  );
-  // Per VALUE, not one concatenated blob: a value with no terminal punctuation
-  // would otherwise be glued to its neighbour and inherit its denial.
-  const besktValues = Array.from(dict.matchAll(/"beskt\.[a-zA-Z0-9_.]+":\s*"([^"]*)"/g)).map(
-    (m) => m[1] ?? "",
-  );
-  const besktCopy = besktValues.join("   ");
-  check(
-    !/personlighetstest|lämplighetstest|personality test|suitability test|aptitude test/i.test(
-      besktCopy,
-    ),
-    "BCP-UI: no BESKT copy calls the method a personality, suitability or aptitude test",
-  );
-  // Scoring vocabulary may appear ONLY inside a sentence that denies a score.
-  // Scoring vocabulary is not banned from the copy -- the product has to be
-  // able to say "this produces no score" and "distinct from the scored
-  // assessments above", and a candidate who is never told either is left to
-  // assume the opposite. What is banned is ASSERTING one, so every sentence
-  // that names scoring must also deny or distinguish it.
-  const denies =
-    /\b(inte|inget|ingen|inga|aldrig|utan|skilt|skild|åtskild|not|no|never|nobody|none|without|distinct|separate|rather than|instead of)\b/i;
-  const scoringSentences = besktValues
-    .flatMap((value) => value.split(/(?<=[.!?])\s+/))
-    .filter((sentence) => /\b(poäng|betyg|rangordn|score|ranking|grade)\w*/i.test(sentence));
-  const asserted = scoringSentences.filter((sentence) => !denies.test(sentence));
-  check(
-    scoringSentences.length >= 4 && asserted.length === 0,
-    `BCP-NO-SCORE: scoring vocabulary appears only inside sentences that DENY or distinguish a score (${scoringSentences.length} checked, ${asserted.length} asserting: ${asserted.join(" | ").slice(0, 200)})`,
-  );
-
-  const section = read(LIBRARY_SECTION);
-  check(
-    section.includes('t("beskt.library.emptyTitle")') &&
-      section.includes('t("beskt.library.underDevelopment")'),
-    "BCP-UI: the library section renders an honest empty / under-development state",
-  );
-  for (const state of ["loading", "error", "denied"] as const) {
-    check(
-      section.includes(`t("beskt.library.${state}")`),
-      `BCP-UI: it renders a distinct ${state} state`,
-    );
-  }
-  check(
-    section.includes("listAssignableBesktMethods"),
-    "BCP-UI: it lists only what the database says is genuinely assignable",
-  );
-  check(
-    read(LIBRARY_ROUTE).includes("<MethodSupportSection"),
-    "BCP-UI: the section is mounted on the existing Testbibliotek page as a sibling",
-  );
-
-  const panel = read(APPLICATION_PANEL);
-  check(
-    panel.includes("startBesktPreparation") && panel.includes("applicationId"),
-    "BCP-UI: a preparation is started from the existing job/application context",
-  );
-  check(
-    panel.includes('t("beskt.start.noMethod")'),
-    "BCP-UI: and refuses honestly when no compatible published version is available",
-  );
-  check(
-    panel.includes("beskt-readback-draft-private") && panel.includes("answers === null"),
-    "BCP-UI: an unsubmitted draft is reported as unreadable, not rendered in part",
-  );
-  check(
-    read(APPLICATION_ROUTE).includes("<BesktApplicationPanel"),
-    "BCP-UI: the panel is mounted on the existing application page",
-  );
-
-  const candidate = read(CANDIDATE_UI);
-  check(
-    candidate.includes('t("beskt.answer.skip")') && candidate.includes('t("beskt.answer.oral")'),
-    'BCP-UI: the candidate can choose "Hoppa över" and "Ta muntligt under intervjun"',
-  );
-  check(
-    /role="alert"[\s\S]{0,200}data-testid="beskt-error-summary"/.test(candidate) &&
-      /tabIndex=\{-1\}[\s\S]{0,200}data-testid="beskt-error-summary"/.test(candidate),
-    "BCP-UI: the error summary ITSELF is announced and focusable, not merely present",
-  );
-  check(
-    (candidate.match(/min-h-\[44px\]/g) ?? []).length >= 8,
-    "BCP-UI: interaction targets are at least 44px",
-  );
-  check(
-    candidate.includes("<fieldset>") && candidate.includes("<legend"),
-    "BCP-UI: each question is a labelled group for a screen reader",
-  );
-  check(
-    candidate.includes('setPhase("review")') &&
-      candidate.includes("<ReviewList items={data.items} drafts={drafts} readOnly={false} />") &&
-      candidate.indexOf('data-testid="beskt-to-review"') <
-        candidate.indexOf('data-testid="beskt-submit"'),
-    "BCP-UI: the candidate reviews every response, in an editable review, before the submit control is reachable",
-  );
-  check(
-    candidate.includes('data-testid="beskt-submitted"') && candidate.includes("submitted.readOnly"),
-    "BCP-UI: a submitted preparation is a clear read-only confirmation",
-  );
-  check(
-    !/text-(red|amber|orange|yellow|green)-\d|bg-(red|amber|orange|yellow|green)-\d/.test(
-      candidate,
-    ),
-    "BCP-UI: no risk or performance colour is used anywhere in the candidate journey",
-  );
-  const candidateCode = candidate.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
-  check(
-    !/progress|percent|procent/i.test(candidateCode),
-    "BCP-UI: there is no progress bar or completion percentage to be read as performance",
-  );
-  check(
-    read(CANDIDATE_ROUTE).includes("/_authenticated/my-career/preparation/$assignmentId"),
-    "BCP-UI: the candidate journey lives inside the authenticated My Career area",
-  );
-  check(
-    read(MY_PREPARATIONS).includes("listMyBesktPreparations"),
-    "BCP-UI: My Career lists the candidate's own preparations",
-  );
-
-  const fnsCode = read(FUNCTIONS)
-    .replace(/\/\/[^\n]*/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
-  check(
-    !/score|ranking|suitab|credib|verdict|recommendation/i.test(fnsCode),
-    "BCP-NO-SCORE: the application layer has no scoring, suitability or recommendation concept",
-  );
-  check(
-    !/\.from\("bcp_/.test(fnsCode),
-    "BCP-SECURITY: the application layer reaches the runtime only through governed RPCs, never a direct table write",
-  );
-
   const types = read(TYPES);
   for (const table of TABLES) {
     check(types.includes(`      ${table}: {`), `BCP-TYPES: ${table} is in the generated types`);
@@ -1001,11 +836,6 @@ const pr2 = read(PR2_MIGRATION);
     tsconfig.includes('"scripts/beskt-candidate-preparation-check.ts"') &&
       tsconfig.includes('"scripts/negative-controls/beskt-candidate-preparation-controls.ts"'),
     "BCP-REGISTRATION: the guard and its controls are typechecked",
-  );
-  const e2e = read(E2E);
-  check(
-    e2e.includes("beskt") && /mobile/i.test(e2e) && /sv|en/.test(e2e),
-    "BCP-EVIDENCE: a routed browser evidence walk exists for the preparation journey",
   );
 }
 

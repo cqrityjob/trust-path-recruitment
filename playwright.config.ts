@@ -3,13 +3,11 @@ import { defineConfig, devices } from "@playwright/test";
 // H3.4A — Playwright configuration for the beta-critical candidate-to-
 // employer smoke test (e2e/candidate-to-employer-application.spec.ts).
 //
-// Most specs here run against whatever backend SUPABASE_URL /
-// VITE_SUPABASE_URL in .env point to, and are NOT auto-run against a live or
-// shared backend -- see each spec's own header for why.
-//
-// The exception is a spec that WRITES: e2e/beskt-candidate-preparation.spec.ts
-// refuses to run unless E2E_LOCAL_STACK=1 and the base URL is loopback.
-// scripts/local-stack/up.sh builds the stack it needs.
+// This project has no local Supabase stack (no Docker/CLI available in
+// this environment) -- every browser session runs against whatever
+// backend SUPABASE_URL / VITE_SUPABASE_URL in .env point to. See the spec
+// file's own header comment for why this test is NOT auto-run against a
+// live/shared backend by default.
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -34,19 +32,6 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-
-    // ── AN ALREADY-INSTALLED CHROMIUM, WHEN ONE IS ALL THERE IS ────────
-    //
-    // Opt-in and absent by default, so CI -- which installs the browser
-    // Playwright asks for -- is unaffected. It exists because an image can
-    // ship a pinned Chromium while blocking Playwright's download host, and
-    // in that environment the only runnable browser is the one already on
-    // disk. Pointing at it is a statement about the environment, not about
-    // the tests; a version skew between the two is real and belongs in the
-    // evidence report rather than hidden behind a default.
-    ...(process.env.PW_CHROMIUM_PATH
-      ? { launchOptions: { executablePath: process.env.PW_CHROMIUM_PATH } }
-      : {}),
   },
   projects: [
     {

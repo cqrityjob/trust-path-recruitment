@@ -108,7 +108,6 @@ import { Route as AuthenticatedAdminApplicationsIndexRouteImport } from './route
 import { Route as AuthenticatedSecurityCareerAssessmentReportSnapshotIdRouteImport } from './routes/_authenticated.security-career-assessment.report.$snapshotId'
 import { Route as AuthenticatedPassportCredentialsNewRouteImport } from './routes/_authenticated.passport.credentials.new'
 import { Route as AuthenticatedMyCareerReportsRunIdRouteImport } from './routes/_authenticated.my-career.reports.$runId'
-import { Route as AuthenticatedMyCareerPreparationAssignmentIdRouteImport } from './routes/_authenticated.my-career.preparation.$assignmentId'
 import { Route as AuthenticatedMyCareerInterviewsCaseIdRouteImport } from './routes/_authenticated.my-career.interviews.$caseId'
 import { Route as AuthenticatedMyCareerCvNewRouteImport } from './routes/_authenticated.my-career.cv.new'
 import { Route as AuthenticatedMyCareerCvCvIdRouteImport } from './routes/_authenticated.my-career.cv.$cvId'
@@ -721,12 +720,6 @@ const AuthenticatedMyCareerReportsRunIdRoute =
     path: '/reports/$runId',
     getParentRoute: () => AuthenticatedMyCareerRoute,
   } as any)
-const AuthenticatedMyCareerPreparationAssignmentIdRoute =
-  AuthenticatedMyCareerPreparationAssignmentIdRouteImport.update({
-    id: '/preparation/$assignmentId',
-    path: '/preparation/$assignmentId',
-    getParentRoute: () => AuthenticatedMyCareerRoute,
-  } as any)
 const AuthenticatedMyCareerInterviewsCaseIdRoute =
   AuthenticatedMyCareerInterviewsCaseIdRouteImport.update({
     id: '/interviews/$caseId',
@@ -1252,7 +1245,6 @@ export interface FileRoutesByFullPath {
   '/my-career/cv/$cvId': typeof AuthenticatedMyCareerCvCvIdRoute
   '/my-career/cv/new': typeof AuthenticatedMyCareerCvNewRoute
   '/my-career/interviews/$caseId': typeof AuthenticatedMyCareerInterviewsCaseIdRoute
-  '/my-career/preparation/$assignmentId': typeof AuthenticatedMyCareerPreparationAssignmentIdRoute
   '/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
   '/security-career-assessment/report/$snapshotId': typeof AuthenticatedSecurityCareerAssessmentReportSnapshotIdRoute
@@ -1396,7 +1388,6 @@ export interface FileRoutesByTo {
   '/my-career/cv/$cvId': typeof AuthenticatedMyCareerCvCvIdRoute
   '/my-career/cv/new': typeof AuthenticatedMyCareerCvNewRoute
   '/my-career/interviews/$caseId': typeof AuthenticatedMyCareerInterviewsCaseIdRoute
-  '/my-career/preparation/$assignmentId': typeof AuthenticatedMyCareerPreparationAssignmentIdRoute
   '/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
   '/security-career-assessment/report/$snapshotId': typeof AuthenticatedSecurityCareerAssessmentReportSnapshotIdRoute
@@ -1561,7 +1552,6 @@ export interface FileRoutesById {
   '/_authenticated/my-career/cv/$cvId': typeof AuthenticatedMyCareerCvCvIdRoute
   '/_authenticated/my-career/cv/new': typeof AuthenticatedMyCareerCvNewRoute
   '/_authenticated/my-career/interviews/$caseId': typeof AuthenticatedMyCareerInterviewsCaseIdRoute
-  '/_authenticated/my-career/preparation/$assignmentId': typeof AuthenticatedMyCareerPreparationAssignmentIdRoute
   '/_authenticated/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/_authenticated/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
   '/_authenticated/security-career-assessment/report/$snapshotId': typeof AuthenticatedSecurityCareerAssessmentReportSnapshotIdRoute
@@ -1726,7 +1716,6 @@ export interface FileRouteTypes {
     | '/my-career/cv/$cvId'
     | '/my-career/cv/new'
     | '/my-career/interviews/$caseId'
-    | '/my-career/preparation/$assignmentId'
     | '/my-career/reports/$runId'
     | '/passport/credentials/new'
     | '/security-career-assessment/report/$snapshotId'
@@ -1870,7 +1859,6 @@ export interface FileRouteTypes {
     | '/my-career/cv/$cvId'
     | '/my-career/cv/new'
     | '/my-career/interviews/$caseId'
-    | '/my-career/preparation/$assignmentId'
     | '/my-career/reports/$runId'
     | '/passport/credentials/new'
     | '/security-career-assessment/report/$snapshotId'
@@ -2034,7 +2022,6 @@ export interface FileRouteTypes {
     | '/_authenticated/my-career/cv/$cvId'
     | '/_authenticated/my-career/cv/new'
     | '/_authenticated/my-career/interviews/$caseId'
-    | '/_authenticated/my-career/preparation/$assignmentId'
     | '/_authenticated/my-career/reports/$runId'
     | '/_authenticated/passport/credentials/new'
     | '/_authenticated/security-career-assessment/report/$snapshotId'
@@ -2815,13 +2802,6 @@ declare module '@tanstack/react-router' {
       path: '/reports/$runId'
       fullPath: '/my-career/reports/$runId'
       preLoaderRoute: typeof AuthenticatedMyCareerReportsRunIdRouteImport
-      parentRoute: typeof AuthenticatedMyCareerRoute
-    }
-    '/_authenticated/my-career/preparation/$assignmentId': {
-      id: '/_authenticated/my-career/preparation/$assignmentId'
-      path: '/preparation/$assignmentId'
-      fullPath: '/my-career/preparation/$assignmentId'
-      preLoaderRoute: typeof AuthenticatedMyCareerPreparationAssignmentIdRouteImport
       parentRoute: typeof AuthenticatedMyCareerRoute
     }
     '/_authenticated/my-career/interviews/$caseId': {
@@ -3694,7 +3674,6 @@ interface AuthenticatedMyCareerRouteChildren {
   AuthenticatedMyCareerProfileRoute: typeof AuthenticatedMyCareerProfileRoute
   AuthenticatedMyCareerIndexRoute: typeof AuthenticatedMyCareerIndexRoute
   AuthenticatedMyCareerInterviewsCaseIdRoute: typeof AuthenticatedMyCareerInterviewsCaseIdRoute
-  AuthenticatedMyCareerPreparationAssignmentIdRoute: typeof AuthenticatedMyCareerPreparationAssignmentIdRoute
   AuthenticatedMyCareerReportsRunIdRoute: typeof AuthenticatedMyCareerReportsRunIdRoute
 }
 
@@ -3707,8 +3686,6 @@ const AuthenticatedMyCareerRouteChildren: AuthenticatedMyCareerRouteChildren = {
   AuthenticatedMyCareerIndexRoute: AuthenticatedMyCareerIndexRoute,
   AuthenticatedMyCareerInterviewsCaseIdRoute:
     AuthenticatedMyCareerInterviewsCaseIdRoute,
-  AuthenticatedMyCareerPreparationAssignmentIdRoute:
-    AuthenticatedMyCareerPreparationAssignmentIdRoute,
   AuthenticatedMyCareerReportsRunIdRoute:
     AuthenticatedMyCareerReportsRunIdRoute,
 }
