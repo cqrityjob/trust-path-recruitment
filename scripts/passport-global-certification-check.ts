@@ -675,7 +675,15 @@ for (const clause of [
     MIGRATION.indexOf("sp_credential_type_global_scope_unbound"),
     MIGRATION.indexOf("sp_credential_type_national_scope_bound"),
   );
-  ok(constraint.includes(clause), `and it pins ${clause}`);
+  // Anchored on a preceding non-identifier character. `.includes` was not
+  // enough and the negative control proved it: "jurisdiction_code IS NULL" is
+  // a SUBSTRING of "sub_jurisdiction_code IS NULL", so deleting the former
+  // left the assertion passing on the latter — a dead check that would have
+  // shipped a global definition free to carry a country.
+  ok(
+    new RegExp(`(?<![A-Za-z0-9_])${clause.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(constraint),
+    `and it pins ${clause}`,
+  );
 }
 {
   const constraint = MIGRATION.slice(
