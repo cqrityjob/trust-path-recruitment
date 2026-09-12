@@ -87,6 +87,23 @@ export function isMissingPilotLayer(err: { code?: string } | null | undefined): 
  *  surface that quietly presented every closed market as "not a pilot" on a
  *  failed read would be guessing about a governed state. */
 export function isMissingPilotStateColumn(err: { code?: string } | null | undefined): boolean {
+  return isMissingColumn(err);
+}
+
+/** True when a Supabase error means "this database does not have that column
+ *  yet" — the generic form of the rule above.
+ *
+ *  Postgres reports an undefined column as 42703; PostgREST reports a column
+ *  its schema cache does not know as PGRST204. Nothing else is tolerated.
+ *
+ *  Named without a feature in it because the situation is not specific to one:
+ *  this repository ships migrations ahead of their application as a matter of
+ *  routine, so every read that selects a brand-new column sits in the same gap
+ *  `pilot_state` once sat in. A caller that uses this MUST have an honest
+ *  degraded answer for the column being absent, and that answer must be
+ *  strictly narrower than the full one — see `resolveMarketAccess` for the
+ *  shape. */
+export function isMissingColumn(err: { code?: string } | null | undefined): boolean {
   return err?.code === "42703" || err?.code === "PGRST204";
 }
 
@@ -97,6 +114,18 @@ export function isMissingPilotStateColumn(err: { code?: string } | null | undefi
  *  missing from its schema cache as PGRST205. As above, nothing else is
  *  tolerated. */
 export function isMissingPilotMembersTable(err: { code?: string } | null | undefined): boolean {
+  return isMissingRelation(err);
+}
+
+/** True when a Supabase error means "this database does not have that table
+ *  yet" — the generic form of the rule above.
+ *
+ *  Postgres reports an undefined table as 42P01; PostgREST reports a relation
+ *  missing from its schema cache as PGRST205. As above, nothing else is
+ *  tolerated, and the caller owes an honest degraded answer: an ABSENT
+ *  catalogue is an EMPTY catalogue, never an error shown to a holder about
+ *  something that is not their problem. */
+export function isMissingRelation(err: { code?: string } | null | undefined): boolean {
   return err?.code === "42P01" || err?.code === "PGRST205";
 }
 

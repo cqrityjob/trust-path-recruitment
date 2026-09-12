@@ -58,6 +58,11 @@ function licence(
     titleIsHolderWritten: false,
     jurisdictionCode,
     subJurisdictionCode,
+    // Every row this builder makes carries a jurisdiction, which is exactly
+    // what 20261110090000 backfilled `national_regulated` onto. No fixture in
+    // this file is `global_professional`: the international catalogue belongs
+    // to its own reader and its own Phase 2 flow.
+    scopeCode: "national_regulated",
     sortOrder: r.sortOrder,
   }));
 }
@@ -81,6 +86,11 @@ function training(
     titleIsHolderWritten: false,
     jurisdictionCode,
     subJurisdictionCode,
+    // Every row this builder makes carries a jurisdiction, which is exactly
+    // what 20261110090000 backfilled `national_regulated` onto. No fixture in
+    // this file is `global_professional`: the international catalogue belongs
+    // to its own reader and its own Phase 2 flow.
+    scopeCode: "national_regulated",
     sortOrder: r.sortOrder,
   }));
 }
@@ -383,6 +393,7 @@ const AE_DU_FITNESS: CredentialType & { readonly sortOrder: number } = {
   titleIsHolderWritten: false,
   jurisdictionCode: "AE",
   subJurisdictionCode: "AE-DU",
+  scopeCode: "national_regulated",
   sortOrder: 560,
 };
 

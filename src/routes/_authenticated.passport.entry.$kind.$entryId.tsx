@@ -386,6 +386,11 @@ function PassportEntryRoute() {
           titleIsHolderWritten: false,
           jurisdictionCode: null,
           subJurisdictionCode: null,
+          // Undeclared, never global. This fallback stands in for a taxonomy
+          // row the read has not produced, and a stand-in that declared an
+          // international scope would classify an unknown credential as a
+          // governed certification.
+          scopeCode: null,
         },
       ).scope ?? false)
     : false;
