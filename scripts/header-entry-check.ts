@@ -60,6 +60,31 @@
 // carry the SAME destination -- a phone that dropped the `?redirect=` would
 // land somebody on a dashboard with no explanation of what just happened.
 //
+// ── WHAT CHANGED (2026-09-12, employer entry clarity) ─────────────────
+//
+// The 2026-08-30 collapse into one door removed the ungated
+// "Arbetsgivarportal" from the utility bar, correctly: it offered an
+// organisation context to people holding none. What it also removed,
+// without meaning to, was the only place a signed-out visitor could learn
+// that the employer portal is reached through the same login. "Logga in"
+// reads as the personal one, so an existing customer's site manager had no
+// visible route in at all, and /employers offered them a contact form that
+// sends nothing.
+//
+// The settled shape adds a THIRD label, which is a door and says so:
+//
+//   "Arbetsgivare"        -> /employers  (information, primary nav only)
+//   "Logga in"            -> /login      (the one door, personal reading)
+//   "Företagsinloggning"  -> /login?redirect=/employer   (the same door)
+//   "Skapa ditt Security Passport" -> /signup?redirect=/passport
+//
+// It is the SAME route, the SAME form and the SAME account. Only the
+// return destination differs, carried by the same validated `?redirect=`
+// the Passport CTA already uses. Section 9 below asserts all of it,
+// including that it is offered to signed-out visitors only -- a second
+// ungated entry beside the account menu's truthful, membership-scoped list
+// would be the 2026-08-30 defect wearing new words.
+//
 // Plain TS script matching this repository's scripts/*-check.ts convention.
 // The header is a React component with router/query/supabase imports and
 // cannot be rendered outside the app runtime, so its half is a structural
@@ -332,6 +357,263 @@ expect(
 expect(
   header.includes("listMyEmployerWorkspaces"),
   "the organisation entries must come from listMyEmployerWorkspaces (what RLS returned), never from a client-side role check",
+);
+
+// -----------------------------------------------------------------------
+// 9. THE EMPLOYER DOOR — visible, named, and still the same one door.
+//
+//    Section 8 above defends the thing this section must not undo: an
+//    ungated "Arbetsgivarportal" that offered an organisation context to
+//    people who hold none, and told somebody who holds two nothing about
+//    which one it would open. That entry is gone and stays gone.
+//
+//    What was lost with it was DISCOVERABILITY for a signed-out visitor.
+//    An employer arriving on the public site could see "Logga in", which
+//    reads as the personal one, and had no way to tell that it is also the
+//    way into their company's workspace. The correction is an entry that
+//    says so in words -- and nothing else:
+//
+//      * ONE authentication system. It points at /login, the same route
+//        the personal action points at, carrying "/employer" as a
+//        validated `?redirect=`. Not a second form, not a second client,
+//        not a second identity.
+//      * NO ROLE FROM INTENT. `?redirect=` selects a destination.
+//        /employer then resolves real organisation membership server-side
+//        on every load; RLS decides, and a URL never has.
+//      * SIGNED-OUT ONLY. A signed-in person reaches their organisations
+//        from the account menu, by name, and only the ones the database
+//        returned. A second, ungated entry beside that truthful one would
+//        be section 8's defect wearing new words.
+//      * NOT "Arbetsgivare". That word is the information page in the
+//        primary nav (section 3) and nothing else. This entry has its own.
+// -----------------------------------------------------------------------
+const EMPLOYER_INTENT = '{ redirect: "/employer" } as never';
+const EMPLOYER_GATE = "signedIn !== true && employerPortalEnabled() && (";
+
+// ── 9a. Both languages name it, and name it something of its own ──────
+const employerCopy = {
+  "nav.employerLogin": { sv: "Företagsinloggning", en: "Employer login" },
+  "employers.cta.login": { sv: "Logga in för företag", en: "Employer login" },
+  "employers.cta.createAccount": {
+    sv: "Skapa företagskonto",
+    en: "Create employer account",
+  },
+} as const;
+
+for (const [key, expected] of Object.entries(employerCopy)) {
+  for (const lang of ["sv", "en"] as const) {
+    const actual = (dictionaries[lang] as Record<string, string>)[key];
+    expect(
+      actual === expected[lang],
+      `${lang} "${key}" must read "${expected[lang]}" (found ${actual === undefined ? "no entry" : `"${actual}"`}) -- the employer entrance is distinguished from personal sign-in by exactly these words`,
+    );
+  }
+}
+
+// Both languages, and DIFFERENT text in each: an English interface showing
+// "Företagsinloggning" is the regression this line exists to catch.
+for (const key of Object.keys(employerCopy)) {
+  const sv = (dictionaries.sv as Record<string, string>)[key];
+  const en = (dictionaries.en as Record<string, string>)[key];
+  expect(
+    typeof sv === "string" && typeof en === "string" && sv !== en,
+    `"${key}" must be translated in both languages -- an untouched English string is an untranslated one`,
+  );
+}
+
+// It may not reuse the information page's word, in either language. Same
+// rule as section 3, checked on the copy rather than on the usage count.
+for (const lang of ["sv", "en"] as const) {
+  const d = dictionaries[lang] as Record<string, string>;
+  expect(
+    d["nav.employerLogin"] !== d["nav.employers"],
+    `${lang} "nav.employerLogin" must not be the same word as "nav.employers" -- one label for two destinations is the original defect`,
+  );
+  expect(
+    d["nav.employerLogin"] !== d["nav.signin"],
+    `${lang} "nav.employerLogin" must be distinguishable from "nav.signin" -- the two entrances are the whole point`,
+  );
+}
+
+// ── 9b. Desktop AND the compact menu, same destination ────────────────
+const employerIntentUses = header.split(EMPLOYER_INTENT).length - 1;
+expect(
+  employerIntentUses === 2,
+  `the employer entrance must carry search=${EMPLOYER_INTENT} on BOTH the desktop utility bar and the compact menu (found ${employerIntentUses}) -- an entrance that exists only on a laptop is not an entrance`,
+);
+
+const desktopBar = header.slice(0, header.indexOf(menuMarker));
+expect(
+  desktopBar.includes(EMPLOYER_INTENT) && desktopBar.includes('{t("nav.employerLogin")}'),
+  "the desktop header must offer the employer entrance, labelled nav.employerLogin",
+);
+expect(
+  mobileMenu.includes(EMPLOYER_INTENT) && mobileMenu.includes('{t("nav.employerLogin")}'),
+  "the compact menu must offer the same employer entrance, labelled nav.employerLogin",
+);
+
+// Visible TEXT, not an icon. An icon-only door is a door nobody can name,
+// and on the viewport where it is hardest to hit it must also be a 44px
+// target carrying the shared focus ring -- the standard every other row in
+// this sheet already meets.
+const mobileEmployerRow = mobileMenu.slice(
+  mobileMenu.indexOf(EMPLOYER_INTENT),
+  mobileMenu.indexOf(EMPLOYER_INTENT) + 900,
+);
+expect(
+  mobileEmployerRow.includes("min-h-[44px]"),
+  "the compact menu's employer entrance must meet the 44px touch target every other row in the sheet meets",
+);
+expect(
+  mobileEmployerRow.includes("focusRing"),
+  "the compact menu's employer entrance must carry the shared keyboard-focus treatment",
+);
+expect(
+  mobileEmployerRow.includes('{t("nav.employerLogin")}'),
+  "the compact menu's employer entrance must carry visible text -- an icon-only control is not a named entrance",
+);
+// aria-hidden on the decorative icon, so a screen reader reads the words
+// once rather than announcing a building.
+expect(
+  /<Building2[^>]*aria-hidden="true"/.test(mobileEmployerRow),
+  "the employer entrance's icon must be decorative (aria-hidden) -- the label carries the meaning",
+);
+
+// ── 9c. It is offered to a signed-out visitor and to nobody else ──────
+{
+  const gates = header.split(EMPLOYER_GATE).length - 1;
+  expect(
+    gates === 2,
+    `both employer entrances must be gated on "${EMPLOYER_GATE}" (found ${gates}) -- a signed-in person reaches their organisations from the account menu, by name`,
+  );
+  let cursor = 0;
+  let guarded = 0;
+  for (;;) {
+    const at = header.indexOf(EMPLOYER_INTENT, cursor);
+    if (at === -1) break;
+    cursor = at + EMPLOYER_INTENT.length;
+    if (header.slice(Math.max(0, at - 400), at).includes(EMPLOYER_GATE)) guarded += 1;
+  }
+  expect(
+    guarded === employerIntentUses,
+    `every employer entrance must sit inside the signed-out gate (${guarded} of ${employerIntentUses} do) -- a duplicate door for somebody already signed in is section 8's defect in new words`,
+  );
+}
+
+// The organisation entries a SIGNED-IN person sees are still the ones the
+// database returned, and nothing here derives one from anywhere else.
+expect(
+  header.includes("const hasEmployerWorkspace = myWorkspaces.length > 0;"),
+  "an organisation context must still be offered only when listMyEmployerWorkspaces returned one",
+);
+expect(
+  !/employerLogin[\s\S]{0,200}user_metadata/.test(header),
+  "the employer entrance must not read user_metadata -- metadata is user-writable and has never been a permission",
+);
+
+// ── 9d. The destination is real, internal, and not a loop ─────────────
+expect(
+  existsSync(path.join(root, "src/routes/_authenticated.employer.index.tsx")),
+  "the employer entrance's landing (/employer) must be backed by the existing membership-resolving route",
+);
+expect(
+  !AUTH_SURFACES.includes("/employer"),
+  "/employer must not be an auth surface -- safeReturnPath would discard the intent and land everybody on the default destination",
+);
+
+const { safeReturnPath } = await import("../src/lib/auth/safe-redirect");
+expect(
+  safeReturnPath("/employer", "/my-career") === "/employer",
+  "safeReturnPath must carry /employer through -- otherwise the entrance silently becomes the personal one",
+);
+
+// ── 9e. Open-redirect protection, on the parameter this entrance uses ──
+//
+// The entrance ships a `?redirect=` in front of visitors, which is exactly
+// the parameter an attacker rewrites. These are asserted HERE, beside the
+// feature that raises their profile, rather than only in the redirect
+// helper's own guard.
+for (const hostile of [
+  "https://evil.test/employer",
+  "//evil.test",
+  "/\\evil.test",
+  "\\\\evil.test",
+  "javascript:alert(1)",
+  "/employer\\@evil.test",
+  "/login?redirect=/login",
+  "/employer/login",
+  "/employer%0d%0aSet-Cookie:%20a=b",
+  `/employer${"x".repeat(600)}`,
+]) {
+  expect(
+    safeReturnPath(hostile, "/my-career") === "/my-career",
+    `safeReturnPath must refuse ${JSON.stringify(hostile)} -- the employer entrance must not become an open redirect`,
+  );
+}
+
+// ── 9f. The legacy employer doors still work, and still validate ──────
+//
+// Section 6 asserts the FILES survive and carry no auth of their own. This
+// asserts what they DO: resolve onto the unified entrance, carrying a
+// validated return path and dropping a hostile one.
+const { unifiedAuthHref } = await import("../src/lib/auth/legacy-entry");
+expect(
+  unifiedAuthHref("signin", "?redirect=/employer") === "/login?redirect=%2Femployer",
+  "/employer/login must resolve to /login carrying the validated /employer return path",
+);
+expect(
+  unifiedAuthHref("signup", "?redirect=/employer") === "/signup?redirect=%2Femployer",
+  "/employer/register must resolve to /signup carrying the validated /employer return path",
+);
+expect(
+  unifiedAuthHref("signin", "?redirect=https://evil.test") === "/login",
+  "a hostile return path must be dropped by the legacy employer door, not forwarded",
+);
+expect(
+  unifiedAuthHref("signin", "?intent=employer") === "/login",
+  "intent must not survive the legacy employer door -- it selected a form, and was never a permission",
+);
+
+// ── 9g. /employers offers both actions, and contact is not the front door ──
+const employersPage = read("src/routes/employers.tsx");
+expect(
+  employersPage.includes('<PrimaryLink to="/login" search={{ redirect: "/employer" }}>') &&
+    employersPage.includes('{t("employers.cta.login")}'),
+  '/employers must offer "employers.cta.login" pointing at /login with the /employer return path',
+);
+expect(
+  employersPage.includes(
+    '<PrimaryLink to="/signup" search={{ redirect: "/employer" }} variant="ghost">',
+  ) && employersPage.includes('{t("employers.cta.createAccount")}'),
+  '/employers must offer "employers.cta.createAccount" pointing at /signup with the /employer return path',
+);
+expect(
+  !/to="\/employer\/(login|register)"/.test(employersPage),
+  "/employers must not send anyone through a compatibility redirect -- the one door is /login",
+);
+// The dead contact form is not the way in. /contact calls preventDefault
+// and sends nothing (it says so in its own preview notice), so it may be
+// present, but it may not come first and it may not be a primary action
+// while the two real entrances are on the page.
+{
+  const login = employersPage.indexOf('{t("employers.cta.login")}');
+  const talk = employersPage.indexOf('{t("cta.talk")}');
+  expect(
+    login !== -1 && talk !== -1 && login < talk,
+    "/employers must lead with the employer entrance, not with the contact form",
+  );
+  const gated = employersPage.indexOf("employerPortalEnabled() ? (");
+  const fallback = employersPage.indexOf(") : (");
+  expect(
+    gated !== -1 &&
+      fallback > gated &&
+      !employersPage.slice(gated, fallback).includes('<PrimaryLink to="/contact">'),
+    "/contact must not be a primary action on /employers while the employer entrances are offered",
+  );
+}
+expect(
+  existsSync(path.join(root, "src/routes/contact.tsx")),
+  "/employers still links /contact, so the route must exist",
 );
 
 // -----------------------------------------------------------------------

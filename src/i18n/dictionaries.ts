@@ -11,6 +11,13 @@ export const dictionaries = {
     "nav.about": "Om oss",
     "nav.contact": "Kontakt",
     "nav.signin": "Logga in",
+    // The employer DOOR, distinct from "Arbetsgivare" (nav.employers), which
+    // is the information page and stays information. Two different words for
+    // two different things: reusing "Arbetsgivare" for an action is the
+    // original defect scripts/header-entry-check.ts exists to prevent.
+    // It leads to the ONE door, /login, carrying /employer as its validated
+    // return destination -- it is not a second authentication system.
+    "nav.employerLogin": "Företagsinloggning",
     "nav.createAccount": "Skapa konto",
     "nav.signin.tooltip": "Kommer snart",
     // ── THE SIGNED-IN CANDIDATE'S FOUR DESTINATIONS ──────────────────
@@ -411,6 +418,13 @@ export const dictionaries = {
       "Mät kompetens mot definierade krav och följ utveckling över tid.",
     "employers.disclaimer":
       "CQrityjob stödjer arbetsgivarens beslut. Arbetsgivaren fattar alltid det slutliga rekryterings- eller kompetensbeslutet.",
+    // The two actions on /employers. An existing customer reads the first,
+    // a new employer reads the second, and both land on the SAME unified
+    // auth routes every other visitor uses -- with /employer as the
+    // validated return destination. Neither grants anything: /employer
+    // resolves real organisation membership server-side on arrival.
+    "employers.cta.login": "Logga in för företag",
+    "employers.cta.createAccount": "Skapa företagskonto",
 
     "assessment.eyebrow": "TVÅ SEPARERADE LÖSNINGAR",
     "assessment.title": "Tester för karriär och säkerhetskompetens",
@@ -6213,6 +6227,7 @@ export const dictionaries = {
     "nav.about": "About",
     "nav.contact": "Contact",
     "nav.signin": "Sign in",
+    "nav.employerLogin": "Employer login",
     "nav.createAccount": "Create account",
     "nav.signin.tooltip": "Coming soon",
     "nav.my_career": "My Career",
@@ -6504,6 +6519,8 @@ export const dictionaries = {
       "Measure competence against defined requirements and track development over time.",
     "employers.disclaimer":
       "CQrityjob supports employer decisions. The employer always makes the final hiring or competence decision.",
+    "employers.cta.login": "Employer login",
+    "employers.cta.createAccount": "Create employer account",
 
     "assessment.eyebrow": "TWO SEPARATE SOLUTIONS",
     "assessment.title": "Career and Security Competence Assessments",

@@ -23,6 +23,13 @@ import { workspaceStatusLabelKey } from "./workspace-status";
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
+/** The same treatment for a control sitting on the navy utility bar. Only
+ *  the ring OFFSET colour differs: offsetting against `background` on a dark
+ *  strip draws a pale halo that reads as a rendering fault rather than as
+ *  focus. Matches what LanguageSwitcher's `tone="onDark"` already does. */
+const focusRingOnDark =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-primary";
+
 /** The compact menu sheet's own surface. It scrolls independently: signed in,
  *  with an organisation and the account block, the sheet is taller than a
  *  small phone in landscape and the last rows were unreachable. */
@@ -346,15 +353,49 @@ export function SiteHeader() {
           </span>
           <div className="flex shrink-0 items-center gap-5">
             <LanguageSwitcher tone="onDark" />
-            {/* The employer door used to live here, ungated, for everybody.
-                It is gone: an organisation context is reached from the
-                account menu, which lists only the organisations the database
-                actually returned for this person and names each one. An
-                ungated "Arbetsgivarportal" offered a door to people who hold
-                no membership, and told somebody who holds two nothing about
-                which one it would open. /employers -- the information page --
-                remains in the primary nav for anybody deciding whether
-                CQrityjob is for their company. */}
+            {/* ── THE EMPLOYER DOOR, FOR A SIGNED-OUT VISITOR ─────────────
+                The ungated "Arbetsgivarportal" that used to sit here was a
+                door offered to everybody, including people holding no
+                membership, and it pointed at a SECOND login. Both defects
+                stay fixed, and neither is what this entry is:
+
+                  * It is offered only while nobody is signed in. A signed-in
+                    person reaches their organisations from the account menu,
+                    BY NAME, and only the organisations RLS actually returned
+                    -- so this never becomes a second, ungated way in beside
+                    a truthful one. That is asserted by header-entry:check.
+                  * It leads to /login -- the one door -- carrying /employer
+                    as a `?redirect=`. Exactly the mechanism the Passport CTA
+                    already uses, validated by safeReturnPath on arrival.
+                  * It grants NOTHING. /employer resolves real organisation
+                    membership server-side on every load: no workspace sends
+                    somebody to onboarding, a pending one to the review state.
+                    An intent in a URL has never been a permission here.
+
+                It is a text link rather than a button, on the utility bar
+                rather than in the action cluster, because the primary
+                navigation and the Passport CTA are the header's job. The
+                word is "Företagsinloggning", never "Arbetsgivare": that word
+                belongs to the information page in the primary nav and to
+                nothing else.
+
+                Gated on the release flag for the same reason /employer
+                itself is -- an entrance to a "coming soon" page is worse
+                than no entrance. The flag remains release control only; it
+                is not, and is not read as, a security boundary. */}
+            {signedIn !== true && employerPortalEnabled() && (
+              <Link
+                to="/login"
+                search={{ redirect: "/employer" } as never}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-sm whitespace-nowrap text-primary-foreground/80 underline-offset-4 transition-colors hover:text-primary-foreground hover:underline",
+                  focusRingOnDark,
+                )}
+              >
+                <Building2 className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden="true" />
+                {t("nav.employerLogin")}
+              </Link>
+            )}
           </div>
         </Container>
       </div>
@@ -644,6 +685,33 @@ export function SiteHeader() {
                 )}
               >
                 {t("cta.passport")}
+              </Link>
+            )}
+            {/* ── THE EMPLOYER DOOR, AT THIS WIDTH ────────────────────────
+                The desktop utility bar is `lg:block`, so without this row
+                the employer entrance would exist on a laptop and nowhere
+                else -- and the person most likely to be reading this on a
+                phone is the site manager who was handed the company's
+                account, not the developer who added the link.
+
+                Same destination, same gate, same words. It is a full-width
+                row with VISIBLE TEXT, a 44px target and the shared focus
+                ring, exactly like every other row in this sheet: an
+                icon-only control here would be an entrance nobody can
+                name. Rendered under the primary action rather than beside
+                it, because it is the secondary of the two. */}
+            {signedIn !== true && employerPortalEnabled() && (
+              <Link
+                to="/login"
+                search={{ redirect: "/employer" } as never}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "flex min-h-[44px] items-center justify-center gap-2 rounded-md border border-border px-4 text-center text-sm font-medium text-foreground transition-colors hover:bg-secondary",
+                  focusRing,
+                )}
+              >
+                <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {t("nav.employerLogin")}
               </Link>
             )}
           </div>
