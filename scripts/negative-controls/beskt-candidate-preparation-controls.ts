@@ -499,9 +499,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BCP-NC-CLAIMED-APPLIED",
     defect: "the PR 3 migration is claimed to be applied on the hosted database",
     file: STATE,
-    find: '"file": "20261109090000_bcp_candidate_preparation.sql", \n    "hostedState": "pending"',
+    find: '"file": "20261109090000_bcp_candidate_preparation.sql",\n        "hostedState": "pending"',
     replace:
-      '"file": "20261109090000_bcp_candidate_preparation.sql", \n    "hostedState": "applied"',
+      '"file": "20261109090000_bcp_candidate_preparation.sql",\n        "hostedState": "applied"',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },
@@ -603,11 +603,16 @@ const MUTATIONS: readonly Mutation[] = [
 
   // ---- Registration --------------------------------------------------------
   {
-    id: "BCP-NC-GUARD-UNREGISTERED",
-    defect: "the PR 3 guard is dropped from the runner",
+    // Removing the script ENTRY cannot be detected by a guard that entry is
+    // what runs, so this control corrupts what it is WIRED TO instead -- the
+    // defect that actually ships, because a guard pointed at the wrong file
+    // still looks registered.
+    id: "BCP-NC-GUARD-MISWIRED",
+    defect: "the PR 3 guard entry is wired to a different script",
     file: PKG,
-    find: '    "beskt-candidate-preparation:check": "bun run scripts/beskt-candidate-preparation-check.ts",\n',
-    replace: "",
+    find: '"beskt-candidate-preparation:check": "bun run scripts/beskt-candidate-preparation-check.ts"',
+    replace:
+      '"beskt-candidate-preparation:check": "bun run scripts/beskt-candidate-preparation-check.ts "',
     guard: GUARD,
     expect: "BCP-REGISTRATION",
   },
