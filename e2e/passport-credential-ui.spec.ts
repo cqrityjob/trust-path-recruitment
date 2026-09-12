@@ -66,7 +66,11 @@ test.describe("credential form", () => {
 
     // Submit incomplete → error summary takes focus, field errors appear.
     await page.getByRole("button", { name: "Lägg till i passet" }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "Kontrollera fälten" })).toBeFocused();
+    // The summary reads "Kontrollera de markerade fälten." since the pilot
+    // bug-fix round named the marked fields; the assertion follows the copy.
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Kontrollera de markerade fälten." }),
+    ).toBeFocused();
     await expect(page.getByText("Ange vilken myndighet som förordnade dig.")).toBeVisible();
     await expect(page.getByText("Ett förordnande måste ha ett slutdatum.")).toBeVisible();
     await page.screenshot({ path: `${EVIDENCE}/form-ov-validation-sv.png`, fullPage: true });
@@ -169,7 +173,10 @@ test.describe("overview", () => {
   test("add-credential panel, drafts strip and symbol rows", async ({ page }) => {
     await openHarness(page, "overview", "cred-vu1-draft", "en");
     await expect(page.getByText("Credentials and training")).toBeVisible();
-    await expect(page.getByRole("button", { name: /^VU1$/ })).toBeVisible();
+    // The shared catalogue names the credential first and the code second.
+    await expect(
+      page.getByRole("button", { name: /^Security Guard Training 1 \(VU1\)/ }),
+    ).toBeVisible();
     // The saved draft resumes from the overview.
     await expect(page.getByText("Drafts")).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue draft" })).toBeVisible();
@@ -192,10 +199,15 @@ test.describe("the shared recipient Passport", () => {
     // And it must NOT carry the bare present-tense claim.
     await expect(lapsed.getByText("VERIFIED", { exact: true })).toHaveCount(0);
 
-    // The current one does read as verified.
+    // The current one is a CQrityjob document review, and since the
+    // trust-source containment (20261030090000) that is presented as
+    // DOCUMENTED — "Reviewed by: CQrityjob" — never as the bare present-tense
+    // VERIFIED, which is reserved for a source's own confirmation.
     const current = page.locator("article").first();
     await expect(current.getByText("Stina Testsson")).toBeVisible();
-    await expect(current.getByText("VERIFIED", { exact: true }).first()).toBeVisible();
+    // (Rendered uppercase by CSS from "Documented", like "Expired" above.)
+    await expect(current.getByText("Documented", { exact: true }).first()).toBeVisible();
+    await expect(current.getByText("VERIFIED", { exact: true })).toHaveCount(0);
 
     await page.screenshot({ path: `${EVIDENCE}/recipient-cards-en.png`, fullPage: true });
   });

@@ -32,6 +32,12 @@ import {
   adminDeleteUser,
 } from "@/lib/job-intelligence/admin-lifecycle.functions";
 import { DangerZone, AccountDeletionImpactPreview } from "@/components/admin/DangerZone";
+import { PassportPilotAccessSection } from "@/components/admin/PassportPilotAccessSection";
+import {
+  adminGrantPassportPilotAccess,
+  adminListPassportPilotAccess,
+  adminRevokePassportPilotAccess,
+} from "@/lib/job-intelligence/admin-passport-pilot.functions";
 import { lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
 import { formatDate, formatDateTime } from "@/lib/job-intelligence/date-format";
 
@@ -152,6 +158,57 @@ function AdminUserDetailPage() {
   });
 
   const lifecyclePending = setDisabled.isPending || anonymise.isPending || deleteUser.isPending;
+
+  // ── Security Passport internal-pilot access ─────────────────────────
+  //
+  // Read and written through server functions that re-check platform-admin
+  // status and call the SECURITY DEFINER RPCs on THIS administrator's own
+  // session, so granted_by / revoked_by name the person who clicked. After a
+  // change, both the administrator's view of the user and the holder's own
+  // Passport read models are marked stale: the holder's catalogue on
+  // "Mina uppgifter" and the market cards on their overview are derived from
+  // exactly this entitlement.
+  const pilotListFn = useServerFn(adminListPassportPilotAccess);
+  const pilotGrantFn = useServerFn(adminGrantPassportPilotAccess);
+  const pilotRevokeFn = useServerFn(adminRevokePassportPilotAccess);
+  const [pilotError, setPilotError] = useState<string | null>(null);
+  const pilotAccess = useQuery({
+    queryKey: ["admin", "passport-pilot-access", userId],
+    queryFn: () => pilotListFn({ data: { userId } }),
+    retry: false,
+  });
+  function pilotChanged() {
+    setPilotError(null);
+    qc.invalidateQueries({ queryKey: ["admin", "passport-pilot-access", userId] });
+    qc.invalidateQueries({ queryKey: ["admin", "person-overview", userId] });
+    qc.invalidateQueries({ queryKey: ["admin", "user-detail", userId] });
+    qc.invalidateQueries({ queryKey: ["passport", "mine"] });
+    qc.invalidateQueries({ queryKey: ["professional-identity"] });
+  }
+  const pilotGrant = useMutation({
+    mutationFn: (vars: { marketPackCode: string; note: string }) =>
+      pilotGrantFn({
+        data: {
+          userId,
+          marketPackCode: vars.marketPackCode as "GB" | "GB-NI" | "AE-DU",
+          note: vars.note.trim() || undefined,
+        },
+      }),
+    onSuccess: pilotChanged,
+    onError: (e: Error) => setPilotError(e.message),
+  });
+  const pilotRevoke = useMutation({
+    mutationFn: (vars: { marketPackCode: string }) =>
+      pilotRevokeFn({
+        data: { userId, marketPackCode: vars.marketPackCode as "GB" | "GB-NI" | "AE-DU" },
+      }),
+    onSuccess: pilotChanged,
+    onError: (e: Error) => setPilotError(e.message),
+  });
+  const PILOT_ERROR_KEY: Record<string, TranslationKey> = {
+    FORBIDDEN_ADMIN_REQUIRED: "admin.users.pilot.error.forbidden",
+    PILOT_MARKET_NOT_IN_PILOT: "admin.users.pilot.error.notInPilot",
+  };
 
   const setRole = useMutation({
     mutationFn: (vars: { role: "admin" | "superadmin"; grant: boolean }) =>
@@ -334,6 +391,26 @@ function AdminUserDetailPage() {
             </div>
           </section>
         )}
+        {/* Rendered for every administrator who can open this page; the
+            server functions refuse anyone who is not one, and the RPCs
+            behind them refuse again. An administrator may grant their own
+            account — admins are deliberately not implicit pilot members. */}
+        <PassportPilotAccessSection
+          rows={pilotAccess.data ?? []}
+          status={pilotAccess.isLoading ? "loading" : pilotAccess.isError ? "failed" : "ready"}
+          pending={pilotGrant.isPending || pilotRevoke.isPending}
+          errorMessage={
+            pilotError
+              ? PILOT_ERROR_KEY[pilotError]
+                ? t(PILOT_ERROR_KEY[pilotError])
+                : t("admin.users.pilot.error.generic")
+              : null
+          }
+          onGrant={(input) => pilotGrant.mutate(input)}
+          onRevoke={(input) => pilotRevoke.mutate(input)}
+          onRetry={() => void pilotAccess.refetch()}
+        />
+
         {overview.data && (
           <>
             <section className="mt-6 rounded-lg border border-border bg-background p-5">

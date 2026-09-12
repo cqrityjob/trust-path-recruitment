@@ -78,6 +78,28 @@ export function isMissingPilotLayer(err: { code?: string } | null | undefined): 
   return err?.code === "PGRST202" || err?.code === "42883";
 }
 
+/** True when a Supabase error means "this database's sp_market_packs has no
+ *  pilot_state column yet" — the 20260915090000 axis unapplied.
+ *
+ *  Postgres reports an undefined column as 42703; PostgREST reports a column
+ *  its schema cache does not know as PGRST204. Nothing else is tolerated: a
+ *  permission error or an outage on this read must surface, because a
+ *  surface that quietly presented every closed market as "not a pilot" on a
+ *  failed read would be guessing about a governed state. */
+export function isMissingPilotStateColumn(err: { code?: string } | null | undefined): boolean {
+  return err?.code === "42703" || err?.code === "PGRST204";
+}
+
+/** True when a Supabase error means "this database has no sp_pilot_members
+ *  table yet" — the same unapplied axis, seen from the administration page.
+ *
+ *  Postgres reports an undefined table as 42P01; PostgREST reports a relation
+ *  missing from its schema cache as PGRST205. As above, nothing else is
+ *  tolerated. */
+export function isMissingPilotMembersTable(err: { code?: string } | null | undefined): boolean {
+  return err?.code === "42P01" || err?.code === "PGRST205";
+}
+
 /** Resolve the market access decision, degrading safely.
  *
  *  With the pilot layer present this simply passes through what the database
@@ -94,4 +116,23 @@ export function resolveMarketAccess(input: MarketAccessInputs): MarketAccess {
   return input.rpcAccess === "production" || input.rpcAccess === "pilot"
     ? input.rpcAccess
     : "closed";
+}
+
+/** Product availability of one market, for the overview: `available` when
+ *  the pack is public (`is_active`), `internal_pilot` only when `pilot_state`
+ *  is EXACTLY 'internal_pilot', and `closed` for everything else — a closed
+ *  pack, an unknown state, a database whose pack has no pilot_state column.
+ *
+ *  Pure, so the guard can prove the mapping: an inactive pack whose state is
+ *  missing, null, 'closed' or anything unrecognised is never presented as a
+ *  pilot, because "under review" is a governed claim and the only evidence
+ *  for it is the column saying so. */
+export type MarketAvailability = "available" | "internal_pilot" | "closed";
+
+export function marketAvailabilityOf(
+  packIsActive: boolean,
+  pilotState: string | null | undefined,
+): MarketAvailability {
+  if (packIsActive) return "available";
+  return pilotState === "internal_pilot" ? "internal_pilot" : "closed";
 }

@@ -462,6 +462,52 @@ async function mount(
         if (scenario.passportFails) return boom(route, "read failed");
         return ok(route, snapshotOf(scenario));
 
+      // The three-market overview cards, on their own clock. Sweden is the
+      // scenario's market and the only one open to this holder.
+      case "listPassportMarketOverview":
+        return ok(route, [
+          {
+            marketPackCode: "SE",
+            jurisdictionCode: "SE",
+            subJurisdictionCode: null,
+            nameSv: "Sverige",
+            nameEn: "Sweden",
+            availability: "available",
+            holderAccess: "production",
+            isCurrentWorkMarket: true,
+          },
+          {
+            marketPackCode: "GB",
+            jurisdictionCode: "GB",
+            subJurisdictionCode: null,
+            nameSv: "Storbritannien",
+            nameEn: "Great Britain",
+            availability: "internal_pilot",
+            holderAccess: "closed",
+            isCurrentWorkMarket: false,
+          },
+          {
+            marketPackCode: "GB-NI",
+            jurisdictionCode: "GB",
+            subJurisdictionCode: "GB-NI",
+            nameSv: "Nordirland",
+            nameEn: "Northern Ireland",
+            availability: "internal_pilot",
+            holderAccess: "closed",
+            isCurrentWorkMarket: false,
+          },
+          {
+            marketPackCode: "AE-DU",
+            jurisdictionCode: "AE",
+            subJurisdictionCode: "AE-DU",
+            nameSv: "Dubai",
+            nameEn: "Dubai",
+            availability: "internal_pilot",
+            holderAccess: "closed",
+            isCurrentWorkMarket: false,
+          },
+        ]);
+
       case "listMyVerificationRequests":
         if (scenario.verificationDelayMs)
           await new Promise((r) => setTimeout(r, scenario.verificationDelayMs));
@@ -482,8 +528,20 @@ async function mount(
           subJurisdictionCode: null,
           marketPackCode: "SE-CORE",
           types: [
-            { code: "VU1", nameSv: "Väktare grund 1", nameEn: "Guard 1", symbolLabel: null },
-            { code: "OV", nameSv: "Ordningsvakt", nameEn: "Public order", symbolLabel: null },
+            {
+              code: "VU1",
+              category: "qualification",
+              nameSv: "Väktare grund 1",
+              nameEn: "Guard 1",
+              symbolLabel: null,
+            },
+            {
+              code: "OV",
+              category: "appointment",
+              nameSv: "Ordningsvakt",
+              nameEn: "Public order",
+              symbolLabel: null,
+            },
           ],
         });
       case "listMyEntries":

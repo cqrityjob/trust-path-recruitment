@@ -35,6 +35,7 @@ import {
   type RegulatedCredentialAvailability,
 } from "@/lib/security-passport/credentials.functions";
 import type { ClosedMarket } from "@/components/security-passport/CredentialForm";
+import { isOfferableMarketState } from "@/lib/security-passport/market-catalogue";
 import { CredentialForm } from "@/components/security-passport/CredentialForm";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
 
@@ -179,14 +180,15 @@ function NewCredentialRoute() {
   // "Open" and "open as a pilot" are the two states with credentials to offer.
   // The other three are different facts about the same absence and the form
   // says which — an empty list would have said none of them.
-  const closedMarket: ClosedMarket | null =
-    availability.state === "open" || availability.state === "open_pilot"
-      ? null
-      : {
-          reason: availability.state,
-          jurisdictionCode: availability.jurisdictionCode,
-          subJurisdictionCode: availability.subJurisdictionCode,
-        };
+  // The shared rule, not a comparison written here: the section on "Mina
+  // uppgifter" and this form must agree about which states carry a list.
+  const closedMarket: ClosedMarket | null = isOfferableMarketState(availability.state)
+    ? null
+    : {
+        reason: availability.state as ClosedMarket["reason"],
+        jurisdictionCode: availability.jurisdictionCode,
+        subJurisdictionCode: availability.subJurisdictionCode,
+      };
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">

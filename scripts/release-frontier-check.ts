@@ -36,7 +36,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // schema-only branch awaiting review. It is recorded `pending` in
 // release-state.json with its objects and its rollback, and it comes OFF this
 // list the moment the owner project has applied it and evidence is recorded.
-const expectedPending: string[] = ["20261108090000_beskt_governed_method_content.sql"];
+const expectedPending: string[] = [
+  "20261108090000_beskt_governed_method_content.sql",
+  "20261109090000_sp_pilot_catalogue_visibility.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

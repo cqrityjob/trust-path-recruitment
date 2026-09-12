@@ -39,6 +39,7 @@ import { SharePanel } from "./live/SharePanel";
 import { RecipientCardFixture } from "./RecipientCardFixture";
 import { EntryFixture } from "./EntryFixture";
 import { MarketProfileFixture } from "./MarketProfileFixture";
+import { ThreeMarketFixture } from "./ThreeMarketFixture";
 import { FIXTURE_CREDENTIAL_TYPES } from "@/lib/security-passport/fixtures/credential-types";
 import { buildSocialCard } from "@/lib/security-passport/social";
 import { CredentialSymbolMatrix } from "./CredentialSymbolMatrix";
@@ -54,6 +55,7 @@ import { WelcomePurpose } from "./WelcomePurpose";
 type ScreenId =
   | "home"
   | "marketProfiles"
+  | "threeMarkets"
   | "welcome"
   | "onboarding"
   | "overview"
@@ -75,6 +77,7 @@ type ScreenId =
 const SCREENS: readonly { id: ScreenId; labelKey: PassportCopyKey }[] = [
   { id: "home", labelKey: "screen.home" },
   { id: "marketProfiles", labelKey: "screen.marketProfiles" },
+  { id: "threeMarkets", labelKey: "screen.threeMarkets" },
   { id: "welcome", labelKey: "screen.welcome" },
   { id: "onboarding", labelKey: "screen.onboarding" },
   { id: "overview", labelKey: "screen.overview" },
@@ -317,6 +320,7 @@ export function PrototypeShell() {
                 ["VU1", "VU2", "OV", "SV"].includes(t.code),
               ).map((t) => ({
                 code: t.code,
+                category: t.category,
                 nameSv: t.nameSv,
                 nameEn: t.nameEn,
                 symbolLabel: t.symbolLabel,
@@ -344,6 +348,8 @@ export function PrototypeShell() {
         {screen === "entries" ? <EntryFixture /> : null}
 
         {screen === "marketProfiles" ? <MarketProfileFixture /> : null}
+
+        {screen === "threeMarkets" ? <ThreeMarketFixture /> : null}
 
         {screen === "linkedin" ? (
           <div className="mx-auto w-full max-w-2xl">

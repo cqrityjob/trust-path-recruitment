@@ -601,6 +601,11 @@ export function PassportWorkspace({
    *  as the first thing under "My merits": what needs the holder comes
    *  before an inventory of what they have. */
   attention,
+  /** The three-market overview — product availability per market, owned by
+   *  the route because it is a separate read on its own clock. Rendered
+   *  after the merits: the holder's own record comes first, the product's
+   *  scale second. */
+  markets,
   needsWorkLocation,
   onConfirmWorkLocation,
   onRetry,
@@ -608,6 +613,7 @@ export function PassportWorkspace({
 }: {
   workspace: Workspace;
   attention?: React.ReactNode;
+  markets?: React.ReactNode;
   /** True while nobody has confirmed where this holder works. Asked once,
    *  quietly, and never answered on their behalf. */
   needsWorkLocation?: boolean;
@@ -839,7 +845,10 @@ export function PassportWorkspace({
         </Group>
       </div>
 
-      {/* ── 5 · What the Passport is for ──────────────────────────────── */}
+      {/* ── 5 · Three markets, one Passport ───────────────────────────── */}
+      {markets ? <div className="mt-8">{markets}</div> : null}
+
+      {/* ── 6 · What the Passport is for ──────────────────────────────── */}
       <div className="mt-8">
         <Group id="ws-use" title={pt("ws.use.title")}>
           <ul className="grid divide-y divide-border overflow-hidden rounded-xl border border-border bg-card md:grid-cols-3 md:divide-x md:divide-y-0">

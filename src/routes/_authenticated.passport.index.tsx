@@ -40,6 +40,11 @@ import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
 import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
 import { buildPassportWorkspace, type ReviewReadState } from "@/lib/security-passport/workspace";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
+import { listPassportMarketOverview } from "@/lib/security-passport/credentials.functions";
+import {
+  MarketOverviewCards,
+  type MarketOverviewState,
+} from "@/components/security-passport/MarketOverviewCards";
 import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
 import {
   deriveVerificationAttention,
@@ -81,6 +86,20 @@ function PassportWorkspaceRoute() {
   const [attention, setAttention] = useState<VerificationAttention | null>(null);
   const [reviewState, setReviewState] = useState<ReviewReadState>("loading");
   const [error, setError] = useState<string | null>(null);
+  // The three-market overview, on its own clock. Failing it costs the market
+  // cards and nothing else — and the cards then say so, rather than showing
+  // a Passport with no markets.
+  const loadMarkets = useServerFn(listPassportMarketOverview);
+  const [markets, setMarkets] = useState<MarketOverviewState>({ status: "loading" });
+  const refreshMarkets = useCallback(async () => {
+    setMarkets({ status: "loading" });
+    try {
+      setMarkets({ status: "ready", markets: await loadMarkets({ data: undefined }) });
+    } catch (err) {
+      console.error("[passport] market overview load failed", err);
+      setMarkets({ status: "failed" });
+    }
+  }, [loadMarkets]);
 
   /** The verification state, on its own clock. Failing it costs the figures
    *  it feeds and nothing else — and those figures then read "could not be
@@ -109,6 +128,7 @@ function PassportWorkspaceRoute() {
   const refresh = useCallback(async () => {
     setError(null);
     void refreshVerification();
+    void refreshMarkets();
 
     try {
       setSnapshot(await load({ data: undefined }));
@@ -125,7 +145,7 @@ function PassportWorkspaceRoute() {
       console.error("[passport] load failed", err);
       setError(pt("live.readError"));
     }
-  }, [load, refreshVerification, pt]);
+  }, [load, refreshVerification, refreshMarkets, pt]);
 
   useEffect(() => {
     void refresh();
@@ -235,6 +255,7 @@ function PassportWorkspaceRoute() {
           void navigate({ to: "/passport/information", hash: "sp-work-country" })
         }
         onRetry={() => void refreshVerification()}
+        markets={<MarketOverviewCards state={markets} />}
         attention={
           /* ── EVERYTHING THAT NEEDS THIS HOLDER, IN ONE REGION ──────────
              The career home links here as `/passport#attention` whenever more

@@ -67,7 +67,7 @@ import {
 } from "@/lib/security-passport/credentials";
 import { formatWorkLocation, workCountrySupportKey } from "@/lib/security-passport/format";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
-import { CredentialSymbol } from "./CredentialSymbol";
+import { CredentialCatalogue } from "./CredentialCatalogue";
 
 /** Why the holder's own market is closed, when it is.
  *
@@ -281,78 +281,48 @@ export function CredentialForm({
       {closedMarket ? null : (
         <fieldset>
           <legend className="text-sm font-medium text-foreground">{pt("cred.select.label")}</legend>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {types.map((t) => {
-              const chosen = draft.credentialCode === t.code;
-              return (
-                <label
-                  key={t.code}
-                  className={cn(
-                    // focus-within: the radio itself is visually hidden, so
-                    // the card must carry the keyboard focus indicator.
-                    "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring",
-                    chosen ? "border-accent bg-accent/5" : "border-border hover:bg-accent/5",
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="sp-cred-code"
-                    value={t.code}
-                    checked={chosen}
-                    onChange={() =>
-                      setDraft((d) =>
-                        // Values the new credential does not ask for are dropped,
-                        // not merely hidden. A retained scope or end date would
-                        // be submitted from a field the holder can no longer see.
-                        clearIncompatible(
-                          {
-                            ...d,
-                            credentialCode: t.code,
-                            // The definition's own name. It used to be a prefill
-                            // that "stays editable" — which is how a skyddsvakt
-                            // appointment came to be called "Bajskorv".
-                            // `clearIncompatible` sets it again from the same
-                            // source for every controlled credential, and the
-                            // server sets it a third time before the write; this
-                            // is the one that makes the field show the right
-                            // thing immediately.
-                            title: typeName(t),
-                            // The credential's country comes from the credential.
-                            // Nobody chooses it, here or anywhere: a Swedish VU1
-                            // is Swedish for a holder who has moved to Dubai, and
-                            // the database refuses any other filing.
-                            jurisdictionCode: t.jurisdictionCode ?? d.jurisdictionCode,
-                          },
-                          t,
-                        ),
-                      )
-                    }
-                    className="sr-only"
-                  />
-                  <CredentialSymbol
-                    code={t.code}
-                    state="self_declared"
-                    symbolLabel={t.symbolLabel}
-                    name={typeName(t)}
-                    size={40}
-                    decorative
-                    className="shrink-0"
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium leading-snug text-foreground">
-                      {typeName(t)}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
-                      {pt(
-                        t.category === "appointment"
-                          ? "cred.category.appointment"
-                          : "cred.category.qualification",
-                      )}
-                    </span>
-                  </span>
-                </label>
-              );
-            })}
+          {/* The SHARED catalogue, in select mode: one radio per credential,
+              grouped by meaning, searchable past twelve. The radio keeps the
+              form's own name and the credential's code as its value, which
+              is what the browser tests and the pilot bug-fix guard key on. */}
+          <div className="mt-2">
+            <CredentialCatalogue
+              mode="select"
+              name="sp-cred-code"
+              idPrefix="sp-cred-catalogue"
+              options={types}
+              selectedCode={draft.credentialCode}
+              onChange={(code) => {
+                const t = types.find((x) => x.code === code);
+                if (!t) return;
+                setDraft((d) =>
+                  // Values the new credential does not ask for are dropped,
+                  // not merely hidden. A retained scope or end date would
+                  // be submitted from a field the holder can no longer see.
+                  clearIncompatible(
+                    {
+                      ...d,
+                      credentialCode: t.code,
+                      // The definition's own name. It used to be a prefill
+                      // that "stays editable" — which is how a skyddsvakt
+                      // appointment came to be called "Bajskorv".
+                      // `clearIncompatible` sets it again from the same
+                      // source for every controlled credential, and the
+                      // server sets it a third time before the write; this
+                      // is the one that makes the field show the right
+                      // thing immediately.
+                      title: typeName(t),
+                      // The credential's country comes from the credential.
+                      // Nobody chooses it, here or anywhere: a Swedish VU1
+                      // is Swedish for a holder who has moved to Dubai, and
+                      // the database refuses any other filing.
+                      jurisdictionCode: t.jurisdictionCode ?? d.jurisdictionCode,
+                    },
+                    t,
+                  ),
+                );
+              }}
+            />
           </div>
           <FieldError
             id={`${fieldId("credentialCode")}-error`}

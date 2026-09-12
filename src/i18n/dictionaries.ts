@@ -2505,6 +2505,37 @@ export const dictionaries = {
       "Du kan inte ändra din egen roll. Be en annan superadmin göra det.",
     "admin.users.detail.error.lastSuperadmin": "Kan inte ta bort den sista superadmin-rollen.",
     "admin.users.detail.error.forbidden": "Endast superadmin kan ändra plattformsroller.",
+    // ── Security Passport internal-pilot access (GB, GB-NI, AE-DU) ──────
+    "admin.users.pilot.title": "Security Passport — pilotåtkomst",
+    "admin.users.pilot.lead":
+      "Ger den här användaren rätt att registrera behörigheter i en marknad som är i intern pilot. En marknad i taget, en person i taget. Grundas i databasen och tillskrivs dig.",
+    "admin.users.pilot.notApproval":
+      "En pilotåtkomst tillåter registrering. Den är inte ett juridiskt godkännande av marknaden, inte en verifiering av något användaren registrerar, inte ett omdöme om personen och inte en behörighet att arbeta.",
+    "admin.users.pilot.state.active": "Aktiv sedan",
+    "admin.users.pilot.state.revoked": "Återkallad",
+    "admin.users.pilot.state.none": "Ingen pilotåtkomst",
+    "admin.users.pilot.note.label": "Intern anteckning",
+    "admin.users.pilot.note.optional": "valfri, visas aldrig för användaren",
+    "admin.users.pilot.note.placeholder": "T.ex. UAT: SIA-katalogen",
+    "admin.users.pilot.notInPilot": "Marknaden är inte i intern pilot. Åtkomst kan inte beviljas.",
+    "admin.users.pilot.action.grant": "Bevilja pilotåtkomst",
+    "admin.users.pilot.action.regrant": "Bevilja igen",
+    "admin.users.pilot.action.revoke": "Återkalla pilotåtkomst",
+    "admin.users.pilot.confirm.title": "Återkalla pilotåtkomst?",
+    "admin.users.pilot.confirm.body":
+      "Användaren kan inte längre registrera nya behörigheter i den här marknaden. Återkallelsen sparas och tillskrivs dig.",
+    "admin.users.pilot.confirm.claims":
+      "Uppgifter användaren redan har registrerat påverkas inte. De behåller sin jurisdiktion, sin status och sina underlag.",
+    "admin.users.pilot.confirm.cancel": "Avbryt",
+    "admin.users.pilot.confirm.revoke": "Återkalla",
+    "admin.users.pilot.loadFailed": "Pilotåtkomsten kunde inte läsas. Inget har ändrats.",
+    "admin.users.pilot.retry": "Försök igen",
+    "admin.users.pilot.error.forbidden":
+      "Endast en plattformsadministratör kan hantera pilotåtkomst.",
+    "admin.users.pilot.error.notInPilot":
+      "Marknaden är inte i intern pilot, så åtkomst kan inte beviljas.",
+    "admin.users.pilot.error.generic": "Åtgärden avvisades. Inget har ändrats.",
+    "admin.users.pilot.success": "Sparat. Pilotåtkomsten är uppdaterad.",
     "admin.users.detail.column.employer": "Arbetsgivare",
     "admin.users.detail.column.role": "Roll",
     "admin.users.detail.column.status": "Status",
@@ -8489,6 +8520,36 @@ export const dictionaries = {
       "You cannot change your own role. Ask another superadmin to do it.",
     "admin.users.detail.error.lastSuperadmin": "Cannot remove the last superadmin role.",
     "admin.users.detail.error.forbidden": "Only superadmin can change platform roles.",
+    "admin.users.pilot.title": "Security Passport — pilot access",
+    "admin.users.pilot.lead":
+      "Lets this user register credentials in a market that is in internal pilot. One market at a time, one person at a time. Recorded in the database and attributed to you.",
+    "admin.users.pilot.notApproval":
+      "A pilot entitlement permits registration. It is not legal approval of the market, not verification of anything the user records, not a judgement about the person and not an authority to work.",
+    "admin.users.pilot.state.active": "Active since",
+    "admin.users.pilot.state.revoked": "Revoked",
+    "admin.users.pilot.state.none": "No pilot access",
+    "admin.users.pilot.note.label": "Internal note",
+    "admin.users.pilot.note.optional": "optional, never shown to the user",
+    "admin.users.pilot.note.placeholder": "e.g. UAT: SIA catalogue",
+    "admin.users.pilot.notInPilot":
+      "This market is not in internal pilot. Access cannot be granted.",
+    "admin.users.pilot.action.grant": "Grant pilot access",
+    "admin.users.pilot.action.regrant": "Grant again",
+    "admin.users.pilot.action.revoke": "Revoke pilot access",
+    "admin.users.pilot.confirm.title": "Revoke pilot access?",
+    "admin.users.pilot.confirm.body":
+      "The user can no longer register new credentials in this market. The revocation is recorded and attributed to you.",
+    "admin.users.pilot.confirm.claims":
+      "Records the user has already registered are not affected. They keep their jurisdiction, their status and their evidence.",
+    "admin.users.pilot.confirm.cancel": "Cancel",
+    "admin.users.pilot.confirm.revoke": "Revoke",
+    "admin.users.pilot.loadFailed": "Pilot access could not be read. Nothing has changed.",
+    "admin.users.pilot.retry": "Try again",
+    "admin.users.pilot.error.forbidden": "Only a platform administrator can manage pilot access.",
+    "admin.users.pilot.error.notInPilot":
+      "This market is not in internal pilot, so access cannot be granted.",
+    "admin.users.pilot.error.generic": "The action was refused. Nothing has changed.",
+    "admin.users.pilot.success": "Saved. Pilot access is updated.",
     "admin.users.detail.column.employer": "Employer",
     "admin.users.detail.column.role": "Role",
     "admin.users.detail.column.status": "Status",

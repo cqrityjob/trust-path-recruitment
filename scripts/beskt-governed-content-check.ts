@@ -1463,11 +1463,15 @@ check(
     !read(HOSTED_LEDGER).includes("20261108090000"),
     "BESKT-DB-NO-HOSTED: the hosted ledger snapshot does not claim the migration was applied",
   );
+  // The frontier's expected-pending list must name this migration. Other
+  // schema-only corrections may be pending beside it (the list is the set of
+  // migrations awaiting the owner's hosted apply), so the assertion is
+  // membership in that literal, not sole occupancy.
+  const frontierPending =
+    /const expectedPending: string\[\] = \[([\s\S]*?)\];/.exec(read(FRONTIER))?.[1] ?? "";
   check(
-    /const expectedPending: string\[\] = \["20261108090000_beskt_governed_method_content\.sql"\];/.test(
-      read(FRONTIER),
-    ),
-    "BESKT-DB-NO-HOSTED: the release frontier expects exactly this migration to be pending",
+    frontierPending.includes('"20261108090000_beskt_governed_method_content.sql"'),
+    "BESKT-DB-NO-HOSTED: the release frontier expects this migration to be pending",
   );
 }
 
