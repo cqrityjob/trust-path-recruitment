@@ -463,8 +463,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BESKT-NC-DB-ROLLBACK-NOT-EXERCISED",
     defect: "db-test.sh stops applying the rollback file",
     file: DB,
-    find: '  -f supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql 2>&1)"',
-    replace: '  -c "SELECT \'BESKT_GOVERNED_CONTENT_ROLLBACK ok\'" 2>&1)"',
+    find: 'BG_RB="$(psql -1 -v ON_ERROR_STOP=1 -d "$TEST_DB" \\\n  -f supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql 2>&1)"',
+    replace:
+      'BG_RB="$(psql -d "$TEST_DB" -c "SELECT \'BESKT_GOVERNED_CONTENT_ROLLBACK ok\'" 2>&1)"',
     guard: GUARD,
     expect: "BESKT-DB-SUITE",
   },
