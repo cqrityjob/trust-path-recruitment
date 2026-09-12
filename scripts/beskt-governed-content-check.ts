@@ -705,8 +705,20 @@ check(
       ].every((t) => detector.includes(t)) &&
       /on a scale\|scale of/.test(detector) &&
       /på en skala\|skala/.test(detector),
-    ["star", "classif", "tier", "proceed", "whether"].every((t) => detector.includes(t)) &&
-      ["stjärn", "klassificer", "bedöm", "avgör", "vidare"].every((t) => detector.includes(t)),
+    [
+      "\\mstars?\\M",
+      "classif\\w*|categoris\\w*",
+      "tiers?|tiered",
+      "proceed|proceeds|advance",
+      "decide|decides|determine",
+    ].every((t) => detector.includes(t)) &&
+      [
+        "\\mstjärn\\w*",
+        "klassificer\\w*|kategoriser\\w*",
+        "bedöm|bedömer|bedöma",
+        "avgör|avgöra|avgörs",
+        "(gå|föras|tas|slussas)\\s+vidare",
+      ].every((t) => detector.includes(t)),
     "BESKT-DB-NO-SCORING: the detector reads scoring, rating, grading, ranking, stars, tiers, classification, suitability/verdict, pass/fail, recommendation and 'decide whether they proceed' instructions in English and Swedish. It is a best-effort content check over free text, NOT a proof that arbitrary prose is scoring-free: the structural guarantee is the closed Evaluation template above, and the five human gates carry the semantic review.",
   );
   const v = functionBody(functionText(sql, "beskt_method_validate") ?? "");
@@ -1313,12 +1325,19 @@ check(
   // POSITIVE claim that an employer principal, a candidate or a roleless
   // user reads PR 2 BESKT content may survive anywhere in the migration.
   const employerClaim =
-    /(employer|candidate|roleless)[^.\n]{0,80}(reach|reaches|read|reads|receive|receives)[^.\n]{0,80}(content|method|document)/i;
+    /(employer|candidate|roleless)[^.]{0,120}(reach|reaches|read|reads|receive|receives)[^.]{0,120}(content|method|document)/i;
+  // Comment PROSE, rejoined across line breaks: a claim split over two lines
+  // is still a claim.
   const claimLines = raw
     .split("\n")
-    .map((line, i) => ({ line, n: i + 1 }))
-    .filter(({ line }) => employerClaim.test(line))
-    .filter(({ line }) => !/\b(no|never|not|nothing|only|refus|denied|cannot)\b/i.test(line));
+    .map((line, i) => ({ text: /^\s*--(.*)$/.exec(line)?.[1] ?? "", n: i + 1 }))
+    .map(({ text, n }, i, all) => ({
+      // each comment line plus the two that follow it, as one sentence window
+      window: [text, all[i + 1]?.text ?? "", all[i + 2]?.text ?? ""].join(" "),
+      n,
+    }))
+    .filter(({ window }) => employerClaim.test(window))
+    .filter(({ window }) => !/\b(no|never|not|nothing|only|refus|denied|cannot)\b/i.test(window));
   check(
     claimLines.length === 0 &&
       !/for an employer principal\. A listing/.test(raw) &&
