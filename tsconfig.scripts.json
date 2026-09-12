@@ -124,7 +124,11 @@
     // parser that silently stopped matching would report a contract it never
     // read.
     "scripts/beskt-governed-content-check.ts",
+    "scripts/beskt-candidate-preparation-check.ts",
+    "scripts/beskt-candidate-preparation-render-check.tsx",
+    "scripts/beskt-candidate-preparation-evidence.ts",
     "scripts/negative-controls/beskt-governed-content-controls.ts",
+    "scripts/negative-controls/beskt-candidate-preparation-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"

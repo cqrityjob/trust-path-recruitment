@@ -58,6 +58,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { RecruitmentPage } from "@/components/academy/AcademyWorkspace";
 import { ApplicationAssessmentPanel } from "@/components/academy/ApplicationAssessmentPanel";
+import { BesktApplicationPanel } from "@/components/beskt/BesktApplicationPanel";
 import { ApplicationPassportPanel } from "@/components/employer/ApplicationPassportPanel";
 import { listInterviewCasesForApplication } from "@/lib/interview-intelligence/runtime.functions";
 import { CaseStatusChip } from "@/components/employer/interview/InterviewUi";
@@ -733,6 +734,22 @@ function Candidate360({
             ))}
           </ul>
         )}
+      </section>
+
+      {/* ── BESKT preparation ───────────────────────────────────────── */}
+      {/*  Metodstöd för rekrytering, on the one surface where the method has
+       *  a real employer, job, application and candidate to attach to. The
+       *  panel starts the preparation and later reads back what the candidate
+       *  submitted; it never shows a draft, and it interprets nothing.
+       *
+       *  It renders for every application, and says "not available to you
+       *  yet" when no governed method has been published and admitted --
+       *  which, until the five human review gates are passed, is always. */}
+      <section className="mt-10" aria-labelledby="candidate-beskt">
+        <h2 id="candidate-beskt" className="sr-only">
+          {t("beskt.start.title")}
+        </h2>
+        <BesktApplicationPanel employerId={employerId} applicationId={applicationId} />
       </section>
 
       {/* ── Security Passport ───────────────────────────────────────── */}

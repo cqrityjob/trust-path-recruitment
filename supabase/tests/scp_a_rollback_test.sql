@@ -138,6 +138,82 @@ END $$;
 -- HERE rather than in production.
 -- ---------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------
+-- BESKT PR 3 (20261109090000) unwinds FIRST of all, newest first: the
+-- candidate-preparation runtime holds foreign keys into beskt_method_versions
+-- and beskt_items, so the PR 2 drop set below cannot run while it exists.
+-- The drop set matches
+-- supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql,
+-- which db-test.sh has already applied and re-applied for real before this
+-- suite runs; keeping them identical is the point.
+--
+-- The three PR #218 read contracts PR 3 re-created are NOT restored here:
+-- the PR 2 drop set below removes them outright, which is the correct end
+-- state for a full unwind of both.
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds first of all';
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'bcp\_%' ESCAPE '\') = 6,
+    'pre-rollback: the six bcp_ candidate-preparation tables exist');
+END $$;
+
+DROP FUNCTION IF EXISTS public.bcp_employer_readback(uuid);
+DROP FUNCTION IF EXISTS public.bcp_employer_assignments(uuid);
+DROP FUNCTION IF EXISTS public.bcp_candidate_preparation(uuid);
+DROP FUNCTION IF EXISTS public.bcp_candidate_assignments();
+DROP FUNCTION IF EXISTS public.bcp_assignable_method_versions(uuid);
+DROP FUNCTION IF EXISTS public.bcp_assignable_exposure_profiles(uuid, uuid);
+DROP FUNCTION IF EXISTS public.bcp_cancel(uuid, uuid, text);
+DROP FUNCTION IF EXISTS public.bcp_submit(uuid, uuid, integer);
+DROP FUNCTION IF EXISTS public.bcp_save_answers(uuid, uuid, integer, jsonb);
+DROP FUNCTION IF EXISTS public.bcp_acknowledge_notice(uuid, uuid, text, text, text);
+DROP FUNCTION IF EXISTS public.bcp_mark_opened(uuid, uuid);
+DROP FUNCTION IF EXISTS public.bcp_assign(uuid, uuid, uuid, uuid, text, text, timestamptz);
+DROP FUNCTION IF EXISTS public.bcp_revoke_pilot(uuid, uuid, uuid, text);
+DROP FUNCTION IF EXISTS public.bcp_grant_pilot(uuid, uuid, uuid, text, date);
+DROP FUNCTION IF EXISTS public.bcp_visible_items(uuid, uuid);
+DROP FUNCTION IF EXISTS public.bcp_routing_answers(uuid);
+DROP FUNCTION IF EXISTS public.bcp_answers_content_hash(uuid);
+DROP FUNCTION IF EXISTS public.bcp_canonical_answers(uuid);
+DROP FUNCTION IF EXISTS public.bcp_notice_hash(uuid);
+DROP FUNCTION IF EXISTS public.bcp_notice_descriptor(uuid);
+DROP FUNCTION IF EXISTS public.bcp_notice_sections();
+DROP FUNCTION IF EXISTS public.bcp_notice_version();
+DROP FUNCTION IF EXISTS public.bcp_operation_begin(uuid, text);
+DROP FUNCTION IF EXISTS public.bcp_record_event(uuid, uuid, uuid, uuid, text, text, text, text, text, integer, uuid, text, jsonb, jsonb);
+DROP FUNCTION IF EXISTS public.bcp_party_can_read_method_version(uuid);
+DROP FUNCTION IF EXISTS public.bcp_employer_can_read_assignment(uuid);
+DROP FUNCTION IF EXISTS public.bcp_is_assignment_candidate(uuid);
+DROP FUNCTION IF EXISTS public.bcp_version_is_candidate_safe(uuid);
+DROP FUNCTION IF EXISTS public.bcp_pilot_grant_active(uuid, uuid);
+DROP TABLE IF EXISTS public.bcp_answers;
+DROP TABLE IF EXISTS public.bcp_events;
+DROP TABLE IF EXISTS public.bcp_notice_acknowledgements;
+DROP TABLE IF EXISTS public.bcp_responses;
+DROP TABLE IF EXISTS public.bcp_assignments;
+DROP TABLE IF EXISTS public.bcp_pilot_grants;
+DROP FUNCTION IF EXISTS public.bcp_guard_answer();
+DROP FUNCTION IF EXISTS public.bcp_guard_response();
+DROP FUNCTION IF EXISTS public.bcp_guard_assignment();
+DROP FUNCTION IF EXISTS public.bcp_guard_pilot_grants();
+DROP FUNCTION IF EXISTS public.bcp_guard_append_only();
+DROP FUNCTION IF EXISTS public.beskt_governance_can_read_version(uuid);
+
+DO $$
+BEGIN
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'bcp\_%' ESCAPE '\') = 0,
+    'BESKT PR 3: the candidate-preparation runtime is gone, PR 2 can now unwind');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname LIKE 'bcp\_%' ESCAPE '\') = 0,
+    'BESKT PR 3: no bcp_ function survives');
+END $$;
+
+-- ---------------------------------------------------------------------------
 -- BESKT PR 2 (20261108090000) unwinds first, newest first: the BESKT domain
 -- hangs off scp_interview_packs and the additive pack_kind column, and the
 -- five re-scoped role-interview functions are dropped with their own layers

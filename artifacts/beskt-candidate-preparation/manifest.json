@@ -1,0 +1,747 @@
+{
+  "what": "BESKT PR 3 candidate-preparation browser evidence",
+  "kind": "rendered-markup captures in real Chromium — NOT a live data walk",
+  "head": "6561a2f1fce0588dd81ff6cdf257a50153b29658",
+  "capturedAt": "2026-09-12T11:19:32.565Z",
+  "totalMs": 3014,
+  "assertions": 100,
+  "failures": 0,
+  "phases": [
+    {
+      "phase": "sv-desktop",
+      "steps": 28,
+      "ms": 899
+    },
+    {
+      "phase": "en-desktop",
+      "steps": 21,
+      "ms": 590
+    },
+    {
+      "phase": "desktop",
+      "steps": 1,
+      "ms": 0
+    },
+    {
+      "phase": "sv-mobile",
+      "steps": 28,
+      "ms": 615
+    },
+    {
+      "phase": "en-mobile",
+      "steps": 21,
+      "ms": 417
+    },
+    {
+      "phase": "mobile",
+      "steps": 1,
+      "ms": 0
+    }
+  ],
+  "steps": [
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-notice: rendered",
+      "ms": 129,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-notice: no horizontal overflow at 1440px",
+      "ms": 7,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-notice: every interaction target is at least 44px tall",
+      "ms": 3,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-notice: the document declares lang=\"sv\"",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-notice: the first control takes focus and shows it",
+      "ms": 4,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"button\"}"
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-notice: nothing on screen asserts a score, grade or risk",
+      "ms": 3,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-notice: captured",
+      "ms": 171,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-notice: rendered",
+      "ms": 97,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-notice: no horizontal overflow at 1440px",
+      "ms": 3,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-notice: every interaction target is at least 44px tall",
+      "ms": 6,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-notice: the document declares lang=\"en\"",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-notice: the first control takes focus and shows it",
+      "ms": 3,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"button\"}"
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-notice: nothing on screen asserts a score, grade or risk",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-notice: captured",
+      "ms": 133,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-questions: rendered",
+      "ms": 89,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-questions: no horizontal overflow at 1440px",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-questions: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-questions: the document declares lang=\"sv\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-questions: the first control takes focus and shows it",
+      "ms": 5,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"button\"}"
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-questions: nothing on screen asserts a score, grade or risk",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-questions: captured",
+      "ms": 106,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-questions: rendered",
+      "ms": 82,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-questions: no horizontal overflow at 1440px",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-questions: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-questions: the document declares lang=\"en\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-questions: the first control takes focus and shows it",
+      "ms": 4,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"button\"}"
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-questions: nothing on screen asserts a score, grade or risk",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-questions: captured",
+      "ms": 86,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-review: rendered",
+      "ms": 86,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-review: no horizontal overflow at 1440px",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-review: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-review: the document declares lang=\"sv\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-review: the first control takes focus and shows it",
+      "ms": 9,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"a\"}"
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-review: nothing on screen asserts a score, grade or risk",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-review: captured",
+      "ms": 88,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-review: rendered",
+      "ms": 82,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-review: no horizontal overflow at 1440px",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-review: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-review: the document declares lang=\"en\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-review: the first control takes focus and shows it",
+      "ms": 4,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"a\"}"
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-review: nothing on screen asserts a score, grade or risk",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-desktop",
+      "step": "candidate-review: captured",
+      "ms": 74,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-submitted: rendered",
+      "ms": 79,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-submitted: no horizontal overflow at 1440px",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-submitted: every interaction target is at least 44px tall",
+      "ms": 4,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-submitted: the document declares lang=\"sv\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-submitted: read-only -- offers no interactive control at all",
+      "ms": 2,
+      "ok": true,
+      "detail": "{\"found\":false,\"visible\":false,\"tag\":\"\"}"
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-submitted: nothing on screen asserts a score, grade or risk",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-desktop",
+      "step": "candidate-submitted: captured",
+      "ms": 94,
+      "ok": true
+    },
+    {
+      "phase": "desktop",
+      "step": "no capture reached the network",
+      "ms": 0,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-notice: rendered",
+      "ms": 90,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-notice: no horizontal overflow at 375px",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-notice: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-notice: the document declares lang=\"sv\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-notice: the first control takes focus and shows it",
+      "ms": 7,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"button\"}"
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-notice: nothing on screen asserts a score, grade or risk",
+      "ms": 3,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-notice: captured",
+      "ms": 104,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-notice: rendered",
+      "ms": 82,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-notice: no horizontal overflow at 375px",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-notice: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-notice: the document declares lang=\"en\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-notice: the first control takes focus and shows it",
+      "ms": 2,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"button\"}"
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-notice: nothing on screen asserts a score, grade or risk",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-notice: captured",
+      "ms": 88,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-questions: rendered",
+      "ms": 85,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-questions: no horizontal overflow at 375px",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-questions: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-questions: the document declares lang=\"sv\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-questions: the first control takes focus and shows it",
+      "ms": 2,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"button\"}"
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-questions: nothing on screen asserts a score, grade or risk",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-questions: captured",
+      "ms": 60,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-questions: rendered",
+      "ms": 66,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-questions: no horizontal overflow at 375px",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-questions: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-questions: the document declares lang=\"en\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-questions: the first control takes focus and shows it",
+      "ms": 2,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"button\"}"
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-questions: nothing on screen asserts a score, grade or risk",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-questions: captured",
+      "ms": 49,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-review: rendered",
+      "ms": 68,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-review: no horizontal overflow at 375px",
+      "ms": 4,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-review: every interaction target is at least 44px tall",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-review: the document declares lang=\"sv\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-review: the first control takes focus and shows it",
+      "ms": 4,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"a\"}"
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-review: nothing on screen asserts a score, grade or risk",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-review: captured",
+      "ms": 57,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-review: rendered",
+      "ms": 78,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-review: no horizontal overflow at 375px",
+      "ms": 5,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-review: every interaction target is at least 44px tall",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-review: the document declares lang=\"en\"",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-review: the first control takes focus and shows it",
+      "ms": 3,
+      "ok": true,
+      "detail": "{\"found\":true,\"visible\":true,\"tag\":\"a\"}"
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-review: nothing on screen asserts a score, grade or risk",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "en-mobile",
+      "step": "candidate-review: captured",
+      "ms": 26,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-submitted: rendered",
+      "ms": 68,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-submitted: no horizontal overflow at 375px",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-submitted: every interaction target is at least 44px tall",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-submitted: the document declares lang=\"sv\"",
+      "ms": 2,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-submitted: read-only -- offers no interactive control at all",
+      "ms": 1,
+      "ok": true,
+      "detail": "{\"found\":false,\"visible\":false,\"tag\":\"\"}"
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-submitted: nothing on screen asserts a score, grade or risk",
+      "ms": 1,
+      "ok": true
+    },
+    {
+      "phase": "sv-mobile",
+      "step": "candidate-submitted: captured",
+      "ms": 41,
+      "ok": true
+    },
+    {
+      "phase": "mobile",
+      "step": "no capture reached the network",
+      "ms": 0,
+      "ok": true
+    }
+  ],
+  "files": [
+    {
+      "file": "candidate-notice-en-desktop.png",
+      "sha256": "ade309fe86e94e00bb4a6a1028573b24b0c3cd673cc571aa28fd7c46240899b6"
+    },
+    {
+      "file": "candidate-notice-en-mobile.png",
+      "sha256": "8b1e02f0f4a544e057f48112802a275ebc48a801af3bc3cf2cb50c59c8abf6af"
+    },
+    {
+      "file": "candidate-notice-en.html",
+      "sha256": "24c146f589ce9e16c29c9353118188fbb257caf3c1e442938127b3eba89f3be9"
+    },
+    {
+      "file": "candidate-notice-sv-desktop.png",
+      "sha256": "b9297ec5659b4c5e2008117f14da1b7fd7b401d788b0c6a078924201b5becfe5"
+    },
+    {
+      "file": "candidate-notice-sv-mobile.png",
+      "sha256": "afe20f4afa1220b4e92d9a2c1e6ada965e9b3111c33c274f715280552392e6de"
+    },
+    {
+      "file": "candidate-notice-sv.html",
+      "sha256": "d2c531117decd133da2b6da4ef538c07602935ef768cc801d0d4ce390093dde4"
+    },
+    {
+      "file": "candidate-questions-en-desktop.png",
+      "sha256": "94b285cb2fa0d45427473ce19fab05afeadf0b44d7b32c2ab6fd0cc20795d1e5"
+    },
+    {
+      "file": "candidate-questions-en-mobile.png",
+      "sha256": "19e40999d1f26fcb76e8eb5d31df0eb2e3b531abad9799fe8f39657490ec0f6b"
+    },
+    {
+      "file": "candidate-questions-en.html",
+      "sha256": "5df4175bc98cde030cee15d736ac7a6452cf7885ac65c05d6059601043620b66"
+    },
+    {
+      "file": "candidate-questions-sv-desktop.png",
+      "sha256": "92132a080057b197a3bad8c9f4102cda1fef39ab5944cd9a89420f95c9441a2f"
+    },
+    {
+      "file": "candidate-questions-sv-mobile.png",
+      "sha256": "c382bc8e9acc27aa60e9f9b2938578bf2ab3fcfd822198a71a54c7ba8b68dc00"
+    },
+    {
+      "file": "candidate-questions-sv.html",
+      "sha256": "a50e812e3061a9456215ce97a65ca3f055bc8a6830d62ea5df15f31242c5a765"
+    },
+    {
+      "file": "candidate-review-en-desktop.png",
+      "sha256": "ea7dd5a51597fd933a2382d49fd9759a18f1841910315189b1da69695a22a5ab"
+    },
+    {
+      "file": "candidate-review-en-mobile.png",
+      "sha256": "52d8420734ec89ff62dbb24558c8e5a6d9c12ba13b4ec6e504415dbdaec0394b"
+    },
+    {
+      "file": "candidate-review-en.html",
+      "sha256": "6be640de5a90be841788b33e02217a692cb916a4843f2c16cc3bb39f8647b4c6"
+    },
+    {
+      "file": "candidate-review-sv-desktop.png",
+      "sha256": "4c16f72b6ef3d725e528410a02d16e166e1e618cd22005653170473890f8b693"
+    },
+    {
+      "file": "candidate-review-sv-mobile.png",
+      "sha256": "60a9594df6928f170211c0c0267cd919ffa867962108e965da791830d6387a72"
+    },
+    {
+      "file": "candidate-review-sv.html",
+      "sha256": "7160546ec68b95dcda9528bdc9afc7c7aa222f86a236c7345cbb0f501d0e9880"
+    },
+    {
+      "file": "candidate-submitted-sv-desktop.png",
+      "sha256": "6c205f3f843642db5d16e66304b7366359c2cb896ab22da1d19c3f68d88602f3"
+    },
+    {
+      "file": "candidate-submitted-sv-mobile.png",
+      "sha256": "ea1d7a1b9170a2be0ba70220aa33f29ad4d15c9b3d16961a6147dd6956107aa9"
+    },
+    {
+      "file": "candidate-submitted-sv.html",
+      "sha256": "d1a81c7d0fa23968a4bb20cf081ad995edd8eb713c773f81d6cacfc2f7d4932c"
+    },
+    {
+      "file": "styles.css",
+      "sha256": "388794e9c7721a0cec3d6264fb12ee2a62b186cf834352dd711abda2a7ae81b0"
+    }
+  ]
+}

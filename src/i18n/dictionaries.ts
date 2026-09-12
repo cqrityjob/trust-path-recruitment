@@ -3439,6 +3439,173 @@ export const dictionaries = {
     "academy.overview.openLibrary": "Öppna testbiblioteket",
     "academy.overview.openParticipants": "Visa alla kandidater",
     "academy.library.title": "Testbibliotek",
+
+    // ── BESKT — Metodstöd för rekrytering (PR 3, candidate preparation) ──
+    //
+    // BESKT is a METHOD, not an instrument. It is never called a test, a
+    // personality test or a suitability test anywhere in this block, and
+    // scripts/beskt-candidate-preparation-check.ts fails the build if it
+    // ever is. It produces no score, and the copy says so where a candidate
+    // will actually read it.
+    "beskt.library.title": "Metodstöd för rekrytering",
+    "beskt.library.lede":
+      "Strukturerat stöd för förberedelse och intervju. Det här är inte ett test och ger inget resultat, ingen poäng och ingen rangordning — det hjälper er att ställa samma genomtänkta frågor till alla och att dokumentera underlaget.",
+    "beskt.library.siblingNote":
+      "Ett eget produktområde, skilt från Testbibliotekets bedömningar ovan.",
+    "beskt.library.notAssessment": "Inget resultat, ingen poäng, ingen rangordning",
+    "beskt.library.humanDecides": "En människa fattar alla beslut",
+    "beskt.library.loading": "Hämtar metodstöd …",
+    "beskt.library.error": "Metodstödet kunde inte hämtas just nu.",
+    "beskt.library.retry": "Försök igen",
+    "beskt.library.denied": "Du har inte behörighet att se metodstöd för den här arbetsgivaren.",
+    "beskt.library.underDevelopment": "Under utveckling",
+    "beskt.library.emptyTitle": "Ingen granskad metod är publicerad ännu",
+    "beskt.library.emptyBody":
+      "BESKT är under utveckling. Metoden kan användas först när den har granskats av personalsäkerhet, HR, rekrytering, arbetsrätt och dataskydd och er organisation har fått ett uttryckligt godkännande. Vi visar hellre den här rutan än innehåll som ser färdigt ut men inte är det.",
+    "beskt.library.unavailable": "Inte tillgänglig för er ännu",
+    "beskt.library.version": "Version",
+    "beskt.library.contentHash": "Innehållssumma",
+    "beskt.library.validationLabel.pilot_hypothesis": "Pilothypotes — inte validerad",
+    "beskt.library.validationLabel.content_validated": "Innehållsgranskad",
+    "beskt.library.startHint":
+      "Förberedelsen startas från en befintlig ansökan, på ansökans egen sida.",
+
+    // ── The employer's start control, on an application ──────────────────
+    "beskt.start.title": "BESKT-förberedelse",
+    "beskt.start.lede":
+      "Be kandidaten förbereda sig strukturerat inför intervjun. Kandidaten svarar med egna ord, får hoppa över frågor och får välja att ta något muntligt i stället.",
+    "beskt.start.action": "Starta förberedelse",
+    "beskt.start.starting": "Startar …",
+    "beskt.start.noMethod":
+      "Ingen publicerad och godkänd BESKT-metod är tillgänglig för er ännu, så förberedelsen kan inte startas.",
+    "beskt.start.failed": "Förberedelsen kunde inte startas.",
+    "beskt.start.chooseProfile": "Rollexponering",
+
+    // ── The employer's readback of a submitted preparation ───────────────
+    "beskt.readback.title": "Kandidatens inlämnade underlag",
+    "beskt.readback.status": "Status",
+    "beskt.readback.state.assigned": "Tilldelad",
+    "beskt.readback.state.notice_acknowledged": "Informationen läst",
+    "beskt.readback.state.in_progress": "Påbörjad",
+    "beskt.readback.state.submitted": "Inlämnad",
+    "beskt.readback.state.cancelled": "Avbruten",
+    "beskt.readback.submittedAt": "Inlämnad",
+    "beskt.readback.method": "Metod och version",
+    "beskt.readback.hash": "Innehållssumma (sha256)",
+    "beskt.readback.notSubmittedTitle": "Inget underlag att läsa ännu",
+    "beskt.readback.notSubmittedBody":
+      "Kandidatens utkast är privat tills det lämnas in. Ni ser att förberedelsen pågår, men inte vad som står i den.",
+    "beskt.readback.answers": "Kandidatens svar",
+    "beskt.readback.topics": "Att ta upp i intervjun",
+    "beskt.readback.topicsLede":
+      "Frågor som kandidaten hoppade över eller valde att ta muntligt. Det säger ingenting om kandidaten — det säger vad samtalet behöver täcka.",
+    "beskt.readback.reason.omitted": "Hoppade över",
+    "beskt.readback.reason.discuss_orally": "Tar muntligt",
+    "beskt.readback.state.answered": "Besvarad",
+    "beskt.readback.noInterpretation":
+      "CQrityjob tolkar inte, poängsätter inte och rekommenderar inget. Det här är kandidatens egna uppgifter, ordagrant.",
+
+    // ── The candidate's preparation ──────────────────────────────────────
+    "beskt.prep.navTitle": "Förberedelse inför intervju",
+    "beskt.prep.loading": "Hämtar förberedelsen …",
+    "beskt.prep.error": "Förberedelsen kunde inte hämtas.",
+    "beskt.prep.denied": "Den här förberedelsen tillhör inte dig.",
+    "beskt.prep.purpose": "Varför du får den här",
+    "beskt.prep.roleRelevance": "Kopplingen till rollen",
+    "beskt.prep.methodLabel": "Metod",
+    "beskt.prep.notATest":
+      "Det här är inte ett test. Det ger inget resultat, ingen poäng och ingen rangordning.",
+    "beskt.prep.open": "Öppna förberedelsen",
+    "beskt.prep.continue": "Fortsätt",
+    "beskt.prep.review": "Granska och lämna in",
+
+    // The nine notices. Every one of them is required before a single
+    // question may be answered; the database enforces the order.
+    "beskt.notice.title": "Innan du börjar",
+    "beskt.notice.lede":
+      "Läs igenom det här. Du behöver bekräfta att du har läst informationen innan du svarar på någon fråga.",
+    "beskt.notice.purpose.title": "Syftet",
+    "beskt.notice.purpose.body":
+      "Arbetsgivaren vill förbereda en strukturerad intervju om sådant som faktiskt hör till rollen. Dina svar används som underlag för samtalet.",
+    "beskt.notice.use_of_information.title": "Hur uppgifterna används",
+    "beskt.notice.use_of_information.body":
+      "Det du skriver läses av den arbetsgivare du sökt jobb hos och används för att förbereda och genomföra intervjun. Det används inte för att räkna fram något om dig.",
+    "beskt.notice.human_decision.title": "En människa beslutar",
+    "beskt.notice.human_decision.body":
+      "Alla beslut i rekryteringen fattas av människor hos arbetsgivaren. Systemet fattar inget beslut om dig och lämnar ingen rekommendation.",
+    "beskt.notice.not_a_test_with_score.title": "Det här är inte ett test",
+    "beskt.notice.not_a_test_with_score.body":
+      "Det finns inget resultat, ingen poäng, ingen nivå och ingen rangordning. Ingen bedömer din lämplighet eller trovärdighet utifrån det du skriver här.",
+    "beskt.notice.may_omit_questions.title": "Du får hoppa över frågor",
+    "beskt.notice.may_omit_questions.body":
+      "Du kan hoppa över enskilda frågor. Att hoppa över en fråga räknas aldrig som ett negativt svar.",
+    "beskt.notice.oral_discussion.title": "Du kan ta något muntligt",
+    "beskt.notice.oral_discussion.body":
+      "Om du hellre vill ta en fråga i samtalet kan du markera den så. Den blir ett samtalsämne, inget annat.",
+    "beskt.notice.review_and_correct.title": "Du granskar innan du lämnar in",
+    "beskt.notice.review_and_correct.body":
+      "Du kan spara, komma tillbaka senare och ändra dina svar. Du ser allt du skrivit och kan rätta det innan du lämnar in.",
+    "beskt.notice.who_can_access.title": "Vem kan läsa det",
+    "beskt.notice.who_can_access.body":
+      "Behöriga medarbetare hos den arbetsgivare du sökt jobb hos. Ditt utkast är privat tills du lämnar in det — arbetsgivaren ser att förberedelsen pågår, inte vad du har skrivit.",
+    "beskt.notice.retention.title": "Hur länge det sparas",
+    "beskt.notice.retention.body":
+      "Uppgifterna hanteras som rekryteringsunderlag enligt arbetsgivarens dokumenterade gallringsregler för den här rekryteringen.",
+    "beskt.notice.retentionClass": "Gallringsklass",
+    "beskt.notice.lawfulBasis": "Rättslig grund (arbetsgivarens)",
+    "beskt.notice.acknowledge": "Jag har läst informationen",
+    "beskt.notice.acknowledgeHint":
+      "Det här är en bekräftelse på att du fått informationen. Det är inte ett samtycke och det skapar ingen rättslig grund.",
+    "beskt.notice.acknowledged": "Du bekräftade informationen",
+    "beskt.notice.acknowledging": "Sparar …",
+
+    // ── Answering ────────────────────────────────────────────────────────
+    "beskt.answer.voluntary": "Frivillig",
+    "beskt.answer.required": "Behöver besvaras, hoppas över eller tas muntligt",
+    "beskt.answer.yes": "Ja",
+    "beskt.answer.no": "Nej",
+    "beskt.answer.skip": "Hoppa över",
+    "beskt.answer.oral": "Ta muntligt under intervjun",
+    "beskt.answer.undoSkip": "Ångra",
+    "beskt.answer.skipped": "Du har hoppat över den här frågan",
+    "beskt.answer.oralChosen": "Du tar den här frågan muntligt",
+    "beskt.answer.confirm": "Jag bekräftar",
+    "beskt.answer.purposeOfQuestion": "Varför frågan ställs",
+    "beskt.answer.save": "Spara och avsluta",
+    "beskt.answer.saving": "Sparar …",
+    "beskt.answer.saved": "Sparat",
+    "beskt.answer.saveFailed": "Det gick inte att spara.",
+    "beskt.answer.stale":
+      "Förberedelsen har ändrats i ett annat fönster. Ladda om sidan och försök igen.",
+    "beskt.answer.errorSummary": "Kontrollera följande innan du går vidare",
+    "beskt.answer.unanswered": "Inte besvarad ännu",
+
+    // ── Review and submit ────────────────────────────────────────────────
+    "beskt.review.title": "Granska dina svar",
+    "beskt.review.lede":
+      "Läs igenom och ändra det du vill innan du lämnar in. Efter inlämning kan du inte ändra svaren.",
+    "beskt.review.edit": "Ändra",
+    "beskt.review.submit": "Lämna in",
+    "beskt.review.submitting": "Lämnar in …",
+    "beskt.review.submitFailed": "Det gick inte att lämna in.",
+    "beskt.review.incomplete":
+      "Alla frågor du ser behöver besvaras, hoppas över eller markeras för muntligt innan du kan lämna in.",
+    "beskt.submitted.title": "Inlämnad",
+    "beskt.submitted.body":
+      "Dina svar är inlämnade och kan inte ändras. Arbetsgivaren kan nu läsa dem inför intervjun.",
+    "beskt.submitted.readOnly": "Skrivskyddad",
+    "beskt.submitted.at": "Inlämnad",
+
+    // ── My Career entry ──────────────────────────────────────────────────
+    "beskt.mycareer.title": "Förberedelse inför intervju",
+    "beskt.mycareer.lede": "Strukturerad förberedelse som en arbetsgivare har bett dig om.",
+    "beskt.mycareer.empty": "Du har ingen förberedelse just nu.",
+    "beskt.mycareer.due": "Senast",
+    "beskt.mycareer.state.assigned": "Att göra",
+    "beskt.mycareer.state.notice_acknowledged": "Påbörjad",
+    "beskt.mycareer.state.in_progress": "Påbörjad",
+    "beskt.mycareer.state.submitted": "Inlämnad",
+    "beskt.mycareer.state.cancelled": "Avbruten",
     "academy.library.lede": "Välj ett test att tilldela en kandidat.",
     "academy.library.items": "Uppgifter",
     "academy.library.duration": "Tidsåtgång",
@@ -9377,6 +9544,159 @@ export const dictionaries = {
     "academy.overview.openLibrary": "Open the test library",
     "academy.overview.openParticipants": "View all candidates",
     "academy.library.title": "Test library",
+
+    // ── BESKT — method support for recruitment (PR 3, candidate preparation) ──
+    // See the Swedish block for why this copy never calls BESKT a test.
+    "beskt.library.title": "Method support for recruitment",
+    "beskt.library.lede":
+      "Structured support for preparation and interviewing. This is not a test: it produces no result, no score and no ranking — it helps you ask everyone the same considered questions and record the basis.",
+    "beskt.library.siblingNote":
+      "A separate product area, distinct from the scored assessments in the test library above.",
+    "beskt.library.notAssessment": "No result, no score, no ranking",
+    "beskt.library.humanDecides": "A human makes every decision",
+    "beskt.library.loading": "Loading method support …",
+    "beskt.library.error": "Method support could not be loaded right now.",
+    "beskt.library.retry": "Try again",
+    "beskt.library.denied": "You are not authorised to see method support for this employer.",
+    "beskt.library.underDevelopment": "Under development",
+    "beskt.library.emptyTitle": "No reviewed method is published yet",
+    "beskt.library.emptyBody":
+      "BESKT is under development. The method can only be used once it has been reviewed by personnel security, HR, recruitment, employment law and data protection, and your organisation has been explicitly admitted. We would rather show you this box than content that looks finished and is not.",
+    "beskt.library.unavailable": "Not available to you yet",
+    "beskt.library.version": "Version",
+    "beskt.library.contentHash": "Content hash",
+    "beskt.library.validationLabel.pilot_hypothesis": "Pilot hypothesis — not validated",
+    "beskt.library.validationLabel.content_validated": "Content reviewed",
+    "beskt.library.startHint":
+      "A preparation is started from an existing application, on that application's own page.",
+
+    "beskt.start.title": "BESKT preparation",
+    "beskt.start.lede":
+      "Ask the candidate to prepare for the interview in a structured way. They answer in their own words, may skip questions, and may choose to take something orally instead.",
+    "beskt.start.action": "Start preparation",
+    "beskt.start.starting": "Starting …",
+    "beskt.start.noMethod":
+      "No published and approved BESKT method is available to you yet, so a preparation cannot be started.",
+    "beskt.start.failed": "The preparation could not be started.",
+    "beskt.start.chooseProfile": "Role exposure",
+
+    "beskt.readback.title": "The candidate's submitted basis",
+    "beskt.readback.status": "Status",
+    "beskt.readback.state.assigned": "Assigned",
+    "beskt.readback.state.notice_acknowledged": "Information read",
+    "beskt.readback.state.in_progress": "Started",
+    "beskt.readback.state.submitted": "Submitted",
+    "beskt.readback.state.cancelled": "Cancelled",
+    "beskt.readback.submittedAt": "Submitted",
+    "beskt.readback.method": "Method and version",
+    "beskt.readback.hash": "Content hash (sha256)",
+    "beskt.readback.notSubmittedTitle": "Nothing to read yet",
+    "beskt.readback.notSubmittedBody":
+      "The candidate's draft is private until they submit it. You can see that the preparation is under way, not what it says.",
+    "beskt.readback.answers": "The candidate's answers",
+    "beskt.readback.topics": "To cover in the interview",
+    "beskt.readback.topicsLede":
+      "Questions the candidate skipped or chose to take orally. It says nothing about the candidate — it says what the conversation needs to cover.",
+    "beskt.readback.reason.omitted": "Skipped",
+    "beskt.readback.reason.discuss_orally": "Taking orally",
+    "beskt.readback.state.answered": "Answered",
+    "beskt.readback.noInterpretation":
+      "CQrityjob does not interpret, score or recommend. This is the candidate's own account, verbatim.",
+
+    "beskt.prep.navTitle": "Interview preparation",
+    "beskt.prep.loading": "Loading the preparation …",
+    "beskt.prep.error": "The preparation could not be loaded.",
+    "beskt.prep.denied": "This preparation does not belong to you.",
+    "beskt.prep.purpose": "Why you have this",
+    "beskt.prep.roleRelevance": "How it relates to the role",
+    "beskt.prep.methodLabel": "Method",
+    "beskt.prep.notATest": "This is not a test. It produces no result, no score and no ranking.",
+    "beskt.prep.open": "Open the preparation",
+    "beskt.prep.continue": "Continue",
+    "beskt.prep.review": "Review and submit",
+
+    "beskt.notice.title": "Before you begin",
+    "beskt.notice.lede":
+      "Please read this. You need to confirm that you have read it before answering any question.",
+    "beskt.notice.purpose.title": "The purpose",
+    "beskt.notice.purpose.body":
+      "The employer wants to prepare a structured interview about things that genuinely belong to the role. Your answers are the basis for that conversation.",
+    "beskt.notice.use_of_information.title": "How the information is used",
+    "beskt.notice.use_of_information.body":
+      "What you write is read by the employer you applied to and used to prepare and hold the interview. It is not used to compute anything about you.",
+    "beskt.notice.human_decision.title": "A human decides",
+    "beskt.notice.human_decision.body":
+      "Every recruitment decision is made by people at the employer. The system makes no decision about you and offers no recommendation.",
+    "beskt.notice.not_a_test_with_score.title": "This is not a test",
+    "beskt.notice.not_a_test_with_score.body":
+      "There is no result, no score, no level and no ranking. Nobody judges your suitability or credibility from what you write here.",
+    "beskt.notice.may_omit_questions.title": "You may skip questions",
+    "beskt.notice.may_omit_questions.body":
+      "You can leave individual questions out. Skipping a question is never treated as a negative answer.",
+    "beskt.notice.oral_discussion.title": "You can take something orally",
+    "beskt.notice.oral_discussion.body":
+      "If you would rather discuss a question in the conversation, mark it as such. It becomes a topic for the interview, nothing more.",
+    "beskt.notice.review_and_correct.title": "You review before you submit",
+    "beskt.notice.review_and_correct.body":
+      "You can save, come back later and change your answers. You see everything you wrote and can correct it before submitting.",
+    "beskt.notice.who_can_access.title": "Who can read it",
+    "beskt.notice.who_can_access.body":
+      "Authorised staff at the employer you applied to. Your draft is private until you submit it — the employer sees that the preparation is under way, not what you have written.",
+    "beskt.notice.retention.title": "How long it is kept",
+    "beskt.notice.retention.body":
+      "The information is handled as recruitment record material under the employer's documented retention rules for this recruitment.",
+    "beskt.notice.retentionClass": "Retention class",
+    "beskt.notice.lawfulBasis": "Lawful basis (the employer's)",
+    "beskt.notice.acknowledge": "I have read the information",
+    "beskt.notice.acknowledgeHint":
+      "This confirms that you received the information. It is not consent and it creates no lawful basis.",
+    "beskt.notice.acknowledged": "You confirmed the information",
+    "beskt.notice.acknowledging": "Saving …",
+
+    "beskt.answer.voluntary": "Voluntary",
+    "beskt.answer.required": "Needs an answer, a skip, or to be taken orally",
+    "beskt.answer.yes": "Yes",
+    "beskt.answer.no": "No",
+    "beskt.answer.skip": "Skip",
+    "beskt.answer.oral": "Take orally in the interview",
+    "beskt.answer.undoSkip": "Undo",
+    "beskt.answer.skipped": "You skipped this question",
+    "beskt.answer.oralChosen": "You are taking this question orally",
+    "beskt.answer.confirm": "I confirm",
+    "beskt.answer.purposeOfQuestion": "Why this is asked",
+    "beskt.answer.save": "Save and exit",
+    "beskt.answer.saving": "Saving …",
+    "beskt.answer.saved": "Saved",
+    "beskt.answer.saveFailed": "Could not save.",
+    "beskt.answer.stale":
+      "This preparation changed in another window. Reload the page and try again.",
+    "beskt.answer.errorSummary": "Check the following before continuing",
+    "beskt.answer.unanswered": "Not answered yet",
+
+    "beskt.review.title": "Review your answers",
+    "beskt.review.lede":
+      "Read through and change anything you want before submitting. After submission you cannot change your answers.",
+    "beskt.review.edit": "Change",
+    "beskt.review.submit": "Submit",
+    "beskt.review.submitting": "Submitting …",
+    "beskt.review.submitFailed": "Could not submit.",
+    "beskt.review.incomplete":
+      "Every question you can see needs an answer, a skip, or to be marked for oral discussion before you can submit.",
+    "beskt.submitted.title": "Submitted",
+    "beskt.submitted.body":
+      "Your answers are submitted and cannot be changed. The employer can now read them before the interview.",
+    "beskt.submitted.readOnly": "Read-only",
+    "beskt.submitted.at": "Submitted",
+
+    "beskt.mycareer.title": "Interview preparation",
+    "beskt.mycareer.lede": "Structured preparation an employer has asked you for.",
+    "beskt.mycareer.empty": "You have no preparation right now.",
+    "beskt.mycareer.due": "By",
+    "beskt.mycareer.state.assigned": "To do",
+    "beskt.mycareer.state.notice_acknowledged": "Started",
+    "beskt.mycareer.state.in_progress": "Started",
+    "beskt.mycareer.state.submitted": "Submitted",
+    "beskt.mycareer.state.cancelled": "Cancelled",
     "academy.library.lede": "Choose a test to assign to a candidate.",
     "academy.library.items": "Tasks",
     "academy.library.duration": "Time needed",
