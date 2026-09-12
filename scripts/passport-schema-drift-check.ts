@@ -361,6 +361,14 @@ console.log("\n4 -- the certification catalogue degrades instead of failing clos
     "that function falls back to the column list without scope_code",
     /TAXONOMY_BASE_COLUMNS/.test(server) && /isMissingColumn\(/.test(server),
   );
+  // The direction, in the MAPPER rather than only in the predicate. A guard
+  // that checked `isGlobalCertification(null)` alone would not notice the read
+  // substituting a scope for the column it could not find, which is the one
+  // way the absence of schema could make MORE things international.
+  ck(
+    "a row read without its scope column maps to null, never to a scope",
+    /scopeCode: r\.scope_code \?\? null/.test(server),
+  );
   ck(
     "and it rethrows anything that is not a missing column",
     /if \(!isMissingColumn\([\s\S]{0,60}?throw new Error/.test(server),

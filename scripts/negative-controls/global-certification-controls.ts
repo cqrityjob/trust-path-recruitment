@@ -376,10 +376,10 @@ const MUTATIONS: readonly Mutation[] = [
     id: "GC-NC-NO-SCOPE-IS-GLOBAL",
     defect: "a definition read without its scope column degrades to international",
     file: SERVER,
-    find: "    scopeCode: r.scope_code ?? null,",
-    replace: '    scopeCode: r.scope_code ?? "global_professional",',
-    guard: GUARD,
-    expect: "an UNDECLARED scope is not global",
+    find: "scopeCode: r.scope_code ?? null,",
+    replace: 'scopeCode: r.scope_code ?? "global_professional",',
+    guard: DRIFT_GUARD,
+    expect: "a row read without its scope column maps to null, never to a scope",
   },
 
   /* ── The private credential reference ────────────────────────────── */
