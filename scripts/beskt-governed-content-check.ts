@@ -704,14 +704,14 @@ check(
         "anställ",
       ].every((t) => detector.includes(t)) &&
       /on a scale\|scale of/.test(detector) &&
-      /på en skala\|skala/.test(detector),
-    [
-      "\\mstars?\\M",
-      "classif\\w*|categoris\\w*",
-      "tiers?|tiered",
-      "proceed|proceeds|advance",
-      "decide|decides|determine",
-    ].every((t) => detector.includes(t)) &&
+      /på en skala\|skala/.test(detector) &&
+      [
+        "\\mstars?\\M",
+        "classif\\w*|categoris\\w*",
+        "tiers?|tiered",
+        "proceed|proceeds|advance",
+        "decide|decides|determine",
+      ].every((t) => detector.includes(t)) &&
       [
         "\\mstjärn\\w*",
         "klassificer\\w*|kategoriser\\w*",
@@ -1337,7 +1337,10 @@ check(
       n,
     }))
     .filter(({ window }) => employerClaim.test(window))
-    .filter(({ window }) => !/\b(no|never|not|nothing|only|refus|denied|cannot)\b/i.test(window));
+    // "only" is NOT a negation: "reach ... through the read RPC only" is a
+    // positive claim. A real denial says no / never / not / nothing /
+    // refused / denied / cannot.
+    .filter(({ window }) => !/\b(no|never|not|nothing|refus\w*|denied|cannot)\b/i.test(window));
   check(
     claimLines.length === 0 &&
       !/for an employer principal\. A listing/.test(raw) &&
