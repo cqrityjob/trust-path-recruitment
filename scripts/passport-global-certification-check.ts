@@ -60,6 +60,15 @@ function sqlCode(src: string): string {
 const MIGRATION_SQL = sqlCode(MIGRATION);
 const ROLLBACK_SQL = sqlCode(ROLLBACK);
 
+/** The database suite. Read here so this fast guard can assert that the
+ *  attack matrix still EXISTS — deleting an assertion is the cheapest way to
+ *  make a security suite green, and it happens in the same file the fix lives
+ *  in. This reader runs in the lint job, minutes before the database one. */
+const SUITE = readFileSync(
+  join(root, "supabase/tests/security_passport_global_certification_test.sql"),
+  "utf8",
+);
+
 console.log("passport-global-certification-check (schema release)\n");
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -247,6 +256,7 @@ const INTRODUCED = [
   "sp_certification_sources",
   "sp_certification_definitions",
   "sp_claim_certification_lifecycle",
+  "sp_certification_lifecycle_declare",
   "scope_code",
 ] as const;
 
@@ -372,23 +382,221 @@ for (const preserved of [
   ok(ROLLBACK.includes(preserved), `and the rollback restores it`);
 }
 
-/* Ownership. The lifecycle table is the holder's own data in both directions. */
+/* ── THE HOLDER WRITE BOUNDARY ─────────────────────────────────────────
+ *
+ * The defect independent review found, stated as the assertions that would
+ * have caught it.
+ *
+ * The lifecycle table carries `status_source`, which says WHO established a
+ * holder's standing: the holder, a CQrityjob document review, or the issuer.
+ * The first version of this migration gave `authenticated` whole-row INSERT
+ * and UPDATE behind a `FOR ALL` owner policy. The policy proved the ROW was
+ * the caller's; the trigger proved the CLAIM was the caller's. Neither asked
+ * whether the caller was a reviewer or an issuer — so a holder could POST
+ * `issuer_confirmed` with a timestamp and any https:// URL and the Passport
+ * would carry an issuer confirmation no issuer made.
+ *
+ * The fix is least privilege, not another CHECK: the holder holds SELECT and
+ * nothing else, and one narrow SECURITY DEFINER function is the only writer.
+ * Everything below fails if any part of that is undone.
+ */
 {
   const policy = MIGRATION.slice(
     MIGRATION.indexOf("CREATE POLICY sp_claim_certification_lifecycle_owner"),
     MIGRATION.indexOf("GRANT SELECT ON public.sp_credential_scopes"),
   );
   ok(policy.length > 0, "the lifecycle table has an owner policy");
+  ok(policy.length < 2000, "and the policy slice is the policy, not half the file");
   ok(/USING \(holder_user_id = auth\.uid\(\)\)/.test(policy), "reading is scoped to the owner");
-  ok(/WITH CHECK \(/.test(policy), "and writing is checked");
+
+  // FOR SELECT, never FOR ALL. A write policy on this table would mean the
+  // write boundary is "is this row yours", which is the wrong question.
   ok(
-    /c\.holder_user_id = auth\.uid\(\)/.test(policy),
-    "including that the CLAIM is the caller's own",
+    /FOR SELECT TO authenticated/.test(policy),
+    "and the policy is SELECT-only: ownership is not authority over status_source",
   );
+  ok(!/FOR ALL/.test(policy), "no FOR ALL policy grants the holder a write path back");
+  ok(
+    !/WITH CHECK/.test(policy),
+    "and there is no WITH CHECK, because there is no policy-mediated write at all",
+  );
+
   ok(
     /SP_CERTIFICATION_LIFECYCLE_WRONG_HOLDER/.test(MIGRATION),
-    "and a trigger enforces the same for callers RLS does not bind",
+    "the trigger still pins the row to the claim's holder for callers RLS does not bind",
   );
+}
+
+/* The table grants: SELECT only, and the absence of the other three written
+ * down rather than assumed, because the hosted platform's defaults grant them. */
+{
+  ok(
+    /GRANT SELECT ON public\.sp_claim_certification_lifecycle TO authenticated;/.test(MIGRATION),
+    "the holder keeps SELECT on their own lifecycle row",
+  );
+  ok(
+    !/GRANT[^;]*\b(INSERT|UPDATE|DELETE)\b[^;]*ON public\.sp_claim_certification_lifecycle/.test(
+      MIGRATION_SQL,
+    ),
+    "and no application role is GRANTed INSERT, UPDATE or DELETE on it",
+  );
+  ok(
+    /REVOKE INSERT, UPDATE, DELETE ON public\.sp_claim_certification_lifecycle FROM anon, authenticated;/.test(
+      MIGRATION,
+    ),
+    "with all three revoked by name, because the hosted default grants them",
+  );
+  ok(
+    /SP_GLOBAL_CERT_LIFECYCLE_WRITABLE/.test(MIGRATION),
+    "and the migration refuses to apply if any of the three survives",
+  );
+  ok(
+    /SP_GLOBAL_CERT_LIFECYCLE_POLICY_WRITABLE/.test(MIGRATION),
+    "or if a policy on the table is anything but SELECT-only",
+  );
+}
+
+/* The one write path. */
+{
+  const fn = MIGRATION.slice(
+    MIGRATION.indexOf("CREATE OR REPLACE FUNCTION public.sp_certification_lifecycle_declare"),
+    MIGRATION.indexOf("COMMENT ON FUNCTION public.sp_certification_lifecycle_declare"),
+  );
+  ok(fn.length > 0, "a holder write path exists");
+  ok(fn.length < 9000, "and the slice is the function, not the rest of the file");
+
+  ok(/SECURITY DEFINER/.test(fn), "it is SECURITY DEFINER, since the holder holds no table grant");
+  ok(
+    /SET search_path = public, pg_temp/.test(fn),
+    "with a fixed search_path, or SECURITY DEFINER is a privilege escalation",
+  );
+  ok(
+    /REVOKE ALL ON FUNCTION\s+public\.sp_certification_lifecycle_declare\(uuid, date, date, text, text, date\)\s+FROM PUBLIC, anon;/.test(
+      MIGRATION,
+    ),
+    "revoked from PUBLIC and anon",
+  );
+  ok(
+    /GRANT EXECUTE ON FUNCTION\s+public\.sp_certification_lifecycle_declare\(uuid, date, date, text, text, date\)\s+TO authenticated;/.test(
+      MIGRATION,
+    ),
+    "and granted to authenticated alone",
+  );
+
+  // auth.uid(), proved before anything is read or written.
+  ok(/auth\.uid\(\)/.test(fn), "it reads the caller from auth.uid(), not from a parameter");
+  ok(/SP_NOT_AUTHENTICATED/.test(fn), "and refuses a caller with no subject");
+
+  // Ownership, and a refusal that cannot be used to enumerate.
+  ok(
+    /c\.id = _claim_id AND c\.holder_user_id = _uid/.test(fn),
+    "the claim must be the caller's own",
+  );
+  ok(
+    (fn.match(/SP_CERTIFICATION_LIFECYCLE_CLAIM_NOT_YOURS/g) ?? []).length === 1,
+    "and one refusal covers both 'not yours' and 'no such claim', so it cannot enumerate",
+  );
+  ok(
+    /SP_CERTIFICATION_LIFECYCLE_NOT_GLOBAL/.test(fn),
+    "and a national credential has no certification lifecycle",
+  );
+
+  // The fields a holder may NOT supply are not parameters at all. Read off the
+  // parameter list, which is the only thing a caller controls.
+  const params = fn.slice(fn.indexOf("("), fn.indexOf("RETURNS"));
+  for (const forbidden of [
+    "holder_user_id",
+    "status_source",
+    "issuer_confirmed_at",
+    "issuer_confirmed_source_url",
+    "created_at",
+    "updated_at",
+  ]) {
+    ok(!params.includes(forbidden), `${forbidden} is not a parameter of the write path`);
+  }
+
+  // And they are hardcoded in the body, in both the INSERT and the correction.
+  ok(
+    (fn.match(/'holder_declared'/g) ?? []).length >= 2,
+    "status_source is hardcoded to holder_declared on create AND on correction",
+  );
+  ok(
+    !/'document_reviewed'|'issuer_confirmed'/.test(fn),
+    "and the write path never mentions a source only a reviewer or issuer may establish",
+  );
+  ok(
+    /issuer_confirmed_at\s*=\s*NULL/.test(fn) && /issuer_confirmed_source_url\s*=\s*NULL/.test(fn),
+    "both issuer-attribution fields are forced to NULL on correction",
+  );
+  ok(/_claim_id, _uid,/.test(fn), "holder_user_id is hardcoded to auth.uid() rather than accepted");
+
+  // Identity and audit survive a correction: absent from the DO UPDATE SET.
+  const doUpdate = fn.slice(fn.indexOf("ON CONFLICT"));
+  ok(doUpdate.length > 0, "the correction path is an ON CONFLICT DO UPDATE");
+  for (const preserved of ["claim_id ", "holder_user_id ", "created_at "]) {
+    ok(
+      !new RegExp(`\\b${preserved.trim()}\\s*=`).test(doUpdate),
+      `${preserved.trim()} is never rewritten by a correction`,
+    );
+  }
+  ok(/updated_at\s*=\s*now\(\)/.test(doUpdate), "and updated_at is set here, not by the caller");
+
+  ok(
+    /SP_GLOBAL_CERT_NO_WRITE_PATH/.test(MIGRATION) &&
+      /SP_GLOBAL_CERT_WRITE_PATH_NOT_DEFINER/.test(MIGRATION) &&
+      /SP_GLOBAL_CERT_WRITE_PATH_UNPINNED/.test(MIGRATION) &&
+      /SP_GLOBAL_CERT_WRITE_PATH_ANON/.test(MIGRATION) &&
+      /SP_GLOBAL_CERT_WRITE_PATH_SOURCE/.test(MIGRATION) &&
+      /SP_GLOBAL_CERT_WRITE_PATH_ATTRIBUTES/.test(MIGRATION),
+    "and the migration asserts all of it at apply time",
+  );
+}
+
+/* The issuer-attribution constraint, which was written as an equivalence and
+ * therefore allowed a non-issuer row to carry exactly ONE issuer field. */
+{
+  const c = MIGRATION.slice(
+    MIGRATION.indexOf("CONSTRAINT sp_certification_lifecycle_issuer_confirmation_is_attributed"),
+    MIGRATION.indexOf("CONSTRAINT sp_certification_lifecycle_dates_ordered"),
+  );
+  ok(c.length > 0 && c.length < 900, "the issuer-attribution constraint is where it is expected");
+  ok(
+    /CASE WHEN status_source = 'issuer_confirmed'/.test(c),
+    "it is written as a CASE, not as an equivalence",
+  );
+  ok(
+    /ELSE issuer_confirmed_at IS NULL/.test(c) && /AND issuer_confirmed_source_url IS NULL/.test(c),
+    "so every other source requires BOTH issuer fields to be NULL, not merely not-both",
+  );
+  ok(
+    !/\)\s*=\s*\(issuer_confirmed_at IS NOT NULL/.test(c),
+    "and the equivalence form that permitted exactly one field is gone",
+  );
+}
+
+/* The attack matrix exists in the database suite, not only in this reader. */
+{
+  for (const attack of [
+    "8b.1 a holder cannot INSERT a lifecycle row directly",
+    "8b.2 nor UPDATE their own lifecycle row directly",
+    "8b.3 nor declare that a document was reviewed",
+    "8b.4 nor forge a COMPLETE issuer confirmation",
+    "8b.5 a non-issuer source may not carry an issuer-confirmation time",
+    "8b.5b nor an issuer-confirmation source URL",
+    "8b.6 nor move the statement onto another credential",
+    "8b.7 nor rewrite whose statement it is",
+    "8b.8 nor backdate when they first made it",
+    "8b.9 nor write lifecycle data for another holder",
+    "8b.10 and a claim that does not exist is refused identically",
+    "8b.11 a holder corrects their own statement",
+    "8b.13 while claim_id, holder_user_id and created_at are preserved",
+    "8b.15 and none of it has changed the claim",
+    "8b.16 no application role holds INSERT, UPDATE or DELETE",
+    "8b.19 anon cannot execute the write path",
+    "8b.22 and a caller with no JWT subject is refused outright",
+  ]) {
+    ok(SUITE.includes(attack), `the suite proves: ${attack}`);
+  }
 }
 
 /* Anonymous and holder write boundaries. */
@@ -440,16 +648,12 @@ ok(
   "and the taxonomy's new scope column is not holder-writable either",
 );
 
-/* Phase 8's rule: removal is withdrawal, and history is not erasable. */
+/* Phase 8's rule: removal is withdrawal, and history is not erasable. Asserted
+ * above as part of the write boundary; restated here because it is Phase 8's
+ * rule and not this file's, and a reader looking for it should find it. */
 ok(
   !/GRANT[^;]*DELETE[^;]*ON public\.sp_claim_certification_lifecycle/.test(MIGRATION_SQL),
   "no application role is GRANTed DELETE on the lifecycle table",
-);
-ok(
-  /REVOKE DELETE ON public\.sp_claim_certification_lifecycle FROM anon, authenticated/.test(
-    MIGRATION,
-  ),
-  "and DELETE is explicitly revoked, because the hosted default grants it",
 );
 
 /* The rollback contract. */
@@ -468,6 +672,25 @@ ok(
     ROLLBACK_SQL.slice(ROLLBACK_SQL.indexOf("DELETE FROM public.sp_credential_types")),
   ),
   "so a future INTL_ code cannot be swept up by it",
+);
+
+// The write path is SECURITY DEFINER and granted to every signed-in holder. A
+// rollback that dropped its table and left the function behind would leave a
+// privileged function over a table that no longer exists.
+ok(
+  /DROP FUNCTION IF EXISTS\s+public\.sp_certification_lifecycle_declare\(uuid, date, date, text, text, date\);/.test(
+    ROLLBACK,
+  ),
+  "the rollback drops the holder write path, by its exact signature",
+);
+ok(
+  ROLLBACK_SQL.indexOf("DROP FUNCTION IF EXISTS\n  public.sp_certification_lifecycle_declare") <
+    ROLLBACK_SQL.indexOf("DROP TABLE IF EXISTS public.sp_claim_certification_lifecycle"),
+  "and drops it BEFORE the table it writes to",
+);
+ok(
+  /SP_GLOBAL_CERT_ROLLBACK_LEFTOVER/.test(ROLLBACK),
+  "and refuses to finish if any function this migration created survives",
 );
 
 /* No market is activated by a schema release. */

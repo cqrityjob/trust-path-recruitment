@@ -16,6 +16,23 @@
 > on the owner project and `release-state.json` records the hosted evidence.
 > That order is the repository's schema-first contract, enforced by
 > `scripts/schema-first-release-check.ts`.
+>
+> **What is, and is not, evidence that this release is schema-only.**
+> `schema-first-release:check` answers a narrower question than its success
+> message suggests. It compares `src/` against the objects a _pending_
+> migration introduces and says "this branch is application-release eligible"
+> when it finds no dependency — which it would also say about a branch full of
+> application changes that simply happen not to touch this schema. This branch
+> also changes `package.json` and the CI workflow, so that message on its own
+> proves nothing about the shape of the release. The evidence that does is:
+>
+> 1. `git diff --name-only <base>...HEAD -- src/` is **empty**; and
+> 2. `passport-global-certification:check` GROUP 4, which names every object
+>    this migration introduces and asserts, one at a time, that no file under
+>    `src/` mentions it and the generated Supabase types do not describe it.
+>
+> Cite those two. The schema-first guard passing is a necessary condition, not
+> the proof.
 
 This document is the governance record for the international-certification
 foundation: why international scope is explicit, what an issuer is and is not,
@@ -144,10 +161,79 @@ Two independent axes, and a third thing that is neither.
 **Trust** (`sp_claims.assertion_level`) is how well a claim is backed:
 self-declared, document reviewed by CQrityjob, or — in future — confirmed by
 an authenticated issuer. A PDF, a logo, an email domain, a link click and a
-public-directory search are none of them issuer confirmation, and
-`sp_claim_certification_lifecycle` enforces that: `status_source =
-'issuer_confirmed'` requires both a confirming time and a confirming source,
-which a document review can supply neither of.
+public-directory search are none of them issuer confirmation.
+
+### Who may say who established a standing
+
+`status_source` is the column that answers that, and it is the trust boundary
+of this table. Independent review of the first version of this migration found
+it open, so the design is recorded here in the form it now has.
+
+The first version gave `authenticated` whole-row `INSERT` and `UPDATE` on
+`sp_claim_certification_lifecycle` behind a `FOR ALL` owner policy. The policy
+proved the **row** was the caller's; the trigger proved the **claim** was the
+caller's. Neither asked whether the caller was a reviewer or an issuer. A
+holder with nothing but their own PostgREST token could therefore write
+`status_source = 'issuer_confirmed'` with an `issuer_confirmed_at` of their
+choosing and any `https://` URL, and the Passport would carry, in its own
+vocabulary, an issuer confirmation that no issuer ever made. The suite's
+issuer-confirmation test tried the value **without** its two attribution
+fields and watched the constraint refuse it — which proves the row shape and
+not the caller's authority. The forgery that worked supplied both fields, and
+nothing tried it.
+
+Ownership is not authority, and no policy or `CHECK` can tell them apart: by
+the time either runs, the caller has already chosen every column value. So the
+fix is least privilege.
+
+- The holder holds **`SELECT` and nothing else** on the table. `INSERT`,
+  `UPDATE` and `DELETE` are revoked by name from `anon` and `authenticated`,
+  because the hosted platform's default privileges grant them.
+- The owner policy is **`FOR SELECT`**. There is no `WITH CHECK`, because
+  there is no policy-mediated write at all.
+- `public.sp_certification_lifecycle_declare(uuid, date, date, text, text,
+date)` is the **only** holder write path: `SECURITY DEFINER` with a fixed
+  `search_path`, revoked from `PUBLIC` and `anon`, granted to `authenticated`.
+  What a holder may state is its parameter list — the award date, the cycle
+  end and its meaning, the status and its as-of date. What a holder may not
+  state is not a parameter at all:
+
+  | Field                                                | How it is set                            |
+  | ---------------------------------------------------- | ---------------------------------------- |
+  | `holder_user_id`                                     | hardcoded to `auth.uid()`                |
+  | `status_source`                                      | hardcoded to `holder_declared`           |
+  | `issuer_confirmed_at`, `issuer_confirmed_source_url` | forced to `NULL`                         |
+  | `claim_id`, `created_at`                             | preserved on correction, never rewritten |
+  | `updated_at`                                         | set by the function                      |
+
+  It proves the claim is the caller's and that it references a
+  `global_professional` certification, and it refuses a claim that belongs to
+  somebody else with the **same** message as one that does not exist, so it
+  cannot be used to ask whether another holder holds a given credential.
+
+`document_reviewed` and `issuer_confirmed` therefore remain **reserved schema
+states with no holder-reachable write path anywhere in this repository**.
+Their writers will require separately authorised reviewer and issuer
+identities, which are a later phase's work and deliberately absent here.
+
+The issuer-attribution constraint was corrected in the same pass. It was
+written as an equivalence:
+
+```sql
+(status_source = 'issuer_confirmed')
+  = (issuer_confirmed_at IS NOT NULL AND issuer_confirmed_source_url IS NOT NULL)
+```
+
+which reads like "both fields if and only if issuer confirmation" and is not:
+for a non-issuer source the right-hand side only has to be _false_, and it is
+false when exactly **one** field is populated. A `holder_declared` row could
+carry an issuer-confirmation timestamp, or an `https://` source URL presented
+as an issuer's. It is now a `CASE`: `issuer_confirmed` requires both, and every
+other source requires both to be `NULL`.
+
+Group 8b of `security_passport_global_certification_test.sql` is the attack
+matrix for all of this, written so that each assertion would **succeed**
+against the old design.
 
 **Lifecycle** is where the fact sits in its life. For these certifications it
 is emphatically _not_ `sp_claims.valid_until`, which means one thing across the

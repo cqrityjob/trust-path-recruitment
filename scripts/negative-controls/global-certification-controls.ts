@@ -81,21 +81,22 @@ const MUTATIONS: readonly Mutation[] = [
   /* ── Ownership and least privilege ───────────────────────────────── */
   {
     id: "GC-NC-OWNERSHIP-PREDICATE",
-    defect: "the lifecycle table's ownership predicate is removed",
+    defect: "the lifecycle table's ownership predicate is removed, so every holder reads every row",
     file: MIGRATION,
-    find: "  USING (holder_user_id = auth.uid())\n  WITH CHECK (",
-    replace: "  USING (true)\n  WITH CHECK (",
+    find: "  FOR SELECT TO authenticated\n  USING (holder_user_id = auth.uid());",
+    replace: "  FOR SELECT TO authenticated\n  USING (true);",
     guard: GUARD,
     expect: "reading is scoped to the owner",
   },
   {
     id: "GC-NC-CLAIM-OWNERSHIP",
-    defect: "a holder may attach a lifecycle row to somebody else's claim",
+    defect:
+      "the write path stops proving the claim is the caller's own, so a holder writes lifecycle data onto somebody else's credential",
     file: MIGRATION,
-    find: "    AND EXISTS (SELECT 1 FROM public.sp_claims c\n                 WHERE c.id = claim_id AND c.holder_user_id = auth.uid())",
-    replace: "    AND true",
+    find: "   WHERE c.id = _claim_id AND c.holder_user_id = _uid;",
+    replace: "   WHERE c.id = _claim_id;",
     guard: GUARD,
-    expect: "including that the CLAIM is the caller's own",
+    expect: "the claim must be the caller's own",
   },
   {
     id: "GC-NC-ANON-READS-CATALOGUE",
@@ -129,11 +130,160 @@ const MUTATIONS: readonly Mutation[] = [
     id: "GC-NC-HISTORY-ERASABLE",
     defect: "a holder may DELETE their own lifecycle history",
     file: MIGRATION,
-    find: "GRANT SELECT, INSERT, UPDATE ON public.sp_claim_certification_lifecycle TO authenticated;",
-    replace:
-      "GRANT SELECT, INSERT, UPDATE, DELETE ON public.sp_claim_certification_lifecycle TO authenticated;",
+    find: "GRANT SELECT ON public.sp_claim_certification_lifecycle TO authenticated;",
+    replace: "GRANT SELECT, DELETE ON public.sp_claim_certification_lifecycle TO authenticated;",
     guard: GUARD,
     expect: "no application role is GRANTed DELETE on the lifecycle table",
+  },
+
+  /* ── THE TRUST BOUNDARY INDEPENDENT REVIEW FOUND ─────────────────────
+   *
+   * `status_source` says WHO established a holder's standing. Every control
+   * below restores one piece of the design that let a holder answer that
+   * question about themselves, and each must break a named assertion. They
+   * are the most important controls in this file: the defect they model
+   * passed a full green CI, because nothing tried the attack that worked. */
+  {
+    id: "GC-NC-DIRECT-WRITE-GRANT",
+    defect: "the holder gets whole-row INSERT and UPDATE on the lifecycle table back",
+    file: MIGRATION,
+    find: "GRANT SELECT ON public.sp_claim_certification_lifecycle TO authenticated;",
+    replace:
+      "GRANT SELECT, INSERT, UPDATE ON public.sp_claim_certification_lifecycle TO authenticated;",
+    guard: GUARD,
+    expect: "and no application role is GRANTed INSERT, UPDATE or DELETE on it",
+  },
+  {
+    id: "GC-NC-WRITE-REVOKE-NARROWED",
+    defect: "only DELETE is revoked by name, so the platform default leaves INSERT and UPDATE",
+    file: MIGRATION,
+    find: "REVOKE INSERT, UPDATE, DELETE ON public.sp_claim_certification_lifecycle FROM anon, authenticated;",
+    replace: "REVOKE DELETE ON public.sp_claim_certification_lifecycle FROM anon, authenticated;",
+    guard: GUARD,
+    expect: "with all three revoked by name, because the hosted default grants them",
+  },
+  {
+    id: "GC-NC-POLICY-WRITABLE",
+    defect: "the owner policy becomes FOR ALL again, so ownership is treated as authority",
+    file: MIGRATION,
+    find: "  FOR SELECT TO authenticated\n  USING (holder_user_id = auth.uid());",
+    replace:
+      "  FOR ALL TO authenticated\n  USING (holder_user_id = auth.uid())\n  WITH CHECK (holder_user_id = auth.uid());",
+    guard: GUARD,
+    expect: "and the policy is SELECT-only: ownership is not authority over status_source",
+  },
+  {
+    id: "GC-NC-SOURCE-PARAMETERISED",
+    defect: "the write path accepts status_source as a parameter",
+    file: MIGRATION,
+    find: "  _status_as_of            date DEFAULT NULL)",
+    replace:
+      "  _status_as_of            date DEFAULT NULL,\n  _status_source           text DEFAULT 'holder_declared')",
+    guard: GUARD,
+    expect: "status_source is not a parameter of the write path",
+  },
+  {
+    id: "GC-NC-SOURCE-NOT-HARDCODED",
+    defect: "the correction path stops restating holder_declared, so a forged source survives it",
+    file: MIGRATION,
+    find: "    status_source               = 'holder_declared',",
+    replace: "    -- (source left as it was)",
+    guard: GUARD,
+    expect: "status_source is hardcoded to holder_declared on create AND on correction",
+  },
+  {
+    id: "GC-NC-ISSUER-FIELDS-WRITABLE",
+    defect: "the write path stops forcing the issuer-attribution fields to NULL on correction",
+    file: MIGRATION,
+    find: "    issuer_confirmed_at         = NULL,\n    issuer_confirmed_source_url = NULL,",
+    replace: "",
+    guard: GUARD,
+    expect: "both issuer-attribution fields are forced to NULL on correction",
+  },
+  {
+    id: "GC-NC-CREATED-AT-REWRITTEN",
+    defect: "a correction rewrites created_at, so a holder can backdate their own statement",
+    file: MIGRATION,
+    find: "    updated_at                  = now();",
+    replace: "    created_at                  = now(),\n    updated_at                  = now();",
+    guard: GUARD,
+    expect: "created_at is never rewritten by a correction",
+  },
+  {
+    id: "GC-NC-WRITE-PATH-UNPINNED",
+    defect: "the SECURITY DEFINER write path loses its fixed search_path",
+    file: MIGRATION,
+    find: "SET search_path = public, pg_temp\nAS $fn$\nDECLARE\n  _uid     uuid := auth.uid();",
+    replace: "AS $fn$\nDECLARE\n  _uid     uuid := auth.uid();",
+    guard: GUARD,
+    expect: "with a fixed search_path, or SECURITY DEFINER is a privilege escalation",
+  },
+  {
+    id: "GC-NC-WRITE-PATH-ANON",
+    defect: "the write path is left executable by PUBLIC and anon",
+    file: MIGRATION,
+    find: "REVOKE ALL ON FUNCTION\n  public.sp_certification_lifecycle_declare(uuid, date, date, text, text, date)\n  FROM PUBLIC, anon;",
+    replace: "-- (revoke removed)",
+    guard: GUARD,
+    expect: "revoked from PUBLIC and anon",
+  },
+  {
+    id: "GC-NC-ENUMERATION-ORACLE",
+    defect:
+      "a claim that belongs to somebody else is refused differently from one that does not exist, so the write path answers questions about other holders",
+    file: MIGRATION,
+    find: "      'SP_CERTIFICATION_LIFECYCLE_CLAIM_NOT_YOURS: no credential of yours has that id'",
+    replace:
+      "      'SP_CERTIFICATION_LIFECYCLE_CLAIM_OTHER_HOLDER: that claim belongs to somebody else'",
+    guard: GUARD,
+    expect: "and one refusal covers both 'not yours' and 'no such claim', so it cannot enumerate",
+  },
+  {
+    id: "GC-NC-ISSUER-ATTRIBUTION-EQUIVALENCE",
+    defect:
+      "the issuer-attribution constraint goes back to the equivalence, which let a holder_declared row carry exactly one issuer field",
+    file: MIGRATION,
+    find:
+      "    CHECK (CASE WHEN status_source = 'issuer_confirmed'\n" +
+      "                THEN issuer_confirmed_at IS NOT NULL\n" +
+      "                 AND issuer_confirmed_source_url IS NOT NULL\n" +
+      "                ELSE issuer_confirmed_at IS NULL\n" +
+      "                 AND issuer_confirmed_source_url IS NULL\n" +
+      "           END),",
+    replace:
+      "    CHECK ((status_source = 'issuer_confirmed')\n" +
+      "           = (issuer_confirmed_at IS NOT NULL\n" +
+      "              AND issuer_confirmed_source_url IS NOT NULL)),",
+    guard: GUARD,
+    expect: "it is written as a CASE, not as an equivalence",
+  },
+  {
+    id: "GC-NC-ATTACK-ASSERTION-DELETED",
+    defect: "the forged-issuer-confirmation attack assertion is deleted from the database suite",
+    file: "supabase/tests/security_passport_global_certification_test.sql",
+    find: "    '8b.4 nor forge a COMPLETE issuer confirmation with a time and an https source');",
+    replace: "    '8b.4 (removed)');",
+    guard: GUARD,
+    expect: "the suite proves: 8b.4 nor forge a COMPLETE issuer confirmation",
+  },
+  {
+    id: "GC-NC-DIRECT-WRITE-ASSERTION-DELETED",
+    defect: "the direct-INSERT attack assertion is deleted from the database suite",
+    file: "supabase/tests/security_passport_global_certification_test.sql",
+    find: "    '8b.1 a holder cannot INSERT a lifecycle row directly, even their own');",
+    replace: "    '8b.1 (removed)');",
+    guard: GUARD,
+    expect: "the suite proves: 8b.1 a holder cannot INSERT a lifecycle row directly",
+  },
+  {
+    id: "GC-NC-ROLLBACK-KEEPS-WRITE-PATH",
+    defect:
+      "the rollback drops the lifecycle table and leaves its SECURITY DEFINER writer behind, executable by every signed-in holder",
+    file: ROLLBACK,
+    find: "DROP FUNCTION IF EXISTS\n  public.sp_certification_lifecycle_declare(uuid, date, date, text, text, date);",
+    replace: "-- (write path left in place)",
+    guard: GUARD,
+    expect: "the rollback drops the holder write path, by its exact signature",
   },
 
   /* ── Free text is never upgraded ─────────────────────────────────── */

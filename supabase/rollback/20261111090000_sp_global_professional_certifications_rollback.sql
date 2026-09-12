@@ -258,12 +258,25 @@ COMMENT ON FUNCTION public.sp_claims_credential_rules IS
 REVOKE ALL ON FUNCTION public.sp_claims_credential_rules() FROM PUBLIC, anon;
 
 -- ---------------------------------------------------------------------------
--- 2. The holder lifecycle table
+-- 2. The holder lifecycle table and its single write path
 -- ---------------------------------------------------------------------------
+-- The RPC goes FIRST and by its exact signature. It is SECURITY DEFINER and
+-- it is granted to `authenticated`, so a rollback that removed the table and
+-- left it behind would leave a privileged function over a table that no longer
+-- exists, still executable by every signed-in holder. Named argument types
+-- rather than a bare name, so a future overload cannot be dropped by accident;
+-- no CASCADE anywhere in this file, so if anything unexpectedly depends on it
+-- the rollback stops instead of quietly removing the dependant too.
+DROP FUNCTION IF EXISTS
+  public.sp_certification_lifecycle_declare(uuid, date, date, text, text, date);
+
 DROP TRIGGER IF EXISTS sp_claim_certification_lifecycle_set_updated_at
   ON public.sp_claim_certification_lifecycle;
 DROP TRIGGER IF EXISTS sp_certification_lifecycle_rules_trg
   ON public.sp_claim_certification_lifecycle;
+-- The table's policy and its grants are removed with the table. Nothing here
+-- restores a grant to `authenticated`, because before this migration the table
+-- did not exist and no role held anything on it.
 DROP TABLE IF EXISTS public.sp_claim_certification_lifecycle;
 DROP FUNCTION IF EXISTS public.sp_certification_lifecycle_rules();
 
@@ -344,7 +357,21 @@ BEGIN
   IF _n <> 59 THEN
     RAISE WARNING 'SP_GLOBAL_CERT_ROLLBACK: sp_credential_types holds % rows (59 expected on a clean replay)', _n;
   END IF;
-  RAISE NOTICE 'SP_GLOBAL_CERT_ROLLBACK ok: catalogue, registry, scope column and lifecycle table removed; no claim touched';
+
+  -- No privileged leftovers. A SECURITY DEFINER function executable by every
+  -- signed-in holder is the one thing in this file that would still be
+  -- dangerous after its table is gone, so its removal is asserted rather than
+  -- assumed.
+  IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+              WHERE n.nspname = 'public'
+                AND p.proname IN ('sp_certification_lifecycle_declare',
+                                  'sp_certification_lifecycle_rules',
+                                  'sp_certification_definition_rules',
+                                  'sp_certification_issuer_code_immutable')) THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_ROLLBACK_LEFTOVER: a function this migration created survived the rollback';
+  END IF;
+
+  RAISE NOTICE 'SP_GLOBAL_CERT_ROLLBACK ok: catalogue, registry, scope column, lifecycle table and its write path removed; no claim touched';
 END $proof$;
 
 COMMIT;

@@ -1,10 +1,25 @@
 -- Security Passport — the governed international-certification foundation.
 --
--- Additive only. No column is dropped, no existing row is rewritten, no
--- existing constraint is tightened on existing data, and every new column is
--- NULLable. Sweden, the United Kingdom and Dubai behave exactly as they do
--- today: this file does not touch a market pack, a jurisdiction, an authority,
--- a regulated role or a single existing claim.
+-- Additive only. No column is dropped, no existing constraint is tightened on
+-- existing data, and every new column is NULLable. Sweden, the United Kingdom
+-- and Dubai behave exactly as they do today: this file does not touch a market
+-- pack, a jurisdiction, an authority, a regulated role or a single existing
+-- claim.
+--
+-- ON "NO EXISTING ROW IS REWRITTEN", which is what this header used to say and
+-- which was not true: section 9 DOES write to existing rows — it sets
+-- `scope_code = 'national_regulated'` on the 59 sp_credential_types rows that
+-- already carry both a market pack and a jurisdiction. That is a governed
+-- catalogue row gaining a new, previously NULL column, and it is the point of
+-- the migration. The guarantee this file actually makes, and the one that
+-- matters, is narrower and exact:
+--
+--   NO CLAIM, NO HOLDER AND NO OTHER PERSONAL-DATA ROW IS REWRITTEN.
+--
+-- There is no INSERT, UPDATE or DELETE against sp_claims anywhere in this
+-- file, the suite plants free-text rows titled ASIS, CPP, CISSP and test and
+-- proves every column of each is byte-for-byte unchanged afterwards, and no
+-- free-text entry is converted into a governed certification by anything here.
 --
 -- ══ WHY INTERNATIONAL SCOPE IS A COLUMN AND NOT AN INFERENCE ═══════════
 --
@@ -545,10 +560,28 @@ CREATE TABLE IF NOT EXISTS public.sp_claim_certification_lifecycle (
   -- A PDF, a logo, an email domain, a link click and a directory search are
   -- none of them an authenticated issuer speaking. Issuer confirmation needs
   -- an actor time and a source, and a document review can supply neither.
+  --
+  -- Written as a CASE, not as an equivalence. The first version of this file
+  -- said
+  --
+  --   (status_source = 'issuer_confirmed')
+  --     = (issuer_confirmed_at IS NOT NULL AND issuer_confirmed_source_url IS NOT NULL)
+  --
+  -- which reads like "both fields iff issuer confirmation" and is not. For a
+  -- NON-issuer source the right-hand side only has to be false, and it is
+  -- false when exactly ONE field is populated — so a `holder_declared` row
+  -- could carry an issuer confirmation timestamp, or an https:// source URL
+  -- presented as an issuer's, with nothing to stop it. The comment above
+  -- claimed the constraint forbade that; it did not. Independent review found
+  -- it. The CASE says what the comment always meant: for every other source,
+  -- BOTH fields are NULL.
   CONSTRAINT sp_certification_lifecycle_issuer_confirmation_is_attributed
-    CHECK ((status_source = 'issuer_confirmed')
-           = (issuer_confirmed_at IS NOT NULL
-              AND issuer_confirmed_source_url IS NOT NULL)),
+    CHECK (CASE WHEN status_source = 'issuer_confirmed'
+                THEN issuer_confirmed_at IS NOT NULL
+                 AND issuer_confirmed_source_url IS NOT NULL
+                ELSE issuer_confirmed_at IS NULL
+                 AND issuer_confirmed_source_url IS NULL
+           END),
 
   CONSTRAINT sp_certification_lifecycle_dates_ordered
     CHECK (cycle_ends_on IS NULL OR awarded_on IS NULL OR cycle_ends_on > awarded_on),
@@ -616,6 +649,175 @@ CREATE TRIGGER sp_certification_lifecycle_rules_trg
   FOR EACH ROW EXECUTE FUNCTION public.sp_certification_lifecycle_rules();
 
 REVOKE ALL ON FUNCTION public.sp_certification_lifecycle_rules() FROM PUBLIC, anon;
+
+-- ── THE HOLDER'S ONLY WRITE PATH ───────────────────────────────────────
+--
+-- WHY A FUNCTION AND NOT A TABLE GRANT. The first version of this file gave
+-- `authenticated` whole-row INSERT and UPDATE on the table above and relied on
+-- an owner policy plus the trigger. Independent review found the hole, and it
+-- is a trust-boundary hole, not a tidiness one:
+--
+--   `status_source` is the column that says WHO established a standing, and
+--   its CHECK admits 'holder_declared', 'document_reviewed' and
+--   'issuer_confirmed'. The policy asked only whether the ROW was the
+--   caller's. The trigger asked only whether the CLAIM was the caller's and
+--   whether the credential was international. NOTHING asked whether the
+--   caller was a reviewer or an issuer.
+--
+--   So a holder with nothing but their own PostgREST token could POST
+--   status_source = 'issuer_confirmed' with an issuer_confirmed_at of their
+--   choosing and any https:// URL, and the Passport would carry, in its own
+--   vocabulary, an issuer confirmation that no issuer ever made. They could
+--   equally write 'document_reviewed' without a document, move the row to
+--   another claim of theirs, or backdate created_at.
+--
+--   The old suite's 8.4 tried `issuer_confirmed` WITHOUT the two attribution
+--   fields and watched it fail. That proves the row-shape constraint. It
+--   never tried the fully populated forgery, which succeeded.
+--
+-- Least privilege is the fix, not another CHECK: the holder keeps SELECT on
+-- their own row and holds no INSERT, UPDATE or DELETE at all, and this one
+-- narrow function is the only way a holder-declared statement is written.
+-- The fields a holder is entitled to state are PARAMETERS; the fields that
+-- carry identity, attribution and audit are not parameters at all and cannot
+-- be reached from outside:
+--
+--   holder_user_id               hardcoded to auth.uid()
+--   status_source                hardcoded to 'holder_declared'
+--   issuer_confirmed_at, _url    forced to NULL
+--   claim_id, created_at         preserved on correction, never rewritten
+--   updated_at                   set here, not by the caller
+--
+-- 'document_reviewed' and 'issuer_confirmed' therefore remain RESERVED schema
+-- states with no holder-reachable write path anywhere in this repository.
+-- Their writers will need separately authorised reviewer and issuer
+-- identities, which are a later phase's work and deliberately absent here.
+--
+-- SECURITY DEFINER, because the caller now holds no table write privilege.
+-- That means row level security does not protect this body, so the ownership
+-- proof below IS the boundary — and a claim that is not the caller's is
+-- refused with the SAME message whether it belongs to somebody else or does
+-- not exist, so the function cannot be used to enumerate other holders.
+CREATE OR REPLACE FUNCTION public.sp_certification_lifecycle_declare(
+  _claim_id                uuid,
+  _awarded_on              date DEFAULT NULL,
+  _cycle_ends_on           date DEFAULT NULL,
+  _cycle_end_semantics     text DEFAULT 'unknown',
+  _holder_lifecycle_status text DEFAULT 'unknown',
+  _status_as_of            date DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $fn$
+DECLARE
+  _uid     uuid := auth.uid();
+  _code    text;
+  _scope   text;
+  _created boolean;
+BEGIN
+  IF _uid IS NULL THEN
+    RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  IF _claim_id IS NULL THEN
+    RAISE EXCEPTION 'SP_CERTIFICATION_LIFECYCLE_CLAIM_REQUIRED: name the credential this statement is about'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  -- ONE lookup, filtered by owner. A claim that belongs to somebody else and a
+  -- claim that does not exist produce the same NOT FOUND and the same message:
+  -- an error that distinguished them would answer "does holder X hold claim
+  -- Y?" for any Y a caller cares to guess.
+  SELECT c.credential_code INTO _code
+    FROM public.sp_claims c
+   WHERE c.id = _claim_id AND c.holder_user_id = _uid;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION
+      'SP_CERTIFICATION_LIFECYCLE_CLAIM_NOT_YOURS: no credential of yours has that id'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT t.scope_code INTO _scope
+    FROM public.sp_credential_types t WHERE t.code = _code;
+
+  IF _scope IS DISTINCT FROM 'global_professional' THEN
+    RAISE EXCEPTION
+      'SP_CERTIFICATION_LIFECYCLE_NOT_GLOBAL: % is scope %, and this lifecycle model describes international certifications only',
+      coalesce(_code, '(free text)'), coalesce(_scope, 'undeclared')
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  -- The table's CHECKs are the authority on all three of these. They are
+  -- restated here only so a caller receives an SP_ code rather than a
+  -- constraint name, which must never reach a client.
+  IF _holder_lifecycle_status IS NULL OR _holder_lifecycle_status NOT IN
+       ('unknown','active','lapsed','suspended','expired','revoked','retired') THEN
+    RAISE EXCEPTION 'SP_CERTIFICATION_LIFECYCLE_STATUS_UNKNOWN: % is not a lifecycle status',
+      coalesce(_holder_lifecycle_status, '(null)') USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF _cycle_end_semantics IS NULL OR _cycle_end_semantics NOT IN
+       ('unknown','recertification_due','certificate_printed_date','annual_compliance_due') THEN
+    RAISE EXCEPTION 'SP_CERTIFICATION_LIFECYCLE_SEMANTICS_UNKNOWN: % is not a cycle-end meaning',
+      coalesce(_cycle_end_semantics, '(null)') USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF _holder_lifecycle_status <> 'unknown' AND _status_as_of IS NULL THEN
+    RAISE EXCEPTION
+      'SP_CERTIFICATION_LIFECYCLE_STATUS_UNDATED: a status must say when it was true'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  _created := NOT EXISTS (
+    SELECT 1 FROM public.sp_claim_certification_lifecycle WHERE claim_id = _claim_id);
+
+  INSERT INTO public.sp_claim_certification_lifecycle (
+    claim_id, holder_user_id,
+    awarded_on, cycle_ends_on, cycle_end_semantics,
+    holder_lifecycle_status, status_as_of,
+    status_source, issuer_confirmed_at, issuer_confirmed_source_url)
+  VALUES (
+    _claim_id, _uid,
+    _awarded_on, _cycle_ends_on, _cycle_end_semantics,
+    _holder_lifecycle_status, _status_as_of,
+    -- Not a parameter. Not derivable from one. The only value this function
+    -- can ever write.
+    'holder_declared', NULL, NULL)
+  ON CONFLICT (claim_id) DO UPDATE SET
+    -- claim_id, holder_user_id and created_at are absent from this list on
+    -- purpose: a correction corrects the statement, never the row's identity
+    -- or when the holder first made it.
+    awarded_on              = EXCLUDED.awarded_on,
+    cycle_ends_on           = EXCLUDED.cycle_ends_on,
+    cycle_end_semantics     = EXCLUDED.cycle_end_semantics,
+    holder_lifecycle_status = EXCLUDED.holder_lifecycle_status,
+    status_as_of            = EXCLUDED.status_as_of,
+    -- A correction of a holder's own statement is a holder's own statement.
+    -- Restated rather than left alone so that a row which somehow carried a
+    -- different source is brought back, never preserved.
+    status_source               = 'holder_declared',
+    issuer_confirmed_at         = NULL,
+    issuer_confirmed_source_url = NULL,
+    updated_at                  = now();
+
+  RETURN jsonb_build_object('claim_id', _claim_id, 'created', _created);
+END $fn$;
+
+COMMENT ON FUNCTION public.sp_certification_lifecycle_declare(uuid, date, date, text, text, date) IS
+  'The holder''s ONLY write path into sp_claim_certification_lifecycle. Writes '
+  'status_source = holder_declared and nothing else, forces both '
+  'issuer-confirmation fields to NULL, pins holder_user_id to auth.uid(), and '
+  'preserves claim_id and created_at when correcting. Reviewer and issuer '
+  'attribution require separately authorised identities and have no write '
+  'path in this phase.';
+
+REVOKE ALL ON FUNCTION
+  public.sp_certification_lifecycle_declare(uuid, date, date, text, text, date)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION
+  public.sp_certification_lifecycle_declare(uuid, date, date, text, text, date)
+  TO authenticated;
 
 DROP TRIGGER IF EXISTS sp_claim_certification_lifecycle_set_updated_at
   ON public.sp_claim_certification_lifecycle;
@@ -1443,22 +1645,30 @@ CREATE POLICY sp_certification_definitions_read
   ON public.sp_certification_definitions
   FOR SELECT TO authenticated USING (true);
 
--- The holder's own row, and only the holder's own row. The WITH CHECK also
--- requires the CLAIM to be theirs, so a holder cannot attach a lifecycle
--- statement to somebody else's credential by writing their own id into the
--- owner column. The trigger asserts the same thing for callers RLS does not
--- bind.
+-- The holder's own row, and only the holder's own row — TO READ.
+--
+-- FOR SELECT, not FOR ALL. The first version of this file wrote FOR ALL with a
+-- WITH CHECK that proved the row and the claim were the caller's, which is a
+-- complete answer to "whose row is this?" and no answer at all to "who is
+-- entitled to say an issuer confirmed it?". A policy cannot distinguish those
+-- two questions, because at the point it runs the caller has already chosen
+-- every column value including status_source.
+--
+-- So the holder reads their own row here and writes it nowhere: the grants
+-- below give `authenticated` SELECT and nothing else, and
+-- sp_certification_lifecycle_declare() is the single write path.
 DROP POLICY IF EXISTS sp_claim_certification_lifecycle_owner
   ON public.sp_claim_certification_lifecycle;
 CREATE POLICY sp_claim_certification_lifecycle_owner
   ON public.sp_claim_certification_lifecycle
-  FOR ALL TO authenticated
-  USING (holder_user_id = auth.uid())
-  WITH CHECK (
-    holder_user_id = auth.uid()
-    AND EXISTS (SELECT 1 FROM public.sp_claims c
-                 WHERE c.id = claim_id AND c.holder_user_id = auth.uid())
-  );
+  FOR SELECT TO authenticated
+  USING (holder_user_id = auth.uid());
+
+COMMENT ON POLICY sp_claim_certification_lifecycle_owner
+  ON public.sp_claim_certification_lifecycle IS
+  'Read-only, owner-only. Holder writes go through '
+  'sp_certification_lifecycle_declare(), which is the only code path that can '
+  'set status_source, and it can only ever set holder_declared.';
 
 -- ── REVOKE EVERYTHING FIRST, THEN GRANT EXACTLY WHAT IS NEEDED ──────
 --
@@ -1486,18 +1696,32 @@ GRANT SELECT ON public.sp_certification_issuers        TO authenticated;
 GRANT SELECT ON public.sp_certification_issuer_aliases TO authenticated;
 GRANT SELECT ON public.sp_certification_sources        TO authenticated;
 GRANT SELECT ON public.sp_certification_definitions    TO authenticated;
--- SELECT, INSERT and UPDATE. NOT DELETE.
+-- SELECT. NOT INSERT, NOT UPDATE, NOT DELETE.
 --
--- Phase 8 established the rule and its suite enforces it: no application role
+-- Two rules meet on this one line.
+--
+-- Phase 8 established the first and its suite enforces it: no application role
 -- holds DELETE on any sp_* table, because "remove" in this product means
 -- WITHDRAW. A lifecycle statement a holder no longer stands behind is
 -- corrected back to `unknown` — which is an honest state and keeps the
 -- record — rather than erased, and a holder who retracts a certification
--- withdraws the CLAIM, which takes this row with it through the FK.
+-- withdraws the CLAIM, which takes this row with it through the FK. The first
+-- version of this file granted DELETE and the Phase 8 suite refused it, which
+-- is exactly what that suite is for.
 --
--- The first version of this file granted DELETE. The Phase 8 suite refused it,
--- which is exactly what that suite is for.
-GRANT SELECT, INSERT, UPDATE ON public.sp_claim_certification_lifecycle TO authenticated;
+-- The second came from independent review of this file: INSERT and UPDATE are
+-- WHOLE-ROW privileges, and one of this table's columns — status_source —
+-- says who established the holder's standing. A holder holding UPDATE can
+-- write 'issuer_confirmed' with a timestamp and an https:// URL of their
+-- choosing, and no policy or trigger that only proves ownership will stop
+-- them. Column-level grants would leave the same hole open for the columns a
+-- holder legitimately writes, and a CHECK cannot know who the caller is.
+--
+-- So the holder holds no write privilege on this table at all, and
+-- sp_certification_lifecycle_declare() is the only writer. What a holder may
+-- state is the function's parameter list; what they may not is everything the
+-- function hardcodes.
+GRANT SELECT ON public.sp_claim_certification_lifecycle TO authenticated;
 
 -- Restated after the grants, so the intent is legible at the end of the block
 -- as well as the beginning: anon reaches none of this, the catalogue is
@@ -1513,7 +1737,12 @@ REVOKE ALL ON public.sp_certification_sources         FROM anon;
 REVOKE ALL ON public.sp_certification_definitions     FROM anon;
 REVOKE ALL ON public.sp_claim_certification_lifecycle FROM anon;
 
-REVOKE DELETE ON public.sp_claim_certification_lifecycle FROM anon, authenticated;
+-- Restated by name for the same reason the REVOKE ALL above exists: the
+-- hosted platform's default privileges grant these, so their absence has to be
+-- written, not assumed. A future edit that hands a holder direct INSERT or
+-- UPDATE back has to delete one of these lines to do it, and the guard, the
+-- proof block below and the suite all refuse that.
+REVOKE INSERT, UPDATE, DELETE ON public.sp_claim_certification_lifecycle FROM anon, authenticated;
 
 REVOKE INSERT, UPDATE, DELETE ON public.sp_credential_scopes            FROM authenticated;
 REVOKE INSERT, UPDATE, DELETE ON public.sp_certification_issuers        FROM authenticated;
@@ -1560,7 +1789,7 @@ COMMENT ON COLUMN public.sp_claims.credential_reference IS
 -- catalogue fails at apply time rather than in a suite somebody may not run.
 
 DO $proof$
-DECLARE _n int; _bad text;
+DECLARE _n int; _bad text; _priv text; _fn oid; _src text;
 BEGIN
   -- Every global definition is unbound from every territorial concept.
   SELECT string_agg(code, ', ' ORDER BY code) INTO _bad
@@ -1636,12 +1865,68 @@ BEGIN
     RAISE EXCEPTION 'SP_GLOBAL_CERT_WIDE_GRANT: a new table kept TRUNCATE, REFERENCES or TRIGGER';
   END IF;
 
-  -- And no holder may DELETE their own history. Phase 8's rule, restated at
-  -- apply time so a future edit that grants it fails here rather than three
-  -- suites later.
-  IF has_table_privilege('authenticated', 'public.sp_claim_certification_lifecycle', 'DELETE')
-     OR has_table_privilege('anon', 'public.sp_claim_certification_lifecycle', 'DELETE') THEN
-    RAISE EXCEPTION 'SP_GLOBAL_CERT_DELETE_GRANTED: removal is withdrawal; no application role may DELETE';
+  -- And no holder writes the lifecycle table DIRECTLY — not INSERT, not
+  -- UPDATE, not DELETE. Asserted at apply time so an edit that hands any of
+  -- them back fails here rather than three suites later.
+  --
+  -- DELETE is Phase 8's rule: removal is withdrawal. INSERT and UPDATE are
+  -- this file's own correction: they are whole-row privileges over a table
+  -- that carries status_source, so holding either is holding the ability to
+  -- forge an issuer confirmation.
+  FOR _priv IN SELECT unnest(ARRAY['INSERT','UPDATE','DELETE']) LOOP
+    IF has_table_privilege('authenticated', 'public.sp_claim_certification_lifecycle', _priv)
+       OR has_table_privilege('anon', 'public.sp_claim_certification_lifecycle', _priv) THEN
+      RAISE EXCEPTION
+        'SP_GLOBAL_CERT_LIFECYCLE_WRITABLE: an application role holds % on the lifecycle table; the only holder write path is sp_certification_lifecycle_declare()',
+        _priv;
+    END IF;
+  END LOOP;
+
+  -- The owner policy is READ-only. A FOR ALL policy here would mean the write
+  -- boundary is "is this row yours", which is not the question.
+  IF EXISTS (
+    SELECT 1 FROM pg_policy
+     WHERE polrelid = 'public.sp_claim_certification_lifecycle'::regclass
+       AND polcmd <> 'r'
+  ) THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_LIFECYCLE_POLICY_WRITABLE: the lifecycle policy is not SELECT-only';
+  END IF;
+
+  -- The one write path exists, is SECURITY DEFINER with a fixed search_path,
+  -- and is reachable by a signed-in holder and by nobody else.
+  SELECT p.oid INTO _fn FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'sp_certification_lifecycle_declare';
+  IF _fn IS NULL THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_NO_WRITE_PATH: sp_certification_lifecycle_declare() is missing, so nothing can write the lifecycle table';
+  END IF;
+  IF NOT (SELECT prosecdef FROM pg_proc WHERE oid = _fn) THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_NOT_DEFINER: the holder holds no table grant, so the write path must be SECURITY DEFINER';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_proc
+                  WHERE oid = _fn
+                    AND proconfig IS NOT NULL
+                    AND EXISTS (SELECT 1 FROM unnest(proconfig) c WHERE c LIKE 'search\_path=%')) THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_UNPINNED: a SECURITY DEFINER function without a fixed search_path is a privilege escalation';
+  END IF;
+  IF has_function_privilege('anon', _fn, 'EXECUTE') THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_ANON: anon can execute the holder write path';
+  END IF;
+  IF NOT has_function_privilege('authenticated', _fn, 'EXECUTE') THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_UNREACHABLE: a signed-in holder cannot execute their own write path';
+  END IF;
+
+  -- It can only ever write holder_declared, and it can never populate the
+  -- issuer-attribution fields. Read off the stored body, so a rewrite that
+  -- parameterises either fails at apply time.
+  SELECT prosrc INTO _src FROM pg_proc WHERE oid = _fn;
+  IF position('''document_reviewed''' in _src) > 0
+     OR position('''issuer_confirmed''' in _src) > 0 THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_ATTRIBUTES: the holder write path mentions a source only a reviewer or an issuer may establish';
+  END IF;
+  IF position('status_source' in _src) = 0
+     OR position('''holder_declared''' in _src) = 0 THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_SOURCE: the holder write path no longer hardcodes status_source = holder_declared';
   END IF;
 
   -- And no holder may write the catalogue.

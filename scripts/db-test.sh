@@ -3937,13 +3937,20 @@ if [ "$SPGC_RC" -ne 0 ]; then
   suite_failed "Security Passport global professional certification"
 else
   echo "    ok  ${SPGC_PASSED} global certification assertions passed"
-  # GROUP 6 (a forged client cannot give a CPP a country), GROUP 12 (the
-  # private reference reaches no disclosure), GROUP 13 (free text is never
-  # upgraded) and GROUP 14 (PR #222's SE/GB/AE-DU behaviour is unchanged) are
-  # the reason this suite exists. A short run that stopped before them would
-  # report success having proved nothing.
-  if [ "$SPGC_PASSED" -lt 100 ]; then
-    echo "FAIL: expected at least 100 global certification assertions, only ${SPGC_PASSED} ran." >&2
+  # GROUP 6 (a forged client cannot give a CPP a country), GROUP 8b (a holder
+  # cannot forge WHO established their standing), GROUP 12 (the private
+  # reference reaches no disclosure), GROUP 13 (free text is never upgraded)
+  # and GROUP 14 (PR #222's SE/GB/AE-DU behaviour is unchanged) are the reason
+  # this suite exists. A short run that stopped before them would report
+  # success having proved nothing.
+  #
+  # RAISED 100 -> 130 when GROUP 8b was added. The floor is not decoration: the
+  # trust-boundary defect 8b exists for passed a full green CI, and the
+  # cheapest way to make a security suite green is to delete the assertion that
+  # is failing. passport-global-certification:check names the 8b assertions
+  # individually as well, so both a deletion and a short run are caught.
+  if [ "$SPGC_PASSED" -lt 130 ]; then
+    echo "FAIL: expected at least 130 global certification assertions, only ${SPGC_PASSED} ran." >&2
     suite_failed "Security Passport global certification (assertion shortfall: floor 100)"
   fi
 fi

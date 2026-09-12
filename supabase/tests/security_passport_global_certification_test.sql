@@ -567,38 +567,49 @@ BEGIN
   -- =====================================================================
   RAISE NOTICE 'GROUP 8 -- trust and lifecycle are different questions';
   -- =====================================================================
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _global::text, true);
-  INSERT INTO public.sp_claim_certification_lifecycle
-    (claim_id, holder_user_id, awarded_on, cycle_ends_on, cycle_end_semantics,
-     holder_lifecycle_status, status_as_of, status_source)
-  VALUES (_cpp, _global, DATE '2024-05-01', DATE '2027-05-01', 'recertification_due',
-          'active', DATE '2026-09-12', 'holder_declared');
-  RESET ROLE;
-  PERFORM pg_temp.ok(true, '8.1 a holder records their own dated standing');
+  -- Through the ONLY write path a holder has. Not an INSERT: `authenticated`
+  -- holds no INSERT on this table, and GROUP 8b proves that by trying.
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare(
+         '%s'::uuid, DATE '2024-05-01', DATE '2027-05-01',
+         'recertification_due', 'active', DATE '2026-09-12')$q$, _cpp));
+  PERFORM pg_temp.ok(_r = 'OK', '8.1 a holder records their own dated standing');
+
+  PERFORM pg_temp.ok(
+    (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _cpp) = 'active'
+    AND (SELECT cycle_ends_on FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _cpp) = DATE '2027-05-01',
+    '8.1b and the statement is stored exactly as they made it');
 
   PERFORM pg_temp.ok(
     (SELECT assertion_level FROM public.sp_claims WHERE id = _cpp) = 'self_declared',
     '8.2 and the claim''s TRUST level is untouched by it');
 
   -- A status with no as-of date is a claim about the present nobody checked.
-  BEGIN
-    UPDATE public.sp_claim_certification_lifecycle
-       SET holder_lifecycle_status = 'lapsed', status_as_of = NULL WHERE claim_id = _cpp;
-    PERFORM pg_temp.ok(false, '8.3 an undated status was ACCEPTED');
-  EXCEPTION WHEN check_violation THEN
-    PERFORM pg_temp.ok(true, '8.3 a status must say when it was true');
-  END;
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare(
+         '%s'::uuid, NULL, NULL, 'unknown', 'lapsed', NULL)$q$, _cpp));
+  PERFORM pg_temp.ok(_r = 'REFUSED: SP_CERTIFICATION_LIFECYCLE_STATUS_UNDATED',
+    '8.3 a status must say when it was true');
 
-  -- Document review is not issuer confirmation. A PDF cannot fill these.
-  BEGIN
-    UPDATE public.sp_claim_certification_lifecycle
-       SET status_source = 'issuer_confirmed' WHERE claim_id = _cpp;
-    PERFORM pg_temp.ok(false, '8.4 issuer confirmation was claimed without attribution');
-  EXCEPTION WHEN check_violation THEN
-    PERFORM pg_temp.ok(true,
-      '8.4 issuer confirmation requires a confirming time AND source — a document review has neither');
-  END;
+  -- And the refusal changed nothing.
+  PERFORM pg_temp.ok(
+    (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _cpp) = 'active',
+    '8.3b and a refused statement leaves the previous one standing');
+
+  -- Document review is not issuer confirmation, and NEITHER is reachable: the
+  -- write path has no parameter for the source and hardcodes holder_declared.
+  PERFORM pg_temp.ok(
+    (SELECT status_source FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _cpp) = 'holder_declared',
+    '8.4 a holder''s statement is recorded as the holder''s own, always');
+
+  PERFORM pg_temp.ok(
+    (SELECT issuer_confirmed_at IS NULL AND issuer_confirmed_source_url IS NULL
+       FROM public.sp_claim_certification_lifecycle WHERE claim_id = _cpp),
+    '8.4b with no issuer attribution, because a holder cannot supply one');
 
   -- The programme's cycle never becomes the holder's date.
   PERFORM pg_temp.ok(
@@ -623,14 +634,232 @@ BEGIN
     (SELECT valid_until FROM public.sp_claims WHERE id = _cpp) IS NULL,
     '8.8 the CLAIM carries no expiry: a recertification cycle is not one');
 
-  -- A lifecycle row may not attach to a national credential.
+  -- A lifecycle row may not attach to a national credential, and the write
+  -- path says so by name rather than by a generic privilege error.
   SELECT id INTO _claim FROM public.sp_claims
    WHERE holder_user_id = _se AND credential_code = 'VU1';
   _r := pg_temp.as_user(_se, format(
-    $q$INSERT INTO public.sp_claim_certification_lifecycle (claim_id, holder_user_id)
-        VALUES ('%s', '%s')$q$, _claim, _se));
-  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    $q$SELECT public.sp_certification_lifecycle_declare('%s'::uuid)$q$, _claim));
+  PERFORM pg_temp.ok(_r = 'REFUSED: SP_CERTIFICATION_LIFECYCLE_NOT_GLOBAL',
     '8.9 the certification lifecycle model does not attach to a Swedish credential');
+
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM public.sp_claim_certification_lifecycle WHERE claim_id = _claim),
+    '8.9b and the refusal wrote nothing');
+
+  -- =====================================================================
+  RAISE NOTICE 'GROUP 8b -- a holder cannot forge who established their standing';
+  -- =====================================================================
+  -- THE DEFECT THIS GROUP EXISTS FOR. The first version of this migration gave
+  -- `authenticated` whole-row INSERT and UPDATE on the lifecycle table behind a
+  -- FOR ALL owner policy. The policy proved the ROW was the caller's and the
+  -- trigger proved the CLAIM was the caller's; nothing proved the caller was
+  -- entitled to set `status_source`. A holder could therefore write
+  -- 'issuer_confirmed' with a timestamp and an https:// URL of their choosing
+  -- and the Passport would carry an issuer confirmation no issuer ever made.
+  --
+  -- The old 8.4 tried `issuer_confirmed` WITHOUT the two attribution fields and
+  -- watched the constraint refuse it. That proved the row shape. The forgery
+  -- that worked supplied both fields, and nothing tried it. Independent review
+  -- found it. Every assertion below is that missing attempt, and each one is
+  -- written to SUCCEED against the defect if the privileges ever come back.
+
+  -- A SECOND global certification of their own, so "move the row to another
+  -- claim" below is a move between two claims the caller genuinely holds —
+  -- the case ownership checks cannot catch.
+  PERFORM pg_temp.ok(
+    pg_temp.file_canonical(_global, 'INTL_ISACA_CISM', 'active') = 'OK',
+    '8b.0 the same holder records a second international certification');
+  SELECT id INTO _claim FROM public.sp_claims
+   WHERE holder_user_id = _global AND credential_code = 'INTL_ISACA_CISM';
+  PERFORM pg_temp.ok(_claim IS NOT NULL, '8b.0b and it is the claim the moves below target');
+
+  -- 1. No direct INSERT, at all.
+  _r := pg_temp.as_user(_global, format(
+    $q$INSERT INTO public.sp_claim_certification_lifecycle (claim_id, holder_user_id)
+        VALUES ('%s', '%s')$q$, _claim, _global));
+  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    '8b.1 a holder cannot INSERT a lifecycle row directly, even their own');
+
+  -- 2. No direct UPDATE of the row they legitimately created in 8.1.
+  _r := pg_temp.as_user(_global, format(
+    $q$UPDATE public.sp_claim_certification_lifecycle
+          SET holder_lifecycle_status = 'retired', status_as_of = current_date
+        WHERE claim_id = '%s'$q$, _cpp));
+  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    '8b.2 nor UPDATE their own lifecycle row directly');
+
+  -- 3. `document_reviewed` — CQrityjob reading a certificate, which a holder
+  --    is not.
+  _r := pg_temp.as_user(_global, format(
+    $q$UPDATE public.sp_claim_certification_lifecycle
+          SET status_source = 'document_reviewed' WHERE claim_id = '%s'$q$, _cpp));
+  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    '8b.3 nor declare that a document was reviewed');
+
+  -- 4. THE FORGERY THAT USED TO WORK: fully populated issuer confirmation.
+  _r := pg_temp.as_user(_global, format(
+    $q$UPDATE public.sp_claim_certification_lifecycle
+          SET status_source = 'issuer_confirmed',
+              issuer_confirmed_at = now(),
+              issuer_confirmed_source_url = 'https://isc2.org/verify/forged'
+        WHERE claim_id = '%s'$q$, _cpp));
+  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    '8b.4 nor forge a COMPLETE issuer confirmation with a time and an https source');
+
+  PERFORM pg_temp.ok(
+    (SELECT status_source FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _cpp) = 'holder_declared'
+    AND (SELECT issuer_confirmed_source_url FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _cpp) IS NULL,
+    '8b.4b and the row still says holder_declared with no issuer attribution');
+
+  -- 5. The constraint defect: for a non-issuer source, ONE issuer field was
+  --    enough to satisfy an equivalence that was meant to forbid both.
+  --    Asserted as the table owner, so it is the CONSTRAINT being tested and
+  --    not the grant.
+  BEGIN
+    UPDATE public.sp_claim_certification_lifecycle
+       SET issuer_confirmed_at = now() WHERE claim_id = _cpp;
+    PERFORM pg_temp.ok(false,
+      '8b.5 a holder_declared row ACCEPTED an issuer-confirmation timestamp');
+  EXCEPTION WHEN check_violation THEN
+    PERFORM pg_temp.ok(true,
+      '8b.5 a non-issuer source may not carry an issuer-confirmation time, even alone');
+  END;
+
+  BEGIN
+    UPDATE public.sp_claim_certification_lifecycle
+       SET issuer_confirmed_source_url = 'https://isc2.org/verify/forged'
+     WHERE claim_id = _cpp;
+    PERFORM pg_temp.ok(false,
+      '8b.5b a holder_declared row ACCEPTED an issuer-confirmation source URL');
+  EXCEPTION WHEN check_violation THEN
+    PERFORM pg_temp.ok(true,
+      '8b.5b nor an issuer-confirmation source URL, even alone');
+  END;
+
+  -- 6. Identity and audit columns are not the caller's to move.
+  _r := pg_temp.as_user(_global, format(
+    $q$UPDATE public.sp_claim_certification_lifecycle
+          SET claim_id = '%s' WHERE claim_id = '%s'$q$, _claim, _cpp));
+  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    '8b.6 nor move the statement onto another credential of their own');
+
+  _r := pg_temp.as_user(_global, format(
+    $q$UPDATE public.sp_claim_certification_lifecycle
+          SET holder_user_id = '%s' WHERE claim_id = '%s'$q$, _other, _cpp));
+  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    '8b.7 nor rewrite whose statement it is');
+
+  _r := pg_temp.as_user(_global, format(
+    $q$UPDATE public.sp_claim_certification_lifecycle
+          SET created_at = TIMESTAMPTZ '2019-01-01' WHERE claim_id = '%s'$q$, _cpp));
+  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    '8b.8 nor backdate when they first made it');
+
+  -- 7. Another holder's claim, through the write path itself. The refusal must
+  --    be the SAME as for a claim that does not exist, or the function answers
+  --    "does holder B hold claim X?" for any X.
+  SELECT id INTO _claim FROM public.sp_claims WHERE holder_user_id = _other LIMIT 1;
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare('%s'::uuid)$q$, _claim));
+  PERFORM pg_temp.ok(_r = 'REFUSED: SP_CERTIFICATION_LIFECYCLE_CLAIM_NOT_YOURS',
+    '8b.9 nor write lifecycle data for another holder''s claim');
+
+  _r := pg_temp.as_user(_global,
+    $q$SELECT public.sp_certification_lifecycle_declare(
+         '00000000-0000-0000-0000-000000000000'::uuid)$q$);
+  PERFORM pg_temp.ok(_r = 'REFUSED: SP_CERTIFICATION_LIFECYCLE_CLAIM_NOT_YOURS',
+    '8b.10 and a claim that does not exist is refused identically, so the write path cannot enumerate');
+
+  -- 8. What the holder legitimately CAN do: correct their own statement,
+  --    without the row changing identity underneath them.
+  SELECT to_jsonb(l) INTO _payload FROM public.sp_claim_certification_lifecycle l
+   WHERE claim_id = _cpp;
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare(
+         '%s'::uuid, DATE '2024-05-01', DATE '2028-05-01',
+         'recertification_due', 'lapsed', DATE '2026-09-13')$q$, _cpp));
+  PERFORM pg_temp.ok(_r = 'OK', '8b.11 a holder corrects their own statement');
+
+  PERFORM pg_temp.ok(
+    (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _cpp) = 'lapsed'
+    AND (SELECT cycle_ends_on FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _cpp) = DATE '2028-05-01',
+    '8b.12 and the correction took');
+
+  PERFORM pg_temp.ok(
+    (SELECT created_at FROM public.sp_claim_certification_lifecycle WHERE claim_id = _cpp)
+      = (_payload ->> 'created_at')::timestamptz
+    AND (SELECT holder_user_id FROM public.sp_claim_certification_lifecycle WHERE claim_id = _cpp)
+      = (_payload ->> 'holder_user_id')::uuid
+    AND (SELECT count(*) FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _cpp) = 1,
+    '8b.13 while claim_id, holder_user_id and created_at are preserved exactly');
+
+  PERFORM pg_temp.ok(
+    (SELECT status_source FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _cpp) = 'holder_declared',
+    '8b.14 and a correction is still the holder''s own statement');
+
+  -- 9. The trust level never moves, whatever the lifecycle says.
+  PERFORM pg_temp.ok(
+    (SELECT assertion_level FROM public.sp_claims WHERE id = _cpp) = 'self_declared',
+    '8b.15 and none of it has changed the claim''s assertion_level');
+
+  -- 10. The privileges and the policy themselves, read off the catalogue.
+  PERFORM pg_temp.ok(
+    NOT has_table_privilege('authenticated', 'public.sp_claim_certification_lifecycle', 'INSERT')
+    AND NOT has_table_privilege('authenticated', 'public.sp_claim_certification_lifecycle', 'UPDATE')
+    AND NOT has_table_privilege('authenticated', 'public.sp_claim_certification_lifecycle', 'DELETE'),
+    '8b.16 no application role holds INSERT, UPDATE or DELETE on the lifecycle table');
+
+  PERFORM pg_temp.ok(
+    has_table_privilege('authenticated', 'public.sp_claim_certification_lifecycle', 'SELECT'),
+    '8b.17 and the holder keeps SELECT, because it is their own record');
+
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM pg_policy
+      WHERE polrelid = 'public.sp_claim_certification_lifecycle'::regclass
+        AND polcmd <> 'r') = 0,
+    '8b.18 and every policy on it is SELECT-only');
+
+  PERFORM pg_temp.ok(
+    NOT has_function_privilege('anon',
+      'public.sp_certification_lifecycle_declare(uuid,date,date,text,text,date)', 'EXECUTE'),
+    '8b.19 anon cannot execute the write path');
+
+  PERFORM pg_temp.ok(
+    NOT has_table_privilege('anon', 'public.sp_claim_certification_lifecycle', 'SELECT'),
+    '8b.20 nor read the table');
+
+  PERFORM pg_temp.ok(
+    (SELECT prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = 'sp_certification_lifecycle_declare')
+    AND EXISTS (
+      SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname = 'sp_certification_lifecycle_declare'
+         AND p.proconfig IS NOT NULL
+         AND EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search\_path=%')),
+    '8b.21 and the write path is SECURITY DEFINER with a fixed search_path');
+
+  -- 11. A session with no JWT subject reaches none of it. `authenticated` is
+  --     the role PostgREST uses for a request whose token it accepted; a
+  --     request with no subject claim still arrives, and auth.uid() is NULL.
+  --     The function refuses before it reads anything.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  BEGIN
+    PERFORM public.sp_certification_lifecycle_declare(_cpp);
+    RESET ROLE;
+    PERFORM pg_temp.ok(false, '8b.22 a caller with no JWT subject was ACCEPTED');
+  EXCEPTION WHEN insufficient_privilege THEN
+    RESET ROLE;
+    PERFORM pg_temp.ok(true, '8b.22 and a caller with no JWT subject is refused outright');
+  END;
+  PERFORM set_config('request.jwt.claim.sub', _global::text, true);
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 9 -- an inactive definition: readable, not selectable';
@@ -680,7 +909,7 @@ BEGIN
         WHERE claim_id = '%s'$q$, _cpp));
   PERFORM pg_temp.ok(
     (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
-      WHERE claim_id = _cpp) = 'active',
+      WHERE claim_id = _cpp) = 'lapsed',
     '10.3 candidate B cannot revoke candidate A''s certification standing');
 
   _r := pg_temp.as_user(_other, format(
@@ -702,16 +931,18 @@ BEGIN
   PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
     '10.7 so even the owner cannot erase their own statement (got ' || _r || ')');
 
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _global::text, true);
-  UPDATE public.sp_claim_certification_lifecycle
-     SET holder_lifecycle_status = 'unknown', status_as_of = NULL
-   WHERE claim_id = _cpp;
-  RESET ROLE;
+  -- Through the write path, because a holder holds no UPDATE either.
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare('%s'::uuid)$q$, _cpp));
   PERFORM pg_temp.ok(
-    (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
-      WHERE claim_id = _cpp) = 'unknown',
+    _r = 'OK'
+    AND (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _cpp) = 'unknown',
     '10.8 they correct it back to `unknown` instead — the honest state');
+
+  PERFORM pg_temp.ok(
+    EXISTS (SELECT 1 FROM public.sp_claim_certification_lifecycle WHERE claim_id = _cpp),
+    '10.9 and the record itself is still there, which is the point of not deleting');
 
   -- Nor attach their own lifecycle row to somebody else's claim.
   _r := pg_temp.as_user(_other, format(
