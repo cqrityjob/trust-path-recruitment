@@ -734,13 +734,31 @@ AS $$
        AND current_date < g.expires_on);
 $$;
 
-REVOKE ALL ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) TO authenticated, service_role;
+-- INTERNAL, and not merely "revoked from anon".
+--
+-- It is SECURITY DEFINER over bcp_pilot_grants, which is FORCE RLS and has no
+-- policy admitting a reader. Granting EXECUTE to `authenticated` would
+-- therefore publish an ORACLE: PostgREST exposes every function that role may
+-- execute, so any signed-in person could ask
+-- `bcp_pilot_grant_active(<any employer>, <any version>)` and learn whether a
+-- competitor is in the pilot -- exactly the fact the table's RLS refuses to
+-- serve, answered by the function that bypasses it. Pilot participation is a
+-- commercial fact about an employer and is nobody else's to read.
+--
+-- Nothing loses access: a SECURITY DEFINER RPC calls this as its owner, not as
+-- its caller, so bcp_assign, bcp_assignable_method_versions and
+-- bcp_assignable_exposure_profiles are unaffected. Those read models remain
+-- the only way a client learns anything about assignability, and each answers
+-- only about an employer the caller is actually a member of.
+REVOKE ALL ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) TO service_role;
 
 COMMENT ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) IS
-  'The single entitlement decision for BESKT candidate preparation: a live, '
-  'in-window, unrevoked pilot grant for exactly this employer and this '
-  'method version. Absent one, nothing is assignable.';
+  'INTERNAL. The single entitlement decision for BESKT candidate preparation: '
+  'a live, in-window, unrevoked pilot grant for exactly this employer and this '
+  'method version. Absent one, nothing is assignable. Not executable by any '
+  'browser principal: it answers about an employer the caller need not belong '
+  'to, so exposing it would leak pilot participation.';
 
 
 -- 4.2  Is this method version safe to put in front of a candidate at all?
@@ -775,14 +793,24 @@ AS $$
               OR i.access_class = 'authorised_security_function'));
 $$;
 
-REVOKE ALL ON FUNCTION public.bcp_version_is_candidate_safe(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.bcp_version_is_candidate_safe(uuid) TO authenticated, service_role;
+-- INTERNAL, for the same reason and with the same non-cost.
+--
+-- It is SECURITY DEFINER over beskt_method_versions, beskt_exposure_profiles
+-- and beskt_items, whose read contract is PR #218's. Exposing it to
+-- `authenticated` would answer, for ANY version id, whether that version is
+-- published, recruitment-support and free of security-vetting content --
+-- a probe into governed content the caller has no read path to. The preserved
+-- PR 3B application calls twelve governed RPCs and neither helper, so no
+-- browser client requires it.
+REVOKE ALL ON FUNCTION public.bcp_version_is_candidate_safe(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.bcp_version_is_candidate_safe(uuid) TO service_role;
 
 COMMENT ON FUNCTION public.bcp_version_is_candidate_safe(uuid) IS
   'True only for a PUBLISHED, recruitment-support method version that holds '
   'no security-vetting profile and no security-vetting item at all. PR 1 '
   'section 3''s hard boundary, evaluated on the stored rows: '
-  'security-vetting content never becomes candidate-readable through PR 3.';
+  'security-vetting content never becomes candidate-readable through PR 3. '
+  'INTERNAL: not executable by any browser principal.';
 
 
 -- 4.3  Who is party to an assignment.
@@ -1299,7 +1327,73 @@ $$;
 REVOKE ALL ON FUNCTION public.bcp_notice_sections() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.bcp_notice_sections() TO authenticated, service_role;
 
-CREATE OR REPLACE FUNCTION public.bcp_notice_descriptor(_assignment_id uuid)
+-- 5.3a  The locales the notice exists in, and the GOVERNED DIGEST of the exact
+--       copy in each of them.
+--
+--       WHY THIS EXISTS. The descriptor below used to carry section
+--       IDENTIFIERS and governed metadata and nothing else, so the two
+--       language versions of the notice hashed identically and the
+--       acknowledgement bound to "the nine matters were covered" rather than
+--       to "these words were on the screen". Editing the Swedish body text
+--       changed nothing the server could see. That made the record's own
+--       claim -- that it names the exact notice the candidate read -- false.
+--
+--       The wording itself is NOT here: it lives in the application
+--       dictionary, and putting a second copy of it in the database would
+--       create two sources of truth for one sentence. What is here is the
+--       digest the wording MUST hash to, which is the part that has to be
+--       governed, immutable and versioned.
+--
+--       CANONICAL FORM, so the application half can reproduce it exactly.
+--       For each section in bcp_notice_sections() order, and for `title`
+--       then `body`:
+--
+--           "beskt.notice.<section>.<field>" || E'\n' || <text> || E'\n'
+--
+--       concatenated in that order, hashed as UTF-8 with SHA-256, lowercase
+--       hex. No value may contain a newline. PR 3B proves its rendered
+--       dictionary text hashes to exactly the value below; until it does,
+--       nothing renders this notice at all.
+--
+--       CHANGING THE COPY therefore requires changing this digest, in a
+--       migration, deliberately -- which changes every notice hash and makes
+--       a new acknowledgement necessary. That is the point: a silently
+--       reworded notice cannot inherit an old acknowledgement.
+CREATE OR REPLACE FUNCTION public.bcp_notice_locales()
+RETURNS text[]
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$ SELECT ARRAY['sv-SE', 'en-GB']::text[]; $$;
+
+REVOKE ALL ON FUNCTION public.bcp_notice_locales() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_notice_locales() TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.bcp_notice_copy_digest(_notice_version text, _locale text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN _notice_version = 'beskt-prep-notice-1' AND _locale = 'sv-SE'
+      THEN 'c86510f74ccd8632e434e00e2524a533358c08002f4e7eaa190a5baed914fa72'
+    WHEN _notice_version = 'beskt-prep-notice-1' AND _locale = 'en-GB'
+      THEN 'e1f879e48a3c7dbb18594017a0dc36b07544139a718dceaf155bab94d7a66b34'
+  END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bcp_notice_copy_digest(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_notice_copy_digest(text, text) TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.bcp_notice_copy_digest(text, text) IS
+  'The governed SHA-256 of the exact candidate-notice copy for one notice '
+  'version in one locale. NULL for any pair this migration does not govern, '
+  'which is what makes an ungoverned locale unacknowledgeable rather than '
+  'silently acceptable.';
+
+
+CREATE OR REPLACE FUNCTION public.bcp_notice_descriptor(_assignment_id uuid, _locale text)
 RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
@@ -1309,18 +1403,39 @@ AS $$
 DECLARE
   _a public.bcp_assignments%ROWTYPE;
   _p public.beskt_exposure_profiles%ROWTYPE;
+  _digest text;
 BEGIN
   IF NOT (public.bcp_is_assignment_candidate(_assignment_id)
           OR public.bcp_employer_can_read_assignment(_assignment_id)) THEN
     RAISE EXCEPTION 'BCP_NOT_AUTHORISED: you are not party to this preparation.'
       USING ERRCODE = 'insufficient_privilege';
   END IF;
+  IF _locale IS NULL OR NOT (_locale = ANY (public.bcp_notice_locales())) THEN
+    RAISE EXCEPTION 'BCP_NOTICE_LOCALE_UNSUPPORTED: the candidate notice exists in % only.',
+      array_to_string(public.bcp_notice_locales(), ', ')
+      USING ERRCODE = 'check_violation';
+  END IF;
   SELECT * INTO _a FROM public.bcp_assignments WHERE id = _assignment_id;
   SELECT * INTO _p FROM public.beskt_exposure_profiles WHERE id = _a.exposure_profile_id;
+
+  -- The governed digest of the copy this locale actually renders. A locale
+  -- this notice version does not govern has none, and is refused here rather
+  -- than hashed to something meaningless.
+  _digest := public.bcp_notice_copy_digest(_a.notice_version, _locale);
+  IF _digest IS NULL THEN
+    RAISE EXCEPTION 'BCP_NOTICE_COPY_UNGOVERNED: no governed notice copy exists for "%" in %.',
+      _a.notice_version, _locale
+      USING ERRCODE = 'check_violation';
+  END IF;
 
   RETURN jsonb_build_object(
     'notice_version', _a.notice_version,
     'sections', to_jsonb(public.bcp_notice_sections()),
+    -- Locale and the governed digest of the WORDS, not just the matters.
+    -- These are what make the Swedish and English hashes differ, and what
+    -- make a reworded notice a different notice.
+    'locale', _locale,
+    'notice_copy_digest', _digest,
     -- The governed references the candidate is entitled to. NOT consent:
     -- the lawful basis is the employer's and is stated on the profile.
     'retention_class', _p.retention_class,
@@ -1334,21 +1449,27 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.bcp_notice_descriptor(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.bcp_notice_descriptor(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_notice_descriptor(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_notice_descriptor(uuid, text) TO authenticated, service_role;
 
-CREATE OR REPLACE FUNCTION public.bcp_notice_hash(_assignment_id uuid)
+CREATE OR REPLACE FUNCTION public.bcp_notice_hash(_assignment_id uuid, _locale text)
 RETURNS text
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT public.beskt_request_hash(public.bcp_notice_descriptor(_assignment_id));
+  SELECT public.beskt_request_hash(public.bcp_notice_descriptor(_assignment_id, _locale));
 $$;
 
-REVOKE ALL ON FUNCTION public.bcp_notice_hash(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.bcp_notice_hash(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_notice_hash(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_notice_hash(uuid, text) TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.bcp_notice_hash(uuid, text) IS
+  'The SHA-256 the acknowledgement binds to: the governed matters, the '
+  'governed references, the locale AND the governed digest of the copy that '
+  'locale renders. Swedish and English therefore hash differently, and a '
+  'reworded notice cannot inherit an old acknowledgement.';
 
 
 -- 5.4  The canonical submitted answers, and their SHA-256.
@@ -1810,31 +1931,55 @@ BEGIN
     RAISE EXCEPTION 'BCP_NOT_AVAILABLE_YET: this preparation becomes available at %.', _a.available_from
       USING ERRCODE = 'check_violation';
   END IF;
+  -- SINGLE-SHOT, and refused rather than silently ignored.
+  --
+  -- An exact replay -- the SAME operation id and the same request -- already
+  -- returned its stored receipt above and never reaches here. What reaches
+  -- here with an assignment already acknowledged is a DIFFERENT operation,
+  -- and it must not be treated as a no-op: doing so wrote a second
+  -- `notice_acknowledged` event onto the ledger and returned a receipt
+  -- asserting lifecycle_state 'notice_acknowledged' even when the real state
+  -- had moved on to 'in_progress'. A receipt that states a lifecycle the
+  -- assignment is not in is a false record, and the ledger is the thing this
+  -- domain exists to keep honest.
+  IF _a.acknowledged_at IS NOT NULL THEN
+    RAISE EXCEPTION 'BCP_NOTICE_ALREADY_ACKNOWLEDGED: this preparation''s notice was acknowledged at %.', _a.acknowledged_at
+      USING ERRCODE = 'check_violation';
+  END IF;
+
   IF _notice_version IS DISTINCT FROM _a.notice_version THEN
     RAISE EXCEPTION 'BCP_NOTICE_VERSION_MISMATCH: this preparation carries notice "%".', _a.notice_version
       USING ERRCODE = 'check_violation';
   END IF;
 
-  -- The hash is the server's own, so a client cannot acknowledge a notice
-  -- it invented or an older set of disclosures.
-  _expected := public.bcp_notice_hash(_assignment_id);
+  -- The locale is an enumerated governed value, not free text: the row it
+  -- writes is the record of WHICH language the candidate was shown, and an
+  -- unrecognised one would make that record unreadable.
+  IF _locale IS NULL OR NOT (_locale = ANY (public.bcp_notice_locales())) THEN
+    RAISE EXCEPTION 'BCP_NOTICE_LOCALE_UNSUPPORTED: the candidate notice exists in % only.',
+      array_to_string(public.bcp_notice_locales(), ', ')
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  -- The hash is the server's own, computed for THIS locale, so a client can
+  -- neither acknowledge a notice it invented nor bind the Swedish screen's
+  -- acknowledgement to the English text.
+  _expected := public.bcp_notice_hash(_assignment_id, _locale);
   IF _notice_content_hash IS DISTINCT FROM _expected THEN
     RAISE EXCEPTION 'BCP_NOTICE_HASH_MISMATCH: the notice you acknowledged is not the notice this preparation carries. Reload and read it again.'
       USING ERRCODE = 'check_violation';
   END IF;
 
-  IF _a.acknowledged_at IS NULL THEN
-    INSERT INTO public.bcp_notice_acknowledgements
-      (assignment_id, candidate_user_id, notice_version, notice_content_hash, locale)
-    VALUES (_assignment_id, auth.uid(), _notice_version, _notice_content_hash, _locale);
+  INSERT INTO public.bcp_notice_acknowledgements
+    (assignment_id, candidate_user_id, notice_version, notice_content_hash, locale)
+  VALUES (_assignment_id, auth.uid(), _notice_version, _notice_content_hash, _locale);
 
-    UPDATE public.bcp_assignments
-       SET lifecycle_state = 'notice_acknowledged',
-           acknowledged_at = now(),
-           first_opened_at = coalesce(first_opened_at, now()),
-           revision = revision + 1
-     WHERE id = _assignment_id;
-  END IF;
+  UPDATE public.bcp_assignments
+     SET lifecycle_state = 'notice_acknowledged',
+         acknowledged_at = now(),
+         first_opened_at = coalesce(first_opened_at, now()),
+         revision = revision + 1
+   WHERE id = _assignment_id;
 
   -- The candidate's first draft opens here, once.
   SELECT r.id INTO _response_id FROM public.bcp_responses r
@@ -1845,9 +1990,12 @@ BEGIN
     VALUES (_assignment_id, 1) RETURNING id INTO _response_id;
   END IF;
 
+  -- Read back, never asserted. The previous form hardcoded
+  -- 'notice_acknowledged', which is how a second call could return a
+  -- lifecycle the row was not in.
   _result := jsonb_build_object('assignment_id', _assignment_id, 'response_id', _response_id,
     'notice_version', _notice_version, 'notice_content_hash', _expected, 'locale', _locale,
-    'lifecycle_state', 'notice_acknowledged',
+    'lifecycle_state', (SELECT lifecycle_state FROM public.bcp_assignments WHERE id = _assignment_id),
     'revision', (SELECT revision FROM public.bcp_assignments WHERE id = _assignment_id),
     'operation_id', _operation_id);
   PERFORM public.bcp_record_event(_assignment_id, _response_id, _a.employer_id, _a.method_version_id,
@@ -2457,11 +2605,19 @@ BEGIN
       'retention_class', _prof.retention_class,
       'lawful_basis_reference', _prof.lawful_basis_reference,
       'jurisdiction_reference', _prof.jurisdiction_reference),
+    -- PER LOCALE, because the hash is now per locale. The client renders one
+    -- language and echoes back the hash for THAT language; the server
+    -- recomputes it from its own governed digest and refuses a mismatch, so
+    -- nothing here is a client-selected authority.
     'notice', jsonb_build_object(
       'notice_version', _a.notice_version,
-      'notice_content_hash', public.bcp_notice_hash(_assignment_id),
       'acknowledged_at', _a.acknowledged_at,
-      'descriptor', public.bcp_notice_descriptor(_assignment_id)),
+      'locales', to_jsonb(public.bcp_notice_locales()),
+      'by_locale', (
+        SELECT jsonb_object_agg(loc, jsonb_build_object(
+                 'notice_content_hash', public.bcp_notice_hash(_assignment_id, loc),
+                 'descriptor', public.bcp_notice_descriptor(_assignment_id, loc)))
+          FROM unnest(public.bcp_notice_locales()) AS loc)),
     'response', CASE WHEN _r.id IS NULL THEN NULL ELSE jsonb_build_object(
       'response_id', _r.id, 'response_version', _r.response_version,
       'response_state', _r.response_state, 'revision', _r.revision,
@@ -2905,11 +3061,76 @@ BEGIN
       'public.bcp_answers_content_hash(uuid)',
       'public.bcp_routing_answers(uuid)',
       'public.bcp_visible_items(uuid,uuid)',
-      'public.bcp_party_can_read_method_version(uuid)'] LOOP
+      'public.bcp_party_can_read_method_version(uuid)',
+      -- Both of these answer about an employer or a version the caller need
+      -- not be party to, over tables whose RLS would refuse them. They are
+      -- SECURITY DEFINER, so a grant to `authenticated` is an oracle, not a
+      -- convenience.
+      'public.bcp_pilot_grant_active(uuid,uuid)',
+      'public.bcp_version_is_candidate_safe(uuid)'] LOOP
     IF has_function_privilege('authenticated', _fn::regprocedure, 'EXECUTE') THEN
       RAISE EXCEPTION 'BCP_PROOF: internal function % is executable by authenticated.', _fn;
     END IF;
+    IF has_function_privilege('anon', _fn::regprocedure, 'EXECUTE') THEN
+      RAISE EXCEPTION 'BCP_PROOF: internal function % is executable by anon.', _fn;
+    END IF;
+    IF has_function_privilege('public', _fn::regprocedure, 'EXECUTE') THEN
+      RAISE EXCEPTION 'BCP_PROOF: internal function % is executable by PUBLIC.', _fn;
+    END IF;
   END LOOP;
+
+  -- 9.7a The notice hash is bound to the locale and to the governed copy.
+  --
+  --      Asserted on the COMPUTED VALUES, not on the presence of a column:
+  --      the two locales must produce different hashes, and each must carry
+  --      the governed digest of its own copy.
+  IF public.bcp_notice_copy_digest('beskt-prep-notice-1', 'sv-SE') IS NULL
+     OR public.bcp_notice_copy_digest('beskt-prep-notice-1', 'en-GB') IS NULL THEN
+    RAISE EXCEPTION 'BCP_PROOF: the governed notice copy digest is missing for a supported locale.';
+  END IF;
+  IF public.bcp_notice_copy_digest('beskt-prep-notice-1', 'sv-SE')
+     = public.bcp_notice_copy_digest('beskt-prep-notice-1', 'en-GB') THEN
+    RAISE EXCEPTION 'BCP_PROOF: the Swedish and English notice copies share a governed digest, so the hash cannot tell them apart.';
+  END IF;
+  IF public.bcp_notice_copy_digest('beskt-prep-notice-1', 'de-DE') IS NOT NULL THEN
+    RAISE EXCEPTION 'BCP_PROOF: an ungoverned locale has a notice copy digest.';
+  END IF;
+  IF NOT (public.bcp_notice_copy_digest('beskt-prep-notice-1', 'sv-SE') ~ '^[0-9a-f]{64}$'
+          AND public.bcp_notice_copy_digest('beskt-prep-notice-1', 'en-GB') ~ '^[0-9a-f]{64}$') THEN
+    RAISE EXCEPTION 'BCP_PROOF: a governed notice copy digest is not a lowercase SHA-256.';
+  END IF;
+  IF array_length(public.bcp_notice_locales(), 1) IS DISTINCT FROM 2 THEN
+    RAISE EXCEPTION 'BCP_PROOF: the notice must declare exactly the two supported locales.';
+  END IF;
+  -- The descriptor and hash must TAKE the locale; a one-argument form would
+  -- silently reinstate the defect this replaced.
+  IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+              WHERE n.nspname = 'public' AND p.proname IN ('bcp_notice_hash', 'bcp_notice_descriptor')
+                AND p.pronargs = 1) THEN
+    RAISE EXCEPTION 'BCP_PROOF: a locale-blind notice descriptor or hash still exists.';
+  END IF;
+  IF (SELECT prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname = 'bcp_notice_descriptor')
+     NOT LIKE '%bcp_notice_copy_digest%' THEN
+    RAISE EXCEPTION 'BCP_PROOF: the notice descriptor does not carry the governed copy digest.';
+  END IF;
+
+  -- 9.7b The acknowledgement is single-shot across operation ids.
+  IF (SELECT prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname = 'bcp_acknowledge_notice')
+     NOT LIKE '%BCP_NOTICE_ALREADY_ACKNOWLEDGED%' THEN
+    RAISE EXCEPTION 'BCP_PROOF: the acknowledgement does not refuse an already acknowledged preparation.';
+  END IF;
+  IF (SELECT prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname = 'bcp_acknowledge_notice')
+     NOT LIKE '%BCP_NOTICE_LOCALE_UNSUPPORTED%' THEN
+    RAISE EXCEPTION 'BCP_PROOF: the acknowledgement does not validate the locale.';
+  END IF;
+  IF (SELECT prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname = 'bcp_acknowledge_notice')
+     LIKE '%''lifecycle_state'', ''notice_acknowledged''%' THEN
+    RAISE EXCEPTION 'BCP_PROOF: the acknowledgement receipt asserts a lifecycle instead of reading it back.';
+  END IF;
 
   -- 9.8  Append-only and immutability triggers exist and cover what they claim.
   IF NOT EXISTS (SELECT 1 FROM pg_trigger t WHERE t.tgname = 'bcp_events_append_only'

@@ -511,6 +511,155 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BCP-RELEASE",
   },
 
+  // ---- The three defects an independent review found ------------------------
+  //
+  // Each plants the ORIGINAL defect, not a paraphrase of it, so the guard is
+  // proved to catch the thing that was actually wrong.
+  {
+    id: "BCP-NC-PILOT-ORACLE-REOPENED",
+    defect:
+      "bcp_pilot_grant_active is granted back to authenticated, republishing the oracle that tells any signed-in person whether a competitor is in the pilot",
+    file: MIG,
+    find:
+      "REVOKE ALL ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) FROM PUBLIC, anon, authenticated;\n" +
+      "GRANT EXECUTE ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) TO service_role;",
+    replace:
+      "REVOKE ALL ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) FROM PUBLIC, anon;\n" +
+      "GRANT EXECUTE ON FUNCTION public.bcp_pilot_grant_active(uuid, uuid) TO authenticated, service_role;",
+    guard: GUARD,
+    expect: "BCP-INTERNAL",
+  },
+  {
+    id: "BCP-NC-CANDIDATE-SAFE-ORACLE-REOPENED",
+    defect:
+      "bcp_version_is_candidate_safe is granted back to authenticated, letting any signed-in person probe governed content they have no read path to",
+    file: MIG,
+    find:
+      "REVOKE ALL ON FUNCTION public.bcp_version_is_candidate_safe(uuid) FROM PUBLIC, anon, authenticated;\n" +
+      "GRANT EXECUTE ON FUNCTION public.bcp_version_is_candidate_safe(uuid) TO service_role;",
+    replace:
+      "REVOKE ALL ON FUNCTION public.bcp_version_is_candidate_safe(uuid) FROM PUBLIC, anon;\n" +
+      "GRANT EXECUTE ON FUNCTION public.bcp_version_is_candidate_safe(uuid) TO authenticated, service_role;",
+    guard: GUARD,
+    expect: "BCP-INTERNAL",
+  },
+  {
+    id: "BCP-NC-ACK-NOT-SINGLE-SHOT",
+    defect:
+      "the already-acknowledged refusal is removed, so a second operation id writes a second ledger event again",
+    file: MIG,
+    find:
+      "  IF _a.acknowledged_at IS NOT NULL THEN\n" +
+      "    RAISE EXCEPTION 'BCP_NOTICE_ALREADY_ACKNOWLEDGED: this preparation''s notice was acknowledged at %.', _a.acknowledged_at\n" +
+      "      USING ERRCODE = 'check_violation';\n" +
+      "  END IF;\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-ACK-CONDITION-UNREACHABLE",
+    defect:
+      "the already-acknowledged refusal keeps its message but its condition can never be true -- the exact shape of the dead assertions the earlier controls found",
+    file: MIG,
+    find: "  IF _a.acknowledged_at IS NOT NULL THEN\n    RAISE EXCEPTION 'BCP_NOTICE_ALREADY_ACKNOWLEDGED",
+    replace: "  IF false THEN\n    RAISE EXCEPTION 'BCP_NOTICE_ALREADY_ACKNOWLEDGED",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-ACK-RECEIPT-ASSERTS-LIFECYCLE",
+    defect:
+      "the receipt hardcodes lifecycle_state again, so it can claim a lifecycle the row is not in",
+    file: MIG,
+    find:
+      "    'lifecycle_state', (SELECT lifecycle_state FROM public.bcp_assignments WHERE id = _assignment_id),\n" +
+      "    'revision', (SELECT revision FROM public.bcp_assignments WHERE id = _assignment_id),\n" +
+      "    'operation_id', _operation_id);",
+    replace:
+      "    'lifecycle_state', 'notice_acknowledged',\n" +
+      "    'revision', (SELECT revision FROM public.bcp_assignments WHERE id = _assignment_id),\n" +
+      "    'operation_id', _operation_id);",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-ACK-LOCALE-UNVALIDATED",
+    defect: "the acknowledgement stops validating the locale, so any string can be recorded",
+    file: MIG,
+    find:
+      "  IF _locale IS NULL OR NOT (_locale = ANY (public.bcp_notice_locales())) THEN\n" +
+      "    RAISE EXCEPTION 'BCP_NOTICE_LOCALE_UNSUPPORTED: the candidate notice exists in % only.',\n" +
+      "      array_to_string(public.bcp_notice_locales(), ', ')\n" +
+      "      USING ERRCODE = 'check_violation';\n" +
+      "  END IF;\n\n  -- The hash is the server's own, computed for THIS locale",
+    replace: "  -- The hash is the server's own, computed for THIS locale",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-COPY-DIGESTS-IDENTICAL",
+    defect:
+      "both locales are given the same governed digest, so the Swedish and English notices hash alike and the acknowledgement stops naming which was read",
+    file: MIG,
+    find: "      THEN 'e1f879e48a3c7dbb18594017a0dc36b07544139a718dceaf155bab94d7a66b34'",
+    replace: "      THEN 'c86510f74ccd8632e434e00e2524a533358c08002f4e7eaa190a5baed914fa72'",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-DESCRIPTOR-DROPS-COPY",
+    defect:
+      "the descriptor stops carrying the governed copy digest, so the hash covers the matters but not the words -- the original defect",
+    file: MIG,
+    find: "    'notice_copy_digest', _digest,\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-DESCRIPTOR-DROPS-LOCALE",
+    defect: "the descriptor stops carrying the locale, so both languages hash identically again",
+    file: MIG,
+    find: "    'locale', _locale,\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-COPY-UNGOVERNED-ACCEPTED",
+    defect:
+      "an ungoverned locale stops being refused by the descriptor, so it would hash with a NULL digest",
+    file: MIG,
+    find:
+      "  IF _digest IS NULL THEN\n" +
+      "    RAISE EXCEPTION 'BCP_NOTICE_COPY_UNGOVERNED: no governed notice copy exists for \"%\" in %.',\n" +
+      "      _a.notice_version, _locale\n" +
+      "      USING ERRCODE = 'check_violation';\n" +
+      "  END IF;\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-HASH-LOCALE-BLIND",
+    defect: "the hash goes back to taking only an assignment id, losing the locale binding",
+    file: MIG,
+    find: "CREATE OR REPLACE FUNCTION public.bcp_notice_hash(_assignment_id uuid, _locale text)",
+    replace: "CREATE OR REPLACE FUNCTION public.bcp_notice_hash(_assignment_id uuid)",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-LOCALES-WIDENED",
+    defect: "an ungoverned locale is added to the supported list without a governed copy digest",
+    file: MIG,
+    find: "AS $$ SELECT ARRAY['sv-SE', 'en-GB']::text[]; $$;",
+    replace: "AS $$ SELECT ARRAY['sv-SE', 'en-GB', 'de-DE']::text[]; $$;",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+
   // ---- The generated database types ----------------------------------------
   {
     id: "BCP-NC-TYPES-STALE",

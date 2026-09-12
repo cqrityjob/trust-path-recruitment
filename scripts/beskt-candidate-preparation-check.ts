@@ -64,7 +64,15 @@ const CLIENT_MUTATIONS = [
   "bcp_cancel",
 ] as const;
 
-/** Helpers no client role may execute. */
+/** Helpers no client role may execute.
+ *
+ *  bcp_pilot_grant_active and bcp_version_is_candidate_safe are here because
+ *  they are SECURITY DEFINER over tables whose RLS refuses the caller, and
+ *  they answer about an employer or a version the caller need not be party
+ *  to. Granting either to `authenticated` publishes an ORACLE through
+ *  PostgREST -- "is this competitor in the pilot?" -- which is exactly the
+ *  fact the table policy withholds. Nothing loses access: a SECURITY DEFINER
+ *  RPC calls them as its owner. */
 const INTERNAL_FUNCTIONS = [
   "bcp_record_event",
   "bcp_operation_begin",
@@ -73,6 +81,8 @@ const INTERNAL_FUNCTIONS = [
   "bcp_routing_answers",
   "bcp_visible_items",
   "bcp_party_can_read_method_version",
+  "bcp_pilot_grant_active",
+  "bcp_version_is_candidate_safe",
 ] as const;
 
 /** The three PR #218 contracts PR 3 re-creates, and the rollback must restore. */
@@ -571,6 +581,83 @@ const pr2 = read(PR2_MIGRATION);
     !/\bconsent\b/i.test(stripComments(ackText)),
     "BCP-NOTICE: the acknowledgement path never calls itself consent",
   );
+  // SINGLE-SHOT. Asserted on the REACHABLE CONDITION, not on the message: a
+  // refusal whose condition is unreachable still contains its own string.
+  check(
+    /IF _a\.acknowledged_at IS NOT NULL THEN\s*RAISE EXCEPTION 'BCP_NOTICE_ALREADY_ACKNOWLEDGED/.test(
+      ack,
+    ),
+    "BCP-NOTICE: a second operation id on an acknowledged preparation is REFUSED, not silently ignored",
+  );
+  check(
+    !/IF _a\.acknowledged_at IS NULL THEN[\s\S]{0,400}INSERT INTO public\.bcp_notice_acknowledgements/.test(
+      ack,
+    ),
+    "BCP-NOTICE: and the acknowledgement write is no longer wrapped in a silent no-op branch",
+  );
+  check(
+    !/'lifecycle_state', 'notice_acknowledged'/.test(ack) &&
+      /'lifecycle_state', \(SELECT lifecycle_state FROM public\.bcp_assignments/.test(ack),
+    "BCP-NOTICE: the receipt READS the lifecycle back instead of asserting one the row may not be in",
+  );
+  // The locale is an enumerated governed value, in the RPC and in the
+  // descriptor, so an unrecognised language cannot be recorded.
+  check(
+    /IF _locale IS NULL OR NOT \(_locale = ANY \(public\.bcp_notice_locales\(\)\)\) THEN\s*RAISE EXCEPTION 'BCP_NOTICE_LOCALE_UNSUPPORTED/.test(
+      ack,
+    ),
+    "BCP-NOTICE: the acknowledgement validates the locale against the governed list",
+  );
+  check(
+    /IF _locale IS NULL OR NOT \(_locale = ANY \(public\.bcp_notice_locales\(\)\)\) THEN\s*RAISE EXCEPTION 'BCP_NOTICE_LOCALE_UNSUPPORTED/.test(
+      functionBody(functionText(sql, "bcp_notice_descriptor") ?? ""),
+    ),
+    "BCP-NOTICE: and so does the descriptor it is built from",
+  );
+
+  // THE COPY, not just the matters. The descriptor used to carry section
+  // identifiers and governed metadata only, so both languages hashed
+  // identically and "the exact notice bytes" was not a true claim.
+  const locales = functionBody(functionText(sql, "bcp_notice_locales") ?? "");
+  check(
+    /ARRAY\['sv-SE', 'en-GB'\]/.test(locales),
+    "BCP-NOTICE: the governed locales are exactly sv-SE and en-GB",
+  );
+  const digest = functionBody(functionText(sql, "bcp_notice_copy_digest") ?? "");
+  const digests = Array.from(digest.matchAll(/'([0-9a-f]{64})'/g), (m) => m[1]);
+  check(
+    digests.length === 2 && digests[0] !== digests[1],
+    "BCP-NOTICE: each governed locale has its OWN SHA-256 copy digest, so the two languages cannot hash alike",
+  );
+  check(
+    /WHEN _notice_version = 'beskt-prep-notice-1' AND _locale = 'sv-SE'/.test(digest) &&
+      /WHEN _notice_version = 'beskt-prep-notice-1' AND _locale = 'en-GB'/.test(digest),
+    "BCP-NOTICE: the digest is keyed by notice VERSION and locale, so a reworded notice needs a new version",
+  );
+  const descriptor = functionBody(functionText(sql, "bcp_notice_descriptor") ?? "");
+  check(
+    /'locale', _locale/.test(descriptor) && /'notice_copy_digest', _digest/.test(descriptor),
+    "BCP-NOTICE: the server-built descriptor carries the locale AND the governed copy digest",
+  );
+  check(
+    /_digest := public\.bcp_notice_copy_digest\(_a\.notice_version, _locale\);/.test(descriptor) &&
+      /IF _digest IS NULL THEN\s*RAISE EXCEPTION 'BCP_NOTICE_COPY_UNGOVERNED/.test(descriptor),
+    "BCP-NOTICE: the digest is the SERVER'S, taken from the governed table, and an ungoverned locale is refused rather than hashed",
+  );
+  check(
+    /CREATE OR REPLACE FUNCTION public\.bcp_notice_hash\(_assignment_id uuid, _locale text\)/.test(
+      sql,
+    ) &&
+      /CREATE OR REPLACE FUNCTION public\.bcp_notice_descriptor\(_assignment_id uuid, _locale text\)/.test(
+        sql,
+      ),
+    "BCP-NOTICE: the descriptor and the hash both TAKE the locale; a locale-blind form cannot come back",
+  );
+  check(
+    /public\.bcp_notice_hash\(_assignment_id, _locale\)/.test(ack),
+    "BCP-NOTICE: and the acknowledgement compares against the hash for the locale it was shown in",
+  );
+
   check(
     /CONSTRAINT bcp_assignments_notice_first_check/.test(bare) &&
       /IF _a\.acknowledged_at IS NULL THEN\s*RAISE EXCEPTION 'BCP_NOTICE_NOT_ACKNOWLEDGED/.test(

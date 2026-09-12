@@ -15062,11 +15062,22 @@ export type Database = {
         Args: { _assignment_id: string; _operation_id: string }
         Returns: Json
       }
+      bcp_notice_copy_digest: {
+        Args: { _locale: string; _notice_version: string }
+        Returns: string
+      }
       bcp_notice_descriptor: {
-        Args: { _assignment_id: string }
+        Args: { _assignment_id: string; _locale: string }
         Returns: Json
       }
-      bcp_notice_hash: { Args: { _assignment_id: string }; Returns: string }
+      bcp_notice_hash: {
+        Args: { _assignment_id: string; _locale: string }
+        Returns: string
+      }
+      bcp_notice_locales: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       bcp_notice_sections: {
         Args: Record<PropertyKey, never>
         Returns: string[]

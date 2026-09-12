@@ -3103,8 +3103,8 @@ if [ "$BCP_RC" -ne 0 ]; then
   BCP_FAILED=1
 else
   echo "    ok  ${BCP_PASSED} BESKT candidate-preparation assertions passed"
-  if [ "$BCP_PASSED" -lt 195 ]; then
-    echo "FAIL: expected at least 195 BESKT candidate-preparation assertions, only ${BCP_PASSED} ran." >&2
+  if [ "$BCP_PASSED" -lt 230 ]; then
+    echo "FAIL: expected at least 230 BESKT candidate-preparation assertions, only ${BCP_PASSED} ran." >&2
     BCP_FAILED=1
   fi
 fi

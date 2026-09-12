@@ -69,7 +69,51 @@ At submission, any stored answer the final routing no longer shows is **removed 
 
 PR 3 owns the notice's **identity** — its version and the exact ordered set of nine matters it must cover (PR 1 section 6: purpose, use, human decision, not-a-test, omission, oral discussion, review and correction, recipients, retention) — plus the governed references the candidate is entitled to see, taken from the exposure profile. The bilingual **wording** lives in the application dictionary, and the guard fails a build where a key is missing from either language.
 
-The acknowledgement binds to the SHA-256 of the server-built descriptor, so a client cannot record acknowledgement of a notice it invented, and a later change to what must be disclosed changes the hash.
+The acknowledgement binds to the SHA-256 of the server-built descriptor, so a
+client cannot record acknowledgement of a notice it invented, and a later
+change to what must be disclosed changes the hash.
+
+**The hash covers the WORDS, not only the matters — and this was not true in
+the first revision.** The descriptor originally carried section identifiers and
+governed metadata and nothing else, so the Swedish and English notices hashed
+identically and editing a body string changed nothing the server could see. The
+record's own claim, that it names the exact notice the candidate read, was
+therefore false. It now carries the **locale** and a **governed copy digest**:
+
+| Function                                    | What it governs                                                                                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bcp_notice_locales()`                      | exactly `sv-SE` and `en-GB`                                                                                                                       |
+| `bcp_notice_copy_digest(version, locale)`   | the SHA-256 the copy for that pair MUST hash to; `NULL` for any ungoverned pair, so an ungoverned locale is refused rather than hashed to nothing |
+| `bcp_notice_descriptor(assignment, locale)` | carries both, so the two languages hash differently                                                                                               |
+| `bcp_notice_hash(assignment, locale)`       | what the acknowledgement compares against                                                                                                         |
+
+The wording itself stays in the application dictionary — a second copy of it in
+the database would be a second source of truth for one sentence. What lives in
+the database is the digest it must hash to. The canonical form, so PR 3B can
+reproduce it exactly: for each section in `bcp_notice_sections()` order and for
+`title` then `body`,
+
+```
+"beskt.notice.<section>.<field>" || E'\n' || <text> || E'\n'
+```
+
+concatenated in that order, hashed as UTF-8 with SHA-256, lowercase hex, no
+value containing a newline. **PR 3B must prove its rendered dictionary text
+hashes to the governed value**; until it does, nothing renders this notice.
+
+Changing the copy therefore requires changing the governed digest, in a
+migration, deliberately — which changes every notice hash and makes a new
+acknowledgement necessary. A silently reworded notice cannot inherit an old
+acknowledgement.
+
+**The acknowledgement is single-shot.** An exact replay — the same operation id
+and the same request — returns its stored receipt, as every governed mutation
+here does. A _different_ operation id on an already-acknowledged preparation is
+refused with `BCP_NOTICE_ALREADY_ACKNOWLEDGED`. It used to be silently ignored,
+which wrote a second `notice_acknowledged` event onto the append-only ledger and
+returned a receipt asserting lifecycle `notice_acknowledged` even when the row
+had moved on to `in_progress`. The receipt now reads the lifecycle back rather
+than asserting it, and the locale is validated against the governed list.
 
 **It is an information receipt, not consent**, and the copy says so to the candidate in both languages. The lawful basis for the preparation is the employer's and is recorded on the governed exposure profile; nothing here creates, evidences or substitutes for it. `acknowledgement_kind` admits one value, so no later code can read the row as a lawful basis it never was.
 
@@ -82,6 +126,23 @@ Every table: ENABLE **and** FORCE row level security, revoked to zero for PUBLIC
 - **Candidate:** their own assignment, their own response at every state, their own answers. Nobody else's, through the read models or through the tables.
 - **Employer:** an active member of the employer that owns **both** the assignment and the linked application and job, for a candidate who is that application's own applicant. Status always; the candidate's answers **only once submitted** — `answers` is absent, not empty and not partial, until then, in the read model and in the row policy alike.
 - **Anonymous and roleless users:** nothing, anywhere.
+
+**A `SECURITY DEFINER` function that `authenticated` may execute is an API, not
+a helper.** PostgREST exposes every function that role can call, so
+`bcp_pilot_grant_active(employer, version)` and
+`bcp_version_is_candidate_safe(version)` — both definer-rights over tables whose
+RLS refuses the caller — were answerable by any signed-in person about **any**
+employer or version. That is an oracle: "is this competitor in the pilot?" is
+exactly the fact `bcp_pilot_grants`' policy withholds, and pilot participation
+is a commercial fact about an employer that is nobody else's to read. Both are
+now revoked from `PUBLIC`, `anon` and `authenticated` and granted only to
+`service_role`, alongside the other internal helpers.
+
+Nothing lost access. A `SECURITY DEFINER` RPC calls them as its owner, not as
+its caller, so `bcp_assign`, `bcp_assignable_method_versions` and
+`bcp_assignable_exposure_profiles` are unchanged — and each of those answers
+only about an employer the caller is actually a member of. The postflight,
+the suite, the guard and the planted controls all hold the line.
 
 Every mutation derives its actor from `auth.uid()`, authorises itself inside the function, pins `search_path`, is revoked from PUBLIC and `anon`, takes an operation id, hashes its exact request (reusing PR #218's `beskt_request_hash`), answers a replay **before** the compare-and-swap, refuses the same operation id with a different request or actor, refuses a stale expected revision **without writing**, and writes its append-only event in the same transaction.
 

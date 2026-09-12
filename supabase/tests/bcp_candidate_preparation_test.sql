@@ -40,7 +40,10 @@ CREATE TEMP TABLE bcpk (
   sv_v uuid, sv_prof uuid,
   draft_v uuid, susp_v uuid, ret_v uuid, susp_prof uuid,
   job_a2 uuid, app_a2 uuid,
-  assignment uuid, response uuid, scratch text, n bigint
+  assignment uuid, response uuid, scratch text, n bigint,
+  -- C3's acknowledgement operation and the hash it bound, so C12 can prove
+  -- the replay contract survived making acknowledgement single-shot.
+  ack_op uuid, ack_hash text
 ) ON COMMIT DROP;
 INSERT INTO bcpk DEFAULT VALUES;
 GRANT ALL ON bcpk TO authenticated;
@@ -468,7 +471,7 @@ BEGIN
     'BCP_NOTICE_NOT_ACKNOWLEDGED', 'C3.2 and nothing can be submitted before it either');
 
   -- The descriptor the candidate is shown, and the hash that binds it.
-  _d := pg_temp.rpc(_k.cand_a, format('SELECT public.bcp_notice_descriptor(%L)', _k.assignment));
+  _d := pg_temp.rpc(_k.cand_a, format('SELECT public.bcp_notice_descriptor(%L, %L)', _k.assignment, 'sv-SE'));
   PERFORM pg_temp.ok(
     (SELECT count(*) FROM jsonb_array_elements_text(_d -> 'sections')) = 9,
     'C3.3 the notice covers exactly the nine required matters');
@@ -487,7 +490,7 @@ BEGIN
   PERFORM pg_temp.ok(_d ->> 'lawful_basis_reference' IS NOT NULL,
     'C3.7 and so does the lawful-basis reference');
 
-  _h := pg_temp.rpc(_k.cand_a, format('SELECT to_jsonb(public.bcp_notice_hash(%L))', _k.assignment)) #>> '{}';
+  _h := pg_temp.rpc(_k.cand_a, format('SELECT to_jsonb(public.bcp_notice_hash(%L, %L))', _k.assignment, 'sv-SE')) #>> '{}';
 
   PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
     format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)', gen_random_uuid(), _k.assignment,
@@ -508,7 +511,7 @@ BEGIN
 
   _r := pg_temp.rpc(_k.cand_a, format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
           _op, _k.assignment, 'beskt-prep-notice-1', _h, 'sv-SE'));
-  UPDATE bcpk SET response = (_r ->> 'response_id')::uuid;
+  UPDATE bcpk SET response = (_r ->> 'response_id')::uuid, ack_op = _op, ack_hash = _h;
 
   PERFORM pg_temp.ok((SELECT lifecycle_state FROM public.bcp_assignments WHERE id = _k.assignment) = 'notice_acknowledged',
     'C3.12 acknowledging moves the preparation to notice_acknowledged');
@@ -521,6 +524,9 @@ BEGIN
   PERFORM pg_temp.ok((SELECT notice_content_hash FROM public.bcp_notice_acknowledgements
                        WHERE assignment_id = _k.assignment) = _h,
     'C3.15 bound to the exact notice bytes the candidate was shown');
+  PERFORM pg_temp.ok((SELECT locale FROM public.bcp_notice_acknowledgements
+                       WHERE assignment_id = _k.assignment) = 'sv-SE',
+    'C3.15a and to the language it was shown in');
   PERFORM pg_temp.ok((SELECT count(*) FROM public.bcp_responses WHERE assignment_id = _k.assignment) = 1,
     'C3.16 and the candidate''s first draft is opened in the same transaction');
 
@@ -847,8 +853,9 @@ BEGIN
   UPDATE bcpk SET scratch = _b::text;
 
   -- Candidate B acknowledges and answers, but does NOT submit.
-  PERFORM pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, public.bcp_notice_hash(%L), %L)',
-    gen_random_uuid(), _b, 'beskt-prep-notice-1', _b, 'en-GB'));
+  -- In ENGLISH, so the suite exercises both governed locales end to end.
+  PERFORM pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, public.bcp_notice_hash(%L, %L), %L)',
+    gen_random_uuid(), _b, 'beskt-prep-notice-1', _b, 'en-GB', 'en-GB'));
   PERFORM pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_save_answers(%L, %L, %s, %L)',
     gen_random_uuid(), _b, pg_temp.draft_revision(_b),
     '[{"item_key":"reported_incident","response_state":"answered","value_boolean":false}]'));
@@ -1291,6 +1298,223 @@ BEGIN
     'C11.3 an assignment pins a governed method version by foreign key, which is why PR 2 cannot unwind first');
 END
 $c11$;
+
+
+-- ---------------------------------------------------------------------------
+-- C12 -- The three defects an independent review found, each proved closed
+--        by the behaviour that replaced it rather than by its absence.
+-- ---------------------------------------------------------------------------
+DO $c12$
+DECLARE
+  _k bcpk%ROWTYPE;
+  _fresh uuid; _r jsonb; _op uuid := gen_random_uuid();
+  _h_sv text; _h_en text;
+  _ack_before bigint; _events_before bigint; _rev_before integer; _state_before text;
+BEGIN
+  SELECT * INTO _k FROM bcpk;
+
+  -- ---- 1 · the SECURITY DEFINER oracle is closed -------------------------
+  --
+  -- Both helpers bypass the RLS on the tables they read, so a grant to
+  -- `authenticated` would publish, through PostgREST, the very fact the
+  -- policy refuses: whether SOME OTHER employer is in the pilot.
+  PERFORM pg_temp.ok(
+    NOT has_function_privilege('authenticated', 'public.bcp_pilot_grant_active(uuid,uuid)', 'EXECUTE'),
+    'C12.1 ORACLE: a signed-in principal cannot execute bcp_pilot_grant_active');
+  PERFORM pg_temp.ok(
+    NOT has_function_privilege('authenticated', 'public.bcp_version_is_candidate_safe(uuid)', 'EXECUTE'),
+    'C12.2 nor bcp_version_is_candidate_safe');
+  PERFORM pg_temp.ok(
+    NOT has_function_privilege('anon', 'public.bcp_pilot_grant_active(uuid,uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'public.bcp_version_is_candidate_safe(uuid)', 'EXECUTE'),
+    'C12.3 and neither can an anonymous caller');
+  PERFORM pg_temp.ok(
+    NOT has_function_privilege('public', 'public.bcp_pilot_grant_active(uuid,uuid)', 'EXECUTE')
+    AND NOT has_function_privilege('public', 'public.bcp_version_is_candidate_safe(uuid)', 'EXECUTE'),
+    'C12.4 nor PUBLIC, so no future role inherits the oracle');
+
+  -- The refusal is real, not a privilege listing: every principal the brief
+  -- names is refused when it actually calls.
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_a,
+    format('SELECT public.bcp_pilot_grant_active(%L, %L)', _k.emp_a, _k.v),
+    'permission denied', 'C12.5 the CANDIDATE calling it is refused by the database');
+  PERFORM pg_temp.must_fail_as('authenticated', _k.rec_b,
+    format('SELECT public.bcp_pilot_grant_active(%L, %L)', _k.emp_a, _k.v),
+    'permission denied', 'C12.6 a member of ANOTHER employer cannot learn employer A''s pilot participation');
+  PERFORM pg_temp.must_fail_as('authenticated', _k.outsider,
+    format('SELECT public.bcp_pilot_grant_active(%L, %L)', _k.emp_a, _k.v),
+    'permission denied', 'C12.7 nor can a roleless signed-in user');
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_a,
+    format('SELECT public.bcp_version_is_candidate_safe(%L)', _k.v),
+    'permission denied', 'C12.8 and the candidate cannot probe governed content through the safety predicate');
+
+  -- Closing it costs nothing: the governed path still works for the people
+  -- it is meant to work for.
+  PERFORM pg_temp.ok(
+    jsonb_array_length(pg_temp.rpc(_k.rec_a,
+      format('SELECT public.bcp_assignable_method_versions(%L)', _k.emp_a))) >= 1,
+    'C12.9 the employer still sees what is assignable, through the governed read model');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.bcp_assignments WHERE id = _k.assignment) = 1,
+    'C12.10 and the assignment created through bcp_assign is unaffected');
+
+  -- ---- a fresh preparation, for the scenarios that need an unacknowledged one
+  --
+  -- C9 revoked employer A's grant to prove revocation bites, so this mints a
+  -- new one first -- through the governed RPC, as the platform administrator,
+  -- exactly as an owner would.
+  PERFORM pg_temp.rpc(_k.admin_u, format('SELECT public.bcp_grant_pilot(%L, %L, %L, %L, %L)',
+    gen_random_uuid(), _k.emp_a, _k.v, 'owner decision: synthetic pilot for the review scenarios',
+    (current_date + 30)));
+  _r := pg_temp.rpc(_k.rec_a, format('SELECT public.bcp_assign(%L, %L, %L, %L, %L, %L)',
+          gen_random_uuid(), _k.app_a2, _k.v, _k.prof, _k.hash, 'beskt-prep-notice-1'));
+  _fresh := (_r ->> 'assignment_id')::uuid;
+  PERFORM pg_temp.ok(
+    (SELECT lifecycle_state FROM public.bcp_assignments WHERE id = _fresh) = 'assigned',
+    'C12.11 a fresh preparation starts unacknowledged');
+
+  -- ---- 3 · the hash binds the LOCALIZED copy, not just the matters -------
+  _h_sv := pg_temp.rpc(_k.cand_b,
+    format('SELECT to_jsonb(public.bcp_notice_hash(%L, %L))', _fresh, 'sv-SE')) #>> '{}';
+  _h_en := pg_temp.rpc(_k.cand_b,
+    format('SELECT to_jsonb(public.bcp_notice_hash(%L, %L))', _fresh, 'en-GB')) #>> '{}';
+  PERFORM pg_temp.ok(_h_sv IS NOT NULL AND _h_en IS NOT NULL AND _h_sv <> _h_en,
+    'C12.12 COPY BINDING: the Swedish and English notices hash differently');
+  PERFORM pg_temp.ok(
+    pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_notice_descriptor(%L, %L)', _fresh, 'sv-SE'))
+      ->> 'notice_copy_digest'
+      = public.bcp_notice_copy_digest('beskt-prep-notice-1', 'sv-SE'),
+    'C12.13 the descriptor carries the GOVERNED digest of the copy for that locale');
+  PERFORM pg_temp.ok(
+    pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_notice_descriptor(%L, %L)', _fresh, 'en-GB'))
+      ->> 'notice_copy_digest'
+      = public.bcp_notice_copy_digest('beskt-prep-notice-1', 'en-GB'),
+    'C12.14 and a different governed digest for the other locale');
+  PERFORM pg_temp.ok(
+    pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_notice_descriptor(%L, %L)', _fresh, 'sv-SE'))
+      ->> 'locale' = 'sv-SE',
+    'C12.15 and names the locale it was built for');
+  PERFORM pg_temp.ok(
+    public.bcp_notice_copy_digest('beskt-prep-notice-1', 'de-DE') IS NULL
+    AND public.bcp_notice_copy_digest('beskt-prep-notice-0', 'sv-SE') IS NULL,
+    'C12.16 no governed digest exists for an ungoverned locale or notice version');
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
+    format('SELECT public.bcp_notice_descriptor(%L, %L)', _fresh, 'de-DE'),
+    'BCP_NOTICE_LOCALE_UNSUPPORTED', 'C12.17 an ungoverned locale has no descriptor to acknowledge');
+
+  -- The hash for ONE locale cannot acknowledge the OTHER. This is the whole
+  -- point of binding the copy, asserted on the real refusal.
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
+    format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+           gen_random_uuid(), _fresh, 'beskt-prep-notice-1', _h_en, 'sv-SE'),
+    'BCP_NOTICE_HASH_MISMATCH',
+    'C12.18 the English hash cannot acknowledge the Swedish screen');
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
+    format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+           gen_random_uuid(), _fresh, 'beskt-prep-notice-1', _h_sv, 'en-GB'),
+    'BCP_NOTICE_HASH_MISMATCH', 'C12.19 nor the Swedish hash the English one');
+
+  -- ---- locale validation, on a preparation that is not yet acknowledged --
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
+    format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+           gen_random_uuid(), _fresh, 'beskt-prep-notice-1', _h_sv, 'de-DE'),
+    'BCP_NOTICE_LOCALE_UNSUPPORTED',
+    'C12.20 LOCALE: an ungoverned language is refused');
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
+    format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+           gen_random_uuid(), _fresh, 'beskt-prep-notice-1', _h_sv, NULL),
+    'BCP_NOTICE_LOCALE_UNSUPPORTED', 'C12.21 and so is none at all');
+  PERFORM pg_temp.ok(
+    (SELECT lifecycle_state FROM public.bcp_assignments WHERE id = _fresh) = 'assigned'
+    AND (SELECT count(*) FROM public.bcp_notice_acknowledgements WHERE assignment_id = _fresh) = 0,
+    'C12.22 and none of those refusals acknowledged anything');
+
+  -- ---- 2 · acknowledgement is single-shot across operation ids -----------
+  --
+  -- Exactly the scenario the review named: acknowledge with operation A, save
+  -- an answer so the lifecycle moves on, then call again with operation B.
+  -- The old form silently no-opped, wrote a SECOND notice_acknowledged event
+  -- and returned a receipt claiming lifecycle 'notice_acknowledged' while the
+  -- row said 'in_progress'. A receipt that states a lifecycle the assignment
+  -- is not in is a false record.
+  _r := pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+          _op, _fresh, 'beskt-prep-notice-1', _h_en, 'en-GB'));
+  PERFORM pg_temp.ok(_r ->> 'locale' = 'en-GB'
+                 AND _r ->> 'lifecycle_state' = 'notice_acknowledged',
+    'C12.23 the English hash DOES acknowledge the English screen');
+  PERFORM pg_temp.ok(
+    (SELECT notice_content_hash FROM public.bcp_notice_acknowledgements WHERE assignment_id = _fresh) = _h_en
+    AND (SELECT locale FROM public.bcp_notice_acknowledgements WHERE assignment_id = _fresh) = 'en-GB',
+    'C12.24 and the row records the exact localized notice that was read');
+
+  PERFORM pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_save_answers(%L, %L, %s, %L)',
+    gen_random_uuid(), _fresh, pg_temp.draft_revision(_fresh),
+    '[{"item_key":"reported_incident","response_state":"answered","value_boolean":false}]'));
+
+  _state_before   := (SELECT lifecycle_state FROM public.bcp_assignments WHERE id = _fresh);
+  _rev_before     := (SELECT revision FROM public.bcp_assignments WHERE id = _fresh);
+  _ack_before     := (SELECT count(*) FROM public.bcp_notice_acknowledgements WHERE assignment_id = _fresh);
+  _events_before  := (SELECT count(*) FROM public.bcp_events
+                       WHERE assignment_id = _fresh AND event = 'notice_acknowledged');
+  PERFORM pg_temp.ok(_state_before = 'in_progress' AND _ack_before = 1 AND _events_before = 1,
+    'C12.25 precondition: acknowledged once, and answering has moved it on to in_progress');
+
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
+    format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+           gen_random_uuid(), _fresh, 'beskt-prep-notice-1', _h_en, 'en-GB'),
+    'BCP_NOTICE_ALREADY_ACKNOWLEDGED',
+    'C12.26 SINGLE-SHOT: a NEW operation id on an acknowledged preparation is refused');
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
+    format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+           gen_random_uuid(), _fresh, 'beskt-prep-notice-1', _h_sv, 'sv-SE'),
+    'BCP_NOTICE_ALREADY_ACKNOWLEDGED',
+    'C12.27 including one claiming the other language');
+  PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
+    format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+           gen_random_uuid(), _fresh, 'beskt-prep-notice-1', _h_en, 'de-DE'),
+    'BCP_NOTICE_ALREADY_ACKNOWLEDGED',
+    'C12.28 and one claiming an invalid language -- the already-acknowledged refusal comes first');
+
+  PERFORM pg_temp.ok(
+    (SELECT lifecycle_state FROM public.bcp_assignments WHERE id = _fresh) = _state_before
+    AND (SELECT revision FROM public.bcp_assignments WHERE id = _fresh) = _rev_before,
+    'C12.29 the refusals changed neither the lifecycle nor the revision');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.bcp_notice_acknowledgements WHERE assignment_id = _fresh) = _ack_before,
+    'C12.30 no second acknowledgement row was written');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.bcp_events
+      WHERE assignment_id = _fresh AND event = 'notice_acknowledged') = _events_before,
+    'C12.31 and no second notice_acknowledged event reached the ledger');
+
+  -- The replay contract is untouched: the ORIGINAL operation id still answers
+  -- with its original receipt, even now that a new one is refused.
+  PERFORM pg_temp.ok(
+    pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+      _op, _fresh, 'beskt-prep-notice-1', _h_en, 'en-GB')) = _r,
+    'C12.32 REPLAY: the original operation id still returns its original receipt, byte for byte');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.bcp_events
+      WHERE assignment_id = _fresh AND event = 'notice_acknowledged') = _events_before
+    AND (SELECT count(*) FROM public.bcp_notice_acknowledgements WHERE assignment_id = _fresh) = _ack_before,
+    'C12.33 and the replay wrote nothing either');
+
+  -- The same contract still holds for the preparation C3 acknowledged, whose
+  -- receipt was recorded long before any of this.
+  PERFORM pg_temp.ok(
+    (pg_temp.rpc(_k.cand_a, format('SELECT public.bcp_acknowledge_notice(%L, %L, %L, %L, %L)',
+       _k.ack_op, _k.assignment, 'beskt-prep-notice-1', _k.ack_hash, 'sv-SE')) ->> 'operation_id')::uuid
+      = _k.ack_op,
+    'C12.34 and C3''s original operation id replays correctly too');
+
+  -- The receipt is read back, not asserted: this is what made the old second
+  -- call able to claim a lifecycle the row was not in.
+  PERFORM pg_temp.ok(
+    (_r ->> 'lifecycle_state') = 'notice_acknowledged'
+    AND (SELECT lifecycle_state FROM public.bcp_assignments WHERE id = _fresh) = 'in_progress',
+    'C12.35 the receipt recorded the lifecycle AT THE TIME, and the row has since moved on');
+END
+$c12$;
 
 \echo '    BESKT candidate-preparation assertions passed'
 ROLLBACK;
