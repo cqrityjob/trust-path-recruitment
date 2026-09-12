@@ -15,6 +15,11 @@
 //                       kept as its own submarket, chosen separately)
 //   Dubai, UAE          Internal pilot · under review
 //
+// "Internal pilot" is printed only when the database's pilot_state says
+// exactly that. A pack that is neither public nor in internal pilot — closed,
+// an unknown state, a database without the column — reads "Not available",
+// because "under review" is a governed claim and the column is its evidence.
+//
 // They describe nothing about the holder. A card that reads "Available"
 // does not mean this person holds anything there; a card that reads "under
 // review" does not mean this person is under review. The one holder-specific
@@ -42,7 +47,7 @@ export interface MarketOverviewRow {
   readonly marketPackCode: string;
   readonly jurisdictionCode: string;
   readonly subJurisdictionCode: string | null;
-  readonly availability: "available" | "under_review";
+  readonly availability: "available" | "internal_pilot" | "closed";
   readonly holderAccess: "production" | "pilot" | "closed";
   readonly isCurrentWorkMarket: boolean;
 }
@@ -64,7 +69,11 @@ const PRIMARY_MARKETS = ["SE", "GB", "AE-DU"] as const;
 function StatusChip({ availability }: { availability: MarketOverviewRow["availability"] }) {
   const { pt } = usePassportCopy();
   const key: PassportCopyKey =
-    availability === "available" ? "markets.status.available" : "markets.status.pilot";
+    availability === "available"
+      ? "markets.status.available"
+      : availability === "internal_pilot"
+        ? "markets.status.pilot"
+        : "markets.status.closed";
   return (
     <span
       data-market-availability={availability}
@@ -124,12 +133,12 @@ function MarketCard({
         {row.isCurrentWorkMarket ? (
           <span className="font-medium text-foreground">{pt("markets.holder.current")}</span>
         ) : null}
-        {row.isCurrentWorkMarket && (holderIsPilot || row.availability === "under_review")
+        {row.isCurrentWorkMarket && (holderIsPilot || row.availability !== "available")
           ? " · "
           : null}
         {holderIsPilot
           ? pt("markets.holder.pilotMember")
-          : row.availability === "under_review"
+          : row.availability !== "available"
             ? pt("markets.holder.pilotClosed")
             : null}
       </p>

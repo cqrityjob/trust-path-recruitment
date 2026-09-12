@@ -45,6 +45,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
   isMissingPilotLayer,
+  isMissingPilotStateColumn,
+  marketAvailabilityOf,
   resolveMarketAccess,
 } from "../src/lib/security-passport/market-access";
 
@@ -137,6 +139,28 @@ console.log("\n2 -- every other failure still throws");
 
   // Matched on code, never on message text: the database speaks Swedish here.
   const src = read("src/lib/security-passport/market-access.ts");
+  // The overview's availability mapping: "internal_pilot" needs the column
+  // to say exactly that; every other inactive shape is closed, never a pilot.
+  ck(
+    "marketAvailabilityOf: internal_pilot only when pilot_state is exactly internal_pilot",
+    marketAvailabilityOf(false, "internal_pilot") === "internal_pilot" &&
+      marketAvailabilityOf(false, "closed") === "closed" &&
+      marketAvailabilityOf(false, null) === "closed" &&
+      marketAvailabilityOf(false, undefined) === "closed" &&
+      marketAvailabilityOf(false, "INTERNAL_PILOT") === "closed" &&
+      marketAvailabilityOf(false, "pilot") === "closed" &&
+      marketAvailabilityOf(true, "internal_pilot") === "available" &&
+      marketAvailabilityOf(true, null) === "available",
+  );
+  ck(
+    "isMissingPilotStateColumn: only 42703 / PGRST204, never a permission error or an outage",
+    isMissingPilotStateColumn({ code: "42703" }) &&
+      isMissingPilotStateColumn({ code: "PGRST204" }) &&
+      !isMissingPilotStateColumn({ code: "42501" }) &&
+      !isMissingPilotStateColumn({ code: "PGRST301" }) &&
+      !isMissingPilotStateColumn({ code: "42883" }) &&
+      !isMissingPilotStateColumn(null),
+  );
   ck("the match is on error CODE, not on message text", !/\.message\b/.test(code(src)));
 }
 
@@ -156,11 +180,35 @@ console.log("\n3 -- the market read model requests no column that may not exist"
   // pilot_state -- so the assertion passed while the defect sat two hundred
   // lines below it. A guard that cannot fail is worse than no guard, because
   // it is believed.
+  // ── ONE EXCEPTION, IN ONE SHAPE ────────────────────────────────────
+  //
+  // The overview must label a market "Internal pilot" only when pilot_state
+  // says exactly that, so it reads the column. It may do so ONLY as a query
+  // of its own that selects nothing else (so no foundation read rides on
+  // it), and whose failure is tolerated ONLY through the recognised missing-
+  // column codes (isMissingPilotStateColumn) with every other error thrown.
+  // Any pack read that names pilot_state beside another column, or without
+  // that exact tolerance immediately after it, fails here.
   const packSelects = [...src.matchAll(/\.from\("sp_market_packs"\)\s*\.select\(([^)]*)\)/g)];
-  ck("every market-pack read is found", packSelects.length >= 2);
+  ck("every market-pack read is found", packSelects.length >= 3);
+  let foundationReads = 0;
   for (const [i, m] of packSelects.entries()) {
-    ck(`market-pack read #${i + 1} does NOT select pilot_state`, !m[1].includes("pilot_state"));
+    if (!m[1].includes("pilot_state")) {
+      foundationReads += 1;
+      ck(`market-pack read #${i + 1} does NOT select pilot_state`, true);
+      continue;
+    }
+    const after = src.slice(m.index! + m[0].length, m.index! + m[0].length + 400);
+    ck(
+      `market-pack read #${i + 1} selects pilot_state ALONE (with the code it belongs to)`,
+      /^"code,\s*pilot_state"$/.test(m[1].trim()),
+    );
+    ck(
+      `market-pack read #${i + 1} tolerates only the recognised missing column and throws otherwise`,
+      /if \(\w+ && !isMissingPilotStateColumn\(\w+\)\)\s*\{?\s*throw new Error/.test(after),
+    );
   }
+  ck("the foundation reads (name, activation) never name pilot_state", foundationReads >= 2);
 
   // The types read MAY filter on pilot_state, but only on the branch that is
   // unreachable unless the RPC succeeded -- which proves the column exists.

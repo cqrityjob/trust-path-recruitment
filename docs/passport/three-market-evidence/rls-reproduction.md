@@ -94,7 +94,7 @@ policy reads `is_active`, forward file re-applies, proof notice logged.
 ## What proves it from now on
 
 - `supabase/tests/security_passport_pilot_catalogue_visibility_test.sql`,
-  35 assertions, every read and claim as `SET LOCAL ROLE authenticated`:
+  55 assertions, every read and claim as `SET LOCAL ROLE authenticated`:
   a public holder reads production only; a GB member reads all 13 GB rows
   (7 licences, 6 qualifications) and files a GB claim; a GB member reads no
   Dubai, Northern Ireland or Abu Dhabi row; a Dubai member reads 30 (15/15)
@@ -102,12 +102,42 @@ policy reads `is_active`, forward file re-applies, proof notice logged.
   ordinary GB row; revocation closes the catalogue but keeps the one type
   already claimed readable; anon is refused outright (42501); Sweden is
   still the only active market.
-- `scripts/db-test.sh` runs that suite with a floor of 30, then proves the
+- `scripts/db-test.sh` runs that suite with a floor of 50, then proves the
   rollback round-trips (rollback → the suite refuses the old policy →
   re-apply → proof), and runs the rollback for good before the entitlement
   rollback that drops `sp_market_access()`.
 - The suite fails against the shipped policy (verified before the fix:
   `ASSERTION FAILED: 1.1 the taxonomy read policy consults sp_market_access()`).
+
+## Two privacy corrections in the same migration
+
+Found by the same review, fixed in the same unshipped file, proven by the
+same suite (groups 8 and 9, all as `SET LOCAL ROLE authenticated`):
+
+- **The entitlement table was readable by its holder, every column.**
+  `sp_pilot_members` had `GRANT SELECT` to `authenticated` and a self-read
+  policy, so a holder could read the administrator's internal note about
+  them and who granted or revoked them, while the administration page says
+  the note is "never shown to the user". The table now has no application-
+  role grant and no policy; a holder learns their own access through
+  `sp_market_access()`. Proven: `SELECT note` as the holder is refused
+  (42501), as are the audit columns, the row, an INSERT and an UPDATE.
+- **Any signed-in user could ask about anyone.** `sp_is_pilot_member(uuid,
+  text)` and `sp_market_access(uuid, text)` took any user id, so holder A
+  could enumerate holder B's pilot markets. They now answer about the
+  caller, about anyone for a platform administrator, and without
+  restriction for a session with no JWT (owner, service role, the harness);
+  anyone else asking about someone else is refused with
+  `SP_PILOT_MEMBERSHIP_PRIVATE` (insufficient_privilege) rather than told
+  "closed". Proven: a stranger asking about the Dubai member is refused;
+  the member asking about themselves is told `pilot`; an administrator is
+  answered about anyone; the catalogue policy and the claim trigger, which
+  ask about `auth.uid()`, still admit the entitled member and still refuse
+  the non-member; after revocation the former member is told `closed` and
+  cannot file a new claim.
+
+The rollback restores the 20260915090000 function definitions, grants and
+self policy verbatim and asserts the resulting grant set.
 
 ## What did not change
 

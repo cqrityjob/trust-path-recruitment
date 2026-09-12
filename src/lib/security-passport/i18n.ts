@@ -1759,6 +1759,10 @@ const sv = {
   "market.step.workMarket": "Arbetsmarknad",
   "market.workMarket.question": "Var arbetar du eller vill du använda ditt Security Passport?",
   "market.registerNote": "Reglerade behörigheter kan endast registreras för det valda landet.",
+  "market.read.loading": "Hämtar reglerna för din arbetsmarknad …",
+  "market.read.failed":
+    "Reglerna för din arbetsmarknad kunde inte hämtas. Inget du har registrerat påverkas.",
+  "market.read.retry": "Försök igen",
   "market.section.credentialsFor": "Behörigheter och utbildningar för",
   // ── The internal pilot status line ──────────────────────────────────
   //
@@ -1826,6 +1830,7 @@ const sv = {
     "En person, ett Passport, en profil per marknad. Varje marknad har sina egna regler, sina egna behörigheter och sin egen granskning — inget likställs mellan länder.",
   "markets.status.available": "Tillgänglig",
   "markets.status.pilot": "Intern pilot · under granskning",
+  "markets.status.closed": "Inte tillgänglig",
   "markets.holder.current": "Din arbetsmarknad",
   "markets.holder.pilotMember": "Du har pilotåtkomst till den här marknaden.",
   "markets.holder.pilotClosed": "Reglerade val kan inte väljas här ännu.",
@@ -3653,6 +3658,10 @@ const en: Record<PassportCopyKey, string> = {
   "market.workMarket.question":
     "Where do you work, or where do you want to use your Security Passport?",
   "market.registerNote": "Regulated credentials can only be registered for the selected country.",
+  "market.read.loading": "Loading the rules for your work market…",
+  "market.read.failed":
+    "The rules for your work market could not be loaded. Nothing you have recorded is affected.",
+  "market.read.retry": "Try again",
   "market.section.credentialsFor": "Credentials and training for",
   "market.pilot.status": "Internal pilot market — regulatory content is under review",
   "market.pilot.body":
@@ -3699,6 +3708,7 @@ const en: Record<PassportCopyKey, string> = {
     "One person, one Passport, one profile per market. Each market has its own rules, its own credentials and its own review — nothing is treated as equivalent across countries.",
   "markets.status.available": "Available",
   "markets.status.pilot": "Internal pilot · under review",
+  "markets.status.closed": "Not available",
   "markets.holder.current": "Your work market",
   "markets.holder.pilotMember": "You have pilot access to this market.",
   "markets.holder.pilotClosed": "Regulated choices cannot be selected here yet.",

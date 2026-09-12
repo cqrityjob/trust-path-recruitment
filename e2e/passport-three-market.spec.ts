@@ -98,7 +98,7 @@ type MarketRow = {
   subJurisdictionCode: string | null;
   nameSv: string;
   nameEn: string;
-  availability: "available" | "under_review";
+  availability: "available" | "internal_pilot" | "closed";
   holderAccess: "production" | "pilot" | "closed";
   isCurrentWorkMarket: boolean;
 };
@@ -117,7 +117,7 @@ function markets(opts: { work: string; pilot: readonly string[] }): MarketRow[] 
     subJurisdictionCode: sub,
     nameSv,
     nameEn,
-    availability: active ? "available" : "under_review",
+    availability: active ? "available" : "internal_pilot",
     holderAccess: active ? "production" : opts.pilot.includes(code) ? "pilot" : "closed",
     isCurrentWorkMarket: opts.work === code,
   });
@@ -203,6 +203,10 @@ const THREE_MARKET_CLAIMS = [
 interface Scenario {
   readonly availability?: Availability;
   readonly availabilityFails?: boolean;
+  /** When set, the availability read answers per CURRENT work market (as the
+   *  save stub updates it), after the given delay — so a test can hold one
+   *  market's answer in flight while the holder moves to another. */
+  readonly availabilityByMarket?: Record<string, { body: Availability; delayMs: number }>;
   readonly markets?: MarketRow[];
   readonly marketsFail?: boolean;
   readonly claims?: ReturnType<typeof claim>[];
@@ -331,6 +335,9 @@ async function mount(
   );
 
   const rows = scenario.pilotRows ?? pilotRows();
+  // Mutable: the work-country save stub moves it, and the profile and
+  // availability stubs answer for wherever it is NOW.
+  const state = { work: { ...work } };
 
   await page.route("**/_serverFn/**", async (route) => {
     const name = exportOf(route.request().url()) ?? "?";
@@ -342,8 +349,8 @@ async function mount(
             displayName: "Testperson (fiktiv)",
             headline: null,
             cigProfessionSlug: null,
-            jurisdictionCode: work.jurisdictionCode,
-            subJurisdictionCode: work.subJurisdictionCode,
+            jurisdictionCode: state.work.jurisdictionCode,
+            subJurisdictionCode: state.work.subJurisdictionCode,
             workLocationConfirmedAt: "2026-08-01T09:00:00.000Z",
             privacyMode: "full_name",
             onboardingState: "completed",
@@ -368,8 +375,8 @@ async function mount(
               localEligibility: [],
               activeTitles: [],
             },
-            jurisdictionCode: work.jurisdictionCode,
-            subJurisdictionCode: work.subJurisdictionCode,
+            jurisdictionCode: state.work.jurisdictionCode,
+            subJurisdictionCode: state.work.subJurisdictionCode,
             periods: [],
             claims: scenario.claims ?? [
               claim({
@@ -390,9 +397,28 @@ async function mount(
       case "listPassportMarketOverview":
         if (scenario.marketsFail) return boom(route, "market overview failed");
         return ok(route, scenario.markets ?? markets({ work: "SE", pilot: [] }));
-      case "getRegulatedCredentialAvailability":
+      case "getRegulatedCredentialAvailability": {
         if (scenario.availabilityFails) return boom(route, "availability failed");
+        const perMarket =
+          scenario.availabilityByMarket?.[
+            state.work.subJurisdictionCode ?? state.work.jurisdictionCode
+          ];
+        if (perMarket) {
+          await new Promise((r) => setTimeout(r, perMarket.delayMs));
+          return ok(route, perMarket.body);
+        }
         return ok(route, scenario.availability ?? AVAIL.se);
+      }
+      case "setWorkCountry": {
+        const chosen = String(payloadOf(route).workCountry ?? "");
+        state.work =
+          chosen === "GB-NI"
+            ? { jurisdictionCode: "GB", subJurisdictionCode: "GB-NI" }
+            : chosen === "AE-DU"
+              ? { jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" }
+              : { jurisdictionCode: chosen, subJurisdictionCode: null };
+        return ok(route, { savedAt: "2026-09-12T12:00:00.000Z" });
+      }
       case "listMyEntries":
         return ok(route, {
           experience: [],
@@ -871,12 +897,109 @@ test.describe("three markets — the real routes", () => {
     await expect(section.locator('[data-testid="market-pilot-status"]')).toHaveCount(0);
 
     await mount(page, { availabilityFails: true }, "sv", "/passport/information");
-    // The work-country control survives, and the catalogue's failure is in words.
+    // The work-country control survives, and the catalogue's failure is in
+    // words: a failed read is drawn AS a failed read with a retry — never as
+    // "no work country", which would tell a holder who named Sweden that
+    // they had not.
     await expect(page.locator("#sp-work-country")).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator('[data-testid="market-credential-section"]')).toHaveAttribute(
-      "data-market-state",
-      "no_work_country",
+    const failed = page.locator('[data-testid="market-credential-section"]');
+    await expect(failed).toHaveAttribute("data-market-read", "failed", { timeout: 30_000 });
+    await expect(failed).not.toHaveAttribute("data-market-state", "no_work_country");
+    await expect(failed.locator('[data-testid="market-read-failed"]')).toBeVisible();
+    await expect(failed.locator('[data-testid="market-read-retry"]')).toBeVisible();
+    await expect(failed.locator('[data-testid="market-closed-notice"]')).toHaveCount(0);
+    await expect(failed.locator("[data-credential-code]")).toHaveCount(0);
+  });
+
+  test("the market read renders loading, then failure with a retry, never 'no work country'", async ({
+    page,
+  }) => {
+    // The first read of Sweden's rules is slow, then fails; a retry succeeds.
+    let calls = 0;
+    await mount(
+      page,
+      {
+        availabilityByMarket: { SE: { body: AVAIL.se, delayMs: 1200 } },
+        work: { jurisdictionCode: "SE", subJurisdictionCode: null },
+      },
+      "en",
+      "/passport/information",
     );
+    // Second layer on the same route: the first availability answer breaks.
+    await page.route("**/_serverFn/**", async (route) => {
+      if (
+        exportOf(route.request().url()) === "getRegulatedCredentialAvailability" &&
+        calls++ === 0
+      ) {
+        await new Promise((r) => setTimeout(r, 600));
+        return boom(route, "availability failed");
+      }
+      return route.fallback();
+    });
+    const section = page.locator('[data-testid="market-credential-section"]');
+    await expect(section).toHaveAttribute("data-market-read", "loading");
+    await expect(section.locator('[data-testid="market-read-loading"]')).toBeVisible();
+    // Loading is NOT "no work country": the holder named Sweden.
+    await expect(section).not.toHaveAttribute("data-market-state", "no_work_country");
+    await expect(section.locator('[data-testid="market-closed-notice"]')).toHaveCount(0);
+
+    await expect(section).toHaveAttribute("data-market-read", "failed", { timeout: 10_000 });
+    await expect(section.locator('[data-testid="market-read-failed"]')).toBeVisible();
+    await expect(section.locator('[data-testid="market-closed-notice"]')).toHaveCount(0);
+    await expect(section.locator("[data-credential-code]")).toHaveCount(0);
+
+    await section.locator('[data-testid="market-read-retry"]').click();
+    await expect(section).toHaveAttribute("data-market-read", "loading");
+    await expect(section).toHaveAttribute("data-market-read", "ready", { timeout: 10_000 });
+    await expect(section).toHaveAttribute("data-market-state", "open");
+    await expect(section.locator("[data-credential-code]")).toHaveCount(8);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("REGRESSION: changing Sweden to Great Britain never shows a Swedish option under the new market, even when Sweden's answer arrives last", async ({
+    page,
+  }) => {
+    // Sweden's rules answer SLOWLY (3s); Great Britain's answer fast (200ms).
+    // The holder changes country while Sweden's first read is still open, so
+    // the reads settle out of order: GB first, then the stale Swedish one.
+    await mount(
+      page,
+      {
+        availabilityByMarket: {
+          SE: { body: AVAIL.se, delayMs: 3000 },
+          GB: { body: AVAIL.gbPilot, delayMs: 200 },
+        },
+        work: { jurisdictionCode: "SE", subJurisdictionCode: null },
+      },
+      "sv",
+      "/passport/information",
+    );
+    const section = page.locator('[data-testid="market-credential-section"]');
+    await expect(section).toHaveAttribute("data-market-read", "loading");
+
+    await page.locator("#sp-work-country").selectOption("GB");
+    await page.getByRole("button", { name: "Spara arbetsland" }).click();
+
+    // While Great Britain's catalogue loads: the section is loading, names
+    // no Swedish option, and offers nothing selectable.
+    await expect(section).toHaveAttribute("data-market-read", "loading");
+    await expect(section.locator('[data-credential-code="VU1"]')).toHaveCount(0);
+    await expect(section.locator("[data-credential-code]")).toHaveCount(0);
+
+    // Great Britain settles: 13 governed choices, the pilot status line.
+    await expect(section).toHaveAttribute("data-market-read", "ready", { timeout: 10_000 });
+    await expect(section).toHaveAttribute("data-market", "GB");
+    await expect(section.locator("[data-credential-code]")).toHaveCount(13);
+    await expect(section.locator('[data-credential-code="VU1"]')).toHaveCount(0);
+
+    // Sweden's stale answer lands now (3s after mount). It must lose: still
+    // Great Britain, still 13, still no VU1, no flicker back.
+    await page.waitForTimeout(3500);
+    await expect(section).toHaveAttribute("data-market", "GB");
+    await expect(section.locator("[data-credential-code]")).toHaveCount(13);
+    await expect(section.locator('[data-credential-code="VU1"]')).toHaveCount(0);
+    await expect(section.locator('[data-testid="market-pilot-status"]')).toBeVisible();
+    expect(pageErrors).toEqual([]);
   });
 
   for (const lang of ["sv", "en"] as const) {

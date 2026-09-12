@@ -168,9 +168,16 @@ group("1 · the entry route passes the catalogue for open AND open_pilot");
     !/state\s*===\s*"open"/.test(route),
   );
   ck(
-    "1.4 the catalogue's loading and failure are passed on, not swallowed",
-    /catalogueStatus=\{availabilityStatus\}/.test(route) &&
-      /setAvailabilityStatus\("failed"\)/.test(route),
+    "1.4 the read's loading and failure are passed on, not swallowed",
+    /read=\{availabilityStatus\}/.test(route) &&
+      /setAvailabilityStatus\("failed"\)/.test(route) &&
+      /onRetry=\{\(\) => void refreshWorkCountry\(\)\}/.test(route),
+  );
+  ck(
+    "1.4 a refresh clears the previous market's answer BEFORE it reads, and drops stale responses",
+    /const seq = \+\+availabilitySeq\.current;\s*[\s\S]{0,300}?setAvailability\(null\);\s*setAvailabilityStatus\("loading"\);/.test(
+      route,
+    ) && (route.match(/if \(seq !== availabilitySeq\.current\) return;/g) ?? []).length >= 3,
   );
 
   // Nobody else decides "may a list be offered" with a comparison of its
@@ -864,7 +871,7 @@ group("9 · three market cards, the admin section and the copy, both languages")
     code: string,
     j: string,
     sub: string | null,
-    availability: "available" | "under_review",
+    availability: "available" | "internal_pilot",
     holderAccess: "production" | "pilot" | "closed",
     isCurrentWorkMarket = false,
   ) => ({
@@ -877,15 +884,15 @@ group("9 · three market cards, the admin section and the copy, both languages")
   });
   const PUBLIC = [
     row("SE", "SE", null, "available", "production", true),
-    row("GB", "GB", null, "under_review", "closed"),
-    row("GB-NI", "GB", "GB-NI", "under_review", "closed"),
-    row("AE-DU", "AE", "AE-DU", "under_review", "closed"),
+    row("GB", "GB", null, "internal_pilot", "closed"),
+    row("GB-NI", "GB", "GB-NI", "internal_pilot", "closed"),
+    row("AE-DU", "AE", "AE-DU", "internal_pilot", "closed"),
   ];
   const PILOT = [
     row("SE", "SE", null, "available", "production"),
-    row("GB", "GB", null, "under_review", "pilot", true),
-    row("GB-NI", "GB", "GB-NI", "under_review", "closed"),
-    row("AE-DU", "AE", "AE-DU", "under_review", "closed"),
+    row("GB", "GB", null, "internal_pilot", "pilot", true),
+    row("GB-NI", "GB", "GB-NI", "internal_pilot", "closed"),
+    row("AE-DU", "AE", "AE-DU", "internal_pilot", "closed"),
   ];
   const cards = (markets: typeof PUBLIC, lang: Lang = "sv") =>
     html(<MarketOverviewCards state={{ status: "ready", markets }} />, lang);
@@ -966,11 +973,41 @@ group("9 · three market cards, the admin section and the copy, both languages")
       /data-market-card="SE"[\s\S]*?data-market-action="choose"/.test(pilot),
     );
   }
+  // A pack that is neither public nor in internal pilot is "Not available",
+  // never "Internal pilot": the label follows the column, not the absence
+  // of activation.
+  const CLOSED_DUBAI = [
+    row("SE", "SE", null, "available", "production", true),
+    row("GB", "GB", null, "internal_pilot", "closed"),
+    row("GB-NI", "GB", "GB-NI", "internal_pilot", "closed"),
+    row("AE-DU", "AE", "AE-DU", "closed", "closed"),
+  ];
+  for (const lang of ["sv", "en"] as const) {
+    const closed = cards(CLOSED_DUBAI, lang);
+    const dubai = closed.slice(closed.indexOf('data-market-card="AE-DU"'));
+    ck(
+      `9.${lang} a closed pack reads "Not available", not "Internal pilot"`,
+      dubai.includes(passportT("markets.status.closed", lang)) &&
+        !dubai.includes(passportT("markets.status.pilot", lang)) &&
+        /data-market-availability="closed"/.test(dubai),
+    );
+    ck(
+      `9.${lang} while the UK, in internal pilot, still reads "Internal pilot · under review"`,
+      closed
+        .slice(closed.indexOf('data-market-card="GB"'), closed.indexOf('data-market-card="AE-DU"'))
+        .includes(passportT("markets.status.pilot", lang)),
+    );
+    ck(
+      `9.${lang} a closed pack offers no regulated action and says choices are not selectable`,
+      !/data-market-action="add"/.test(dubai) &&
+        dubai.includes(passportT("markets.holder.pilotClosed", lang)),
+    );
+  }
   const NI_PILOT = [
     row("SE", "SE", null, "available", "production"),
-    row("GB", "GB", null, "under_review", "closed"),
-    row("GB-NI", "GB", "GB-NI", "under_review", "pilot", true),
-    row("AE-DU", "AE", "AE-DU", "under_review", "closed"),
+    row("GB", "GB", null, "internal_pilot", "closed"),
+    row("GB-NI", "GB", "GB-NI", "internal_pilot", "pilot", true),
+    row("AE-DU", "AE", "AE-DU", "internal_pilot", "closed"),
   ];
   for (const lang of ["sv", "en"] as const) {
     const ni = cards(NI_PILOT, lang);

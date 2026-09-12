@@ -28,7 +28,7 @@
 // to be checked. Without those the page would be a data-entry chore with no
 // visible point.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -120,7 +120,9 @@ const CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey 
 ];
 
 type Editing =
-  { kind: "experience"; draft: ExperienceDraft } | { kind: "claim"; draft: ClaimDraft } | null;
+  | { kind: "experience"; draft: ExperienceDraft }
+  | { kind: "claim"; draft: ClaimDraft }
+  | null;
 
 function SectionShell({
   icon,
@@ -185,6 +187,17 @@ function PassportInformationRoute() {
   const [availabilityStatus, setAvailabilityStatus] = useState<"loading" | "ready" | "failed">(
     "loading",
   );
+  // ── ONE ANSWER ON SCREEN, AND ONLY THE LATEST ────────────────────────
+  //
+  // A holder who changes Sweden to Great Britain triggers a second read while
+  // the first may still be in flight. Two things must hold: while the new
+  // read is open, NO option from the previous market may render under the
+  // new market's heading (a Swedish training offered under "Great Britain"
+  // is exactly the regulatory claim this page exists not to make); and when
+  // the reads settle out of order, the older answer must lose. Each refresh
+  // takes a sequence number; the previous answer is cleared before the read
+  // starts, and a response whose number is no longer current is dropped.
+  const availabilitySeq = useRef(0);
   // The profile-level half of the six basics. Read from the SAME profile
   // fetch as the work country below, because they are one row: loading them
   // separately is how a page ends up showing a stale name beside a fresh
@@ -250,6 +263,11 @@ function PassportInformationRoute() {
   }, [queryClient]);
 
   const refreshWorkCountry = useCallback(async () => {
+    const seq = ++availabilitySeq.current;
+    // The previous market's answer leaves the screen BEFORE the new read is
+    // sent, never after it returns.
+    setAvailability(null);
+    setAvailabilityStatus("loading");
     // ── TWO READS, TWO FAILURES ───────────────────────────────────────
     //
     // These were one Promise.all, and a market lookup that failed also took
@@ -261,6 +279,7 @@ function PassportInformationRoute() {
     // Settled independently. Each is allowed to fail on its own terms.
     try {
       const snap = await loadProfile({ data: undefined });
+      if (seq !== availabilitySeq.current) return;
       setWorkCountryState({
         jurisdictionCode: snap.profile?.jurisdictionCode ?? null,
         subJurisdictionCode: snap.profile?.subJurisdictionCode ?? null,
@@ -280,9 +299,12 @@ function PassportInformationRoute() {
     }
 
     try {
-      setAvailability(await loadAvailability({ data: undefined }));
+      const next = await loadAvailability({ data: undefined });
+      if (seq !== availabilitySeq.current) return;
+      setAvailability(next);
       setAvailabilityStatus("ready");
     } catch (err) {
+      if (seq !== availabilitySeq.current) return;
       console.error("[passport] market availability load failed", err);
       setAvailability(null);
       setAvailabilityStatus("failed");
@@ -707,12 +729,21 @@ function PassportInformationRoute() {
           place that decides, and scripts/passport-market-catalogue-check
           fails the build if a route restates it. */}
         <MarketCredentialSection
+          // `state` is consulted only once the read is "ready"; while it is
+          // loading or after it failed the section draws THAT, and never the
+          // "no work country" state a null answer would otherwise imply.
           state={availability?.state ?? "no_work_country"}
-          jurisdictionCode={availability?.jurisdictionCode ?? null}
-          subJurisdictionCode={availability?.subJurisdictionCode ?? null}
+          read={availabilityStatus}
+          jurisdictionCode={
+            availability?.jurisdictionCode ??
+            (workCountry?.confirmed ? workCountry.jurisdictionCode : null)
+          }
+          subJurisdictionCode={
+            availability?.subJurisdictionCode ??
+            (workCountry?.confirmed ? workCountry.subJurisdictionCode : null)
+          }
           options={catalogueOptionsFor(availability)}
-          catalogueStatus={availabilityStatus}
-          onRetryCatalogue={() => void refreshWorkCountry()}
+          onRetry={() => void refreshWorkCountry()}
           onSelect={(code) => void navigate({ to: "/passport/credentials/new", search: { code } })}
           onSetWorkCountry={() => {
             document.getElementById("sp-work-country")?.focus();

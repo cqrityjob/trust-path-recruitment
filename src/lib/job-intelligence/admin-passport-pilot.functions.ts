@@ -49,6 +49,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  isMissingPilotMembersTable,
+  isMissingPilotStateColumn,
+} from "@/lib/security-passport/market-access";
 
 type Ctx = { supabase: SupabaseClient<Database>; userId: string };
 
@@ -107,11 +111,18 @@ export const adminListPassportPilotAccess = createServerFn({ method: "POST" })
       .is("superseded_on", null);
     if (packErr) throw new Error("PILOT_PACKS_LOAD_FAILED");
 
+    // Only the RECOGNISED absence (no pilot_state column: 42703 / PGRST204)
+    // degrades to "not in pilot". Any other failure is an operational error
+    // and is thrown, so an outage or a permission problem never renders as
+    // "nothing is piloted" on the administration page.
     const pilotStates = new Map<string, string>();
     const { data: pilotRows, error: pilotErr } = await ctx.supabase
       .from("sp_market_packs")
       .select("code, pilot_state")
       .in("code", [...PILOT_MANAGED_MARKETS]);
+    if (pilotErr && !isMissingPilotStateColumn(pilotErr)) {
+      throw new Error(`PILOT_STATE_LOAD_FAILED: ${pilotErr.code ?? ""} ${pilotErr.message}`.trim());
+    }
     if (!pilotErr) {
       for (const r of (pilotRows ?? []) as Array<{ code: string; pilot_state: string }>) {
         pilotStates.set(r.code, r.pilot_state);
@@ -128,9 +139,16 @@ export const adminListPassportPilotAccess = createServerFn({ method: "POST" })
       .select("market_pack_code, granted_at, revoked_at, note")
       .eq("user_id", data.userId)
       .in("market_pack_code", [...PILOT_MANAGED_MARKETS]);
-    // A database without the pilot layer has no table to read. That is "no
-    // entitlements", not a failure, and it fails closed: nobody appears
-    // granted.
+    // A database without the pilot layer has no table to read (42P01 /
+    // PGRST205). That is "no entitlements", not a failure, and it fails
+    // closed: nobody appears granted. Every OTHER error is thrown: a page that
+    // showed "never granted" because a read broke would be a quiet lie about
+    // someone's access.
+    if (memberErr && !isMissingPilotMembersTable(memberErr)) {
+      throw new Error(
+        `PILOT_MEMBERS_LOAD_FAILED: ${memberErr.code ?? ""} ${memberErr.message}`.trim(),
+      );
+    }
     const memberByCode = new Map<string, NonNullable<typeof members>[number]>();
     if (!memberErr) {
       for (const m of members ?? []) memberByCode.set(m.market_pack_code, m);

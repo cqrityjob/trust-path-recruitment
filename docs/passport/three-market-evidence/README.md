@@ -38,3 +38,11 @@ the hosted project was not touched.
 The database-level defect that made the pilot catalogue empty for a real
 entitled member, its reproduction on a full migration replay and the
 correction are documented in `rls-reproduction.md` beside this file.
+
+Two browser regressions in `e2e/passport-three-market.spec.ts` guard the
+information route's market read: the read renders loading, then failure
+with a retry, and never "no work country"; and changing Sweden to Great
+Britain never shows a Swedish option under the new market, even when
+Sweden's slower answer arrives after Great Britain's (the older response is
+dropped). The second test fails against the route without the clearing and
+sequencing, which was verified by reinstating the defect.

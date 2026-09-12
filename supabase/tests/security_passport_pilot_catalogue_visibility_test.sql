@@ -16,6 +16,12 @@
 -- Counts are taken from the owner first and compared under impersonation, so
 -- the suite states "a member sees exactly the rows that exist", not a number
 -- that rots when a catalogue grows.
+--
+-- GROUPS 8-9 pin the two privacy corrections that ship in the same migration:
+-- a holder cannot read the entitlement table (so the administrator's internal
+-- note and the audit columns really are never shown), and holder A cannot
+-- learn holder B's pilot membership through sp_is_pilot_member() or
+-- sp_market_access(), while self-access and administrator access still work.
 -- =============================================================================
 
 \set ON_ERROR_STOP on
@@ -46,7 +52,8 @@ END $$;
  *  SP_ code the database refused it with. */
 CREATE OR REPLACE FUNCTION pg_temp.try_claim_as(
   _uid uuid, _code text, _title text, _jur text, _sub text, _type text,
-  _valid_until date DEFAULT NULL, _issuer text DEFAULT 'Fiktiv myndighet')
+  _valid_until date DEFAULT NULL, _issuer text DEFAULT 'Fiktiv myndighet',
+  _scope text DEFAULT NULL)
 RETURNS text LANGUAGE plpgsql AS $$
 DECLARE _msg text;
 BEGIN
@@ -55,14 +62,54 @@ BEGIN
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code,
-       jurisdiction_code, sub_jurisdiction_code, valid_until, claimed_issuer_name)
-    VALUES (_uid, _type, _title, _code, _jur, _sub, _valid_until, _issuer);
+       jurisdiction_code, sub_jurisdiction_code, valid_until, claimed_issuer_name,
+       authorisation_scope)
+    VALUES (_uid, _type, _title, _code, _jur, _sub, _valid_until, _issuer, _scope);
     RESET ROLE;
     RETURN 'OK';
   EXCEPTION WHEN OTHERS THEN
     GET STACKED DIAGNOSTICS _msg = MESSAGE_TEXT;
     RESET ROLE;
     RETURN split_part(_msg, ':', 1);
+  END;
+END $$;
+
+/** Runs `_sql` as role authenticated with `_uid` as the JWT subject and
+ *  reports 'OK' or the SQLSTATE it failed with. Membership-privacy probes
+ *  use this: the assertion is about WHETHER the database answers at all. */
+CREATE OR REPLACE FUNCTION pg_temp.probe_as(_uid uuid, _sql text)
+RETURNS text LANGUAGE plpgsql AS $$
+DECLARE _state text;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _uid::text, true);
+  BEGIN
+    EXECUTE _sql;
+    RESET ROLE;
+    RETURN 'OK';
+  EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS _state = RETURNED_SQLSTATE;
+    RESET ROLE;
+    RETURN _state;
+  END;
+END $$;
+
+/** Evaluates a scalar text expression as role authenticated with `_uid` as
+ *  the subject, or reports the SQLSTATE prefixed with 'ERR:'. */
+CREATE OR REPLACE FUNCTION pg_temp.eval_as(_uid uuid, _sql text)
+RETURNS text LANGUAGE plpgsql AS $$
+DECLARE _state text; _out text;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _uid::text, true);
+  BEGIN
+    EXECUTE _sql INTO _out;
+    RESET ROLE;
+    RETURN _out;
+  EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS _state = RETURNED_SQLSTATE;
+    RESET ROLE;
+    RETURN 'ERR:' || _state;
   END;
 END $$;
 
@@ -271,7 +318,107 @@ BEGIN
     '7.1 an anonymous read of the taxonomy is refused outright (SQLSTATE ' || _r || ')');
 
   -- =====================================================================
-  RAISE NOTICE 'GROUP 8 -- cleanup';
+  RAISE NOTICE 'GROUP 8 -- the entitlement table is closed to the people it is about';
+  -- =====================================================================
+  -- The Dubai member holds a live entitlement with a note. As themselves, as
+  -- role authenticated, they cannot read the note, the audit columns, or the
+  -- row at all: "never shown to the user" is a grant, not a promise.
+  PERFORM pg_temp.ok(
+    pg_temp.probe_as(_du_user, 'SELECT note FROM public.sp_pilot_members') = '42501',
+    '8.1 a holder cannot SELECT the internal note about themselves (permission denied)');
+  PERFORM pg_temp.ok(
+    pg_temp.probe_as(_du_user, 'SELECT granted_by, revoked_by FROM public.sp_pilot_members') = '42501',
+    '8.2 a holder cannot SELECT who granted or revoked them');
+  PERFORM pg_temp.ok(
+    pg_temp.probe_as(_du_user, 'SELECT user_id, market_pack_code FROM public.sp_pilot_members') = '42501',
+    '8.3 a holder cannot SELECT the entitlement row at all');
+  PERFORM pg_temp.ok(
+    pg_temp.probe_as(_du_user,
+      format('INSERT INTO public.sp_pilot_members (user_id, market_pack_code) VALUES (%L, %L)', _du_user, 'GB')) = '42501',
+    '8.4 a holder cannot INSERT an entitlement (no grant, not merely no policy)');
+  PERFORM pg_temp.ok(
+    pg_temp.probe_as(_du_user,
+      format('UPDATE public.sp_pilot_members SET revoked_at = NULL WHERE user_id = %L', _du_user)) = '42501',
+    '8.5 a holder cannot UPDATE an entitlement');
+  PERFORM pg_temp.ok(
+    NOT has_column_privilege('authenticated', 'public.sp_pilot_members', 'note', 'SELECT')
+    AND (SELECT count(*) FROM pg_policy WHERE polrelid = 'public.sp_pilot_members'::regclass) = 0,
+    '8.6 no column grant and no policy opens sp_pilot_members to an application role');
+  PERFORM pg_temp.ok(
+    has_table_privilege('service_role', 'public.sp_pilot_members', 'SELECT')
+    AND NOT has_table_privilege('service_role', 'public.sp_pilot_members', 'DELETE'),
+    '8.7 service_role keeps its enumerated read and still holds no DELETE');
+
+  -- =====================================================================
+  RAISE NOTICE 'GROUP 9 -- membership is private: A cannot inspect B';
+  -- =====================================================================
+  -- _du_user is a live Dubai member; _public holds nothing. Each asks about
+  -- the other, as role authenticated.
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_public, format('SELECT public.sp_is_pilot_member(%L, %L)::text', _du_user, 'AE-DU')) = 'ERR:42501',
+    '9.1 a stranger asking sp_is_pilot_member() about the Dubai member is refused, not told false');
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_public, format('SELECT public.sp_market_access(%L, %L)', _du_user, 'AE-DU')) = 'ERR:42501',
+    '9.2 a stranger asking sp_market_access() about the Dubai member is refused, not told closed');
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_du_user, format('SELECT public.sp_market_access(%L, %L)', _public, 'AE-DU')) = 'ERR:42501',
+    '9.3 a member asking about a non-member is refused just the same');
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_du_user, format('SELECT public.sp_market_access(%L, %L)', _public, 'SE')) = 'ERR:42501',
+    '9.4 even a production market is not answered about someone else');
+
+  -- Self-access is untouched, in both directions of the answer.
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_du_user, format('SELECT public.sp_market_access(%L, %L)', _du_user, 'AE-DU')) = 'pilot'
+    AND pg_temp.eval_as(_du_user, format('SELECT public.sp_is_pilot_member(%L, %L)::text', _du_user, 'AE-DU')) = 'true',
+    '9.5 the Dubai member asking about themselves is told pilot / true');
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_du_user, format('SELECT public.sp_market_access(%L, %L)', _du_user, 'GB')) = 'closed'
+    AND pg_temp.eval_as(_du_user, format('SELECT public.sp_market_access(%L, %L)', _du_user, 'SE')) = 'production',
+    '9.6 and about their other markets: GB closed, Sweden production');
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_public, format('SELECT public.sp_market_access(%L, %L)', _public, 'AE-DU')) = 'closed'
+    AND pg_temp.eval_as(_public, format('SELECT public.sp_is_pilot_member(%L, %L)::text', _public, 'AE-DU')) = 'false',
+    '9.7 a non-member asking about themselves is told closed / false');
+
+  -- A platform administrator may ask about anyone: the administration page
+  -- and the grant/revoke RPCs depend on it.
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_admin, format('SELECT public.sp_market_access(%L, %L)', _du_user, 'AE-DU')) = 'pilot'
+    AND pg_temp.eval_as(_admin, format('SELECT public.sp_is_pilot_member(%L, %L)::text', _du_user, 'AE-DU')) = 'true'
+    AND pg_temp.eval_as(_admin, format('SELECT public.sp_market_access(%L, %L)', _public, 'AE-DU')) = 'closed',
+    '9.8 a platform administrator is answered about anyone');
+
+  -- The catalogue policy and the claim trigger ask about auth.uid() and keep
+  -- working under the restriction: the Dubai member still reads their 30
+  -- rows and still files a claim, as authenticated.
+  PERFORM pg_temp.ok(
+    pg_temp.visible_as(_du_user, $q$market_pack_code = 'AE-DU'$q$) = _du_total,
+    '9.9 the catalogue policy still answers the entitled member after the restriction');
+  _r := pg_temp.try_claim_as(_du_user, 'AE_DU_SIRA_CARD_GUARD',
+        'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence', '2030-01-01',
+        'Security Industry Regulatory Agency', 'Fiktivt bevakningsbolag');
+  PERFORM pg_temp.ok(_r = 'OK',
+    '9.10 the claim trigger still admits the entitled member as authenticated (got ' || _r || ')');
+  _r := pg_temp.try_claim_as(_public, 'AE_DU_SIRA_CARD_GUARD',
+        'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence', '2030-01-01');
+  PERFORM pg_temp.ok(_r = 'SP_MARKET_PACK_NOT_ACTIVE',
+    '9.11 and still refuses the non-member with the same public refusal (got ' || _r || ')');
+
+  -- Revocation, seen through the restricted functions, as the former member.
+  PERFORM set_config('request.jwt.claim.sub', _admin::text, true);
+  PERFORM public.sp_revoke_pilot_member(_du_user, 'AE-DU');
+  PERFORM pg_temp.ok(
+    pg_temp.eval_as(_du_user, format('SELECT public.sp_market_access(%L, %L)', _du_user, 'AE-DU')) = 'closed'
+    AND pg_temp.visible_as(_du_user, $q$market_pack_code = 'AE-DU'$q$) = 1,
+    '9.12 after revocation the former member is told closed and keeps only the type they claimed');
+  _r := pg_temp.try_claim_as(_du_user, 'AE_DU_SIRA_CARD_EVENT',
+        'SIRA Security Cadre Card — Event Security', 'AE', 'AE-DU', 'licence', '2030-01-01');
+  PERFORM pg_temp.ok(_r <> 'OK',
+    '9.13 and cannot register a new Dubai card (got ' || _r || ')');
+
+  -- =====================================================================
+  RAISE NOTICE 'GROUP 10 -- cleanup';
   -- =====================================================================
   PERFORM set_config('request.jwt.claim.sub', '', true);
   DELETE FROM public.sp_claims WHERE holder_user_id IN (_gb_user, _ni_user, _du_user, _public);
@@ -279,5 +426,5 @@ BEGIN
   DELETE FROM auth.users WHERE id IN (_gb_user, _ni_user, _du_user, _public, _admin);
   SELECT count(*) INTO _n FROM public.sp_pilot_members
    WHERE user_id IN (_gb_user, _ni_user, _du_user);
-  PERFORM pg_temp.ok(_n = 0, '8.1 the suite left no entitlement behind');
+  PERFORM pg_temp.ok(_n = 0, '10.1 the suite left no entitlement behind');
 END $$;

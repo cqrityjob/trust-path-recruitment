@@ -25,7 +25,14 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { isCalendarDate } from "./dates";
-import { isMissingPilotLayer, resolveMarketAccess, type MarketAccess } from "./market-access";
+import {
+  isMissingPilotLayer,
+  isMissingPilotStateColumn,
+  marketAvailabilityOf,
+  resolveMarketAccess,
+  type MarketAccess,
+  type MarketAvailability,
+} from "./market-access";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
@@ -351,18 +358,18 @@ export const PASSPORT_OVERVIEW_MARKETS = ["SE", "GB", "GB-NI", "AE-DU"] as const
 
 /** Product availability of one market, as distinct from the holder's own
  *  access to it. `available` is `is_active` — public and legally cleared.
- *  `under_review` is everything else the overview lists: a pack whose
- *  regulatory content nobody qualified has signed off, reachable only
- *  through a per-holder pilot entitlement that `holderAccess` reports.
+ *  `internal_pilot` is a pack whose `pilot_state` is exactly that: not
+ *  public, reachable only through a per-holder pilot entitlement that
+ *  `holderAccess` reports, and presented as "Internal pilot · under review".
+ *  `closed` is everything else — a closed pack, an unknown state, or a
+ *  database that has no pilot_state column — and is presented as not
+ *  available, never as a pilot. The mapping is `marketAvailabilityOf`.
  *
- *  Derived from `is_active`, a foundation column. `pilot_state` is
- *  deliberately NOT read here: selecting a column
- *  PostgREST may not know fails the whole request, which is the outage
- *  scripts/passport-schema-drift-check exists to prevent, and the overview
- *  needs the DISTINCTION (open to the public or not) rather than the raw
- *  pilot flag — `sp_market_access()` already answers "may THIS holder use
- *  it", and answers it in the database. */
-export type MarketAvailability = "available" | "under_review";
+ *  `pilot_state` is read in a query OF ITS OWN, so the foundation read of
+ *  the packs (name, activation) can never be taken down by it; and only the
+ *  RECOGNISED absence of the column degrades — to `closed`, the narrower
+ *  answer. Any other failure of that read throws. */
+export type { MarketAvailability };
 
 export interface PassportMarketOverviewRow {
   readonly marketPackCode: string;
@@ -407,6 +414,24 @@ export const listPassportMarketOverview = createServerFn({ method: "GET" })
       .is("superseded_on", null);
     if (packError) throw new Error(packError.message);
 
+    // The pilot state, read truthfully and separately. "Internal pilot" is a
+    // governed label and the column is the only evidence for it, so the
+    // overview asks for it — in its own request, so the packs above survive
+    // a database that has not got the column, and with exactly one tolerated
+    // failure: the recognised missing column (42703 / PGRST204), which
+    // degrades every non-public pack to "closed". Anything else throws.
+    const pilotStateByCode = new Map<string, string | null>();
+    const { data: pilotRows, error: pilotStateError } = await supabase
+      .from("sp_market_packs")
+      .select("code, pilot_state")
+      .in("code", [...PASSPORT_OVERVIEW_MARKETS]);
+    if (pilotStateError && !isMissingPilotStateColumn(pilotStateError)) {
+      throw new Error(pilotStateError.message);
+    }
+    for (const r of (pilotRows ?? []) as Array<{ code: string; pilot_state: string | null }>) {
+      pilotStateByCode.set(r.code, r.pilot_state);
+    }
+
     const rows = await Promise.all(
       (packs ?? []).map(async (p): Promise<PassportMarketOverviewRow> => {
         const { data: rpcAccess, error: accessError } = await supabase.rpc("sp_market_access", {
@@ -419,10 +444,10 @@ export const listPassportMarketOverview = createServerFn({ method: "GET" })
           rpcAccess,
           pilotLayerMissing: Boolean(accessError),
         });
-        // A pack that is public is available; one that is not is under
-        // review, and the overview says so whatever its review state is
-        // called today — 'pending' and 'in_review' are both "not yet".
-        const availability: MarketAvailability = p.is_active ? "available" : "under_review";
+        const availability: MarketAvailability = marketAvailabilityOf(
+          p.is_active,
+          pilotStateByCode.get(p.code),
+        );
         return {
           marketPackCode: p.code,
           jurisdictionCode: p.jurisdiction_code,

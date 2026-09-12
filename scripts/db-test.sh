@@ -3752,11 +3752,13 @@ if [ "$SPCV_RC" -ne 0 ]; then
 else
   echo "    ok  ${SPCV_PASSED} pilot catalogue visibility assertions passed"
   # GROUP 3 (the entitled member reads 13 rows and files a claim as
-  # authenticated) and GROUP 6 (revocation closes the read again) are the
-  # reason the suite exists. A run that stopped before them proved nothing.
-  if [ "$SPCV_PASSED" -lt 30 ]; then
-    echo "FAIL: expected at least 30 pilot catalogue visibility assertions, only ${SPCV_PASSED} ran." >&2
-    suite_failed "Security Passport pilot catalogue visibility (assertion shortfall: floor 30)"
+  # authenticated), GROUP 6 (revocation closes the read again), GROUP 8 (a
+  # holder cannot read the entitlement table) and GROUP 9 (holder A cannot
+  # inspect holder B's membership) are the reason the suite exists. A run
+  # that stopped before them proved nothing.
+  if [ "$SPCV_PASSED" -lt 50 ]; then
+    echo "FAIL: expected at least 50 pilot catalogue visibility assertions, only ${SPCV_PASSED} ran." >&2
+    suite_failed "Security Passport pilot catalogue visibility (assertion shortfall: floor 50)"
   fi
 fi
 
