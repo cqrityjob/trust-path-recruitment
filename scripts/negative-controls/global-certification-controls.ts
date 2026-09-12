@@ -119,7 +119,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "GC-NC-HOLDER-OUTRANKS-TRUST",
     defect: "recency outranks trust, so a self-declared claim can lead a verified one",
     file: CLASSIFIER,
-    find: "  const trust = (TRUST_RANK[b.claim.assertionLevel] ?? 0) - (TRUST_RANK[a.claim.assertionLevel] ?? 0);\n  if (trust !== 0) return trust;",
+    find: "  const trust =\n    (TRUST_RANK[b.claim.assertionLevel] ?? 0) - (TRUST_RANK[a.claim.assertionLevel] ?? 0);\n  if (trust !== 0) return trust;",
     replace: "  const trust = 0;\n  if (trust !== 0) return trust;",
     guard: GUARD,
     expect: "a verified older claim outranks a self-declared newer one",
