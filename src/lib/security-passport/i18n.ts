@@ -1701,6 +1701,17 @@ const sv = {
     "Uppgiften kunde inte sparas som utkast. Kontrollera fälten ovan och försök igen.",
   "cred.error.serverUnknownCode":
     "Den här behörigheten går inte att registrera längre. Välj en annan i listan.",
+  // The write path's market refusals, named. These are the database saying
+  // which market rule stopped the row -- not a reason to keep trying the
+  // same thing. The credential's market is set from behörighetens definition
+  // on every path now; if one of these still appears, something upstream is
+  // wrong and the sentence says so rather than pretending otherwise.
+  "cred.error.serverWrongMarket":
+    "Den här behörigheten hör till en annan marknad än den du försöker registrera den i. Ladda om sidan och välj behörigheten igen.",
+  "cred.error.serverSubMarketRequired":
+    "Landet reglerar bevakning regionalt. Behörighetens region saknades i registreringen — ladda om sidan och välj behörigheten igen.",
+  "cred.error.serverMarketClosed":
+    "Marknaden är inte öppen för dig. Behörigheter här kan bara registreras av deltagare i den interna piloten.",
 
   "cred.error.selectCredential": "Välj vilken behörighet du lägger till.",
   "cred.error.titleRequired": "Ange en benämning.",
@@ -3623,6 +3634,12 @@ const en: Record<PassportCopyKey, string> = {
     "The entry could not be saved as a draft. Check the fields above and try again.",
   "cred.error.serverUnknownCode":
     "This credential can no longer be registered. Choose another one from the list.",
+  "cred.error.serverWrongMarket":
+    "This credential belongs to a different market from the one you are registering it in. Reload the page and choose the credential again.",
+  "cred.error.serverSubMarketRequired":
+    "This country regulates security regionally. The credential's region was missing from the registration — reload the page and choose the credential again.",
+  "cred.error.serverMarketClosed":
+    "This market is not open to you. Credentials here can only be registered by members of the internal pilot.",
 
   "cred.error.selectCredential": "Choose which credential you are adding.",
   "cred.error.titleRequired": "Enter a name.",

@@ -292,6 +292,68 @@ export function clearIncompatible(draft: CredentialDraft, type: CredentialType):
   };
 }
 
+/** Apply a chosen credential DEFINITION to a draft — the one place that does.
+ *
+ * ── THE DEFECT THIS EXISTS TO REMOVE ───────────────────────────────────
+ *
+ * Choosing a credential settles four things at once: which code the draft
+ * carries, what it is called, and — the two that matter here — WHICH
+ * REGULATED MARKET it belongs to. That decision was made in one place only:
+ * the radio button's `onChange`. A holder who arrived with `?code=` from the
+ * catalogue never ran it. Their draft kept `emptyCredentialDraft()`'s
+ * `jurisdictionCode: "SE"` while the screen, reading the market from the
+ * definition, displayed "Great Britain" or "Dubai" above it. The mismatch was
+ * invisible until the write, where the database refused the row and the
+ * holder was told "Something went wrong. Please try again."
+ *
+ * A second entry path that has to remember to repeat four assignments will
+ * eventually forget one again, so there is now exactly one function, used by
+ * every path: the preselect, the manual change, and a resumed draft.
+ *
+ * ── THE MARKET COMES FROM THE TAXONOMY ─────────────────────────────────
+ *
+ * `type.jurisdictionCode` and `type.subJurisdictionCode` are the credential's
+ * own market, read from `sp_credential_types`. Nobody chooses it: a Swedish
+ * VU1 is Swedish for a holder who has moved to Dubai, and a SIRA cadre card
+ * is Dubai's wherever it is entered. The fallback to the draft's value is for
+ * a definition that carries no jurisdiction of its own — a legacy or
+ * unregulated row — which is the only case where the holder's own country is
+ * the best answer available.
+ *
+ * The SUB-jurisdiction is not kept on the draft at all. It travels nowhere
+ * from the client: `credentialClaimFields` reads it from the definition at
+ * write time, so there is no hidden client value for it to disagree with. */
+export function applyCredentialType(
+  draft: CredentialDraft,
+  type: CredentialType,
+  lang: "sv" | "en",
+): CredentialDraft {
+  return clearIncompatible(
+    {
+      ...draft,
+      credentialCode: type.code,
+      // The definition's own name. `clearIncompatible` sets it again from the
+      // same source for every controlled credential, and the write path sets
+      // it a third time; this is the one that makes the field show the right
+      // thing immediately.
+      title: controlledTitle(type, lang),
+      jurisdictionCode: type.jurisdictionCode ?? draft.jurisdictionCode,
+    },
+    type,
+  );
+}
+
+/** True when this draft's market still disagrees with its credential's.
+ *
+ *  Cheap reconciliation for a draft that reached the form by some path that
+ *  predates `applyCredentialType` — a row stored before this fix, a form
+ *  rendered before its taxonomy arrived. The invariant is asserted rather
+ *  than assumed, because the last time it was merely assumed the holder got
+ *  "Something went wrong." */
+export function draftMarketIsStale(draft: CredentialDraft, type: CredentialType): boolean {
+  return type.jurisdictionCode !== null && draft.jurisdictionCode !== type.jurisdictionCode;
+}
+
 /** The label an appointment's issuer field should carry.
  *
  *  "Training provider" and "appointing authority" are not synonyms, and using
@@ -463,4 +525,97 @@ export function canSubmitForVerification(
   type: CredentialType | null,
 ): boolean {
   return validateCredential(draft, type, "active").length === 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* The stored row                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Blank strings are how an HTML form says "empty". The database wants NULL,
+ *  so a missing reference is absent rather than an empty string that looks
+ *  like a recorded value. */
+function nullIfBlank(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+/** The `sp_claims` columns a governed credential writes, named as the table
+ *  names them. */
+export interface CredentialClaimFields {
+  readonly claim_type: string;
+  readonly credential_code: string;
+  readonly title: string;
+  readonly claimed_issuer_name: string | null;
+  readonly jurisdiction_code: string | null;
+  readonly sub_jurisdiction_code: string | null;
+  readonly issued_on: string | null;
+  readonly valid_from: string | null;
+  readonly valid_until: string | null;
+  readonly credential_reference: string | null;
+  readonly holder_note: string | null;
+  readonly authorisation_scope: string | null;
+  readonly lifecycle_state: "draft" | "active";
+}
+
+/**
+ * What a governed credential is stored AS — the exact row the database
+ * trigger judges.
+ *
+ * ── WHY THE MARKET IS NOT TAKEN FROM THE DRAFT ─────────────────────────
+ *
+ * `jurisdiction_code` used to be written straight from the draft the browser
+ * sent, and `sub_jurisdiction_code` was not written at all. Both were wrong,
+ * and together they made every pilot credential unsavable:
+ *
+ *   * a holder who reached the form with `?code=UK_SIA_LICENCE_DS` still
+ *     carried `emptyCredentialDraft()`'s "SE", so a British licence was filed
+ *     in Sweden and `sp_claims_credential_rules` refused it — as
+ *     SP_CREDENTIAL_NOT_AVAILABLE, because a GB credential is not available
+ *     inside the Swedish market at all;
+ *   * a Dubai cadre card, whose definition names the emirate, arrived with no
+ *     sub-jurisdiction, and the same trigger refused it with
+ *     SP_SUB_JURISDICTION_REQUIRED even once the country had been corrected
+ *     by hand.
+ *
+ * So the market is read HERE, from the definition, for every governed
+ * credential and on every write — insert and update alike. A correction from
+ * a Dubai card to a British licence clears the emirate rather than leaving
+ * the old one behind, because the column is always written, never omitted.
+ *
+ * The fallback to the draft's country applies only to a definition that
+ * carries no jurisdiction of its own: a legacy or unregulated row, where the
+ * holder's own answer is the best available and the trigger's jurisdiction
+ * rules do not apply.
+ *
+ * Pure, and exported, so the browser suite can compute the row a captured
+ * payload would become and the SQL suite can assert the trigger accepts
+ * exactly that row — rather than either of them trusting a stub that said
+ * "saved".
+ */
+export function credentialClaimFields(
+  draft: CredentialDraft,
+  type: CredentialType,
+  mode: "draft" | "active",
+): CredentialClaimFields {
+  return {
+    claim_type: type.claimType,
+    credential_code: type.code,
+    // A governed credential takes the taxonomy's own label, whatever arrived.
+    // `nameSv` rather than the reader's language, deliberately: the stored
+    // value is one canonical string, and the surfaces resolve the reader's
+    // language from `credential_code`.
+    title: titleIsControlled(type) ? type.nameSv : (nullIfBlank(draft.title) ?? type.nameSv),
+    claimed_issuer_name: nullIfBlank(draft.issuerName),
+    jurisdiction_code: type.jurisdictionCode ?? nullIfBlank(draft.jurisdictionCode),
+    sub_jurisdiction_code: type.subJurisdictionCode,
+    issued_on: draft.issuedOn,
+    valid_from: draft.validFrom ?? draft.issuedOn,
+    valid_until: draft.validUntil,
+    credential_reference: nullIfBlank(draft.credentialReference),
+    // A note on a narrow-result credential is where register contents or a
+    // medical finding would arrive. Dropped here as well as refused there.
+    holder_note: type.narrowResultOnly ? null : nullIfBlank(draft.holderNote),
+    authorisation_scope: nullIfBlank(draft.authorisationScope),
+    lifecycle_state: mode,
+  };
 }

@@ -35,6 +35,12 @@ import {
   FIXTURE_GB_CATALOGUE,
   FIXTURE_GB_NI_CATALOGUE,
 } from "../src/lib/security-passport/fixtures/market-catalogues";
+import {
+  credentialClaimFields,
+  type CredentialClaimFields,
+  type CredentialDraft,
+  type CredentialType,
+} from "../src/lib/security-passport/credentials";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
@@ -214,6 +220,8 @@ interface Scenario {
   /** The admin pilot-access rows, kept as mutable state so a grant or a
    *  revoke changes what the next read returns. */
   readonly pilotRows?: PilotRow[];
+  /** Unfinished credential drafts the form offers to resume. */
+  readonly drafts?: readonly Record<string, unknown>[];
 }
 
 type PilotRow = {
@@ -293,6 +301,57 @@ let pageErrors: string[] = [];
  *  function received it. */
 let adminWrites: Array<{ fn: string; data: Record<string, unknown> }> = [];
 
+/* ------------------------------------------------------------------ */
+/* The write path                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Every credential payload the browser sent, and the row the SERVER would
+ *  store for it.
+ *
+ *  ── WHY THE STUB DOES NOT SIMPLY SAY "SAVED" ──────────────────────────
+ *
+ *  A stub that returns success for whatever arrives proves that a button
+ *  was clicked. The defect this covers was invisible to exactly that: the
+ *  form sent a British licence with `jurisdictionCode: "SE"`, every stub in
+ *  the suite accepted it, and only the database refused it — in production,
+ *  as "Något gick fel. Försök igen."
+ *
+ *  So the stub runs the application's OWN mapping, `credentialClaimFields`,
+ *  over the payload it received, and then applies the two rules
+ *  `sp_claims_credential_rules` applies to the result: a credential is
+ *  filed in its definition's jurisdiction and its definition's
+ *  sub-jurisdiction, or it is refused with the same SP_ code the trigger
+ *  raises. The scenario therefore fails for the same reason production
+ *  failed. */
+let savedPayloads: Array<Record<string, unknown>> = [];
+let savedRows: CredentialClaimFields[] = [];
+
+const ALL_FIXTURE_TYPES: readonly CredentialType[] = [
+  ...FIXTURE_CREDENTIAL_TYPES,
+  ...FIXTURE_GB_CATALOGUE,
+  ...FIXTURE_GB_NI_CATALOGUE,
+  ...FIXTURE_AE_DU_CATALOGUE,
+];
+
+const str = (v: unknown) => (typeof v === "string" ? v : "");
+const strOrNull = (v: unknown) => (typeof v === "string" && v.length > 0 ? v : null);
+
+/** The payload as the server's `toDomainDraft` reads it. */
+function draftOfPayload(data: Record<string, unknown>): CredentialDraft {
+  return {
+    credentialCode: strOrNull(data.credentialCode),
+    title: str(data.title),
+    issuerName: str(data.issuerName),
+    jurisdictionCode: str(data.jurisdictionCode),
+    issuedOn: strOrNull(data.issuedOn),
+    validFrom: strOrNull(data.validFrom),
+    validUntil: strOrNull(data.validUntil),
+    credentialReference: str(data.credentialReference),
+    holderNote: str(data.holderNote),
+    authorisationScope: str(data.authorisationScope),
+  };
+}
+
 async function mount(
   page: Page,
   scenario: Scenario,
@@ -303,6 +362,8 @@ async function mount(
   unmatched = [];
   pageErrors = [];
   adminWrites = [];
+  savedPayloads = [];
+  savedRows = [];
   const userId = who === "admin" ? ADMIN_ID : USER_ID;
   const work = scenario.work ?? { jurisdictionCode: "SE", subJurisdictionCode: null };
 
@@ -434,7 +495,39 @@ async function mount(
       case "listSkillTypes":
         return ok(route, []);
       case "listMyCredentialDrafts":
-        return ok(route, []);
+        return ok(route, scenario.drafts ?? []);
+      case "discardCredentialDraft":
+        return ok(route, { ok: true });
+      case "saveCredential": {
+        const data = payloadOf(route);
+        savedPayloads.push(data);
+        const type = ALL_FIXTURE_TYPES.find((t) => t.code === data.credentialCode) ?? null;
+        if (!type) return boom(route, "SP_CREDENTIAL_CODE_UNKNOWN");
+        const mode = data.activate === true ? "active" : "draft";
+        // The real mapping, over the real payload.
+        const row = credentialClaimFields(draftOfPayload(data), type, mode);
+        savedRows.push(row);
+        // And the trigger's two market rules, applied to its output.
+        if (row.jurisdiction_code !== type.jurisdictionCode) {
+          return boom(
+            route,
+            `SP_CREDENTIAL_JURISDICTION_MISMATCH: ${type.code} is a ${type.jurisdictionCode} credential, filed as ${row.jurisdiction_code}`,
+          );
+        }
+        if (row.sub_jurisdiction_code !== type.subJurisdictionCode) {
+          return boom(
+            route,
+            type.subJurisdictionCode === null
+              ? `SP_SUB_JURISDICTION_NOT_SUPPORTED: ${type.code}`
+              : `SP_SUB_JURISDICTION_REQUIRED: ${type.jurisdictionCode} regulates security locally`,
+          );
+        }
+        return ok(route, {
+          id: `saved-${savedRows.length}`,
+          lifecycleState: mode,
+          updatedAt: "2026-09-12T12:00:00.000Z",
+        });
+      }
       case "getMyProfessionalIdentity":
       case "getMyPassportProfileBasics":
         return ok(route, null);
@@ -764,6 +857,267 @@ test.describe("three markets — the fixture screen", () => {
         .filter((h) => h < 44),
     );
     expect(small).toEqual([]);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   The write path — a pilot credential can actually be SAVED
+   ══════════════════════════════════════════════════════════════════════
+
+   The catalogues became visible and selectable, the right credential was
+   preselected from `?code=`, and then every save failed with "Något gick
+   fel. Försök igen."
+
+   Choosing a credential settles which regulated market the entry belongs
+   to. That assignment lived only in the radio button's onChange, so a
+   holder arriving from the catalogue kept the empty draft's "SE" under a
+   heading that said Great Britain or Dubai — and the write path wrote the
+   DRAFT's country and never wrote a sub-jurisdiction at all.
+
+   Every scenario below asserts THE PAYLOAD the browser sent and THE ROW the
+   server's own mapping makes of it — see `savedRows`, which is computed by
+   `credentialClaimFields` and refused by the same two market rules the
+   database trigger applies. None of them passes on a stub that merely says
+   "saved".
+   ══════════════════════════════════════════════════════════════════════ */
+
+test.describe("three markets — the write path", () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  /** Fill what the taxonomy asks of this credential, by field id so the
+   *  scenario reads the same in both languages. */
+  async function fill(page: Page, opts: { issuer?: string; validUntil?: string; scope?: string }) {
+    if (opts.issuer !== undefined) await page.locator("#sp-cred-issuerName").fill(opts.issuer);
+    if (opts.validUntil !== undefined) {
+      await page.locator("#sp-cred-validUntil").fill(opts.validUntil);
+    }
+    if (opts.scope !== undefined) {
+      await page.locator("#sp-cred-authorisationScope").fill(opts.scope);
+    }
+  }
+
+  const noGenericError = async (page: Page) => {
+    // The sentence the holder actually met. A successful write must not
+    // produce it, and neither must a successful draft save.
+    await expect(page.getByText(/Något gick fel|Something went wrong/)).toHaveCount(0);
+  };
+
+  test("A · THE DEFECT: a British licence reached by ?code= saves, in GB", async ({ page }) => {
+    await mount(
+      page,
+      { availability: AVAIL.gbPilot, work: { jurisdictionCode: "GB", subJurisdictionCode: null } },
+      "sv",
+      "/passport/credentials/new?code=UK_SIA_LICENCE_DS",
+    );
+    await expect(
+      page.getByRole("radio", { name: /^SIA Licence — Door Supervision\s/ }),
+    ).toBeChecked({ timeout: 30_000 });
+    await fill(page, { issuer: "Security Industry Authority", validUntil: "2030-01-01" });
+
+    // ── Save draft ───────────────────────────────────────────────────
+    await page.getByRole("button", { name: "Spara utkast" }).click();
+    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
+    // The PAYLOAD: the draft the browser sent carried the credential's own
+    // market, not `emptyCredentialDraft()`'s "SE". This is the assertion the
+    // defect fails.
+    expect(savedPayloads[0]!.jurisdictionCode).toBe("GB");
+    // The ROW the server mapping makes of it, which the trigger judges.
+    expect(savedRows[0]).toMatchObject({
+      credential_code: "UK_SIA_LICENCE_DS",
+      jurisdiction_code: "GB",
+      sub_jurisdiction_code: null,
+      lifecycle_state: "draft",
+    });
+    await noGenericError(page);
+
+    // ── Add to the Passport ──────────────────────────────────────────
+    await page.getByRole("button", { name: "Lägg till i passet" }).click();
+    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(2);
+    expect(savedRows[1]).toMatchObject({
+      credential_code: "UK_SIA_LICENCE_DS",
+      jurisdiction_code: "GB",
+      sub_jurisdiction_code: null,
+      lifecycle_state: "active",
+    });
+    await noGenericError(page);
+    expect(pageErrors).toEqual([]);
+    expect(unmatched.filter((u) => u !== "getEntryDetail")).toEqual([]);
+  });
+
+  test("A2 · and the saved British licence is there after a reload", async ({ page }) => {
+    // The stored row, re-read: the entry exists in the holder's Passport,
+    // under Great Britain, with no emirate.
+    await mount(
+      page,
+      {
+        availability: AVAIL.gbPilot,
+        work: { jurisdictionCode: "GB", subJurisdictionCode: null },
+        claims: [
+          claim({
+            id: "c-gb-saved",
+            credentialCode: "UK_SIA_LICENCE_DS",
+            titleSv: "SIA Licence — Door Supervision",
+            titleEn: "SIA Licence — Door Supervision",
+            jurisdictionCode: "GB",
+            subJurisdictionCode: null,
+            validUntil: "2030-01-01",
+          }),
+        ],
+      },
+      "sv",
+      "/passport/information",
+    );
+    const section = page.locator('[data-testid="market-credential-section"]');
+    await expect(section).toHaveAttribute("data-market-state", "open_pilot", { timeout: 30_000 });
+    await expect(section).toHaveAttribute("data-market", "GB");
+    await expect(section.getByText("SIA Licence — Door Supervision").first()).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("B · THE DEFECT: a Dubai cadre card reached by ?code= saves, in AE / AE-DU", async ({
+    page,
+  }) => {
+    await mount(
+      page,
+      {
+        availability: AVAIL.duPilot,
+        work: { jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" },
+      },
+      "en",
+      "/passport/credentials/new?code=AE_DU_SIRA_CARD_GUARD",
+    );
+    await expect(
+      page.getByRole("radio", { name: /^SIRA Security Cadre Card — Security Guard\s/ }),
+    ).toBeChecked({ timeout: 30_000 });
+    // A cadre card asks for all three, the scope included.
+    await fill(page, {
+      issuer: "Security Industry Regulatory Agency",
+      validUntil: "2030-01-01",
+      scope: "Fictional security company",
+    });
+
+    await page.getByRole("button", { name: "Add to my Passport" }).click();
+    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
+    // The payload carries Dubai's country — never "SE" — and the row the
+    // server builds carries the EMIRATE, which the old write path never
+    // wrote at all.
+    expect(savedPayloads[0]!.jurisdictionCode).toBe("AE");
+    expect(savedRows[0]).toMatchObject({
+      credential_code: "AE_DU_SIRA_CARD_GUARD",
+      jurisdiction_code: "AE",
+      sub_jurisdiction_code: "AE-DU",
+      authorisation_scope: "Fictional security company",
+      lifecycle_state: "active",
+    });
+    await noGenericError(page);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("B2 · and the saved Dubai card is on the Passport after a reload", async ({ page }) => {
+    await mount(
+      page,
+      {
+        availability: AVAIL.duPilot,
+        work: { jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" },
+        claims: [
+          claim({
+            id: "c-du-saved",
+            credentialCode: "AE_DU_SIRA_CARD_GUARD",
+            titleSv: "SIRA Security Cadre Card — Security Guard",
+            titleEn: "SIRA Security Cadre Card — Security Guard",
+            jurisdictionCode: "AE",
+            subJurisdictionCode: "AE-DU",
+            authorisationScope: "Fictional security company",
+            validUntil: "2030-01-01",
+          }),
+        ],
+      },
+      "en",
+      "/passport/information",
+    );
+    const section = page.locator('[data-testid="market-credential-section"]');
+    await expect(section).toHaveAttribute("data-market-state", "open_pilot", { timeout: 30_000 });
+    await expect(section).toHaveAttribute("data-market", "AE-DU");
+    await expect(
+      section.getByText("SIRA Security Cadre Card — Security Guard").first(),
+    ).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("C · the same holds for a credential chosen by hand, with no ?code=", async ({ page }) => {
+    // Great Britain, chosen from the form's own catalogue.
+    await mount(
+      page,
+      { availability: AVAIL.gbPilot, work: { jurisdictionCode: "GB", subJurisdictionCode: null } },
+      "sv",
+      "/passport/credentials/new",
+    );
+    await page
+      .getByRole("radio", { name: /^SIA Licence — Door Supervision\s/ })
+      .check({ force: true, timeout: 30_000 });
+    await fill(page, { issuer: "Security Industry Authority", validUntil: "2030-01-01" });
+    await page.getByRole("button", { name: "Lägg till i passet" }).click();
+    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
+    expect(savedPayloads[0]!.jurisdictionCode).toBe("GB");
+    expect(savedRows[0]).toMatchObject({
+      credential_code: "UK_SIA_LICENCE_DS",
+      jurisdiction_code: "GB",
+      sub_jurisdiction_code: null,
+    });
+    await noGenericError(page);
+
+    // Dubai, chosen from the form's own catalogue — and then CHANGED to a
+    // course, which is the path that used to leave the previous choice's
+    // fields behind.
+    await mount(
+      page,
+      {
+        availability: AVAIL.duPilot,
+        work: { jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" },
+      },
+      "sv",
+      "/passport/credentials/new",
+    );
+    await page
+      .getByRole("radio", { name: /^SIRA Security Cadre Card — Security Guard\s/ })
+      .check({ force: true, timeout: 30_000 });
+    await fill(page, { issuer: "SIRA", validUntil: "2030-01-01", scope: "Fiktivt uppdrag" });
+    await page.getByRole("radio", { name: /^SIRA Security Guard course\s/ }).check({ force: true });
+    await page.getByRole("button", { name: "Lägg till i passet" }).click();
+    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
+    expect(savedRows[0]).toMatchObject({
+      credential_code: "AE_DU_SIRA_GUARD_COURSE",
+      jurisdiction_code: "AE",
+      sub_jurisdiction_code: "AE-DU",
+      // The card's expiry and scope went with the card.
+      valid_until: null,
+      authorisation_scope: null,
+    });
+    await noGenericError(page);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("E · a Swedish credential is untouched by any of this", async ({ page }) => {
+    await mount(
+      page,
+      { availability: AVAIL.se, work: { jurisdictionCode: "SE", subJurisdictionCode: null } },
+      "sv",
+      "/passport/credentials/new?code=OV",
+    );
+    await expect(page.getByRole("radio", { name: /^Ordningsvaktsförordnande\s/ })).toBeChecked({
+      timeout: 30_000,
+    });
+    await fill(page, { issuer: "Fiktiva Polismyndigheten", validUntil: "2029-06-30" });
+    await page.getByRole("button", { name: "Lägg till i passet" }).click();
+    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
+    expect(savedPayloads[0]!.jurisdictionCode).toBe("SE");
+    expect(savedRows[0]).toMatchObject({
+      credential_code: "OV",
+      jurisdiction_code: "SE",
+      sub_jurisdiction_code: null,
+    });
+    await noGenericError(page);
+    expect(pageErrors).toEqual([]);
   });
 });
 

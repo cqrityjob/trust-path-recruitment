@@ -48,7 +48,7 @@ import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import {
   CREDENTIAL_CODE_MAX_LENGTH,
   clearIncompatible,
-  titleIsControlled,
+  credentialClaimFields,
   validateCredential,
   type CredentialCategory,
   type CredentialDraft,
@@ -511,14 +511,6 @@ function toDomainDraft(data: DraftInput): CredentialDraft {
   };
 }
 
-/** Blank strings are how an HTML form says "empty". The database wants NULL,
- *  so that a missing reference is absent rather than an empty string that
- *  looks like a recorded value. */
-function nullIfBlank(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed;
-}
-
 export interface SavedCredential {
   readonly id: string;
   readonly lifecycleState: string;
@@ -588,37 +580,23 @@ export const saveCredential = createServerFn({ method: "POST" })
 
     // assertion_level is deliberately absent: it takes its column default.
     // There is no parameter for it anywhere in this file.
-    const fields = {
-      claim_type: type.claimType,
-      credential_code: type.code,
-      // A governed credential takes the taxonomy's own label, whatever arrived.
-      // The database refuses anything else for every caller, so passing the
-      // holder's text through would only turn a rule into an error message.
-      //
-      // The condition used to be `narrowResultOnly`, which is how a
-      // skyddsvakt appointment came to be stored as "Bajskorv": the holder's
-      // text was written for every credential that was not a narrow result,
-      // which is six of the eight Swedish ones. `titleIsControlled` is the
-      // same question asked of the whole governed vocabulary.
-      //
-      // `nameSv` rather than the reader's language, deliberately: the stored
-      // value is one canonical string, and the surfaces resolve the reader's
-      // language from `credential_code`. Storing whichever language the form
-      // happened to be in would make the same credential two different rows.
-      title: titleIsControlled(type) ? type.nameSv : (nullIfBlank(draft.title) ?? type.nameSv),
-      claimed_issuer_name: nullIfBlank(draft.issuerName),
-      jurisdiction_code: nullIfBlank(draft.jurisdictionCode),
-      issued_on: draft.issuedOn,
-      valid_from: draft.validFrom ?? draft.issuedOn,
-      valid_until: draft.validUntil,
-      credential_reference: nullIfBlank(draft.credentialReference),
-      // Same reasoning, and this one matters more: a note on a narrow-result
-      // credential is where register contents or a medical finding would
-      // arrive. Dropped here as well as refused there.
-      holder_note: type.narrowResultOnly ? null : nullIfBlank(draft.holderNote),
-      authorisation_scope: nullIfBlank(draft.authorisationScope),
-      lifecycle_state: mode,
-    };
+    //
+    // ── THE ROW IS BUILT BY ONE PURE FUNCTION ────────────────────────
+    //
+    // `credentialClaimFields` owns the mapping, including the correction
+    // this hotfix exists for: jurisdiction_code and sub_jurisdiction_code
+    // come from the DEFINITION, never from the draft the browser sent. A
+    // British licence reached here carrying "SE" -- the value
+    // `emptyCredentialDraft()` starts with, which only the radio button's
+    // onChange ever replaced -- and a Dubai cadre card reached here with no
+    // emirate at all, because this object never wrote the column. Both were
+    // then refused by `sp_claims_credential_rules`, and the holder was told
+    // "Something went wrong. Please try again."
+    //
+    // It is pure and exported so the browser suite can compute the row a
+    // captured payload becomes, and the SQL suite can prove the trigger
+    // accepts exactly that row.
+    const fields = credentialClaimFields(draft, type, mode);
 
     if (data.claimId) {
       // RLS already restricts the holder to their own rows, and to draft/active
