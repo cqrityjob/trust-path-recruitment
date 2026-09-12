@@ -39,6 +39,7 @@ const RELEASE_STATE = join(ROOT, "supabase/release-state.json");
 const PACKAGE = join(ROOT, "package.json");
 const CI = join(ROOT, ".github/workflows/ci.yml");
 const TSCONFIG = join(ROOT, "tsconfig.scripts.json");
+const FRONTIER = join(ROOT, "scripts/release-frontier-check.ts");
 const DICTIONARIES = join(ROOT, "src/i18n/dictionaries.ts");
 const TYPES = join(ROOT, "src/integrations/supabase/types.ts");
 const FUNCTIONS = join(ROOT, "src/lib/beskt/candidate-preparation.functions.ts");
@@ -785,6 +786,12 @@ const pr2 = read(PR2_MIGRATION);
   check(
     entry?.hostedState === "pending",
     "BCP-RELEASE: and is recorded as NOT applied to the hosted database",
+  );
+  check(
+    /const expectedPending: string\[\] = \[[\s\S]*?"20261109090000_bcp_candidate_preparation\.sql",?[\s\S]*?\];/.test(
+      read(FRONTIER),
+    ),
+    "BCP-RELEASE: the release frontier declares it pending BY DESIGN, so a genuinely stuck migration cannot hide behind it",
   );
   const introduced = new Set((entry?.introduces ?? []).map((i) => i.object));
   for (const table of TABLES) {

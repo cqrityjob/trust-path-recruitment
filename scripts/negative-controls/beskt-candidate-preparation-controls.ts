@@ -506,6 +506,16 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BCP-RELEASE",
   },
 
+  {
+    id: "BCP-NC-FRONTIER-UNDECLARED",
+    defect: "the pending migration is dropped from the owner-level frontier list",
+    file: "scripts/release-frontier-check.ts",
+    find: '  "20261109090000_bcp_candidate_preparation.sql",\n',
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-RELEASE",
+  },
+
   // ---- The application surface ---------------------------------------------
   {
     id: "BCP-NC-ENGLISH-COPY-MISSING",
