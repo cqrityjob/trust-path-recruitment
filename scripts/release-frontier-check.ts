@@ -36,7 +36,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // schema-only branch awaiting review. It is recorded `pending` in
 // release-state.json with its objects and its rollback, and it comes OFF this
 // list the moment the owner project has applied it and evidence is recorded.
-const expectedPending: string[] = ["20261108090000_beskt_governed_method_content.sql"];
+//
+// 20261109090000_bcp_candidate_preparation is PENDING for the same reason and
+// sits BEHIND it: the BESKT PR 3 candidate-preparation runtime hangs off PR 2's
+// content spine by foreign key, so it can only be applied after it. Neither has
+// been applied to the owner project by this branch, and both come off this list
+// only when they have been and the evidence is recorded in release-state.json.
+const expectedPending: string[] = [
+  "20261108090000_beskt_governed_method_content.sql",
+  "20261109090000_bcp_candidate_preparation.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
