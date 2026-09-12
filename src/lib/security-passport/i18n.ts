@@ -39,6 +39,7 @@ const sv = {
   // ── Screen names (harness navigation) ────────────────────────────────
   "screen.home": "Kandidathem (mockup)",
   "screen.marketProfiles": "Marknadsprofiler",
+  "screen.threeMarkets": "Tre marknader och katalog",
   "screen.welcome": "Välkommen och syfte",
   "screen.onboarding": "Kom igång",
   "screen.overview": "Mitt Security Passport",
@@ -1786,6 +1787,66 @@ const sv = {
   "market.details.show": "Visa detaljer",
   "market.details.hide": "Dölj detaljer",
   "market.currentMarket.none": "Inga dokumenterade uppgifter i denna marknad ännu.",
+
+  // ── The credential catalogue (three-market completion) ─────────────
+  //
+  // One data-driven catalogue serves every market. The group headings name
+  // all three kinds of authorisation on purpose: a Swedish reader looks for
+  // "förordnande", a British one for "licence", a Dubai one for "cadre card",
+  // and all three are `appointment` rows in the taxonomy. No sentence here
+  // names a market; the section heading does that.
+  "catalogue.group.appointments": "Licenser, förordnanden och kadrekort",
+  "catalogue.group.qualifications": "Utbildningar och kvalifikationer",
+  "catalogue.choices.one": "val",
+  "catalogue.choices.many": "val",
+  "catalogue.code": "Kod",
+  "catalogue.selected": "Vald",
+  "catalogue.search.label": "Sök bland behörigheter och utbildningar",
+  "catalogue.search.placeholder": "Skriv namn eller kod",
+  "catalogue.search.showing": "Visar",
+  "catalogue.search.of": "av",
+  "catalogue.search.noMatch": "Inga val matchar sökningen. Ditt tidigare val finns kvar.",
+  "catalogue.search.clear": "Rensa sökningen",
+  "catalogue.loading": "Hämtar katalogen för din marknad …",
+  "catalogue.failed":
+    "Katalogen kunde inte hämtas. Inget i ditt Security Passport har ändrats — försök igen om en stund.",
+  "catalogue.retry": "Försök igen",
+  "catalogue.empty": "Den här marknaden har inga registrerbara behörigheter ännu.",
+
+  // ── Three markets, one Passport ──────────────────────────────────────
+  //
+  // Product availability per market, never a statement about the holder.
+  // "Intern pilot · under granskning" is the approved wording for a market
+  // whose regulatory content nobody qualified has signed off, and nothing
+  // below may call such a market approved, open or equivalent to another.
+  "markets.headline":
+    "Ett Security Passport. Marknadsspecifik verifiering. Byggt för att följa din karriär.",
+  "markets.title": "Marknader",
+  "markets.lead":
+    "En person, ett Passport, en profil per marknad. Varje marknad har sina egna regler, sina egna behörigheter och sin egen granskning — inget likställs mellan länder.",
+  "markets.status.available": "Tillgänglig",
+  "markets.status.pilot": "Intern pilot · under granskning",
+  "markets.holder.current": "Din arbetsmarknad",
+  "markets.holder.pilotMember": "Du har pilotåtkomst till den här marknaden.",
+  "markets.holder.pilotClosed": "Reglerade val kan inte väljas här ännu.",
+  "markets.action.add": "Lägg till behörigheter",
+  "markets.action.choose": "Välj som arbetsmarknad",
+  "markets.pilot.note":
+    "En pilotåtkomst tillåter registrering. Den är inte ett juridiskt godkännande, inte en verifiering, inte ett omdöme om dig som person och inte en behörighet.",
+  "markets.ni.label": "Nordirland",
+  "markets.ni.note":
+    "Nordirland är en egen delmarknad med egna regler. Välj Nordirland som arbetsmarknad för att se dess katalog.",
+  "markets.notCredentials":
+    "Marknadsstatus beskriver produktens tillgänglighet, inte de behörigheter du själv har.",
+  "markets.loading": "Hämtar marknader …",
+  "markets.failed": "Marknadsöversikten kunde inte hämtas. Dina uppgifter påverkas inte.",
+  "markets.how.title": "Så fungerar Security Passport",
+  "markets.how.1": "Skapa din yrkesprofil och välj arbetsmarknad.",
+  "markets.how.2": "Lägg till marknadsspecifika licenser, förordnanden och utbildningar.",
+  "markets.how.3": "Ladda upp underlag så att varje uppgift kan granskas oberoende.",
+  "markets.how.4": "Dela valda, aktuella meriter via en säker QR-kod eller länk.",
+  "markets.employerLine":
+    "Arbetsgivare ser verifierade fakta, giltighetsdatum och omfattning — aldrig ett dolt samlat omdöme.",
   "card.verifiedMarkets": "Dokumenterade marknader",
   "card.currentWorkMarket": "Aktuell arbetsmarknad",
   "cred.field.credentialCountry": "Behörighetens land",
@@ -2111,6 +2172,7 @@ const en: Record<PassportCopyKey, string> = {
 
   "screen.home": "Candidate home (mock)",
   "screen.marketProfiles": "Market profiles",
+  "screen.threeMarkets": "Three markets and catalogue",
   "screen.welcome": "Welcome and purpose",
   "screen.onboarding": "Get started",
   "screen.overview": "My Security Passport",
@@ -3611,6 +3673,53 @@ const en: Record<PassportCopyKey, string> = {
   "market.details.show": "View details",
   "market.details.hide": "Hide details",
   "market.currentMarket.none": "No documented records in this market yet.",
+
+  "catalogue.group.appointments": "Professional licences, appointments and cadre cards",
+  "catalogue.group.qualifications": "Training and qualifications",
+  "catalogue.choices.one": "choice",
+  "catalogue.choices.many": "choices",
+  "catalogue.code": "Code",
+  "catalogue.selected": "Selected",
+  "catalogue.search.label": "Search credentials and training",
+  "catalogue.search.placeholder": "Type a name or code",
+  "catalogue.search.showing": "Showing",
+  "catalogue.search.of": "of",
+  "catalogue.search.noMatch": "No choices match your search. Your earlier choice is kept.",
+  "catalogue.search.clear": "Clear search",
+  "catalogue.loading": "Loading the catalogue for your market …",
+  "catalogue.failed":
+    "The catalogue could not be loaded. Nothing in your Security Passport has changed — try again in a moment.",
+  "catalogue.retry": "Try again",
+  "catalogue.empty": "This market has no registrable credentials yet.",
+
+  "markets.headline":
+    "One Security Passport. Market-specific verification. Built to move with your career.",
+  "markets.title": "Markets",
+  "markets.lead":
+    "One person, one Passport, one profile per market. Each market has its own rules, its own credentials and its own review — nothing is treated as equivalent across countries.",
+  "markets.status.available": "Available",
+  "markets.status.pilot": "Internal pilot · under review",
+  "markets.holder.current": "Your work market",
+  "markets.holder.pilotMember": "You have pilot access to this market.",
+  "markets.holder.pilotClosed": "Regulated choices cannot be selected here yet.",
+  "markets.action.add": "Add credentials",
+  "markets.action.choose": "Choose as work market",
+  "markets.pilot.note":
+    "A pilot entitlement permits registration. It is not legal approval, not verification, not a judgement about you as a person and not an authority to work.",
+  "markets.ni.label": "Northern Ireland",
+  "markets.ni.note":
+    "Northern Ireland is a separate submarket with its own rules. Choose Northern Ireland as your work market to see its catalogue.",
+  "markets.notCredentials":
+    "Market status describes product availability, not the credentials you personally hold.",
+  "markets.loading": "Loading markets …",
+  "markets.failed": "The market overview could not be loaded. Your records are unaffected.",
+  "markets.how.title": "How Security Passport works",
+  "markets.how.1": "Create your professional profile and choose your work market.",
+  "markets.how.2": "Add market-specific licences, appointments and training.",
+  "markets.how.3": "Submit evidence so each record can be independently reviewed.",
+  "markets.how.4": "Share selected, current credentials through a secure QR code or link.",
+  "markets.employerLine":
+    "Employers see verified facts, expiry dates and scope — never a black-box verdict.",
   "card.verifiedMarkets": "Documented markets",
   "card.currentWorkMarket": "Current work market",
   "cred.field.credentialCountry": "Credential's country",

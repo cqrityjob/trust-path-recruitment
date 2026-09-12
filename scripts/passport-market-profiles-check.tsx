@@ -139,6 +139,7 @@ const SWEDISH_OPTIONS = FIXTURE_CREDENTIAL_TYPES.filter((t) =>
   ["VU1", "VU2", "OV", "SV"].includes(t.code),
 ).map((t) => ({
   code: t.code,
+  category: t.category,
   nameSv: t.nameSv,
   nameEn: t.nameEn,
   symbolLabel: t.symbolLabel,

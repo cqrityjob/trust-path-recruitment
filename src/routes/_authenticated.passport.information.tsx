@@ -57,6 +57,7 @@ import {
   getRegulatedCredentialAvailability,
   type RegulatedCredentialAvailability,
 } from "@/lib/security-passport/credentials.functions";
+import { catalogueOptionsFor } from "@/lib/security-passport/market-catalogue";
 import { Briefcase, GraduationCap, Languages, Plus, ShieldCheck, Wrench } from "lucide-react";
 import { CAREER_PROFILE_ROUTE } from "@/lib/security-passport/profile-basics";
 import {
@@ -177,6 +178,13 @@ function PassportInformationRoute() {
     confirmed: boolean;
   } | null>(null);
   const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
+  // Three states for the catalogue read, kept apart from the answer itself:
+  // "no answer yet" and "the read failed" both leave `availability` null, and
+  // a section that could not tell them apart would draw a healthy, slow read
+  // as a failure — or a failure as an empty market.
+  const [availabilityStatus, setAvailabilityStatus] = useState<"loading" | "ready" | "failed">(
+    "loading",
+  );
   // The profile-level half of the six basics. Read from the SAME profile
   // fetch as the work country below, because they are one row: loading them
   // separately is how a page ends up showing a stale name beside a fresh
@@ -273,9 +281,11 @@ function PassportInformationRoute() {
 
     try {
       setAvailability(await loadAvailability({ data: undefined }));
+      setAvailabilityStatus("ready");
     } catch (err) {
       console.error("[passport] market availability load failed", err);
       setAvailability(null);
+      setAvailabilityStatus("failed");
     }
   }, [loadProfile, loadAvailability, invalidateCandidateReadModels]);
   useEffect(() => {
@@ -685,12 +695,24 @@ function PassportInformationRoute() {
         {/* Was a literal ["VU1","VU2","OV","SV"] rendered unconditionally, which
           offered Swedish regulated credentials to a holder who had told the
           product they work in Dubai. It is now the governed answer, and the
-          three closed states each say which absence they are. */}
+          three closed states each say which absence they are.
+
+          The OPTIONS come from the shared rule, not from a comparison written
+          here. This line used to read `availability?.state === "open"`, which
+          was complete on the day it was written and silently incomplete the
+          day "open_pilot" joined the union: the section below and the form
+          after it both accepted a pilot market, and this route alone passed
+          it an empty list — so an entitled pilot holder read the pilot status
+          line and found nothing under it. `catalogueOptionsFor` is the one
+          place that decides, and scripts/passport-market-catalogue-check
+          fails the build if a route restates it. */}
         <MarketCredentialSection
           state={availability?.state ?? "no_work_country"}
           jurisdictionCode={availability?.jurisdictionCode ?? null}
           subJurisdictionCode={availability?.subJurisdictionCode ?? null}
-          options={availability?.state === "open" ? availability.types : []}
+          options={catalogueOptionsFor(availability)}
+          catalogueStatus={availabilityStatus}
+          onRetryCatalogue={() => void refreshWorkCountry()}
           onSelect={(code) => void navigate({ to: "/passport/credentials/new", search: { code } })}
           onSetWorkCountry={() => {
             document.getElementById("sp-work-country")?.focus();

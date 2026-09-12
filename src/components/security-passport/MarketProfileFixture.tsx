@@ -200,6 +200,7 @@ export function MarketProfileFixture() {
         ["UK_SIA_LICENCE_NFL", "SIA Licence — Non-Front-Line", "NFL"],
       ].map(([code, name, label]) => ({
         code,
+        category: "appointment" as const,
         nameSv: name,
         nameEn: name,
         symbolLabel: label,
@@ -212,6 +213,7 @@ export function MarketProfileFixture() {
       FIXTURE_CREDENTIAL_TYPES.filter((t) => ["VU1", "VU2", "OV", "SV"].includes(t.code)).map(
         (t) => ({
           code: t.code,
+          category: t.category,
           nameSv: t.nameSv,
           nameEn: t.nameEn,
           symbolLabel: t.symbolLabel,

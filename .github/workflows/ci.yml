@@ -370,6 +370,18 @@ jobs:
       - name: Passport market profiles check
         run: bun run passport-market-profiles:check
 
+      # Three markets, one catalogue. The entry route passed the governed
+      # catalogue only for `state === "open"` while the section under it and
+      # the form after it accepted "open_pilot" too -- so an entitled pilot
+      # holder read the pilot status line and found nothing under it, and the
+      # pure-component guard above could not see a route handing a component
+      # the wrong props. This reads the route, renders the shared catalogue
+      # for all four market packs (3/5, 7/6, 1/0, 15/15, in database order),
+      # re-parses the migrations the fixture mirrors, and asserts the market
+      # cards, the admin pilot-access surface and the copy in both languages.
+      - name: Passport market catalogue check
+        run: bun run passport-market-catalogue:check
+
       # The application deploys when main moves; a migration is applied when
       # somebody asks. Between those two events the code can be talking to a
       # schema that has never heard of what it needs -- which took the whole

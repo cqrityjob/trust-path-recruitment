@@ -482,8 +482,20 @@ async function mount(
           subJurisdictionCode: null,
           marketPackCode: "SE-CORE",
           types: [
-            { code: "VU1", nameSv: "Väktare grund 1", nameEn: "Guard 1", symbolLabel: null },
-            { code: "OV", nameSv: "Ordningsvakt", nameEn: "Public order", symbolLabel: null },
+            {
+              code: "VU1",
+              category: "qualification",
+              nameSv: "Väktare grund 1",
+              nameEn: "Guard 1",
+              symbolLabel: null,
+            },
+            {
+              code: "OV",
+              category: "appointment",
+              nameSv: "Ordningsvakt",
+              nameEn: "Public order",
+              symbolLabel: null,
+            },
           ],
         });
       case "listMyEntries":

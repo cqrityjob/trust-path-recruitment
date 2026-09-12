@@ -29,6 +29,11 @@ import { isCurrentMerit, isUnfinishedMerit } from "@/lib/security-passport/types
 import { AssertionLegend } from "./AssertionChip";
 import { ClaimList } from "./ClaimRow";
 import { CredentialSymbol } from "./CredentialSymbol";
+import { CredentialCatalogue } from "./CredentialCatalogue";
+import {
+  isOfferableMarketState,
+  type CatalogueOption,
+} from "@/lib/security-passport/market-catalogue";
 import { ExperienceTimeline } from "./ExperienceTimeline";
 import { formatWorkLocation } from "@/lib/security-passport/format";
 import { EligibilityLine } from "./EligibilityLine";
@@ -101,12 +106,7 @@ export function PassportOverview({
    *  regulated credentials from the Passport's front page. */
   marketCredentials?: {
     readonly state: "no_work_country" | "open" | "open_pilot" | "pending_review" | "unsupported";
-    readonly options: readonly {
-      code: string;
-      nameSv: string;
-      nameEn: string;
-      symbolLabel: string | null;
-    }[];
+    readonly options: readonly CatalogueOption[];
   };
   onResumeDraft?: (claimId: string) => void;
   className?: string;
@@ -314,33 +314,22 @@ export function PassportOverview({
                       ? pt("market.unsupported.body")
                       : pt("cred.market.noWorkCountry")}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 space-y-3">
             {/* The governed catalogue, or none. A regulated credential is only
-                ever offered for a market whose pack is ACTIVE; every other
-                state offers nothing regulated rather than falling back to
-                another market's list. */}
-            {(marketCredentials?.state === "open" || marketCredentials?.state === "open_pilot"
-              ? marketCredentials.options
-              : []
-            ).map((o) => (
-              <button
-                key={o.code}
-                type="button"
-                onClick={() => onAddCredential(o.code)}
-                data-credential-code={o.code}
-                className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <CredentialSymbol
-                  code={o.code}
-                  state="self_declared"
-                  symbolLabel={o.symbolLabel ?? undefined}
-                  name={lang === "sv" ? o.nameSv : o.nameEn}
-                  size={28}
-                  decorative
-                />
-                {o.code}
-              </button>
-            ))}
+                ever offered for a market this holder may register in — open
+                or open as a pilot — and every other state offers nothing
+                regulated rather than falling back to another market's list.
+                The SAME component the entry page and the form draw, so the
+                front page cannot show a different list from the form it
+                leads to. */}
+            {isOfferableMarketState(marketCredentials?.state) && marketCredentials ? (
+              <CredentialCatalogue
+                mode="action"
+                options={marketCredentials.options}
+                onSelect={(code) => onAddCredential(code)}
+                idPrefix="sp-overview-catalogue"
+              />
+            ) : null}
             <button
               type="button"
               onClick={() => onAddCredential()}

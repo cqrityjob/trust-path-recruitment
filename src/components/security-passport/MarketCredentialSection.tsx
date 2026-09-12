@@ -30,7 +30,11 @@
 import { ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatWorkLocation, workCountrySupportKey } from "@/lib/security-passport/format";
-import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
+import {
+  isOfferableMarketState,
+  type CatalogueOption,
+} from "@/lib/security-passport/market-catalogue";
+import { CredentialCatalogue, type CatalogueStatus } from "./CredentialCatalogue";
 
 /** The four governed states, mirroring `RegulatedMarketState` exactly.
  *
@@ -48,22 +52,25 @@ export type MarketSectionState =
   | "pending_review"
   | "unsupported";
 
-/** One registrable credential, as the market pack describes it. */
-export interface MarketCredentialOption {
-  readonly code: string;
-  readonly nameSv: string;
-  readonly nameEn: string;
-  readonly symbolLabel: string | null;
-}
+/** One registrable credential, as the market pack describes it. The shared
+ *  catalogue shape: `category` is what groups a licence apart from the
+ *  training behind it. */
+export type MarketCredentialOption = CatalogueOption;
 
 export interface MarketCredentialSectionProps {
   readonly state: MarketSectionState;
   readonly jurisdictionCode: string | null;
   readonly subJurisdictionCode: string | null;
-  /** Non-empty only when `state` is "open". A caller that passes options for
-   *  any other state is passing a catalogue for a market that is closed, and
-   *  they are ignored rather than rendered. */
+  /** Non-empty only when `state` is "open" or "open_pilot". A caller that
+   *  passes options for any other state is passing a catalogue for a market
+   *  that is closed, and they are ignored rather than rendered. */
   readonly options: readonly MarketCredentialOption[];
+  /** How the catalogue read went. "ready" unless the route says otherwise;
+   *  the two other states are drawn in words inside the open section so a
+   *  slow or failed read is never mistaken for an empty market. */
+  readonly catalogueStatus?: CatalogueStatus;
+  /** Offered when the catalogue read failed. */
+  readonly onRetryCatalogue?: () => void;
   /** What already exists in this market. Rendered above the entry controls so
    *  the holder sees their own record before they are asked to add to it. */
   readonly children?: React.ReactNode;
@@ -78,6 +85,8 @@ export function MarketCredentialSection({
   jurisdictionCode,
   subJurisdictionCode,
   options,
+  catalogueStatus = "ready",
+  onRetryCatalogue,
   children,
   onSelect,
   onSetWorkCountry,
@@ -86,8 +95,9 @@ export function MarketCredentialSection({
   const marketName = formatWorkLocation(jurisdictionCode, subJurisdictionCode, lang);
   // Both states offer a catalogue. They differ only in what the surface must
   // SAY about the market, never in what it may refuse — the database decides
-  // that, and it decided before this component was rendered.
-  const isOpen = state === "open" || state === "open_pilot";
+  // that, and it decided before this component was rendered. The rule is the
+  // shared one, so this section and the route feeding it cannot disagree.
+  const isOpen = isOfferableMarketState(state);
 
   // The heading names the market in every state. That is what lets one set of
   // copy strings serve every market: the sentences below never contain a
@@ -102,7 +112,11 @@ export function MarketCredentialSection({
 
   return (
     <section
-      className="rounded-xl border border-border bg-card p-5"
+      // An anchor, so the overview's market card can send the holder straight
+      // to the catalogue for the market they chose. Focusable only as a target.
+      id="sp-market-section"
+      tabIndex={-1}
+      className="scroll-mt-24 rounded-xl border border-border bg-card p-5 outline-none"
       data-testid="market-credential-section"
       data-market-state={state}
       data-market={subJurisdictionCode ?? jurisdictionCode ?? ""}
@@ -139,34 +153,21 @@ export function MarketCredentialSection({
       {children ? <div className="mt-4">{children}</div> : null}
 
       {isOpen ? (
-        <div className="mt-4 flex flex-wrap gap-2" data-testid="market-credential-options">
-          {options.map((o) => {
-            const name = lang === "sv" ? o.nameSv : o.nameEn;
-            return (
-              <button
-                key={o.code}
-                type="button"
-                onClick={() => onSelect(o.code)}
-                data-credential-code={o.code}
-                className="inline-flex h-auto min-h-11 w-full max-w-full items-center gap-2 rounded-md border border-input px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-[calc(50%-0.25rem)] lg:w-[calc(33.333%-0.334rem)]"
-              >
-                <CredentialSymbol
-                  code={o.code}
-                  state="self_declared"
-                  symbolLabel={o.symbolLabel ?? undefined}
-                  name={name}
-                  size={28}
-                  decorative
-                  className="shrink-0"
-                />
-                {/* Regulated credential names are long single words in
-                    Swedish - "Ordningsvaktsforordnande" has no break
-                    opportunity - and without this they ran past the card
-                    edge. */}
-                <span className="min-w-0 break-words leading-tight">{name}</span>
-              </button>
-            );
-          })}
+        // ── OPEN. The shared catalogue, grouped by meaning. ─────────────
+        //
+        // Not a flat row of buttons any more: Dubai's thirty choices need
+        // a search and two headings to be readable at all, and Sweden's
+        // eight are clearer for the same headings. The catalogue decides the
+        // presentation; this section decided only that there IS one.
+        <div className="mt-4" data-testid="market-credential-options">
+          <CredentialCatalogue
+            mode="action"
+            options={options}
+            status={catalogueStatus}
+            onRetry={onRetryCatalogue}
+            onSelect={onSelect}
+            idPrefix="sp-market-catalogue"
+          />
         </div>
       ) : (
         // ── CLOSED. Which absence, in the market's own name. ───────────
