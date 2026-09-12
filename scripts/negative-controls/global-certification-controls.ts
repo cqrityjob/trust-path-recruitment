@@ -358,14 +358,8 @@ const MUTATIONS: readonly Mutation[] = [
     id: "GC-NC-SWALLOWS-REAL-ERRORS",
     defect: "a permission error or an outage is reported as a missing column",
     file: SCHEMA_HELPERS,
-    find: '  return err?.code === "42703" || err?.code === "PGRST204";
-}
-
-/** True when a Supabase error means "this database does not have that column',
-    replace: '  return true;
-}
-
-/** True when a Supabase error means "this database does not have that column',
+    find: 'return err?.code === "42703" || err?.code === "PGRST204";',
+    replace: "return true;",
     guard: DRIFT_GUARD,
     expect: "a permission error is NOT swallowed as a missing column",
   },
@@ -373,8 +367,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "GC-NC-MISSING-CATALOGUE-THROWS",
     defect: "an absent certification catalogue is reported to the holder as an error",
     file: SERVER,
-    find: "      if (isMissingRelation(error)) return [];
-      throw new Error(error.message);",
+    find: "if (isMissingRelation(error)) return [];",
     replace: "      throw new Error(error.message);",
     guard: DRIFT_GUARD,
     expect: "an absent certification catalogue reads as an EMPTY one, not an error",
