@@ -1,6 +1,6 @@
 # BESKT PR 3 — candidate preparation, browser evidence
 
-Captured at HEAD `d56df05043f711a98b710ec1b4d03d97a38067b4` in 2861 ms, 100 assertions,
+Captured at HEAD `b86df352e3f4984b840385dd7a947d1fa90afce6` in 2252 ms, 100 assertions,
 0 failures.
 
 ## What these captures are
@@ -13,17 +13,19 @@ ring, and the visible text.
 
 ## What these captures are NOT
 
-They are not the live data walk. The full journey — employer start, candidate
-notice and acknowledgement, save and resume, omission and discuss-orally,
-review and correction, submission, employer submitted readback, and the denied
-cross-user and cross-tenant paths — is in
-`e2e/beskt-candidate-preparation.spec.ts` and needs a local Supabase stack
-(Docker). That stack is unavailable in the environment these were taken in, so
-the spec did not run here.
+They are not the routed walk, and they do not stand in for one. The full
+journey — employer start, candidate notice and acknowledgement, save and
+resume, omission and discuss-orally, review and correction, submission,
+employer submitted readback, and the denied cross-user and cross-tenant paths
+— is walked in a browser by `e2e/beskt-candidate-preparation.spec.ts`
+against a real stack, and its captures are in
+`artifacts/beskt-candidate-preparation/live/`.
 
-Every one of those transitions and refusals is proved end to end by the 203
-assertions in `supabase/tests/bcp_candidate_preparation_test.sql`, which
-DID run. What the live walk would add is that the screens wire to them.
+These SUPPLEMENT that walk. They measure layout, hit targets and focus on
+markup that needs no database, so they run anywhere — including in CI, where
+there is no stack at all. Every transition and refusal is additionally proved
+in the database by the 206 assertions in
+`supabase/tests/bcp_candidate_preparation_test.sql`.
 
 ## Reproduce
 

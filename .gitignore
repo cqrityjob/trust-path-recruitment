@@ -110,4 +110,16 @@ pw.shots.mjs
 # would only be a stale second copy of the build in the diff.
 /artifacts/beskt-candidate-preparation/*.html
 /artifacts/beskt-candidate-preparation/styles.css
-/artifacts/beskt-candidate-preparation/live/
+
+# The ROUTED walk's captures ARE committed: they are the evidence that the
+# screens above are wired to the database, taken from the real application on
+# its real routes while signed in. `live/INDEX.md` records the HEAD, the stack
+# they ran against and the one part of it that is substituted; `live/
+# manifest.json` records every step's duration and every file's SHA-256.
+#
+# Its TRACES are not committed, and that is deliberate rather than an
+# oversight: a Playwright trace records the network, so it carries the
+# signed-in session's bearer token. The manifest names each trace and its
+# digest so a reviewer reproducing the run can check they got the same files.
+/artifacts/beskt-candidate-preparation/live/**/trace.zip
+/artifacts/beskt-candidate-preparation/live/*.zip

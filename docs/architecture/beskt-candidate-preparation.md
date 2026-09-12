@@ -8,7 +8,8 @@
 **Rollback:** `supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql`
 **Suite:** `supabase/tests/bcp_candidate_preparation_test.sql`
 **Guard / controls:** `scripts/beskt-candidate-preparation-check.ts`, `scripts/negative-controls/beskt-candidate-preparation-controls.ts`
-**Render proof / evidence:** `scripts/beskt-candidate-preparation-render-check.tsx`, `scripts/beskt-candidate-preparation-evidence.ts`, `e2e/beskt-candidate-preparation.spec.ts`
+**Render proof:** `scripts/beskt-candidate-preparation-render-check.tsx`, `scripts/beskt-candidate-preparation-evidence.ts`
+**Routed evidence:** `e2e/beskt-candidate-preparation.spec.ts`, `scripts/local-stack/`, `scripts/fixtures/beskt-candidate-preparation-fixture.sql` (see section 9)
 
 ## 1. Why the runtime is `bcp_` and not `beskt_`
 
@@ -46,14 +47,14 @@ With no assignment in existence, every one of these is byte-for-byte the PR #218
 
 ## 3. The six tables
 
-| Table | Holds |
-| --- | --- |
-| `bcp_pilot_grants` | the whole of PR 3's release authority: employer → method version, grantor, documented source reference, validity window, revocation with reason. Append-only apart from a single revocation; written only by `bcp_grant_pilot` / `bcp_revoke_pilot` |
-| `bcp_assignments` | one preparation: employer, job, application and the application's **own** applicant; the pinned method version, exposure profile, content hash and release scope; a constrained forward-only lifecycle (`assigned → notice_acknowledged → in_progress → submitted`, or `cancelled`); availability, delivery, acknowledgement, submission and cancellation times; a compare-and-swap revision. `mode` admits `recruitment_support` alone |
-| `bcp_notice_acknowledgements` | append-only proof that the candidate was shown, and confirmed reading, an exactly identified notice in a stated language. `acknowledgement_kind` admits `information_received` and nothing else |
-| `bcp_responses` | a version of one candidate's preparation, with a generated `draft_slot` making at most one open draft per assignment a database invariant; frozen from submission with the SHA-256 of the exact answers and of the method content they were given against |
-| `bcp_answers` | typed answers against governed item keys. One value column per declared `answer_type`, enforced by CHECK; `response_state` is exactly `answered` / `omitted` / `discuss_orally`, and a neutral state is required to carry no value at all |
-| `bcp_events` | the append-only lifecycle ledger, carrying the idempotency receipt for each operation id |
+| Table                         | Holds                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bcp_pilot_grants`            | the whole of PR 3's release authority: employer → method version, grantor, documented source reference, validity window, revocation with reason. Append-only apart from a single revocation; written only by `bcp_grant_pilot` / `bcp_revoke_pilot`                                                                                                                                                                                     |
+| `bcp_assignments`             | one preparation: employer, job, application and the application's **own** applicant; the pinned method version, exposure profile, content hash and release scope; a constrained forward-only lifecycle (`assigned → notice_acknowledged → in_progress → submitted`, or `cancelled`); availability, delivery, acknowledgement, submission and cancellation times; a compare-and-swap revision. `mode` admits `recruitment_support` alone |
+| `bcp_notice_acknowledgements` | append-only proof that the candidate was shown, and confirmed reading, an exactly identified notice in a stated language. `acknowledgement_kind` admits `information_received` and nothing else                                                                                                                                                                                                                                         |
+| `bcp_responses`               | a version of one candidate's preparation, with a generated `draft_slot` making at most one open draft per assignment a database invariant; frozen from submission with the SHA-256 of the exact answers and of the method content they were given against                                                                                                                                                                               |
+| `bcp_answers`                 | typed answers against governed item keys. One value column per declared `answer_type`, enforced by CHECK; `response_state` is exactly `answered` / `omitted` / `discuss_orally`, and a neutral state is required to carry no value at all                                                                                                                                                                                               |
+| `bcp_events`                  | the append-only lifecycle ledger, carrying the idempotency receipt for each operation id                                                                                                                                                                                                                                                                                                                                                |
 
 No score, level, weight, threshold, total, rank, pass/fail, suitability, credibility, truthfulness, recommendation, risk or verdict column exists anywhere in the domain, and the postflight refuses the migration if one appears. `jsonb` exists only on the event ledger, so an ungoverned scoring object cannot be stored as an answer.
 
@@ -98,3 +99,45 @@ A preparation is started from an existing application, on that application's own
 ## 8. What PR 3 does not do
 
 No live interview execution, interviewer observation, evidence-state assessment, independent assessor workflow, panel workflow, report generation, AI analysis or summarisation, candidate scoring or ranking, suitability, credibility or deception judgement, automated employment recommendation, automatic job-application status change, security-vetting runtime, hosted apply or Lovable publish. The postflight and the guard refuse a table, column, function or code path for any of them. Those begin in PR 4.
+
+## 9. The routed evidence
+
+Exported components can prove layout and copy. They cannot prove that the
+screens are wired to the database, and PR 3's whole claim is about what the
+database decides. So the journey is walked in a real browser, signed in, on
+the real routes: `e2e/beskt-candidate-preparation.spec.ts`, captured in
+`artifacts/beskt-candidate-preparation/live/`.
+
+Seven tests, in order, at 1440, 375 and 390, in Swedish and English: the
+library's honest state; the employer starting a preparation from an existing
+application and seeing **nothing** of a draft; the nine notices with no
+question answerable before acknowledgement; answering, saving, leaving and
+resuming with the exact same answers; one question taken orally and another
+skipped; review and a real correction; one submission after which the screen
+is read-only; the employer's readback of the submitted basis and the neutral
+states; and the two refusals — a second candidate and a member of another
+employer.
+
+Two of those steps are worth naming because they are properties, not screens:
+
+- **Routing is the database's decision.** The follow-up questions appear only
+  after the answer that opens them has been _saved_, because the item sequence
+  is resolved by PR #218's resolver over the answers actually stored. What the
+  candidate is asked is never decided in the browser, and the walk asserts the
+  order in which that becomes visible.
+- **The refusals are absences.** The wrong candidate's page carries no notice,
+  no question, no review list and none of the submitted text — not an empty
+  panel, nothing at all.
+
+The stack it runs against is described in `scripts/local-stack/README.md`. It
+is a real PostgreSQL 16 with the full migration history and the hosted
+privilege baseline, a real PostgREST enforcing the real RLS, and the real
+application — with **GoTrue substituted** by a local token endpoint, because
+in the environment this evidence was captured in no container image could be
+fetched at all. That substitution is named in the evidence index beside the
+captures rather than left for a reader to discover.
+
+The walk's traces are captured and deliberately **not** committed: a trace
+records the network and therefore carries the session's bearer token, which
+`scripts/e4-evidence-scan.ts` correctly refuses. Their digests are in
+`live/manifest.json`.

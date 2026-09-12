@@ -11,15 +11,14 @@
  * sizes, real document width, a real focus ring after a real Tab — not from
  * source text.
  *
- * It is NOT the live data walk. The full journey against a running stack
- * (employer start -> candidate notice -> save/resume -> omission and oral ->
- * review and correction -> submission -> employer readback -> denied
- * cross-user and cross-tenant paths) lives in
- * e2e/beskt-candidate-preparation.spec.ts and needs a local Supabase stack.
- * Every one of those transitions is proved end to end by the 206 assertions
- * in supabase/tests/bcp_candidate_preparation_test.sql; what a live browser
- * adds on top is that the screens wire to them, and that is the part this
- * environment cannot run without Docker.
+ * It is NOT the routed walk, and it does not stand in for one. The full
+ * journey against a running stack (employer start -> candidate notice ->
+ * save/resume -> omission and oral -> review and correction -> submission ->
+ * employer readback -> denied cross-user and cross-tenant paths) is walked in
+ * a browser by e2e/beskt-candidate-preparation.spec.ts, whose captures are in
+ * artifacts/beskt-candidate-preparation/live/. These captures SUPPLEMENT that
+ * one: they measure layout and hit targets on markup that needs no stack, so
+ * they can run anywhere, including in CI where no database exists.
  *
  * The distinction is stated in INDEX.md beside the captures, so nobody reads
  * these as something they are not.
@@ -34,7 +33,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { chromium, type Browser, type Page } from "@playwright/test";
 
@@ -298,6 +297,10 @@ const totalMs = Math.round(performance.now() - started);
 
 const files = readdirSync(OUT)
   .filter((f) => f !== "manifest.json" && f !== "INDEX.md")
+  // Files only. `live/` is the routed walk's directory and has its own
+  // manifest; hashing a directory is an EISDIR, and hashing someone else's
+  // evidence into this manifest would be wrong even if it were not.
+  .filter((f) => statSync(path.join(OUT, f)).isFile())
   .sort()
   .map((f) => ({ file: f, sha256: sha256(path.join(OUT, f)) }));
 
@@ -345,17 +348,19 @@ ring, and the visible text.
 
 ## What these captures are NOT
 
-They are not the live data walk. The full journey — employer start, candidate
-notice and acknowledgement, save and resume, omission and discuss-orally,
-review and correction, submission, employer submitted readback, and the denied
-cross-user and cross-tenant paths — is in
-\`e2e/beskt-candidate-preparation.spec.ts\` and needs a local Supabase stack
-(Docker). That stack is unavailable in the environment these were taken in, so
-the spec did not run here.
+They are not the routed walk, and they do not stand in for one. The full
+journey — employer start, candidate notice and acknowledgement, save and
+resume, omission and discuss-orally, review and correction, submission,
+employer submitted readback, and the denied cross-user and cross-tenant paths
+— is walked in a browser by \`e2e/beskt-candidate-preparation.spec.ts\`
+against a real stack, and its captures are in
+\`artifacts/beskt-candidate-preparation/live/\`.
 
-Every one of those transitions and refusals is proved end to end by the 203
-assertions in \`supabase/tests/bcp_candidate_preparation_test.sql\`, which
-DID run. What the live walk would add is that the screens wire to them.
+These SUPPLEMENT that walk. They measure layout, hit targets and focus on
+markup that needs no database, so they run anywhere — including in CI, where
+there is no stack at all. Every transition and refusal is additionally proved
+in the database by the 206 assertions in
+\`supabase/tests/bcp_candidate_preparation_test.sql\`.
 
 ## Reproduce
 
