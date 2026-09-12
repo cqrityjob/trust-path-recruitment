@@ -16,7 +16,7 @@
  * review and correction -> submission -> employer readback -> denied
  * cross-user and cross-tenant paths) lives in
  * e2e/beskt-candidate-preparation.spec.ts and needs a local Supabase stack.
- * Every one of those transitions is proved end to end by the 203 assertions
+ * Every one of those transitions is proved end to end by the 206 assertions
  * in supabase/tests/bcp_candidate_preparation_test.sql; what a live browser
  * adds on top is that the screens wire to them, and that is the part this
  * environment cannot run without Docker.

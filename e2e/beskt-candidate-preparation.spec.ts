@@ -32,7 +32,7 @@
  * ── WHAT PROVES THE SAME THING WITHOUT A BROWSER ───────────────────────
  *
  * Every transition and every refusal above is proved end to end by
- * supabase/tests/beskt_candidate_preparation_test.sql (203 assertions), which
+ * supabase/tests/bcp_candidate_preparation_test.sql (206 assertions), which
  * runs in the database job on every push. The screens themselves are captured
  * in real Chromium, in both languages at both widths, by
  * scripts/beskt-candidate-preparation-evidence.ts, which needs no stack.
