@@ -118,7 +118,7 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("sp_credential_types")
       .select(
-        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code",
+        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code, scope_code",
       )
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
@@ -138,6 +138,7 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
       titleIsHolderWritten: r.title_is_holder_written,
       jurisdictionCode: r.jurisdiction_code,
       subJurisdictionCode: r.sub_jurisdiction_code,
+      scopeCode: r.scope_code,
     }));
   });
 
@@ -206,7 +207,7 @@ export interface RegulatedCredentialAvailability {
 }
 
 const TAXONOMY_COLUMNS =
-  "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code";
+  "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code, scope_code";
 
 export const getRegulatedCredentialAvailability = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -335,8 +336,177 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
         titleIsHolderWritten: r.title_is_holder_written,
         jurisdictionCode: r.jurisdiction_code,
         subJurisdictionCode: r.sub_jurisdiction_code,
+        scopeCode: r.scope_code,
       })),
     };
+  });
+
+/* ------------------------------------------------------------------ */
+/* International professional certifications                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One international professional certification, as the catalogue governs it.
+ *
+ * A SEPARATE reader from `getRegulatedCredentialAvailability`, and the
+ * separation is the point. That function answers "given where this holder
+ * works, what may they register", and every answer it can give is bounded by a
+ * market pack. A CPP is bounded by nothing: it is available to a holder in
+ * Sweden, a holder in Dubai, a holder in a country nobody has authored rules
+ * for and a holder who has stated no country at all, and it needs no pilot
+ * entitlement. Asking the market question about it would have produced
+ * `unsupported` for most of the world.
+ */
+export interface GlobalCertificationType {
+  readonly type: CredentialType;
+  readonly issuerCode: string;
+  /** The controlled display name. The ONLY name any surface prints — aliases
+   *  exist for search and never for rendering. */
+  readonly issuerDisplayName: string;
+  readonly issuerOfficialUrl: string;
+  readonly abbreviation: string;
+  readonly programmeUrl: string;
+  readonly maintenancePolicyUrl: string;
+  readonly maintenancePolicyType: string;
+  /** The PROGRAMME's cycle in months, where one is published. Null for an
+   *  annual-compliance programme. Never added to a holder's award date: see
+   *  `sp_claim_certification_lifecycle`, which is where a holder's own dated
+   *  statement lives. */
+  readonly maintenanceCycleMonths: number | null;
+  readonly maintenanceSummaryEn: string;
+  /** How a third party could check standing with this issuer, and whether not
+   *  finding somebody means anything. An opt-in directory's absence proves
+   *  nothing, and a caller that cannot tell the modes apart will eventually
+   *  render "not found" as "not certified". */
+  readonly verificationMode: string;
+  readonly publicVerificationUrl: string | null;
+  readonly absenceIsInconclusive: boolean;
+  readonly sourceReviewedOn: string;
+  readonly retiredOn: string | null;
+}
+
+/**
+ * The governed international catalogue.
+ *
+ * ── WHAT THIS PHASE DOES WITH IT ───────────────────────────────────────
+ *
+ * Nothing visible. No route calls it, no component renders it, and the add
+ * flow that will is Phase 2's. It exists now because the resolver, the write
+ * path and the classifier are this phase's deliverable and each of them needs
+ * one reader that is not the market reader — and because a catalogue with no
+ * reader cannot be tested end to end.
+ *
+ * ── WHY IT READS ACTIVE ONLY ───────────────────────────────────────────
+ *
+ * This is the SELECTION list: what a holder may newly add. A retired
+ * definition stays readable through `listCredentialTypes` and through the
+ * Passport snapshot, so an existing claim against it still renders — which is
+ * the other half of the same rule, and the reason `retiredOn` is carried here
+ * rather than used as a filter somewhere else.
+ */
+export const listGlobalCertificationTypes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly GlobalCertificationType[]> => {
+    const { data, error } = await context.supabase
+      .from("sp_certification_definitions")
+      .select(
+        `credential_code, abbreviation, programme_url, maintenance_policy_url,
+         maintenance_policy_type, maintenance_cycle_months, maintenance_summary_en,
+         public_verification_url, source_reviewed_on, retired_on,
+         sp_certification_issuers!inner (
+           issuer_code, display_name, official_url,
+           verification_mode, public_verification_url, absence_is_inconclusive
+         ),
+         sp_credential_types!inner (
+           code, category, claim_type, name_sv, name_en, symbol_label,
+           requires_valid_until, requires_issuer, requires_scope,
+           narrow_result_only, title_is_holder_written,
+           jurisdiction_code, sub_jurisdiction_code, scope_code, is_active,
+           sort_order
+         )`,
+      )
+      .is("retired_on", null)
+      .order("credential_code", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    type Row = {
+      credential_code: string;
+      abbreviation: string;
+      programme_url: string;
+      maintenance_policy_url: string;
+      maintenance_policy_type: string;
+      maintenance_cycle_months: number | null;
+      maintenance_summary_en: string;
+      public_verification_url: string | null;
+      source_reviewed_on: string;
+      retired_on: string | null;
+      sp_certification_issuers: {
+        issuer_code: string;
+        display_name: string;
+        official_url: string;
+        verification_mode: string;
+        public_verification_url: string | null;
+        absence_is_inconclusive: boolean;
+      };
+      sp_credential_types: {
+        code: string;
+        category: string;
+        claim_type: string;
+        name_sv: string;
+        name_en: string;
+        symbol_label: string;
+        requires_valid_until: boolean;
+        requires_issuer: boolean;
+        requires_scope: boolean;
+        narrow_result_only: boolean;
+        title_is_holder_written: boolean;
+        jurisdiction_code: string | null;
+        sub_jurisdiction_code: string | null;
+        scope_code: string | null;
+        is_active: boolean;
+        sort_order: number;
+      };
+    };
+
+    return ((data ?? []) as unknown as Row[])
+      .filter((r) => r.sp_credential_types.is_active)
+      .sort((a, b) => a.sp_credential_types.sort_order - b.sp_credential_types.sort_order)
+      .map((r) => ({
+        type: {
+          code: r.sp_credential_types.code,
+          category: r.sp_credential_types.category as CredentialCategory,
+          claimType: r.sp_credential_types.claim_type,
+          nameSv: r.sp_credential_types.name_sv,
+          nameEn: r.sp_credential_types.name_en,
+          symbolLabel: r.sp_credential_types.symbol_label,
+          requiresValidUntil: r.sp_credential_types.requires_valid_until,
+          requiresIssuer: r.sp_credential_types.requires_issuer,
+          requiresScope: r.sp_credential_types.requires_scope,
+          narrowResultOnly: r.sp_credential_types.narrow_result_only,
+          titleIsHolderWritten: r.sp_credential_types.title_is_holder_written,
+          jurisdictionCode: r.sp_credential_types.jurisdiction_code,
+          subJurisdictionCode: r.sp_credential_types.sub_jurisdiction_code,
+          scopeCode: r.sp_credential_types.scope_code,
+        },
+        issuerCode: r.sp_certification_issuers.issuer_code,
+        issuerDisplayName: r.sp_certification_issuers.display_name,
+        issuerOfficialUrl: r.sp_certification_issuers.official_url,
+        abbreviation: r.abbreviation,
+        programmeUrl: r.programme_url,
+        maintenancePolicyUrl: r.maintenance_policy_url,
+        maintenancePolicyType: r.maintenance_policy_type,
+        maintenanceCycleMonths: r.maintenance_cycle_months,
+        maintenanceSummaryEn: r.maintenance_summary_en,
+        verificationMode: r.sp_certification_issuers.verification_mode,
+        // The programme may override the issuer's route; NULL means inherit,
+        // and inheriting NULL — ACAMS — is the honest answer that no confirmed
+        // public lookup exists.
+        publicVerificationUrl:
+          r.public_verification_url ?? r.sp_certification_issuers.public_verification_url,
+        absenceIsInconclusive: r.sp_certification_issuers.absence_is_inconclusive,
+        sourceReviewedOn: r.source_reviewed_on,
+        retiredOn: r.retired_on,
+      }));
   });
 
 /* ------------------------------------------------------------------ */
@@ -537,7 +707,7 @@ export const saveCredential = createServerFn({ method: "POST" })
       const { data: row, error } = await supabase
         .from("sp_credential_types")
         .select(
-          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code",
+          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code, scope_code",
         )
         .eq("code", data.credentialCode)
         .maybeSingle();
@@ -557,6 +727,7 @@ export const saveCredential = createServerFn({ method: "POST" })
         titleIsHolderWritten: row.title_is_holder_written,
         jurisdictionCode: row.jurisdiction_code,
         subJurisdictionCode: row.sub_jurisdiction_code,
+        scopeCode: row.scope_code,
       };
     }
 

@@ -15,6 +15,14 @@ import type { CredentialType } from "../credentials";
 // The second is what keeps a Swedish credential Swedish for a holder who has
 // moved — the form STATES the jurisdiction from the definition rather than
 // asking anybody to choose one.
+//
+// `scopeCode: "national_regulated"` on every row is the third. These eight are
+// Swedish regulated credentials and say so; 20261110090000 backfilled the same
+// value onto every definition that already carried both a market pack and a
+// jurisdiction. NONE of them is `global_professional`, and this fixture
+// deliberately mirrors no international certification: the add flow for those
+// is Phase 2's, and a harness offering a credential the product does not yet
+// offer would be reviewing a screen that does not exist.
 
 export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
   {
@@ -31,6 +39,7 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     titleIsHolderWritten: false,
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
+    scopeCode: "national_regulated",
   },
   {
     code: "VU2",
@@ -46,6 +55,7 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     titleIsHolderWritten: false,
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
+    scopeCode: "national_regulated",
   },
   {
     code: "OV",
@@ -61,6 +71,7 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     titleIsHolderWritten: false,
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
+    scopeCode: "national_regulated",
   },
   {
     code: "SV",
@@ -80,6 +91,7 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     titleIsHolderWritten: false,
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
+    scopeCode: "national_regulated",
   },
 
   // ── Added by the Swedish truth model (20260907091000) ─────────────────
@@ -100,6 +112,7 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     titleIsHolderWritten: false,
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
+    scopeCode: "national_regulated",
   },
   {
     code: "OV_REFRESHER",
@@ -115,6 +128,7 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     titleIsHolderWritten: false,
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
+    scopeCode: "national_regulated",
   },
   {
     code: "OV_TRANSPORT",
@@ -130,6 +144,7 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     titleIsHolderWritten: false,
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
+    scopeCode: "national_regulated",
   },
   // The narrow result. Nothing about the police register behind it may enter
   // the Passport, so the form hides the note and title fields and the database
@@ -148,5 +163,6 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     titleIsHolderWritten: false,
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
+    scopeCode: "national_regulated",
   },
 ] as const;

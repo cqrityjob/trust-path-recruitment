@@ -382,6 +382,29 @@ jobs:
       - name: Passport market catalogue check
         run: bun run passport-market-catalogue:check
 
+      # Security Passport Phase 1. The governed international-certification
+      # foundation: an explicit `global_professional` scope that is DECLARED
+      # and never inferred, the five controlled issuers and the exact fourteen
+      # reviewed definitions, the constraint that keeps a portable
+      # certification from creating national eligibility or a professional
+      # title, and the classifier that puts every fact in exactly one bucket.
+      #
+      # The database suite proves what the schema refuses. This proves what the
+      # repository says -- the half a migration cannot check, because it is
+      # about source that has not run. A fuzzy upgrade from a title or a null
+      # jurisdiction would fail no migration and no type check, and would turn
+      # somebody's free-text "CPP" into a credential nobody awarded them.
+      - name: Passport global certification catalogue check
+        run: bun run passport-global-certification:check
+
+      # The credential reference is a lookup key into somebody else's register
+      # and the single most damaging field in the Passport to leak. It stays in
+      # sp_claims because moving it would rewrite real holders' data, so the
+      # guarantee is a strict column allowlist on every read path -- and this
+      # is the enforcement a comment cannot be.
+      - name: Passport private credential reference check
+        run: bun run passport-private-reference:check
+
       # The application deploys when main moves; a migration is applied when
       # somebody asks. Between those two events the code can be talking to a
       # schema that has never heard of what it needs -- which took the whole
