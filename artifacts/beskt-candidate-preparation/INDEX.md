@@ -1,6 +1,6 @@
 # BESKT PR 3 — candidate preparation, browser evidence
 
-Captured at HEAD `6561a2f1fce0588dd81ff6cdf257a50153b29658` in 3014 ms, 100 assertions,
+Captured at HEAD `d56df05043f711a98b710ec1b4d03d97a38067b4` in 2861 ms, 100 assertions,
 0 failures.
 
 ## What these captures are
@@ -22,7 +22,7 @@ cross-user and cross-tenant paths — is in
 the spec did not run here.
 
 Every one of those transitions and refusals is proved end to end by the 203
-assertions in `supabase/tests/beskt_candidate_preparation_test.sql`, which
+assertions in `supabase/tests/bcp_candidate_preparation_test.sql`, which
 DID run. What the live walk would add is that the screens wire to them.
 
 ## Reproduce
@@ -48,7 +48,7 @@ bun run beskt-candidate-preparation-evidence
 - `candidate-questions-sv-mobile.png` — `c382bc8e9acc27aa…`
 - `candidate-questions-sv.html` — `a50e812e3061a945…`
 - `candidate-review-en-desktop.png` — `ea7dd5a51597fd93…`
-- `candidate-review-en-mobile.png` — `52d8420734ec89ff…`
+- `candidate-review-en-mobile.png` — `4a7a36a3d946e154…`
 - `candidate-review-en.html` — `6be640de5a90be84…`
 - `candidate-review-sv-desktop.png` — `4c16f72b6ef3d725…`
 - `candidate-review-sv-mobile.png` — `60a9594df6928f17…`
