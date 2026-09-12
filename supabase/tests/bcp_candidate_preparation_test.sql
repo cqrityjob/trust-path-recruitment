@@ -1398,6 +1398,35 @@ BEGIN
     public.bcp_notice_copy_digest('beskt-prep-notice-1', 'de-DE') IS NULL
     AND public.bcp_notice_copy_digest('beskt-prep-notice-0', 'sv-SE') IS NULL,
     'C12.16 no governed digest exists for an ungoverned locale or notice version');
+
+  -- The template covers the WHOLE pre-confirmation surface. Each of these was
+  -- ungoverned when it covered the nine title/body pairs alone, and the last
+  -- of them is the sentence that says this is not a consent.
+  PERFORM pg_temp.ok(
+    'beskt.notice.title' = ANY (public.bcp_notice_copy_keys())
+    AND 'beskt.notice.lede' = ANY (public.bcp_notice_copy_keys())
+    AND 'beskt.notice.retentionClass' = ANY (public.bcp_notice_copy_keys())
+    AND 'beskt.notice.lawfulBasis' = ANY (public.bcp_notice_copy_keys())
+    AND 'beskt.notice.acknowledge' = ANY (public.bcp_notice_copy_keys())
+    AND 'beskt.notice.acknowledgeHint' = ANY (public.bcp_notice_copy_keys())
+    AND 'beskt.prep.open' = ANY (public.bcp_notice_copy_keys()),
+    'C12.16a TEMPLATE: the heading, lede, both reference labels, the acknowledgement, the not-consent hint and the confirm control are all governed');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) = 9 FROM unnest(public.bcp_notice_sections()) AS sec
+      WHERE 'beskt.notice.' || sec || '.title' = ANY (public.bcp_notice_copy_keys())
+        AND 'beskt.notice.' || sec || '.body' = ANY (public.bcp_notice_copy_keys())),
+    'C12.16b and both fields of every one of the nine governed matters');
+  PERFORM pg_temp.ok(
+    array_length(public.bcp_notice_copy_keys(), 1) = 25
+    AND (SELECT count(*) FROM (SELECT DISTINCT unnest(public.bcp_notice_copy_keys())) d) = 25,
+    'C12.16c exactly 25 distinct keys, so the template is a closed set');
+  -- The descriptor binds the template's SHAPE, so narrowing it changes the
+  -- hash even though the digest itself is a stored constant.
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM jsonb_array_elements_text(
+       pg_temp.rpc(_k.cand_b, format('SELECT public.bcp_notice_descriptor(%L, %L)', _fresh, 'sv-SE'))
+         -> 'notice_copy_keys')) = 25,
+    'C12.16d and the descriptor carries that list, so a narrowed template cannot inherit an acknowledgement');
   PERFORM pg_temp.must_fail_as('authenticated', _k.cand_b,
     format('SELECT public.bcp_notice_descriptor(%L, %L)', _fresh, 'de-DE'),
     'BCP_NOTICE_LOCALE_UNSUPPORTED', 'C12.17 an ungoverned locale has no descriptor to acknowledge');

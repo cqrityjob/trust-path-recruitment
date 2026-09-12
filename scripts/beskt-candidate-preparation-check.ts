@@ -39,6 +39,7 @@ const RELEASE_STATE = join(ROOT, "supabase/release-state.json");
 const PACKAGE = join(ROOT, "package.json");
 const CI = join(ROOT, ".github/workflows/ci.yml");
 const TSCONFIG = join(ROOT, "tsconfig.scripts.json");
+const NOTICE_COPY_CHECK = join(ROOT, "scripts/beskt-notice-copy-digest-check.ts");
 const FRONTIER = join(ROOT, "scripts/release-frontier-check.ts");
 const TYPES = join(ROOT, "src/integrations/supabase/types.ts");
 
@@ -623,6 +624,40 @@ const pr2 = read(PR2_MIGRATION);
     /ARRAY\['sv-SE', 'en-GB'\]/.test(locales),
     "BCP-NOTICE: the governed locales are exactly sv-SE and en-GB",
   );
+  // THE WHOLE PRE-CONFIRMATION SURFACE, not only the nine matters. Each key
+  // below was ungoverned when the template covered the title/body pairs alone,
+  // and the acknowledgement hint is the sentence that says this is NOT consent.
+  const copyKeys = functionBody(functionText(sql, "bcp_notice_copy_keys") ?? "");
+  const governedKeys = Array.from(copyKeys.matchAll(/'([a-z][a-zA-Z0-9_.]*)'/g), (m) => m[1]);
+  check(
+    governedKeys.length === 25 && new Set(governedKeys).size === 25,
+    `BCP-NOTICE: the governed copy template lists 25 distinct keys (found ${governedKeys.length})`,
+  );
+  for (const key of [
+    "beskt.notice.title",
+    "beskt.notice.lede",
+    "beskt.notice.retentionClass",
+    "beskt.notice.lawfulBasis",
+    "beskt.notice.acknowledge",
+    "beskt.notice.acknowledgeHint",
+    "beskt.prep.open",
+  ]) {
+    check(governedKeys.includes(key), `BCP-NOTICE: the governed copy template covers ${key}`);
+  }
+  for (const section of NOTICE_SECTIONS) {
+    check(
+      governedKeys.includes(`beskt.notice.${section}.title`) &&
+        governedKeys.includes(`beskt.notice.${section}.body`),
+      `BCP-NOTICE: and both fields of the "${section}" matter`,
+    );
+  }
+  check(
+    /'notice_copy_keys', to_jsonb\(public\.bcp_notice_copy_keys\(\)\)/.test(
+      functionBody(functionText(sql, "bcp_notice_descriptor") ?? ""),
+    ),
+    "BCP-NOTICE: the descriptor binds the template's SHAPE too, so a field cannot be dropped from it silently",
+  );
+
   const digest = functionBody(functionText(sql, "bcp_notice_copy_digest") ?? "");
   const digests = Array.from(digest.matchAll(/'([0-9a-f]{64})'/g), (m) => m[1]);
   check(
@@ -958,6 +993,31 @@ const pr2 = read(PR2_MIGRATION);
       ci.includes("run: bun run beskt-architecture:check"),
     "BCP-REGISTRATION: CI runs the PR 1, PR 2 and PR 3 guards",
   );
+  // The application half's obligation is mechanical: scripts/
+  // beskt-notice-copy-digest-check.ts computes the canonical string from the
+  // real dictionary and refuses a mismatch, and it runs in CI on every branch.
+  // In this release the dictionary carries no notice keys, so it reports the
+  // proof as OUTSTANDING rather than passing silently.
+  check(
+    pkg.scripts["beskt-notice-copy:check"] === "bun run scripts/beskt-notice-copy-digest-check.ts",
+    "BCP-REGISTRATION: the notice-copy digest check is registered",
+  );
+  check(
+    ci.includes("run: bun run beskt-notice-copy:check"),
+    "BCP-REGISTRATION: and CI runs it, so PR 3B cannot merge a dictionary that does not match the governed template",
+  );
+  const noticeCheck = read(NOTICE_COPY_CHECK);
+  check(
+    /createHash\("sha256"\)/.test(noticeCheck) &&
+      /bcp_notice_copy_keys/.test(noticeCheck) &&
+      /bcp_notice_copy_digest/.test(noticeCheck),
+    "BCP-REGISTRATION: it derives both the key list and the digests from the migration rather than restating them",
+  );
+  check(
+    /dictionaryCarriesTheNotice/.test(noticeCheck) && /OUTSTANDING/.test(noticeCheck),
+    "BCP-REGISTRATION: and reports the dictionary proof as outstanding while the copy is absent",
+  );
+
   const tsconfig = read(TSCONFIG);
   check(
     tsconfig.includes('"scripts/beskt-candidate-preparation-check.ts"') &&

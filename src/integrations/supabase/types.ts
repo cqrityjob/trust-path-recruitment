@@ -15066,6 +15066,10 @@ export type Database = {
         Args: { _locale: string; _notice_version: string }
         Returns: string
       }
+      bcp_notice_copy_keys: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       bcp_notice_descriptor: {
         Args: { _assignment_id: string; _locale: string }
         Returns: Json

@@ -1345,20 +1345,80 @@ GRANT EXECUTE ON FUNCTION public.bcp_notice_sections() TO authenticated, service
 --       governed, immutable and versioned.
 --
 --       CANONICAL FORM, so the application half can reproduce it exactly.
---       For each section in bcp_notice_sections() order, and for `title`
---       then `body`:
+--       For each key in bcp_notice_copy_keys() order:
 --
---           "beskt.notice.<section>.<field>" || E'\n' || <text> || E'\n'
+--           <key> || E'\n' || <text> || E'\n'
 --
 --       concatenated in that order, hashed as UTF-8 with SHA-256, lowercase
 --       hex. No value may contain a newline. PR 3B proves its rendered
 --       dictionary text hashes to exactly the value below; until it does,
 --       nothing renders this notice at all.
 --
+--       IT IS A TEMPLATE DIGEST, NOT A RENDERING. It covers the STATIC copy
+--       the notice screen shows before the candidate confirms: the heading,
+--       the lede, the nine matters, the labels on the two governed
+--       references, the acknowledgement statement, the not-consent hint and
+--       the label on the control that records the acknowledgement. It is NOT
+--       a hash of the DOM, a screenshot or the assembled page, and it does
+--       not cover the DYNAMIC governed values -- the retention class and the
+--       lawful-basis reference themselves -- which travel in the descriptor
+--       as data and vary per exposure profile.
+--
+--       The first revision covered the nine title/body pairs ALONE. That left
+--       the heading, the lede, both labels, the acknowledgement statement and
+--       -- most materially -- the hint that says in so many words that this
+--       is NOT consent, all ungoverned: any of them could be reworded, or the
+--       not-consent sentence deleted outright, without the digest noticing.
+--
 --       CHANGING THE COPY therefore requires changing this digest, in a
 --       migration, deliberately -- which changes every notice hash and makes
 --       a new acknowledgement necessary. That is the point: a silently
 --       reworded notice cannot inherit an old acknowledgement.
+CREATE OR REPLACE FUNCTION public.bcp_notice_copy_keys()
+RETURNS text[]
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  -- IN RENDER ORDER, which is the order the canonical form concatenates.
+  -- Every entry is STATIC copy shown before the candidate confirms.
+  SELECT ARRAY[
+    'beskt.notice.title',                        -- the heading
+    'beskt.notice.lede',                         -- what the screen is for
+    'beskt.notice.purpose.title',                -- the nine governed matters
+    'beskt.notice.purpose.body',
+    'beskt.notice.use_of_information.title',
+    'beskt.notice.use_of_information.body',
+    'beskt.notice.human_decision.title',
+    'beskt.notice.human_decision.body',
+    'beskt.notice.not_a_test_with_score.title',
+    'beskt.notice.not_a_test_with_score.body',
+    'beskt.notice.may_omit_questions.title',
+    'beskt.notice.may_omit_questions.body',
+    'beskt.notice.oral_discussion.title',
+    'beskt.notice.oral_discussion.body',
+    'beskt.notice.review_and_correct.title',
+    'beskt.notice.review_and_correct.body',
+    'beskt.notice.who_can_access.title',
+    'beskt.notice.who_can_access.body',
+    'beskt.notice.retention.title',
+    'beskt.notice.retention.body',
+    'beskt.notice.retentionClass',               -- the LABEL; the value is
+    'beskt.notice.lawfulBasis',                  -- dynamic and in the descriptor
+    'beskt.notice.acknowledge',                  -- what the candidate confirms
+    'beskt.notice.acknowledgeHint',              -- "this is NOT a consent"
+    'beskt.prep.open']::text[];                  -- the control that records it
+$$;
+
+REVOKE ALL ON FUNCTION public.bcp_notice_copy_keys() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_notice_copy_keys() TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.bcp_notice_copy_keys() IS
+  'The ordered set of application copy keys the governed notice-template '
+  'digest covers: every static string the notice screen shows before the '
+  'candidate confirms. Changing this list changes the notice hash, so a '
+  'field cannot be dropped from the template quietly.';
+
 CREATE OR REPLACE FUNCTION public.bcp_notice_locales()
 RETURNS text[]
 LANGUAGE sql
@@ -1377,9 +1437,9 @@ SET search_path = public
 AS $$
   SELECT CASE
     WHEN _notice_version = 'beskt-prep-notice-1' AND _locale = 'sv-SE'
-      THEN 'c86510f74ccd8632e434e00e2524a533358c08002f4e7eaa190a5baed914fa72'
+      THEN 'dd2abc9db2c26293d6ac577f860e4fcd2795ef7f62ac2bb142c8ccf7100cc4fa'
     WHEN _notice_version = 'beskt-prep-notice-1' AND _locale = 'en-GB'
-      THEN 'e1f879e48a3c7dbb18594017a0dc36b07544139a718dceaf155bab94d7a66b34'
+      THEN '37abcf8f2ef3629adda4a9eee6b5e7b4745edb2599f571375aa6ca7443da40c9'
   END;
 $$;
 
@@ -1436,6 +1496,11 @@ BEGIN
     -- make a reworded notice a different notice.
     'locale', _locale,
     'notice_copy_digest', _digest,
+    -- The template's SHAPE, not only its content. Dropping a field from
+    -- bcp_notice_copy_keys() -- the not-consent hint, say -- changes the
+    -- notice hash even though the digest constant is a literal, so a
+    -- narrowed template cannot inherit an old acknowledgement either.
+    'notice_copy_keys', to_jsonb(public.bcp_notice_copy_keys()),
     -- The governed references the candidate is entitled to. NOT consent:
     -- the lawful basis is the employer's and is stated on the profile.
     'retention_class', _p.retention_class,
@@ -3101,6 +3166,41 @@ BEGIN
   END IF;
   IF array_length(public.bcp_notice_locales(), 1) IS DISTINCT FROM 2 THEN
     RAISE EXCEPTION 'BCP_PROOF: the notice must declare exactly the two supported locales.';
+  END IF;
+
+  -- The template must cover the WHOLE pre-confirmation surface, not only the
+  -- nine matters. Each of these was ungoverned in the first revision, and the
+  -- last one is the sentence that says this is not a consent.
+  FOREACH _fn IN ARRAY ARRAY[
+      'beskt.notice.title',
+      'beskt.notice.lede',
+      'beskt.notice.retentionClass',
+      'beskt.notice.lawfulBasis',
+      'beskt.notice.acknowledge',
+      'beskt.notice.acknowledgeHint',
+      'beskt.prep.open'] LOOP
+    IF NOT (_fn = ANY (public.bcp_notice_copy_keys())) THEN
+      RAISE EXCEPTION 'BCP_PROOF: the governed notice template does not cover %.', _fn;
+    END IF;
+  END LOOP;
+  -- And every governed matter, as both a title and a body.
+  FOREACH _fn IN ARRAY public.bcp_notice_sections() LOOP
+    IF NOT ('beskt.notice.' || _fn || '.title' = ANY (public.bcp_notice_copy_keys()))
+       OR NOT ('beskt.notice.' || _fn || '.body' = ANY (public.bcp_notice_copy_keys())) THEN
+      RAISE EXCEPTION 'BCP_PROOF: the governed notice template does not cover both fields of %.', _fn;
+    END IF;
+  END LOOP;
+  IF array_length(public.bcp_notice_copy_keys(), 1) IS DISTINCT FROM 25 THEN
+    RAISE EXCEPTION 'BCP_PROOF: the governed notice template covers % key(s); 25 are required.',
+      array_length(public.bcp_notice_copy_keys(), 1);
+  END IF;
+  IF (SELECT count(*) FROM (SELECT DISTINCT unnest(public.bcp_notice_copy_keys())) d) <> 25 THEN
+    RAISE EXCEPTION 'BCP_PROOF: the governed notice template repeats a key.';
+  END IF;
+  IF (SELECT prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname = 'bcp_notice_descriptor')
+     NOT LIKE '%bcp_notice_copy_keys%' THEN
+    RAISE EXCEPTION 'BCP_PROOF: the descriptor does not bind the template shape, so a field could be dropped silently.';
   END IF;
   -- The descriptor and hash must TAKE the locale; a one-argument form would
   -- silently reinstate the defect this replaced.

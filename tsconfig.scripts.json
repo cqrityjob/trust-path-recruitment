@@ -125,6 +125,7 @@
     // read.
     "scripts/beskt-governed-content-check.ts",
     "scripts/beskt-candidate-preparation-check.ts",
+    "scripts/beskt-notice-copy-digest-check.ts",
     "scripts/negative-controls/beskt-governed-content-controls.ts",
     "scripts/negative-controls/beskt-candidate-preparation-controls.ts",
     "scripts/negative-controls/runner.ts",

@@ -80,26 +80,66 @@ identically and editing a body string changed nothing the server could see. The
 record's own claim, that it names the exact notice the candidate read, was
 therefore false. It now carries the **locale** and a **governed copy digest**:
 
-| Function                                    | What it governs                                                                                                                                   |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bcp_notice_locales()`                      | exactly `sv-SE` and `en-GB`                                                                                                                       |
-| `bcp_notice_copy_digest(version, locale)`   | the SHA-256 the copy for that pair MUST hash to; `NULL` for any ungoverned pair, so an ungoverned locale is refused rather than hashed to nothing |
-| `bcp_notice_descriptor(assignment, locale)` | carries both, so the two languages hash differently                                                                                               |
-| `bcp_notice_hash(assignment, locale)`       | what the acknowledgement compares against                                                                                                         |
+| Function                                    | What it governs                                                                                                                                    |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bcp_notice_locales()`                      | exactly `sv-SE` and `en-GB`                                                                                                                        |
+| `bcp_notice_copy_keys()`                    | the **ordered set of copy keys the template covers** — every static string the notice screen shows before the candidate confirms                   |
+| `bcp_notice_copy_digest(version, locale)`   | the SHA-256 that copy MUST hash to for that pair; `NULL` for any ungoverned pair, so an ungoverned locale is refused rather than hashed to nothing |
+| `bcp_notice_descriptor(assignment, locale)` | carries the locale, the digest **and the key list**, so the template's content and its shape are both bound                                        |
+| `bcp_notice_hash(assignment, locale)`       | what the acknowledgement compares against                                                                                                          |
 
-The wording itself stays in the application dictionary — a second copy of it in
-the database would be a second source of truth for one sentence. What lives in
-the database is the digest it must hash to. The canonical form, so PR 3B can
-reproduce it exactly: for each section in `bcp_notice_sections()` order and for
-`title` then `body`,
+### What the digest is, and what it is not
+
+It is a **governed notice-template digest**. It covers the static copy of the
+pre-confirmation screen: the heading, the lede, the nine matters as title and
+body, the labels on the two governed references, the acknowledgement statement,
+the hint that says this is not consent, and the label on the control that
+records the acknowledgement — **25 keys, in render order**.
+
+It is **not** a hash of the DOM, of a screenshot or of the assembled page, and
+it does not claim to be. It also does not cover the **dynamic** governed values
+— the retention class and the lawful-basis reference themselves — which vary
+per exposure profile and travel in the descriptor as data, where the hash
+already binds them.
+
+The first revision covered the nine title/body pairs **alone**. That left the
+heading, the lede, both labels, the acknowledgement statement and — most
+materially — the sentence saying in so many words that this is _not_ consent
+all ungoverned: any could have been reworded, or the not-consent sentence
+deleted outright, without the digest noticing.
+
+### The canonical form
+
+The wording itself stays in the application dictionary — a second copy in the
+database would be a second source of truth for one sentence. What lives in the
+database is the digest it must hash to and the list of fields it must cover.
+For each key in `bcp_notice_copy_keys()` order:
 
 ```
-"beskt.notice.<section>.<field>" || E'\n' || <text> || E'\n'
+<key> || E'\n' || <text> || E'\n'
 ```
 
 concatenated in that order, hashed as UTF-8 with SHA-256, lowercase hex, no
-value containing a newline. **PR 3B must prove its rendered dictionary text
-hashes to the governed value**; until it does, nothing renders this notice.
+value containing a newline.
+
+### How the application half is held to it
+
+Not by a sentence in this note. `scripts/beskt-notice-copy-digest-check.ts`
+reads `bcp_notice_copy_keys()` and `bcp_notice_copy_digest()` out of the
+migration, computes the canonical string from the real dictionary and
+**refuses a mismatch**. It runs in CI on every branch.
+
+In this schema release the dictionary carries no BESKT notice keys, so the
+check reports the dictionary proof as **outstanding** rather than passing
+silently — the truthful state of a release that ships the contract and not yet
+the copy. The moment PR 3B adds the copy, the same check computes and enforces
+it. Verified against the preserved PR 3B dictionary: it hashes to both governed
+digests exactly, while rewording the not-consent hint, rewording the heading
+and deleting the lede each make it fail.
+
+Narrowing the template is caught separately: the key list travels in the
+descriptor, so dropping a field changes every notice hash even though the
+digest itself is a stored constant.
 
 Changing the copy therefore requires changing the governed digest, in a
 migration, deliberately — which changes every notice hash and makes a new

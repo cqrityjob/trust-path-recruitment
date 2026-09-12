@@ -681,6 +681,96 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BCP-HARNESS",
   },
 
+  // ---- The governed notice TEMPLATE, and the strings it must cover ---------
+  {
+    id: "BCP-NC-NOTICE-TEMPLATE-DROPS-NOT-CONSENT-HINT",
+    defect:
+      "the acknowledgement hint -- the sentence that says in so many words that this is NOT consent -- is dropped from the governed template, so it could be reworded or deleted unnoticed",
+    file: MIG,
+    find: "    'beskt.notice.acknowledgeHint',              -- \"this is NOT a consent\"\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-TEMPLATE-DROPS-TITLE",
+    defect: "the notice heading leaves the governed template",
+    file: MIG,
+    find: "    'beskt.notice.title',                        -- the heading\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-TEMPLATE-DROPS-LEDE",
+    defect: "the lede leaves the governed template",
+    file: MIG,
+    find: "    'beskt.notice.lede',                         -- what the screen is for\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-TEMPLATE-DROPS-ACK-LABEL",
+    defect: "what the candidate actually confirms leaves the governed template",
+    file: MIG,
+    find: "    'beskt.notice.acknowledge',                  -- what the candidate confirms\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-TEMPLATE-DROPS-CONFIRM-CONTROL",
+    defect:
+      'the label on the control that records the acknowledgement leaves the template, so it could be relabelled "I consent"',
+    file: MIG,
+    find: "    'beskt.prep.open']::text[];                  -- the control that records it",
+    replace: "    'beskt.notice.acknowledgeHint']::text[];",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-TEMPLATE-DROPS-REFERENCE-LABELS",
+    defect: "the labels on the two governed references leave the template",
+    file: MIG,
+    find:
+      "    'beskt.notice.retentionClass',               -- the LABEL; the value is\n" +
+      "    'beskt.notice.lawfulBasis',                  -- dynamic and in the descriptor\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-TEMPLATE-SHAPE-UNBOUND",
+    defect:
+      "the descriptor stops carrying the template's key list, so narrowing the template would no longer change the notice hash",
+    file: MIG,
+    find: "    'notice_copy_keys', to_jsonb(public.bcp_notice_copy_keys()),\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-COPY-CHECK-UNREGISTERED",
+    defect:
+      "the notice-copy digest check is dropped from CI, so PR 3B could merge a dictionary that does not match the governed template",
+    file: CI,
+    find: "        run: bun run beskt-notice-copy:check",
+    replace: "        run: echo skipped",
+    guard: GUARD,
+    expect: "BCP-REGISTRATION",
+  },
+  {
+    id: "BCP-NC-NOTICE-COPY-CHECK-RESTATES-DIGEST",
+    defect:
+      "the notice-copy check stops deriving the governed digests from the migration, so the two could drift apart",
+    file: "scripts/beskt-notice-copy-digest-check.ts",
+    find: "const digestBlock =",
+    replace: "const unusedDigestBlock =",
+    guard: GUARD,
+    expect: "BCP-REGISTRATION",
+  },
+
   // ---- The generated database types ----------------------------------------
   {
     id: "BCP-NC-TYPES-STALE",

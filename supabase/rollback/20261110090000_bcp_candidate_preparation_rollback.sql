@@ -394,6 +394,7 @@ DROP FUNCTION IF EXISTS public.bcp_canonical_answers(uuid);
 DROP FUNCTION IF EXISTS public.bcp_notice_hash(uuid, text);
 DROP FUNCTION IF EXISTS public.bcp_notice_descriptor(uuid, text);
 DROP FUNCTION IF EXISTS public.bcp_notice_copy_digest(text, text);
+DROP FUNCTION IF EXISTS public.bcp_notice_copy_keys();
 DROP FUNCTION IF EXISTS public.bcp_notice_locales();
 DROP FUNCTION IF EXISTS public.bcp_notice_sections();
 DROP FUNCTION IF EXISTS public.bcp_notice_version();
