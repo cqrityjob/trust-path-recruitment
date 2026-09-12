@@ -23,7 +23,11 @@ const CLASSIFIER = "src/lib/security-passport/classification.ts";
 const CREDENTIALS = "src/lib/security-passport/credentials.ts";
 const DISCLOSURE = "src/lib/security-passport/disclosure.ts";
 
+const SERVER = "src/lib/security-passport/credentials.functions.ts";
+const SCHEMA_HELPERS = "src/lib/security-passport/market-access.ts";
+
 const GUARD = "passport-global-certification:check";
+const DRIFT_GUARD = "passport-schema-drift:check";
 const PRIVATE_GUARD = "passport-private-reference:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -333,6 +337,56 @@ const MUTATIONS: readonly Mutation[] = [
       "DELETE FROM public.sp_credential_types WHERE code LIKE 'INTL%' OR code IN (\n  'INTL_ASIS_APP', 'INTL_ASIS_CPP', 'INTL_ASIS_PCI', 'INTL_ASIS_PSP',",
     guard: GUARD,
     expect: "so a future INTL_ code cannot be swept up by it",
+  },
+
+  /* ── The deploy/migrate gap ──────────────────────────────────────── */
+  //
+  // The migration ships ahead of its application, so these reads run against a
+  // database without `scope_code`. A SELECT naming an unknown column fails the
+  // WHOLE request, which is how the Passport once went dark for holders whose
+  // records were entirely intact.
+  {
+    id: "GC-NC-NO-COLUMN-FALLBACK",
+    defect: "the taxonomy read has no fallback for a database without scope_code",
+    file: SERVER,
+    find: "  if (!isMissingColumn(withScope.error)) throw new Error(withScope.error.message);",
+    replace: "  throw new Error(withScope.error.message);",
+    guard: DRIFT_GUARD,
+    expect: "that function falls back to the column list without scope_code",
+  },
+  {
+    id: "GC-NC-SWALLOWS-REAL-ERRORS",
+    defect: "a permission error or an outage is reported as a missing column",
+    file: SCHEMA_HELPERS,
+    find: '  return err?.code === "42703" || err?.code === "PGRST204";
+}
+
+/** True when a Supabase error means "this database does not have that column',
+    replace: '  return true;
+}
+
+/** True when a Supabase error means "this database does not have that column',
+    guard: DRIFT_GUARD,
+    expect: "a permission error is NOT swallowed as a missing column",
+  },
+  {
+    id: "GC-NC-MISSING-CATALOGUE-THROWS",
+    defect: "an absent certification catalogue is reported to the holder as an error",
+    file: SERVER,
+    find: "      if (isMissingRelation(error)) return [];
+      throw new Error(error.message);",
+    replace: "      throw new Error(error.message);",
+    guard: DRIFT_GUARD,
+    expect: "an absent certification catalogue reads as an EMPTY one, not an error",
+  },
+  {
+    id: "GC-NC-NO-SCOPE-IS-GLOBAL",
+    defect: "a definition read without its scope column degrades to international",
+    file: SERVER,
+    find: "    scopeCode: r.scope_code ?? null,",
+    replace: '    scopeCode: r.scope_code ?? "global_professional",',
+    guard: GUARD,
+    expect: "an UNDECLARED scope is not global",
   },
 
   /* ── The private credential reference ────────────────────────────── */

@@ -44,11 +44,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
+  isMissingColumn,
   isMissingPilotLayer,
   isMissingPilotStateColumn,
+  isMissingRelation,
   marketAvailabilityOf,
   resolveMarketAccess,
 } from "../src/lib/security-passport/market-access";
+import { isGlobalCertification } from "../src/lib/security-passport/certification-scope";
 
 const root = path.resolve(import.meta.dirname, "..");
 const fails: string[] = [];
@@ -301,6 +304,88 @@ console.log("\n4 -- the catalogue is not load-bearing for the pages that show it
         : !src.includes("getRegulatedCredentialAvailability"),
     );
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   4. THE SAME GAP, FOR THE INTERNATIONAL CERTIFICATION CATALOGUE
+   ══════════════════════════════════════════════════════════════════════ */
+//
+// 20261110090000 adds `sp_credential_types.scope_code` and six tables, and
+// ships ahead of its application like every migration here. That puts three
+// LOAD-BEARING reads in exactly the gap `pilot_state` fell into: the credential
+// list, the market-aware catalogue and the save path all select a column a
+// production database does not have yet, and a SELECT naming an unknown column
+// fails the WHOLE request.
+//
+// The consequence would not be "no international certifications". It would be
+// the credential form, the correction form and every save going down for every
+// holder — the 2026-08-25 shape, again.
+console.log("\n4 -- the certification catalogue degrades instead of failing closed loudly");
+{
+  // The predicates are narrow: only a missing column and a missing relation.
+  ck(
+    "a missing column is recognised (42703 / PGRST204)",
+    isMissingColumn({ code: "42703" }) && isMissingColumn({ code: "PGRST204" }),
+  );
+  ck(
+    "a missing relation is recognised (42P01 / PGRST205)",
+    isMissingRelation({ code: "42P01" }) && isMissingRelation({ code: "PGRST205" }),
+  );
+  ck(
+    "a permission error is NOT swallowed as a missing column",
+    !isMissingColumn({ code: "42501" }) && !isMissingRelation({ code: "42501" }),
+  );
+  ck(
+    "nor is an unknown failure",
+    !isMissingColumn({ code: "PGRST301" }) && !isMissingRelation(null),
+  );
+
+  // The direction that matters: the degraded answer is strictly NARROWER.
+  // No scope column means no scope, and no scope is not global.
+  ck(
+    "a definition read without a scope column is NOT international",
+    !isGlobalCertification({ scopeCode: null }),
+  );
+  ck(
+    "and neither is one whose scope simply was not read",
+    !isGlobalCertification(null) && !isGlobalCertification(undefined),
+  );
+
+  const server = code(read("src/lib/security-passport/credentials.functions.ts"));
+
+  ck(
+    "the taxonomy is read through one function, not three hand-copied selects",
+    (server.match(/selectTaxonomy\(/g) ?? []).length >= 4,
+  );
+  ck(
+    "that function falls back to the column list without scope_code",
+    /TAXONOMY_BASE_COLUMNS/.test(server) && /isMissingColumn\(/.test(server),
+  );
+  ck(
+    "and it rethrows anything that is not a missing column",
+    /if \(!isMissingColumn\([\s\S]{0,60}?throw new Error/.test(server),
+  );
+  ck(
+    "no taxonomy read selects scope_code through the generated client",
+    !/\.from\("sp_credential_types"\)/.test(server),
+  );
+  ck(
+    "an absent certification catalogue reads as an EMPTY one, not an error",
+    /isMissingRelation\(error\)\) return \[\]/.test(server),
+  );
+  ck(
+    "and anything else on that read still throws",
+    /isMissingRelation\(error\)\) return \[\];\s*throw new Error/.test(server),
+  );
+
+  // The escape hatch is auditable and its removal condition is written down.
+  const pending = read("src/lib/security-passport/pending-schema.ts");
+  ck(
+    "the type-level escape hatch is one named function",
+    (code(pending).match(/export function fromPendingSchema/g) ?? []).length === 1,
+  );
+  ck("it names the migration whose application retires it", pending.includes("20261110090000"));
+  ck("and says that a cast does not make the read safe", /fails the WHOLE request/i.test(pending));
 }
 
 console.log(

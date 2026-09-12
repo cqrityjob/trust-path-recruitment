@@ -26,13 +26,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { isCalendarDate } from "./dates";
 import {
+  isMissingColumn,
   isMissingPilotLayer,
   isMissingPilotStateColumn,
+  isMissingRelation,
   marketAvailabilityOf,
   resolveMarketAccess,
   type MarketAccess,
   type MarketAvailability,
 } from "./market-access";
+import { fromPendingSchema, type PendingSchemaQuery } from "./pending-schema";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
@@ -108,6 +111,101 @@ export const listSelectableMarkets = createServerFn({ method: "GET" })
     }));
   });
 
+/* ------------------------------------------------------------------ */
+/* Reading the taxonomy while `scope_code` is still in flight           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One `sp_credential_types` row, as these reads want it.
+ *
+ * `scope_code` is OPTIONAL on this type, and that is the whole point:
+ * 20261110090000 adds the column and ships ahead of its application, so a
+ * production database can legitimately answer without it. A required field
+ * would force every caller to pretend it had one.
+ */
+interface TaxonomyRow {
+  code: string;
+  category: string;
+  claim_type: string;
+  name_sv: string;
+  name_en: string;
+  symbol_label: string;
+  requires_valid_until: boolean;
+  requires_issuer: boolean;
+  requires_scope: boolean;
+  narrow_result_only: boolean;
+  title_is_holder_written: boolean;
+  jurisdiction_code: string | null;
+  sub_jurisdiction_code: string | null;
+  scope_code?: string | null;
+}
+
+/** The columns every taxonomy read needs, WITHOUT the new one. */
+const TAXONOMY_BASE_COLUMNS =
+  "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code";
+
+/** …and with it. */
+const TAXONOMY_COLUMNS = `${TAXONOMY_BASE_COLUMNS}, scope_code`;
+
+/** One mapper, used by all three reads.
+ *
+ *  `scopeCode: r.scope_code ?? null` is the degraded answer made explicit: a
+ *  database that has not run the migration reports no scope, and NO SCOPE IS
+ *  NOT GLOBAL. `isGlobalCertification` returns false for null, so the absence
+ *  of the column can only ever make FEWER things international, never more —
+ *  the same fail-closed direction `resolveMarketAccess` takes for a missing
+ *  pilot layer. */
+function toCredentialType(r: TaxonomyRow): CredentialType {
+  return {
+    code: r.code,
+    category: r.category as CredentialCategory,
+    claimType: r.claim_type,
+    nameSv: r.name_sv,
+    nameEn: r.name_en,
+    symbolLabel: r.symbol_label,
+    requiresValidUntil: r.requires_valid_until,
+    requiresIssuer: r.requires_issuer,
+    requiresScope: r.requires_scope,
+    narrowResultOnly: r.narrow_result_only,
+    titleIsHolderWritten: r.title_is_holder_written,
+    jurisdictionCode: r.jurisdiction_code,
+    subJurisdictionCode: r.sub_jurisdiction_code,
+    scopeCode: r.scope_code ?? null,
+  };
+}
+
+/**
+ * Run a taxonomy read, falling back to the pre-migration column list when the
+ * database has not got `scope_code` yet.
+ *
+ * ── WHY THE FALLBACK IS NOT OPTIONAL ───────────────────────────────────
+ *
+ * A SELECT naming a column PostgREST has never heard of fails the WHOLE
+ * request. These three reads are what the credential form, the correction form
+ * and the save path hang off, so without this the unapplied migration would
+ * not degrade the international feature — it would take the Passport down for
+ * every holder, exactly as `pilot_state` once did. That outage is the reason
+ * `market-access.ts` exists, and the lesson does not need learning twice.
+ *
+ * Only a MISSING COLUMN is tolerated. A permission error or a genuine outage
+ * still throws: reporting those as "no credential declares a scope" would be a
+ * quiet lie a holder has no way to detect.
+ */
+async function selectTaxonomy(
+  client: unknown,
+  refine: (q: PendingSchemaQuery<TaxonomyRow>) => PendingSchemaQuery<TaxonomyRow>,
+): Promise<readonly TaxonomyRow[]> {
+  const table = () => fromPendingSchema<TaxonomyRow>(client, "sp_credential_types");
+
+  const withScope = await refine(table().select(TAXONOMY_COLUMNS));
+  if (!withScope.error) return withScope.data ?? [];
+  if (!isMissingColumn(withScope.error)) throw new Error(withScope.error.message);
+
+  const withoutScope = await refine(table().select(TAXONOMY_BASE_COLUMNS));
+  if (withoutScope.error) throw new Error(withoutScope.error.message);
+  return withoutScope.data ?? [];
+}
+
 /** The supported credentials, straight from the database.
  *
  *  Not a constant in the bundle: the taxonomy is data, and a fifth credential
@@ -115,31 +213,10 @@ export const listSelectableMarkets = createServerFn({ method: "GET" })
 export const listCredentialTypes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly CredentialType[]> => {
-    const { data, error } = await context.supabase
-      .from("sp_credential_types")
-      .select(
-        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code, scope_code",
-      )
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
-    if (error) throw new Error(error.message);
-
-    return (data ?? []).map((r) => ({
-      code: r.code,
-      category: r.category as CredentialCategory,
-      claimType: r.claim_type,
-      nameSv: r.name_sv,
-      nameEn: r.name_en,
-      symbolLabel: r.symbol_label,
-      requiresValidUntil: r.requires_valid_until,
-      requiresIssuer: r.requires_issuer,
-      requiresScope: r.requires_scope,
-      narrowResultOnly: r.narrow_result_only,
-      titleIsHolderWritten: r.title_is_holder_written,
-      jurisdictionCode: r.jurisdiction_code,
-      subJurisdictionCode: r.sub_jurisdiction_code,
-      scopeCode: r.scope_code,
-    }));
+    const rows = await selectTaxonomy(context.supabase, (q) =>
+      q.eq("is_active", true).order("sort_order", { ascending: true }),
+    );
+    return rows.map(toCredentialType);
   });
 
 /* ------------------------------------------------------------------ */
@@ -205,9 +282,6 @@ export interface RegulatedCredentialAvailability {
   /** Non-empty only when `state` is "open" or "open_pilot". */
   readonly types: readonly CredentialType[];
 }
-
-const TAXONOMY_COLUMNS =
-  "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code, scope_code";
 
 export const getRegulatedCredentialAvailability = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -305,39 +379,19 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // A pilot market publishes nothing: its credentials are reachable through
     // `pilot_state`, and `is_active` stays false so they do not become public
     // the day the pack is approved without somebody deciding that separately.
-    const typeQuery = supabase
-      .from("sp_credential_types")
-      .select(TAXONOMY_COLUMNS)
-      .eq("market_pack_code", pack.code)
-      .order("sort_order", { ascending: true });
-
-    const { data, error } =
-      access === "production"
-        ? await typeQuery.eq("is_active", true)
-        : await typeQuery.eq("pilot_state", "internal_pilot");
-    if (error) throw new Error(error.message);
+    const rows = await selectTaxonomy(supabase, (q) => {
+      const scoped = q.eq("market_pack_code", pack.code).order("sort_order", { ascending: true });
+      return access === "production"
+        ? scoped.eq("is_active", true)
+        : scoped.eq("pilot_state", "internal_pilot");
+    });
 
     return {
       state: access === "production" ? "open" : "open_pilot",
       jurisdictionCode,
       subJurisdictionCode,
       marketPackCode: pack.code,
-      types: (data ?? []).map((r) => ({
-        code: r.code,
-        category: r.category as CredentialCategory,
-        claimType: r.claim_type,
-        nameSv: r.name_sv,
-        nameEn: r.name_en,
-        symbolLabel: r.symbol_label,
-        requiresValidUntil: r.requires_valid_until,
-        requiresIssuer: r.requires_issuer,
-        requiresScope: r.requires_scope,
-        narrowResultOnly: r.narrow_result_only,
-        titleIsHolderWritten: r.title_is_holder_written,
-        jurisdictionCode: r.jurisdiction_code,
-        subJurisdictionCode: r.sub_jurisdiction_code,
-        scopeCode: r.scope_code,
-      })),
+      types: rows.map(toCredentialType),
     };
   });
 
@@ -404,11 +458,44 @@ export interface GlobalCertificationType {
  * the other half of the same rule, and the reason `retiredOn` is carried here
  * rather than used as a filter somewhere else.
  */
+/** One `sp_certification_definitions` row with its issuer and its taxonomy row,
+ *  as the embedded select returns them. Declared here rather than inline so
+ *  `fromPendingSchema` has a checked row type to be given: the escape hatch
+ *  widens whether the generated schema knows the RELATION, never what its
+ *  columns are. */
+interface GlobalCertificationRow {
+  credential_code: string;
+  abbreviation: string;
+  programme_url: string;
+  maintenance_policy_url: string;
+  maintenance_policy_type: string;
+  maintenance_cycle_months: number | null;
+  maintenance_summary_en: string;
+  public_verification_url: string | null;
+  source_reviewed_on: string;
+  retired_on: string | null;
+  sp_certification_issuers: {
+    issuer_code: string;
+    display_name: string;
+    official_url: string;
+    verification_mode: string;
+    public_verification_url: string | null;
+    absence_is_inconclusive: boolean;
+  };
+  sp_credential_types: TaxonomyRow & { is_active: boolean; sort_order: number };
+}
+
 export const listGlobalCertificationTypes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly GlobalCertificationType[]> => {
-    const { data, error } = await context.supabase
-      .from("sp_certification_definitions")
+    // Through the pending-schema reader: `sp_certification_definitions` does
+    // not exist until 20261110090000 is applied, so the generated types do not
+    // describe it and a production database does not have it. The row type
+    // below is still checked.
+    const { data, error } = await fromPendingSchema<GlobalCertificationRow>(
+      context.supabase,
+      "sp_certification_definitions",
+    )
       .select(
         `credential_code, abbreviation, programme_url, maintenance_policy_url,
          maintenance_policy_type, maintenance_cycle_months, maintenance_summary_en,
@@ -427,67 +514,22 @@ export const listGlobalCertificationTypes = createServerFn({ method: "GET" })
       )
       .is("retired_on", null)
       .order("credential_code", { ascending: true });
-    if (error) throw new Error(error.message);
 
-    type Row = {
-      credential_code: string;
-      abbreviation: string;
-      programme_url: string;
-      maintenance_policy_url: string;
-      maintenance_policy_type: string;
-      maintenance_cycle_months: number | null;
-      maintenance_summary_en: string;
-      public_verification_url: string | null;
-      source_reviewed_on: string;
-      retired_on: string | null;
-      sp_certification_issuers: {
-        issuer_code: string;
-        display_name: string;
-        official_url: string;
-        verification_mode: string;
-        public_verification_url: string | null;
-        absence_is_inconclusive: boolean;
-      };
-      sp_credential_types: {
-        code: string;
-        category: string;
-        claim_type: string;
-        name_sv: string;
-        name_en: string;
-        symbol_label: string;
-        requires_valid_until: boolean;
-        requires_issuer: boolean;
-        requires_scope: boolean;
-        narrow_result_only: boolean;
-        title_is_holder_written: boolean;
-        jurisdiction_code: string | null;
-        sub_jurisdiction_code: string | null;
-        scope_code: string | null;
-        is_active: boolean;
-        sort_order: number;
-      };
-    };
+    // An ABSENT catalogue is an EMPTY catalogue. Between this branch merging
+    // and its migration being applied, the table genuinely does not exist, and
+    // the honest answer is that the holder has no international certifications
+    // to choose from — not an error about somebody else's deployment order.
+    // Anything other than a missing relation still throws.
+    if (error) {
+      if (isMissingRelation(error)) return [];
+      throw new Error(error.message);
+    }
 
-    return ((data ?? []) as unknown as Row[])
+    return (data ?? [])
       .filter((r) => r.sp_credential_types.is_active)
       .sort((a, b) => a.sp_credential_types.sort_order - b.sp_credential_types.sort_order)
       .map((r) => ({
-        type: {
-          code: r.sp_credential_types.code,
-          category: r.sp_credential_types.category as CredentialCategory,
-          claimType: r.sp_credential_types.claim_type,
-          nameSv: r.sp_credential_types.name_sv,
-          nameEn: r.sp_credential_types.name_en,
-          symbolLabel: r.sp_credential_types.symbol_label,
-          requiresValidUntil: r.sp_credential_types.requires_valid_until,
-          requiresIssuer: r.sp_credential_types.requires_issuer,
-          requiresScope: r.sp_credential_types.requires_scope,
-          narrowResultOnly: r.sp_credential_types.narrow_result_only,
-          titleIsHolderWritten: r.sp_credential_types.title_is_holder_written,
-          jurisdictionCode: r.sp_credential_types.jurisdiction_code,
-          subJurisdictionCode: r.sp_credential_types.sub_jurisdiction_code,
-          scopeCode: r.sp_credential_types.scope_code,
-        },
+        type: toCredentialType(r.sp_credential_types),
         issuerCode: r.sp_certification_issuers.issuer_code,
         issuerDisplayName: r.sp_certification_issuers.display_name,
         issuerOfficialUrl: r.sp_certification_issuers.official_url,
@@ -704,31 +746,16 @@ export const saveCredential = createServerFn({ method: "POST" })
     // than assumed from the code string.
     let type: CredentialType | null = null;
     if (data.credentialCode) {
-      const { data: row, error } = await supabase
-        .from("sp_credential_types")
-        .select(
-          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code, scope_code",
-        )
-        .eq("code", data.credentialCode)
-        .maybeSingle();
-      if (error) throw new Error(error.message);
+      // Through the same reader as the two list paths, so the write and the
+      // form cannot disagree about what a definition says — including on a
+      // database that has not got `scope_code` yet, where both read null and
+      // no credential is international.
+      const rows = await selectTaxonomy(supabase, (q) =>
+        q.eq("code", data.credentialCode as string),
+      );
+      const row = rows[0];
       if (!row) throw new Error("SP_CREDENTIAL_CODE_UNKNOWN");
-      type = {
-        code: row.code,
-        category: row.category as CredentialCategory,
-        claimType: row.claim_type,
-        nameSv: row.name_sv,
-        nameEn: row.name_en,
-        symbolLabel: row.symbol_label,
-        requiresValidUntil: row.requires_valid_until,
-        requiresIssuer: row.requires_issuer,
-        requiresScope: row.requires_scope,
-        narrowResultOnly: row.narrow_result_only,
-        titleIsHolderWritten: row.title_is_holder_written,
-        jurisdictionCode: row.jurisdiction_code,
-        subJurisdictionCode: row.sub_jurisdiction_code,
-        scopeCode: row.scope_code,
-      };
+      type = toCredentialType(row);
     }
 
     const mode = data.activate ? "active" : "draft";
