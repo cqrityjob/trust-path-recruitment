@@ -329,7 +329,8 @@ export function compareForHighlight<T extends ClassifiableClaim>(
   const bucket = BUCKET_RANK[a.bucket] - BUCKET_RANK[b.bucket];
   if (bucket !== 0) return bucket;
 
-  const trust = (TRUST_RANK[b.claim.assertionLevel] ?? 0) - (TRUST_RANK[a.claim.assertionLevel] ?? 0);
+  const trust =
+    (TRUST_RANK[b.claim.assertionLevel] ?? 0) - (TRUST_RANK[a.claim.assertionLevel] ?? 0);
   if (trust !== 0) return trust;
 
   // More recently issued first. A missing date sorts last rather than being

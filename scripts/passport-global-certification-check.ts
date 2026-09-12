@@ -61,10 +61,7 @@ const MIGRATION = readFileSync(
   "utf8",
 );
 const ROLLBACK = readFileSync(
-  join(
-    root,
-    "supabase/rollback/20261110090000_sp_global_professional_certifications_rollback.sql",
-  ),
+  join(root, "supabase/rollback/20261110090000_sp_global_professional_certifications_rollback.sql"),
   "utf8",
 );
 
@@ -77,6 +74,7 @@ function sqlCode(src: string): string {
 }
 
 const ROLLBACK_SQL = sqlCode(ROLLBACK);
+const MIGRATION_SQL = sqlCode(MIGRATION);
 
 /** Source with comments stripped, so a comment that NAMES a banned pattern in
  *  order to explain why it is banned does not fail the check it documents. */
@@ -120,7 +118,10 @@ ok(
 const unexpected = seededCodes.filter(
   (c) => !(EXPECTED_CODES as readonly string[]).includes(c) && !c.startsWith("INTL_FORGED"),
 );
-ok(unexpected.length === 0, `and no unreviewed code was added — extra: ${unexpected.join(", ") || "none"}`);
+ok(
+  unexpected.length === 0,
+  `and no unreviewed code was added — extra: ${unexpected.join(", ") || "none"}`,
+);
 
 ok(
   EXPECTED_CODES.every((c) => ROLLBACK.includes(`'${c}'`)),
@@ -142,10 +143,7 @@ for (const [issuer, n] of ISSUER_COUNTS) {
 ok(EXPECTED_CODES.length === 14, "fourteen definitions in total");
 
 /* The controlled display names. */
-ok(
-  /'ASIS', 'ASIS International'/.test(MIGRATION),
-  'ASIS displays as "ASIS International"',
-);
+ok(/'ASIS', 'ASIS International'/.test(MIGRATION), 'ASIS displays as "ASIS International"');
 ok(/'ISC2', 'ISC2'/.test(MIGRATION), 'ISC2 displays as "ISC2", not as "(ISC)²"');
 ok(
   MIGRATION.includes("'(ISC)²',") && MIGRATION.includes("'search_alias'"),
@@ -201,8 +199,12 @@ for (const c of EXPECTED_CODES) {
    ══════════════════════════════════════════════════════════════════════ */
 console.log("\nGROUP 2 -- nothing infers international scope");
 
-const SCOPE_SRC = code(readFileSync(join(root, "src/lib/security-passport/certification-scope.ts"), "utf8"));
-const CLASS_SRC = code(readFileSync(join(root, "src/lib/security-passport/classification.ts"), "utf8"));
+const SCOPE_SRC = code(
+  readFileSync(join(root, "src/lib/security-passport/certification-scope.ts"), "utf8"),
+);
+const CLASS_SRC = code(
+  readFileSync(join(root, "src/lib/security-passport/classification.ts"), "utf8"),
+);
 const CRED_SRC = code(readFileSync(join(root, "src/lib/security-passport/credentials.ts"), "utf8"));
 
 // The one place the string may appear as a literal.
@@ -214,19 +216,28 @@ ok(
   !CLASS_SRC.includes(`"${GLOBAL_PROFESSIONAL_SCOPE}"`),
   "the classifier never compares the scope string itself — it calls the predicate",
 );
-ok(
-  !CRED_SRC.includes(`"${GLOBAL_PROFESSIONAL_SCOPE}"`),
-  "and neither does the write mapping",
-);
+ok(!CRED_SRC.includes(`"${GLOBAL_PROFESSIONAL_SCOPE}"`), "and neither does the write mapping");
 
 // The inference shapes, named individually so a failure says which one came
 // back rather than "a regex matched".
 const FUZZY = [
   { name: "a title containing CPP/CISSP/CAMS", re: /title[^\n]*\b(CPP|CISSP|CAMS|CRISC|CFE)\b/i },
-  { name: "an issuer name compared to ASIS/ISACA/ACFE", re: /issuer[A-Za-z]*\s*(===|==|\.includes|\.startsWith)[^\n]*(ASIS|ISACA|ACFE|ACAMS|ISC2)/i },
-  { name: "the word international matched in text", re: /(includes|match|test|indexOf)\([^)]*["'`]international/i },
-  { name: "scope derived from a null jurisdiction", re: /jurisdictionCode\s*===?\s*null[^\n]*global/i },
-  { name: "scope derived from a missing jurisdiction", re: /!\s*[A-Za-z.]*jurisdictionCode[^\n]*global/i },
+  {
+    name: "an issuer name compared to ASIS/ISACA/ACFE",
+    re: /issuer[A-Za-z]*\s*(===|==|\.includes|\.startsWith)[^\n]*(ASIS|ISACA|ACFE|ACAMS|ISC2)/i,
+  },
+  {
+    name: "the word international matched in text",
+    re: /(includes|match|test|indexOf)\([^)]*["'`]international/i,
+  },
+  {
+    name: "scope derived from a null jurisdiction",
+    re: /jurisdictionCode\s*===?\s*null[^\n]*global/i,
+  },
+  {
+    name: "scope derived from a missing jurisdiction",
+    re: /!\s*[A-Za-z.]*jurisdictionCode[^\n]*global/i,
+  },
 ];
 for (const src of [
   ["certification-scope.ts", SCOPE_SRC],
@@ -242,7 +253,10 @@ for (const src of [
 const MIG_UPDATES = [...MIGRATION.matchAll(/UPDATE public\.sp_credential_types[\s\S]*?;/g)].map(
   (m) => m[0],
 );
-ok(MIG_UPDATES.length === 1, `the migration performs exactly one backfill UPDATE (found ${MIG_UPDATES.length})`);
+ok(
+  MIG_UPDATES.length === 1,
+  `the migration performs exactly one backfill UPDATE (found ${MIG_UPDATES.length})`,
+);
 const backfill = MIG_UPDATES[0] ?? "";
 ok(
   backfill.includes(`'${NATIONAL_REGULATED_SCOPE}'`) &&
@@ -256,21 +270,18 @@ ok(
 for (const fuzzy of ["name_en ILIKE", "name_sv ILIKE", "title ILIKE", "similar to", "~*"]) {
   ok(!backfill.toLowerCase().includes(fuzzy.toLowerCase()), `the backfill uses no ${fuzzy} match`);
 }
-ok(
-  !/UPDATE public\.sp_claims/.test(MIGRATION),
-  "the migration never UPDATEs a holder claim",
-);
-ok(
-  !/DELETE FROM public\.sp_claims/.test(MIGRATION),
-  "and never DELETEs one",
-);
+ok(!/UPDATE public\.sp_claims/.test(MIGRATION), "the migration never UPDATEs a holder claim");
+ok(!/DELETE FROM public\.sp_claims/.test(MIGRATION), "and never DELETEs one");
 
 /* ══════════════════════════════════════════════════════════════════════
    GROUP 3 — the predicates
    ══════════════════════════════════════════════════════════════════════ */
 console.log("\nGROUP 3 -- the scope predicates read the declaration and nothing else");
 
-ok(isGlobalCertification({ scopeCode: GLOBAL_PROFESSIONAL_SCOPE }), "a declared global scope is global");
+ok(
+  isGlobalCertification({ scopeCode: GLOBAL_PROFESSIONAL_SCOPE }),
+  "a declared global scope is global",
+);
 ok(!isGlobalCertification({ scopeCode: NATIONAL_REGULATED_SCOPE }), "a national scope is not");
 ok(!isGlobalCertification({ scopeCode: null }), "an UNDECLARED scope is not global");
 ok(!isGlobalCertification(null), "and neither is a missing definition");
@@ -326,11 +337,7 @@ function type(over: Partial<CredentialType>): CredentialType {
   );
 
   // A holder who typed a country into the draft still stores none.
-  const forged = credentialClaimFields(
-    { ...draft, jurisdictionCode: "AE" },
-    type({}),
-    "active",
-  );
+  const forged = credentialClaimFields({ ...draft, jurisdictionCode: "AE" }, type({}), "active");
   ok(
     forged.jurisdiction_code === null && forged.sub_jurisdiction_code === null,
     "a country in the submitted draft is IGNORED for a global certification",
@@ -352,7 +359,10 @@ function type(over: Partial<CredentialType>): CredentialType {
     }),
     "active",
   );
-  ok(uk.jurisdiction_code === "GB", "PR #222: a British licence still stores GB, not the draft's SE");
+  ok(
+    uk.jurisdiction_code === "GB",
+    "PR #222: a British licence still stores GB, not the draft's SE",
+  );
 
   const dubai = credentialClaimFields(
     draft,
@@ -419,18 +429,15 @@ console.log("\nGROUP 4b -- the symbol plate prints the credential's own mark");
   for (const [c, label] of seededMarks) {
     if (credentialMark(c) !== label) wrong.push(`${c}: "${credentialMark(c)}" != "${label}"`);
   }
-  ok(wrong.length === 0, `every resolved mark equals its seeded symbol_label${wrong.length ? " — " + wrong.join("; ") : ""}`);
+  ok(
+    wrong.length === 0,
+    `every resolved mark equals its seeded symbol_label${wrong.length ? " — " + wrong.join("; ") : ""}`,
+  );
 
   ok(credentialMark("INTL_ISC2_CISSP") === "CISSP", "CISSP resolves whole, five characters");
   ok(credentialMark("INTL_ISACA_CRISC") === "CRISC", "CRISC resolves whole, five characters");
-  ok(
-    /BETWEEN 1 AND 8/.test(MIGRATION),
-    "and the plate's CHECK was relaxed to hold them",
-  );
-  ok(
-    /<= 4/.test(ROLLBACK),
-    "while the rollback restores the four-character bound",
-  );
+  ok(/BETWEEN 1 AND 8/.test(MIGRATION), "and the plate's CHECK was relaxed to hold them");
+  ok(/<= 4/.test(ROLLBACK), "while the rollback restores the four-character bound");
 
   const leaks = [...seededMarks.keys()].filter((c) => {
     const mark = credentialMark(c);
@@ -464,16 +471,91 @@ function claim(over: Partial<ClassifiableClaim> & { id: string }): ClassifiableC
 const WORK = { jurisdictionCode: "SE", subJurisdictionCode: null };
 
 const FIXTURES: readonly (readonly [ClassifiableClaim, string])[] = [
-  [claim({ id: "a", lifecycleState: "draft", credentialCode: "INTL_ASIS_CPP", definition: GLOBAL_DEF }), "draft"],
-  [claim({ id: "b", lifecycleState: "expired", jurisdictionCode: "SE", claimType: "licence", definition: NATIONAL_DEF }), "historical"],
-  [claim({ id: "c", lifecycleState: "revoked", credentialCode: "INTL_ASIS_CPP", definition: GLOBAL_DEF }), "historical"],
-  [claim({ id: "d", lifecycleState: "superseded", jurisdictionCode: "GB", definition: NATIONAL_DEF }), "historical"],
-  [claim({ id: "e", lifecycleState: "disputed", jurisdictionCode: "SE", definition: NATIONAL_DEF }), "historical"],
-  [claim({ id: "f", credentialCode: "INTL_ASIS_CPP", definition: GLOBAL_DEF }), "international_certification"],
-  [claim({ id: "g", credentialCode: "INTL_ISC2_CISSP", definition: GLOBAL_DEF }), "international_certification"],
-  [claim({ id: "h", claimType: "licence", credentialCode: "OV", jurisdictionCode: "SE", definition: NATIONAL_DEF }), "current_market_credential"],
-  [claim({ id: "i", claimType: "licence", credentialCode: "UK_SIA_LICENCE_DS", jurisdictionCode: "GB", definition: NATIONAL_DEF }), "other_country_credential"],
-  [claim({ id: "j", claimType: "licence", credentialCode: "AE_DU_SIRA_CARD_GUARD", jurisdictionCode: "AE", subJurisdictionCode: "AE-DU", definition: NATIONAL_DEF }), "other_country_credential"],
+  [
+    claim({
+      id: "a",
+      lifecycleState: "draft",
+      credentialCode: "INTL_ASIS_CPP",
+      definition: GLOBAL_DEF,
+    }),
+    "draft",
+  ],
+  [
+    claim({
+      id: "b",
+      lifecycleState: "expired",
+      jurisdictionCode: "SE",
+      claimType: "licence",
+      definition: NATIONAL_DEF,
+    }),
+    "historical",
+  ],
+  [
+    claim({
+      id: "c",
+      lifecycleState: "revoked",
+      credentialCode: "INTL_ASIS_CPP",
+      definition: GLOBAL_DEF,
+    }),
+    "historical",
+  ],
+  [
+    claim({
+      id: "d",
+      lifecycleState: "superseded",
+      jurisdictionCode: "GB",
+      definition: NATIONAL_DEF,
+    }),
+    "historical",
+  ],
+  [
+    claim({
+      id: "e",
+      lifecycleState: "disputed",
+      jurisdictionCode: "SE",
+      definition: NATIONAL_DEF,
+    }),
+    "historical",
+  ],
+  [
+    claim({ id: "f", credentialCode: "INTL_ASIS_CPP", definition: GLOBAL_DEF }),
+    "international_certification",
+  ],
+  [
+    claim({ id: "g", credentialCode: "INTL_ISC2_CISSP", definition: GLOBAL_DEF }),
+    "international_certification",
+  ],
+  [
+    claim({
+      id: "h",
+      claimType: "licence",
+      credentialCode: "OV",
+      jurisdictionCode: "SE",
+      definition: NATIONAL_DEF,
+    }),
+    "current_market_credential",
+  ],
+  [
+    claim({
+      id: "i",
+      claimType: "licence",
+      credentialCode: "UK_SIA_LICENCE_DS",
+      jurisdictionCode: "GB",
+      definition: NATIONAL_DEF,
+    }),
+    "other_country_credential",
+  ],
+  [
+    claim({
+      id: "j",
+      claimType: "licence",
+      credentialCode: "AE_DU_SIRA_CARD_GUARD",
+      jurisdictionCode: "AE",
+      subJurisdictionCode: "AE-DU",
+      definition: NATIONAL_DEF,
+    }),
+    "other_country_credential",
+  ],
   [claim({ id: "k", claimType: "education" }), "education_and_training"],
   [claim({ id: "l", claimType: "training" }), "education_and_training"],
   [claim({ id: "m", claimType: "professional_membership" }), "membership"],
@@ -496,16 +578,21 @@ for (const [c, expected] of FIXTURES) {
   const all = FIXTURES.map(([c]) => c);
   const classified = classifyAll(all, WORK);
   ok(classified.length === all.length, "every input row appears in the output exactly once");
-  ok(
-    new Set(classified.map((c) => c.claim.id)).size === all.length,
-    "and no row appears twice",
-  );
+  ok(new Set(classified.map((c) => c.claim.id)).size === all.length, "and no row appears twice");
 
   // Exactly one bucket each, checked by counting across every bucket.
   const total = [
-    "draft", "historical", "international_certification", "current_market_credential",
-    "other_country_credential", "education_and_training", "membership", "language",
-    "skill", "document", "other_self_declared",
+    "draft",
+    "historical",
+    "international_certification",
+    "current_market_credential",
+    "other_country_credential",
+    "education_and_training",
+    "membership",
+    "language",
+    "skill",
+    "document",
+    "other_self_declared",
   ].reduce((n, b) => n + inBucket(classified, b as never).length, 0);
   ok(total === all.length, "the buckets partition the input — no row in two, none in none");
 
@@ -571,18 +658,27 @@ console.log("\nGROUP 5c -- the ordering is total and input-order independent");
     FIXTURES.map(([c]) => c),
     WORK,
   );
-  const canonical = orderForDisplay(classified).map((c) => c.claim.id).join(",");
+  const canonical = orderForDisplay(classified)
+    .map((c) => c.claim.id)
+    .join(",");
 
   // Every rotation of the input must produce the same output. A comparator
   // that returned 0 for two different rows would not.
   let stable = true;
   for (let i = 0; i < classified.length; i++) {
     const rotated = [...classified.slice(i), ...classified.slice(0, i)];
-    if (orderForDisplay(rotated).map((c) => c.claim.id).join(",") !== canonical) stable = false;
+    if (
+      orderForDisplay(rotated)
+        .map((c) => c.claim.id)
+        .join(",") !== canonical
+    )
+      stable = false;
   }
   ok(stable, "every rotation of the input produces the identical order");
 
-  const reversed = orderForDisplay([...classified].reverse()).map((c) => c.claim.id).join(",");
+  const reversed = orderForDisplay([...classified].reverse())
+    .map((c) => c.claim.id)
+    .join(",");
   ok(reversed === canonical, "and so does the reversed input");
 
   // Deterministic: no comparison may return 0 for two distinct rows.
@@ -596,11 +692,23 @@ console.log("\nGROUP 5c -- the ordering is total and input-order independent");
 
   // Trust outranks recency within a bucket, and the holder cannot invert it.
   const weakRecent = classify(
-    claim({ id: "z1", credentialCode: "INTL_ASIS_CPP", definition: GLOBAL_DEF, assertionLevel: "self_declared", issuedOn: "2026-01-01" }),
+    claim({
+      id: "z1",
+      credentialCode: "INTL_ASIS_CPP",
+      definition: GLOBAL_DEF,
+      assertionLevel: "self_declared",
+      issuedOn: "2026-01-01",
+    }),
     WORK,
   );
   const strongOld = classify(
-    claim({ id: "z2", credentialCode: "INTL_ASIS_PSP", definition: GLOBAL_DEF, assertionLevel: "verified", issuedOn: "2015-01-01" }),
+    claim({
+      id: "z2",
+      credentialCode: "INTL_ASIS_PSP",
+      definition: GLOBAL_DEF,
+      assertionLevel: "verified",
+      issuedOn: "2015-01-01",
+    }),
     WORK,
   );
   ok(
@@ -618,10 +726,7 @@ console.log("\nGROUP 5c -- the ordering is total and input-order independent");
    ══════════════════════════════════════════════════════════════════════ */
 console.log("\nGROUP 6 -- this phase activates nothing");
 
-ok(
-  !/UPDATE public\.sp_market_packs/.test(MIGRATION),
-  "no market pack row is touched",
-);
+ok(!/UPDATE public\.sp_market_packs/.test(MIGRATION), "no market pack row is touched");
 ok(
   !/is_active\s*=\s*true[\s\S]{0,80}sp_market_packs/.test(MIGRATION),
   "and no market is activated",
@@ -805,16 +910,28 @@ ok(
   "and the taxonomy's new scope column is not holder-writable either",
 );
 
+/* Phase 8's rule: removal is withdrawal, and history is not erasable. The
+ * first version of this migration granted DELETE on the lifecycle table and
+ * the Phase 8 suite refused it. Restated here so the repository catches it
+ * before a replay does. */
+ok(
+  !/GRANT[^;]*DELETE[^;]*ON public\.sp_claim_certification_lifecycle/.test(MIGRATION_SQL),
+  "no application role is GRANTed DELETE on the lifecycle table",
+);
+ok(
+  /REVOKE DELETE ON public\.sp_claim_certification_lifecycle FROM anon, authenticated/.test(
+    MIGRATION,
+  ),
+  "and DELETE is explicitly revoked, because the hosted default grants it",
+);
+
 /* The rollback contract. */
 ok(
   /SP_GLOBAL_CERT_ROLLBACK_REFUSED/.test(ROLLBACK),
   "the rollback REFUSES once a holder's claim references a definition",
 );
 ok(!/CASCADE/.test(ROLLBACK_SQL), "and uses no CASCADE anywhere");
-ok(
-  !/DELETE FROM public\.sp_claims/.test(ROLLBACK_SQL),
-  "and deletes no holder claim",
-);
+ok(!/DELETE FROM public\.sp_claims/.test(ROLLBACK_SQL), "and deletes no holder claim");
 ok(
   /DELETE FROM public\.sp_credential_types WHERE code IN \(/.test(ROLLBACK),
   "removing the fourteen definitions by NAME, never by pattern",

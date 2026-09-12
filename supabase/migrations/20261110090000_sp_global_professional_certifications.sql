@@ -1465,8 +1465,18 @@ GRANT SELECT ON public.sp_certification_issuers        TO authenticated;
 GRANT SELECT ON public.sp_certification_issuer_aliases TO authenticated;
 GRANT SELECT ON public.sp_certification_sources        TO authenticated;
 GRANT SELECT ON public.sp_certification_definitions    TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE
-  ON public.sp_claim_certification_lifecycle TO authenticated;
+-- SELECT, INSERT and UPDATE. NOT DELETE.
+--
+-- Phase 8 established the rule and its suite enforces it: no application role
+-- holds DELETE on any sp_* table, because "remove" in this product means
+-- WITHDRAW. A lifecycle statement a holder no longer stands behind is
+-- corrected back to `unknown` — which is an honest state and keeps the
+-- record — rather than erased, and a holder who retracts a certification
+-- withdraws the CLAIM, which takes this row with it through the FK.
+--
+-- The first version of this file granted DELETE. The Phase 8 suite refused it,
+-- which is exactly what that suite is for.
+GRANT SELECT, INSERT, UPDATE ON public.sp_claim_certification_lifecycle TO authenticated;
 
 REVOKE ALL ON public.sp_credential_scopes             FROM anon;
 REVOKE ALL ON public.sp_certification_issuers         FROM anon;
@@ -1474,6 +1484,11 @@ REVOKE ALL ON public.sp_certification_issuer_aliases  FROM anon;
 REVOKE ALL ON public.sp_certification_sources         FROM anon;
 REVOKE ALL ON public.sp_certification_definitions     FROM anon;
 REVOKE ALL ON public.sp_claim_certification_lifecycle FROM anon;
+
+-- Restated rather than left to the GRANT above: the hosted project's ALTER
+-- DEFAULT PRIVILEGES grants DELETE on a new table, and a local replay cannot
+-- observe that. This line is the one that actually takes it away there.
+REVOKE DELETE ON public.sp_claim_certification_lifecycle FROM anon, authenticated;
 
 -- The catalogue is migration-and-administration governed. A holder and an
 -- ordinary reviewer may read it and may never write it: an issuer somebody
@@ -1583,6 +1598,14 @@ BEGIN
      OR has_table_privilege('anon', 'public.sp_claim_certification_lifecycle', 'SELECT')
      OR has_table_privilege('anon', 'public.sp_credential_scopes', 'SELECT') THEN
     RAISE EXCEPTION 'SP_GLOBAL_CERT_ANON_READ: anon holds a grant on the new tables';
+  END IF;
+
+  -- And no holder may DELETE their own history. Phase 8's rule, restated at
+  -- apply time so a future edit that grants it fails here rather than three
+  -- suites later.
+  IF has_table_privilege('authenticated', 'public.sp_claim_certification_lifecycle', 'DELETE')
+     OR has_table_privilege('anon', 'public.sp_claim_certification_lifecycle', 'DELETE') THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_DELETE_GRANTED: removal is withdrawal; no application role may DELETE';
   END IF;
 
   -- And no holder may write the catalogue.

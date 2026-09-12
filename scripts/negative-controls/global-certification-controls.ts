@@ -63,7 +63,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "the sub-jurisdiction column is omitted instead of cleared",
     file: SCOPE,
     find: "export const GLOBAL_CERTIFICATION_TERRITORY = {\n  jurisdiction_code: null,\n  sub_jurisdiction_code: null,\n} as const;",
-    replace: "export const GLOBAL_CERTIFICATION_TERRITORY = {\n  jurisdiction_code: null,\n} as const;",
+    replace:
+      "export const GLOBAL_CERTIFICATION_TERRITORY = {\n  jurisdiction_code: null,\n} as const;",
     guard: GUARD,
     expect: "the sub-jurisdiction column is present, not omitted",
   },
@@ -128,7 +129,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "a draft becomes disclosable",
     file: CLASSIFIER,
     find: 'export const DISCLOSABLE_BUCKETS: readonly PassportBucket[] = [\n  "historical",',
-    replace: 'export const DISCLOSABLE_BUCKETS: readonly PassportBucket[] = [\n  "draft",\n  "historical",',
+    replace:
+      'export const DISCLOSABLE_BUCKETS: readonly PassportBucket[] = [\n  "draft",\n  "historical",',
     guard: GUARD,
     expect: "a draft is never disclosable",
   },
@@ -154,7 +156,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "GC-NC-CONSTRAINT-NEVER-VALIDATED",
-    defect: "the constraint is added NOT VALID and never validated, so existing rows are never scanned",
+    defect:
+      "the constraint is added NOT VALID and never validated, so existing rows are never scanned",
     file: MIGRATION,
     find: "ALTER TABLE public.sp_credential_types\n  VALIDATE CONSTRAINT sp_credential_type_global_scope_unbound;",
     replace: "-- (validation removed)",
@@ -166,7 +169,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "the trigger reads the submitted row's scope instead of the definition's",
     file: MIGRATION,
     find: "  IF _t.scope_code = 'global_professional'\n     AND (NEW.jurisdiction_code IS NOT NULL OR NEW.sub_jurisdiction_code IS NOT NULL) THEN",
-    replace: "  IF false\n     AND (NEW.jurisdiction_code IS NOT NULL OR NEW.sub_jurisdiction_code IS NOT NULL) THEN",
+    replace:
+      "  IF false\n     AND (NEW.jurisdiction_code IS NOT NULL OR NEW.sub_jurisdiction_code IS NOT NULL) THEN",
     guard: GUARD,
     expect: "and it reads the DEFINITION's scope, not the submitted row",
   },
@@ -175,7 +179,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "the rewritten trigger drops one of PR #222's market refusals",
     file: MIGRATION,
     find: "          'SP_SUB_JURISDICTION_REQUIRED: % regulates security locally; name the emirate or region',",
-    replace: "          'SP_MARKET_UNAVAILABLE: % regulates security locally; name the emirate or region',",
+    replace:
+      "          'SP_MARKET_UNAVAILABLE: % regulates security locally; name the emirate or region',",
     guard: GUARD,
     expect: "PR #222's SP_SUB_JURISDICTION_REQUIRED survives the rewritten trigger",
   },
@@ -214,6 +219,17 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "-- (revoke removed)",
     guard: GUARD,
     expect: "and no holder may write sp_certification_issuers",
+  },
+
+  {
+    id: "GC-NC-HISTORY-ERASABLE",
+    defect: "a holder may DELETE their own lifecycle history",
+    file: MIGRATION,
+    find: "GRANT SELECT, INSERT, UPDATE ON public.sp_claim_certification_lifecycle TO authenticated;",
+    replace:
+      "GRANT SELECT, INSERT, UPDATE, DELETE ON public.sp_claim_certification_lifecycle TO authenticated;",
+    guard: GUARD,
+    expect: "no application role is GRANTed DELETE on the lifecycle table",
   },
 
   /* ── Free text is never upgraded ─────────────────────────────────── */
@@ -324,7 +340,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "the classifier gains a field for the private reference",
     file: CLASSIFIER,
     find: "  readonly issuedOn?: string | null;",
-    replace: "  readonly issuedOn?: string | null;\n  readonly credentialReference?: string | null;",
+    replace:
+      "  readonly issuedOn?: string | null;\n  readonly credentialReference?: string | null;",
     guard: PRIVATE_GUARD,
     expect: "classification.ts does not mention the private reference at all",
   },

@@ -24,10 +24,7 @@
 // user-facing text — so it has to come from the copy module like everything
 // else, and be resolved at render time in the reader's language.
 
-import {
-  GLOBAL_CERTIFICATION_TERRITORY,
-  isGlobalCertification,
-} from "./certification-scope";
+import { GLOBAL_CERTIFICATION_TERRITORY, isGlobalCertification } from "./certification-scope";
 import { isCalendarDate, isFutureDate } from "./dates";
 import type { PassportCopyKey } from "./i18n";
 

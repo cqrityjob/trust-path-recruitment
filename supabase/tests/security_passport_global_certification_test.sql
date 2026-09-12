@@ -689,6 +689,30 @@ BEGIN
     EXISTS (SELECT 1 FROM public.sp_claim_certification_lifecycle WHERE claim_id = _cpp),
     '10.4 nor delete it');
 
+  -- And neither can its OWNER, by grant rather than by policy. Phase 8's rule:
+  -- removal is withdrawal, and history is not erasable. A holder who no longer
+  -- stands behind a statement corrects it to `unknown`.
+  PERFORM pg_temp.ok(
+    NOT has_table_privilege('authenticated', 'public.sp_claim_certification_lifecycle', 'DELETE')
+    AND NOT has_table_privilege('anon', 'public.sp_claim_certification_lifecycle', 'DELETE'),
+    '10.6 no application role holds DELETE on the lifecycle table at all');
+
+  _r := pg_temp.as_user(_global, format(
+    $q$DELETE FROM public.sp_claim_certification_lifecycle WHERE claim_id = '%s'$q$, _cpp));
+  PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
+    '10.7 so even the owner cannot erase their own statement (got ' || _r || ')');
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _global::text, true);
+  UPDATE public.sp_claim_certification_lifecycle
+     SET holder_lifecycle_status = 'unknown', status_as_of = NULL
+   WHERE claim_id = _cpp;
+  RESET ROLE;
+  PERFORM pg_temp.ok(
+    (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _cpp) = 'unknown',
+    '10.8 they correct it back to `unknown` instead — the honest state');
+
   -- Nor attach their own lifecycle row to somebody else's claim.
   _r := pg_temp.as_user(_other, format(
     $q$INSERT INTO public.sp_claim_certification_lifecycle (claim_id, holder_user_id)

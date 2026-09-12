@@ -104,7 +104,10 @@ const NON_OWNER_MODULES = [
 for (const rel of NON_OWNER_MODULES) {
   const src = code(readFileSync(join(root, rel), "utf8"));
   const named = FIELDS.filter((f) => src.includes(f));
-  ok(named.length === 0, `${rel} names no private reference${named.length ? ` — found ${named.join(", ")}` : ""}`);
+  ok(
+    named.length === 0,
+    `${rel} names no private reference${named.length ? ` — found ${named.join(", ")}` : ""}`,
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -132,7 +135,9 @@ function latestDefinition(fn: string): string | null {
   let found: string | null = null;
   const head = new RegExp(`CREATE OR REPLACE FUNCTION public\\.${fn}\\s*\\(`, "g");
 
-  for (const file of readdirSync(MIGRATIONS).filter((f) => f.endsWith(".sql")).sort()) {
+  for (const file of readdirSync(MIGRATIONS)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
     const sql = sqlCode(readFileSync(join(MIGRATIONS, file), "utf8"));
     for (const m of sql.matchAll(head)) {
       const start = m.index ?? 0;
@@ -171,13 +176,13 @@ for (const fn of PAYLOAD_FUNCTIONS) {
 console.log("\n3 -- the one reader that may see it is owner-scoped");
 
 {
-  const src = readFileSync(join(root, "src/lib/security-passport/credentials.functions.ts"), "utf8");
+  const src = readFileSync(
+    join(root, "src/lib/security-passport/credentials.functions.ts"),
+    "utf8",
+  );
   const fn = src.slice(src.indexOf("export const getCredentialPrivateFields"));
   ok(fn.length > 0, "getCredentialPrivateFields exists");
-  ok(
-    /requireSupabaseAuth/.test(fn.slice(0, 400)),
-    "and requires an authenticated caller",
-  );
+  ok(/requireSupabaseAuth/.test(fn.slice(0, 400)), "and requires an authenticated caller");
   ok(
     /\.select\("credential_reference, holder_note"\)/.test(fn.slice(0, 1200)),
     "and reads a NAMED column pair, never a wildcard",
@@ -214,8 +219,14 @@ const PASSPORT_SRC = [
 const SINKS = [
   { name: "localStorage / sessionStorage", re: /(local|session)Storage[^\n]*credentialReference/i },
   { name: "console logging", re: /console\.\w+\([^)]*credentialReference/i },
-  { name: "an analytics or tracking call", re: /(track|analytics|telemetry|capture)\w*\([^)]*credentialReference/i },
-  { name: "a URL or query parameter", re: /(searchParams|URLSearchParams|\?code=)[^\n]*credentialReference/i },
+  {
+    name: "an analytics or tracking call",
+    re: /(track|analytics|telemetry|capture)\w*\([^)]*credentialReference/i,
+  },
+  {
+    name: "a URL or query parameter",
+    re: /(searchParams|URLSearchParams|\?code=)[^\n]*credentialReference/i,
+  },
 ];
 
 for (const sink of SINKS) {
@@ -232,9 +243,18 @@ for (const sink of SINKS) {
 console.log("\n5 -- the international-certification surfaces carry none of it");
 
 {
-  const scope = readFileSync(join(root, "src/lib/security-passport/certification-scope.ts"), "utf8");
-  const classification = readFileSync(join(root, "src/lib/security-passport/classification.ts"), "utf8");
-  for (const [name, src] of [["certification-scope.ts", scope], ["classification.ts", classification]] as const) {
+  const scope = readFileSync(
+    join(root, "src/lib/security-passport/certification-scope.ts"),
+    "utf8",
+  );
+  const classification = readFileSync(
+    join(root, "src/lib/security-passport/classification.ts"),
+    "utf8",
+  );
+  for (const [name, src] of [
+    ["certification-scope.ts", scope],
+    ["classification.ts", classification],
+  ] as const) {
     ok(
       FIELDS.every((f) => !src.includes(f)),
       `${name} does not mention the private reference at all`,
@@ -248,10 +268,15 @@ console.log("\n5 -- the international-certification surfaces carry none of it");
     "the classifier's input type has no field for it",
   );
 
-  const server = readFileSync(join(root, "src/lib/security-passport/credentials.functions.ts"), "utf8");
+  const server = readFileSync(
+    join(root, "src/lib/security-passport/credentials.functions.ts"),
+    "utf8",
+  );
   const globalFn = server.slice(
     server.indexOf("export const listGlobalCertificationTypes"),
-    server.indexOf("/* ------------------------------------------------------------------ */\n/* The three-market overview"),
+    server.indexOf(
+      "/* ------------------------------------------------------------------ */\n/* The three-market overview",
+    ),
   );
   ok(globalFn.length > 0, "listGlobalCertificationTypes is present");
   ok(
