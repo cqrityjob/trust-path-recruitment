@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-10T16:35:11Z",
-  "readBy": "Post-merge read-only verification for PR #214 reconciliation: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #213 merged to main as 9d36f6a64cb31aa2380ed4e6c38e75281ace0596 and Lovable published. 272 rows; canonical 20261105090000 scp_participant_report_issuer_preview and 20261107090000 scp_iv_report_basis_integrity are both recorded under their canonical versions.",
+  "readAt": "2026-09-12T21:36:47Z",
+  "readBy": "Post-merge read-only verification for the BESKT hosted release-evidence sync: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #221 merged to main as 8ba7635cb717ff509eb280cc5c47633c38873ee5. 275 rows. The 272 rows of the previous snapshot were proved unchanged before this refresh: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production excluding the three new versions is ce6c5a7e85b79c825da44a9831dc5c91, identical to the same digest computed over the committed snapshot. Over all 275 rows production and this file both give 2e5b2520ae17c67b4ae344be33bb73ac. The three added rows are canonical 20261108090000 beskt_governed_method_content, 20261109090000 sp_pilot_catalogue_visibility and 20261110090000 bcp_candidate_preparation -- each recorded under the canonical filename's own version and slug, not a generated uuid, so the hosted row and the repository file are the same identity.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1103,6 +1103,18 @@
     {
       "version": "20261107090000",
       "name": "scp_iv_report_basis_integrity"
+    },
+    {
+      "version": "20261108090000",
+      "name": "beskt_governed_method_content"
+    },
+    {
+      "version": "20261109090000",
+      "name": "sp_pilot_catalogue_visibility"
+    },
+    {
+      "version": "20261110090000",
+      "name": "bcp_candidate_preparation"
     }
   ]
 }
