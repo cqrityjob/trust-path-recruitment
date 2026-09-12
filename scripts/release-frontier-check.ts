@@ -46,13 +46,21 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // because Supabase keys schema_migrations by the numeric prefix alone, and the
 // Passport correction above already holds 20261109090000 on main -- two files
 // sharing one version means the second is silently treated as already applied.
-// None of the three has been applied to the owner project by this branch, and
+// 20261111090000_sp_global_professional_certifications is PENDING: the Security
+// Passport international-certification SCHEMA, awaiting independent review and
+// the owner's hosted apply. It took 20261111 rather than 20261110 because
+// bcp_candidate_preparation reached main first and holds that version -- the
+// same one-version-one-file rule the paragraph above is about, applied to this
+// branch by the collision it warns of.
+//
+// None of the four has been applied to the owner project by this branch, and
 // each comes off this list only when it has been and the evidence is recorded
 // in release-state.json.
 const expectedPending: string[] = [
   "20261108090000_beskt_governed_method_content.sql",
   "20261109090000_sp_pilot_catalogue_visibility.sql",
   "20261110090000_bcp_candidate_preparation.sql",
+  "20261111090000_sp_global_professional_certifications.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

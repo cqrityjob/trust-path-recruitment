@@ -3910,6 +3910,146 @@ else
   echo "    ok  the forward migration re-applies on top of its rollback"
 fi
 
+echo "==> Running Security Passport global professional certification assertions"
+# 20261111090000. The governed international-certification foundation: an
+# explicit `global_professional` scope, a separate issuer registry, the exact
+# 14 reviewed definitions, a lifecycle model that is not `valid_until`, and the
+# rule that keeps a portable certification portable
+# (SP_GLOBAL_CERTIFICATION_HAS_NO_JURISDICTION).
+#
+# Every claim is filed as SET LOCAL ROLE authenticated with a JWT subject --
+# what PostgREST does -- so the isolation and catalogue-write groups mean
+# something. The forged shapes a browser could send are filed too and asserted
+# to be refused, because a suite that only proves the fix works cannot tell you
+# the defect was real.
+set +e
+SPGC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_global_certification_test.sql 2>&1)"
+SPGC_RC=$?
+set -e
+
+echo "$SPGC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPGC_PASSED="$(echo "$SPGC_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPGC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the global certification suite exited with code ${SPGC_RC}." >&2
+  echo "$SPGC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport global professional certification"
+else
+  echo "    ok  ${SPGC_PASSED} global certification assertions passed"
+  # GROUP 6 (a forged client cannot give a CPP a country), GROUP 8b (a holder
+  # cannot forge WHO established their standing), GROUP 12 (the private
+  # reference reaches no disclosure), GROUP 13 (free text is never upgraded)
+  # and GROUP 14 (PR #222's SE/GB/AE-DU behaviour is unchanged) are the reason
+  # this suite exists. A short run that stopped before them would report
+  # success having proved nothing.
+  #
+  # RAISED 100 -> 130 when GROUP 8b was added. The floor is not decoration: the
+  # trust-boundary defect 8b exists for passed a full green CI, and the
+  # cheapest way to make a security suite green is to delete the assertion that
+  # is failing. passport-global-certification:check names the 8b assertions
+  # individually as well, so both a deletion and a short run are caught.
+  if [ "$SPGC_PASSED" -lt 130 ]; then
+    echo "FAIL: expected at least 130 global certification assertions, only ${SPGC_PASSED} ran." >&2
+    suite_failed "Security Passport global certification (assertion shortfall: floor 100)"
+  fi
+fi
+
+echo "==> Verifying the global certification rollback preserves every holder row"
+# The rollback contract is not "the objects disappear". It is "the objects
+# disappear AND every row a holder ever wrote is byte-for-byte what it was",
+# and after real adoption "the rollback REFUSES rather than deleting one".
+# All three are exercised here against a representative pre-migration fixture:
+# free-text rows named after real certifications, a Swedish credential, a
+# British licence and a Dubai cadre card.
+set +e
+SPGCF_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_global_certification_rollback_fixture.sql 2>&1)"
+SPGCF_RC=$?
+set -e
+if [ "$SPGCF_RC" -ne 0 ]; then
+  echo "FAIL: the rollback fixture could not be planted (rc ${SPGCF_RC})." >&2
+  echo "$SPGCF_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "global certification rollback fixture"
+else
+  echo "    ok  a representative pre-rollback database is planted"
+fi
+
+set +e
+SPGCRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261111090000_sp_global_professional_certifications_rollback.sql 2>&1)"
+SPGCRB_RC=$?
+set -e
+if [ "$SPGCRB_RC" -ne 0 ]; then
+  echo "FAIL: the global certification rollback did not apply (rc ${SPGCRB_RC})." >&2
+  echo "$SPGCRB_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "global certification rollback"
+else
+  echo "    ok  the rollback applies"
+fi
+
+set +e
+SPGCRA_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/security_passport_global_certification_rollback_assert.sql 2>&1)"
+SPGCRA_RC=$?
+set -e
+SPGCRA_PASSED="$(echo "$SPGCRA_OUT" | grep -c "ok  " || true)"
+if [ "$SPGCRA_RC" -ne 0 ] || [ "$SPGCRA_PASSED" -lt 15 ]; then
+  echo "FAIL: the rollback did not preserve the fixture (rc ${SPGCRA_RC}, ${SPGCRA_PASSED} assertions)." >&2
+  echo "$SPGCRA_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "global certification rollback data safety"
+else
+  echo "    ok  ${SPGCRA_PASSED} rollback data-safety assertions passed"
+fi
+
+# The suite must FAIL against the rolled-back schema. A suite that passes
+# either way detects nothing, which is the failure mode a rollback test is
+# most likely to have.
+set +e
+SPGCRN_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_global_certification_test.sql 2>&1)"
+SPGCRN_RC=$?
+set -e
+if [ "$SPGCRN_RC" -eq 0 ]; then
+  echo "FAIL: the global certification suite passed against the rolled-back schema; it detects nothing." >&2
+  suite_failed "global certification rollback (suite blind to the removal)"
+else
+  echo "    ok  and the suite refuses the rolled-back schema (the removal is detectable)"
+fi
+
+set +e
+SPGCRF_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261111090000_sp_global_professional_certifications.sql 2>&1)"
+SPGCRF_RC=$?
+set -e
+if [ "$SPGCRF_RC" -ne 0 ] || ! echo "$SPGCRF_OUT" | grep -q "SP_GLOBAL_CERTIFICATION_PROOF ok"; then
+  echo "FAIL: 20261111090000 did not re-apply after its rollback." >&2
+  echo "$SPGCRF_OUT" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "global certification re-apply"
+else
+  echo "    ok  the forward migration re-applies on top of its rollback, with holder data present"
+fi
+
+# And the documented limitation: once a holder records an international
+# certification, the rollback REFUSES rather than deleting it.
+set +e
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_global_certification_rollback_refusal_fixture.sql >/dev/null 2>&1
+SPGCX_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261111090000_sp_global_professional_certifications_rollback.sql 2>&1)"
+SPGCX_RC=$?
+set -e
+SPGCX_LEFT="$(psql -tAq -d "$TEST_DB" -c "SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'INTL\_%'")"
+if [ "$SPGCX_RC" -eq 0 ] || ! echo "$SPGCX_OUT" | grep -q "SP_GLOBAL_CERT_ROLLBACK_REFUSED" \
+   || [ "$SPGCX_LEFT" != "14" ]; then
+  echo "FAIL: the rollback did not refuse once a holder's certification referenced it (rc ${SPGCX_RC}, ${SPGCX_LEFT} definitions left)." >&2
+  suite_failed "global certification rollback refusal"
+else
+  echo "    ok  and it REFUSES once a holder's certification references it, removing nothing"
+fi
+
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_global_certification_rollback_cleanup.sql >/dev/null
+
 echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
 set +e
 SPAE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_uae_dubai_market_pack_test.sql 2>&1)"
@@ -6376,6 +6516,8 @@ echo "              ${SPUK_PASSED} UK market pack assertions,"
 echo "              ${SPUKT_PASSED} UK title rule assertions,"
 echo "              ${SPAE_PASSED} Dubai market pack assertions,"
 echo "              ${SPPILOT_PASSED} internal-pilot entitlement assertions,"
+echo "              ${SPGC_PASSED} global certification assertions,"
+echo "              ${SPGCRA_PASSED} global certification rollback data-safety assertions,"
 echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
 echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
 echo "              ${SPRDS_PASSED} rollback data-safety assertions"

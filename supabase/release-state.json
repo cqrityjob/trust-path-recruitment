@@ -833,6 +833,60 @@
                 "kind": "function"
             }
         ]
+    },
+    {
+      "file": "20261111090000_sp_global_professional_certifications.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "sp_credential_scopes",
+          "kind": "table"
+        },
+        {
+          "object": "sp_certification_issuers",
+          "kind": "table"
+        },
+        {
+          "object": "sp_certification_issuer_aliases",
+          "kind": "table"
+        },
+        {
+          "object": "sp_certification_sources",
+          "kind": "table"
+        },
+        {
+          "object": "sp_certification_definitions",
+          "kind": "table"
+        },
+        {
+          "object": "sp_claim_certification_lifecycle",
+          "kind": "table"
+        },
+        {
+          "object": "scope_code",
+          "kind": "column",
+          "table": "sp_credential_types"
+        },
+        {
+          "object": "sp_certification_definition_rules",
+          "kind": "function"
+        },
+        {
+          "object": "sp_certification_issuer_code_immutable",
+          "kind": "function"
+        },
+        {
+          "object": "sp_certification_lifecycle_rules",
+          "kind": "function"
+        },
+        {
+          "object": "sp_certification_lifecycle_declare",
+          "kind": "function"
+        }
+      ],
+      "note": "SECURITY PASSPORT PHASE 1 -- THE GOVERNED INTERNATIONAL-CERTIFICATION FOUNDATION. Schema and reference data only; no application release is coupled to it, no market is activated, no UI reads it. PROBLEM: the Passport could say WHERE a credential comes from (20260907090000 separated jurisdiction, sub-jurisdiction, authority and market pack) but had no way to say that a credential comes from NOWHERE -- that a Certified Protection Professional is real, governed and portable, and authorises nothing anywhere. Every cheap way of recognising one is wrong: a null jurisdiction is also every language, practical skill and free-text training row; an issuer's domicile is not its credentials' jurisdiction; a title, an abbreviation, an uploaded document and a Career Center category are all holder-supplied or unrelated. CORRECTION: scope is DECLARED in a new nullable sp_credential_types.scope_code, foreign-keyed to a lookup table (not an enum, so the rollback stays clean). sp_credential_type_global_scope_unbound pins every global row to claim_type=certification, category=qualification, NULL market pack / jurisdiction / sub-jurisdiction / authority / regulated role, and NO contribution to local_eligibility or active_title; added NOT VALID, asserted, then VALIDATEd. sp_claims_credential_rules gains SP_GLOBAL_CERTIFICATION_HAS_NO_JURISDICTION and is otherwise reproduced verbatim, so every PR #222 market refusal survives. A SEPARATE issuer registry (ASIS International, ISC2, ISACA, Association of Certified Fraud Examiners (ACFE), ACAMS) rather than sp_authorities: a certification body is not a statutory regulator, and the table deliberately carries no jurisdiction column. 14 definitions seeded (ASIS 4, ISC2 5, ISACA 3, ACFE 1, ACAMS 1), sources reviewed 2026-09-12; ACAMS records NO public verification URL because none was confirmed, and the ACFE directory records that absence proves nothing. A holder's standing lives in sp_claim_certification_lifecycle (owner-only, RLS + trigger) with explicit semantics, because a recertification cycle is not an expiry and nothing computes one from an award date. BACKFILL: scope_code='national_regulated' onto the 59 definitions that ALREADY carry both a market pack and a jurisdiction -- an exact governed relationship, never a name or a null. No sp_claims row is read, written or deleted; free-text rows titled ASIS, CPP, CISSP and test are unchanged. sp_credential_types_symbol_label_check relaxed 4 -> 8 so CISSP and CRISC render whole. Rollback removes only these objects, uses no CASCADE, names the 14 codes explicitly, restores the 20261109090000 trigger and the four-character plate bound, and REFUSES with SP_GLOBAL_CERT_ROLLBACK_REFUSED once a holder's certification references a definition -- after adoption the correction is a forward migration.",
+      "verify": "SELECT count(*) FROM public.sp_credential_types WHERE scope_code='global_professional' AND is_active;  -- expect 14. Then: SELECT i.issuer_code, count(*) FROM public.sp_certification_definitions d JOIN public.sp_certification_issuers i ON i.id=d.issuer_id GROUP BY 1 ORDER BY 1;  -- expect ACAMS 1, ACFE 1, ASIS 4, ISACA 3, ISC2 5. Then: SELECT verification_mode, public_verification_url FROM public.sp_certification_issuers WHERE issuer_code='ACAMS';  -- expect none | NULL. Then: SELECT count(*) FROM public.sp_credential_types WHERE scope_code='global_professional' AND (jurisdiction_code IS NOT NULL OR market_pack_code IS NOT NULL OR authority_id IS NOT NULL OR regulated_role_id IS NOT NULL OR contributes_to && ARRAY['local_eligibility','active_title']::text[]);  -- expect 0. Then: SELECT convalidated FROM pg_constraint WHERE conname='sp_credential_type_global_scope_unbound';  -- expect t. Then: SELECT count(*) FROM public.sp_market_packs WHERE is_active;  -- expect 1 (SE). Then: SELECT count(*) FROM public.sp_claims WHERE credential_code LIKE 'INTL\\_%';  -- expect 0 immediately after apply. Then: SELECT has_table_privilege('anon','public.sp_certification_issuers','SELECT'), has_table_privilege('authenticated','public.sp_certification_issuers','INSERT');  -- expect f|f. Then: SELECT prosrc LIKE '%SP_GLOBAL_CERTIFICATION_HAS_NO_JURISDICTION%' AND prosrc LIKE '%SP_SUB_JURISDICTION_REQUIRED%' FROM pg_proc WHERE proname='sp_claims_credential_rules';  -- expect t.",
+      "rollback": "supabase/rollback/20261111090000_sp_global_professional_certifications_rollback.sql"
     }
   ], 
   "policyVersion": 2, 
