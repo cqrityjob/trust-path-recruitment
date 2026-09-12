@@ -403,13 +403,18 @@ const pr2 = read(PR2_MIGRATION);
   );
   const response = functionBody(functionText(sql, "bcp_guard_response") ?? "");
   check(
-    response.includes("BCP_RESPONSE_IMMUTABLE") && response.includes("BCP_RESPONSE_NO_DELETE"),
-    "BCP-IMMUTABLE: a submitted response is frozen and is never deleted",
+    /IF OLD\.response_state = 'submitted' THEN\s*RAISE EXCEPTION 'BCP_RESPONSE_IMMUTABLE/.test(
+      response,
+    ) && /IF TG_OP = 'DELETE' THEN\s*RAISE EXCEPTION 'BCP_RESPONSE_NO_DELETE/.test(response),
+    "BCP-IMMUTABLE: a submitted response is frozen and is never deleted -- the CONDITION, not the message",
   );
   const answer = functionBody(functionText(sql, "bcp_guard_answer") ?? "");
   check(
-    answer.includes("FOR SHARE") && answer.includes("BCP_ANSWER_FROZEN"),
-    "BCP-IMMUTABLE: an answer write locks its owning response before reading its state, then refuses a frozen one",
+    (answer.match(/FOR SHARE/g) ?? []).length >= 3 &&
+      /WHERE r\.id = NEW\.response_id FOR SHARE/.test(answer) &&
+      /WHERE r\.id = OLD\.response_id FOR SHARE/.test(answer) &&
+      answer.includes("BCP_ANSWER_FROZEN"),
+    "BCP-IMMUTABLE: every answer write locks its owning response FOR SHARE before reading its state, then refuses a frozen one",
   );
   const assignment = functionBody(functionText(sql, "bcp_guard_assignment") ?? "");
   check(
@@ -513,14 +518,25 @@ const pr2 = read(PR2_MIGRATION);
     "BCP-GATE: nothing is assignable without a live pilot grant",
   );
   check(
-    assign.includes("BCP_METHOD_NOT_PUBLISHED") &&
-      assign.includes("BCP_METHOD_MODE_NOT_PERMITTED") &&
-      assign.includes("BCP_METHOD_NOT_CANDIDATE_SAFE"),
-    "BCP-GATE: a draft, suspended, retired or security-vetting version is refused by name",
+    /IF _v\.content_status <> 'published' THEN\s*RAISE EXCEPTION 'BCP_METHOD_NOT_PUBLISHED/.test(
+      assign,
+    ) &&
+      /IF _v\.mode <> 'recruitment_support' THEN\s*RAISE EXCEPTION 'BCP_METHOD_MODE_NOT_PERMITTED/.test(
+        assign,
+      ) &&
+      /IF NOT public\.bcp_version_is_candidate_safe\(_method_version_id\) THEN\s*RAISE EXCEPTION 'BCP_METHOD_NOT_CANDIDATE_SAFE/.test(
+        assign,
+      ),
+    "BCP-GATE: a draft, suspended, retired or security-vetting version is refused by a reachable condition",
   );
   check(
-    assign.includes("BCP_CONTENT_HASH_MISMATCH") && assign.includes("BCP_PROFILE_NOT_IN_VERSION"),
-    "BCP-GATE: a moved content hash and a foreign exposure profile are refused",
+    /_v\.content_hash IS DISTINCT FROM _expected_content_hash THEN\s*RAISE EXCEPTION 'BCP_CONTENT_HASH_MISMATCH/.test(
+      assign,
+    ) &&
+      /_p\.method_version_id IS DISTINCT FROM _method_version_id THEN\s*RAISE EXCEPTION 'BCP_PROFILE_NOT_IN_VERSION/.test(
+        assign,
+      ),
+    "BCP-GATE: a moved content hash and a foreign exposure profile are refused by a reachable condition",
   );
   check(
     assign.includes("has_employer_role(auth.uid()") &&
@@ -557,8 +573,11 @@ const pr2 = read(PR2_MIGRATION);
   const ackText = functionText(sql, "bcp_acknowledge_notice") ?? "";
   const ack = functionBody(ackText);
   check(
-    ack.includes("BCP_NOTICE_HASH_MISMATCH") && ack.includes("bcp_notice_hash("),
-    "BCP-NOTICE: the acknowledgement binds to the server's own notice hash, so a client cannot acknowledge a notice it invented",
+    ack.includes("bcp_notice_hash(") &&
+      /_notice_content_hash IS DISTINCT FROM _expected THEN\s*RAISE EXCEPTION 'BCP_NOTICE_HASH_MISMATCH/.test(
+        ack,
+      ),
+    "BCP-NOTICE: the acknowledgement compares the caller's hash against the server's own, so a client cannot acknowledge a notice it invented",
   );
   check(
     /acknowledgement_kind text NOT NULL DEFAULT 'information_received'\s*CHECK \(acknowledgement_kind = 'information_received'\)/.test(
@@ -572,10 +591,13 @@ const pr2 = read(PR2_MIGRATION);
   );
   check(
     /CONSTRAINT bcp_assignments_notice_first_check/.test(bare) &&
-      functionBody(functionText(sql, "bcp_save_answers") ?? "").includes(
-        "BCP_NOTICE_NOT_ACKNOWLEDGED",
+      /IF _a\.acknowledged_at IS NULL THEN\s*RAISE EXCEPTION 'BCP_NOTICE_NOT_ACKNOWLEDGED/.test(
+        functionBody(functionText(sql, "bcp_save_answers") ?? ""),
+      ) &&
+      /IF _a\.acknowledged_at IS NULL THEN\s*RAISE EXCEPTION 'BCP_NOTICE_NOT_ACKNOWLEDGED/.test(
+        functionBody(functionText(sql, "bcp_submit") ?? ""),
       ),
-    "BCP-NOTICE: nothing can be answered before the notice is acknowledged, by constraint AND by RPC",
+    "BCP-NOTICE: nothing can be answered or submitted before the notice is acknowledged, by constraint AND by a reachable condition in both RPCs",
   );
 }
 
@@ -632,12 +654,15 @@ const pr2 = read(PR2_MIGRATION);
   );
 
   check(
-    /BCP_ROLLBACK BLOCKED/.test(rbBare) &&
-      /pg_constraint/.test(rbBare) &&
+    /pg_constraint/.test(rbBare) &&
       /pg_views/.test(rbBare) &&
       /pg_policies/.test(rbBare) &&
-      /reltype = ANY \(p\.proargtypes\)/.test(rbBare),
-    "BCP-ROLLBACK: it refuses on a foreign key, a view, a policy, a calling function or a row-type dependency from outside the domain",
+      /reltype = ANY \(p\.proargtypes\)/.test(rbBare) &&
+      // Seven refusals -- six dependency kinds plus the submitted-preparation
+      // one -- and every one of them REACHABLE: a guard whose condition is
+      // dead refuses nothing at all.
+      (rbBare.match(/IF _n > 0 THEN\s*RAISE EXCEPTION 'BCP_ROLLBACK BLOCKED/g) ?? []).length === 7,
+    "BCP-ROLLBACK: it refuses on a foreign key, a view, a trigger, a policy, a calling function or a row-type dependency from outside the domain -- each by a reachable condition",
   );
   check(
     /response_state = 'submitted'/.test(rbBare) &&
@@ -794,9 +819,12 @@ const pr2 = read(PR2_MIGRATION);
     dict.includes('"beskt.library.title": "Metodstöd för rekrytering"'),
     'BCP-UI: the employer section is named "Metodstöd för rekrytering"',
   );
-  const besktCopy = Array.from(dict.matchAll(/"beskt\.[a-zA-Z0-9_.]+":\s*"([^"]*)"/g))
-    .map((m) => m[1])
-    .join("   ");
+  // Per VALUE, not one concatenated blob: a value with no terminal punctuation
+  // would otherwise be glued to its neighbour and inherit its denial.
+  const besktValues = Array.from(dict.matchAll(/"beskt\.[a-zA-Z0-9_.]+":\s*"([^"]*)"/g)).map(
+    (m) => m[1] ?? "",
+  );
+  const besktCopy = besktValues.join("   ");
   check(
     !/personlighetstest|lämplighetstest|personality test|suitability test|aptitude test/i.test(
       besktCopy,
@@ -811,8 +839,8 @@ const pr2 = read(PR2_MIGRATION);
   // that names scoring must also deny or distinguish it.
   const denies =
     /\b(inte|inget|ingen|inga|aldrig|utan|skilt|skild|åtskild|not|no|never|nobody|none|without|distinct|separate|rather than|instead of)\b/i;
-  const scoringSentences = besktCopy
-    .split(/(?<=[.!?])\s+/)
+  const scoringSentences = besktValues
+    .flatMap((value) => value.split(/(?<=[.!?])\s+/))
     .filter((sentence) => /\b(poäng|betyg|rangordn|score|ranking|grade)\w*/i.test(sentence));
   const asserted = scoringSentences.filter((sentence) => !denies.test(sentence));
   check(
@@ -865,8 +893,9 @@ const pr2 = read(PR2_MIGRATION);
     'BCP-UI: the candidate can choose "Hoppa över" and "Ta muntligt under intervjun"',
   );
   check(
-    candidate.includes("beskt-error-summary") && candidate.includes('role="alert"'),
-    "BCP-UI: an error summary exists and is announced",
+    /role="alert"[\s\S]{0,200}data-testid="beskt-error-summary"/.test(candidate) &&
+      /tabIndex=\{-1\}[\s\S]{0,200}data-testid="beskt-error-summary"/.test(candidate),
+    "BCP-UI: the error summary ITSELF is announced and focusable, not merely present",
   );
   check(
     (candidate.match(/min-h-\[44px\]/g) ?? []).length >= 8,
