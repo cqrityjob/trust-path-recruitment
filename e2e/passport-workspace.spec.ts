@@ -462,6 +462,52 @@ async function mount(
         if (scenario.passportFails) return boom(route, "read failed");
         return ok(route, snapshotOf(scenario));
 
+      // The three-market overview cards, on their own clock. Sweden is the
+      // scenario's market and the only one open to this holder.
+      case "listPassportMarketOverview":
+        return ok(route, [
+          {
+            marketPackCode: "SE",
+            jurisdictionCode: "SE",
+            subJurisdictionCode: null,
+            nameSv: "Sverige",
+            nameEn: "Sweden",
+            availability: "available",
+            holderAccess: "production",
+            isCurrentWorkMarket: true,
+          },
+          {
+            marketPackCode: "GB",
+            jurisdictionCode: "GB",
+            subJurisdictionCode: null,
+            nameSv: "Storbritannien",
+            nameEn: "Great Britain",
+            availability: "under_review",
+            holderAccess: "closed",
+            isCurrentWorkMarket: false,
+          },
+          {
+            marketPackCode: "GB-NI",
+            jurisdictionCode: "GB",
+            subJurisdictionCode: "GB-NI",
+            nameSv: "Nordirland",
+            nameEn: "Northern Ireland",
+            availability: "under_review",
+            holderAccess: "closed",
+            isCurrentWorkMarket: false,
+          },
+          {
+            marketPackCode: "AE-DU",
+            jurisdictionCode: "AE",
+            subJurisdictionCode: "AE-DU",
+            nameSv: "Dubai",
+            nameEn: "Dubai",
+            availability: "under_review",
+            holderAccess: "closed",
+            isCurrentWorkMarket: false,
+          },
+        ]);
+
       case "listMyVerificationRequests":
         if (scenario.verificationDelayMs)
           await new Promise((r) => setTimeout(r, scenario.verificationDelayMs));

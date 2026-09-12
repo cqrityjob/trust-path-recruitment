@@ -169,7 +169,10 @@ test.describe("overview", () => {
   test("add-credential panel, drafts strip and symbol rows", async ({ page }) => {
     await openHarness(page, "overview", "cred-vu1-draft", "en");
     await expect(page.getByText("Credentials and training")).toBeVisible();
-    await expect(page.getByRole("button", { name: /^VU1$/ })).toBeVisible();
+    // The shared catalogue names the credential first and the code second.
+    await expect(
+      page.getByRole("button", { name: /^Security Guard Training 1 \(VU1\)/ }),
+    ).toBeVisible();
     // The saved draft resumes from the overview.
     await expect(page.getByText("Drafts")).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue draft" })).toBeVisible();
