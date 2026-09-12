@@ -919,6 +919,7 @@ export type Database = {
           locale_en: string
           locale_sv: string
           mode: string
+          open_slot: string | null
           pack_id: string
           published_at: string | null
           published_by: string | null
@@ -1005,7 +1006,7 @@ export type Database = {
           {
             foreignKeyName: "beskt_method_versions_pack_id_fkey"
             columns: ["pack_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "scp_interview_packs"
             referencedColumns: ["id"]
           },
@@ -14557,6 +14558,7 @@ export type Database = {
           locale_en: string
           locale_sv: string
           mode: string
+          open_slot: string | null
           pack_id: string
           published_at: string | null
           published_by: string | null
@@ -14711,6 +14713,10 @@ export type Database = {
         Returns: Json
       }
       beskt_text_claims_deception_cue: {
+        Args: { _text: string }
+        Returns: boolean
+      }
+      beskt_text_instructs_scoring: {
         Args: { _text: string }
         Returns: boolean
       }

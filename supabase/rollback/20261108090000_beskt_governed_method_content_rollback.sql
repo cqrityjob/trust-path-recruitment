@@ -32,7 +32,8 @@
 -- signature or any other catalogue dependency that a CASCADE would otherwise
 -- remove silently -- or if a BESKT version is currently published.
 --
--- Run inside the caller's transaction.
+-- Run inside the caller's transaction (psql -1 -f ...): every refusal above
+-- then leaves the database exactly as it was, nothing half-dropped.
 
 DO $$
 DECLARE _offender text; _n integer;
@@ -78,6 +79,25 @@ BEGIN
                      FROM pg_rewrite r WHERE r.oid = d.objid));
   IF _offender IS NOT NULL THEN
     RAISE EXCEPTION 'BESKT_ROLLBACK BLOCKED: catalogue objects outside the domain depend on it (%). A CASCADE would remove them silently; reconcile first.', _offender;
+  END IF;
+  -- Dependencies on a BESKT table's ROW TYPE: a function whose signature
+  -- names a BESKT table (RETURNS SETOF beskt_x, a beskt_x argument) depends
+  -- on pg_type, not pg_class, and would otherwise be found only when the
+  -- DROP TABLE fails half-way through.
+  SELECT string_agg(DISTINCT d.classid::regclass::text || ' ' || d.objid::text, ', ') INTO _offender
+    FROM pg_depend d
+    JOIN pg_type ty ON ty.oid = d.refobjid AND d.refclassid = 'pg_type'::regclass
+    JOIN pg_class rc ON rc.oid = ty.typrelid
+    JOIN pg_namespace rn ON rn.oid = rc.relnamespace
+   WHERE rn.nspname = 'public' AND rc.relname LIKE 'beskt\_%' ESCAPE '\'
+     AND d.deptype IN ('n', 'a')
+     AND NOT (d.classid = 'pg_type'::regclass)
+     AND NOT (d.classid = 'pg_class'::regclass
+              AND (SELECT relname FROM pg_class WHERE oid = d.objid) LIKE 'beskt\_%' ESCAPE '\')
+     AND NOT (d.classid = 'pg_proc'::regclass
+              AND (SELECT proname FROM pg_proc WHERE oid = d.objid) LIKE 'beskt\_%' ESCAPE '\');
+  IF _offender IS NOT NULL THEN
+    RAISE EXCEPTION 'BESKT_ROLLBACK BLOCKED: objects outside the domain depend on a BESKT row type (%). Reconcile first.', _offender;
   END IF;
   SELECT string_agg(DISTINCT p.proname, ', ') INTO _offender
     FROM pg_depend d
@@ -145,6 +165,7 @@ DROP FUNCTION IF EXISTS public.beskt_method_validate(uuid, boolean);
 DROP FUNCTION IF EXISTS public.beskt_method_content_hash(uuid);
 DROP FUNCTION IF EXISTS public.beskt_canonical_content(uuid);
 DROP FUNCTION IF EXISTS public.beskt_sorted_array(text[]);
+DROP FUNCTION IF EXISTS public.beskt_text_instructs_scoring(text);
 DROP FUNCTION IF EXISTS public.beskt_text_claims_deception_cue(text);
 DROP FUNCTION IF EXISTS public.beskt_wording_is_neutral(text);
 DROP FUNCTION IF EXISTS public.beskt_prompt_stage(text);

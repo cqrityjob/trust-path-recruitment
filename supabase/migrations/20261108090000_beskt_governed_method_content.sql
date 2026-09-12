@@ -757,6 +757,15 @@ CREATE TABLE public.beskt_method_versions (
   -- approvals.
   review_cycle integer NOT NULL DEFAULT 0 CHECK (review_cycle >= 0),
 
+  -- The open-version slot: 'open' while the version is draft or in_review,
+  -- NULL from published onward. UNIQUE (pack_id, open_slot) below admits at
+  -- most one open version per method (NULLs never collide, so any number of
+  -- closed versions may coexist) WITHOUT a unique index on pack_id alone,
+  -- which PostgREST would read as a one-to-one relation between a method
+  -- and its versions. Generated, so no writer can set it.
+  open_slot text GENERATED ALWAYS AS (
+    CASE WHEN content_status IN ('draft', 'in_review') THEN 'open' END) STORED,
+
   -- Deterministic SHA-256 over every governed field, maintained by
   -- beskt_method_content_hash(). A review is bound to the hash it saw.
   content_hash text,
@@ -787,9 +796,11 @@ COMMENT ON TABLE public.beskt_method_versions IS
 
 CREATE INDEX beskt_method_versions_pack_idx ON public.beskt_method_versions (pack_id, version_number DESC);
 -- At most one open (draft or in_review) version per method, enforced by the
--- database itself so two concurrent creations cannot both succeed.
+-- database itself so two concurrent creations cannot both succeed. Two
+-- columns on purpose: pack_id alone is not unique (a method has many
+-- historical versions) and must not be exposed as if it were.
 CREATE UNIQUE INDEX beskt_method_versions_one_open_idx
-  ON public.beskt_method_versions (pack_id) WHERE content_status IN ('draft', 'in_review');
+  ON public.beskt_method_versions (pack_id, open_slot);
 CREATE INDEX beskt_method_versions_status_idx ON public.beskt_method_versions (content_status);
 CREATE INDEX beskt_method_versions_created_by_idx ON public.beskt_method_versions (created_by);
 
@@ -1390,15 +1401,17 @@ DECLARE
   -- Columns a governed transition may write. Everything else is CONTENT and
   -- is frozen once the version leaves the editable states.
   _lifecycle text[] := ARRAY[
-    'content_status', 'validation_label', 'content_hash', 'revision', 'review_cycle', 'updated_at',
+    'content_status', 'validation_label', 'content_hash', 'revision', 'review_cycle', 'open_slot', 'updated_at',
     'published_by', 'published_at',
     'suspended_by', 'suspended_at', 'suspended_reason',
     'retired_by', 'retired_at', 'retired_reason'];
   _editable text[] := ARRAY['draft', 'in_review'];
   _governed boolean := coalesce(current_setting('beskt.governed_transition', true), '') = 'on';
   _col text;
-  _old jsonb := to_jsonb(OLD);
-  _new jsonb := to_jsonb(NEW);
+  -- open_slot is generated from content_status after BEFORE triggers run, so
+  -- NEW carries no value for it here; it is never compared.
+  _old jsonb := to_jsonb(OLD) - 'open_slot';
+  _new jsonb := to_jsonb(NEW) - 'open_slot';
   _legal boolean;
 BEGIN
   IF NOT _governed THEN
@@ -1518,6 +1531,7 @@ DECLARE
   _tgt record;
   _opt_item uuid;
   _item_profile uuid;
+  _lock_id uuid;
 BEGIN
   _row := COALESCE(NEW, OLD);
 
@@ -1545,6 +1559,20 @@ BEGIN
     RAISE EXCEPTION 'BESKT_GUARD_UNRESOLVED_PARENT: could not resolve the owning method version for a row in "%".',
       TG_TABLE_NAME USING ERRCODE = 'check_violation';
   END IF;
+
+  -- ---- serialise against publication -------------------------------------
+  -- The owning version row(s) are locked BEFORE their status is read, with
+  -- a lock that conflicts with the FOR UPDATE that beskt_lock_version takes
+  -- for publication. A child write and a publication of the same version
+  -- therefore serialise: either the child commits first and publication
+  -- sees a stale hash, or publication commits first and the child sees a
+  -- frozen version. The published bytes are always exactly the bytes the
+  -- stored hash names. Two owners (a re-parent) are locked in id order.
+  FOR _lock_id IN
+    SELECT x FROM unnest(ARRAY[_version_id, _old_version_id]) AS u(x) WHERE x IS NOT NULL ORDER BY x
+  LOOP
+    PERFORM 1 FROM public.beskt_method_versions v WHERE v.id = _lock_id FOR SHARE;
+  END LOOP;
 
   SELECT v.content_status INTO _status FROM public.beskt_method_versions v WHERE v.id = _version_id;
   IF _status IS NULL THEN
@@ -1661,10 +1689,14 @@ BEGIN
   END IF;
 
   IF TG_TABLE_NAME = 'beskt_routing_rules' THEN
-    SELECT i.method_version_id, i.answer_type, i.permitted_mode, i.phase, i.exposure_profile_id
-      INTO _src FROM public.beskt_items i WHERE i.id = NEW.source_item_id;
-    SELECT i.method_version_id, i.answer_type, i.permitted_mode, i.phase, i.exposure_profile_id
-      INTO _tgt FROM public.beskt_items i WHERE i.id = NEW.target_item_id;
+    SELECT i.method_version_id, i.answer_type, i.permitted_mode, i.phase, i.exposure_profile_id,
+           s.display_order AS section_order, i.display_order, i.item_key
+      INTO _src FROM public.beskt_items i JOIN public.beskt_sections s ON s.id = i.section_id
+     WHERE i.id = NEW.source_item_id;
+    SELECT i.method_version_id, i.answer_type, i.permitted_mode, i.phase, i.exposure_profile_id,
+           s.display_order AS section_order, i.display_order, i.item_key
+      INTO _tgt FROM public.beskt_items i JOIN public.beskt_sections s ON s.id = i.section_id
+     WHERE i.id = NEW.target_item_id;
     IF _src.method_version_id IS NULL OR _tgt.method_version_id IS NULL THEN
       RAISE EXCEPTION 'BESKT_ROUTE_ITEM_UNKNOWN: a routing rule names a source and a target item that exist.'
         USING ERRCODE = 'foreign_key_violation';
@@ -1707,6 +1739,15 @@ BEGIN
        AND (_tgt.permitted_mode = 'security_vetting_support'
             OR _src.permitted_mode = 'security_vetting_support') THEN
       RAISE EXCEPTION 'BESKT_ROUTE_MODE_ESCALATION: a recruitment_support rule cannot reach or read security_vetting_support content.'
+        USING ERRCODE = 'check_violation';
+    END IF;
+    -- Routing only moves forward through the governed order (section, item,
+    -- key): a target never precedes or equals its source, so an answer can
+    -- never reopen or close something the candidate has already passed, and
+    -- no cycle is representable.
+    IF (_tgt.section_order, _tgt.display_order, _tgt.item_key)
+       <= (_src.section_order, _src.display_order, _src.item_key) THEN
+      RAISE EXCEPTION 'BESKT_ROUTE_BACKWARD: a routing rule may only target an item that comes after its source in the governed order.'
         USING ERRCODE = 'check_violation';
     END IF;
   END IF;
@@ -1844,18 +1885,34 @@ CREATE TRIGGER beskt_method_reviews_insert_guard
   FOR EACH ROW EXECUTE FUNCTION public.beskt_guard_review_insert();
 
 
--- 4.7  Governance grants are never deleted and never rewritten, except to
---      revoke: the one permitted UPDATE sets the revocation columns from NULL
---      and touches nothing else.
+-- 4.7  Governance grants are written only by the two governed RPCs, which
+--      set a transaction-local marker around their one INSERT or one
+--      revocation UPDATE. Every other write -- a fabricated grant, a
+--      revocation outside beskt_revoke_governance, a rewrite, a delete -- is
+--      refused for every caller, the database owner and service_role
+--      included, because a trigger fires for BYPASSRLS callers too.
 CREATE OR REPLACE FUNCTION public.beskt_guard_grants_append_only()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  _governed boolean := coalesce(current_setting('beskt.governance_grant_write', true), '') = 'on';
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'BESKT_GRANT_APPEND_ONLY: a governance grant is never deleted; revoke it instead.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF TG_OP = 'INSERT' AND NOT _governed THEN
+    RAISE EXCEPTION 'BESKT_GRANT_UNGOVERNED_WRITE: a governance grant is made only by beskt_grant_governance (platform admin, receipt, provenance), never by a direct INSERT.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    RETURN NEW;
+  END IF;
+  IF NOT _governed THEN
+    RAISE EXCEPTION 'BESKT_GRANT_UNGOVERNED_WRITE: a governance grant is revoked only by beskt_revoke_governance (platform admin, receipt, reason), never by a direct UPDATE.'
       USING ERRCODE = 'insufficient_privilege';
   END IF;
   IF OLD.revoked_at IS NOT NULL
@@ -1872,7 +1929,7 @@ $$;
 REVOKE ALL ON FUNCTION public.beskt_guard_grants_append_only() FROM PUBLIC, anon, authenticated;
 
 CREATE TRIGGER beskt_governance_grants_append_only
-  BEFORE UPDATE OR DELETE ON public.beskt_governance_grants
+  BEFORE INSERT OR UPDATE OR DELETE ON public.beskt_governance_grants
   FOR EACH ROW EXECUTE FUNCTION public.beskt_guard_grants_append_only();
 
 -- The one predicate every gate check uses: an unrevoked grant for exactly
@@ -1893,8 +1950,10 @@ AS $$
        AND (g.valid_until IS NULL OR g.valid_until > now()));
 $$;
 
-REVOKE ALL ON FUNCTION public.beskt_holds_grant(uuid, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.beskt_holds_grant(uuid, text) TO authenticated, service_role;
+-- INTERNAL: it answers for an arbitrary user id, so a browser principal could
+-- otherwise enumerate who holds which gate. Every caller is SECURITY DEFINER.
+REVOKE ALL ON FUNCTION public.beskt_holds_grant(uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.beskt_holds_grant(uuid, text) TO service_role;
 
 -- ###########################################################################
 -- SECTION 5 -- Canonical SHA-256 content hash, neutrality rules and the
@@ -2014,6 +2073,32 @@ GRANT EXECUTE ON FUNCTION public.beskt_text_claims_deception_cue(text) TO authen
 --      actors, timestamps, validation_label, release_scope) are EXCLUDED, so
 --      publishing a version does not change its hash and an approval survives
 --      the transition it authorised.
+-- 5.3b Content that instructs scoring, rating, grading, ranking, a
+--      suitability or hiring verdict, pass/fail or a recommendation -- in the
+--      Swedish and English the product uses. Governed items, prompts and
+--      evidence anchors carrying such an instruction block publication:
+--      BESKT produces a basis for a human decision, never a score, and the
+--      Evaluation step is interviewer reflection only.
+CREATE OR REPLACE FUNCTION public.beskt_text_instructs_scoring(_text text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT _text IS NOT NULL AND (
+    -- English
+    _text ~* '\m(rate|rates|rated|rating|ratings|score|scores|scored|scoring|grade|grades|graded|grading|rank|ranks|ranked|ranking|suitability|suitable|unsuitable|verdict|pass/fail|pass or fail|passes|passed|fails|failed|recommend|recommends|recommended|recommendation|hire|hireable|hiring decision|shortlist|shortlisted)\M'
+    OR _text ~* '\m(on a scale|scale of|scale from|from|between)\s+\d+\s*(to|-|–|and)\s*\d+'
+    OR _text ~* '\d+\s*out of\s*\d+'
+    OR _text ~* '(\d+\s*points?\M|\mpoints?\s+(scale|out of|total)\M|\m(award|assign|give|deduct|earn|allocate)\w*\s+points?\M)'
+    -- Swedish
+    OR _text ~* '\m(betyg|betygsätt\w*|betygsatt\w*|poäng\w*|gradera\w*|graderas|ranka\w*|rankad\w*|rangordn\w*|lämplighet\w*|lämplig|olämplig\w*|omdöme\w*|utlåtande\w*|godkänd\w*|godkänn\w*|underkänd\w*|underkänn\w*|rekommend\w*|anställ\w*|verdikt\w*|shortlist\w*)\M'
+    OR _text ~* '\m(på en skala|skala|från|mellan)\s+\d+\s*(till|-|–|och)\s*\d+');
+$$;
+
+REVOKE ALL ON FUNCTION public.beskt_text_instructs_scoring(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.beskt_text_instructs_scoring(text) TO authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION public.beskt_sorted_array(_arr text[])
 RETURNS jsonb
 LANGUAGE sql
@@ -2707,6 +2792,48 @@ BEGIN
        AND (length(btrim(coalesce(f.label_sv, ''))) = 0 OR length(btrim(coalesce(f.label_en, ''))) = 0
          OR length(btrim(coalesce(f.definition_sv, ''))) = 0 OR length(btrim(coalesce(f.definition_en, ''))) = 0);
 
+  -- ---- no scoring instruction anywhere in the governed content ------------------
+  -- Not a key check: the VALUES of every wording, purpose and anchor component
+  -- are read, in both languages.
+  RETURN QUERY
+    SELECT 'ITEM_INSTRUCTS_SCORING', 'blocking',
+           format('Item %s instructs scoring, rating, grading, ranking, a suitability or hiring verdict, pass/fail or a recommendation.', i.item_key)
+      FROM public.beskt_items i
+     WHERE i.method_version_id = _method_version_id
+       AND (public.beskt_text_instructs_scoring(i.wording_sv) OR public.beskt_text_instructs_scoring(i.wording_en)
+            OR public.beskt_text_instructs_scoring(i.purpose_sv) OR public.beskt_text_instructs_scoring(i.purpose_en));
+  RETURN QUERY
+    SELECT 'PROMPT_INSTRUCTS_SCORING', 'blocking',
+           format('Prompt %s instructs scoring, rating, grading, ranking, a suitability or hiring verdict, pass/fail or a recommendation; the Evaluation step is interviewer reflection only.', pr.prompt_key)
+      FROM public.beskt_prompts pr
+     WHERE pr.method_version_id = _method_version_id
+       AND (public.beskt_text_instructs_scoring(pr.wording_sv) OR public.beskt_text_instructs_scoring(pr.wording_en));
+  RETURN QUERY
+    SELECT 'ANCHOR_INSTRUCTS_SCORING', 'blocking',
+           format('Evidence anchor %s instructs scoring, rating, grading, ranking, a suitability or hiring verdict, pass/fail or a recommendation.', a.evidence_state)
+      FROM public.beskt_evidence_anchors a
+     WHERE a.method_version_id = _method_version_id
+       AND (public.beskt_text_instructs_scoring(a.definition_sv) OR public.beskt_text_instructs_scoring(a.definition_en)
+            OR public.beskt_text_instructs_scoring(a.inclusion_criteria_sv) OR public.beskt_text_instructs_scoring(a.inclusion_criteria_en)
+            OR public.beskt_text_instructs_scoring(a.exclusion_criteria_sv) OR public.beskt_text_instructs_scoring(a.exclusion_criteria_en)
+            OR public.beskt_text_instructs_scoring(a.supporting_evidence_examples_sv) OR public.beskt_text_instructs_scoring(a.supporting_evidence_examples_en)
+            OR public.beskt_text_instructs_scoring(a.counter_evidence_and_protective_factors_sv) OR public.beskt_text_instructs_scoring(a.counter_evidence_and_protective_factors_en));
+
+  -- ---- routing moves forward only ---------------------------------------------
+  -- Re-proved on the stored graph: a target ordered at or before its source
+  -- (section, item order, key) blocks publication even if a row was forced
+  -- past the write-time guard.
+  RETURN QUERY
+    SELECT 'ROUTE_TARGET_BEFORE_SOURCE', 'blocking',
+           format('Rule %s targets %s, which does not come after its source %s in the governed order.', r.rule_key, ti.item_key, si.item_key)
+      FROM public.beskt_routing_rules r
+      JOIN public.beskt_items si ON si.id = r.source_item_id
+      JOIN public.beskt_sections ss ON ss.id = si.section_id
+      JOIN public.beskt_items ti ON ti.id = r.target_item_id
+      JOIN public.beskt_sections ts ON ts.id = ti.section_id
+     WHERE r.method_version_id = _method_version_id
+       AND (ts.display_order, ti.display_order, ti.item_key) <= (ss.display_order, si.display_order, si.item_key);
+
   -- ---- the five human review gates, bound to the CURRENT content hash ------------
   IF _require_reviews THEN
     _hash := public.beskt_method_content_hash(_method_version_id);
@@ -2785,8 +2912,9 @@ AS $$
   END;
 $$;
 
-REVOKE ALL ON FUNCTION public.beskt_reader_access_classes(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.beskt_reader_access_classes(uuid) TO authenticated, service_role;
+-- INTERNAL: it answers for an arbitrary user id. Every caller is SECURITY DEFINER.
+REVOKE ALL ON FUNCTION public.beskt_reader_access_classes(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.beskt_reader_access_classes(uuid) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.beskt_can_read_version(_method_version_id uuid)
 RETURNS boolean
@@ -2900,7 +3028,7 @@ BEGIN
   -- Rules in evaluation order. A later rule overrides an earlier one on the
   -- same target, deterministically.
   FOR _r IN
-    SELECT r.condition_kind, r.condition_boolean, r.action, r.target_item_id,
+    SELECT r.condition_kind, r.condition_boolean, r.action, r.target_item_id, r.source_item_id,
            si.item_key AS source_key, si.exposure_profile_id AS source_profile,
            o.option_key,
            (ti.permitted_mode = 'recruitment_support' OR _mode = 'security_vetting_support') AS target_permitted,
@@ -2917,6 +3045,12 @@ BEGIN
     -- content the chosen mode permits.
     IF _r.source_profile <> _exposure_profile_id OR _r.target_profile <> _exposure_profile_id
        OR NOT _r.target_permitted THEN
+      CONTINUE;
+    END IF;
+    -- A rule reads only an item that is currently shown. An answer supplied
+    -- for a hidden or skipped source is ignored, deterministically, so a
+    -- stale answer can neither reveal nor hide downstream content.
+    IF NOT (_r.source_item_id = ANY (_shown)) THEN
       CONTINUE;
     END IF;
 
@@ -2963,8 +3097,9 @@ GRANT EXECUTE ON FUNCTION public.beskt_resolve_item_sequence(uuid, uuid, text, j
 COMMENT ON FUNCTION public.beskt_resolve_item_sequence(uuid, uuid, text, jsonb) IS
   'Deterministic questionnaire routing over governed structured data only. '
   'Same version, profile, mode and structured answers -> same items, same '
-  'order. An omitted or discuss-orally answer fires no rule. It starts '
-  'nothing and stores nothing.';
+  'order. An omitted or discuss-orally answer fires no rule, and neither does '
+  'an answer for an item that is not currently shown. It starts nothing and '
+  'stores nothing.';
 
 
 -- ###########################################################################
@@ -3761,10 +3896,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = _user_id) THEN
     RAISE EXCEPTION 'BESKT_USER_NOT_FOUND' USING ERRCODE = 'check_violation';
   END IF;
+  PERFORM set_config('beskt.governance_grant_write', 'on', true);
   INSERT INTO public.beskt_governance_grants
     (user_id, grant_kind, granted_by, valid_until, source_reference, grant_operation_id)
   VALUES (_user_id, _grant_kind, auth.uid(), _valid_until, btrim(_source_reference), _operation_id)
   RETURNING id INTO _id;
+  PERFORM set_config('beskt.governance_grant_write', 'off', true);
   RETURN jsonb_build_object('grant_id', _id, 'user_id', _user_id, 'grant_kind', _grant_kind);
 END;
 $$;
@@ -3817,10 +3954,12 @@ BEGIN
   IF _g.revoked_at IS NOT NULL THEN
     RAISE EXCEPTION 'BESKT_GRANT_ALREADY_REVOKED' USING ERRCODE = 'check_violation';
   END IF;
+  PERFORM set_config('beskt.governance_grant_write', 'on', true);
   UPDATE public.beskt_governance_grants
      SET revoked_at = now(), revoked_by = auth.uid(), revoke_reason = btrim(_reason),
          revoke_operation_id = _operation_id
    WHERE id = _grant_id;
+  PERFORM set_config('beskt.governance_grant_write', 'off', true);
   RETURN jsonb_build_object('grant_id', _grant_id, 'revoked_at', now());
 END;
 $$;
@@ -3831,8 +3970,10 @@ GRANT EXECUTE ON FUNCTION public.beskt_revoke_governance(uuid, uuid, text) TO au
 
 -- 7.12 The read contract: the published governed content a caller is
 --      authorised to read, as one document. Drafts, suspended and retired
---      versions are refused; security-vetting content is refused to employer
---      principals. Nothing here starts anything.
+--      versions are refused; release_scope is synthetic_internal_only, so
+--      only governance readers and explicit internal-QA grantees read
+--      anything, and security-vetting content reaches governance only.
+--      Nothing here starts anything.
 CREATE OR REPLACE FUNCTION public.beskt_published_method(_method_version_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -4026,7 +4167,8 @@ GRANT EXECUTE ON FUNCTION public.beskt_readable_published_versions() TO authenti
 COMMENT ON FUNCTION public.beskt_readable_published_versions() IS
   'The published BESKT method versions the caller may read, and nothing '
   'else: never a draft, never a suspended or retired version, never '
-  'security-vetting content for an employer principal. A listing, not a '
+  'security-vetting content to internal QA, nothing at all to an employer '
+  'principal, a candidate or a roleless user. A listing, not a '
   'start selector: no scp_iv_* start path accepts a BESKT version.';
 
 
@@ -4364,8 +4506,17 @@ BEGIN
   END IF;
   -- One open version per method is a database invariant.
   IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'beskt_method_versions_one_open_idx'
-                  AND indexdef LIKE 'CREATE UNIQUE INDEX%') THEN
-    RAISE EXCEPTION 'BESKT_PROOF: the one-open-version unique index is missing.';
+                  AND indexdef LIKE 'CREATE UNIQUE INDEX%' AND indexdef LIKE '%(pack_id, open_slot)%') THEN
+    RAISE EXCEPTION 'BESKT_PROOF: the one-open-version unique index is missing or exposes pack_id alone as unique.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid
+              WHERE c.relname = 'beskt_method_versions' AND i.indisunique AND i.indnatts = 1
+                AND (SELECT attname FROM pg_attribute WHERE attrelid = i.indrelid AND attnum = i.indkey[0]) = 'pack_id') THEN
+    RAISE EXCEPTION 'BESKT_PROOF: pack_id alone must never be unique on beskt_method_versions.';
+  END IF;
+  IF has_function_privilege('authenticated', 'public.beskt_holds_grant(uuid, text)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.beskt_reader_access_classes(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'BESKT_PROOF: a governance helper is executable by authenticated.';
   END IF;
   -- The canonical representation is typed jsonb, and reviews bind to the cycle.
   SELECT p.prosrc INTO _src FROM pg_proc p WHERE p.proname = 'beskt_canonical_content';

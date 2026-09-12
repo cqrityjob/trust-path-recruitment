@@ -29,6 +29,7 @@ const ROLLBACK = join(
 const SUITE = join(ROOT, "supabase/tests/beskt_governed_content_test.sql");
 const DB_TEST = join(ROOT, "scripts/db-test.sh");
 const ROLLBACK_SUITE = join(ROOT, "supabase/tests/scp_a_rollback_test.sql");
+const FIXTURE = join(ROOT, "supabase/tests/beskt_governed_content_fixture.sql");
 const ADR = join(ROOT, "docs/architecture/beskt-recruitment-method-discovery.md");
 const RELEASE_STATE = join(ROOT, "supabase/release-state.json");
 const HOSTED_LEDGER = join(ROOT, "supabase/hosted-ledger.json");
@@ -117,6 +118,8 @@ const INTERNAL_FUNCTIONS = [
   "beskt_lock_version",
   "beskt_canonical_content",
   "beskt_method_content_hash",
+  "beskt_holds_grant",
+  "beskt_reader_access_classes",
 ] as const;
 
 const ADMIN_MUTATIONS = ["beskt_grant_governance", "beskt_revoke_governance"] as const;
@@ -672,6 +675,53 @@ check(
   );
 }
 
+// ---- no scoring instruction in the CONTENT, either language --------------------
+{
+  const detector = functionBody(functionText(sql, "beskt_text_instructs_scoring") ?? "");
+  check(
+    /IMMUTABLE/.test(functionHeader(functionText(sql, "beskt_text_instructs_scoring") ?? "")) &&
+      [
+        "rate",
+        "rating",
+        "score",
+        "grade",
+        "rank",
+        "suitability",
+        "verdict",
+        "pass/fail",
+        "recommend",
+        "hire",
+      ].every((t) => detector.includes(t)) &&
+      [
+        "betyg",
+        "poäng",
+        "gradera",
+        "rangordn",
+        "lämplig",
+        "godkän",
+        "underkän",
+        "rekommend",
+        "anställ",
+      ].every((t) => detector.includes(t)) &&
+      /on a scale\|scale of/.test(detector) &&
+      /på en skala\|skala/.test(detector),
+    "BESKT-DB-NO-SCORING: the detector reads scoring, rating, grading, ranking, suitability/verdict, pass/fail and recommendation instructions in English and Swedish",
+  );
+  const v = functionBody(functionText(sql, "beskt_method_validate") ?? "");
+  check(
+    /SELECT 'ITEM_INSTRUCTS_SCORING', 'blocking',[\s\S]{0,400}?public\.beskt_text_instructs_scoring\(i\.wording_sv\) OR public\.beskt_text_instructs_scoring\(i\.wording_en\)\s+OR public\.beskt_text_instructs_scoring\(i\.purpose_sv\) OR public\.beskt_text_instructs_scoring\(i\.purpose_en\)/.test(
+      v,
+    ) &&
+      /SELECT 'PROMPT_INSTRUCTS_SCORING', 'blocking',[\s\S]{0,400}?public\.beskt_text_instructs_scoring\(pr\.wording_sv\) OR public\.beskt_text_instructs_scoring\(pr\.wording_en\)/.test(
+        v,
+      ) &&
+      /SELECT 'ANCHOR_INSTRUCTS_SCORING', 'blocking',[\s\S]{0,1200}?beskt_text_instructs_scoring\(a\.definition_sv\)[\s\S]*?beskt_text_instructs_scoring\(a\.counter_evidence_and_protective_factors_en\)/.test(
+        v,
+      ),
+    "BESKT-DB-NO-SCORING: the validator blocks publication on a scoring instruction in any item, prompt or anchor VALUE, not only on a forbidden key",
+  );
+}
+
 // ---- PEACE: Evaluation is an interviewer-oriented governed step ---------------
 {
   check(
@@ -729,6 +779,23 @@ check(
       /ORDER BY s\.display_order, i\.display_order, i\.item_key/.test(r) &&
       /ORDER BY r\.evaluation_order/.test(r),
     "BESKT-DB-OMISSION-NEUTRAL: the resolver fires a rule only on an explicit option or boolean answer and orders on stable keys",
+  );
+  check(
+    /IF NOT \(_r\.source_item_id = ANY \(_shown\)\) THEN\s+CONTINUE;\s+END IF;/.test(r) &&
+      /SELECT r\.condition_kind, r\.condition_boolean, r\.action, r\.target_item_id, r\.source_item_id,/.test(
+        r,
+      ),
+    "BESKT-DB-ROUTING: a rule fires only while its source item is currently shown; an answer for a hidden or skipped source is ignored",
+  );
+  const cg = functionBody(functionText(sql, "beskt_guard_child_row") ?? "");
+  check(
+    /IF \(_tgt\.section_order, _tgt\.display_order, _tgt\.item_key\)\s+<= \(_src\.section_order, _src\.display_order, _src\.item_key\) THEN\s+RAISE EXCEPTION 'BESKT_ROUTE_BACKWARD/.test(
+      cg,
+    ) &&
+      /SELECT 'ROUTE_TARGET_BEFORE_SOURCE', 'blocking',[\s\S]{0,600}?AND \(ts\.display_order, ti\.display_order, ti\.item_key\) <= \(ss\.display_order, si\.display_order, si\.item_key\)/.test(
+        functionBody(functionText(sql, "beskt_method_validate") ?? ""),
+      ),
+    "BESKT-DB-ROUTING: a target must come after its source in the governed order — refused at write time and re-proved by the validator on the stored graph",
   );
   check(
     /\(i\.permitted_mode = 'recruitment_support' OR _mode = 'security_vetting_support'\)/.test(r) &&
@@ -819,6 +886,21 @@ check(
         g,
       ),
     "BESKT-DB-REPARENT: on UPDATE the child guard resolves the OLD owner as well as the NEW one and refuses to move a child away from a frozen version",
+  );
+  const lockAt = g.indexOf(
+    "PERFORM 1 FROM public.beskt_method_versions v WHERE v.id = _lock_id FOR SHARE;",
+  );
+  const statusAt = g.indexOf(
+    "SELECT v.content_status INTO _status FROM public.beskt_method_versions v WHERE v.id = _version_id;",
+  );
+  check(
+    lockAt > 0 &&
+      statusAt > lockAt &&
+      /SELECT x FROM unnest\(ARRAY\[_version_id, _old_version_id\]\) AS u\(x\) WHERE x IS NOT NULL ORDER BY x/.test(
+        g,
+      ) &&
+      /FOR UPDATE;/.test(functionBody(functionText(sql, "beskt_lock_version") ?? "")),
+    "BESKT-DB-CHILD-LOCK: the child guard locks the owning version row(s), in id order, with a lock that conflicts with publication's FOR UPDATE, BEFORE it reads the status",
   );
   for (const t of CHILD_TABLES) {
     const keys = PARENT_KEYS[t] ?? [];
@@ -936,7 +1018,7 @@ check(
   );
   const ga = functionBody(functionText(sql, "beskt_guard_grants_append_only") ?? "");
   check(
-    /CREATE TRIGGER beskt_governance_grants_append_only\s+BEFORE UPDATE OR DELETE ON public\.beskt_governance_grants/.test(
+    /CREATE TRIGGER beskt_governance_grants_append_only\s+BEFORE INSERT OR UPDATE OR DELETE ON public\.beskt_governance_grants/.test(
       sql,
     ) &&
       /IF TG_OP = 'DELETE' THEN\s+RAISE EXCEPTION 'BESKT_GRANT_APPEND_ONLY/.test(ga) &&
@@ -944,6 +1026,30 @@ check(
         ga,
       ),
     "BESKT-DB-GATE-GRANTS: a grant is never deleted or rewritten; the only permitted change is one revocation",
+  );
+  check(
+    /_governed boolean := coalesce\(current_setting\('beskt\.governance_grant_write', true\), ''\) = 'on';/.test(
+      ga,
+    ) &&
+      /IF TG_OP = 'INSERT' AND NOT _governed THEN\s+RAISE EXCEPTION 'BESKT_GRANT_UNGOVERNED_WRITE/.test(
+        ga,
+      ) &&
+      /IF NOT _governed THEN\s+RAISE EXCEPTION 'BESKT_GRANT_UNGOVERNED_WRITE: a governance grant is revoked only/.test(
+        ga,
+      ),
+    "BESKT-DB-GATE-GRANTS: a direct INSERT and a direct revocation UPDATE on the mapping are refused for every caller, service_role included, unless the governed marker is set",
+  );
+  const grantRpc = functionBody(functionText(sql, "beskt_grant_governance") ?? "");
+  const revokeRpc = functionBody(functionText(sql, "beskt_revoke_governance") ?? "");
+  check(
+    /PERFORM set_config\('beskt\.governance_grant_write', 'on', true\);\s+INSERT INTO public\.beskt_governance_grants[\s\S]*?RETURNING id INTO _id;\s+PERFORM set_config\('beskt\.governance_grant_write', 'off', true\);/.test(
+      grantRpc,
+    ) &&
+      /PERFORM set_config\('beskt\.governance_grant_write', 'on', true\);\s+UPDATE public\.beskt_governance_grants[\s\S]*?WHERE id = _grant_id;\s+PERFORM set_config\('beskt\.governance_grant_write', 'off', true\);/.test(
+        revokeRpc,
+      ) &&
+      [...sql.matchAll(/set_config\('beskt\.governance_grant_write', 'on', true\)/g)].length === 2,
+    "BESKT-DB-GATE-GRANTS: only the two governed RPCs set the marker, narrowly around their one write, and clear it again",
   );
   for (const m of ADMIN_MUTATIONS) {
     const body = functionBody(functionText(sql, m) ?? "");
@@ -1046,10 +1152,17 @@ check(
     "BESKT-DB-ONE-OPEN-VERSION: the per-method advisory lock is taken BEFORE the open-version check, so two concurrent creates serialise",
   );
   check(
-    /CREATE UNIQUE INDEX beskt_method_versions_one_open_idx\s+ON public\.beskt_method_versions \(pack_id\)\s+WHERE content_status IN \('draft', 'in_review'\);/.test(
+    /CREATE UNIQUE INDEX beskt_method_versions_one_open_idx\s+ON public\.beskt_method_versions \(pack_id, open_slot\);/.test(
       sql,
-    ),
-    "BESKT-DB-ONE-OPEN-VERSION: a partial unique index on the table is the last line of defence",
+    ) &&
+      /open_slot text GENERATED ALWAYS AS \(\s+CASE WHEN content_status IN \('draft', 'in_review'\) THEN 'open' END\) STORED,/.test(
+        sql,
+      ) &&
+      !/UNIQUE INDEX [a-z_]+\s+ON public\.beskt_method_versions \(pack_id\)/.test(sql) &&
+      /'review_cycle', 'open_slot', 'updated_at'/.test(
+        functionBody(functionText(sql, "beskt_guard_version_transition") ?? ""),
+      ),
+    "BESKT-DB-ONE-OPEN-VERSION: the invariant is a unique index on (pack_id, generated open_slot), never on pack_id alone, so PostgREST cannot infer a one-to-one relation",
   );
   const submit = functionBody(functionText(sql, "beskt_submit_for_review") ?? "");
   check(
@@ -1114,6 +1227,18 @@ check(
     ) && /ELSE '\{\}'::text\[\]/.test(classes),
     "BESKT-DB-READ-CONTRACT: internal QA never holds the authorised_security_function class; everyone else holds no class",
   );
+  // Prose, deliberately read from `raw`: the normalised `sql` above strips
+  // comments, and a stale comment is exactly what this check is for.
+  check(
+    !/refused to employer\n--\s+principals/.test(raw) &&
+      !/for an employer principal\. A listing/.test(raw) &&
+      !/security-vetting content is refused to employer/.test(raw) &&
+      /release_scope is synthetic_internal_only, so\n--\s+only governance readers and explicit internal-QA grantees read/.test(
+        raw,
+      ) &&
+      /nothing at all to an employer '\s+'principal, a candidate or a roleless user/.test(raw),
+    "BESKT-DB-READ-CONTRACT: the read-contract comments describe synthetic_internal_only, not an employer-principal read path",
+  );
   const pub = functionBody(functionText(sql, "beskt_published_method") ?? "");
   check(
     /IF NOT public\.beskt_can_read_version\(_method_version_id\) THEN\s+RAISE EXCEPTION 'BESKT_NOT_AUTHORISED/.test(
@@ -1172,6 +1297,15 @@ check(
       ].every((f) => types.includes(`      ${f}: {`)),
     "BESKT-DB-TYPES: the generated Supabase types carry pack_kind, the nullable role_id, every BESKT table and the BESKT RPCs",
   );
+  check(
+    /foreignKeyName: "beskt_method_versions_pack_id_fkey"\s+columns: \["pack_id"\]\s+isOneToOne: false/.test(
+      types,
+    ) &&
+      /beskt_method_versions: \{\s+Row: \{[\s\S]*?open_slot: string \| null[\s\S]*?\}\s+Insert: \{(?:(?!open_slot)[\s\S])*?\}\s+Update: \{(?:(?!open_slot)[\s\S])*?\}/.test(
+        types,
+      ),
+    "BESKT-DB-TYPES: a method has many versions (isOneToOne: false) and the generated open_slot is read-only in the types",
+  );
   const rolePacks = read(ROLE_PACKS);
   check(
     /\.from\("scp_interview_packs"\)\s+\.select\("id, slug, name_sv, name_en, purpose_sv, created_at"\)\s+\.not\("role_id", "is", null\)/.test(
@@ -1193,7 +1327,10 @@ check(
       entry.hostedState === "pending" &&
       entry.rollback ===
         "supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql" &&
-      (entry.introduces?.length ?? 0) >= 13,
+      (entry.introduces?.length ?? 0) >= 13 &&
+      (entry.introduces ?? []).some(
+        (i) => (i as { object?: string }).object === "beskt_text_instructs_scoring",
+      ),
     "BESKT-DB-NO-HOSTED: the migration is recorded pending (never applied) with its objects and rollback in release-state.json",
   );
   check(
@@ -1263,10 +1400,24 @@ check(
         "B6.4",
         "B6.7",
         "B6.10",
+        "B6.9c",
+        "B6.9d",
         "B6.13",
         "B6.15",
         "B6.35",
+        "B2.50b",
+        "B2.52a",
+        "B2.52c",
+        "B2.52e",
+        "B2.52g",
+        "B2.52k",
+        "B2.52l",
+        "B5.18d",
+        "B5.18f",
       ].every((l) => suite.includes(l)) &&
+      suite.includes("\\ir beskt_governed_content_fixture.sql") &&
+      existsSync(FIXTURE) &&
+      /CREATE OR REPLACE FUNCTION pg_temp\.build_method\(/.test(read(FIXTURE)) &&
       !/\\echo[^\n]*ok {2}/.test(suite) &&
       /ROLLBACK;\s*$/.test(suite),
     "BESKT-DB-SUITE: the behaviour suite exists with every group and the material assertions, and rolls back",
@@ -1299,12 +1450,51 @@ check(
       db.includes('if [ "$BGR_COUNT" != "1" ]; then'),
     "BESKT-DB-ONE-OPEN-VERSION: db-test.sh races two real sessions on one method and requires the second to wait, be refused, and leave exactly one version",
   );
+  const pubRaceAt = db.indexOf('echo "==> Running BESKT child-write versus publication race"');
+  check(
+    pubRaceAt > raceAt &&
+      pubRaceAt < rollbackAt &&
+      db.includes("\\i supabase/tests/beskt_governed_content_fixture.sql") &&
+      db.includes('grep -q "BESKT_CONTENT_HASH_STALE" /tmp/bgp_b.out') &&
+      db.includes('grep -q "BESKT_PUBLISHED_IMMUTABLE" /tmp/bgp_b.out') &&
+      /if \[ "\$BGP_B_MS" -lt 1500 \]; then # \(A\) publication waited/.test(db) &&
+      /if \[ "\$BGP_B_MS" -lt 1500 \]; then # \(B\) the child waited/.test(db) &&
+      db.includes('if [ "$BGP_STATUS" != "in_review ${BGP_HASH} false" ]; then') &&
+      db.includes(
+        'if [ "$BGP_STATUS" != "published ${BGP_HASH} true" ] || [ "$BGP_LATE" != "0" ]; then',
+      ),
+    "BESKT-DB-CHILD-LOCK: db-test.sh races an uncommitted child edit against publication both ways and requires the loser to wait and be refused, with the published bytes always at the approved hash",
+  );
+  const depAt = db.indexOf('echo "==> Running BESKT rollback planted-dependency refusal"');
+  check(
+    depAt > pubRaceAt &&
+      depAt < rollbackAt &&
+      db.includes(
+        "CREATE VIEW public.probe_beskt_dependency_view AS SELECT id, content_status FROM public.beskt_method_versions;",
+      ) &&
+      db.includes("RETURNS SETOF public.beskt_method_versions") &&
+      db.includes(
+        'BGD_EXPECT="BESKT_ROLLBACK BLOCKED: catalogue objects outside the domain depend on it"',
+      ) &&
+      db.includes(
+        'BGD_EXPECT="BESKT_ROLLBACK BLOCKED: objects outside the domain depend on a BESKT row type"',
+      ) &&
+      /BGD_OUT="\$\(psql -1 -v ON_ERROR_STOP=1 -d "\$TEST_DB" \\\s+-f supabase\/rollback\/20261108090000_beskt_governed_method_content_rollback\.sql 2>&1\)"/.test(
+        db,
+      ) &&
+      db.includes('if [ "$BGD_AFTER" != "$BGD_BEFORE" ] || [ "$BGD_SHAPE_OK" -ne 1 ]; then') &&
+      /BG_RB="\$\(psql -1 -v ON_ERROR_STOP=1 -d "\$TEST_DB" \\\s+-f supabase\/rollback\/20261108090000_beskt_governed_method_content_rollback\.sql 2>&1\)"/.test(
+        db,
+      ),
+    "BESKT-DB-ROLLBACK: db-test.sh plants an outside view and a row-type function dependency, runs the rollback in one transaction, and requires refusal with nothing dropped; the real rollback runs in one transaction too",
+  );
   const rbSuite = read(ROLLBACK_SUITE);
   check(
     TABLES.every((t) => rbSuite.includes(`DROP TABLE IF EXISTS public.${t};`)) &&
       rbSuite.includes(
         "DROP FUNCTION IF EXISTS public.beskt_revoke_governance(uuid, uuid, text);",
       ) &&
+      rbSuite.includes("DROP FUNCTION IF EXISTS public.beskt_text_instructs_scoring(text);") &&
       rbSuite.includes("DROP COLUMN IF EXISTS pack_kind") &&
       !/DROP TABLE IF EXISTS public\.beskt_[a-z_]+\s+CASCADE;/.test(rbSuite),
     "BESKT-DB-SUITE: the documented rollback procedure unwinds BESKT first, with the same drop set as the rollback file and no CASCADE",
@@ -1332,6 +1522,13 @@ check(
       !/CASCADE;/.test(rb.replace(/--[^\n]*/g, "")) &&
       /pg_depend/.test(rb) &&
       /BESKT_ROLLBACK BLOCKED: catalogue objects outside the domain depend on it/.test(rb) &&
+      /JOIN pg_type ty ON ty\.oid = d\.refobjid AND d\.refclassid = 'pg_type'::regclass\s+JOIN pg_class rc ON rc\.oid = ty\.typrelid/.test(
+        rb,
+      ) &&
+      /RAISE EXCEPTION 'BESKT_ROLLBACK BLOCKED: objects outside the domain depend on a BESKT row type/.test(
+        rb,
+      ) &&
+      /DROP FUNCTION IF EXISTS public\.beskt_text_instructs_scoring\(text\);/.test(rb) &&
       rb.indexOf(
         "DROP POLICY IF EXISTS scp_interview_packs_editor_update ON public.scp_interview_packs;",
       ) < rb.indexOf("ALTER TABLE public.scp_interview_packs DROP COLUMN IF EXISTS pack_kind;"),

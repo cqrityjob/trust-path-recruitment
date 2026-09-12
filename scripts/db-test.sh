@@ -2911,9 +2911,222 @@ if [ "$BGR_FAILED" -ne 0 ]; then
   BG_FAILED=1
 fi
 
-# Applied for real, then the migration re-applied (-f, never -c "\i").
+# ---------------------------------------------------------------------------
+# A child write versus publication, under a REAL race. The child guard locks
+# the owning version row (FOR SHARE) before it reads the status; publication
+# locks it FOR UPDATE before it hashes. So the two serialise, and only two
+# outcomes exist:
+#   (A) the child commits first -> publication waits, then sees a stale hash
+#       and is refused (BESKT_CONTENT_HASH_STALE);
+#   (B) publication commits first -> the child waits, then sees a frozen
+#       version and is refused (BESKT_PUBLISHED_IMMUTABLE).
+# In neither case can the published bytes differ from the approved hash.
+# The complete method with five approvals is planted from the shared
+# synthetic fixture and committed; the BESKT rollback below removes it.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT child-write versus publication race"
+BGP_FAILED=0
+BGP_PASSED=0
+BGP_PUBLISHER="b2000000-0000-4000-8000-0000000000b1"
+BGP_SETUP_SQL="$(mktemp)"; BGP_A="$(mktemp)"; BGP_B="$(mktemp)"
+cat > "$BGP_SETUP_SQL" <<'SQL'
+\set ON_ERROR_STOP on
+BEGIN;
+\i supabase/tests/beskt_governed_content_fixture.sql
+SELECT pg_temp.build_method('beskt-race-publish', 'recruitment_support');
+SELECT pg_temp.submit((SELECT rec_v FROM bk));
+SELECT pg_temp.approve_all((SELECT rec_v FROM bk));
+SELECT 'VID=' || rec_v || ' ITEM=' || rec_i1 || ' HASH=' || (SELECT content_hash FROM public.beskt_method_versions WHERE id = rec_v) AS marked FROM bk;
+COMMIT;
+SQL
 set +e
-BG_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+BGP_SETUP="$(psql -v ON_ERROR_STOP=1 -tAq -d "$TEST_DB" -f "$BGP_SETUP_SQL" 2>&1)"
+BGP_SETUP_RC=$?
+set -e
+BGP_VID="$(echo "$BGP_SETUP" | grep -oE 'VID=[0-9a-f-]{36}' | head -1 | cut -d= -f2 || true)"
+BGP_ITEM="$(echo "$BGP_SETUP" | grep -oE 'ITEM=[0-9a-f-]{36}' | head -1 | cut -d= -f2 || true)"
+BGP_HASH="$(echo "$BGP_SETUP" | grep -oE 'HASH=[0-9a-f]{64}' | head -1 | cut -d= -f2 || true)"
+if [ "$BGP_SETUP_RC" -ne 0 ] || [ -z "$BGP_VID" ] || [ -z "$BGP_ITEM" ] || [ -z "$BGP_HASH" ]; then
+  echo "FAIL: the child-versus-publication race setup failed." >&2
+  echo "$BGP_SETUP" | grep -iE "ERROR:|FEL:|ASSERTION" | head -5 >&2
+  BGP_FAILED=1
+else
+  BGP_REV="$(psql -tAq -d "$TEST_DB" -c "select revision from public.beskt_method_versions where id = '${BGP_VID}';")"
+  # (A) the child edit is in flight, uncommitted, when publication arrives.
+  cat > "$BGP_A" <<SQL
+BEGIN;
+UPDATE public.beskt_items SET wording_en = wording_en || ' (racing edit)' WHERE id = '${BGP_ITEM}';
+SELECT 'EDITED=' || count(*) FROM public.beskt_items WHERE id = '${BGP_ITEM}' AND wording_en LIKE '% (racing edit)';
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+  cat > "$BGP_B" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${BGP_PUBLISHER}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${BGP_PUBLISHER}', true);
+SET LOCAL ROLE authenticated;
+SELECT 'PUB=' || (public.beskt_publish_version(gen_random_uuid(), '${BGP_VID}'::uuid, ${BGP_REV}, 'race A') ->> 'content_status') AS marked;
+COMMIT;
+SQL
+  psql -tAq -d "$TEST_DB" -f "$BGP_A" > /tmp/bgp_a.out 2>&1 &
+  BGP_PID=$!
+  sleep 1
+  BGP_B_START="$(date +%s%N)"
+  psql -tAq -d "$TEST_DB" -f "$BGP_B" > /tmp/bgp_b.out 2>&1 || true
+  BGP_B_END="$(date +%s%N)"
+  wait "$BGP_PID" || true
+  BGP_B_MS=$(( (BGP_B_END - BGP_B_START) / 1000000 ))
+  BGP_STATUS="$(psql -tAq -d "$TEST_DB" -c "select content_status || ' ' || content_hash || ' ' || (public.beskt_method_content_hash(id) = content_hash)::text from public.beskt_method_versions where id = '${BGP_VID}';")"
+  if ! grep -q "EDITED=1" /tmp/bgp_a.out; then
+    echo "FAIL: session A did not apply its child edit." >&2; head -5 /tmp/bgp_a.out >&2; BGP_FAILED=1
+  else
+    echo "    ok  (A) session A edited a governed item of the in-review version and held its transaction"
+    BGP_PASSED=$(( BGP_PASSED + 1 ))
+  fi
+  if grep -q "PUB=" /tmp/bgp_b.out || ! grep -q "BESKT_CONTENT_HASH_STALE" /tmp/bgp_b.out; then
+    echo "FAIL: (A) publication was not refused with BESKT_CONTENT_HASH_STALE after the child edit committed." >&2
+    head -5 /tmp/bgp_b.out >&2; BGP_FAILED=1
+  else
+    echo "    ok  (A) publication, started while the edit was uncommitted, waited for it and was refused: the reviewed hash no longer names the bytes"
+    BGP_PASSED=$(( BGP_PASSED + 1 ))
+  fi
+  if [ "$BGP_B_MS" -lt 1500 ]; then # (A) publication waited on the child's lock
+    echo "FAIL: (A) publication answered after ${BGP_B_MS} ms; it did not wait on the version lock, so this was not a race." >&2; BGP_FAILED=1
+  else
+    echo "    ok  (A) publication waited ${BGP_B_MS} ms on the version row the child guard had locked"
+    BGP_PASSED=$(( BGP_PASSED + 1 ))
+  fi
+  if [ "$BGP_STATUS" != "in_review ${BGP_HASH} false" ]; then
+    echo "FAIL: (A) expected the version to stay in_review at the approved hash with the stored bytes now differing, got '${BGP_STATUS}'." >&2; BGP_FAILED=1
+  else
+    echo "    ok  (A) the version is still in_review, the stored hash is the approved one, and the bytes now differ from it: nothing was published"
+    BGP_PASSED=$(( BGP_PASSED + 1 ))
+  fi
+  # Restore the reviewed bytes: the five approvals bind to this hash in this cycle.
+  psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "UPDATE public.beskt_items SET wording_en = replace(wording_en, ' (racing edit)', '') WHERE id = '${BGP_ITEM}';"
+  # (B) publication is in flight, uncommitted, when the child edit arrives.
+  cat > "$BGP_A" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${BGP_PUBLISHER}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${BGP_PUBLISHER}', true);
+SET LOCAL ROLE authenticated;
+SELECT 'PUB=' || (public.beskt_publish_version(gen_random_uuid(), '${BGP_VID}'::uuid, ${BGP_REV}, 'race B') ->> 'content_status') AS marked;
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+  cat > "$BGP_B" <<SQL
+BEGIN;
+UPDATE public.beskt_items SET wording_en = wording_en || ' (late edit)' WHERE id = '${BGP_ITEM}';
+SELECT 'EDITED=' || count(*) FROM public.beskt_items WHERE id = '${BGP_ITEM}' AND wording_en LIKE '% (late edit)';
+COMMIT;
+SQL
+  psql -tAq -d "$TEST_DB" -f "$BGP_A" > /tmp/bgp_a.out 2>&1 &
+  BGP_PID=$!
+  sleep 1
+  BGP_B_START="$(date +%s%N)"
+  psql -tAq -d "$TEST_DB" -f "$BGP_B" > /tmp/bgp_b.out 2>&1 || true
+  BGP_B_END="$(date +%s%N)"
+  wait "$BGP_PID" || true
+  BGP_B_MS=$(( (BGP_B_END - BGP_B_START) / 1000000 ))
+  BGP_STATUS="$(psql -tAq -d "$TEST_DB" -c "select content_status || ' ' || content_hash || ' ' || (public.beskt_method_content_hash(id) = content_hash)::text from public.beskt_method_versions where id = '${BGP_VID}';")"
+  BGP_LATE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.beskt_items where id = '${BGP_ITEM}' and wording_en like '% (late edit)';")"
+  if ! grep -q "PUB=published" /tmp/bgp_a.out; then
+    echo "FAIL: (B) session A did not publish." >&2; head -5 /tmp/bgp_a.out >&2; BGP_FAILED=1
+  else
+    echo "    ok  (B) session A published the version and held its transaction"
+    BGP_PASSED=$(( BGP_PASSED + 1 ))
+  fi
+  if grep -q "EDITED=1" /tmp/bgp_b.out || ! grep -q "BESKT_PUBLISHED_IMMUTABLE" /tmp/bgp_b.out; then
+    echo "FAIL: (B) the child edit was not refused with BESKT_PUBLISHED_IMMUTABLE after publication committed." >&2
+    head -5 /tmp/bgp_b.out >&2; BGP_FAILED=1
+  else
+    echo "    ok  (B) the child edit, started while publication was uncommitted, waited for it and was refused: the version is frozen"
+    BGP_PASSED=$(( BGP_PASSED + 1 ))
+  fi
+  if [ "$BGP_B_MS" -lt 1500 ]; then # (B) the child waited on publication's lock
+    echo "FAIL: (B) the child edit answered after ${BGP_B_MS} ms; it did not wait on the publication lock, so this was not a race." >&2; BGP_FAILED=1
+  else
+    echo "    ok  (B) the child edit waited ${BGP_B_MS} ms on the version row publication had locked"
+    BGP_PASSED=$(( BGP_PASSED + 1 ))
+  fi
+  if [ "$BGP_STATUS" != "published ${BGP_HASH} true" ] || [ "$BGP_LATE" != "0" ]; then
+    echo "FAIL: (B) expected a published version whose bytes hash to the approved hash and no late edit, got '${BGP_STATUS}' / late=${BGP_LATE}." >&2; BGP_FAILED=1
+  else
+    echo "    ok  (B) the published bytes hash to exactly the approved stored hash; the late edit left no trace"
+    BGP_PASSED=$(( BGP_PASSED + 1 ))
+  fi
+  # Retire the published race version under governance so the rollback below
+  # is not (correctly) refused for a live publication.
+  BGP_REV="$(psql -tAq -d "$TEST_DB" -c "select revision from public.beskt_method_versions where id = '${BGP_VID}';")"
+  psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" > /dev/null <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${BGP_PUBLISHER}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${BGP_PUBLISHER}', true);
+SET LOCAL ROLE authenticated;
+SELECT public.beskt_retire_version(gen_random_uuid(), '${BGP_VID}'::uuid, ${BGP_REV}, 'race fixture retired');
+COMMIT;
+SQL
+fi
+rm -f "$BGP_SETUP_SQL" "$BGP_A" "$BGP_B"
+if [ "$BGP_FAILED" -ne 0 ]; then
+  BG_FAILED=1
+fi
+
+# ---------------------------------------------------------------------------
+# The rollback refuses a planted OUTSIDE dependency -- a view on a BESKT
+# table, then a function whose signature names a BESKT row type -- before it
+# drops anything. Run in one transaction (-1), exactly as the file requires,
+# so a refusal leaves the schema untouched: still thirteen tables, still
+# every function, still pack_kind.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT rollback planted-dependency refusal"
+BGD_FAILED=0
+BGD_PASSED=0
+BGD_BEFORE="$(psql -tAq -d "$TEST_DB" -c "select (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'beskt\\_%') || '/' || (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname like 'beskt\\_%') || '/' || (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'scp_interview_packs' and column_name = 'pack_kind') || '/' || (select count(*) from public.scp_interview_packs where pack_kind = 'beskt_method');")"
+for BGD_KIND in view function; do
+  if [ "$BGD_KIND" = "view" ]; then
+    psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "CREATE VIEW public.probe_beskt_dependency_view AS SELECT id, content_status FROM public.beskt_method_versions;"
+    BGD_EXPECT="BESKT_ROLLBACK BLOCKED: catalogue objects outside the domain depend on it"
+  else
+    psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "CREATE FUNCTION public.probe_beskt_dependency_fn() RETURNS SETOF public.beskt_method_versions LANGUAGE sql AS 'SELECT * FROM public.beskt_method_versions';"
+    BGD_EXPECT="BESKT_ROLLBACK BLOCKED: objects outside the domain depend on a BESKT row type"
+  fi
+  set +e
+  BGD_OUT="$(psql -1 -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+    -f supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql 2>&1)"
+  BGD_RC=$?
+  set -e
+  BGD_AFTER="$(psql -tAq -d "$TEST_DB" -c "select (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'beskt\\_%') || '/' || (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname like 'beskt\\_%') || '/' || (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'scp_interview_packs' and column_name = 'pack_kind') || '/' || (select count(*) from public.scp_interview_packs where pack_kind = 'beskt_method');")"
+  if [ "$BGD_RC" -eq 0 ] || ! echo "$BGD_OUT" | grep -q "${BGD_EXPECT}"; then
+    echo "FAIL: the rollback did not refuse the planted ${BGD_KIND} dependency." >&2
+    echo "$BGD_OUT" | grep -iE "ERROR:|FEL:|NOTICE" | head -5 >&2
+    BGD_FAILED=1
+  else
+    echo "    ok  the rollback refuses a planted outside ${BGD_KIND} dependency (BESKT_ROLLBACK BLOCKED)"
+    BGD_PASSED=$(( BGD_PASSED + 1 ))
+  fi
+  case "$BGD_BEFORE" in 13/*/1/*) BGD_SHAPE_OK=1 ;; *) BGD_SHAPE_OK=0 ;; esac
+  if [ "$BGD_AFTER" != "$BGD_BEFORE" ] || [ "$BGD_SHAPE_OK" -ne 1 ]; then
+    echo "FAIL: the refused rollback changed the schema (before ${BGD_BEFORE}, after ${BGD_AFTER})." >&2
+    BGD_FAILED=1
+  else
+    echo "    ok  and dropped nothing: tables/functions/pack_kind/identities unchanged (${BGD_AFTER})"
+    BGD_PASSED=$(( BGD_PASSED + 1 ))
+  fi
+  if [ "$BGD_KIND" = "view" ]; then
+    psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "DROP VIEW public.probe_beskt_dependency_view;"
+  else
+    psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "DROP FUNCTION public.probe_beskt_dependency_fn();"
+  fi
+done
+if [ "$BGD_FAILED" -ne 0 ]; then
+  BG_FAILED=1
+fi
+
+# Applied for real, in one transaction as the file requires, then the
+# migration re-applied (-f, never -c "\i").
+set +e
+BG_RB="$(psql -1 -v ON_ERROR_STOP=1 -d "$TEST_DB" \
   -f supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql 2>&1)"
 BG_RB_RC=$?
 set -e
@@ -2938,11 +3151,16 @@ else
   echo "    ok  and the BESKT migration re-applies cleanly over the rolled-back state"
 fi
 
-# The race fixture: the rollback above dropped its version with the domain
-# and deleted its identity; the planted principal goes too.
+# The race fixtures: the rollback above dropped their versions with the
+# domain and deleted their identities; the planted principals go too.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" <<SQL
 DELETE FROM public.scp_content_roles WHERE user_id = '${BGR_EDITOR}';
 DELETE FROM auth.users WHERE id = '${BGR_EDITOR}';
+DELETE FROM public.employer_memberships WHERE employer_id IN ('b2000000-0000-4000-8000-00000000ee01', 'b2000000-0000-4000-8000-00000000ee02');
+DELETE FROM public.employers WHERE id IN ('b2000000-0000-4000-8000-00000000ee01', 'b2000000-0000-4000-8000-00000000ee02');
+DELETE FROM public.scp_content_roles WHERE user_id::text LIKE 'b2000000-0000-4000-8000-0000000000%';
+DELETE FROM public.user_roles WHERE user_id::text LIKE 'b2000000-0000-4000-8000-0000000000%';
+DELETE FROM auth.users WHERE id::text LIKE 'b2000000-0000-4000-8000-0000000000%';
 SQL
 
 if [ "$BG_FAILED" -ne 0 ]; then
@@ -5969,5 +6187,7 @@ echo "              ${SPRC_PASSED} rollback correction assertions,"
 echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
               ${BI_PASSED} employer final-report basis assertions,
               ${BG_PASSED} BESKT governed-content assertions,
-              ${BGR_PASSED} BESKT one-open-version race assertions"
+              ${BGR_PASSED} BESKT one-open-version race assertions,
+              ${BGP_PASSED} BESKT child-write versus publication race assertions,
+              ${BGD_PASSED} BESKT rollback planted-dependency assertions"
 echo "===================================================="
