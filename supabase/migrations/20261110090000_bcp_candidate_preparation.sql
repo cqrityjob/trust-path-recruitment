@@ -95,7 +95,7 @@
 -- `bcp_assignments.mode` admits `recruitment_support` alone, and the party
 -- branch refuses a version that holds any security-vetting row.
 --
--- Rollback: supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql
+-- Rollback: supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql
 --           restores all three PR #218 functions verbatim and drops only
 --           what this file adds.
 -- ===========================================================================

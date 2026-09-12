@@ -4,8 +4,8 @@
 
 **Depends on:** PR #217 (`docs/architecture/beskt-recruitment-method-discovery.md`, the normative contract) and PR #218 (`docs/architecture/beskt-governed-content-schema.md`, the governed content spine). This note records the additive decisions PR 3 makes inside those contracts; it changes nothing in either.
 
-**Migration:** `supabase/migrations/20261109090000_bcp_candidate_preparation.sql`
-**Rollback:** `supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql`
+**Migration:** `supabase/migrations/20261110090000_bcp_candidate_preparation.sql`
+**Rollback:** `supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql`
 **Suite:** `supabase/tests/bcp_candidate_preparation_test.sql`
 **Guard / controls:** `scripts/beskt-candidate-preparation-check.ts`, `scripts/negative-controls/beskt-candidate-preparation-controls.ts`
 **Render proof:** `scripts/beskt-candidate-preparation-render-check.tsx`, `scripts/beskt-candidate-preparation-evidence.ts`

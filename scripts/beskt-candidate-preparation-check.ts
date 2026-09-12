@@ -21,11 +21,11 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 
-const MIGRATION_NAME = "20261109090000_bcp_candidate_preparation.sql";
+const MIGRATION_NAME = "20261110090000_bcp_candidate_preparation.sql";
 const MIGRATION = join(ROOT, "supabase/migrations", MIGRATION_NAME);
 const ROLLBACK = join(
   ROOT,
-  "supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql",
+  "supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql",
 );
 const SUITE = join(ROOT, "supabase/tests/bcp_candidate_preparation_test.sql");
 const PR2_MIGRATION = join(
@@ -712,12 +712,12 @@ const pr2 = read(PR2_MIGRATION);
     "BCP-HARNESS: with an assertion floor, so a silently shrinking suite fails",
   );
   check(
-    dbTest.indexOf("supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql") <
+    dbTest.indexOf("supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql") <
       dbTest.indexOf("supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql"),
     "BCP-HARNESS: db-test.sh unwinds PR 3 before PR 2, in reverse release order",
   );
   check(
-    dbTest.indexOf("supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql") <
+    dbTest.indexOf("supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql") <
       dbTest.indexOf("supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql"),
     "BCP-HARNESS: PR 3 is stood down before PR 2's own rollback is exercised at all",
   );
@@ -788,7 +788,7 @@ const pr2 = read(PR2_MIGRATION);
     "BCP-RELEASE: and is recorded as NOT applied to the hosted database",
   );
   check(
-    /const expectedPending: string\[\] = \[[\s\S]*?"20261109090000_bcp_candidate_preparation\.sql",?[\s\S]*?\];/.test(
+    /const expectedPending: string\[\] = \[[\s\S]*?"20261110090000_bcp_candidate_preparation\.sql",?[\s\S]*?\];/.test(
       read(FRONTIER),
     ),
     "BCP-RELEASE: the release frontier declares it pending BY DESIGN, so a genuinely stuck migration cannot hide behind it",

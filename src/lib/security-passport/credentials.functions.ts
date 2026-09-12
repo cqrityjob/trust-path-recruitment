@@ -25,7 +25,14 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { isCalendarDate } from "./dates";
-import { isMissingPilotLayer, resolveMarketAccess } from "./market-access";
+import {
+  isMissingPilotLayer,
+  isMissingPilotStateColumn,
+  marketAvailabilityOf,
+  resolveMarketAccess,
+  type MarketAccess,
+  type MarketAvailability,
+} from "./market-access";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
@@ -330,6 +337,137 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
         subJurisdictionCode: r.sub_jurisdiction_code,
       })),
     };
+  });
+
+/* ------------------------------------------------------------------ */
+/* The three-market overview                                           */
+/* ------------------------------------------------------------------ */
+
+/** The market packs the Passport presents as its product scale.
+ *
+ *  ── WHY A LIST AND NOT `SELECT *` ─────────────────────────────────────
+ *
+ *  `sp_market_packs` also carries Abu Dhabi, which is authored, unreviewed
+ *  and deliberately CLOSED to the pilot by owner decision. An overview that
+ *  drew every pack would present a market nobody has opened as one of the
+ *  product's markets. The three the owner named — Sweden, the United Kingdom
+ *  with Northern Ireland as its own submarket, and Dubai — are the product's
+ *  declared scale; everything about them (name, activation, this holder's
+ *  access) is still read from the database. */
+export const PASSPORT_OVERVIEW_MARKETS = ["SE", "GB", "GB-NI", "AE-DU"] as const;
+
+/** Product availability of one market, as distinct from the holder's own
+ *  access to it. `available` is `is_active` — public and legally cleared.
+ *  `internal_pilot` is a pack whose `pilot_state` is exactly that: not
+ *  public, reachable only through a per-holder pilot entitlement that
+ *  `holderAccess` reports, and presented as "Internal pilot · under review".
+ *  `closed` is everything else — a closed pack, an unknown state, or a
+ *  database that has no pilot_state column — and is presented as not
+ *  available, never as a pilot. The mapping is `marketAvailabilityOf`.
+ *
+ *  `pilot_state` is read in a query OF ITS OWN, so the foundation read of
+ *  the packs (name, activation) can never be taken down by it; and only the
+ *  RECOGNISED absence of the column degrades — to `closed`, the narrower
+ *  answer. Any other failure of that read throws. */
+export type { MarketAvailability };
+
+export interface PassportMarketOverviewRow {
+  readonly marketPackCode: string;
+  readonly jurisdictionCode: string;
+  readonly subJurisdictionCode: string | null;
+  readonly nameSv: string;
+  readonly nameEn: string;
+  readonly availability: MarketAvailability;
+  /** What THIS holder may do here, from `sp_market_access()`. A public
+   *  reader of an internal-pilot market gets "closed" and sees the market
+   *  as under review; an entitled member gets "pilot" and can use it. */
+  readonly holderAccess: MarketAccess;
+  readonly isCurrentWorkMarket: boolean;
+}
+
+/** The overview's three market cards, decided per holder in the database.
+ *
+ *  Reads nothing a holder cannot already read: `sp_market_packs` is
+ *  readable by every authenticated user, and `sp_market_access()` answers
+ *  for the calling user only. It asserts nothing about the holder's
+ *  credentials; those are read through the Passport snapshot. */
+export const listPassportMarketOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly PassportMarketOverviewRow[]> => {
+    const { supabase, userId } = context;
+
+    const { data: profile, error: profileError } = await supabase
+      .from("sp_passport_profiles")
+      .select("jurisdiction_code, sub_jurisdiction_code, work_location_confirmed_at")
+      .eq("holder_user_id", userId)
+      .maybeSingle();
+    if (profileError) throw new Error(profileError.message);
+    // A legacy 'SE' nobody confirmed is not a work market the holder chose.
+    const workMarket = profile?.work_location_confirmed_at
+      ? (profile.sub_jurisdiction_code ?? profile.jurisdiction_code ?? null)
+      : null;
+
+    const { data: packs, error: packError } = await supabase
+      .from("sp_market_packs")
+      .select("code, jurisdiction_code, sub_jurisdiction_code, name_sv, name_en, is_active")
+      .in("code", [...PASSPORT_OVERVIEW_MARKETS])
+      .is("superseded_on", null);
+    if (packError) throw new Error(packError.message);
+
+    // The pilot state, read truthfully and separately. "Internal pilot" is a
+    // governed label and the column is the only evidence for it, so the
+    // overview asks for it — in its own request, so the packs above survive
+    // a database that has not got the column, and with exactly one tolerated
+    // failure: the recognised missing column (42703 / PGRST204), which
+    // degrades every non-public pack to "closed". Anything else throws.
+    const pilotStateByCode = new Map<string, string | null>();
+    const { data: pilotRows, error: pilotStateError } = await supabase
+      .from("sp_market_packs")
+      .select("code, pilot_state")
+      .in("code", [...PASSPORT_OVERVIEW_MARKETS]);
+    if (pilotStateError && !isMissingPilotStateColumn(pilotStateError)) {
+      throw new Error(pilotStateError.message);
+    }
+    for (const r of (pilotRows ?? []) as Array<{ code: string; pilot_state: string | null }>) {
+      pilotStateByCode.set(r.code, r.pilot_state);
+    }
+
+    const rows = await Promise.all(
+      (packs ?? []).map(async (p): Promise<PassportMarketOverviewRow> => {
+        const { data: rpcAccess, error: accessError } = await supabase.rpc("sp_market_access", {
+          _user_id: userId,
+          _market_pack_code: p.code,
+        });
+        if (accessError && !isMissingPilotLayer(accessError)) throw new Error(accessError.message);
+        const holderAccess = resolveMarketAccess({
+          packIsActive: p.is_active,
+          rpcAccess,
+          pilotLayerMissing: Boolean(accessError),
+        });
+        const availability: MarketAvailability = marketAvailabilityOf(
+          p.is_active,
+          pilotStateByCode.get(p.code),
+        );
+        return {
+          marketPackCode: p.code,
+          jurisdictionCode: p.jurisdiction_code,
+          subJurisdictionCode: p.sub_jurisdiction_code,
+          nameSv: p.name_sv,
+          nameEn: p.name_en,
+          availability,
+          holderAccess,
+          isCurrentWorkMarket: workMarket === p.code,
+        };
+      }),
+    );
+
+    // The owner's order, not the database's: Sweden, then the United Kingdom
+    // with Northern Ireland beside it, then Dubai.
+    const order = new Map(PASSPORT_OVERVIEW_MARKETS.map((c, i) => [c, i] as const));
+    return rows.sort(
+      (a, b) =>
+        (order.get(a.marketPackCode as never) ?? 99) - (order.get(b.marketPackCode as never) ?? 99),
+    );
   });
 
 /* ------------------------------------------------------------------ */

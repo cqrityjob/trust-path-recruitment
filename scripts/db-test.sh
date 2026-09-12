@@ -3117,7 +3117,7 @@ fi
 echo "==> Running BESKT PR 3 rollback and re-apply"
 set +e
 BCP_RB="$(psql -1 -v ON_ERROR_STOP=1 -d "$TEST_DB" \
-  -f supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql 2>&1)"
+  -f supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql 2>&1)"
 BCP_RB_RC=$?
 set -e
 if [ "$BCP_RB_RC" -ne 0 ] || ! echo "$BCP_RB" | grep -q "BESKT_CANDIDATE_PREPARATION_ROLLBACK ok"; then
@@ -3130,7 +3130,7 @@ fi
 
 set +e
 BCP_RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
-  -f supabase/migrations/20261109090000_bcp_candidate_preparation.sql 2>&1)"
+  -f supabase/migrations/20261110090000_bcp_candidate_preparation.sql 2>&1)"
 BCP_RE_RC=$?
 set -e
 if [ "$BCP_RE_RC" -ne 0 ] || ! echo "$BCP_RE" | grep -q "BESKT_CANDIDATE_PREPARATION_PROOF ok"; then
@@ -3151,7 +3151,7 @@ fi
 # The dependency itself is asserted in the PR 3 suite (C11), where it is a
 # catalogue fact rather than a comment.
 psql -1 -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql >/dev/null
+  -f supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql >/dev/null
 
 # ---------------------------------------------------------------------------
 echo "==> Running BESKT rollback planted-dependency refusal"
@@ -3228,7 +3228,7 @@ fi
 
 # The database ends the BESKT block in the release state: PR 2 and then PR 3.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261109090000_bcp_candidate_preparation.sql >/dev/null
+  -f supabase/migrations/20261110090000_bcp_candidate_preparation.sql >/dev/null
 
 # The race fixtures: the rollback above dropped their versions with the
 # domain and deleted their identities; the planted principals go too.
@@ -3804,6 +3804,79 @@ else
     echo "FAIL: expected at least 30 pilot entitlement assertions, only ${SPPILOT_PASSED} ran." >&2
     suite_failed "Security Passport internal-pilot entitlement (assertion shortfall: floor 30)"
   fi
+fi
+
+echo "==> Running Security Passport pilot catalogue visibility assertions"
+# 20261109090000. The taxonomy's SELECT policy was USING (is_active) while
+# every pilot credential type is inactive, so an entitled member received
+# open_pilot and read ZERO catalogue rows (and the SECURITY INVOKER claim
+# trigger refused their claim with SP_CREDENTIAL_CODE_UNKNOWN). This suite
+# reads and claims as SET LOCAL ROLE authenticated -- what PostgREST does --
+# which the older pilot suite, running as the owner, never exercised.
+set +e
+SPCV_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_pilot_catalogue_visibility_test.sql 2>&1)"
+SPCV_RC=$?
+set -e
+
+echo "$SPCV_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPCV_PASSED="$(echo "$SPCV_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPCV_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the pilot catalogue visibility suite exited with code ${SPCV_RC}." >&2
+  echo "$SPCV_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport pilot catalogue visibility"
+else
+  echo "    ok  ${SPCV_PASSED} pilot catalogue visibility assertions passed"
+  # GROUP 3 (the entitled member reads 13 rows and files a claim as
+  # authenticated), GROUP 6 (revocation closes the read again), GROUP 8 (a
+  # holder cannot read the entitlement table) and GROUP 9 (holder A cannot
+  # inspect holder B's membership) are the reason the suite exists. A run
+  # that stopped before them proved nothing.
+  if [ "$SPCV_PASSED" -lt 50 ]; then
+    echo "FAIL: expected at least 50 pilot catalogue visibility assertions, only ${SPCV_PASSED} ran." >&2
+    suite_failed "Security Passport pilot catalogue visibility (assertion shortfall: floor 50)"
+  fi
+fi
+
+# The rollback must REINSTATE the defect, verifiably, and the forward file
+# must re-apply on top of it: rollback -> policy is USING (is_active) again
+# and the suite's read assertion fails -> re-apply -> the suite passes again.
+echo "==> Verifying the pilot catalogue visibility rollback round-trips"
+set +e
+SPCVRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261109090000_sp_pilot_catalogue_visibility_rollback.sql 2>&1)"
+SPCVRB_RC=$?
+set -e
+SPCVRB_QUAL="$(psql -tAq -d "$TEST_DB" -c "SELECT qual FROM pg_policies WHERE tablename = 'sp_credential_types' AND policyname = 'sp_credential_types_read'")"
+if [ "$SPCVRB_RC" -ne 0 ] || [ "$SPCVRB_QUAL" != "is_active" ]; then
+  echo "FAIL: the pilot catalogue visibility rollback did not restore USING (is_active) (rc ${SPCVRB_RC}, qual '${SPCVRB_QUAL}')." >&2
+  echo "$SPCVRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "pilot catalogue visibility rollback"
+else
+  echo "    ok  the rollback restores the 20260817160000 policy verbatim"
+fi
+set +e
+SPCVRB_NEG="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_pilot_catalogue_visibility_test.sql 2>&1)"
+SPCVRB_NEG_RC=$?
+set -e
+if [ "$SPCVRB_NEG_RC" -eq 0 ]; then
+  echo "FAIL: the visibility suite passed against the rolled-back policy; it detects nothing." >&2
+  suite_failed "pilot catalogue visibility rollback (suite blind to the defect)"
+else
+  echo "    ok  and the suite refuses the rolled-back policy (the defect is detectable)"
+fi
+set +e
+SPCVRA_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261109090000_sp_pilot_catalogue_visibility.sql 2>&1)"
+SPCVRA_RC=$?
+set -e
+if [ "$SPCVRA_RC" -ne 0 ] || ! echo "$SPCVRA_OUT" | grep -q "SP_PILOT_CATALOGUE_VISIBILITY_PROOF ok"; then
+  echo "FAIL: 20261109090000 did not re-apply after its rollback." >&2
+  echo "$SPCVRA_OUT" | grep -iE "ERROR:|FEL:" | head -10 >&2
+  suite_failed "pilot catalogue visibility re-apply"
+else
+  echo "    ok  the forward migration re-applies on top of its rollback"
 fi
 
 echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
@@ -5728,6 +5801,27 @@ fi
 # three-market rollback further down does DROP TABLE sp_market_packs, which
 # Postgres refuses while a dependent table exists.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# The pilot catalogue visibility policy rolls back BEFORE the entitlement.
+# 20261109090000's policy calls sp_market_access(), which the entitlement
+# rollback DROPs; Postgres refuses that drop while the policy depends on it.
+# ---------------------------------------------------------------------------
+echo "==> Verifying the pilot catalogue visibility rollback"
+set +e
+SPCVF_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261109090000_sp_pilot_catalogue_visibility_rollback.sql 2>&1)"
+SPCVF_RC=$?
+set -e
+
+if [ "$SPCVF_RC" -ne 0 ] || ! echo "$SPCVF_OUT" | grep -q "SP_PILOT_CATALOGUE_VISIBILITY_ROLLBACK ok"; then
+  echo ""
+  echo "FAIL: the pilot catalogue visibility rollback exited with code ${SPCVF_RC}." >&2
+  echo "$SPCVF_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "pilot catalogue visibility rollback"
+else
+  echo "    ok  the taxonomy read policy is USING (is_active) again; the entitlement can now drop"
+fi
+
 echo "==> Verifying the internal-pilot entitlement rollback"
 set +e
 SPPRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \

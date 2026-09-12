@@ -12,8 +12,8 @@
  */
 import { runControls, type Mutation } from "./runner";
 
-const MIG = "supabase/migrations/20261109090000_bcp_candidate_preparation.sql";
-const RB = "supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql";
+const MIG = "supabase/migrations/20261110090000_bcp_candidate_preparation.sql";
+const RB = "supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql";
 const DB = "scripts/db-test.sh";
 const RB_SUITE = "supabase/tests/scp_a_rollback_test.sql";
 const STATE = "supabase/release-state.json";
@@ -499,9 +499,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BCP-NC-CLAIMED-APPLIED",
     defect: "the PR 3 migration is claimed to be applied on the hosted database",
     file: STATE,
-    find: '"file": "20261109090000_bcp_candidate_preparation.sql",\n        "hostedState": "pending"',
+    find: '"file": "20261110090000_bcp_candidate_preparation.sql",\n        "hostedState": "pending"',
     replace:
-      '"file": "20261109090000_bcp_candidate_preparation.sql",\n        "hostedState": "applied"',
+      '"file": "20261110090000_bcp_candidate_preparation.sql",\n        "hostedState": "applied"',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },
@@ -510,7 +510,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BCP-NC-FRONTIER-UNDECLARED",
     defect: "the pending migration is dropped from the owner-level frontier list",
     file: "scripts/release-frontier-check.ts",
-    find: '  "20261109090000_bcp_candidate_preparation.sql",\n',
+    find: '  "20261110090000_bcp_candidate_preparation.sql",\n',
     replace: "",
     guard: GUARD,
     expect: "BCP-RELEASE",

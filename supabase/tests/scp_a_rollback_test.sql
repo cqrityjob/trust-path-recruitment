@@ -142,7 +142,7 @@ END $$;
 -- candidate-preparation runtime holds foreign keys into beskt_method_versions
 -- and beskt_items, so the PR 2 drop set below cannot run while it exists.
 -- The drop set matches
--- supabase/rollback/20261109090000_bcp_candidate_preparation_rollback.sql,
+-- supabase/rollback/20261110090000_bcp_candidate_preparation_rollback.sql,
 -- which db-test.sh has already applied and re-applied for real before this
 -- suite runs; keeping them identical is the point.
 --

@@ -237,6 +237,10 @@ BEGIN
   -- =====================================================================
   -- _all_three holds live entitlements for BOTH pilot markets. If pilot access
   -- were a bypass, this is the user it would show up on.
+  -- Asked as the member themselves: since 20261109090000 a membership is
+  -- answered about the caller (or about anyone for an administrator), and
+  -- the last principal above was the GB member asking about someone else.
+  PERFORM set_config('request.jwt.claim.sub', _all_three::text, true);
   PERFORM pg_temp.ok(public.sp_market_access(_all_three, 'GB') = 'pilot'
                  AND public.sp_market_access(_all_three, 'AE-DU') = 'pilot',
     '6.0 the probe user is a live pilot member of both markets');

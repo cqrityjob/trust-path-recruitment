@@ -37,14 +37,22 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // release-state.json with its objects and its rollback, and it comes OFF this
 // list the moment the owner project has applied it and evidence is recorded.
 //
-// 20261109090000_bcp_candidate_preparation is PENDING for the same reason and
-// sits BEHIND it: the BESKT PR 3 candidate-preparation runtime hangs off PR 2's
-// content spine by foreign key, so it can only be applied after it. Neither has
-// been applied to the owner project by this branch, and both come off this list
-// only when they have been and the evidence is recorded in release-state.json.
+// 20261109090000_sp_pilot_catalogue_visibility is PENDING for the same reason:
+// a schema-only Security Passport correction awaiting the owner's hosted apply.
+//
+// 20261110090000_bcp_candidate_preparation is PENDING and sits BEHIND the BESKT
+// content spine: the candidate-preparation runtime hangs off it by foreign key,
+// so it can only be applied after it. Its version is 20261110 and not 20261109
+// because Supabase keys schema_migrations by the numeric prefix alone, and the
+// Passport correction above already holds 20261109090000 on main -- two files
+// sharing one version means the second is silently treated as already applied.
+// None of the three has been applied to the owner project by this branch, and
+// each comes off this list only when it has been and the evidence is recorded
+// in release-state.json.
 const expectedPending: string[] = [
   "20261108090000_beskt_governed_method_content.sql",
-  "20261109090000_bcp_candidate_preparation.sql",
+  "20261109090000_sp_pilot_catalogue_visibility.sql",
+  "20261110090000_bcp_candidate_preparation.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

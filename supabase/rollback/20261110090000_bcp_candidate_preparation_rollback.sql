@@ -2,7 +2,7 @@
 -- ROLLBACK -- BESKT PR 3, candidate preparation
 -- ===========================================================================
 --
--- Unwinds supabase/migrations/20261109090000_bcp_candidate_preparation.sql
+-- Unwinds supabase/migrations/20261110090000_bcp_candidate_preparation.sql
 -- and NOTHING else. It removes only what PR 3 added and restores every PR
 -- #218 contract PR 3 re-created, byte for byte.
 --

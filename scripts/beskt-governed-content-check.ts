@@ -1463,17 +1463,15 @@ check(
     !read(HOSTED_LEDGER).includes("20261108090000"),
     "BESKT-DB-NO-HOSTED: the hosted ledger snapshot does not claim the migration was applied",
   );
-  // Membership, not sole occupancy. The original form pinned the array to a
-  // single literal element, which could only stay true while PR 2 was the last
-  // BESKT migration in the tree; BESKT PR 3 adds a second pending migration
-  // behind it, by design and declared in the same list. What this assertion is
-  // FOR -- "PR 2's migration is declared pending, deliberately, in the
-  // owner-level list" -- is unchanged and still enforced.
+  // The frontier's expected-pending list must name this migration. Other
+  // schema-only corrections may be pending beside it (the list is the set of
+  // migrations awaiting the owner's hosted apply), so the assertion is
+  // membership in that literal, not sole occupancy.
+  const frontierPending =
+    /const expectedPending: string\[\] = \[([\s\S]*?)\];/.exec(read(FRONTIER))?.[1] ?? "";
   check(
-    /const expectedPending: string\[\] = \[[\s\S]*?"20261108090000_beskt_governed_method_content\.sql",?[\s\S]*?\];/.test(
-      read(FRONTIER),
-    ),
-    "BESKT-DB-NO-HOSTED: the release frontier declares this migration pending",
+    frontierPending.includes('"20261108090000_beskt_governed_method_content.sql"'),
+    "BESKT-DB-NO-HOSTED: the release frontier expects this migration to be pending",
   );
 }
 
