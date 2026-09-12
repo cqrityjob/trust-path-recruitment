@@ -220,9 +220,7 @@ type PilotRow = {
   entitlement: {
     active: boolean;
     grantedAt: string;
-    grantedBy: string | null;
     revokedAt: string | null;
-    revokedBy: string | null;
     note: string | null;
   } | null;
 };
@@ -486,9 +484,7 @@ async function mount(
           r.entitlement = {
             active: true,
             grantedAt: "2026-09-12T10:00:00.000Z",
-            grantedBy: ADMIN_ID,
             revokedAt: null,
-            revokedBy: null,
             note: (data.note as string | undefined) ?? null,
           };
         }
@@ -503,7 +499,6 @@ async function mount(
             ...r.entitlement,
             active: false,
             revokedAt: "2026-09-12T11:00:00.000Z",
-            revokedBy: ADMIN_ID,
           };
         }
         return ok(route, { ok: true });
@@ -648,6 +643,18 @@ test.describe("three markets — the fixture screen", () => {
       ).toHaveCount(1);
       await expect(
         page.locator('[data-testid="markets-pilot"] [data-market-pilot-note]'),
+      ).toHaveCount(1);
+      // A Northern Ireland pilot holder: the UK card's action is for GB-NI,
+      // ordinary Great Britain stays closed, and no "choose" is offered there.
+      const ni = page.locator('[data-testid="markets-pilot-ni"] [data-market-card="GB"]');
+      await expect(ni).toHaveAttribute("data-holder-access", "closed");
+      await expect(ni.locator('[data-market-action="add"]')).toHaveAttribute(
+        "data-market-action-for",
+        "GB-NI",
+      );
+      await expect(ni.locator('[data-market-action="choose"]')).toHaveCount(0);
+      await expect(
+        ni.locator('[data-market-submarket="GB-NI"] [data-market-pilot-note]'),
       ).toHaveCount(1);
 
       expect(pageErrors).toEqual([]);

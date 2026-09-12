@@ -506,7 +506,7 @@ const sv = {
   "ws.add.education": "Utbildning, kurs eller certifikat",
   "ws.add.educationBody": "Något du har gått eller tagit.",
   "ws.add.credential": "Behörighet eller förordnande",
-  "ws.add.credentialBody": "VU1, VU2, ordningsvakt eller skyddsvakt.",
+  "ws.add.credentialBody": "Förordnanden, licenser och utbildningar för din arbetsmarknad.",
 
   "ws.use.title": "Använd ditt Passport",
   "ws.use.share": "Dela ditt Passport",
@@ -2603,7 +2603,7 @@ const en: Record<PassportCopyKey, string> = {
   "ws.add.education": "Education, course or certificate",
   "ws.add.educationBody": "Something you took or completed.",
   "ws.add.credential": "Authorisation or appointment",
-  "ws.add.credentialBody": "VU1, VU2, public order or protective security.",
+  "ws.add.credentialBody": "Appointments, licences and training for your work market.",
 
   "ws.use.title": "Use your Passport",
   "ws.use.share": "Share your Passport",

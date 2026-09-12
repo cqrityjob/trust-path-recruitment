@@ -92,6 +92,21 @@ function MarketCard({
   const name = formatWorkLocation(row.jurisdictionCode, row.subJurisdictionCode, lang);
   const usable = row.holderAccess === "production" || row.holderAccess === "pilot";
   const holderIsPilot = row.holderAccess === "pilot";
+  const submarketUsable =
+    submarket !== undefined &&
+    (submarket.holderAccess === "production" || submarket.holderAccess === "pilot");
+
+  // Which market, if any, this card's action adds credentials to. Northern
+  // Ireland is chosen as a work market in its own right, so a holder whose
+  // work market is GB-NI reaches their catalogue from the United Kingdom
+  // card exactly as a GB holder does — the card is the country, the action
+  // is the submarket they actually work in.
+  const addFor: string | null =
+    usable && row.isCurrentWorkMarket
+      ? row.marketPackCode
+      : submarket && submarketUsable && submarket.isCurrentWorkMarket
+        ? submarket.marketPackCode
+        : null;
 
   return (
     <li
@@ -139,21 +154,31 @@ function MarketCard({
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {pt("markets.ni.note")}
           </p>
-          {submarket.isCurrentWorkMarket ? (
+          {submarket.isCurrentWorkMarket || submarket.holderAccess === "pilot" ? (
             <p className="mt-1 text-xs font-medium text-foreground">
-              {pt("markets.holder.current")}
-              {submarket.holderAccess === "pilot" ? ` · ${pt("markets.holder.pilotMember")}` : ""}
+              {submarket.isCurrentWorkMarket ? pt("markets.holder.current") : null}
+              {submarket.isCurrentWorkMarket && submarket.holderAccess === "pilot" ? " · " : null}
+              {submarket.holderAccess === "pilot" ? pt("markets.holder.pilotMember") : null}
+            </p>
+          ) : null}
+          {submarket.holderAccess === "pilot" ? (
+            <p
+              data-market-pilot-note
+              className="mt-1 text-xs leading-relaxed text-muted-foreground"
+            >
+              {pt("markets.pilot.note")}
             </p>
           ) : null}
         </div>
       ) : null}
 
       <div className="mt-auto pt-3">
-        {usable && row.isCurrentWorkMarket ? (
+        {addFor ? (
           <Link
             to="/passport/information"
             hash="sp-market-section"
             data-market-action="add"
+            data-market-action-for={addFor}
             className={LINK}
           >
             {pt("markets.action.add")}

@@ -75,13 +75,14 @@ export interface AdminPilotAccessRow {
   /** True when the pack is in internal pilot, which is the only state in
    *  which `sp_grant_pilot_member()` accepts a grant. */
   readonly inPilot: boolean;
-  /** The entitlement row, or null when this user was never granted. */
+  /** The entitlement row, or null when this user was never granted. The
+   *  granting and revoking administrators' ids stay in the database: the
+   *  page needs WHEN and WHETHER, and an actor id in a browser response is
+   *  personal data it has no use for. */
   readonly entitlement: {
     readonly active: boolean;
     readonly grantedAt: string;
-    readonly grantedBy: string | null;
     readonly revokedAt: string | null;
-    readonly revokedBy: string | null;
     readonly note: string | null;
   } | null;
 }
@@ -117,13 +118,14 @@ export const adminListPassportPilotAccess = createServerFn({ method: "POST" })
       }
     }
 
-    // The entitlement rows for THIS user, audit columns only. Service role,
-    // after the admin check, because the table's SELECT policy is the
-    // holder's own and an administrator is not the holder.
+    // The entitlement rows for THIS user: market, moments and note, and no
+    // actor id. Service role, after the admin check, because the table's
+    // SELECT policy is the holder's own and an administrator is not the
+    // holder; the read is scoped to one user id and three market codes.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: members, error: memberErr } = await supabaseAdmin
       .from("sp_pilot_members")
-      .select("market_pack_code, granted_at, granted_by, revoked_at, revoked_by, note")
+      .select("market_pack_code, granted_at, revoked_at, note")
       .eq("user_id", data.userId)
       .in("market_pack_code", [...PILOT_MANAGED_MARKETS]);
     // A database without the pilot layer has no table to read. That is "no
@@ -155,9 +157,7 @@ export const adminListPassportPilotAccess = createServerFn({ method: "POST" })
             ? {
                 active: m.revoked_at === null,
                 grantedAt: m.granted_at,
-                grantedBy: m.granted_by,
                 revokedAt: m.revoked_at,
-                revokedBy: m.revoked_by,
                 note: m.note,
               }
             : null,

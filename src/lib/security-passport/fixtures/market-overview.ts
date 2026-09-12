@@ -41,3 +41,13 @@ export const FIXTURE_MARKETS_PILOT_GB: readonly MarketOverviewRow[] = [
   market("GB-NI", "GB", "GB-NI", "under_review", "closed"),
   market("AE-DU", "AE", "AE-DU", "under_review", "closed"),
 ];
+
+/** An entitled pilot member whose work market is Northern Ireland: the
+ *  United Kingdom card carries their access and their action, and ordinary
+ *  Great Britain stays closed to them. */
+export const FIXTURE_MARKETS_PILOT_GB_NI: readonly MarketOverviewRow[] = [
+  market("SE", "SE", null, "available", "production"),
+  market("GB", "GB", null, "under_review", "closed"),
+  market("GB-NI", "GB", "GB-NI", "under_review", "pilot", true),
+  market("AE-DU", "AE", "AE-DU", "under_review", "closed"),
+];

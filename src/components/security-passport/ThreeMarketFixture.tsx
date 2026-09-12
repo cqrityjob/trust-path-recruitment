@@ -22,6 +22,7 @@ import {
 import type { CatalogueOption } from "@/lib/security-passport/market-catalogue";
 import {
   FIXTURE_MARKETS_PILOT_GB,
+  FIXTURE_MARKETS_PILOT_GB_NI,
   FIXTURE_MARKETS_PUBLIC,
 } from "@/lib/security-passport/fixtures/market-overview";
 import { MarketCredentialSection } from "./MarketCredentialSection";
@@ -95,6 +96,20 @@ export function ThreeMarketFixture() {
         )}
       >
         <MarketOverviewCards state={{ status: "ready", markets: FIXTURE_MARKETS_PILOT_GB }} />
+      </Panel>
+
+      <Panel
+        id="markets-pilot-ni"
+        title={note(
+          "B2 — Marknadsöversikt, pilotdeltagare (Nordirland)",
+          "B2 — Market overview, pilot member (Northern Ireland)",
+        )}
+        note={note(
+          "Nordirland är innehavarens arbetsmarknad. Åtgärden på Storbritannien-kortet gäller GB-NI; vanliga Storbritannien är fortfarande stängt.",
+          "Northern Ireland is the holder's work market. The action on the United Kingdom card is for GB-NI; ordinary Great Britain stays closed.",
+        )}
+      >
+        <MarketOverviewCards state={{ status: "ready", markets: FIXTURE_MARKETS_PILOT_GB_NI }} />
       </Panel>
 
       <Panel

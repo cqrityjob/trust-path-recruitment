@@ -966,6 +966,42 @@ group("9 · three market cards, the admin section and the copy, both languages")
       /data-market-card="SE"[\s\S]*?data-market-action="choose"/.test(pilot),
     );
   }
+  const NI_PILOT = [
+    row("SE", "SE", null, "available", "production"),
+    row("GB", "GB", null, "under_review", "closed"),
+    row("GB-NI", "GB", "GB-NI", "under_review", "pilot", true),
+    row("AE-DU", "AE", "AE-DU", "under_review", "closed"),
+  ];
+  for (const lang of ["sv", "en"] as const) {
+    const ni = cards(NI_PILOT, lang);
+    const ukCard = ni.slice(
+      ni.indexOf('data-market-card="GB"'),
+      ni.indexOf('data-market-card="AE-DU"'),
+    );
+    ck(
+      `9.${lang} a Northern Ireland pilot holder gets "Add credentials" on the UK card, for GB-NI`,
+      /data-market-action="add"[^>]*data-market-action-for="GB-NI"/.test(ukCard) &&
+        !/data-market-action="choose"/.test(ukCard),
+    );
+    ck(
+      `9.${lang} ordinary Great Britain is still closed to them (card access closed)`,
+      /data-market-card="GB"[^>]*data-holder-access="closed"/.test(ni),
+    );
+    ck(
+      `9.${lang} the Northern Ireland submarket says current work market and pilot access`,
+      ukCard.includes(passportT("markets.holder.current", lang)) &&
+        ukCard.includes(passportT("markets.holder.pilotMember", lang)),
+    );
+    ck(
+      `9.${lang} and the pilot warning is kept inside the submarket`,
+      /data-market-submarket="GB-NI"[\s\S]*?data-market-pilot-note/.test(ukCard),
+    );
+    ck(
+      `9.${lang} a GB pilot holder's action is for GB, never GB-NI`,
+      /data-market-action-for="GB"/.test(cards(PILOT, lang)) &&
+        !/data-market-action-for="GB-NI"/.test(cards(PILOT, lang)),
+    );
+  }
   const loading = html(<MarketOverviewCards state={{ status: "loading" }} />);
   const failed = html(<MarketOverviewCards state={{ status: "failed" }} />);
   ck(
