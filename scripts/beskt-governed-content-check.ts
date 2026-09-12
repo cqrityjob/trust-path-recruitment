@@ -1445,33 +1445,55 @@ check(
     : [];
   check(fnOffenders.length === 0, "BESKT-DB-NO-APP-CODE: no edge function references BESKT");
   const state = JSON.parse(read(RELEASE_STATE)) as {
-    frontier: { file: string; hostedState: string; rollback?: string; introduces?: unknown[] }[];
+    frontier: {
+      file: string;
+      hostedState: string;
+      rollback?: string;
+      evidenceSource?: string;
+      introduces?: unknown[];
+    }[];
   };
+  // ── WHY THIS ASSERTS "APPLIED" AND NO LONGER "PENDING" ──────────────────
+  //
+  // Until the owner applied it, the invariant worth guarding was that nothing
+  // in the repository claimed this migration was live when it was not. It IS
+  // live now: it reached owner production through the official Supabase GitHub
+  // integration after #221 merged, and release-state.json carries the
+  // read-only verification behind that claim.
+  //
+  // So the assertion flips rather than disappears, exactly as
+  // passport-share-gateway-schema-check.ts did for its own migration. The
+  // thing now worth guarding is the OTHER direction: an applied migration must
+  // not be quietly re-declared pending, must keep the evidence that makes
+  // "applied" a statement somebody can check, and must not be left sitting in
+  // the frontier's expected-pending list -- a resolved name there hides the
+  // next genuinely stuck migration behind an expectation.
   const entry = state.frontier.find((e) => e.file === MIGRATION_NAME);
   check(
     entry !== undefined &&
-      entry.hostedState === "pending" &&
+      entry.hostedState === "applied" &&
+      (entry.evidenceSource ?? "").includes("20261108090000") &&
+      (entry.evidenceSource ?? "").includes("wrygicdfxwjnrugduxnt") &&
       entry.rollback ===
         "supabase/rollback/20261108090000_beskt_governed_method_content_rollback.sql" &&
       (entry.introduces?.length ?? 0) >= 13 &&
       ["beskt_text_instructs_scoring", "beskt_evaluation_template"].every((fn) =>
         (entry.introduces ?? []).some((i) => (i as { object?: string }).object === fn),
       ),
-    "BESKT-DB-NO-HOSTED: the migration is recorded pending (never applied) with its objects and rollback in release-state.json",
+    "BESKT-DB-HOSTED: the migration is recorded applied, naming the hosted version and project ref, with its objects and rollback in release-state.json",
   );
   check(
-    !read(HOSTED_LEDGER).includes("20261108090000"),
-    "BESKT-DB-NO-HOSTED: the hosted ledger snapshot does not claim the migration was applied",
+    read(HOSTED_LEDGER).includes("20261108090000"),
+    "BESKT-DB-HOSTED: the hosted ledger snapshot records the migration under its canonical version",
   );
-  // The frontier's expected-pending list must name this migration. Other
-  // schema-only corrections may be pending beside it (the list is the set of
-  // migrations awaiting the owner's hosted apply), so the assertion is
-  // membership in that literal, not sole occupancy.
+  // The frontier's expected-pending list must NOT name this migration any
+  // more. Other migrations may legitimately be pending beside it, so the
+  // assertion is absence from that literal, not that the literal is empty.
   const frontierPending =
     /const expectedPending: string\[\] = \[([\s\S]*?)\];/.exec(read(FRONTIER))?.[1] ?? "";
   check(
-    frontierPending.includes('"20261108090000_beskt_governed_method_content.sql"'),
-    "BESKT-DB-NO-HOSTED: the release frontier expects this migration to be pending",
+    !frontierPending.includes('"20261108090000_beskt_governed_method_content.sql"'),
+    "BESKT-DB-HOSTED: the applied migration is no longer declared pending on the release frontier",
   );
 }
 

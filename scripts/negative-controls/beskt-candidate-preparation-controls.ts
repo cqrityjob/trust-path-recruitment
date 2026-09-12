@@ -491,22 +491,25 @@ const MUTATIONS: readonly Mutation[] = [
 
   // ---- Release bookkeeping -------------------------------------------------
   {
-    id: "BCP-NC-CLAIMED-APPLIED",
-    defect: "the PR 3 migration is claimed to be applied on the hosted database",
+    id: "BCP-NC-CLAIMED-PENDING",
+    defect:
+      "the applied PR 3 migration is walked back to pending, so the repository stops recording a hosted apply that really happened",
     file: STATE,
-    find: '"file": "20261110090000_bcp_candidate_preparation.sql",\n        "hostedState": "pending"',
+    find: '"file": "20261110090000_bcp_candidate_preparation.sql",\n        "hostedState": "applied"',
     replace:
-      '"file": "20261110090000_bcp_candidate_preparation.sql",\n        "hostedState": "applied"',
+      '"file": "20261110090000_bcp_candidate_preparation.sql",\n        "hostedState": "pending"',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },
 
   {
-    id: "BCP-NC-FRONTIER-UNDECLARED",
-    defect: "the pending migration is dropped from the owner-level frontier list",
+    id: "BCP-NC-FRONTIER-STALE-PENDING",
+    defect:
+      "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: "scripts/release-frontier-check.ts",
-    find: '  "20261110090000_bcp_candidate_preparation.sql",\n',
-    replace: "",
+    find: "const expectedPending: string[] = [];",
+    replace:
+      'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },

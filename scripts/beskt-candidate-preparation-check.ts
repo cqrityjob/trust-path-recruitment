@@ -922,19 +922,35 @@ const pr2 = read(PR2_MIGRATION);
 // ── 12. Release bookkeeping ───────────────────────────────────────────────
 {
   const state = JSON.parse(read(RELEASE_STATE)) as {
-    frontier: Array<{ file: string; hostedState: string; introduces?: Array<{ object: string }> }>;
+    frontier: Array<{
+      file: string;
+      hostedState: string;
+      evidenceSource?: string;
+      introduces?: Array<{ object: string }>;
+    }>;
   };
   const entry = state.frontier.find((f) => f.file === MIGRATION_NAME);
   check(entry !== undefined, "BCP-RELEASE: the PR 3 migration is on the release frontier");
+  // The migration has been applied to owner production through the official
+  // Supabase GitHub integration and verified read-only, so the guarded
+  // direction inverts: what must not happen now is an applied migration being
+  // re-declared pending, losing the evidence that makes "applied" checkable,
+  // or being left on the frontier's expected-pending list where a resolved
+  // name hides the next genuinely stuck migration behind an expectation.
   check(
-    entry?.hostedState === "pending",
-    "BCP-RELEASE: and is recorded as NOT applied to the hosted database",
+    entry?.hostedState === "applied",
+    "BCP-RELEASE: and is recorded as applied to the hosted database",
   );
   check(
-    /const expectedPending: string\[\] = \[[\s\S]*?"20261110090000_bcp_candidate_preparation\.sql",?[\s\S]*?\];/.test(
-      read(FRONTIER),
-    ),
-    "BCP-RELEASE: the release frontier declares it pending BY DESIGN, so a genuinely stuck migration cannot hide behind it",
+    (entry?.evidenceSource ?? "").includes("20261110090000") &&
+      (entry?.evidenceSource ?? "").includes("wrygicdfxwjnrugduxnt"),
+    "BCP-RELEASE: with evidence naming the hosted migration version and the project it was verified against",
+  );
+  const frontierPending =
+    /const expectedPending: string\[\] = \[([\s\S]*?)\];/.exec(read(FRONTIER))?.[1] ?? "";
+  check(
+    !frontierPending.includes('"20261110090000_bcp_candidate_preparation.sql"'),
+    "BCP-RELEASE: and is no longer declared pending on the release frontier, so a genuinely stuck migration cannot hide behind it",
   );
   const introduced = new Set((entry?.introduces ?? []).map((i) => i.object));
   for (const table of TABLES) {
