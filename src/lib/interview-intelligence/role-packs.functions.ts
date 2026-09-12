@@ -301,9 +301,14 @@ export const listRolePacks = createServerFn({ method: "GET" })
     const db = context.supabase;
 
     const [packsRes, versionsRes] = await Promise.all([
+      // Role-interview packs only. The identity table also carries BESKT
+      // method identities, which have no canonical role (role_id IS NULL by
+      // invariant) and are never role packs; listing them here would offer a
+      // governed method to the role-pack editor.
       db
         .from("scp_interview_packs")
         .select("id, slug, name_sv, name_en, purpose_sv, created_at")
+        .not("role_id", "is", null)
         .order("name_sv", { ascending: true }),
       db
         .from("scp_interview_pack_versions")
