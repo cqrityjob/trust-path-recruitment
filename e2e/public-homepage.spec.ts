@@ -238,7 +238,10 @@ test.describe("the public homepage", () => {
     for (const lang of ["sv", "en"] as const) {
       await setLang(page, lang);
       for (const action of await page.locator("#hero article a").all()) {
-        await expect(action, `${lang}: primary entry action is below the first viewport`).toBeInViewport();
+        await expect(
+          action,
+          `${lang}: primary entry action is below the first viewport`,
+        ).toBeInViewport();
       }
     }
   });
