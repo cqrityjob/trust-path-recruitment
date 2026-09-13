@@ -25,6 +25,8 @@
 // asserted from the copy module directly, and `passport-fixture-check` holds
 // sv/en parity across all ~1000 keys.
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../src/i18n/context";
 import { CredentialForm } from "../src/components/security-passport/CredentialForm";
@@ -38,6 +40,7 @@ function ck(name: string, ok: boolean): void {
   if (!ok) fails.push(name);
 }
 
+const root = path.resolve(import.meta.dir, "..");
 const html = (n: React.ReactNode) => renderToStaticMarkup(<I18nProvider>{n}</I18nProvider>);
 
 const noop = () => {};
@@ -292,6 +295,80 @@ console.log("\nDEFECT 3 -- the holder could not tell whether the document was sa
       />,
     ).includes(passportT("ev.linkShort", "sv")),
   );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   5b. EMSOMS #9 -- UPLOAD FEEDBACK, AND THE LINE IT MUST NOT CROSS
+   ══════════════════════════════════════════════════════════════════════ */
+console.log("\nEmsoms #9 -- upload feedback is complete, and never implies verification");
+{
+  // The states this is about -- chosen, uploading, saved, failed -- are all
+  // POST-INTERACTION. A static render starts with busy=null, saved=false,
+  // error=null, so none of them can be reached here, exactly as the block
+  // above already records for the success confirmation. So the markup for
+  // each is asserted from source, and the copy from the dictionary.
+  const panel = readFileSync(
+    path.join(root, "src/components/security-passport/live/EvidencePanel.tsx"),
+    "utf8",
+  );
+
+  // 1 · WHICH FILE. "Uploading …" and "Saved" are true of any file; the
+  // holder needs to know the product is talking about theirs.
+  ck(
+    "the chosen file's name is held for the whole attempt",
+    /const \[selectedName, setSelectedName\] = useState/.test(panel) &&
+      /setSelectedName\(file\.name\)/.test(panel),
+  );
+  ck(
+    "it is shown while the upload is in flight",
+    /data-evidence-uploading-file/.test(panel),
+  );
+  ck("and on the success confirmation", /data-evidence-saved-file/.test(panel));
+  ck("and on the failure message", /data-evidence-error-file/.test(panel));
+
+  // 2 · THE STATES THEMSELVES.
+  ck("an uploading state is rendered", /busy === "upload" \? pt\("ev\.uploading"\)/.test(panel));
+  ck(
+    "success is announced, not only painted",
+    /role="status"[\s\S]{0,200}data-evidence-saved/.test(panel) ||
+      /data-evidence-saved[\s\S]{0,200}role="status"/.test(panel),
+  );
+  ck("failure is announced as an alert", /role="alert"[\s\S]{0,120}data-evidence-error/.test(panel));
+
+  // 3 · A REAL RETRY, not a sentence telling the holder to try again.
+  ck("a retry control exists", /data-evidence-retry/.test(panel));
+  ck(
+    "and it arms the same picker, so there is one way into this flow",
+    /data-evidence-retry[\s\S]{0,400}inputRef\.current\?\.click\(\)/.test(panel),
+  );
+  ck("replacing an existing document is still offered", /data-cta-replace|ev\.replace/.test(panel));
+
+  // 4 · THE LINE. Uploading must never read as verification -- said BEFORE
+  // the picker (the ceiling) and again AT the moment of success, because the
+  // sentence after a green tick is the one a person carries away.
+  ck("the ceiling is stated before the picker", /pt\("ev\.ceiling"\)/.test(panel));
+  ck("and the resulting state is restated on success", /pt\("ev\.savedState"\)/.test(panel));
+  for (const lang of ["sv", "en"] as const) {
+    const saved = passportT("ev.saved", lang);
+    const state = passportT("ev.savedState", lang);
+    const ceiling = passportT("ev.ceiling", lang);
+    ck(`${lang}: the success line itself never says verified`, !/verifierat|verified/i.test(saved));
+    ck(
+      `${lang}: the state line names Document provided AND denies Verified`,
+      /(dokument inl\u00e4mnat|document provided)/i.test(state) &&
+        /(inte verifierat|not verified)/i.test(state),
+    );
+    // Both locales deny verification, but they phrase the denial
+    // differently -- "Det blir inte Verifierat forran ..." against "It does
+    // not become Verified until ...". Matching only the Swedish shape made
+    // this fail on English copy that is perfectly correct, so the pattern
+    // carries both phrasings rather than the copy being bent to fit one.
+    ck(
+      `${lang}: the ceiling denies verification before the upload`,
+      /(inte verifierat|not verified|does not become verified)/i.test(ceiling),
+    );
+    ck(`${lang}: a retry label exists`, passportT("ev.retry", lang).trim() !== "");
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════

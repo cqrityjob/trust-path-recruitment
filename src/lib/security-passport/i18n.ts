@@ -975,6 +975,12 @@ const sv = {
   // stays; what changed is that it now says WHICH link, next to the button
   // that makes one, and that the document says separately that it is stored.
   "ev.saved": "Dokument uppladdat och sparat.",
+  // Said again at the moment of success. "Sparat" must never be heard as
+  // "kontrollerat": the ceiling sentence above the picker states the rule,
+  // and this states the RESULT, which is the sentence a holder carries away
+  // from a green tick.
+  "ev.savedState": "Uppgiften är nu Dokument inlämnat — inte Verifierat.",
+  "ev.retry": "Försök igen",
   "ev.stored": "Dokumentet ligger kvar i ditt Passport tills du tar bort det.",
   "ev.linkShort":
     "Öppna-länken skapas när du klickar och slutar gälla efter fem minuter. Dokumentet påverkas inte.",
@@ -2990,6 +2996,8 @@ const en: Record<PassportCopyKey, string> = {
   "ev.view": "Open",
   "ev.opening": "Opening …",
   "ev.saved": "Document uploaded and saved.",
+  "ev.savedState": "The entry is now Document provided — not Verified.",
+  "ev.retry": "Try again",
   "ev.stored": "The document stays in your Passport until you remove it.",
   "ev.linkShort":
     "The link to open a document is created when you click and stops working after five minutes. The document itself is unaffected.",
