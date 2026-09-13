@@ -30,6 +30,10 @@
     // net: it is new, it carries no pre-existing type debt, and a guard that
     // silently stops enforcing is exactly the failure this file was written about.
     "scripts/sql-security-guard-check.ts",
+    // Pilot blocker 2: the interview-method library tenant-read guard and its
+    // planted controls, on the same terms as the security guard above.
+    "scripts/interview-method-tenant-read-check.ts",
+    "scripts/negative-controls/interview-method-tenant-read-controls.ts",
     "scripts/backend-target-lock-check.ts",
     "scripts/scripts-env.d.ts",
     "scripts/regulatory-source-monitor.ts",

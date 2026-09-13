@@ -617,6 +617,9 @@ DROP FUNCTION IF EXISTS public.scp_iv_set_case_status(uuid, text);
 DROP FUNCTION IF EXISTS public.scp_iv_record_event(uuid, text, text, uuid, text, text, text, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_pack_competency_pack(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_question_pack(uuid);
+-- 20261115090000: the method-library employer read predicate. Its five
+-- policies vanish with the tables above; the function itself does not.
+DROP FUNCTION IF EXISTS public.scp_iv_employer_may_read_method(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_employer_may_read_pack(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_plan_case(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_source_case(uuid);

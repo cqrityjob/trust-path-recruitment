@@ -87,7 +87,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 20261114090000_sp_global_certification_governed_issuer was applied by the
 // official integration after #230 merged and now has hosted evidence in
 // release-state.json. No active migration remains pending.
-const expectedPending: string[] = [];
+//
+// Pilot blocker 2: the interview-method library employer read boundary
+// (20261115090000) is pending BY DESIGN until the owner applies it through the
+// integration; the draft PR is not merged and nothing hosted was written from
+// its session. Its name comes off this list in the same change that records
+// the evidence.
+const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

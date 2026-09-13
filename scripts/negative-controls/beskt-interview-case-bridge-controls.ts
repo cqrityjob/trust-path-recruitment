@@ -512,10 +512,12 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
-    // The pending list is empty after the issuer evidence lands. The planted
+    // The pending list carries pilot blocker 2's genuinely pending migration,
+    // so the anchor is that one-line list rather than an empty one. The planted
     // defect is unchanged: this APPLIED migration goes back on the frontier.
-    find: "const expectedPending: string[] = [];",
-    replace: 'const expectedPending: string[] = ["20261112090000_bcp_interview_case_bridge.sql"];',
+    find: 'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
+    replace:
+      'const expectedPending: string[] = [\n  "20261115090000_scp_interview_method_library_tenant_read.sql",\n  "20261112090000_bcp_interview_case_bridge.sql",\n];',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },
