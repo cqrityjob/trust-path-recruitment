@@ -527,9 +527,9 @@ const MUTATIONS: readonly Mutation[] = [
     // the frontier list.
     // PR 4 put its own genuinely pending migration in the list, so the anchor is
     // that line rather than an empty one.
-    find: 'const expectedPending: string[] = ["20261112090000_bcp_interview_case_bridge.sql"];',
+    find: "const expectedPending: string[] = [];",
     replace:
-      'const expectedPending: string[] = [\n  "20261112090000_bcp_interview_case_bridge.sql",\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
+      'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },

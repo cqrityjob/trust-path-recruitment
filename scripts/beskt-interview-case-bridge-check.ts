@@ -723,6 +723,7 @@ const pr3 = stripComments(read(PR3_MIGRATION));
     frontier?: Array<{
       file?: string;
       hostedState?: string;
+      evidenceSource?: string;
       verify?: unknown;
       rollback?: unknown;
       introduces?: unknown[];
@@ -734,8 +735,19 @@ const pr3 = stripComments(read(PR3_MIGRATION));
     "BRIDGE-REGISTRATION: the migration is declared in release-state.json",
   );
   check(
-    entry?.hostedState === "pending",
-    "BRIDGE-REGISTRATION: and declared PENDING — it has not been applied to the hosted project, and saying otherwise would be the claim this whole stack exists to prevent",
+    entry?.hostedState === "applied",
+    "BRIDGE-REGISTRATION: and declared APPLIED — the Supabase GitHub integration applied it to production when PR #229 merged",
+  );
+  check(
+    typeof entry?.evidenceSource === "string" && entry.evidenceSource.length > 0,
+    'BRIDGE-REGISTRATION: and an applied entry carries evidence, because "applied" without it is exactly the unverified claim this stack exists to prevent',
+  );
+  check(
+    typeof entry?.evidenceSource === "string" &&
+      entry.evidenceSource.includes("20261112090000") &&
+      entry.evidenceSource.includes("bcp_interview_case_bridge") &&
+      entry.evidenceSource.includes("wrygicdfxwjnrugduxnt"),
+    "BRIDGE-REGISTRATION: and that evidence names the real hosted version, the recorded name and the project it was verified against",
   );
   check(
     entry?.verify !== undefined && entry?.rollback !== undefined,
@@ -754,8 +766,13 @@ const pr3 = stripComments(read(PR3_MIGRATION));
 
   const frontier = read(FRONTIER);
   check(
-    frontier.includes(MIGRATION_NAME),
-    "BRIDGE-REGISTRATION: the frontier check expects this pending migration by name, so a silent drop from release-state would fail",
+    // The mirror of the assertion above: once applied, the migration must NOT be
+    // on the owner-level pending list. A resolved name left there hides the next
+    // genuinely stuck migration behind an expectation.
+    !(/const expectedPending: string\[\] = \[([\s\S]*?)\]/.exec(frontier)?.[1] ?? "").includes(
+      MIGRATION_NAME,
+    ),
+    "BRIDGE-REGISTRATION: and is no longer declared pending on the release frontier",
   );
 }
 
