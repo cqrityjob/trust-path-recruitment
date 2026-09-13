@@ -235,6 +235,12 @@ export function BesktApplicationPanel({
       setCancelError(null);
       setCancelOpen(false);
       setCancelReason("");
+      // The replacement starts from a blank choice. Leaving the cancelled
+      // method and profile selected would pre-fill the form with the exact
+      // pairing just declared wrong, which invites making the same mistake
+      // twice -- and the employer is here because the first choice was wrong.
+      setMethodVersionId("");
+      setProfileId("");
       await queryClient.invalidateQueries({ queryKey: ["beskt", "employer-preparations"] });
     },
     onError: (e: unknown) => setCancelError(besktErrorKey(e)),

@@ -97,3 +97,181 @@
 {"phase":"readback","step":"no judgement anywhere on the surface","ms":201,"project":"mobile-390","at":"2026-09-13T06:39:57.600Z"}
 {"phase":"refusal","step":"another candidate is refused this preparation","ms":2923,"project":"mobile-390","at":"2026-09-13T06:40:00.913Z"}
 {"phase":"refusal","step":"a member of another employer is refused the readback","ms":2792,"project":"mobile-390","at":"2026-09-13T06:40:03.706Z"}
+{"phase":"library","step":"sign in as the recruiter","ms":28378,"project":"chromium","at":"2026-09-13T07:49:03.354Z"}
+{"phase":"library","step":"the section is present and is not a test","ms":1513,"project":"chromium","at":"2026-09-13T07:49:04.936Z"}
+{"phase":"library","step":"the same page in English","ms":469,"project":"chromium","at":"2026-09-13T07:49:05.406Z"}
+{"phase":"assign","step":"sign in and open the application","ms":3049,"project":"chromium","at":"2026-09-13T07:49:08.662Z"}
+{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2290,"project":"chromium","at":"2026-09-13T07:49:10.952Z"}
+{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":450,"project":"chromium","at":"2026-09-13T07:49:11.403Z"}
+{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":540,"project":"chromium","at":"2026-09-13T07:49:11.944Z"}
+{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1147,"project":"chromium","at":"2026-09-13T07:49:13.091Z"}
+{"phase":"assign","step":"start it","ms":442,"project":"chromium","at":"2026-09-13T07:49:13.534Z"}
+{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":240,"project":"chromium","at":"2026-09-13T07:49:13.774Z"}
+{"phase":"notice","step":"sign in and find it in My Career","ms":3253,"project":"chromium","at":"2026-09-13T07:49:17.207Z"}
+{"phase":"notice","step":"all nine matters are disclosed","ms":924,"project":"chromium","at":"2026-09-13T07:49:18.131Z"}
+{"phase":"notice","step":"it says plainly that it is not a consent","ms":311,"project":"chromium","at":"2026-09-13T07:49:18.442Z"}
+{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":560,"project":"chromium","at":"2026-09-13T07:49:19.002Z"}
+{"phase":"notice","step":"acknowledge it","ms":631,"project":"chromium","at":"2026-09-13T07:49:19.633Z"}
+{"phase":"answer","step":"reopen the preparation","ms":3026,"project":"chromium","at":"2026-09-13T07:49:22.814Z"}
+{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":491,"project":"chromium","at":"2026-09-13T07:49:23.309Z"}
+{"phase":"answer","step":"come back; the answer was really written","ms":2906,"project":"chromium","at":"2026-09-13T07:49:26.215Z"}
+{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":11,"project":"chromium","at":"2026-09-13T07:49:26.226Z"}
+{"phase":"answer","step":"take that question orally instead","ms":87,"project":"chromium","at":"2026-09-13T07:49:26.313Z"}
+{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":3285,"project":"chromium","at":"2026-09-13T07:49:29.600Z"}
+{"phase":"answer","step":"skip the context question","ms":460,"project":"chromium","at":"2026-09-13T07:49:30.061Z"}
+{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":347,"project":"chromium","at":"2026-09-13T07:49:30.409Z"}
+{"phase":"resume","step":"come back and find the EXACT same answers","ms":2487,"project":"chromium","at":"2026-09-13T07:49:32.896Z"}
+{"phase":"review","step":"reopen and go to the review","ms":33313,"project":"chromium","at":"2026-09-13T07:50:06.392Z"}
+{"phase":"library","step":"sign in as the recruiter","ms":16061,"project":"chromium","at":"2026-09-13T07:51:07.874Z"}
+{"phase":"library","step":"the section is present and is not a test","ms":1632,"project":"chromium","at":"2026-09-13T07:51:09.509Z"}
+{"phase":"library","step":"the same page in English","ms":301,"project":"chromium","at":"2026-09-13T07:51:09.811Z"}
+{"phase":"assign","step":"sign in and open the application","ms":3053,"project":"chromium","at":"2026-09-13T07:51:13.060Z"}
+{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2478,"project":"chromium","at":"2026-09-13T07:51:15.540Z"}
+{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":354,"project":"chromium","at":"2026-09-13T07:51:15.895Z"}
+{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":559,"project":"chromium","at":"2026-09-13T07:51:16.454Z"}
+{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1063,"project":"chromium","at":"2026-09-13T07:51:17.518Z"}
+{"phase":"assign","step":"start it","ms":463,"project":"chromium","at":"2026-09-13T07:51:17.981Z"}
+{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":411,"project":"chromium","at":"2026-09-13T07:51:18.392Z"}
+{"phase":"notice","step":"sign in and find it in My Career","ms":3237,"project":"chromium","at":"2026-09-13T07:51:21.794Z"}
+{"phase":"notice","step":"all nine matters are disclosed","ms":520,"project":"chromium","at":"2026-09-13T07:51:22.314Z"}
+{"phase":"notice","step":"it says plainly that it is not a consent","ms":219,"project":"chromium","at":"2026-09-13T07:51:22.534Z"}
+{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":553,"project":"chromium","at":"2026-09-13T07:51:23.088Z"}
+{"phase":"notice","step":"acknowledge it","ms":544,"project":"chromium","at":"2026-09-13T07:51:23.633Z"}
+{"phase":"answer","step":"reopen the preparation","ms":2989,"project":"chromium","at":"2026-09-13T07:51:26.801Z"}
+{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":523,"project":"chromium","at":"2026-09-13T07:51:27.324Z"}
+{"phase":"answer","step":"come back; the answer was really written","ms":2798,"project":"chromium","at":"2026-09-13T07:51:30.122Z"}
+{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":10,"project":"chromium","at":"2026-09-13T07:51:30.132Z"}
+{"phase":"answer","step":"take that question orally instead","ms":95,"project":"chromium","at":"2026-09-13T07:51:30.228Z"}
+{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":3318,"project":"chromium","at":"2026-09-13T07:51:33.546Z"}
+{"phase":"answer","step":"skip the context question","ms":485,"project":"chromium","at":"2026-09-13T07:51:34.031Z"}
+{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":288,"project":"chromium","at":"2026-09-13T07:51:34.320Z"}
+{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":309,"project":"chromium","at":"2026-09-13T07:51:34.629Z"}
+{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":382,"project":"chromium","at":"2026-09-13T07:51:35.012Z"}
+{"phase":"resume","step":"come back and find the EXACT same answers","ms":2330,"project":"chromium","at":"2026-09-13T07:51:37.343Z"}
+{"phase":"review","step":"reopen and go to the review","ms":3491,"project":"chromium","at":"2026-09-13T07:51:41.025Z"}
+{"phase":"review","step":"every answer offers a correction control that WORKS","ms":237077,"project":"chromium","at":"2026-09-13T07:55:38.102Z"}
+{"phase":"library","step":"sign in as the recruiter","ms":31544,"project":"chromium","at":"2026-09-13T07:56:38.047Z"}
+{"phase":"library","step":"the section is present and is not a test","ms":1610,"project":"chromium","at":"2026-09-13T07:56:39.658Z"}
+{"phase":"library","step":"the same page in English","ms":277,"project":"chromium","at":"2026-09-13T07:56:39.937Z"}
+{"phase":"assign","step":"sign in and open the application","ms":3151,"project":"chromium","at":"2026-09-13T07:56:43.281Z"}
+{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2624,"project":"chromium","at":"2026-09-13T07:56:45.906Z"}
+{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":355,"project":"chromium","at":"2026-09-13T07:56:46.262Z"}
+{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":548,"project":"chromium","at":"2026-09-13T07:56:46.810Z"}
+{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1110,"project":"chromium","at":"2026-09-13T07:56:47.921Z"}
+{"phase":"assign","step":"start it","ms":454,"project":"chromium","at":"2026-09-13T07:56:48.376Z"}
+{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":368,"project":"chromium","at":"2026-09-13T07:56:48.745Z"}
+{"phase":"notice","step":"sign in and find it in My Career","ms":3342,"project":"chromium","at":"2026-09-13T07:56:52.274Z"}
+{"phase":"notice","step":"all nine matters are disclosed","ms":921,"project":"chromium","at":"2026-09-13T07:56:53.196Z"}
+{"phase":"notice","step":"it says plainly that it is not a consent","ms":272,"project":"chromium","at":"2026-09-13T07:56:53.468Z"}
+{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":504,"project":"chromium","at":"2026-09-13T07:56:53.973Z"}
+{"phase":"notice","step":"acknowledge it","ms":566,"project":"chromium","at":"2026-09-13T07:56:54.540Z"}
+{"phase":"answer","step":"reopen the preparation","ms":3526,"project":"chromium","at":"2026-09-13T07:56:58.243Z"}
+{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":546,"project":"chromium","at":"2026-09-13T07:56:58.789Z"}
+{"phase":"answer","step":"come back; the answer was really written","ms":2934,"project":"chromium","at":"2026-09-13T07:57:01.724Z"}
+{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":25,"project":"chromium","at":"2026-09-13T07:57:01.750Z"}
+{"phase":"answer","step":"take that question orally instead","ms":98,"project":"chromium","at":"2026-09-13T07:57:01.849Z"}
+{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":2295,"project":"chromium","at":"2026-09-13T07:57:04.144Z"}
+{"phase":"answer","step":"skip the context question","ms":531,"project":"chromium","at":"2026-09-13T07:57:04.676Z"}
+{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":269,"project":"chromium","at":"2026-09-13T07:57:04.945Z"}
+{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":285,"project":"chromium","at":"2026-09-13T07:57:05.230Z"}
+{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":377,"project":"chromium","at":"2026-09-13T07:57:05.607Z"}
+{"phase":"resume","step":"come back and find the EXACT same answers","ms":2596,"project":"chromium","at":"2026-09-13T07:57:08.208Z"}
+{"phase":"review","step":"reopen and go to the review","ms":3307,"project":"chromium","at":"2026-09-13T07:57:11.710Z"}
+{"phase":"review","step":"every answer offers a correction control that WORKS","ms":863,"project":"chromium","at":"2026-09-13T07:57:12.574Z"}
+{"phase":"review","step":"go back and CORRECT one response","ms":697,"project":"chromium","at":"2026-09-13T07:57:13.271Z"}
+{"phase":"review","step":"the correction is what the review now shows","ms":93,"project":"chromium","at":"2026-09-13T07:57:13.364Z"}
+{"phase":"submit","step":"submit it once","ms":293,"project":"chromium","at":"2026-09-13T07:57:13.657Z"}
+{"phase":"submit","step":"read-only means read-only","ms":175,"project":"chromium","at":"2026-09-13T07:57:13.832Z"}
+{"phase":"submit","step":"and in English","ms":258,"project":"chromium","at":"2026-09-13T07:57:14.091Z"}
+{"phase":"readback","step":"sign in and open the application","ms":2527,"project":"chromium","at":"2026-09-13T07:57:16.790Z"}
+{"phase":"readback","step":"the submitted basis is readable now","ms":1006,"project":"chromium","at":"2026-09-13T07:57:17.797Z"}
+{"phase":"readback","step":"the neutral states are shown AS states","ms":261,"project":"chromium","at":"2026-09-13T07:57:18.059Z"}
+{"phase":"readback","step":"no judgement anywhere on the surface","ms":379,"project":"chromium","at":"2026-09-13T07:57:18.439Z"}
+{"phase":"refusal","step":"another candidate is refused this preparation","ms":3428,"project":"chromium","at":"2026-09-13T07:57:21.976Z"}
+{"phase":"refusal","step":"a member of another employer is refused the readback","ms":3202,"project":"chromium","at":"2026-09-13T07:57:25.178Z"}
+{"phase":"library","step":"sign in as the recruiter","ms":15799,"project":"chromium","at":"2026-09-13T07:58:25.988Z"}
+{"phase":"library","step":"the section is present and is not a test","ms":1601,"project":"chromium","at":"2026-09-13T07:58:27.593Z"}
+{"phase":"library","step":"the same page in English","ms":285,"project":"chromium","at":"2026-09-13T07:58:27.878Z"}
+{"phase":"assign","step":"sign in and open the application","ms":3187,"project":"chromium","at":"2026-09-13T07:58:31.261Z"}
+{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2420,"project":"chromium","at":"2026-09-13T07:58:33.682Z"}
+{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":386,"project":"chromium","at":"2026-09-13T07:58:34.069Z"}
+{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":484,"project":"chromium","at":"2026-09-13T07:58:34.556Z"}
+{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1131,"project":"chromium","at":"2026-09-13T07:58:35.687Z"}
+{"phase":"assign","step":"start it","ms":441,"project":"chromium","at":"2026-09-13T07:58:36.128Z"}
+{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":346,"project":"chromium","at":"2026-09-13T07:58:36.475Z"}
+{"phase":"notice","step":"sign in and find it in My Career","ms":3396,"project":"chromium","at":"2026-09-13T07:58:40.055Z"}
+{"phase":"notice","step":"all nine matters are disclosed","ms":480,"project":"chromium","at":"2026-09-13T07:58:40.537Z"}
+{"phase":"notice","step":"it says plainly that it is not a consent","ms":216,"project":"chromium","at":"2026-09-13T07:58:40.753Z"}
+{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":501,"project":"chromium","at":"2026-09-13T07:58:41.255Z"}
+{"phase":"notice","step":"acknowledge it","ms":565,"project":"chromium","at":"2026-09-13T07:58:41.820Z"}
+{"phase":"answer","step":"reopen the preparation","ms":2980,"project":"chromium","at":"2026-09-13T07:58:45.001Z"}
+{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":523,"project":"chromium","at":"2026-09-13T07:58:45.524Z"}
+{"phase":"answer","step":"come back; the answer was really written","ms":2338,"project":"chromium","at":"2026-09-13T07:58:47.863Z"}
+{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":16,"project":"chromium","at":"2026-09-13T07:58:47.880Z"}
+{"phase":"answer","step":"take that question orally instead","ms":108,"project":"chromium","at":"2026-09-13T07:58:47.989Z"}
+{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":3205,"project":"chromium","at":"2026-09-13T07:58:51.195Z"}
+{"phase":"answer","step":"skip the context question","ms":428,"project":"chromium","at":"2026-09-13T07:58:51.623Z"}
+{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":258,"project":"chromium","at":"2026-09-13T07:58:51.882Z"}
+{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":299,"project":"chromium","at":"2026-09-13T07:58:52.182Z"}
+{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":362,"project":"chromium","at":"2026-09-13T07:58:52.544Z"}
+{"phase":"resume","step":"come back and find the EXACT same answers","ms":3613,"project":"chromium","at":"2026-09-13T07:58:56.158Z"}
+{"phase":"review","step":"reopen and go to the review","ms":3404,"project":"chromium","at":"2026-09-13T07:58:59.756Z"}
+{"phase":"review","step":"every answer offers a correction control that WORKS","ms":852,"project":"chromium","at":"2026-09-13T07:59:00.609Z"}
+{"phase":"review","step":"go back and CORRECT one response","ms":745,"project":"chromium","at":"2026-09-13T07:59:01.356Z"}
+{"phase":"review","step":"the correction is what the review now shows","ms":88,"project":"chromium","at":"2026-09-13T07:59:01.444Z"}
+{"phase":"submit","step":"submit it once","ms":300,"project":"chromium","at":"2026-09-13T07:59:01.745Z"}
+{"phase":"submit","step":"read-only means read-only","ms":179,"project":"chromium","at":"2026-09-13T07:59:01.924Z"}
+{"phase":"submit","step":"and in English","ms":257,"project":"chromium","at":"2026-09-13T07:59:02.181Z"}
+{"phase":"readback","step":"sign in and open the application","ms":2588,"project":"chromium","at":"2026-09-13T07:59:04.949Z"}
+{"phase":"readback","step":"the submitted basis is readable now","ms":1158,"project":"chromium","at":"2026-09-13T07:59:06.107Z"}
+{"phase":"readback","step":"the neutral states are shown AS states","ms":260,"project":"chromium","at":"2026-09-13T07:59:06.368Z"}
+{"phase":"readback","step":"no judgement anywhere on the surface","ms":390,"project":"chromium","at":"2026-09-13T07:59:06.759Z"}
+{"phase":"refusal","step":"another candidate is refused this preparation","ms":3431,"project":"chromium","at":"2026-09-13T07:59:10.301Z"}
+{"phase":"refusal","step":"a member of another employer is refused the readback","ms":3187,"project":"chromium","at":"2026-09-13T07:59:13.489Z"}
+{"phase":"cancel","step":"start one with the FIRST method","ms":6253,"project":"chromium","at":"2026-09-13T07:59:19.828Z"}
+{"phase":"cancel","step":"cancelling demands a reason before it will proceed","ms":483,"project":"chromium","at":"2026-09-13T07:59:20.311Z"}
+{"phase":"cancel","step":"cancel it, and the start form comes back","ms":5281,"project":"chromium","at":"2026-09-13T07:59:25.592Z"}
+{"phase":"library","step":"sign in as the recruiter","ms":28474,"project":"chromium","at":"2026-09-13T08:00:18.655Z"}
+{"phase":"library","step":"the section is present and is not a test","ms":1652,"project":"chromium","at":"2026-09-13T08:00:20.308Z"}
+{"phase":"library","step":"the same page in English","ms":288,"project":"chromium","at":"2026-09-13T08:00:20.597Z"}
+{"phase":"assign","step":"sign in and open the application","ms":3123,"project":"chromium","at":"2026-09-13T08:00:23.935Z"}
+{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2412,"project":"chromium","at":"2026-09-13T08:00:26.348Z"}
+{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":397,"project":"chromium","at":"2026-09-13T08:00:26.746Z"}
+{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":524,"project":"chromium","at":"2026-09-13T08:00:27.271Z"}
+{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1076,"project":"chromium","at":"2026-09-13T08:00:28.347Z"}
+{"phase":"assign","step":"start it","ms":458,"project":"chromium","at":"2026-09-13T08:00:28.805Z"}
+{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":360,"project":"chromium","at":"2026-09-13T08:00:29.166Z"}
+{"phase":"notice","step":"sign in and find it in My Career","ms":3742,"project":"chromium","at":"2026-09-13T08:00:33.150Z"}
+{"phase":"notice","step":"all nine matters are disclosed","ms":909,"project":"chromium","at":"2026-09-13T08:00:34.060Z"}
+{"phase":"notice","step":"it says plainly that it is not a consent","ms":239,"project":"chromium","at":"2026-09-13T08:00:34.299Z"}
+{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":473,"project":"chromium","at":"2026-09-13T08:00:34.773Z"}
+{"phase":"notice","step":"acknowledge it","ms":595,"project":"chromium","at":"2026-09-13T08:00:35.369Z"}
+{"phase":"answer","step":"reopen the preparation","ms":3607,"project":"chromium","at":"2026-09-13T08:00:39.152Z"}
+{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":526,"project":"chromium","at":"2026-09-13T08:00:39.680Z"}
+{"phase":"answer","step":"come back; the answer was really written","ms":2947,"project":"chromium","at":"2026-09-13T08:00:42.630Z"}
+{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":9,"project":"chromium","at":"2026-09-13T08:00:42.640Z"}
+{"phase":"answer","step":"take that question orally instead","ms":96,"project":"chromium","at":"2026-09-13T08:00:42.737Z"}
+{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":2798,"project":"chromium","at":"2026-09-13T08:00:45.536Z"}
+{"phase":"answer","step":"skip the context question","ms":516,"project":"chromium","at":"2026-09-13T08:00:46.054Z"}
+{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":294,"project":"chromium","at":"2026-09-13T08:00:46.349Z"}
+{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":309,"project":"chromium","at":"2026-09-13T08:00:46.658Z"}
+{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":438,"project":"chromium","at":"2026-09-13T08:00:47.096Z"}
+{"phase":"resume","step":"come back and find the EXACT same answers","ms":2650,"project":"chromium","at":"2026-09-13T08:00:49.746Z"}
+{"phase":"review","step":"reopen and go to the review","ms":3937,"project":"chromium","at":"2026-09-13T08:00:53.876Z"}
+{"phase":"review","step":"every answer offers a correction control that WORKS","ms":844,"project":"chromium","at":"2026-09-13T08:00:54.721Z"}
+{"phase":"review","step":"go back and CORRECT one response","ms":662,"project":"chromium","at":"2026-09-13T08:00:55.384Z"}
+{"phase":"review","step":"the correction is what the review now shows","ms":66,"project":"chromium","at":"2026-09-13T08:00:55.450Z"}
+{"phase":"submit","step":"submit it once","ms":261,"project":"chromium","at":"2026-09-13T08:00:55.711Z"}
+{"phase":"submit","step":"read-only means read-only","ms":177,"project":"chromium","at":"2026-09-13T08:00:55.889Z"}
+{"phase":"submit","step":"and in English","ms":230,"project":"chromium","at":"2026-09-13T08:00:56.119Z"}
+{"phase":"readback","step":"sign in and open the application","ms":2599,"project":"chromium","at":"2026-09-13T08:00:58.899Z"}
+{"phase":"readback","step":"the submitted basis is readable now","ms":1128,"project":"chromium","at":"2026-09-13T08:01:00.028Z"}
+{"phase":"readback","step":"the neutral states are shown AS states","ms":294,"project":"chromium","at":"2026-09-13T08:01:00.322Z"}
+{"phase":"readback","step":"no judgement anywhere on the surface","ms":377,"project":"chromium","at":"2026-09-13T08:01:00.700Z"}
+{"phase":"refusal","step":"another candidate is refused this preparation","ms":3891,"project":"chromium","at":"2026-09-13T08:01:04.704Z"}
+{"phase":"refusal","step":"a member of another employer is refused the readback","ms":4361,"project":"chromium","at":"2026-09-13T08:01:09.065Z"}
+{"phase":"cancel","step":"start one with the FIRST method","ms":5350,"project":"chromium","at":"2026-09-13T08:01:14.512Z"}
+{"phase":"cancel","step":"cancelling demands a reason before it will proceed","ms":565,"project":"chromium","at":"2026-09-13T08:01:15.078Z"}
+{"phase":"cancel","step":"cancel it, and the start form comes back","ms":538,"project":"chromium","at":"2026-09-13T08:01:15.617Z"}
+{"phase":"cancel","step":"the replacement uses a DIFFERENT method and profile","ms":1665,"project":"chromium","at":"2026-09-13T08:01:17.283Z"}
+{"phase":"cancel","step":"and the same flow reads in English","ms":464,"project":"chromium","at":"2026-09-13T08:01:17.747Z"}

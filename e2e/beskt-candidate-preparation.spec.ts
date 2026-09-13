@@ -400,6 +400,45 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       await shot(page, "4-answered-sv");
     });
 
+    await step("answer", "every governed ANSWER TYPE is answerable in the browser", async () => {
+      // Finding 0.5 in the place it actually matters. single_choice, boolean,
+      // long_text, short_text and acknowledgement are answered above; these are
+      // the two the old fixture could not express. Each is asserted through its
+      // own real control, by role, so a wrong control fails here.
+
+      // multi_choice: checkboxes, and SEVERAL of them really do stay checked.
+      const nights = page.locator("#beskt-input-shift_patterns_worked-nights");
+      const weekends = page.locator("#beskt-input-shift_patterns_worked-weekends");
+      await expect(nights).toHaveAttribute("role", "checkbox");
+      await nights.click();
+      await weekends.click();
+      await expect(nights).toBeChecked();
+      await expect(weekends).toBeChecked();
+
+      // date: a real date input.
+      const trained = page.locator("#beskt-input-most_recent_training");
+      await expect(trained).toHaveAttribute("type", "date");
+      await trained.fill("2026-03-17");
+      await expect(trained).toHaveValue("2026-03-17");
+    });
+
+    await step("answer", "single_choice is a RADIO group, and cannot be un-answered", async () => {
+      // The defect this replaces: as checkboxes, clicking a chosen required
+      // answer again turned it back into a blank. A radio cannot do that.
+      const yes = page.locator("#beskt-input-lone_working_experience-yes");
+      const no = page.locator("#beskt-input-lone_working_experience-no");
+      await expect(yes).toHaveAttribute("role", "radio");
+      await expect(yes).toBeChecked();
+      await yes.click();
+      await expect(yes).toBeChecked();
+      // And choosing the other one moves the selection rather than adding to it.
+      await no.click();
+      await expect(no).toBeChecked();
+      await expect(yes).not.toBeChecked();
+      await yes.click();
+      await expect(yes).toBeChecked();
+    });
+
     await step("resume", "save the omission and the oral choice, and LEAVE", async () => {
       // The leaving is done by the product's own control, not by the test
       // navigating on its behalf: that is the whole of finding 0.1.
@@ -453,7 +492,13 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       expect(keys.length).toBeGreaterThanOrEqual(3);
 
       for (const key of [keys[0], keys[Math.floor(keys.length / 2)], keys[keys.length - 1]]) {
-        await page.getByTestId("beskt-to-review").click();
+        // Back to the review only when we are not already there: the
+        // "Granska" control does not exist during the review phase, so
+        // clicking it unconditionally would be a test asserting its own
+        // navigation rather than the product's.
+        if ((await page.getByTestId("beskt-review-list").count()) === 0) {
+          await page.getByTestId("beskt-to-review").click();
+        }
         await expect(page.getByTestId("beskt-review-list")).toBeVisible();
         await page.getByTestId(`beskt-review-edit-${key}`).click();
 
@@ -467,7 +512,9 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
     });
 
     await step("review", "go back and CORRECT one response", async () => {
-      await page.getByTestId("beskt-to-review").click();
+      if ((await page.getByTestId("beskt-review-list").count()) === 0) {
+        await page.getByTestId("beskt-to-review").click();
+      }
       await page.getByTestId("beskt-review-edit-lone_working_example").click();
       await expect(page.getByTestId("beskt-item-lone_working_example")).toBeFocused();
       // Undo the oral choice and answer it after all — a real correction on
@@ -578,6 +625,72 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       } finally {
         await context.close();
       }
+    });
+  });
+
+  test("8 · a wrong assignment is cancelled and correctly replaced", async ({ page }) => {
+    // Finding 0.6. The RPC existed and nothing could reach it, so an employer
+    // who started a preparation with the wrong method was stuck: bcp_assign
+    // refuses a second live assignment on the same application, and the first
+    // was unreachable. This walks the way out and back.
+    //
+    // It uses the OTHER application in the fixture, so it neither disturbs nor
+    // depends on the submitted preparation the tests above built.
+    const OTHER_APPLICATION =
+      process.env.E2E_OTHER_APPLICATION_ID ?? "b4000000-0000-4000-8000-00000000aa02";
+    const panel = page.getByTestId("beskt-application-panel");
+
+    await step("cancel", "start one with the FIRST method", async () => {
+      await signIn(page, RECRUITER, `/employer/${EMPLOYER_SLUG}/applications/${OTHER_APPLICATION}`);
+      await expect(panel).toBeVisible({ timeout: 30_000 });
+      await panel.getByLabel(/^metod$|^method$/i).click();
+      await page.getByRole("option").first().click();
+      await panel.getByLabel(/rollexponering|role exposure/i).click();
+      await page.getByRole("option").first().click();
+      await panel.getByTestId("beskt-start-submit").click();
+      await expect(panel.getByTestId("beskt-readback-state")).toBeVisible({ timeout: 30_000 });
+    });
+
+    await step("cancel", "cancelling demands a reason before it will proceed", async () => {
+      await panel.getByTestId("beskt-cancel-open").click();
+      const dialog = page.getByTestId("beskt-cancel-dialog");
+      await expect(dialog).toBeVisible({ timeout: 15_000 });
+      // A cancellation with no reason leaves the append-only ledger with no
+      // explanation anyone reading it afterwards could use.
+      await expect(dialog.getByTestId("beskt-cancel-confirm")).toBeDisabled();
+      await dialog
+        .getByTestId("beskt-cancel-reason")
+        .fill("Fel metod valdes vid start. Ersätts med rätt metod och profil.");
+      await expect(dialog.getByTestId("beskt-cancel-confirm")).toBeEnabled();
+      await shot(page, "9-cancel-dialog");
+    });
+
+    await step("cancel", "cancel it, and the start form comes back", async () => {
+      await page.getByTestId("beskt-cancel-confirm").click();
+      // Nothing is deleted: the cancelled assignment simply stops being the
+      // live one, and the employer may start a correct replacement.
+      await expect(panel.getByTestId("beskt-start-submit")).toBeVisible({ timeout: 30_000 });
+      await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
+      await shot(page, "9-cancelled");
+    });
+
+    await step("cancel", "the replacement uses a DIFFERENT method and profile", async () => {
+      await panel.getByLabel(/^metod$|^method$/i).click();
+      await page.getByRole("option").nth(1).click();
+      await panel.getByLabel(/rollexponering|role exposure/i).click();
+      await page.getByRole("option").first().click();
+      await panel.getByTestId("beskt-start-submit").click();
+      await expect(panel.getByTestId("beskt-readback-state")).toBeVisible({ timeout: 30_000 });
+      await expectFitsViewport(page);
+      await shot(page, "9-replaced");
+    });
+
+    await step("cancel", "and the same flow reads in English", async () => {
+      await useEnglish(page);
+      await expect(panel).toBeVisible();
+      await expectNoScoringClaim(page, "beskt-application-panel");
+      await shot(page, "9-replaced-en");
+      await useSwedish(page);
     });
   });
 });
