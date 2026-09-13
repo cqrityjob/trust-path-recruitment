@@ -382,6 +382,19 @@ jobs:
       - name: Passport market catalogue check
         run: bun run passport-market-catalogue:check
 
+      # Security Passport Phase 1A — the international-certification SCHEMA.
+      # Reads SQL only and imports nothing under src/, because the property it
+      # exists to protect is that this release has no application dependency:
+      # it must be safe to merge and apply while the running app continues
+      # against the old hosted schema. GROUP 4 asserts exactly that, object by
+      # object. The rest pins the fourteen reviewed definitions, the five
+      # controlled issuers, the honest gaps (ACAMS has no verification URL, the
+      # ACFE directory's absence is inconclusive), the constraint that keeps a
+      # portable certification from creating eligibility or a title, and the
+      # rollback's refusal after adoption.
+      - name: Passport global certification catalogue check
+        run: bun run passport-global-certification:check
+
       # The application deploys when main moves; a migration is applied when
       # somebody asks. Between those two events the code can be talking to a
       # schema that has never heard of what it needs -- which took the whole
