@@ -990,9 +990,13 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "THE ORIGINAL DEFECT: the candidate screen shows the database's own raised text, which can name tables, columns and policies",
     file: PANEL,
-    find: "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  const saveMutation",
+    // The submit mutation's onError, identified by what follows it: all three
+    // onError lines are byte-identical, so the anchor has to include the one
+    // thing that is unique -- the end of the last mutation.
+    find:
+      "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  if (prep.isPending) {",
     replace:
-      "    onError: (e: unknown) =>\n      setActionError((e instanceof Error ? e.message : String(e)) as never),\n  });\n\n  const saveMutation",
+      "    onError: (e: unknown) =>\n      setActionError((e instanceof Error ? e.message : String(e)) as never),\n  });\n\n  if (prep.isPending) {",
     guard: GUARD,
     expect: "BCP-SAFE-ERRORS",
   },
