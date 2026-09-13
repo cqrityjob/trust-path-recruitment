@@ -750,6 +750,14 @@ jobs:
       - name: BESKT interview-case bridge (PR 4) source guard
         run: bun run beskt-interview-case-bridge:check
 
+      # BESKT PR 5A -- the governed conduct of the BESKT interview: the
+      # structured information model, independent assessor positions, the
+      # append-only correction and verification history, and the panel that
+      # records disagreement rather than averaging it. Source-level only,
+      # nothing hosted. Its planted controls run in negative-controls:all.
+      - name: BESKT interview conduct (PR 5A) source guard
+        run: bun run beskt-interview-conduct:check
+
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape
       # and reports the dictionary proof as outstanding; once PR 3B adds the

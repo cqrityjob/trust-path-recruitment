@@ -76,8 +76,8 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Its name comes OFF this list in the same change that records the evidence, for
 // the reason stated above: a resolved name here hides the next genuinely stuck
 // migration behind an expectation. The list is empty again.
-// Empty again: BESKT PR 4's interview-case bridge was applied to production by
-// the Supabase GitHub integration when PR #229 merged, and release-state.json
+// Empty again: BESKT PR 5A's interview conduct layer was applied to production
+// by the Supabase GitHub integration when PR #233 merged, and release-state.json
 // now records that with evidence. A name left here after the migration is
 // applied would hide the next genuinely stuck migration behind an expectation.
 const expectedPending: string[] = [];

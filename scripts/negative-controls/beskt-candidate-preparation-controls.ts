@@ -527,6 +527,9 @@ const MUTATIONS: readonly Mutation[] = [
     // the frontier list.
     // PR 4 put its own genuinely pending migration in the list, so the anchor is
     // that line rather than an empty one.
+    // PR 5A put its own genuinely pending migration in the list, so the anchor
+    // is that line rather than an empty one. The planted defect is unchanged:
+    // the APPLIED migration back on the frontier.
     find: "const expectedPending: string[] = [];",
     replace:
       'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
