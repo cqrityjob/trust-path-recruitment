@@ -17,6 +17,7 @@
 // position, where it is attributed to them.
 
 import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import type { BesktSnapshotAnswer } from "@/lib/beskt/interview-conduct.functions";
 import { ResponseStateChip, governedText } from "./BesktConductUi";
 
@@ -93,13 +94,7 @@ export function BesktSnapshot({ answers }: { answers: readonly BesktSnapshotAnsw
  * saying so plainly is better than an empty line a reader could mistake for a
  * rendering failure.
  */
-function answerText(
-  a: BesktSnapshotAnswer,
-  t: (
-    k:
-      "beskt.conduct.snapshot.yes" | "beskt.conduct.snapshot.no" | "beskt.conduct.snapshot.noValue",
-  ) => string,
-): string {
+function answerText(a: BesktSnapshotAnswer, t: (k: TranslationKey) => string): string {
   if (a.responseState !== "answered") return t("beskt.conduct.snapshot.noValue");
   if (a.valueText !== null && a.valueText.trim() !== "") return a.valueText;
   if (a.valueBoolean !== null)
