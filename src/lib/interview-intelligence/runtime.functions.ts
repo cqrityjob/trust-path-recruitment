@@ -2376,14 +2376,12 @@ export const finaliseReport = createServerFn({ method: "POST" })
     // bundle deployed before this release; nothing here calls it, and a
     // separate owner-approved CONTRACT migration drops it afterwards. All
     // three arguments are passed: the function has no default to fall back on.
-    // The hosted function accepts SQL NULL for provenance when no AI draft was
-    // used. Generated types currently narrow that nullable UUID to `string`, so
-    // keep the runtime value truthful without changing the generated file.
-    const draftRunId = (data.draftRunId ?? null) as unknown as string;
     const { data: id, error } = await context.supabase.rpc("scp_iv_finalise_previewed_report", {
       _case_id: data.caseId,
       _expected_basis_hash: data.expectedBasisHash,
-      _draft_run_id: draftRunId,
+      // The database accepts SQL NULL here; the generated client type is
+      // temporarily narrower than the hosted function's nullable UUID.
+      _draft_run_id: (data.draftRunId ?? null) as string,
     });
     if (error) {
       // The message carries the rule that refused (SCP_IV_STALE_PREVIEW,
