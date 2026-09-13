@@ -92,7 +92,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: '      if (!definition) throw new Error("SP_GLOBAL_CERTIFICATION_ISSUER_UNKNOWN");',
     replace: "      if (!definition) governedIssuerName = null;",
     guard: GUARD,
-    expect: "a global definition with no issuer row is refused by name",
+    expect: "a global definition with no issuer row is REFUSED by name",
   },
 ];
 

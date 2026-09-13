@@ -243,9 +243,12 @@ console.log("\n5 -- SOURCE ASSERTIONS: the resolution happens on the server");
     /if \(issuerError\) throw new Error\(issuerError\.message\)/.test(save),
     "5.4 a failed catalogue read throws rather than falling back to the client's value",
   );
+  // The THROW, not merely the string: the name also appears in the comment
+  // above the read, and a guard that matched that would pass with the refusal
+  // deleted. ISSUER-NC-MISSING-DEFINITION-TOLERATED caught exactly that.
   ok(
-    /SP_GLOBAL_CERTIFICATION_ISSUER_UNKNOWN/.test(save),
-    "5.5 and a global definition with no issuer row is refused by name",
+    /if \(!definition\) throw new Error\("SP_GLOBAL_CERTIFICATION_ISSUER_UNKNOWN"\);/.test(save),
+    "5.5 and a global definition with no issuer row is REFUSED by name",
   );
 
   // The mapper must not be reachable with the client's issuer for a global
@@ -267,7 +270,10 @@ console.log("\n5 -- SOURCE ASSERTIONS: the resolution happens on the server");
     "5.9 and a governed definition can only ever yield the catalogue's name or null",
   );
   const mapperCode = mapper.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
-  ok(!/sp_certification_issuer_aliases|alias/i.test(mapperCode), "5.10 and it never reads an alias");
+  ok(
+    !/sp_certification_issuer_aliases|alias/i.test(mapperCode),
+    "5.10 and it never reads an alias",
+  );
 }
 
 console.log(
