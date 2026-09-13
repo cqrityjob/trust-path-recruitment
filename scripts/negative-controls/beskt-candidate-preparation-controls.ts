@@ -507,15 +507,15 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: "scripts/release-frontier-check.ts",
-    // The anchor is the list itself, not the empty list. #225 emptied it when
-    // it recorded this migration's hosted evidence; the Security Passport
-    // schema branch then put its own genuinely pending migration in it, and
-    // this control's anchor -- `= [];` -- stopped existing. The defect being
-    // planted is unchanged: the APPLIED bcp migration back on the list beside
-    // whatever is legitimately waiting there.
-    find: 'const expectedPending: string[] = ["20261111090000_sp_global_professional_certifications.sql"];',
+    // The anchor tracks the list's current shape. #225 emptied it when it
+    // recorded this migration's hosted evidence; the Security Passport schema
+    // branch put its own genuinely pending migration in it; the Phase 1A hosted
+    // evidence then took that one off again, so the list is empty once more.
+    // The defect being planted never changes: the APPLIED bcp migration back on
+    // the frontier list.
+    find: "const expectedPending: string[] = [];",
     replace:
-      'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n  "20261111090000_sp_global_professional_certifications.sql",\n];',
+      'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },

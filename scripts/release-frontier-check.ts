@@ -54,17 +54,29 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // already holds 20261109090000 -- two files sharing one version means the
 // second is silently treated as already applied.
 //
-// 20261111090000_sp_global_professional_certifications is PENDING: the Security
-// Passport international-certification SCHEMA, awaiting independent review and
-// the owner's hosted apply. It took 20261111 rather than 20261110 because
-// bcp_candidate_preparation reached main first and holds that version -- the
-// same one-version-one-file rule the paragraph above is about, met by this
-// branch as a real collision rather than a hypothetical.
+// 20261111090000_sp_global_professional_certifications is APPLIED. It reached
+// the owner project through the official Supabase GitHub integration after #224
+// merged to main as 218c3c436be70f4c32d49e9d7e2bf12b5f090b5e, and is recorded in
+// supabase_migrations under its canonical version and slug rather than a
+// generated uuid, directly above 20261110090000. It was then verified read-only
+// against production: all five function bodies are byte-identical to the merged
+// source by md5(prosrc), the fourteen reviewed definitions and five issuers are
+// seeded exactly, Sweden is still the only active market pack, no INTL_ holder
+// claim and no lifecycle row exists, and the lifecycle trust boundary holds --
+// authenticated has SELECT and no INSERT, UPDATE or DELETE, anon and PUBLIC have
+// nothing, the single policy is SELECT-only, and only authenticated may execute
+// sp_certification_lifecycle_declare, which is SECURITY DEFINER with a pinned
+// search_path. release-state.json and hosted-ledger.json carry that evidence.
 //
-// It has not been applied to the owner project by this branch, and it comes off
-// this list only when it has been and the evidence is recorded in
-// release-state.json.
-const expectedPending: string[] = ["20261111090000_sp_global_professional_certifications.sql"];
+// It took 20261111 rather than 20261110 because bcp_candidate_preparation
+// reached main first and holds that version -- the same one-version-one-file
+// rule the paragraph above is about, met as a real collision rather than a
+// hypothetical.
+//
+// Its name comes OFF this list in the same change that records the evidence, for
+// the reason stated above: a resolved name here hides the next genuinely stuck
+// migration behind an expectation. The list is empty again.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
