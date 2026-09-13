@@ -144,19 +144,40 @@ export const startBesktPreparation = createServerFn({ method: "POST" })
         methodVersionId: z.string().uuid(),
         exposureProfileId: z.string().uuid(),
         expectedContentHash: z.string().regex(/^[0-9a-f]{64}$/),
-        noticeVersion: z.string().min(1),
         dueAt: z.string().datetime().nullable().optional(),
       })
       .parse(d),
   )
   .handler(async ({ context, data }): Promise<{ readonly assignmentId: string }> => {
+    // ── THE NOTICE VERSION IS THE DATABASE'S TO STATE ──────────────────
+    //
+    // It used to arrive from the browser, where it was a string literal in a
+    // component. Two things were wrong with that. It is a CONTRACT value --
+    // bcp_notice_version() is the single governed source, and a copy of it in
+    // a .tsx file is a second source of truth that goes stale silently the
+    // day the notice is versioned. And it was caller-supplied input on a
+    // governed write, which is the shape of value a client should never get
+    // to choose.
+    //
+    // So the server asks the database what the current notice version is and
+    // passes THAT. The value never leaves the server, and the browser has no
+    // say in it. bcp_assign still pins the hash and the locale binding
+    // exactly as before; this only removes the client's vote on which notice
+    // version the assignment is created against.
+    const { data: noticeVersion, error: versionError } =
+      await context.supabase.rpc("bcp_notice_version");
+    if (versionError) throw new Error(versionError.message);
+    if (typeof noticeVersion !== "string" || noticeVersion.length === 0) {
+      throw new Error("BCP_NOTICE_VERSION_UNKNOWN: the governed notice version is unavailable.");
+    }
+
     const { data: row, error } = await context.supabase.rpc("bcp_assign", {
       _operation_id: data.operationId,
       _application_id: data.applicationId,
       _method_version_id: data.methodVersionId,
       _exposure_profile_id: data.exposureProfileId,
       _expected_content_hash: data.expectedContentHash,
-      _notice_version: data.noticeVersion,
+      _notice_version: noticeVersion,
       _due_at: data.dueAt ?? undefined,
     });
     if (error) throw new Error(error.message);

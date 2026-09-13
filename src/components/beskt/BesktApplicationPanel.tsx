@@ -40,7 +40,16 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -49,7 +58,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import { besktErrorKey } from "@/lib/beskt/errors";
 import {
+  cancelBesktPreparation,
   getBesktEmployerReadback,
   listAssignableBesktExposureProfiles,
   listAssignableBesktMethods,
@@ -111,9 +123,21 @@ export function BesktApplicationPanel({
   const listPreparations = useServerFn(listEmployerBesktPreparations);
   const readback = useServerFn(getBesktEmployerReadback);
   const start = useServerFn(startBesktPreparation);
+  const cancel = useServerFn(cancelBesktPreparation);
 
+  // ── 0.3 — THE METHOD IS CHOSEN, NOT ASSUMED ──────────────────────────
+  //
+  // This used to be `methods.data?.[0]`: whatever the database happened to
+  // return first, silently, with no way for the employer to see what was
+  // picked or to pick anything else. With one method admitted that is
+  // invisible; with two it is wrong, and wrong in the way that matters --
+  // the method determines the questions a candidate is asked.
+  const [methodVersionId, setMethodVersionId] = useState<string>("");
   const [profileId, setProfileId] = useState<string>("");
-  const [startError, setStartError] = useState<string | null>(null);
+  const [startError, setStartError] = useState<TranslationKey | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState<TranslationKey | null>(null);
 
   const preparations = useQuery({
     queryKey: ["beskt", "employer-preparations", employerId],
@@ -136,7 +160,7 @@ export function BesktApplicationPanel({
     enabled: !existing && !preparations.isPending,
   });
 
-  const method = methods.data?.[0] ?? null;
+  const method = (methods.data ?? []).find((m) => m.methodVersionId === methodVersionId) ?? null;
 
   const profiles = useQuery({
     queryKey: ["beskt", "exposure-profiles", employerId, method?.methodVersionId],
@@ -144,6 +168,16 @@ export function BesktApplicationPanel({
     retry: false,
     enabled: Boolean(method),
   });
+
+  // A profile belongs to ONE method version. Changing the method therefore
+  // invalidates the profile beneath it, and carrying the old selection over
+  // would let the employer submit a pairing the database refuses with
+  // BCP_PROFILE_NOT_IN_VERSION -- a refusal caused entirely by the UI.
+  const chooseMethod = (id: string) => {
+    setMethodVersionId(id);
+    setProfileId("");
+    setStartError(null);
+  };
 
   const detail = useQuery({
     queryKey: ["beskt", "readback", existing?.assignmentId],
@@ -155,6 +189,8 @@ export function BesktApplicationPanel({
   const startMutation = useMutation({
     mutationFn: async () => {
       if (!method) throw new Error("BCP_NOT_ASSIGNABLE");
+      // No noticeVersion: the server reads the governed value from
+      // bcp_notice_version() so the browser has no vote in it.
       return start({
         data: {
           operationId: crypto.randomUUID(),
@@ -162,7 +198,6 @@ export function BesktApplicationPanel({
           methodVersionId: method.methodVersionId,
           exposureProfileId: profileId,
           expectedContentHash: method.contentHash,
-          noticeVersion: "beskt-prep-notice-1",
         },
       });
     },
@@ -170,8 +205,48 @@ export function BesktApplicationPanel({
       setStartError(null);
       await queryClient.invalidateQueries({ queryKey: ["beskt", "employer-preparations"] });
     },
-    onError: (e: unknown) => setStartError(e instanceof Error ? e.message : String(e)),
+    onError: (e: unknown) => setStartError(besktErrorKey(e)),
   });
+
+  // ── 0.6 — CANCELLING A PREPARATION THAT SHOULD NOT HAVE BEEN SENT ────
+  //
+  // The RPC existed and nothing could reach it, so an employer who picked the
+  // wrong method had no way out: bcp_assign refuses a second live assignment
+  // on the same application with BCP_ASSIGNMENT_EXISTS, and the first one was
+  // unreachable. The correct preparation could not be created at all.
+  //
+  // Cancelling is a governed state transition, not a delete. The row stays,
+  // the reason is recorded on the append-only ledger, and the candidate's
+  // draft is not erased -- it becomes read-only under a cancelled assignment.
+  // That is why the reason is mandatory: it is the only explanation anyone
+  // reading the history afterwards will have.
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      if (!existing) throw new Error("BCP_ASSIGNMENT_NOT_FOUND");
+      return cancel({
+        data: {
+          operationId: crypto.randomUUID(),
+          assignmentId: existing.assignmentId,
+          reason: cancelReason.trim(),
+        },
+      });
+    },
+    onSuccess: async () => {
+      setCancelError(null);
+      setCancelOpen(false);
+      setCancelReason("");
+      await queryClient.invalidateQueries({ queryKey: ["beskt", "employer-preparations"] });
+    },
+    onError: (e: unknown) => setCancelError(besktErrorKey(e)),
+  });
+
+  // Only while the preparation is still live. A submitted preparation is the
+  // candidate's completed work and the database refuses to cancel it; showing
+  // a control that always fails would be worse than showing none.
+  const cancellable =
+    existing !== undefined &&
+    existing.lifecycleState !== "submitted" &&
+    existing.lifecycleState !== "cancelled";
 
   return (
     <section
@@ -318,13 +393,31 @@ export function BesktApplicationPanel({
                 </>
               )}
             </div>
+
+            {cancellable ? (
+              <div className="mt-6 border-t pt-5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-[44px]"
+                  data-testid="beskt-cancel-open"
+                  onClick={() => {
+                    setCancelError(null);
+                    setCancelOpen(true);
+                  }}
+                >
+                  {t("beskt.cancel.action")}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">{t("beskt.cancel.lede")}</p>
+              </div>
+            ) : null}
           </div>
-        ) : methods.isPending || profiles.isPending ? (
+        ) : methods.isPending ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
             {t("beskt.library.loading")}
           </p>
-        ) : !method || (profiles.data ?? []).length === 0 ? (
+        ) : (methods.data ?? []).length === 0 ? (
           <Alert data-testid="beskt-start-unavailable">
             <Info aria-hidden="true" className="h-4 w-4" />
             <AlertDescription>{t("beskt.start.noMethod")}</AlertDescription>
@@ -338,13 +431,41 @@ export function BesktApplicationPanel({
             }}
           >
             <div>
+              <Label htmlFor="beskt-method">{t("beskt.start.chooseMethod")}</Label>
+              <Select value={methodVersionId} onValueChange={chooseMethod}>
+                <SelectTrigger id="beskt-method" className="mt-1.5 min-h-[44px] w-full max-w-md">
+                  <SelectValue placeholder={t("beskt.start.chooseMethod")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(methods.data ?? []).map((m) => (
+                    <SelectItem key={m.methodVersionId} value={m.methodVersionId}>
+                      {((lang === "sv" ? m.nameSv : (m.nameEn ?? m.nameSv)) ?? m.packSlug) +
+                        ` · v${m.versionNumber}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {method ? (
+                <p className="mt-2 text-xs text-muted-foreground" data-testid="beskt-method-summary">
+                  {(lang === "sv" ? method.summarySv : (method.summaryEn ?? method.summarySv)) ??
+                    (lang === "sv" ? method.purposeSv : method.purposeSv) ??
+                    ""}
+                </p>
+              ) : null}
+            </div>
+
+            <div>
               <Label htmlFor="beskt-exposure-profile">{t("beskt.start.chooseProfile")}</Label>
-              <Select value={profileId} onValueChange={setProfileId}>
+              <Select value={profileId} onValueChange={setProfileId} disabled={!method}>
                 <SelectTrigger
                   id="beskt-exposure-profile"
                   className="mt-1.5 min-h-[44px] w-full max-w-md"
                 >
-                  <SelectValue placeholder={t("beskt.start.chooseProfile")} />
+                  <SelectValue
+                    placeholder={t(
+                      method ? "beskt.start.chooseProfile" : "beskt.start.chooseMethodFirst",
+                    )}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {(profiles.data ?? []).map((p) => (
@@ -354,20 +475,25 @@ export function BesktApplicationPanel({
                   ))}
                 </SelectContent>
               </Select>
+              {method && !profiles.isPending && (profiles.data ?? []).length === 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground" data-testid="beskt-no-profiles">
+                  {t("beskt.start.noProfile")}
+                </p>
+              ) : null}
             </div>
 
             {startError ? (
               <Alert variant="destructive" role="alert">
                 <AlertTriangle aria-hidden="true" className="h-4 w-4" />
                 <AlertTitle>{t("beskt.start.failed")}</AlertTitle>
-                <AlertDescription className="font-mono text-xs">{startError}</AlertDescription>
+                <AlertDescription data-testid="beskt-start-error">{t(startError)}</AlertDescription>
               </Alert>
             ) : null}
 
             <Button
               type="submit"
               className="min-h-[44px]"
-              disabled={!profileId || startMutation.isPending}
+              disabled={!methodVersionId || !profileId || startMutation.isPending}
               data-testid="beskt-start-submit"
             >
               {startMutation.isPending ? t("beskt.start.starting") : t("beskt.start.action")}
@@ -375,6 +501,57 @@ export function BesktApplicationPanel({
           </form>
         )}
       </div>
+
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent data-testid="beskt-cancel-dialog">
+          <DialogHeader>
+            <DialogTitle>{t("beskt.cancel.confirmTitle")}</DialogTitle>
+            <DialogDescription>{t("beskt.cancel.confirmBody")}</DialogDescription>
+          </DialogHeader>
+
+          <div>
+            <Label htmlFor="beskt-cancel-reason">{t("beskt.cancel.reasonLabel")}</Label>
+            <Textarea
+              id="beskt-cancel-reason"
+              className="mt-1.5 min-h-[88px]"
+              value={cancelReason}
+              maxLength={500}
+              onChange={(e) => setCancelReason(e.target.value)}
+              data-testid="beskt-cancel-reason"
+            />
+            <p className="mt-1.5 text-xs text-muted-foreground">{t("beskt.cancel.reasonHint")}</p>
+          </div>
+
+          {cancelError ? (
+            <Alert variant="destructive" role="alert">
+              <AlertTriangle aria-hidden="true" className="h-4 w-4" />
+              <AlertDescription data-testid="beskt-cancel-error">{t(cancelError)}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-[44px]"
+              onClick={() => setCancelOpen(false)}
+              data-testid="beskt-cancel-dismiss"
+            >
+              {t("beskt.cancel.keep")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="min-h-[44px]"
+              disabled={cancelReason.trim().length < 3 || cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate()}
+              data-testid="beskt-cancel-confirm"
+            >
+              {cancelMutation.isPending ? t("beskt.cancel.cancelling") : t("beskt.cancel.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

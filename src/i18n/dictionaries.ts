@@ -3511,6 +3511,29 @@ export const dictionaries = {
       "Ingen publicerad och godkänd BESKT-metod är tillgänglig för er ännu, så förberedelsen kan inte startas.",
     "beskt.start.failed": "Förberedelsen kunde inte startas.",
     "beskt.start.chooseProfile": "Rollexponering",
+    "beskt.start.chooseMethod": "Metod",
+    "beskt.start.chooseMethodFirst": "Välj metod först",
+    "beskt.start.noProfile":
+      "Den här metoden har ingen rollexponeringsprofil som är tillgänglig för er. Välj en annan metod.",
+
+    // ── Avbryta en felaktig tilldelning ──────────────────────────────────
+    //
+    // Att avbryta är ett styrt tillståndsbyte, inte en radering. Raden
+    // ligger kvar, anledningen skrivs till den append-only-liggare som inte
+    // kan ändras i efterhand, och kandidatens utkast raderas inte — det blir
+    // skrivskyddat under en avbruten tilldelning.
+    "beskt.cancel.action": "Avbryt förberedelsen",
+    "beskt.cancel.lede":
+      "Avbryt om förberedelsen startades med fel metod eller fel rollexponering. Inget raderas, och du kan därefter starta en ny med rätt val.",
+    "beskt.cancel.confirmTitle": "Avbryta den här förberedelsen?",
+    "beskt.cancel.confirmBody":
+      "Kandidaten kan inte längre svara, och det som redan sparats blir skrivskyddat. Ingenting raderas och historiken skrivs inte om. Du kan sedan starta en ny förberedelse för samma ansökan.",
+    "beskt.cancel.reasonLabel": "Anledning",
+    "beskt.cancel.reasonHint":
+      "Skriv så att någon som läser händelseloggen i efterhand förstår varför. Anledningen sparas och kan inte ändras.",
+    "beskt.cancel.keep": "Behåll förberedelsen",
+    "beskt.cancel.confirm": "Avbryt förberedelsen",
+    "beskt.cancel.cancelling": "Avbryter …",
 
     // ── The employer's readback of a submitted preparation ───────────────
     "beskt.readback.title": "Kandidatens inlämnade underlag",
@@ -3610,6 +3633,60 @@ export const dictionaries = {
       "Förberedelsen har ändrats i ett annat fönster. Ladda om sidan och försök igen.",
     "beskt.answer.errorSummary": "Kontrollera följande innan du går vidare",
     "beskt.answer.unanswered": "Inte besvarad ännu",
+    "beskt.answer.savedAndLeaving": "Sparat. Tar dig tillbaka …",
+
+    // ── Refusals, in words the reader can act on ─────────────────────────
+    //
+    // The database refuses with a code and an operator-facing sentence. The
+    // code chooses the sentence below; the original text never reaches the
+    // screen, because it names tables, columns and policies.
+    "beskt.error.generic":
+      "Något gick fel och åtgärden genomfördes inte. Försök igen. Om det upprepas, kontakta den som skickade förberedelsen.",
+    "beskt.error.staleRevision":
+      "Förberedelsen har ändrats i ett annat fönster eller på en annan enhet. Ladda om sidan så visas den senaste versionen, och försök sedan igen.",
+    "beskt.error.incomplete":
+      "Några frågor är varken besvarade, överhoppade eller markerade för muntlig hantering. Gå igenom listan ovan och ta ställning till var och en.",
+    "beskt.error.alreadySubmitted":
+      "Förberedelsen är redan inskickad och kan inte ändras. Kontakta arbetsgivaren om något behöver rättas.",
+    "beskt.error.noticeNotAcknowledged":
+      "Informationen behöver läsas och bekräftas innan frågorna kan besvaras.",
+    "beskt.error.noticeAlreadyAcknowledged":
+      "Informationen är redan bekräftad. Ladda om sidan så visas frågorna.",
+    "beskt.error.noticeMoved":
+      "Informationstexten har uppdaterats sedan sidan laddades. Ladda om sidan och läs den aktuella texten innan du bekräftar.",
+    "beskt.error.noticeLocale":
+      "Informationen finns inte på det valda språket. Byt språk och försök igen.",
+    "beskt.error.methodMoved":
+      "Metoden har uppdaterats sedan sidan laddades. Ladda om sidan så visas den aktuella versionen.",
+    "beskt.error.methodUnavailable":
+      "Metoden är inte tillgänglig att använda. Den kan ha tagits ur bruk eller ännu inte godkänts.",
+    "beskt.error.profileNotInMethod":
+      "Den valda exponeringsprofilen hör inte till den valda metoden. Välj metod igen och därefter profil.",
+    "beskt.error.notAssignable":
+      "Ingen godkänd BESKT-metod är tillgänglig för er organisation ännu.",
+    "beskt.error.assignmentExists":
+      "Den här ansökan har redan en pågående förberedelse. Avbryt den först om den behöver ersättas.",
+    "beskt.error.applicationNotFound": "Ansökan hittades inte.",
+    "beskt.error.applicationWithdrawn":
+      "Ansökan är återkallad, så ingen förberedelse kan startas för den.",
+    "beskt.error.employerNotActive":
+      "Organisationen är inte aktiv, så förberedelsen kan inte startas.",
+    "beskt.error.assignmentCancelled": "Förberedelsen är avbruten och kan inte längre ändras.",
+    "beskt.error.cannotCancelNow":
+      "Förberedelsen kan inte avbrytas i det här läget. Ladda om sidan så visas aktuell status.",
+    "beskt.error.notAuthorised": "Du har inte behörighet till den här förberedelsen.",
+    "beskt.error.notAuthenticated": "Du behöver vara inloggad. Logga in och försök igen.",
+    "beskt.error.assignmentNotFound": "Förberedelsen hittades inte.",
+    "beskt.error.notAvailableYet": "Förberedelsen är inte öppen ännu.",
+    "beskt.error.itemNotVisible":
+      "En av frågorna visas inte längre. Ladda om sidan så visas de aktuella frågorna.",
+    "beskt.error.optionNotInItem":
+      "Ett av de valda svarsalternativen hör inte till frågan. Ladda om sidan och välj igen.",
+    "beskt.error.oralNotAllowed": "Den här frågan kan inte tas muntligt.",
+    "beskt.error.answerRejected":
+      "Svaret kunde inte tas emot i den form det skickades. Ladda om sidan och försök igen.",
+    "beskt.error.operationConflict":
+      "Åtgärden krockade med en annan pågående åtgärd. Ladda om sidan och försök igen.",
 
     // ── Review and submit ────────────────────────────────────────────────
     "beskt.review.title": "Granska dina svar",
@@ -9640,6 +9717,29 @@ export const dictionaries = {
       "No published and approved BESKT method is available to you yet, so a preparation cannot be started.",
     "beskt.start.failed": "The preparation could not be started.",
     "beskt.start.chooseProfile": "Role exposure",
+    "beskt.start.chooseMethod": "Method",
+    "beskt.start.chooseMethodFirst": "Choose a method first",
+    "beskt.start.noProfile":
+      "This method has no role-exposure profile available to you. Choose a different method.",
+
+    // ── Cancelling a preparation that should not have been sent ──────────
+    //
+    // Cancelling is a governed state transition, not a delete. The row stays,
+    // the reason is written to the append-only ledger that cannot be edited
+    // afterwards, and the candidate's draft is not erased — it becomes
+    // read-only under a cancelled assignment.
+    "beskt.cancel.action": "Cancel this preparation",
+    "beskt.cancel.lede":
+      "Cancel if the preparation was started with the wrong method or the wrong role exposure. Nothing is deleted, and you can then start a new one with the right choices.",
+    "beskt.cancel.confirmTitle": "Cancel this preparation?",
+    "beskt.cancel.confirmBody":
+      "The candidate can no longer answer, and anything already saved becomes read-only. Nothing is deleted and no history is rewritten. You can then start a new preparation for the same application.",
+    "beskt.cancel.reasonLabel": "Reason",
+    "beskt.cancel.reasonHint":
+      "Write it so that someone reading the event log later understands why. The reason is stored and cannot be changed.",
+    "beskt.cancel.keep": "Keep the preparation",
+    "beskt.cancel.confirm": "Cancel the preparation",
+    "beskt.cancel.cancelling": "Cancelling …",
 
     "beskt.readback.title": "The candidate's submitted basis",
     "beskt.readback.status": "Status",
@@ -9733,6 +9833,61 @@ export const dictionaries = {
       "This preparation changed in another window. Reload the page and try again.",
     "beskt.answer.errorSummary": "Check the following before continuing",
     "beskt.answer.unanswered": "Not answered yet",
+    "beskt.answer.savedAndLeaving": "Saved. Taking you back …",
+
+    // ── Refusals, in words the reader can act on ─────────────────────────
+    //
+    // The database refuses with a code and an operator-facing sentence. The
+    // code chooses the sentence below; the original text never reaches the
+    // screen, because it names tables, columns and policies.
+    "beskt.error.generic":
+      "Something went wrong and the action did not go through. Try again. If it keeps happening, contact whoever sent you this preparation.",
+    "beskt.error.staleRevision":
+      "This preparation changed in another window or on another device. Reload the page to see the latest version, then try again.",
+    "beskt.error.incomplete":
+      "Some questions have not been answered, skipped, or marked for discussion. Go through the list above and decide on each one.",
+    "beskt.error.alreadySubmitted":
+      "This preparation has already been submitted and cannot be changed. Contact the employer if something needs correcting.",
+    "beskt.error.noticeNotAcknowledged":
+      "The information needs to be read and confirmed before the questions can be answered.",
+    "beskt.error.noticeAlreadyAcknowledged":
+      "The information has already been confirmed. Reload the page to see the questions.",
+    "beskt.error.noticeMoved":
+      "The information text was updated since this page loaded. Reload the page and read the current text before confirming.",
+    "beskt.error.noticeLocale":
+      "The information is not available in the selected language. Switch language and try again.",
+    "beskt.error.methodMoved":
+      "The method was updated since this page loaded. Reload the page to see the current version.",
+    "beskt.error.methodUnavailable":
+      "This method is not available for use. It may have been withdrawn, or not yet approved.",
+    "beskt.error.profileNotInMethod":
+      "The selected exposure profile does not belong to the selected method. Choose the method again, then the profile.",
+    "beskt.error.notAssignable":
+      "No approved BESKT method is available to your organisation yet.",
+    "beskt.error.assignmentExists":
+      "This application already has a preparation in progress. Cancel it first if it needs replacing.",
+    "beskt.error.applicationNotFound": "The application could not be found.",
+    "beskt.error.applicationWithdrawn":
+      "The application has been withdrawn, so no preparation can be started for it.",
+    "beskt.error.employerNotActive":
+      "The organisation is not active, so the preparation cannot be started.",
+    "beskt.error.assignmentCancelled":
+      "This preparation has been cancelled and can no longer be changed.",
+    "beskt.error.cannotCancelNow":
+      "This preparation cannot be cancelled in its current state. Reload the page to see its status.",
+    "beskt.error.notAuthorised": "You do not have access to this preparation.",
+    "beskt.error.notAuthenticated": "You need to be signed in. Sign in and try again.",
+    "beskt.error.assignmentNotFound": "The preparation could not be found.",
+    "beskt.error.notAvailableYet": "This preparation is not open yet.",
+    "beskt.error.itemNotVisible":
+      "One of the questions is no longer shown. Reload the page to see the current questions.",
+    "beskt.error.optionNotInItem":
+      "One of the selected options does not belong to the question. Reload the page and choose again.",
+    "beskt.error.oralNotAllowed": "This question cannot be taken orally.",
+    "beskt.error.answerRejected":
+      "The answer could not be accepted in the form it was sent. Reload the page and try again.",
+    "beskt.error.operationConflict":
+      "This action collided with another one in progress. Reload the page and try again.",
 
     "beskt.review.title": "Review your answers",
     "beskt.review.lede":

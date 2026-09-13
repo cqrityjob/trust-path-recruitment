@@ -433,18 +433,44 @@ check(
 
 /* ---- 3. Review and the read-only confirmation ------------------------- */
 
-const reviewSv = render(<ReviewList items={ITEMS} drafts={drafts} readOnly={false} />, "sv");
-const reviewEn = render(<ReviewList items={ITEMS} drafts={drafts} readOnly={false} />, "en");
+const reviewSv = render(
+  <ReviewList items={ITEMS} drafts={drafts} readOnly={false} onEdit={() => {}} />,
+  "sv",
+);
+const reviewEn = render(
+  <ReviewList items={ITEMS} drafts={drafts} readOnly={false} onEdit={() => {}} />,
+  "en",
+);
 const readOnlySv = render(<ReviewList items={ITEMS} drafts={drafts} readOnly />, "sv");
 
 check(
   "the review lists every response the candidate gave",
   ITEMS.every((i) => text(reviewSv).includes((i.wordingSv ?? "").replace(/\s+/g, " "))),
 );
+// ── CORRECTION IS A CONTROL, NOT A LINK TO NOTHING ─────────────────────
+//
+// This used to assert `href="#beskt-item-..."`, and the assertion passed while
+// the feature did not work at all: during the review phase the questions are
+// not rendered, so every one of those fragments pointed at an element that did
+// not exist. A candidate told they could correct an answer could not.
+//
+// So the assertion is now about the thing that actually has to be true: each
+// answer carries a real BUTTON, one per item, which asks the parent to go back
+// to that question. And no `href="#beskt-item-` survives anywhere, because
+// that is the exact shape of the defect.
 check(
-  "the review offers a way back to CORRECT each one before submitting",
-  (reviewSv.match(/href="#beskt-item-/g) ?? []).length === ITEMS.length &&
+  "the review offers a real correction CONTROL for each answer, one per item",
+  ITEMS.every((i) => reviewSv.includes(`data-testid="beskt-review-edit-${i.itemKey}"`)) &&
+    (reviewSv.match(/<button/g) ?? []).length === ITEMS.length &&
     text(reviewSv).includes(sv["beskt.review.edit"] ?? "\u0000"),
+);
+check(
+  "and it is not a fragment link to a question that is not on screen",
+  !reviewSv.includes('href="#beskt-item-') && !reviewEn.includes('href="#beskt-item-'),
+);
+check(
+  "each correction control names the question it belongs to, for a screen reader",
+  ITEMS.every((i) => reviewSv.includes(`<span class="sr-only">${(i.wordingSv ?? "").trim()} — `)),
 );
 check("and in English", text(reviewEn).includes(en["beskt.review.edit"] ?? "\u0000"));
 check(

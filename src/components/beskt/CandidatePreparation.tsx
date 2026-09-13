@@ -30,7 +30,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -52,6 +52,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
+import { besktErrorKey } from "@/lib/beskt/errors";
 import { draftFrom, isAddressed, type Draft } from "./preparation-draft";
 import {
   acknowledgeBesktNotice,
@@ -120,6 +121,7 @@ function toEntry(item: BesktPreparationItem, d: Draft): BesktAnswerEntry | null 
 export function CandidatePreparation({ assignmentId }: { readonly assignmentId: string }) {
   const { t, lang } = useT();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const getPreparation = useServerFn(getMyBesktPreparation);
   const markOpened = useServerFn(markBesktPreparationOpened);
@@ -135,11 +137,16 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [phase, setPhase] = useState<"answer" | "review">("answer");
-  const [actionError, setActionError] = useState<string | null>(null);
+  // A translation KEY, never the database's own sentence. See
+  // src/lib/beskt/errors.ts for why the original text never reaches the DOM.
+  const [actionError, setActionError] = useState<TranslationKey | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const errorSummaryRef = useRef<HTMLDivElement | null>(null);
   const openedRef = useRef(false);
+  // Set by "Ändra" on the review screen; consumed once the answer phase has
+  // actually rendered, because you cannot focus an element that is not there.
+  const [focusItemKey, setFocusItemKey] = useState<string | null>(null);
 
   // Seed the working values from what is actually stored, whenever the
   // server view changes. Resume is therefore exact: nothing is invented and
@@ -163,6 +170,22 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
          candidate from reading their own preparation. */
     });
   }, [prep.data, assignmentId, markOpened]);
+
+  // ── "ÄNDRA" LANDS ON THE QUESTION, NOT NEAR IT ───────────────────────
+  //
+  // Focus is moved only after the answer phase has painted and the element
+  // exists. A URL fragment is set at the same moment and for the same reason:
+  // written earlier it would point at nothing, which is exactly the defect
+  // this replaces.
+  useEffect(() => {
+    if (phase !== "answer" || focusItemKey === null) return;
+    const el = document.getElementById(`beskt-item-${focusItemKey}`);
+    setFocusItemKey(null);
+    if (!el) return;
+    el.focus();
+    el.scrollIntoView({ block: "center", behavior: "auto" });
+    window.history.replaceState(null, "", `#beskt-item-${focusItemKey}`);
+  }, [phase, focusItemKey]);
 
   const data = prep.data;
   const acknowledged = Boolean(data?.notice.acknowledgedAt);
@@ -202,9 +225,21 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
       setActionError(null);
       await queryClient.invalidateQueries({ queryKey: ["beskt", "preparation", assignmentId] });
     },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : String(e)),
+    onError: (e: unknown) => setActionError(besktErrorKey(e)),
   });
 
+  // ── SAVE AND EXIT, WHICH MEANS BOTH ──────────────────────────────────
+  //
+  // The control says "Spara och avsluta" / "Save and exit". It used to save
+  // and then leave the candidate exactly where they were, which is a promise
+  // the button does not keep: someone who reads it and walks away believes
+  // they have left, and someone who reads it and stays is confused.
+  //
+  // The ORDER is the point. The navigation happens only after the server has
+  // confirmed the write, so a failed save never looks like a completed one.
+  // On failure the candidate stays on the page, with their answers still in
+  // the form and a sentence they can act on -- leaving on a failure would
+  // discard work while claiming to have saved it.
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!data?.response) throw new Error("no draft");
@@ -225,8 +260,10 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
       setActionError(null);
       setSavedAt(new Date().toISOString());
       await queryClient.invalidateQueries({ queryKey: ["beskt", "preparation", assignmentId] });
+      // Confirmed written; now the "exit" half.
+      await navigate({ to: "/my-career/applications" });
     },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : String(e)),
+    onError: (e: unknown) => setActionError(besktErrorKey(e)),
   });
 
   const submitMutation = useMutation({
@@ -255,7 +292,7 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
       setActionError(null);
       await queryClient.invalidateQueries({ queryKey: ["beskt", "preparation", assignmentId] });
     },
-    onError: (e: unknown) => setActionError(e instanceof Error ? e.message : String(e)),
+    onError: (e: unknown) => setActionError(besktErrorKey(e)),
   });
 
   if (prep.isPending) {
@@ -394,9 +431,7 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
             <Alert variant="destructive" role="alert" className="mt-6">
               <AlertTriangle aria-hidden="true" className="h-4 w-4" />
               <AlertTitle>{t("beskt.answer.saveFailed")}</AlertTitle>
-              <AlertDescription className="font-mono text-xs">
-                {/BCP_STALE_REVISION/.test(actionError) ? t("beskt.answer.stale") : actionError}
-              </AlertDescription>
+              <AlertDescription data-testid="beskt-answer-error">{t(actionError)}</AlertDescription>
             </Alert>
           ) : null}
 
@@ -409,7 +444,11 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
               onClick={() => saveMutation.mutate()}
               data-testid="beskt-save"
             >
-              {saveMutation.isPending ? t("beskt.answer.saving") : t("beskt.answer.save")}
+              {saveMutation.isPending
+                ? t("beskt.answer.saving")
+                : saveMutation.isSuccess
+                  ? t("beskt.answer.savedAndLeaving")
+                  : t("beskt.answer.save")}
             </Button>
             <Button
               type="button"
@@ -442,19 +481,23 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("beskt.review.lede")}</p>
 
-          <ReviewList items={data.items} drafts={drafts} readOnly={false} />
+          <ReviewList
+            items={data.items}
+            drafts={drafts}
+            readOnly={false}
+            onEdit={(itemKey) => {
+              setActionError(null);
+              setShowErrors(false);
+              setPhase("answer");
+              setFocusItemKey(itemKey);
+            }}
+          />
 
           {actionError ? (
             <Alert variant="destructive" role="alert" className="mt-6">
               <AlertTriangle aria-hidden="true" className="h-4 w-4" />
               <AlertTitle>{t("beskt.review.submitFailed")}</AlertTitle>
-              <AlertDescription className="font-mono text-xs">
-                {/BCP_INCOMPLETE/.test(actionError)
-                  ? t("beskt.review.incomplete")
-                  : /BCP_STALE_REVISION/.test(actionError)
-                    ? t("beskt.answer.stale")
-                    : actionError}
-              </AlertDescription>
+              <AlertDescription data-testid="beskt-review-error">{t(actionError)}</AlertDescription>
             </Alert>
           ) : null}
 
@@ -498,7 +541,8 @@ export function NoticePanel({
    *  renders what the acknowledgement will be bound to. */
   readonly notice: BesktNoticeForLocale;
   readonly pending: boolean;
-  readonly error: string | null;
+  /** A translation key, never the database's own sentence. */
+  readonly error: TranslationKey | null;
   readonly onAcknowledge: () => void;
 }) {
   const { t } = useT();
@@ -559,7 +603,7 @@ export function NoticePanel({
       {error ? (
         <Alert variant="destructive" role="alert" className="mt-5">
           <AlertTriangle aria-hidden="true" className="h-4 w-4" />
-          <AlertDescription className="font-mono text-xs">{error}</AlertDescription>
+          <AlertDescription data-testid="beskt-notice-error">{t(error)}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -616,9 +660,19 @@ export function QuestionCard({
   const neutral = draft.state !== "answered";
 
   return (
-    <li id={groupId} className="rounded-xl border p-4 sm:p-5" data-testid={groupId}>
+    // tabIndex={-1} makes the question a programmatic focus target without
+    // putting it in the tab order. "Ändra" on the review screen focuses it, so
+    // a keyboard or screen-reader user lands ON the question they chose rather
+    // than at the top of a re-rendered form.
+    <li
+      id={groupId}
+      tabIndex={-1}
+      className="rounded-xl border p-4 sm:p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      data-testid={groupId}
+      aria-labelledby={`${groupId}-legend`}
+    >
       <fieldset>
-        <legend className="text-sm font-medium leading-snug">
+        <legend id={`${groupId}-legend`} className="text-sm font-medium leading-snug">
           {item.sequencePosition}. {wording}
         </legend>
         {purpose ? (
@@ -709,6 +763,11 @@ function AnswerControl({
 }) {
   const { t, lang } = useT();
   const id = `beskt-input-${item.itemKey}`;
+  // The question's own <legend>, which is what names a choice group. It lives
+  // on the QuestionCard, so it is keyed by the item id and not by `id` above --
+  // an aria-labelledby pointing at an element that does not exist is the same
+  // class of defect as a link to a fragment that is not rendered.
+  const legendId = `beskt-item-${item.itemKey}-legend`;
 
   if (item.answerType === "boolean") {
     return (
@@ -753,10 +812,47 @@ function AnswerControl({
     );
   }
 
-  if (item.answerType === "single_choice" || item.answerType === "multi_choice") {
-    const multi = item.answerType === "multi_choice";
+  // ── ONE ANSWER IS A RADIO GROUP; SEVERAL ARE CHECKBOXES ────────────────
+  //
+  // Both used to be checkboxes, with single-choice enforced by clearing the
+  // other keys in the handler. Visually it worked; for anyone not looking at
+  // it, it did not. A checkbox announces "checkbox, not checked" and offers
+  // itself as independently toggleable, so a screen-reader user was told they
+  // could pick several when only one would be kept, arrow keys did not move
+  // between the options, and the group had no single accessible name.
+  //
+  // A real radio group fixes all four: correct role, roving tab stop, arrow-key
+  // navigation, and -- the reason it matters for THIS product -- a required
+  // single-choice answer cannot be un-answered by clicking it again, which a
+  // checkbox allows and which would silently turn an answer back into a blank.
+  if (item.answerType === "single_choice") {
+    const selected = draft.options[0] ?? "";
     return (
-      <div className="space-y-3">
+      <RadioGroup
+        className="space-y-3"
+        value={selected}
+        aria-labelledby={legendId}
+        onValueChange={(v) => onChange({ ...draft, options: v ? [v] : [] })}
+      >
+        {item.options.map((o) => {
+          const label = (lang === "sv" ? o.labelSv : (o.labelEn ?? o.labelSv)) ?? o.optionKey;
+          const optionId = `${id}-${o.optionKey}`;
+          return (
+            <div key={o.optionKey} className="flex items-center gap-3">
+              <RadioGroupItem id={optionId} value={o.optionKey} className="h-5 w-5" />
+              <Label htmlFor={optionId} className="min-h-[44px] flex-1 content-center text-sm">
+                {label}
+              </Label>
+            </div>
+          );
+        })}
+      </RadioGroup>
+    );
+  }
+
+  if (item.answerType === "multi_choice") {
+    return (
+      <div className="space-y-3" role="group" aria-labelledby={legendId}>
         {item.options.map((o) => {
           const label = (lang === "sv" ? o.labelSv : (o.labelEn ?? o.labelSv)) ?? o.optionKey;
           const checked = draft.options.includes(o.optionKey);
@@ -767,20 +863,15 @@ function AnswerControl({
                 id={optionId}
                 checked={checked}
                 className="h-5 w-5"
-                aria-checked={checked}
-                onCheckedChange={(v) => {
-                  const on = v === true;
-                  if (multi) {
-                    onChange({
-                      ...draft,
-                      options: on
+                onCheckedChange={(v) =>
+                  onChange({
+                    ...draft,
+                    options:
+                      v === true
                         ? [...draft.options, o.optionKey]
                         : draft.options.filter((k) => k !== o.optionKey),
-                    });
-                  } else {
-                    onChange({ ...draft, options: on ? [o.optionKey] : [] });
-                  }
-                }}
+                  })
+                }
               />
               <Label htmlFor={optionId} className="min-h-[44px] flex-1 content-center text-sm">
                 {label}
@@ -833,10 +924,24 @@ export function ReviewList({
   items,
   drafts,
   readOnly,
+  onEdit,
 }: {
   readonly items: readonly BesktPreparationItem[];
   readonly drafts: Record<string, Draft>;
   readonly readOnly: boolean;
+  /**
+   * Go back and change this answer.
+   *
+   * This used to be an `<a href="#beskt-item-...">`, which was a link to
+   * nothing: during the review phase the questions are not rendered, so the
+   * fragment had no target and the control did nothing at all. A candidate who
+   * was told they could correct an answer could not.
+   *
+   * It is a BUTTON now because it performs an action rather than navigating,
+   * and the parent owns the phase, so the parent is given the item key and
+   * decides what to show and what to focus.
+   */
+  readonly onEdit?: (itemKey: string) => void;
 }) {
   const { t, lang } = useT();
   return (
@@ -883,13 +988,16 @@ export function ReviewList({
                 <span className="text-muted-foreground">{t("beskt.answer.unanswered")}</span>
               )}
             </p>
-            {readOnly ? null : (
-              <a
+            {readOnly || !onEdit ? null : (
+              <button
+                type="button"
                 className="mt-2 inline-flex min-h-[44px] items-center text-sm underline underline-offset-2"
-                href={`#beskt-item-${item.itemKey}`}
+                data-testid={`beskt-review-edit-${item.itemKey}`}
+                onClick={() => onEdit(item.itemKey)}
               >
+                <span className="sr-only">{wording} — </span>
                 {t("beskt.review.edit")}
-              </a>
+              </button>
             )}
           </li>
         );
