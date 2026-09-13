@@ -17799,7 +17799,11 @@ export type Database = {
         }[]
       }
       scp_iv_finalise_previewed_report: {
-        Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }
+        Args: {
+          _case_id: string
+          _draft_run_id: string
+          _expected_basis_hash: string
+        }
         Returns: string
       }
       scp_iv_finalise_report: {
