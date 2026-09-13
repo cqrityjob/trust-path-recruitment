@@ -3734,6 +3734,351 @@ export const dictionaries = {
     "beskt.error.operationConflict":
       "Åtgärden krockade med en annan pågående åtgärd. Ladda om sidan och försök igen.",
 
+    // ── BESKT inside the interview case: refusals ────────────────────────
+    "beskt.error.linkNotFound": "Kopplingen mellan förberedelsen och intervjufallet hittades inte.",
+    "beskt.error.linkNotLive":
+      "Förberedelsen är inte längre kopplad till det här intervjufallet. Ladda om sidan så visas aktuellt läge.",
+    "beskt.error.conductNotPermitted":
+      "Du har inte behörighet att arbeta i det här intervjufallet.",
+    "beskt.error.conductSessionNotFound":
+      "Samtalsstödet hittades inte. Ladda om sidan så visas aktuellt läge.",
+    "beskt.error.conductSessionConcluded": "Samtalsstödet är avslutat och kan inte längre ändras.",
+    "beskt.error.conductAlreadyJoined":
+      "Du har redan en ståndpunkt i det här samtalet. Ladda om sidan så visas den.",
+    "beskt.error.conductRoleUnknown":
+      "Den valda rollen finns inte. Välj en roll i listan och försök igen.",
+    "beskt.error.conductNotParticipant":
+      "Du deltar inte i det här samtalet, så du kan inte göra det här.",
+    "beskt.error.conductNotOwnPosition": "Du kan bara skriva i din egen ståndpunkt.",
+    "beskt.error.conductPositionNotFound":
+      "Ståndpunkten hittades inte. Ladda om sidan så visas aktuellt läge.",
+    "beskt.error.conductPositionLocked":
+      "Din ståndpunkt är låst. Öppna den igen med ett skäl om något behöver ändras.",
+    "beskt.error.conductAlreadyLocked":
+      "Ståndpunkten är redan låst. Ladda om sidan så visas den som låst.",
+    "beskt.error.conductNotLocked": "Ståndpunkten är inte låst, så det här går inte att göra ännu.",
+    "beskt.error.conductNothingToLock":
+      "Det finns ingen dokumentation att låsa. Dokumentera minst ett tema först.",
+    "beskt.error.conductReopenReasonRequired": "Ange ett skäl till att ståndpunkten öppnas igen.",
+    "beskt.error.conductEntryNotFound":
+      "Dokumentationen hittades inte. Ladda om sidan så visas aktuellt läge.",
+    "beskt.error.conductEntryRejected":
+      "Dokumentationen kunde inte tas emot i den form den skickades. Ladda om sidan och försök igen.",
+    "beskt.error.conductItemNotInVersion":
+      "Temat hör inte till den metodversion samtalet är bundet till. Ladda om sidan.",
+    "beskt.error.conductAlreadyCorrected":
+      "Den här versionen är redan rättad. Ladda om sidan så visas den senaste versionen.",
+    "beskt.error.conductCorrectionReasonRequired":
+      "En rättelse behöver ett skäl, så att historiken går att läsa i efterhand.",
+    "beskt.error.conductVerificationStateUnknown":
+      "Det valda verifieringsläget finns inte. Välj ett läge i listan.",
+    "beskt.error.conductVerificationSourceRequired":
+      "Det här verifieringsläget behöver en källa. Ange varifrån uppgiften kommer.",
+    "beskt.error.conductNotVisibleYet": "Andras ståndpunkter visas först när din egen är låst.",
+    "beskt.error.conductRevealTooEarly":
+      "Panelen kan visas först när alla deltagare har låst sina ståndpunkter.",
+    "beskt.error.conductPanelNeedsTwo":
+      "En panel behöver minst två deltagare med egna ståndpunkter.",
+    "beskt.error.conductPanelAlreadyRevealed":
+      "Panelens ståndpunkter är redan framtagna. Ladda om sidan.",
+    "beskt.error.conductPanelNotRevealed":
+      "Panelens ståndpunkter behöver tas fram innan hanteringen kan registreras.",
+    "beskt.error.conductResolutionKindUnknown":
+      "Det valda utfallet finns inte. Välj samsyn eller kvarstående skillnad.",
+    "beskt.error.conductAgreementRequired": "Samsyn behöver en gemensam formulering.",
+    "beskt.error.conductDivergenceRequired":
+      "En kvarstående skillnad behöver den avvikande ståndpunkten skriven i klartext.",
+    "beskt.error.conductRationaleRequired": "Ange en motivering till panelens hantering.",
+
+    // ── The BESKT module inside an interview case ────────────────────────
+    "beskt.module.title": "BESKT-metodstöd",
+    "beskt.module.lede":
+      "Strukturerat metodstöd för samtalet, byggt på kandidatens egen inlämnade förberedelse.",
+    "beskt.module.limits":
+      "BESKT ger ingen poäng, ingen rangordning och ingen rekommendation. Beslutet är arbetsgivarens.",
+    "beskt.module.notLinked":
+      "Ingen BESKT-förberedelse är kopplad till det här intervjufallet, så metodstödet finns inte här.",
+    "beskt.module.notSubmitted":
+      "Den kopplade förberedelsen är inte inlämnad ännu. Metodstödet öppnas när kandidaten har lämnat in.",
+    "beskt.module.bindingInvalid":
+      "Det metodinnehåll förberedelsen besvarades mot stämmer inte längre med det som är bundet till kopplingen. Metodstödet öppnas inte förrän det är utrett.",
+    "beskt.module.open": "Öppna BESKT-metodstöd",
+    "beskt.module.continue": "Fortsätt i BESKT-metodstöd",
+    "beskt.module.linkedAt": "Kopplad",
+    "beskt.module.themeCount": "Teman att ta upp",
+    "beskt.module.answerCount": "Inlämnade svar",
+    "beskt.module.sessionOpen": "Samtalsstödet är öppnat",
+    "beskt.module.sessionNone": "Samtalsstödet är inte öppnat ännu",
+
+    // ── The interviewer's workspace ──────────────────────────────────────
+    "beskt.conduct.title": "BESKT-metodstöd",
+    "beskt.conduct.lede":
+      "Det här är intervjuarens arbetsyta för samtalet. Den bygger helt på kandidatens inlämnade förberedelse och på metodens eget innehåll.",
+    "beskt.conduct.back": "Till intervjufallet",
+    "beskt.conduct.limits.heading": "Vad BESKT är och inte är",
+    "beskt.conduct.limits.is":
+      "BESKT är strukturerat metodstöd för en mänskligt ansvarig rekryterings- och intervjuprocess.",
+    "beskt.conduct.limits.isNot":
+      "Det är inget automatiskt test, ingen poängsättning, ingen rangordning, ingen lämplighetsdom, ingen sanningsbedömning och ingen automatisk rekommendation. Beslutet fattas av en människa som svarar för det.",
+    "beskt.conduct.nav.aria": "Delar av BESKT-metodstödet",
+    "beskt.conduct.nav.interview": "Samtalet",
+    "beskt.conduct.nav.position": "Min ståndpunkt",
+    "beskt.conduct.nav.panel": "Panel",
+
+    "beskt.conduct.method.heading": "Metod och version",
+    "beskt.conduct.method.name": "Metod",
+    "beskt.conduct.method.version": "Version",
+    "beskt.conduct.method.mode": "Läge",
+    "beskt.conduct.method.mode.recruitment_support": "Rekryteringsstöd",
+    "beskt.conduct.method.mode.security_vetting_support": "Stöd vid säkerhetsprövning",
+    "beskt.conduct.method.validation": "Valideringsstatus",
+    "beskt.conduct.method.releaseScope": "Släppomfång",
+    "beskt.conduct.method.releaseScope.synthetic_internal_only":
+      "Syntetiskt innehåll, endast internt",
+    "beskt.conduct.method.binding": "Bindning och innehållssummor",
+    "beskt.conduct.method.bindingNote":
+      "Samtalet är bundet till exakt den metodversion och den inlämning kandidaten besvarade. Summorna nedan gör det efterkontrollerbart.",
+    "beskt.conduct.method.contentHash": "Metodinnehållets summa (SHA-256)",
+    "beskt.conduct.method.answersHash": "Svarens summa (SHA-256)",
+    "beskt.conduct.method.methodVersionId": "Metodversionens identitet",
+    "beskt.conduct.method.responseVersion": "Inlämningens version",
+    "beskt.conduct.method.linkedAt": "Kopplad till fallet",
+
+    "beskt.conduct.start.heading": "Öppna samtalsstödet",
+    "beskt.conduct.start.body":
+      "Samtalsstödet öppnas en gång för det här fallet. Alla som deltar arbetar sedan i samma bundna underlag, var och en i sin egen ståndpunkt.",
+    "beskt.conduct.start.action": "Öppna samtalsstödet",
+    "beskt.conduct.start.working": "Öppnar …",
+    "beskt.conduct.join.heading": "Delta i samtalet",
+    "beskt.conduct.join.body":
+      "Samtalsstödet är redan öppnat. Ta din egen ståndpunkt i det för att kunna dokumentera.",
+    "beskt.conduct.join.roleLabel": "Din roll i samtalet",
+    "beskt.conduct.join.action": "Ta min ståndpunkt",
+    "beskt.conduct.join.working": "Ansluter …",
+    "beskt.conduct.role.assessor": "Bedömare",
+    "beskt.conduct.role.responsible_owner": "Ansvarig ägare",
+    "beskt.conduct.role.assessorHelp": "Du dokumenterar en egen, oberoende ståndpunkt.",
+    "beskt.conduct.role.responsible_ownerHelp":
+      "Du dokumenterar den ansvariga ägarens ståndpunkt i samma struktur. Den väger inte tyngre i något räknesätt — det finns inget räknesätt.",
+
+    "beskt.conduct.snapshot.heading": "Kandidatens inlämnade förberedelse",
+    "beskt.conduct.snapshot.lede":
+      "Exakt det kandidaten lämnade in, i den ordning metoden ställer frågorna.",
+    "beskt.conduct.snapshot.readOnly":
+      "Inlämnade svar visas som de lämnades. De kan inte ändras härifrån.",
+    "beskt.conduct.snapshot.state.answered": "Besvarad",
+    "beskt.conduct.snapshot.state.omitted": "Överhoppad",
+    "beskt.conduct.snapshot.state.discuss_orally": "Tas muntligt",
+    "beskt.conduct.snapshot.stateMeaning":
+      "Överhoppad och Tas muntligt är kandidatens egna val i förberedelsen. De betyder ingenting utöver det, och de är inte en signal om något.",
+    "beskt.conduct.snapshot.purpose": "Frågans syfte",
+    "beskt.conduct.snapshot.itemKey": "Frågenyckel",
+    "beskt.conduct.snapshot.noValue": "Inget svarsinnehåll registrerat",
+    "beskt.conduct.snapshot.empty": "Förberedelsen innehåller inga svar att visa.",
+    "beskt.conduct.snapshot.yes": "Ja",
+    "beskt.conduct.snapshot.no": "Nej",
+
+    "beskt.conduct.themes.heading": "Teman att ta upp i samtalet",
+    "beskt.conduct.themes.lede":
+      "Temana är härledda av systemet direkt ur kandidatens egna val i förberedelsen. Inget tema är hittat på här, och inget tema är tillagt av en modell.",
+    "beskt.conduct.themes.empty":
+      "Kandidaten besvarade allting, så det finns inga härledda teman att ta upp.",
+    "beskt.conduct.themes.reason": "Varför temat finns",
+    "beskt.conduct.themes.reason.omitted": "Kandidaten hoppade över frågan",
+    "beskt.conduct.themes.reason.discuss_orally": "Kandidaten valde att ta frågan muntligt",
+    "beskt.conduct.themes.basis": "Metodens fråga",
+    "beskt.conduct.themes.purpose": "Frågans syfte enligt metoden",
+    "beskt.conduct.themes.origin": "Härlett ur metodversionen",
+    "beskt.conduct.themes.itemKey": "Frågenyckel",
+    "beskt.conduct.themes.methodVersion": "Metodversion",
+    "beskt.conduct.themes.promptsUnavailable":
+      "Metodens intervjuarformuleringar är ännu inte tillgängliga på den här ytan. Tills de är det visas metodens egen frågetext och syfte, och ingenting formuleras här.",
+    "beskt.conduct.themes.documented": "Dokumenterat",
+    "beskt.conduct.themes.notDocumented": "Inte dokumenterat ännu",
+
+    "beskt.conduct.entry.heading": "Dokumentation",
+    "beskt.conduct.entry.separation":
+      "Observation och tolkning hålls isär i egna fält. De slås aldrig samman till en anteckning.",
+    "beskt.conduct.entry.observableFact": "Observerbart faktum",
+    "beskt.conduct.entry.observableFactHelp":
+      "Vad som faktiskt sades eller hände, utan värdering. Skriv det en kollega skulle känna igen från samma samtal.",
+    "beskt.conduct.entry.candidateExplanation": "Kandidatens egen förklaring",
+    "beskt.conduct.entry.candidateExplanationHelp":
+      "Kandidatens egna ord om det observerade, inte din sammanfattning av vad det betyder.",
+    "beskt.conduct.entry.interviewerInterpretation": "Din tolkning som intervjuare",
+    "beskt.conduct.entry.interviewerInterpretationHelp":
+      "Vad du gör av det. Det här är en tolkning och läses som en tolkning, aldrig som ett faktum.",
+    "beskt.conduct.entry.alternativeExplanation": "Alternativ förklaring",
+    "beskt.conduct.entry.alternativeExplanationHelp":
+      "Vad annat skulle kunna förklara samma observation lika väl?",
+    "beskt.conduct.entry.protectiveFactor": "Skyddande faktor",
+    "beskt.conduct.entry.protectiveFactorHelp":
+      "Något i sammanhanget som minskar betydelsen av det observerade, om det finns.",
+    "beskt.conduct.entry.verificationNeed": "Verifieringsbehov",
+    "beskt.conduct.entry.verificationNeedHelp":
+      "Vad behöver kontrolleras vidare, och varför just det?",
+    "beskt.conduct.entry.verificationState": "Verifieringsläge",
+    "beskt.conduct.entry.verificationSource": "Källa",
+    "beskt.conduct.entry.verificationSourceHelp":
+      "Varifrån uppgiften kommer, när den har kontrollerats.",
+    "beskt.conduct.entry.sensitivityClass": "Känslighetsklass",
+    "beskt.conduct.entry.sensitivityClassHelp":
+      "Hur uppgiften ska hanteras. Klassen styr hantering, inte bedömning.",
+    "beskt.conduct.entry.save": "Spara dokumentation",
+    "beskt.conduct.entry.saving": "Sparar …",
+    "beskt.conduct.entry.saved": "Sparat",
+    "beskt.conduct.entry.saveFailed": "Det gick inte att spara.",
+    "beskt.conduct.entry.needsContent": "Fyll i minst ett fält innan du sparar.",
+    "beskt.conduct.entry.cancel": "Avbryt",
+    "beskt.conduct.entry.new": "Dokumentera temat",
+    "beskt.conduct.entry.edit": "Rätta dokumentationen",
+    "beskt.conduct.entry.version": "Version",
+    "beskt.conduct.entry.recordedAt": "Sparad",
+    "beskt.conduct.entry.readOnly": "Ståndpunkten är låst, så dokumentationen visas skrivskyddad.",
+
+    "beskt.conduct.verification.not_required": "Inget verifieringsbehov",
+    "beskt.conduct.verification.requested": "Verifiering begärd",
+    "beskt.conduct.verification.in_progress": "Verifiering pågår",
+    "beskt.conduct.verification.verified": "Verifierad",
+    "beskt.conduct.verification.not_verified": "Inte verifierad",
+    "beskt.conduct.verification.inconclusive": "Underlaget räckte inte",
+    "beskt.conduct.verification.openNote":
+      "Ett öppet verifieringsbehov är arbete som återstår. Det är ingen slutsats om kandidaten.",
+    "beskt.conduct.verification.notVerifiedMeaning":
+      "”Inte verifierad” betyder att kontrollen inte gick att genomföra. Det betyder inte att uppgiften är osann.",
+    "beskt.conduct.verify.heading": "Verifiering",
+    "beskt.conduct.verify.newState": "Nytt läge",
+    "beskt.conduct.verify.source": "Källa",
+    "beskt.conduct.verify.note": "Anteckning",
+    "beskt.conduct.verify.save": "Registrera verifiering",
+    "beskt.conduct.verify.saving": "Registrerar …",
+    "beskt.conduct.verify.sourceRequired": "Ange källan för det här läget.",
+
+    "beskt.conduct.sensitivity.ordinary": "Vanlig uppgift",
+    "beskt.conduct.sensitivity.sensitive": "Känslig uppgift",
+    "beskt.conduct.sensitivity.special_category": "Särskild kategori av personuppgifter",
+
+    "beskt.conduct.correction.heading": "Rättelse",
+    "beskt.conduct.correction.reason": "Skäl till rättelsen",
+    "beskt.conduct.correction.reasonHelp":
+      "Skriv varför uppgiften ändras, så att historiken går att läsa i efterhand.",
+    "beskt.conduct.correction.reasonRequired": "Ange ett skäl på minst tre tecken.",
+    "beskt.conduct.correction.save": "Spara rättelse",
+    "beskt.conduct.correction.note":
+      "En rättelse skapar en ny version. Ingen tidigare version skrivs över eller döljs.",
+
+    "beskt.conduct.history.show": "Visa historik",
+    "beskt.conduct.history.hide": "Dölj historik",
+    "beskt.conduct.history.heading": "Historik",
+    "beskt.conduct.history.loading": "Hämtar historiken …",
+    "beskt.conduct.history.current": "Aktuell version",
+    "beskt.conduct.history.historical": "Tidigare version",
+    "beskt.conduct.history.by": "Av",
+    "beskt.conduct.history.at": "Tid",
+    "beskt.conduct.history.reason": "Skäl",
+    "beskt.conduct.history.empty": "Ingen historik ännu.",
+    "beskt.conduct.history.verifications": "Verifieringshistorik",
+    "beskt.conduct.history.from": "Från",
+    "beskt.conduct.history.to": "Till",
+    "beskt.conduct.history.source": "Källa",
+    "beskt.conduct.history.note": "Anteckning",
+
+    "beskt.conduct.position.heading": "Min ståndpunkt",
+    "beskt.conduct.position.lede":
+      "Din egen dokumentation för det här samtalet. Den låses av dig och bara av dig.",
+    "beskt.conduct.position.role": "Roll",
+    "beskt.conduct.position.state": "Läge",
+    "beskt.conduct.position.state.open": "Öppen",
+    "beskt.conduct.position.state.locked": "Låst",
+    "beskt.conduct.position.revision": "Revision",
+    "beskt.conduct.position.lockedAt": "Låst",
+    "beskt.conduct.position.lockedBy": "Låst av",
+    "beskt.conduct.position.reopenCount": "Antal återöppningar",
+    "beskt.conduct.position.entryCount": "Dokumenterade teman",
+    "beskt.conduct.position.review": "Genomgång före låsning",
+    "beskt.conduct.position.blockers": "Det här återstår innan du kan låsa",
+    "beskt.conduct.position.blocker.noEntries": "Ingen dokumentation är sparad ännu.",
+    "beskt.conduct.position.blocker.undocumentedThemes":
+      "Alla härledda teman är inte dokumenterade ännu.",
+    "beskt.conduct.position.ready": "Allt som krävs för att låsa är på plats.",
+    "beskt.conduct.position.lock": "Lås min ståndpunkt",
+    "beskt.conduct.position.locking": "Låser …",
+    "beskt.conduct.position.lockDialog.title": "Lås din ståndpunkt?",
+    "beskt.conduct.position.lockDialog.body":
+      "När du låser blir din dokumentation skrivskyddad. Först då kan du se andras ståndpunkter, och först då kan panelen ta fram dem. Du kan öppna din egen igen med ett skäl.",
+    "beskt.conduct.position.lockDialog.confirm": "Ja, lås min ståndpunkt",
+    "beskt.conduct.position.lockDialog.cancel": "Avbryt",
+    "beskt.conduct.position.readOnly": "Din ståndpunkt är låst och visas skrivskyddad.",
+    "beskt.conduct.position.reopen": "Öppna min ståndpunkt igen",
+    "beskt.conduct.position.reopening": "Öppnar …",
+    "beskt.conduct.position.reopenReason": "Skäl till att öppna igen",
+    "beskt.conduct.position.reopenReasonHelp":
+      "Skälet sparas som en spårbar händelse med ditt namn och tidpunkten.",
+    "beskt.conduct.position.reopenConfirm": "Öppna igen",
+    "beskt.conduct.position.reopenNote":
+      "Att öppna igen kräver ett skäl och lämnar en spårbar händelse. Tidigare versioner ligger kvar.",
+
+    "beskt.conduct.others.heading": "Andra ståndpunkter",
+    "beskt.conduct.others.hidden.title": "Andras ståndpunkter visas inte ännu",
+    "beskt.conduct.others.hidden.body":
+      "Du ser andras dokumentation först när din egen ståndpunkt är låst. Fram till dess hämtas den inte heller till den här sidan.",
+    "beskt.conduct.others.empty": "Ingen annan har en ståndpunkt i det här samtalet ännu.",
+    "beskt.conduct.others.noAggregation":
+      "Ståndpunkter visas var för sig. De vägs inte samman, jämkas inte och summeras inte.",
+    "beskt.conduct.others.differs": "Skiljer sig från din dokumentation",
+    "beskt.conduct.others.matches": "Samma tema dokumenterat av båda",
+    "beskt.conduct.others.onlyOther": "Dokumenterat endast av den andra ståndpunkten",
+    "beskt.conduct.others.onlyMine": "Dokumenterat endast av dig",
+    "beskt.conduct.others.anonymous": "Annan deltagare",
+    "beskt.conduct.others.you": "Du",
+
+    "beskt.conduct.panel.heading": "Panel",
+    "beskt.conduct.panel.lede":
+      "Panelen jämför låsta ståndpunkter och registrerar hur samtalet hanterade dem. Den räknar ingenting samman.",
+    "beskt.conduct.panel.open": "Öppna panelen",
+    "beskt.conduct.panel.opening": "Öppnar …",
+    "beskt.conduct.panel.none": "Ingen panel är öppnad för det här samtalet ännu.",
+    "beskt.conduct.panel.state": "Panelens läge",
+    "beskt.conduct.panel.state.open": "Öppen",
+    "beskt.conduct.panel.state.revealed": "Ståndpunkter framtagna",
+    "beskt.conduct.panel.state.concluded": "Avslutad",
+    "beskt.conduct.panel.reveal": "Ta fram låsta ståndpunkter",
+    "beskt.conduct.panel.revealing": "Tar fram …",
+    "beskt.conduct.panel.revealNote":
+      "Ståndpunkterna kan tas fram först när alla deltagare har låst sina egna.",
+    "beskt.conduct.panel.common": "Gemensamma punkter",
+    "beskt.conduct.panel.divergent": "Skillnader",
+    "beskt.conduct.panel.noCommon": "Inga teman är dokumenterade av alla deltagare.",
+    "beskt.conduct.panel.noDivergent": "Inga skillnader att visa ännu.",
+    "beskt.conduct.panel.preservesPositions":
+      "Panelen ändrar aldrig bedömarnas egna ståndpunkter. De ligger kvar precis som de låstes.",
+    "beskt.conduct.panel.noTotal":
+      "Panelen ger ingen poäng, ingen rangordning och ingen rekommendation.",
+    "beskt.conduct.panel.resolution.heading": "Registrera panelens hantering",
+    "beskt.conduct.panel.resolution.item": "Tema",
+    "beskt.conduct.panel.resolution.kind": "Hur panelen hanterade temat",
+    "beskt.conduct.panel.resolution.kind.agreed": "Samsyn",
+    "beskt.conduct.panel.resolution.kind.disagreed": "Kvarstående skillnad",
+    "beskt.conduct.panel.resolution.agreed": "Gemensam formulering",
+    "beskt.conduct.panel.resolution.agreedHelp":
+      "Vad panelen enades om, skrivet så att det går att läsa utan att ha varit med.",
+    "beskt.conduct.panel.resolution.divergent": "Avvikande ståndpunkt",
+    "beskt.conduct.panel.resolution.divergentHelp":
+      "Den avvikande ståndpunkten bevaras ordagrant. Den tas inte bort för att panelen är oense.",
+    "beskt.conduct.panel.resolution.rationale": "Motivering",
+    "beskt.conduct.panel.resolution.rationaleHelp": "Varför panelen hanterade temat så här.",
+    "beskt.conduct.panel.resolution.save": "Registrera hantering",
+    "beskt.conduct.panel.resolution.saving": "Registrerar …",
+    "beskt.conduct.panel.resolution.recorded": "Registrerade hanteringar",
+    "beskt.conduct.panel.resolution.empty": "Ingen hantering är registrerad ännu.",
+
+    "beskt.conduct.save.idle": "Inte sparat ännu",
+    "beskt.conduct.save.saving": "Sparar …",
+    "beskt.conduct.save.saved": "Sparat och bekräftat av servern",
+    "beskt.conduct.save.failed": "Sparandet gick inte igenom",
+    "beskt.conduct.optional": "Frivilligt",
+    "beskt.conduct.loading": "Hämtar arbetsytan …",
+
     // ── Review and submit ────────────────────────────────────────────────
     "beskt.review.title": "Granska dina svar",
     "beskt.review.lede":
@@ -9952,6 +10297,352 @@ export const dictionaries = {
       "The answer could not be accepted in the form it was sent. Reload the page and try again.",
     "beskt.error.operationConflict":
       "This action collided with another one in progress. Reload the page and try again.",
+
+    // ── BESKT inside the interview case: refusals ────────────────────────
+    "beskt.error.linkNotFound":
+      "The link between the preparation and the interview case could not be found.",
+    "beskt.error.linkNotLive":
+      "The preparation is no longer linked to this interview case. Reload the page to see the current state.",
+    "beskt.error.conductNotPermitted": "You do not have access to work on this interview case.",
+    "beskt.error.conductSessionNotFound":
+      "The conversation support could not be found. Reload the page to see the current state.",
+    "beskt.error.conductSessionConcluded":
+      "This conversation support is concluded and can no longer be changed.",
+    "beskt.error.conductAlreadyJoined":
+      "You already hold a position in this conversation. Reload the page to see it.",
+    "beskt.error.conductRoleUnknown":
+      "That role does not exist. Choose a role from the list and try again.",
+    "beskt.error.conductNotParticipant":
+      "You are not taking part in this conversation, so you cannot do this.",
+    "beskt.error.conductNotOwnPosition": "You can only write in your own position.",
+    "beskt.error.conductPositionNotFound":
+      "The position could not be found. Reload the page to see the current state.",
+    "beskt.error.conductPositionLocked":
+      "Your position is locked. Reopen it with a reason if something needs changing.",
+    "beskt.error.conductAlreadyLocked":
+      "The position is already locked. Reload the page to see it as locked.",
+    "beskt.error.conductNotLocked": "The position is not locked, so this cannot be done yet.",
+    "beskt.error.conductNothingToLock":
+      "There is no documentation to lock. Document at least one theme first.",
+    "beskt.error.conductReopenReasonRequired": "Give a reason for reopening the position.",
+    "beskt.error.conductEntryNotFound":
+      "The documentation could not be found. Reload the page to see the current state.",
+    "beskt.error.conductEntryRejected":
+      "The documentation could not be accepted in the form it was sent. Reload the page and try again.",
+    "beskt.error.conductItemNotInVersion":
+      "That theme does not belong to the method version this conversation is bound to. Reload the page.",
+    "beskt.error.conductAlreadyCorrected":
+      "This version has already been corrected. Reload the page to see the latest version.",
+    "beskt.error.conductCorrectionReasonRequired":
+      "A correction needs a reason, so the history can be read afterwards.",
+    "beskt.error.conductVerificationStateUnknown":
+      "That verification state does not exist. Choose a state from the list.",
+    "beskt.error.conductVerificationSourceRequired":
+      "This verification state needs a source. Say where the information came from.",
+    "beskt.error.conductNotVisibleYet":
+      "Other people's positions appear only once your own is locked.",
+    "beskt.error.conductRevealTooEarly":
+      "The panel can be revealed only once every participant has locked their position.",
+    "beskt.error.conductPanelNeedsTwo":
+      "A panel needs at least two participants with positions of their own.",
+    "beskt.error.conductPanelAlreadyRevealed":
+      "The panel's positions have already been revealed. Reload the page.",
+    "beskt.error.conductPanelNotRevealed":
+      "The panel's positions need revealing before the outcome can be recorded.",
+    "beskt.error.conductResolutionKindUnknown":
+      "That outcome does not exist. Choose agreement or a remaining difference.",
+    "beskt.error.conductAgreementRequired": "An agreement needs a shared statement.",
+    "beskt.error.conductDivergenceRequired":
+      "A remaining difference needs the divergent position written out.",
+    "beskt.error.conductRationaleRequired": "Give a rationale for how the panel handled this.",
+
+    // ── The BESKT module inside an interview case ────────────────────────
+    "beskt.module.title": "BESKT method support",
+    "beskt.module.lede":
+      "Structured method support for the conversation, built on the candidate's own submitted preparation.",
+    "beskt.module.limits":
+      "BESKT produces no score, no ranking and no recommendation. The decision is the employer's.",
+    "beskt.module.notLinked":
+      "No BESKT preparation is linked to this interview case, so the method support does not exist here.",
+    "beskt.module.notSubmitted":
+      "The linked preparation has not been submitted yet. The method support opens once the candidate has submitted.",
+    "beskt.module.bindingInvalid":
+      "The method content the preparation was answered against no longer matches what is bound to the link. The method support stays closed until that is resolved.",
+    "beskt.module.open": "Open BESKT method support",
+    "beskt.module.continue": "Continue in BESKT method support",
+    "beskt.module.linkedAt": "Linked",
+    "beskt.module.themeCount": "Themes to cover",
+    "beskt.module.answerCount": "Submitted answers",
+    "beskt.module.sessionOpen": "The conversation support is open",
+    "beskt.module.sessionNone": "The conversation support has not been opened yet",
+
+    // ── The interviewer's workspace ──────────────────────────────────────
+    "beskt.conduct.title": "BESKT method support",
+    "beskt.conduct.lede":
+      "This is the interviewer's working surface for the conversation. It rests entirely on the candidate's submitted preparation and on the method's own content.",
+    "beskt.conduct.back": "Back to the interview case",
+    "beskt.conduct.limits.heading": "What BESKT is and is not",
+    "beskt.conduct.limits.is":
+      "BESKT is structured method support for a humanly accountable recruitment and interview process.",
+    "beskt.conduct.limits.isNot":
+      "It is not an automatic test, not a score, not a ranking, not a suitability verdict, not a truthfulness judgement and not an automatic recommendation. The decision is made by a person who answers for it.",
+    "beskt.conduct.nav.aria": "Parts of the BESKT method support",
+    "beskt.conduct.nav.interview": "The conversation",
+    "beskt.conduct.nav.position": "My position",
+    "beskt.conduct.nav.panel": "Panel",
+
+    "beskt.conduct.method.heading": "Method and version",
+    "beskt.conduct.method.name": "Method",
+    "beskt.conduct.method.version": "Version",
+    "beskt.conduct.method.mode": "Mode",
+    "beskt.conduct.method.mode.recruitment_support": "Recruitment support",
+    "beskt.conduct.method.mode.security_vetting_support": "Security vetting support",
+    "beskt.conduct.method.validation": "Validation status",
+    "beskt.conduct.method.releaseScope": "Release scope",
+    "beskt.conduct.method.releaseScope.synthetic_internal_only": "Synthetic content, internal only",
+    "beskt.conduct.method.binding": "Binding and content digests",
+    "beskt.conduct.method.bindingNote":
+      "The conversation is bound to exactly the method version and the submission the candidate answered. The digests below make that checkable afterwards.",
+    "beskt.conduct.method.contentHash": "Method content digest (SHA-256)",
+    "beskt.conduct.method.answersHash": "Answer digest (SHA-256)",
+    "beskt.conduct.method.methodVersionId": "Method version identity",
+    "beskt.conduct.method.responseVersion": "Submission version",
+    "beskt.conduct.method.linkedAt": "Linked to the case",
+
+    "beskt.conduct.start.heading": "Open the conversation support",
+    "beskt.conduct.start.body":
+      "The conversation support is opened once for this case. Everyone taking part then works from the same bound material, each in their own position.",
+    "beskt.conduct.start.action": "Open the conversation support",
+    "beskt.conduct.start.working": "Opening …",
+    "beskt.conduct.join.heading": "Take part in the conversation",
+    "beskt.conduct.join.body":
+      "The conversation support is already open. Take your own position in it so you can document.",
+    "beskt.conduct.join.roleLabel": "Your role in the conversation",
+    "beskt.conduct.join.action": "Take my position",
+    "beskt.conduct.join.working": "Joining …",
+    "beskt.conduct.role.assessor": "Assessor",
+    "beskt.conduct.role.responsible_owner": "Responsible owner",
+    "beskt.conduct.role.assessorHelp": "You document your own independent position.",
+    "beskt.conduct.role.responsible_ownerHelp":
+      "You document the responsible owner's position in the same structure. It carries no extra weight in any calculation — there is no calculation.",
+
+    "beskt.conduct.snapshot.heading": "The candidate's submitted preparation",
+    "beskt.conduct.snapshot.lede":
+      "Exactly what the candidate submitted, in the order the method asks the questions.",
+    "beskt.conduct.snapshot.readOnly":
+      "Submitted answers are shown as they were given. They cannot be changed from here.",
+    "beskt.conduct.snapshot.state.answered": "Answered",
+    "beskt.conduct.snapshot.state.omitted": "Skipped",
+    "beskt.conduct.snapshot.state.discuss_orally": "To discuss orally",
+    "beskt.conduct.snapshot.stateMeaning":
+      "Skipped and To discuss orally are the candidate's own choices in the preparation. They mean nothing beyond that, and they are not a signal about anything.",
+    "beskt.conduct.snapshot.purpose": "Purpose of the question",
+    "beskt.conduct.snapshot.itemKey": "Item key",
+    "beskt.conduct.snapshot.noValue": "No answer content recorded",
+    "beskt.conduct.snapshot.empty": "The preparation contains no answers to show.",
+    "beskt.conduct.snapshot.yes": "Yes",
+    "beskt.conduct.snapshot.no": "No",
+
+    "beskt.conduct.themes.heading": "Themes to cover in the conversation",
+    "beskt.conduct.themes.lede":
+      "The themes are derived by the system straight from the candidate's own choices in the preparation. No theme is invented here, and no theme is added by a model.",
+    "beskt.conduct.themes.empty":
+      "The candidate answered everything, so there are no derived themes to cover.",
+    "beskt.conduct.themes.reason": "Why the theme exists",
+    "beskt.conduct.themes.reason.omitted": "The candidate skipped the question",
+    "beskt.conduct.themes.reason.discuss_orally": "The candidate chose to take the question orally",
+    "beskt.conduct.themes.basis": "The method's question",
+    "beskt.conduct.themes.purpose": "Purpose of the question in the method",
+    "beskt.conduct.themes.origin": "Derived from the method version",
+    "beskt.conduct.themes.itemKey": "Item key",
+    "beskt.conduct.themes.methodVersion": "Method version",
+    "beskt.conduct.themes.promptsUnavailable":
+      "The method's interviewer wordings are not yet available on this surface. Until they are, the method's own question text and purpose are shown, and nothing is worded here.",
+    "beskt.conduct.themes.documented": "Documented",
+    "beskt.conduct.themes.notDocumented": "Not documented yet",
+
+    "beskt.conduct.entry.heading": "Documentation",
+    "beskt.conduct.entry.separation":
+      "Observation and interpretation are kept apart in separate fields. They are never merged into one note.",
+    "beskt.conduct.entry.observableFact": "Observable fact",
+    "beskt.conduct.entry.observableFactHelp":
+      "What was actually said or happened, without evaluation. Write what a colleague would recognise from the same conversation.",
+    "beskt.conduct.entry.candidateExplanation": "The candidate's own explanation",
+    "beskt.conduct.entry.candidateExplanationHelp":
+      "The candidate's own words about what was observed, not your summary of what it means.",
+    "beskt.conduct.entry.interviewerInterpretation": "Your interpretation as interviewer",
+    "beskt.conduct.entry.interviewerInterpretationHelp":
+      "What you make of it. This is an interpretation and is read as one, never as a fact.",
+    "beskt.conduct.entry.alternativeExplanation": "Alternative explanation",
+    "beskt.conduct.entry.alternativeExplanationHelp":
+      "What else could explain the same observation just as well?",
+    "beskt.conduct.entry.protectiveFactor": "Protective factor",
+    "beskt.conduct.entry.protectiveFactorHelp":
+      "Something in the context that reduces the weight of what was observed, if there is any.",
+    "beskt.conduct.entry.verificationNeed": "Verification need",
+    "beskt.conduct.entry.verificationNeedHelp":
+      "What needs checking further, and why that in particular?",
+    "beskt.conduct.entry.verificationState": "Verification state",
+    "beskt.conduct.entry.verificationSource": "Source",
+    "beskt.conduct.entry.verificationSourceHelp":
+      "Where the information came from, once it has been checked.",
+    "beskt.conduct.entry.sensitivityClass": "Sensitivity class",
+    "beskt.conduct.entry.sensitivityClassHelp":
+      "How the information must be handled. The class governs handling, not assessment.",
+    "beskt.conduct.entry.save": "Save documentation",
+    "beskt.conduct.entry.saving": "Saving …",
+    "beskt.conduct.entry.saved": "Saved",
+    "beskt.conduct.entry.saveFailed": "Could not save.",
+    "beskt.conduct.entry.needsContent": "Fill in at least one field before saving.",
+    "beskt.conduct.entry.cancel": "Cancel",
+    "beskt.conduct.entry.new": "Document this theme",
+    "beskt.conduct.entry.edit": "Correct the documentation",
+    "beskt.conduct.entry.version": "Version",
+    "beskt.conduct.entry.recordedAt": "Saved",
+    "beskt.conduct.entry.readOnly":
+      "The position is locked, so the documentation is shown read-only.",
+
+    "beskt.conduct.verification.not_required": "No verification needed",
+    "beskt.conduct.verification.requested": "Verification requested",
+    "beskt.conduct.verification.in_progress": "Verification in progress",
+    "beskt.conduct.verification.verified": "Verified",
+    "beskt.conduct.verification.not_verified": "Not verified",
+    "beskt.conduct.verification.inconclusive": "The material was not enough",
+    "beskt.conduct.verification.openNote":
+      "An open verification need is work that remains. It is not a conclusion about the candidate.",
+    "beskt.conduct.verification.notVerifiedMeaning":
+      "“Not verified” means the check could not be carried out. It does not mean the information is untrue.",
+    "beskt.conduct.verify.heading": "Verification",
+    "beskt.conduct.verify.newState": "New state",
+    "beskt.conduct.verify.source": "Source",
+    "beskt.conduct.verify.note": "Note",
+    "beskt.conduct.verify.save": "Record verification",
+    "beskt.conduct.verify.saving": "Recording …",
+    "beskt.conduct.verify.sourceRequired": "Give the source for this state.",
+
+    "beskt.conduct.sensitivity.ordinary": "Ordinary information",
+    "beskt.conduct.sensitivity.sensitive": "Sensitive information",
+    "beskt.conduct.sensitivity.special_category": "Special category of personal data",
+
+    "beskt.conduct.correction.heading": "Correction",
+    "beskt.conduct.correction.reason": "Reason for the correction",
+    "beskt.conduct.correction.reasonHelp":
+      "Write why the record is changing, so the history can be read afterwards.",
+    "beskt.conduct.correction.reasonRequired": "Give a reason of at least three characters.",
+    "beskt.conduct.correction.save": "Save correction",
+    "beskt.conduct.correction.note":
+      "A correction creates a new version. No earlier version is overwritten or hidden.",
+
+    "beskt.conduct.history.show": "Show history",
+    "beskt.conduct.history.hide": "Hide history",
+    "beskt.conduct.history.heading": "History",
+    "beskt.conduct.history.loading": "Fetching the history …",
+    "beskt.conduct.history.current": "Current version",
+    "beskt.conduct.history.historical": "Earlier version",
+    "beskt.conduct.history.by": "By",
+    "beskt.conduct.history.at": "Time",
+    "beskt.conduct.history.reason": "Reason",
+    "beskt.conduct.history.empty": "No history yet.",
+    "beskt.conduct.history.verifications": "Verification history",
+    "beskt.conduct.history.from": "From",
+    "beskt.conduct.history.to": "To",
+    "beskt.conduct.history.source": "Source",
+    "beskt.conduct.history.note": "Note",
+
+    "beskt.conduct.position.heading": "My position",
+    "beskt.conduct.position.lede":
+      "Your own documentation for this conversation. It is locked by you and only by you.",
+    "beskt.conduct.position.role": "Role",
+    "beskt.conduct.position.state": "State",
+    "beskt.conduct.position.state.open": "Open",
+    "beskt.conduct.position.state.locked": "Locked",
+    "beskt.conduct.position.revision": "Revision",
+    "beskt.conduct.position.lockedAt": "Locked",
+    "beskt.conduct.position.lockedBy": "Locked by",
+    "beskt.conduct.position.reopenCount": "Times reopened",
+    "beskt.conduct.position.entryCount": "Themes documented",
+    "beskt.conduct.position.review": "Review before locking",
+    "beskt.conduct.position.blockers": "This is what remains before you can lock",
+    "beskt.conduct.position.blocker.noEntries": "No documentation has been saved yet.",
+    "beskt.conduct.position.blocker.undocumentedThemes":
+      "Not every derived theme has been documented yet.",
+    "beskt.conduct.position.ready": "Everything needed to lock is in place.",
+    "beskt.conduct.position.lock": "Lock my position",
+    "beskt.conduct.position.locking": "Locking …",
+    "beskt.conduct.position.lockDialog.title": "Lock your position?",
+    "beskt.conduct.position.lockDialog.body":
+      "Once you lock, your documentation becomes read-only. Only then can you see other people's positions, and only then can the panel reveal them. You can reopen your own with a reason.",
+    "beskt.conduct.position.lockDialog.confirm": "Yes, lock my position",
+    "beskt.conduct.position.lockDialog.cancel": "Cancel",
+    "beskt.conduct.position.readOnly": "Your position is locked and is shown read-only.",
+    "beskt.conduct.position.reopen": "Reopen my position",
+    "beskt.conduct.position.reopening": "Reopening …",
+    "beskt.conduct.position.reopenReason": "Reason for reopening",
+    "beskt.conduct.position.reopenReasonHelp":
+      "The reason is stored as a traceable event with your name and the time.",
+    "beskt.conduct.position.reopenConfirm": "Reopen",
+    "beskt.conduct.position.reopenNote":
+      "Reopening requires a reason and leaves a traceable event. Earlier versions stay as they were.",
+
+    "beskt.conduct.others.heading": "Other positions",
+    "beskt.conduct.others.hidden.title": "Other positions are not shown yet",
+    "beskt.conduct.others.hidden.body":
+      "You see other people's documentation only once your own position is locked. Until then it is not fetched to this page either.",
+    "beskt.conduct.others.empty": "Nobody else holds a position in this conversation yet.",
+    "beskt.conduct.others.noAggregation":
+      "Positions are shown one by one. They are not weighed together, not reconciled and not totalled.",
+    "beskt.conduct.others.differs": "Differs from your documentation",
+    "beskt.conduct.others.matches": "The same theme documented by both",
+    "beskt.conduct.others.onlyOther": "Documented only by the other position",
+    "beskt.conduct.others.onlyMine": "Documented only by you",
+    "beskt.conduct.others.anonymous": "Another participant",
+    "beskt.conduct.others.you": "You",
+
+    "beskt.conduct.panel.heading": "Panel",
+    "beskt.conduct.panel.lede":
+      "The panel compares locked positions and records how the conversation handled them. It totals nothing.",
+    "beskt.conduct.panel.open": "Open the panel",
+    "beskt.conduct.panel.opening": "Opening …",
+    "beskt.conduct.panel.none": "No panel has been opened for this conversation yet.",
+    "beskt.conduct.panel.state": "Panel state",
+    "beskt.conduct.panel.state.open": "Open",
+    "beskt.conduct.panel.state.revealed": "Positions revealed",
+    "beskt.conduct.panel.state.concluded": "Concluded",
+    "beskt.conduct.panel.reveal": "Reveal locked positions",
+    "beskt.conduct.panel.revealing": "Revealing …",
+    "beskt.conduct.panel.revealNote":
+      "Positions can be revealed only once every participant has locked their own.",
+    "beskt.conduct.panel.common": "Common points",
+    "beskt.conduct.panel.divergent": "Differences",
+    "beskt.conduct.panel.noCommon": "No theme is documented by every participant.",
+    "beskt.conduct.panel.noDivergent": "No differences to show yet.",
+    "beskt.conduct.panel.preservesPositions":
+      "The panel never changes the assessors' own positions. They stay exactly as they were locked.",
+    "beskt.conduct.panel.noTotal": "The panel produces no score, no ranking and no recommendation.",
+    "beskt.conduct.panel.resolution.heading": "Record how the panel handled it",
+    "beskt.conduct.panel.resolution.item": "Theme",
+    "beskt.conduct.panel.resolution.kind": "How the panel handled it",
+    "beskt.conduct.panel.resolution.kind.agreed": "Agreement",
+    "beskt.conduct.panel.resolution.kind.disagreed": "Remaining difference",
+    "beskt.conduct.panel.resolution.agreed": "Shared statement",
+    "beskt.conduct.panel.resolution.agreedHelp":
+      "What the panel agreed, written so it can be read by someone who was not there.",
+    "beskt.conduct.panel.resolution.divergent": "Divergent position",
+    "beskt.conduct.panel.resolution.divergentHelp":
+      "The divergent position is preserved word for word. It is not removed because the panel disagrees.",
+    "beskt.conduct.panel.resolution.rationale": "Rationale",
+    "beskt.conduct.panel.resolution.rationaleHelp": "Why the panel handled the theme this way.",
+    "beskt.conduct.panel.resolution.save": "Record outcome",
+    "beskt.conduct.panel.resolution.saving": "Recording …",
+    "beskt.conduct.panel.resolution.recorded": "Recorded outcomes",
+    "beskt.conduct.panel.resolution.empty": "No outcome has been recorded yet.",
+
+    "beskt.conduct.save.idle": "Not saved yet",
+    "beskt.conduct.save.saving": "Saving …",
+    "beskt.conduct.save.saved": "Saved and confirmed by the server",
+    "beskt.conduct.save.failed": "The save did not go through",
+    "beskt.conduct.optional": "Optional",
+    "beskt.conduct.loading": "Fetching the workspace …",
 
     "beskt.review.title": "Review your answers",
     "beskt.review.lede":

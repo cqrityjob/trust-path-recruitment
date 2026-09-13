@@ -123,3 +123,17 @@ pw.shots.mjs
 # digest so a reviewer reproducing the run can check they got the same files.
 /artifacts/beskt-candidate-preparation/live/**/trace.zip
 /artifacts/beskt-candidate-preparation/live/*.zip
+
+# PR 5B's routed evidence, on the same terms and for the same reasons: the
+# captures, the index and the manifest are committed because they are what
+# shows the BESKT interview tool wired to the database -- the withheld
+# position before the second assessor locks, the same position visible after,
+# the correction and verification histories, the panel's recorded
+# disagreement -- at three viewports and in both languages.
+#
+# Its traces are not committed either. `run-interview-tool-evidence.sh` moves
+# them to /tmp, digests them into the manifest, and DELETES test-results/ so
+# there is no second copy for anything to pick up.
+!/artifacts/beskt-interview-tool/
+/artifacts/beskt-interview-tool/live/**/trace.zip
+/artifacts/beskt-interview-tool/live/*.zip

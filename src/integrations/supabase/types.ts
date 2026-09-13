@@ -16173,8 +16173,14 @@ export type Database = {
       }
       bcp_conduct_record_resolution: {
         Args: {
-          _agreed_statement: string
-          _divergent_statement: string
+          // Nullable in the SQL signature, and the generator does not carry
+          // that through. The table's shape constraint REQUIRES a null here:
+          // an agreed resolution must have divergent_statement IS NULL and a
+          // disagreed one must carry the divergent words, and an empty string
+          // satisfies neither. Restored by hand, as PR #236 restored
+          // scp_iv_finalise_previewed_report for the same reason.
+          _agreed_statement: string | null
+          _divergent_statement: string | null
           _expected_revision: number
           _item_key: string
           _operation_id: string

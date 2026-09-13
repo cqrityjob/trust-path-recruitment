@@ -116,6 +116,57 @@ const MESSAGE_FOR_CODE: Readonly<Record<string, TranslationKey>> = {
   BCP_OPERATION_PAYLOAD_MISMATCH: "beskt.error.operationConflict",
   BCP_OPERATION_ACTOR_MISMATCH: "beskt.error.operationConflict",
   BCP_OPERATION_ID_REQUIRED: "beskt.error.operationConflict",
+
+  // ---- The bridge between a preparation and an interview case -------------
+  BCP_CASE_LINK_NOT_FOUND: "beskt.error.linkNotFound",
+  BCP_CONDUCT_LINK_NOT_LIVE: "beskt.error.linkNotLive",
+
+  // ---- Conducting the interview -------------------------------------------
+  //
+  // These are the refusals an interviewer can actually provoke from the
+  // screen. Each gets a sentence that says what happened AND what to do,
+  // because every one of them is recoverable: reload, reopen, wait for a
+  // colleague, or fill something in.
+  BCP_CONDUCT_NOT_PERMITTED: "beskt.error.conductNotPermitted",
+  BCP_CONDUCT_SESSION_NOT_FOUND: "beskt.error.conductSessionNotFound",
+  BCP_CONDUCT_SESSION_CONCLUDED: "beskt.error.conductSessionConcluded",
+  BCP_CONDUCT_ALREADY_JOINED: "beskt.error.conductAlreadyJoined",
+  BCP_CONDUCT_ROLE_UNKNOWN: "beskt.error.conductRoleUnknown",
+  BCP_CONDUCT_NOT_A_PARTICIPANT: "beskt.error.conductNotParticipant",
+
+  // ---- Writing into a position --------------------------------------------
+  BCP_CONDUCT_NOT_OWN_POSITION: "beskt.error.conductNotOwnPosition",
+  BCP_CONDUCT_POSITION_NOT_FOUND: "beskt.error.conductPositionNotFound",
+  BCP_CONDUCT_POSITION_LOCKED: "beskt.error.conductPositionLocked",
+  BCP_CONDUCT_ALREADY_LOCKED: "beskt.error.conductAlreadyLocked",
+  BCP_CONDUCT_NOT_LOCKED: "beskt.error.conductNotLocked",
+  BCP_CONDUCT_NOTHING_TO_LOCK: "beskt.error.conductNothingToLock",
+  BCP_CONDUCT_REOPEN_REASON_REQUIRED: "beskt.error.conductReopenReasonRequired",
+
+  // ---- Entries and corrections --------------------------------------------
+  BCP_CONDUCT_ENTRY_NOT_FOUND: "beskt.error.conductEntryNotFound",
+  BCP_CONDUCT_ENTRY_NOT_STRUCTURED: "beskt.error.conductEntryRejected",
+  BCP_CONDUCT_ENTRY_FROZEN: "beskt.error.conductPositionLocked",
+  BCP_CONDUCT_ITEM_REQUIRED: "beskt.error.conductEntryRejected",
+  BCP_CONDUCT_ITEM_NOT_IN_VERSION: "beskt.error.conductItemNotInVersion",
+  BCP_CONDUCT_SUPERSEDES_UNKNOWN: "beskt.error.conductEntryNotFound",
+  BCP_CONDUCT_ALREADY_CORRECTED: "beskt.error.conductAlreadyCorrected",
+  BCP_CONDUCT_CORRECTION_REASON_REQUIRED: "beskt.error.conductCorrectionReasonRequired",
+
+  // ---- Verification --------------------------------------------------------
+  BCP_CONDUCT_VERIFICATION_STATE_UNKNOWN: "beskt.error.conductVerificationStateUnknown",
+  BCP_CONDUCT_VERIFICATION_SOURCE_REQUIRED: "beskt.error.conductVerificationSourceRequired",
+
+  // ---- The panel -----------------------------------------------------------
+  BCP_CONDUCT_NOT_VISIBLE_YET: "beskt.error.conductNotVisibleYet",
+  BCP_CONDUCT_REVEAL_TOO_EARLY: "beskt.error.conductRevealTooEarly",
+  BCP_CONDUCT_PANEL_NEEDS_TWO: "beskt.error.conductPanelNeedsTwo",
+  BCP_CONDUCT_PANEL_ALREADY_REVEALED: "beskt.error.conductPanelAlreadyRevealed",
+  BCP_CONDUCT_PANEL_NOT_REVEALED: "beskt.error.conductPanelNotRevealed",
+  BCP_CONDUCT_RESOLUTION_KIND_UNKNOWN: "beskt.error.conductResolutionKindUnknown",
+  BCP_CONDUCT_AGREEMENT_REQUIRED: "beskt.error.conductAgreementRequired",
+  BCP_CONDUCT_DIVERGENCE_REQUIRED: "beskt.error.conductDivergenceRequired",
+  BCP_CONDUCT_RATIONALE_REQUIRED: "beskt.error.conductRationaleRequired",
 };
 
 /** What the reader is told when we do not recognise the failure. */
