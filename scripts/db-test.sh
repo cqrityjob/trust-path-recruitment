@@ -6612,5 +6612,6 @@ echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
               ${BGR_PASSED} BESKT one-open-version race assertions,
               ${BGP_PASSED} BESKT child-write versus publication race assertions,
               ${BGD_PASSED} BESKT rollback planted-dependency assertions,
-              ${BCP_PASSED} BESKT candidate-preparation assertions"
+              ${BCP_PASSED} BESKT candidate-preparation assertions,
+              ${BRG_PASSED} BESKT interview-case bridge assertions"
 echo "===================================================="
