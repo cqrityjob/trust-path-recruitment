@@ -395,6 +395,15 @@ jobs:
       - name: Passport global certification catalogue check
         run: bun run passport-global-certification:check
 
+      # `sp_claims.credential_reference` is a lookup key into somebody else's
+      # register -- the single most damaging field in the Passport to leak.
+      # Relocating it would rewrite real holder data, so the allowlist is
+      # enforced here instead: no disclosure, recipient, card, export or
+      # analytics path may name it, and the new international-certification
+      # surfaces must carry none of it either.
+      - name: Passport private credential reference check
+        run: bun run passport-private-reference:check
+
       # The application deploys when main moves; a migration is applied when
       # somebody asks. Between those two events the code can be talking to a
       # schema that has never heard of what it needs -- which took the whole

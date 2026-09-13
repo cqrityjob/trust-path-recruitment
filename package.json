@@ -112,6 +112,7 @@
     "passport-market-catalogue:check": "bun run scripts/passport-market-catalogue-check.tsx",
     "passport-schema-drift:check": "bun run scripts/passport-schema-drift-check.ts",
     "passport-global-certification:check": "bun run scripts/passport-global-certification-check.ts",
+    "passport-private-reference:check": "bun run scripts/passport-private-reference-check.ts",
     "negative-controls:global-certification": "bun run scripts/negative-controls/global-certification-controls.ts",
     "scripts:typecheck": "tsc -p tsconfig.scripts.json --noEmit",
     "passport-regulatory-claim:check": "bun run scripts/passport-regulatory-claim-check.ts",
