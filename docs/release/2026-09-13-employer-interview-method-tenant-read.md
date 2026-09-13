@@ -161,6 +161,18 @@ Negative controls, three layers:
   of which the guard must reject with the named diagnostic, files restored
   byte-for-byte.
 
+### 6.1 What was actually run in the authoring session, and what could not be
+
+| Check | Result |
+| --- | --- |
+| `bun run db:test` (full clean replay, every suite) | exit 0 — 279 migrations; new suite 123/123; planted-defect run fails on ML1.5 as required; rollback and re-apply proved |
+| `migrations:check`, `schema-first-release:check`, `release-parity:check`, `release-frontier:check`, `sql-security:check` | OK (one migration pending by design) |
+| `interview-method-tenant-read:check` | 115/115 |
+| `negative-controls:interview-method-tenant-read` | 27/27 detected, tree clean |
+| `negative-controls:all` | the chain stops at `beskt-candidate-preparation` on one control whose guard renders React and cannot resolve `@supabase/supabase-js` in this sandbox (see below); every suite before it and every suite after it, run individually, is recorded in the PR |
+| Interview Intelligence, employer and BESKT guards (37) | 30 pass; 4 cannot resolve `@supabase/supabase-js`; `employer-library-purpose:check` fails identically at the baseline SHA (an i18n plural key, untouched here); `interview-finalisation-rpc:check` and `interview-context-bridge-history:check` are local-stack-only and need a Supabase auth schema and a browser-walked interview, which this sandbox has neither of |
+| `bun run lint`, both typechecks, `bun run build` | **not reproducible here**: `bun install --frozen-lockfile` received 403 from Lovable's private registry proxy, leaving `@lovable.dev/vite-tanstack-config` and `@supabase/supabase-js` absent and a different prettier installed. The build cannot load `vite.config.ts`, the app typecheck reports implicit-`any` on the auth hooks, and `eslint .` reports 841 pre-existing formatting errors on untouched files. Every file this change adds or edits is eslint- and prettier-clean under the installed toolchain. CI on the PR is the authoritative run. |
+
 ## 7. Production versus repository (read-only, 2026-09-13)
 
 - The five policies: identical (`md5(qual)` matches the replay).
