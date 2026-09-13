@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
+import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { useT } from "@/i18n/context";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -14,13 +15,21 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
  *  What is here now is ONE row of links, and every one of them goes
  *  somewhere that works:
  *
- *    Security Passport · Karriärvägar · Jobb · För arbetsgivare · Om oss ·
- *    Betafeedback
+ *    Security Passport · Career Discovery · Karriärvägar · Jobb ·
+ *    För arbetsgivare · Om oss · Betafeedback
  *
  *  "Security Passport" is the homepage's own Passport section, not a page
  *  of its own: every Passport route is authenticated, and a footer link
  *  that lands a signed-out reader on a login form is a dead end wearing a
  *  product name.
+ *
+ *  ── CAREER DISCOVERY IS HERE FOR THE SAME REASON IT IS IN THE HEADER ─
+ *
+ *  The two individual products are PEERS (2026-09-13). A footer that named
+ *  one of them and not the other would restate, at the bottom of every
+ *  page, the single-product position the site has left behind. Career
+ *  Discovery needs no section trick: it has a canonical public route and
+ *  this links straight to it.
  *
  *  ── WHAT IS DELIBERATELY NOT A LINK ──────────────────────────────────
  *
@@ -41,11 +50,13 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   const links = [
-    // Same first entry as the header, for the same reason: the Passport has
-    // no public page of its own, so the product's own name points at the
+    // The same six destinations as the header, in the same order, plus beta
+    // feedback. Same first entry for the same reason: the Passport has no
+    // public page of its own, so the product's own name points at the
     // section of the homepage that explains it. `hash` rather than "#" in
     // `to` -- the router does not parse one out of the path.
     { to: "/", hash: "passport", label: t("nav.passportPublic") },
+    { to: CANONICAL_ASSESSMENT_PATH, hash: undefined, label: t("nav.careerDiscovery") },
     { to: "/career-center", hash: undefined, label: t("nav.career_center") },
     { to: "/jobs", hash: undefined, label: t("nav.jobs") },
     { to: "/employers", hash: undefined, label: t("nav.employers") },
@@ -60,7 +71,7 @@ export function SiteFooter() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
             <Link
               to="/"
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-md font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               style={{ fontFamily: "var(--font-display)" }}
             >
               <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
@@ -85,7 +96,13 @@ export function SiteFooter() {
                     to={l.to}
                     hash={l.hash}
                     activeOptions={{ exact: l.to === "/" }}
-                    className="inline-flex min-h-[44px] items-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    // 44 x 44, BOTH dimensions. The height was already here;
+                    // the width was not, and "Jobb" is a 33px word -- a
+                    // 33 x 44 target that the suite used to exempt by
+                    // measuring footer rows on height alone. Centred inside
+                    // the reserved box so the row's rhythm is unchanged for
+                    // the longer labels.
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     {l.label}
                   </Link>
