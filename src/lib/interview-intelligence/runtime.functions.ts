@@ -48,12 +48,7 @@ export type PeaceStage = "planning" | "engage_explain" | "account" | "closure" |
  * cannot cross that boundary; this can.
  */
 export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 /** Interview PROCESS quality. Every field counts process artefacts, never the candidate. */
 export interface ProcessQuality {
@@ -1953,9 +1948,8 @@ async function runEvidenceExtractionInner(db: CallerDb, caseId: string): Promise
 export const runEvidenceExtraction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
-  .handler(
-    async ({ context, data }): Promise<ExtractionResult> =>
-      runEvidenceExtractionInner(context.supabase, data.caseId),
+  .handler(async ({ context, data }): Promise<ExtractionResult> =>
+    runEvidenceExtractionInner(context.supabase, data.caseId),
   );
 
 /**
@@ -2376,9 +2370,23 @@ export const finaliseReport = createServerFn({ method: "POST" })
     // bundle deployed before this release; nothing here calls it, and a
     // separate owner-approved CONTRACT migration drops it afterwards. All
     // three arguments are passed: the function has no default to fall back on.
+    //
+    // NULL IS A REAL VALUE HERE, and the generated type cannot say so.
+    // `_draft_run_id` is a NULLABLE uuid on the hosted function -- a report
+    // finalised without a draft run records no provenance -- but
+    // `supabase gen types` does not model argument nullability and emits
+    // `string`. The mismatch is in the GENERATOR, not in this call.
+    //
+    // The annotation belongs here rather than in types.ts. Editing the
+    // generated file to say `string | null` makes it unreproducible from the
+    // generator, and that repair does not survive: it was applied, then
+    // removed by the next regeneration, twice, taking CI red with it each
+    // time. A local, named suppression survives every regeneration and keeps
+    // the generated file exactly what the generator produces.
     const { data: id, error } = await context.supabase.rpc("scp_iv_finalise_previewed_report", {
       _case_id: data.caseId,
       _expected_basis_hash: data.expectedBasisHash,
+      // @ts-expect-error Generated types omit the hosted argument's nullable UUID.
       _draft_run_id: data.draftRunId ?? null,
     });
     if (error) {
