@@ -316,7 +316,13 @@ const sv = {
 
   "onboarding.identity.title": "Yrkesidentitet",
   "onboarding.identity.name": "Namn som visas",
-  "onboarding.identity.headline": "Kort yrkesbeskrivning",
+  // "Kort yrkesbeskrivning" sat directly under "Namn som visas", and the
+  // pilot review found people reading it as a second place to write who
+  // they are. It names the YRKESTITEL, and it says so now -- with the help
+  // line below stating where the title actually appears.
+  "onboarding.identity.headline": "Yrkestitel som visas",
+  "onboarding.identity.headlineHelp":
+    "Visas på ditt Passport Card, i din översikt och för arbetsgivare du delar med. Till exempel \u201dVäktare\u201d eller \u201dSkyddsvakt\u201d \u2014 inte ditt namn.",
   "onboarding.identity.why": "Det här är namnet och beskrivningen som syns när du delar något.",
 
   "onboarding.profession.title": "Yrke",
@@ -2443,7 +2449,9 @@ const en: Record<PassportCopyKey, string> = {
 
   "onboarding.identity.title": "Professional identity",
   "onboarding.identity.name": "Name shown",
-  "onboarding.identity.headline": "Short professional description",
+  "onboarding.identity.headline": "Displayed professional title",
+  "onboarding.identity.headlineHelp":
+    "Shown on your Passport Card, in your overview, and to employers you share with. For example \u201cSecurity Officer\u201d or \u201cClose Protection Officer\u201d \u2014 not your name.",
   "onboarding.identity.why":
     "This is the name and description that appear when you share something.",
 

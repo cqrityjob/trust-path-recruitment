@@ -584,6 +584,55 @@ console.log("\nLANGUAGE -- both, and different from each other");
   }
 }
 
+// ── EMSOMS #8 · THE PROFESSIONAL TITLE IS NOT THE PERSON'S NAME ────────
+//
+// The field sat directly beneath "Namn som visas" and was called "Kort
+// yrkesbeskrivning", so two adjacent text inputs both read as places to
+// type who you are -- and the pilot review found people doing exactly
+// that. A label can only say what a field is CALLED; this one also had to
+// say where its value ends up.
+//
+// Rendered, not read from source: an aria-describedby that names an id no
+// element carries is worse than no help text, because a screen reader
+// announces nothing and the markup looks correct.
+{
+  console.log("\nEmsoms #8 · the displayed professional title");
+  const html = card();
+
+  ck(
+    'the label is the owner\'s wording, not "kort yrkesbeskrivning"',
+    html.includes("Yrkestitel som visas") && !/[Kk]ort yrkesbeskrivning/.test(html),
+  );
+  ck("English reads 'Displayed professional title'", passportT("onboarding.identity.headline", "en") === "Displayed professional title");
+
+  // Help text exists, in both languages, and says what to enter.
+  const helpSv = passportT("onboarding.identity.headlineHelp", "sv");
+  const helpEn = passportT("onboarding.identity.headlineHelp", "en");
+  ck("help copy is authored in both languages", helpSv.trim() !== "" && helpEn.trim() !== "");
+  ck(
+    "and each says plainly that it is NOT the person's name",
+    /inte ditt namn/i.test(helpSv) && /not your name/i.test(helpEn),
+  );
+
+  // The association is REAL: the describedby target must exist in the markup.
+  const described = /aria-describedby="([^"]+)"/.exec(html);
+  ck("the input declares aria-describedby", described !== null);
+  ck(
+    "and the id it names is actually rendered, so a screen reader has something to read",
+    described !== null && html.includes(`id="${described[1]}"`),
+  );
+  ck("the help text itself is on the page", html.includes("Visas på ditt Passport Card"));
+
+  // It is a display title, not evidence. The owner's rule: do not confuse
+  // the professional title with a Passport credential or certification.
+  ck(
+    "the title is not presented as a credential or certification",
+    !/credential|certification|certifiering|beh\u00f6righet/i.test(
+      html.slice(Math.max(0, html.indexOf("Yrkestitel som visas") - 400), html.indexOf("Yrkestitel som visas") + 400),
+    ),
+  );
+}
+
 console.log(
   `\n${fails.length === 0 ? "PASS" : `FAIL (${fails.length})`} — passport-profile-basics-check`,
 );

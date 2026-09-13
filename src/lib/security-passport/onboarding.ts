@@ -21,6 +21,17 @@ export interface OnboardingField {
   readonly labelKey: PassportCopyKey;
   readonly type: "text" | "date" | "select" | "checkbox";
   readonly required: boolean;
+  /** Optional helper text, rendered under the control and wired to it with
+   *  aria-describedby.
+   *
+   *  It exists because a LABEL can only say what a field is called, and one
+   *  field here needed to say where its value ends up. The professional
+   *  title was read as the person's name during the pilot review -- it sat
+   *  directly beneath "Namn som visas" and was called "Kort
+   *  yrkesbeskrivning", so two adjacent text inputs both looked like places
+   *  to type who you are. Renaming it fixes half of that; saying where it
+   *  is shown fixes the other half. */
+  readonly helpKey?: PassportCopyKey;
   /** Fixed options for `select`.
    *
    *  `labelKey` is preferred and `label` is the legacy literal. The two exist
@@ -89,7 +100,13 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     createsClaim: false,
     fields: [
       { id: "displayName", labelKey: "onboarding.identity.name", type: "text", required: true },
-      { id: "headline", labelKey: "onboarding.identity.headline", type: "text", required: false },
+      {
+        id: "headline",
+        labelKey: "onboarding.identity.headline",
+        helpKey: "onboarding.identity.headlineHelp",
+        type: "text",
+        required: false,
+      },
     ],
   },
   {
