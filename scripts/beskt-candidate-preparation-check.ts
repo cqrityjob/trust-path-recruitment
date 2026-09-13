@@ -886,8 +886,13 @@ const pr2 = read(PR2_MIGRATION);
   );
 
   const rollbackSuite = read(ROLLBACK_SUITE);
+  // PR 3 is no longer the FIRST thing the documented procedure unwinds -- PR 4's
+  // interview-case bridge holds foreign keys into bcp_assignments and
+  // bcp_responses, so it has to come down ahead of PR 3. What this assertion is
+  // actually about is unchanged and is the second half: PR 3's drop set precedes
+  // PR 2's, because an assignment pins a governed method version by foreign key.
   check(
-    rollbackSuite.includes("BESKT PR 3 unwinds first of all") &&
+    rollbackSuite.includes("BESKT PR 3 unwinds next") &&
       rollbackSuite.indexOf("DROP TABLE IF EXISTS public.bcp_assignments;") <
         rollbackSuite.indexOf("DROP TABLE IF EXISTS public.beskt_method_versions;"),
     "BCP-HARNESS: the documented rollback procedure unwinds PR 3 before PR 2, with the same drop set",
