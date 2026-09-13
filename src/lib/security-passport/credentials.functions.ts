@@ -24,6 +24,7 @@
 // the guarantee. Neither is load-bearing on its own.
 
 import { createServerFn } from "@tanstack/react-start";
+import { isGlobalCertification } from "./certification-scope";
 import { isCalendarDate } from "./dates";
 import {
   isMissingPilotLayer,
@@ -750,7 +751,38 @@ export const saveCredential = createServerFn({ method: "POST" })
     // It is pure and exported so the browser suite can compute the row a
     // captured payload becomes, and the SQL suite can prove the trigger
     // accepts exactly that row.
-    const fields = credentialClaimFields(draft, type, mode);
+    // ── THE GOVERNED ISSUER IS RESOLVED HERE, NOT SENT ─────────────────
+    //
+    // For a governed international certification the issuer is a fact about
+    // the credential rather than a field about this holder, so it is read
+    // from the catalogue and the client's `issuerName` is discarded. A CPP is
+    // awarded by ASIS International or it is not a CPP.
+    //
+    // This read happens ONLY for a global definition. A national credential's
+    // appointing authority and a free-text claim's issuer are the holder's to
+    // state and are not touched, so nothing else pays for this.
+    //
+    // A failed read THROWS. Falling back to the submitted value would restore
+    // the exact defect 20261112090000 closes; falling back to NULL silently
+    // would drop a governed fact the holder can see is missing and cannot
+    // fix. Neither is an honest answer to "the catalogue did not load".
+    let governedIssuerName: string | null = null;
+    if (type && isGlobalCertification(type)) {
+      const { data: definition, error: issuerError } = await supabase
+        .from("sp_certification_definitions")
+        .select(`sp_certification_issuers!inner ( display_name )`)
+        .eq("credential_code", type.code)
+        .maybeSingle();
+      if (issuerError) throw new Error(issuerError.message);
+      // A global definition with no certification detail row is a catalogue
+      // that contradicts itself. The database refuses the write for exactly
+      // this case (SP_GLOBAL_CERTIFICATION_ISSUER_UNKNOWN); refusing here too
+      // means the holder gets a named error instead of a trigger message.
+      if (!definition) throw new Error("SP_GLOBAL_CERTIFICATION_ISSUER_UNKNOWN");
+      governedIssuerName = definition.sp_certification_issuers.display_name;
+    }
+
+    const fields = credentialClaimFields(draft, type, mode, governedIssuerName);
 
     if (data.claimId) {
       // RLS already restricts the holder to their own rows, and to draft/active

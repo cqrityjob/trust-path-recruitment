@@ -642,10 +642,63 @@ export interface CredentialClaimFields {
  * exactly that row — rather than either of them trusting a stub that said
  * "saved".
  */
+/**
+ * Who a claim records as its issuer.
+ *
+ * ── THE CATALOGUE NAMES A GOVERNED ISSUER; THE HOLDER NAMES THE REST ───
+ *
+ * For a governed international certification the issuer is a FACT about the
+ * credential rather than a field about this holder: a CPP is awarded by ASIS
+ * International or it is not a CPP. So the client's `issuerName` is discarded
+ * outright and the governed display name is written.
+ *
+ * That is not a formatting nicety. Until 20261112090000 nothing connected the
+ * two: `authenticated` holds INSERT and UPDATE on its own `sp_claims` rows,
+ * `sp_disclosure_payload` emits `claimed_issuer_name` to a RECIPIENT, and a
+ * holder could store INTL_ASIS_CPP as 'Fake Corporation' — reproduced against
+ * a full replay. That migration makes the database refuse it for every
+ * caller; this makes the application send the right value in the first place,
+ * so a holder using the product never meets the refusal. Both halves are
+ * needed: this one binds the browser, the trigger binds a direct PostgREST
+ * write carrying the holder's own token.
+ *
+ * When a global definition arrives with no resolved issuer the answer is
+ * NULL, never the submitted text. Saying nothing is the one direction this is
+ * allowed to fail in; saying the wrong organisation is the defect itself.
+ *
+ * Nothing is inferred. The name arrives from the catalogue read — never from
+ * the title, the abbreviation or a search alias. A national credential's
+ * appointing authority and a free-text claim's issuer are untouched, because
+ * those genuinely are the holder's to state.
+ *
+ * A named function rather than a ternary inside the row literal: the rule is
+ * the kind a reader has to be able to find, and a formatter is free to
+ * reshape an expression until no guard can match it.
+ */
+function issuerNameFor(
+  draft: CredentialDraft,
+  type: CredentialType,
+  governedIssuerName: string | null | undefined,
+): string | null {
+  if (!isGlobalCertification(type)) return nullIfBlank(draft.issuerName);
+  return governedIssuerName ? nullIfBlank(governedIssuerName) : null;
+}
+
 export function credentialClaimFields(
   draft: CredentialDraft,
   type: CredentialType,
   mode: "draft" | "active",
+  /** The issuer the CATALOGUE records for a governed international
+   *  certification — `sp_certification_definitions -> sp_certification_issuers`
+   *  — resolved by the server, never sent by the browser.
+   *
+   *  Required in practice for a global definition and optional in the type so
+   *  every existing caller (a national credential, a free-text claim, the
+   *  browser suite computing an expected row) keeps working unchanged. When a
+   *  global definition arrives without one, the issuer is written as NULL
+   *  rather than as whatever the client typed: the one direction this is
+   *  allowed to fail in is towards saying nothing. */
+  governedIssuerName?: string | null,
 ): CredentialClaimFields {
   return {
     claim_type: type.claimType,
@@ -655,7 +708,31 @@ export function credentialClaimFields(
     // value is one canonical string, and the surfaces resolve the reader's
     // language from `credential_code`.
     title: titleIsControlled(type) ? type.nameSv : (nullIfBlank(draft.title) ?? type.nameSv),
-    claimed_issuer_name: nullIfBlank(draft.issuerName),
+    // ── THE CATALOGUE NAMES THE ISSUER, NOT THE HOLDER ────────────────
+    //
+    // For a governed international certification the issuer is a FACT about
+    // the credential, not a field about this holder: a CPP is awarded by ASIS
+    // International or it is not a CPP. So the client's `issuerName` is
+    // discarded outright and the governed display name is written.
+    //
+    // This is not a formatting nicety. Until 20261112090000 nothing connected
+    // the two: `authenticated` holds INSERT and UPDATE on its own sp_claims
+    // rows, `sp_disclosure_payload` emits `claimed_issuer_name` to a
+    // RECIPIENT, and a holder could store INTL_ASIS_CPP as 'Fake Corporation'
+    // — reproduced against a full replay. That migration makes the database
+    // refuse it for every caller; this makes the application send the right
+    // value in the first place, so a holder using the product never meets the
+    // refusal.
+    //
+    // Both halves are needed and neither replaces the other. A rule here
+    // binds the browser; the trigger binds a direct PostgREST write with the
+    // holder's own token.
+    //
+    // Nothing is inferred: the name arrives from the catalogue read, never
+    // from the title, the abbreviation or a search alias. A national
+    // credential's appointing authority and a free-text claim's issuer are
+    // untouched — those are genuinely the holder's to state.
+    claimed_issuer_name: issuerNameFor(draft, type, governedIssuerName),
     // ── THE SCOPE DECIDES THE TERRITORY, BEFORE THE DEFINITION DOES ────
     //
     // For a national credential this is PR #222's rule, unchanged: the
