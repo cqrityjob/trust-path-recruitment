@@ -17,7 +17,7 @@
 // Optional chaining guards a field that a future snapshot revision might not
 // carry, so one absent key can never blank the page. It never invents a value.
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
@@ -79,6 +79,7 @@ export function V31ReportView({
    *  they are hidden rather than pointed at a page that would 401. */
   mode = "authenticated",
   onCareerCardEvent,
+  afterRanking,
   /** Present only for a claimed, owned report (see cd_career_goals) —
    *  "Set as career goal" is hidden without it rather than shown and
    *  failing against RLS. */
@@ -110,6 +111,18 @@ export function V31ReportView({
   /** Privacy-safe funnel events (Execution Mandate §34) — forwarded from
    *  CareerCardCreator; the host decides how/whether to record them. */
   onCareerCardEvent?: (name: string, detail?: Record<string, unknown>) => void;
+  /** Rendered immediately under the profession ranking — the position the
+   *  Career Card CTA used to hold, and the one place on this page that is
+   *  genuinely "next to the result".
+   *
+   *  It exists for the anonymous flow's save/create-account action, which
+   *  the owner's review (Emsoms #2) found "too far down after completion":
+   *  it sat below the entire report AND below the download/share bar, so
+   *  reaching it meant scrolling past everything the person had just been
+   *  given. A slot rather than a hard-coded block, because this component
+   *  is also rendered for a SAVED report, where there is nothing to save
+   *  and the slot is simply absent. */
+  afterRanking?: ReactNode;
   sessionId?: string | null;
   journey?: CareerJourney | null;
 }) {
@@ -264,7 +277,14 @@ export function V31ReportView({
           this control goes with them: a live action for a product that is
           not in the pilot is exactly the dead control the review was
           about. CareerCardCreator and its rules stay in the tree,
-          unreferenced, so restoring the card is re-adding this block. */}
+          unreferenced, so restoring the card is re-adding this block.
+
+          2c · What occupies that position now: whatever the host puts in
+          `afterRanking`. For the anonymous flow that is the save /
+          create-account action, which belongs beside the result rather
+          than below every section of the report. */}
+      {afterRanking}
+
       {/* The "pending" note now means what it says: there is no approved
           profession catalogue at all. It used to appear whenever nothing
           cleared the fit gates, which told a candidate that matching was

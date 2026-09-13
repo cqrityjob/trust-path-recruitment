@@ -436,6 +436,39 @@ group("9 · Where a claim LANDS (Emsoms #4)");
     /career-discovery-claim-open-report/.test(overview),
     "9.7 with a visible action that opens the report",
   );
+
+  // ── WHERE THE SAVE ACTION SITS (Emsoms #2) ──────────────────────────
+  //
+  // It used to render below the whole report AND below the download/share
+  // bar, so reaching it meant scrolling past every section of a
+  // many-screen report. It is passed into the slot directly under the
+  // profession ranking now -- the one position on the page that is
+  // genuinely beside the result, and the slot the retired Career Card CTA
+  // used to hold.
+  ok(
+    /afterRanking=\{!signedIn \? saveCta : undefined\}/.test(flowSrc),
+    "9.8 the save action is handed to the slot under the ranking, next to the result",
+  );
+  // Exactly one. Two controls for one action is the duplication this pass
+  // exists to remove, so the bottom copy is gone rather than kept "just in
+  // case".
+  //
+  // Scoped to the FINAL return -- lastIndexOf, not indexOf. Three branches
+  // of this component open with <AssessmentShell wide>, and the
+  // "result could not be loaded" branch legitimately carries its own save
+  // control: there is no report to sit beside there, the answers are still
+  // staged, and the retry is the only other thing on the screen. Counting
+  // from the first shell would have swept that unrelated branch in and
+  // failed for a reason that has nothing to do with this rule.
+  const resultBranch = flowSrc.slice(flowSrc.lastIndexOf("<AssessmentShell wide>"));
+  ok(
+    (resultBranch.match(/saveCta/g) ?? []).length === 1,
+    "9.9 and appears exactly once on the result screen -- no second copy at the bottom",
+  );
+  ok(
+    !/\{resultActions\}\s*\n\s*\{!signedIn && saveCta\}/.test(flowSrc),
+    "9.10 specifically, it is no longer rendered after the download/share bar",
+  );
 }
 
 console.log(
