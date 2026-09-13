@@ -404,6 +404,14 @@ jobs:
       - name: Passport private credential reference check
         run: bun run passport-private-reference:check
 
+      # The guards above read source text. This one IMPORTS the classifier and
+      # RUNS it: a regex can prove `isNationalCredential` is called and still
+      # miss that the branch beside it treats any jurisdiction as regulated
+      # authority, or that an unrecognised lifecycle state walks into the
+      # international bucket. Both of those shipped green once.
+      - name: Passport classifier behaviour (executed, not read)
+        run: bun run passport-classifier-behaviour:check
+
       # The application deploys when main moves; a migration is applied when
       # somebody asks. Between those two events the code can be talking to a
       # schema that has never heard of what it needs -- which took the whole

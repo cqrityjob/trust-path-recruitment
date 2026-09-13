@@ -24,21 +24,52 @@
 //   1. draft                  private work in progress. Never a card, never a
 //                             recipient, never an export. First, because a
 //                             draft CPP is still a draft.
-//   2. historical             expired, revoked, superseded, retired or
-//                             challenged. Before every "active" rule, so a
-//                             revoked licence can never be presented as a
-//                             current-market credential.
-//   3. international          an ACTIVE claim on a governed
+//   2. historical             expired, revoked, superseded, disputed or
+//                             withdrawn — plus `retired` and `challenged`,
+//                             which the architecture names and the column's
+//                             CHECK does not carry yet. Before every "current"
+//                             rule, so a revoked licence can never be
+//                             presented as a current-market credential.
+//   3. NOT CURRENT            the fail-closed gate. Anything whose lifecycle
+//                             state is neither draft nor historical nor the
+//                             one CURRENT state lands in `other_self_declared`
+//                             and is presented as nothing more. See below.
+//   4. international          a CURRENT claim on a governed
 //                             `global_professional` definition.
-//   4. current market         an active national credential whose jurisdiction
-//                             matches where the holder says they work.
-//   5. other country          an active national credential from elsewhere,
-//                             grouped by ITS OWN jurisdiction — never the
-//                             holder's.
-//   6. merit sections         education, training, membership, language,
+//   5. current market         a CURRENT claim on a governed
+//                             `national_regulated` definition whose
+//                             jurisdiction matches where the holder works.
+//   6. other country          the same, from elsewhere, grouped by ITS OWN
+//                             jurisdiction — never the holder's.
+//   7. merit sections         education, training, membership, language,
 //                             skill, document.
-//   7. other self-declared    everything left. Legacy and free-text rows land
+//   8. other self-declared    everything left. Legacy and free-text rows land
 //                             here and are labelled as what they are.
+//
+// Eight RULES, eleven BUCKETS: rules 5 and 6 are one branch with two answers,
+// and `merit sections` is six buckets chosen by claim type. `PassportBucket`
+// lists all eleven and `EVERY_BUCKET` pins the count, because an earlier
+// revision of this comment said "seven" and nothing failed when it was wrong.
+//
+// ══ THE LIFECYCLE GATE FAILS CLOSED ════════════════════════════════════
+//
+// Rule 3 is a trust boundary, and it is stated positively. `isCurrentMerit`
+// in ./types is this repository's ONE definition of a current merit — the
+// same predicate the Passport overview, My Career and the share policy use —
+// and today it means exactly `active`, which is what `sp_claims`'s CHECK
+// allows alongside draft, expired, revoked, superseded, disputed and
+// withdrawn.
+//
+// The gate matters because this function is PURE and exported: it classifies
+// whatever it is handed, and the database CHECK constrains only what the
+// database stores. A future migration adding a state, a fixture, a test
+// double, a share payload assembled elsewhere or a malformed row can all
+// reach it with a string this file has never seen. Listing the states that
+// are NOT current would let every one of those be presented as a current,
+// governed, international credential — an unrecognised string is exactly the
+// input an attacker or a bug supplies. So the rule is inverted: a claim is
+// presented as current only when it SAYS it is current, and everything else
+// is honestly labelled as self-declared rather than silently promoted.
 //
 // ══ WHAT IT REFUSES TO DO ══════════════════════════════════════════════
 //
@@ -55,12 +86,23 @@
 // argument and returns a bucket, and there is no setter in this module at all.
 //
 // It does not rank a holder's preference. `compareForHighlight` is a total
-// order over trust, then lifecycle recency, then a stable tie-breaker, so the
-// output is independent of the order the rows arrived in and a holder cannot
-// push a weaker claim above a stronger one.
+// order over BUCKET, then trust, then lifecycle recency, then the claim id, so
+// the output is independent of the order the rows arrived in and a holder
+// cannot push a weaker claim above a stronger one. Bucket comes FIRST — see
+// `compareForHighlight`, which documents why and what the alternative would
+// mean. An earlier revision of this comment omitted the bucket term and read
+// as though trust led; the implementation has always compared bucket first.
 
-import { isGlobalCertification, type ScopedCredentialDefinition } from "./certification-scope";
+import {
+  isGlobalCertification,
+  isNationalCredential,
+  type ScopedCredentialDefinition,
+} from "./certification-scope";
 import { isRelevantToWorkLocation, type WorkLocation } from "./jurisdiction-relevance";
+// The ONE definition of a current merit in this repository. Imported rather
+// than restated: a second opinion about what "current" means is the exact
+// defect `isCurrentMerit` was introduced to end.
+import { isCurrentMerit } from "./types";
 
 /** The seven buckets. Every classified row carries exactly one. */
 export type PassportBucket =
@@ -75,6 +117,26 @@ export type PassportBucket =
   | "skill"
   | "document"
   | "other_self_declared";
+
+/** Every bucket, exactly once, pinned so the count is checked rather than
+ *  described. The comment above this module once said "seven buckets" while
+ *  the union carried eleven, and nothing failed — a prose count that no test
+ *  reads is a claim, not a fact. `EVERY_BUCKET` is what the executable suite
+ *  asserts against, so adding a bucket without deciding whether it is
+ *  disclosable is a build failure rather than a silent default. */
+export const EVERY_BUCKET: readonly PassportBucket[] = [
+  "draft",
+  "historical",
+  "international_certification",
+  "current_market_credential",
+  "other_country_credential",
+  "education_and_training",
+  "membership",
+  "language",
+  "skill",
+  "document",
+  "other_self_declared",
+] as const;
 
 /** The buckets a recipient or a card may ever see.
  *
@@ -191,18 +253,51 @@ export function classify<T extends ClassifiableClaim>(
     return { claim, bucket: "historical", groupKey: null };
   }
 
-  // 3. An international professional certification — because its DEFINITION
-  //    says so. Not because it has no country: buckets 6 and 7 below are full
-  //    of things with no country.
+  // 3. THE FAIL-CLOSED GATE. Everything below this line presents a claim as
+  //    something a reader is entitled to rely on today, so nothing reaches it
+  //    without SAYING it is current. An unrecognised, future or malformed
+  //    lifecycle value is not evidence of currency, and treating it as one
+  //    would let a single unexpected string promote a row into the
+  //    international or current-market section.
+  //
+  //    It lands in `other_self_declared`: the honest "we have no governed
+  //    statement about this" bucket. Deliberately not `historical`, which
+  //    would assert the claim USED to be true, and deliberately not `draft`,
+  //    which would both mislabel a finished claim as the holder's private
+  //    work and — because `draft` is the one bucket outside
+  //    `DISCLOSABLE_BUCKETS` — silently drop it from a share the holder
+  //    believes is complete.
+  if (!isCurrentMerit(claim.lifecycleState)) {
+    return { claim, bucket: "other_self_declared", groupKey: null };
+  }
+
+  // 4. An international professional certification — because its DEFINITION
+  //    says so. Not because it has no country: buckets below are full of
+  //    things with no country.
   if (isGlobalCertification(claim.definition)) {
     return { claim, bucket: "international_certification", groupKey: null };
   }
 
-  // 4 and 5. A national credential belongs to its own jurisdiction, and the
-  //    only question the work location answers is which heading it appears
-  //    under. A claim with no jurisdiction is not a national credential and
-  //    falls through.
-  if (claim.jurisdictionCode) {
+  // 5 and 6. A REGULATED NATIONAL CREDENTIAL — again because its definition
+  //    says so, and only then. A jurisdiction is provenance, not authority: a
+  //    course taken in Sweden, a degree awarded in Sweden and a language
+  //    learned in Sweden all carry `SE` and none of them is a credential the
+  //    Swedish state granted. Testing `claim.jurisdictionCode` alone, as this
+  //    branch once did, presented every one of them as a current-market
+  //    regulated credential.
+  //
+  //    `isNationalCredential` reads the declared `national_regulated` scope
+  //    and nothing else, so an UNDECLARED scope is neither global nor
+  //    national and falls through to the factual sections below — the same
+  //    direction of failure the scope module is built to fail in.
+  //
+  //    The jurisdiction is still required: a national credential with no
+  //    jurisdiction has no heading to appear under, and inventing one from
+  //    the holder's work country is the misrepresentation rules 5 and 6 exist
+  //    to prevent. The database's `sp_credential_type_national_scope_bound`
+  //    makes that combination unreachable through the catalogue; this is what
+  //    happens if it ever arrives anyway.
+  if (isNationalCredential(claim.definition) && claim.jurisdictionCode) {
     return isRelevantToWorkLocation(claim, work)
       ? { claim, bucket: "current_market_credential", groupKey: null }
       : {
@@ -215,11 +310,12 @@ export function classify<T extends ClassifiableClaim>(
         };
   }
 
-  // 6. The factual merit sections.
+  // 7. The factual merit sections. A training course or a degree keeps its
+  //    own section whether or not it records where it was taken.
   const byType = CLAIM_TYPE_BUCKET[claim.claimType];
   if (byType) return { claim, bucket: byType, groupKey: null };
 
-  // 7. Everything else, honestly labelled. A free-text "CPP" arrives here and
+  // 8. Everything left, honestly labelled. A free-text "CPP" arrives here and
   //    stays here until its holder explicitly replaces it with the governed
   //    definition. Nothing in this file will do that for them.
   return { claim, bucket: "other_self_declared", groupKey: null };
@@ -310,6 +406,24 @@ const BUCKET_RANK: Readonly<Record<PassportBucket, number>> = {
  * the card is Phase 2's and a card that picks its own three highlights would
  * be the fourth surface in this codebase to invent its own opinion of
  * "important".
+ *
+ * ── THE ORDER, EXACTLY AS IMPLEMENTED ──────────────────────────────────
+ *
+ *   1. BUCKET      `BUCKET_RANK` below, current-market first.
+ *   2. trust       verified > document_provided > self_declared. An
+ *                  unrecognised assertion level ranks 0 — below every known
+ *                  one — so an unknown value can never outrank a real
+ *                  verification.
+ *   3. recency     more recently issued first; a missing date sorts last.
+ *   4. claim id    the stable, unique tie-break.
+ *
+ * BUCKET LEADS, and that is a deliberate product statement rather than an
+ * accident: a self-declared licence for the market the holder actually works
+ * in outranks a verified certificate from a country they left. The
+ * alternative — trust first — would surface the strongest EVIDENCE regardless
+ * of where it applies. Both are defensible; this file implements bucket-first
+ * and the executable suite asserts it, so changing it is a visible product
+ * decision with a failing test attached, not a quiet edit.
  *
  * Total, and that word is load-bearing. Every comparison falls through to the
  * claim id, which is unique, so `sort` produces the same sequence for any input
