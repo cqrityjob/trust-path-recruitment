@@ -79,15 +79,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 //
 // Empty again after BESKT PR 4, too: its interview-case bridge was applied to
 // production by the Supabase GitHub integration when PR #229 merged, and
-// release-state.json now records that with evidence. A name left here after
-// the migration is applied would hide the next genuinely stuck migration
-// behind an expectation.
+// release-state.json now records that with evidence.
 //
-// ── 20261113090000_sp_global_certification_governed_issuer ─────────────
+// ── 20261113090000_bcp_interview_conduct ───────────────────────────────
 //
-// Pending BY DESIGN, on the same terms and for the same reason as the entries
-// above: this branch is the SCHEMA half of a schema-first delivery and carries
-// no application code at all.
+// BESKT PR 5A -- the interview conduct layer. Named here so that removing it
+// from release-state.json, or quietly flipping it to applied, fails this check
+// rather than passing silently.
+//
+// ── 20261114090000_sp_global_certification_governed_issuer ─────────────
+//
+// Pending BY DESIGN, on the same terms and for the same reason: this branch is
+// the SCHEMA half of a schema-first delivery and carries no application code.
 //
 // It closes a defect that was reproduced rather than theorised. On a full
 // migration replay, as an ordinary holder -- SET ROLE authenticated with their
@@ -99,14 +102,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // vocabulary exists for. 20261111090000 governs a certification's scope, its
 // territory and its title; nothing governed its issuer.
 //
-// It took 20261113 rather than 20261112 because bcp_interview_case_bridge
-// reached main first and holds that version -- the same one-version-one-file
-// rule the 20261111 entry above records, met as a real collision for the
-// second time. migrations-duplicate:check caught it on the base merge.
+// It took 20261114 after TWO collisions on the way: bcp_interview_case_bridge
+// holds 20261112 and bcp_interview_conduct holds 20261113, both reaching main
+// while this branch was open. Supabase records only the version prefix, so a
+// shared version means one file is silently skipped;
+// migrations-duplicate:check named the colliding pair on each base merge.
 //
-// Its name comes OFF this list in the same change that records the hosted
-// evidence, exactly as the ones above did.
-const expectedPending: string[] = ["20261113090000_sp_global_certification_governed_issuer.sql"];
+// Both names come OFF this list in the same change that records their hosted
+// evidence, exactly as the ones above did: a resolved name here hides the next
+// genuinely stuck migration behind an expectation.
+const expectedPending: string[] = [
+  "20261113090000_bcp_interview_conduct.sql",
+  "20261114090000_sp_global_certification_governed_issuer.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

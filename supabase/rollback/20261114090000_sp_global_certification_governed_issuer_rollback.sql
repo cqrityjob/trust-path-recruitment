@@ -1,5 +1,5 @@
 -- ============================================================================
--- ROLLBACK — 20261113090000_sp_global_certification_governed_issuer
+-- ROLLBACK — 20261114090000_sp_global_certification_governed_issuer
 --
 -- Restores public.sp_claims_credential_rules to the body 20261111090000
 -- installed, VERBATIM, and restores that migration's COMMENT with it. Nothing

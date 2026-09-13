@@ -1,5 +1,5 @@
 -- =============================================================================
--- SECURITY PASSPORT — THE GOVERNED ISSUER (20261113090000)
+-- SECURITY PASSPORT — THE GOVERNED ISSUER (20261114090000)
 --
 -- Every write below runs as ROLE authenticated with the holder's own
 -- auth.uid(): the exact principal a browser, a mobile client or a direct
