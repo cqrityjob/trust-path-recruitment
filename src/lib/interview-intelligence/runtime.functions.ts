@@ -2381,7 +2381,8 @@ export const finaliseReport = createServerFn({ method: "POST" })
     const { data: id, error } = await context.supabase.rpc("scp_iv_finalise_previewed_report", {
       _case_id: data.caseId,
       _expected_basis_hash: data.expectedBasisHash,
-      _draft_run_id: (data.draftRunId ?? null) as string,
+      // @ts-expect-error Generated types currently omit the database argument's nullable UUID.
+      _draft_run_id: data.draftRunId ?? null,
     });
     if (error) {
       // The message carries the rule that refused (SCP_IV_STALE_PREVIEW,
