@@ -162,7 +162,7 @@ group("E1 · one h1, the approved copy, and a sane hierarchy");
       headings(main[lang], "h2"),
     );
     ck(
-      `${lang}: eight h3 — six path steps and two examples`,
+      `${lang}: eight h3 — five path steps, the continuation and two examples`,
       headings(main[lang], "h3").length === 8,
       headings(main[lang], "h3").length,
     );
@@ -270,11 +270,14 @@ group("E3 · the release flag still fails closed");
 /* E4 ---------------------------------------------------------------- */
 group("E4 · the connected path, ending in a documented human decision");
 {
+  // FIVE numbered outcomes, then a SEPARATE continuation (specification
+  // §8.3). The sixth is asserted below, apart from the list, because a
+  // decision presented as step five of six reads as a waypoint.
   for (const lang of LANGS) {
     const steps = headings(main[lang], "h3")
-      .slice(0, 6)
+      .slice(0, 5)
       .map((h) => h.replace(/^\d+\.\s*/, ""));
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= 5; i++) {
       ck(
         `${lang}: step ${i} is "${d(lang)[`employers.path.step${i}.title`]}"`,
         steps[i - 1] === d(lang)[`employers.path.step${i}.title`],
@@ -287,6 +290,26 @@ group("E4 · the connected path, ending in a documented human decision");
     }
   }
   ck("it is an ordered list", main.sv.includes("<ol"));
+  ck(
+    "the ordered list holds exactly five outcomes",
+    (main.sv.match(/<ol[\s\S]*?<\/ol>/)?.[0].match(/<li\b/g) ?? []).length === 5,
+    (main.sv.match(/<ol[\s\S]*?<\/ol>/)?.[0].match(/<li\b/g) ?? []).length,
+  );
+  // The continuation: present, outside the list, and labelled as a
+  // continuation rather than numbered.
+  for (const lang of LANGS) {
+    ck(
+      `${lang}: the continuation is rendered outside the five`,
+      text[lang].includes(d(lang)["employers.path.continuation"]) &&
+        text[lang].includes(d(lang)["employers.path.step6.title"]) &&
+        text[lang].includes(d(lang)["employers.path.step6.body"]),
+    );
+    ck(
+      `${lang}: and it is not numbered as a sixth step`,
+      !headings(main[lang], "h3").some((h) => /^6\./.test(h)),
+      headings(main[lang], "h3"),
+    );
+  }
   // Step 5 is the one the page exists to make unmistakable.
   ck(
     "sv step 5 says a person decides and the decision is documented",

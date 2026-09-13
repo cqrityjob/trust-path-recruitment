@@ -71,7 +71,7 @@ export function SiteFooter() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
             <Link
               to="/"
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-md font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md font-semibold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               style={{ fontFamily: "var(--font-display)" }}
             >
               <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
@@ -96,7 +96,13 @@ export function SiteFooter() {
                     to={l.to}
                     hash={l.hash}
                     activeOptions={{ exact: l.to === "/" }}
-                    className="inline-flex min-h-[44px] items-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    // 44 x 44, BOTH dimensions. The height was already here;
+                    // the width was not, and "Jobb" is a 33px word -- a
+                    // 33 x 44 target that the suite used to exempt by
+                    // measuring footer rows on height alone. Centred inside
+                    // the reserved box so the row's rhythm is unchanged for
+                    // the longer labels.
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     {l.label}
                   </Link>

@@ -32,12 +32,33 @@
 // the project URL and differs between a local stack, a preview and
 // production. Nothing reaches a database.
 //
+// ── THIS SUITE IS BLOCKING CI (2026-09-13) ─────────────────────────────
+//
+// It used to be a local-only suite, on the same footing as
+// e2e/my-career-home.spec.ts. The review was explicit that a spec nobody
+// runs is not evidence, so `public-entry-browser` in .github/workflows/ci.yml
+// starts the real application and runs this file and e2e/employer-landing
+// .spec.ts against it, with no `continue-on-error` and no skip path. The
+// screenshots it writes are uploaded as a CI artifact.
+//
+// Nothing reaches production: e2e/support/public-entry-harness.ts refuses
+// every request to a Supabase host and every unstubbed server function.
+//
 // Run:  E2E_BASE_URL=http://localhost:3100 bunx playwright test e2e/public-homepage.spec.ts
 
 import { test, expect, type Page } from "@playwright/test";
-
-const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-const USER_ID = "00000000-0000-4000-8000-00000000home";
+import {
+  assertNoRefusals,
+  BASE,
+  horizontalOverflow,
+  installBoundary,
+  observeSupabaseStorageKey,
+  plantSession,
+  REQUIRED_WIDTHS,
+  setLang,
+  shot,
+  undersizedTargets,
+} from "./support/public-entry-harness";
 
 /** The four sections the homepage is allowed to have, in order. */
 const SECTION_ORDER = ["hero", "employers", "lifecycle", "passport"] as const;
@@ -63,66 +84,6 @@ const REMOVED_SV = [
 
 async function visibleText(page: Page): Promise<string> {
   return page.evaluate(() => document.querySelector("main")!.innerText);
-}
-
-async function horizontalOverflow(page: Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-}
-
-async function setLang(page: Page, lang: "sv" | "en"): Promise<void> {
-  await page.evaluate((l) => window.localStorage.setItem("cqrityjob.lang", l), lang);
-  await page.reload({ waitUntil: "networkidle" });
-}
-
-/** supabase-js derives its storage key from the project URL. Rather than
- *  hardcode one and silently stop testing anything the day that URL changes,
- *  the key is OBSERVED: `getItem` is wrapped before the first load and
- *  records every `sb-*-auth-token` the client asks for. */
-async function observeSupabaseStorageKey(page: Page): Promise<string> {
-  await page.addInitScript(() => {
-    const seen: string[] = [];
-    (window as unknown as { __sbKeys: string[] }).__sbKeys = seen;
-    const original = Storage.prototype.getItem;
-    Storage.prototype.getItem = function patched(key: string) {
-      if (/^sb-.*-auth-token$/.test(key) && !seen.includes(key)) seen.push(key);
-      return original.call(this, key);
-    };
-  });
-  await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-  await page.waitForTimeout(500);
-  const key = await page.evaluate(
-    () => (window as unknown as { __sbKeys: string[] }).__sbKeys[0] ?? null,
-  );
-  expect(key, "the homepage never read a Supabase session key").not.toBeNull();
-  return key as string;
-}
-
-async function plantSession(page: Page, storageKey: string): Promise<void> {
-  await page.route("**/auth/v1/user**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ id: USER_ID, aud: "authenticated", email: "e2e@example.test" }),
-    }),
-  );
-  await page.evaluate(
-    ([key, uid]) => {
-      window.localStorage.setItem(
-        key,
-        JSON.stringify({
-          access_token: "e2e-access-token",
-          refresh_token: "e2e-refresh-token",
-          token_type: "bearer",
-          expires_in: 3600,
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
-          user: { id: uid, aud: "authenticated", role: "authenticated", email: "e2e@example.test" },
-        }),
-      );
-    },
-    [storageKey, USER_ID] as const,
-  );
 }
 
 test.describe("the public homepage", () => {
@@ -625,49 +586,43 @@ test.describe("the public homepage", () => {
 
   // H19 ─────────────────────────────────────────────────────────────────
   //
-  // ── WHAT "44 x 44" IS ASSERTED ON, AND WHAT IT IS NOT ────────────────
+  // ── 44 x 44, EVERYWHERE, WITH NO EXEMPT REGION ───────────────────────
   //
-  // Every control the homepage itself renders: 44 x 44, both dimensions, at
-  // every width.
+  // What this replaced measured `main` on both dimensions, the FOOTER on
+  // height alone, and exempted the desktop header bar entirely — 36px
+  // controls and a two-letter language toggle — on the argument that they
+  // are mouse targets on a >=1024px viewport that clear WCAG 2.5.8's 24 x 24.
   //
-  // The shared chrome is asserted where touch is the input — the footer's
-  // link rows — by HEIGHT. A 33px-wide "Jobb" in a horizontal footer row is
-  // a 33 x 44 target, and widening a text link into a 44px box would space
-  // the row out into something nobody asked for.
-  //
-  // The desktop header bar's own 36px control height and the two-letter
-  // language toggle are PRE-EXISTING, are mouse targets on a >=1024px
-  // viewport, clear WCAG 2.5.8 (AA, 24 x 24), and changing them is a
-  // redesign of a component shared by every route on the site.
-  test("every interactive target is at least 44px and keeps a visible focus ring", async ({
-    page,
-  }) => {
-    const undersized = await page.evaluate(() =>
-      [...document.querySelectorAll<HTMLElement>("main a, main button")]
-        .map((el) => {
-          const r = el.getBoundingClientRect();
-          return {
-            text: (el.textContent ?? "").trim().slice(0, 30),
-            h: Math.round(r.height),
-            w: Math.round(r.width),
-          };
-        })
-        .filter((x) => x.h > 0 && (x.h < 44 || x.w < 44)),
+  // The Platform Entry Specification does not grant that exemption. §4.2
+  // requires the six public destinations to be reachable "with 44 pixel
+  // minimum targets" and §12 requires it of every control. A 1024px viewport
+  // is also a tablet. So the exemption is gone, header/main/footer are all
+  // measured, both dimensions are measured, and the components were changed
+  // to meet it rather than the assertion weakened to accept them.
+  test("every public control is at least 44 x 44 in header, main and footer", async ({ page }) => {
+    for (const width of REQUIRED_WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+      const under = await undersizedTargets(page);
+      expect(under, `under 44x44 at ${width}px: ${JSON.stringify(under)}`).toEqual([]);
+    }
+    // And inside the compact menu, where the six destinations live below lg.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /meny/i }).first().click();
+    await expect(page.locator("header nav a").first()).toBeVisible();
+    const inMenu = await undersizedTargets(page);
+    expect(inMenu, `under 44x44 inside the open menu: ${JSON.stringify(inMenu)}`).toEqual([]);
+    await shot(
+      page,
+      "homepage-sv-375-menu-open",
+      "Compact menu open at 375px; all six destinations at >= 44 x 44",
     );
-    expect(undersized, `Under 44x44 inside main: ${JSON.stringify(undersized)}`).toEqual([]);
+  });
 
-    const shortRows = await page.evaluate(() =>
-      [...document.querySelectorAll<HTMLElement>("footer a")]
-        .map((el) => ({
-          text: (el.textContent ?? "").trim().slice(0, 30),
-          h: Math.round(el.getBoundingClientRect().height),
-        }))
-        .filter((x) => x.h > 0 && x.h < 44),
-    );
-    expect(shortRows, `Footer rows under 44px tall: ${JSON.stringify(shortRows)}`).toEqual([]);
-
+  test("every control keeps a visible focus ring, and focus never traps", async ({ page }) => {
     const seen = new Set<string>();
-    for (let i = 0; i < 16; i += 1) {
+    for (let i = 0; i < 18; i += 1) {
       await page.keyboard.press("Tab");
       const state = await page.evaluate(() => {
         const el = document.activeElement as HTMLElement | null;
@@ -821,23 +776,154 @@ test.describe("Career Discovery still starts without an account", () => {
     });
     const url = new URL(page.url());
     expect(url.pathname).toBe("/security-career-assessment");
+    expect(url.searchParams.get("claim"), "the token was stripped in transit").toBe("e2e-token");
     expect(await page.locator('input[type="password"]').count()).toBe(0);
+    await shot(
+      page,
+      "career-discovery-claim-token",
+      "Canonical Career Discovery route with ?claim= preserved, signed out, no credential asked",
+    );
+  });
+
+  // ── THE TOKEN SURVIVES THE ROUND TRIP THROUGH THE ONE DOOR ───────────
+  //
+  // This is the continuity the specification's §6.2 step 7 names: the claim
+  // must survive email confirmation, Google OAuth and a sign-in/signup swap.
+  // A browser can prove the SWAP half end to end, which is the half a
+  // homepage change could break: the return path carries the claim, and the
+  // swap link rebuilds it rather than dropping it.
+  test("the claim survives a signup/login swap", async ({ page }) => {
+    const returnTo = "/security-career-assessment?claim=e2e-token";
+    await page.goto(`${BASE}/signup?redirect=${encodeURIComponent(returnTo)}`, {
+      waitUntil: "networkidle",
+    });
+    await expect(page.locator('input[type="email"]').first()).toBeVisible({ timeout: 15_000 });
+
+    // The form RESOLVED the return path rather than echoing the URL: the
+    // swap link is built from the validated value.
+    const swap = page.locator('a[href^="/login?"]').first();
+    const swapHref = await swap.getAttribute("href");
+    expect(swapHref, "the claim is lost for somebody who already has an account").toContain(
+      "claim%3De2e-token",
+    );
+
+    await swap.click();
+    await page.waitForURL("**/login**", { timeout: 15_000 });
+    const back = new URL(page.url()).searchParams.get("redirect");
+    expect(back, "the swap dropped the return path").toBe(returnTo);
+    await shot(
+      page,
+      "career-discovery-claim-swap",
+      "Claim token preserved across the signup -> login swap",
+    );
   });
 });
 
 // ── THE SIGNED-IN VISITOR ───────────────────────────────────────────────
 test.describe("the signed-in visitor", () => {
-  test("a signed-in visitor at / is redirected to /my-career", async ({ page }) => {
+  test("a signed-in visitor at / is redirected to /my-career, without a loop", async ({ page }) => {
+    const refusals = await installBoundary(page, {
+      // Everything the shell and the header ask for on arrival. A `null`
+      // answer is a legitimate one for each; what matters here is the
+      // redirect, not the dashboard's contents.
+      listMyEmployerWorkspaces: [],
+      countMyAcademyWork: 0,
+      countMyReviewQueue: 0,
+      ensureMyEmployerCompanyFromSignup: null,
+    });
     const key = await observeSupabaseStorageKey(page);
     await plantSession(page, key);
 
     await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-    await page.waitForURL("**/my-career**", { timeout: 15_000 });
+    await page.waitForURL("**/my-career**", { timeout: 20_000 });
     expect(new URL(page.url()).pathname.startsWith("/my-career")).toBe(true);
 
     // And it is a redirect, not a loop: the URL settles and stays settled.
     const first = page.url();
-    await page.waitForTimeout(2000);
-    expect(page.url()).toBe(first);
+    await page.waitForTimeout(3000);
+    expect(page.url(), "the redirect is looping").toBe(first);
+    assertNoRefusals(refusals);
+    await shot(
+      page,
+      "signed-in-redirect-no-loop",
+      "Signed-in visitor at / settles on /my-career and stays there",
+    );
+  });
+});
+
+// ── ROUTED EVIDENCE ─────────────────────────────────────────────────────
+//
+// The screenshots the review asks for, taken from the RUNNING application
+// rather than from statically rendered HTML. Each one follows an assertion
+// in the same test, so a picture cannot show a state nothing verified.
+//
+// Written to artifacts/public-entry-browser/ with a manifest, and uploaded
+// by the `public-entry-browser` CI job whatever the outcome.
+test.describe("routed evidence — the individual entrances", () => {
+  for (const [lang, h1] of [
+    ["sv", "Bygg din framtid inom säkerhet"],
+    ["en", "Build your future in security"],
+  ] as const) {
+    for (const width of [1440, 375, 390] as const) {
+      test(`homepage ${lang} at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: width >= 1440 ? 900 : 812 });
+        await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+        await setLang(page, lang);
+
+        await expect(page.locator("main h1")).toHaveText(h1);
+        // Both entrances are present and both actions are real controls.
+        const cards = page.locator("#hero article");
+        await expect(cards).toHaveCount(2);
+        for (const card of await cards.all()) {
+          await expect(card.locator("a").first()).toBeVisible();
+        }
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+        expect(await undersizedTargets(page)).toEqual([]);
+
+        // §15.1: at 1440 both offers are visible without scrolling.
+        if (width === 1440) {
+          for (const card of await cards.all()) await expect(card).toBeInViewport();
+        }
+
+        await shot(
+          page,
+          `homepage-${lang}-${width}`,
+          `Homepage ${lang.toUpperCase()} at ${width}px — two peer entrances, 0px overflow, no target under 44x44`,
+        );
+      });
+    }
+  }
+
+  test("the Passport signup destination", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    await page.locator("#hero").getByRole("link", { name: "Skapa mitt Security Passport" }).click();
+    await page.waitForURL("**/signup**", { timeout: 15_000 });
+    expect(new URL(page.url()).searchParams.get("redirect")).toBe("/passport");
+    await expect(page.locator('input[type="email"]').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('input[type="password"]').first()).toBeVisible();
+    const swapHref = await page.locator('a[href^="/login?"]').first().getAttribute("href");
+    expect(swapHref, "the Passport intent is lost on the swap").toContain("redirect=%2Fpassport");
+    await shot(
+      page,
+      "passport-signup-destination",
+      "Passport card -> /signup?redirect=/passport, intent resolved by the form",
+    );
+  });
+
+  test("the Career Discovery anonymous landing", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    await page.locator("#hero").getByRole("link", { name: "Starta Career Discovery" }).click();
+    await page.waitForURL("**/security-career-assessment**", { timeout: 15_000 });
+    expect(new URL(page.url()).pathname).toBe("/security-career-assessment");
+    // Signed out, and no credential asked for before the first question.
+    expect(await page.locator('input[type="password"]').count()).toBe(0);
+    await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 20_000 });
+    await shot(
+      page,
+      "career-discovery-anonymous-landing",
+      "Career Discovery canonical landing reached signed out, no credential requested",
+    );
   });
 });

@@ -420,6 +420,11 @@ export const dictionaries = {
 
     // ── THE CONNECTED PATH ──────────────────────────────────────────────
     "employers.path.title": "Så hänger processen ihop",
+    // Rendered apart from the five, because §8.3 separates them: the five are
+    // the recruitment itself and end in a documented human decision; this is
+    // what continues afterwards. Presenting it as a sixth peer step made the
+    // decision look like a waypoint rather than the outcome.
+    "employers.path.continuation": "Och sedan",
     "employers.path.step1.title": "Publicera jobbet",
     "employers.path.step1.body": "Beskriv rollen, kraven och arbetsplatsen och publicera annonsen.",
     "employers.path.step2.title": "Ta emot och ordna ansökningarna",
@@ -465,7 +470,7 @@ export const dictionaries = {
     // arrival, and intent is never a role.
     "employers.cta.register": "Registrera företag",
     "employers.cta.how": "Se hur plattformen fungerar",
-    "employers.cta.login": "Logga in i företagsportalen",
+    "employers.cta.login": "Logga in till företagsportalen",
 
     "assessment.eyebrow": "TVÅ SEPARERADE LÖSNINGAR",
     "assessment.title": "Tester för karriär och säkerhetskompetens",
@@ -6819,6 +6824,7 @@ export const dictionaries = {
       "Publish security jobs, manage applications and use structured assessments and interview models for both ordinary security roles and security-protection-sensitive positions.",
 
     "employers.path.title": "How the process connects",
+    "employers.path.continuation": "And then",
     "employers.path.step1.title": "Publish the job",
     "employers.path.step1.body":
       "Describe the role, the requirements and the site, and publish the advert.",

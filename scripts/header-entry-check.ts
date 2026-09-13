@@ -526,7 +526,7 @@ const employerCopy = {
     en: "See how the platform works",
   },
   "employers.cta.login": {
-    sv: "Logga in i företagsportalen",
+    sv: "Logga in till företagsportalen",
     en: "Log in to the employer portal",
   },
 } as const;

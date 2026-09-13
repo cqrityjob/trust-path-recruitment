@@ -86,9 +86,15 @@ export const Route = createFileRoute("/employers")({
   component: EmployersPage,
 });
 
-/** The connected path, in the order an employer actually walks it. Six
- *  steps, numbered, and the last two are the ones the page exists to make
- *  unmistakable: a person decides, and the decision is written down. */
+/** The connected path, in the order an employer actually walks it.
+ *
+ *  FIVE numbered outcomes, and the fifth is the one the page exists to make
+ *  unmistakable: a person decides, and the decision is written down. The
+ *  sixth thing an employer does — develop the person they hired — is
+ *  rendered BELOW this list rather than inside it, because §8.3 of the
+ *  Platform Entry Specification separates them and because a decision
+ *  presented as step five of six reads as a waypoint rather than as the
+ *  outcome of the process. */
 const PATH = [
   { icon: Send, titleKey: "employers.path.step1.title", bodyKey: "employers.path.step1.body" },
   { icon: Inbox, titleKey: "employers.path.step2.title", bodyKey: "employers.path.step2.body" },
@@ -102,11 +108,6 @@ const PATH = [
     icon: FileSignature,
     titleKey: "employers.path.step5.title",
     bodyKey: "employers.path.step5.body",
-  },
-  {
-    icon: GraduationCap,
-    titleKey: "employers.path.step6.title",
-    bodyKey: "employers.path.step6.body",
   },
 ] as const satisfies readonly {
   icon: typeof Send;
@@ -193,6 +194,25 @@ function EmployersPage() {
             </li>
           ))}
         </ol>
+
+        {/* The continuation, visually separated from the five. Same visual
+            language, deliberately not a numbered peer. */}
+        <div className="mt-10 flex items-start gap-4 rounded-xl border border-border bg-background p-5 md:p-6">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-accent">
+            <GraduationCap className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              {t("employers.path.continuation")}
+            </p>
+            <h3 className="mt-1 text-base font-semibold tracking-tight text-foreground [hyphens:auto] break-words">
+              {t("employers.path.step6.title")}
+            </h3>
+            <p className="mt-1.5 max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
+              {t("employers.path.step6.body")}
+            </p>
+          </div>
+        </div>
       </Section>
 
       {/* ── TWO RECRUITMENT EXAMPLES ─────────────────────────────────────
