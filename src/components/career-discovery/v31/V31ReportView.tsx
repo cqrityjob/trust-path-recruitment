@@ -24,7 +24,6 @@ import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { CareerJourneySection } from "@/components/career-journey/CareerJourneySection";
 import type { CareerJourney } from "@/lib/career-journey/types";
-import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
 import { FeedbackForm } from "@/components/career-discovery/v31/FeedbackForm";
 import { MoveForwardSection } from "@/components/career-discovery/v31/MoveForwardSection";
 import { PossiblePathway } from "@/components/career-discovery/v31/PossiblePathway";
@@ -127,7 +126,6 @@ export function V31ReportView({
   // there is nothing to remember except whether the dialog is open — the
   // previous `careerCardMatch` state existed only to carry the profession
   // the candidate had picked, which is exactly the choice that has gone.
-  const [careerCardOpen, setCareerCardOpen] = useState(false);
   const [goalProfessionId, setGoalProfessionId] = useState<string | null>(null);
   const [settingGoal, setSettingGoal] = useState(false);
   const setGoal = useServerFn(setCareerGoal);
@@ -159,11 +157,6 @@ export function V31ReportView({
     day: "numeric",
   }).format(new Date(snapshot.completedAt ?? generatedAt));
 
-  // The canonical top 3, straight from the snapshot. The Career Card is
-  // built from THIS — the same array RecommendedProfessions renders three
-  // lines above the CTA — so the card cannot name a different #1 from the
-  // report the candidate is looking at while they press the button.
-  const rankedTop3 = snapshot.professions?.ranked ?? [];
 
   return (
     <div data-report-contract="v3.1">
@@ -263,36 +256,15 @@ export function V31ReportView({
         locale={snapshot.locale === "en" ? "en" : "sv"}
       />
 
-      {/* 2b · CREATE YOUR CAREER CARD — placed right under the ranking it
-          shares its data with (§26 Section 3), so pressing it is visibly a
-          way to share THAT, not to start a new choice. Gated on `ranked`
-          rather than `available`: a balanced profile gets a real ranking and
-          no cleared tiers, and used to be denied a card for it. */}
-      {rankedTop3.length > 0 && (
-        <div className="no-print relative mt-12 overflow-hidden rounded-2xl border border-accent/30 bg-[color:var(--secondary)] p-7 text-center sm:p-10">
-          <span
-            aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent"
-          />
-          <h2
-            className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {t("careerDiscovery.report.v31.createCareerCardCta")}
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-            {t("careerDiscovery.report.v31.createCareerCardCtaBody")}
-          </p>
-          <button
-            type="button"
-            onClick={() => setCareerCardOpen(true)}
-            className="mt-6 inline-flex h-12 items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold uppercase tracking-wide text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            {t("careerDiscovery.report.v31.createCareerCardCta")}
-          </button>
-        </div>
-      )}
-
+      {/* 2b · THE CAREER CARD CTA IS GONE — HIDDEN FOR THE PILOT.
+          It sat right under the ranking it shares its data with, and it
+          opened the card creator inline rather than navigating, which is
+          why hiding the card's ROUTE and its other entry points did not
+          reach it. The owner's pilot review removed the Career Card, so
+          this control goes with them: a live action for a product that is
+          not in the pilot is exactly the dead control the review was
+          about. CareerCardCreator and its rules stay in the tree,
+          unreferenced, so restoring the card is re-adding this block. */}
       {/* The "pending" note now means what it says: there is no approved
           profession catalogue at all. It used to appear whenever nothing
           cleared the fit gates, which told a candidate that matching was
@@ -554,25 +526,6 @@ export function V31ReportView({
         </div>
       </details>
 
-      {/* The card is available whenever the report NAMES a career — i.e.
-          whenever `ranked` is non-empty — not only when the gated tiers
-          cleared (`available === true`). Those are different facts, and
-          gating the card on the second one hid it from exactly the balanced
-          profiles the always-present ranking was built to serve. It carries
-          `ranked` itself, so the card and the report cannot disagree about
-          who is #1. */}
-      {rankedTop3.length > 0 && (
-        <CareerCardCreator
-          open={careerCardOpen}
-          onOpenChange={setCareerCardOpen}
-          ranked={rankedTop3}
-          dimensions={snapshot.outputA.dimensions}
-          locale={snapshot.locale === "en" ? "en" : "sv"}
-          definitionVersion={snapshot.versions.definitionVersion}
-          generatedAt={snapshot.completedAt ?? generatedAt}
-          onEvent={onCareerCardEvent}
-        />
-      )}
     </div>
   );
 }
