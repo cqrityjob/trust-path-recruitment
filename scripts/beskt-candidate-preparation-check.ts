@@ -1033,8 +1033,13 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
     ),
     "BCP-METHOD-CHOICE: the method in use is the one the employer selected",
   );
+  // Bounded to chooseMethod's OWN body. An unbounded [\s\S]*? ran past the end
+  // of the function and matched the setProfileId("") in the cancel handler
+  // instead, so a planted control that deleted the real one still passed.
+  const chooseMethodBody =
+    /const chooseMethod = \(id: string\) => \{([\s\S]*?)\n  \};/.exec(employerPanel)?.[1] ?? "";
   check(
-    /const chooseMethod = \(id: string\) => \{[\s\S]*?setProfileId\(""\);/.test(employerPanel),
+    chooseMethodBody.length > 0 && /setProfileId\(""\);/.test(chooseMethodBody),
     "BCP-METHOD-CHOICE: changing the method clears the profile, which belongs to the old one",
   );
   check(
