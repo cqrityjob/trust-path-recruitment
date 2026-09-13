@@ -118,8 +118,14 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the position section stops accepting a withheld list, so the withholding has nowhere to be expressed",
     file: POSITION,
-    find: "  others: readonly BesktOtherPosition[] | null;",
-    replace: "  others: readonly BesktOtherPosition[];",
+    find:
+      "  topics: readonly BesktConductTopic[];\n" +
+      "  /** NULL while the database withholds them. Never an empty array in that case. */\n" +
+      "  others: readonly BesktOtherPosition[] | null;",
+    replace:
+      "  topics: readonly BesktConductTopic[];\n" +
+      "  /** NULL while the database withholds them. Never an empty array in that case. */\n" +
+      "  others: readonly BesktOtherPosition[];",
     guard: GUARD,
     expect: "BESKT_TOOL_INDEPENDENCE_TYPE",
   },
@@ -148,11 +154,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a revealed position is reduced to its item keys, so the colleague's actual record is never shown",
     file: POSITION,
-    find:
-      "              <OtherRow\n" +
-      '                label={t("beskt.conduct.entry.observableFact")}\n' +
-      "                value={e.observableFact}\n" +
-      "              />\n",
+    find: '              <OtherRow label={t("beskt.conduct.entry.observableFact")} value={e.observableFact} />\n',
     replace: "",
     guard: GUARD,
     expect: "BESKT_TOOL_INDEPENDENCE_REVEAL",
