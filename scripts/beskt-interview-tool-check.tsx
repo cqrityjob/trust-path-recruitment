@@ -272,6 +272,7 @@ const NO_ACTIONS = {
   savedItemKey: null,
   saveError: null,
   verifyPendingEntryId: null,
+  verifiedEntryId: null,
   verifyError: null,
   saveEntry: () => {},
   recordVerification: () => {},
@@ -1312,6 +1313,29 @@ ck(
     );
   })(),
   "BESKT_TOOL_SAVE_CONFIRM: a save may be reported only after the server confirms it",
+);
+
+ck(
+  "T13.1b a form closes on the SERVER'S confirmation, never on the click",
+  (() => {
+    // Both forms watch the confirmation the route sets from the RPC's own
+    // answer, and they compare it against the previous one so that reopening a
+    // form deliberately is not undone. A form that closed in its own submit
+    // handler would be telling the interviewer their work was recorded at the
+    // moment it left the browser.
+    const entryCloses =
+      /lastConfirmed\.current/.test(themesCode) &&
+      /actions\.savedItemKey === itemKey\)\s*setMode\("view"\)/.test(themesCode);
+    const verifyCloses =
+      /lastConfirmed\.current/.test(verifyFormCode) &&
+      /confirmedEntryId === entry\.entryId\)\s*setOpen\(false\)/.test(verifyFormCode);
+    // And neither closes itself from inside its own submit path.
+    const noOptimisticClose =
+      !/onSubmit\([^)]*\);\s*setMode\("view"\)/.test(themesCode) &&
+      !/onSubmit\([^)]*\);\s*setOpen\(false\)/.test(verifyFormCode);
+    return entryCloses && verifyCloses && noOptimisticClose;
+  })(),
+  "BESKT_TOOL_FORM_CLOSE: a form may close only when the server has confirmed the write",
 );
 
 ck(

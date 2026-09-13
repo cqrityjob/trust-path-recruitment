@@ -89,7 +89,11 @@ export function BesktPositionSection({
   const undocumented = topics.filter((x) => !documented.has(x.itemKey));
 
   return (
-    <section className="rounded-lg border border-border p-4" aria-labelledby="beskt-position-h">
+    <section
+      data-testid="beskt-position"
+      className="rounded-lg border border-border p-4"
+      aria-labelledby="beskt-position-h"
+    >
       <h2 id="beskt-position-h" className="text-sm font-semibold text-foreground">
         {t("beskt.conduct.position.heading")}
       </h2>
@@ -112,6 +116,10 @@ export function BesktPositionSection({
         </Fact>
         <Fact label={t("beskt.conduct.position.entryCount")}>{String(entries.length)}</Fact>
         <Fact label={t("beskt.conduct.position.revision")}>{String(position.revision)}</Fact>
+        {/* Shown in EVERY state, not only while locked. A position that has
+            been reopened is a different thing from one that never was, and an
+            open position is exactly where that fact is easiest to lose. */}
+        <Fact label={t("beskt.conduct.position.reopenCount")}>{String(position.reopenCount)}</Fact>
       </dl>
 
       {locked ? (
@@ -258,6 +266,7 @@ function LockDialog({
         aria-modal="true"
         aria-labelledby="beskt-lock-title"
         aria-describedby="beskt-lock-body"
+        data-testid="beskt-lock-dialog"
         className="w-full max-w-md rounded-lg border border-border bg-background p-5 shadow-lg"
       >
         <h3 id="beskt-lock-title" className="text-base font-semibold text-foreground">
@@ -314,9 +323,6 @@ function LockedState({
             </Fact>
           )}
           <Fact label={t("beskt.conduct.position.revision")}>{String(position.revision)}</Fact>
-          <Fact label={t("beskt.conduct.position.reopenCount")}>
-            {String(position.reopenCount)}
-          </Fact>
         </dl>
       </Panel>
 
@@ -355,7 +361,7 @@ function LockedState({
           <textarea
             id="beskt-reopen-reason"
             rows={2}
-            required
+            aria-required="true"
             className={`${FIELD} ${TOUCH}`}
             aria-describedby="beskt-reopen-help"
             value={reason}
@@ -402,7 +408,7 @@ function OthersSection({
   const visible: readonly BesktOtherPosition[] = others ?? [];
 
   return (
-    <div className="mt-6 border-t border-border pt-4">
+    <div data-testid="beskt-others" className="mt-6 border-t border-border pt-4">
       <h3 className="text-sm font-semibold text-foreground">{t("beskt.conduct.others.heading")}</h3>
 
       {withheld ? (

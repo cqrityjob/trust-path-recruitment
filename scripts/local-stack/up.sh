@@ -109,6 +109,13 @@ if [ "$MODE" = "full" ]; then
   psql -q -v ON_ERROR_STOP=1 -d "$DB_URL" \
     -f scripts/fixtures/beskt-candidate-preparation-fixture.sql > /dev/null
 
+  # PR 5B's state: a preparation taken all the way to SUBMITTED and bridged to
+  # a real interview case, so the BESKT module inside Interview Intelligence
+  # has something to be a module OF. Built entirely through the governed RPCs.
+  echo "==> Seeding the BESKT interview-tool fixture"
+  psql -q -v ON_ERROR_STOP=1 -d "$DB_URL" \
+    -f scripts/fixtures/beskt-interview-tool-fixture.sql > /dev/null
+
   echo "==> Snapshotting the seeded state as ${SEED_DB}"
   psql -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres \
     -c "DROP DATABASE IF EXISTS ${SEED_DB} WITH (FORCE);"

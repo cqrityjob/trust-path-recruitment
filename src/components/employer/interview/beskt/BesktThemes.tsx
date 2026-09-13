@@ -18,7 +18,7 @@
 // anyone later establishes that the theme discussed was the governed item it
 // claims to be, in the version it claims to be from.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useT } from "@/i18n/context";
 import type {
   BesktConductEntry,
@@ -44,6 +44,8 @@ export interface BesktThemeActions {
   readonly savedItemKey: string | null;
   readonly saveError: unknown;
   readonly verifyPendingEntryId: string | null;
+  /** Set from the SERVER'S answer, so a form closes on a confirmed write. */
+  readonly verifiedEntryId: string | null;
   readonly verifyError: unknown;
   readonly saveEntry: (input: {
     itemKey: string;
@@ -77,7 +79,11 @@ export function BesktThemes({
   const byItemKey = new Map(entries.map((e) => [e.itemKey, e]));
 
   return (
-    <section className="rounded-lg border border-border p-4" aria-labelledby="beskt-themes-h">
+    <section
+      data-testid="beskt-themes"
+      className="rounded-lg border border-border p-4"
+      aria-labelledby="beskt-themes-h"
+    >
       <h2 id="beskt-themes-h" className="text-sm font-semibold text-foreground">
         {t("beskt.conduct.themes.heading")}
       </h2>
@@ -135,7 +141,10 @@ function Theme({
   const busy = actions.pendingItemKey === topic.itemKey;
 
   return (
-    <li className="rounded-md border border-border p-3">
+    <li
+      data-testid={`beskt-theme-${topic.itemKey}`}
+      className="rounded-md border border-border p-3"
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 className="min-w-0 text-sm font-medium text-foreground">
           {governedText(lang, topic.wordingSv, topic.wordingEn)}
@@ -159,8 +168,8 @@ function Theme({
         <dd className="font-mono text-xs text-muted-foreground">
           <span className="sr-only">{t("beskt.conduct.themes.itemKey")}: </span>
           {topic.itemKey}
-          <span className="sr-only"> · {t("beskt.conduct.themes.methodVersion")}: </span>
           {" · "}
+          <span className="sr-only">{t("beskt.conduct.themes.methodVersion")}: </span>
           {methodVersionId}
         </dd>
       </dl>
@@ -212,6 +221,26 @@ function EntryBlock({
 }) {
   const { t } = useT();
   const saved = actions.savedItemKey === itemKey;
+
+  // ── WHY A FORM CLOSES HERE AND NOT IN ITS OWN SUBMIT HANDLER ──────────
+  //
+  // Because a submit handler only knows that a request was SENT. Closing there
+  // would tell the interviewer their correction had been recorded at the
+  // moment it left the browser, which is exactly the claim this product must
+  // not make about work that may still be refused for a stale revision.
+  //
+  // `savedItemKey` is set in the mutation's onSuccess, from the item key the
+  // SERVER returned. Watching it change is therefore watching the write be
+  // confirmed. The ref is what makes it a transition rather than a state: once
+  // set, the key stays set, and without it a deliberate reopening of the
+  // correction form would be closed again the instant it opened.
+  const lastConfirmed = useRef<string | null>(actions.savedItemKey);
+  useEffect(() => {
+    if (actions.savedItemKey !== lastConfirmed.current) {
+      lastConfirmed.current = actions.savedItemKey;
+      if (actions.savedItemKey === itemKey) setMode("view");
+    }
+  }, [actions.savedItemKey, itemKey, setMode]);
 
   return (
     <div className="mt-3 border-t border-border pt-3">
@@ -300,6 +329,7 @@ function EntryBlock({
           entry={entry}
           busy={actions.verifyPendingEntryId === entry.entryId}
           error={actions.verifyError}
+          confirmedEntryId={actions.verifiedEntryId}
           onSubmit={(newState, source, note) =>
             actions.recordVerification({ entryId: entry.entryId, newState, source, note })
           }

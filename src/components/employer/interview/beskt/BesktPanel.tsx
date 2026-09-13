@@ -77,7 +77,11 @@ export function BesktPanelSection({
   const { t } = useT();
 
   return (
-    <section className="rounded-lg border border-border p-4" aria-labelledby="beskt-panel-h">
+    <section
+      data-testid="beskt-panel"
+      className="rounded-lg border border-border p-4"
+      aria-labelledby="beskt-panel-h"
+    >
       <h2 id="beskt-panel-h" className="text-sm font-semibold text-foreground">
         {t("beskt.conduct.panel.heading")}
       </h2>
@@ -400,7 +404,7 @@ function ResolutionForm({
         <textarea
           id={id("rationale")}
           rows={2}
-          required
+          aria-required="true"
           className={`${FIELD} ${TOUCH}`}
           aria-describedby={id("rationale-help")}
           value={rationale}

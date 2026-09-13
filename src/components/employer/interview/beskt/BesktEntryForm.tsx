@@ -133,7 +133,12 @@ export function BesktEntryForm({
   const message = localError ?? (error ? t(besktErrorKey(error)) : null);
 
   return (
-    <form className="mt-3 space-y-4" onSubmit={submit} aria-describedby={id("separation")}>
+    <form
+      data-testid={`beskt-entry-form-${itemKey}`}
+      className="mt-3 space-y-4"
+      onSubmit={submit}
+      aria-describedby={id("separation")}
+    >
       <p
         id={id("separation")}
         className="max-w-[72ch] text-xs leading-relaxed text-muted-foreground"
@@ -258,6 +263,13 @@ export function BesktEntryForm({
         </p>
       </div>
 
+      {/* `aria-required` rather than `required`.
+          The native constraint fires BEFORE this form's own validation and
+          shows a bubble in the BROWSER's language, not the page's -- a Swedish
+          interviewer on an English-locale machine would get an English
+          sentence the product never wrote. The requirement is announced to
+          assistive technology and enforced in the handler below, where the
+          message is ours and translated. */}
       {correcting && (
         <div className="rounded-md border border-border p-3">
           <p className="text-xs leading-relaxed text-muted-foreground">
@@ -269,7 +281,7 @@ export function BesktEntryForm({
           <textarea
             id={id("reason")}
             rows={2}
-            required
+            aria-required="true"
             className={`${FIELD} ${TOUCH}`}
             aria-describedby={id("reason-help")}
             value={reason}

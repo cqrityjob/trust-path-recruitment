@@ -449,6 +449,17 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BESKT_TOOL_SAVE_CONFIRM",
   },
   {
+    id: "TOOL-NC-CLOSE-ON-CLICK",
+    defect:
+      "the documentation form closes the moment the button is clicked, so an interviewer is told their correction was recorded before the server has accepted it",
+    file: THEMES,
+    find: '      if (actions.savedItemKey === itemKey) setMode("view");',
+    replace: '      setMode("view");',
+    guard: GUARD,
+    expect: "BESKT_TOOL_FORM_CLOSE",
+  },
+
+  {
     id: "TOOL-NC-BLANKET-INVALIDATION",
     defect: "a successful mutation invalidates the whole cache instead of exactly what changed",
     file: ROUTE,

@@ -40,7 +40,11 @@ export function BesktMethodHeader({ binding }: { binding: BesktMethodBinding }) 
   const scopeKey = binding.releaseScope ? RELEASE_SCOPE_LABEL[binding.releaseScope] : undefined;
 
   return (
-    <section className="rounded-lg border border-border p-4" aria-labelledby="beskt-method-h">
+    <section
+      data-testid="beskt-method-header"
+      className="rounded-lg border border-border p-4"
+      aria-labelledby="beskt-method-h"
+    >
       <h2 id="beskt-method-h" className="text-sm font-semibold text-foreground">
         {t("beskt.conduct.method.heading")}
       </h2>

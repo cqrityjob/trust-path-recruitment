@@ -24,7 +24,11 @@ export function BesktSnapshot({ answers }: { answers: readonly BesktSnapshotAnsw
   const { t, lang } = useT();
 
   return (
-    <section className="rounded-lg border border-border p-4" aria-labelledby="beskt-snapshot-h">
+    <section
+      data-testid="beskt-snapshot"
+      className="rounded-lg border border-border p-4"
+      aria-labelledby="beskt-snapshot-h"
+    >
       <h2 id="beskt-snapshot-h" className="text-sm font-semibold text-foreground">
         {t("beskt.conduct.snapshot.heading")}
       </h2>

@@ -45,7 +45,11 @@ export function BesktModuleCard({
       : null;
 
   return (
-    <section className="rounded-lg border border-border p-4" aria-labelledby="beskt-module-h">
+    <section
+      data-testid="beskt-module-card"
+      className="rounded-lg border border-border p-4"
+      aria-labelledby="beskt-module-h"
+    >
       <h2 id="beskt-module-h" className="text-sm font-semibold text-foreground">
         {t("beskt.module.title")}
       </h2>

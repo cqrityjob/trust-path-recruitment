@@ -15,7 +15,7 @@
 // product derives one from them. There is no rule anywhere that turns an
 // unverified entry into a negative outcome, because there is no outcome.
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useT } from "@/i18n/context";
 import {
   BESKT_VERIFICATION_STATES,
@@ -37,11 +37,14 @@ export function BesktVerificationForm({
   entry,
   busy,
   error,
+  confirmedEntryId,
   onSubmit,
 }: {
   entry: BesktConductEntry;
   busy: boolean;
   error: unknown;
+  /** The entry the SERVER last confirmed a verification for. */
+  confirmedEntryId: string | null;
   onSubmit: (newState: BesktVerificationState, source: string | null, note: string | null) => void;
 }) {
   const { t } = useT();
@@ -53,6 +56,17 @@ export function BesktVerificationForm({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const id = (n: string) => `${base}-${n}`;
+
+  // Closed on the server's confirmation, never on the click. Same reasoning as
+  // the documentation form: a request that has been sent is not a request that
+  // has been accepted, and a stale revision is refused after it leaves.
+  const lastConfirmed = useRef<string | null>(confirmedEntryId);
+  useEffect(() => {
+    if (confirmedEntryId !== lastConfirmed.current) {
+      lastConfirmed.current = confirmedEntryId;
+      if (confirmedEntryId === entry.entryId) setOpen(false);
+    }
+  }, [confirmedEntryId, entry.entryId]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

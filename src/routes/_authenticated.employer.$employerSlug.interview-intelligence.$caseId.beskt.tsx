@@ -164,6 +164,7 @@ function Page() {
   const [pendingItemKey, setPendingItemKey] = useState<string | null>(null);
   const [savedItemKey, setSavedItemKey] = useState<string | null>(null);
   const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
+  const [verifiedEntryId, setVerifiedEntryId] = useState<string | null>(null);
 
   const start = useMutation({
     mutationFn: (linkId: string) => startFn({ data: { operationId: startOp.take(), linkId } }),
@@ -242,8 +243,11 @@ function Page() {
           note: input.note ?? undefined,
         },
       }),
-    onSuccess: async () => {
+    // Again from the server's own answer, not from the request: the entry id
+    // that comes back is the one the write actually landed on.
+    onSuccess: async (result) => {
       verifyOp.clear();
+      setVerifiedEntryId(result.entryId);
       await invalidate();
       if (sessionId !== null && pendingEntryId !== null) {
         await queryClient.invalidateQueries({
@@ -522,6 +526,7 @@ function Page() {
                 savedItemKey,
                 saveError: saveEntry.isError ? saveEntry.error : null,
                 verifyPendingEntryId: pendingEntryId,
+                verifiedEntryId,
                 verifyError: verify.isError ? verify.error : null,
                 saveEntry: (input) => {
                   if (myPosition === null) return;
@@ -540,6 +545,7 @@ function Page() {
                 recordVerification: (input) => {
                   if (myPosition === null) return;
                   setPendingEntryId(input.entryId);
+                  setVerifiedEntryId(null);
                   verify.mutate({
                     entryId: input.entryId,
                     expectedRevision: myPosition.revision,
