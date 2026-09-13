@@ -623,8 +623,13 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the frontier check stops expecting this pending migration, so dropping it from release-state would pass silently",
     file: FRONTIER,
-    find: 'const expectedPending: string[] = ["20261113090000_bcp_interview_conduct.sql"];',
-    replace: "const expectedPending: string[] = [];",
+    // Anchored on THIS migration's own entry rather than on the whole list:
+    // the governed-issuer hardening branch carries a pending migration too, so
+    // expectedPending holds two names and an empty-list replacement would have
+    // planted a different defect (forgetting BOTH). Removing just this line
+    // plants exactly the one described above.
+    find: '  "20261113090000_bcp_interview_conduct.sql",\n',
+    replace: "",
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },
