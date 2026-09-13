@@ -525,11 +525,13 @@ const MUTATIONS: readonly Mutation[] = [
     // evidence then took that one off again, so the list is empty once more.
     // The defect being planted never changes: the APPLIED bcp migration back on
     // the frontier list.
-    // PR 4 put its own genuinely pending migration in the list, so the anchor is
-    // that line rather than an empty one.
-    find: "const expectedPending: string[] = [];",
+    // PR 4 put its own genuinely pending migration in the list, then its hosted
+    // evidence took it off again; the governed-issuer hardening branch now has
+    // ITS pending migration in it, so the anchor is that line rather than an
+    // empty one. The planted defect is unchanged either way.
+    find: 'const expectedPending: string[] = ["20261113090000_sp_global_certification_governed_issuer.sql"];',
     replace:
-      'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
+      'const expectedPending: string[] = [\n  "20261113090000_sp_global_certification_governed_issuer.sql",\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },
