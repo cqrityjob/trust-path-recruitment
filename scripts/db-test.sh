@@ -3138,6 +3138,172 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# BESKT PR 5A -- the governed conduct of the BESKT interview.
+#
+# Runs BEFORE PR 4 is stood down, because it is built on PR 4's tables:
+# bcp_conduct_sessions carries foreign keys into bcp_case_links, so PR 4 cannot
+# be unwound while PR 5A stands.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT interview-conduct assertions"
+set +e
+CND_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_interview_conduct_test.sql 2>&1)"
+CND_RC=$?
+set -e
+CND_PASSED="$(echo "$CND_OUT" | grep -c "ok  " || true)"
+CND_FAILED=0
+if [ "$CND_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT interview-conduct suite exited with code ${CND_RC}." >&2
+  echo "$CND_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  CND_FAILED=1
+else
+  echo "    ok  ${CND_PASSED} BESKT interview-conduct assertions passed"
+  if [ "$CND_PASSED" -lt 90 ]; then
+    echo "FAIL: expected at least 90 BESKT interview-conduct assertions, only ${CND_PASSED} ran." >&2
+    CND_FAILED=1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Two people press "lock my position" at the same instant, in two real
+# connections. Exactly one lock must land and the other must be refused by
+# name -- not both, not neither, and not a torn row. The suite above runs in
+# one transaction and cannot prove this; only two connections can.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT conduct concurrent-lock race"
+CNDR_SETUP="$(mktemp)"; CNDR_A="$(mktemp)"; CNDR_B="$(mktemp)"
+CNDR_FAILED=0
+CNDR_REC="b6000000-0000-4000-8000-0000000000d1"
+cat > "$CNDR_SETUP" <<'SQL'
+\set ON_ERROR_STOP on
+BEGIN;
+\i supabase/tests/bcp_conduct_race_fixture.sql
+COMMIT;
+SQL
+set +e
+CNDR_SETUP_OUT="$(psql -v ON_ERROR_STOP=1 -tAq -d "$TEST_DB" -f "$CNDR_SETUP" 2>&1)"
+CNDR_SETUP_RC=$?
+set -e
+CNDR_POS="$(echo "$CNDR_SETUP_OUT" | grep -oE 'POS=[0-9a-f-]{36}' | head -1 | cut -d= -f2 || true)"
+CNDR_REV="$(echo "$CNDR_SETUP_OUT" | grep -oE 'REV=[0-9]+' | head -1 | cut -d= -f2 || true)"
+if [ "$CNDR_SETUP_RC" -ne 0 ] || [ -z "$CNDR_POS" ] || [ -z "$CNDR_REV" ]; then
+  echo "FAIL: the conduct concurrent-lock race setup failed." >&2
+  echo "$CNDR_SETUP_OUT" | grep -iE "ERROR:|FEL:|ASSERTION" | head -5 >&2
+  CNDR_FAILED=1
+else
+  # Both name the SAME expected revision, which is what makes this a race
+  # rather than two ordered calls.
+  for W in A B; do
+    eval "F=\$CNDR_$W"
+    cat > "$F" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${CNDR_REC}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${CNDR_REC}', true);
+SET LOCAL ROLE authenticated;
+SELECT 'LOCKED=' || (public.bcp_conduct_lock_position(gen_random_uuid(), '${CNDR_POS}'::uuid, ${CNDR_REV}) ->> 'state') AS marked;
+COMMIT;
+SQL
+  done
+  set +e
+  psql -v ON_ERROR_STOP=1 -tAq -d "$TEST_DB" -f "$CNDR_A" > /tmp/cndr_a.out 2>&1 &
+  CNDR_PID=$!
+  psql -v ON_ERROR_STOP=1 -tAq -d "$TEST_DB" -f "$CNDR_B" > /tmp/cndr_b.out 2>&1
+  wait "$CNDR_PID" || true
+  set -e
+  CNDR_WON="$(cat /tmp/cndr_a.out /tmp/cndr_b.out | grep -c 'LOCKED=locked' || true)"
+  CNDR_REFUSED="$(cat /tmp/cndr_a.out /tmp/cndr_b.out | grep -cE 'BCP_CONDUCT_ALREADY_LOCKED|BCP_STALE_REVISION' || true)"
+  CNDR_ROWS="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.bcp_conduct_positions where id = '${CNDR_POS}' and state = 'locked';")"
+  if [ "$CNDR_WON" -ne 1 ] || [ "$CNDR_REFUSED" -ne 1 ]; then
+    echo "FAIL: the concurrent lock did not settle deterministically (won=${CNDR_WON}, refused=${CNDR_REFUSED})." >&2
+    cat /tmp/cndr_a.out /tmp/cndr_b.out | head -10 >&2
+    CNDR_FAILED=1
+  else
+    echo "    ok  exactly one of two simultaneous locks landed, and the other was refused by name"
+  fi
+  if [ "$CNDR_ROWS" != "1" ]; then
+    echo "FAIL: after the race the position is not in exactly one locked state (${CNDR_ROWS})." >&2
+    CNDR_FAILED=1
+  else
+    echo "    ok  and the position ended locked exactly once"
+  fi
+  rm -f /tmp/cndr_a.out /tmp/cndr_b.out
+fi
+rm -f "$CNDR_SETUP" "$CNDR_A" "$CNDR_B"
+if [ "$CNDR_FAILED" -ne 0 ]; then CND_FAILED=1; fi
+
+# ---------------------------------------------------------------------------
+# The PR 5A rollback, for real, then the migration re-applied over it.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT PR 5A rollback and re-apply"
+# The race above committed a real session; the rollback correctly REFUSES while
+# one exists, which is itself the contract. Prove that refusal, then clear the
+# synthetic rows deliberately -- exactly what the refusal message asks for.
+set +e
+CND_REFUSE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261113090000_bcp_interview_conduct_rollback.sql 2>&1)"
+CND_REFUSE_RC=$?
+set -e
+if [ "$CND_REFUSE_RC" -eq 0 ] || ! echo "$CND_REFUSE" | grep -q "BCP_CONDUCT_ROLLBACK"; then
+  echo "FAIL: the PR 5A rollback did not refuse while a real conduct session existed." >&2
+  echo "$CND_REFUSE" | grep -iE "ERROR:|NOTICE" | head -5 >&2
+  CND_FAILED=1
+else
+  echo "    ok  the rollback REFUSES to discard a recorded interview, and says so by name"
+fi
+
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" > /dev/null <<'SQL'
+DELETE FROM public.bcp_events WHERE event LIKE 'conduct\_%';
+DELETE FROM public.bcp_conduct_panel_resolutions;
+DELETE FROM public.bcp_conduct_panels;
+DELETE FROM public.bcp_conduct_verifications;
+ALTER TABLE public.bcp_conduct_entries DISABLE TRIGGER bcp_conduct_entries_guard;
+DELETE FROM public.bcp_conduct_entries;
+ALTER TABLE public.bcp_conduct_entries ENABLE TRIGGER bcp_conduct_entries_guard;
+ALTER TABLE public.bcp_conduct_positions DISABLE TRIGGER bcp_conduct_positions_guard;
+DELETE FROM public.bcp_conduct_positions;
+ALTER TABLE public.bcp_conduct_positions ENABLE TRIGGER bcp_conduct_positions_guard;
+ALTER TABLE public.bcp_conduct_sessions DISABLE TRIGGER bcp_conduct_sessions_guard;
+DELETE FROM public.bcp_conduct_sessions;
+ALTER TABLE public.bcp_conduct_sessions ENABLE TRIGGER bcp_conduct_sessions_guard;
+SQL
+
+set +e
+CND_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261113090000_bcp_interview_conduct_rollback.sql 2>&1)"
+CND_RB_RC=$?
+set -e
+if [ "$CND_RB_RC" -ne 0 ] || ! echo "$CND_RB" | grep -q "BESKT_INTERVIEW_CONDUCT_ROLLBACK ok"; then
+  echo "FAIL: the BESKT interview-conduct rollback did not verify." >&2
+  echo "$CND_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  CND_FAILED=1
+else
+  echo "    ok  the PR 5A rollback drops only the conduct layer and restores PR 4's vocabulary verbatim"
+fi
+
+set +e
+CND_RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/migrations/20261113090000_bcp_interview_conduct.sql 2>&1)"
+CND_RE_RC=$?
+set -e
+if [ "$CND_RE_RC" -ne 0 ] || ! echo "$CND_RE" | grep -q "BESKT_INTERVIEW_CONDUCT_PROOF ok"; then
+  echo "FAIL: the BESKT PR 5A migration does not re-apply over the rolled-back state." >&2
+  echo "$CND_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CND_FAILED=1
+else
+  echo "    ok  and the PR 5A migration re-applies cleanly over it"
+fi
+
+if [ "$CND_FAILED" -ne 0 ]; then
+  suite_failed "BESKT interview conduct"
+fi
+
+# Stand PR 5A down so PR 4 can be unwound below: bcp_conduct_sessions holds
+# foreign keys into bcp_case_links, and PR 4's rollback correctly refuses to
+# leave a dangling one.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261113090000_bcp_interview_conduct_rollback.sql >/dev/null
+
+# ---------------------------------------------------------------------------
 # The PR 4 rollback, for real, then the migration re-applied over it. The
 # rollback restores two governed vocabularies verbatim -- the interview
 # source kinds and the BESKT event names -- which the migration's own
@@ -3304,6 +3470,8 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261110090000_bcp_candidate_preparation.sql >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261112090000_bcp_interview_case_bridge.sql >/dev/null
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261113090000_bcp_interview_conduct.sql >/dev/null
 
 # The race fixtures: the rollback above dropped their versions with the
 # domain and deleted their identities; the planted principals go too.
@@ -6613,5 +6781,5 @@ echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
               ${BGP_PASSED} BESKT child-write versus publication race assertions,
               ${BGD_PASSED} BESKT rollback planted-dependency assertions,
               ${BCP_PASSED} BESKT candidate-preparation assertions,
-              ${BRG_PASSED} BESKT interview-case bridge assertions"
+              ${BRG_PASSED} BESKT interview-case bridge assertions,\n              ${CND_PASSED} BESKT interview-conduct assertions"
 echo "===================================================="

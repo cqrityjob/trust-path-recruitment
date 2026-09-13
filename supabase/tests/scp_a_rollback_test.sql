@@ -138,7 +138,74 @@ END $$;
 -- HERE rather than in production.
 -- ---------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------
--- BESKT PR 4 (20261112090000) unwinds FIRST of all, newest first: the
+-- BESKT PR 5A (20261113090000) unwinds FIRST of all, newest first: the
+-- interview conduct layer holds foreign keys into bcp_case_links and
+-- bcp_case_topics, so PR 4 cannot come down while it stands.
+--
+-- The drop set matches
+-- supabase/rollback/20261113090000_bcp_interview_conduct_rollback.sql.
+-- The bcp_events vocabulary is NOT restored to PR 4's here: that table goes
+-- with PR 3's drop set further down, so restoring an intermediate state would
+-- be work that nothing reads.
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 5A unwinds first of all';
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r'
+        AND c.relname LIKE 'bcp\_conduct\_%' ESCAPE '\\') = 6,
+    'pre-rollback: the six bcp_conduct_ tables exist');
+END $$;
+
+DROP FUNCTION IF EXISTS public.bcp_conduct_entry_history(uuid);
+DROP FUNCTION IF EXISTS public.bcp_conduct_workspace(uuid);
+DROP FUNCTION IF EXISTS public.bcp_conduct_record_resolution(uuid, uuid, integer, text, text, text, text, text);
+DROP FUNCTION IF EXISTS public.bcp_conduct_reveal_panel(uuid, uuid, integer);
+DROP FUNCTION IF EXISTS public.bcp_conduct_open_panel(uuid, uuid);
+DROP FUNCTION IF EXISTS public.bcp_conduct_reopen_position(uuid, uuid, integer, text);
+DROP FUNCTION IF EXISTS public.bcp_conduct_lock_position(uuid, uuid, integer);
+DROP FUNCTION IF EXISTS public.bcp_conduct_record_verification(uuid, uuid, integer, text, text, text);
+DROP FUNCTION IF EXISTS public.bcp_conduct_save_entry(uuid, uuid, integer, jsonb, uuid, text);
+DROP FUNCTION IF EXISTS public.bcp_conduct_join_session(uuid, uuid, text);
+DROP FUNCTION IF EXISTS public.bcp_conduct_start_session(uuid, uuid);
+DROP TRIGGER IF EXISTS bcp_conduct_panel_resolutions_append_only ON public.bcp_conduct_panel_resolutions;
+DROP TRIGGER IF EXISTS bcp_conduct_verifications_append_only ON public.bcp_conduct_verifications;
+DROP TRIGGER IF EXISTS bcp_conduct_panels_guard ON public.bcp_conduct_panels;
+DROP TRIGGER IF EXISTS bcp_conduct_entries_guard ON public.bcp_conduct_entries;
+DROP TRIGGER IF EXISTS bcp_conduct_positions_guard ON public.bcp_conduct_positions;
+DROP TRIGGER IF EXISTS bcp_conduct_sessions_guard ON public.bcp_conduct_sessions;
+DROP FUNCTION IF EXISTS public.bcp_guard_conduct_append_only();
+DROP FUNCTION IF EXISTS public.bcp_guard_conduct_panel();
+DROP FUNCTION IF EXISTS public.bcp_guard_conduct_entry();
+DROP FUNCTION IF EXISTS public.bcp_guard_conduct_position();
+DROP FUNCTION IF EXISTS public.bcp_guard_conduct_session();
+DROP TABLE IF EXISTS public.bcp_conduct_panel_resolutions;
+DROP TABLE IF EXISTS public.bcp_conduct_panels;
+DROP TABLE IF EXISTS public.bcp_conduct_verifications;
+DROP TABLE IF EXISTS public.bcp_conduct_entries;
+DROP TABLE IF EXISTS public.bcp_conduct_positions;
+DROP TABLE IF EXISTS public.bcp_conduct_sessions;
+DROP FUNCTION IF EXISTS public.bcp_conduct_can_read_session(uuid);
+DROP FUNCTION IF EXISTS public.bcp_conduct_may_see_others(uuid);
+
+DO $$
+BEGIN
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r'
+        AND c.relname LIKE 'bcp\_conduct\_%' ESCAPE '\\') = 0,
+    'BESKT PR 5A: the conduct layer is gone, PR 4 can now unwind');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND (p.proname LIKE 'bcp\_conduct\_%' ESCAPE '\\'
+             OR p.proname LIKE 'bcp\_guard\_conduct\_%' ESCAPE '\\')) = 0,
+    'BESKT PR 5A: no conduct function survives');
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- BESKT PR 4 (20261112090000) unwinds next, newest first: the
 -- interview-case bridge holds foreign keys into bcp_assignments,
 -- bcp_responses and beskt_items, so neither the PR 3 nor the PR 2 drop set
 -- below can run while it exists.
@@ -156,7 +223,7 @@ END $$;
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
-  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 4 unwinds first of all';
+  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 4 unwinds next';
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r'
