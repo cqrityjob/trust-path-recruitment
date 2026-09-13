@@ -868,14 +868,17 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BCP-NOTICE",
   },
   {
-    id: "BCP-NC-NOTICE-COPY-UNGOVERNED",
+    id: "BCP-NC-DICTIONARY-COPY-DRIFT",
     defect:
-      "a governed notice string is reworded in the dictionary, so the copy no longer matches the template digest PR 3A governs",
+      "the Swedish sentence that tells the candidate the confirmation is NOT consent is softened, so the copy no longer matches the template digest PR 3A governs",
     file: DICTIONARIES,
-    find: '"beskt.notice.acknowledgeHint":',
-    replace: '"beskt.notice.acknowledgeHintRenamed":',
+    // The sv-SE value itself, which occurs exactly once. Anchoring on the KEY
+    // would match both language blocks; anchoring on the sentence is also the
+    // honest target, because this control is about the WORDS drifting.
+    find: "Det är inte ett samtycke och det skapar ingen rättslig grund.",
+    replace: "Det skapar ingen rättslig grund.",
     guard: "beskt-notice-copy:check",
-    expect: "dictionary",
+    expect: "sv-SE",
   },
 ];
 
