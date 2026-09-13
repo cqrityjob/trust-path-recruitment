@@ -1095,14 +1095,28 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
 
   // ---- 0.7 · no raw database text reaches the screen ---------------------
   const errors = existsSync(ERRORS) ? stripTsComments(read(ERRORS)) : "";
+  // EVERY handler, not "at least one". The first version of this assertion
+  // checked that besktErrorKey appeared somewhere and that one exact spelling
+  // of the defect did not; a planted control showed it passing with one of the
+  // three handlers storing the raised text under a slightly different spelling.
+  // Counting them is the assertion that cannot be satisfied by its neighbours.
+  const errorHandlers = panel.match(/onError:\s*\(e: unknown\) =>[\s\S]*?,\n  \}\);/g) ?? [];
   check(
-    /setActionError\(besktErrorKey\(e\)\)/.test(panel) &&
-      !/setActionError\(e instanceof Error \? e\.message/.test(panel),
-    "BCP-SAFE-ERRORS: the candidate screen stores a translation key, never the raised text",
+    errorHandlers.length >= 3 &&
+      errorHandlers.every((h) => /setActionError\(besktErrorKey\(e\)\)/.test(h)),
+    "BCP-SAFE-ERRORS: EVERY error handler on the candidate screen stores a translation key",
   );
   check(
-    /setStartError\(besktErrorKey\(e\)\)/.test(employerPanel) &&
-      /setCancelError\(besktErrorKey\(e\)\)/.test(employerPanel),
+    !/set(Action|Start|Cancel)Error\([^)]*e\.message/.test(panel) &&
+      !/set(Action|Start|Cancel)Error\([^)]*String\(e\)/.test(panel),
+    "BCP-SAFE-ERRORS: and no handler stores the raised text under any spelling",
+  );
+  const employerHandlers =
+    employerPanel.match(/onError:\s*\(e: unknown\) =>[\s\S]*?,\n  \}\);/g) ?? [];
+  check(
+    employerHandlers.length >= 2 &&
+      employerHandlers.every((h) => /besktErrorKey\(e\)/.test(h)) &&
+      !/set(Start|Cancel)Error\([^)]*e\.message/.test(employerPanel),
     "BCP-SAFE-ERRORS: and so does the employer screen, for start and for cancel",
   );
   check(
