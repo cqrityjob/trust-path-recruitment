@@ -1125,6 +1125,9 @@ jobs:
       - name: Passport / CV boundary
         run: bun run passport-cv-boundary:check
 
+      - name: Passport page composition (sketch 2)
+        run: bun run passport-page-composition:check
+
       # The public header's entry points -- one door in, one way to create
       # an account, "Arbetsgivare" as information and never as an action.
       # This guard has existed since the unified-account work and was never

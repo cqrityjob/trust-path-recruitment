@@ -37,6 +37,8 @@
     "scripts/candidate-navigation-canon-check.ts",
     "scripts/account-confirmation-state-check.ts",
     "scripts/passport-cv-boundary-check.ts",
+    "scripts/passport-page-composition-check.ts",
+    "scripts/negative-controls/passport-page-composition-controls.ts",
     "scripts/negative-controls/passport-cv-boundary-controls.ts",
     "scripts/negative-controls/account-confirmation-controls.ts",
     "scripts/negative-controls/candidate-navigation-canon-controls.ts",

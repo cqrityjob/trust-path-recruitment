@@ -63,7 +63,17 @@ const sv = {
   "symbols.freeText": "Fritextmerit",
   "symbols.smallSize": "Minsta kortstorlek (28 px)",
   "symbols.withWord": "Märke med statusord",
-  "nav.overview": "Översikt",
+  // ── SCOPED, BECAUSE "ÖVERSIKT" NOW MEANS SOMETHING ELSE ─────────────
+  //
+  // The candidate's primary navigation labels /my-career "Översikt". This
+  // tab labels /passport, and it read "Översikt" too -- so a holder
+  // standing on their Passport saw the same word twice on one screen,
+  // pointing at two different places. The Passport's own sections keep
+  // their names; this one says which overview it is.
+  //
+  // Not "Mina meriter": that is already a heading ON this page, and a tab
+  // repeating a heading below it is the duplication this pass removes.
+  "nav.overview": "Passportöversikt",
   "nav.onboarding": "Kom igång",
   "nav.card": "Passport Card",
   "nav.credentials": "Behörigheter",
@@ -862,6 +872,11 @@ const sv = {
     "Erfarenhet följer med över gränser. Behörighet gör det inte.",
 
   // ── Privacy ──────────────────────────────────────────────────────────
+  // The left column on /passport. It REPORTS; the pages it links to own the
+  // controls, so there is one card renderer and one privacy writer.
+  "side.cardTitle": "Så här ser ditt Passport ut",
+  "side.openCard": "Öppna Passport Card",
+  "side.openPrivacy": "Integritets- och delningsinställningar",
   "privacy.title": "Integritet och delning",
   "privacy.defaultTitle": "Privat som standard",
   "privacy.defaultBody": "Ingenting i ditt Passport visas för någon förrän du delar det.",
@@ -2230,7 +2245,7 @@ const en: Record<PassportCopyKey, string> = {
   "symbols.freeText": "Free-text credential",
   "symbols.smallSize": "Smallest card size (28 px)",
   "symbols.withWord": "Mark with its status word",
-  "nav.overview": "Overview",
+  "nav.overview": "Passport overview",
   "nav.onboarding": "Get started",
   "nav.card": "Passport Card",
   "nav.credentials": "Credentials",
@@ -2904,6 +2919,9 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.experienceVsEligibility":
     "Experience travels across borders. Eligibility does not.",
 
+  "side.cardTitle": "What your Passport looks like",
+  "side.openCard": "Open Passport Card",
+  "side.openPrivacy": "Privacy and sharing settings",
   "privacy.title": "Privacy and sharing",
   "privacy.defaultTitle": "Private by default",
   "privacy.defaultBody": "Nothing in your Passport is shown to anyone until you share it.",
