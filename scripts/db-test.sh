@@ -3252,7 +3252,8 @@ else
 fi
 
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" > /dev/null <<'SQL'
-DELETE FROM public.bcp_events WHERE event LIKE 'conduct\_%';
+-- bcp_events is append-only and stays so: the rollback tolerates the history
+-- it cannot remove, which is the contract being exercised here.
 DELETE FROM public.bcp_conduct_panel_resolutions;
 DELETE FROM public.bcp_conduct_panels;
 DELETE FROM public.bcp_conduct_verifications;

@@ -647,9 +647,21 @@ const race = read(RACE);
     ),
     "CONDUCT-ROLLBACK: it refuses while any conduct session exists — a recorded interview about a named person is not a script's to discard",
   );
+  // bcp_events is append-only for every caller, the owner included, so the
+  // narrower CHECK cannot be restored once conduct history exists -- ADD
+  // CONSTRAINT validates existing rows and those rows refuse it. The rollback
+  // therefore narrows the vocabulary only when nothing was ever recorded, and
+  // says so otherwise. The full replay is what exposed the earlier version,
+  // which demanded a deletion an append-only ledger can never permit.
   check(
-    /event LIKE 'conduct\\_%'[\s\S]{0,600}RAISE EXCEPTION/.test(rbBare),
-    "CONDUCT-ROLLBACK: and refuses while conduct events sit on the append-only ledger it would un-declare",
+    /SELECT count\(\*\) INTO _n FROM public\.bcp_events WHERE event LIKE 'conduct\\_%';[\s\S]{0,200}IF _n = 0 THEN[\s\S]{0,600}ADD CONSTRAINT bcp_events_event_check/.test(
+      rbBare,
+    ),
+    "CONDUCT-ROLLBACK: the event vocabulary is narrowed only when no conduct history exists, because an append-only ledger cannot be cleared to make a constraint fit",
+  );
+  check(
+    /RAISE NOTICE[\s\S]{0,300}vocabulary keeps admitting them/.test(rb),
+    "CONDUCT-ROLLBACK: and when history does exist it says so, rather than failing on a constraint nobody can satisfy",
   );
   check(!/CASCADE/.test(rbBare), "CONDUCT-ROLLBACK: it drops nothing with CASCADE");
   const order = [

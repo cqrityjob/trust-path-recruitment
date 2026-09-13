@@ -488,12 +488,24 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "CONDUCT-ROLLBACK",
   },
   {
-    id: "CND-NC-ROLLBACK-IGNORES-LEDGER",
+    id: "CND-NC-ROLLBACK-NARROWS-OVER-HISTORY",
     defect:
-      "the rollback stops checking the ledger, so restoring the narrower vocabulary would leave rows the constraint refuses",
+      "the rollback narrows the event vocabulary unconditionally, so once a single conduct event exists it can never run again -- an append-only ledger cannot be cleared to make the constraint fit",
     file: RB,
-    find: "  SELECT count(*) INTO _n FROM public.bcp_events\n   WHERE event LIKE 'conduct\\_%';",
-    replace: "  SELECT 0 INTO _n;",
+    find: "  SELECT count(*) INTO _n FROM public.bcp_events WHERE event LIKE 'conduct\\_%';\n  IF _n = 0 THEN",
+    replace:
+      "  SELECT count(*) INTO _n FROM public.bcp_events WHERE event LIKE 'conduct\\_%';\n  IF true THEN",
+    guard: GUARD,
+    expect: "CONDUCT-ROLLBACK",
+  },
+  {
+    id: "CND-NC-ROLLBACK-SILENT-OVER-HISTORY",
+    defect:
+      "the rollback stops saying that it left the vocabulary wide, so an operator cannot tell the difference between a full restore and a partial one",
+    file: RB,
+    find: "      'vocabulary keeps admitting them. Nothing can write them any more -- the conduct RPCs are '",
+    replace:
+      "      'vocabulary was handled. Nothing can write them any more -- the conduct RPCs are '",
     guard: GUARD,
     expect: "CONDUCT-ROLLBACK",
   },

@@ -30,13 +30,6 @@ BEGIN
       'not discard recruitment history.', _n;
   END IF;
 
-  SELECT count(*) INTO _n FROM public.bcp_events
-   WHERE event LIKE 'conduct\_%';
-  IF _n <> 0 THEN
-    RAISE EXCEPTION
-      'BCP_CONDUCT_ROLLBACK: % conduct event(s) are on the append-only ledger. Restoring the '
-      'narrower vocabulary would leave rows the constraint refuses. Resolve them first.', _n;
-  END IF;
 END $$;
 
 -- ---- the read and write surface ------------------------------------------
@@ -78,15 +71,42 @@ DROP TABLE IF EXISTS public.bcp_conduct_sessions;
 DROP FUNCTION IF EXISTS public.bcp_conduct_can_read_session(uuid);
 DROP FUNCTION IF EXISTS public.bcp_conduct_may_see_others(uuid);
 
--- ---- the vocabulary, restored verbatim to its PR 4 state ------------------
-ALTER TABLE public.bcp_events DROP CONSTRAINT IF EXISTS bcp_events_event_check;
-ALTER TABLE public.bcp_events
-  ADD CONSTRAINT bcp_events_event_check
-  CHECK (event IN (
-    'assignment_created', 'notice_acknowledged', 'response_saved',
-    'response_submitted', 'assignment_cancelled', 'assignment_opened',
-    'pilot_granted', 'pilot_revoked',
-    'case_linked', 'case_unlinked'));
+-- ---- the vocabulary --------------------------------------------------------
+--
+-- Restored to PR 4's state ONLY when nothing was ever recorded under it.
+--
+-- bcp_events is append-only by construction: PR 3's guard refuses a DELETE from
+-- every caller, the table owner included. So if a conduct event was ever
+-- written, the narrower CHECK cannot be put back -- ADD CONSTRAINT validates
+-- existing rows and those rows would refuse it. The only way to "resolve" that
+-- would be to delete recruitment history to make a constraint fit, which is not
+-- something a rollback does on anyone's behalf.
+--
+-- Leaving the wider vocabulary in place is safe and honest: the conduct RPCs are
+-- gone by this point, so nothing can write those events any more. The
+-- vocabulary simply goes on admitting what the ledger already contains, which
+-- is what an append-only ledger requires of it.
+DO $vocab$
+DECLARE
+  _n integer;
+BEGIN
+  SELECT count(*) INTO _n FROM public.bcp_events WHERE event LIKE 'conduct\_%';
+  IF _n = 0 THEN
+    ALTER TABLE public.bcp_events DROP CONSTRAINT IF EXISTS bcp_events_event_check;
+    ALTER TABLE public.bcp_events
+      ADD CONSTRAINT bcp_events_event_check
+      CHECK (event IN (
+        'assignment_created', 'notice_acknowledged', 'response_saved',
+        'response_submitted', 'assignment_cancelled', 'assignment_opened',
+        'pilot_granted', 'pilot_revoked',
+        'case_linked', 'case_unlinked'));
+  ELSE
+    RAISE NOTICE
+      'BCP_CONDUCT_ROLLBACK: % conduct event(s) remain on the append-only ledger, so the event '
+      'vocabulary keeps admitting them. Nothing can write them any more -- the conduct RPCs are '
+      'gone -- and the history stays readable.', _n;
+  END IF;
+END $vocab$;
 
 DO $proof$
 DECLARE
@@ -111,10 +131,16 @@ BEGIN
     RAISE EXCEPTION 'BCP_CONDUCT_ROLLBACK: % conduct policy/policies survive.', _n;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM pg_constraint
-              WHERE conrelid = 'public.bcp_events'::regclass
-                AND pg_get_constraintdef(oid) LIKE '%conduct_%') THEN
-    RAISE EXCEPTION 'BCP_CONDUCT_ROLLBACK: the event vocabulary still admits a conduct event.';
+  -- The vocabulary is narrowed only when the ledger holds no conduct history;
+  -- see the note above. Prove exactly that, rather than asserting a narrowing
+  -- that an append-only ledger can make impossible.
+  IF NOT EXISTS (SELECT 1 FROM public.bcp_events WHERE event LIKE 'conduct\_%')
+     AND EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conrelid = 'public.bcp_events'::regclass
+                    AND pg_get_constraintdef(oid) LIKE '%conduct_%') THEN
+    RAISE EXCEPTION
+      'BCP_CONDUCT_ROLLBACK: no conduct event was ever recorded, so the vocabulary should have '
+      'been narrowed, and it still admits a conduct event.';
   END IF;
 
   -- PR 4's members must survive untouched: this rollback unwinds PR 5A only.
