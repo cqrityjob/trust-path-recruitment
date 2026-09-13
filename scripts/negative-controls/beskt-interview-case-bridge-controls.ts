@@ -22,6 +22,7 @@ const TSCONFIG = "tsconfig.scripts.json";
 const CI = ".github/workflows/ci.yml";
 const FRONTIER = "scripts/release-frontier-check.ts";
 const GUARD = "beskt-interview-case-bridge:check";
+const RB_SUITE = "supabase/tests/scp_a_rollback_test.sql";
 
 const MUTATIONS: readonly Mutation[] = [
   // ---- No parallel case system --------------------------------------------
@@ -70,8 +71,7 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "BRG-NC-EVENT-VOCABULARY-NARROWED",
-    defect:
-      "the rebuilt event CHECK silently drops an existing member, breaking PR 3's own writes",
+    defect: "the rebuilt event CHECK silently drops an existing member, breaking PR 3's own writes",
     file: MIG,
     find: "    'assignment_created', 'notice_acknowledged', 'response_saved',",
     replace: "    'assignment_created', 'notice_acknowledged',",
@@ -95,8 +95,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the bound answers hash loses its digest shape, so a placeholder string could be bound as the snapshot identity",
     file: MIG,
-    find:
-      "  bound_answers_content_hash text NOT NULL CHECK (bound_answers_content_hash ~ '^[0-9a-f]{64}$'),",
+    find: "  bound_answers_content_hash text NOT NULL CHECK (bound_answers_content_hash ~ '^[0-9a-f]{64}$'),",
     replace: "  bound_answers_content_hash text NOT NULL,",
     guard: GUARD,
     expect: "BRIDGE-SNAPSHOT",
@@ -165,8 +164,7 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "BRG-NC-CANDIDATE-VIEW-UNGUARDED",
-    defect:
-      "the candidate read model stops checking that the preparation belongs to the caller",
+    defect: "the candidate read model stops checking that the preparation belongs to the caller",
     file: MIG,
     find: "  IF NOT public.bcp_is_assignment_candidate(_assignment_id) THEN",
     replace: "  IF false THEN",
@@ -233,8 +231,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the replay check moves after the first write, so a retried request links twice before it is recognised",
     file: MIG,
-    find:
-      "  _replay := public.bcp_operation_begin(_operation_id, _hash);\n  IF _replay IS NOT NULL THEN RETURN _replay; END IF;\n\n  -- Serialise against the preparation",
+    find: "  _replay := public.bcp_operation_begin(_operation_id, _hash);\n  IF _replay IS NOT NULL THEN RETURN _replay; END IF;\n\n  -- Serialise against the preparation",
     replace: "  -- Serialise against the preparation",
     guard: GUARD,
     expect: "BRIDGE-IDEMPOTENCY",
@@ -254,8 +251,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "one-live-link-per-preparation stops being an index, leaving only a read-then-write a concurrent transaction can race past",
     file: MIG,
-    find:
-      "CREATE UNIQUE INDEX bcp_case_links_one_live_per_assignment_idx\n  ON public.bcp_case_links (live_slot) WHERE live_slot IS NOT NULL;",
+    find: "CREATE UNIQUE INDEX bcp_case_links_one_live_per_assignment_idx\n  ON public.bcp_case_links (live_slot) WHERE live_slot IS NOT NULL;",
     replace:
       "CREATE INDEX bcp_case_links_one_live_per_assignment_idx\n  ON public.bcp_case_links (live_slot) WHERE live_slot IS NOT NULL;",
     guard: GUARD,
@@ -276,8 +272,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the link RPC stops refusing a stale revision, so a member can link against a preparation that changed under them",
     file: MIG,
-    find:
-      "    RAISE EXCEPTION 'BCP_STALE_REVISION: the preparation is at revision % but the request expected %. Reload and retry.',",
+    find: "    RAISE EXCEPTION 'BCP_STALE_REVISION: the preparation is at revision % but the request expected %. Reload and retry.',",
     replace:
       "    RAISE EXCEPTION 'BCP_REVISION_NOTE: the preparation is at revision % but the request expected %.',",
     guard: GUARD,
@@ -288,8 +283,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the link RPC stops checking employer membership, so any signed-in user can attach a preparation to a case",
     file: MIG,
-    find:
-      "  IF NOT public.has_employer_role(_caller, _a.employer_id, ARRAY['owner', 'admin', 'member']) THEN\n    RAISE EXCEPTION 'BCP_NOT_EMPLOYER_MEMBER: you are not a member of this employer.'",
+    find: "  IF NOT public.has_employer_role(_caller, _a.employer_id, ARRAY['owner', 'admin', 'member']) THEN\n    RAISE EXCEPTION 'BCP_NOT_EMPLOYER_MEMBER: you are not a member of this employer.'",
     replace:
       "  IF _caller IS NULL THEN\n    RAISE EXCEPTION 'BCP_NOT_EMPLOYER_MEMBER: you are not a member of this employer.'",
     guard: GUARD,
@@ -311,8 +305,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BRG-NC-UNLINK-DELETES",
     defect: "unlinking deletes the link instead of marking it, destroying the history",
     file: MIG,
-    find:
-      "  UPDATE public.bcp_case_links\n     SET unlinked_at = now(), unlinked_by = _caller, unlinked_reason = _reason,\n         unlink_operation_id = _operation_id\n   WHERE id = _link_id;",
+    find: "  UPDATE public.bcp_case_links\n     SET unlinked_at = now(), unlinked_by = _caller, unlinked_reason = _reason,\n         unlink_operation_id = _operation_id\n   WHERE id = _link_id;",
     replace: "  DELETE FROM public.bcp_case_links WHERE id = _link_id;",
     guard: GUARD,
     expect: "BRIDGE-APPEND-ONLY",
@@ -390,8 +383,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the link trigger function keeps its default PUBLIC EXECUTE, so PostgREST publishes an invariant-checker as a callable API",
     file: MIG,
-    find:
-      "REVOKE ALL ON FUNCTION public.bcp_guard_case_link() FROM PUBLIC, anon, authenticated, service_role;",
+    find: "REVOKE ALL ON FUNCTION public.bcp_guard_case_link() FROM PUBLIC, anon, authenticated, service_role;",
     replace: "REVOKE ALL ON FUNCTION public.bcp_guard_case_link() FROM anon;",
     guard: GUARD,
     expect: "BRIDGE-SURFACE",
@@ -401,8 +393,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a SECURITY DEFINER RPC loses its pinned search_path, so a caller-controlled schema can shadow the objects it reads",
     file: MIG,
-    find:
-      "CREATE OR REPLACE FUNCTION public.bcp_case_preparation_basis(_case_id uuid)\nRETURNS jsonb\nLANGUAGE plpgsql\nSTABLE\nSECURITY DEFINER\nSET search_path = public",
+    find: "CREATE OR REPLACE FUNCTION public.bcp_case_preparation_basis(_case_id uuid)\nRETURNS jsonb\nLANGUAGE plpgsql\nSTABLE\nSECURITY DEFINER\nSET search_path = public",
     replace:
       "CREATE OR REPLACE FUNCTION public.bcp_case_preparation_basis(_case_id uuid)\nRETURNS jsonb\nLANGUAGE plpgsql\nSTABLE\nSECURITY DEFINER",
     guard: GUARD,
@@ -443,8 +434,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BRG-NC-ROLLBACK-DROP-ORDER",
     defect: "the rollback drops the parent table before its child",
     file: RB,
-    find:
-      "DROP TABLE IF EXISTS public.bcp_case_topics;\nDROP TABLE IF EXISTS public.bcp_case_links;",
+    find: "DROP TABLE IF EXISTS public.bcp_case_topics;\nDROP TABLE IF EXISTS public.bcp_case_links;",
     replace:
       "DROP TABLE IF EXISTS public.bcp_case_links;\nDROP TABLE IF EXISTS public.bcp_case_topics;",
     guard: GUARD,
@@ -466,7 +456,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BRG-NC-SUITE-NOT-RUN",
     defect: "the behaviour suite stops running in the database harness",
     file: DB,
-    find: "  -f supabase/tests/bcp_interview_case_bridge_test.sql 2>&1)\"",
+    find: '  -f supabase/tests/bcp_interview_case_bridge_test.sql 2>&1)"',
     replace: "  -c 'SELECT 1' 2>&1)\"",
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
@@ -496,8 +486,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "release-state.json claims the migration is already applied on the hosted database, which is exactly the unverified claim this stack exists to prevent",
     file: STATE,
-    find:
-      '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "pending",',
+    find: '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "pending",',
     replace:
       '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "applied",',
     guard: GUARD,
@@ -538,6 +527,17 @@ const MUTATIONS: readonly Mutation[] = [
     file: TSCONFIG,
     find: '    "scripts/beskt-interview-case-bridge-check.ts",\n',
     replace: "",
+    guard: GUARD,
+    expect: "BRIDGE-REGISTRATION",
+  },
+
+  {
+    id: "BRG-NC-DOCUMENTED-UNWIND-ORDER",
+    defect:
+      "the documented full-unwind procedure drops PR 3's tables before the bridge that points into them, so the published procedure would fail on a foreign key",
+    file: RB_SUITE,
+    find: "DROP TABLE IF EXISTS public.bcp_case_topics;\nDROP TABLE IF EXISTS public.bcp_case_links;",
+    replace: "-- moved after PR 3",
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },

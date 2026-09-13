@@ -37,6 +37,7 @@ const PACKAGE = join(ROOT, "package.json");
 const CI = join(ROOT, ".github/workflows/ci.yml");
 const TSCONFIG = join(ROOT, "tsconfig.scripts.json");
 const FRONTIER = join(ROOT, "scripts/release-frontier-check.ts");
+const ROLLBACK_SUITE = join(ROOT, "supabase/tests/scp_a_rollback_test.sql");
 
 /** The two tables PR 4 adds. Nothing else may appear. */
 const TABLES = ["bcp_case_links", "bcp_case_topics"] as const;
@@ -481,7 +482,8 @@ const pr3 = stripComments(read(PR3_MIGRATION));
   check(
     /SELECT an\.response_state INTO _state[\s\S]{0,300}an\.response_id = _l\.bound_response_id/.test(
       topicBody,
-    ) && /IF _state <> NEW\.topic_reason THEN[\s\S]{0,200}BCP_TOPIC_REASON_MISMATCH/.test(topicBody),
+    ) &&
+      /IF _state <> NEW\.topic_reason THEN[\s\S]{0,200}BCP_TOPIC_REASON_MISMATCH/.test(topicBody),
     "BRIDGE-DERIVATION: and a topic's reason is READ from the bound snapshot, so a caller cannot assert 'omitted' against a question the candidate answered in full",
   );
 }
@@ -633,8 +635,7 @@ const pr3 = stripComments(read(PR3_MIGRATION));
     "BRIDGE-POSTFLIGHT: and raises a named diagnostic when a postflight assertion fails",
   );
   check(
-    /has_function_privilege\('anon'/.test(bare) ||
-      /has_table_privilege\('anon'/.test(bare),
+    /has_function_privilege\('anon'/.test(bare) || /has_table_privilege\('anon'/.test(bare),
     "BRIDGE-POSTFLIGHT: the postflight interrogates anon's real privileges through the catalogue rather than restating the GRANT statements above it",
   );
 }
@@ -667,6 +668,27 @@ const pr3 = stripComments(read(PR3_MIGRATION));
   check(
     suiteAt >= 0 && pr3RollbackAt >= 0 && suiteAt < pr3RollbackAt,
     "BRIDGE-REGISTRATION: and it runs before PR 3 is stood down, because the bridge's foreign keys into PR 3's tables are real",
+  );
+
+  // The DOCUMENTED full-unwind procedure, which is a separate artefact from
+  // this migration's own rollback: it takes the whole stack down in one pass,
+  // newest first. PR 4 holds foreign keys into PR 3's tables, so if it is not
+  // unwound there first, the documented procedure is simply wrong -- and the
+  // place that must fail is here, not production.
+  const rollbackSuite = read(ROLLBACK_SUITE);
+  const bridgeAt = rollbackSuite.indexOf("DROP TABLE IF EXISTS public.bcp_case_links;");
+  const pr3At = rollbackSuite.indexOf("DROP TABLE IF EXISTS public.bcp_assignments;");
+  check(
+    bridgeAt >= 0,
+    "BRIDGE-REGISTRATION: the documented full-unwind procedure drops the bridge tables",
+  );
+  check(
+    bridgeAt >= 0 && pr3At >= 0 && bridgeAt < pr3At,
+    "BRIDGE-REGISTRATION: and drops them BEFORE PR 3's, because the bridge's foreign keys into PR 3 are real",
+  );
+  check(
+    rollbackSuite.includes("ADD CONSTRAINT scp_interview_case_sources_source_kind_check"),
+    "BRIDGE-REGISTRATION: and restores the source vocabulary on the table that SURVIVES the unwind, so it stops admitting a kind nothing can produce",
   );
 
   const pkg = read(PACKAGE);
@@ -707,7 +729,10 @@ const pr3 = stripComments(read(PR3_MIGRATION));
     }>;
   };
   const entry = (state.frontier ?? []).find((m) => m.file === MIGRATION_NAME);
-  check(entry !== undefined, "BRIDGE-REGISTRATION: the migration is declared in release-state.json");
+  check(
+    entry !== undefined,
+    "BRIDGE-REGISTRATION: the migration is declared in release-state.json",
+  );
   check(
     entry?.hostedState === "pending",
     "BRIDGE-REGISTRATION: and declared PENDING — it has not been applied to the hosted project, and saying otherwise would be the claim this whole stack exists to prevent",
@@ -724,7 +749,7 @@ const pr3 = stripComments(read(PR3_MIGRATION));
       [...CLIENT_MUTATIONS, ...CLIENT_READS, ...TRIGGER_FUNCTIONS].every((f) =>
         (entry?.introduces as Array<{ object?: string }>).some((i) => i.object === f),
       ),
-    "BRIDGE-REGISTRATION: and declares every object it introduces, so \"can code depend on this yet?\" is answerable from the file",
+    'BRIDGE-REGISTRATION: and declares every object it introduces, so "can code depend on this yet?" is answerable from the file',
   );
 
   const frontier = read(FRONTIER);
@@ -736,10 +761,7 @@ const pr3 = stripComments(read(PR3_MIGRATION));
 
 // ── 12. The suite itself proves, rather than reports ─────────────────────
 {
-  check(
-    /SYNTETISK/.test(suite),
-    "BRIDGE-SUITE: everything the suite plants is labelled synthetic",
-  );
+  check(/SYNTETISK/.test(suite), "BRIDGE-SUITE: everything the suite plants is labelled synthetic");
   check(
     /^BEGIN;/m.test(suite) && /^ROLLBACK;/m.test(suite),
     "BRIDGE-SUITE: and the whole suite runs in one transaction that is rolled back, so it seeds nothing",
@@ -767,10 +789,7 @@ const pr3 = stripComments(read(PR3_MIGRATION));
     "bcp_my_preparation_link",
     "bcp_linkable_interview_cases",
   ]) {
-    check(
-      suite.includes(needle),
-      `BRIDGE-SUITE: the suite exercises ${needle}`,
-    );
+    check(suite.includes(needle), `BRIDGE-SUITE: the suite exercises ${needle}`);
   }
   check(
     /SET LOCAL ROLE anon/.test(suite) || /must_fail_as\('anon'/.test(suite),
@@ -794,14 +813,13 @@ const pr3 = stripComments(read(PR3_MIGRATION));
     pr3.includes("CREATE TABLE public.bcp_events ("),
     "BRIDGE-NO-REGRESSION: the event ledger PR 4 writes to is PR 3's, read from PR 3's own migration",
   );
-  check(
-    !/DROP TABLE/.test(bare),
-    "BRIDGE-NO-REGRESSION: PR 4 drops no table at all",
-  );
+  check(!/DROP TABLE/.test(bare), "BRIDGE-NO-REGRESSION: PR 4 drops no table at all");
 }
 
 if (failures.length > 0) {
-  console.error(`\nBESKT interview-case bridge guard FAILED (${failures.length} of ${assertions}).`);
+  console.error(
+    `\nBESKT interview-case bridge guard FAILED (${failures.length} of ${assertions}).`,
+  );
   for (const failure of failures) console.error(`  - ${failure}`);
   process.exit(1);
 }
