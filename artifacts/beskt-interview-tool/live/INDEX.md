@@ -1,7 +1,7 @@
 # BESKT PR 5B — the interview tool, ROUTED browser evidence
 
-Captured at HEAD `f4cc9980da207e89d9df60cdfb8d14233b541aa2`, 165 steps over
-3 viewport(s), 270.1 s of measured step time.
+Captured at HEAD `e69efdb7d25f10da6faf03ff53f65b8689b990a5`, 165 steps over
+3 viewport(s), 240.9 s of measured step time.
 
 ## What these captures are
 
@@ -77,267 +77,267 @@ scripts/local-stack/run-interview-tool-evidence.sh
 
 | Project | Phase | Steps | Duration |
 | --- | --- | ---: | ---: |
-| chromium | overview | 3 | 43.4 s |
-| chromium | open | 4 | 4.8 s |
+| chromium | overview | 3 | 21.8 s |
+| chromium | open | 4 | 21.0 s |
 | chromium | binding | 1 | 0.9 s |
-| chromium | snapshot | 4 | 1.5 s |
+| chromium | snapshot | 4 | 1.6 s |
 | chromium | session | 2 | 3.8 s |
-| chromium | themes | 3 | 1.8 s |
+| chromium | themes | 3 | 1.9 s |
 | chromium | document | 3 | 1.6 s |
-| chromium | confirm | 2 | 1.4 s |
+| chromium | confirm | 2 | 1.3 s |
 | chromium | correct | 2 | 1.5 s |
 | chromium | history | 1 | 0.7 s |
-| chromium | verify | 2 | 1.7 s |
-| chromium | neutral | 2 | 1.5 s |
-| chromium | lock | 3 | 0.9 s |
-| chromium | locked | 3 | 5.0 s |
-| chromium | independence | 4 | 7.7 s |
-| chromium | second | 3 | 4.2 s |
+| chromium | verify | 2 | 1.8 s |
+| chromium | neutral | 2 | 1.6 s |
+| chromium | lock | 3 | 1.0 s |
+| chromium | locked | 3 | 5.4 s |
+| chromium | independence | 4 | 7.0 s |
+| chromium | second | 3 | 4.0 s |
 | chromium | compare | 3 | 0.6 s |
-| chromium | reopen | 3 | 6.2 s |
-| chromium | panel | 6 | 6.5 s |
-| chromium | refusal | 1 | 4.7 s |
-| mobile-375 | overview | 3 | 23.2 s |
-| mobile-375 | open | 4 | 4.6 s |
-| mobile-375 | binding | 1 | 0.7 s |
-| mobile-375 | snapshot | 4 | 1.3 s |
-| mobile-375 | session | 2 | 3.9 s |
-| mobile-375 | themes | 3 | 1.6 s |
-| mobile-375 | document | 3 | 1.1 s |
+| chromium | reopen | 3 | 6.0 s |
+| chromium | panel | 6 | 7.2 s |
+| chromium | refusal | 1 | 4.3 s |
+| mobile-375 | overview | 3 | 22.0 s |
+| mobile-375 | open | 4 | 4.5 s |
+| mobile-375 | binding | 1 | 0.8 s |
+| mobile-375 | snapshot | 4 | 1.2 s |
+| mobile-375 | session | 2 | 3.6 s |
+| mobile-375 | themes | 3 | 1.7 s |
+| mobile-375 | document | 3 | 1.2 s |
 | mobile-375 | confirm | 2 | 1.0 s |
 | mobile-375 | correct | 2 | 1.1 s |
 | mobile-375 | history | 1 | 0.5 s |
-| mobile-375 | verify | 2 | 1.3 s |
-| mobile-375 | neutral | 2 | 1.2 s |
+| mobile-375 | verify | 2 | 1.4 s |
+| mobile-375 | neutral | 2 | 1.3 s |
 | mobile-375 | lock | 3 | 0.9 s |
-| mobile-375 | locked | 3 | 5.3 s |
-| mobile-375 | independence | 4 | 7.1 s |
-| mobile-375 | second | 3 | 3.7 s |
+| mobile-375 | locked | 3 | 5.0 s |
+| mobile-375 | independence | 4 | 7.0 s |
+| mobile-375 | second | 3 | 3.6 s |
 | mobile-375 | compare | 3 | 0.5 s |
-| mobile-375 | reopen | 3 | 5.7 s |
-| mobile-375 | panel | 6 | 6.2 s |
-| mobile-375 | refusal | 1 | 6.8 s |
-| mobile-390 | overview | 3 | 37.3 s |
+| mobile-375 | reopen | 3 | 5.6 s |
+| mobile-375 | panel | 6 | 6.4 s |
+| mobile-375 | refusal | 1 | 4.2 s |
+| mobile-390 | overview | 3 | 20.8 s |
 | mobile-390 | open | 4 | 4.6 s |
-| mobile-390 | binding | 1 | 0.7 s |
-| mobile-390 | snapshot | 4 | 1.3 s |
-| mobile-390 | session | 2 | 3.4 s |
-| mobile-390 | themes | 3 | 1.7 s |
+| mobile-390 | binding | 1 | 0.8 s |
+| mobile-390 | snapshot | 4 | 1.4 s |
+| mobile-390 | session | 2 | 3.6 s |
+| mobile-390 | themes | 3 | 1.3 s |
 | mobile-390 | document | 3 | 1.2 s |
 | mobile-390 | confirm | 2 | 1.1 s |
-| mobile-390 | correct | 2 | 1.1 s |
+| mobile-390 | correct | 2 | 1.2 s |
 | mobile-390 | history | 1 | 0.5 s |
 | mobile-390 | verify | 2 | 1.3 s |
-| mobile-390 | neutral | 2 | 1.3 s |
+| mobile-390 | neutral | 2 | 1.4 s |
 | mobile-390 | lock | 3 | 0.9 s |
-| mobile-390 | locked | 3 | 4.8 s |
+| mobile-390 | locked | 3 | 5.0 s |
 | mobile-390 | independence | 4 | 7.3 s |
-| mobile-390 | second | 3 | 3.8 s |
-| mobile-390 | compare | 3 | 0.6 s |
-| mobile-390 | reopen | 3 | 5.8 s |
-| mobile-390 | panel | 6 | 6.9 s |
-| mobile-390 | refusal | 1 | 6.7 s |
+| mobile-390 | second | 3 | 3.7 s |
+| mobile-390 | compare | 3 | 0.5 s |
+| mobile-390 | reopen | 3 | 5.7 s |
+| mobile-390 | panel | 6 | 6.3 s |
+| mobile-390 | refusal | 1 | 4.3 s |
 
 ## Screenshots
 
-- `chromium-01-overview-module-en.png` — `6ac9f24be4f29982849c8bd03afa5a1a80d153692ce81893dffbbb24e807d929` (263845 bytes)
-- `chromium-01-overview-module-sv.png` — `f944bf2b566dde833626aa67f93fd0e091d5c8ef44a676dfe5186d5a8beab7b6` (257042 bytes)
-- `chromium-02-tool-landing-en.png` — `2f7a60454d4190ad9ba64855f0e443b87c248a77d918b814ff612e827d32c4ad` (261493 bytes)
-- `chromium-02-tool-landing-sv.png` — `d496bbcb2669c7b91e8999b290e79b4cc1bd879f28b8346c7b94414a110b5a74` (245947 bytes)
-- `chromium-03-binding-disclosed-sv.png` — `5b194d36d14eecdf95b4237271b6c54760326669990327726d008b3f02c4a456` (280952 bytes)
-- `chromium-04-snapshot-en.png` — `2f7a60454d4190ad9ba64855f0e443b87c248a77d918b814ff612e827d32c4ad` (261493 bytes)
-- `chromium-04-snapshot-sv.png` — `d496bbcb2669c7b91e8999b290e79b4cc1bd879f28b8346c7b94414a110b5a74` (245947 bytes)
-- `chromium-05-snapshot-readonly-sv.png` — `d496bbcb2669c7b91e8999b290e79b4cc1bd879f28b8346c7b94414a110b5a74` (245947 bytes)
-- `chromium-06-position-blocked-sv.png` — `65cfbf3c1feee48be691dd91910931a10d07b0e7f85f61caae8074fdf625091e` (153056 bytes)
-- `chromium-06-session-open-sv.png` — `88482a25ba77a7580eda76cc8a70d78ace024bc6ad3f60459e0c2b0d7d61687d` (316726 bytes)
-- `chromium-07-themes-en.png` — `1929fce6849b1c44e1382d406e31d1cfbb376f2c453fd81bfbe373205448fe29` (339269 bytes)
-- `chromium-07-themes-sv.png` — `88482a25ba77a7580eda76cc8a70d78ace024bc6ad3f60459e0c2b0d7d61687d` (316726 bytes)
-- `chromium-08-entry-form-sv.png` — `9f6c7180ba8a0a5cd680e3ae8c97b6af0af8683e97d8cebf0ae4d3a5c17eaa8e` (398280 bytes)
-- `chromium-08-entry-saved-sv.png` — `f5eb719d99170091b4d74d384cf7b95deec3cd3b5e1392ca9b854fd488924edc` (368916 bytes)
-- `chromium-09-entry-confirmed-sv.png` — `d98eff795e85c1a29a118a8c4940011ff3931e93965d689dc5328de0c58a35f8` (397108 bytes)
-- `chromium-09-entry-refused-sv.png` — `5deed2bee3e30b1c079dc569d3878f3369f84ba8f61b8ec888eb05c1f2966d80` (451160 bytes)
-- `chromium-10-correction-refused-sv.png` — `cca08ed9646d550945deefba4bec8f156af046773241d7b3148e905a1edb3ce1` (469575 bytes)
-- `chromium-10-correction-saved-sv.png` — `3b0cb310e5cc92a5e999ee23cab1c25e786ee3b27131dc87a61b4b43ebaceda2` (396955 bytes)
-- `chromium-11-history-sv.png` — `e464c6b41a0aa9cc3ec0d3a6862a2f3ec813f5c33ac809d3cf5fe01a39394f52` (504024 bytes)
-- `chromium-12-verification-history-sv.png` — `534a9feff2404b903ac1584fffce0c477c28d30f7898732a4bf64d747d7ad660` (520760 bytes)
-- `chromium-12-verification-refused-sv.png` — `1bd3a8976e42056a07c2480c03d2da5899297bf7d1a59ddfb2c547bd0ce8174f` (413815 bytes)
-- `chromium-13-not-verified-neutral-en.png` — `6364f3cc5ac582176c277210127aea599dd1ddf6cbde093e39adadfed22fb777` (429971 bytes)
-- `chromium-13-not-verified-neutral-sv.png` — `7fc151cae705036881b15688d9748d1f6cb006aecb080222106520e679f88c3d` (406162 bytes)
-- `chromium-14-before-lock-sv.png` — `a0c7aeb5e5b6352970118d743d7e98b96ad9f60299792ae05034bbc52ad69632` (144440 bytes)
-- `chromium-14-lock-dialog-sv.png` — `f5eb0fbef40e6fe64efd61d559e8ec0aaaa528d34ad3a4e3dca9522824b97a36` (154180 bytes)
-- `chromium-14-locked-sv.png` — `7c6f61c2f483e331604451d52c27cbf49d9bcd95d187a4e24d9a3f97df5cd17c` (145465 bytes)
-- `chromium-15-entries-readonly-sv.png` — `143a2218f832ca6bafec6388c980c447669c61129447b05ba5a8d247d8ca19af` (397488 bytes)
-- `chromium-15-locked-readonly-en.png` — `0385f1fc4f2c6010d50495b75bdc44c74e4490fbf879c9513d985016af13af10` (145669 bytes)
-- `chromium-15-locked-readonly-sv.png` — `7c6f61c2f483e331604451d52c27cbf49d9bcd95d187a4e24d9a3f97df5cd17c` (145465 bytes)
-- `chromium-16-second-assessor-joined-sv.png` — `2e678a2324bafd6d997cc5eb994cd96b724c264379d3ea4f59ed09bd5568628f` (335577 bytes)
-- `chromium-16-withheld-en.png` — `94471da8b0d01b5bf1f05adfd9ec7c7c54cd1c107a0a5e9ddbf63e3c66dfe8a5` (155176 bytes)
-- `chromium-16-withheld-sv.png` — `d2d2fed359641960cc7597326c977b4bef5a812688953f010e55f4d2f887eaa3` (153293 bytes)
-- `chromium-17-revealed-sv.png` — `0dd9d4c2249db712285c3a115a232e10a1ddcc4a3f57670e440c40fddff8e43b` (217374 bytes)
-- `chromium-17-second-documented-sv.png` — `13de3e1f61d19514875f42a7a805352206c456f5726d8c08c01736b40025546e` (355501 bytes)
-- `chromium-17-second-locked-sv.png` — `0dd9d4c2249db712285c3a115a232e10a1ddcc4a3f57670e440c40fddff8e43b` (217374 bytes)
-- `chromium-18-side-by-side-en.png` — `cf5cac14de6e982588db0446e5d374a07afe57b30a4d24bf60cf3754a3e7f79c` (188576 bytes)
-- `chromium-18-side-by-side-sv.png` — `2d664919a897dcf45c550a173c3cc28fa0c317a6059cc108615f957b002a9445` (188449 bytes)
-- `chromium-19-relocked-sv.png` — `2ff24b7e9facb24e1c8035d3186fb4c4724c0090070b4957daf17a8551f89099` (188535 bytes)
-- `chromium-19-reopen-refused-sv.png` — `6c70a773c88446623629cd6cf144d8c21e65afd68b7587f7c4f71ed8fecb963e` (201875 bytes)
-- `chromium-19-reopened-sv.png` — `7fc151cae705036881b15688d9748d1f6cb006aecb080222106520e679f88c3d` (406162 bytes)
+- `chromium-01-overview-module-en.png` — `c02d637b9d87f69b0035eb663a1eb3da72241c476d7e0e5bb7a5a376873a5481` (264374 bytes)
+- `chromium-01-overview-module-sv.png` — `4c605ae6574c662a31900e0a80c361d8334c3a01e4d4baf41123e630a935f255` (257666 bytes)
+- `chromium-02-tool-landing-en.png` — `2ecd54381ea6a6bf266f25f565b5dfc3a0193eec61e149acdf1fe64e3b148fee` (262209 bytes)
+- `chromium-02-tool-landing-sv.png` — `f44d61ee1b59913a06894e483fa0369637fae9ea1e31da959ada616c642d6e97` (246459 bytes)
+- `chromium-03-binding-disclosed-sv.png` — `2ccda8f7fbf5519b0eae81a9319dcfd09e87ac7e4a341e0c64d4cc1e66b4f065` (281345 bytes)
+- `chromium-04-snapshot-en.png` — `2ecd54381ea6a6bf266f25f565b5dfc3a0193eec61e149acdf1fe64e3b148fee` (262209 bytes)
+- `chromium-04-snapshot-sv.png` — `f44d61ee1b59913a06894e483fa0369637fae9ea1e31da959ada616c642d6e97` (246459 bytes)
+- `chromium-05-snapshot-readonly-sv.png` — `f44d61ee1b59913a06894e483fa0369637fae9ea1e31da959ada616c642d6e97` (246459 bytes)
+- `chromium-06-position-blocked-sv.png` — `fbe6df1ded055561f9e2e7a6620993d26736952a2b07e61527869225860fbc53` (153343 bytes)
+- `chromium-06-session-open-sv.png` — `14b9fe5fd2e2a8e13d9a6a2868b2d20adda0a061ea7bf5992741450823c80a9e` (317022 bytes)
+- `chromium-07-themes-en.png` — `dc6a44302b72f7b7cdf71831a0a608a75a84080540f30effbc2659907f36dda2` (339443 bytes)
+- `chromium-07-themes-sv.png` — `14b9fe5fd2e2a8e13d9a6a2868b2d20adda0a061ea7bf5992741450823c80a9e` (317022 bytes)
+- `chromium-08-entry-form-sv.png` — `944ad47b9c08e7b1a7372e790dd6ee79e7a0bfe585fe245b61e86a1c2a5a67ac` (398603 bytes)
+- `chromium-08-entry-saved-sv.png` — `8d280262f37b2f4ecedb2d3e08b9e3ae1c806bb635b5895a9c3492e0339b5417` (369280 bytes)
+- `chromium-09-entry-confirmed-sv.png` — `01e83cfa00facc0cc17ad8482a728b48b88e07da8dd24a76b727d4f03500a9d1` (397531 bytes)
+- `chromium-09-entry-refused-sv.png` — `97cb68cf124b81effaae08bcc1b6690e21acf3069709ba922fa57fd4f853fb48` (451539 bytes)
+- `chromium-10-correction-refused-sv.png` — `53454f3870bdda2baa41fe95d48be8aa3abbadc013c7f5ddc5a07c051f47bf0a` (469884 bytes)
+- `chromium-10-correction-saved-sv.png` — `f65eed14ef446d797fc084f3d84e412fa21c8a6a2301a6777adf46b174f23622` (397393 bytes)
+- `chromium-11-history-sv.png` — `34ebb9a4c70ee81160d53e41f0fa7fa6f6a24837b9765b327ef46134c3e682ea` (504500 bytes)
+- `chromium-12-verification-history-sv.png` — `229ec11b088338ff87c93b0da624d030477fa9378356bcc2c0100e49c6aaf9e8` (521349 bytes)
+- `chromium-12-verification-refused-sv.png` — `fd54b99860326a27c26ff2991b50f0bdfb044f4c56d8baa67d2fffb7ace71af7` (414237 bytes)
+- `chromium-13-not-verified-neutral-en.png` — `d4ff6e31ff6705a13e31934810cdb050332f44f3d95fb91faf76e777e073dc93` (429994 bytes)
+- `chromium-13-not-verified-neutral-sv.png` — `67f2a169d997c284d2808f3313956753b841faa4d3e76757ee04bf52942b952b` (406492 bytes)
+- `chromium-14-before-lock-sv.png` — `f21caa6635be630e5f13382f984f497cfd5731901859d96f27d4f1b7c46a54df` (144736 bytes)
+- `chromium-14-lock-dialog-sv.png` — `532dd674f7896d107e18455199e9c15e2a4deedb042f527b74177dbcbbce99ac` (154301 bytes)
+- `chromium-14-locked-sv.png` — `28ac7108469aeae9a5f254cadfbe72dfff605782c80e609de94208ac46869cf7` (145809 bytes)
+- `chromium-15-entries-readonly-sv.png` — `3ff623d27c4d5770d75752b9b252b8761bd41c66d8c2120441eed6fd9885f012` (397845 bytes)
+- `chromium-15-locked-readonly-en.png` — `e7ddee4479275c82b84fd8478554c437a9c68cd64ac6ec4e84670059e98f4db0` (145932 bytes)
+- `chromium-15-locked-readonly-sv.png` — `28ac7108469aeae9a5f254cadfbe72dfff605782c80e609de94208ac46869cf7` (145809 bytes)
+- `chromium-16-second-assessor-joined-sv.png` — `94f66c508a266a13c941fad3715b36655fef9b78e88d5efffd46b2ddbfc51198` (335869 bytes)
+- `chromium-16-withheld-en.png` — `13ab0af4c7ab4012461bce0d2ce7a1aabc04e5c856db1a9da1d39bb10bc738e7` (155345 bytes)
+- `chromium-16-withheld-sv.png` — `9c41a26027cbd2892e5bd805d596ef8620f47c050590869666a46f781356dbe5` (153559 bytes)
+- `chromium-17-revealed-sv.png` — `6ad5a1a45d6abe541624552d01d6e0b5d59036de6c86ffe8134558d0d4a2ad9c` (217573 bytes)
+- `chromium-17-second-documented-sv.png` — `9fb45e7faf18f4f9749802d1709e60f85cf524a7520c487093b3d88697f798c0` (355583 bytes)
+- `chromium-17-second-locked-sv.png` — `6ad5a1a45d6abe541624552d01d6e0b5d59036de6c86ffe8134558d0d4a2ad9c` (217573 bytes)
+- `chromium-18-side-by-side-en.png` — `f39e947b0aca48845b99276854406cad0383eb86aa3ddf7cc9e71cedd6bd5038` (188606 bytes)
+- `chromium-18-side-by-side-sv.png` — `c5149fa46e005d5e1d324f7232aa52f10a8116578059898c842c9f76be870adc` (188683 bytes)
+- `chromium-19-relocked-sv.png` — `10cfc039fa96fd6783b84b420a3f357b190f81e1d770d6a4612cb25abddedf9d` (188669 bytes)
+- `chromium-19-reopen-refused-sv.png` — `9efa86c51e97b46cc3b74e7d7d324330fdc68d35b6c2e608d431d0f3b987ebd9` (202128 bytes)
+- `chromium-19-reopened-sv.png` — `67f2a169d997c284d2808f3313956753b841faa4d3e76757ee04bf52942b952b` (406492 bytes)
 - `chromium-20-outsider-refused-sv.png` — `ef283a18b8918d0b48b2f3a4dc56ee99a8ad419404e2a2c6fe403b8d60093073` (4256 bytes)
-- `chromium-20-panel-refused-sv.png` — `44f149f4c6a42fe5a206508dae1799b0547d8014dbf3ff620db72eb39fa6a0f5` (192674 bytes)
-- `chromium-20-panel-resolution-en.png` — `05062dc2c1a3345f3a388bf6cb65437afd23b221b4aeeab368fba153b8e4b273` (198656 bytes)
-- `chromium-20-panel-resolution-sv.png` — `f25873d335cbfe06ae63ca929fbc98da19baa783578ffc51a273feff4b7e8147` (191058 bytes)
-- `chromium-20-panel-revealed-sv.png` — `b67a8e61cbb4b5d8ea454d6455ad95b43813f721262c4c1defa64bbda3117af9` (180733 bytes)
-- `chromium-20-positions-untouched-sv.png` — `143a2218f832ca6bafec6388c980c447669c61129447b05ba5a8d247d8ca19af` (397488 bytes)
-- `mobile-375-01-overview-module-en.png` — `6339760fdb83ea8d3520e58dfeb39f4f5666563f90091100acf6c3059ad5cb74` (216258 bytes)
-- `mobile-375-01-overview-module-sv.png` — `1bbb509b011c60b23498fe52fb64dca546a342b3d25f071c91a0553b256f3c73` (209223 bytes)
-- `mobile-375-02-tool-landing-en.png` — `96b1d5895bf0f9f456fae9991aac3e7c5306dc6e5d5e59d1b69fa96c4875c54c` (218752 bytes)
-- `mobile-375-02-tool-landing-sv.png` — `06b4444346f579db1aa39c462d677c724cd94c62154df540ce5b4765132e814e` (203230 bytes)
-- `mobile-375-03-binding-disclosed-sv.png` — `b1adcec313b0a132f7a21759de66c2f731a0409976e8eecd4a204c9162b48187` (240278 bytes)
-- `mobile-375-04-snapshot-en.png` — `b5edc78bd42b78a70ebda0edafe48fede207cfaab6445781452bb7927ccab7cb` (218711 bytes)
-- `mobile-375-04-snapshot-sv.png` — `06b4444346f579db1aa39c462d677c724cd94c62154df540ce5b4765132e814e` (203230 bytes)
-- `mobile-375-05-snapshot-readonly-sv.png` — `06b4444346f579db1aa39c462d677c724cd94c62154df540ce5b4765132e814e` (203230 bytes)
-- `mobile-375-06-position-blocked-sv.png` — `8ce09ef332acddfc5a287e53e0f9eb62a93cbf1702893b230f43e800c3dffc2e` (119739 bytes)
-- `mobile-375-06-session-open-sv.png` — `8e6524a2e70d48d3d5dcc3fb571f76fbbc6f4efe54e8b1552461f4a072df91b7` (270592 bytes)
-- `mobile-375-07-themes-en.png` — `7f16cb2327bac1262f446d8c87de267636e76860ad55eccf85c55c5a2b4533a1` (290835 bytes)
-- `mobile-375-07-themes-sv.png` — `8e6524a2e70d48d3d5dcc3fb571f76fbbc6f4efe54e8b1552461f4a072df91b7` (270592 bytes)
-- `mobile-375-08-entry-form-sv.png` — `651d132fb7dfb87d9dc43471d75b260f4e8d0ba5113edc7ae35f078955aedbbb` (351235 bytes)
-- `mobile-375-08-entry-saved-sv.png` — `4067d39603799726cf9f518749ae9bc83bef6ec2f9b6b758840871643a6860dd` (320705 bytes)
-- `mobile-375-09-entry-confirmed-sv.png` — `273ae08b6db9483c4b62473d4e9d00d4b4d96640c7a37424ca2ce16d008f09cf` (347133 bytes)
-- `mobile-375-09-entry-refused-sv.png` — `e3ca963f9ba92d1d3701ec1b6880ac29c8128c94837d86e95545030b197eb486` (401498 bytes)
-- `mobile-375-10-correction-refused-sv.png` — `5154f87c75618c6c1db5a5614ea4c3e48a06142e2cb5790fee020a1d361de4f5` (418497 bytes)
-- `mobile-375-10-correction-saved-sv.png` — `bac55cf5e5dec33d555fdc186926456b2b6b48610d8de1d01280108734d7c841` (346747 bytes)
-- `mobile-375-11-history-sv.png` — `f079953b290f6023628fc52002e3f5a9b8a7c8a0d812ae5c505de7df7a5c9b2a` (448132 bytes)
-- `mobile-375-12-verification-history-sv.png` — `c5df67c58a37dc3b69c6234e3199c79d445edf6fef2158992f033a3788fdd041` (464371 bytes)
-- `mobile-375-12-verification-refused-sv.png` — `369268100775e388acab0972e4e0c5dd364a8ff46e957b926204a6290f8f5d5d` (362501 bytes)
-- `mobile-375-13-not-verified-neutral-en.png` — `57982d7864bd4f435340b1c30bed0484508effa6f04059098cbf2afcd2b4fbcc` (376721 bytes)
-- `mobile-375-13-not-verified-neutral-sv.png` — `564e9b5a022288289ae0cd2dd4404655436f9c06d7e44df77c39e5c0637fc359` (355389 bytes)
-- `mobile-375-14-before-lock-sv.png` — `94c29adcbda942aeb50f34aeec3b977bddf51044d1f27d705b49646c3185f1e7` (111501 bytes)
-- `mobile-375-14-lock-dialog-sv.png` — `51824532d3a38a36b829c9e3ff3758fd43bf71e2562e82bc08d84b981f7e5b10` (114490 bytes)
-- `mobile-375-14-locked-sv.png` — `88438460c185866ab43eb393086e902f834db175e4c724a1d80ff55f6eb07a7c` (111851 bytes)
-- `mobile-375-15-entries-readonly-sv.png` — `042da37981bd78e95423e6df443cebe80c1530fcfcc47b369eb599962eb321d3` (345731 bytes)
-- `mobile-375-15-locked-readonly-en.png` — `cfdd7e97df7abb34fcbee945f1144fc03938b20fc31ebd18f1aa821e855c3fad` (114494 bytes)
-- `mobile-375-15-locked-readonly-sv.png` — `88438460c185866ab43eb393086e902f834db175e4c724a1d80ff55f6eb07a7c` (111851 bytes)
-- `mobile-375-16-second-assessor-joined-sv.png` — `e07af3be0d913ed1d4f36cbb6266b516216b3bfbdff3b254030b7e554a8bac8c` (289141 bytes)
-- `mobile-375-16-withheld-en.png` — `ad626b0010431c622248226bd175c3c9acbec7a53bfbfc29c81f2fb04fff1f44` (123211 bytes)
-- `mobile-375-16-withheld-sv.png` — `8ce09ef332acddfc5a287e53e0f9eb62a93cbf1702893b230f43e800c3dffc2e` (119739 bytes)
-- `mobile-375-17-revealed-sv.png` — `6537a134fe18e78473c157149fd9ce27fe799b8f5b6b7bb5ab2768ca682cce83` (181638 bytes)
-- `mobile-375-17-second-documented-sv.png` — `885c9031b4573994796b12c3ea34b111180b7208d2fb51362e55b29058d8d268` (307084 bytes)
-- `mobile-375-17-second-locked-sv.png` — `6537a134fe18e78473c157149fd9ce27fe799b8f5b6b7bb5ab2768ca682cce83` (181638 bytes)
-- `mobile-375-18-side-by-side-en.png` — `d67683ee639f66d0b5cb2808df2d10984d22324f720300250ccb54abf3d26b4d` (156511 bytes)
-- `mobile-375-18-side-by-side-sv.png` — `2bd5b7027b94ea7ded907f713cacae2fd3d84f9150f0e30669a658997814dfab` (153636 bytes)
-- `mobile-375-19-relocked-sv.png` — `8a88244c4c08c5ee4b8a4976e3fde58212fd97c9a7f72228fc62bdd3608d2af8` (153773 bytes)
-- `mobile-375-19-reopen-refused-sv.png` — `66e005f31b4c3ecec67e89999effa63bce9cc13cb217332eb6b171da8f71a313` (166534 bytes)
-- `mobile-375-19-reopened-sv.png` — `564e9b5a022288289ae0cd2dd4404655436f9c06d7e44df77c39e5c0637fc359` (355389 bytes)
+- `chromium-20-panel-refused-sv.png` — `c6aec623fb2d496fa03b644be58d97e30653d5715308bf5d13b00b0902a7ba18` (192936 bytes)
+- `chromium-20-panel-resolution-en.png` — `4ac447211ffcd41f02a3f75aa2451eab5195c8eb193e1ad0c703723aab862ce5` (198595 bytes)
+- `chromium-20-panel-resolution-sv.png` — `7c1272d4475d7eb4b1b226ce35779cc45db537e23f305c904315397da925c1e4` (191341 bytes)
+- `chromium-20-panel-revealed-sv.png` — `644da52d05c41c3030adbf6715b0122c71b006007d9dd641ca1eed27d751e142` (181013 bytes)
+- `chromium-20-positions-untouched-sv.png` — `3ff623d27c4d5770d75752b9b252b8761bd41c66d8c2120441eed6fd9885f012` (397845 bytes)
+- `mobile-375-01-overview-module-en.png` — `75e7ec2965d191b94f9a3f5464333288707801b9a413d97e5ebbcfc5a8e8f337` (216869 bytes)
+- `mobile-375-01-overview-module-sv.png` — `a75959d058be22459198712ab0176a47d857c74a75aa721ac9570959777dd3f2` (209750 bytes)
+- `mobile-375-02-tool-landing-en.png` — `afa24354978287250fb509f6c3429813bac0c2f1f8d982c9b3560c1d8251c318` (219352 bytes)
+- `mobile-375-02-tool-landing-sv.png` — `5d136371f3344eba25de3bd9532db098cf79ef79d8479e8d1d4df0f8543788e5` (203817 bytes)
+- `mobile-375-03-binding-disclosed-sv.png` — `b0522da490d0be2a9b3428eb023100769417a3da32ca965fc8c919afeae03588` (240878 bytes)
+- `mobile-375-04-snapshot-en.png` — `e4a6643db9243481f6317e15ba7f64a155fa49d47447947869042c2e6ae6a217` (219338 bytes)
+- `mobile-375-04-snapshot-sv.png` — `5d136371f3344eba25de3bd9532db098cf79ef79d8479e8d1d4df0f8543788e5` (203817 bytes)
+- `mobile-375-05-snapshot-readonly-sv.png` — `5d136371f3344eba25de3bd9532db098cf79ef79d8479e8d1d4df0f8543788e5` (203817 bytes)
+- `mobile-375-06-position-blocked-sv.png` — `52e692ee1c9ad2cb4b54596ccb50f70db0ad68f6ee703089cf2ac256af3a92bb` (120363 bytes)
+- `mobile-375-06-session-open-sv.png` — `4ed050cee742b28fcd7684f7b2f5c26483467dd450fb6eef421894739f939102` (271283 bytes)
+- `mobile-375-07-themes-en.png` — `409d8e82bb9fbb7b2d2f4a635a75dd2d987e440e0fca1acb3564921df245017e` (291464 bytes)
+- `mobile-375-07-themes-sv.png` — `4ed050cee742b28fcd7684f7b2f5c26483467dd450fb6eef421894739f939102` (271283 bytes)
+- `mobile-375-08-entry-form-sv.png` — `cfc23d3134bad51274ebe400d897e73e39d3e31d1765a94cb4d7249d7422a510` (351879 bytes)
+- `mobile-375-08-entry-saved-sv.png` — `187d7f3cc59547b0a89e0cfaff11781162b36dd2f8415c23f238e1d4d5fc6a1e` (321302 bytes)
+- `mobile-375-09-entry-confirmed-sv.png` — `a561bb54fd6a4ece47d8f57b145f9e3c3a6de4738a0c09f5cf6ff219b1b1ad79` (347752 bytes)
+- `mobile-375-09-entry-refused-sv.png` — `92c70c459d88d0a18b5d0d34dce773a169cda95056c1ece2613090acb7970bad` (402110 bytes)
+- `mobile-375-10-correction-refused-sv.png` — `2d334659e52860ce00c180026e91db1a8e97c23a78dfc61990008ad4c8583e1b` (419112 bytes)
+- `mobile-375-10-correction-saved-sv.png` — `45d445ee25796f3add78a34da6731a03fec1f7f32d9fa078c7c98f381a88f572` (347364 bytes)
+- `mobile-375-11-history-sv.png` — `6e450c4e3bd803c4c3d4deb2e9183452b08b2ceb66571968352f17de8ffd7114` (448744 bytes)
+- `mobile-375-12-verification-history-sv.png` — `7106fd04b9dfb47028cd0710feb2f2ab130d8d232e9bf17c4e58fdc0dc6f4f48` (464947 bytes)
+- `mobile-375-12-verification-refused-sv.png` — `4014e7b045d01b811c9f20e10970d54c05acfa43a9ad2dbb15b5ce4cae4b5a28` (363097 bytes)
+- `mobile-375-13-not-verified-neutral-en.png` — `ee47be9c7e7ceb909ec1866212ac40da80b763bf066947f1237fc31346fb9894` (377323 bytes)
+- `mobile-375-13-not-verified-neutral-sv.png` — `cb229fab9e45389d6f098ecc3a06e414db1198646dcd5f6dbe422347f4ca480e` (356007 bytes)
+- `mobile-375-14-before-lock-sv.png` — `a1c96f16311868ca211a15526f1c13bef668513d8939ccbc4150f1178c6263b3` (112068 bytes)
+- `mobile-375-14-lock-dialog-sv.png` — `e684e3cd92f7b78fcc13f943847ff70521361c8afa10cfe357bb0aa38f4c0e7d` (115102 bytes)
+- `mobile-375-14-locked-sv.png` — `4dbbb9201c77624e4c1289226142643e36b043441c09192d2f5cc148a9e4f34f` (112515 bytes)
+- `mobile-375-15-entries-readonly-sv.png` — `9cec7849e32d993310f1bd25bf80433f1533f4ae9f4441f77d1de0cc3b341d78` (346349 bytes)
+- `mobile-375-15-locked-readonly-en.png` — `90687a7ec67541e8b8fa6f4d5df81fb5a54284cd8845bc91d135d16e616e7666` (115164 bytes)
+- `mobile-375-15-locked-readonly-sv.png` — `4dbbb9201c77624e4c1289226142643e36b043441c09192d2f5cc148a9e4f34f` (112515 bytes)
+- `mobile-375-16-second-assessor-joined-sv.png` — `2d288212afdaada49acfce85a656f4d096d844ec7a697bdfe3acb6d6c9aac1ed` (289733 bytes)
+- `mobile-375-16-withheld-en.png` — `94aec35bc081d62f83c690a4db07276b5e5ba34986db19658c2b776c2d399944` (123961 bytes)
+- `mobile-375-16-withheld-sv.png` — `52e692ee1c9ad2cb4b54596ccb50f70db0ad68f6ee703089cf2ac256af3a92bb` (120363 bytes)
+- `mobile-375-17-revealed-sv.png` — `d1cfaefb0567d29546ec1c07739f76239c3316a23f7bf8e532c369238eb36ba6` (182270 bytes)
+- `mobile-375-17-second-documented-sv.png` — `add9443a362f13d9e835c621fbf7530eaa6535005008fe741671df5af85612bd` (307487 bytes)
+- `mobile-375-17-second-locked-sv.png` — `d1cfaefb0567d29546ec1c07739f76239c3316a23f7bf8e532c369238eb36ba6` (182270 bytes)
+- `mobile-375-18-side-by-side-en.png` — `03c20c75a87f06e69756c962c45089fc7950f894bcdc36cb905ccc94b13a0503` (156947 bytes)
+- `mobile-375-18-side-by-side-sv.png` — `56a51f2ca55f5fc740b2ce1c16acdae66d7c66a89441dd67466cdb07aa3bb426` (154322 bytes)
+- `mobile-375-19-relocked-sv.png` — `1269496aa77416de6b033e19d0a979dc9411449e46d11ff638a6e940db7fac19` (154326 bytes)
+- `mobile-375-19-reopen-refused-sv.png` — `c7158fb17d3f2e1471dc17cc7bf89723b3725d9e4f0821a4c8f54df4ec5aa083` (167203 bytes)
+- `mobile-375-19-reopened-sv.png` — `cb229fab9e45389d6f098ecc3a06e414db1198646dcd5f6dbe422347f4ca480e` (356007 bytes)
 - `mobile-375-20-outsider-refused-sv.png` — `e002fd064ec7e54d15c4e5a8c09811e897517bdfc14fd81e3677dba637ac8a9c` (2540 bytes)
-- `mobile-375-20-panel-refused-sv.png` — `f8116e420812655ce8b3aa9d587e7652842c009bce0ff36975c060bde765a775` (158077 bytes)
-- `mobile-375-20-panel-resolution-en.png` — `47a81103b2fbc281477e2193b3af93a50f55b6dba56802e7e2cc6f4ba5452198` (163663 bytes)
-- `mobile-375-20-panel-resolution-sv.png` — `08b720996b96480ff35b54669aed95f2d09baf5ce688c9e41fdd820522126606` (156026 bytes)
-- `mobile-375-20-panel-revealed-sv.png` — `3b7a239788718cb50db249f4ca6cb55fe9c5d4facafbe04a6851a3d2ad3ada43` (145817 bytes)
-- `mobile-375-20-positions-untouched-sv.png` — `042da37981bd78e95423e6df443cebe80c1530fcfcc47b369eb599962eb321d3` (345731 bytes)
-- `mobile-390-01-overview-module-en.png` — `f7b0f12cb17ec3f3515130f871ac3ace91cc02a119749af39d2ad3c273a67658` (215491 bytes)
-- `mobile-390-01-overview-module-sv.png` — `609b1243241fcaf00c8ef74cd3dc3fcef1654fa400dfcc5f582388a66f106554` (207012 bytes)
-- `mobile-390-02-tool-landing-en.png` — `cff2204d41b737471bd0998b654bfed12fbe09a19189293c8a22666459c247a2` (219285 bytes)
-- `mobile-390-02-tool-landing-sv.png` — `aadde14d7fa7681fdc59eaa2a480cc6b6ba1b549e8615cd5a40bfe9790022cd1` (203366 bytes)
-- `mobile-390-03-binding-disclosed-sv.png` — `49b715dc3284f08f39a0a28c721c0358a35ec36cb9a98d48d862eb23d6de6e42` (240541 bytes)
-- `mobile-390-04-snapshot-en.png` — `393accb3378871f1f31552ecef8f58108749ea7d4bed7b3c93f109131300ce64` (219256 bytes)
-- `mobile-390-04-snapshot-sv.png` — `aadde14d7fa7681fdc59eaa2a480cc6b6ba1b549e8615cd5a40bfe9790022cd1` (203366 bytes)
-- `mobile-390-05-snapshot-readonly-sv.png` — `aadde14d7fa7681fdc59eaa2a480cc6b6ba1b549e8615cd5a40bfe9790022cd1` (203366 bytes)
-- `mobile-390-06-position-blocked-sv.png` — `b6cd7ae46d85a0af8cab422eee95021614daa12c0df769e1eb2e0763e9f98df6` (119725 bytes)
-- `mobile-390-06-session-open-sv.png` — `11ee3ddae0092697e4941483612267beac95fa7b5433778d2a7a06deaa83e10d` (270403 bytes)
-- `mobile-390-07-themes-en.png` — `f9c45175782fc29730d30c110f14fb615d9c78c52ea11c94a72465bf86cb3b64` (291048 bytes)
-- `mobile-390-07-themes-sv.png` — `11ee3ddae0092697e4941483612267beac95fa7b5433778d2a7a06deaa83e10d` (270403 bytes)
-- `mobile-390-08-entry-form-sv.png` — `403ca0c76ef739d2e25ba39b3991e964d8f37be7bd4a051150b5fc1523f9a1e6` (350130 bytes)
-- `mobile-390-08-entry-saved-sv.png` — `945e4ab14f59ed26e746c9f7b0da73c6aa661ce3e4223d08b51adbc203b4d313` (320095 bytes)
-- `mobile-390-09-entry-confirmed-sv.png` — `372f6bc1c4e7cb5e103518bf5138d998bafc8e16932abb05df5f06fca746215b` (345834 bytes)
-- `mobile-390-09-entry-refused-sv.png` — `cbbe357bd7e9e00f37b7ed744f82411d1bdb26158f3cee99830aa43b89d82cbb` (399890 bytes)
-- `mobile-390-10-correction-refused-sv.png` — `77f081a039e2bb38f0513e09ba9be4eec7acba73cc11cfe4da69836aa97e03a7` (416705 bytes)
-- `mobile-390-10-correction-saved-sv.png` — `890e5d80d25be7dbee987eeb0ae58ec6e7d9a1e35f8fe1a315cf60e33baa1a85` (345721 bytes)
-- `mobile-390-11-history-sv.png` — `1129a877596996916d9fd3f7d855c2f5b4bab9b4881bbb736f4264e436f311db` (446678 bytes)
-- `mobile-390-12-verification-history-sv.png` — `545c9fae00fb4e422b4a33bbcd493f6b27272ab46bb803c67fb3d275b40b660a` (462848 bytes)
-- `mobile-390-12-verification-refused-sv.png` — `4f1c245fee041e909a82b6d6486dca81d65b1387705a3bd5a8667b773792a1d3` (361516 bytes)
-- `mobile-390-13-not-verified-neutral-en.png` — `ef181094fac240f8d965c90dbf579ffdd498f4df7f1faf21b37a5a2b72c1fbda` (377574 bytes)
-- `mobile-390-13-not-verified-neutral-sv.png` — `2c336a669649e35eda50a6e7e4434a3929c11099120af39e7de99b98fbab216d` (354197 bytes)
-- `mobile-390-14-before-lock-sv.png` — `63040658d0d0543181a18fb32a68a9d450d5f8aab3a2a54380698cd7d8a26991` (111411 bytes)
-- `mobile-390-14-lock-dialog-sv.png` — `e615e88ed13de922b1bf5bc2a7e9f7d9d5301acb73a8e4a218054ce82bb33348` (114514 bytes)
-- `mobile-390-14-locked-sv.png` — `f50ac8cd704b9adbf0ec22166cc890b060998b2ce5cd257590af19972aa45341` (111813 bytes)
-- `mobile-390-15-entries-readonly-sv.png` — `23f2fcbd139fb2e35d844de5e0a79521e3cd41bef712b060c2b223b862a1403b` (346041 bytes)
-- `mobile-390-15-locked-readonly-en.png` — `42fcdde340abe936695048a2955b4f3b8d8f3f324da5afbace7285ea54fcd9be` (113589 bytes)
-- `mobile-390-15-locked-readonly-sv.png` — `f50ac8cd704b9adbf0ec22166cc890b060998b2ce5cd257590af19972aa45341` (111813 bytes)
-- `mobile-390-16-second-assessor-joined-sv.png` — `5bdd480012173c42e933f6a7d7a4e821a747a0ddc77b86508d5a974f2724cc99` (288901 bytes)
-- `mobile-390-16-withheld-en.png` — `e18d44917c2c1af975385bad4cda472d1d0de5ebb20e954e07d18696d94c02b8` (122677 bytes)
-- `mobile-390-16-withheld-sv.png` — `b6cd7ae46d85a0af8cab422eee95021614daa12c0df769e1eb2e0763e9f98df6` (119725 bytes)
-- `mobile-390-17-revealed-sv.png` — `816674c0858bdf735d8f5bd515773fe72b2087588688b5edfa2ce2b83b706810` (182090 bytes)
-- `mobile-390-17-second-documented-sv.png` — `973ce6672a030ab01080f16937dc25d1b7183c0059a7e6452028f32e691449f4` (306547 bytes)
-- `mobile-390-17-second-locked-sv.png` — `816674c0858bdf735d8f5bd515773fe72b2087588688b5edfa2ce2b83b706810` (182090 bytes)
-- `mobile-390-18-side-by-side-en.png` — `587ba3556d1e55b54ef74d0953c0ceafbfb0bd15fade037daf2e81cb6e4a67c5` (155890 bytes)
-- `mobile-390-18-side-by-side-sv.png` — `7e4c363f9c4d6d832b71651816c24e951f8c09fd8d2ff60d8c80a9c72a4dfa76` (153796 bytes)
-- `mobile-390-19-relocked-sv.png` — `89fe661c535183932556d4b7897895b055c6c5c7d96890dc2e7b43d56f145447` (153741 bytes)
-- `mobile-390-19-reopen-refused-sv.png` — `b8226f290f63e54b96288704d722ea49b642f42a17b397c14bdd0801c8537a4c` (166219 bytes)
-- `mobile-390-19-reopened-sv.png` — `2c336a669649e35eda50a6e7e4434a3929c11099120af39e7de99b98fbab216d` (354197 bytes)
+- `mobile-375-20-panel-refused-sv.png` — `508227a41d2f7e94f6a6ec6f0c48865e10d4475d1e0c217ac6e2d67c44126e78` (158592 bytes)
+- `mobile-375-20-panel-resolution-en.png` — `105367ec408f9517159456ca1d124eb97861226e08f057f4d01f1e2896743238` (164145 bytes)
+- `mobile-375-20-panel-resolution-sv.png` — `6547addfbf78523e200ae540321cdb122a23136e621467cc48bb62d678b17499` (156551 bytes)
+- `mobile-375-20-panel-revealed-sv.png` — `42a0898264c4145b348cf97294781988541ea7ba2be910d47a66b05f20e4369f` (146330 bytes)
+- `mobile-375-20-positions-untouched-sv.png` — `9cec7849e32d993310f1bd25bf80433f1533f4ae9f4441f77d1de0cc3b341d78` (346349 bytes)
+- `mobile-390-01-overview-module-en.png` — `5de20353c08cffe309c5d96b8bc2e71efa41a3ded1b97be60dc07ab2f22d912f` (216105 bytes)
+- `mobile-390-01-overview-module-sv.png` — `bd85218e62eec18fe4fe0d7d72883dd3242571916349295aae0c4fbd8c5ad390` (207568 bytes)
+- `mobile-390-02-tool-landing-en.png` — `f194e02a631657f6f627e480d64a70dd97d216c0c7aaf917713c83f82eea1026` (219895 bytes)
+- `mobile-390-02-tool-landing-sv.png` — `45b1a21b2137bd45da475fe100cd867433b98c56c2c9c4d0bf0d6f56d4a5b51c` (203977 bytes)
+- `mobile-390-03-binding-disclosed-sv.png` — `bb1a8d2bc06f673af9726f086cfcaf410bc237d4be06c16a774091b6831d058d` (241161 bytes)
+- `mobile-390-04-snapshot-en.png` — `72092112cbcc0cc953b7df6689911d7a8dcce4153e9cc13608afd430ccbea9ab` (219912 bytes)
+- `mobile-390-04-snapshot-sv.png` — `45b1a21b2137bd45da475fe100cd867433b98c56c2c9c4d0bf0d6f56d4a5b51c` (203977 bytes)
+- `mobile-390-05-snapshot-readonly-sv.png` — `45b1a21b2137bd45da475fe100cd867433b98c56c2c9c4d0bf0d6f56d4a5b51c` (203977 bytes)
+- `mobile-390-06-position-blocked-sv.png` — `232b8957adf503bf1cf806e6ea54d3327fdb18f31dfc6e3bdb3afabece0ec739` (120370 bytes)
+- `mobile-390-06-session-open-sv.png` — `144a6b7069d3c2a8d9dc2c3adc5a1d78a2c774441a8d7fe73cb9b9521d5b309d` (271088 bytes)
+- `mobile-390-07-themes-en.png` — `96388987e92db8c998a36f9be1ba5b546243c1263e587b4f558b704f52e9eca8` (291728 bytes)
+- `mobile-390-07-themes-sv.png` — `144a6b7069d3c2a8d9dc2c3adc5a1d78a2c774441a8d7fe73cb9b9521d5b309d` (271088 bytes)
+- `mobile-390-08-entry-form-sv.png` — `0cc4b3e89d8f4dad1f000834aa40986429aa3219fe5c03341356ab86890a5c84` (350783 bytes)
+- `mobile-390-08-entry-saved-sv.png` — `5a9e5a8326d452e6e05d86600eafd40e9f3cff3b908a17255469069230f93ee6` (320615 bytes)
+- `mobile-390-09-entry-confirmed-sv.png` — `c27cce747922d3ca48627dcb9d717aef27db927c2d89a762ef52ba6ed1e145a9` (346267 bytes)
+- `mobile-390-09-entry-refused-sv.png` — `628959e3e146f2695a098c177784d3bf14baf4b85263737b9f106e2609ec76ba` (400422 bytes)
+- `mobile-390-10-correction-refused-sv.png` — `efb2d0afdbfc7c6fc147eec8133d1c904ee5b7c371f39a60bb356c6f90b19399` (417217 bytes)
+- `mobile-390-10-correction-saved-sv.png` — `1e75461d947a789afa2d81f4403f1451ff0206a785ff1d3cf306aa5916cd56b7` (346187 bytes)
+- `mobile-390-11-history-sv.png` — `bad682c971cd3d96b58edb812cb8b84f9bd1f4d7eb3208c975166c3a29b32902` (446910 bytes)
+- `mobile-390-12-verification-history-sv.png` — `a657a7ff9e70a5dba4a6865a82e6aea152abeb70d9645439dedc84a2c6268c19` (463229 bytes)
+- `mobile-390-12-verification-refused-sv.png` — `20b27eda5f828db142ccda9c22878ca0725e30e21c52add67cc6347a69457502` (361990 bytes)
+- `mobile-390-13-not-verified-neutral-en.png` — `cf8ee11f0a950cfa28da2f8174c1f576cddb7958527088e60255f0de35b9c5e0` (377966 bytes)
+- `mobile-390-13-not-verified-neutral-sv.png` — `ac163a4fc3443f90e9e5f8eeaba59c6773cb10bbf100b9a1b83bb126a69b4716` (354664 bytes)
+- `mobile-390-14-before-lock-sv.png` — `6d78189490d5df49702f4d7cb873a8564b61d7931dde3a7f8db4fc4f8d4aa0ec` (111994 bytes)
+- `mobile-390-14-lock-dialog-sv.png` — `f6adb70609815e58df90629bcb618ae86c624dbc65d0fd13eb17d8777598534f` (115117 bytes)
+- `mobile-390-14-locked-sv.png` — `20b57fbdb1fddb98b0a654ed147bdd4eff1780f0de53a427b52ac4e97899f7a9` (112381 bytes)
+- `mobile-390-15-entries-readonly-sv.png` — `e8779637f9cb84bad01ba7886e767276f66bf0389bc501e0a8b8276767cce9c9` (346525 bytes)
+- `mobile-390-15-locked-readonly-en.png` — `dfd0a49f235e1e4e4d0a88dd68dfa5bd3a6f9fe2f25b451d23e59ca79575c367` (114168 bytes)
+- `mobile-390-15-locked-readonly-sv.png` — `20b57fbdb1fddb98b0a654ed147bdd4eff1780f0de53a427b52ac4e97899f7a9` (112381 bytes)
+- `mobile-390-16-second-assessor-joined-sv.png` — `07bf22fb9481a1b8f184e92f6240643dea0261786a3cad80ba70d70789d4629f` (289492 bytes)
+- `mobile-390-16-withheld-en.png` — `5a334a181bd9862904b30f21c8c40249bf3623ce998ff54475027ca1031807f3` (123119 bytes)
+- `mobile-390-16-withheld-sv.png` — `232b8957adf503bf1cf806e6ea54d3327fdb18f31dfc6e3bdb3afabece0ec739` (120370 bytes)
+- `mobile-390-17-revealed-sv.png` — `53462bdf23771c9b200073f5aec8e553caeb3413704bd40172cf7fe14d1d8582` (182726 bytes)
+- `mobile-390-17-second-documented-sv.png` — `21b6625fd3ebcf3e776bdd49abc9353eeaf5dd7e2da250182d4db7026a6d09d6` (307166 bytes)
+- `mobile-390-17-second-locked-sv.png` — `53462bdf23771c9b200073f5aec8e553caeb3413704bd40172cf7fe14d1d8582` (182726 bytes)
+- `mobile-390-18-side-by-side-en.png` — `8f9d277aeac69ff8bb4be95872fe728b7d75467921bc8b5d96bc5bd280c5776d` (156552 bytes)
+- `mobile-390-18-side-by-side-sv.png` — `4a597ef791e17c9071c713229e19edad6ee3579d6aef212ea254342dd6ed21cd` (154413 bytes)
+- `mobile-390-19-relocked-sv.png` — `33c524036b9cc58f77e1b2d190ca7f9f97990c83e8d5c763ba8ab4474843dabc` (154621 bytes)
+- `mobile-390-19-reopen-refused-sv.png` — `954c85dfd879f3cc2907352f08736ed7446b7978045b5a9a83f5cd7358c3fc9f` (166803 bytes)
+- `mobile-390-19-reopened-sv.png` — `ac163a4fc3443f90e9e5f8eeaba59c6773cb10bbf100b9a1b83bb126a69b4716` (354664 bytes)
 - `mobile-390-20-outsider-refused-sv.png` — `0712fd74071445afc9b98c41440bfd0b7a0886fc95a1e4e755d8f424c88fc8b1` (2742 bytes)
-- `mobile-390-20-panel-refused-sv.png` — `ca15ac58931271fca875abcf0ee227446c28c0995fd904802f07868d56470a22` (158121 bytes)
-- `mobile-390-20-panel-resolution-en.png` — `6e890b07baba6d6aa5b20eab0331ec432b8ea68b6c5bb5408782a68442a3800b` (162937 bytes)
-- `mobile-390-20-panel-resolution-sv.png` — `a3d3e5983ebeac93da03e62ca0bef7c1e5212a01564723deb0b2c26b80f3973a` (156049 bytes)
-- `mobile-390-20-panel-revealed-sv.png` — `b611d8fb926ba47d850ef0d6c239583068df10b25151884f9a233522ffd73a71` (145632 bytes)
-- `mobile-390-20-positions-untouched-sv.png` — `23f2fcbd139fb2e35d844de5e0a79521e3cd41bef712b060c2b223b862a1403b` (346041 bytes)
+- `mobile-390-20-panel-refused-sv.png` — `47a40d55b27f098ca082022d541a4d1f41b50c8268dc26082a45d287421f2877` (158857 bytes)
+- `mobile-390-20-panel-resolution-en.png` — `d1af3597d18719b9f4b5887bd929ad6c6d214fc03dc5badfab47bdb1506b9867` (164293 bytes)
+- `mobile-390-20-panel-resolution-sv.png` — `935d47386dd05cd264bd5b9fea441d9cb67999c01ae83e0ee3e7d8665eb90eb6` (156856 bytes)
+- `mobile-390-20-panel-revealed-sv.png` — `0852953ea0c61b509fd3e1233c8a0363bf8dab53fe2b934e6519b8b3301ce306` (146434 bytes)
+- `mobile-390-20-positions-untouched-sv.png` — `e8779637f9cb84bad01ba7886e767276f66bf0389bc501e0a8b8276767cce9c9` (346525 bytes)
 
 ## Traces (digested, not committed)
 
-- `chromium/beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-chromium.zip` — `2af2d940f8d19895e4c6734d282eb73ff73cdd1023651cf6d2d3b06ce16610e8` (1933287 bytes)
-- `chromium/beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-chromium.zip` — `ac4454bbfae44a6d7613997850177c10235f2945b6cc761b11e83b29f538f376` (1795752 bytes)
-- `chromium/beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-chromium.zip` — `97f5b3cd58ac5ce8c69cf44b26f6206cbda09c00f7dc9e8d074909444472fae5` (1926028 bytes)
-- `chromium/beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-chromium.zip` — `4a72471a58b9b4888513f5df3ba85654c8a2305924702b628bef38ade184476e` (2129749 bytes)
-- `chromium/beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-chromium.zip` — `02954e36599f9441b70185f5a6ebf3be527078c6211e3ebb3c9c2b7027c775c2` (1802526 bytes)
-- `chromium/beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-chromium.zip` — `f4f62e984277718e003a81cca97b1ce27faf68e6273babde67967acda152bd84` (1464344 bytes)
-- `chromium/beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-chromium.zip` — `d1979793c18162d0495ab12e0c63d9e0e25a4cf87dd9a148251d5adfd4cfe0d6` (1765452 bytes)
-- `chromium/beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-chromium.zip` — `375a94a218690fc0ecd3413815aa972b90c9b0caa22367b8a175dcc4e243a3ea` (1846843 bytes)
-- `chromium/beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-chromium.zip` — `887b2a704b0a91d118477f0ed4d9f4fec1460a72ea981fc87307722f35c69dd3` (1925116 bytes)
-- `chromium/beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-chromium.zip` — `203a609cdc3c1fec2cb1d09aeab1f32dd7b6ba458b859df09ee16f9785cf0bc2` (1793575 bytes)
-- `chromium/beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-chromium.zip` — `657d58293eddd8147e5f4b5e85723eebdcf789125ca520cfc8d04bd6aaccce76` (1979895 bytes)
-- `chromium/beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-chromium.zip` — `39d567333f1f5cc0baa249c1102f5f03b36c74da4509dfe6b819ac3423ffc335` (2104307 bytes)
-- `chromium/beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-chromium.zip` — `0d977d2cebd69bb55c0ce1fa65cbdd773e93a6f9b7a763836d4b3cefb18a5a0e` (1778891 bytes)
-- `chromium/beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-chromium.zip` — `ec1d385a51dbd6a2e271c5903a8e64510794afd51449926ab574fae27c423252` (2224920 bytes)
-- `chromium/beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-chromium.zip` — `1ae047a12a76526951313ba1af850a5c05eaa781bfc9fe2a7ffba2e396105925` (1567944 bytes)
-- `chromium/beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-chromium.zip` — `2d7a34998d49d048a3510ee66e06ceedf0c3c52ed565d7bec8b50e44d6e50910` (1914038 bytes)
-- `chromium/beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-chromium.zip` — `c2057ea4bd4f61958858805b86881cb40d8158b8ad1ddf9b0681504cb713b608` (1706295 bytes)
-- `chromium/beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-chromium.zip` — `cf4780ce19566b3819c4a87a0e7bb13209876d7b645f9159a351e97d5896e24b` (2192028 bytes)
-- `chromium/beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-chromium.zip` — `4c90e14f00b5b54c34bb1a8d538acba10e2bb6663e0c551e6678e81ecb46f09a` (1632484 bytes)
-- `chromium/beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-chromium.zip` — `1c284d5c26b3715b975e5fb2a63b910204a50a3cd62f3fb5f4b66c77d1e94a49` (4477836 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-mobile-375.zip` — `984bed9bedb5f304b33ab31897cb14fba4946ba99bfc691588f753f8f9fbedd4` (2395974 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-mobile-375.zip` — `1f7afe8c59d477078e85a5d42831a7cb465b3e57f00a934ef186a5541a0dd04f` (1968876 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-mobile-375.zip` — `da4c5d56e188cb771133f590bda62656bb6be73848719bbcf7ec1a25ca0e8fe2` (2416346 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-mobile-375.zip` — `ffea2b7cd4cc51f4f2406abc9caaf5bdb383f59c92cb3becf2b128a00a2d3bfc` (2025235 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-mobile-375.zip` — `c7d1b1ef6d37c34e190e05a813fc9aab2b11a3096c41c6d415a8154366e0abf9` (1955640 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-mobile-375.zip` — `6c41f493e3081fb14468f1a3fdec655fa3a483efb09e8614675af5076820af0e` (1538606 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-mobile-375.zip` — `5acc632ed1cfa788ebfc3dbf44db9917cd4d45ef60697c1f21588180404c2d5d` (2341603 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-mobile-375.zip` — `7d7640266838d502d4998516ed3d724945d81bc71de7242c685aa094980bdc67` (2017546 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-mobile-375.zip` — `68084bb6c75e8f89b78b0acad966659b4a5e2589a17f176b8acb85bea051e769` (2280566 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-mobile-375.zip` — `df1e2e63f57604690d3fd27ade3d924fecb14b467b039c4f933e45613d958fd7` (1866226 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-mobile-375.zip` — `105bc4d38cdf2b97fa90e26e45ecef7c3952390fedc563531dbae94d713c2c10` (2036212 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-mobile-375.zip` — `22a2284cf86921d7a8c5b40ed385ef1c5a29b5b6860af87023d81152603a9a01` (2395026 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-mobile-375.zip` — `1bb900daaa15d38ff8dbc906c751ae8be52a53b0015a9f84daa73c171d2f0dbf` (2507692 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-mobile-375.zip` — `7ed0ce2ad9fcbc6dbacb5233a8b127f6a0d4be7ba29fff599a82a83849476652` (2432843 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-mobile-375.zip` — `5c69f8d29f4de14025ba7974ab339ae3b107423cfe2db976493417ae194d2b3b` (1845678 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-mobile-375.zip` — `23bc71e5da9466aafe9a8bcc2790f3c8e030b791074f589ae5b4b583a3676068` (2580332 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-mobile-375.zip` — `988eb6b4eb0d34259baaacac72bf3cff9cbb7e6c8890e0057733692a5eef3e4c` (1943638 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-mobile-375.zip` — `9f87c25b03c707e6ceb8e8bc898764f9e99be842d4d8afe5c6930d1e842f74ab` (2968437 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-mobile-375.zip` — `fbdd87704313fc15dd0bba688ec69fe1be34a086a16817642558fae824968055` (1511482 bytes)
-- `mobile-375/beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-mobile-375.zip` — `f1cfb21dae5025b8ab4be315c9cce8dd8f6dacb3b73c0e7dc1c97f53de7e9bac` (4892729 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-mobile-390.zip` — `9db61a769005639374f4d2408a0b60055c850234fe765b681c76a62a90d734c6` (2237661 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-mobile-390.zip` — `609e9dba029f6ff02cfbf86fbd19f59e35001d6e7a6d1287601d429b7d381ec3` (2017494 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-mobile-390.zip` — `e242da2f0900cc3f31fe4113051eb96b652ef836062f502744aefe254f6a84e6` (1918835 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-mobile-390.zip` — `b4aa60ffa0442b68ab03d1b28a840b1c81e3bbfd4865d961cef24fad7c4279e5` (2209984 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-mobile-390.zip` — `b7d9eb182af813edc262c25fe4474958a982a24f5508f89d99981298f65f3c66` (1903447 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-mobile-390.zip` — `d7ec7b20d99212e5c768d6e43c12246b4997288895693a3b933ea4f97725bfe7` (1469944 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-mobile-390.zip` — `57ff8118ceaa9638908d6f1adda1f450c44faff4416ca6591de3e44fefb4ab77` (2222369 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-mobile-390.zip` — `a632313dbc32b07dabf6e85e513abe62aee6479963b1fe633ec10dd39be14de0` (1784874 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-mobile-390.zip` — `7fc4b290a4f6c364db55968051d5a4dadb612cd1e5a641e61c7dd2bd3a759941` (2316005 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-mobile-390.zip` — `dacea8b9b5152c298d5b6d50a1574f913f2c32a31da2a58c6dcf709fafeed28a` (1941015 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-mobile-390.zip` — `0619edbc5b3a4187697810d9fa294c7beff8f2ceeac96b45492ce97393295d5f` (1885291 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-mobile-390.zip` — `2a71559993234e0b066d443a12d2b4d4edc7b30dc104f2b24ef16b494bdfd700` (2296514 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-mobile-390.zip` — `0af5142863cc60b1746138d996529cb4fb7af423fa8ca6bb060bb33dc7f434e8` (2809531 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-mobile-390.zip` — `cd2cc92c7edbb39cadc291d0cf4cc44d206b15fb0534a10c7bbd536865456364` (2230860 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-mobile-390.zip` — `6c2c9859a994ff761f18a9928f43eb51e22a3616c607a2b2a48a2243468dcb8d` (1952224 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-mobile-390.zip` — `a2a6e368f053bcab7f7018083afc0888a65d7609cb25ec785c1149c5c1899672` (2402691 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-mobile-390.zip` — `2ed265a2f41d1fd40ae68086cb7a707d5fbaa5805854d7ffaee46d38bc2a263c` (1648925 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-mobile-390.zip` — `29ddf3d7989b66663b955d9a3bf56d1c6dcb8ed4cb57917ac2beeed906279cde` (2630144 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-mobile-390.zip` — `bd7add4c86f8094a1bf83c9d4c3ce334187fe08b6b4ac15cd3a8ec6e431ab986` (1426388 bytes)
-- `mobile-390/beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-mobile-390.zip` — `6026a15e598eee65406f0afe13d9ac660bb07748203cef66e6bf1e8a879019da` (4913836 bytes)
+- `chromium/beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-chromium.zip` — `8d9e162e067fca11be430e3a3917c5ae8689b694086279189680d9de1322ea94` (1885234 bytes)
+- `chromium/beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-chromium.zip` — `d3dd3392b249db1e04eec4fc9902b5756d88deea1f6904e3dbbcde875040cdaa` (1705996 bytes)
+- `chromium/beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-chromium.zip` — `ab9b2a531d5762b9bba2f3fedb705a9f771a2266f91fda48c19eceed3c528d3b` (2244484 bytes)
+- `chromium/beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-chromium.zip` — `da1905da99a4c32dcef21098085478fa5763dee7c9806ea67e9f92fc92745248` (1536127 bytes)
+- `chromium/beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-chromium.zip` — `c9ce5d4d6fb7d4354815126f7851f5a439cec48b5fbbc3df8fbf82b08591e180` (1774786 bytes)
+- `chromium/beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-chromium.zip` — `978363f3e3431f72aa13d780d8caa677542ede521e75b634da3866873880aac1` (1482790 bytes)
+- `chromium/beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-chromium.zip` — `05dbb1c10e741defa149aeac464e15555d2b4d5c3e7e7f6297c077a88d2d308a` (1802109 bytes)
+- `chromium/beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-chromium.zip` — `0d37ddb5e687bccbf8a42427adca893e67a6fde2ad0954b9ba8ff7ef2c41d59b` (1704578 bytes)
+- `chromium/beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-chromium.zip` — `bfff0b7f798406432aa2c905bfc2781310e1c296d0e8f12951af46c82d1ae150` (1944997 bytes)
+- `chromium/beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-chromium.zip` — `82c3d905d8ff80e0e545077213e2cbf2edb3ba3bf176adea2f2c0c08cdd0e73b` (1649564 bytes)
+- `chromium/beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-chromium.zip` — `e1ea22e0eecc5d450456fb895b24e93cb54a6397e9170b80f58df8fc36f5a127` (2102149 bytes)
+- `chromium/beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-chromium.zip` — `bd2c7d72acb6f1436ef070011b01b42d2a0d7a5257dc6901678df0c4b13a0bc2` (2081169 bytes)
+- `chromium/beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-chromium.zip` — `7091d8c51af8d939f7432b42aa71413181df6608c9af098b79840b69a055d2f6` (1878380 bytes)
+- `chromium/beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-chromium.zip` — `208bad1eb0d88d2b4048a3c03ae37bebea9b29a9dc36a271e248e9c7a54b47ad` (2490050 bytes)
+- `chromium/beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-chromium.zip` — `1719795e4406aee17ed37c646a18929adcd36450aeb939eb83eb492b2848c0b3` (1749978 bytes)
+- `chromium/beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-chromium.zip` — `a110ddc601132f4908de8167ca08555c09988d0919acabda7c6d3bca3ce0e76b` (2007626 bytes)
+- `chromium/beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-chromium.zip` — `4074954edebf7e00b421f4ba26301674f293a2242d05107c8809958bf0f0a663` (1776079 bytes)
+- `chromium/beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-chromium.zip` — `9774d2665dd1294bb9757f3a300c5baadcebf9fe0d7032fced266cf0f1e2aa62` (2425370 bytes)
+- `chromium/beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-chromium.zip` — `8d0b7dbf3a27c771005798aad6a25ded6d12b1ec0ba9e51e318445480065eb90` (1489987 bytes)
+- `chromium/beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-chromium.zip` — `94f71a90b87acdacb3ef2e6d72b008e221429b971cdce480a567e0043666f71d` (4446007 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-mobile-375.zip` — `b5111ace1e77ecbe851bc17628386e02ee0977f3578cb5daf8e822349464b90a` (2239487 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-mobile-375.zip` — `eb1c9503110edaee67c14cc04fe1a9f809c6962835d78e1fffe95862fcfe214f` (2103621 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-mobile-375.zip` — `f4130ffd72ce44086bebcee15e9c9ec6bd21ca1907c24fc422d2b7275b4b1b77` (2470202 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-mobile-375.zip` — `84ff30acf249bc01f4fcf1897dd8e4a91a034cb4dc21411f997621e9776fc202` (2074637 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-mobile-375.zip` — `54a5fd35dfc5b1873da0c40bc807a3ce8bb32fc17323a8cc71a04241ce3f92a8` (1887586 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-mobile-375.zip` — `71d087d8e2f7b5a96a2f60f6119cab3c7dd17e955bbb9c938753e33cb1280ef1` (1637671 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-mobile-375.zip` — `148f795a2af3bdb18a7b61bec5e7b28bc061005084decfe8166c73a4c0eed188` (2342289 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-mobile-375.zip` — `db9cf3127bda3109229aa4f45e47215014c16ab3500cf60bdf7cb922d540a7cf` (1834724 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-mobile-375.zip` — `3cf5756b47c06c45ee9f74657168639ca4af3421484ef5587813c6f8321a1c9f` (2250042 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-mobile-375.zip` — `8cb94952621df4ff1b70c282b45c8991b07b8a8b95391f3dd6637ad5148aa97a` (1794748 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-mobile-375.zip` — `70ea92d4e00f33d6d513721dc1018137cfa3fcb28b6eba259af0c9cf608a6cec` (2035162 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-mobile-375.zip` — `f7cf1a6102409663ce6249ca6a9193b9b1862d8160ad8ae8728b65df1199bb96` (2444166 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-mobile-375.zip` — `ab11223e40635a18aad2c6a7e13ea91e716626833307ee74303d786505218d5d` (2382505 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-mobile-375.zip` — `2b5505914767e111a44405b186e8f2c534bbdadc3c47af7687dc8cffe78cf909` (2558017 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-mobile-375.zip` — `ee1a1d3533d041fc1992427b22f9b12bb11b64bd4128ab47ea4e03d40aab5d1e` (1982837 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-mobile-375.zip` — `e323708610dfb674961a4f904a50a2ee52019f62859a72c6a7972d91906f04ad` (2593306 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-mobile-375.zip` — `8f94a52d232d4a0f0bf7a5c156626ad904d01f3a35e5ff873b98c32e40ceeb56` (2102805 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-mobile-375.zip` — `ea525fa28cf6f3b7ac1c543458ead2d3c402376bcd97327430d747b587217cdb` (2617925 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-mobile-375.zip` — `c09c1c7b6ad9dce449b221658261d7bd44806b7d5afbce8b5f7a1ef38e598b31` (1556248 bytes)
+- `mobile-375/beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-mobile-375.zip` — `6c8329cb791a5faf2fd2191b115d4e0e5eb3acf84a54e2cdee343f3030bf30a5` (4881214 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-mobile-390.zip` — `15bd9f8eaab66c02181399e6240ad102becbf88462470a5a3c603997d2e3779c` (2242951 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-mobile-390.zip` — `685aa5f9beaa499a3389ab431079fb0f5c6b4451f8ab461cd97ed5aeeaf3e161` (1976542 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-mobile-390.zip` — `a6da697d2fce66a729b7131ba91f6157d651fbe8fdc6e914475215cc4f742a8e` (1941683 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-mobile-390.zip` — `376723c8232820ebeb9bc57bad729e9cc69af45dba7dce0b6f40e47e86d41154` (2073739 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-mobile-390.zip` — `50ff833d5cb36b9bd91e1f47ddce0a616c93812291b068e0d1e4d7713bc0a4a9` (1901168 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-mobile-390.zip` — `ee367a2901c6429cc2a2d7b27676e94254c3ab916a5b41effb91b5dbe9fcc0dc` (1575101 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-mobile-390.zip` — `37ca8430eecef2ca394f0dd8963712e5ec8272c228fc2eb42166abc8861dc0f6` (2388194 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-mobile-390.zip` — `1778de237105c2d93f58434a924e9e22b55b8729ae9828a7dc347316298940d7` (1945244 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-mobile-390.zip` — `deb913bcf19df465fc94e9febd5ac32dcc526aa1455c3ab11286fc4d5be9f587` (2108806 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-mobile-390.zip` — `d4618e8cf57155562d19dab00d70a5a498b438440788e631dbdc237db5faec60` (1819643 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-mobile-390.zip` — `ff973af05ec06c4540459d4974d8f1c9904d9bd0cb6bf875fce1ea400c49f5ba` (2104055 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-mobile-390.zip` — `a552de9f1a4e5e8e5a63f0593ba782a76f8ff0b59ddeaae173fa10d1f90339f3` (2374813 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-mobile-390.zip` — `c42eb807e1bdf060aaeb7676f62a686f6705aaeb5b7bbc054b880ac23899d76a` (2540801 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-mobile-390.zip` — `f8c7ba5e321327678271e54f880b2cf021f4118d92002adb2922e2974e6c0ea4` (2282947 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-mobile-390.zip` — `cc6a7e680be32f12a12d4f0f3b62ac018c2f0e6aa5cacd82c9ab838a7416023b` (1997705 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-mobile-390.zip` — `b361dd43f7d93e64f8f708e77670088485f37bc13d3f162c701eaafda4d00603` (2493379 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-mobile-390.zip` — `01d0ebc587f0adf589636ccb662d6d9b3165373d001f979cae9adc015df3f388` (1547474 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-mobile-390.zip` — `431c258a89cc7a63c92a4ecee94b8681e78aed39148b5691025cd3017a2cb765` (2108525 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-mobile-390.zip` — `12e1bdd7a33da7ea7f7fa6b33bb9b893860ea55a97a071b68f3680c3cc5df04b` (1617231 bytes)
+- `mobile-390/beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-mobile-390.zip` — `df7b4423ccb66220dc2c7e7d5450d07c09471bfeda293f7cfa29ad0d5a77de5b` (4636405 bytes)
