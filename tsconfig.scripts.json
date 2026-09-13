@@ -136,6 +136,12 @@
     // matching would report a contract it never read.
     "scripts/beskt-interview-case-bridge-check.ts",
     "scripts/negative-controls/beskt-interview-case-bridge-controls.ts",
+    // BESKT PR 5A: the interview-conduct guard and its controls, on the same
+    // terms -- new, no pre-existing type debt, and the guard PARSES the
+    // migration's function bodies and DDL. A parser that silently stopped
+    // matching would report a contract it never read.
+    "scripts/beskt-interview-conduct-check.ts",
+    "scripts/negative-controls/beskt-interview-conduct-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
