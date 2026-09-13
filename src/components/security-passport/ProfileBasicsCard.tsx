@@ -271,6 +271,12 @@ export function ProfileBasicsCard({
 
     const value = field.id === "displayName" ? displayName : headline;
     const set = field.id === "displayName" ? setDisplayName : setHeadline;
+    // Helper text, wired to the control with aria-describedby rather than
+    // merely sitting near it: a sighted reader gets the sentence from
+    // proximity, and everybody else gets it only if the association is
+    // declared. The professional title is the field that needed it -- it
+    // was being filled in with the holder's name.
+    const helpId = field.helpKey ? `${id}-help` : undefined;
     return (
       <div key={field.id} className="max-w-md">
         {label}
@@ -279,8 +285,14 @@ export function ProfileBasicsCard({
           type={field.type === "date" ? "date" : "text"}
           value={value}
           onChange={(e) => set(e.target.value)}
+          aria-describedby={helpId}
           className={control}
         />
+        {field.helpKey && (
+          <p id={helpId} className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+            {pt(field.helpKey)}
+          </p>
+        )}
       </div>
     );
   }

@@ -509,8 +509,14 @@ function NextStepCard({
  * today, and each option is one of them:
  *
  *   Employment                      /passport/information#sp-employment
- *   Education, course, certificate  /passport/information#sp-education
+ *   Course or certificate           /passport/information#sp-credentials
  *   Authorisation or appointment    /passport/credentials/new
+ *
+ * GENERAL EDUCATION IS NOT HERE. It is a profile and CV fact, edited on
+ * /my-career/profile, and offering it from the Passport's "add a merit"
+ * control would put the candidate back on the page this pass moved them
+ * off. A security course is `training` and a security certificate is
+ * `certification`; both stay.
  *
  * Nothing here promises a route that does not exist or a form that has not
  * been built. Languages and practical skills are deliberately absent: they
@@ -534,7 +540,11 @@ function AddMeritChooser({ dominant }: { dominant: boolean }) {
     {
       key: "education",
       to: "/passport/information",
-      hash: "sp-education",
+      // `sp-education` left with the education editor, which is on the
+      // canonical profile now. What this option still offers -- a security
+      // course, a certificate -- stays here, so it lands on the credential
+      // sections and the copy no longer says "utbildning".
+      hash: "sp-credentials",
       title: "ws.add.education",
       body: "ws.add.educationBody",
     },

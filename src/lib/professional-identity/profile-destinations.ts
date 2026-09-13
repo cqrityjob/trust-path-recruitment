@@ -69,9 +69,20 @@ export const SECTION_DESTINATIONS: Readonly<Record<CompletenessSection, SectionD
   experience: { owner: "profile", href: "/my-career/profile?edit=profession#career-profile" },
   location: { owner: "passport", href: "/passport/information#sp-work-country" },
   employment: { owner: "passport", href: "/passport/information#sp-employment" },
-  education: { owner: "passport", href: "/passport/information#sp-education" },
-  skills: { owner: "passport", href: "/passport/information#sp-skills" },
-  languages: { owner: "passport", href: "/passport/information#sp-languages" },
+  // ── MOVED TO THE PROFILE, WHERE THE OWNER'S REVIEW PUT THEM ─────────
+  //
+  // These three were edited inside /passport/information, which is what
+  // made a candidate go to the Security Passport to record their degree.
+  // Their editors are on the canonical profile now, and this file routes
+  // to where the write actually happens -- which is the whole point of it.
+  //
+  // The OWNER changes with the editor; the STORAGE does not. Each is still
+  // one `sp_claims` row written by the same server function, so this is a
+  // routing change and emphatically not a copy into a profile table -- see
+  // the note above on migration 20261007090000.
+  education: { owner: "profile", href: "/my-career/profile#profile-education" },
+  skills: { owner: "profile", href: "/my-career/profile#profile-skills" },
+  languages: { owner: "profile", href: "/my-career/profile#profile-languages" },
   careerDirection: { owner: "discovery", href: "/security-career-assessment" },
 };
 

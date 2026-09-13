@@ -32,6 +32,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import { PassportWorkspace } from "@/components/security-passport/PassportWorkspace";
+import { PassportSideColumn } from "@/components/security-passport/PassportSideColumn";
 import { needsWorkLocationConfirmation } from "@/lib/security-passport/onboarding";
 import { deriveFirstRunState } from "@/lib/security-passport/first-run";
 import { FirstRunLoading } from "@/components/security-passport/FirstRunJourney";
@@ -244,6 +245,20 @@ function PassportWorkspaceRoute() {
   return (
     <>
       <ScrollToHashOnceReady />
+      {/* ── THE OWNER'S SKETCH 2 LAYOUT ────────────────────────────────
+          Left: the Passport Card -- what another person sees -- with the
+          integrity and sharing settings directly beneath it, because the
+          privacy mode is what decides whose name that card carries.
+          Right: the Passport itself.
+
+          One column below `lg`, and the SOURCE ORDER puts the workspace
+          first: on a phone the holder's own record is what they came for,
+          and a card preview above it would push every merit off the first
+          screen. `lg:order-*` restores the sketch's left/right at the width
+          the sketch describes, so the two readings agree without two
+          markups. */}
+      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1 lg:order-2">
       <PassportWorkspace
         workspace={workspace}
         // Asked once, of anyone whose work location nobody has confirmed —
@@ -335,6 +350,13 @@ function PassportWorkspaceRoute() {
           </section>
         }
       />
+        </div>
+        <PassportSideColumn
+          snapshot={snapshot}
+          today={today()}
+          className="lg:order-1"
+        />
+      </div>
     </>
   );
 }

@@ -29,6 +29,7 @@
 // unfinished private work and an expired credential is history; neither is
 // Passport content, so neither ends the first run.
 
+import { isCalendarDate } from "./dates";
 import { isCurrentMerit } from "./types";
 
 /** The five things a person may add first.
@@ -234,10 +235,33 @@ export function fieldsFor(kind: FirstMeritKind): readonly FirstMeritFieldId[] {
     : ["title", "organisation", "startedOn"];
 }
 
-/** ISO calendar day, as a browser date input produces it. */
-function isDay(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
-}
+/** ISO calendar day, as a browser date input produces it.
+ *
+ *  ── WHY THIS IS NOT A LOCAL REGEX ANY MORE ──────────────────────────
+ *
+ *  It was `/^\d{4}-\d{2}-\d{2}$/` plus a `Date.parse`. Measured against
+ *  the values that actually reach this field, that pair let two real
+ *  classes through:
+ *
+ *    "2026-02-31"  ACCEPTED -- a day that does not exist
+ *    "1899-12-31"  ACCEPTED -- outside the Passport year window
+ *    "2201-01-01"  ACCEPTED -- ditto, at the other end
+ *
+ *  It did refuse "0000-00-00", "2026-13-45" and "20260-01-01": Date.parse
+ *  rejects those outright, so the old pair was not as weak as the bare
+ *  regex alone would have been. The gap was impossible calendar days and
+ *  missing year bounds, which is precisely what the UAT finding about
+ *  malformed years and over-long input is about.
+ *
+ *  dates.ts already answered all of that for every other Passport surface:
+ *  real month, real day for that month, leap years, and a 1900-2200 window.
+ *  This file was simply the call site the sweep missed -- exactly the
+ *  failure mode passport-date-validation:check was written to catch, and it
+ *  has been reporting this file by name.
+ *
+ *  So this is now a re-export of the one definition rather than a second,
+ *  weaker one standing beside it. */
+const isDay = isCalendarDate;
 
 export interface FirstMeritValidation {
   readonly missing: readonly FirstMeritProblemId[];

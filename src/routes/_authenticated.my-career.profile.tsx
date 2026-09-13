@@ -56,6 +56,7 @@ import {
   type CompletenessSection,
 } from "@/lib/professional-identity/completeness";
 import { SECTION_DESTINATIONS } from "@/lib/professional-identity/profile-destinations";
+import { GeneralProfileClaims } from "@/components/professional-identity/GeneralProfileClaims";
 import {
   CREDENTIAL_CLAIM_TYPES,
   EDUCATION_CLAIM_TYPES,
@@ -108,9 +109,26 @@ const COPY = {
     "Självrapporterat. Ingen har granskat det.",
     "Self-reported. Nobody has reviewed it.",
   ),
+  // ── WHERE EACH FACT BELONGS, AND WHERE IT IS EDITED ─────────────────
+  //
+  // These are two different questions, and this sentence used to answer
+  // only the second -- "education and languages live in the Security
+  // Passport" -- which the owner's review read, correctly, as the product
+  // calling CV facts Passport content.
+  //
+  // They are edited with the Passport because the fact is stored exactly
+  // once, as an sp_claims row, which is what lets it carry a document and a
+  // review. That is a storage and review argument, not a claim about what
+  // kind of fact it is. The Passport page now says the same thing from its
+  // own side, under "Profil- och CV-uppgifter".
+  generalSection: c("Profil- och CV-uppgifter", "Profile and CV information"),
+  generalSectionLead: c(
+    "Utbildning, språk och färdigheter — körkort inräknat. De fyller ditt CV automatiskt. Uppgiften lagras en enda gång, så det du skriver här är samma uppgift som kan dokumenteras och granskas i ditt Security Passport.",
+    "Education, languages and skills — driving licence among them. They fill your CV automatically. The fact is stored exactly once, so what you write here is the same record that can be documented and reviewed in your Security Passport.",
+  ),
   whySplit: c(
-    "Anställningar, utbildningar, intyg och språk bor i Security Passport. Där kan de granskas och verifieras — vilket en profiluppgift aldrig kan.",
-    "Employment, education, credentials and languages live in the Security Passport. There they can be reviewed and verified — which a profile field never can.",
+    "Anställningar och säkerhetsintyg är bevisning i ditt Security Passport och redigeras där. Utbildning, språk och färdigheter hör till din profil och ditt CV, redigeras här nedan och är inte säkerhetsbevisning. Uppgiften lagras en enda gång oavsett var du skriver den, så den kan dokumenteras och granskas i Passportet utan att finnas på två ställen.",
+    "Employment and security credentials are evidence in your Security Passport and are edited there. Education, languages and skills belong to your profile and CV, are edited below, and are not security evidence. The fact is stored exactly once wherever you enter it, so it can be documented and reviewed in the Passport without existing in two places.",
   ),
 } as const;
 
@@ -394,6 +412,31 @@ function ProfilePage() {
                 {L(COPY.openPassport, l)}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               </Link>
+            </section>
+
+            {/* ── THE GENERAL FACTS, EDITED WHERE THEY BELONG ───────────
+                Education, languages and practical skills (driving licence
+                among them) used to be edited inside /passport/information,
+                which is what made a candidate go to the Security Passport
+                to record their degree. The editors live here now.
+
+                The ROWS did not move and must not: each is still one
+                `sp_claims` row, written by the same server functions, and
+                the CV goes on projecting exactly those records. What moved
+                is where the candidate is asked. */}
+            <section aria-labelledby="general-profile-heading" className="mt-8">
+              <h2
+                id="general-profile-heading"
+                className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+              >
+                {L(COPY.generalSection, l)}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                {L(COPY.generalSectionLead, l)}
+              </p>
+              <div className="mt-5">
+                <GeneralProfileClaims />
+              </div>
             </section>
           </div>
         )}

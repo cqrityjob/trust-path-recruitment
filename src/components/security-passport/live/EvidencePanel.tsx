@@ -101,6 +101,15 @@ export function EvidencePanel({
   /** Set after a successful upload so the holder is told it worked. Cleared on
    *  the next attempt, so a stale success never sits above a fresh failure. */
   const [saved, setSaved] = useState(false);
+  /** The name of the file the holder chose, kept for the whole attempt.
+   *
+   *  "Laddar upp …" and "Dokument uppladdat och sparat." are both true of
+   *  any file, which is exactly the problem the pilot review named: the
+   *  holder could not tell WHICH document the product was talking about,
+   *  and on a slow connection could not tell whether their pick had
+   *  registered at all. Held through success AND failure, so a retry
+   *  message can name the file that failed. */
+  const [selectedName, setSelectedName] = useState<string | null>(null);
   /** The document a chosen file should REPLACE, or null for a plain add.
    *  Replacement is upload-then-withdraw in that order: if the second call
    *  fails the holder is left with both documents, which is visible and
@@ -110,6 +119,9 @@ export function EvidencePanel({
   async function handleFile(file: File) {
     setError(null);
     setSaved(false);
+    // Named before anything can go wrong, so a refusal below names the file
+    // it refused rather than reporting an anonymous failure.
+    setSelectedName(file.name);
 
     // Checked here for a fast, plain-language answer; checked again in the
     // server function, in the bucket configuration and in a CHECK
@@ -237,13 +249,32 @@ export function EvidencePanel({
       ) : null}
 
       {saved ? (
-        <p
+        <div
           role="status"
-          className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm font-medium text-foreground"
+          data-evidence-saved
+          className="mt-3 rounded-lg border border-border bg-secondary/40 p-3 text-sm text-foreground"
         >
-          <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />
-          {pt("ev.saved")}
-        </p>
+          <p className="flex items-center gap-2 font-medium">
+            <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />
+            {pt("ev.saved")}
+          </p>
+          {/* WHICH document. "Saved" is true of any file; the holder needs to
+              know it was theirs. */}
+          {selectedName ? (
+            <p data-evidence-saved-file className="mt-1 break-all text-xs text-muted-foreground">
+              {selectedName}
+            </p>
+          ) : null}
+          {/* WHAT IT IS NOW, restated at the moment of success.
+              `ev.ceiling` says this above the picker, but the sentence a
+              person reads after a green tick is the one they carry away --
+              and "saved" must never be heard as "checked". Naming the state
+              here is what keeps the upload state and the verification state
+              apart at the only moment they could be confused. */}
+          <p data-evidence-saved-state className="mt-1 text-xs text-muted-foreground">
+            {pt("ev.savedState")}
+          </p>
+        </div>
       ) : null}
 
       {canAdd ? (
@@ -254,6 +285,18 @@ export function EvidencePanel({
           >
             {busy === "upload" ? pt("ev.uploading") : pt("ev.add")}
           </label>
+          {/* The chosen file, while it is in flight. Without it the only
+              feedback on a slow connection is a button that changed its
+              label, which does not say whether the pick registered. */}
+          {busy === "upload" && selectedName ? (
+            <p
+              data-evidence-uploading-file
+              aria-live="polite"
+              className="mt-2 break-all text-xs text-muted-foreground"
+            >
+              {selectedName}
+            </p>
+          ) : null}
           <input
             ref={inputRef}
             id="sp-evidence-file"
@@ -293,9 +336,30 @@ export function EvidencePanel({
       ) : null}
 
       {error ? (
-        <p role="alert" className="mt-3 text-sm text-destructive">
-          {error}
-        </p>
+        <div role="alert" data-evidence-error className="mt-3 text-sm text-destructive">
+          <p>{error}</p>
+          {selectedName ? (
+            <p data-evidence-error-file className="mt-1 break-all text-xs">
+              {selectedName}
+            </p>
+          ) : null}
+          {/* A REAL retry control, not just a sentence telling the holder to
+              try again. "Försök igen" with nothing to press means hunting
+              for the picker, which on a refused type or an over-size file is
+              the same hunt that produced the failure. Arms the same input,
+              so there is still exactly one way into this flow. */}
+          {canAdd ? (
+            <button
+              type="button"
+              data-evidence-retry
+              disabled={busy !== null}
+              onClick={() => inputRef.current?.click()}
+              className="mt-2 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+            >
+              {pt("ev.retry")}
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );

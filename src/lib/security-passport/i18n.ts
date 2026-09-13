@@ -63,7 +63,17 @@ const sv = {
   "symbols.freeText": "Fritextmerit",
   "symbols.smallSize": "Minsta kortstorlek (28 px)",
   "symbols.withWord": "Märke med statusord",
-  "nav.overview": "Översikt",
+  // ── SCOPED, BECAUSE "ÖVERSIKT" NOW MEANS SOMETHING ELSE ─────────────
+  //
+  // The candidate's primary navigation labels /my-career "Översikt". This
+  // tab labels /passport, and it read "Översikt" too -- so a holder
+  // standing on their Passport saw the same word twice on one screen,
+  // pointing at two different places. The Passport's own sections keep
+  // their names; this one says which overview it is.
+  //
+  // Not "Mina meriter": that is already a heading ON this page, and a tab
+  // repeating a heading below it is the duplication this pass removes.
+  "nav.overview": "Passportöversikt",
   "nav.onboarding": "Kom igång",
   "nav.card": "Passport Card",
   "nav.credentials": "Behörigheter",
@@ -316,7 +326,13 @@ const sv = {
 
   "onboarding.identity.title": "Yrkesidentitet",
   "onboarding.identity.name": "Namn som visas",
-  "onboarding.identity.headline": "Kort yrkesbeskrivning",
+  // "Kort yrkesbeskrivning" sat directly under "Namn som visas", and the
+  // pilot review found people reading it as a second place to write who
+  // they are. It names the YRKESTITEL, and it says so now -- with the help
+  // line below stating where the title actually appears.
+  "onboarding.identity.headline": "Yrkestitel som visas",
+  "onboarding.identity.headlineHelp":
+    "Visas på ditt Passport Card, i din översikt och för arbetsgivare du delar med. Till exempel \u201dVäktare\u201d eller \u201dSkyddsvakt\u201d \u2014 inte ditt namn.",
   "onboarding.identity.why": "Det här är namnet och beskrivningen som syns när du delar något.",
 
   "onboarding.profession.title": "Yrke",
@@ -503,8 +519,8 @@ const sv = {
   "ws.add.title": "Vad vill du lägga till?",
   "ws.add.employment": "Anställning",
   "ws.add.employmentBody": "En roll hos en arbetsgivare.",
-  "ws.add.education": "Utbildning, kurs eller certifikat",
-  "ws.add.educationBody": "Något du har gått eller tagit.",
+  "ws.add.education": "Kurs eller certifikat",
+  "ws.add.educationBody": "En säkerhetskurs eller ett intyg du har tagit. Allmän utbildning hör till din profil.",
   "ws.add.credential": "Behörighet eller förordnande",
   "ws.add.credentialBody": "Förordnanden, licenser och utbildningar för din arbetsmarknad.",
 
@@ -856,6 +872,11 @@ const sv = {
     "Erfarenhet följer med över gränser. Behörighet gör det inte.",
 
   // ── Privacy ──────────────────────────────────────────────────────────
+  // The left column on /passport. It REPORTS; the pages it links to own the
+  // controls, so there is one card renderer and one privacy writer.
+  "side.cardTitle": "Så här ser ditt Passport ut",
+  "side.openCard": "Öppna Passport Card",
+  "side.openPrivacy": "Integritets- och delningsinställningar",
   "privacy.title": "Integritet och delning",
   "privacy.defaultTitle": "Privat som standard",
   "privacy.defaultBody": "Ingenting i ditt Passport visas för någon förrän du delar det.",
@@ -969,6 +990,19 @@ const sv = {
   // stays; what changed is that it now says WHICH link, next to the button
   // that makes one, and that the document says separately that it is stored.
   "ev.saved": "Dokument uppladdat och sparat.",
+  // Said again at the moment of success. "Sparat" must never be heard as
+  // "kontrollerat": the ceiling sentence above the picker states the rule,
+  // and this states the RESULT, which is the sentence a holder carries away
+  // from a green tick.
+  "ev.savedState": "Uppgiften är nu Dokument inlämnat — inte Verifierat.",
+  // The boundary between the two products, said on the page that holds both
+  // editors. These rows are the same sp_claims rows as the ones above; what
+  // this heading changes is what the page CLAIMS about them.
+  // The Passport MAY point at the profile; it may not edit there.
+  "info.generalMoved":
+    "Utbildning, språk och färdigheter — körkort inräknat — hör till din profil och ditt CV, redigeras där och är inte säkerhetsbevisning.",
+  "info.generalMovedLink": "Öppna profil- och CV-uppgifter",
+  "ev.retry": "Försök igen",
   "ev.stored": "Dokumentet ligger kvar i ditt Passport tills du tar bort det.",
   "ev.linkShort":
     "Öppna-länken skapas när du klickar och slutar gälla efter fem minuter. Dokumentet påverkas inte.",
@@ -2212,7 +2246,7 @@ const en: Record<PassportCopyKey, string> = {
   "symbols.freeText": "Free-text credential",
   "symbols.smallSize": "Smallest card size (28 px)",
   "symbols.withWord": "Mark with its status word",
-  "nav.overview": "Overview",
+  "nav.overview": "Passport overview",
   "nav.onboarding": "Get started",
   "nav.card": "Passport Card",
   "nav.credentials": "Credentials",
@@ -2443,7 +2477,9 @@ const en: Record<PassportCopyKey, string> = {
 
   "onboarding.identity.title": "Professional identity",
   "onboarding.identity.name": "Name shown",
-  "onboarding.identity.headline": "Short professional description",
+  "onboarding.identity.headline": "Displayed professional title",
+  "onboarding.identity.headlineHelp":
+    "Shown on your Passport Card, in your overview, and to employers you share with. For example \u201cSecurity Officer\u201d or \u201cClose Protection Officer\u201d \u2014 not your name.",
   "onboarding.identity.why":
     "This is the name and description that appear when you share something.",
 
@@ -2616,8 +2652,8 @@ const en: Record<PassportCopyKey, string> = {
   "ws.add.title": "What would you like to add?",
   "ws.add.employment": "Employment",
   "ws.add.employmentBody": "A role with an employer.",
-  "ws.add.education": "Education, course or certificate",
-  "ws.add.educationBody": "Something you took or completed.",
+  "ws.add.education": "Course or certificate",
+  "ws.add.educationBody": "A security course or certificate you completed. General education belongs to your profile.",
   "ws.add.credential": "Authorisation or appointment",
   "ws.add.credentialBody": "Appointments, licences and training for your work market.",
 
@@ -2884,6 +2920,9 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.experienceVsEligibility":
     "Experience travels across borders. Eligibility does not.",
 
+  "side.cardTitle": "What your Passport looks like",
+  "side.openCard": "Open Passport Card",
+  "side.openPrivacy": "Privacy and sharing settings",
   "privacy.title": "Privacy and sharing",
   "privacy.defaultTitle": "Private by default",
   "privacy.defaultBody": "Nothing in your Passport is shown to anyone until you share it.",
@@ -2982,6 +3021,11 @@ const en: Record<PassportCopyKey, string> = {
   "ev.view": "Open",
   "ev.opening": "Opening …",
   "ev.saved": "Document uploaded and saved.",
+  "ev.savedState": "The entry is now Document provided — not Verified.",
+  "info.generalMoved":
+    "Education, languages and skills — driving licence among them — belong to your profile and CV, are edited there, and are not security evidence.",
+  "info.generalMovedLink": "Open profile and CV information",
+  "ev.retry": "Try again",
   "ev.stored": "The document stays in your Passport until you remove it.",
   "ev.linkShort":
     "The link to open a document is created when you click and stops working after five minutes. The document itself is unaffected.",
