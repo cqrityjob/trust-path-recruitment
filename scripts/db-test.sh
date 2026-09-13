@@ -3277,10 +3277,12 @@ DELETE FROM public.bcp_conduct_sessions;
 ALTER TABLE public.bcp_conduct_sessions ENABLE TRIGGER bcp_conduct_sessions_guard;
 
 ALTER TABLE public.bcp_case_links DISABLE TRIGGER bcp_case_links_guard;
+ALTER TABLE public.bcp_case_topics DISABLE TRIGGER bcp_case_topics_guard;
 DELETE FROM public.bcp_case_topics
  WHERE link_id IN (SELECT id FROM public.bcp_case_links
                     WHERE employer_id::text LIKE 'b6000000%');
 DELETE FROM public.bcp_case_links WHERE employer_id::text LIKE 'b6000000%';
+ALTER TABLE public.bcp_case_topics ENABLE TRIGGER bcp_case_topics_guard;
 ALTER TABLE public.bcp_case_links ENABLE TRIGGER bcp_case_links_guard;
 
 ALTER TABLE public.bcp_events DISABLE TRIGGER ALL;
