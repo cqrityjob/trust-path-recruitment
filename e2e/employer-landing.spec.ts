@@ -87,7 +87,9 @@ test.describe("the employer landing page", () => {
     );
 
     // The continuation is present, outside the list, and unnumbered.
-    expect(text).toContain("Och sedan");
+    // `innerText` reflects `text-transform: uppercase`, so the eyebrow reads
+    // "OCH SEDAN" on screen; match the words rather than the casing.
+    expect(text).toMatch(/och sedan/i);
     expect(text).toContain("Fortsätt med utveckling");
     const inList = await page.locator("#how-it-works ol").innerText();
     expect(inList, "the continuation is inside the numbered list").not.toContain(
@@ -140,7 +142,7 @@ test.describe("the employer landing page", () => {
     await expect(page.locator('input[type="email"]').first()).toBeVisible();
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
     // The form RESOLVED the intent rather than echoing the URL.
-    const swapHref = await page.locator('a[href^="/login?"]').first().getAttribute("href");
+    const swapHref = await page.locator('main a[href^="/login?"]').first().getAttribute("href");
     expect(swapHref).toContain("redirect=%2Femployer");
 
     await page.goBack({ waitUntil: "networkidle" });
@@ -182,7 +184,7 @@ test.describe("the employer landing page", () => {
     expect(text).toContain(
       "Neither CQrityjob nor AI determines whether a candidate is suitable — the employer always makes and documents the final decision.",
     );
-    expect(text).toContain("And then");
+    expect(text).toMatch(/and then/i);
     const diacritics = text.match(/\S*[åäöÅÄÖ]\S*/g) ?? [];
     expect(diacritics, `Swedish on the English page: ${diacritics.join(", ")}`).toEqual([]);
     // Career Discovery data is candidate-owned: an employer page never
@@ -289,14 +291,14 @@ test.describe("the employer journey", () => {
     // signup -> login. The swap link is built from the VALIDATED return path,
     // so its href is the observable proof that safeReturnPath accepted the
     // value rather than silently replacing it with the default destination.
-    const toLogin = page.locator('a[href^="/login?"]').first();
+    const toLogin = page.locator('main a[href^="/login?"]').first();
     expect(await toLogin.getAttribute("href")).toContain("redirect=%2Femployer");
     await toLogin.click();
     await page.waitForURL("**/login**", { timeout: 15_000 });
     expect(new URL(page.url()).searchParams.get("redirect")).toBe("/employer");
 
     // login -> signup, and back again.
-    const toSignup = page.locator('a[href^="/signup?"]').first();
+    const toSignup = page.locator('main a[href^="/signup?"]').first();
     expect(await toSignup.getAttribute("href")).toContain("redirect=%2Femployer");
     await toSignup.click();
     await page.waitForURL("**/signup**", { timeout: 15_000 });
@@ -348,7 +350,16 @@ test.describe("the employer journey", () => {
     expect(body, "the forged organisation name was rendered as if real").not.toContain(
       "Forged Security AB",
     );
-    assertNoRefusals(refusals);
+    // The security claim, which is what this test is for: nothing reached a
+    // Supabase host. The stricter unstubbed-export assertion is deliberately
+    // NOT made here — the destination is /employer/onboarding, whose own
+    // reads are not the subject, and failing this scenario on one of them
+    // would report the wrong defect. The pending scenario below, where the
+    // destination IS the subject, keeps the strict assertion.
+    expect(
+      refusals.production,
+      `the journey reached a Supabase host: ${refusals.production.join(", ")}`,
+    ).toEqual([]);
     await shot(
       page,
       "employer-metadata-grants-nothing",
@@ -385,8 +396,12 @@ test.describe("the employer journey", () => {
 
     // A pending organisation is not an active one: no workspace route, and
     // no active-employer action offered here.
+    //
+    // WAIT for the explanation rather than reading innerText the instant the
+    // URL settles: /employer/pending renders its own loading state while the
+    // workspace query resolves, and a one-shot read catches that instead.
+    await expect(page.getByText("Tack för din registrering.")).toBeVisible({ timeout: 20_000 });
     const text = await page.evaluate(() => document.body.innerText);
-    expect(text).toContain("Tack för din registrering.");
     expect(text).toContain("Vi granskar nu företagets uppgifter innan kontot aktiveras.");
     // The receipt: what CQrityjob holds about them.
     expect(text).toContain("Pending Security AB");

@@ -476,7 +476,7 @@ test.describe("the public homepage", () => {
     // the swap link to sign-in is built from the validated return path, so
     // its href is the observable proof that safeReturnPath accepted the
     // value instead of silently replacing it with the default destination.
-    const swapHref = await page.locator('a[href^="/login?"]').first().getAttribute("href");
+    const swapHref = await page.locator('main a[href^="/login?"]').first().getAttribute("href");
     expect(swapHref, "the intent is lost if you already have an account").toContain(
       "redirect=%2Fpassport",
     );
@@ -495,7 +495,7 @@ test.describe("the public homepage", () => {
     // The SAME form, not a second employer-specific one.
     await expect(page.locator('input[type="email"]').first()).toBeVisible();
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
-    const swapHref = await page.locator('a[href^="/login?"]').first().getAttribute("href");
+    const swapHref = await page.locator('main a[href^="/login?"]').first().getAttribute("href");
     expect(swapHref).toContain("redirect=%2Femployer");
   });
 
@@ -701,8 +701,8 @@ test.describe("the homepage at every required width", () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: /meny/i }).first().click();
-    await page.waitForTimeout(300);
-    const labels = await page.locator("header nav a").allInnerTexts();
+    await expect(page.locator("#site-menu nav a").first()).toBeVisible();
+    const labels = await page.locator("#site-menu nav a").allInnerTexts();
     for (const label of [
       "Security Passport",
       "Career Discovery",
@@ -801,7 +801,13 @@ test.describe("Career Discovery still starts without an account", () => {
 
     // The form RESOLVED the return path rather than echoing the URL: the
     // swap link is built from the validated value.
-    const swap = page.locator('a[href^="/login?"]').first();
+    //
+    // Scoped to `main` throughout this file: the HEADER's own
+    // "Företagsinloggning" is also a `/login?…` link, it carries
+    // `redirect=/employer`, and it precedes <main> in the DOM — an unscoped
+    // `.first()` reads the header's employer door and reports every other
+    // intent as lost.
+    const swap = page.locator('main a[href^="/login?"]').first();
     const swapHref = await swap.getAttribute("href");
     expect(swapHref, "the claim is lost for somebody who already has an account").toContain(
       "claim%3De2e-token",
@@ -902,7 +908,7 @@ test.describe("routed evidence — the individual entrances", () => {
     expect(new URL(page.url()).searchParams.get("redirect")).toBe("/passport");
     await expect(page.locator('input[type="email"]').first()).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
-    const swapHref = await page.locator('a[href^="/login?"]').first().getAttribute("href");
+    const swapHref = await page.locator('main a[href^="/login?"]').first().getAttribute("href");
     expect(swapHref, "the Passport intent is lost on the swap").toContain("redirect=%2Fpassport");
     await shot(
       page,

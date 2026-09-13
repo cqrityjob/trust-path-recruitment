@@ -100,7 +100,24 @@ export async function installBoundary(page: Page, table: ServerFnTable = {}): Pr
     });
   });
 
-  // The two auth endpoints a planted session actually calls. Answered here,
+  // ── ORDER MATTERS, AND IT IS THE OPPOSITE OF THE OBVIOUS ONE ────────
+  //
+  // Playwright consults the MOST RECENTLY registered handler first. The
+  // Supabase catch-all below therefore has to be registered BEFORE the two
+  // specific auth handlers, or it wins over them and aborts the session
+  // refresh a planted session legitimately makes — which is how the
+  // signed-in scenario first failed, reporting its own harness as a leak.
+  //
+  // Anything else aimed at a Supabase host IS a leak. Record and abort.
+  for (const pattern of ["**://*.supabase.co/**", "**://*.supabase.in/**"]) {
+    await page.route(pattern, async (route) => {
+      refusals.production.push(route.request().url());
+      return route.abort();
+    });
+  }
+
+  // The two auth endpoints a planted session actually calls. Registered
+  // after the catch-all so they take precedence over it. Answered here,
   // never upstream.
   await page.route("**/auth/v1/user**", (route) =>
     route.fulfill({
@@ -122,14 +139,6 @@ export async function installBoundary(page: Page, table: ServerFnTable = {}): Pr
       }),
     }),
   );
-
-  // Anything else aimed at a Supabase host is a leak. Record and abort.
-  for (const pattern of ["**://*.supabase.co/**", "**://*.supabase.in/**"]) {
-    await page.route(pattern, async (route) => {
-      refusals.production.push(route.request().url());
-      return route.abort();
-    });
-  }
 
   return refusals;
 }
