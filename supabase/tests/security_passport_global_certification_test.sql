@@ -127,6 +127,10 @@ DECLARE
   _se_before jsonb;
   _legacy_before jsonb;
   _payload jsonb;
+  _snap    jsonb;
+  _reviewed uuid;   -- a claim whose standing CQrityjob reviewed
+  _issuer   uuid;   -- a claim whose standing the issuer confirmed
+  _fresh    uuid;   -- a claim with no lifecycle row yet
   _disclosure uuid;
   _codes text[];
 BEGIN
@@ -860,6 +864,167 @@ BEGIN
     PERFORM pg_temp.ok(true, '8b.22 and a caller with no JWT subject is refused outright');
   END;
   PERFORM set_config('request.jwt.claim.sub', _global::text, true);
+
+  -- =====================================================================
+  RAISE NOTICE 'GROUP 8c -- a holder cannot erase a standing somebody else established';
+  -- =====================================================================
+  -- THE SECOND DEFECT INDEPENDENT REVIEW FOUND, and the subtler one. GROUP 8b
+  -- proves a holder cannot WRITE 'document_reviewed' or 'issuer_confirmed'.
+  -- That is not the same as proving they cannot DESTROY one.
+  --
+  -- The write path's conflict update was unconditional. It set
+  -- status_source = 'holder_declared' and NULLed both issuer fields on every
+  -- correction -- so the moment a properly authorised path wrote a trusted
+  -- standing, the holder's ordinary declaration RPC would overwrite it:
+  --
+  --   an issuer records `revoked`, issuer_confirmed, with its time and source
+  --   -> the holder declares `active`
+  --   -> the revocation is gone, the issuer fields are NULL, and the Passport
+  --      says active
+  --
+  -- The trusted writer does not exist yet. That is not a defence: this is the
+  -- foundation it will rely on, and the row it writes has to survive. The old
+  -- tests only ever created and corrected holder_declared rows, so none of
+  -- them could have found this.
+  --
+  -- Every row below is planted as the TABLE OWNER, standing in for the
+  -- authorised writer this phase does not build.
+
+  PERFORM pg_temp.ok(
+    pg_temp.file_canonical(_global, 'INTL_ISC2_CISSP', 'active') = 'OK'
+    AND pg_temp.file_canonical(_global, 'INTL_ACFE_CFE', 'active') = 'OK'
+    AND pg_temp.file_canonical(_global, 'INTL_ISACA_CRISC', 'active') = 'OK',
+    '8c.0 the same holder records three more international certifications');
+  SELECT id INTO _reviewed FROM public.sp_claims
+   WHERE holder_user_id = _global AND credential_code = 'INTL_ISC2_CISSP';
+  SELECT id INTO _issuer FROM public.sp_claims
+   WHERE holder_user_id = _global AND credential_code = 'INTL_ACFE_CFE';
+  SELECT id INTO _fresh FROM public.sp_claims
+   WHERE holder_user_id = _global AND credential_code = 'INTL_ISACA_CRISC';
+
+  -- ── A standing CQrityjob reviewed ───────────────────────────────────
+  INSERT INTO public.sp_claim_certification_lifecycle
+    (claim_id, holder_user_id, awarded_on, cycle_ends_on, cycle_end_semantics,
+     holder_lifecycle_status, status_as_of, status_source)
+  VALUES (_reviewed, _global, DATE '2023-03-01', DATE '2026-03-01',
+          'certificate_printed_date', 'lapsed', DATE '2026-06-30',
+          'document_reviewed');
+  SELECT to_jsonb(l) INTO _snap FROM public.sp_claim_certification_lifecycle l
+   WHERE claim_id = _reviewed;
+  PERFORM pg_temp.ok(_snap IS NOT NULL, '8c.1 a document-reviewed standing is on record');
+
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare(
+         '%s'::uuid, DATE '2023-03-01', DATE '2029-03-01',
+         'recertification_due', 'active', DATE '2026-09-13')$q$, _reviewed));
+  PERFORM pg_temp.ok(_r = 'REFUSED: SP_CERTIFICATION_LIFECYCLE_SOURCE_PROTECTED',
+    '8c.2 the holder cannot declare over it (got ' || _r || ')');
+
+  PERFORM pg_temp.ok(
+    (SELECT to_jsonb(l) FROM public.sp_claim_certification_lifecycle l
+      WHERE claim_id = _reviewed) = _snap,
+    '8c.3 and the COMPLETE row is byte-for-byte what it was');
+
+  PERFORM pg_temp.ok(
+    (SELECT updated_at FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _reviewed) = (_snap ->> 'updated_at')::timestamptz,
+    '8c.4 including updated_at, so nothing was written and rolled back');
+
+  -- ── A standing the issuer confirmed, fully attributed ───────────────
+  INSERT INTO public.sp_claim_certification_lifecycle
+    (claim_id, holder_user_id, awarded_on, holder_lifecycle_status,
+     status_as_of, status_source, issuer_confirmed_at,
+     issuer_confirmed_source_url)
+  VALUES (_issuer, _global, DATE '2021-11-01', 'revoked', DATE '2026-08-01',
+          'issuer_confirmed', TIMESTAMPTZ '2026-08-01 09:00:00+00',
+          'https://acfe.com/verify/confirmed');
+  SELECT to_jsonb(l) INTO _snap FROM public.sp_claim_certification_lifecycle l
+   WHERE claim_id = _issuer;
+  PERFORM pg_temp.ok(
+    (_snap ->> 'holder_lifecycle_status') = 'revoked'
+    AND (_snap ->> 'issuer_confirmed_source_url') IS NOT NULL,
+    '8c.5 an issuer-confirmed REVOCATION is on record, fully attributed');
+
+  -- The exact sequence the review named: revoked by the issuer, then the
+  -- holder declares themselves active.
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare(
+         '%s'::uuid, DATE '2021-11-01', NULL, 'unknown', 'active', DATE '2026-09-13')$q$,
+    _issuer));
+  PERFORM pg_temp.ok(_r = 'REFUSED: SP_CERTIFICATION_LIFECYCLE_SOURCE_PROTECTED',
+    '8c.6 the holder cannot declare themselves active over an issuer revocation (got ' || _r || ')');
+
+  PERFORM pg_temp.ok(
+    (SELECT to_jsonb(l) FROM public.sp_claim_certification_lifecycle l
+      WHERE claim_id = _issuer) = _snap,
+    '8c.7 and the COMPLETE row is byte-for-byte what it was');
+
+  PERFORM pg_temp.ok(
+    (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _issuer) = 'revoked'
+    AND (SELECT status_source FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _issuer) = 'issuer_confirmed'
+    AND (SELECT issuer_confirmed_at FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _issuer) IS NOT NULL
+    AND (SELECT issuer_confirmed_source_url FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _issuer) IS NOT NULL,
+    '8c.8 the revocation, its source and both attribution fields all survive');
+
+  -- Neither trusted source can be converted back to holder_declared.
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id IN (_reviewed, _issuer) AND status_source = 'holder_declared') = 0,
+    '8c.9 neither trusted source was converted back to holder_declared');
+
+  -- The refusal is the SAME for both, so it does not tell a holder whether
+  -- CQrityjob reviewed their certificate or the issuer answered about them.
+  PERFORM pg_temp.ok(
+    pg_temp.as_user(_global, format(
+      $q$SELECT public.sp_certification_lifecycle_declare('%s'::uuid)$q$, _reviewed))
+    = pg_temp.as_user(_global, format(
+      $q$SELECT public.sp_certification_lifecycle_declare('%s'::uuid)$q$, _issuer)),
+    '8c.10 and the refusal does not reveal WHICH protected source it is');
+
+  -- ── What the holder can still do, unchanged ─────────────────────────
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare(
+         '%s'::uuid, DATE '2022-02-02', NULL, 'unknown', 'active', DATE '2026-09-13')$q$,
+    _fresh));
+  PERFORM pg_temp.ok(_r = 'OK', '8c.11 a holder still CREATES a new holder_declared row');
+
+  PERFORM pg_temp.ok(
+    (SELECT status_source FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _fresh) = 'holder_declared'
+    AND (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _fresh) = 'active',
+    '8c.12 recorded as their own statement');
+
+  SELECT to_jsonb(l) INTO _snap FROM public.sp_claim_certification_lifecycle l
+   WHERE claim_id = _fresh;
+  _r := pg_temp.as_user(_global, format(
+    $q$SELECT public.sp_certification_lifecycle_declare(
+         '%s'::uuid, DATE '2022-02-02', NULL, 'unknown', 'retired', DATE '2026-09-13')$q$,
+    _fresh));
+  PERFORM pg_temp.ok(_r = 'OK', '8c.13 and still CORRECTS an existing holder_declared row');
+
+  PERFORM pg_temp.ok(
+    (SELECT holder_lifecycle_status FROM public.sp_claim_certification_lifecycle
+      WHERE claim_id = _fresh) = 'retired'
+    AND (SELECT created_at FROM public.sp_claim_certification_lifecycle
+          WHERE claim_id = _fresh) = (_snap ->> 'created_at')::timestamptz,
+    '8c.14 with created_at preserved across the correction');
+
+  -- ── And none of it moved the claim's trust ──────────────────────────
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.sp_claims
+      WHERE id IN (_reviewed, _issuer, _fresh, _cpp)
+        AND assertion_level = 'self_declared') = 4,
+    '8c.15 every claim''s assertion_level is still self_declared');
+
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.sp_claims
+      WHERE id IN (_reviewed, _issuer, _fresh, _cpp) AND valid_until IS NOT NULL) = 0,
+    '8c.16 and no claim gained an expiry from a lifecycle row');
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 9 -- an inactive definition: readable, not selectable';

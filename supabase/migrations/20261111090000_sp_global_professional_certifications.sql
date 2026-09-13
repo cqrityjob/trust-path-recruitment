@@ -601,6 +601,16 @@ COMMENT ON COLUMN public.sp_claim_certification_lifecycle.cycle_ends_on IS
   'Stated, never computed. Nothing adds sp_certification_definitions.'
   'maintenance_cycle_months to awarded_on to produce this column.';
 
+COMMENT ON COLUMN public.sp_claim_certification_lifecycle.status_source IS
+  'WHO established this standing, and therefore who may change it. While it '
+  'reads holder_declared the holder may correct the row through '
+  'sp_certification_lifecycle_declare(). Once it reads document_reviewed or '
+  'issuer_confirmed the row is the holder''s to READ and nobody''s to rewrite '
+  'from the holder side: that function refuses with '
+  'SP_CERTIFICATION_LIFECYCLE_SOURCE_PROTECTED. Correcting a trusted '
+  'observation requires a separately authorised, audited path that does not '
+  'exist in this phase.';
+
 CREATE INDEX IF NOT EXISTS sp_claim_certification_lifecycle_holder_idx
   ON public.sp_claim_certification_lifecycle (holder_user_id);
 
@@ -688,6 +698,15 @@ REVOKE ALL ON FUNCTION public.sp_certification_lifecycle_rules() FROM PUBLIC, an
 --   claim_id, created_at         preserved on correction, never rewritten
 --   updated_at                   set here, not by the caller
 --
+-- AND A HOLDER DECLARATION IS MUTABLE ONLY WHILE IT IS STILL A HOLDER
+-- DECLARATION. The conflict update below carries
+-- `WHERE l.status_source = 'holder_declared'`, so once a reviewer or an issuer
+-- has established a standing, this function refuses rather than overwriting
+-- it. Without that predicate a holder could erase an issuer's revocation by
+-- declaring themselves active -- see the long note at the statement itself.
+-- Changing a trusted observation needs a separately authorised and audited
+-- correction path, which does not exist yet and is not this function.
+--
 -- 'document_reviewed' and 'issuer_confirmed' therefore remain RESERVED schema
 -- states with no holder-reachable write path anywhere in this repository.
 -- Their writers will need separately authorised reviewer and issuer
@@ -705,7 +724,7 @@ CREATE OR REPLACE FUNCTION public.sp_certification_lifecycle_declare(
   _cycle_end_semantics     text DEFAULT 'unknown',
   _holder_lifecycle_status text DEFAULT 'unknown',
   _status_as_of            date DEFAULT NULL)
-RETURNS jsonb
+RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $fn$
@@ -713,7 +732,7 @@ DECLARE
   _uid     uuid := auth.uid();
   _code    text;
   _scope   text;
-  _created boolean;
+  _written uuid;
 BEGIN
   IF _uid IS NULL THEN
     RAISE EXCEPTION 'SP_NOT_AUTHENTICATED' USING ERRCODE = 'insufficient_privilege';
@@ -769,10 +788,39 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
-  _created := NOT EXISTS (
-    SELECT 1 FROM public.sp_claim_certification_lifecycle WHERE claim_id = _claim_id);
-
-  INSERT INTO public.sp_claim_certification_lifecycle (
+  -- ── ONE STATEMENT, AND THE PROVENANCE GUARD IS INSIDE IT ────────────
+  --
+  -- The conflict update is permitted ONLY while the row that is already there
+  -- still says `holder_declared`. Independent review found the second defect
+  -- here: the first version's DO UPDATE was unconditional, and its own comment
+  -- described the consequence as though it were a feature -- "a row which
+  -- somehow carried a different source is brought back". Brought back is
+  -- exactly wrong. It means that the moment a properly authorised path writes
+  -- `document_reviewed` or `issuer_confirmed`, the holder calls their ordinary
+  -- declaration RPC and ERASES it:
+  --
+  --   1. an authenticated issuer records `revoked` as an issuer-confirmed
+  --      standing, with its confirming time and source;
+  --   2. the holder declares `active`;
+  --   3. the unconditional update overwrites the revocation with
+  --      holder_declared, NULLs both issuer fields, and stores `active`.
+  --
+  -- That is destruction of higher-authority provenance by the party it is
+  -- about. The trusted writer not existing yet is not a defence: this
+  -- migration is the foundation that writer will rely on, and the row it
+  -- writes has to survive.
+  --
+  -- The guard is a WHERE on the conflict update, not a pre-check followed by
+  -- an update. A pre-check is a race: two calls both read `holder_declared`
+  -- and the second overwrites whatever the first, or a concurrent reviewer,
+  -- committed in between. ON CONFLICT DO UPDATE takes a row lock on the
+  -- conflicting row and evaluates this predicate against the CURRENT version
+  -- of it, in the same statement that writes.
+  --
+  -- When the predicate is false the statement updates nothing and RETURNING
+  -- yields no row, so `_written` stays NULL and the call fails closed below.
+  -- A holder correcting a trusted row gets a refusal, never a silent no-op.
+  INSERT INTO public.sp_claim_certification_lifecycle AS l (
     claim_id, holder_user_id,
     awarded_on, cycle_ends_on, cycle_end_semantics,
     holder_lifecycle_status, status_as_of,
@@ -793,24 +841,48 @@ BEGIN
     cycle_end_semantics     = EXCLUDED.cycle_end_semantics,
     holder_lifecycle_status = EXCLUDED.holder_lifecycle_status,
     status_as_of            = EXCLUDED.status_as_of,
-    -- A correction of a holder's own statement is a holder's own statement.
-    -- Restated rather than left alone so that a row which somehow carried a
-    -- different source is brought back, never preserved.
+    -- Restated rather than left alone, so a holder's correction is recorded as
+    -- a holder's own statement. Reachable only for a row that is ALREADY
+    -- holder_declared, because of the predicate below -- which is what makes
+    -- these three lines a restatement and not an erasure.
     status_source               = 'holder_declared',
     issuer_confirmed_at         = NULL,
     issuer_confirmed_source_url = NULL,
-    updated_at                  = now();
+    updated_at                  = now()
+  WHERE l.status_source = 'holder_declared'
+  RETURNING l.claim_id INTO _written;
 
-  RETURN jsonb_build_object('claim_id', _claim_id, 'created', _created);
+  IF _written IS NULL THEN
+    -- One code for both protected sources. Saying WHICH one would tell a
+    -- holder whether CQrityjob has reviewed their certificate or whether the
+    -- issuer has answered about them, which is not theirs to learn from a
+    -- refusal.
+    RAISE EXCEPTION
+      'SP_CERTIFICATION_LIFECYCLE_SOURCE_PROTECTED: this certification''s standing was established by someone other than you and cannot be changed by a holder declaration'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  -- The claim id, and nothing else. The first version also returned a
+  -- `created` boolean derived from a NOT EXISTS read taken before the write:
+  -- two concurrent first declarations could both observe "not exists" while
+  -- only one inserted, so the flag could be wrong for the loser. Nothing
+  -- consumes this RPC yet, so the honest contract is the narrow one -- an
+  -- accurate `created` would have to come out of the write itself, and there
+  -- is no caller asking for it.
+  RETURN _written;
 END $fn$;
 
 COMMENT ON FUNCTION public.sp_certification_lifecycle_declare(uuid, date, date, text, text, date) IS
   'The holder''s ONLY write path into sp_claim_certification_lifecycle. Writes '
   'status_source = holder_declared and nothing else, forces both '
   'issuer-confirmation fields to NULL, pins holder_user_id to auth.uid(), and '
-  'preserves claim_id and created_at when correcting. Reviewer and issuer '
-  'attribution require separately authorised identities and have no write '
-  'path in this phase.';
+  'preserves claim_id and created_at when correcting. It may correct an '
+  'existing row ONLY while that row is still holder_declared: a standing '
+  'established by a review or by the issuer is refused with '
+  'SP_CERTIFICATION_LIFECYCLE_SOURCE_PROTECTED, in one statement so there is '
+  'no window between checking and writing. Reviewer and issuer attribution '
+  'require separately authorised identities and an audited correction path, '
+  'neither of which exists in this phase.';
 
 REVOKE ALL ON FUNCTION
   public.sp_certification_lifecycle_declare(uuid, date, date, text, text, date)
@@ -1927,6 +1999,16 @@ BEGIN
   IF position('status_source' in _src) = 0
      OR position('''holder_declared''' in _src) = 0 THEN
     RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_SOURCE: the holder write path no longer hardcodes status_source = holder_declared';
+  END IF;
+
+  -- And it may not overwrite a standing somebody else established. The
+  -- predicate lives ON the conflict update, so that checking and writing are
+  -- one statement; a pre-check would be a race a concurrent reviewer loses.
+  IF position('WHERE l.status_source = ''holder_declared''' in _src) = 0 THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_OVERWRITES_PROVENANCE: the holder write path can overwrite a reviewer- or issuer-established standing';
+  END IF;
+  IF position('SP_CERTIFICATION_LIFECYCLE_SOURCE_PROTECTED' in _src) = 0 THEN
+    RAISE EXCEPTION 'SP_GLOBAL_CERT_WRITE_PATH_FAILS_OPEN: a refused correction must raise, not silently write nothing';
   END IF;
 
   -- And no holder may write the catalogue.

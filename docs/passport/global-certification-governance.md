@@ -216,6 +216,60 @@ states with no holder-reachable write path anywhere in this repository**.
 Their writers will require separately authorised reviewer and issuer
 identities, which are a later phase's work and deliberately absent here.
 
+### A holder declaration is mutable only while it is still a holder declaration
+
+Not being able to _write_ a trusted source is not the same as not being able
+to _destroy_ one, and the first correction only covered the first half.
+
+The write path's conflict update was unconditional. It restates
+`status_source = 'holder_declared'` and NULLs both issuer fields on every
+correction — so the moment a properly authorised path wrote a trusted
+standing, the holder's ordinary declaration would have erased it:
+
+1. an authenticated issuer records `revoked`, issuer-confirmed, with its
+   confirming time and source;
+2. the holder calls `sp_certification_lifecycle_declare()` with `active`;
+3. the revocation is gone, both attribution fields are `NULL`, and the
+   Passport says `active`.
+
+That is destruction of higher-authority provenance by the party it is about.
+The trusted writer not existing yet is no defence: this migration is the
+foundation that writer will rely on, and the row it writes has to survive.
+
+So the rule is:
+
+- **Holder declarations are mutable only while the current lifecycle source
+  remains `holder_declared`.** The conflict update carries
+  `WHERE l.status_source = 'holder_declared'`.
+- **Reviewer- or issuer-established lifecycle information cannot be replaced
+  by the holder.** The call is refused with
+  `SP_CERTIFICATION_LIFECYCLE_SOURCE_PROTECTED` — one code for both sources,
+  so a refusal never tells a holder whether CQrityjob has read their
+  certificate or the issuer has answered about them.
+- **Changing a trusted lifecycle observation requires a separately authorised,
+  audited correction path**, which does not exist in this phase and is not
+  this function.
+
+The guard is a predicate **on the writing statement**, not a check before it.
+A pre-check is a race: two callers both read `holder_declared`, or a reviewer
+commits between the read and the write, and the later write wins anyway.
+`ON CONFLICT … DO UPDATE` locks the conflicting row and evaluates the
+predicate against its current version in the same statement that writes. When
+the predicate is false the statement updates nothing, `RETURNING` yields no
+row, and the function raises — it fails closed, never as a silent no-op.
+
+The return contract is the written `claim_id` and nothing else. An earlier
+version also returned a `created` flag derived from a `NOT EXISTS` read taken
+before the write; two concurrent first declarations could both have observed
+"not exists" while only one inserted. Nothing consumes this RPC yet, so the
+honest contract is the narrow one.
+
+Group 8c of the database suite plants a `document_reviewed` row and a fully
+attributed `issuer_confirmed` revocation as the table owner — standing in for
+the authorised writer this phase does not build — and proves that a holder
+declaration against either is refused and leaves the complete row
+byte-for-byte identical, `updated_at` included.
+
 The issuer-attribution constraint was corrected in the same pass. It was
 written as an equivalence:
 
@@ -231,8 +285,8 @@ carry an issuer-confirmation timestamp, or an `https://` source URL presented
 as an issuer's. It is now a `CASE`: `issuer_confirmed` requires both, and every
 other source requires both to be `NULL`.
 
-Group 8b of `security_passport_global_certification_test.sql` is the attack
-matrix for all of this, written so that each assertion would **succeed**
+Groups 8b and 8c of `security_passport_global_certification_test.sql` are the
+attack matrix for all of this, written so that each assertion would **succeed**
 against the old design.
 
 **Lifecycle** is where the fact sits in its life. For these certifications it

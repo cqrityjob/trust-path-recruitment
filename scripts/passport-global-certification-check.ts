@@ -533,6 +533,65 @@ for (const preserved of [
   // Identity and audit survive a correction: absent from the DO UPDATE SET.
   const doUpdate = fn.slice(fn.indexOf("ON CONFLICT"));
   ok(doUpdate.length > 0, "the correction path is an ON CONFLICT DO UPDATE");
+
+  // ── PROVENANCE: a holder may correct their OWN statement and nothing else.
+  //
+  // The second defect independent review found. The conflict update was
+  // unconditional, and it sets status_source back to 'holder_declared' and
+  // NULLs both issuer fields -- so the moment an authorised path wrote
+  // 'document_reviewed' or 'issuer_confirmed', a holder's ordinary
+  // declaration would ERASE it. An issuer records `revoked`; the holder
+  // declares `active`; the revocation is gone. The trusted writer not
+  // existing yet is not a defence: this is the foundation it will rely on.
+  ok(
+    /WHERE l\.status_source = 'holder_declared'/.test(doUpdate),
+    "and the conflict update is permitted ONLY while the existing row is still holder_declared",
+  );
+  ok(
+    /RETURNING l\.claim_id INTO _written/.test(doUpdate),
+    "the statement reports what it actually wrote",
+  );
+  ok(
+    /IF _written IS NULL THEN/.test(fn) && /SP_CERTIFICATION_LIFECYCLE_SOURCE_PROTECTED/.test(fn),
+    "and a refused correction fails CLOSED with one stable code, never as a silent no-op",
+  );
+
+  // The guard must be part of the writing statement. A pre-check followed by
+  // an unconditional update is a race: two callers both read holder_declared,
+  // or a reviewer commits between the read and the write.
+  {
+    const guardAt = fn.indexOf("WHERE l.status_source = 'holder_declared'");
+    const insertAt = fn.indexOf("INSERT INTO public.sp_claim_certification_lifecycle");
+    const raiseAt = fn.indexOf("IF _written IS NULL THEN");
+    ok(
+      insertAt >= 0 && guardAt > insertAt && raiseAt > guardAt,
+      "the predicate sits inside the INSERT statement, before the failure check — not as a separate pre-check",
+    );
+    ok(
+      !/SELECT[^;]*status_source[^;]*FROM public\.sp_claim_certification_lifecycle/.test(
+        fn.slice(0, insertAt),
+      ),
+      "and nothing reads status_source before the write, which would be a race rather than a guard",
+    );
+  }
+
+  // The refusal must not say WHICH protected source it is.
+  ok(
+    !/SOURCE_PROTECTED[^;]*document_reviewed|SOURCE_PROTECTED[^;]*issuer_confirmed/.test(fn),
+    "and the refusal does not reveal whether a reviewer or the issuer established it",
+  );
+
+  // The `created` flag is gone. It came from a NOT EXISTS read taken before
+  // the write, so two concurrent first declarations could both see "not
+  // exists" while only one inserted.
+  ok(
+    !/NOT EXISTS \(\s*SELECT 1 FROM public\.sp_claim_certification_lifecycle/.test(fn),
+    "no pre-write existence read remains, whose answer a concurrent caller could invalidate",
+  );
+  ok(
+    !/'created'/.test(fn),
+    "and the return contract carries no created flag that could be wrong under concurrency",
+  );
   for (const preserved of ["claim_id ", "holder_user_id ", "created_at "]) {
     ok(
       !new RegExp(`\\b${preserved.trim()}\\s*=`).test(doUpdate),
@@ -547,7 +606,9 @@ for (const preserved of [
       /SP_GLOBAL_CERT_WRITE_PATH_UNPINNED/.test(MIGRATION) &&
       /SP_GLOBAL_CERT_WRITE_PATH_ANON/.test(MIGRATION) &&
       /SP_GLOBAL_CERT_WRITE_PATH_SOURCE/.test(MIGRATION) &&
-      /SP_GLOBAL_CERT_WRITE_PATH_ATTRIBUTES/.test(MIGRATION),
+      /SP_GLOBAL_CERT_WRITE_PATH_ATTRIBUTES/.test(MIGRATION) &&
+      /SP_GLOBAL_CERT_WRITE_PATH_OVERWRITES_PROVENANCE/.test(MIGRATION) &&
+      /SP_GLOBAL_CERT_WRITE_PATH_FAILS_OPEN/.test(MIGRATION),
     "and the migration asserts all of it at apply time",
   );
 }
@@ -594,6 +655,17 @@ for (const preserved of [
     "8b.16 no application role holds INSERT, UPDATE or DELETE",
     "8b.19 anon cannot execute the write path",
     "8b.22 and a caller with no JWT subject is refused outright",
+    "8c.2 the holder cannot declare over it",
+    "8c.3 and the COMPLETE row is byte-for-byte what it was",
+    "8c.4 including updated_at, so nothing was written and rolled back",
+    "8c.5 an issuer-confirmed REVOCATION is on record, fully attributed",
+    "8c.6 the holder cannot declare themselves active over an issuer revocation",
+    "8c.8 the revocation, its source and both attribution fields all survive",
+    "8c.9 neither trusted source was converted back to holder_declared",
+    "8c.10 and the refusal does not reveal WHICH protected source it is",
+    "8c.11 a holder still CREATES a new holder_declared row",
+    "8c.13 and still CORRECTS an existing holder_declared row",
+    "8c.14 with created_at preserved across the correction",
   ]) {
     ok(SUITE.includes(attack), `the suite proves: ${attack}`);
   }

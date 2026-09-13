@@ -276,6 +276,60 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "the suite proves: 8b.1 a holder cannot INSERT a lifecycle row directly",
   },
   {
+    id: "GC-NC-PROVENANCE-OVERWRITE",
+    defect:
+      "the conflict update loses its holder_declared predicate, so a holder's declaration overwrites a reviewer- or issuer-established standing",
+    file: MIGRATION,
+    find: "    updated_at                  = now()\n  WHERE l.status_source = 'holder_declared'\n  RETURNING l.claim_id INTO _written;",
+    replace: "    updated_at                  = now()\n  RETURNING l.claim_id INTO _written;",
+    guard: GUARD,
+    expect:
+      "and the conflict update is permitted ONLY while the existing row is still holder_declared",
+  },
+  {
+    id: "GC-NC-PROTECTION-FAILS-OPEN",
+    defect:
+      "a refused correction returns quietly instead of raising, so the caller cannot tell that nothing was written",
+    file: MIGRATION,
+    find: "  IF _written IS NULL THEN",
+    replace: "  IF false THEN",
+    guard: GUARD,
+    expect: "and a refused correction fails CLOSED with one stable code, never as a silent no-op",
+  },
+  {
+    id: "GC-NC-PROVENANCE-PRE-CHECK",
+    defect:
+      "the predicate moves out of the writing statement into a pre-check, which a concurrent reviewer's write can win between",
+    file: MIGRATION,
+    find: "  INSERT INTO public.sp_claim_certification_lifecycle AS l (",
+    replace:
+      "  PERFORM 1 FROM public.sp_claim_certification_lifecycle\n   WHERE claim_id = _claim_id AND status_source = 'holder_declared';\n\n  INSERT INTO public.sp_claim_certification_lifecycle AS l (",
+    guard: GUARD,
+    expect:
+      "and nothing reads status_source before the write, which would be a race rather than a guard",
+  },
+  {
+    id: "GC-NC-REVIEWED-PRESERVATION-ASSERTION-DELETED",
+    defect:
+      "the assertion that a document-reviewed standing survives a holder declaration is deleted from the database suite",
+    file: "supabase/tests/security_passport_global_certification_test.sql",
+    find: "    '8c.2 the holder cannot declare over it (got ' || _r || ')');",
+    replace: "    '8c.2 (removed)');",
+    guard: GUARD,
+    expect: "the suite proves: 8c.2 the holder cannot declare over it",
+  },
+  {
+    id: "GC-NC-ISSUER-PRESERVATION-ASSERTION-DELETED",
+    defect:
+      "the assertion that an issuer-confirmed revocation survives a holder declaration is deleted from the database suite",
+    file: "supabase/tests/security_passport_global_certification_test.sql",
+    find: "    '8c.6 the holder cannot declare themselves active over an issuer revocation (got ' || _r || ')');",
+    replace: "    '8c.6 (removed)');",
+    guard: GUARD,
+    expect:
+      "the suite proves: 8c.6 the holder cannot declare themselves active over an issuer revocation",
+  },
+  {
     id: "GC-NC-ROLLBACK-KEEPS-WRITE-PATH",
     defect:
       "the rollback drops the lifecycle table and leaves its SECURITY DEFINER writer behind, executable by every signed-in holder",
