@@ -7,6 +7,60 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261112090000_bcp_interview_case_bridge.sql",
+      "hostedState": "applied",
+      "evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt through the official Supabase GitHub integration when PR #229 merged to main as db165c045c972ffdc45e691f563e7f3b0197500a; the integration applied it automatically on merge, so no hosted write was issued from this session. Verified read-only on 2026-09-13 through the Supabase management API; every statement below is a read, and nothing was applied, re-applied or repaired. RECORDED IDENTITY: supabase_migrations.schema_migrations carries version 20261112090000, name bcp_interview_case_bridge -- the canonical filename's own version and slug, not a generated uuid, so no canonical-to-hosted alias is required and a clean replay executes nothing twice. It is the ledger frontier, and it sits above 20261110090000 and 20261108090000, so both BESKT migrations it depends on by foreign key were applied first, as required. SCHEMA: both bridge tables exist (bcp_case_links, bcp_case_topics) with 34 columns, 29 constraints, 20 indexes and 2 triggers (bcp_case_links_guard, bcp_case_topics_guard). Both partial unique indexes on the generated live slots are present: bcp_case_links_one_live_per_assignment_idx and bcp_case_links_one_live_per_case_idx, so one live link per preparation and per case is enforced by index under concurrency. topic_reason on production is CHECK ((topic_reason = ANY (ARRAY['omitted'::text, 'discuss_orally'::text]))) -- exactly the candidate's own two neutral states, with no third value. RLS AND PRIVILEGES: both tables carry relrowsecurity AND relforcerowsecurity, with exactly one SELECT policy each (bcp_case_links_party_read, bcp_case_topics_party_read, both TO authenticated) and zero write policies. Table privileges are exactly as the migration declares: anon holds nothing on either table, and both authenticated and service_role hold SELECT only -- no role holds INSERT, UPDATE, DELETE or TRUNCATE, service_role included, so every write goes through a governed RPC. FUNCTIONS: all 7 functions exist, all are SECURITY DEFINER and all pin search_path=public; zero bcp_ definer functions on production are unpinned. Grants match the migration one by one: the five client-facing RPCs (bcp_link_preparation_to_case, bcp_unlink_preparation_from_case, bcp_linkable_interview_cases, bcp_case_preparation_basis, bcp_my_preparation_link) are executable by authenticated and service_role and NOT by anon or PUBLIC, and the two trigger guard functions (bcp_guard_case_link, bcp_guard_case_topic) are executable by NO role at all -- not PUBLIC, not anon, not authenticated, not service_role -- so PostgREST does not publish an invariant-checker as a callable API. BODY EQUIVALENCE: all 7 function bodies on production are byte-identical to the merged migration source. md5(prosrc) was compared against the bodies extracted from supabase/migrations/20261112090000_bcp_interview_case_bridge.sql (sha256 a5f4d65a4352fd4cea94aadc53c4cff03aa89ef02f78f72dc50d99eb5d4d70eb, byte-identical to the reviewed PR #229 head b5e5b824b7d494144dde3785310bba7153f769df): bcp_link_preparation_to_case eb08d453eba12c5d7dad34e1d32c4e14, bcp_unlink_preparation_from_case a709479455171b80287650f522c98534, bcp_linkable_interview_cases 24defa1951aa4796aad136bff10d08eb, bcp_case_preparation_basis 00cd8a959536456b7b45285a6ae7b78d, bcp_my_preparation_link ca389703c97aca6f532ab81b59b820ad, bcp_guard_case_link b54d4695599fdec8cb6a629fc55bb534, bcp_guard_case_topic 2f5c68ec3d3d44b29da43425a0002855. Zero differing, zero repo-only, zero hosted-only. GOVERNED VOCABULARIES: scp_interview_case_sources.source_kind admits beskt_preparation and bcp_events.event admits case_linked, both re-read from pg_constraint rather than assumed. NO SEED: bcp_case_links holds 0 rows, bcp_case_topics holds 0 rows, and scp_interview_case_sources holds 0 rows of kind beskt_preparation, so no synthetic link, topic or case source was left in production and no real candidate or employer record was touched. Zero forbidden columns (score, weight, rank, suitability, credibility, truthfulness, recommendation, risk, verdict, deception, hire, confidence) and zero jsonb columns exist on either bridge table, so there is nowhere on production to store a judgement of a voluntary omission. LEDGER: supabase/hosted-ledger.json was refreshed from the same read and proved faithful rather than assumed -- production holds 277 rows, and md5(string_agg(version || ':' || name, ',' ORDER BY version)) over the 276 rows of the previous snapshot is 3f19608a4ec10e66b67e9a456e763f80 computed both by production and over the committed file, so no earlier row changed; over all 277 rows both give 38887a384cff1fe462a1f81b82e6e46b. ADVISORS: Supabase security and performance advisors were run and nothing is hidden. Security returns 6 lint groups. The only group naming a PR 4 object is authenticated_security_definer_function_executable (WARN), which names exactly the five deliberately client-facing governed RPCs -- every one matching the migration's own GRANT list -- and names NEITHER trigger guard, so the closure holds on production. anon_security_definer_function_executable names no PR 4 object, so anon is closed. The single ERROR finding (security_definer_view) and every other group name no PR 4 object and are pre-existing.",
+      "introduces": [
+        {
+          "object": "bcp_case_links",
+          "kind": "table"
+        },
+        {
+          "object": "bcp_case_topics",
+          "kind": "table"
+        },
+        {
+          "object": "bcp_guard_case_link",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_guard_case_topic",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_link_preparation_to_case",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_unlink_preparation_from_case",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_linkable_interview_cases",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_case_preparation_basis",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_my_preparation_link",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_case_links_one_live_per_assignment_idx",
+          "kind": "index"
+        },
+        {
+          "object": "bcp_case_links_one_live_per_case_idx",
+          "kind": "index"
+        }
+      ],
+      "note": "BESKT PR 4 -- THE BRIDGE FROM A SUBMITTED CANDIDATE PREPARATION TO THE EXISTING INTERVIEW CASE. Schema only; adds no case, application, evidence or event system of its own. It registers a governed source row on scp_interview_case_sources, writes to PR 3's bcp_events ledger through bcp_record_event, and binds the exact immutable snapshot: response id and version, assignment revision, method version, content hash, submitted answers hash, and the notice version, hash and locale the candidate acknowledged. Depends by foreign key on 20261110090000 (bcp_assignments, bcp_responses, beskt_items) and on 20261108090000 (beskt_method_versions, beskt_sections), so it must be applied after both. It rebuilds two governed CHECK vocabularies -- scp_interview_case_sources.source_kind gains beskt_preparation, and bcp_events.event gains case_linked and case_unlinked -- which is why the rollback restores both verbatim and refuses to run while any row still uses them. NOT applied to the hosted database: no hosted migration, production write or Lovable publication was performed for this change.",
+      "verify": "Replay locally with scripts/db-test.sh: the migration raises BESKT_INTERVIEW_CASE_BRIDGE_PROOF ok from its own postflight, supabase/tests/bcp_interview_case_bridge_test.sql must report at least 45 assertions, and the rollback must raise BESKT_INTERVIEW_CASE_BRIDGE_ROLLBACK ok with the migration re-applying cleanly over the rolled-back state. Source-level: bun run beskt-interview-case-bridge:check and bun run negative-controls:beskt-interview-case-bridge.",
+      "rollback": "supabase/rollback/20261112090000_bcp_interview_case_bridge_rollback.sql"
+    },
+    {
       "file": "20261031090000_sp_passport_first_merit.sql", 
       "hostedState": "applied", 
       "evidenceSource": "Applied through Lovable's connected Supabase migration mechanism to owner production wrygicdfxwjnrugduxnt on 2026-09-07 as hosted version 20260907064849, name 0bb96516-c1eb-4178-8e9e-60bde13071dd. Read-only postflight verified functions, holder-keyed advisory lock order, unique indexes, forced RLS with zero policies, zero PUBLIC/anon/authenticated table privileges, event-policy hardening, onboarding_draft_revision, and unchanged holder row counts. Canonical alias 20261031090000 was then recorded by history-only migration 20260907071826 / 6c070461-aa51-4d78-8ed0-a82294f12489 without re-executing schema SQL. See docs/release/2026-09-07-release-frontier-reconciliation.md.", 

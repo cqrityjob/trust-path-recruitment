@@ -126,8 +126,16 @@
     "scripts/beskt-governed-content-check.ts",
     "scripts/beskt-candidate-preparation-check.ts",
     "scripts/beskt-notice-copy-digest-check.ts",
+    "scripts/beskt-candidate-preparation-render-check.tsx",
+    "scripts/beskt-candidate-preparation-evidence.ts",
     "scripts/negative-controls/beskt-governed-content-controls.ts",
     "scripts/negative-controls/beskt-candidate-preparation-controls.ts",
+    // BESKT PR 4: the interview-case bridge guard and its controls, on the
+    // same terms -- new, no pre-existing type debt, and the guard PARSES the
+    // migration's function bodies and DDL. A parser that silently stopped
+    // matching would report a contract it never read.
+    "scripts/beskt-interview-case-bridge-check.ts",
+    "scripts/negative-controls/beskt-interview-case-bridge-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"

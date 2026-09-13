@@ -22,6 +22,14 @@ const TSCONFIG = "tsconfig.scripts.json";
 const CI = ".github/workflows/ci.yml";
 const TYPES = "src/integrations/supabase/types.ts";
 const GUARD = "beskt-candidate-preparation:check";
+// PR 3B's application half: the real candidate screen, the real dictionary,
+// and the two guards that hold them to what PR 3A governs.
+const PANEL = "src/components/beskt/CandidatePreparation.tsx";
+const DICTIONARIES = "src/i18n/dictionaries.ts";
+const RENDER_GUARD = "beskt-candidate-preparation-render:check";
+const EMPLOYER_PANEL = "src/components/beskt/BesktApplicationPanel.tsx";
+const CLIENT = "src/lib/beskt/candidate-preparation.functions.ts";
+const ERRORS = "src/lib/beskt/errors.ts";
 
 const MUTATIONS: readonly Mutation[] = [
   // ---- RLS, grants and policies -------------------------------------------
@@ -481,9 +489,13 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "BCP-NC-DOCUMENTED-ROLLBACK-ORDER",
-    defect: "the documented rollback procedure stops unwinding PR 3 first",
+    defect: "the documented rollback procedure stops unwinding PR 3 before PR 2",
     file: RB_SUITE,
-    find: "  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds first of all';",
+    // PR 4 put the interview-case bridge ahead of PR 3 in the documented
+    // procedure, so PR 3 is no longer "first of all" and this anchor moved with
+    // it. The defect being planted never changes: the procedure stops saying
+    // that PR 3 comes down before PR 2.
+    find: "  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds next';",
     replace: "  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds at some point';",
     guard: GUARD,
     expect: "BCP-HARNESS",
@@ -513,6 +525,8 @@ const MUTATIONS: readonly Mutation[] = [
     // evidence then took that one off again, so the list is empty once more.
     // The defect being planted never changes: the APPLIED bcp migration back on
     // the frontier list.
+    // PR 4 put its own genuinely pending migration in the list, so the anchor is
+    // that line rather than an empty one.
     find: "const expectedPending: string[] = [];",
     replace:
       'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
@@ -838,6 +852,181 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "",
     guard: GUARD,
     expect: "BCP-REGISTRATION",
+  },
+
+  // ---- The application half (PR 3B) ---------------------------------------
+  //
+  // These plant defects in the REAL candidate screen and require the render
+  // guard to catch them. They exist because PR 3B's material claims are about
+  // what a candidate actually sees, and an assertion about rendered output is
+  // only worth having if a wrong render makes it fail.
+  {
+    id: "BCP-NC-NOTICE-LOCALE-IGNORED",
+    defect:
+      "the notice panel ignores the locale it was handed and always renders the Swedish notice, so an English-reading candidate would confirm bytes they never saw",
+    file: PANEL,
+    find: "      data-notice-locale={notice.locale}\n      data-notice-hash={notice.noticeContentHash}",
+    replace:
+      '      data-notice-locale={"sv-SE"}\n      data-notice-hash={data.notice.byLocale["sv-SE"].noticeContentHash}',
+    guard: RENDER_GUARD,
+    expect: "locale",
+  },
+  {
+    id: "BCP-NC-ACK-SENDS-WRONG-LOCALE-HASH",
+    defect:
+      "the confirmation sends the notice-level hash of whichever locale was built first instead of the one on screen — the exact defect that made the earlier 'exact notice bytes' claim false",
+    file: PANEL,
+    find: '          noticeContentHash: notice.noticeContentHash,\n          locale: notice.locale as "sv-SE" | "en-GB",',
+    replace:
+      '          noticeContentHash: data.notice.byLocale[data.notice.locales[0]].noticeContentHash,\n          locale: data.notice.locales[0] as "sv-SE" | "en-GB",',
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  // ---- The eight review findings, each proven still catchable -------------
+  //
+  // Every one of these defects was real and passed review once. A guard that
+  // cannot be shown to fail on the original defect is not evidence that the
+  // defect is gone.
+  {
+    id: "BCP-NC-SAVE-DOES-NOT-EXIT",
+    defect:
+      "the control labelled save-and-exit goes back to only saving, so a candidate who reads it and leaves believes they have left",
+    file: PANEL,
+    find: '      await navigate({ to: "/my-career/applications" });\n',
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-SAVE-EXIT",
+  },
+  {
+    id: "BCP-NC-EXIT-BEFORE-CONFIRMED",
+    defect:
+      "the navigation moves into onError as well, so a save that FAILED still leaves the page and the work looks saved",
+    file: PANEL,
+    find: "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  const submitMutation",
+    replace:
+      '    onError: (e: unknown) => {\n      setActionError(besktErrorKey(e));\n      void navigate({ to: "/my-career/applications" });\n    },\n  });\n\n  const submitMutation',
+    guard: GUARD,
+    expect: "BCP-SAVE-EXIT",
+  },
+  {
+    id: "BCP-NC-CORRECT-IS-A-DEAD-LINK",
+    defect:
+      "THE ORIGINAL DEFECT: correction goes back to an anchor pointing at a question that is not rendered during review",
+    file: PANEL,
+    find: '              <button\n                type="button"\n                className="mt-2 inline-flex min-h-[44px] items-center text-sm underline underline-offset-2"\n                data-testid={`beskt-review-edit-${item.itemKey}`}\n                onClick={() => onEdit(item.itemKey)}\n              >',
+    replace:
+      '              <a\n                className="mt-2 inline-flex min-h-[44px] items-center text-sm underline underline-offset-2"\n                href={`#beskt-item-${item.itemKey}`}\n              >',
+    guard: GUARD,
+    expect: "BCP-CORRECT",
+  },
+  {
+    id: "BCP-NC-FRAGMENT-BEFORE-TARGET",
+    defect:
+      "the URL fragment is written before focus, so it names a question that may not be on screen yet",
+    file: PANEL,
+    find: '    el.focus();\n    el.scrollIntoView({ block: "center", behavior: "auto" });\n    window.history.replaceState(null, "", `#beskt-item-${focusItemKey}`);',
+    replace:
+      '    window.history.replaceState(null, "", `#beskt-item-${focusItemKey}`);\n    el.focus();\n    el.scrollIntoView({ block: "center", behavior: "auto" });',
+    guard: GUARD,
+    expect: "BCP-CORRECT",
+  },
+  {
+    id: "BCP-NC-SILENT-FIRST-METHOD",
+    defect:
+      "THE ORIGINAL DEFECT: the employer's method choice goes back to whatever the database returned first",
+    file: EMPLOYER_PANEL,
+    find: "  const method = (methods.data ?? []).find((m) => m.methodVersionId === methodVersionId) ?? null;",
+    replace: "  const method = methods.data?.[0] ?? null;",
+    guard: GUARD,
+    expect: "BCP-METHOD-CHOICE",
+  },
+  {
+    id: "BCP-NC-PROFILE-SURVIVES-METHOD-CHANGE",
+    defect:
+      "changing the method keeps the old profile, which belongs to the previous method and which the database will refuse",
+    file: EMPLOYER_PANEL,
+    find: '    setMethodVersionId(id);\n    setProfileId("");',
+    replace: "    setMethodVersionId(id);",
+    guard: GUARD,
+    expect: "BCP-METHOD-CHOICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-VERSION-FROM-BROWSER",
+    defect:
+      "THE ORIGINAL DEFECT: the notice version goes back to being a literal the browser sends on a governed write",
+    file: CLIENT,
+    find: "      _notice_version: noticeVersion,",
+    replace: '      _notice_version: "beskt-prep-notice-1",',
+    guard: GUARD,
+    expect: "BCP-NOTICE-VERSION",
+  },
+  {
+    id: "BCP-NC-SINGLE-CHOICE-IS-A-CHECKBOX",
+    defect:
+      "THE ORIGINAL DEFECT: one-answer questions render as checkboxes again, announcing themselves as independently toggleable and letting a required answer be clicked back to blank",
+    file: PANEL,
+    find: '  if (item.answerType === "single_choice") {',
+    replace: '  if (item.answerType === "single_choice_disabled_by_control") {',
+    guard: GUARD,
+    expect: "BCP-CHOICE-CONTROL",
+  },
+  {
+    id: "BCP-NC-CANCEL-UNREACHABLE",
+    defect:
+      "THE ORIGINAL DEFECT: the cancel RPC becomes unreachable again, so a wrong assignment can never be replaced",
+    file: EMPLOYER_PANEL,
+    find: "  const cancel = useServerFn(cancelBesktPreparation);\n",
+    replace: "",
+    guard: GUARD,
+    expect: "BCP-CANCEL",
+  },
+  {
+    id: "BCP-NC-CANCEL-WITHOUT-REASON",
+    defect:
+      "a preparation can be cancelled with no reason, leaving the append-only ledger with no explanation anyone can read",
+    file: EMPLOYER_PANEL,
+    find: "              disabled={cancelReason.trim().length < 3 || cancelMutation.isPending}",
+    replace: "              disabled={cancelMutation.isPending}",
+    guard: GUARD,
+    expect: "BCP-CANCEL",
+  },
+  {
+    id: "BCP-NC-RAW-ERROR-ON-SCREEN",
+    defect:
+      "THE ORIGINAL DEFECT: the candidate screen shows the database's own raised text, which can name tables, columns and policies",
+    file: PANEL,
+    // The submit mutation's onError, identified by what follows it: all three
+    // onError lines are byte-identical, so the anchor has to include the one
+    // thing that is unique -- the end of the last mutation.
+    find: "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  if (prep.isPending) {",
+    replace:
+      "    onError: (e: unknown) =>\n      setActionError((e instanceof Error ? e.message : String(e)) as never),\n  });\n\n  if (prep.isPending) {",
+    guard: GUARD,
+    expect: "BCP-SAFE-ERRORS",
+  },
+  {
+    id: "BCP-NC-UNKNOWN-ERROR-NOT-GENERIC",
+    defect:
+      "an unrecognised failure stops falling back to the generic sentence, so a code we never mapped reaches the reader untranslated",
+    file: ERRORS,
+    find: "  return MESSAGE_FOR_CODE[code] ?? BESKT_GENERIC_ERROR;",
+    replace: "  return MESSAGE_FOR_CODE[code] ?? (code as TranslationKey);",
+    guard: GUARD,
+    expect: "BCP-SAFE-ERRORS",
+  },
+
+  {
+    id: "BCP-NC-DICTIONARY-COPY-DRIFT",
+    defect:
+      "the Swedish sentence that tells the candidate the confirmation is NOT consent is softened, so the copy no longer matches the template digest PR 3A governs",
+    file: DICTIONARIES,
+    // The sv-SE value itself, which occurs exactly once. Anchoring on the KEY
+    // would match both language blocks; anchoring on the sentence is also the
+    // honest target, because this control is about the WORDS drifting.
+    find: "Det är inte ett samtycke och det skapar ingen rättslig grund.",
+    replace: "Det skapar ingen rättslig grund.",
+    guard: "beskt-notice-copy:check",
+    expect: "sv-SE",
   },
 ];
 

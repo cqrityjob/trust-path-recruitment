@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-13T07:19:03Z",
-  "readBy": "Post-merge read-only verification for the Security Passport Phase 1A hosted release evidence: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #224 merged to main as 218c3c436be70f4c32d49e9d7e2bf12b5f090b5e. 276 rows. The 275 rows of the previous snapshot were proved unchanged before this refresh: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production excluding the one new version is 2e5b2520ae17c67b4ae344be33bb73ac, identical to the same digest computed over the committed snapshot, which is also the digest that snapshot recorded for itself. Over all 276 rows production gives 3f19608a4ec10e66b67e9a456e763f80. The single added row is canonical 20261111090000 sp_global_professional_certifications -- recorded under the canonical filename's own version and slug, not a generated uuid, so the hosted row and the repository file are the same identity -- and it is the highest row in the ledger, directly above 20261110090000 bcp_candidate_preparation. No hosted write of any kind was issued by the session that produced this snapshot.",
+  "readAt": "2026-09-13T10:15:00Z",
+  "readBy": "Post-merge read-only verification for the BESKT PR 4 interview-case bridge hosted release evidence: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #229 merged to main as db165c045c972ffdc45e691f563e7f3b0197500a. 277 rows. The 276 rows of the previous snapshot were proved unchanged before this refresh: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261112090000 is 3f19608a4ec10e66b67e9a456e763f80, which is exactly the md5 of the committed 276-row file, so no earlier row was rewritten. Over all 277 rows production gives 38887a384cff1fe462a1f81b82e6e46b. The single added row is the canonical identity 20261112090000 / bcp_interview_case_bridge, applied by the official Supabase GitHub integration on merge.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1119,6 +1119,10 @@
     {
       "version": "20261111090000",
       "name": "sp_global_professional_certifications"
+    },
+    {
+      "version": "20261112090000",
+      "name": "bcp_interview_case_bridge"
     }
   ]
 }
