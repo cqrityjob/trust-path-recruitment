@@ -525,14 +525,15 @@ const MUTATIONS: readonly Mutation[] = [
     // evidence then took that one off again, so the list is empty once more.
     // The defect being planted never changes: the APPLIED bcp migration back on
     // the frontier list.
-    // PR 4 put its own genuinely pending migration in the list, so the anchor is
-    // that line rather than an empty one.
-    // PR 5A put its own genuinely pending migration in the list, so the anchor
-    // is that line rather than an empty one. The planted defect is unchanged:
-    // the APPLIED migration back on the frontier.
-    find: "const expectedPending: string[] = [];",
+    // Anchored on the pending migration's NAME rather than on the whole
+    // expectedPending declaration. That list's shape changes every time any
+    // branch carries a pending migration -- it has changed six times now, and
+    // this control has been re-anchored three of them. The name is stable
+    // whatever the formatter does with the array. The planted defect is
+    // unchanged: the APPLIED migration back on the frontier list.
+    find: '"20261114090000_sp_global_certification_governed_issuer.sql"',
     replace:
-      'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n];',
+      '"20261114090000_sp_global_certification_governed_issuer.sql", "20261110090000_bcp_candidate_preparation.sql"',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },
