@@ -69,6 +69,14 @@ const { CONTENT_VERSION, DEFINITION_VERSION } =
 const { isPersonalItemId, personalItem } =
   await import("../src/lib/career-discovery/v31/personal-layer");
 
+// Group 9 reads source rather than calling a function: where a claim LANDS
+// needs a browser and a staged claim, so it is not reachable from the pure
+// storage harness this file otherwise runs against.
+const { readFileSync: readSource } = await import("node:fs");
+const { join: joinPath } = await import("node:path");
+const { fileURLToPath: toPath } = await import("node:url");
+const REPO_ROOT = joinPath(toPath(new URL(".", import.meta.url)), "..");
+
 let failures = 0;
 let checks = 0;
 
@@ -375,6 +383,93 @@ ok(
   [...tokens].every((t) => !t.includes(Date.now().toString(36).slice(0, 6))),
   "8.3 no token embeds the wall clock",
 );
+
+// =========================================================================
+group("9 · Where a claim LANDS (Emsoms #4)");
+// =========================================================================
+//
+// Claiming used to navigate to the report with ?saved=true -- a page
+// reached by creating an account, carrying no navigation context and none
+// of the person's other work. The owner's review called it being dropped
+// into a disconnected report. It lands on the authenticated overview now,
+// which states the outcome and offers the report as one explicit click.
+//
+// Read from source: this flow needs a browser and a staged claim, so the
+// destination is not reachable from the pure-function harness above.
+{
+  const flowSrc = readSource(
+    joinPath(REPO_ROOT, "src/components/career-discovery/v31/PublicAssessmentFlow.tsx"),
+    "utf8",
+  );
+  const claimNav = flowSrc.slice(
+    flowSrc.indexOf('track("result_claimed")'),
+    flowSrc.indexOf("} catch (err) {", flowSrc.indexOf('track("result_claimed")')),
+  );
+  ok(claimNav.length > 0, "9.1 the post-claim navigation is locatable");
+  ok(
+    /to: "\/my-career"/.test(claimNav),
+    "9.2 a claimed result lands on the authenticated overview, not on a bare report page",
+  );
+  ok(
+    /search: \{ savedReport: result\.snapshotId \}/.test(claimNav),
+    "9.3 carrying the snapshot id, so the overview can offer the report and a refresh still says what happened",
+  );
+  ok(
+    !/to: "\/security-career-assessment\/report/.test(claimNav),
+    "9.4 and no longer navigates straight into the report",
+  );
+
+  const overview = readSource(
+    joinPath(REPO_ROOT, "src/routes/_authenticated.my-career.index.tsx"),
+    "utf8",
+  );
+  ok(
+    /validateSearch/.test(overview) &&
+      /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}/.test(overview),
+    "9.5 the overview VALIDATES savedReport as a uuid -- it is rendered into a link, so an unvalidated value would be a redirect surface",
+  );
+  ok(
+    /career-discovery-claim-saved/.test(overview) && /role="status"/.test(overview),
+    "9.6 and announces the saved state rather than only painting it",
+  );
+  ok(
+    /career-discovery-claim-open-report/.test(overview),
+    "9.7 with a visible action that opens the report",
+  );
+
+  // ── WHERE THE SAVE ACTION SITS (Emsoms #2) ──────────────────────────
+  //
+  // It used to render below the whole report AND below the download/share
+  // bar, so reaching it meant scrolling past every section of a
+  // many-screen report. It is passed into the slot directly under the
+  // profession ranking now -- the one position on the page that is
+  // genuinely beside the result, and the slot the retired Career Card CTA
+  // used to hold.
+  ok(
+    /afterRanking=\{!signedIn \? saveCta : undefined\}/.test(flowSrc),
+    "9.8 the save action is handed to the slot under the ranking, next to the result",
+  );
+  // Exactly one. Two controls for one action is the duplication this pass
+  // exists to remove, so the bottom copy is gone rather than kept "just in
+  // case".
+  //
+  // Scoped to the FINAL return -- lastIndexOf, not indexOf. Three branches
+  // of this component open with <AssessmentShell wide>, and the
+  // "result could not be loaded" branch legitimately carries its own save
+  // control: there is no report to sit beside there, the answers are still
+  // staged, and the retry is the only other thing on the screen. Counting
+  // from the first shell would have swept that unrelated branch in and
+  // failed for a reason that has nothing to do with this rule.
+  const resultBranch = flowSrc.slice(flowSrc.lastIndexOf("<AssessmentShell wide>"));
+  ok(
+    (resultBranch.match(/saveCta/g) ?? []).length === 1,
+    "9.9 and appears exactly once on the result screen -- no second copy at the bottom",
+  );
+  ok(
+    !/\{resultActions\}\s*\n\s*\{!signedIn && saveCta\}/.test(flowSrc),
+    "9.10 specifically, it is no longer rendered after the download/share bar",
+  );
+}
 
 console.log(
   failures === 0

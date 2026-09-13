@@ -183,6 +183,25 @@ check(
   "the career tools list does not offer the Career Card",
 );
 
+// ── THE ENTRY POINT THAT IS NOT A ROUTE ──────────────────────────────
+//
+// PR A hid the Career Card's route and every entry point that NAVIGATED
+// to it, and missed this one: the Career Discovery report carried its own
+// CTA that opened the creator INLINE, so nothing about hiding a route
+// reached it. A control that opens a product removed from the pilot is
+// the dead control the review was about, whether it navigates or not --
+// so this guard checks for the component and the handler, not for a href.
+const REPORT_VIEW = "src/components/career-discovery/v31/V31ReportView.tsx";
+const reportView = code(read(REPORT_VIEW));
+check(
+  !/<CareerCardCreator/.test(reportView),
+  "the Career Discovery report mounts no Career Card creator",
+);
+check(
+  !/setCareerCardOpen|createCareerCardCta/.test(reportView),
+  "and offers no inline control that opens one -- hiding a route does not reach a modal",
+);
+
 /* ------------------------------------------------------------------ */
 /* 6 · One navigation, not two                                         */
 /* ------------------------------------------------------------------ */

@@ -1,0 +1,182 @@
+// The account-creation confirmation state — asserted from real code.
+//
+// ── WHAT THIS DEFENDS ──────────────────────────────────────────────────
+//
+// The owner's pilot review (Emsoms #3): after submitting the registration
+// form, the form STAYED on screen. All that changed was a one-line notice
+// above it. So the only control the page still offered was the button that
+// had already worked, and pressing it again answers "User already
+// registered" — an error about the thing that succeeded. Nothing said which
+// address the link went to, nothing offered to resend it, and nothing said
+// the destination the person was heading for had survived.
+//
+// The fix is a state that REPLACES the form, and these are its properties:
+//
+//   1. Sign-up without a session hands over to a confirmation state. It is
+//      a state, not a string: a notice can be rendered beside a live form,
+//      a branch cannot.
+//   2. The form is not rendered in that state — so a second submission is
+//      impossible by construction rather than by discipline.
+//   3. The address is shown, because a typo in an email address is
+//      invisible until nothing arrives.
+//   4. Send again and Change email both exist.
+//   5. Resend uses the STORED address and return path, not the form's
+//      fields — which are no longer on screen, so reading them would send
+//      the link somewhere else or nowhere.
+//   6. The post-verification destination is preserved, and said in words.
+//
+// It reads source rather than rendering: UnifiedAuthForm imports the
+// Supabase browser client, so rendering it here would assert nothing about
+// the branch and everything about a missing module.
+//
+// Run: bun run account-confirmation:check
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+const read = (p: string): string => readFileSync(join(ROOT, p), "utf8");
+
+const FORM = "src/components/auth/UnifiedAuthForm.tsx";
+const DICT = "src/i18n/dictionaries.ts";
+
+const failures: string[] = [];
+let assertions = 0;
+
+function check(ok: boolean, diagnostic: string): void {
+  assertions += 1;
+  if (!ok) failures.push(diagnostic);
+  else console.log(`  ok ${diagnostic}`);
+}
+
+/** Comments stripped, so no rule is satisfied by prose about the rule. */
+function code(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/[^\n]*$/gm, "");
+}
+
+const form = code(read(FORM));
+
+/* ---------------------------------------------------------------- */
+console.log("\n1 · registration hands over to a state, not a notice");
+
+check(
+  /const \[awaitingConfirmation, setAwaitingConfirmation\] = useState</.test(form),
+  "ACS-STATE: the form carries an explicit confirmation state",
+);
+check(
+  /setAwaitingConfirmation\(\{ email: email\.trim\(\), returnTo \}\)/.test(form),
+  "ACS-STATE: sign-up without a session sets it, carrying the address AND the return path",
+);
+check(
+  !/setInfo\(\s*\n?\s*t\(forOrganisation \? "auth\.signup\.check_email_employer"/.test(form),
+  "ACS-STATE: and no longer merely sets a notice line beside a live form",
+);
+check(
+  /if \(data\.session\) \{\s*goToDestination\(\);/.test(form),
+  "ACS-STATE: a sign-up that DOES return a session still goes straight to the destination -- there is no email to read in that case",
+);
+
+/* ---------------------------------------------------------------- */
+console.log("\n2 · the form is gone, not merely captioned");
+
+// The confirmation branch must be tested BEFORE the branch that renders the
+// form, in the same conditional chain. Any other arrangement can paint both.
+const chain = form.slice(form.indexOf("!sessionKnown ?"), form.indexOf("</form>"));
+check(
+  chain.indexOf("awaitingConfirmation ?") > -1,
+  "ACS-REPLACES: the confirmation branch sits in the same chain that decides whether to draw the form",
+);
+check(
+  chain.indexOf("awaitingConfirmation ?") < chain.indexOf("<form onSubmit"),
+  "ACS-REPLACES: and is decided BEFORE the form, so the two can never both render",
+);
+
+/* ---------------------------------------------------------------- */
+console.log("\n3 · it says what happened, to whom, and what is next");
+
+check(
+  /\{awaitingConfirmation\.email\}/.test(form),
+  "ACS-SHOWS: the address the link was sent to is rendered from the stored state",
+);
+check(
+  /auth\.confirm\.heading/.test(form) && /auth\.confirm\.sentTo/.test(form),
+  "ACS-SHOWS: with a heading and a label for the address",
+);
+check(
+  /auth\.confirm\.destinationKept/.test(form),
+  "ACS-SHOWS: and says in words that the destination survived -- a claimed Career Discovery result is the reason this matters",
+);
+check(
+  /auth\.confirm\.notArrived/.test(form),
+  "ACS-SHOWS: and what to do when nothing arrives",
+);
+
+/* ---------------------------------------------------------------- */
+console.log("\n4 · send again, and change email");
+
+check(/onResend/.test(form), "ACS-ACTIONS: a resend action exists");
+check(/onChangeEmail/.test(form), "ACS-ACTIONS: and a change-email action");
+check(
+  /supabase\.auth\.resend\(\{\s*type: "signup"/.test(form),
+  "ACS-ACTIONS: resend asks for a signup link specifically",
+);
+check(
+  /email: awaitingConfirmation\.email/.test(form),
+  "ACS-ACTIONS: addressed to the STORED address, never the form field -- which is off screen",
+);
+check(
+  /awaitingConfirmation\.returnTo/.test(form),
+  "ACS-ACTIONS: and carrying the STORED return path, so a resend cannot quietly change where the link goes",
+);
+check(
+  /function onChangeEmail\(\) \{[^}]*setAwaitingConfirmation\(null\)/.test(form),
+  "ACS-ACTIONS: change-email returns to the form by clearing the state",
+);
+// Scoped to the confirmation panel itself. A bare search for role="status"
+// passes on the form's own notice region, which is a different element on a
+// different branch -- so it would have gone on printing "ok" with the
+// panel's announcement deleted. The control ACC-NC-RESEND-SILENT is what
+// found that, which is exactly what a control is for.
+const panel = form.slice(
+  form.indexOf('data-testid="auth-awaiting-confirmation"'),
+  form.indexOf('data-testid="auth-confirmation-change-email"'),
+);
+check(panel.length > 0, "ACS-ACTIONS: the confirmation panel is locatable for scoped assertions");
+check(
+  /role="status"/.test(panel),
+  "ACS-ACTIONS: the resend outcome is announced INSIDE the panel, not only painted",
+);
+check(
+  /role="alert"/.test(panel),
+  "ACS-ACTIONS: and a failed resend is announced as an alert in the panel too",
+);
+
+/* ---------------------------------------------------------------- */
+console.log("\n5 · the copy exists in both languages");
+
+const dict = read(DICT);
+for (const key of [
+  "auth.confirm.heading",
+  "auth.confirm.body",
+  "auth.confirm.bodyEmployer",
+  "auth.confirm.sentTo",
+  "auth.confirm.notArrived",
+  "auth.confirm.resend",
+  "auth.confirm.resending",
+  "auth.confirm.resent",
+  "auth.confirm.changeEmail",
+  "auth.confirm.destinationKept",
+]) {
+  const n = dict.split(`"${key}":`).length - 1;
+  check(n === 2, `ACS-COPY: ${key} is authored in Swedish and English (found ${n})`);
+}
+
+/* ---------------------------------------------------------------- */
+console.log("");
+if (failures.length > 0) {
+  console.error(`account-confirmation-state-check FAILED (${failures.length} of ${assertions}):`);
+  for (const f of failures) console.error(`  - ${f}`);
+  process.exit(1);
+}
+console.log(`Account confirmation state: ${assertions} of ${assertions} assertions passed.`);

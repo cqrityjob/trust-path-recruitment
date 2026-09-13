@@ -115,6 +115,18 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "no recommended next step points at the Career Card",
   },
 
+  {
+    id: "CNC-NC-CARD-CTA-INLINE",
+    defect:
+      "the Career Discovery report gets its Career Card CTA back -- the entry point that opens the creator INLINE, which hiding the route never reached",
+    file: "src/components/career-discovery/v31/V31ReportView.tsx",
+    find: "    </div>\n  );\n}",
+    replace:
+      "      <CareerCardCreator open={false} onOpenChange={() => {}} />\n    </div>\n  );\n}",
+    guard: GUARD,
+    expect: "mounts no Career Card creator",
+  },
+
   // ---- The second navigation -----------------------------------------------
   {
     id: "CNC-NC-SECTION-STRIP-RETURNS",

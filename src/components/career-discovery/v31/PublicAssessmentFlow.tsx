@@ -587,13 +587,22 @@ export function PublicAssessmentFlow() {
       // buffer does, and only after a confirmed write.
       clearPendingClaim();
       track("result_claimed");
+      // ── WHERE A CLAIM LANDS (Emsoms #4) ───────────────────────────────
+      //
+      // This used to navigate to the REPORT with ?saved=true. That is a page
+      // reached by creating an account which carries no navigation context
+      // and none of the person's other work -- the owner's review called it
+      // being dropped into a disconnected report.
+      //
+      // It lands on the authenticated overview instead, which is the home
+      // the person just earned and the place the rest of their journey
+      // starts from. The outcome is still stated once on arrival, and the
+      // report is one explicit click away rather than the thing they were
+      // dropped into. The snapshot id travels in the URL so a refresh or a
+      // Back still says what happened.
       navigate({
-        to: "/security-career-assessment/report/$snapshotId",
-        params: { snapshotId: result.snapshotId },
-        // Says so, once, on arrival. A candidate who created an account for
-        // exactly one reason should be told that reason has been met rather
-        // than left to infer it from a page that looks the same either way.
-        search: { saved: true },
+        to: "/my-career",
+        search: { savedReport: result.snapshotId },
       });
     } catch (err) {
       // Log the real reason. The candidate still sees the calm failure state,
@@ -1311,9 +1320,23 @@ export function PublicAssessmentFlow() {
           if ((FUNNEL_EVENT_NAMES as readonly string[]).includes(name))
             track(name as FunnelEventName);
         }}
+        // ── THE SAVE ACTION SITS NEXT TO THE RESULT (Emsoms #2) ────────
+        //
+        // It used to render below this whole component AND below the
+        // download/share bar, so reaching it meant scrolling past every
+        // section of the report -- the owner's review called it "too far
+        // down after completion". The report is many screens; the ranking
+        // is the first of them and is what the person came for.
+        //
+        // This is the slot the Career Card CTA used to occupy, directly
+        // under the ranking, which is the one position on the page that is
+        // genuinely beside the result. It is passed rather than duplicated:
+        // there is exactly ONE save control on the page, not a second copy
+        // at the bottom, because two controls for one action is the
+        // duplication this whole pass is removing.
+        afterRanking={!signedIn ? saveCta : undefined}
       />
       {resultActions}
-      {!signedIn && saveCta}
     </AssessmentShell>
   );
 }

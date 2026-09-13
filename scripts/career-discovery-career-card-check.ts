@@ -154,17 +154,33 @@ ok(
   creator.includes("ranked: readonly RankedProfession[]") && !/\bmatches\b:/.test(creator),
   "1.6 the creator takes the canonical `ranked`, not a `matches` list to pick from",
 );
+// ── 1.7/1.8 INVERTED: THE REPORT NO LONGER OFFERS THE CARD ────────────
+//
+// These asserted that the report passes its own `ranked` array to the
+// creator, and that the card is offered whenever a career is named rather
+// than only when the fit gates cleared. Both were right while the card was
+// in the product.
+//
+// The owner's pilot review removed the Career Card. PR A hid its route and
+// its other entry points, but MISSED this one: the in-report CTA opens the
+// creator inline rather than navigating, so nothing about hiding a route
+// reached it. That gap is closed here, and these two assertions now hold
+// the report to it -- a live control for a product that is not in the
+// pilot is exactly the dead control the review was about.
+//
+// What is NOT dropped is the integrity rule the pair protected: the card
+// must never name a different #1 from the report. It cannot, because the
+// report no longer builds one; and the creator is still asserted (below,
+// and in career-discovery-recommendation-integrity) to take the canonical
+// `ranked` and to rank nothing itself, so re-adding the CTA cannot
+// reintroduce a second ranking by the back door.
 ok(
-  /ranked=\{rankedTop3\}/.test(reportView) &&
-    /const rankedTop3 = snapshot\.professions\?\.ranked \?\? \[\]/.test(reportView),
-  "1.7 the report passes the snapshot's own ranked array straight through",
+  !/<CareerCardCreator/.test(reportView),
+  "1.7 the report mounts no Career Card creator -- hidden for the pilot",
 );
-// The card used to be gated on `available === true`, which is a claim about
-// the FIT GATES, not about whether a career was named. A balanced profile
-// gets a real ranking and clears no tier — and got no card.
 ok(
-  /\{rankedTop3\.length > 0 && \(\s*<CareerCardCreator/.test(reportView),
-  "1.8 the card is offered whenever the report names a career, not only when tiers cleared",
+  !/createCareerCardCta/.test(reportView) && !/setCareerCardOpen/.test(reportView),
+  "1.8 and offers no control that opens one, inline or otherwise",
 );
 ok(
   !creator.includes("showIndicators"),
