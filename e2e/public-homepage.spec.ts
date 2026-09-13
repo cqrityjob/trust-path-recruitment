@@ -231,6 +231,32 @@ test.describe("the public homepage", () => {
     }
   });
 
+  test("both primary actions fit in a 1024 by 768 desktop viewport, in both languages", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    for (const lang of ["sv", "en"] as const) {
+      await setLang(page, lang);
+      for (const action of await page.locator("#hero article a").all()) {
+        await expect(action, `${lang}: primary entry action is below the first viewport`).toBeInViewport();
+      }
+    }
+  });
+
+  test("the homepage keeps public navigation neutral until a section is selected", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.reload({ waitUntil: "networkidle" });
+
+    const passport = page.locator('header nav[aria-label="Primary"] a[href="/#passport"]');
+    await expect(passport).not.toHaveAttribute("aria-current", "page");
+
+    await passport.click();
+    await expect(page).toHaveURL(/\/#passport$/);
+    await expect(passport).toHaveAttribute("aria-current", "page");
+  });
+
   // H6 ──────────────────────────────────────────────────────────────────
   test("the anonymous-start disclosure sits beside the Career Discovery action", async ({
     page,

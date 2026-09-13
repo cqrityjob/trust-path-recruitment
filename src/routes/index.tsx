@@ -220,7 +220,7 @@ function Index() {
             maskImage: "linear-gradient(to bottom, black, transparent 88%)",
           }}
         />
-        <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-12 sm:pt-14 md:px-8 md:pb-20 md:pt-20">
+        <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-12 sm:pt-14 md:px-8 md:pb-20 md:pt-12">
           <div className="mx-auto max-w-3xl text-center animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               {t("home.hero.eyebrow")}
@@ -246,7 +246,7 @@ function Index() {
               quieter, would have to change the shared constant to get it,
               and scripts/public-homepage-check.tsx reads the rendered class
               attributes to prove neither has. */}
-          <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 items-stretch gap-5 md:mt-14 md:grid-cols-2 md:gap-6">
+          <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 items-stretch gap-5 md:mt-10 md:grid-cols-2 md:gap-6">
             <EntryCard
               icon={ShieldCheck}
               titleKey="home.entry.passport.title"
