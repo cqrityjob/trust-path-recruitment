@@ -1292,6 +1292,25 @@ ck(
   "BESKT_TOOL_COLOUR_ALONE: every state must render as words as well as tone",
 );
 
+ck(
+  "T12.12 no conduct label is a bare verdict word",
+  (() => {
+    // A one-word label is where a verdict sneaks back in: "Utfall" / "Outcome"
+    // over a control that records how a conversation was handled reads as a
+    // result the method produced. The repository already forbids those two
+    // outright (recruitment-assessment-ux:check, section 15, which caught this
+    // surface doing exactly that); this extends the same rule to the rest of
+    // the family, on this vocabulary, so it cannot come back under a synonym.
+    const BARE_VERDICT =
+      /^(utfall|outcome|resultat|result|bedömning|assessment|omdöme|verdict|betyg|grade|poäng|score|slutsats|conclusion)$/i;
+    const offenders = CONDUCT_KEYS.filter(
+      (k) => BARE_VERDICT.test(sv[k].trim()) || BARE_VERDICT.test(en[k].trim()),
+    );
+    return offenders.length === 0;
+  })(),
+  "BESKT_TOOL_VERDICT_LABEL: no conduct label may be a bare verdict word",
+);
+
 /* ================================================================== */
 group("T13 · Saving waits for the server");
 

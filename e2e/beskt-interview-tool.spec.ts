@@ -850,7 +850,9 @@ test.describe("BESKT interview tool — the routed journey", () => {
     });
 
     await step("panel", "a disagreement is refused without its divergent position", async () => {
-      await panel.getByLabel(/^Utfall$|^Outcome$/i).selectOption("disagreed");
+      await panel
+        .getByLabel(/Hur panelen hanterade temat|How the panel handled it/i)
+        .selectOption("disagreed");
       await panel
         .getByLabel(/^Motivering$|^Rationale$/i)
         .fill("SYNTETISKT panelen kunde inte enas om bemanningen");

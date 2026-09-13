@@ -428,6 +428,17 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BESKT_TOOL_SCHEMA_LEAK",
   },
   {
+    id: "TOOL-NC-VERDICT-LABEL",
+    defect:
+      "a control that records how a conversation was handled is labelled as an outcome, which reads as a result the method produced",
+    file: DICT,
+    find: '    "beskt.conduct.panel.resolution.kind": "How the panel handled it",',
+    replace: '    "beskt.conduct.panel.resolution.kind": "Outcome",',
+    guard: GUARD,
+    expect: "BESKT_TOOL_VERDICT_LABEL",
+  },
+
+  {
     id: "TOOL-NC-TOUCH-TARGET",
     defect: "a control drops below the 44px floor and becomes unusable one-handed on a phone",
     file: ENTRY_FORM,
