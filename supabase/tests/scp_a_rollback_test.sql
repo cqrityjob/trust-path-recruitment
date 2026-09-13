@@ -154,7 +154,7 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r'
-        AND c.relname LIKE 'bcp\_conduct\_%' ESCAPE '\\') = 6,
+        AND c.relname LIKE 'bcp\_conduct\_%' ESCAPE '\') = 6,
     'pre-rollback: the six bcp_conduct_ tables exist');
 END $$;
 
@@ -194,13 +194,13 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r'
-        AND c.relname LIKE 'bcp\_conduct\_%' ESCAPE '\\') = 0,
+        AND c.relname LIKE 'bcp\_conduct\_%' ESCAPE '\') = 0,
     'BESKT PR 5A: the conduct layer is gone, PR 4 can now unwind');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public'
-        AND (p.proname LIKE 'bcp\_conduct\_%' ESCAPE '\\'
-             OR p.proname LIKE 'bcp\_guard\_conduct\_%' ESCAPE '\\')) = 0,
+        AND (p.proname LIKE 'bcp\_conduct\_%' ESCAPE '\'
+             OR p.proname LIKE 'bcp\_guard\_conduct\_%' ESCAPE '\')) = 0,
     'BESKT PR 5A: no conduct function survives');
 END $$;
 
