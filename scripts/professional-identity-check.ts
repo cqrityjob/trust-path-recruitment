@@ -2997,11 +2997,20 @@ console.log("\n12 · candidate dead ends");
     read("src/components/security-passport/WorkCountryCard.tsx"),
   ].join("\n");
   const profileCard = read("src/components/assessment/SecurityCareerProfileCard.tsx");
+  // The canonical profile page composes two independently extracted editors:
+  // the security-career card and the general profile/CV claims editor. Search
+  // both, just as passportSurface searches every component mounted by its
+  // route, so moving an editor between real page components cannot turn a
+  // valid deep link into a false negative in this guard.
+  const profileSurface = [
+    profileCard,
+    read("src/components/professional-identity/GeneralProfileClaims.tsx"),
+  ].join("\n");
   for (const section of COMPLETENESS_SECTION_ORDER) {
     const { href, owner } = SECTION_DESTINATIONS[section];
     const anchor = href.includes("#") ? href.split("#")[1] : null;
     if (!anchor) continue;
-    const host = owner === "passport" ? passportSurface : profileCard;
+    const host = owner === "passport" ? passportSurface : profileSurface;
     ck(
       `12.19 the ${section} destination's anchor exists on its page (#${anchor})`,
       host.includes(`id="${anchor}"`) || host.includes(`"${anchor}"`),
