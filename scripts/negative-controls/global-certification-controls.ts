@@ -6,11 +6,15 @@
  * named diagnostic. A guard that keeps printing "ok" with the defect applied
  * is a dead assertion, and this is the only thing that makes that visible.
  *
- * ── SCHEMA RELEASE ONLY ────────────────────────────────────────────────
+ * ── SCHEMA AND APPLICATION ─────────────────────────────────────────────
  *
- * Every file mutated here is SQL, or the generated types. The controls for the
- * write mapping, the scope predicates and the classifier belong to the
- * application release, with the guard groups that check them.
+ * The first set mutates the migration and the rollback SQL, and proves the
+ * schema invariants still bind. The second set — added with the Phase 1B
+ * application release — mutates the runtime, the generated types and the
+ * release bookkeeping, and proves the INVERTED GROUP 4 binds: that the schema
+ * is recorded applied, that the escape hatch is gone, that the catalogue is
+ * read through its governed relationships, that a failure is never an empty
+ * catalogue, and that no direct lifecycle write exists.
  *
  * The set is chosen from the load-bearing invariants rather than from what is
  * easy to mutate: the ownership predicate, the global-scope constraint, the
@@ -443,29 +447,128 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "so a future INTL_ code cannot be swept up by it",
   },
 
-  /* ── The schema release stays schema-only ────────────────────────── */
+  /* ── The application release rests on an APPLIED schema ──────────── */
   //
-  // The property that makes this branch safe to merge on its own: the running
-  // application must not reference anything the migration introduces. If it
-  // did, Lovable would rebuild from main against a database that has never
-  // heard of it — the 2026-08-25 outage.
+  // Through the schema release the property was that NOTHING under src/
+  // referenced these objects. Phase 1B introduces those dependencies on
+  // purpose, so the controls below prove the INVERTED guard binds: the
+  // release-state classification, the generated types, the removal of the
+  // escape hatch, the governed catalogue, the territory rules, the trust
+  // boundary and the obsolete migration identity.
   {
-    id: "GC-NC-APPLICATION-DEPENDS-ON-SCHEMA",
-    defect: "application code starts reading a column this migration has not applied yet",
-    file: "src/lib/security-passport/credentials.ts",
-    find: "export const CREDENTIAL_CODE_MAX_LENGTH = 48;",
-    replace: "export const CREDENTIAL_CODE_MAX_LENGTH = 48;\nexport const PENDING = 'scope_code';",
+    id: "GC-NC-SCHEMA-NOT-APPLIED",
+    defect: "the application release proceeds while the schema is not recorded applied",
+    file: "supabase/release-state.json",
+    find: '"file": "20261111090000_sp_global_professional_certifications.sql",\n      "hostedState": "applied",',
+    replace:
+      '"file": "20261111090000_sp_global_professional_certifications.sql",\n      "hostedState": "pending",',
     guard: GUARD,
-    expect: "no application file references scope_code",
+    expect: "and classifies it as applied on the hosted database",
   },
   {
-    id: "GC-NC-TYPES-REGENERATED-EARLY",
-    defect: "the generated Supabase types claim a table that is not hosted yet",
+    id: "GC-NC-TYPES-MISSING-OBJECT",
+    defect: "the runtime names a table the generated types do not describe",
     file: "src/integrations/supabase/types.ts",
-    find: "export type Json =",
-    replace: "// sp_certification_definitions\nexport type Json =",
+    find: "      sp_certification_definitions: {",
+    replace: "      sp_certification_definitions_RENAMED: {",
     guard: GUARD,
-    expect: "the generated Supabase types do NOT yet describe sp_certification_definitions",
+    expect: "the generated Supabase types describe sp_certification_definitions",
+  },
+  {
+    id: "GC-NC-PENDING-SCHEMA-RETURNS",
+    defect: "an untyped escape hatch is reintroduced now that the schema is applied",
+    file: "src/lib/security-passport/credentials.functions.ts",
+    find: "const TAXONOMY_COLUMNS =",
+    replace: "const RESURRECTED = fromPendingSchema;\nconst TAXONOMY_COLUMNS =",
+    guard: GUARD,
+    expect: "no application file uses fromPendingSchema",
+  },
+  {
+    id: "GC-NC-TAXONOMY-SCOPE-DROPPED",
+    defect: "the taxonomy read stops selecting the declared scope, so nothing is ever global",
+    file: "src/lib/security-passport/credentials.functions.ts",
+    find: 'jurisdiction_code, sub_jurisdiction_code, scope_code";',
+    replace: 'jurisdiction_code, sub_jurisdiction_code";',
+    guard: GUARD,
+    expect: "every taxonomy read selects the declared scope",
+  },
+  {
+    id: "GC-NC-CATALOGUE-EMBED-AMBIGUOUS",
+    defect:
+      "the taxonomy embed loses its foreign-key hint, so PostgREST refuses the whole catalogue read",
+    file: "src/lib/security-passport/credentials.functions.ts",
+    find: "         sp_credential_types!sp_certification_definitions_credential_code_fkey!inner (",
+    replace: "         sp_credential_types!inner (",
+    guard: GUARD,
+    expect: "and its taxonomy embed is hinted with the credential_code foreign key",
+  },
+  {
+    id: "GC-NC-CATALOGUE-ERROR-BECOMES-EMPTY",
+    defect: "a failed catalogue read is presented to the holder as an empty catalogue",
+    file: "src/lib/security-passport/credentials.functions.ts",
+    find: '      .is("retired_on", null)\n      .order("credential_code", { ascending: true });\n\n    if (error) throw new Error(error.message);',
+    replace:
+      '      .is("retired_on", null)\n      .order("credential_code", { ascending: true });\n\n    if (error) return [];',
+    guard: GUARD,
+    expect: "it throws on every read error",
+  },
+  {
+    id: "GC-NC-GLOBAL-TERRITORY-NOT-CLEARED",
+    defect:
+      "a global certification stops clearing the sub-jurisdiction, so a corrected Dubai card keeps its emirate",
+    file: "src/lib/security-passport/certification-scope.ts",
+    find: "  jurisdiction_code: null,\n  sub_jurisdiction_code: null,\n} as const;",
+    replace: "  jurisdiction_code: null,\n} as const;",
+    guard: GUARD,
+    expect: "the global territory writes BOTH jurisdiction columns as null",
+  },
+  {
+    id: "GC-NC-NATIONAL-BEHAVIOUR-CHANGED",
+    defect: "a national credential stops taking its jurisdiction from the governed definition",
+    file: "src/lib/security-passport/credentials.ts",
+    find: "          jurisdiction_code: type.jurisdictionCode ?? nullIfBlank(draft.jurisdictionCode),",
+    replace: "          jurisdiction_code: nullIfBlank(draft.jurisdictionCode),",
+    guard: GUARD,
+    expect: "and a national credential still takes its jurisdiction from the definition",
+  },
+  {
+    id: "GC-NC-UNDECLARED-BECOMES-NATIONAL",
+    defect: "an undeclared scope collapses into national, so three states become two",
+    file: "src/lib/security-passport/certification-scope.ts",
+    find: "  return definition?.scopeCode === NATIONAL_REGULATED_SCOPE;",
+    replace: "  return !isGlobalCertification(definition);",
+    guard: GUARD,
+    expect: "national is its own declared state, not the negation of global",
+  },
+  {
+    id: "GC-NC-CLASSIFIER-TITLE-INFERENCE",
+    defect: "the classifier starts upgrading a free-text claim by matching its title",
+    file: "src/lib/security-passport/classification.ts",
+    find: '    return { claim, bucket: "international_certification", groupKey: null };',
+    replace:
+      '    return { claim, bucket: "international_certification", groupKey: null };\n  }\n  if (/CPP|CISSP/i.test(String((claim as { title?: string }).title ?? ""))) {\n    return { claim, bucket: "international_certification", groupKey: null };',
+    guard: GUARD,
+    expect: "the classifier reads no title",
+  },
+  {
+    id: "GC-NC-DIRECT-LIFECYCLE-WRITE",
+    defect: "a holder lifecycle row is written directly, bypassing the canonical RPC",
+    file: "src/lib/security-passport/credentials.functions.ts",
+    find: "const TAXONOMY_COLUMNS =",
+    replace:
+      'async function declareStanding(c: { from: (t: string) => { insert: (v: unknown) => unknown } }) {\n  return c.from("sp_claim_certification_lifecycle").insert({ status_source: "holder_declared" });\n}\nconst TAXONOMY_COLUMNS =',
+    guard: GUARD,
+    expect: "no application file performs a direct .insert() on sp_claim_certification_lifecycle",
+  },
+  {
+    id: "GC-NC-OBSOLETE-MIGRATION-IDENTITY",
+    defect: "application code still names the obsolete 20261110090000 certification migration",
+    file: "src/lib/security-passport/certification-scope.ts",
+    find: "export const GLOBAL_PROFESSIONAL_SCOPE",
+    replace:
+      "// Introduced by 20261110090000_sp_global_professional_certifications.\nexport const GLOBAL_PROFESSIONAL_SCOPE",
+    guard: GUARD,
+    expect: "no application file names the obsolete migration identity",
   },
 ];
 

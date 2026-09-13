@@ -12999,6 +12999,302 @@ export type Database = {
           },
         ]
       }
+      sp_certification_definitions: {
+        Row: {
+          abbreviation: string
+          canonical_name_en: string
+          created_at: string
+          credential_code: string
+          effective_from: string
+          issuer_id: string
+          maintenance_cycle_months: number | null
+          maintenance_policy_effective_from: string | null
+          maintenance_policy_type: string
+          maintenance_policy_url: string
+          maintenance_policy_version: string | null
+          maintenance_summary_en: string
+          programme_url: string
+          public_verification_url: string | null
+          replaced_by_code: string | null
+          retired_on: string | null
+          source_reviewed_on: string
+          updated_at: string
+        }
+        Insert: {
+          abbreviation: string
+          canonical_name_en: string
+          created_at?: string
+          credential_code: string
+          effective_from?: string
+          issuer_id: string
+          maintenance_cycle_months?: number | null
+          maintenance_policy_effective_from?: string | null
+          maintenance_policy_type: string
+          maintenance_policy_url: string
+          maintenance_policy_version?: string | null
+          maintenance_summary_en: string
+          programme_url: string
+          public_verification_url?: string | null
+          replaced_by_code?: string | null
+          retired_on?: string | null
+          source_reviewed_on: string
+          updated_at?: string
+        }
+        Update: {
+          abbreviation?: string
+          canonical_name_en?: string
+          created_at?: string
+          credential_code?: string
+          effective_from?: string
+          issuer_id?: string
+          maintenance_cycle_months?: number | null
+          maintenance_policy_effective_from?: string | null
+          maintenance_policy_type?: string
+          maintenance_policy_url?: string
+          maintenance_policy_version?: string | null
+          maintenance_summary_en?: string
+          programme_url?: string
+          public_verification_url?: string | null
+          replaced_by_code?: string | null
+          retired_on?: string | null
+          source_reviewed_on?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_certification_definitions_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: true
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_certification_definitions_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "sp_certification_issuers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_certification_definitions_replaced_by_code_fkey"
+            columns: ["replaced_by_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_certification_issuer_aliases: {
+        Row: {
+          alias: string
+          alias_kind: string
+          created_at: string
+          issuer_id: string
+        }
+        Insert: {
+          alias: string
+          alias_kind: string
+          created_at?: string
+          issuer_id: string
+        }
+        Update: {
+          alias?: string
+          alias_kind?: string
+          created_at?: string
+          issuer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_certification_issuer_aliases_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "sp_certification_issuers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_certification_issuers: {
+        Row: {
+          absence_is_inconclusive: boolean
+          created_at: string
+          display_name: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          issuer_code: string
+          legal_name: string | null
+          official_url: string
+          predecessor_issuer_id: string | null
+          public_verification_url: string | null
+          source_reviewed_on: string
+          successor_issuer_id: string | null
+          updated_at: string
+          verification_mode: string
+        }
+        Insert: {
+          absence_is_inconclusive?: boolean
+          created_at?: string
+          display_name: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          issuer_code: string
+          legal_name?: string | null
+          official_url: string
+          predecessor_issuer_id?: string | null
+          public_verification_url?: string | null
+          source_reviewed_on: string
+          successor_issuer_id?: string | null
+          updated_at?: string
+          verification_mode: string
+        }
+        Update: {
+          absence_is_inconclusive?: boolean
+          created_at?: string
+          display_name?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          issuer_code?: string
+          legal_name?: string | null
+          official_url?: string
+          predecessor_issuer_id?: string | null
+          public_verification_url?: string | null
+          source_reviewed_on?: string
+          successor_issuer_id?: string | null
+          updated_at?: string
+          verification_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_certification_issuers_predecessor_issuer_id_fkey"
+            columns: ["predecessor_issuer_id"]
+            isOneToOne: false
+            referencedRelation: "sp_certification_issuers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_certification_issuers_successor_issuer_id_fkey"
+            columns: ["successor_issuer_id"]
+            isOneToOne: false
+            referencedRelation: "sp_certification_issuers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_certification_sources: {
+        Row: {
+          created_at: string
+          credential_code: string | null
+          id: string
+          issuer_id: string
+          review_note: string | null
+          reviewed_by: string
+          reviewed_on: string
+          source_kind: string
+          superseded_on: string | null
+          title: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          credential_code?: string | null
+          id?: string
+          issuer_id: string
+          review_note?: string | null
+          reviewed_by: string
+          reviewed_on: string
+          source_kind: string
+          superseded_on?: string | null
+          title: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          credential_code?: string | null
+          id?: string
+          issuer_id?: string
+          review_note?: string | null
+          reviewed_by?: string
+          reviewed_on?: string
+          source_kind?: string
+          superseded_on?: string | null
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_certification_sources_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_certification_sources_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "sp_certification_issuers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_claim_certification_lifecycle: {
+        Row: {
+          awarded_on: string | null
+          claim_id: string
+          created_at: string
+          cycle_end_semantics: string
+          cycle_ends_on: string | null
+          holder_lifecycle_status: string
+          holder_user_id: string
+          issuer_confirmed_at: string | null
+          issuer_confirmed_source_url: string | null
+          status_as_of: string | null
+          status_source: string
+          updated_at: string
+        }
+        Insert: {
+          awarded_on?: string | null
+          claim_id: string
+          created_at?: string
+          cycle_end_semantics?: string
+          cycle_ends_on?: string | null
+          holder_lifecycle_status?: string
+          holder_user_id: string
+          issuer_confirmed_at?: string | null
+          issuer_confirmed_source_url?: string | null
+          status_as_of?: string | null
+          status_source?: string
+          updated_at?: string
+        }
+        Update: {
+          awarded_on?: string | null
+          claim_id?: string
+          created_at?: string
+          cycle_end_semantics?: string
+          cycle_ends_on?: string | null
+          holder_lifecycle_status?: string
+          holder_user_id?: string
+          issuer_confirmed_at?: string | null
+          issuer_confirmed_source_url?: string | null
+          status_as_of?: string | null
+          status_source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_claim_certification_lifecycle_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sp_claims: {
         Row: {
           assertion_level: string
@@ -13116,6 +13412,39 @@ export type Database = {
           },
         ]
       }
+      sp_credential_scopes: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          is_territorial: boolean
+          meaning_en: string
+          name_en: string
+          name_sv: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          is_territorial: boolean
+          meaning_en: string
+          name_en: string
+          name_sv: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          is_territorial?: boolean
+          meaning_en?: string
+          name_en?: string
+          name_sv?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       sp_credential_types: {
         Row: {
           authority_id: string | null
@@ -13140,6 +13469,7 @@ export type Database = {
           requires_issuer: boolean
           requires_scope: boolean
           requires_valid_until: boolean
+          scope_code: string | null
           sort_order: number
           sub_jurisdiction_code: string | null
           symbol_label: string
@@ -13169,6 +13499,7 @@ export type Database = {
           requires_issuer?: boolean
           requires_scope?: boolean
           requires_valid_until?: boolean
+          scope_code?: string | null
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label: string
@@ -13198,6 +13529,7 @@ export type Database = {
           requires_issuer?: boolean
           requires_scope?: boolean
           requires_valid_until?: boolean
+          scope_code?: string | null
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label?: string
@@ -13232,6 +13564,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sp_regulated_roles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_credential_types_scope_code_fkey"
+            columns: ["scope_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_scopes"
+            referencedColumns: ["code"]
           },
           {
             foreignKeyName: "sp_credential_types_sub_jurisdiction_code_fkey"
@@ -17103,6 +17442,17 @@ export type Database = {
           _sha256: string
           _size_bytes: number
           _storage_path: string
+        }
+        Returns: string
+      }
+      sp_certification_lifecycle_declare: {
+        Args: {
+          _awarded_on?: string
+          _claim_id: string
+          _cycle_end_semantics?: string
+          _cycle_ends_on?: string
+          _holder_lifecycle_status?: string
+          _status_as_of?: string
         }
         Returns: string
       }

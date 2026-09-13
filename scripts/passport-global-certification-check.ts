@@ -30,7 +30,7 @@
  *      that violated it leaves a green suite behind.
  */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const root = join(import.meta.dirname, "..");
@@ -222,22 +222,30 @@ console.log("\nGROUP 3 -- CISSP and CRISC render whole");
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   GROUP 4 — NOTHING IN THE APPLICATION DEPENDS ON THIS SCHEMA
+   GROUP 4 — THE APPLICATION NOW DEPENDS ON THIS SCHEMA, DELIBERATELY
    ══════════════════════════════════════════════════════════════════════ */
-console.log("\nGROUP 4 -- the schema release is safe to merge on its own");
+console.log("\nGROUP 4 -- the application release rests on an APPLIED schema");
 
-/* ── WHY THIS IS THE MOST IMPORTANT GROUP IN THE FILE ──────────────────
+/* ── WHAT THIS GROUP USED TO PROVE, AND WHY IT CHANGED ─────────────────
  *
- * Lovable rebuilds the application from `main` the moment a PR merges.
- * Canonical Supabase migrations do NOT run then; they run when somebody
- * applies them. So between those two events the deployed code talks to a
- * schema that has never heard of what this migration adds. On 2026-08-25 that
- * took down all job publishing.
+ * Through the schema release this group proved the opposite of what it proves
+ * now: that NO file under `src/` mentioned any object the migration
+ * introduced, and that the generated types did not describe them either. That
+ * was the property that made the schema safe to merge on its own — Lovable
+ * rebuilds from `main` the moment a PR merges, canonical migrations do not run
+ * then, and on 2026-08-25 that gap took down all job publishing.
  *
- * `schema-first-release:check` enforces the same rule from the other side, by
- * comparing `src/` against the objects a pending migration introduces. This
- * states it as a property of THIS release and names the objects explicitly, so
- * a reviewer can see the list rather than trust a cross-reference.
+ * That gap is closed. 20261111090000 is applied on the owner project through
+ * the official Supabase integration and `release-state.json` records it with
+ * its evidence, so the application release is exactly the deliberate change
+ * the schema guard said it would be. The guard is therefore INVERTED rather
+ * than deleted: the same objects are named in the same list, and every one of
+ * them must now be present in the generated types, reachable from the runtime,
+ * and reached only through the governed catalogue.
+ *
+ * Deleting this group would have been the cheap way past a red check. The
+ * order was the point, and it still is — so the guard now proves the order was
+ * FOLLOWED instead of proving it had not been started.
  */
 function walk(dir: string, ext: readonly string[]): string[] {
   const out: string[] = [];
@@ -260,32 +268,331 @@ const INTRODUCED = [
   "scope_code",
 ] as const;
 
+const CANONICAL_MIGRATION = "20261111090000_sp_global_professional_certifications.sql";
+const OBSOLETE_MIGRATION_STEM = "20261110090000_sp_global_professional_certifications";
+
+const SRC = join(root, "src");
+const appFiles = walk(SRC, [".ts", ".tsx"]);
+const appText = new Map(appFiles.map((f) => [relative(root, f), readFileSync(f, "utf8")] as const));
+function read(rel: string): string {
+  const t = appText.get(rel);
+  if (t === undefined) throw new Error(`guard expected ${rel} to exist`);
+  return t;
+}
+/** Every application file EXCEPT the generated types, which are data. */
+function handWritten(): ReadonlyArray<readonly [string, string]> {
+  return [...appText].filter(([rel]) => rel !== "src/integrations/supabase/types.ts");
+}
+
+const GENERATED = read("src/integrations/supabase/types.ts");
+const SCOPE_MODULE = read("src/lib/security-passport/certification-scope.ts");
+const CLASSIFIER = read("src/lib/security-passport/classification.ts");
+const CREDENTIALS = read("src/lib/security-passport/credentials.ts");
+const CRED_FUNCTIONS = read("src/lib/security-passport/credentials.functions.ts");
+
+/* ── 4.1 the schema this code depends on is recorded APPLIED ─────────── */
 {
-  const appFiles = walk(join(root, "src"), [".ts", ".tsx"]);
+  const releaseState = JSON.parse(
+    readFileSync(join(root, "supabase/release-state.json"), "utf8"),
+  ) as { frontier: ReadonlyArray<{ file: string; hostedState: string; evidenceSource?: string }> };
+  const entry = releaseState.frontier.find((e) => e.file === CANONICAL_MIGRATION);
+  ok(Boolean(entry), `release-state.json carries ${CANONICAL_MIGRATION}`);
+  ok(entry?.hostedState === "applied", "and classifies it as applied on the hosted database");
+  ok(
+    (entry?.evidenceSource ?? "").length > 0,
+    "and names the evidence by which that was established",
+  );
+}
+
+/* ── 4.2 the generated types describe every object the runtime names ─── */
+{
   for (const object of INTRODUCED) {
-    const offenders = appFiles.filter((f) => readFileSync(f, "utf8").includes(object));
+    ok(GENERATED.includes(object), `the generated Supabase types describe ${object}`);
+  }
+  // The exact holder write contract, by its six argument names. A guard that
+  // only looked for the function name would pass against a different overload.
+  const declare = /sp_certification_lifecycle_declare: \{\s*Args: \{([\s\S]*?)\}/.exec(GENERATED);
+  ok(Boolean(declare), "the generated types describe the lifecycle declare RPC's arguments");
+  for (const arg of [
+    "_claim_id",
+    "_awarded_on",
+    "_cycle_ends_on",
+    "_cycle_end_semantics",
+    "_holder_lifecycle_status",
+    "_status_as_of",
+  ]) {
+    ok(Boolean(declare?.[1]?.includes(arg)), `  and its argument ${arg}`);
+  }
+  // Every one of the six tables, as a TABLE the client can be typed against.
+  for (const table of INTRODUCED.filter(
+    (o) => o.startsWith("sp_") && o.includes("certification"),
+  )) {
+    if (table === "sp_certification_lifecycle_declare") continue;
     ok(
-      offenders.length === 0,
-      `no application file references ${object}` +
-        (offenders.length ? ` — ${offenders.map((f) => relative(root, f)).join(", ")}` : ""),
+      new RegExp(`^      ${table}: \\{$`, "m").test(GENERATED),
+      `  and ${table} as a table the client is typed against`,
     );
   }
+}
 
-  const intlInApp = appFiles.filter((f) => /INTL_[A-Z0-9_]+/.test(readFileSync(f, "utf8")));
+/* ── 4.3 no escape hatch survived the apply ──────────────────────────── */
+{
   ok(
-    intlInApp.length === 0,
-    `no application file names a governed international code` +
-      (intlInApp.length ? ` — ${intlInApp.map((f) => relative(root, f)).join(", ")}` : ""),
+    !existsSync(join(SRC, "lib/security-passport/pending-schema.ts")),
+    "the pending-schema escape hatch module is gone",
   );
-
-  // The generated types describe the HOSTED database. Regenerating them for a
-  // schema that is not applied would make types.ts assert something untrue
-  // about production, which is the claim release-state.json exists to keep
-  // honest.
-  const generated = readFileSync(join(root, "src/integrations/supabase/types.ts"), "utf8");
-  for (const object of INTRODUCED) {
-    ok(!generated.includes(object), `the generated Supabase types do NOT yet describe ${object}`);
+  const hatches: ReadonlyArray<readonly [string, RegExp]> = [
+    ["fromPendingSchema", /fromPendingSchema/],
+    ["pending-schema", /pending-schema/],
+    ["aheadOfHostedSchema", /aheadOfHostedSchema/],
+  ];
+  for (const [label, re] of hatches) {
+    const offenders = handWritten()
+      .filter(([, text]) => re.test(text))
+      .map(([rel]) => rel);
+    ok(
+      offenders.length === 0,
+      `no application file uses ${label}${offenders.length ? ` — ${offenders.join(", ")}` : ""}`,
+    );
   }
+  // The generic missing-column / missing-relation predicates existed ONLY to
+  // survive the unapplied schema. The pilot-specific ones they were factored
+  // out of are pre-existing and stay.
+  const marketAccess = read("src/lib/security-passport/market-access.ts");
+  ok(
+    !/export function isMissingColumn\b/.test(marketAccess),
+    "the generic isMissingColumn helper added for the schema gap is gone",
+  );
+  ok(
+    !/export function isMissingRelation\b/.test(marketAccess),
+    "the generic isMissingRelation helper added for the schema gap is gone",
+  );
+  ok(
+    /export function isMissingPilotStateColumn\b/.test(marketAccess),
+    "and the pre-existing pilot-state tolerance is untouched",
+  );
+  ok(
+    /export function isMissingPilotMembersTable\b/.test(marketAccess),
+    "and so is the pre-existing pilot-members tolerance",
+  );
+  // The retry that read the taxonomy a second time without scope_code.
+  ok(
+    !/TAXONOMY_BASE_COLUMNS/.test(CRED_FUNCTIONS),
+    "the retry-without-scope_code column list is gone",
+  );
+  ok(!/withoutScope/.test(CRED_FUNCTIONS), "and so is the second read it fell back to");
+}
+
+/* ── 4.4 the runtime reads the GOVERNED catalogue ────────────────────── */
+{
+  ok(
+    /const TAXONOMY_COLUMNS =[\s\S]{0,600}?scope_code/.test(CRED_FUNCTIONS),
+    "every taxonomy read selects the declared scope",
+  );
+  const selects = [
+    ...CRED_FUNCTIONS.matchAll(/\.from\("sp_credential_types"\)\s*\n\s*\.select\(([^)]*)\)/g),
+  ];
+  ok(selects.length > 0, "the taxonomy reads are found");
+  for (const [i, m] of selects.entries()) {
+    ok(
+      m[1].includes("TAXONOMY_COLUMNS"),
+      `taxonomy read #${i + 1} goes through the one shared column list`,
+    );
+  }
+  ok(
+    /\.from\("sp_certification_definitions"\)/.test(CRED_FUNCTIONS),
+    "the international catalogue is read from the governed definitions table",
+  );
+  // The definitions table references sp_credential_types TWICE. An unhinted
+  // embed is ambiguous and PostgREST refuses the whole request.
+  ok(
+    /sp_credential_types!sp_certification_definitions_credential_code_fkey!inner/.test(
+      CRED_FUNCTIONS,
+    ),
+    "and its taxonomy embed is hinted with the credential_code foreign key",
+  );
+  ok(
+    /issuerDisplayName: r\.sp_certification_issuers\.display_name/.test(CRED_FUNCTIONS),
+    "issuer names come from the controlled display name",
+  );
+  const aliasOffenders = handWritten()
+    .filter(([, t]) => /sp_certification_issuer_aliases/.test(t))
+    .map(([rel]) => rel);
+  ok(
+    aliasOffenders.length === 0,
+    `no surface renders from the search aliases${aliasOffenders.length ? ` — ${aliasOffenders.join(", ")}` : ""}`,
+  );
+}
+
+/* ── 4.5 nothing is inferred from a title, an abbreviation or an issuer ─ */
+{
+  // The scope module reads scopeCode and nothing else.
+  ok(
+    /definition\?\.scopeCode === GLOBAL_PROFESSIONAL_SCOPE/.test(SCOPE_MODULE),
+    "isGlobalCertification compares the DECLARED scope",
+  );
+  for (const forbidden of ["nameSv", "nameEn", "title", "issuer", "abbreviation", "symbolLabel"]) {
+    ok(
+      !new RegExp(`\\b${forbidden}\\b`, "i").test(
+        SCOPE_MODULE.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, ""),
+      ),
+      `certification-scope.ts reads no ${forbidden}`,
+    );
+  }
+  const classifierCode = CLASSIFIER.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+  for (const forbidden of ["title", "issuer", "abbreviation", "INTL_"]) {
+    ok(!new RegExp(forbidden, "i").test(classifierCode), `the classifier reads no ${forbidden}`);
+  }
+  ok(
+    /isGlobalCertification\(claim\.definition\)/.test(CLASSIFIER),
+    "the international bucket is entered only through the definition's declared scope",
+  );
+  // An undeclared scope is not global — the one direction this may fail in.
+  ok(
+    /isNationalCredential/.test(SCOPE_MODULE) &&
+      !/!isGlobalCertification/.test(SCOPE_MODULE.replace(/\/\*[\s\S]*?\*\//g, "")),
+    "national is its own declared state, not the negation of global",
+  );
+}
+
+/* ── 4.6 a global scope CLEARS the territory; national is unchanged ──── */
+{
+  ok(
+    /GLOBAL_CERTIFICATION_TERRITORY = \{[\s\S]*?jurisdiction_code: null,[\s\S]*?sub_jurisdiction_code: null,[\s\S]*?\}/.test(
+      SCOPE_MODULE,
+    ),
+    "the global territory writes BOTH jurisdiction columns as null",
+  );
+  ok(
+    /isGlobalCertification\(type\)\s*\?\s*GLOBAL_CERTIFICATION_TERRITORY/.test(CREDENTIALS),
+    "the write path uses it for a global certification",
+  );
+  // PR #222's rule, verbatim, for everything else.
+  ok(
+    /jurisdiction_code: type\.jurisdictionCode \?\? nullIfBlank\(draft\.jurisdictionCode\)/.test(
+      CREDENTIALS,
+    ),
+    "and a national credential still takes its jurisdiction from the definition",
+  );
+  ok(
+    /sub_jurisdiction_code: type\.subJurisdictionCode/.test(CREDENTIALS),
+    "and its sub-jurisdiction from the definition, so a correction clears the emirate",
+  );
+  ok(
+    /!isGlobalCertification\(type\) && isBlank\(draft\.jurisdictionCode\)/.test(CREDENTIALS),
+    "the form demands a jurisdiction of a credential that has one, and only of those",
+  );
+}
+
+/* ── 4.7 an international certification is never permission to work ──── */
+{
+  const offenders = handWritten()
+    .filter(([rel]) => rel.startsWith("src/lib/security-passport/"))
+    .filter(([, t]) => {
+      const code = t.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+      return /local_eligibility|active_title/.test(code) && /global_professional/.test(code);
+    })
+    .map(([rel]) => rel);
+  ok(
+    offenders.length === 0,
+    `no module joins the global scope to eligibility or to a derived title${offenders.length ? ` — ${offenders.join(", ")}` : ""}`,
+  );
+  // The classifier's international bucket carries no group key, so it can
+  // never be presented under a country heading.
+  ok(
+    /bucket: "international_certification", groupKey: null/.test(CLASSIFIER),
+    "an international certification is grouped under no jurisdiction",
+  );
+}
+
+/* ── 4.8 a catalogue failure is never a trusted fact ─────────────────── */
+{
+  const fn = /listGlobalCertificationTypes[\s\S]*?^ {2}\}\);$/m.exec(CRED_FUNCTIONS)?.[0] ?? "";
+  ok(fn.length > 0, "the international catalogue reader is found");
+  ok(/if \(error\) throw new Error\(error\.message\);/.test(fn), "it throws on every read error");
+  ok(
+    !/isMissingRelation|isMissingColumn/.test(fn),
+    "and tolerates no missing relation or column, so an outage cannot read as an empty catalogue",
+  );
+  ok(
+    !/return \[\];/.test(fn),
+    "and has no path that answers with an empty catalogue instead of failing",
+  );
+}
+
+/* ── 4.9 the holder lifecycle trust boundary ─────────────────────────── */
+{
+  for (const verb of ["insert", "update", "upsert", "delete"]) {
+    const re = new RegExp(
+      `from\\(\\s*["'\`]sp_claim_certification_lifecycle["'\`]\\s*\\)[\\s\\S]{0,200}?\\.${verb}\\(`,
+    );
+    const offenders = handWritten()
+      .filter(([, text]) => re.test(text))
+      .map(([rel]) => rel);
+    ok(
+      offenders.length === 0,
+      `no application file performs a direct .${verb}() on sp_claim_certification_lifecycle` +
+        (offenders.length ? ` — ${offenders.join(", ")}` : ""),
+    );
+  }
+  // If a lifecycle write ever appears, it may only be the canonical RPC.
+  const rpcCalls = handWritten().flatMap(([rel, t]) =>
+    [...t.matchAll(/\.rpc\(\s*["'`]([a-z0-9_]+)["'`]/g)].map((m) => [rel, m[1]] as const),
+  );
+  const lifecycleRpcs = rpcCalls.filter(([, name]) => name.includes("certification_lifecycle"));
+  for (const [rel, name] of lifecycleRpcs) {
+    ok(
+      name === "sp_certification_lifecycle_declare",
+      `${rel} reaches the lifecycle only through the canonical RPC (found ${name})`,
+    );
+  }
+  // This phase builds no holder lifecycle write at all, and says so.
+  ok(
+    lifecycleRpcs.length === 0,
+    "this phase adds no holder lifecycle write, speculatively or otherwise",
+  );
+  // Reviewer and issuer write paths are not this phase's either.
+  const provenance = [
+    "status_source",
+    "issuer_confirmed_at",
+    "issuer_confirmation_url",
+    "holder_user_id",
+  ];
+  for (const field of provenance) {
+    const offenders = handWritten()
+      .filter(([, t]) => {
+        const code = t.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+        return code.includes("certification_lifecycle") && code.includes(field);
+      })
+      .map(([rel]) => rel);
+    ok(
+      offenders.length === 0,
+      `no client chooses the protected provenance field ${field}${offenders.length ? ` — ${offenders.join(", ")}` : ""}`,
+    );
+  }
+}
+
+/* ── 4.10 the obsolete migration identity is gone ────────────────────── */
+{
+  ok(
+    !existsSync(join(root, "supabase/migrations", `${OBSOLETE_MIGRATION_STEM}.sql`)),
+    "the obsolete 20261110090000 certification migration was not reintroduced",
+  );
+  ok(
+    !existsSync(join(root, "supabase/rollback", `${OBSOLETE_MIGRATION_STEM}_rollback.sql`)),
+    "and neither was its rollback",
+  );
+  ok(
+    existsSync(join(root, "supabase/migrations", CANONICAL_MIGRATION)),
+    "the canonical migration is the one on disk",
+  );
+  const stale = handWritten()
+    .filter(([, t]) => t.includes(OBSOLETE_MIGRATION_STEM) || /20261110090000/.test(t))
+    .map(([rel]) => rel);
+  ok(
+    stale.length === 0,
+    `no application file names the obsolete migration identity${stale.length ? ` — ${stale.join(", ")}` : ""}`,
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════
