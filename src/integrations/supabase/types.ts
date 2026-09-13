@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 147095)
-Total output lines: 18926
-
 export type Json =
   | string
   | number
@@ -6356,7 +6353,5936 @@ export type Database = {
           language: string
           level: number | null
           rationale: string
-          response_text: …47095 tokens truncated…       retired_at?: string | null
+          response_text: string
+          rubric_dimension_id: string
+        }
+        Insert: {
+          anchor_type: string
+          created_at?: string
+          id?: string
+          language?: string
+          level?: number | null
+          rationale: string
+          response_text: string
+          rubric_dimension_id: string
+        }
+        Update: {
+          anchor_type?: string
+          created_at?: string
+          id?: string
+          language?: string
+          level?: number | null
+          rationale?: string
+          response_text?: string
+          rubric_dimension_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_anchor_responses_rubric_dimension_id_fkey"
+            columns: ["rubric_dimension_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rubric_dimensions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_assessment_definitions: {
+        Row: {
+          created_at: string
+          designed_for: string
+          display_name_en: string | null
+          display_name_sv: string | null
+          family_id: string
+          id: string
+          is_test_fixture: boolean
+          name_en: string
+          name_sv: string
+          owner_employer_id: string | null
+          profession_id: string | null
+          purpose: string
+          slug: string
+          standard_for_recruitment: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          designed_for?: string
+          display_name_en?: string | null
+          display_name_sv?: string | null
+          family_id: string
+          id?: string
+          is_test_fixture?: boolean
+          name_en: string
+          name_sv: string
+          owner_employer_id?: string | null
+          profession_id?: string | null
+          purpose: string
+          slug: string
+          standard_for_recruitment?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          designed_for?: string
+          display_name_en?: string | null
+          display_name_sv?: string | null
+          family_id?: string
+          id?: string
+          is_test_fixture?: boolean
+          name_en?: string
+          name_sv?: string
+          owner_employer_id?: string | null
+          profession_id?: string | null
+          purpose?: string
+          slug?: string
+          standard_for_recruitment?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_assessment_definitions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_definitions_owner_employer_id_fkey"
+            columns: ["owner_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_definitions_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "scp_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_assessment_families: {
+        Row: {
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          id: string
+          name_en: string
+          name_sv: string
+          product_type: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          name_en: string
+          name_sv: string
+          product_type: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          name_en?: string
+          name_sv?: string
+          product_type?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scp_assessment_invitations: {
+        Row: {
+          application_id: string | null
+          assessment_version_id: string
+          bound_assignment_id: string | null
+          bound_at: string | null
+          bound_subject_id: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          closed_reason: string | null
+          deadline: string | null
+          email: string
+          employer_id: string
+          expires_at: string
+          id: string
+          invited_at: string
+          invited_by: string
+          invited_name: string | null
+          job_id: string | null
+          language: string
+          status: string
+          use_case: string
+        }
+        Insert: {
+          application_id?: string | null
+          assessment_version_id: string
+          bound_assignment_id?: string | null
+          bound_at?: string | null
+          bound_subject_id?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          closed_reason?: string | null
+          deadline?: string | null
+          email: string
+          employer_id: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          invited_by: string
+          invited_name?: string | null
+          job_id?: string | null
+          language?: string
+          status?: string
+          use_case: string
+        }
+        Update: {
+          application_id?: string | null
+          assessment_version_id?: string
+          bound_assignment_id?: string | null
+          bound_at?: string | null
+          bound_subject_id?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          closed_reason?: string | null
+          deadline?: string | null
+          email?: string
+          employer_id?: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string
+          invited_name?: string | null
+          job_id?: string | null
+          language?: string
+          status?: string
+          use_case?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_assessment_invitations_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_bound_assignment_id_fkey"
+            columns: ["bound_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_bound_assignment_id_fkey"
+            columns: ["bound_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_bound_subject_id_fkey"
+            columns: ["bound_subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_assessment_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          content_hash: string | null
+          content_status: string
+          created_at: string
+          definition_id: string
+          id: string
+          language_scope: string[]
+          notes: string | null
+          program_version_id: string | null
+          published_at: string | null
+          published_by: string | null
+          retired_at: string | null
+          retired_reason: string | null
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          definition_id: string
+          id?: string
+          language_scope?: string[]
+          notes?: string | null
+          program_version_id?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          retired_at?: string | null
+          retired_reason?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          definition_id?: string
+          id?: string
+          language_scope?: string[]
+          notes?: string | null
+          program_version_id?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          retired_at?: string | null
+          retired_reason?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_assessment_versions_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_versions_program_version_id_fkey"
+            columns: ["program_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_program_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_attempts: {
+        Row: {
+          accommodation_granted: boolean
+          accommodation_note: string | null
+          assessment_version_id: string | null
+          assignment_id: string | null
+          content_status_at_assignment: string | null
+          created_at: string
+          form_id: string
+          governance_mode:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
+          id: string
+          issuer_organization_id: string | null
+          jurisdiction_id: string | null
+          mode: string
+          option_order_seed: number | null
+          program_version_id: string | null
+          purpose_version_id: string | null
+          released_at: string | null
+          role_version_id: string | null
+          scored_at: string | null
+          scoring_model_version: string | null
+          started_at: string
+          status: string
+          subject_id: string
+          submitted_at: string | null
+          test_grant_id: string | null
+          validation_status_at_assignment: string | null
+        }
+        Insert: {
+          accommodation_granted?: boolean
+          accommodation_note?: string | null
+          assessment_version_id?: string | null
+          assignment_id?: string | null
+          content_status_at_assignment?: string | null
+          created_at?: string
+          form_id: string
+          governance_mode?:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
+          id?: string
+          issuer_organization_id?: string | null
+          jurisdiction_id?: string | null
+          mode: string
+          option_order_seed?: number | null
+          program_version_id?: string | null
+          purpose_version_id?: string | null
+          released_at?: string | null
+          role_version_id?: string | null
+          scored_at?: string | null
+          scoring_model_version?: string | null
+          started_at?: string
+          status?: string
+          subject_id: string
+          submitted_at?: string | null
+          test_grant_id?: string | null
+          validation_status_at_assignment?: string | null
+        }
+        Update: {
+          accommodation_granted?: boolean
+          accommodation_note?: string | null
+          assessment_version_id?: string | null
+          assignment_id?: string | null
+          content_status_at_assignment?: string | null
+          created_at?: string
+          form_id?: string
+          governance_mode?:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
+          id?: string
+          issuer_organization_id?: string | null
+          jurisdiction_id?: string | null
+          mode?: string
+          option_order_seed?: number | null
+          program_version_id?: string | null
+          purpose_version_id?: string | null
+          released_at?: string | null
+          role_version_id?: string | null
+          scored_at?: string | null
+          scoring_model_version?: string | null
+          started_at?: string
+          status?: string
+          subject_id?: string
+          submitted_at?: string | null
+          test_grant_id?: string | null
+          validation_status_at_assignment?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_attempts_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_issuer_organization_id_fkey"
+            columns: ["issuer_organization_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "scp_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_program_version_id_fkey"
+            columns: ["program_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_program_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_purpose_version_id_fkey"
+            columns: ["purpose_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_purpose_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_role_version_id_fkey"
+            columns: ["role_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_test_grant_id_fkey"
+            columns: ["test_grant_id"]
+            isOneToOne: false
+            referencedRelation: "scp_test_grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_behaviour_competency_map: {
+        Row: {
+          behaviour_version_id: string
+          competency_version_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          weight: number
+        }
+        Insert: {
+          behaviour_version_id: string
+          competency_version_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          weight?: number
+        }
+        Update: {
+          behaviour_version_id?: string
+          competency_version_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_behaviour_competency_map_behaviour_version_id_fkey"
+            columns: ["behaviour_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_behaviour_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_behaviour_competency_map_competency_version_id_fkey"
+            columns: ["competency_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competency_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_behaviour_versions: {
+        Row: {
+          behaviour_id: string
+          content_status: string
+          contraindications_sv: string[]
+          created_at: string
+          id: string
+          is_safety_critical: boolean
+          positive_indicators_sv: string[]
+          published_at: string | null
+          retired_at: string | null
+          statement_en: string
+          statement_sv: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          behaviour_id: string
+          content_status?: string
+          contraindications_sv?: string[]
+          created_at?: string
+          id?: string
+          is_safety_critical?: boolean
+          positive_indicators_sv?: string[]
+          published_at?: string | null
+          retired_at?: string | null
+          statement_en: string
+          statement_sv: string
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          behaviour_id?: string
+          content_status?: string
+          contraindications_sv?: string[]
+          created_at?: string
+          id?: string
+          is_safety_critical?: boolean
+          positive_indicators_sv?: string[]
+          published_at?: string | null
+          retired_at?: string | null
+          statement_en?: string
+          statement_sv?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_behaviour_versions_behaviour_id_fkey"
+            columns: ["behaviour_id"]
+            isOneToOne: false
+            referencedRelation: "scp_observable_behaviours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_bundle_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          bundle_id: string
+          content_hash: string | null
+          content_status: string
+          core_assessment_version_id: string
+          core_form_id: string
+          created_at: string
+          disclaimer_version: string
+          id: string
+          module_assessment_version_id: string
+          module_form_id: string
+          published_at: string | null
+          published_by: string | null
+          report_version: string
+          retired_at: string | null
+          retired_reason: string | null
+          role_weight_profile_id: string | null
+          scoring_version_id: string | null
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bundle_id: string
+          content_hash?: string | null
+          content_status?: string
+          core_assessment_version_id: string
+          core_form_id: string
+          created_at?: string
+          disclaimer_version?: string
+          id?: string
+          module_assessment_version_id: string
+          module_form_id: string
+          published_at?: string | null
+          published_by?: string | null
+          report_version?: string
+          retired_at?: string | null
+          retired_reason?: string | null
+          role_weight_profile_id?: string | null
+          scoring_version_id?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bundle_id?: string
+          content_hash?: string | null
+          content_status?: string
+          core_assessment_version_id?: string
+          core_form_id?: string
+          created_at?: string
+          disclaimer_version?: string
+          id?: string
+          module_assessment_version_id?: string
+          module_form_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          report_version?: string
+          retired_at?: string | null
+          retired_reason?: string | null
+          role_weight_profile_id?: string | null
+          scoring_version_id?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_bundle_versions_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "scp_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_core_assessment_version_id_fkey"
+            columns: ["core_assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_core_form_id_fkey"
+            columns: ["core_form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_module_assessment_version_id_fkey"
+            columns: ["module_assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_module_form_id_fkey"
+            columns: ["module_form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_role_weight_profile_fkey"
+            columns: ["role_weight_profile_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_weight_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_scoring_version_id_fkey"
+            columns: ["scoring_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_scoring_version_lineage"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_scoring_version_id_fkey"
+            columns: ["scoring_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_scoring_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_bundles: {
+        Row: {
+          created_at: string
+          id: string
+          name_en: string
+          name_sv: string
+          profession_id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name_en: string
+          name_sv: string
+          profession_id: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name_en?: string
+          name_sv?: string
+          profession_id?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_bundles_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "scp_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_candidate_responses: {
+        Row: {
+          attempt_id: string
+          best_option_id: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          item_version_id: string
+          responded_at: string
+          response_text: string | null
+          selected_option_id: string | null
+          worst_option_id: string | null
+        }
+        Insert: {
+          attempt_id: string
+          best_option_id?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          item_version_id: string
+          responded_at?: string
+          response_text?: string | null
+          selected_option_id?: string | null
+          worst_option_id?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          best_option_id?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          item_version_id?: string
+          responded_at?: string
+          response_text?: string | null
+          selected_option_id?: string | null
+          worst_option_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_candidate_responses_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_candidate_responses_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_candidate_responses_best_option_id_fkey"
+            columns: ["best_option_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_candidate_responses_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_candidate_responses_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_candidate_responses_worst_option_id_fkey"
+            columns: ["worst_option_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_competencies: {
+        Row: {
+          code: string
+          created_at: string
+          display_order: number
+          id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_order: number
+          id?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+        }
+        Relationships: []
+      }
+      scp_competency_evidence: {
+        Row: {
+          assessor_actor_id: string | null
+          behaviour_version_id: string
+          confidence: number
+          context_ref: string | null
+          context_type: string | null
+          contribution: number
+          created_at: string
+          created_by_service: string | null
+          derivation_basis: Json | null
+          disclosure_class: string
+          id: string
+          is_safety_critical: boolean
+          issuer_organization_id: string | null
+          jurisdiction_id: string | null
+          observed_at: string
+          provenance_ref: string | null
+          provenance_type: string
+          purpose_version_id: string | null
+          requires_human_review: boolean
+          review_status: string
+          role_version_id: string | null
+          safety_finding: string | null
+          safety_severity: string | null
+          scoring_model_version: string | null
+          source_ref: string
+          source_snapshot_hash: string | null
+          source_type: string
+          subject_id: string
+          superseded_at: string | null
+          superseded_by: string | null
+          superseded_by_actor_id: string | null
+          superseded_reason: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          assessor_actor_id?: string | null
+          behaviour_version_id: string
+          confidence: number
+          context_ref?: string | null
+          context_type?: string | null
+          contribution: number
+          created_at?: string
+          created_by_service?: string | null
+          derivation_basis?: Json | null
+          disclosure_class?: string
+          id?: string
+          is_safety_critical?: boolean
+          issuer_organization_id?: string | null
+          jurisdiction_id?: string | null
+          observed_at?: string
+          provenance_ref?: string | null
+          provenance_type: string
+          purpose_version_id?: string | null
+          requires_human_review?: boolean
+          review_status?: string
+          role_version_id?: string | null
+          safety_finding?: string | null
+          safety_severity?: string | null
+          scoring_model_version?: string | null
+          source_ref: string
+          source_snapshot_hash?: string | null
+          source_type: string
+          subject_id: string
+          superseded_at?: string | null
+          superseded_by?: string | null
+          superseded_by_actor_id?: string | null
+          superseded_reason?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          assessor_actor_id?: string | null
+          behaviour_version_id?: string
+          confidence?: number
+          context_ref?: string | null
+          context_type?: string | null
+          contribution?: number
+          created_at?: string
+          created_by_service?: string | null
+          derivation_basis?: Json | null
+          disclosure_class?: string
+          id?: string
+          is_safety_critical?: boolean
+          issuer_organization_id?: string | null
+          jurisdiction_id?: string | null
+          observed_at?: string
+          provenance_ref?: string | null
+          provenance_type?: string
+          purpose_version_id?: string | null
+          requires_human_review?: boolean
+          review_status?: string
+          role_version_id?: string | null
+          safety_finding?: string | null
+          safety_severity?: string | null
+          scoring_model_version?: string | null
+          source_ref?: string
+          source_snapshot_hash?: string | null
+          source_type?: string
+          subject_id?: string
+          superseded_at?: string | null
+          superseded_by?: string | null
+          superseded_by_actor_id?: string | null
+          superseded_reason?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_competency_evidence_behaviour_version_id_fkey"
+            columns: ["behaviour_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_behaviour_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_competency_evidence_issuer_organization_id_fkey"
+            columns: ["issuer_organization_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_competency_evidence_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "scp_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_competency_evidence_purpose_version_id_fkey"
+            columns: ["purpose_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_purpose_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_competency_evidence_role_version_id_fkey"
+            columns: ["role_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_competency_evidence_source_type_fkey"
+            columns: ["source_type"]
+            isOneToOne: false
+            referencedRelation: "scp_evidence_source_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "scp_competency_evidence_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_competency_evidence_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "scp_competency_evidence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_competency_facets: {
+        Row: {
+          competency_id: string
+          created_at: string
+          definition_en: string
+          definition_sv: string
+          display_order: number
+          id: string
+          name_en: string
+          name_sv: string
+          slug: string
+        }
+        Insert: {
+          competency_id: string
+          created_at?: string
+          definition_en: string
+          definition_sv: string
+          display_order?: number
+          id?: string
+          name_en: string
+          name_sv: string
+          slug: string
+        }
+        Update: {
+          competency_id?: string
+          created_at?: string
+          definition_en?: string
+          definition_sv?: string
+          display_order?: number
+          id?: string
+          name_en?: string
+          name_sv?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_competency_facets_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_competency_versions: {
+        Row: {
+          competency_id: string
+          content_status: string
+          created_at: string
+          definition_en: string
+          definition_sv: string
+          development_indicators_sv: string[]
+          does_not_measure_sv: string[]
+          id: string
+          interpretation_rule_en: string | null
+          interpretation_rule_sv: string | null
+          name_en: string
+          name_sv: string
+          published_at: string | null
+          retired_at: string | null
+          risk_indicators_sv: string[]
+          strong_indicators_sv: string[]
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          competency_id: string
+          content_status?: string
+          created_at?: string
+          definition_en: string
+          definition_sv: string
+          development_indicators_sv?: string[]
+          does_not_measure_sv?: string[]
+          id?: string
+          interpretation_rule_en?: string | null
+          interpretation_rule_sv?: string | null
+          name_en: string
+          name_sv: string
+          published_at?: string | null
+          retired_at?: string | null
+          risk_indicators_sv?: string[]
+          strong_indicators_sv?: string[]
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          competency_id?: string
+          content_status?: string
+          created_at?: string
+          definition_en?: string
+          definition_sv?: string
+          development_indicators_sv?: string[]
+          does_not_measure_sv?: string[]
+          id?: string
+          interpretation_rule_en?: string | null
+          interpretation_rule_sv?: string | null
+          name_en?: string
+          name_sv?: string
+          published_at?: string | null
+          retired_at?: string | null
+          risk_indicators_sv?: string[]
+          strong_indicators_sv?: string[]
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_competency_versions_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_content_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          id: string
+          metadata: Json
+          reason: string | null
+          subject_id: string | null
+          subject_ref: string | null
+          subject_type: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          subject_id?: string | null
+          subject_ref?: string | null
+          subject_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          subject_id?: string | null
+          subject_ref?: string | null
+          subject_type?: string
+        }
+        Relationships: []
+      }
+      scp_content_roles: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scp_contract_versions: {
+        Row: {
+          contract_version: string
+          created_at: string
+          deprecated_at: string | null
+          id: string
+          intended_consumer: string | null
+          read_model: string
+          scope_note: string
+          status: string
+        }
+        Insert: {
+          contract_version: string
+          created_at?: string
+          deprecated_at?: string | null
+          id?: string
+          intended_consumer?: string | null
+          read_model: string
+          scope_note: string
+          status?: string
+        }
+        Update: {
+          contract_version?: string
+          created_at?: string
+          deprecated_at?: string | null
+          id?: string
+          intended_consumer?: string | null
+          read_model?: string
+          scope_note?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      scp_employer_report_decisions: {
+        Row: {
+          action: string
+          attempt_id: string
+          created_at: string
+          decided_at: string
+          decided_by: string
+          employer_id: string
+          id: string
+          next_step: string | null
+          next_step_owner: string | null
+          reason_code: string
+          reason_note: string | null
+          supersedes_id: string | null
+        }
+        Insert: {
+          action: string
+          attempt_id: string
+          created_at?: string
+          decided_at?: string
+          decided_by: string
+          employer_id: string
+          id?: string
+          next_step?: string | null
+          next_step_owner?: string | null
+          reason_code: string
+          reason_note?: string | null
+          supersedes_id?: string | null
+        }
+        Update: {
+          action?: string
+          attempt_id?: string
+          created_at?: string
+          decided_at?: string
+          decided_by?: string
+          employer_id?: string
+          id?: string
+          next_step?: string | null
+          next_step_owner?: string | null
+          reason_code?: string
+          reason_note?: string | null
+          supersedes_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_employer_report_decisions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_employer_report_decisions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_employer_report_decisions_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_employer_report_decisions_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "scp_employer_report_decisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_employer_reviewers: {
+        Row: {
+          allowed_use_cases: string[]
+          employer_id: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          user_id: string
+        }
+        Insert: {
+          allowed_use_cases?: string[]
+          employer_id: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id: string
+        }
+        Update: {
+          allowed_use_cases?: string[]
+          employer_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_employer_reviewers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_evidence_source_types: {
+        Row: {
+          code: string
+          counts_toward_maturity: boolean
+          created_at: string
+          has_active_writer: boolean
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          code: string
+          counts_toward_maturity?: boolean
+          created_at?: string
+          has_active_writer?: boolean
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          code?: string
+          counts_toward_maturity?: boolean
+          created_at?: string
+          has_active_writer?: boolean
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: []
+      }
+      scp_fixture_access: {
+        Row: {
+          employer_id: string
+          granted_at: string
+          granted_by: string | null
+          reason: string
+        }
+        Insert: {
+          employer_id: string
+          granted_at?: string
+          granted_by?: string | null
+          reason: string
+        }
+        Update: {
+          employer_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_fixture_access_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: true
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_followup_prompts: {
+        Row: {
+          audience: string
+          competency_id: string
+          content_status: string
+          created_at: string
+          id: string
+          prompt_en: string
+          prompt_sv: string
+          version_number: number
+        }
+        Insert: {
+          audience: string
+          competency_id: string
+          content_status?: string
+          created_at?: string
+          id?: string
+          prompt_en: string
+          prompt_sv: string
+          version_number?: number
+        }
+        Update: {
+          audience?: string
+          competency_id?: string
+          content_status?: string
+          created_at?: string
+          id?: string
+          prompt_en?: string
+          prompt_sv?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_followup_prompts_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_form_blocks: {
+        Row: {
+          asks: string
+          block_key: string
+          created_at: string
+          display_order: number
+          form_id: string
+          id: string
+          intro_en: string
+          intro_sv: string
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          asks: string
+          block_key: string
+          created_at?: string
+          display_order: number
+          form_id: string
+          id?: string
+          intro_en: string
+          intro_sv: string
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          asks?: string
+          block_key?: string
+          created_at?: string
+          display_order?: number
+          form_id?: string
+          id?: string
+          intro_en?: string
+          intro_sv?: string
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_form_blocks_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_form_items: {
+        Row: {
+          block_key: string
+          created_at: string
+          display_order: number
+          form_id: string
+          id: string
+          item_version_id: string
+          randomise_options: boolean
+        }
+        Insert: {
+          block_key?: string
+          created_at?: string
+          display_order: number
+          form_id: string
+          id?: string
+          item_version_id: string
+          randomise_options?: boolean
+        }
+        Update: {
+          block_key?: string
+          created_at?: string
+          display_order?: number
+          form_id?: string
+          id?: string
+          item_version_id?: string
+          randomise_options?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_form_items_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_form_items_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_forms: {
+        Row: {
+          assessment_version_id: string
+          content_hash: string | null
+          created_at: string
+          id: string
+          name_en: string
+          name_sv: string
+          randomise_within_block: boolean
+          slug: string
+          target_minutes_max: number | null
+          target_minutes_min: number | null
+          updated_at: string
+        }
+        Insert: {
+          assessment_version_id: string
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          name_en: string
+          name_sv: string
+          randomise_within_block?: boolean
+          slug: string
+          target_minutes_max?: number | null
+          target_minutes_min?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assessment_version_id?: string
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          name_en?: string
+          name_sv?: string
+          randomise_within_block?: boolean
+          slug?: string
+          target_minutes_max?: number | null
+          target_minutes_min?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_forms_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_human_reviews: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          opened_at: string
+          outcome: string | null
+          response_id: string
+          review_status: string
+          reviewed_under_break_glass: boolean
+          reviewer_actor_id: string | null
+          reviewer_conflict_disclosed: string | null
+          reviewer_rationale: string | null
+          scoring_run_id: string | null
+          trigger_reason: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          outcome?: string | null
+          response_id: string
+          review_status?: string
+          reviewed_under_break_glass?: boolean
+          reviewer_actor_id?: string | null
+          reviewer_conflict_disclosed?: string | null
+          reviewer_rationale?: string | null
+          scoring_run_id?: string | null
+          trigger_reason: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          outcome?: string | null
+          response_id?: string
+          review_status?: string
+          reviewed_under_break_glass?: boolean
+          reviewer_actor_id?: string | null
+          reviewer_conflict_disclosed?: string | null
+          reviewer_rationale?: string | null
+          scoring_run_id?: string | null
+          trigger_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_human_reviews_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "scp_candidate_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_human_reviews_scoring_run_id_fkey"
+            columns: ["scoring_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_ai_scoring_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_human_reviews_scoring_run_id_fkey"
+            columns: ["scoring_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_review_queue"
+            referencedColumns: ["scoring_run_id"]
+          },
+        ]
+      }
+      scp_integrity_flags: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          detail: string | null
+          flag_type: string
+          id: string
+          raised_at: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          detail?: string | null
+          flag_type: string
+          id?: string
+          raised_at?: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          detail?: string | null
+          flag_type?: string
+          id?: string
+          raised_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_integrity_flags_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_integrity_flags_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+        ]
+      }
+      scp_intel_edges: {
+        Row: {
+          assurance: string
+          assurance_note: string | null
+          created_at: string
+          created_by: string | null
+          employer_id: string | null
+          from_id: string
+          from_kind: string
+          from_version: string | null
+          id: string
+          implication_id: string | null
+          note: string | null
+          relation: string
+          superseded_by: string | null
+          to_id: string
+          to_kind: string
+          to_version: string | null
+        }
+        Insert: {
+          assurance?: string
+          assurance_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          employer_id?: string | null
+          from_id: string
+          from_kind: string
+          from_version?: string | null
+          id?: string
+          implication_id?: string | null
+          note?: string | null
+          relation: string
+          superseded_by?: string | null
+          to_id: string
+          to_kind: string
+          to_version?: string | null
+        }
+        Update: {
+          assurance?: string
+          assurance_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          employer_id?: string | null
+          from_id?: string
+          from_kind?: string
+          from_version?: string | null
+          id?: string
+          implication_id?: string | null
+          note?: string | null
+          relation?: string
+          superseded_by?: string | null
+          to_id?: string
+          to_kind?: string
+          to_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_intel_edges_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_intel_edges_implication_id_fkey"
+            columns: ["implication_id"]
+            isOneToOne: false
+            referencedRelation: "scp_research_implications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_intel_edges_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "scp_intel_edges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_ai_config: {
+        Row: {
+          ai_enabled: boolean
+          id: boolean
+          transcript_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ai_enabled?: boolean
+          id?: boolean
+          transcript_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ai_enabled?: boolean
+          id?: boolean
+          transcript_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      scp_interview_ai_run_retrievals: {
+        Row: {
+          ai_run_id: string
+          created_at: string
+          embedding_model_version: string | null
+          filtered_reason: string | null
+          id: string
+          record_id: string
+          record_kind: string
+          record_version: string | null
+          retrieval_method: string
+          similarity: number | null
+          used_in_prompt: boolean
+        }
+        Insert: {
+          ai_run_id: string
+          created_at?: string
+          embedding_model_version?: string | null
+          filtered_reason?: string | null
+          id?: string
+          record_id: string
+          record_kind: string
+          record_version?: string | null
+          retrieval_method?: string
+          similarity?: number | null
+          used_in_prompt?: boolean
+        }
+        Update: {
+          ai_run_id?: string
+          created_at?: string
+          embedding_model_version?: string | null
+          filtered_reason?: string | null
+          id?: string
+          record_id?: string
+          record_kind?: string
+          record_version?: string | null
+          retrieval_method?: string
+          similarity?: number | null
+          used_in_prompt?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_ai_run_retrievals_ai_run_id_fkey"
+            columns: ["ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_ai_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_ai_runs: {
+        Row: {
+          abstention_reason: string | null
+          ai_task_id: string | null
+          case_id: string
+          cost_micros: number | null
+          eval_set_version: string | null
+          failure_reason: string | null
+          finished_at: string | null
+          id: string
+          input_hash: string | null
+          input_schema_version: string
+          input_tokens: number | null
+          latency_ms: number | null
+          model: string
+          model_confirmed_by_provider: boolean
+          output_schema_version: string
+          output_tokens: number | null
+          policy_version: string
+          prompt_version: string
+          provider: string
+          provider_mode: string
+          raw_request: Json | null
+          raw_response: Json | null
+          requires_human_review: boolean
+          started_at: string
+          started_by: string | null
+          status: string
+          task: string
+          task_version: string
+          withheld_passages: Json
+        }
+        Insert: {
+          abstention_reason?: string | null
+          ai_task_id?: string | null
+          case_id: string
+          cost_micros?: number | null
+          eval_set_version?: string | null
+          failure_reason?: string | null
+          finished_at?: string | null
+          id?: string
+          input_hash?: string | null
+          input_schema_version?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model: string
+          model_confirmed_by_provider?: boolean
+          output_schema_version?: string
+          output_tokens?: number | null
+          policy_version?: string
+          prompt_version: string
+          provider: string
+          provider_mode?: string
+          raw_request?: Json | null
+          raw_response?: Json | null
+          requires_human_review?: boolean
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          task: string
+          task_version: string
+          withheld_passages?: Json
+        }
+        Update: {
+          abstention_reason?: string | null
+          ai_task_id?: string | null
+          case_id?: string
+          cost_micros?: number | null
+          eval_set_version?: string | null
+          failure_reason?: string | null
+          finished_at?: string | null
+          id?: string
+          input_hash?: string | null
+          input_schema_version?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string
+          model_confirmed_by_provider?: boolean
+          output_schema_version?: string
+          output_tokens?: number | null
+          policy_version?: string
+          prompt_version?: string
+          provider?: string
+          provider_mode?: string
+          raw_request?: Json | null
+          raw_response?: Json | null
+          requires_human_review?: boolean
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          task?: string
+          task_version?: string
+          withheld_passages?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_ai_runs_ai_task_id_fkey"
+            columns: ["ai_task_id"]
+            isOneToOne: false
+            referencedRelation: "scp_ai_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_ai_runs_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_ai_runs_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      scp_interview_approved_probes: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          pack_version_id: string
+          purpose: string
+          purpose_provenance: string
+          question_id: string | null
+          wording_en: string | null
+          wording_sv: string
+        }
+        Insert: {
+          created_at?: string
+          display_order: number
+          id?: string
+          pack_version_id: string
+          purpose: string
+          purpose_provenance: string
+          question_id?: string | null
+          wording_en?: string | null
+          wording_sv: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          pack_version_id?: string
+          purpose?: string
+          purpose_provenance?: string
+          question_id?: string | null
+          wording_en?: string | null
+          wording_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_approved_probes_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_approved_probes_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_assessments: {
+        Row: {
+          anchor_id: string
+          assessed_at: string
+          assessor_id: string
+          case_id: string
+          created_at: string
+          id: string
+          level: number
+          locked_at: string | null
+          question_id: string
+          rationale: string
+          supersede_reason: string | null
+          superseded_by: string | null
+          uncertainty_note: string | null
+        }
+        Insert: {
+          anchor_id: string
+          assessed_at?: string
+          assessor_id: string
+          case_id: string
+          created_at?: string
+          id?: string
+          level: number
+          locked_at?: string | null
+          question_id: string
+          rationale: string
+          supersede_reason?: string | null
+          superseded_by?: string | null
+          uncertainty_note?: string | null
+        }
+        Update: {
+          anchor_id?: string
+          assessed_at?: string
+          assessor_id?: string
+          case_id?: string
+          created_at?: string
+          id?: string
+          level?: number
+          locked_at?: string | null
+          question_id?: string
+          rationale?: string
+          supersede_reason?: string | null
+          superseded_by?: string | null
+          uncertainty_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_assessments_anchor_id_fkey"
+            columns: ["anchor_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_rating_anchors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_assessments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_assessments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_assessments_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_assessments_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_candidate_corrections: {
+        Row: {
+          candidate_user_id: string
+          case_id: string
+          created_at: string
+          employer_response: string | null
+          id: string
+          responded_at: string | null
+          responded_by: string | null
+          what_is_correct: string
+          what_is_wrong: string
+        }
+        Insert: {
+          candidate_user_id: string
+          case_id: string
+          created_at?: string
+          employer_response?: string | null
+          id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          what_is_correct: string
+          what_is_wrong: string
+        }
+        Update: {
+          candidate_user_id?: string
+          case_id?: string
+          created_at?: string
+          employer_response?: string | null
+          id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          what_is_correct?: string
+          what_is_wrong?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_candidate_corrections_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_candidate_corrections_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      scp_interview_candidate_facts: {
+        Row: {
+          ai_run_id: string | null
+          case_id: string
+          claim_class: string
+          created_at: string
+          display_order: number
+          fact_kind: string
+          human_actor_at: string | null
+          human_actor_id: string | null
+          human_state: string
+          id: string
+          source_passage_id: string | null
+          source_quote: string | null
+          source_status: string
+          statement: string
+        }
+        Insert: {
+          ai_run_id?: string | null
+          case_id: string
+          claim_class?: string
+          created_at?: string
+          display_order?: number
+          fact_kind: string
+          human_actor_at?: string | null
+          human_actor_id?: string | null
+          human_state?: string
+          id?: string
+          source_passage_id?: string | null
+          source_quote?: string | null
+          source_status?: string
+          statement: string
+        }
+        Update: {
+          ai_run_id?: string | null
+          case_id?: string
+          claim_class?: string
+          created_at?: string
+          display_order?: number
+          fact_kind?: string
+          human_actor_at?: string | null
+          human_actor_id?: string | null
+          human_state?: string
+          id?: string
+          source_passage_id?: string | null
+          source_quote?: string | null
+          source_status?: string
+          statement?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_candidate_facts_ai_run_id_fkey"
+            columns: ["ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_ai_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_candidate_facts_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_candidate_facts_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_candidate_facts_source_passage_id_fkey"
+            columns: ["source_passage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_source_passages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_case_events: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          ai_run_id: string | null
+          at: string
+          case_id: string
+          event: string
+          id: string
+          metadata: Json
+          new_status: string | null
+          previous_status: string | null
+          reason: string | null
+          seq: number
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind?: string
+          ai_run_id?: string | null
+          at?: string
+          case_id: string
+          event: string
+          id?: string
+          metadata?: Json
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          seq?: never
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          ai_run_id?: string | null
+          at?: string
+          case_id?: string
+          event?: string
+          id?: string
+          metadata?: Json
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          seq?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_case_events_ai_run_id_fkey"
+            columns: ["ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_ai_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_case_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_case_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      scp_interview_case_sources: {
+        Row: {
+          case_id: string
+          content_text: string | null
+          created_at: string
+          disclosure_id: string | null
+          erased_at: string | null
+          id: string
+          label: string
+          lawful_basis_note: string
+          linked_application_id: string | null
+          origin: string
+          provided_at: string
+          provided_by: string | null
+          purpose_code: string
+          retention_state: string
+          source_kind: string
+        }
+        Insert: {
+          case_id: string
+          content_text?: string | null
+          created_at?: string
+          disclosure_id?: string | null
+          erased_at?: string | null
+          id?: string
+          label: string
+          lawful_basis_note: string
+          linked_application_id?: string | null
+          origin?: string
+          provided_at?: string
+          provided_by?: string | null
+          purpose_code: string
+          retention_state?: string
+          source_kind: string
+        }
+        Update: {
+          case_id?: string
+          content_text?: string | null
+          created_at?: string
+          disclosure_id?: string | null
+          erased_at?: string | null
+          id?: string
+          label?: string
+          lawful_basis_note?: string
+          linked_application_id?: string | null
+          origin?: string
+          provided_at?: string
+          provided_by?: string | null
+          purpose_code?: string
+          retention_state?: string
+          source_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_case_sources_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_case_sources_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_case_sources_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: false
+            referencedRelation: "sp_disclosures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_case_sources_linked_application_id_fkey"
+            columns: ["linked_application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_cases: {
+        Row: {
+          application_id: string | null
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          candidate_display_name: string
+          candidate_external_ref: string | null
+          candidate_informed_confirmed_at: string | null
+          candidate_informed_confirmed_by: string | null
+          candidate_informed_statement: string | null
+          candidate_user_id: string | null
+          created_at: string
+          created_by: string | null
+          employer_id: string
+          id: string
+          job_id: string | null
+          pack_content_hash: string | null
+          pack_version_id: string
+          purpose_code: string
+          retain_until: string | null
+          retention_set_at: string | null
+          retention_set_by: string | null
+          retention_state: string
+          role_version_id: string
+          status: string
+          title: string
+          transcript_lawful_basis_confirmed_at: string | null
+          transcript_lawful_basis_confirmed_by: string | null
+          transcript_lawful_basis_statement: string | null
+          transcript_purpose_code: string | null
+          trust_method_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_id?: string | null
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          candidate_display_name: string
+          candidate_external_ref?: string | null
+          candidate_informed_confirmed_at?: string | null
+          candidate_informed_confirmed_by?: string | null
+          candidate_informed_statement?: string | null
+          candidate_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          employer_id: string
+          id?: string
+          job_id?: string | null
+          pack_content_hash?: string | null
+          pack_version_id: string
+          purpose_code?: string
+          retain_until?: string | null
+          retention_set_at?: string | null
+          retention_set_by?: string | null
+          retention_state?: string
+          role_version_id: string
+          status?: string
+          title: string
+          transcript_lawful_basis_confirmed_at?: string | null
+          transcript_lawful_basis_confirmed_by?: string | null
+          transcript_lawful_basis_statement?: string | null
+          transcript_purpose_code?: string | null
+          trust_method_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string | null
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          candidate_display_name?: string
+          candidate_external_ref?: string | null
+          candidate_informed_confirmed_at?: string | null
+          candidate_informed_confirmed_by?: string | null
+          candidate_informed_statement?: string | null
+          candidate_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          employer_id?: string
+          id?: string
+          job_id?: string | null
+          pack_content_hash?: string | null
+          pack_version_id?: string
+          purpose_code?: string
+          retain_until?: string | null
+          retention_set_at?: string | null
+          retention_set_by?: string | null
+          retention_state?: string
+          role_version_id?: string
+          status?: string
+          title?: string
+          transcript_lawful_basis_confirmed_at?: string | null
+          transcript_lawful_basis_confirmed_by?: string | null
+          transcript_lawful_basis_statement?: string | null
+          transcript_purpose_code?: string | null
+          trust_method_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_cases_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_cases_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_cases_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_cases_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_cases_role_version_id_fkey"
+            columns: ["role_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_cases_trust_method_id_fkey"
+            columns: ["trust_method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_conduct_guidance: {
+        Row: {
+          created_at: string
+          display_order: number
+          guidance_key: string
+          id: string
+          method_id: string
+          statement_en: string
+          statement_sv: string
+          surface: string
+          trust_stage: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          guidance_key: string
+          id?: string
+          method_id: string
+          statement_en: string
+          statement_sv: string
+          surface: string
+          trust_stage: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          guidance_key?: string
+          id?: string
+          method_id?: string
+          statement_en?: string
+          statement_sv?: string
+          surface?: string
+          trust_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_conduct_guidance_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_conduct_prohibitions: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          method_id: string
+          prohibition_key: string
+          statement_en: string
+          statement_sv: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          method_id: string
+          prohibition_key: string
+          statement_en: string
+          statement_sv: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          method_id?: string
+          prohibition_key?: string
+          statement_en?: string
+          statement_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_conduct_prohibitions_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_conduct_steps: {
+        Row: {
+          created_at: string
+          guidance_en: string
+          guidance_sv: string
+          id: string
+          label_en: string
+          label_sv: string
+          method_id: string
+          ordinal: number
+          step_key: string
+        }
+        Insert: {
+          created_at?: string
+          guidance_en: string
+          guidance_sv: string
+          id?: string
+          label_en: string
+          label_sv: string
+          method_id: string
+          ordinal: number
+          step_key: string
+        }
+        Update: {
+          created_at?: string
+          guidance_en?: string
+          guidance_sv?: string
+          id?: string
+          label_en?: string
+          label_sv?: string
+          method_id?: string
+          ordinal?: number
+          step_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_conduct_steps_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_core_questions: {
+        Row: {
+          code: string
+          created_at: string
+          display_order: number
+          evidence_source_note_sv: string | null
+          id: string
+          pack_version_id: string
+          prompt_en: string | null
+          prompt_sv: string
+          question_type: string
+          recommended_duration_max_minutes: number | null
+          recommended_duration_min_minutes: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_order: number
+          evidence_source_note_sv?: string | null
+          id?: string
+          pack_version_id: string
+          prompt_en?: string | null
+          prompt_sv: string
+          question_type: string
+          recommended_duration_max_minutes?: number | null
+          recommended_duration_min_minutes?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_order?: number
+          evidence_source_note_sv?: string | null
+          id?: string
+          pack_version_id?: string
+          prompt_en?: string | null
+          prompt_sv?: string
+          question_type?: string
+          recommended_duration_max_minutes?: number | null
+          recommended_duration_min_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_core_questions_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_evidence: {
+        Row: {
+          case_id: string
+          confirmed_at: string
+          confirmed_by: string
+          correction_note: string | null
+          created_at: string
+          e1_situation: string | null
+          e2_own_role: string | null
+          e3_action: string | null
+          e4_effect: string | null
+          e5_reflection: string | null
+          evidence_dimension_id: string | null
+          excerpt: string
+          id: string
+          note_id: string | null
+          origin: string
+          original_excerpt: string | null
+          pack_competency_id: string | null
+          proposal_id: string | null
+          question_id: string
+          source_passage_id: string | null
+        }
+        Insert: {
+          case_id: string
+          confirmed_at?: string
+          confirmed_by: string
+          correction_note?: string | null
+          created_at?: string
+          e1_situation?: string | null
+          e2_own_role?: string | null
+          e3_action?: string | null
+          e4_effect?: string | null
+          e5_reflection?: string | null
+          evidence_dimension_id?: string | null
+          excerpt: string
+          id?: string
+          note_id?: string | null
+          origin: string
+          original_excerpt?: string | null
+          pack_competency_id?: string | null
+          proposal_id?: string | null
+          question_id: string
+          source_passage_id?: string | null
+        }
+        Update: {
+          case_id?: string
+          confirmed_at?: string
+          confirmed_by?: string
+          correction_note?: string | null
+          created_at?: string
+          e1_situation?: string | null
+          e2_own_role?: string | null
+          e3_action?: string | null
+          e4_effect?: string | null
+          e5_reflection?: string | null
+          evidence_dimension_id?: string | null
+          excerpt?: string
+          id?: string
+          note_id?: string | null
+          origin?: string
+          original_excerpt?: string | null
+          pack_competency_id?: string | null
+          proposal_id?: string | null
+          question_id?: string
+          source_passage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_evidence_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_evidence_dimension_id_fkey"
+            columns: ["evidence_dimension_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_evidence_dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_session_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_pack_competency_id_fkey"
+            columns: ["pack_competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_evidence_proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_source_passage_id_fkey"
+            columns: ["source_passage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_source_passages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_evidence_dimensions: {
+        Row: {
+          code: string
+          created_at: string
+          description_sv: string | null
+          display_order: number
+          id: string
+          label_en: string | null
+          label_sv: string
+          question_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description_sv?: string | null
+          display_order: number
+          id?: string
+          label_en?: string | null
+          label_sv: string
+          question_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description_sv?: string | null
+          display_order?: number
+          id?: string
+          label_en?: string | null
+          label_sv?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_evidence_dimensions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_evidence_proposals: {
+        Row: {
+          ai_run_id: string
+          case_id: string
+          correction_class: string | null
+          created_at: string
+          e1_situation: string | null
+          e2_own_role: string | null
+          e3_action: string | null
+          e4_effect: string | null
+          e5_reflection: string | null
+          evidence_dimension_id: string | null
+          excerpt: string
+          extraction_confidence: number | null
+          id: string
+          note_id: string | null
+          pack_competency_id: string | null
+          prohibited_conclusion_note: string | null
+          question_id: string
+          relevance_rationale: string
+          review_note: string | null
+          review_state: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_passage_id: string | null
+          uncertainty_note: string | null
+        }
+        Insert: {
+          ai_run_id: string
+          case_id: string
+          correction_class?: string | null
+          created_at?: string
+          e1_situation?: string | null
+          e2_own_role?: string | null
+          e3_action?: string | null
+          e4_effect?: string | null
+          e5_reflection?: string | null
+          evidence_dimension_id?: string | null
+          excerpt: string
+          extraction_confidence?: number | null
+          id?: string
+          note_id?: string | null
+          pack_competency_id?: string | null
+          prohibited_conclusion_note?: string | null
+          question_id: string
+          relevance_rationale?: string
+          review_note?: string | null
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_passage_id?: string | null
+          uncertainty_note?: string | null
+        }
+        Update: {
+          ai_run_id?: string
+          case_id?: string
+          correction_class?: string | null
+          created_at?: string
+          e1_situation?: string | null
+          e2_own_role?: string | null
+          e3_action?: string | null
+          e4_effect?: string | null
+          e5_reflection?: string | null
+          evidence_dimension_id?: string | null
+          excerpt?: string
+          extraction_confidence?: number | null
+          id?: string
+          note_id?: string | null
+          pack_competency_id?: string | null
+          prohibited_conclusion_note?: string | null
+          question_id?: string
+          relevance_rationale?: string
+          review_note?: string | null
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_passage_id?: string | null
+          uncertainty_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_evidence_proposals_ai_run_id_fkey"
+            columns: ["ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_ai_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_proposals_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_proposals_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_proposals_evidence_dimension_id_fkey"
+            columns: ["evidence_dimension_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_evidence_dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_proposals_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_session_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_proposals_pack_competency_id_fkey"
+            columns: ["pack_competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_proposals_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_evidence_proposals_source_passage_id_fkey"
+            columns: ["source_passage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_source_passages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_findings: {
+        Row: {
+          ai_run_id: string | null
+          case_id: string
+          claim_class: string
+          created_at: string
+          finding_kind: string
+          human_actor_at: string | null
+          human_actor_id: string | null
+          human_note: string | null
+          human_state: string
+          id: string
+          question_id: string | null
+          rationale: string | null
+          resolution_state: string
+          source_passage_id: string | null
+          statement: string
+          verification_rule_id: string | null
+        }
+        Insert: {
+          ai_run_id?: string | null
+          case_id: string
+          claim_class?: string
+          created_at?: string
+          finding_kind: string
+          human_actor_at?: string | null
+          human_actor_id?: string | null
+          human_note?: string | null
+          human_state?: string
+          id?: string
+          question_id?: string | null
+          rationale?: string | null
+          resolution_state?: string
+          source_passage_id?: string | null
+          statement: string
+          verification_rule_id?: string | null
+        }
+        Update: {
+          ai_run_id?: string | null
+          case_id?: string
+          claim_class?: string
+          created_at?: string
+          finding_kind?: string
+          human_actor_at?: string | null
+          human_actor_id?: string | null
+          human_note?: string | null
+          human_state?: string
+          id?: string
+          question_id?: string | null
+          rationale?: string | null
+          resolution_state?: string
+          source_passage_id?: string | null
+          statement?: string
+          verification_rule_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_findings_ai_run_id_fkey"
+            columns: ["ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_ai_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_findings_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_findings_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_findings_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_findings_source_passage_id_fkey"
+            columns: ["source_passage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_source_passages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_findings_verification_rule_id_fkey"
+            columns: ["verification_rule_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_verification_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_guide_prompts: {
+        Row: {
+          authored_by_ai: boolean
+          competency_id: string
+          content_status: string
+          created_at: string
+          facet_id: string | null
+          focus: string
+          followup_en: string
+          followup_sv: string
+          id: string
+          listen_for_en: string[]
+          listen_for_sv: string[]
+          question_en: string
+          question_sv: string
+          version_number: number
+        }
+        Insert: {
+          authored_by_ai?: boolean
+          competency_id: string
+          content_status?: string
+          created_at?: string
+          facet_id?: string | null
+          focus: string
+          followup_en: string
+          followup_sv: string
+          id?: string
+          listen_for_en: string[]
+          listen_for_sv: string[]
+          question_en: string
+          question_sv: string
+          version_number?: number
+        }
+        Update: {
+          authored_by_ai?: boolean
+          competency_id?: string
+          content_status?: string
+          created_at?: string
+          facet_id?: string | null
+          focus?: string
+          followup_en?: string
+          followup_sv?: string
+          id?: string
+          listen_for_en?: string[]
+          listen_for_sv?: string[]
+          question_en?: string
+          question_sv?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_guide_prompts_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_guide_prompts_facet_id_fkey"
+            columns: ["facet_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competency_facets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_method_practices: {
+        Row: {
+          claim_id: string | null
+          created_at: string
+          display_order: number
+          id: string
+          method_id: string
+          peace_stage: string | null
+          practice_kind: string
+          rationale: string | null
+          statement_en: string | null
+          statement_sv: string
+        }
+        Insert: {
+          claim_id?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          method_id: string
+          peace_stage?: string | null
+          practice_kind: string
+          rationale?: string | null
+          statement_en?: string | null
+          statement_sv: string
+        }
+        Update: {
+          claim_id?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          method_id?: string
+          peace_stage?: string | null
+          practice_kind?: string
+          rationale?: string | null
+          statement_en?: string | null
+          statement_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_method_practices_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "scp_research_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_method_practices_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_methods: {
+        Row: {
+          approval_state: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          intended_context: string
+          jurisdiction_code: string | null
+          locale_notes: string | null
+          method_family: string
+          name: string
+          product_implementation: string
+          prohibited_interpretations: string[]
+          purpose: string
+          required_reviewer_qualification: string | null
+          slug: string
+          supported_behaviours: string[]
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          approval_state?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          intended_context: string
+          jurisdiction_code?: string | null
+          locale_notes?: string | null
+          method_family: string
+          name: string
+          product_implementation: string
+          prohibited_interpretations?: string[]
+          purpose: string
+          required_reviewer_qualification?: string | null
+          slug: string
+          supported_behaviours?: string[]
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          approval_state?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          intended_context?: string
+          jurisdiction_code?: string | null
+          locale_notes?: string | null
+          method_family?: string
+          name?: string
+          product_implementation?: string
+          prohibited_interpretations?: string[]
+          purpose?: string
+          required_reviewer_qualification?: string | null
+          slug?: string
+          supported_behaviours?: string[]
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      scp_interview_notes: {
+        Row: {
+          area_code: string
+          attempt_id: string
+          employer_id: string
+          id: string
+          note: string | null
+          outcome: string
+          recorded_at: string
+          recorded_by: string
+        }
+        Insert: {
+          area_code: string
+          attempt_id: string
+          employer_id: string
+          id?: string
+          note?: string | null
+          outcome: string
+          recorded_at?: string
+          recorded_by: string
+        }
+        Update: {
+          area_code?: string
+          attempt_id?: string
+          employer_id?: string
+          id?: string
+          note?: string | null
+          outcome?: string
+          recorded_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_notes_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_notes_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_notes_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_pack_competencies: {
+        Row: {
+          code: string
+          created_at: string
+          definition_en: string | null
+          definition_sv: string
+          display_order: number
+          id: string
+          name_en: string | null
+          name_sv: string
+          observable_indicators_sv: string[]
+          pack_version_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          definition_en?: string | null
+          definition_sv: string
+          display_order: number
+          id?: string
+          name_en?: string | null
+          name_sv: string
+          observable_indicators_sv?: string[]
+          pack_version_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          definition_en?: string | null
+          definition_sv?: string
+          display_order?: number
+          id?: string
+          name_en?: string | null
+          name_sv?: string
+          observable_indicators_sv?: string[]
+          pack_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_pack_competencies_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_pack_competency_map: {
+        Row: {
+          behaviour_version_id: string | null
+          competency_version_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          mapping_state: string
+          pack_competency_id: string
+          rationale_sv: string
+          relation: string
+        }
+        Insert: {
+          behaviour_version_id?: string | null
+          competency_version_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          mapping_state?: string
+          pack_competency_id: string
+          rationale_sv: string
+          relation: string
+        }
+        Update: {
+          behaviour_version_id?: string | null
+          competency_version_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          mapping_state?: string
+          pack_competency_id?: string
+          rationale_sv?: string
+          relation?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_pack_competency_map_behaviour_version_id_fkey"
+            columns: ["behaviour_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_behaviour_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_pack_competency_map_competency_version_id_fkey"
+            columns: ["competency_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competency_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_pack_competency_map_pack_competency_id_fkey"
+            columns: ["pack_competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_pack_events: {
+        Row: {
+          actor_id: string | null
+          at: string
+          content_hash: string | null
+          event: string
+          id: string
+          metadata: Json
+          new_status: string | null
+          pack_id: string
+          pack_version_id: string | null
+          previous_status: string | null
+          reason: string | null
+          seq: number
+          source_version: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          at?: string
+          content_hash?: string | null
+          event: string
+          id?: string
+          metadata?: Json
+          new_status?: string | null
+          pack_id: string
+          pack_version_id?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          seq?: never
+          source_version?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          at?: string
+          content_hash?: string | null
+          event?: string
+          id?: string
+          metadata?: Json
+          new_status?: string | null
+          pack_id?: string
+          pack_version_id?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          seq?: never
+          source_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_pack_events_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_pack_events_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_pack_pilot_grants: {
+        Row: {
+          cohort_user_ids: string[]
+          employer_id: string
+          environment: string
+          expires_on: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          pack_version_id: string
+          rationale: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          starts_on: string
+          usage_mode: string
+        }
+        Insert: {
+          cohort_user_ids?: string[]
+          employer_id: string
+          environment?: string
+          expires_on: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          pack_version_id: string
+          rationale: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          starts_on?: string
+          usage_mode?: string
+        }
+        Update: {
+          cohort_user_ids?: string[]
+          employer_id?: string
+          environment?: string
+          expires_on?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          pack_version_id?: string
+          rationale?: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          starts_on?: string
+          usage_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_pack_pilot_grants_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_pack_pilot_grants_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_pack_reviews: {
+        Row: {
+          content_hash_at_review: string
+          decided_at: string
+          decision: string
+          gate: string
+          id: string
+          pack_version_id: string
+          rationale: string
+          reviewer_id: string
+        }
+        Insert: {
+          content_hash_at_review: string
+          decided_at?: string
+          decision: string
+          gate: string
+          id?: string
+          pack_version_id: string
+          rationale: string
+          reviewer_id: string
+        }
+        Update: {
+          content_hash_at_review?: string
+          decided_at?: string
+          decision?: string
+          gate?: string
+          id?: string
+          pack_version_id?: string
+          rationale?: string
+          reviewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_pack_reviews_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_pack_versions: {
+        Row: {
+          content_hash: string | null
+          content_status: string
+          created_at: string
+          created_by: string | null
+          id: string
+          locale: string
+          pack_id: string
+          pilot_availability: string
+          published_at: string | null
+          published_by: string | null
+          retired_at: string | null
+          retired_by: string | null
+          retired_reason: string | null
+          role_version_id: string
+          source_document_version: string
+          source_reference: string
+          summary_sv: string | null
+          suspended_at: string | null
+          suspended_by: string | null
+          suspended_reason: string | null
+          updated_at: string
+          validation_label: string
+          version_number: number
+        }
+        Insert: {
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          locale: string
+          pack_id: string
+          pilot_availability?: string
+          published_at?: string | null
+          published_by?: string | null
+          retired_at?: string | null
+          retired_by?: string | null
+          retired_reason?: string | null
+          role_version_id: string
+          source_document_version: string
+          source_reference: string
+          summary_sv?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
+          updated_at?: string
+          validation_label?: string
+          version_number: number
+        }
+        Update: {
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          locale?: string
+          pack_id?: string
+          pilot_availability?: string
+          published_at?: string | null
+          published_by?: string | null
+          retired_at?: string | null
+          retired_by?: string | null
+          retired_reason?: string | null
+          role_version_id?: string
+          source_document_version?: string
+          source_reference?: string
+          summary_sv?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
+          updated_at?: string
+          validation_label?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_pack_versions_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_pack_versions_role_version_id_fkey"
+            columns: ["role_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_packs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name_en: string | null
+          name_sv: string
+          pack_kind: string
+          purpose_sv: string
+          role_id: string | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name_en?: string | null
+          name_sv: string
+          pack_kind?: string
+          purpose_sv: string
+          role_id?: string | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name_en?: string | null
+          name_sv?: string
+          pack_kind?: string
+          purpose_sv?: string
+          role_id?: string | null
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_packs_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "scp_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_panel_members: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          id: string
+          panel_id: string
+          submitted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          panel_id: string
+          submitted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          panel_id?: string
+          submitted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_panel_members_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_panels: {
+        Row: {
+          case_id: string
+          concluded_at: string | null
+          concluded_by: string | null
+          conclusion: string | null
+          id: string
+          opened_at: string
+          opened_by: string | null
+          revealed_at: string | null
+          revealed_by: string | null
+          state: string
+        }
+        Insert: {
+          case_id: string
+          concluded_at?: string | null
+          concluded_by?: string | null
+          conclusion?: string | null
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          revealed_at?: string | null
+          revealed_by?: string | null
+          state?: string
+        }
+        Update: {
+          case_id?: string
+          concluded_at?: string | null
+          concluded_by?: string | null
+          conclusion?: string | null
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          revealed_at?: string | null
+          revealed_by?: string | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_panels_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_panels_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      scp_interview_prep_items: {
+        Row: {
+          claim_class: string
+          created_at: string
+          display_order: number
+          human_state: string
+          id: string
+          item_kind: string
+          plan_id: string
+          probe_id: string | null
+          question_id: string | null
+          source_passage_id: string | null
+          source_quote: string | null
+          statement: string
+        }
+        Insert: {
+          claim_class?: string
+          created_at?: string
+          display_order?: number
+          human_state?: string
+          id?: string
+          item_kind: string
+          plan_id: string
+          probe_id?: string | null
+          question_id?: string | null
+          source_passage_id?: string | null
+          source_quote?: string | null
+          statement: string
+        }
+        Update: {
+          claim_class?: string
+          created_at?: string
+          display_order?: number
+          human_state?: string
+          id?: string
+          item_kind?: string
+          plan_id?: string
+          probe_id?: string | null
+          question_id?: string | null
+          source_passage_id?: string | null
+          source_quote?: string | null
+          statement?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_prep_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_prep_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_prep_items_probe_id_fkey"
+            columns: ["probe_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_approved_probes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_prep_items_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_prep_items_source_passage_id_fkey"
+            columns: ["source_passage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_source_passages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_prep_plans: {
+        Row: {
+          ai_disclosure: string
+          ai_disclosure_en: string | null
+          ai_run_id: string | null
+          approval_note: string | null
+          approved_at: string | null
+          approved_by: string | null
+          candidate_summary: string | null
+          case_id: string
+          closing_guidance: string | null
+          created_at: string
+          id: string
+          opening_guidance: string | null
+          role_summary: string | null
+          status: string
+          time_plan: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          ai_disclosure?: string
+          ai_disclosure_en?: string | null
+          ai_run_id?: string | null
+          approval_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          candidate_summary?: string | null
+          case_id: string
+          closing_guidance?: string | null
+          created_at?: string
+          id?: string
+          opening_guidance?: string | null
+          role_summary?: string | null
+          status?: string
+          time_plan?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          ai_disclosure?: string
+          ai_disclosure_en?: string | null
+          ai_run_id?: string | null
+          approval_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          candidate_summary?: string | null
+          case_id?: string
+          closing_guidance?: string | null
+          created_at?: string
+          id?: string
+          opening_guidance?: string | null
+          role_summary?: string | null
+          status?: string
+          time_plan?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_prep_plans_ai_run_id_fkey"
+            columns: ["ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_ai_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_prep_plans_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_prep_plans_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      scp_interview_probe_usages: {
+        Row: {
+          contextual_text: string | null
+          id: string
+          outcome: string
+          probe_id: string | null
+          question_id: string
+          session_id: string
+          used_at: string
+          used_by: string | null
+        }
+        Insert: {
+          contextual_text?: string | null
+          id?: string
+          outcome?: string
+          probe_id?: string | null
+          question_id: string
+          session_id: string
+          used_at?: string
+          used_by?: string | null
+        }
+        Update: {
+          contextual_text?: string | null
+          id?: string
+          outcome?: string
+          probe_id?: string | null
+          question_id?: string
+          session_id?: string
+          used_at?: string
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_probe_usages_probe_id_fkey"
+            columns: ["probe_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_approved_probes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_probe_usages_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_probe_usages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_prohibited_areas: {
+        Row: {
+          area_type: string
+          code: string
+          created_at: string
+          display_order: number
+          id: string
+          pack_version_id: string
+          rationale_sv: string
+          statement_en: string | null
+          statement_sv: string
+        }
+        Insert: {
+          area_type: string
+          code: string
+          created_at?: string
+          display_order: number
+          id?: string
+          pack_version_id: string
+          rationale_sv: string
+          statement_en?: string | null
+          statement_sv: string
+        }
+        Update: {
+          area_type?: string
+          code?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          pack_version_id?: string
+          rationale_sv?: string
+          statement_en?: string | null
+          statement_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_prohibited_areas_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_question_competencies: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          pack_competency_id: string
+          question_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          pack_competency_id: string
+          question_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          pack_competency_id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_question_competencies_pack_competency_id_fkey"
+            columns: ["pack_competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_question_competencies_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_rating_anchors: {
+        Row: {
+          anchor_en: string | null
+          anchor_sv: string
+          counts_toward_aggregation: boolean
+          created_at: string
+          id: string
+          is_safety_critical: boolean
+          label_en: string | null
+          label_sv: string
+          level: number
+          pack_competency_id: string | null
+          question_id: string | null
+        }
+        Insert: {
+          anchor_en?: string | null
+          anchor_sv: string
+          counts_toward_aggregation: boolean
+          created_at?: string
+          id?: string
+          is_safety_critical?: boolean
+          label_en?: string | null
+          label_sv: string
+          level: number
+          pack_competency_id?: string | null
+          question_id?: string | null
+        }
+        Update: {
+          anchor_en?: string | null
+          anchor_sv?: string
+          counts_toward_aggregation?: boolean
+          created_at?: string
+          id?: string
+          is_safety_critical?: boolean
+          label_en?: string | null
+          label_sv?: string
+          level?: number
+          pack_competency_id?: string | null
+          question_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_rating_anchors_pack_competency_id_fkey"
+            columns: ["pack_competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_rating_anchors_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_reports: {
+        Row: {
+          basis_hash: string | null
+          case_id: string
+          content_hash: string | null
+          content_hash_algorithm: string | null
+          created_at: string
+          draft_ai_run_id: string | null
+          draft_summary: string | null
+          finalised_at: string | null
+          finalised_by: string | null
+          id: string
+          pack_content_hash: string | null
+          pack_version_id: string
+          payload: Json | null
+          role_version_id: string
+          status: string
+          version_number: number
+        }
+        Insert: {
+          basis_hash?: string | null
+          case_id: string
+          content_hash?: string | null
+          content_hash_algorithm?: string | null
+          created_at?: string
+          draft_ai_run_id?: string | null
+          draft_summary?: string | null
+          finalised_at?: string | null
+          finalised_by?: string | null
+          id?: string
+          pack_content_hash?: string | null
+          pack_version_id: string
+          payload?: Json | null
+          role_version_id: string
+          status?: string
+          version_number?: number
+        }
+        Update: {
+          basis_hash?: string | null
+          case_id?: string
+          content_hash?: string | null
+          content_hash_algorithm?: string | null
+          created_at?: string
+          draft_ai_run_id?: string | null
+          draft_summary?: string | null
+          finalised_at?: string | null
+          finalised_by?: string | null
+          id?: string
+          pack_content_hash?: string | null
+          pack_version_id?: string
+          payload?: Json | null
+          role_version_id?: string
+          status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_reports_draft_ai_run_id_fkey"
+            columns: ["draft_ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_ai_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_reports_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_reports_role_version_id_fkey"
+            columns: ["role_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_role_requirements: {
+        Row: {
+          ai_run_id: string | null
+          case_id: string
+          claim_class: string
+          created_at: string
+          display_order: number
+          human_actor_at: string | null
+          human_actor_id: string | null
+          human_state: string
+          id: string
+          requirement_kind: string
+          source_passage_id: string | null
+          source_quote: string | null
+          statement: string
+        }
+        Insert: {
+          ai_run_id?: string | null
+          case_id: string
+          claim_class?: string
+          created_at?: string
+          display_order?: number
+          human_actor_at?: string | null
+          human_actor_id?: string | null
+          human_state?: string
+          id?: string
+          requirement_kind: string
+          source_passage_id?: string | null
+          source_quote?: string | null
+          statement: string
+        }
+        Update: {
+          ai_run_id?: string | null
+          case_id?: string
+          claim_class?: string
+          created_at?: string
+          display_order?: number
+          human_actor_at?: string | null
+          human_actor_id?: string | null
+          human_state?: string
+          id?: string
+          requirement_kind?: string
+          source_passage_id?: string | null
+          source_quote?: string | null
+          statement?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_role_requirements_ai_run_id_fkey"
+            columns: ["ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_ai_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_role_requirements_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_role_requirements_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_role_requirements_source_passage_id_fkey"
+            columns: ["source_passage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_source_passages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_session_notes: {
+        Row: {
+          author_id: string | null
+          body: string
+          candidate_correction: string | null
+          created_at: string
+          id: string
+          note_kind: string
+          question_id: string | null
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          candidate_correction?: string | null
+          created_at?: string
+          id?: string
+          note_kind?: string
+          question_id?: string | null
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          candidate_correction?: string | null
+          created_at?: string
+          id?: string
+          note_kind?: string
+          question_id?: string | null
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_session_notes_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_session_notes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_session_questions: {
+        Row: {
+          completed_at: string | null
+          display_order: number
+          elapsed_seconds: number | null
+          id: string
+          question_id: string
+          session_id: string
+          skip_reason: string | null
+          started_at: string | null
+          state: string
+        }
+        Insert: {
+          completed_at?: string | null
+          display_order: number
+          elapsed_seconds?: number | null
+          id?: string
+          question_id: string
+          session_id: string
+          skip_reason?: string | null
+          started_at?: string | null
+          state?: string
+        }
+        Update: {
+          completed_at?: string | null
+          display_order?: number
+          elapsed_seconds?: number | null
+          id?: string
+          question_id?: string
+          session_id?: string
+          skip_reason?: string | null
+          started_at?: string | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_session_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_core_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_session_questions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_sessions: {
+        Row: {
+          case_id: string
+          completed_at: string | null
+          created_by: string | null
+          id: string
+          interviewer_names: string | null
+          last_autosave_at: string | null
+          paused_at: string | null
+          peace_stage: string
+          plan_id: string
+          process_reflection: string | null
+          protocol_deviations: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          completed_at?: string | null
+          created_by?: string | null
+          id?: string
+          interviewer_names?: string | null
+          last_autosave_at?: string | null
+          paused_at?: string | null
+          peace_stage?: string
+          plan_id: string
+          process_reflection?: string | null
+          protocol_deviations?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          completed_at?: string | null
+          created_by?: string | null
+          id?: string
+          interviewer_names?: string | null
+          last_autosave_at?: string | null
+          paused_at?: string | null
+          peace_stage?: string
+          plan_id?: string
+          process_reflection?: string | null
+          protocol_deviations?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_sessions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_sessions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_sessions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_prep_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_source_passages: {
+        Row: {
+          char_end: number | null
+          char_start: number | null
+          content: string
+          created_at: string
+          id: string
+          passage_index: number
+          source_id: string
+        }
+        Insert: {
+          char_end?: number | null
+          char_start?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          passage_index: number
+          source_id: string
+        }
+        Update: {
+          char_end?: number | null
+          char_start?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          passage_index?: number
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_source_passages_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_case_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_verification_rules: {
+        Row: {
+          code: string
+          created_at: string
+          display_order: number
+          id: string
+          interview_action_sv: string
+          pack_version_id: string
+          passport_boundary_sv: string
+          permitted_source_states: string[]
+          requirement_sv: string
+          subsequent_verification_sv: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_order: number
+          id?: string
+          interview_action_sv: string
+          pack_version_id: string
+          passport_boundary_sv: string
+          permitted_source_states?: string[]
+          requirement_sv: string
+          subsequent_verification_sv: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          interview_action_sv?: string
+          pack_version_id?: string
+          passport_boundary_sv?: string
+          permitted_source_states?: string[]
+          requirement_sv?: string
+          subsequent_verification_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_verification_rules_pack_version_id_fkey"
+            columns: ["pack_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_pack_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_exposure: {
+        Row: {
+          attempt_id: string | null
+          created_at: string
+          exposed_at: string
+          id: string
+          item_version_id: string
+        }
+        Insert: {
+          attempt_id?: string | null
+          created_at?: string
+          exposed_at?: string
+          id?: string
+          item_version_id: string
+        }
+        Update: {
+          attempt_id?: string | null
+          created_at?: string
+          exposed_at?: string
+          id?: string
+          item_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_exposure_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_exposure_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_item_exposure_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_option_texts: {
+        Row: {
+          created_at: string
+          id: string
+          item_option_id: string
+          label: string
+          language: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_option_id: string
+          label: string
+          language: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_option_id?: string
+          label?: string
+          language?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_option_texts_item_option_id_fkey"
+            columns: ["item_option_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_options: {
+        Row: {
+          created_at: string
+          display_order: number
+          distractor_error_type: string | null
+          id: string
+          is_best_key: boolean
+          is_preferred: boolean
+          is_worst_key: boolean
+          item_version_id: string
+          learning_feedback_en: string | null
+          learning_feedback_sv: string | null
+          option_key: string
+          reverse_scored: boolean
+          score_value: number
+          scoring_rationale_en: string | null
+          scoring_rationale_sv: string
+        }
+        Insert: {
+          created_at?: string
+          display_order: number
+          distractor_error_type?: string | null
+          id?: string
+          is_best_key?: boolean
+          is_preferred?: boolean
+          is_worst_key?: boolean
+          item_version_id: string
+          learning_feedback_en?: string | null
+          learning_feedback_sv?: string | null
+          option_key: string
+          reverse_scored?: boolean
+          score_value: number
+          scoring_rationale_en?: string | null
+          scoring_rationale_sv: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          distractor_error_type?: string | null
+          id?: string
+          is_best_key?: boolean
+          is_preferred?: boolean
+          is_worst_key?: boolean
+          item_version_id?: string
+          learning_feedback_en?: string | null
+          learning_feedback_sv?: string | null
+          option_key?: string
+          reverse_scored?: boolean
+          score_value?: number
+          scoring_rationale_en?: string | null
+          scoring_rationale_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_options_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_texts: {
+        Row: {
+          adaptation_notes: string | null
+          adaptation_status: string
+          created_at: string
+          id: string
+          item_version_id: string
+          language: string
+          prompt: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scenario: string
+          updated_at: string
+        }
+        Insert: {
+          adaptation_notes?: string | null
+          adaptation_status?: string
+          created_at?: string
+          id?: string
+          item_version_id: string
+          language: string
+          prompt: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scenario: string
+          updated_at?: string
+        }
+        Update: {
+          adaptation_notes?: string | null
+          adaptation_status?: string
+          created_at?: string
+          id?: string
+          item_version_id?: string
+          language?: string
+          prompt?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scenario?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_texts_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_version_professions: {
+        Row: {
+          created_at: string
+          id: string
+          item_version_id: string
+          job_analysis_reference: string | null
+          profession_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sme_review_status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_version_id: string
+          job_analysis_reference?: string | null
+          profession_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sme_review_status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_version_id?: string
+          job_analysis_reference?: string | null
+          profession_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sme_review_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_version_professions_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_version_professions_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "scp_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_versions: {
+        Row: {
+          accessibility_review_status: string
+          authored_by_ai: boolean
+          bias_review_notes: string | null
+          bias_review_status: string
+          cognitive_demand: string | null
+          cognitive_review_status: string
+          competency_id: string
+          content_hash: string | null
+          content_status: string
+          context_note: string | null
+          created_at: string
+          depends_on_employer_instruction: boolean
+          difficulty: string | null
+          evidence_source_type: string
+          facet_id: string | null
+          id: string
+          information_available_sv: string | null
+          information_withheld_sv: string | null
+          is_safety_critical: boolean
+          item_format: string
+          item_id: string
+          jurisdiction_id: string | null
+          language_review_status: string
+          learning_counterpart_decision: string | null
+          learning_counterpart_id: string | null
+          legal_assumption_sv: string | null
+          legal_basis_required: boolean
+          legal_review_expires_at: string | null
+          legal_review_status: string
+          legal_reviewed_at: string | null
+          legal_reviewed_by: string | null
+          legal_source: string | null
+          market: string | null
+          mode: string | null
+          observable_behavior: string
+          overgeneralisation_guard_sv: string | null
+          pilot_stats: Json
+          primary_behaviour_id: string | null
+          primary_construct: string | null
+          published_at: string | null
+          requires_human_review: boolean
+          response_process: string
+          retired_at: string | null
+          secondary_competency_id: string | null
+          sme_review_notes: string | null
+          sme_review_status: string
+          sme_reviewer_count: number
+          tests_what: string | null
+          updated_at: string
+          validation_status: string
+          version_number: number
+          work_context_sv: string | null
+        }
+        Insert: {
+          accessibility_review_status?: string
+          authored_by_ai?: boolean
+          bias_review_notes?: string | null
+          bias_review_status?: string
+          cognitive_demand?: string | null
+          cognitive_review_status?: string
+          competency_id: string
+          content_hash?: string | null
+          content_status?: string
+          context_note?: string | null
+          created_at?: string
+          depends_on_employer_instruction?: boolean
+          difficulty?: string | null
+          evidence_source_type?: string
+          facet_id?: string | null
+          id?: string
+          information_available_sv?: string | null
+          information_withheld_sv?: string | null
+          is_safety_critical?: boolean
+          item_format: string
+          item_id: string
+          jurisdiction_id?: string | null
+          language_review_status?: string
+          learning_counterpart_decision?: string | null
+          learning_counterpart_id?: string | null
+          legal_assumption_sv?: string | null
+          legal_basis_required?: boolean
+          legal_review_expires_at?: string | null
+          legal_review_status?: string
+          legal_reviewed_at?: string | null
+          legal_reviewed_by?: string | null
+          legal_source?: string | null
+          market?: string | null
+          mode?: string | null
+          observable_behavior: string
+          overgeneralisation_guard_sv?: string | null
+          pilot_stats?: Json
+          primary_behaviour_id?: string | null
+          primary_construct?: string | null
+          published_at?: string | null
+          requires_human_review?: boolean
+          response_process: string
+          retired_at?: string | null
+          secondary_competency_id?: string | null
+          sme_review_notes?: string | null
+          sme_review_status?: string
+          sme_reviewer_count?: number
+          tests_what?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+          work_context_sv?: string | null
+        }
+        Update: {
+          accessibility_review_status?: string
+          authored_by_ai?: boolean
+          bias_review_notes?: string | null
+          bias_review_status?: string
+          cognitive_demand?: string | null
+          cognitive_review_status?: string
+          competency_id?: string
+          content_hash?: string | null
+          content_status?: string
+          context_note?: string | null
+          created_at?: string
+          depends_on_employer_instruction?: boolean
+          difficulty?: string | null
+          evidence_source_type?: string
+          facet_id?: string | null
+          id?: string
+          information_available_sv?: string | null
+          information_withheld_sv?: string | null
+          is_safety_critical?: boolean
+          item_format?: string
+          item_id?: string
+          jurisdiction_id?: string | null
+          language_review_status?: string
+          learning_counterpart_decision?: string | null
+          learning_counterpart_id?: string | null
+          legal_assumption_sv?: string | null
+          legal_basis_required?: boolean
+          legal_review_expires_at?: string | null
+          legal_review_status?: string
+          legal_reviewed_at?: string | null
+          legal_reviewed_by?: string | null
+          legal_source?: string | null
+          market?: string | null
+          mode?: string | null
+          observable_behavior?: string
+          overgeneralisation_guard_sv?: string | null
+          pilot_stats?: Json
+          primary_behaviour_id?: string | null
+          primary_construct?: string | null
+          published_at?: string | null
+          requires_human_review?: boolean
+          response_process?: string
+          retired_at?: string | null
+          secondary_competency_id?: string | null
+          sme_review_notes?: string | null
+          sme_review_status?: string
+          sme_reviewer_count?: number
+          tests_what?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+          work_context_sv?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_versions_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_evidence_source_type_fkey"
+            columns: ["evidence_source_type"]
+            isOneToOne: false
+            referencedRelation: "scp_evidence_source_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_facet_id_fkey"
+            columns: ["facet_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competency_facets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "scp_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "scp_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_learning_counterpart_id_fkey"
+            columns: ["learning_counterpart_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_primary_behaviour_id_fkey"
+            columns: ["primary_behaviour_id"]
+            isOneToOne: false
+            referencedRelation: "scp_behaviour_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_secondary_competency_id_fkey"
+            columns: ["secondary_competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_items: {
+        Row: {
+          created_at: string
+          id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      scp_jurisdictions: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: []
+      }
+      scp_maturity_thresholds: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          level: string
+          max_age_days: number | null
+          min_contexts: number
+          min_mean_contribution: number
+          min_observations: number
+          min_source_types: number
+          threshold_version: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          level: string
+          max_age_days?: number | null
+          min_contexts: number
+          min_mean_contribution: number
+          min_observations: number
+          min_source_types: number
+          threshold_version: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          level?: string
+          max_age_days?: number | null
+          min_contexts?: number
+          min_mean_contribution?: number
+          min_observations?: number
+          min_source_types?: number
+          threshold_version?: string
+        }
+        Relationships: []
+      }
+      scp_module_behaviour_map: {
+        Row: {
+          behaviour_version_id: string
+          created_at: string
+          id: string
+          module_version_id: string
+        }
+        Insert: {
+          behaviour_version_id: string
+          created_at?: string
+          id?: string
+          module_version_id: string
+        }
+        Update: {
+          behaviour_version_id?: string
+          created_at?: string
+          id?: string
+          module_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_module_behaviour_map_behaviour_version_id_fkey"
+            columns: ["behaviour_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_behaviour_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_module_behaviour_map_module_version_id_fkey"
+            columns: ["module_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_module_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_module_versions: {
+        Row: {
+          content_status: string
+          created_at: string
+          display_order: number
+          estimated_minutes: number | null
+          id: string
+          learning_form_id: string | null
+          module_id: string
+          name_en: string
+          name_sv: string
+          program_version_id: string
+          published_at: string | null
+          retired_at: string | null
+          summary_en: string
+          summary_sv: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          content_status?: string
+          created_at?: string
+          display_order: number
+          estimated_minutes?: number | null
+          id?: string
+          learning_form_id?: string | null
+          module_id: string
+          name_en: string
+          name_sv: string
+          program_version_id: string
+          published_at?: string | null
+          retired_at?: string | null
+          summary_en: string
+          summary_sv: string
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          content_status?: string
+          created_at?: string
+          display_order?: number
+          estimated_minutes?: number | null
+          id?: string
+          learning_form_id?: string | null
+          module_id?: string
+          name_en?: string
+          name_sv?: string
+          program_version_id?: string
+          published_at?: string | null
+          retired_at?: string | null
+          summary_en?: string
+          summary_sv?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_module_versions_learning_form_id_fkey"
+            columns: ["learning_form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_module_versions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "scp_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_module_versions_program_version_id_fkey"
+            columns: ["program_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_program_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_modules: {
+        Row: {
+          created_at: string
+          id: string
+          owner_employer_id: string | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_employer_id?: string | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_employer_id?: string | null
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_modules_owner_employer_id_fkey"
+            columns: ["owner_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_observable_behaviours: {
+        Row: {
+          created_at: string
+          id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      scp_processing_purposes: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: []
+      }
+      scp_professions: {
+        Row: {
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          id: string
+          legally_regulated: boolean
+          market: string
+          name_en: string
+          name_sv: string
+          regulator_note_sv: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          legally_regulated?: boolean
+          market: string
+          name_en: string
+          name_sv: string
+          regulator_note_sv?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          legally_regulated?: boolean
+          market?: string
+          name_en?: string
+          name_sv?: string
+          regulator_note_sv?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scp_program_versions: {
+        Row: {
+          content_status: string
+          created_at: string
+          does_not_measure_en: string[]
+          does_not_measure_sv: string[]
+          id: string
+          jurisdiction_id: string | null
+          name_en: string
+          name_sv: string
+          program_id: string
+          published_at: string | null
+          purpose_en: string
+          purpose_sv: string
+          retired_at: string | null
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          content_status?: string
+          created_at?: string
+          does_not_measure_en?: string[]
+          does_not_measure_sv?: string[]
+          id?: string
+          jurisdiction_id?: string | null
+          name_en: string
+          name_sv: string
+          program_id: string
+          published_at?: string | null
+          purpose_en: string
+          purpose_sv: string
+          retired_at?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          content_status?: string
+          created_at?: string
+          does_not_measure_en?: string[]
+          does_not_measure_sv?: string[]
+          id?: string
+          jurisdiction_id?: string | null
+          name_en?: string
+          name_sv?: string
+          program_id?: string
+          published_at?: string | null
+          purpose_en?: string
+          purpose_sv?: string
+          retired_at?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_program_versions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "scp_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_program_versions_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "scp_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_programs: {
+        Row: {
+          created_at: string
+          display_name_en: string | null
+          display_name_sv: string | null
+          id: string
+          is_test_fixture: boolean
+          owner_employer_id: string | null
+          role_id: string | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          display_name_en?: string | null
+          display_name_sv?: string | null
+          id?: string
+          is_test_fixture?: boolean
+          owner_employer_id?: string | null
+          role_id?: string | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          display_name_en?: string | null
+          display_name_sv?: string | null
+          id?: string
+          is_test_fixture?: boolean
+          owner_employer_id?: string | null
+          role_id?: string | null
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_programs_owner_employer_id_fkey"
+            columns: ["owner_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_programs_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "scp_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_prompt_versions: {
+        Row: {
+          content_status: string
+          created_at: string
+          id: string
+          input_envelope_strategy: string
+          prompt_key: string
+          published_at: string | null
+          retired_at: string | null
+          system_prompt: string
+          version_number: number
+        }
+        Insert: {
+          content_status?: string
+          created_at?: string
+          id?: string
+          input_envelope_strategy?: string
+          prompt_key: string
+          published_at?: string | null
+          retired_at?: string | null
+          system_prompt: string
+          version_number: number
+        }
+        Update: {
+          content_status?: string
+          created_at?: string
+          id?: string
+          input_envelope_strategy?: string
+          prompt_key?: string
+          published_at?: string | null
+          retired_at?: string | null
+          system_prompt?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      scp_publication_approvals: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          id: string
+          notes: string | null
+          subject_id: string
+          subject_type: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by: string
+          id?: string
+          notes?: string | null
+          subject_id: string
+          subject_type: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          id?: string
+          notes?: string | null
+          subject_id?: string
+          subject_type?: string
+        }
+        Relationships: []
+      }
+      scp_purpose_versions: {
+        Row: {
+          created_at: string
+          id: string
+          jurisdiction_id: string
+          lawful_basis_reference: string
+          privacy_notice_version: string
+          published_at: string | null
+          purpose_code: string
+          retired_at: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          jurisdiction_id: string
+          lawful_basis_reference: string
+          privacy_notice_version: string
+          published_at?: string | null
+          purpose_code: string
+          retired_at?: string | null
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          jurisdiction_id?: string
+          lawful_basis_reference?: string
+          privacy_notice_version?: string
+          published_at?: string | null
+          purpose_code?: string
+          retired_at?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_purpose_versions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "scp_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_purpose_versions_purpose_code_fkey"
+            columns: ["purpose_code"]
+            isOneToOne: false
+            referencedRelation: "scp_processing_purposes"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      scp_report_computation_manifests: {
+        Row: {
+          attempt_id: string
+          body: Json
+          brief_version: string
+          calculated_at: string
+          calculation_schema_version: string
+          canonical_sha256: string
+          competency_mapping_version: string
+          created_at: string
+          employer_report_version_id: string
+          employer_snapshot_id: string
+          evidence_scope_version: string
+          evidence_state_version: string
+          id: string
+          issuer_organization_id: string | null
+          participant_report_version_id: string
+          participant_snapshot_id: string
+          released_by: string | null
+          released_by_role: string
+          scoring_model_version: string
+          signal_model_version: string
+          subject_id: string
+          threshold_version: string
+        }
+        Insert: {
+          attempt_id: string
+          body: Json
+          brief_version: string
+          calculated_at: string
+          calculation_schema_version: string
+          canonical_sha256: string
+          competency_mapping_version: string
+          created_at?: string
+          employer_report_version_id: string
+          employer_snapshot_id: string
+          evidence_scope_version: string
+          evidence_state_version: string
+          id?: string
+          issuer_organization_id?: string | null
+          participant_report_version_id: string
+          participant_snapshot_id: string
+          released_by?: string | null
+          released_by_role: string
+          scoring_model_version: string
+          signal_model_version: string
+          subject_id: string
+          threshold_version: string
+        }
+        Update: {
+          attempt_id?: string
+          body?: Json
+          brief_version?: string
+          calculated_at?: string
+          calculation_schema_version?: string
+          canonical_sha256?: string
+          competency_mapping_version?: string
+          created_at?: string
+          employer_report_version_id?: string
+          employer_snapshot_id?: string
+          evidence_scope_version?: string
+          evidence_state_version?: string
+          id?: string
+          issuer_organization_id?: string | null
+          participant_report_version_id?: string
+          participant_snapshot_id?: string
+          released_by?: string | null
+          released_by_role?: string
+          scoring_model_version?: string
+          signal_model_version?: string
+          subject_id?: string
+          threshold_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_manifest_employer_snapshot_fkey"
+            columns: ["employer_snapshot_id"]
+            isOneToOne: true
+            referencedRelation: "scp_report_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_manifest_participant_snapshot_fkey"
+            columns: ["participant_snapshot_id"]
+            isOneToOne: true
+            referencedRelation: "scp_report_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manife_participant_report_version_i_fkey"
+            columns: ["participant_report_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifest_employer_report_version_id_fkey"
+            columns: ["employer_report_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_issuer_organization_id_fkey"
+            columns: ["issuer_organization_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_computation_manifests_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_report_snapshots: {
+        Row: {
+          attempt_id: string
+          audience: string
+          brief: Json | null
+          canonical_sha256: string | null
+          context: Json | null
+          created_at: string
+          derivation_input: Json | null
+          evidence_scope_version: string | null
+          evidence_state_version: string | null
+          id: string
+          issuer_organization_id: string | null
+          manifest_id: string | null
+          payload: Json
+          released_at: string
+          report_version_id: string
+          safety_flags: Json
+          scoring_model_version: string | null
+          subject_id: string
+          threshold_version: string
+        }
+        Insert: {
+          attempt_id: string
+          audience: string
+          brief?: Json | null
+          canonical_sha256?: string | null
+          context?: Json | null
+          created_at?: string
+          derivation_input?: Json | null
+          evidence_scope_version?: string | null
+          evidence_state_version?: string | null
+          id?: string
+          issuer_organization_id?: string | null
+          manifest_id?: string | null
+          payload: Json
+          released_at?: string
+          report_version_id: string
+          safety_flags?: Json
+          scoring_model_version?: string | null
+          subject_id: string
+          threshold_version?: string
+        }
+        Update: {
+          attempt_id?: string
+          audience?: string
+          brief?: Json | null
+          canonical_sha256?: string | null
+          context?: Json | null
+          created_at?: string
+          derivation_input?: Json | null
+          evidence_scope_version?: string | null
+          evidence_state_version?: string | null
+          id?: string
+          issuer_organization_id?: string | null
+          manifest_id?: string | null
+          payload?: Json
+          released_at?: string
+          report_version_id?: string
+          safety_flags?: Json
+          scoring_model_version?: string | null
+          subject_id?: string
+          threshold_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_report_snapshots_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_issuer_organization_id_fkey"
+            columns: ["issuer_organization_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_manifest_id_fkey"
+            columns: ["manifest_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_computation_manifests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_report_version_id_fkey"
+            columns: ["report_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_report_versions: {
+        Row: {
+          audience: string
+          content_status: string
+          created_at: string
+          governance_mode:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
+          id: string
+          limitations_en: string[]
+          limitations_sv: string[]
+          published_at: string | null
+          report_key: string
+          retired_at: string | null
+          threshold_version: string
+          version_number: number
+        }
+        Insert: {
+          audience: string
+          content_status?: string
+          created_at?: string
+          governance_mode?:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
+          id?: string
+          limitations_en?: string[]
+          limitations_sv?: string[]
+          published_at?: string | null
+          report_key: string
+          retired_at?: string | null
           threshold_version?: string
           version_number: number
         }
