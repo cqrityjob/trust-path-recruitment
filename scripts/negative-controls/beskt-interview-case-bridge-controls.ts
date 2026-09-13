@@ -482,23 +482,34 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BRIDGE-REGISTRATION",
   },
   {
-    id: "BRG-NC-STATE-CLAIMS-APPLIED",
+    id: "BRG-NC-CLAIMED-PENDING",
     defect:
-      "release-state.json claims the migration is already applied on the hosted database, which is exactly the unverified claim this stack exists to prevent",
+      "the applied migration is walked back to pending, so the repository stops recording a hosted apply that really happened",
     file: STATE,
-    find: '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "pending",',
+    find: '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "applied",',
     replace:
-      '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "applied",',
+      '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "pending",',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },
   {
-    id: "BRG-NC-FRONTIER-FORGETS-IT",
+    id: "BRG-NC-APPLIED-WITHOUT-EVIDENCE",
     defect:
-      "the frontier check stops expecting this pending migration, so dropping it from release-state would pass silently",
+      "the applied entry keeps its status but loses the evidence naming the hosted version and project, leaving an owner-level claim about production with nothing behind it",
+    file: STATE,
+    find: '      "evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt',
+    replace: '      "evidenceSourceRemoved": "Applied to owner production wrygicdfxwjnrugduxnt',
+    guard: GUARD,
+    expect: "BRIDGE-REGISTRATION",
+  },
+  {
+    id: "BRG-NC-FRONTIER-STALE-PENDING",
+    defect:
+      "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
-    find: 'const expectedPending: string[] = ["20261112090000_bcp_interview_case_bridge.sql"];',
-    replace: "const expectedPending: string[] = [];",
+    find: "const expectedPending: string[] = [];",
+    replace:
+      'const expectedPending: string[] = [\n  "20261112090000_bcp_interview_case_bridge.sql",\n];',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },
