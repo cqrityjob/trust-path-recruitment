@@ -796,8 +796,15 @@ console.log("\nGROUP 5 -- validity ordering is caught HERE, not by the constrain
     join(process.cwd(), "src/lib/security-passport/credentials.functions.ts"),
     "utf8",
   );
+  // The fourth argument arrived with 20261112090000's application half: the
+  // GOVERNED ISSUER, resolved from the catalogue by the server because the
+  // browser's `issuerName` may not name the awarding body of a governed
+  // certification. Still one shared mapping and still an exact literal — the
+  // point of this assertion is that the write path builds no row of its own,
+  // and that is unchanged. scripts/passport-governed-issuer-check.ts asserts
+  // the same call and what the extra argument must be.
   ok(
-    /const fields = credentialClaimFields\(draft, type, mode\);/.test(writeSrc),
+    /const fields = credentialClaimFields\(draft, type, mode, governedIssuerName\);/.test(writeSrc),
     "saveCredential builds its row with the shared mapping",
   );
   ok(
