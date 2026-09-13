@@ -908,6 +908,32 @@ group("T14 · the page order, and the Passport early");
     positions.every((p, i) => p >= 0 && (i === 0 || p > positions[i - 1]!)),
     positions.join(","),
   );
+
+  // ── THE PASSPORT IS THE WIDER CARD (Emsoms #10, #12) ─────────────────
+  //
+  // The owner found the Security Passport "insufficiently visible on
+  // Overview" and asked for its summary to be a PRIMARY part of the page.
+  // It was the narrower of the two top cards, which read as the supporting
+  // figure beside the real content. The ORDER above is unchanged -- §5 of
+  // the brief sets it, and it is what a screen reader and every viewport
+  // below `lg` follow, since the grid collapses to source order. So this
+  // asserts the weight, which is what "insufficiently visible" named.
+  //
+  // Read from the column the component actually sits in, not from a count
+  // of class names: both spans exist on the page, and asserting only that
+  // "col-span-7 appears" would pass with the two cards swapped back.
+  const nextCol = route.lastIndexOf("lg:col-span-", route.indexOf("<NextBestAction"));
+  const passportCol = route.lastIndexOf("lg:col-span-", route.indexOf("<PassportSummary"));
+  ck(
+    "the recommended next step takes five columns",
+    route.slice(nextCol, nextCol + 16).includes("lg:col-span-5"),
+    route.slice(nextCol, nextCol + 16),
+  );
+  ck(
+    "and the Passport summary takes seven -- it is the wider card, not the narrower one",
+    route.slice(passportCol, passportCol + 16).includes("lg:col-span-7"),
+    route.slice(passportCol, passportCol + 16),
+  );
   // The six that left must not creep back onto the overview: a hub that
   // regrows one full product section regrows all of them.
   for (const tag of [

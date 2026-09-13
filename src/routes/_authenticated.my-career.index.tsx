@@ -504,11 +504,33 @@ function MyCareerPage() {
       <CareerPageHeader profile={model.profile} onRetry={retryIdentity} />
 
       {/* 2 · The one next step, 3 · the Passport — two columns on desktop,
-          one column at 375 in source order. Unchanged from #190: this is
-          the lifecycle-aware recommendation and the trust figures it is
-          reasoning about, and neither was the problem. */}
+          one column at 375 in source order.
+
+          ── THE PASSPORT IS THE WIDER CARD (Emsoms #10, #12) ───────────
+          The owner's review found the Security Passport "insufficiently
+          visible on Overview" and asked for its summary to be positioned
+          as a PRIMARY part of the page. It was the narrower of the two
+          cards (5 columns against the recommendation's 7), which read as
+          the supporting figure beside the real content.
+
+          The weights are swapped rather than the order. §5 of the brief
+          sets the sequence itself -- identity, then the recommended next
+          step, then the Passport -- and that sequence is also what a
+          screen reader and every viewport below `lg` follow, since the
+          grid collapses to source order. So the fix is visual weight,
+          which is what "insufficiently visible" actually named, and the
+          document's own ordering is left alone.
+
+          The recommendation does not suffer for it: it is one action and
+          a sentence, and it was never the card that needed seven columns.
+
+          Market and jurisdiction are deliberately NOT added here. The
+          passport model on this page carries counts and a setup state and
+          no market, and the brief is equally clear that the complete
+          Passport workspace must not be duplicated onto Overview -- the
+          market selector belongs to the Passport page itself. */}
       <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-5">
           <NextBestAction
             // h-full on the SECTION. Both cards' <article> already had it,
             // so the article was stretching to a wrapper that was not
@@ -520,7 +542,7 @@ function MyCareerPage() {
             onPrimaryClick={(key, destination) => analytics.click(key as never, destination)}
           />
         </div>
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-7">
           <PassportSummary
             className="h-full"
             passport={model.passport}
