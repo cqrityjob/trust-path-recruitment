@@ -227,17 +227,21 @@ const race = read(RACE);
       !/UPDATE public\.scp_interview_cases/.test(bare),
     "CONDUCT-REUSE: it neither creates nor mutates an interview case — the case must already exist",
   );
-  for (const reused of [
-    "scp_iv_can_read_case",
-    "scp_iv_can_write_case",
-    "bcp_record_event",
-    "bcp_operation_begin",
-  ]) {
+  for (const reused of ["scp_iv_can_read_case", "scp_iv_can_write_case", "bcp_operation_begin"]) {
     check(
       new RegExp(`public\\.${reused}\\(`).test(bare),
       `CONDUCT-REUSE: it reuses the existing ${reused} rather than inventing a second one`,
     );
   }
+  // COUNT the ledger writes, don't merely find one. Every governed mutation
+  // must record its event, and a single call site renamed away would leave a
+  // "does bcp_record_event appear anywhere" check perfectly satisfied -- a
+  // planted control proved exactly that.
+  const ledgerWrites = (bare.match(/PERFORM public\.bcp_record_event\(/g) ?? []).length;
+  check(
+    ledgerWrites >= CLIENT_MUTATIONS.length,
+    `CONDUCT-REUSE: every one of the ${CLIENT_MUTATIONS.length} governed mutations writes to PR 3's existing ledger (found ${ledgerWrites} calls)`,
+  );
   check(
     !/CREATE TABLE public\.[a-z0-9_]*event/.test(bare),
     "CONDUCT-REUSE: and opens no event ledger of its own — PR 3's bcp_events carries the conduct events",
@@ -613,9 +617,12 @@ const race = read(RACE);
 // ── 9. Preflight and postflight ──────────────────────────────────────────
 {
   check(
-    /RAISE EXCEPTION 'BCP_CONDUCT_PREFLIGHT/.test(bare) &&
+    // BOTH refusals, counted. There are two -- one for a missing table, one for
+    // a missing function -- so requiring merely that the phrase appears left
+    // the table one free to become a RAISE NOTICE, which a control proved.
+    (bare.match(/RAISE EXCEPTION 'BCP_CONDUCT_PREFLIGHT/g) ?? []).length === 2 &&
       /to_regclass\('public\.' \|\| t\) IS NULL/.test(bare),
-    "CONDUCT-PREFLIGHT: the migration refuses early and by name if PR 3 or PR 4 is absent",
+    "CONDUCT-PREFLIGHT: the migration REFUSES early and by name, for a missing table and a missing function alike",
   );
   check(
     /RAISE NOTICE 'BESKT_INTERVIEW_CONDUCT_PROOF ok'/.test(bare),
