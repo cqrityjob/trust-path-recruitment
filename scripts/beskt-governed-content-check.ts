@@ -1400,7 +1400,14 @@ check(
   const TYPES = join(ROOT, "src/integrations/supabase/types.ts");
   const ROLE_PACKS = join(ROOT, "src/lib/interview-intelligence/role-packs.functions.ts");
   const srcFiles = walk(join(ROOT, "src")).filter((f) => /\.(ts|tsx)$/.test(f) && f !== TYPES);
-  const offenders = srcFiles.filter((f) => /\bbeskt_/i.test(read(f)));
+  // Case-SENSITIVE, because what this forbids is a call to the BESKT schema
+  // and every identifier in it is lowercase: `beskt_method_versions`,
+  // `beskt_published_method`. The `i` flag also matched SCREAMING_SNAKE
+  // TypeScript constants -- PR 3B's BESKT_GENERIC_ERROR is a translation key,
+  // not a table -- and reported a file that calls no schema at all. Narrowing
+  // it to the form a SQL identifier actually takes keeps every real violation
+  // in scope and stops the guard failing on its own domain's naming.
+  const offenders = srcFiles.filter((f) => /\bbeskt_[a-z]/.test(read(f)));
   check(
     offenders.length === 0,
     `BESKT-DB-NO-APP-CODE: no application file calls the BESKT schema; only the generated types describe it (${offenders.length} offender(s))`,

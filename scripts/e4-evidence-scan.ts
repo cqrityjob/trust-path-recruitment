@@ -38,7 +38,22 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const DIRS = ["artifacts/employer-final-report-e4", "playwright-report", "test-results"];
+
+// ── WHICH EVIDENCE SET IS BEING SCANNED ──────────────────────────────────
+//
+// E4's own capture directory by default, which is what this script was
+// written for. EVIDENCE_CAPTURE_DIR names a DIFFERENT capture set, so a
+// second evidence-producing change can scan the artifact it is actually
+// about instead of E4's.
+//
+// `playwright-report` and `test-results` are scanned either way, and that is
+// deliberate: they are where a run's traces land, a trace records the network
+// and therefore the signed-in session's bearer token, and the whole point of
+// the scan is to refuse before such a file is published. A capture set whose
+// traces are deliberately NOT committed still has to be told so out loud --
+// see .gitignore, which excludes them by path and says why.
+const CAPTURE_DIR = process.env.EVIDENCE_CAPTURE_DIR ?? "artifacts/employer-final-report-e4";
+const DIRS = [CAPTURE_DIR, "playwright-report", "test-results"];
 
 export interface Finding {
   /** Where it was found, including the path inside an archive. */
@@ -505,7 +520,7 @@ if (import.meta.main) {
 
   // An empty artifact uploaded green is worse than no artifact: it looks like
   // evidence in the checks list and contains none.
-  const captures = walk("artifacts/employer-final-report-e4").filter((f) => f.endsWith(".png"));
+  const captures = walk(CAPTURE_DIR).filter((f) => f.endsWith(".png"));
   if (captures.length === 0) {
     console.error(
       "\nREFUSED: no screenshot was captured, so there is nothing to review.\n" +
