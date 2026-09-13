@@ -75,8 +75,28 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 //
 // Its name comes OFF this list in the same change that records the evidence, for
 // the reason stated above: a resolved name here hides the next genuinely stuck
-// migration behind an expectation. The list is empty again.
-const expectedPending: string[] = [];
+// migration behind an expectation. The list was empty again.
+//
+// ── 20261112090000_sp_global_certification_governed_issuer ─────────────
+//
+// Pending BY DESIGN, on the same terms and for the same reason as the entry
+// above: this branch is the SCHEMA half of a schema-first delivery and carries
+// no application code at all.
+//
+// It closes a defect that was reproduced rather than theorised. On a full
+// 276-migration replay, as an ordinary holder -- SET ROLE authenticated with
+// their own auth.uid(), no elevated grant -- INTL_ASIS_CPP was accepted with
+// claimed_issuer_name = 'Fake Corporation', and the issuer on a real governed
+// claim could afterwards be changed to 'Government of Sweden' by an UPDATE
+// touching only that column. sp_disclosure_payload emits the column to a
+// RECIPIENT, so the forged attribution reaches the audience the whole trust
+// vocabulary exists for. 20261111090000 governs a certification's scope, its
+// territory and its title; nothing governed its issuer.
+//
+// Its name comes OFF this list in the same change that records the hosted
+// evidence, exactly as the one above did. A resolved name left here hides the
+// next genuinely stuck migration behind an expectation.
+const expectedPending: string[] = ["20261112090000_sp_global_certification_governed_issuer.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
