@@ -1,7 +1,7 @@
 # BESKT PR 3 — candidate preparation, ROUTED browser evidence
 
-Captured at HEAD `340785c62e1b7b9f19dc2ccbca7d10f9e3ec48d0`, 96 steps over
-3 viewport(s), 132.7 s of measured step time.
+Captured at HEAD `b5168311846a9b9cc8fb773b188394739d5ea85e`, 99 steps over
+3 viewport(s), 139.1 s of measured step time.
 
 ## What these captures are
 
@@ -59,29 +59,29 @@ scripts/local-stack/run-routed-evidence.sh
 | Project | Phase | Steps | Duration |
 | --- | --- | ---: | ---: |
 | chromium | library | 3 | 13.9 s |
-| chromium | assign | 4 | 5.0 s |
-| chromium | notice | 4 | 4.4 s |
+| chromium | assign | 4 | 4.8 s |
+| chromium | notice | 5 | 4.2 s |
 | chromium | answer | 7 | 3.5 s |
-| chromium | resume | 2 | 4.0 s |
+| chromium | resume | 2 | 3.5 s |
 | chromium | review | 3 | 3.3 s |
 | chromium | submit | 3 | 0.5 s |
-| chromium | readback | 4 | 3.7 s |
-| chromium | refusal | 2 | 5.8 s |
-| mobile-375 | library | 3 | 18.1 s |
-| mobile-375 | assign | 4 | 4.5 s |
-| mobile-375 | notice | 4 | 4.2 s |
+| chromium | readback | 4 | 3.6 s |
+| chromium | refusal | 2 | 5.7 s |
+| mobile-375 | library | 3 | 21.9 s |
+| mobile-375 | assign | 4 | 5.5 s |
+| mobile-375 | notice | 5 | 4.0 s |
 | mobile-375 | answer | 7 | 3.4 s |
-| mobile-375 | resume | 2 | 4.1 s |
+| mobile-375 | resume | 2 | 3.5 s |
 | mobile-375 | review | 3 | 3.2 s |
 | mobile-375 | submit | 3 | 0.5 s |
 | mobile-375 | readback | 4 | 3.5 s |
-| mobile-375 | refusal | 2 | 5.5 s |
-| mobile-390 | library | 3 | 12.8 s |
-| mobile-390 | assign | 4 | 4.5 s |
-| mobile-390 | notice | 4 | 3.6 s |
-| mobile-390 | answer | 7 | 3.3 s |
-| mobile-390 | resume | 2 | 4.5 s |
-| mobile-390 | review | 3 | 3.0 s |
+| mobile-375 | refusal | 2 | 5.6 s |
+| mobile-390 | library | 3 | 13.8 s |
+| mobile-390 | assign | 4 | 6.7 s |
+| mobile-390 | notice | 5 | 4.1 s |
+| mobile-390 | answer | 7 | 3.5 s |
+| mobile-390 | resume | 2 | 3.9 s |
+| mobile-390 | review | 3 | 3.2 s |
 | mobile-390 | submit | 3 | 0.5 s |
 | mobile-390 | readback | 4 | 3.5 s |
 | mobile-390 | refusal | 2 | 5.7 s |
@@ -92,74 +92,77 @@ scripts/local-stack/run-routed-evidence.sh
 - `chromium-1-library-sv.png` — `e2e535ecf7696d1b…` (136266 bytes)
 - `chromium-2-employer-before-start.png` — `e1fe6e3779c365b4…` (230407 bytes)
 - `chromium-2-employer-started.png` — `3c2e6007a07479b5…` (244387 bytes)
-- `chromium-3-acknowledged.png` — `43001deb0ea7ee54…` (133929 bytes)
-- `chromium-3-my-career-list.png` — `4859d37c9a776a08…` (112029 bytes)
+- `chromium-3-acknowledged.png` — `bc353e02b9ae89c3…` (133969 bytes)
+- `chromium-3-my-career-list.png` — `1c7f39e00b9b7161…` (68990 bytes)
+- `chromium-3-notice-en.png` — `1634df5f7ae5cbb9…` (209925 bytes)
 - `chromium-3-notice-sv.png` — `e4312648487504f5…` (218188 bytes)
 - `chromium-4-answered-sv.png` — `55b69b45846225c8…` (174699 bytes)
 - `chromium-4-resumed-sv.png` — `796f3ef947e0b16f…` (177431 bytes)
-- `chromium-5-corrected-sv.png` — `2f04a39adf0707a9…` (172869 bytes)
+- `chromium-5-corrected-sv.png` — `c6db8b2abd4bfa26…` (172910 bytes)
 - `chromium-5-review-sv.png` — `0ecd8b064948d4b7…` (124425 bytes)
-- `chromium-6-submitted-en.png` — `1547444faea65079…` (117834 bytes)
-- `chromium-6-submitted-sv.png` — `cd54b689c3d39356…` (120523 bytes)
-- `chromium-7-readback-en.png` — `eb68a72bd4273ae1…` (302032 bytes)
-- `chromium-7-readback-sv.png` — `04765937cc595648…` (291634 bytes)
+- `chromium-6-submitted-en.png` — `7188a8f00f0aaba8…` (117994 bytes)
+- `chromium-6-submitted-sv.png` — `f3420ab59f2dc777…` (120372 bytes)
+- `chromium-7-readback-en.png` — `f14e979ac98a0180…` (302267 bytes)
+- `chromium-7-readback-sv.png` — `9371018f620b6aff…` (291762 bytes)
 - `chromium-8-refused-cross-tenant.png` — `9ebe107a675be005…` (20784 bytes)
 - `chromium-8-refused-wrong-candidate.png` — `754e05a1bf0e376d…` (53556 bytes)
 - `mobile-375-1-library-en.png` — `cc2b59e5cfa2172b…` (106297 bytes)
 - `mobile-375-1-library-sv.png` — `9b4dff2e61bec59c…` (105813 bytes)
-- `mobile-375-2-employer-before-start.png` — `dddd51f86435d0c1…` (187626 bytes)
+- `mobile-375-2-employer-before-start.png` — `2135bb3358598f78…` (187674 bytes)
 - `mobile-375-2-employer-started.png` — `39655d369635a39a…` (200369 bytes)
-- `mobile-375-3-acknowledged.png` — `7d5b7b27a5f47709…` (113372 bytes)
+- `mobile-375-3-acknowledged.png` — `e6644b9dc9e0b809…` (113542 bytes)
 - `mobile-375-3-my-career-list.png` — `e0ff0291812076a1…` (53687 bytes)
+- `mobile-375-3-notice-en.png` — `f6c1c0759438640c…` (201571 bytes)
 - `mobile-375-3-notice-sv.png` — `b886f8a66fc3e42d…` (202383 bytes)
 - `mobile-375-4-answered-sv.png` — `b3d03c203e24c762…` (159381 bytes)
 - `mobile-375-4-resumed-sv.png` — `c6122fb3985fd424…` (158938 bytes)
-- `mobile-375-5-corrected-sv.png` — `fe475bd133d80380…` (156668 bytes)
+- `mobile-375-5-corrected-sv.png` — `4624d4e6a732df42…` (156707 bytes)
 - `mobile-375-5-review-sv.png` — `9f0eec4feb6d11ae…` (104064 bytes)
-- `mobile-375-6-submitted-en.png` — `4d473be796f3ffe2…` (102833 bytes)
-- `mobile-375-6-submitted-sv.png` — `0ff4fbada9f51570…` (102038 bytes)
-- `mobile-375-7-readback-en.png` — `baf25528c089f491…` (256137 bytes)
-- `mobile-375-7-readback-sv.png` — `432c37d60f795d9a…` (246063 bytes)
-- `mobile-375-8-refused-cross-tenant.png` — `702b5903150acf16…` (21993 bytes)
+- `mobile-375-6-submitted-en.png` — `f41ac13ffebf5f6c…` (102848 bytes)
+- `mobile-375-6-submitted-sv.png` — `90c378a6be8eb776…` (102057 bytes)
+- `mobile-375-7-readback-en.png` — `5618f8d8a86b0b9b…` (256374 bytes)
+- `mobile-375-7-readback-sv.png` — `3bd6a6e854976ea2…` (246370 bytes)
+- `mobile-375-8-refused-cross-tenant.png` — `1681410eb052c6fa…` (77737 bytes)
 - `mobile-375-8-refused-wrong-candidate.png` — `a7f077650c37b447…` (42922 bytes)
 - `mobile-390-1-library-en.png` — `c529ef747c3175d9…` (109288 bytes)
 - `mobile-390-1-library-sv.png` — `a8988098fdfe5d79…` (105797 bytes)
-- `mobile-390-2-employer-before-start.png` — `dda695d43c969f80…` (189144 bytes)
+- `mobile-390-2-employer-before-start.png` — `6450c14a48a8714b…` (187350 bytes)
 - `mobile-390-2-employer-started.png` — `db1890c09ca520eb…` (200414 bytes)
-- `mobile-390-3-acknowledged.png` — `8a2df3812e9cf9df…` (117764 bytes)
-- `mobile-390-3-my-career-list.png` — `b5a6a51c8e78ee92…` (70237 bytes)
+- `mobile-390-3-acknowledged.png` — `bc6823e1ed057c7f…` (117799 bytes)
+- `mobile-390-3-my-career-list.png` — `a523bbe8baabbe1e…` (53786 bytes)
+- `mobile-390-3-notice-en.png` — `aa04e3457dc89f30…` (200361 bytes)
 - `mobile-390-3-notice-sv.png` — `f63da0346e160c21…` (201753 bytes)
 - `mobile-390-4-answered-sv.png` — `d647071ca1b0f8d4…` (154405 bytes)
 - `mobile-390-4-resumed-sv.png` — `9dff26a84b1d1137…` (158746 bytes)
-- `mobile-390-5-corrected-sv.png` — `70dc90a80a00a95a…` (161377 bytes)
-- `mobile-390-5-review-sv.png` — `eb112b347f047561…` (102019 bytes)
-- `mobile-390-6-submitted-en.png` — `95b12f85eff4afa5…` (102144 bytes)
-- `mobile-390-6-submitted-sv.png` — `e9bd8ff338f48669…` (101284 bytes)
-- `mobile-390-7-readback-en.png` — `ec5ea278a1251f25…` (256388 bytes)
-- `mobile-390-7-readback-sv.png` — `7e6344675add3cf9…` (245650 bytes)
-- `mobile-390-8-refused-cross-tenant.png` — `4e4d55b2f121ed5d…` (22168 bytes)
+- `mobile-390-5-corrected-sv.png` — `fe9db8ee4e4bea1d…` (161363 bytes)
+- `mobile-390-5-review-sv.png` — `5f2bdb19dad0fc9f…` (102013 bytes)
+- `mobile-390-6-submitted-en.png` — `011a3e640a70f533…` (102211 bytes)
+- `mobile-390-6-submitted-sv.png` — `0d3bb8b43fb52745…` (101404 bytes)
+- `mobile-390-7-readback-en.png` — `68bfa5b95c7df2cb…` (256582 bytes)
+- `mobile-390-7-readback-sv.png` — `9e9130d6a48d853f…` (245825 bytes)
+- `mobile-390-8-refused-cross-tenant.png` — `f9b2f7f0dca2f940…` (34187 bytes)
 - `mobile-390-8-refused-wrong-candidate.png` — `6b28df0d11baa112…` (43040 bytes)
 
 ## Traces (digested, not committed)
 
-- `chromium/beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-chromium.zip` — `d15fe384eff56b8e…` (2632041 bytes)
-- `chromium/beskt-candidate-preparatio-580fd-d-and-states-its-real-state-chromium.zip` — `b70b32b635b070ac…` (1996571 bytes)
-- `chromium/beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-chromium.zip` — `9de452217456a8c4…` (2034721 bytes)
-- `chromium/beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-chromium.zip` — `f6e6dc28add3f7b4…` (1599249 bytes)
-- `chromium/beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-chromium.zip` — `7037d140026351ad…` (2536209 bytes)
-- `chromium/beskt-candidate-preparatio-9d88b-rom-an-existing-application-chromium.zip` — `62b18bbff01a4f9c…` (2273622 bytes)
-- `chromium/beskt-candidate-preparatio-e524f-re-anything-can-be-answered-chromium.zip` — `6a62895206177381…` (2443222 bytes)
-- `mobile-375/beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-mobile-375.zip` — `36b4ca46b91d04c7…` (2317535 bytes)
-- `mobile-375/beskt-candidate-preparatio-580fd-d-and-states-its-real-state-mobile-375.zip` — `2c0bcec02e29142c…` (1515069 bytes)
-- `mobile-375/beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-mobile-375.zip` — `1879febdff7560de…` (2409640 bytes)
-- `mobile-375/beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-mobile-375.zip` — `ed50efc9d05da131…` (1616165 bytes)
-- `mobile-375/beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-mobile-375.zip` — `e52c991b6381a175…` (2986541 bytes)
-- `mobile-375/beskt-candidate-preparatio-9d88b-rom-an-existing-application-mobile-375.zip` — `d2b1f924f0fba669…` (2659208 bytes)
-- `mobile-375/beskt-candidate-preparatio-e524f-re-anything-can-be-answered-mobile-375.zip` — `1f67867aeb3df8ec…` (3481287 bytes)
-- `mobile-390/beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-mobile-390.zip` — `a6fef00556858445…` (2121405 bytes)
-- `mobile-390/beskt-candidate-preparatio-580fd-d-and-states-its-real-state-mobile-390.zip` — `ca8d652e36182229…` (1583603 bytes)
-- `mobile-390/beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-mobile-390.zip` — `265bf320563027d3…` (2241342 bytes)
-- `mobile-390/beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-mobile-390.zip` — `64c854f287b11a4c…` (1547321 bytes)
-- `mobile-390/beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-mobile-390.zip` — `3b2f10f170af1d77…` (2589745 bytes)
-- `mobile-390/beskt-candidate-preparatio-9d88b-rom-an-existing-application-mobile-390.zip` — `6be43849371f9d0e…` (2580846 bytes)
-- `mobile-390/beskt-candidate-preparatio-e524f-re-anything-can-be-answered-mobile-390.zip` — `d0429e5634ef7e3f…` (3031028 bytes)
+- `chromium/beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-chromium.zip` — `9a6eebe00d89f642…` (2705398 bytes)
+- `chromium/beskt-candidate-preparatio-580fd-d-and-states-its-real-state-chromium.zip` — `0613e97195f4aa28…` (1773297 bytes)
+- `chromium/beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-chromium.zip` — `5b513b2e2d012193…` (1966614 bytes)
+- `chromium/beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-chromium.zip` — `fc3751341a242985…` (1590634 bytes)
+- `chromium/beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-chromium.zip` — `30fabcb79cd46649…` (2544697 bytes)
+- `chromium/beskt-candidate-preparatio-9d88b-rom-an-existing-application-chromium.zip` — `6441304087723444…` (2282084 bytes)
+- `chromium/beskt-candidate-preparatio-e524f-re-anything-can-be-answered-chromium.zip` — `d41d8c860c96e8de…` (3049578 bytes)
+- `mobile-375/beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-mobile-375.zip` — `484d9e1ebbdeaafe…` (2240303 bytes)
+- `mobile-375/beskt-candidate-preparatio-580fd-d-and-states-its-real-state-mobile-375.zip` — `7cd59e31cd68d86b…` (1508224 bytes)
+- `mobile-375/beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-mobile-375.zip` — `058d5ea7c187c36c…` (2403569 bytes)
+- `mobile-375/beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-mobile-375.zip` — `a8978726c63b72fd…` (1573088 bytes)
+- `mobile-375/beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-mobile-375.zip` — `5a8d2217c4fbac79…` (2882496 bytes)
+- `mobile-375/beskt-candidate-preparatio-9d88b-rom-an-existing-application-mobile-375.zip` — `6ba172c8a95db649…` (2647921 bytes)
+- `mobile-375/beskt-candidate-preparatio-e524f-re-anything-can-be-answered-mobile-375.zip` — `702ad143c2a2b918…` (3392644 bytes)
+- `mobile-390/beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-mobile-390.zip` — `04b067f21dd97fad…` (2181678 bytes)
+- `mobile-390/beskt-candidate-preparatio-580fd-d-and-states-its-real-state-mobile-390.zip` — `810e851745dda49a…` (1593004 bytes)
+- `mobile-390/beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-mobile-390.zip` — `dc702cfd9936e461…` (2188270 bytes)
+- `mobile-390/beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-mobile-390.zip` — `cdc71752d6ef601e…` (1494668 bytes)
+- `mobile-390/beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-mobile-390.zip` — `3027d980414a4b2e…` (2605237 bytes)
+- `mobile-390/beskt-candidate-preparatio-9d88b-rom-an-existing-application-mobile-390.zip` — `b37e5ac1e4048dbe…` (2725813 bytes)
+- `mobile-390/beskt-candidate-preparatio-e524f-re-anything-can-be-answered-mobile-390.zip` — `f9b992eaa97a2629…` (3536799 bytes)
