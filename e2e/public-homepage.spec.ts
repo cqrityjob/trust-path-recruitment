@@ -252,7 +252,7 @@ test.describe("the public homepage", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.reload({ waitUntil: "networkidle" });
 
-    const passport = page.locator('header nav[aria-label="Primary"] a[href="/#passport"]');
+    const passport = page.locator('header nav[aria-label="Primary"] a[href="/#passport"]:visible');
     await expect(passport).not.toHaveAttribute("aria-current", "page");
 
     await passport.click();
