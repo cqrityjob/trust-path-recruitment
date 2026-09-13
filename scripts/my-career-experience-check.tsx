@@ -278,16 +278,34 @@ group("3 · the career analysis gate reaches the rendering");
   );
 }
 
-group("4 · one Career Card verb, and the card is guidance");
+// ── 4 · THE CAREER CARD IS HIDDEN FOR THE PILOT ──────────────────────
+//
+// This group used to assert the opposite: that the hero and the home both
+// OFFER the card, and that the copy beside it calls the card guidance
+// rather than verification. Those were the right assertions while the card
+// was in the product. The owner's pilot review took it out — it is a sixth
+// shareable artefact competing with the Passport Card for "the thing you
+// show people" — so the group is inverted rather than deleted. The
+// strongest version of the old rule was "the card never claims to be
+// verification"; the strongest version now is "the card is not offered at
+// all", and an offer that is absent cannot mis-describe itself.
+//
+// DUBAI is deliberately kept as the fixture: it is the case that DID offer
+// the card (a completed report that names careers), so this proves the
+// offer is gone in the one state that used to produce it, rather than in a
+// state that never would have.
+group("4 · the Career Card is not offered anywhere in the pilot");
 {
   const hero = render(<ProfessionalIdentityHeader identity={DUBAI} />);
   const { html } = renderPage(input(DUBAI));
-  ck("the hero offers the card", hero.includes('href="/my-career/career-card"'));
-  ck("the home offers the card", html.includes('href="/my-career/career-card"'));
-  ck("the card is never 'your profile as a card'", !/Din profil som ett kort/.test(html));
   ck(
-    "and is said to be guidance, not verification",
-    html.includes("Career Card är karriärvägledning och är inte ett verifieringsbevis."),
+    "the hero does not offer the card, in the very state that used to",
+    !hero.includes('href="/my-career/career-card"'),
+  );
+  ck("the home does not offer the card", !html.includes('href="/my-career/career-card"'));
+  ck(
+    "and no control anywhere on the home names it",
+    !/Career Card/.test(html) && !/Career Card/.test(hero),
   );
 }
 
