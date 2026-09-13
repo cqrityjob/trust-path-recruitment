@@ -1556,6 +1556,95 @@ if [ "$TI_PASSED" -lt 24 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Interview-method library tenant read (20261115090000). The pilot-blocking
+# finding: draft interview-method design content was readable by every active
+# employer member of every employer, because five employer read policies
+# decided on membership alone. Two employers, a suspended employer, an invited
+# member, a candidate, a governance reader, a platform admin and anon; the
+# approved contract; the case-linked continuity; forged JWT metadata; direct
+# reads and direct RPCs; the SECURITY DEFINER allowlist; and four in-suite
+# controls that plant the defect back and require the same assertions to fail.
+#
+# Then the rollback runs for real, the suite is run AGAINST the rolled-back
+# schema and is REQUIRED TO FAIL -- a denial suite that cannot fail is not a
+# guard -- and the migration is re-applied over it with its own proof.
+# ---------------------------------------------------------------------------
+echo "==> Running interview-method library tenant-read assertions"
+set +e
+ML_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_method_library_tenant_read_test.sql 2>&1)"
+ML_RC=$?
+set -e
+
+echo "$ML_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+ML_PASSED="$(echo "$ML_OUT" | grep -c "ok  " || true)"
+ML_FAILED=0
+
+if [ "$ML_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the interview-method library tenant-read suite exited with code ${ML_RC}." >&2
+  echo "$ML_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  ML_FAILED=1
+else
+  echo "    ok  ${ML_PASSED} interview-method library tenant-read assertions passed"
+  if [ "$ML_PASSED" -lt 120 ]; then
+    echo "FAIL: expected at least 120 tenant-read assertions, only ${ML_PASSED} ran." >&2
+    echo "      A denial suite that silently stops running assertions passes silently." >&2
+    ML_FAILED=1
+  fi
+fi
+
+# The harness-level negative control: the original defect, planted in
+# place while the predicate still exists -- the method policy decides on
+# membership alone -- and the suite MUST fail, and fail on an assertion.
+# (Not "against the rolled-back schema": there the predicate is gone, and a
+# suite failing on a missing function has detected nothing about the
+# boundary.) The migration is then re-applied below, which restores the
+# policy and proves the re-apply path in the same breath.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "ALTER POLICY scp_interview_methods_employer_read ON public.scp_interview_methods USING (EXISTS (SELECT 1 FROM public.employer_memberships em WHERE em.user_id = auth.uid() AND em.status = 'active'));"
+set +e
+ML_WEAK="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_method_library_tenant_read_test.sql 2>&1)"
+ML_WEAK_RC=$?
+set -e
+if [ "$ML_WEAK_RC" -eq 0 ] || ! echo "$ML_WEAK" | grep -q "ASSERTION FAILED"; then
+  echo "FAIL: the tenant-read suite PASSED with the membership-only method policy planted back." >&2
+  echo "      The suite cannot tell the fixed boundary from the original defect, so it guards nothing." >&2
+  echo "$ML_WEAK" | grep -iE "ERROR:|FEL:" | head -3 >&2
+  ML_FAILED=1
+else
+  echo "    ok  the suite FAILS with the original defect planted back: $(echo "$ML_WEAK" | grep -o 'ASSERTION FAILED: ML[0-9.]*' | head -1)"
+fi
+
+set +e
+ML_RB="$(psql -v ON_ERROR_STOP=1 -1 -d "$TEST_DB" \
+  -f supabase/rollback/20261115090000_scp_interview_method_library_tenant_read_rollback.sql 2>&1)"
+ML_RB_RC=$?
+set -e
+if [ "$ML_RB_RC" -ne 0 ] || ! echo "$ML_RB" | grep -q "SCP_IV_METHOD_LIBRARY_TENANT_READ_ROLLBACK ok"; then
+  echo "FAIL: the interview-method library tenant-read rollback did not verify." >&2
+  echo "$ML_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  ML_FAILED=1
+else
+  echo "    ok  the rollback restores the five membership-only predicates verbatim and drops the predicate"
+fi
+
+set +e
+ML_RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/migrations/20261115090000_scp_interview_method_library_tenant_read.sql 2>&1)"
+ML_RE_RC=$?
+set -e
+if [ "$ML_RE_RC" -ne 0 ] || ! echo "$ML_RE" | grep -q "SCP_IV_METHOD_LIBRARY_TENANT_READ_PROOF ok"; then
+  echo "FAIL: the interview-method library tenant-read migration does not re-apply over the rolled-back state." >&2
+  echo "$ML_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  ML_FAILED=1
+else
+  echo "    ok  and the migration re-applies cleanly over it, with its postflight proof"
+fi
+
+if [ "$ML_FAILED" -ne 0 ]; then
+  suite_failed "interview-method library tenant read"
+fi
+
+# ---------------------------------------------------------------------------
 # Interview evidence reliability (20261020090000): evidence stays bound to its
 # case, question, application and employer; the writers are idempotent under
 # double-click and retry; an assessment covers the material that existed when

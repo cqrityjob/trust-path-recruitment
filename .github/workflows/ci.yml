@@ -757,6 +757,15 @@ jobs:
       - name: BESKT interview conduct (PR 5A) source guard
         run: bun run beskt-interview-conduct:check
 
+      # Pilot blocker 2 -- the employer read boundary of the interview-method
+      # library (20261115090000): the predicate, the five routed policies, the
+      # grants, the surviving policy state across the whole migration history,
+      # the postflight proof, the rollback, the suite and the release
+      # bookkeeping, read structurally. Its planted controls run in
+      # negative-controls:all.
+      - name: Interview-method library tenant-read guard
+        run: bun run interview-method-tenant-read:check
+
       # BESKT PR 5B -- the VISIBLE interview tool inside Interview Intelligence:
       # the module gate, the immutable submitted snapshot, the deterministic
       # themes, the eight separate documentation fields, corrections and
