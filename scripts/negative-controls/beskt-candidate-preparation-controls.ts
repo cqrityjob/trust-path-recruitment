@@ -489,9 +489,13 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "BCP-NC-DOCUMENTED-ROLLBACK-ORDER",
-    defect: "the documented rollback procedure stops unwinding PR 3 first",
+    defect: "the documented rollback procedure stops unwinding PR 3 before PR 2",
     file: RB_SUITE,
-    find: "  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds first of all';",
+    // PR 4 put the interview-case bridge ahead of PR 3 in the documented
+    // procedure, so PR 3 is no longer "first of all" and this anchor moved with
+    // it. The defect being planted never changes: the procedure stops saying
+    // that PR 3 comes down before PR 2.
+    find: "  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds next';",
     replace: "  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds at some point';",
     guard: GUARD,
     expect: "BCP-HARNESS",
@@ -521,6 +525,8 @@ const MUTATIONS: readonly Mutation[] = [
     // evidence then took that one off again, so the list is empty once more.
     // The defect being planted never changes: the APPLIED bcp migration back on
     // the frontier list.
+    // PR 4 put its own genuinely pending migration in the list, so the anchor is
+    // that line rather than an empty one.
     find: "const expectedPending: string[] = [];",
     replace:
       'const expectedPending: string[] = [\n  "20261110090000_bcp_candidate_preparation.sql",\n];',

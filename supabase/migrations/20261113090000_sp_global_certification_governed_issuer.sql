@@ -1,8 +1,15 @@
 -- ============================================================================
 -- SECURITY PASSPORT — A GOVERNED CERTIFICATION CARRIES ITS GOVERNED ISSUER
 --
--- 20261112090000. Schema-only security hardening. No application release is
+-- 20261113090000. Schema-only security hardening. No application release is
 -- coupled to it, no market is activated, no UI reads it, and it seeds nothing.
+--
+-- It took 20261113 rather than 20261112 because bcp_interview_case_bridge
+-- reached main first and holds that version. Supabase records only the
+-- version prefix, so two files sharing one would mean one is silently
+-- skipped; migrations-duplicate:check caught the collision when main was
+-- merged in, which is the second time this rule has been met for real
+-- rather than hypothetically.
 --
 -- ── THE DEFECT, REPRODUCED BEFORE THIS FILE WAS WRITTEN ────────────────
 --
@@ -70,7 +77,7 @@
 -- rather than assuming it: if any row ever disagrees, the apply FAILS instead
 -- of quietly leaving a violation behind a trigger that only fires on write.
 --
--- ROLLBACK: supabase/rollback/20261112090000_sp_global_certification_governed_issuer_rollback.sql
+-- ROLLBACK: supabase/rollback/20261113090000_sp_global_certification_governed_issuer_rollback.sql
 -- ============================================================================
 
 BEGIN;

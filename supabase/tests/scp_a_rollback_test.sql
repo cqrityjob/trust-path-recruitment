@@ -138,7 +138,73 @@ END $$;
 -- HERE rather than in production.
 -- ---------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------
--- BESKT PR 3 (20261109090000) unwinds FIRST of all, newest first: the
+-- BESKT PR 4 (20261112090000) unwinds FIRST of all, newest first: the
+-- interview-case bridge holds foreign keys into bcp_assignments,
+-- bcp_responses and beskt_items, so neither the PR 3 nor the PR 2 drop set
+-- below can run while it exists.
+--
+-- The drop set matches
+-- supabase/rollback/20261112090000_bcp_interview_case_bridge_rollback.sql,
+-- which db-test.sh has already applied and re-applied for real before this
+-- suite runs; keeping them identical is the point.
+--
+-- The two governed vocabularies PR 4 widened are NOT restored here. The
+-- bcp_events CHECK goes with the table in the PR 3 drop set below, and
+-- scp_interview_case_sources.source_kind is restored, because that table
+-- SURVIVES a full BESKT unwind -- leaving it admitting a kind no code can
+-- produce would be a vocabulary that outlived its meaning.
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 4 unwinds first of all';
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r'
+        AND c.relname IN ('bcp_case_links', 'bcp_case_topics')) = 2,
+    'pre-rollback: both bcp_ interview-case bridge tables exist');
+END $$;
+
+DROP FUNCTION IF EXISTS public.bcp_my_preparation_link(uuid);
+DROP FUNCTION IF EXISTS public.bcp_case_preparation_basis(uuid);
+DROP FUNCTION IF EXISTS public.bcp_linkable_interview_cases(uuid);
+DROP FUNCTION IF EXISTS public.bcp_unlink_preparation_from_case(uuid, uuid, text);
+DROP FUNCTION IF EXISTS public.bcp_link_preparation_to_case(uuid, uuid, uuid, integer);
+DROP TRIGGER IF EXISTS bcp_case_topics_guard ON public.bcp_case_topics;
+DROP TRIGGER IF EXISTS bcp_case_links_guard ON public.bcp_case_links;
+DROP FUNCTION IF EXISTS public.bcp_guard_case_topic();
+DROP FUNCTION IF EXISTS public.bcp_guard_case_link();
+DROP TABLE IF EXISTS public.bcp_case_topics;
+DROP TABLE IF EXISTS public.bcp_case_links;
+
+ALTER TABLE public.scp_interview_case_sources
+  DROP CONSTRAINT IF EXISTS scp_interview_case_sources_source_kind_check;
+ALTER TABLE public.scp_interview_case_sources
+  ADD CONSTRAINT scp_interview_case_sources_source_kind_check
+  CHECK (source_kind IN (
+    'job_description',
+    'employer_requirements',
+    'candidate_cv',
+    'application_answers',
+    'interviewer_notes',
+    'transcript',
+    'passport_disclosure'));
+
+DO $$
+BEGIN
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r'
+        AND c.relname IN ('bcp_case_links', 'bcp_case_topics')) = 0,
+    'BESKT PR 4: the interview-case bridge is gone, PR 3 can now unwind');
+  PERFORM pg_temp.assert(
+    NOT EXISTS (SELECT 1 FROM pg_constraint
+                 WHERE conrelid = 'public.scp_interview_case_sources'::regclass
+                   AND pg_get_constraintdef(oid) LIKE '%beskt_preparation%'),
+    'BESKT PR 4: and the surviving source vocabulary no longer admits a kind nothing can produce');
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- BESKT PR 3 (20261109090000) unwinds next, newest first: the
 -- candidate-preparation runtime holds foreign keys into beskt_method_versions
 -- and beskt_items, so the PR 2 drop set below cannot run while it exists.
 -- The drop set matches
@@ -152,7 +218,7 @@ END $$;
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
-  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds first of all';
+  RAISE NOTICE 'ROLLBACK TEST -- BESKT PR 3 unwinds next';
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname LIKE 'bcp\_%' ESCAPE '\') = 6,
