@@ -420,9 +420,11 @@ export function computeNextBestActions(
     }
   }
 
-  if (known("discovery") && discovery.hasCompletedReport && discovery.namesCareers) {
-    add("create_career_card", 7, "/my-career/career-card", "never — a standing destination");
-  }
+  // "Create your Career Card" was a recommended next step here. The Career
+  // Card is hidden for the pilot, and a recommendation whose destination
+  // redirects away the moment it is followed is the definition of a dead
+  // control. It is removed rather than left at a lower rank: rank cannot
+  // make a broken destination safe.
 
   if (computeCvReadiness(identity).state === "ready") {
     const saved = signals.savedCvCount ?? 0;

@@ -55,6 +55,21 @@ export const dictionaries = {
     "nav.myPassport": "Mitt Security Passport",
     "nav.findJobs": "Hitta jobb",
     "nav.professionsAndPaths": "Yrken och karriärvägar",
+    // ── The owner's five, as the sketches underline them ───────────────
+    //
+    // The three above named more than the destination did. "Hitta jobb"
+    // named only the discovery half of a page that also holds the
+    // candidate's applications; "Yrken och karriärvägar" named one of the
+    // four things the career page does; "Mitt Security Passport" repeated
+    // a possessive the candidate's own navigation already implies. These
+    // three are the labels the owner drew. The keys above stay because
+    // other surfaces still use them as prose.
+    // Jobs deliberately reuses the existing "nav.jobs" above rather than
+    // adding a second key holding "Jobb"/"Jobs": one word, one meaning,
+    // and two keys with identical strings in both languages is precisely
+    // what drifts apart later.
+    "nav.securityPassport": "Security Passport",
+    "nav.career": "Karriär",
     // "Tester & utveckling": the area holds recruitment tests, their released
     // results AND employer-assigned training. "Tester och resultat" named
     // half of it. The two are separated INSIDE the page, never mixed.
@@ -6905,6 +6920,8 @@ export const dictionaries = {
     "nav.myPassport": "My Security Passport",
     "nav.findJobs": "Find jobs",
     "nav.professionsAndPaths": "Professions and career paths",
+    "nav.securityPassport": "Security Passport",
+    "nav.career": "Career",
     "nav.testsAndDevelopment": "Tests & development",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",

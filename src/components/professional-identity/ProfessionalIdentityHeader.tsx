@@ -23,6 +23,10 @@
 // me": what is verified, whether there is a career direction, and how much
 // of the profile is filled in.
 //
+// The Career Card CTA mentioned above is GONE as of the pilot review: the
+// card is hidden for the pilot, its route redirects to Översikt, and the
+// only control left in this row is "Visa profil".
+//
 // ── THE PERCENTAGE IS NOT A JUDGEMENT ──────────────────────────────────
 //
 // "Profil ifylld till 78 %" counts answers. It is not a quality score, not
@@ -91,7 +95,6 @@ const COPY = {
     "The information here is self-reported. What has been verified is shown in the Security Passport.",
   ),
   viewProfile: c("Visa profil", "View profile"),
-  viewCard: c("Visa Career Card", "View Career Card"),
   experienceYears: c("{0} års erfarenhet", "{0} years of experience"),
 
   // ── The trust line ────────────────────────────────────────────────────
@@ -337,8 +340,19 @@ export function ProfessionalIdentityHeader({
       ? formatWorkLocation(identity.accountCountry, null, l)
       : null;
 
-  const cardReady =
-    discoveryKnown && identity.discovery.hasCompletedReport && identity.discovery.namesCareers;
+  // ── CAREER CARD: HIDDEN FOR THE PILOT ─────────────────────────────
+  //
+  // "Visa Career Card" used to sit here beside "Visa profil" whenever a
+  // completed report named careers. The owner's pilot review took the
+  // Career Card out of the pilot, so the control is gone rather than
+  // disabled: a control that is visible and does nothing is worse than
+  // one that is not there.
+  //
+  // The condition it was computed from (discoveryKnown &&
+  // hasCompletedReport && namesCareers) is deliberately NOT kept as an
+  // unused binding -- an unused `cardReady` would be the thing a later
+  // edit re-wires by accident. The route itself redirects to Översikt,
+  // so an old bookmark still lands somewhere true.
 
   const isProfile = variant === "profile";
   // The professional title. On /my-career it is the <h1>; on the profile page
@@ -495,7 +509,7 @@ export function ProfessionalIdentityHeader({
           the profile link is suppressed, and a person with no Career
           Discovery report has no card either -- which left an empty row
           holding open five rems of nothing. */}
-      <div className={showProfileLink || cardReady ? "mt-6 flex flex-wrap gap-2.5" : "hidden"}>
+      <div className={showProfileLink ? "mt-6 flex flex-wrap gap-2.5" : "hidden"}>
         {showProfileLink && (
           <Link
             to="/my-career/profile"
@@ -503,14 +517,6 @@ export function ProfessionalIdentityHeader({
           >
             {L(COPY.viewProfile, l)}
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        )}
-        {cardReady && (
-          <Link
-            to="/my-career/career-card"
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {L(COPY.viewCard, l)}
           </Link>
         )}
       </div>

@@ -998,13 +998,11 @@ export function buildCareerHomeViewModel(input: HomePresentationInput): CareerHo
   if (identityReady && computeCvReadiness(identity).state === "ready") {
     tools.push({ key: "cv", href: "/my-career/cv", existing: (input.savedCvCount ?? 0) > 0 });
   }
-  if (
-    known("discovery") &&
-    identity.discovery.hasCompletedReport &&
-    identity.discovery.namesCareers
-  ) {
-    tools.push({ key: "career_card", href: "/my-career/career-card", existing: true });
-  }
+  // The Career Card used to be offered here whenever a completed report
+  // named careers. It is hidden for the pilot by owner decision, so the
+  // tool is not offered: a tool that redirects straight back to the page
+  // offering it is a dead control with extra steps. Nothing is deleted —
+  // the card's renderer and rules are untouched in the tree.
   tools.push({ key: "professions", href: "/career-center", existing: false });
   tools.push({ key: "profile", href: "/my-career/profile", existing: false });
 
