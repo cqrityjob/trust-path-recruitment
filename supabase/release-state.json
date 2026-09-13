@@ -7,6 +7,59 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261112090000_bcp_interview_case_bridge.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "bcp_case_links",
+          "kind": "table"
+        },
+        {
+          "object": "bcp_case_topics",
+          "kind": "table"
+        },
+        {
+          "object": "bcp_guard_case_link",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_guard_case_topic",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_link_preparation_to_case",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_unlink_preparation_from_case",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_linkable_interview_cases",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_case_preparation_basis",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_my_preparation_link",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_case_links_one_live_per_assignment_idx",
+          "kind": "index"
+        },
+        {
+          "object": "bcp_case_links_one_live_per_case_idx",
+          "kind": "index"
+        }
+      ],
+      "note": "BESKT PR 4 -- THE BRIDGE FROM A SUBMITTED CANDIDATE PREPARATION TO THE EXISTING INTERVIEW CASE. Schema only; adds no case, application, evidence or event system of its own. It registers a governed source row on scp_interview_case_sources, writes to PR 3's bcp_events ledger through bcp_record_event, and binds the exact immutable snapshot: response id and version, assignment revision, method version, content hash, submitted answers hash, and the notice version, hash and locale the candidate acknowledged. Depends by foreign key on 20261110090000 (bcp_assignments, bcp_responses, beskt_items) and on 20261108090000 (beskt_method_versions, beskt_sections), so it must be applied after both. It rebuilds two governed CHECK vocabularies -- scp_interview_case_sources.source_kind gains beskt_preparation, and bcp_events.event gains case_linked and case_unlinked -- which is why the rollback restores both verbatim and refuses to run while any row still uses them. NOT applied to the hosted database: no hosted migration, production write or Lovable publication was performed for this change.",
+      "verify": "Replay locally with scripts/db-test.sh: the migration raises BESKT_INTERVIEW_CASE_BRIDGE_PROOF ok from its own postflight, supabase/tests/bcp_interview_case_bridge_test.sql must report at least 45 assertions, and the rollback must raise BESKT_INTERVIEW_CASE_BRIDGE_ROLLBACK ok with the migration re-applying cleanly over the rolled-back state. Source-level: bun run beskt-interview-case-bridge:check and bun run negative-controls:beskt-interview-case-bridge.",
+      "rollback": "supabase/rollback/20261112090000_bcp_interview_case_bridge_rollback.sql"
+    },
+    {
       "file": "20261031090000_sp_passport_first_merit.sql", 
       "hostedState": "applied", 
       "evidenceSource": "Applied through Lovable's connected Supabase migration mechanism to owner production wrygicdfxwjnrugduxnt on 2026-09-07 as hosted version 20260907064849, name 0bb96516-c1eb-4178-8e9e-60bde13071dd. Read-only postflight verified functions, holder-keyed advisory lock order, unique indexes, forced RLS with zero policies, zero PUBLIC/anon/authenticated table privileges, event-policy hardening, onboarding_draft_revision, and unchanged holder row counts. Canonical alias 20261031090000 was then recorded by history-only migration 20260907071826 / 6c070461-aa51-4d78-8ed0-a82294f12489 without re-executing schema SQL. See docs/release/2026-09-07-release-frontier-reconciliation.md.", 

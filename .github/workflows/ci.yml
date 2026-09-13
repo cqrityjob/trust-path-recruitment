@@ -743,6 +743,13 @@ jobs:
       - name: BESKT candidate preparation (PR 3) source guard
         run: bun run beskt-candidate-preparation:check
 
+      # BESKT PR 4 -- the bridge from a submitted candidate preparation to the
+      # employer's EXISTING interview case: the bound snapshot, the
+      # deterministic neutral topics, and the refusals around them. Source-level
+      # only, nothing hosted. Its planted controls run in negative-controls:all.
+      - name: BESKT interview-case bridge (PR 4) source guard
+        run: bun run beskt-interview-case-bridge:check
+
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape
       # and reports the dictionary proof as outstanding; once PR 3B adds the

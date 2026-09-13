@@ -76,7 +76,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Its name comes OFF this list in the same change that records the evidence, for
 // the reason stated above: a resolved name here hides the next genuinely stuck
 // migration behind an expectation. The list is empty again.
-const expectedPending: string[] = [];
+// BESKT PR 4 -- the interview-case bridge. Named here so that removing it from
+// release-state.json, or quietly flipping it to applied, fails this check
+// rather than passing silently.
+const expectedPending: string[] = ["20261112090000_bcp_interview_case_bridge.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
