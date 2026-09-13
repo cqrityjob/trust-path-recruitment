@@ -2959,12 +2959,38 @@ console.log("\n14. CUTOVER: no runtime path calls the legacy finalisation");
     "14.2 exactly one server function calls the previewed contract",
   );
   const types = read("src/integrations/supabase/types.ts");
-  ok(
-    /scp_iv_finalise_previewed_report:\s*\{\s*Args:\s*\{\s*_case_id: string; _expected_basis_hash: string; _draft_run_id: string \| null\s*\}/.test(
-      types,
-    ),
-    "14.3 the client types declare the previewed contract with all three arguments",
-  );
+  // ── WHY THIS IS NOT A LITERAL SHAPE MATCH ──────────────────────────
+  //
+  // What 14.3 is for is that the client contract declares all THREE
+  // arguments, `_draft_run_id` included — the whole point of the cutover in
+  // 14.1/14.2 is that this release calls the three-argument previewed
+  // contract and never the two-argument legacy one.
+  //
+  // It used to pin one exact single-line layout ending
+  // `_draft_run_id: string | null`. That is a HAND-EDITED shape: `supabase
+  // gen types` does not model argument nullability and emits one argument per
+  // line for three of them, so a routine regeneration turned this assertion
+  // red without anything about the contract changing — which is exactly what
+  // happened on main, and it took another edit to the generated file to make
+  // it green again. A guard that can only pass against a hand-edit makes the
+  // generated file harder to regenerate honestly.
+  //
+  // So the argument NAMES are what is checked, in whatever order and layout
+  // the file carries them. This is not weaker: a missing argument still
+  // fails, and 14.4 below still pins the legacy contract to two arguments, so
+  // the two contracts cannot be confused for one another.
+  {
+    const block = /scp_iv_finalise_previewed_report:\s*\{\s*Args:\s*\{([\s\S]*?)\}/.exec(types);
+    const declared = (arg: string) =>
+      Boolean(block) && new RegExp(`\\b${arg}\\??:`).test(block![1]);
+    ok(
+      Boolean(block) &&
+        declared("_case_id") &&
+        declared("_expected_basis_hash") &&
+        declared("_draft_run_id"),
+      "14.3 the client types declare the previewed contract with all three arguments",
+    );
+  }
   ok(
     /scp_iv_finalise_report:\s*\{\s*Args:\s*\{\s*_case_id: string; _draft_run_id\?: string\s*\}/.test(
       types,

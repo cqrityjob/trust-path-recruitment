@@ -1146,7 +1146,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "E4-EVIDENCE-ACCEPTED-WITHOUT-STATUS",
-    defect: "the index loses its explicit accepted status while leaving reassuring provenance prose behind",
+    defect:
+      "the index loses its explicit accepted status while leaving reassuring provenance prose behind",
     file: "artifacts/employer-final-report-e4/INDEX.md",
     find: "**STATUS: ACCEPTED.**",
     replace: "**STATUS: complete.**",
@@ -1182,7 +1183,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "E4-EVIDENCE-ACCEPTED-WITHOUT-ALL-CAPTURES",
-    defect: "the record claims acceptance after fewer than the required seventeen captures were reviewed",
+    defect:
+      "the record claims acceptance after fewer than the required seventeen captures were reviewed",
     file: "artifacts/employer-final-report-e4/INDEX.md",
     find: "| Captures | 17 reviewed · both languages · both widths |",
     replace: "| Captures | 16 reviewed · both languages · both widths |",
@@ -1194,7 +1196,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "the record claims acceptance after fewer than all six traces were checked",
     file: "artifacts/employer-final-report-e4/INDEX.md",
     find: "| Traces | 6 archives opened and integrity-checked · no recorded page, console or action errors |",
-    replace: "| Traces | 5 archives opened and integrity-checked · no recorded page, console or action errors |",
+    replace:
+      "| Traces | 5 archives opened and integrity-checked · no recorded page, console or action errors |",
     guard: E4,
     expect: "13.9b accepted evidence is bound to its code HEAD",
   },
@@ -1651,6 +1654,24 @@ const MORE: readonly Mutation[] = [
     guard: E4,
     expect:
       '10.5 and no string outside the "does not do" list mentions a recommendation or ranking',
+  },
+  /* ── The cutover's three-argument contract ───────────────────────── */
+  //
+  // 14.3 used to pin one exact hand-edited single-line layout of the
+  // generated Args block, so it went red on a routine `supabase gen types`
+  // run and took a second edit to the generated file to recover. It now
+  // checks the argument NAMES in any order or layout. This control is what
+  // keeps that from being a loosening: remove the argument the cutover is
+  // ABOUT and 14.3 must still fail.
+  {
+    id: "E4-PREVIEWED-CONTRACT-LOSES-AN-ARGUMENT",
+    defect:
+      "the client contract drops _draft_run_id, so the previewed three-argument cutover becomes indistinguishable from the legacy two-argument one",
+    file: "src/integrations/supabase/types.ts",
+    find: "Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }",
+    replace: "Args: { _case_id: string; _expected_basis_hash: string }",
+    guard: E4,
+    expect: "14.3 the client types declare the previewed contract with all three arguments",
   },
 ];
 
