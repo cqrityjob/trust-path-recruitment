@@ -23,7 +23,7 @@
  * IMPORTS the real modules and RUNS them. Nothing here reads a source file.
  *
  * The negative controls in
- * `scripts/negative-controls/global-certification-controls.ts` plant each of
+ * `scripts/negative-controls/classifier-behaviour-controls.ts` plant each of
  * those defects back and require THIS suite to fail.
  */
 import {
