@@ -69,6 +69,14 @@ const { CONTENT_VERSION, DEFINITION_VERSION } =
 const { isPersonalItemId, personalItem } =
   await import("../src/lib/career-discovery/v31/personal-layer");
 
+// Group 9 reads source rather than calling a function: where a claim LANDS
+// needs a browser and a staged claim, so it is not reachable from the pure
+// storage harness this file otherwise runs against.
+const { readFileSync: readSource } = await import("node:fs");
+const { join: joinPath } = await import("node:path");
+const { fileURLToPath: toPath } = await import("node:url");
+const REPO_ROOT = joinPath(toPath(new URL(".", import.meta.url)), "..");
+
 let failures = 0;
 let checks = 0;
 
@@ -375,6 +383,60 @@ ok(
   [...tokens].every((t) => !t.includes(Date.now().toString(36).slice(0, 6))),
   "8.3 no token embeds the wall clock",
 );
+
+// =========================================================================
+group("9 · Where a claim LANDS (Emsoms #4)");
+// =========================================================================
+//
+// Claiming used to navigate to the report with ?saved=true -- a page
+// reached by creating an account, carrying no navigation context and none
+// of the person's other work. The owner's review called it being dropped
+// into a disconnected report. It lands on the authenticated overview now,
+// which states the outcome and offers the report as one explicit click.
+//
+// Read from source: this flow needs a browser and a staged claim, so the
+// destination is not reachable from the pure-function harness above.
+{
+  const flowSrc = readSource(
+    joinPath(REPO_ROOT, "src/components/career-discovery/v31/PublicAssessmentFlow.tsx"),
+    "utf8",
+  );
+  const claimNav = flowSrc.slice(
+    flowSrc.indexOf('track("result_claimed")'),
+    flowSrc.indexOf("} catch (err) {", flowSrc.indexOf('track("result_claimed")')),
+  );
+  ok(claimNav.length > 0, "9.1 the post-claim navigation is locatable");
+  ok(
+    /to: "\/my-career"/.test(claimNav),
+    "9.2 a claimed result lands on the authenticated overview, not on a bare report page",
+  );
+  ok(
+    /search: \{ savedReport: result\.snapshotId \}/.test(claimNav),
+    "9.3 carrying the snapshot id, so the overview can offer the report and a refresh still says what happened",
+  );
+  ok(
+    !/to: "\/security-career-assessment\/report/.test(claimNav),
+    "9.4 and no longer navigates straight into the report",
+  );
+
+  const overview = readSource(
+    joinPath(REPO_ROOT, "src/routes/_authenticated.my-career.index.tsx"),
+    "utf8",
+  );
+  ok(
+    /validateSearch/.test(overview) &&
+      /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}/.test(overview),
+    "9.5 the overview VALIDATES savedReport as a uuid -- it is rendered into a link, so an unvalidated value would be a redirect surface",
+  );
+  ok(
+    /career-discovery-claim-saved/.test(overview) && /role="status"/.test(overview),
+    "9.6 and announces the saved state rather than only painting it",
+  );
+  ok(
+    /career-discovery-claim-open-report/.test(overview),
+    "9.7 with a visible action that opens the report",
+  );
+}
 
 console.log(
   failures === 0

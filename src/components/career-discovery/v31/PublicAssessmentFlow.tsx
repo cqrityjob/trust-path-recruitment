@@ -587,13 +587,22 @@ export function PublicAssessmentFlow() {
       // buffer does, and only after a confirmed write.
       clearPendingClaim();
       track("result_claimed");
+      // ── WHERE A CLAIM LANDS (Emsoms #4) ───────────────────────────────
+      //
+      // This used to navigate to the REPORT with ?saved=true. That is a page
+      // reached by creating an account which carries no navigation context
+      // and none of the person's other work -- the owner's review called it
+      // being dropped into a disconnected report.
+      //
+      // It lands on the authenticated overview instead, which is the home
+      // the person just earned and the place the rest of their journey
+      // starts from. The outcome is still stated once on arrival, and the
+      // report is one explicit click away rather than the thing they were
+      // dropped into. The snapshot id travels in the URL so a refresh or a
+      // Back still says what happened.
       navigate({
-        to: "/security-career-assessment/report/$snapshotId",
-        params: { snapshotId: result.snapshotId },
-        // Says so, once, on arrival. A candidate who created an account for
-        // exactly one reason should be told that reason has been met rather
-        // than left to infer it from a page that looks the same either way.
-        search: { saved: true },
+        to: "/my-career",
+        search: { savedReport: result.snapshotId },
       });
     } catch (err) {
       // Log the real reason. The candidate still sees the calm failure state,

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -49,8 +49,23 @@ import { getMyAssessmentHistory } from "@/lib/security-competency/assessment-lif
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import type { CareerProfileForJobsV1 } from "@/lib/career-intelligence-engine/profile-for-jobs";
-import { L, type Copy } from "@/components/professional-identity/copy";
+import { c, L, type Copy } from "@/components/professional-identity/copy";
 import { ACTIVITY, CAREER } from "@/components/professional-identity/home-copy";
+
+/** The "your result is saved" state, shown once on arrival from a claim.
+ *
+ *  It is deliberately a SAVED state and not a congratulation: the thing the
+ *  person wants to know is that the work they did anonymously survived the
+ *  account they just created. The action beside it opens the report, so the
+ *  report is one click away rather than the place they were dropped. */
+const CLAIMED = {
+  title: c("Ditt Career Discovery-resultat är sparat", "Your Career Discovery result is saved"),
+  body: c(
+    "Det hör nu till ditt konto. Du hittar det alltid under Karriär.",
+    "It now belongs to your account. You can always find it under Career.",
+  ),
+  open: c("Öppna rapporten", "Open the report"),
+} as const;
 
 /**
  * /my-career — the hub's OVERVIEW.
@@ -99,6 +114,30 @@ import { ACTIVITY, CAREER } from "@/components/professional-identity/home-copy";
  */
 
 export const Route = createFileRoute("/_authenticated/my-career/")({
+  // ── "CAREER DISCOVERY RESULT SAVED", ON THE PAGE THAT OWNS THE PERSON ──
+  //
+  // Claiming a result used to navigate to the REPORT with ?saved=true: a
+  // page reached by creating an account, carrying no navigation context and
+  // none of the person's other work. The owner's review named it (Emsoms
+  // #4) -- the candidate is dropped into a disconnected report instead of
+  // the authenticated home they just earned.
+  //
+  // The claim now lands here and states the outcome, with an explicit
+  // action to open the report. The snapshot id travels in the URL rather
+  // than in state so that a refresh, a Back, or the verification link
+  // opened in a different tab still says what happened.
+  //
+  // VALIDATED, not trusted. It is rendered into a link to the report, so an
+  // unvalidated value would be an open redirect surface. Only a uuid-shaped
+  // string survives, and anything else resolves to no banner at all rather
+  // than to a broken link.
+  validateSearch: (search: Record<string, unknown>): { savedReport?: string } => {
+    const raw = search.savedReport;
+    return typeof raw === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)
+      ? { savedReport: raw }
+      : {};
+  },
   ssr: false,
   head: () => ({
     meta: [
@@ -122,6 +161,9 @@ function pickTopFamily(profile: CareerProfileForJobsV1) {
 
 function MyCareerPage() {
   const { lang } = useT();
+  // Present only when the candidate arrived here by claiming a result.
+  // Validated in the route, so it is either a uuid or absent.
+  const { savedReport } = Route.useSearch();
   const say = (v: Copy) => L(v, lang);
   const qc = useQueryClient();
 
@@ -434,6 +476,30 @@ function MyCareerPage() {
 
   return (
     <Section className="py-8 md:py-10" containerClassName="max-w-[1240px]">
+      {/* 0 · What just happened, when the person got here by claiming a
+             Career Discovery result. Announced, because a candidate who
+             created an account for exactly one reason should be TOLD that
+             reason has been met rather than left to infer it from a page
+             that looks the same either way. */}
+      {savedReport && (
+        <div
+          data-testid="career-discovery-claim-saved"
+          role="status"
+          className="mb-6 rounded-xl border border-accent/30 bg-accent/5 p-4 md:p-5"
+        >
+          <h2 className="text-base font-semibold text-foreground">{say(CLAIMED.title)}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{say(CLAIMED.body)}</p>
+          <Link
+            to="/security-career-assessment/report/$snapshotId"
+            params={{ snapshotId: savedReport }}
+            data-testid="career-discovery-claim-open-report"
+            className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {say(CLAIMED.open)}
+          </Link>
+        </div>
+      )}
+
       {/* 1 · Who am I */}
       <CareerPageHeader profile={model.profile} onRetry={retryIdentity} />
 
