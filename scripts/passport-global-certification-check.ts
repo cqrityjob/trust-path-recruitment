@@ -516,9 +516,18 @@ for (const preserved of [
   }
 
   // And they are hardcoded in the body, in both the INSERT and the correction.
+  // Counting occurrences is not enough, and the GC-NC-SOURCE-NOT-HARDCODED
+  // control proved it: once the provenance predicate below was added, deleting
+  // the restatement from the SET list still left two `'holder_declared'`
+  // literals in the function, so the count assertion kept printing ok over a
+  // real defect. Each of the two places is now asserted by its own shape.
   ok(
-    (fn.match(/'holder_declared'/g) ?? []).length >= 2,
-    "status_source is hardcoded to holder_declared on create AND on correction",
+    /'holder_declared', NULL, NULL\)/.test(fn),
+    "the INSERT writes status_source = holder_declared, with neither issuer field",
+  );
+  ok(
+    /\n\s+status_source\s+= 'holder_declared',/.test(fn),
+    "and the correction RESTATES it in the SET list, not merely in the predicate",
   );
   ok(
     !/'document_reviewed'|'issuer_confirmed'/.test(fn),

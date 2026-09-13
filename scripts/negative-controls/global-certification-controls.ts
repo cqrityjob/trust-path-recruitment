@@ -189,7 +189,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "    status_source               = 'holder_declared',",
     replace: "    -- (source left as it was)",
     guard: GUARD,
-    expect: "status_source is hardcoded to holder_declared on create AND on correction",
+    expect: "and the correction RESTATES it in the SET list, not merely in the predicate",
   },
   {
     id: "GC-NC-ISSUER-FIELDS-WRITABLE",
@@ -204,8 +204,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "GC-NC-CREATED-AT-REWRITTEN",
     defect: "a correction rewrites created_at, so a holder can backdate their own statement",
     file: MIGRATION,
-    find: "    updated_at                  = now();",
-    replace: "    created_at                  = now(),\n    updated_at                  = now();",
+    find: "    updated_at                  = now()\n  WHERE",
+    replace:
+      "    created_at                  = now(),\n    updated_at                  = now()\n  WHERE",
     guard: GUARD,
     expect: "created_at is never rewritten by a correction",
   },
