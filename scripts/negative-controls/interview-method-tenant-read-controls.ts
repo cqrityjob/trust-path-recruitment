@@ -49,7 +49,8 @@ const MUTATIONS: readonly Mutation[] = [
       "the case-linked branch stops joining the case to the CALLER'S employer, so a case of any employer opens the method to everyone",
     file: MIG,
     find: "JOIN public.employer_memberships em ON em.employer_id = c.employer_id\n                  WHERE c.trust_method_id = _method_id",
-    replace: "JOIN public.employer_memberships em ON true\n                  WHERE c.trust_method_id = _method_id",
+    replace:
+      "JOIN public.employer_memberships em ON true\n                  WHERE c.trust_method_id = _method_id",
     guard: GUARD,
     expect: "IMTR-PREDICATE",
   },
@@ -118,7 +119,8 @@ const MUTATIONS: readonly Mutation[] = [
   // ---- The five policies ---------------------------------------------------
   {
     id: "IMTR-NC-POLICY-MEMBERSHIP-ONLY",
-    defect: "the method policy goes back to deciding on membership alone -- the original finding, verbatim",
+    defect:
+      "the method policy goes back to deciding on membership alone -- the original finding, verbatim",
     file: MIG,
     find: "ALTER POLICY scp_interview_methods_employer_read ON public.scp_interview_methods\n  USING (public.scp_iv_employer_may_read_method(id));",
     replace:
@@ -138,7 +140,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "IMTR-NC-GOVERNANCE-READ-LOST",
-    defect: "the conduct-steps policy drops the governance-reader read, locking content roles out of what they govern",
+    defect:
+      "the conduct-steps policy drops the governance-reader read, locking content roles out of what they govern",
     file: MIG,
     find: "ALTER POLICY scp_interview_conduct_steps_read ON public.scp_interview_conduct_steps\n  USING (public.scp_interview_can_read(auth.uid())\n         OR public.scp_iv_employer_may_read_method(method_id));",
     replace:
@@ -170,7 +173,8 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "IMTR-NC-POSTFLIGHT-NOT-EXERCISED",
-    defect: "the postflight stops exercising the predicate with no principal, inspecting the catalogue only",
+    defect:
+      "the postflight stops exercising the predicate with no principal, inspecting the catalogue only",
     file: MIG,
     find: "  IF coalesce((SELECT bool_or(public.scp_iv_employer_may_read_method(m.id))\n                 FROM public.scp_interview_methods m), false) THEN",
     replace: "  IF false THEN",
@@ -190,10 +194,12 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "IMTR-NC-ROLLBACK-WRONG-PREDICATE",
-    defect: "the rollback restores the method policy to something other than the previous predicate",
+    defect:
+      "the rollback restores the method policy to something other than the previous predicate",
     file: RB,
     find: "ALTER POLICY scp_interview_methods_employer_read ON public.scp_interview_methods\n  USING (EXISTS (SELECT 1 FROM public.employer_memberships em\n                  WHERE em.user_id = auth.uid() AND em.status = 'active'));",
-    replace: "ALTER POLICY scp_interview_methods_employer_read ON public.scp_interview_methods\n  USING (true);",
+    replace:
+      "ALTER POLICY scp_interview_methods_employer_read ON public.scp_interview_methods\n  USING (true);",
     guard: GUARD,
     expect: "IMTR-ROLLBACK",
   },
@@ -219,10 +225,11 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "IMTR-NC-SUITE-CONTROL-REMOVED",
-    defect: "the in-suite grant control is removed, so a widened grant would no longer be shown to be detectable",
+    defect:
+      "the in-suite grant control is removed, so a widened grant would no longer be shown to be detectable",
     file: SUITE,
-    find: "SAVEPOINT ml_weakened_grant;\n",
-    replace: "",
+    find: "-- Control 3: the grant is widened to anon.\nSAVEPOINT ml_weakened_grant;\n",
+    replace: "-- Control 3: the grant is widened to anon.\n",
     guard: GUARD,
     expect: "IMTR-SUITE",
   },
@@ -261,16 +268,18 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "the harness stops requiring the suite to FAIL against the rolled-back schema",
     file: DB,
     find: 'if [ "$ML_WEAK_RC" -eq 0 ] || ! echo "$ML_WEAK" | grep -q "ASSERTION FAILED"; then',
-    replace: 'if false; then',
+    replace: "if false; then",
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },
   {
     id: "IMTR-NC-CLAIMED-APPLIED",
-    defect: "the pending migration is declared applied with no evidence, an owner-level claim about production with nothing behind it",
+    defect:
+      "the pending migration is declared applied with no evidence, an owner-level claim about production with nothing behind it",
     file: STATE,
     find: '"file": "20261115090000_scp_interview_method_library_tenant_read.sql",\n      "hostedState": "pending",',
-    replace: '"file": "20261115090000_scp_interview_method_library_tenant_read.sql",\n      "hostedState": "applied",',
+    replace:
+      '"file": "20261115090000_scp_interview_method_library_tenant_read.sql",\n      "hostedState": "applied",',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },

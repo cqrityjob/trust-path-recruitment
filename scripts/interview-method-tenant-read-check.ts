@@ -93,10 +93,7 @@ function functionBody(fn: string): string {
  *  dollar-quoted body, so the first `;` ends the statement. */
 function policyStatements(sql: string, table: string, policy: string): string[] {
   const bare = stripComments(sql);
-  const re = new RegExp(
-    `(CREATE|ALTER) POLICY ${policy} ON public\\.${table}\\b[^;]*;`,
-    "g",
-  );
+  const re = new RegExp(`(CREATE|ALTER) POLICY ${policy} ON public\\.${table}\\b[^;]*;`, "g");
   return [...bare.matchAll(re)].map((m) => squash(m[0]));
 }
 
@@ -114,10 +111,7 @@ const bare = stripComments(migration);
     /RETURNS boolean/.test(header) && /SECURITY DEFINER/.test(header),
     "IMTR-PREDICATE: it is a boolean SECURITY DEFINER function (an invoker-rights read of its own table's policy would recurse)",
   );
-  check(
-    /SET search_path = public/.test(header),
-    "IMTR-PREDICATE: and pins search_path = public",
-  );
+  check(/SET search_path = public/.test(header), "IMTR-PREDICATE: and pins search_path = public");
   check(
     /^SELECT auth\.uid\(\) IS NOT NULL AND _method_id IS NOT NULL AND \(/.test(body),
     "IMTR-PREDICATE: it verifies auth.uid() first and answers false for a null method",
@@ -180,18 +174,12 @@ const bare = stripComments(migration);
       stmts.length >= 1 && last.startsWith("ALTER POLICY"),
       `IMTR-POLICIES: ${policy} is re-pointed with ALTER POLICY (never absent), not dropped and re-created`,
     );
-    check(
-      last.includes(`${PREDICATE}(`),
-      `IMTR-POLICIES: ${policy} decides through the predicate`,
-    );
+    check(last.includes(`${PREDICATE}(`), `IMTR-POLICIES: ${policy} decides through the predicate`);
     check(
       !/employer_memberships/i.test(last),
       `IMTR-POLICIES: ${policy} no longer carries the bare membership subquery`,
     );
-    check(
-      !/USING \(\s*true\s*\)/i.test(last),
-      `IMTR-POLICIES: ${policy} is not unconditional`,
-    );
+    check(!/USING \(\s*true\s*\)/i.test(last), `IMTR-POLICIES: ${policy} is not unconditional`);
     if (governance) {
       check(
         last.includes("scp_interview_can_read(auth.uid()) OR"),
@@ -199,10 +187,7 @@ const bare = stripComments(migration);
       );
     }
   }
-  check(
-    !/DROP POLICY/i.test(bare),
-    "IMTR-POLICIES: the migration drops no policy at all",
-  );
+  check(!/DROP POLICY/i.test(bare), "IMTR-POLICIES: the migration drops no policy at all");
 }
 
 // ── 4. The surviving state across the whole history ─────────────────────
@@ -262,8 +247,9 @@ const bare = stripComments(migration);
     "IMTR-POSTFLIGHT: or if search_path is not pinned",
   );
   check(
-    /position\('scp_iv_employer_may_read_method\(' IN _qual\) = 0 THEN\s+RAISE EXCEPTION/.test(proof) &&
-      /_qual ILIKE '%employer_memberships%' THEN\s+RAISE EXCEPTION/.test(proof),
+    /position\('scp_iv_employer_may_read_method\(' IN _qual\) = 0 THEN\s+RAISE EXCEPTION/.test(
+      proof,
+    ) && /_qual ILIKE '%employer_memberships%' THEN\s+RAISE EXCEPTION/.test(proof),
     "IMTR-POSTFLIGHT: or if any of the five policies is not routed through the predicate or still decides on bare membership",
   );
   check(
@@ -273,7 +259,9 @@ const bare = stripComments(migration);
     "IMTR-POSTFLIGHT: or if a table lost its governance-reader read",
   );
   check(
-    /has_table_privilege\('anon', 'public\.' \|\| _t, 'SELECT'\) THEN\s+RAISE EXCEPTION/.test(proof),
+    /has_table_privilege\('anon', 'public\.' \|\| _t, 'SELECT'\) THEN\s+RAISE EXCEPTION/.test(
+      proof,
+    ),
     "IMTR-POSTFLIGHT: or if anon can read any of the five tables",
   );
   check(
@@ -310,7 +298,9 @@ const bare = stripComments(migration);
     "IMTR-ROLLBACK: and drops the predicate",
   );
   check(
-    /RAISE EXCEPTION 'SCP_IV_METHOD_LIBRARY_TENANT_READ_ROLLBACK BLOCKED: % now depends on/.test(rbBare),
+    /RAISE EXCEPTION 'SCP_IV_METHOD_LIBRARY_TENANT_READ_ROLLBACK BLOCKED: % now depends on/.test(
+      rbBare,
+    ),
     "IMTR-ROLLBACK: refusing first if any other policy has come to depend on the predicate",
   );
   check(
@@ -323,8 +313,12 @@ const bare = stripComments(migration);
     "IMTR-ROLLBACK: and proves all five membership predicates are back before it reports success",
   );
   const unwind = read(FULL_UNWIND);
-  const dropMethod = unwind.indexOf("DROP FUNCTION IF EXISTS public.scp_iv_employer_may_read_method(uuid);");
-  const dropPack = unwind.indexOf("DROP FUNCTION IF EXISTS public.scp_iv_employer_may_read_pack(uuid);");
+  const dropMethod = unwind.indexOf(
+    "DROP FUNCTION IF EXISTS public.scp_iv_employer_may_read_method(uuid);",
+  );
+  const dropPack = unwind.indexOf(
+    "DROP FUNCTION IF EXISTS public.scp_iv_employer_may_read_pack(uuid);",
+  );
   check(
     dropMethod >= 0 && dropPack > dropMethod,
     "IMTR-ROLLBACK: the documented full unwind drops the predicate alongside the pack read entitlement",
@@ -350,10 +344,7 @@ const bare = stripComments(migration);
     "IMTR-SUITE: and no two assertions share a label, so a failure names exactly one thing",
   );
   for (let g = 0; g <= 11; g += 1) {
-    check(
-      new RegExp(`GROUP ML${g} —`).test(suite),
-      `IMTR-SUITE: group ML${g} is present`,
-    );
+    check(new RegExp(`GROUP ML${g} —`).test(suite), `IMTR-SUITE: group ML${g} is present`);
   }
   check(
     suite.includes("'user_metadata', json_build_object(") &&
@@ -362,7 +353,8 @@ const bare = stripComments(migration);
     "IMTR-SUITE: it forges user_metadata and app_metadata admin and employer claims and requires them to grant nothing",
   );
   check(
-    suite.includes("SET LOCAL ROLE anon;") && suite.includes("'permission denied', 'ML5.7 anon cannot execute the method predicate'"),
+    suite.includes("SET LOCAL ROLE anon;") &&
+      suite.includes("'permission denied', 'ML5.7 anon cannot execute the method predicate'"),
     "IMTR-SUITE: it proves anon is refused at the function, not assumed",
   );
   check(
@@ -375,9 +367,17 @@ const bare = stripComments(migration);
     ) && suite.includes("_grantees = 'authenticated, service_role'"),
     "IMTR-SUITE: it pins the anon-executable SECURITY DEFINER allowlist and the predicate's exact executor set",
   );
-  for (const sp of ["ml_weakened_policy", "ml_weakened_predicate", "ml_weakened_grant", "ml_unconditional"]) {
+  for (const sp of [
+    "ml_weakened_policy",
+    "ml_weakened_predicate",
+    "ml_weakened_grant",
+    "ml_unconditional",
+  ]) {
+    // Line-anchored: "ROLLBACK TO SAVEPOINT x;" contains "SAVEPOINT x;", so a
+    // substring test would still pass with the savepoint itself removed.
     check(
-      suite.includes(`SAVEPOINT ${sp};`) && suite.includes(`ROLLBACK TO SAVEPOINT ${sp};`),
+      new RegExp(`^SAVEPOINT ${sp};$`, "m").test(suite) &&
+        new RegExp(`^ROLLBACK TO SAVEPOINT ${sp};$`, "m").test(suite),
       `IMTR-SUITE: the in-suite control ${sp} plants a defect and undoes it`,
     );
   }
@@ -386,7 +386,8 @@ const bare = stripComments(migration);
     "IMTR-SUITE: and each control asserts that the SAME boundary assertion now fails",
   );
   check(
-    suite.includes("public.scp_iv_create_case(") && suite.includes("scp_interview_pack_pilot_grants"),
+    suite.includes("public.scp_iv_create_case(") &&
+      suite.includes("scp_interview_pack_pilot_grants"),
     "IMTR-SUITE: fixtures are built through the governed case RPC and a real pilot grant, not by assuming states",
   );
 }
@@ -409,7 +410,9 @@ const bare = stripComments(migration);
     "IMTR-REGISTRATION: the rollback and the re-apply are executed for real, with their proofs required",
   );
   check(
-    dbTest.includes('if [ "$ML_WEAK_RC" -eq 0 ] || ! echo "$ML_WEAK" | grep -q "ASSERTION FAILED"; then'),
+    dbTest.includes(
+      'if [ "$ML_WEAK_RC" -eq 0 ] || ! echo "$ML_WEAK" | grep -q "ASSERTION FAILED"; then',
+    ),
     "IMTR-REGISTRATION: and the suite is run against the rolled-back schema and REQUIRED to fail there",
   );
 
@@ -424,7 +427,10 @@ const bare = stripComments(migration);
     "IMTR-REGISTRATION: its controls have a script AND are part of negative-controls:all",
   );
   const ci = read(CI);
-  check(ci.includes("interview-method-tenant-read:check"), "IMTR-REGISTRATION: the guard runs in CI");
+  check(
+    ci.includes("interview-method-tenant-read:check"),
+    "IMTR-REGISTRATION: the guard runs in CI",
+  );
   check(
     ci.includes("negative-controls:all"),
     "IMTR-REGISTRATION: and CI runs negative-controls:all, which the package script puts these controls inside",
@@ -447,7 +453,10 @@ const bare = stripComments(migration);
     }>;
   };
   const entry = (state.frontier ?? []).find((m) => m.file === MIGRATION_NAME);
-  check(entry !== undefined, "IMTR-REGISTRATION: the migration is classified on the release frontier");
+  check(
+    entry !== undefined,
+    "IMTR-REGISTRATION: the migration is classified on the release frontier",
+  );
   check(
     entry?.introduces?.some((o) => o.object === PREDICATE && o.kind === "function") === true,
     "IMTR-REGISTRATION: and declares the predicate it introduces, so release-parity can see any code dependency",
@@ -465,7 +474,9 @@ const bare = stripComments(migration);
   );
   const frontier = read(FRONTIER);
   check(
-    new RegExp(`const expectedPending: string\\[\\] = \\[[^\\]]*"${MIGRATION_NAME}"`).test(frontier),
+    new RegExp(`const expectedPending: string\\[\\] = \\[[^\\]]*"${MIGRATION_NAME}"`).test(
+      frontier,
+    ),
     "IMTR-REGISTRATION: and the frontier selection check expects exactly that pending migration",
   );
 }
@@ -481,7 +492,9 @@ const bare = stripComments(migration);
     "IMTR-NO-REGRESSION: it creates, alters or drops no table",
   );
   check(
-    !/scp_iv_employer_may_read_pack\s*\(/.test(bare.replace(/scp_iv_employer_may_read_pack\(\)/g, "")),
+    !/scp_iv_employer_may_read_pack\s*\(/.test(
+      bare.replace(/scp_iv_employer_may_read_pack\(\)/g, ""),
+    ),
     "IMTR-NO-REGRESSION: it does not redefine the pack read entitlement",
   );
   check(
@@ -489,7 +502,8 @@ const bare = stripComments(migration);
     "IMTR-NO-REGRESSION: it touches no pack-content or case policy",
   );
   check(
-    !/GRANT [^;]* ON (TABLE )?public\./i.test(bare) && !/REVOKE [^;]* ON (TABLE )?public\./i.test(bare),
+    !/GRANT [^;]* ON (TABLE )?public\./i.test(bare) &&
+      !/REVOKE [^;]* ON (TABLE )?public\./i.test(bare),
     "IMTR-NO-REGRESSION: it changes no table grant",
   );
 }
