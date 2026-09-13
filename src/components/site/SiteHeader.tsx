@@ -476,7 +476,7 @@ export function SiteHeader() {
                   key={item.to}
                   to={item.to}
                   hash={item.hash}
-                  activeOptions={{ exact: item.to === "/" }}
+                  activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}
                   className={cn(
                     "relative inline-flex items-center justify-center rounded-md px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                     touchTarget,
@@ -642,7 +642,7 @@ export function SiteHeader() {
                   key={item.to}
                   to={item.to}
                   hash={item.hash}
-                  activeOptions={{ exact: item.to === "/" }}
+                  activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}
                   onClick={() => setOpen(false)}
                   className={cn(
                     // 44px, not the old ~36px row: these are the primary
