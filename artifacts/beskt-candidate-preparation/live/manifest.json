@@ -1,0 +1,1241 @@
+{
+  "what": "BESKT PR 3 candidate preparation — the ROUTED browser walk",
+  "kind": "the real application on its real routes, signed in, against a local Postgres + PostgREST stack",
+  "head": "340785c62e1b7b9f19dc2ccbca7d10f9e3ec48d0",
+  "builtAt": "2026-09-13T06:20:31.815Z",
+  "projects": [
+    "chromium",
+    "mobile-375",
+    "mobile-390"
+  ],
+  "totalMs": 132657,
+  "stepCount": 96,
+  "phases": [
+    {
+      "project": "chromium",
+      "phase": "library",
+      "steps": 3,
+      "ms": 13890
+    },
+    {
+      "project": "chromium",
+      "phase": "assign",
+      "steps": 4,
+      "ms": 5036
+    },
+    {
+      "project": "chromium",
+      "phase": "notice",
+      "steps": 4,
+      "ms": 4423
+    },
+    {
+      "project": "chromium",
+      "phase": "answer",
+      "steps": 7,
+      "ms": 3523
+    },
+    {
+      "project": "chromium",
+      "phase": "resume",
+      "steps": 2,
+      "ms": 4039
+    },
+    {
+      "project": "chromium",
+      "phase": "review",
+      "steps": 3,
+      "ms": 3294
+    },
+    {
+      "project": "chromium",
+      "phase": "submit",
+      "steps": 3,
+      "ms": 544
+    },
+    {
+      "project": "chromium",
+      "phase": "readback",
+      "steps": 4,
+      "ms": 3688
+    },
+    {
+      "project": "chromium",
+      "phase": "refusal",
+      "steps": 2,
+      "ms": 5762
+    },
+    {
+      "project": "mobile-375",
+      "phase": "library",
+      "steps": 3,
+      "ms": 18053
+    },
+    {
+      "project": "mobile-375",
+      "phase": "assign",
+      "steps": 4,
+      "ms": 4514
+    },
+    {
+      "project": "mobile-375",
+      "phase": "notice",
+      "steps": 4,
+      "ms": 4179
+    },
+    {
+      "project": "mobile-375",
+      "phase": "answer",
+      "steps": 7,
+      "ms": 3434
+    },
+    {
+      "project": "mobile-375",
+      "phase": "resume",
+      "steps": 2,
+      "ms": 4075
+    },
+    {
+      "project": "mobile-375",
+      "phase": "review",
+      "steps": 3,
+      "ms": 3232
+    },
+    {
+      "project": "mobile-375",
+      "phase": "submit",
+      "steps": 3,
+      "ms": 486
+    },
+    {
+      "project": "mobile-375",
+      "phase": "readback",
+      "steps": 4,
+      "ms": 3503
+    },
+    {
+      "project": "mobile-375",
+      "phase": "refusal",
+      "steps": 2,
+      "ms": 5471
+    },
+    {
+      "project": "mobile-390",
+      "phase": "library",
+      "steps": 3,
+      "ms": 12818
+    },
+    {
+      "project": "mobile-390",
+      "phase": "assign",
+      "steps": 4,
+      "ms": 4505
+    },
+    {
+      "project": "mobile-390",
+      "phase": "notice",
+      "steps": 4,
+      "ms": 3600
+    },
+    {
+      "project": "mobile-390",
+      "phase": "answer",
+      "steps": 7,
+      "ms": 3334
+    },
+    {
+      "project": "mobile-390",
+      "phase": "resume",
+      "steps": 2,
+      "ms": 4492
+    },
+    {
+      "project": "mobile-390",
+      "phase": "review",
+      "steps": 3,
+      "ms": 3006
+    },
+    {
+      "project": "mobile-390",
+      "phase": "submit",
+      "steps": 3,
+      "ms": 505
+    },
+    {
+      "project": "mobile-390",
+      "phase": "readback",
+      "steps": 4,
+      "ms": 3514
+    },
+    {
+      "project": "mobile-390",
+      "phase": "refusal",
+      "steps": 2,
+      "ms": 5737
+    }
+  ],
+  "steps": [
+    {
+      "phase": "library",
+      "step": "sign in as the recruiter",
+      "ms": 12672,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:06.327Z"
+    },
+    {
+      "phase": "library",
+      "step": "the section is present and is not a test",
+      "ms": 1021,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:07.349Z"
+    },
+    {
+      "phase": "library",
+      "step": "the same page in English",
+      "ms": 197,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:07.546Z"
+    },
+    {
+      "phase": "assign",
+      "step": "sign in and open the application",
+      "ms": 2358,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:10.322Z"
+    },
+    {
+      "phase": "assign",
+      "step": "the panel offers a governed exposure profile",
+      "ms": 2237,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:12.560Z"
+    },
+    {
+      "phase": "assign",
+      "step": "start it",
+      "ms": 164,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:12.725Z"
+    },
+    {
+      "phase": "assign",
+      "step": "a draft shows the employer NOTHING of the candidate's",
+      "ms": 277,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:13.003Z"
+    },
+    {
+      "phase": "notice",
+      "step": "sign in and find it in My Career",
+      "ms": 3594,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:17.012Z"
+    },
+    {
+      "phase": "notice",
+      "step": "all nine matters are disclosed",
+      "ms": 278,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:17.290Z"
+    },
+    {
+      "phase": "notice",
+      "step": "it says plainly that it is not a consent",
+      "ms": 154,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:17.444Z"
+    },
+    {
+      "phase": "notice",
+      "step": "acknowledge it",
+      "ms": 397,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:17.841Z"
+    },
+    {
+      "phase": "answer",
+      "step": "reopen the preparation",
+      "ms": 2645,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:20.940Z"
+    },
+    {
+      "phase": "answer",
+      "step": "answer the first question and save",
+      "ms": 173,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:21.113Z"
+    },
+    {
+      "phase": "answer",
+      "step": "the saved answer OPENS the follow-up question",
+      "ms": 64,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:21.177Z"
+    },
+    {
+      "phase": "answer",
+      "step": "take that question orally instead",
+      "ms": 63,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:21.240Z"
+    },
+    {
+      "phase": "answer",
+      "step": "answer the boolean and save, which opens the context question",
+      "ms": 298,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:21.539Z"
+    },
+    {
+      "phase": "answer",
+      "step": "skip the context question",
+      "ms": 219,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:21.758Z"
+    },
+    {
+      "phase": "answer",
+      "step": "save the omission and the oral choice too",
+      "ms": 61,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:21.819Z"
+    },
+    {
+      "phase": "resume",
+      "step": "leave the preparation entirely",
+      "ms": 2177,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:23.997Z"
+    },
+    {
+      "phase": "resume",
+      "step": "come back and find the EXACT same answers",
+      "ms": 1862,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:25.859Z"
+    },
+    {
+      "phase": "review",
+      "step": "reopen and go to the review",
+      "ms": 2899,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:29.254Z"
+    },
+    {
+      "phase": "review",
+      "step": "go back and CORRECT one response",
+      "ms": 345,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:29.599Z"
+    },
+    {
+      "phase": "review",
+      "step": "the correction is what the review now shows",
+      "ms": 50,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:29.649Z"
+    },
+    {
+      "phase": "submit",
+      "step": "submit it once",
+      "ms": 261,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:29.910Z"
+    },
+    {
+      "phase": "submit",
+      "step": "read-only means read-only",
+      "ms": 101,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:30.012Z"
+    },
+    {
+      "phase": "submit",
+      "step": "and in English",
+      "ms": 182,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:30.194Z"
+    },
+    {
+      "phase": "readback",
+      "step": "sign in and open the application",
+      "ms": 2297,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:32.904Z"
+    },
+    {
+      "phase": "readback",
+      "step": "the submitted basis is readable now",
+      "ms": 971,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:33.876Z"
+    },
+    {
+      "phase": "readback",
+      "step": "the neutral states are shown AS states",
+      "ms": 172,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:34.048Z"
+    },
+    {
+      "phase": "readback",
+      "step": "no judgement anywhere on the surface",
+      "ms": 248,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:34.297Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "another candidate is refused this preparation",
+      "ms": 2911,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:37.470Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "a member of another employer is refused the readback",
+      "ms": 2851,
+      "project": "chromium",
+      "at": "2026-09-13T06:18:40.321Z"
+    },
+    {
+      "phase": "library",
+      "step": "sign in as the recruiter",
+      "ms": 16954,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:01.594Z"
+    },
+    {
+      "phase": "library",
+      "step": "the section is present and is not a test",
+      "ms": 936,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:02.532Z"
+    },
+    {
+      "phase": "library",
+      "step": "the same page in English",
+      "ms": 163,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:02.695Z"
+    },
+    {
+      "phase": "assign",
+      "step": "sign in and open the application",
+      "ms": 2282,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:05.338Z"
+    },
+    {
+      "phase": "assign",
+      "step": "the panel offers a governed exposure profile",
+      "ms": 1885,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:07.223Z"
+    },
+    {
+      "phase": "assign",
+      "step": "start it",
+      "ms": 210,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:07.433Z"
+    },
+    {
+      "phase": "assign",
+      "step": "a draft shows the employer NOTHING of the candidate's",
+      "ms": 137,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:07.570Z"
+    },
+    {
+      "phase": "notice",
+      "step": "sign in and find it in My Career",
+      "ms": 2784,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:10.753Z"
+    },
+    {
+      "phase": "notice",
+      "step": "all nine matters are disclosed",
+      "ms": 875,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:11.632Z"
+    },
+    {
+      "phase": "notice",
+      "step": "it says plainly that it is not a consent",
+      "ms": 129,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:11.762Z"
+    },
+    {
+      "phase": "notice",
+      "step": "acknowledge it",
+      "ms": 391,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:12.154Z"
+    },
+    {
+      "phase": "answer",
+      "step": "reopen the preparation",
+      "ms": 2620,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:15.304Z"
+    },
+    {
+      "phase": "answer",
+      "step": "answer the first question and save",
+      "ms": 163,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:15.468Z"
+    },
+    {
+      "phase": "answer",
+      "step": "the saved answer OPENS the follow-up question",
+      "ms": 69,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:15.538Z"
+    },
+    {
+      "phase": "answer",
+      "step": "take that question orally instead",
+      "ms": 70,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:15.608Z"
+    },
+    {
+      "phase": "answer",
+      "step": "answer the boolean and save, which opens the context question",
+      "ms": 290,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:15.898Z"
+    },
+    {
+      "phase": "answer",
+      "step": "skip the context question",
+      "ms": 151,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:16.050Z"
+    },
+    {
+      "phase": "answer",
+      "step": "save the omission and the oral choice too",
+      "ms": 71,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:16.122Z"
+    },
+    {
+      "phase": "resume",
+      "step": "leave the preparation entirely",
+      "ms": 2165,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:18.287Z"
+    },
+    {
+      "phase": "resume",
+      "step": "come back and find the EXACT same answers",
+      "ms": 1910,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:20.200Z"
+    },
+    {
+      "phase": "review",
+      "step": "reopen and go to the review",
+      "ms": 2860,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:23.521Z"
+    },
+    {
+      "phase": "review",
+      "step": "go back and CORRECT one response",
+      "ms": 314,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:23.836Z"
+    },
+    {
+      "phase": "review",
+      "step": "the correction is what the review now shows",
+      "ms": 58,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:23.895Z"
+    },
+    {
+      "phase": "submit",
+      "step": "submit it once",
+      "ms": 258,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:24.153Z"
+    },
+    {
+      "phase": "submit",
+      "step": "read-only means read-only",
+      "ms": 76,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:24.230Z"
+    },
+    {
+      "phase": "submit",
+      "step": "and in English",
+      "ms": 152,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:24.382Z"
+    },
+    {
+      "phase": "readback",
+      "step": "sign in and open the application",
+      "ms": 2239,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:27.003Z"
+    },
+    {
+      "phase": "readback",
+      "step": "the submitted basis is readable now",
+      "ms": 917,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:27.921Z"
+    },
+    {
+      "phase": "readback",
+      "step": "the neutral states are shown AS states",
+      "ms": 129,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:28.050Z"
+    },
+    {
+      "phase": "readback",
+      "step": "no judgement anywhere on the surface",
+      "ms": 218,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:28.268Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "another candidate is refused this preparation",
+      "ms": 2767,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:31.314Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "a member of another employer is refused the readback",
+      "ms": 2704,
+      "project": "mobile-375",
+      "at": "2026-09-13T06:19:34.018Z"
+    },
+    {
+      "phase": "library",
+      "step": "sign in as the recruiter",
+      "ms": 11659,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:19:58.570Z"
+    },
+    {
+      "phase": "library",
+      "step": "the section is present and is not a test",
+      "ms": 976,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:19:59.546Z"
+    },
+    {
+      "phase": "library",
+      "step": "the same page in English",
+      "ms": 183,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:19:59.729Z"
+    },
+    {
+      "phase": "assign",
+      "step": "sign in and open the application",
+      "ms": 2276,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:02.475Z"
+    },
+    {
+      "phase": "assign",
+      "step": "the panel offers a governed exposure profile",
+      "ms": 1842,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:04.317Z"
+    },
+    {
+      "phase": "assign",
+      "step": "start it",
+      "ms": 193,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:04.510Z"
+    },
+    {
+      "phase": "assign",
+      "step": "a draft shows the employer NOTHING of the candidate's",
+      "ms": 194,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:04.704Z"
+    },
+    {
+      "phase": "notice",
+      "step": "sign in and find it in My Career",
+      "ms": 2735,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:07.968Z"
+    },
+    {
+      "phase": "notice",
+      "step": "all nine matters are disclosed",
+      "ms": 366,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:08.335Z"
+    },
+    {
+      "phase": "notice",
+      "step": "it says plainly that it is not a consent",
+      "ms": 115,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:08.451Z"
+    },
+    {
+      "phase": "notice",
+      "step": "acknowledge it",
+      "ms": 384,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:08.836Z"
+    },
+    {
+      "phase": "answer",
+      "step": "reopen the preparation",
+      "ms": 2522,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:11.944Z"
+    },
+    {
+      "phase": "answer",
+      "step": "answer the first question and save",
+      "ms": 153,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:12.097Z"
+    },
+    {
+      "phase": "answer",
+      "step": "the saved answer OPENS the follow-up question",
+      "ms": 67,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:12.165Z"
+    },
+    {
+      "phase": "answer",
+      "step": "take that question orally instead",
+      "ms": 66,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:12.231Z"
+    },
+    {
+      "phase": "answer",
+      "step": "answer the boolean and save, which opens the context question",
+      "ms": 294,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:12.526Z"
+    },
+    {
+      "phase": "answer",
+      "step": "skip the context question",
+      "ms": 156,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:12.682Z"
+    },
+    {
+      "phase": "answer",
+      "step": "save the omission and the oral choice too",
+      "ms": 76,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:12.758Z"
+    },
+    {
+      "phase": "resume",
+      "step": "leave the preparation entirely",
+      "ms": 2693,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:15.451Z"
+    },
+    {
+      "phase": "resume",
+      "step": "come back and find the EXACT same answers",
+      "ms": 1799,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:17.250Z"
+    },
+    {
+      "phase": "review",
+      "step": "reopen and go to the review",
+      "ms": 2682,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:20.467Z"
+    },
+    {
+      "phase": "review",
+      "step": "go back and CORRECT one response",
+      "ms": 265,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:20.733Z"
+    },
+    {
+      "phase": "review",
+      "step": "the correction is what the review now shows",
+      "ms": 59,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:20.792Z"
+    },
+    {
+      "phase": "submit",
+      "step": "submit it once",
+      "ms": 259,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:21.051Z"
+    },
+    {
+      "phase": "submit",
+      "step": "read-only means read-only",
+      "ms": 79,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:21.130Z"
+    },
+    {
+      "phase": "submit",
+      "step": "and in English",
+      "ms": 167,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:21.297Z"
+    },
+    {
+      "phase": "readback",
+      "step": "sign in and open the application",
+      "ms": 2261,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:24.075Z"
+    },
+    {
+      "phase": "readback",
+      "step": "the submitted basis is readable now",
+      "ms": 907,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:24.983Z"
+    },
+    {
+      "phase": "readback",
+      "step": "the neutral states are shown AS states",
+      "ms": 129,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:25.112Z"
+    },
+    {
+      "phase": "readback",
+      "step": "no judgement anywhere on the surface",
+      "ms": 217,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:25.329Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "another candidate is refused this preparation",
+      "ms": 2945,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:28.611Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "a member of another employer is refused the readback",
+      "ms": 2792,
+      "project": "mobile-390",
+      "at": "2026-09-13T06:20:31.403Z"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "chromium-1-library-en.png",
+      "bytes": 137763,
+      "sha256": "9f80e96b6f5567bf8411a73df255326f72fc5e089539ba3eb31cb01602a36197"
+    },
+    {
+      "file": "chromium-1-library-sv.png",
+      "bytes": 136266,
+      "sha256": "e2e535ecf7696d1b9f051ae7288abee4dfd2be1531c13036984ea84090cf8adb"
+    },
+    {
+      "file": "chromium-2-employer-before-start.png",
+      "bytes": 230407,
+      "sha256": "e1fe6e3779c365b4ccf8093b04a0095ae20ed39dd67e5a3390f921e695799ded"
+    },
+    {
+      "file": "chromium-2-employer-started.png",
+      "bytes": 244387,
+      "sha256": "3c2e6007a07479b5bcc07729ebc6cbd7cae77db696496b8ca4bfaed78b0d16cd"
+    },
+    {
+      "file": "chromium-3-acknowledged.png",
+      "bytes": 133929,
+      "sha256": "43001deb0ea7ee545e7ef71abf65f1a10f5d3fb61a51442132cf3b4f90bb8bc7"
+    },
+    {
+      "file": "chromium-3-my-career-list.png",
+      "bytes": 112029,
+      "sha256": "4859d37c9a776a085cb13e78924e2511e1e7ab5b93c49188e3c69fe8c0ce798f"
+    },
+    {
+      "file": "chromium-3-notice-sv.png",
+      "bytes": 218188,
+      "sha256": "e4312648487504f511be6febb897e44adf62264160c71fb36e5de0792df2b8e2"
+    },
+    {
+      "file": "chromium-4-answered-sv.png",
+      "bytes": 174699,
+      "sha256": "55b69b45846225c8b023e7bcacd2ba737fa7d5fceba7c32c7ce84edd97f463b6"
+    },
+    {
+      "file": "chromium-4-resumed-sv.png",
+      "bytes": 177431,
+      "sha256": "796f3ef947e0b16f6d0304d5c7d8bc7bf81dd3f88c683703eeea56d3065e1f68"
+    },
+    {
+      "file": "chromium-5-corrected-sv.png",
+      "bytes": 172869,
+      "sha256": "2f04a39adf0707a9f9be7a8307ae159046295d4d42fba28be3d06f2694ec2e67"
+    },
+    {
+      "file": "chromium-5-review-sv.png",
+      "bytes": 124425,
+      "sha256": "0ecd8b064948d4b7b57826c457a1e04123fce6e4ad5a6fb50f2dad6b4f12ad27"
+    },
+    {
+      "file": "chromium-6-submitted-en.png",
+      "bytes": 117834,
+      "sha256": "1547444faea650797a0e254d4b8d0b95404abe212aba727dbac1c40501076eb2"
+    },
+    {
+      "file": "chromium-6-submitted-sv.png",
+      "bytes": 120523,
+      "sha256": "cd54b689c3d393567b75aa8266a4438af140076d27219f612b81ae03994c7850"
+    },
+    {
+      "file": "chromium-7-readback-en.png",
+      "bytes": 302032,
+      "sha256": "eb68a72bd4273ae1099562663b58bd557992907f3a97d47a216698c35aab2b52"
+    },
+    {
+      "file": "chromium-7-readback-sv.png",
+      "bytes": 291634,
+      "sha256": "04765937cc595648fbbdb059ed64a545496decd851f0237f38b2b7acdd395efc"
+    },
+    {
+      "file": "chromium-8-refused-cross-tenant.png",
+      "bytes": 20784,
+      "sha256": "9ebe107a675be0057e66223a6a878533af1841306c11ce72f8c70b027626e04f"
+    },
+    {
+      "file": "chromium-8-refused-wrong-candidate.png",
+      "bytes": 53556,
+      "sha256": "754e05a1bf0e376d4dd03c74aaeefea559a94ec25be9f3ef750ccdf1c10213e9"
+    },
+    {
+      "file": "mobile-375-1-library-en.png",
+      "bytes": 106297,
+      "sha256": "cc2b59e5cfa2172b90a8790d6c7ae36e9a963ff4c057df963273962d60078335"
+    },
+    {
+      "file": "mobile-375-1-library-sv.png",
+      "bytes": 105813,
+      "sha256": "9b4dff2e61bec59ca9a566158f9b4c652af14b246b97edf13433dddfb50d9417"
+    },
+    {
+      "file": "mobile-375-2-employer-before-start.png",
+      "bytes": 187626,
+      "sha256": "dddd51f86435d0c13f0f5eb7f55d437632778806f6f5c636feb2a7fa030ae54e"
+    },
+    {
+      "file": "mobile-375-2-employer-started.png",
+      "bytes": 200369,
+      "sha256": "39655d369635a39acc1ba0e98344dde58ba352acbc5bbceec2d99fa0af997ebe"
+    },
+    {
+      "file": "mobile-375-3-acknowledged.png",
+      "bytes": 113372,
+      "sha256": "7d5b7b27a5f477096def848393131b9bbf1217814e3392942b596cc4c8a5d2b7"
+    },
+    {
+      "file": "mobile-375-3-my-career-list.png",
+      "bytes": 53687,
+      "sha256": "e0ff0291812076a16be95491ec74c9a526a0bd93fcdad6a08ee47f6e77f5b5f0"
+    },
+    {
+      "file": "mobile-375-3-notice-sv.png",
+      "bytes": 202383,
+      "sha256": "b886f8a66fc3e42d0efe6d032c703996c4a7a537e0dab051b7a07707bbe92760"
+    },
+    {
+      "file": "mobile-375-4-answered-sv.png",
+      "bytes": 159381,
+      "sha256": "b3d03c203e24c762ec4ac454d6c8666b0f12918aa65325084698f433568aa09f"
+    },
+    {
+      "file": "mobile-375-4-resumed-sv.png",
+      "bytes": 158938,
+      "sha256": "c6122fb3985fd4242f3fbaa82fb227b7c35144edfafab3dbfebfc085c56ad3a8"
+    },
+    {
+      "file": "mobile-375-5-corrected-sv.png",
+      "bytes": 156668,
+      "sha256": "fe475bd133d80380dac54e211f93d503243fc079b2d07504416f9f8d153ba338"
+    },
+    {
+      "file": "mobile-375-5-review-sv.png",
+      "bytes": 104064,
+      "sha256": "9f0eec4feb6d11ae3fe869eb7ef9182a12797dcac29204409e98dbfa12a51259"
+    },
+    {
+      "file": "mobile-375-6-submitted-en.png",
+      "bytes": 102833,
+      "sha256": "4d473be796f3ffe253049171f0457e94e3545858185164e5f9e33fc6f539018b"
+    },
+    {
+      "file": "mobile-375-6-submitted-sv.png",
+      "bytes": 102038,
+      "sha256": "0ff4fbada9f51570297793780b0cfa158145dc983094c7dbdaff7db1fca7729b"
+    },
+    {
+      "file": "mobile-375-7-readback-en.png",
+      "bytes": 256137,
+      "sha256": "baf25528c089f4919b96dbf034ed6c491f5c1edf1da59330c88fef28ceceb3b7"
+    },
+    {
+      "file": "mobile-375-7-readback-sv.png",
+      "bytes": 246063,
+      "sha256": "432c37d60f795d9a750ed717cfa295d7c93b4ef3803eeea1c2496efa9d7293cd"
+    },
+    {
+      "file": "mobile-375-8-refused-cross-tenant.png",
+      "bytes": 21993,
+      "sha256": "702b5903150acf167820efd5a422f2f34fec558711b03130dd3abe9a7ed079d5"
+    },
+    {
+      "file": "mobile-375-8-refused-wrong-candidate.png",
+      "bytes": 42922,
+      "sha256": "a7f077650c37b44726c718b89af098ec8328b9c02cb053ef99f124af8295b1d9"
+    },
+    {
+      "file": "mobile-390-1-library-en.png",
+      "bytes": 109288,
+      "sha256": "c529ef747c3175d99759dd63c6564eccd8c538db427bca90a3ad7d33486a614d"
+    },
+    {
+      "file": "mobile-390-1-library-sv.png",
+      "bytes": 105797,
+      "sha256": "a8988098fdfe5d791bae58332ea8962ba7935eb9bac8cfbd98489c006b02f19f"
+    },
+    {
+      "file": "mobile-390-2-employer-before-start.png",
+      "bytes": 189144,
+      "sha256": "dda695d43c969f80d38f885c9042427bd81612daf217f322e98ba395d995da10"
+    },
+    {
+      "file": "mobile-390-2-employer-started.png",
+      "bytes": 200414,
+      "sha256": "db1890c09ca520eb75d446e5221d75b74595585afe7d2cd3ee874fa42d562df3"
+    },
+    {
+      "file": "mobile-390-3-acknowledged.png",
+      "bytes": 117764,
+      "sha256": "8a2df3812e9cf9dfd34da8df295fafbc03d748b3d482c8fa822f64fb5f7a4762"
+    },
+    {
+      "file": "mobile-390-3-my-career-list.png",
+      "bytes": 70237,
+      "sha256": "b5a6a51c8e78ee92a9e4236a800b38cedb272d4c56eb68331d9105d8be573405"
+    },
+    {
+      "file": "mobile-390-3-notice-sv.png",
+      "bytes": 201753,
+      "sha256": "f63da0346e160c212c098887d085fc5e2e479cd209c11060935ff5f8b1ff298a"
+    },
+    {
+      "file": "mobile-390-4-answered-sv.png",
+      "bytes": 154405,
+      "sha256": "d647071ca1b0f8d47bbfcaaee235535330c7e93aae34ba278ed22c7cf0eccf2d"
+    },
+    {
+      "file": "mobile-390-4-resumed-sv.png",
+      "bytes": 158746,
+      "sha256": "9dff26a84b1d11377b162c7b601419301fe5d8d8c080f2dc2ab369268059c3dc"
+    },
+    {
+      "file": "mobile-390-5-corrected-sv.png",
+      "bytes": 161377,
+      "sha256": "70dc90a80a00a95abff06a09bfdd291ab5b5137475e58a18a9d3a122f4ab3e69"
+    },
+    {
+      "file": "mobile-390-5-review-sv.png",
+      "bytes": 102019,
+      "sha256": "eb112b347f0475616150ac1f385792f4ac4996d90444e8e51067f72b8acc55fa"
+    },
+    {
+      "file": "mobile-390-6-submitted-en.png",
+      "bytes": 102144,
+      "sha256": "95b12f85eff4afa541f3f063f793fd98b83cdf1ae1a83a176f6c936dcd2d1315"
+    },
+    {
+      "file": "mobile-390-6-submitted-sv.png",
+      "bytes": 101284,
+      "sha256": "e9bd8ff338f486692379422e91db88298845d08bf2a2efc2c9ac97fcd9e84e04"
+    },
+    {
+      "file": "mobile-390-7-readback-en.png",
+      "bytes": 256388,
+      "sha256": "ec5ea278a1251f25a93a2059ddf7f3213f531517528c74e48871a8c7f523b6a9"
+    },
+    {
+      "file": "mobile-390-7-readback-sv.png",
+      "bytes": 245650,
+      "sha256": "7e6344675add3cf9bf32df0c6a0e9aae81ded711624d3f23df2e67974fab6565"
+    },
+    {
+      "file": "mobile-390-8-refused-cross-tenant.png",
+      "bytes": 22168,
+      "sha256": "4e4d55b2f121ed5d02e432f2e78d45dcbb28cc4f7355bb1b6dacfc7753c0e387"
+    },
+    {
+      "file": "mobile-390-8-refused-wrong-candidate.png",
+      "bytes": 43040,
+      "sha256": "6b28df0d11baa112182c49c5b10c4593d0ba4e67db1d29c32649727ce60f3052"
+    }
+  ],
+  "traces": {
+    "committed": false,
+    "why": "a trace records the network and therefore carries the session's bearer token",
+    "directory": "/tmp/beskt-routed-traces",
+    "files": [
+      {
+        "project": "chromium",
+        "file": "beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-chromium.zip",
+        "bytes": 2632041,
+        "sha256": "d15fe384eff56b8e0ae049c7bb7bd536ac4361e562b5b7a3e4e29929638a7696"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-candidate-preparatio-580fd-d-and-states-its-real-state-chromium.zip",
+        "bytes": 1996571,
+        "sha256": "b70b32b635b070acd1ea2ef397cebd1dd1de3ea8a9706283149a397ba7c7abd0"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-chromium.zip",
+        "bytes": 2034721,
+        "sha256": "9de452217456a8c4ad9d11106398b5dfdd1e05537d71f669af01dfd6a95b699a"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-chromium.zip",
+        "bytes": 1599249,
+        "sha256": "f6e6dc28add3f7b43612ae98b0c106706c3c072f1dbf01a1d06272037f3d182a"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-chromium.zip",
+        "bytes": 2536209,
+        "sha256": "7037d140026351ad7555b0c71390e84ac2da98eadf27df0f4615577a98dd299a"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-candidate-preparatio-9d88b-rom-an-existing-application-chromium.zip",
+        "bytes": 2273622,
+        "sha256": "62b18bbff01a4f9c45f7f6ac065fd0aee39f1007277e98f5c5b800e584ef3988"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-candidate-preparatio-e524f-re-anything-can-be-answered-chromium.zip",
+        "bytes": 2443222,
+        "sha256": "6a6289520617738128eac01fb76bc1edefae2e048f83dcad2e538fe036dd00e0"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-mobile-375.zip",
+        "bytes": 2317535,
+        "sha256": "36b4ca46b91d04c7c16324da58cc24de5749c34b875c0526f6c4b4acf32bd21d"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-candidate-preparatio-580fd-d-and-states-its-real-state-mobile-375.zip",
+        "bytes": 1515069,
+        "sha256": "2c0bcec02e29142c1566e87ed7046b7425fb25ac6dec0e6efb6628068e4257b6"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-mobile-375.zip",
+        "bytes": 2409640,
+        "sha256": "1879febdff7560de357c11994510939b82a2aadfcec0740c74642c380942d8eb"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-mobile-375.zip",
+        "bytes": 1616165,
+        "sha256": "ed50efc9d05da131ad55f69fd4bb1858802217fc202f8eca9a75cfa6e910b945"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-mobile-375.zip",
+        "bytes": 2986541,
+        "sha256": "e52c991b6381a175dd3212c1ffcf580ab58b6bb65da7332927d65c4adaa5da19"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-candidate-preparatio-9d88b-rom-an-existing-application-mobile-375.zip",
+        "bytes": 2659208,
+        "sha256": "d2b1f924f0fba6698acd005344f5fde6bf7c1b2a8294263e23ec5a0e28bf2735"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-candidate-preparatio-e524f-re-anything-can-be-answered-mobile-375.zip",
+        "bytes": 3481287,
+        "sha256": "1f67867aeb3df8ecaa233472301f321c10069a1245310be7788a7e2fbd731282"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-candidate-preparatio-2c3eb-g-employer-are-both-refused-mobile-390.zip",
+        "bytes": 2121405,
+        "sha256": "a6fef00556858445856bf70e9dd57f204e9c2d2e691ed5ebcc522b0497ebe17f"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-candidate-preparatio-580fd-d-and-states-its-real-state-mobile-390.zip",
+        "bytes": 1583603,
+        "sha256": "ca8d652e36182229288b00d043851512b7497f3d6e5e965c625bd64dc956292d"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-candidate-preparatio-625a5-iew-correct-and-submit-once-mobile-390.zip",
+        "bytes": 2241342,
+        "sha256": "265bf320563027d3a9a849b8ec36c88e4e68c9792c506a2bdbfb4f4bf6969c6b"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-candidate-preparatio-6b9df-s-and-nothing-it-interprets-mobile-390.zip",
+        "bytes": 1547321,
+        "sha256": "64c854f287b11a4cb00cced50bc5b94b364e711883371685213d4308ed1641f4"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-candidate-preparatio-802b5-saving-leaving-and-resuming-mobile-390.zip",
+        "bytes": 2589745,
+        "sha256": "3b2f10f170af1d77445b4d874df4a8fe06e451a50780d314d8a8659b84615f51"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-candidate-preparatio-9d88b-rom-an-existing-application-mobile-390.zip",
+        "bytes": 2580846,
+        "sha256": "6be43849371f9d0e237fe735b2e459f743794a1fcff552424816dfce2815fbba"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-candidate-preparatio-e524f-re-anything-can-be-answered-mobile-390.zip",
+        "bytes": 3031028,
+        "sha256": "d0429e5634ef7e3f84da97ca14840e2c70058407ec3ef81a02035b54cb960f69"
+      }
+    ]
+  }
+}
