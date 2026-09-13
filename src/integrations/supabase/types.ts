@@ -629,6 +629,687 @@ export type Database = {
           },
         ]
       }
+      bcp_case_links: {
+        Row: {
+          application_id: string
+          assignment_id: string
+          bound_answers_content_hash: string
+          bound_assignment_revision: number
+          bound_content_hash: string
+          bound_method_version_id: string
+          bound_notice_content_hash: string
+          bound_notice_locale: string
+          bound_notice_version: string
+          bound_response_id: string
+          bound_response_version: number
+          candidate_user_id: string
+          case_id: string
+          created_at: string
+          employer_id: string
+          id: string
+          link_operation_id: string
+          linked_at: string
+          linked_by: string
+          live_case_slot: string | null
+          live_slot: string | null
+          source_id: string
+          unlink_operation_id: string | null
+          unlinked_at: string | null
+          unlinked_by: string | null
+          unlinked_reason: string | null
+        }
+        Insert: {
+          application_id: string
+          assignment_id: string
+          bound_answers_content_hash: string
+          bound_assignment_revision: number
+          bound_content_hash: string
+          bound_method_version_id: string
+          bound_notice_content_hash: string
+          bound_notice_locale: string
+          bound_notice_version: string
+          bound_response_id: string
+          bound_response_version: number
+          candidate_user_id: string
+          case_id: string
+          created_at?: string
+          employer_id: string
+          id?: string
+          link_operation_id: string
+          linked_at?: string
+          linked_by: string
+          live_case_slot?: string | null
+          live_slot?: string | null
+          source_id: string
+          unlink_operation_id?: string | null
+          unlinked_at?: string | null
+          unlinked_by?: string | null
+          unlinked_reason?: string | null
+        }
+        Update: {
+          application_id?: string
+          assignment_id?: string
+          bound_answers_content_hash?: string
+          bound_assignment_revision?: number
+          bound_content_hash?: string
+          bound_method_version_id?: string
+          bound_notice_content_hash?: string
+          bound_notice_locale?: string
+          bound_notice_version?: string
+          bound_response_id?: string
+          bound_response_version?: number
+          candidate_user_id?: string
+          case_id?: string
+          created_at?: string
+          employer_id?: string
+          id?: string
+          link_operation_id?: string
+          linked_at?: string
+          linked_by?: string
+          live_case_slot?: string | null
+          live_slot?: string | null
+          source_id?: string
+          unlink_operation_id?: string | null
+          unlinked_at?: string | null
+          unlinked_by?: string | null
+          unlinked_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_case_links_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_case_links_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_case_links_bound_method_version_id_fkey"
+            columns: ["bound_method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_case_links_bound_response_id_fkey"
+            columns: ["bound_response_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_case_links_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_case_links_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "bcp_case_links_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_case_links_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_case_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_case_topics: {
+        Row: {
+          created_at: string
+          derived_from_response_id: string
+          display_order: number
+          id: string
+          item_id: string
+          item_key: string
+          link_id: string
+          topic_reason: string
+        }
+        Insert: {
+          created_at?: string
+          derived_from_response_id: string
+          display_order: number
+          id?: string
+          item_id: string
+          item_key: string
+          link_id: string
+          topic_reason: string
+        }
+        Update: {
+          created_at?: string
+          derived_from_response_id?: string
+          display_order?: number
+          id?: string
+          item_id?: string
+          item_key?: string
+          link_id?: string
+          topic_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_case_topics_derived_from_response_id_fkey"
+            columns: ["derived_from_response_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_case_topics_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_case_topics_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_case_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_conduct_entries: {
+        Row: {
+          alternative_explanation: string | null
+          candidate_explanation: string | null
+          correction_reason: string | null
+          created_at: string
+          entry_version: number
+          id: string
+          interviewer_interpretation: string | null
+          item_id: string
+          item_key: string
+          live_item_slot: string | null
+          live_slot: string | null
+          observable_fact: string | null
+          position_id: string
+          protective_factor: string | null
+          recorded_at: string
+          recorded_by: string
+          save_operation_id: string
+          sensitivity_class: string
+          session_id: string
+          superseded_by_entry_id: string | null
+          supersedes_entry_id: string | null
+          topic_basis: string
+          topic_id: string | null
+          verification_need: string | null
+          verification_source: string | null
+          verification_state: string
+        }
+        Insert: {
+          alternative_explanation?: string | null
+          candidate_explanation?: string | null
+          correction_reason?: string | null
+          created_at?: string
+          entry_version?: number
+          id?: string
+          interviewer_interpretation?: string | null
+          item_id: string
+          item_key: string
+          live_item_slot?: string | null
+          live_slot?: string | null
+          observable_fact?: string | null
+          position_id: string
+          protective_factor?: string | null
+          recorded_at?: string
+          recorded_by: string
+          save_operation_id: string
+          sensitivity_class?: string
+          session_id: string
+          superseded_by_entry_id?: string | null
+          supersedes_entry_id?: string | null
+          topic_basis: string
+          topic_id?: string | null
+          verification_need?: string | null
+          verification_source?: string | null
+          verification_state?: string
+        }
+        Update: {
+          alternative_explanation?: string | null
+          candidate_explanation?: string | null
+          correction_reason?: string | null
+          created_at?: string
+          entry_version?: number
+          id?: string
+          interviewer_interpretation?: string | null
+          item_id?: string
+          item_key?: string
+          live_item_slot?: string | null
+          live_slot?: string | null
+          observable_fact?: string | null
+          position_id?: string
+          protective_factor?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          save_operation_id?: string
+          sensitivity_class?: string
+          session_id?: string
+          superseded_by_entry_id?: string | null
+          supersedes_entry_id?: string | null
+          topic_basis?: string
+          topic_id?: string | null
+          verification_need?: string | null
+          verification_source?: string | null
+          verification_state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_entries_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_entries_superseded_by_entry_id_fkey"
+            columns: ["superseded_by_entry_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_entries_supersedes_entry_id_fkey"
+            columns: ["supersedes_entry_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_entries_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_case_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_conduct_panel_resolutions: {
+        Row: {
+          agreed_statement: string | null
+          divergent_statement: string | null
+          id: string
+          item_id: string
+          item_key: string
+          operation_id: string
+          panel_id: string
+          rationale: string
+          recorded_at: string
+          recorded_by: string
+          resolution_kind: string
+          session_id: string
+        }
+        Insert: {
+          agreed_statement?: string | null
+          divergent_statement?: string | null
+          id?: string
+          item_id: string
+          item_key: string
+          operation_id: string
+          panel_id: string
+          rationale: string
+          recorded_at?: string
+          recorded_by: string
+          resolution_kind: string
+          session_id: string
+        }
+        Update: {
+          agreed_statement?: string | null
+          divergent_statement?: string | null
+          id?: string
+          item_id?: string
+          item_key?: string
+          operation_id?: string
+          panel_id?: string
+          rationale?: string
+          recorded_at?: string
+          recorded_by?: string
+          resolution_kind?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_panel_resolutions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_panel_resolutions_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_panel_resolutions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_conduct_panels: {
+        Row: {
+          concluded_at: string | null
+          concluded_by: string | null
+          created_at: string
+          id: string
+          open_operation_id: string
+          opened_at: string
+          opened_by: string
+          reveal_operation_id: string | null
+          revealed_at: string | null
+          revealed_by: string | null
+          revision: number
+          session_id: string
+          state: string
+        }
+        Insert: {
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          id?: string
+          open_operation_id: string
+          opened_at?: string
+          opened_by: string
+          reveal_operation_id?: string | null
+          revealed_at?: string | null
+          revealed_by?: string | null
+          revision?: number
+          session_id: string
+          state?: string
+        }
+        Update: {
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          id?: string
+          open_operation_id?: string
+          opened_at?: string
+          opened_by?: string
+          reveal_operation_id?: string | null
+          revealed_at?: string | null
+          revealed_by?: string | null
+          revision?: number
+          session_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_panels_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "bcp_conduct_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_conduct_positions: {
+        Row: {
+          assessor_id: string
+          created_at: string
+          created_by: string
+          id: string
+          lock_operation_id: string | null
+          locked_at: string | null
+          position_role: string
+          reopen_count: number
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          revision: number
+          session_id: string
+          state: string
+        }
+        Insert: {
+          assessor_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          lock_operation_id?: string | null
+          locked_at?: string | null
+          position_role?: string
+          reopen_count?: number
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          revision?: number
+          session_id: string
+          state?: string
+        }
+        Update: {
+          assessor_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          lock_operation_id?: string | null
+          locked_at?: string | null
+          position_role?: string
+          reopen_count?: number
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          revision?: number
+          session_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_positions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_conduct_sessions: {
+        Row: {
+          assignment_id: string
+          bound_answers_content_hash: string
+          bound_content_hash: string
+          bound_method_version_id: string
+          bound_response_id: string
+          bound_response_version: number
+          case_id: string
+          concluded_at: string | null
+          concluded_by: string | null
+          created_at: string
+          employer_id: string
+          id: string
+          link_id: string
+          open_operation_id: string
+          opened_at: string
+          opened_by: string
+          revision: number
+          state: string
+        }
+        Insert: {
+          assignment_id: string
+          bound_answers_content_hash: string
+          bound_content_hash: string
+          bound_method_version_id: string
+          bound_response_id: string
+          bound_response_version: number
+          case_id: string
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          employer_id: string
+          id?: string
+          link_id: string
+          open_operation_id: string
+          opened_at?: string
+          opened_by: string
+          revision?: number
+          state?: string
+        }
+        Update: {
+          assignment_id?: string
+          bound_answers_content_hash?: string
+          bound_content_hash?: string
+          bound_method_version_id?: string
+          bound_response_id?: string
+          bound_response_version?: number
+          case_id?: string
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          employer_id?: string
+          id?: string
+          link_id?: string
+          open_operation_id?: string
+          opened_at?: string
+          opened_by?: string
+          revision?: number
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_bound_method_version_id_fkey"
+            columns: ["bound_method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_bound_response_id_fkey"
+            columns: ["bound_response_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: true
+            referencedRelation: "bcp_case_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_conduct_verifications: {
+        Row: {
+          entry_id: string
+          id: string
+          new_state: string
+          note: string | null
+          operation_id: string
+          previous_state: string | null
+          recorded_at: string
+          recorded_by: string
+          seq: number
+          session_id: string
+          source: string | null
+        }
+        Insert: {
+          entry_id: string
+          id?: string
+          new_state: string
+          note?: string | null
+          operation_id: string
+          previous_state?: string | null
+          recorded_at?: string
+          recorded_by: string
+          seq: number
+          session_id: string
+          source?: string | null
+        }
+        Update: {
+          entry_id?: string
+          id?: string
+          new_state?: string
+          note?: string | null
+          operation_id?: string
+          previous_state?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          seq?: number
+          session_id?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_verifications_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_verifications_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bcp_events: {
         Row: {
           actor_id: string | null
@@ -833,6 +1514,7 @@ export type Database = {
         Insert: {
           assignment_id: string
           created_at?: string
+          draft_slot?: string | null
           id?: string
           response_state?: string
           response_version: number
@@ -845,6 +1527,7 @@ export type Database = {
         Update: {
           assignment_id?: string
           created_at?: string
+          draft_slot?: string | null
           id?: string
           response_state?: string
           response_version?: number
@@ -1241,7 +1924,7 @@ export type Database = {
           request_hash?: string | null
           result?: Json | null
           revision?: number | null
-          seq?: number
+          seq?: never
         }
         Update: {
           actor_id?: string | null
@@ -1259,7 +1942,7 @@ export type Database = {
           request_hash?: string | null
           result?: Json | null
           revision?: number | null
-          seq?: number
+          seq?: never
         }
         Relationships: [
           {
@@ -1369,6 +2052,7 @@ export type Database = {
           locale_en?: string
           locale_sv?: string
           mode: string
+          open_slot?: string | null
           pack_id: string
           published_at?: string | null
           published_by?: string | null
@@ -1400,6 +2084,7 @@ export type Database = {
           locale_en?: string
           locale_sv?: string
           mode?: string
+          open_slot?: string | null
           pack_id?: string
           published_at?: string | null
           published_by?: string | null
@@ -4212,6 +4897,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      cv_document_operations: {
+        Row: {
+          created_at: string
+          cv_document_id: string
+          operation_id: string
+          owner_user_id: string
+          request_fingerprint: string
+        }
+        Insert: {
+          created_at?: string
+          cv_document_id: string
+          operation_id: string
+          owner_user_id: string
+          request_fingerprint: string
+        }
+        Update: {
+          created_at?: string
+          cv_document_id?: string
+          operation_id?: string
+          owner_user_id?: string
+          request_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_document_operations_cv_document_id_fkey"
+            columns: ["cv_document_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cv_documents: {
         Row: {
@@ -9858,8 +10575,10 @@ export type Database = {
       }
       scp_interview_reports: {
         Row: {
+          basis_hash: string | null
           case_id: string
           content_hash: string | null
+          content_hash_algorithm: string | null
           created_at: string
           draft_ai_run_id: string | null
           draft_summary: string | null
@@ -9874,8 +10593,10 @@ export type Database = {
           version_number: number
         }
         Insert: {
+          basis_hash?: string | null
           case_id: string
           content_hash?: string | null
+          content_hash_algorithm?: string | null
           created_at?: string
           draft_ai_run_id?: string | null
           draft_summary?: string | null
@@ -9890,8 +10611,10 @@ export type Database = {
           version_number?: number
         }
         Update: {
+          basis_hash?: string | null
           case_id?: string
           content_hash?: string | null
+          content_hash_algorithm?: string | null
           created_at?: string
           draft_ai_run_id?: string | null
           draft_summary?: string | null
@@ -14446,6 +15169,76 @@ export type Database = {
           },
         ]
       }
+      sp_share_handoffs: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          disclosure_id: string
+          expires_at: string
+          handoff_hash: string
+          id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          disclosure_id: string
+          expires_at: string
+          handoff_hash: string
+          id?: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          disclosure_id?: string
+          expires_at?: string
+          handoff_hash?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_share_handoffs_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: false
+            referencedRelation: "sp_disclosures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_share_sessions: {
+        Row: {
+          created_at: string
+          disclosure_id: string
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          session_hash: string
+        }
+        Insert: {
+          created_at?: string
+          disclosure_id: string
+          expires_at: string
+          id?: string
+          last_accessed_at?: string | null
+          session_hash: string
+        }
+        Update: {
+          created_at?: string
+          disclosure_id?: string
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          session_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_share_sessions_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: false
+            referencedRelation: "sp_disclosures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sp_skill_types: {
         Row: {
           allowed_levels: string[]
@@ -15325,7 +16118,7 @@ export type Database = {
         Returns: Json
       }
       bcp_candidate_assignments: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           application_id: string
           assigned_at: string
@@ -15347,10 +16140,94 @@ export type Database = {
         Args: { _assignment_id: string }
         Returns: Json
       }
-      bcp_canonical_answers: {
-        Args: { _response_id: string }
+      bcp_canonical_answers: { Args: { _response_id: string }; Returns: Json }
+      bcp_case_preparation_basis: { Args: { _case_id: string }; Returns: Json }
+      bcp_conduct_can_read_session: {
+        Args: { _session_id: string }
+        Returns: boolean
+      }
+      bcp_conduct_entry_history: { Args: { _entry_id: string }; Returns: Json }
+      bcp_conduct_join_session: {
+        Args: {
+          _operation_id: string
+          _position_role?: string
+          _session_id: string
+        }
         Returns: Json
       }
+      bcp_conduct_lock_position: {
+        Args: {
+          _expected_revision: number
+          _operation_id: string
+          _position_id: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_may_see_others: {
+        Args: { _session_id: string }
+        Returns: boolean
+      }
+      bcp_conduct_open_panel: {
+        Args: { _operation_id: string; _session_id: string }
+        Returns: Json
+      }
+      bcp_conduct_record_resolution: {
+        Args: {
+          _agreed_statement: string
+          _divergent_statement: string
+          _expected_revision: number
+          _item_key: string
+          _operation_id: string
+          _panel_id: string
+          _rationale: string
+          _resolution_kind: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_record_verification: {
+        Args: {
+          _entry_id: string
+          _expected_revision: number
+          _new_state: string
+          _note?: string
+          _operation_id: string
+          _source?: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_reopen_position: {
+        Args: {
+          _expected_revision: number
+          _operation_id: string
+          _position_id: string
+          _reason: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_reveal_panel: {
+        Args: {
+          _expected_revision: number
+          _operation_id: string
+          _panel_id: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_save_entry: {
+        Args: {
+          _correction_reason?: string
+          _corrects_entry_id?: string
+          _entry: Json
+          _expected_revision: number
+          _operation_id: string
+          _position_id: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_start_session: {
+        Args: { _link_id: string; _operation_id: string }
+        Returns: Json
+      }
+      bcp_conduct_workspace: { Args: { _session_id: string }; Returns: Json }
       bcp_employer_assignments: {
         Args: { _employer_id: string }
         Returns: {
@@ -15374,10 +16251,7 @@ export type Database = {
         Args: { _assignment_id: string }
         Returns: boolean
       }
-      bcp_employer_readback: {
-        Args: { _assignment_id: string }
-        Returns: Json
-      }
+      bcp_employer_readback: { Args: { _assignment_id: string }; Returns: Json }
       bcp_grant_pilot: {
         Args: {
           _employer_id: string
@@ -15388,27 +16262,42 @@ export type Database = {
         }
         Returns: Json
       }
-      bcp_guard_append_only: { Args: Record<PropertyKey, never>; Returns: unknown }
-      bcp_guard_answer: { Args: Record<PropertyKey, never>; Returns: unknown }
-      bcp_guard_assignment: { Args: Record<PropertyKey, never>; Returns: unknown }
-      bcp_guard_pilot_grants: { Args: Record<PropertyKey, never>; Returns: unknown }
-      bcp_guard_response: { Args: Record<PropertyKey, never>; Returns: unknown }
       bcp_is_assignment_candidate: {
         Args: { _assignment_id: string }
         Returns: boolean
       }
+      bcp_link_preparation_to_case: {
+        Args: {
+          _assignment_id: string
+          _case_id: string
+          _expected_revision: number
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      bcp_linkable_interview_cases: {
+        Args: { _assignment_id: string }
+        Returns: {
+          already_linked: boolean
+          case_id: string
+          created_at: string
+          status: string
+          title: string
+        }[]
+      }
       bcp_mark_opened: {
         Args: { _assignment_id: string; _operation_id: string }
+        Returns: Json
+      }
+      bcp_my_preparation_link: {
+        Args: { _assignment_id: string }
         Returns: Json
       }
       bcp_notice_copy_digest: {
         Args: { _locale: string; _notice_version: string }
         Returns: string
       }
-      bcp_notice_copy_keys: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
+      bcp_notice_copy_keys: { Args: never; Returns: string[] }
       bcp_notice_descriptor: {
         Args: { _assignment_id: string; _locale: string }
         Returns: Json
@@ -15417,18 +16306,9 @@ export type Database = {
         Args: { _assignment_id: string; _locale: string }
         Returns: string
       }
-      bcp_notice_locales: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
-      bcp_notice_sections: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
-      bcp_notice_version: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      bcp_notice_locales: { Args: never; Returns: string[] }
+      bcp_notice_sections: { Args: never; Returns: string[] }
+      bcp_notice_version: { Args: never; Returns: string }
       bcp_operation_begin: {
         Args: { _operation_id: string; _request_hash: string }
         Returns: Json
@@ -15485,6 +16365,10 @@ export type Database = {
           _expected_revision: number
           _operation_id: string
         }
+        Returns: Json
+      }
+      bcp_unlink_preparation_from_case: {
+        Args: { _link_id: string; _operation_id: string; _reason: string }
         Returns: Json
       }
       bcp_version_is_candidate_safe: {
@@ -15587,6 +16471,12 @@ export type Database = {
           validation_label: string
           version_number: number
         }
+        SetofOptions: {
+          from: "*"
+          to: "beskt_method_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       beskt_method_content_hash: {
         Args: { _method_version_id: string }
@@ -15604,10 +16494,7 @@ export type Database = {
         Args: { _operation_id: string; _request_hash: string }
         Returns: Json
       }
-      beskt_prompt_stage: {
-        Args: { _prompt_kind: string }
-        Returns: string
-      }
+      beskt_prompt_stage: { Args: { _prompt_kind: string }; Returns: string }
       beskt_publish_version: {
         Args: {
           _expected_revision: number
@@ -15622,7 +16509,7 @@ export type Database = {
         Returns: Json
       }
       beskt_readable_published_versions: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           content_hash: string
           method_version_id: string
@@ -15668,10 +16555,7 @@ export type Database = {
         }
         Returns: Json
       }
-      beskt_request_hash: {
-        Args: { _request: Json }
-        Returns: string
-      }
+      beskt_request_hash: { Args: { _request: Json }; Returns: string }
       beskt_resolve_item_sequence: {
         Args: {
           _answers?: Json
@@ -15699,10 +16583,7 @@ export type Database = {
         Args: { _grant_id: string; _operation_id: string; _reason: string }
         Returns: Json
       }
-      beskt_sorted_array: {
-        Args: { _arr: string[] }
-        Returns: Json
-      }
+      beskt_sorted_array: { Args: { _arr: string[] }; Returns: Json }
       beskt_submit_for_review: {
         Args: {
           _expected_revision: number
@@ -15737,10 +16618,7 @@ export type Database = {
         }
         Returns: Json
       }
-      beskt_wording_is_neutral: {
-        Args: { _wording: string }
-        Returns: boolean
-      }
+      beskt_wording_is_neutral: { Args: { _wording: string }; Returns: boolean }
       cd_assert_session_writable: {
         Args: { _caller: string; _session_id: string }
         Returns: undefined
@@ -15877,6 +16755,76 @@ export type Database = {
           employer_slug: string
           membership_id: string
         }[]
+      }
+      cv_application_snapshot: {
+        Args: {
+          _checked_at: string
+          _cv: Database["public"]["Tables"]["cv_documents"]["Row"]
+        }
+        Returns: Json
+      }
+      cv_bundle_ids: { Args: { _bundle: Json }; Returns: string[] }
+      cv_bundle_is_ready: { Args: { _bundle: Json }; Returns: boolean }
+      cv_create: {
+        Args: {
+          _contact: Json
+          _include_career_insight: boolean
+          _included_ids: string[]
+          _locale: string
+          _model_id?: string
+          _operation_id: string
+          _presentation: Json
+          _provider_mode?: string
+          _purpose: string
+          _target_job_text: string
+          _title: string
+        }
+        Returns: Json
+      }
+      cv_delete: {
+        Args: { _cv_id: string; _expected_updated_at: string }
+        Returns: Json
+      }
+      cv_facts_unverified: { Args: { _bundle: Json }; Returns: number }
+      cv_merge_bundle: {
+        Args: { _fresh: Json; _refresh: boolean; _saved: Json }
+        Returns: Json
+      }
+      cv_normalise_contact: { Args: { _contact: Json }; Returns: Json }
+      cv_normalise_presentation: {
+        Args: { _bundle: Json; _presentation: Json }
+        Returns: Json
+      }
+      cv_refresh_from_profile: {
+        Args: { _cv_id: string; _expected_updated_at: string }
+        Returns: Json
+      }
+      cv_save: {
+        Args: {
+          _contact?: Json
+          _cv_id: string
+          _expected_updated_at: string
+          _include_career_insight?: boolean
+          _included_ids?: string[]
+          _locale?: string
+          _model_id?: string
+          _presentation?: Json
+          _provider_mode?: string
+          _purpose?: string
+          _refresh_facts?: boolean
+          _target_job_text?: string
+          _title?: string
+        }
+        Returns: Json
+      }
+      cv_source_bundle: {
+        Args: {
+          _include_career_insight: boolean
+          _included_ids: string[]
+          _locale: string
+          _target_job_text: string
+        }
+        Returns: Json
       }
       employer_accepts_operations: {
         Args: { _employer_id: string }
@@ -16408,6 +17356,16 @@ export type Database = {
           subject_id: string
         }[]
       }
+      scp_employer_report_identity: {
+        Args: { _attempt_id: string }
+        Returns: {
+          released_at: string
+          report_version_id: string
+          scoring_model_version: string
+          snapshot_id: string
+          threshold_version: string
+        }[]
+      }
       scp_employer_report_v3: { Args: { _attempt_id: string }; Returns: Json }
       scp_employer_review_board: {
         Args: { _employer_id: string }
@@ -16738,10 +17696,12 @@ export type Database = {
         }
         Returns: string
       }
+      scp_iv_basis_hash: { Args: { _payload: Json }; Returns: string }
       scp_iv_begin_evidence_review: {
         Args: { _case_id: string }
         Returns: undefined
       }
+      scp_iv_build_report_basis: { Args: { _case_id: string }; Returns: Json }
       scp_iv_can_read_case: { Args: { _case_id: string }; Returns: boolean }
       scp_iv_can_write_case: { Args: { _case_id: string }; Returns: boolean }
       scp_iv_candidate_interview_detail: {
@@ -16793,6 +17753,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      scp_iv_content_hash: { Args: { _payload: Json }; Returns: string }
       scp_iv_create_case: {
         Args: {
           _application_id?: string
@@ -16818,78 +17779,38 @@ export type Database = {
         Args: { _reason: string; _source_id: string }
         Returns: undefined
       }
+      scp_iv_final_report: {
+        Args: { _case_id: string }
+        Returns: {
+          basis_hash: string
+          case_id: string
+          content_hash: string
+          content_hash_algorithm: string
+          finalised_at: string
+          finalised_by: string
+          finalised_by_email: string
+          finalised_by_name: string
+          hash_verified: boolean
+          payload: Json
+          recomputed_hash: string
+          report_id: string
+          status: string
+          version_number: number
+        }[]
+      }
       scp_iv_finalise_previewed_report: {
-        Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }
+        Args: {
+          _case_id: string
+          _draft_run_id: string
+          _expected_basis_hash: string
+        }
         Returns: string
       }
       scp_iv_finalise_report: {
         Args: { _case_id: string; _draft_run_id?: string }
         Returns: string
       }
-      scp_iv_final_report: {
-        Args: { _case_id: string }
-        Returns: {
-          report_id: string
-          case_id: string
-          version_number: number
-          status: string
-          finalised_at: string | null
-          finalised_by: string | null
-          finalised_by_name: string | null
-          finalised_by_email: string | null
-          content_hash: string | null
-          content_hash_algorithm: string
-          basis_hash: string | null
-          recomputed_hash: string | null
-          hash_verified: boolean
-          payload: Json | null
-        }[]
-      }
       scp_iv_is_case_candidate: { Args: { _case_id: string }; Returns: boolean }
-      scp_iv_preview_report: {
-        Args: { _case_id: string }
-        Returns: {
-          payload: Json
-          basis_hash: string
-          content_hash: string
-          blocker_count: number
-          blockers: Json
-        }[]
-      }
-      scp_iv_report_version: {
-        Args: { _report_id: string }
-        Returns: {
-          report_id: string
-          case_id: string
-          version_number: number
-          status: string
-          finalised_at: string | null
-          finalised_by: string | null
-          finalised_by_name: string | null
-          finalised_by_email: string | null
-          content_hash: string | null
-          content_hash_algorithm: string
-          basis_hash: string | null
-          recomputed_hash: string | null
-          hash_verified: boolean
-          payload: Json | null
-        }[]
-      }
-      scp_iv_report_versions: {
-        Args: { _case_id: string }
-        Returns: {
-          report_id: string
-          version_number: number
-          status: string
-          finalised_at: string | null
-          finalised_by: string | null
-          finalised_by_name: string | null
-          finalised_by_email: string | null
-          content_hash: string | null
-          content_hash_algorithm: string
-          basis_hash: string | null
-        }[]
-      }
       scp_iv_mark_assessed: { Args: { _case_id: string }; Returns: undefined }
       scp_iv_mark_sources_ready: {
         Args: { _case_id: string }
@@ -16927,6 +17848,16 @@ export type Database = {
         }[]
       }
       scp_iv_plan_case: { Args: { _plan_id: string }; Returns: string }
+      scp_iv_preview_report: {
+        Args: { _case_id: string }
+        Returns: {
+          basis_hash: string
+          blocker_count: number
+          blockers: Json
+          content_hash: string
+          payload: Json
+        }[]
+      }
       scp_iv_question_pack: { Args: { _question_id: string }; Returns: string }
       scp_iv_record_assessment: {
         Args: {
@@ -16986,6 +17917,40 @@ export type Database = {
         Returns: {
           code: string
           message: string
+        }[]
+      }
+      scp_iv_report_version: {
+        Args: { _report_id: string }
+        Returns: {
+          basis_hash: string
+          case_id: string
+          content_hash: string
+          content_hash_algorithm: string
+          finalised_at: string
+          finalised_by: string
+          finalised_by_email: string
+          finalised_by_name: string
+          hash_verified: boolean
+          payload: Json
+          recomputed_hash: string
+          report_id: string
+          status: string
+          version_number: number
+        }[]
+      }
+      scp_iv_report_versions: {
+        Args: { _case_id: string }
+        Returns: {
+          basis_hash: string
+          content_hash: string
+          content_hash_algorithm: string
+          finalised_at: string
+          finalised_by: string
+          finalised_by_email: string
+          finalised_by_name: string
+          report_id: string
+          status: string
+          version_number: number
         }[]
       }
       scp_iv_session_case: { Args: { _session_id: string }; Returns: string }
@@ -17206,6 +18171,10 @@ export type Database = {
           participant_snapshot: string
         }[]
       }
+      scp_report_issuer_admin: {
+        Args: { _issuer_organization_id: string }
+        Returns: boolean
+      }
       scp_report_manifest_computation: {
         Args: {
           _attempt_id: string
@@ -17228,10 +18197,6 @@ export type Database = {
           rule_version: string
           step: string
         }[]
-      }
-      scp_report_issuer_admin: {
-        Args: { _issuer_organization_id: string }
-        Returns: boolean
       }
       scp_report_snapshot_readable: {
         Args: {
@@ -17524,6 +18489,7 @@ export type Database = {
         Returns: string
       }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
+      sp_get_disclosure_session: { Args: { _session: string }; Returns: Json }
       sp_grant_pilot_member: {
         Args: { _market_pack_code: string; _note?: string; _user_id: string }
         Returns: undefined
@@ -17624,6 +18590,14 @@ export type Database = {
           _purpose: string
         }
         Returns: Json
+      }
+      sp_share_gateway_consume: {
+        Args: { _handoff: string; _session_hash: string }
+        Returns: boolean
+      }
+      sp_share_gateway_issue: {
+        Args: { _handoff_hash: string; _token: string }
+        Returns: boolean
       }
       sp_share_passport_with_application: {
         Args: {

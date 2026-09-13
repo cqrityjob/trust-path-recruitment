@@ -76,10 +76,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Its name comes OFF this list in the same change that records the evidence, for
 // the reason stated above: a resolved name here hides the next genuinely stuck
 // migration behind an expectation. The list is empty again.
-// BESKT PR 5A -- the interview conduct layer. Named here so that removing it
-// from release-state.json, or quietly flipping it to applied, fails this check
-// rather than passing silently.
-const expectedPending: string[] = ["20261113090000_bcp_interview_conduct.sql"];
+// Empty again: BESKT PR 5A's interview conduct layer was applied to production
+// by the Supabase GitHub integration when PR #233 merged, and release-state.json
+// now records that with evidence. A name left here after the migration is
+// applied would hide the next genuinely stuck migration behind an expectation.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

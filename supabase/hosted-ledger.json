@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-13T10:15:00Z",
-  "readBy": "Post-merge read-only verification for the BESKT PR 4 interview-case bridge hosted release evidence: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #229 merged to main as db165c045c972ffdc45e691f563e7f3b0197500a. 277 rows. The 276 rows of the previous snapshot were proved unchanged before this refresh: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261112090000 is 3f19608a4ec10e66b67e9a456e763f80, which is exactly the md5 of the committed 276-row file, so no earlier row was rewritten. Over all 277 rows production gives 38887a384cff1fe462a1f81b82e6e46b. The single added row is the canonical identity 20261112090000 / bcp_interview_case_bridge, applied by the official Supabase GitHub integration on merge.",
+  "readAt": "2026-09-13T12:45:00Z",
+  "readBy": "Post-merge read-only verification for the BESKT PR 5A interview-conduct hosted release evidence: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #233 merged to main as b6aaa74e9dfe2341bef7858a298a4adbc0a095ed. 278 rows. The 277 rows of the previous snapshot were proved unchanged before this refresh: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261113090000 is 38887a384cff1fe462a1f81b82e6e46b, which is exactly the all-rows digest recorded in the PR 4 evidence and the md5 of the committed 277-row file, so no earlier row was rewritten. Over all 278 rows production gives 790d53e46c03ecb92a9ce46f50b529d0. The single added row is the canonical identity 20261113090000 / bcp_interview_conduct, applied by the official Supabase GitHub integration on merge.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1123,6 +1123,10 @@
     {
       "version": "20261112090000",
       "name": "bcp_interview_case_bridge"
+    },
+    {
+      "version": "20261113090000",
+      "name": "bcp_interview_conduct"
     }
   ]
 }
