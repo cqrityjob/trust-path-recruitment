@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-13T12:45:00Z",
-  "readBy": "Post-merge read-only verification for the BESKT PR 5A interview-conduct hosted release evidence: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #233 merged to main as b6aaa74e9dfe2341bef7858a298a4adbc0a095ed. 278 rows. The 277 rows of the previous snapshot were proved unchanged before this refresh: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261113090000 is 38887a384cff1fe462a1f81b82e6e46b, which is exactly the all-rows digest recorded in the PR 4 evidence and the md5 of the committed 277-row file, so no earlier row was rewritten. Over all 278 rows production gives 790d53e46c03ecb92a9ce46f50b529d0. The single added row is the canonical identity 20261113090000 / bcp_interview_conduct, applied by the official Supabase GitHub integration on merge.",
+  "readAt": "2026-09-13T16:32:55Z",
+  "readBy": "Post-merge read-only verification for Security Passport governed-issuer hardening: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #230 merged to main as 932163f617785299d409e05a72aad564f6c58d8e. 279 rows. The previous 278-row snapshot is unchanged: its sorted version:name digest remains 790d53e46c03ecb92a9ce46f50b529d0. The all-rows digest is now 9c77cb921cae6a46a233ffb5b9cd308c. The single added row is the canonical identity 20261114090000 / sp_global_certification_governed_issuer, applied automatically by the official Supabase GitHub integration; this evidence session issued no hosted write.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1127,6 +1127,10 @@
     {
       "version": "20261113090000",
       "name": "bcp_interview_conduct"
+    },
+    {
+      "version": "20261114090000",
+      "name": "sp_global_certification_governed_issuer"
     }
   ]
 }
