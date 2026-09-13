@@ -452,7 +452,10 @@ export function BesktApplicationPanel({
                 </SelectContent>
               </Select>
               {method ? (
-                <p className="mt-2 text-xs text-muted-foreground" data-testid="beskt-method-summary">
+                <p
+                  className="mt-2 text-xs text-muted-foreground"
+                  data-testid="beskt-method-summary"
+                >
                   {(lang === "sv" ? method.summarySv : (method.summaryEn ?? method.summarySv)) ??
                     (lang === "sv" ? method.purposeSv : method.purposeSv) ??
                     ""}

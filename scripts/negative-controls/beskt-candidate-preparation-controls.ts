@@ -918,9 +918,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the URL fragment is written before focus, so it names a question that may not be on screen yet",
     file: PANEL,
-    find: "    el.focus();\n    el.scrollIntoView({ block: \"center\", behavior: \"auto\" });\n    window.history.replaceState(null, \"\", `#beskt-item-${focusItemKey}`);",
+    find: '    el.focus();\n    el.scrollIntoView({ block: "center", behavior: "auto" });\n    window.history.replaceState(null, "", `#beskt-item-${focusItemKey}`);',
     replace:
-      "    window.history.replaceState(null, \"\", `#beskt-item-${focusItemKey}`);\n    el.focus();\n    el.scrollIntoView({ block: \"center\", behavior: \"auto\" });",
+      '    window.history.replaceState(null, "", `#beskt-item-${focusItemKey}`);\n    el.focus();\n    el.scrollIntoView({ block: "center", behavior: "auto" });',
     guard: GUARD,
     expect: "BCP-CORRECT",
   },
@@ -929,8 +929,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "THE ORIGINAL DEFECT: the employer's method choice goes back to whatever the database returned first",
     file: EMPLOYER_PANEL,
-    find:
-      "  const method = (methods.data ?? []).find((m) => m.methodVersionId === methodVersionId) ?? null;",
+    find: "  const method = (methods.data ?? []).find((m) => m.methodVersionId === methodVersionId) ?? null;",
     replace: "  const method = methods.data?.[0] ?? null;",
     guard: GUARD,
     expect: "BCP-METHOD-CHOICE",
@@ -950,7 +949,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "THE ORIGINAL DEFECT: the notice version goes back to being a literal the browser sends on a governed write",
     file: CLIENT,
-    find: '      _notice_version: noticeVersion,',
+    find: "      _notice_version: noticeVersion,",
     replace: '      _notice_version: "beskt-prep-notice-1",',
     guard: GUARD,
     expect: "BCP-NOTICE-VERSION",
@@ -993,8 +992,7 @@ const MUTATIONS: readonly Mutation[] = [
     // The submit mutation's onError, identified by what follows it: all three
     // onError lines are byte-identical, so the anchor has to include the one
     // thing that is unique -- the end of the last mutation.
-    find:
-      "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  if (prep.isPending) {",
+    find: "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  if (prep.isPending) {",
     replace:
       "    onError: (e: unknown) =>\n      setActionError((e instanceof Error ? e.message : String(e)) as never),\n  });\n\n  if (prep.isPending) {",
     guard: GUARD,

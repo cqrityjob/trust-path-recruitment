@@ -9862,8 +9862,7 @@ export const dictionaries = {
       "This method is not available for use. It may have been withdrawn, or not yet approved.",
     "beskt.error.profileNotInMethod":
       "The selected exposure profile does not belong to the selected method. Choose the method again, then the profile.",
-    "beskt.error.notAssignable":
-      "No approved BESKT method is available to your organisation yet.",
+    "beskt.error.notAssignable": "No approved BESKT method is available to your organisation yet.",
     "beskt.error.assignmentExists":
       "This application already has a preparation in progress. Cancel it first if it needs replacing.",
     "beskt.error.applicationNotFound": "The application could not be found.",

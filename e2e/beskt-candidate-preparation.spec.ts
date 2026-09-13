@@ -217,18 +217,22 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       await shot(page, "2-employer-before-start");
     });
 
-    await step("assign", "the offered methods are the governed ones, and there is a choice", async () => {
-      await panel.getByLabel(/^metod$|^method$/i).click();
-      const options = page.getByRole("option");
-      await expect(options.first()).toBeVisible({ timeout: 15_000 });
-      // The fixture publishes two admissible methods precisely so that
-      // "the employer chooses" is observable rather than notional.
-      expect(await options.count()).toBeGreaterThanOrEqual(2);
-      await options.first().click();
-      await expect(panel.getByTestId("beskt-method-summary")).toBeVisible();
-      // A method alone is still not enough.
-      await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
-    });
+    await step(
+      "assign",
+      "the offered methods are the governed ones, and there is a choice",
+      async () => {
+        await panel.getByLabel(/^metod$|^method$/i).click();
+        const options = page.getByRole("option");
+        await expect(options.first()).toBeVisible({ timeout: 15_000 });
+        // The fixture publishes two admissible methods precisely so that
+        // "the employer chooses" is observable rather than notional.
+        expect(await options.count()).toBeGreaterThanOrEqual(2);
+        await options.first().click();
+        await expect(panel.getByTestId("beskt-method-summary")).toBeVisible();
+        // A method alone is still not enough.
+        await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
+      },
+    );
 
     await step("assign", "the profile list belongs to the CHOSEN method", async () => {
       await panel.getByLabel(/rollexponering|role exposure/i).click();

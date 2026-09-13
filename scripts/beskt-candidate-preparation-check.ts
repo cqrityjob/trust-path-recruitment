@@ -982,8 +982,9 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
   const client = stripTsComments(read(CLIENT));
 
   // ---- 0.1 · "save and exit" exits, and only after the write lands -------
-  const saveBlock = /const saveMutation = useMutation\(\{[\s\S]*?\n  \}\);/.exec(panel)?.[0] ?? "";
-  const saveSuccess = /onSuccess: async \(\) => \{([\s\S]*?)\n    \},/.exec(saveBlock)?.[1] ?? "";
+  const saveBlock =
+    /const saveMutation = useMutation\(\{[\s\S]*?\n {2}\}\);/.exec(panel)?.[0] ?? "";
+  const saveSuccess = /onSuccess: async \(\) => \{([\s\S]*?)\n {4}\},/.exec(saveBlock)?.[1] ?? "";
   check(
     /await navigate\(\{ to: "\/my-career\/applications" \}\)/.test(saveSuccess),
     "BCP-SAVE-EXIT: the control labelled save-and-exit navigates away, in onSuccess",
@@ -1037,7 +1038,7 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
   // of the function and matched the setProfileId("") in the cancel handler
   // instead, so a planted control that deleted the real one still passed.
   const chooseMethodBody =
-    /const chooseMethod = \(id: string\) => \{([\s\S]*?)\n  \};/.exec(employerPanel)?.[1] ?? "";
+    /const chooseMethod = \(id: string\) => \{([\s\S]*?)\n {2}\};/.exec(employerPanel)?.[1] ?? "";
   check(
     chooseMethodBody.length > 0 && /setProfileId\(""\);/.test(chooseMethodBody),
     "BCP-METHOD-CHOICE: changing the method clears the profile, which belongs to the old one",
@@ -1054,8 +1055,7 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
     !/beskt-prep-notice-1/.test(employerPanel) && !/beskt-prep-notice-1/.test(panel),
     "BCP-NOTICE-VERSION: no notice version is hard-coded in a component",
   );
-  const startFn =
-    /export const startBesktPreparation[\s\S]*?\n  \}\);/.exec(client)?.[0] ?? "";
+  const startFn = /export const startBesktPreparation[\s\S]*?\n {2}\}\);/.exec(client)?.[0] ?? "";
   check(
     !/noticeVersion:\s*z\./.test(startFn),
     "BCP-NOTICE-VERSION: the start validator does not accept one from the caller",
@@ -1105,7 +1105,7 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
   // of the defect did not; a planted control showed it passing with one of the
   // three handlers storing the raised text under a slightly different spelling.
   // Counting them is the assertion that cannot be satisfied by its neighbours.
-  const errorHandlers = panel.match(/onError:\s*\(e: unknown\) =>[\s\S]*?,\n  \}\);/g) ?? [];
+  const errorHandlers = panel.match(/onError:\s*\(e: unknown\) =>[\s\S]*?,\n {2}\}\);/g) ?? [];
   check(
     errorHandlers.length >= 3 &&
       errorHandlers.every((h) => /setActionError\(besktErrorKey\(e\)\)/.test(h)),
@@ -1117,7 +1117,7 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
     "BCP-SAFE-ERRORS: and no handler stores the raised text under any spelling",
   );
   const employerHandlers =
-    employerPanel.match(/onError:\s*\(e: unknown\) =>[\s\S]*?,\n  \}\);/g) ?? [];
+    employerPanel.match(/onError:\s*\(e: unknown\) =>[\s\S]*?,\n {2}\}\);/g) ?? [];
   check(
     employerHandlers.length >= 2 &&
       employerHandlers.every((h) => /besktErrorKey\(e\)/.test(h)) &&
