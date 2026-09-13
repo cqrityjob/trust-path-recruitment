@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-13T16:32:55Z",
-  "readBy": "Post-merge read-only verification for Security Passport governed-issuer hardening: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #230 merged to main as 932163f617785299d409e05a72aad564f6c58d8e. 279 rows. The previous 278-row snapshot is unchanged: its sorted version:name digest remains 790d53e46c03ecb92a9ce46f50b529d0. The all-rows digest is now 9c77cb921cae6a46a233ffb5b9cd308c. The single added row is the canonical identity 20261114090000 / sp_global_certification_governed_issuer, applied automatically by the official Supabase GitHub integration; this evidence session issued no hosted write.",
+  "readAt": "2026-09-13T17:43:43Z",
+  "readBy": "Post-merge read-only verification for the interview-method library tenant read (pilot blocker 2): supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #241 merged to main as 7e338f2a43fbfe91b2c26228f04d7b3487d67d61. 280 rows. The previous 279-row snapshot is proved unchanged rather than assumed: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261115090000 is 9c77cb921cae6a46a233ffb5b9cd308c, which is exactly the all-rows digest recorded in the previous snapshot and the digest of the committed 279-row file, so no earlier row was rewritten. Over all 280 rows production gives cbe34f3fef140aa15c8810e8b8169425. The single added row is the canonical identity 20261115090000 / scp_interview_method_library_tenant_read -- the migration filename's own version and slug, not a generated uuid -- applied automatically by the official Supabase GitHub integration on merge; this evidence session issued no hosted write.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1131,6 +1131,10 @@
     {
       "version": "20261114090000",
       "name": "sp_global_certification_governed_issuer"
+    },
+    {
+      "version": "20261115090000",
+      "name": "scp_interview_method_library_tenant_read"
     }
   ]
 }
