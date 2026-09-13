@@ -806,8 +806,8 @@ const race = read(RACE);
     "CONDUCT-SUITE: and no two assertions share a label, so a failure names exactly one thing",
   );
   check(
-    /SYNTETISK/.test(race) && /b6000000/.test(race),
-    "CONDUCT-SUITE: the race fixture is synthetic too, on its own actor prefix so it cannot collide with the suite's",
+    /SYNTETISK/.test(race) && /b6000000/.test(race) && !/b5000000/.test(race),
+    "CONDUCT-SUITE: the race fixture is synthetic too, on its OWN actor prefix and none of the suite's, so the two cannot collide",
   );
   for (const needle of [
     ...CLIENT_MUTATIONS,
