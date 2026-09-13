@@ -195,9 +195,10 @@ Negative controls, three layers:
   sp_global_certification_governed_issuer` — Security Passport work from
   the separate PR #228/#230 stream, applied ahead of merge. It is outside
   this task and this migration does not depend on it; it is why this
-  migration takes version `20261115090000`. `supabase/hosted-ledger.json`
-  was **not** refreshed here: recording that row is the Passport stream's
-  evidence to record.
+  migration takes version `20261115090000`. PR #230 and PR #240 have since
+  merged to main with that migration and its hosted evidence, and this branch
+  carries main merged in; `supabase/hosted-ledger.json` is refreshed by that
+  evidence, not by this change.
 - Nothing else differs materially for this domain.
 
 ## 8. Remaining risks
@@ -210,7 +211,6 @@ Negative controls, three layers:
   stage-practice panel is empty for employers. That is the product cost of
   closing the finding and is the owner's call to change by approval, not by
   policy.
-- `hosted-ledger.json` is one row behind production (see §7).
 
 ## 9. Merge and hosted-apply order
 
