@@ -629,6 +629,114 @@ export type Database = {
           },
         ]
       }
+      // The BESKT conduct session, added for PR 5B.
+      //
+      // This file mirrors the parts of the schema the APPLICATION uses, and
+      // PR 4 and PR 5A shipped schema-only: their tables are otherwise absent
+      // because nothing in the application read them. This one is here because
+      // the BESKT module has to answer "is there already a session for this
+      // case?", and there is no RPC that answers it — the read is a plain
+      // policy-governed SELECT, refused for a non-member exactly as the case
+      // itself is.
+      bcp_conduct_sessions: {
+        Row: {
+          assignment_id: string
+          bound_answers_content_hash: string
+          bound_content_hash: string
+          bound_method_version_id: string
+          bound_response_id: string
+          bound_response_version: number
+          case_id: string
+          concluded_at: string | null
+          concluded_by: string | null
+          created_at: string
+          employer_id: string
+          id: string
+          link_id: string
+          open_operation_id: string
+          opened_at: string
+          opened_by: string
+          revision: number
+          state: string
+        }
+        Insert: {
+          assignment_id: string
+          bound_answers_content_hash: string
+          bound_content_hash: string
+          bound_method_version_id: string
+          bound_response_id: string
+          bound_response_version: number
+          case_id: string
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          employer_id: string
+          id?: string
+          link_id: string
+          open_operation_id: string
+          opened_at?: string
+          opened_by: string
+          revision?: number
+          state?: string
+        }
+        Update: {
+          assignment_id?: string
+          bound_answers_content_hash?: string
+          bound_content_hash?: string
+          bound_method_version_id?: string
+          bound_response_id?: string
+          bound_response_version?: number
+          case_id?: string
+          concluded_at?: string | null
+          concluded_by?: string | null
+          created_at?: string
+          employer_id?: string
+          id?: string
+          link_id?: string
+          open_operation_id?: string
+          opened_at?: string
+          opened_by?: string
+          revision?: number
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_bound_method_version_id_fkey"
+            columns: ["bound_method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_bound_response_id_fkey"
+            columns: ["bound_response_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_sessions_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bcp_events: {
         Row: {
           actor_id: string | null
@@ -15030,6 +15138,86 @@ export type Database = {
           method_version_number: number
           submitted_at: string
         }[]
+      }
+      // PR 4's bridge read and PR 5A's conduct contract, added for PR 5B.
+      bcp_case_preparation_basis: {
+        Args: { _case_id: string }
+        Returns: Json
+      }
+      bcp_conduct_entry_history: {
+        Args: { _entry_id: string }
+        Returns: Json
+      }
+      bcp_conduct_join_session: {
+        Args: { _operation_id: string; _position_role?: string; _session_id: string }
+        Returns: Json
+      }
+      bcp_conduct_lock_position: {
+        Args: { _expected_revision: number; _operation_id: string; _position_id: string }
+        Returns: Json
+      }
+      bcp_conduct_open_panel: {
+        Args: { _operation_id: string; _session_id: string }
+        Returns: Json
+      }
+      bcp_conduct_record_resolution: {
+        Args: {
+          // Nullable in the SQL signature: an agreed resolution must carry a
+          // NULL divergent statement and vice versa, and the table's shape
+          // constraint rejects an empty string in either.
+          _agreed_statement: string | null
+          _divergent_statement: string | null
+          _expected_revision: number
+          _item_key: string
+          _operation_id: string
+          _panel_id: string
+          _rationale: string
+          _resolution_kind: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_record_verification: {
+        Args: {
+          _entry_id: string
+          _expected_revision: number
+          _new_state: string
+          _note?: string
+          _operation_id: string
+          _source?: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_reopen_position: {
+        Args: {
+          _expected_revision: number
+          _operation_id: string
+          _position_id: string
+          _reason: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_reveal_panel: {
+        Args: { _expected_revision: number; _operation_id: string; _panel_id: string }
+        Returns: Json
+      }
+      bcp_conduct_save_entry: {
+        Args: {
+          _correction_reason?: string
+          _corrects_entry_id?: string
+          _entry: Json
+          _expected_revision: number
+          _operation_id: string
+          _position_id: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_start_session: {
+        Args: { _link_id: string; _operation_id: string }
+        Returns: Json
+      }
+      bcp_conduct_workspace: {
+        Args: { _session_id: string }
+        Returns: Json
       }
       bcp_employer_can_read_assignment: {
         Args: { _assignment_id: string }

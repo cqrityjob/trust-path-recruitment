@@ -758,6 +758,16 @@ jobs:
       - name: BESKT interview conduct (PR 5A) source guard
         run: bun run beskt-interview-conduct:check
 
+      # BESKT PR 5B -- the VISIBLE interview tool inside Interview Intelligence:
+      # the module gate, the immutable submitted snapshot, the deterministic
+      # themes, the eight separate documentation fields, corrections and
+      # verification history, the independent position and its lock, and the
+      # panel that records disagreement. Asserted both from the real source and
+      # from the RENDERED markup. Its planted controls run in
+      # negative-controls:all.
+      - name: BESKT interview tool (PR 5B) source and render guard
+        run: bun run beskt-interview-tool:check
+
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape
       # and reports the dictionary proof as outstanding; once PR 3B adds the
