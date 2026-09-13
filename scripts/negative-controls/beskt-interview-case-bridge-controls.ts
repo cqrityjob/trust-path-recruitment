@@ -512,9 +512,14 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
-    find: "const expectedPending: string[] = [];",
+    // The anchor tracks the list's current shape, which changes whenever a
+    // branch has a genuinely pending migration. The governed-issuer hardening
+    // branch has one, so this is that line rather than an empty list. The
+    // planted defect is unchanged: the APPLIED bridge migration back on the
+    // frontier list.
+    find: 'const expectedPending: string[] = ["20261113090000_sp_global_certification_governed_issuer.sql"];',
     replace:
-      'const expectedPending: string[] = [\n  "20261112090000_bcp_interview_case_bridge.sql",\n];',
+      'const expectedPending: string[] = [\n  "20261113090000_sp_global_certification_governed_issuer.sql",\n  "20261112090000_bcp_interview_case_bridge.sql",\n];',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },
