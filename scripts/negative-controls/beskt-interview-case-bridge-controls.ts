@@ -515,9 +515,12 @@ const MUTATIONS: readonly Mutation[] = [
     // PR 5A put its own genuinely pending migration in the list, so the anchor
     // is that line rather than an empty one. The planted defect is unchanged:
     // the APPLIED migration back on the frontier.
-    find: "const expectedPending: string[] = [];",
+    // Pilot blocker 2 put its own genuinely pending migration in the list, so
+    // the anchor is that one-line list rather than an empty one. The planted
+    // defect is unchanged: the APPLIED migration back on the frontier.
+    find: 'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
     replace:
-      'const expectedPending: string[] = [\n  "20261112090000_bcp_interview_case_bridge.sql",\n];',
+      'const expectedPending: string[] = [\n  "20261115090000_scp_interview_method_library_tenant_read.sql",\n  "20261112090000_bcp_interview_case_bridge.sql",\n];',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },
