@@ -88,7 +88,7 @@ const MUTATIONS: readonly Mutation[] = [
       "      <div id=\"sp-credentials\" className=\"scroll-mt-24 space-y-5\">\n        {PASSPORT_CLAIM_SECTIONS.map(claimSection)}\n      </div>\n",
     replace: "",
     guard: GUARD,
-    expect: "sp-credentials",
+    expect: "that anchor is a real id on the Passport page",
   },
 
   /* ── ONE FACT, ONE ROW, ONE WRITER ─────────────────────────────────── */

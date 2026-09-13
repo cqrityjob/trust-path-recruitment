@@ -112,8 +112,13 @@ check(
   "no general-education section table remains on the Passport page",
 );
 // The Passport MAY point at the profile. A link is not an editor.
+// `info.generalMoved` is a PREFIX of `info.generalMovedLink`, so a loose
+// substring test here stayed true with the pointer paragraph deleted and
+// only the link label left. Both halves are matched exactly.
 check(
-  /info\.generalMoved/.test(info) && /data-cta="general-profile"/.test(info),
+  /pt\("info\.generalMoved"\)/.test(info) &&
+    /pt\("info\.generalMovedLink"\)/.test(info) &&
+    /data-cta="general-profile"/.test(info),
   "it links to the profile instead, which the owner's rule allows",
 );
 check(
@@ -141,8 +146,11 @@ for (const fn of ["saveClaimEntry", "saveSkillEntry", "removeEntry"]) {
     `it writes through the existing ${fn} server function`,
   );
 }
+// Not merely imported -- WIRED. The bare identifier matched the import
+// line, so the editor could be pointed at a different read entirely and
+// this still passed.
 check(
-  /listMyEntries/.test(profileEditor),
+  /useServerFn\(listMyEntries\)/.test(profileEditor),
   "and reads the same sp_claims entries the Passport reads",
 );
 check(
