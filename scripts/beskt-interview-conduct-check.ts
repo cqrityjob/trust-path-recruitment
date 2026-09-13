@@ -779,6 +779,7 @@ const race = read(RACE);
     frontier?: Array<{
       file?: string;
       hostedState?: string;
+      evidenceSource?: string;
       verify?: unknown;
       rollback?: unknown;
       introduces?: unknown[];
@@ -790,8 +791,19 @@ const race = read(RACE);
     "CONDUCT-REGISTRATION: the migration is declared in release-state.json",
   );
   check(
-    entry?.hostedState === "pending",
-    "CONDUCT-REGISTRATION: and declared PENDING — it has not been applied to the hosted project, and saying otherwise would be the claim this whole stack exists to prevent",
+    entry?.hostedState === "applied",
+    "CONDUCT-REGISTRATION: and declared APPLIED — the Supabase GitHub integration applied it to production when PR #233 merged",
+  );
+  check(
+    typeof entry?.evidenceSource === "string" && entry.evidenceSource.length > 0,
+    'CONDUCT-REGISTRATION: and an applied entry carries evidence, because "applied" without it is exactly the unverified claim this stack exists to prevent',
+  );
+  check(
+    typeof entry?.evidenceSource === "string" &&
+      entry.evidenceSource.includes("20261113090000") &&
+      entry.evidenceSource.includes("bcp_interview_conduct") &&
+      entry.evidenceSource.includes("wrygicdfxwjnrugduxnt"),
+    "CONDUCT-REGISTRATION: and that evidence names the real hosted version, the recorded name and the project it was verified against",
   );
   check(
     entry?.verify !== undefined && entry?.rollback !== undefined,
@@ -809,17 +821,25 @@ const race = read(RACE);
   );
   const frontier = read(FRONTIER);
   check(
-    (/const expectedPending: string\[\] = \[([\s\S]*?)\]/.exec(frontier)?.[1] ?? "").includes(
+    // The mirror of the assertion above: once applied, the migration must NOT be
+    // on the owner-level pending list. A resolved name left there hides the next
+    // genuinely stuck migration behind an expectation.
+    !(/const expectedPending: string\[\] = \[([\s\S]*?)\]/.exec(frontier)?.[1] ?? "").includes(
       MIGRATION_NAME,
     ),
-    "CONDUCT-REGISTRATION: the frontier check expects this pending migration by name",
+    "CONDUCT-REGISTRATION: and is no longer declared pending on the release frontier",
   );
 
-  // SCHEMA-FIRST: nothing may depend on it while it is pending.
+  // SCHEMA-FIRST. The migration is applied now, so the types MAY describe the
+  // conduct tables -- but this evidence PR adds no application code, so they
+  // still do not. Asserting either way would be asserting about a future PR;
+  // what this guard holds is the rule that actually binds: application code may
+  // not reference an object whose migration is unapplied, which release-parity
+  // enforces from the release-state entry above.
   const types = read(TYPES);
   check(
-    TABLES.every((t) => !types.includes(t)),
-    "CONDUCT-SCHEMA-FIRST: the generated types do NOT yet describe the conduct tables, because the migration is pending",
+    typeof types === "string" && types.length > 0,
+    "CONDUCT-SCHEMA-FIRST: the generated types file is present for release-parity to read",
   );
 }
 

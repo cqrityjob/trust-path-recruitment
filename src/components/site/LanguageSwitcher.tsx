@@ -6,7 +6,17 @@ import { cn } from "@/lib/utils";
  *  `tone` is presentation only. "onDark" exists because the switcher now sits
  *  in the navy utility bar at the top of the public header, where the default
  *  light border/foreground pair has too little contrast to read as a control.
- *  Every other caller keeps the default and is untouched. */
+ *  Every other caller keeps the default and is untouched.
+ *
+ *  ── 44 x 44, INCLUDING THE TWO-LETTER BUTTONS (2026-09-13) ───────────
+ *
+ *  A two-character label is the easiest control in a design system to leave
+ *  at 28px, and this one was: it was named in the public homepage suite as a
+ *  deliberate exception, "a mouse target on a >=1024px viewport". The
+ *  Platform Entry Specification §12 does not allow the exception -- every
+ *  control carries a 44px minimum -- so each button now reserves a real
+ *  44 x 44 box and the group's padding is what shrank instead. The visual
+ *  pill is unchanged in weight; only the hit area grew. */
 export function LanguageSwitcher({
   className,
   tone = "default",
@@ -19,7 +29,7 @@ export function LanguageSwitcher({
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-full border p-0.5 text-xs",
+        "inline-flex items-center rounded-full border p-0 text-xs",
         onDark
           ? "border-primary-foreground/25 bg-primary-foreground/5"
           : "border-border bg-background/60",
@@ -34,7 +44,7 @@ export function LanguageSwitcher({
           type="button"
           onClick={() => setLang(l)}
           className={cn(
-            "rounded-full px-2.5 py-1 font-semibold uppercase tracking-wide transition-colors",
+            "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full px-2.5 font-semibold uppercase tracking-wide transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
             onDark ? "focus-visible:ring-offset-primary" : "focus-visible:ring-offset-background",
             lang === l

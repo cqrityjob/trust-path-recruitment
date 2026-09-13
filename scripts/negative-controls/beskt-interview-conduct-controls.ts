@@ -609,27 +609,43 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "CONDUCT-REGISTRATION",
   },
   {
-    id: "CND-NC-STATE-CLAIMS-APPLIED",
+    id: "CND-NC-CLAIMED-PENDING",
     defect:
-      "release-state.json claims the migration is already applied on the hosted database, which is exactly the unverified claim this stack exists to prevent",
+      "the applied migration is walked back to pending, so the repository stops recording a hosted apply that really happened",
     file: STATE,
-    find: '"file": "20261113090000_bcp_interview_conduct.sql",\n      "hostedState": "pending",',
-    replace: '"file": "20261113090000_bcp_interview_conduct.sql",\n      "hostedState": "applied",',
+    find: '"file": "20261113090000_bcp_interview_conduct.sql",\n      "hostedState": "applied",',
+    replace: '"file": "20261113090000_bcp_interview_conduct.sql",\n      "hostedState": "pending",',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },
   {
-    id: "CND-NC-FRONTIER-FORGETS-IT",
+    id: "CND-NC-APPLIED-WITHOUT-EVIDENCE",
     defect:
-      "the frontier check stops expecting this pending migration, so dropping it from release-state would pass silently",
+      "the applied entry keeps its status but loses the evidence naming the hosted version and project, leaving an owner-level claim about production with nothing behind it",
+    file: STATE,
+    // Several entries open their evidence with the same phrase, so the anchor
+    // runs on into the clause only this one has -- and it renames the KEY,
+    // because softening the prose would leave an evidenceSource in place.
+    find: '"evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt through the official Supabase GitHub integration when PR #233 merged',
+    replace:
+      '"evidenceSourceRemoved": "Applied to owner production wrygicdfxwjnrugduxnt through the official Supabase GitHub integration when PR #233 merged',
+    guard: GUARD,
+    expect: "CONDUCT-REGISTRATION",
+  },
+  {
+    id: "CND-NC-FRONTIER-STALE-PENDING",
+    defect:
+      "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
-    // Anchored on THIS migration's own entry rather than on the whole list:
-    // the governed-issuer hardening branch carries a pending migration too, so
-    // expectedPending holds two names and an empty-list replacement would have
-    // planted a different defect (forgetting BOTH). Removing just this line
-    // plants exactly the one described above.
-    find: '  "20261113090000_bcp_interview_conduct.sql",\n',
-    replace: "",
+    // Anchored on the pending migration's NAME rather than on the whole
+    // expectedPending declaration, for the same reason as the other two
+    // frontier controls: the list's shape changes whenever any branch carries
+    // a pending migration, and the governed-issuer hardening branch carries
+    // one. The planted defect is unchanged: this APPLIED migration back on the
+    // frontier list.
+    find: '"20261114090000_sp_global_certification_governed_issuer.sql"',
+    replace:
+      '"20261114090000_sp_global_certification_governed_issuer.sql", "20261113090000_bcp_interview_conduct.sql"',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },
