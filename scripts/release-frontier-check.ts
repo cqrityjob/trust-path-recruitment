@@ -47,13 +47,24 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // release-state.json and hosted-ledger.json carry that production evidence.
 //
 // They came off this list in the same change that recorded the evidence, so the
-// list is empty again and the next genuinely stuck migration has nothing to
-// hide behind. Note for anyone reading the versions: 20261110 rather than
-// 20261109 for the candidate-preparation runtime is deliberate, because
-// Supabase keys schema_migrations by the numeric prefix alone and the Passport
-// correction already holds 20261109090000 -- two files sharing one version
-// means the second is silently treated as already applied.
-const expectedPending: string[] = [];
+// list is empty again except for what is genuinely still waiting. Note for
+// anyone reading the versions: 20261110 rather than 20261109 for the
+// candidate-preparation runtime is deliberate, because Supabase keys
+// schema_migrations by the numeric prefix alone and the Passport correction
+// already holds 20261109090000 -- two files sharing one version means the
+// second is silently treated as already applied.
+//
+// 20261111090000_sp_global_professional_certifications is PENDING: the Security
+// Passport international-certification SCHEMA, awaiting independent review and
+// the owner's hosted apply. It took 20261111 rather than 20261110 because
+// bcp_candidate_preparation reached main first and holds that version -- the
+// same one-version-one-file rule the paragraph above is about, met by this
+// branch as a real collision rather than a hypothetical.
+//
+// It has not been applied to the owner project by this branch, and it comes off
+// this list only when it has been and the evidence is recorded in
+// release-state.json.
+const expectedPending: string[] = ["20261111090000_sp_global_professional_certifications.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
