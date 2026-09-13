@@ -383,11 +383,10 @@ jobs:
         run: bun run passport-market-catalogue:check
 
       # Security Passport Phase 1A — the international-certification SCHEMA.
-      # Reads SQL only and imports nothing under src/, because the property it
-      # exists to protect is that this release has no application dependency:
-      # it must be safe to merge and apply while the running app continues
-      # against the old hosted schema. GROUP 4 asserts exactly that, object by
-      # object. The rest pins the fourteen reviewed definitions, the five
+      # The migration is applied and verified on the hosted owner database.
+      # GROUP 4 keeps runtime application code independent until its separate
+      # release, while requiring generated Supabase types to describe the
+      # hosted tables, column and RPC. The rest pins the fourteen reviewed definitions, the five
       # controlled issuers, the honest gaps (ACAMS has no verification URL, the
       # ACFE directory's absence is inconclusive), the constraint that keeps a
       # portable certification from creating eligibility or a title, and the
@@ -1134,25 +1133,47 @@ jobs:
       - name: Admin employer status guard check
         run: bun run admin-employer-status-guard:check
 
-      # ── PUBLIC HOMEPAGE ─────────────────────────────────────────────────
+      # ── THE PUBLIC ENTRY ARCHITECTURE ───────────────────────────────────
       #
       # The homepage is the one page most people see and the one nobody owns,
-      # which is how it grew to eight sections, 437 words and 5,511px saying
-      # the same few things repeatedly. This guard holds its shape: four
-      # sections, one h1, three h2, ONE visually primary action, the copy
-      # budget, sv/en parity, and — the part that is not cosmetic — that the
-      # Passport trust levels stay named and separated, that only
-      # source-confirmed reads as confirmed, and that nothing on a public
-      # page claims a credential is recognised anywhere or replaces a
-      # licence, a permit or a background check.
+      # which is how it once grew to eight sections saying the same few
+      # things repeatedly. Since 2026-09-13 it also carries the owner-approved
+      # entry architecture, and this guard is what holds it: four sections,
+      # one h1, TWO PEER individual entrances that are structurally equal
+      # (one card component, two solid actions), the employer strip behind
+      # its release flag, the connected lifecycle linking only canonical
+      # routes, the three Passport markets agreeing with the governed
+      # overview, sv/en parity, and — the part that is not cosmetic — the
+      # non-negotiable data boundaries as strings a reader could meet: no
+      # score, no ranking, no suitability, credibility, deception,
+      # personality or protected-trait inference, no AI decision, and no
+      # claim that the Passport replaces a licence, security vetting, the
+      # right to work or an employer's own checks.
       #
-      # The layout half (height, overflow at 320-1440, focus rings, target
-      # sizes, and every CTA clicked through to a destination that renders)
-      # lives in e2e/public-homepage.spec.ts, which needs a browser and a dev
-      # server and so runs locally rather than here -- the same arrangement
-      # as e2e/my-career-home.spec.ts.
+      # The layout half (overflow at 320/375/390/768/1024/1440, focus rings,
+      # target sizes, the two cards measured as the same box on screen, and
+      # every CTA clicked through to a destination that renders) lives in
+      # e2e/public-homepage.spec.ts, which needs a browser and a dev server
+      # and so runs locally rather than here -- the same arrangement as
+      # e2e/my-career-home.spec.ts.
       - name: Public homepage check
         run: bun run public-homepage:check
+
+      # /employers is where an employer decides whether CQrityjob is for
+      # them, and it is the ONE public page that names BESKT -- a governed
+      # method published under `synthetic_internal_only` and assignable only
+      # under an owner-issued, time-boxed pilot grant. A page that presented
+      # it as an available feature, or let "structured interview support"
+      # drift into "replaces säkerhetsprövning", would be the most expensive
+      # over-claim on the site. This guard holds the whole page: the approved
+      # copy, the three actions through the one door, the release flag
+      # failing closed, the six-step path ending in a documented HUMAN
+      # decision, both BESKT boundary sentences, and that candidate-owned
+      # Career Discovery data is never offered to an employer.
+      #
+      # Its layout half is e2e/employer-landing.spec.ts.
+      - name: Employer landing page check
+        run: bun run employer-landing:check
 
 
       - name: Production build
@@ -1455,5 +1476,119 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: passport-three-market-browser-traces
+          path: test-results/
+          if-no-files-found: ignore
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # The public entry architecture, in a real browser, against a real server.
+  # ═══════════════════════════════════════════════════════════════════════
+  #
+  # e2e/public-homepage.spec.ts and e2e/employer-landing.spec.ts drive the
+  # ACTUAL routes: the two peer individual entrances, the employer strip, the
+  # connected lifecycle, the Passport market section, /employers, and the
+  # employer journey from "Register company" through the one unified door to
+  # the pending destination.
+  #
+  # ── WHY THIS JOB EXISTS ───────────────────────────────────────────────
+  #
+  # Both suites shipped in the same pull request as the pages they test and
+  # were run by nothing. The review was explicit that a spec nobody executes
+  # is not evidence, and that statically rendered React, screenshots taken
+  # against compiled CSS and the separate E4 workflow are not substitutes for
+  # it. So this job starts the application and runs them, blocking, with no
+  # `continue-on-error` and no skip path.
+  #
+  # It is also where the responsive, target-size and focus assertions become
+  # real: 320/375/390/768/1024/1440, header AND main AND footer, both
+  # dimensions, measured on the live layout. There is no exempt region — the
+  # desktop header's old 36px exemption was removed in the components rather
+  # than re-argued in the assertions.
+  #
+  # ── NOTHING REACHES PRODUCTION ────────────────────────────────────────
+  #
+  # `.env` is committed and points at a real Supabase project, so "this suite
+  # does not log in" is not a guarantee. e2e/support/public-entry-harness.ts
+  # installs a hard boundary: every request to a Supabase host is refused and
+  # recorded unless it is one of the two auth endpoints a planted session
+  # needs, which are answered inside the browser; every `/_serverFn/` call is
+  # answered from an explicit stub table and an unstubbed export fails the
+  # scenario. No test here writes anything, anywhere.
+  #
+  # The two release-control flags are set explicitly rather than inherited
+  # from the committed `.env`, so this job states the surface it exercises
+  # instead of depending on a file that may change for unrelated reasons.
+  # The flag-OFF behaviour is a separate claim and is asserted by source in
+  # `public-homepage:check` (T7) and `employer-landing:check` (E3).
+  public-entry-browser:
+    name: Public entry browser — homepage, employers and the employer journey
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Chromium
+        run: |
+          # Playwright's dependency installer runs apt-get update. Remove the
+          # unrelated preconfigured Chrome source so a transient mismatch in
+          # Google's repository cannot block installation from Ubuntu.
+          grep -rlZ 'dl.google.com/linux/chrome' /etc/apt/sources.list.d 2>/dev/null | xargs -0r sudo rm -f
+          bunx playwright install --with-deps chromium
+
+      # The same start pattern the CV and three-market browser jobs use: the
+      # dev server on a pinned port, `--strictPort` so a clash is a failure
+      # rather than a silent move to another port and a suite that then tests
+      # nothing.
+      - name: Start the application
+        env:
+          VITE_EMPLOYER_PORTAL_ENABLED: "true"
+          VITE_JOBS_ENABLED: "true"
+        run: |
+          nohup bun run dev -- --port 3100 --strictPort > /tmp/dev-server.log 2>&1 &
+          disown
+          for i in $(seq 1 60); do
+            if curl -sfo /dev/null http://localhost:3100/; then
+              echo "up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "the dev server did not come up"
+          cat /tmp/dev-server.log
+          exit 1
+
+      - name: Public entry browser suites
+        run: bun run e2e:public-entry
+
+      - name: Server log
+        if: failure()
+        run: cat /tmp/dev-server.log
+
+      # The routed evidence, uploaded WHATEVER the outcome: a failed run is
+      # exactly when a reviewer most wants to see what the page looked like.
+      - name: Upload the routed browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-entry-browser-evidence
+          path: artifacts/public-entry-browser/
+          # `error` rather than `warn`: the harness creates the directory and
+          # an empty manifest at module load, so "no files" means the suites
+          # never started, which is a real failure and not merely a red run.
+          if-no-files-found: error
+
+      - name: Upload the failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-entry-browser-traces
           path: test-results/
           if-no-files-found: ignore

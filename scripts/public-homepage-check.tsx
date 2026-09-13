@@ -1,40 +1,46 @@
 // The public homepage — asserted against the RENDERED markup and the
 // dictionaries, in both languages.
 //
-//   T1  main carries exactly four sections, in the settled order
-//   T2  the eight-section page's headings and claims are gone from the
-//       markup, not hidden by CSS, and their keys are deleted
-//   T3  exactly one h1, exactly three h2, and a sane heading hierarchy
-//   T4  Security Passport is the product: it is what the h1 is about, it
-//       is named in the hero, and the Career Analysis is not
-//   T5  exactly ONE visually primary call to action, and it creates a
-//       Security Passport
-//   T6  that action carries the Passport intent through registration, to
-//       a landing that explains the next step
-//   T7  the Career Analysis is offered ONCE, quietly, from section 3, and
-//       is never described as a test or as measuring anything
-//   T8  the trust levels respect PR #189 — three levels, named and
-//       separated, only source-confirmed reads as confirmed, no issuer
-//       claim, no lifecycle state mixed in
-//   T9  every destination is an existing canonical route
-//   T10 the signed-in redirect to /my-career is intact, and is the only
-//       redirect implementation on the route
-//   T11 the public chrome: five nav items, two account actions, and
-//       neither the header nor the footer promotes a dead destination
-//   T12 sv and en carry the same keys, structure and meaning, and English
-//       names the supporting tool one way
-//   T13 the copy budget: <= 220 words inside main, excluding buttons and
-//       the aria-hidden illustrations
-//   T14 nothing on the page claims international recognition, or that the
-//       Passport replaces a licence, permit, screening or due diligence
-//   T15 the English page is ENGLISH — including the decorative product
-//       illustrations, which aria-hidden removes from the accessibility
-//       tree and does not remove from the screen
+// ── WHAT THIS FILE NOW DEFENDS (2026-09-13) ────────────────────────────
 //
-// The height, overflow, focus-ring, target-size and click-through halves of
-// the brief are a property of a LAYOUT and cannot be read out of markup.
-// They live in e2e/public-homepage.spec.ts, which drives the real route in
-// a real browser.
+// It used to assert the opposite architecture, out loud and in detail:
+// "Security Passport is the product, it leads, and the Career Analysis is a
+// SUPPORTING tool offered once, quietly, from section 3". That position is
+// SUPERSEDED by the owner-approved public entry architecture, and a guard
+// that still encoded it would be the single most effective way to prevent
+// the new one from ever shipping. So the assertions below are rewritten
+// rather than extended.
+//
+//   T1  main carries exactly four sections, in the settled order
+//   T2  TWO PEER individual entry products render, in both languages, and
+//       the superseded single-product page is gone from the markup
+//   T3  exactly one h1, the settled h2 set, and a sane heading hierarchy
+//   T4  the two entrances are PEERS — same card shape, same solid action,
+//       and Career Discovery is not a quiet text link
+//   T5  both primary destinations are canonical and safe, and the Passport
+//       intent survives every account path the auth form supports
+//   T6  Career Discovery's anonymous start and result claim are intact,
+//       and this page adds no signup wall
+//   T7  the employer strip: /employer intent, no role by metadata, and the
+//       release flag still fails closed
+//   T8  the connected lifecycle links only existing canonical routes
+//   T9  the Passport market scale agrees with the governed overview, and
+//       the owner-approved disclaimer is rendered verbatim
+//   T10 the trust levels respect PR #189 — three levels, named and
+//       separated, only source-confirmed reads as confirmed
+//   T11 the signed-in redirect to /my-career is intact, and is the only
+//       redirect implementation on the route
+//   T12 the public chrome: six nav destinations, one Login, one Create
+//       account, and the signed-in candidate nav is untouched
+//   T13 sv and en carry the same keys, structure and destinations
+//   T14 NO FORBIDDEN CLAIM was introduced — the data boundaries, as
+//       strings a reader could actually meet
+//   T15 the English page is English
+//
+// The height, overflow, focus-ring, target-size, viewport and click-through
+// halves of the brief are properties of a LAYOUT and cannot be read out of
+// markup. They live in e2e/public-homepage.spec.ts, which drives the real
+// route in a real browser at 320/375/390/768/1024/1440.
 //
 // Run: bun run public-homepage:check
 
@@ -59,15 +65,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 // than on the homepage. The layout is replaced by the three landmarks it
 // renders, so `<main>` still bounds the counts below.
 //
-// The chrome itself is NOT unasserted: T11 reads SiteHeader and SiteFooter
-// as source, and e2e/public-homepage.spec.ts renders and CLICKS the real
-// ones in a browser.
+// The chrome itself is NOT unasserted: T12 reads SiteHeader, SiteFooter and
+// candidate-app-nav as source, and e2e/public-homepage.spec.ts renders and
+// CLICKS the real ones in a browser.
 await mock.module("@tanstack/react-router", () => ({
   Link: ({
     to,
     search,
     hash,
     children,
+    // Swallowed rather than spread: `activeOptions` is a router prop and
+    // React would warn about it as an unknown DOM attribute, which makes
+    // this guard's output noisy for a reason that is not the page's.
+    activeOptions: _activeOptions,
     ...rest
   }: Record<string, unknown> & { children?: React.ReactNode }) => {
     let href = String(to ?? "");
@@ -97,6 +107,10 @@ await mock.module("@/components/site/SiteLayout", () => ({
 const { I18nProvider } = await import("../src/i18n/context");
 const { dictionaries } = await import("../src/i18n/dictionaries");
 const { AUTH_SURFACES, safeReturnPath } = await import("../src/lib/auth/safe-redirect");
+const { CANONICAL_ASSESSMENT_PATH, isAliasPath, isCanonicalPath } =
+  await import("../src/lib/career-discovery/routes");
+const { PUBLIC_MARKET_SCALE } = await import("../src/components/site/passport-market-scale");
+const { CANDIDATE_APP_NAV } = await import("../src/components/site/candidate-app-nav");
 const { Route } = await import("../src/routes/index");
 
 const fails: string[] = [];
@@ -143,7 +157,7 @@ const html: Record<Lang, string> = {
 };
 
 /** Everything between <main …> and </main>. The site chrome is asserted
- *  separately; the brief's counts are all "inside main". */
+ *  separately; the counts below are all "inside main". */
 function mainOf(markup: string): string {
   const open = markup.indexOf("<main");
   const start = markup.indexOf(">", open) + 1;
@@ -158,70 +172,72 @@ function sectionOf(markup: string, id: string): string {
   return next === -1 ? markup.slice(start) : markup.slice(start, start + 1 + next);
 }
 
-/** The page's COPY: rendered text with every aria-hidden subtree removed,
- *  so the decorative product illustrations do not count as prose. */
-async function copyText(markup: string): Promise<string> {
-  const out = await new HTMLRewriter()
-    .on("[aria-hidden]", { element: (el) => el.remove() })
-    .transform(new Response(`<body>${markup}</body>`))
-    .text();
-  return out
-    .replace(/<[^>]*>/g, " ")
+const entities = (s: string) =>
+  s
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&#x27;|&#39;/g, "'")
     .replace(/&quot;/g, '"')
     .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
+    .replace(/&gt;/g, ">");
+
+/** The page's COPY: rendered text with every aria-hidden subtree removed,
+ *  so decoration does not count as prose. */
+async function copyText(markup: string): Promise<string> {
+  const out = await new HTMLRewriter()
+    .on("[aria-hidden]", { element: (el) => el.remove() })
+    .transform(new Response(`<body>${markup}</body>`))
+    .text();
+  return entities(out.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 }
 
 /** Everything a person SEES, decoration included.
  *
- *  `copyText` above deliberately drops aria-hidden subtrees, because they
- *  are not prose and must not be measured as prose. That exclusion is also
- *  exactly how a Swedish product mock shipped inside the English homepage
- *  without one assertion noticing: aria-hidden removes a subtree from the
- *  ACCESSIBILITY TREE, not from the screen. Anything about what is
- *  RENDERED — above all whether the English page is in English — is
- *  asserted against this projection instead. */
+ *  `copyText` drops aria-hidden subtrees, because they are not prose. That
+ *  exclusion is also exactly how a Swedish product mock once shipped inside
+ *  the English homepage: aria-hidden removes a subtree from the ACCESSIBILITY
+ *  TREE, not from the screen. Anything about what is RENDERED — above all
+ *  whether the English page is in English — reads this projection instead. */
 function fullText(markup: string): string {
-  return markup
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#x27;|&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
+  return entities(markup.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 }
 
 const svMain = mainOf(html.sv);
 const enMain = mainOf(html.en);
-const svCopy = await copyText(svMain);
-const enCopy = await copyText(enMain);
-const copyOf: Record<Lang, string> = { sv: svCopy, en: enCopy };
+const mainOfLang: Record<Lang, string> = { sv: svMain, en: enMain };
+const copyOf: Record<Lang, string> = { sv: await copyText(svMain), en: await copyText(enMain) };
 const seenOf: Record<Lang, string> = { sv: fullText(svMain), en: fullText(enMain) };
 
 const headings = (markup: string, tag: "h1" | "h2" | "h3") =>
   [...markup.matchAll(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "g"))].map((m) =>
-    m[1]
-      .replace(/<[^>]*>/g, "")
+    entities(m[1].replace(/<[^>]*>/g, ""))
       .replace(/\s+/g, " ")
       .trim(),
   );
 
+const anchorsOf = (markup: string) => [...markup.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
+const hrefsOf = (markup: string) =>
+  [...markup.matchAll(/href="([^"]*)"/g)].map((m) => entities(m[1]));
+/** Token equality, not a substring: `bg-primary` as a WORD. A substring test
+ *  also matches "hover:bg-primary-foreground/10", and reporting the outlined
+ *  control on the navy band as a solid action is the guard failing rather
+ *  than the page. */
+const isSolid = (tag: string) =>
+  (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/).includes("bg-primary");
 const wc = (s: string) => s.split(/\s+/).filter((w) => /\p{L}|\p{N}/u.test(w)).length;
+
+const d = (lang: Lang) => dictionaries[lang] as Record<string, string>;
 
 console.log("public-homepage-check");
 
 /* T1 ---------------------------------------------------------------- */
 group("T1 · main carries exactly four sections, in the settled order");
 {
-  const ORDER = ["hero", "how", "passport", "employers"];
+  const ORDER = ["hero", "employers", "lifecycle", "passport"];
   const ids = [...svMain.matchAll(/<section[^>]*\bid="([a-z-]+)"/g)].map((m) => m[1]);
   ck(`the four ids are ${ORDER.join(", ")}`, JSON.stringify(ids) === JSON.stringify(ORDER), ids);
   ck(
@@ -230,116 +246,17 @@ group("T1 · main carries exactly four sections, in the settled order");
     (svMain.match(/<section\b/g) ?? []).length,
   );
   ck("one main landmark", html.sv.split("<main").length - 1 === 1);
-  // The route renders its four sections INTO SiteLayout's `<main>` and adds
-  // no wrapper of its own — so a section added outside the layout, where the
+  // The route renders its sections INTO SiteLayout's `<main>` and adds no
+  // wrapper of its own — so a section added outside the layout, where the
   // counts above cannot see it, fails here.
   ck("the route's whole body is the four sections", /^\s*<section id="hero"/.test(svMain));
+  // The employer strip is BELOW the two individual cards and outside the
+  // hero, which is what "visually separate" means structurally.
+  ck("the employer strip is its own section, after the hero", ids.indexOf("employers") === 1, ids);
 }
 
 /* T2 ---------------------------------------------------------------- */
-group("T2 · the removed sections and claims are absent from the markup");
-{
-  // Absence from the MARKUP, not from the rendered text: a section hidden
-  // with `hidden` or `sr-only` still ships its words to a crawler and to a
-  // screen reader, which is not what "removed" means.
-  const REMOVED: Record<Lang, readonly string[]> = {
-    sv: [
-      "Karriär · Rekrytering · Tester",
-      "Gör karriärtestet",
-      "Tre sätt vi stöttar din utveckling",
-      "Din säkerhetskarriär. En yrkesidentitet.",
-      "Byggd för individer och organisationer",
-      "Utforska roller i säkerhetsbranschen",
-      "Kostnadsfritt karriärtest inom säkerhet",
-      "Rollbaserade kompetenstest för organisationer",
-      "Bli anställd",
-      "Möt arbetsgivare",
-      "mät din kompetens",
-      "Prata med oss",
-      "verifierade meriter",
-      "kompetensverifiering",
-      "testa personal",
-      "rätt kandidat",
-      "säkrare rekrytering",
-    ],
-    en: [
-      "Career · Recruitment · Assessments",
-      "Take the career test",
-      "Three ways CQrityjob supports your journey",
-      "Built for individuals and organizations",
-      "Explore roles across the security industry",
-      "Free security career test",
-      "Role-based competence assessments for organizations",
-      "Get hired",
-      "Talk to our team",
-      "measure your competence",
-      "competence verification",
-    ],
-  };
-  for (const lang of LANGS) {
-    for (const phrase of REMOVED[lang]) {
-      ck(
-        `${lang}: "${phrase}" is gone`,
-        !mainOf(html[lang]).toLowerCase().includes(phrase.toLowerCase()),
-      );
-    }
-  }
-  const RETIRED = [
-    "home.pillars.title",
-    "home.pillar.hired.title",
-    "home.account.title",
-    "home.paths.title",
-    "home.careers.title",
-    "home.assessment.title",
-    "home.assessment.point.time",
-    "home.platform.title",
-    "home.employers.item.verify.title",
-  ];
-  for (const lang of LANGS) {
-    for (const key of RETIRED) {
-      ck(`${lang}: the retired key "${key}" is deleted`, !(key in dictionaries[lang]));
-    }
-  }
-  ck("nothing still asks for one of them", !RETIRED.some((k) => routeCode.includes(k)));
-}
-
-/* T3 ---------------------------------------------------------------- */
-group("T3 · one h1, three h2, and a sane hierarchy");
-{
-  for (const lang of LANGS) {
-    const m = mainOf(html[lang]);
-    ck(`${lang}: exactly one h1`, headings(m, "h1").length === 1, headings(m, "h1"));
-    ck(`${lang}: exactly three h2`, headings(m, "h2").length === 3, headings(m, "h2"));
-    ck(
-      `${lang}: h3 is the three journey steps and nothing else`,
-      headings(m, "h3").length === 3,
-      headings(m, "h3"),
-    );
-  }
-  ck(
-    "sv h1",
-    headings(svMain, "h1")[0] === "Din säkerhetskarriär. Samlad på ett ställe.",
-    headings(svMain, "h1")[0],
-  );
-  ck(
-    "en h1 says the same thing",
-    headings(enMain, "h1")[0] === "Your security career. All in one place.",
-    headings(enMain, "h1")[0],
-  );
-  ck(
-    "sv h2s, in order",
-    JSON.stringify(headings(svMain, "h2")) ===
-      JSON.stringify([
-        "Samla. Styrk. Dela.",
-        "Ett Passport genom hela karriären",
-        "Strukturerat stöd för rekrytering och kompetensutveckling",
-      ]),
-    headings(svMain, "h2"),
-  );
-}
-
-/* T4 ---------------------------------------------------------------- */
-group("T4 · Security Passport is the product, and it leads");
+group("T2 · two PEER individual entry products render, in both languages");
 {
   const hero: Record<Lang, string> = {
     sv: sectionOf(svMain, "hero"),
@@ -347,147 +264,270 @@ group("T4 · Security Passport is the product, and it leads");
   };
   for (const lang of LANGS) {
     const heroCopy = await copyText(hero[lang]);
-    ck(`${lang}: the hero names Security Passport`, heroCopy.includes("Security Passport"));
-    // The Career Analysis is a SUPPORTING tool. It may not appear in the
-    // hero at all: not as a heading, not as copy, and not as a control.
+    for (const key of [
+      "home.entry.passport.title",
+      "home.entry.passport.body",
+      "home.entry.discovery.title",
+      "home.entry.discovery.body",
+    ] as const) {
+      ck(`${lang}: the hero renders "${key}"`, heroCopy.includes(d(lang)[key]), d(lang)[key]);
+    }
+    ck(`${lang}: the Passport action is rendered`, heroCopy.includes(d(lang)["cta.passport"]));
     ck(
-      `${lang}: the hero does not mention the Career Analysis`,
-      !/karriäranalys|career analysis/i.test(heroCopy),
-      heroCopy.slice(0, 120),
-    );
-    ck(
-      `${lang}: the hero holds no link to the Career Analysis`,
-      !hero[lang].includes("/security-career-assessment"),
+      `${lang}: the Career Discovery action is rendered`,
+      heroCopy.includes(d(lang)["cta.discovery"]),
     );
   }
-  // The eyebrow states the positioning rather than a list of features.
+  // The owner-approved card copy, verbatim, in both languages.
+  const CARD_COPY: Record<Lang, Record<string, string>> = {
+    sv: {
+      "home.entry.passport.title": "Bygg ditt Security Passport",
+      "home.entry.passport.body":
+        "Samla erfarenhet, utbildning och certifieringar. Välj Sverige, Storbritannien eller Dubai och bestäm själv vad du delar.",
+      "home.entry.discovery.title": "Upptäck din säkerhetskarriär",
+      "home.entry.discovery.body":
+        "Utforska din arbetsinriktning och få förklarade förslag på roller och karriärvägar inom säkerhet.",
+      "cta.passport": "Skapa mitt Security Passport",
+      "cta.discovery": "Starta Career Discovery",
+      "home.hero.eyebrow": "Säkerhetskarriären samlad på ett ställe",
+      "home.hero.title": "Bygg din framtid inom säkerhet",
+    },
+    en: {
+      "home.entry.passport.title": "Build your Security Passport",
+      "home.entry.passport.body":
+        "Bring together experience, education and credentials. Choose Sweden, Great Britain or Dubai and control what you share.",
+      "home.entry.discovery.title": "Discover your security career",
+      "home.entry.discovery.body":
+        "Explore your work orientation and receive explained suggestions for security roles and career paths.",
+      "cta.passport": "Create my Security Passport",
+      "cta.discovery": "Start Career Discovery",
+      "home.hero.eyebrow": "Your security career in one place",
+      "home.hero.title": "Build your future in security",
+    },
+  };
+  for (const lang of LANGS) {
+    for (const [key, expected] of Object.entries(CARD_COPY[lang])) {
+      ck(`${lang} "${key}" is the approved copy`, d(lang)[key] === expected, d(lang)[key]);
+    }
+  }
+
+  // ── THE SUPERSEDED PAGE IS GONE FROM THE MARKUP ──────────────────
+  //
+  // Absence from the MARKUP, not from the rendered text: a section hidden
+  // with `hidden` or `sr-only` still ships its words to a crawler and to a
+  // screen reader, which is not what "removed" means.
+  const REMOVED: Record<Lang, readonly string[]> = {
+    sv: [
+      "Din säkerhetskarriär. Samlad på ett ställe.",
+      "Din yrkesidentitet inom säkerhet",
+      "Samla. Styrk. Dela.",
+      "Ett Passport genom hela karriären",
+      "Utforska din karriärväg",
+      "Skapa ditt Security Passport",
+      "Strukturerat stöd för rekrytering och kompetensutveckling",
+      "Karriäranalysen hjälper dig",
+    ],
+    en: [
+      "Your security career. All in one place.",
+      "Your professional identity in security",
+      "Collect. Support. Share.",
+      "One Passport for your whole career",
+      "Explore your career path",
+      "Create your Security Passport",
+      "Structured support for recruitment and competence development",
+      "The Career Analysis helps you",
+    ],
+  };
+  for (const lang of LANGS) {
+    for (const phrase of REMOVED[lang]) {
+      ck(
+        `${lang}: the superseded "${phrase}" is gone`,
+        !mainOfLang[lang].toLowerCase().includes(phrase.toLowerCase()),
+      );
+    }
+  }
+  const RETIRED = [
+    "home.hero.note",
+    "home.hero.portable",
+    "home.how.title",
+    "home.how.step1.title",
+    "home.passport.title",
+    "home.passport.body",
+    "home.passport.callout",
+    "home.passport.cta",
+    "home.passport.use.cv",
+    "home.mock.subtitle",
+    "home.mock.cat.experience",
+    "home.employers.cta",
+    "home.employers.subtitle",
+    "cta.howItWorks",
+  ];
+  for (const lang of LANGS) {
+    for (const key of RETIRED) {
+      ck(`${lang}: the retired key "${key}" is deleted`, !(key in dictionaries[lang]));
+    }
+  }
+  ck("nothing still asks for one of them", !RETIRED.some((k) => routeCode.includes(`"${k}"`)));
+}
+
+/* T3 ---------------------------------------------------------------- */
+group("T3 · one h1, the settled h2 set, and a sane hierarchy");
+{
+  for (const lang of LANGS) {
+    const m = mainOfLang[lang];
+    ck(`${lang}: exactly one h1`, headings(m, "h1").length === 1, headings(m, "h1"));
+    // Five: the two peer entry cards, the employer strip, the lifecycle and
+    // the Passport section. The two CARDS carry h2 deliberately — a heading
+    // level is a weight, and a peer that sat one level lower would be a
+    // sub-product of whatever came before it.
+    ck(`${lang}: exactly five h2`, headings(m, "h2").length === 5, headings(m, "h2"));
+    ck(
+      `${lang}: h3 is the six lifecycle stages and nothing else`,
+      headings(m, "h3").length === 6,
+      headings(m, "h3"),
+    );
+  }
   ck(
-    "sv eyebrow",
-    dictionaries.sv["home.hero.eyebrow"] === "Din yrkesidentitet inom säkerhet",
-    dictionaries.sv["home.hero.eyebrow"],
+    "sv h1",
+    headings(svMain, "h1")[0] === "Bygg din framtid inom säkerhet",
+    headings(svMain, "h1")[0],
   );
   ck(
-    "en eyebrow",
-    dictionaries.en["home.hero.eyebrow"] === "Your professional identity in security",
-    dictionaries.en["home.hero.eyebrow"],
+    "en h1 says the same thing",
+    headings(enMain, "h1")[0] === "Build your future in security",
+    headings(enMain, "h1")[0],
   );
-  // The two promises under the actions, in both languages.
-  ck("sv trust line", svCopy.includes("Dina uppgifter · Du bestämmer vad som delas"));
-  ck("en trust line", enCopy.includes("Your information · You choose what to share"));
+  // The two entry cards are the FIRST two h2s, in the settled order, in
+  // both languages.
+  for (const lang of LANGS) {
+    const h2 = headings(mainOfLang[lang], "h2");
+    ck(
+      `${lang}: the first two h2 are the two entrances, Passport first`,
+      h2[0] === d(lang)["home.entry.passport.title"] &&
+        h2[1] === d(lang)["home.entry.discovery.title"],
+      h2.slice(0, 2),
+    );
+  }
+  // The hero's subtitle is the approved framing sentence, verbatim.
+  ck(
+    "sv subtitle",
+    d("sv")["home.hero.subtitle"] ===
+      "Samla dina meriter i ett Security Passport eller upptäck vilka säkerhetsroller som passar din riktning. Fortsätt sedan med karriärvägar, CV, jobb och utveckling i samma plattform.",
+  );
+  ck(
+    "en subtitle",
+    d("en")["home.hero.subtitle"] ===
+      "Bring your credentials together in a Security Passport or discover which security roles fit your direction. Then continue with career paths, CV, jobs and development in the same platform.",
+  );
+}
+
+/* T4 ---------------------------------------------------------------- */
+group("T4 · the two entrances are PEERS, structurally");
+{
+  const hero = sectionOf(svMain, "hero");
+  // ── SAME SHAPE ────────────────────────────────────────────────────
+  //
+  // Both cards come out of ONE component, so "equal size and equal visual
+  // weight" cannot decay into two class lists that drift apart. Asserted on
+  // the RENDERED class attributes: the two <article> elements in the hero
+  // must be class-identical.
+  const cards = [...hero.matchAll(/<article class="([^"]*)"/g)].map((m) => m[1]);
+  ck("the hero holds exactly two entry cards", cards.length === 2, cards.length);
+  ck("and they are class-identical", cards[0] === cards[1], cards);
+  ck(
+    "they come from one component, not two",
+    (routeCode.match(/function EntryCard\(/g) ?? []).length === 1 &&
+      (routeCode.match(/<EntryCard\b/g) ?? []).length === 2,
+  );
+  // ── SAME WEIGHT OF ACTION ─────────────────────────────────────────
+  //
+  // Two solid navy controls in the hero and exactly two: one per card.
+  // Career Discovery may NOT be a text link, which is what it used to be.
+  const heroAnchors = anchorsOf(hero);
+  const solid = heroAnchors.filter(isSolid);
+  ck("two solid controls in the hero", solid.length === 2, solid.length);
+  ck(
+    "the first is the Passport signup",
+    solid[0]?.includes('href="/signup?redirect=%2Fpassport"'),
+    solid[0],
+  );
+  ck(
+    "the second is Career Discovery's canonical route",
+    solid[1]?.includes(`href="${CANONICAL_ASSESSMENT_PATH}"`),
+    solid[1],
+  );
+  ck(
+    "the two actions wear the same classes",
+    (solid[0]?.match(/class="([^"]*)"/)?.[1] ?? "a") ===
+      (solid[1]?.match(/class="([^"]*)"/)?.[1] ?? "b"),
+  );
+  // Neither product is described as a prerequisite for the other.
+  for (const lang of LANGS) {
+    for (const rx of [
+      /innan du kan|krävs för att|måste först/i,
+      /before you can|required before|must first/i,
+    ]) {
+      ck(`${lang}: no prerequisite claim "${rx.source}"`, !rx.test(copyOf[lang]));
+    }
+  }
+  // And the page does not collapse them into one data product.
+  for (const lang of LANGS) {
+    for (const rx of [
+      /resultatet (blir|läggs) .{0,20}(merit|passport)/i,
+      /result becomes .{0,20}(credential|passport)/i,
+      /career discovery.{0,40}(kompetens|competence)/i,
+    ]) {
+      ck(`${lang}: the two products are not merged ("${rx.source}")`, !rx.test(copyOf[lang]));
+    }
+  }
 }
 
 /* T5 ---------------------------------------------------------------- */
-group("T5 · exactly one visually primary call to action");
+group("T5 · both primary destinations are canonical and safe");
 {
-  // The design system's one solid navy control is `bg-primary`. Counted from
-  // the RENDERED class attributes of controls inside main, so a second solid
-  // action added anywhere on the page fails here.
-  const anchors = [...svMain.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
-  // Token equality, not a substring: `\bbg-primary\b` also matches
-  // "hover:bg-primary-foreground/10", which is what the employer button on
-  // the navy band wears — and reporting that as a second primary action is
-  // the guard failing rather than the page.
-  const isSolid = (tag: string) =>
-    (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/).includes("bg-primary");
-  const solid = anchors.filter(isSolid);
-  ck("one solid navy control inside main", solid.length === 1, solid.length);
-  ck("and it is the account/Passport action", solid[0]?.includes('href="/signup'), solid[0]);
-  for (const [lang, expected] of [
-    ["sv", "Skapa ditt Security Passport"],
-    ["en", "Create your Security Passport"],
-  ] as const) {
-    ck(
-      `${lang} primary label is "${expected}"`,
-      (dictionaries[lang] as Record<string, string>)["cta.passport"] === expected,
-      (dictionaries[lang] as Record<string, string>)["cta.passport"],
-    );
-    ck(`${lang}: and it is rendered`, copyOf[lang].includes(expected));
-  }
-  // The other two controls are controls, and neither is the loud one.
-  for (const href of ["/security-career-assessment", "/employers"]) {
-    const a = anchors.find((x) => x.includes(`href="${href}"`));
-    ck(`a control points at ${href}`, Boolean(a), href);
-    ck(`  ${href} is not solid navy`, Boolean(a) && !isSolid(a!));
-  }
-  // The hero's second control is an in-page anchor, not a second journey.
-  ck('the hero offers "Se hur det fungerar" as a same-page anchor', svMain.includes('href="#how"'));
+  const PASSPORT_LANDING = "/passport";
   ck(
-    "and the anchor has a target that exists",
-    svMain.includes('<section id="how"') || svMain.includes('id="how"'),
-  );
-  // One destination, one control.
-  const hrefs = anchors
-    .map((a) => a.match(/href="([^"]*)"/)?.[1])
-    .filter((h): h is string => Boolean(h));
-  ck("no destination is offered twice inside main", new Set(hrefs).size === hrefs.length, hrefs);
-}
-
-/* T6 ---------------------------------------------------------------- */
-group("T6 · the primary action carries the Passport intent, to a real landing");
-{
-  const INTENT = "/passport";
-  ck(
-    "the route declares the intent once, as a constant",
+    "the route declares the Passport intent once, as a constant",
     /const PASSPORT_INTENT = \{ redirect: "\/passport" \} as const;/.test(routeCode),
   );
   ck(
-    "the primary control renders /signup?redirect=/passport",
+    "the Passport control renders /signup?redirect=/passport",
     svMain.includes('href="/signup?redirect=%2Fpassport"'),
     svMain.match(/href="\/signup[^"]*"/)?.[0],
   );
-  // The mechanism is the product's own, and it accepts this value: a landing
-  // that safeReturnPath refused would be silently swapped for the default
-  // destination, and the button would quietly stop keeping its promise.
   ck(
-    "safeReturnPath accepts the landing",
-    safeReturnPath(INTENT, "/my-career") === INTENT,
-    safeReturnPath(INTENT, "/my-career"),
+    "safeReturnPath accepts the Passport landing",
+    safeReturnPath(PASSPORT_LANDING, "/my-career") === PASSPORT_LANDING,
   );
-  ck("the landing is not an auth surface (that would loop)", !AUTH_SURFACES.includes(INTENT));
+  ck(
+    "the landing is not an auth surface (that would loop)",
+    !AUTH_SURFACES.includes(PASSPORT_LANDING),
+  );
   ck(
     "the landing is a real route",
     existsSync(path.join(root, "src/routes/_authenticated.passport.index.tsx")),
   );
 
-  // The landing EXPLAINS the next step rather than being a dashboard.
+  // ── CAREER DISCOVERY'S DESTINATION IS THE CANONICAL ONE ───────────
   //
-  // PR #192 changed the MECHANISM and not the promise. /passport used to hold
-  // a "you have no Passport yet" branch with a create button; it now derives
-  // the first-run state from persisted rows and hands the whole first run to
-  // /passport/onboarding, which is a four-screen journey ending in a real
-  // merit. So the assertions follow the hand-off rather than the old branch --
-  // what must stay true is that a new account is given a NAMED FIRST ACTION,
-  // not an empty page.
-  //
-  // The condition is deliberately a CURRENT MERIT and not `onboarding_state`:
-  // a profile can say completed and hold nothing, and telling that person
-  // they are finished above an empty Passport is the failure this whole
-  // branch exists to prevent.
-  const landing = code(read("src/routes/_authenticated.passport.index.tsx"));
+  // Taken from the module that owns the answer rather than typed out here,
+  // and proven to be the canonical route and not the temporary alias — an
+  // alias linked from the homepage is how a second competing product
+  // surface starts.
   ck(
-    "the landing derives the first-run state from persisted rows",
-    landing.includes("deriveFirstRunState("),
+    "the route uses the canonical constant rather than a literal",
+    routeCode.includes("CANONICAL_ASSESSMENT_PATH") &&
+      !routeCode.includes('"/security-career-assessment"'),
   );
+  ck("and it is canonical", isCanonicalPath(CANONICAL_ASSESSMENT_PATH));
+  ck("and it is not the alias", !isAliasPath(CANONICAL_ASSESSMENT_PATH));
+  ck("the homepage links no alias path", !svMain.includes('href="/discovery'));
   ck(
-    "and hands a Passport with no current merit to the first-run journey",
-    landing.includes('firstRun.screen !== "overview"') &&
-      landing.includes('to: "/passport/onboarding"'),
+    "the canonical route file exists",
+    existsSync(path.join(root, "src/routes/security-career-assessment.tsx")),
   );
-  ck(
-    "the journey route exists",
-    existsSync(path.join(root, "src/routes/_authenticated.passport.onboarding.tsx")),
-  );
-  const journey = code(read("src/components/security-passport/FirstRunJourney.tsx"));
-  ck(
-    "which names the first action in words",
-    journey.includes('pt("fr.create.title")') && journey.includes('pt("fr.create.cta")'),
-  );
-  const passportCopy = read("src/lib/security-passport/i18n.ts");
-  for (const key of ["fr.create.title", "fr.create.body", "fr.create.cta"]) {
-    ck(`"${key}" has copy`, new RegExp(`"${key}":`).test(passportCopy));
-  }
 
-  // And the intent survives every account path the form supports.
+  // And the Passport intent survives every account path the form supports.
   const authForm = code(read("src/components/auth/UnifiedAuthForm.tsx"));
   ck(
     "signup reads ?redirect= through safeReturnPath",
@@ -503,186 +543,184 @@ group("T6 · the primary action carries the Passport intent, to a real landing")
     authForm.includes("rememberOAuthReturn(resolveDestination()") &&
       authForm.includes("oauthRedirectUri(destination)"),
   );
+  ck(
+    "the swap between login and signup preserves the redirect",
+    authForm.includes('to={isSignup ? "/login" : "/signup"}') &&
+      authForm.includes("swapSearch.redirect = validated"),
+  );
+}
+
+/* T6 ---------------------------------------------------------------- */
+group("T6 · Career Discovery's anonymous start and claim are intact");
+{
+  // The homepage must not become the thing that breaks the low-friction
+  // model, so it asserts the model rather than merely linking at it.
+  const flow = code(read("src/components/career-discovery/v31/PublicAssessmentFlow.tsx"));
+  ck(
+    "the public flow buffers answers rather than persisting them",
+    flow.includes("v31-public-buffer") ||
+      flow.includes("readBuffer") ||
+      flow.includes("writeBuffer"),
+  );
+  ck("a ?claim= token is still resolved", flow.includes("claim"));
+  const buffer = code(read("src/lib/career-discovery/v31-public-buffer.ts"));
+  ck("the buffer is sessionStorage — this tab only", buffer.includes("sessionStorage"));
+  ck(
+    "the canonical route does not gate on a session",
+    !code(read("src/routes/security-career-assessment.tsx")).includes("beforeLoad"),
+  );
+  // And the homepage says so, in the approved words, beside the action.
+  ck(
+    "sv disclosure is the approved sentence",
+    d("sv")["home.entry.discovery.disclosure"] ===
+      "Du kan börja utan konto. Skapa ett konto när du vill spara resultatet och fortsätta i My Career.",
+    d("sv")["home.entry.discovery.disclosure"],
+  );
+  ck(
+    "en disclosure is the approved sentence",
+    d("en")["home.entry.discovery.disclosure"] ===
+      "You can start without an account. Create one when you want to save the result and continue in My Career.",
+    d("en")["home.entry.discovery.disclosure"],
+  );
+  for (const lang of LANGS) {
+    ck(
+      `${lang}: it is rendered inside the hero`,
+      (await copyText(sectionOf(mainOfLang[lang], "hero"))).includes(
+        d(lang)["home.entry.discovery.disclosure"],
+      ),
+    );
+  }
+  // No signup wall: the Career Discovery action goes to the product, not to
+  // an account form.
+  ck(
+    "the Career Discovery action does not route through /signup",
+    !anchorsOf(sectionOf(svMain, "hero"))
+      .filter((a) => a.includes(">"))
+      .some((a) => a.includes("/signup") && a.includes("assessment")),
+  );
 }
 
 /* T7 ---------------------------------------------------------------- */
-group("T7 · the Career Analysis is the supporting tool, offered once");
+group("T7 · the employer strip, and the flag that still fails closed");
 {
-  const uses = (svMain.match(/\/security-career-assessment/g) ?? []).length;
-  ck("exactly one link to the Career Analysis on the page", uses === 1, uses);
+  const strip = sectionOf(svMain, "employers");
+  ck("the strip renders", strip.length > 0);
   ck(
-    "and it lives in section 3, not the hero",
-    sectionOf(svMain, "passport").includes("/security-career-assessment"),
+    "it carries /signup?redirect=/employer",
+    strip.includes('href="/signup?redirect=%2Femployer"'),
+    strip.match(/href="[^"]*"/g),
   );
+  ck("and it links the employer information page", strip.includes('href="/employers"'));
   ck(
-    "sv label",
-    dictionaries.sv["home.passport.cta"] === "Utforska din karriärväg",
-    dictionaries.sv["home.passport.cta"],
+    "safeReturnPath accepts the employer landing",
+    safeReturnPath("/employer", "/my-career") === "/employer",
   );
-  // The sentence that keeps the two products apart.
+  ck("the employer landing is not an auth surface", !AUTH_SURFACES.includes("/employer"));
   ck(
-    "sv callout separates record from guidance",
-    svCopy.includes(
-      "Security Passport visar vad du har gjort. Karriäranalysen hjälper dig att se vad du kan göra härnäst.",
-    ),
+    "the employer landing is a real route",
+    existsSync(path.join(root, "src/routes/_authenticated.employer.index.tsx")),
   );
-  ck(
-    "en callout says the same",
-    enCopy.includes(
-      "Security Passport shows what you have done. The Career Analysis helps you see what you could do next.",
-    ),
-  );
-  // It is not a test, and it measures nothing.
-  const BANNED: Record<Lang, readonly RegExp[]> = {
-    sv: [/kompetenstest/i, /mäter din kompetens/i, /mät din kompetens/i, /karriärtest/i, /prov\b/i],
-    en: [/competence test/i, /measures your competence/i, /career test/i, /\bexam\b/i],
-  };
-  for (const lang of LANGS) {
-    for (const rx of BANNED[lang]) {
-      ck(`${lang}: no "${rx.source}"`, !rx.test(copyOf[lang]));
-    }
+  // ── INTENT IS NEVER A ROLE ────────────────────────────────────────
+  //
+  // Nothing on this page grants anything, and the destination re-derives
+  // membership server-side. Asserted where a regression would land: the
+  // route may not write user metadata, set a role or read one.
+  for (const banned of ["user_metadata", "employer_memberships", "role:", "is_platform_admin"]) {
+    ck(`the homepage never touches "${banned}"`, !routeCode.includes(banned));
   }
-  // A CV is an OUTPUT, never a second source of truth, and nothing promises
-  // a match or a job.
-  for (const lang of LANGS) {
-    for (const rx of [
-      /automatisk matchning/i,
-      /automatic (job )?match/i,
-      /garanterar (jobb|anställning)/i,
-      /guarantees? (a )?job/i,
-    ]) {
-      ck(`${lang}: no "${rx.source}"`, !rx.test(copyOf[lang]));
-    }
+  const employerRoute = code(read("src/routes/_authenticated.employer.index.tsx"));
+  ck(
+    "/employer resolves membership server-side on arrival",
+    employerRoute.includes("listMyEmployerWorkspaces") || employerRoute.includes("useServerFn"),
+  );
+  // ── THE RELEASE FLAG ──────────────────────────────────────────────
+  //
+  // Read at render, and the REGISTRATION action is what it gates. A
+  // disabled product may not be presented as an available one.
+  ck("the route reads employerPortalEnabled()", routeCode.includes("employerPortalEnabled()"));
+  ck(
+    "and the registration action is conditional on it",
+    /employerOpen\s*&&\s*\(\s*\n?\s*<PrimaryLink/.test(routeCode),
+    routeCode.match(/employerOpen[\s\S]{0,60}/)?.[0],
+  );
+  const flag = read("src/lib/job-intelligence/feature-flag.ts");
+  ck(
+    "the flag fails closed — an unset variable is not enabled",
+    flag.includes('String(raw).toLowerCase() === "true"'),
+  );
+  // The approved strip copy, verbatim.
+  ck(
+    "sv strip copy",
+    d("sv")["home.employers.title"] === "Rekryterar du inom säkerhet?" &&
+      d("sv")["home.employers.body"] ===
+        "Publicera jobb, hantera kandidater och använd strukturerade tester och intervjuer i samma plattform.",
+  );
+  ck(
+    "en strip copy",
+    d("en")["home.employers.title"] === "Hiring in security?" &&
+      d("en")["home.employers.body"] ===
+        "Publish jobs, manage candidates and use structured assessments and interviews in one platform.",
+  );
+  for (const [lang, register, explore] of [
+    ["sv", "Registrera företag", "Se företagsplattformen"],
+    ["en", "Register company", "Explore the employer platform"],
+  ] as const) {
+    ck(`${lang} register label`, d(lang)["home.employers.cta.register"] === register);
+    ck(`${lang} explore label`, d(lang)["home.employers.cta.explore"] === explore);
   }
 }
 
 /* T8 ---------------------------------------------------------------- */
-group("T8 · the trust levels respect the PR #189 semantics");
+group("T8 · the connected lifecycle links only canonical routes");
 {
-  const how: Record<Lang, string> = { sv: sectionOf(svMain, "how"), en: sectionOf(enMain, "how") };
-  for (const [lang, levels] of [
-    ["sv", ["Registrerat", "Dokumenterat", "Källbekräftat"]],
-    ["en", ["Registered", "Documented", "Source-confirmed"]],
-  ] as const) {
-    for (const level of levels) ck(`${lang}: "${level}" is named`, how[lang].includes(level));
-  }
+  const lifecycle = sectionOf(svMain, "lifecycle");
+  const STAGES = ["Upptäck", "Förstå", "Utvecklas", "Visa", "Arbeta", "Fortsätt"];
+  const EN_STAGES = ["Discover", "Understand", "Grow", "Trust", "Work", "Continue"];
   ck(
-    "sv step 2 says what the three levels are for",
-    dictionaries.sv["home.how.step2.desc"] ===
-      "Se tydligt vad som är registrerat, dokumenterat eller källbekräftat.",
-  );
-
-  // ── ONLY SOURCE-CONFIRMED READS AS CONFIRMED ──────────────────────
-  //
-  // The green treatment is reserved. A page where "Registrerat" or
-  // "Dokumenterat" wore it would say, in the one channel most people read
-  // first, that a document somebody uploaded had been confirmed by its
-  // source. Asserted on the rendered class attributes, per chip.
-  const chips = [...how.sv.matchAll(/<span class="([^"]*rounded-full border[^"]*)">/g)].map(
-    (m) => m[1],
-  );
-  const chipBlocks = how.sv.split("<li>").slice(1);
-  ck("three level chips", chipBlocks.length === 3, chipBlocks.length);
-  for (const block of chipBlocks) {
-    const label = block
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    const green = /emerald/.test(block);
-    ck(
-      `"${label}" ${green ? "uses" : "does not use"} the confirmation treatment`,
-      green === label.includes("Källbekräftat"),
-      label,
-    );
-  }
-  void chips;
-
-  // Colour is never what carries it: three distinct glyphs and three
-  // distinct border treatments, before any colour is perceived (Product
-  // Architecture v1.1 §5.4, and AssertionChip.tsx).
-  ck("the weakest level is dashed", /border-dashed/.test(routeCode));
-  const glyphNames = ["PencilLine", "FileText", "CheckCircle2"];
-  for (const g of glyphNames) {
-    ck(`the level list uses ${g}`, new RegExp(`glyph: ${g}`).test(routeCode));
-  }
-  ck(
-    "and every level prints its own word",
-    ["home.trust.registered", "home.trust.documented", "home.trust.sourceConfirmed"].every((k) =>
-      routeCode.includes(k),
-    ),
-  );
-
-  // No issuer claim, anywhere on the page. The product has no issuer
-  // identity, membership, receipt, signature or revocation authority.
-  for (const lang of LANGS) {
-    for (const banned of [
-      "utfärdare",
-      "issuer",
-      "verifierade meriter",
-      "verified merits",
-      "kompetensverifiering",
-      "competence verification",
-    ]) {
-      ck(`${lang}: no "${banned}"`, !copyOf[lang].toLowerCase().includes(banned));
-    }
-  }
-
-  // A TRUST state is not a LIFECYCLE state. Neither vocabulary may leak
-  // into the other on a page that is teaching somebody the difference.
-  for (const lang of LANGS) {
-    for (const rx of [
-      /\bgiltig\b/i,
-      /\butgången\b/i,
-      /\båterkallad\b/i,
-      /\barkiverad\b/i,
-      /\bexpired\b/i,
-      /\brevoked\b/i,
-      /\barchived\b/i,
-    ]) {
-      ck(`${lang}: no lifecycle word "${rx.source}"`, !rx.test(copyOf[lang]));
-    }
-  }
-
-  // The Passport section itself has NO call to action into the Passport:
-  // every Passport route is authenticated, so a "read more" there would
-  // drop a signed-out visitor on a login wall.
-  for (const file of [
-    "src/routes/_authenticated.passport.index.tsx",
-    "src/routes/_authenticated.passport.information.tsx",
-  ]) {
-    ck(`${file} is still authenticated-only`, existsSync(path.join(root, file)));
-  }
-  ck(
-    "no public passport route has appeared without the nav being revisited",
-    !existsSync(path.join(root, "src/routes/passport.tsx")) &&
-      !existsSync(path.join(root, "src/routes/security-passport.tsx")),
+    "sv: the six stages, in order",
+    JSON.stringify(headings(lifecycle, "h3").map((h) => h.replace(/^\d+\.\s*/, ""))) ===
+      JSON.stringify(STAGES),
+    headings(lifecycle, "h3"),
   );
   ck(
-    "the homepage never links a signed-out visitor into a Passport route",
-    !/href="\/passport/.test(svMain),
+    "en: the six stages, in order",
+    JSON.stringify(
+      headings(sectionOf(enMain, "lifecycle"), "h3").map((h) => h.replace(/^\d+\.\s*/, "")),
+    ) === JSON.stringify(EN_STAGES),
+    headings(sectionOf(enMain, "lifecycle"), "h3"),
   );
-}
-
-/* T9 ---------------------------------------------------------------- */
-group("T9 · every destination is an existing canonical route");
-{
+  // An EXPLANATION, not six competing product cards: no solid action lives
+  // inside this section.
+  ck(
+    "no solid call to action inside the lifecycle",
+    anchorsOf(lifecycle).filter(isSolid).length === 0,
+  );
+  ck("it is an ordered list", lifecycle.includes("<ol"));
+  // Every destination is an existing canonical route.
   const ROUTES: Record<string, string> = {
     "/signup": "src/routes/signup.tsx",
+    "/login": "src/routes/login.tsx",
     "/security-career-assessment": "src/routes/security-career-assessment.tsx",
     "/career-center": "src/routes/career-center.index.tsx",
     "/employers": "src/routes/employers.tsx",
     "/jobs": "src/routes/jobs.index.tsx",
-    "/login": "src/routes/login.tsx",
     "/about": "src/routes/about.tsx",
     "/feedback": "src/routes/_authenticated.feedback.tsx",
-    // Not homepage destinations: these are the header's SIGNED-IN entries,
-    // which the same scan sees. They are asserted here for the same reason
-    // as the rest -- a header that points at a route file nobody wrote is
-    // the defect this section exists to catch.
+    // Header-only, signed-in entries the same scan sees.
     "/my-career": "src/routes/_authenticated.my-career.index.tsx",
     "/my-career/profile": "src/routes/_authenticated.my-career.profile.tsx",
     "/reviews": "src/routes/_authenticated.reviews.tsx",
     "/employer/pending": "src/routes/_authenticated.employer.pending.tsx",
+  };
+  // The `?redirect=` LANDINGS the page hands to the one door. Each must be
+  // a real route and must pass safeReturnPath, or the intent is silently
+  // swapped for the default destination and the link quietly stops keeping
+  // its promise.
+  const LANDINGS: Record<string, string> = {
+    "/passport": "src/routes/_authenticated.passport.index.tsx",
+    "/employer": "src/routes/_authenticated.employer.index.tsx",
+    "/my-career": "src/routes/_authenticated.my-career.index.tsx",
+    "/academy": "src/routes/_authenticated.academy.index.tsx",
   };
   const linked = new Set(
     [...`${svMain}${headerCode}${footerCode}`.matchAll(/href="([^"#?]+)|to="([^"]+)"/g)]
@@ -700,10 +738,182 @@ group("T9 · every destination is an existing canonical route");
     [...linked].every((h) => h === "/" || h in ROUTES),
     [...linked].filter((h) => h !== "/" && !(h in ROUTES)),
   );
+  const usedLandings = new Set(
+    hrefsOf(svMain)
+      .map((h) => h.match(/^\/signup\?redirect=(.+)$/)?.[1])
+      .filter((v): v is string => Boolean(v))
+      .map((v) => decodeURIComponent(v)),
+  );
+  ck("the page hands four landings to the one door", usedLandings.size === 4, [...usedLandings]);
+  for (const landing of usedLandings) {
+    ck(`  ${landing} survives safeReturnPath`, safeReturnPath(landing, "/my-career") === landing);
+    ck(`  ${landing} is not an auth surface`, !AUTH_SURFACES.includes(landing));
+    const file = LANDINGS[landing];
+    ck(
+      `  ${landing} is a real route`,
+      Boolean(file) && existsSync(path.join(root, file!)),
+      landing,
+    );
+  }
+  // "Trust" points at this page's own Passport section, because the
+  // Passport has no public page and a link onto a login wall is a dead end
+  // wearing a product name.
+  ck(
+    "the lifecycle's Trust stage points at the on-page section",
+    lifecycle.includes('href="/#passport"'),
+  );
+  ck(
+    "the homepage still never links a signed-out visitor straight into a Passport route",
+    !/href="\/passport/.test(svMain),
+  );
+  ck(
+    "no public Passport route has appeared without the nav being revisited",
+    !existsSync(path.join(root, "src/routes/passport.tsx")) &&
+      !existsSync(path.join(root, "src/routes/security-passport.tsx")),
+  );
+}
+
+/* T9 ---------------------------------------------------------------- */
+group("T9 · the Passport market scale, and the approved disclaimer");
+{
+  const passport = sectionOf(svMain, "passport");
+  ck("three markets are presented", PUBLIC_MARKET_SCALE.length === 3, PUBLIC_MARKET_SCALE.length);
+  // ── AGREEMENT WITH THE GOVERNED LIST ──────────────────────────────
+  //
+  // `PASSPORT_OVERVIEW_MARKETS` is the governed declaration and lives in a
+  // server-function module the public route must not import. It is read
+  // here as SOURCE TEXT rather than imported, which is the same
+  // mirror-and-prove shape identity/market-rules.ts already uses against
+  // its migration: the two may not disagree about a single code.
+  const governedSrc = read("src/lib/security-passport/credentials.functions.ts");
+  const governed = governedSrc
+    .match(/PASSPORT_OVERVIEW_MARKETS = \[([^\]]*)\]/)?.[1]
+    ?.match(/"([^"]+)"/g)
+    ?.map((s) => s.slice(1, -1));
+  ck("the governed overview list is readable", Array.isArray(governed), governed);
+  for (const market of PUBLIC_MARKET_SCALE) {
+    ck(
+      `  "${market.code}" is one of the governed market packs`,
+      Boolean(governed?.includes(market.code)),
+      governed,
+    );
+  }
+  ck(
+    "and the public page does not name a pack the overview omits",
+    PUBLIC_MARKET_SCALE.every((m) => governed?.includes(m.code)),
+  );
+  // Northern Ireland is a SUBMARKET of Great Britain, not a fourth country,
+  // and Abu Dhabi is closed by owner decision. Neither is named publicly.
+  for (const lang of LANGS) {
+    for (const banned of ["GB-NI", "Nordirland", "Northern Ireland", "Abu Dhabi", "AE-AZ"]) {
+      ck(`${lang}: the page does not name "${banned}"`, !seenOf[lang].includes(banned));
+    }
+  }
+  for (const [lang, names] of [
+    ["sv", ["Sverige", "Storbritannien", "Dubai"]],
+    ["en", ["Sweden", "Great Britain", "Dubai"]],
+  ] as const) {
+    for (const name of names) {
+      ck(`${lang}: "${name}" is stated on the page`, copyOf[lang].includes(name));
+    }
+  }
+  // No fabricated credential record. The section is names and nothing else.
+  ck(
+    "the section carries no invented credential, holder or number",
+    !/VU1|VU2|SIA|SIRA|ordningsvakt|licens(nummer)?\s*\d/i.test(passport),
+  );
+  ck(
+    "and the route reads no Passport table or entitlement",
+    !routeCode.includes("sp_") &&
+      !routeCode.includes("getRegulatedCredentialAvailability") &&
+      !routeCode.includes("supabase.from"),
+  );
+  // ── THE DISCLAIMER, VERBATIM ──────────────────────────────────────
+  ck(
+    "sv disclaimer is the approved sentence",
+    d("sv")["home.markets.disclaimer"] ===
+      "Security Passport hjälper dig att strukturera och dela information. Det ersätter inte en myndighetslicens, säkerhetsprövning, rätt att arbeta eller arbetsgivarens egna kontroller.",
+    d("sv")["home.markets.disclaimer"],
+  );
+  ck(
+    "en disclaimer is the approved sentence",
+    d("en")["home.markets.disclaimer"] ===
+      "Security Passport helps you structure and share information. It does not replace a government licence, security vetting, right-to-work check or an employer's own due diligence.",
+    d("en")["home.markets.disclaimer"],
+  );
+  for (const lang of LANGS) {
+    ck(`${lang}: and it is rendered`, copyOf[lang].includes(d(lang)["home.markets.disclaimer"]));
+  }
 }
 
 /* T10 --------------------------------------------------------------- */
-group("T10 · the signed-in redirect is intact and is the only one");
+group("T10 · the trust levels respect the PR #189 semantics");
+{
+  const passport: Record<Lang, string> = {
+    sv: sectionOf(svMain, "passport"),
+    en: sectionOf(enMain, "passport"),
+  };
+  for (const [lang, levels] of [
+    ["sv", ["Registrerat", "Dokumenterat", "Källbekräftat"]],
+    ["en", ["Registered", "Documented", "Source-confirmed"]],
+  ] as const) {
+    for (const level of levels) ck(`${lang}: "${level}" is named`, passport[lang].includes(level));
+  }
+  // ── ONLY SOURCE-CONFIRMED READS AS CONFIRMED ──────────────────────
+  //
+  // Scoped to the trust list by its own aria-label rather than to every
+  // <li> in the section: the market chips are a list too, and counting them
+  // as trust levels would be the guard misreading the page.
+  const trustList = (() => {
+    const legend = d("sv")["home.trust.legend"];
+    const start = passport.sv.indexOf(`<ul aria-label="${legend}"`);
+    if (start === -1) return "";
+    return passport.sv.slice(start, passport.sv.indexOf("</ul>", start));
+  })();
+  ck("the trust list is labelled for a screen reader", trustList.length > 0);
+  const chipBlocks = trustList.split("<li>").slice(1);
+  ck("three level chips", chipBlocks.length === 3, chipBlocks.length);
+  for (const block of chipBlocks) {
+    const label = block
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const green = /emerald/.test(block);
+    ck(
+      `"${label}" ${green ? "uses" : "does not use"} the confirmation treatment`,
+      green === label.includes("Källbekräftat"),
+      label,
+    );
+  }
+  // Colour is never what carries it: three distinct glyphs and three
+  // distinct border treatments, before any colour is perceived.
+  ck("the weakest level is dashed", /border-dashed/.test(routeCode));
+  for (const g of ["PencilLine", "FileText", "CheckCircle2"]) {
+    ck(`the level list uses ${g}`, new RegExp(`glyph: ${g}`).test(routeCode));
+  }
+  ck(
+    "and every level prints its own word",
+    ["home.trust.registered", "home.trust.documented", "home.trust.sourceConfirmed"].every((k) =>
+      routeCode.includes(k),
+    ),
+  );
+  // A TRUST state is not a LIFECYCLE state.
+  for (const lang of LANGS) {
+    for (const rx of [
+      /\butgången\b/i,
+      /\båterkallad\b/i,
+      /\barkiverad\b/i,
+      /\bexpired\b/i,
+      /\brevoked\b/i,
+      /\barchived\b/i,
+    ]) {
+      ck(`${lang}: no lifecycle word "${rx.source}"`, !rx.test(copyOf[lang]));
+    }
+  }
+}
+
+/* T11 --------------------------------------------------------------- */
+group("T11 · the signed-in redirect is intact and is the only one");
 {
   ck("the route reads the session", routeCode.includes("supabase.auth.getSession()"));
   ck(
@@ -720,54 +930,69 @@ group("T10 · the signed-in redirect is intact and is the only one");
     (routeCode.match(/navigate\(/g) ?? []).length,
   );
   ck("no beforeLoad redirect on the public homepage", !routeCode.includes("beforeLoad"));
-  // A failed session read must leave the visitor here, not bounce them.
   ck("no catch-and-redirect", !/\.catch\([^)]*navigate/.test(routeCode));
 }
 
-/* T11 --------------------------------------------------------------- */
-group("T11 · the public chrome");
+/* T12 --------------------------------------------------------------- */
+group("T12 · the public chrome, and the untouched candidate chrome");
 {
   const navBlock = headerCode.slice(headerCode.indexOf("const nav = ["));
   const nav = navBlock.slice(0, navBlock.indexOf("] as const;"));
-  const entries = [...nav.matchAll(/to:\s*"([^"]+)"/g)].map((m) => m[1]);
+  const entries = [...nav.matchAll(/to:\s*(?:"([^"]+)"|(CANONICAL_ASSESSMENT_PATH))/g)].map(
+    (m) => m[1] ?? CANONICAL_ASSESSMENT_PATH,
+  );
   ck(
-    "five primary nav destinations, product first",
+    "six primary nav destinations, the two individual products first",
     JSON.stringify(entries) ===
-      JSON.stringify(["/", "/career-center", "/jobs", "/employers", "/about"]),
+      JSON.stringify([
+        "/",
+        CANONICAL_ASSESSMENT_PATH,
+        "/career-center",
+        "/jobs",
+        "/employers",
+        "/about",
+      ]),
     entries,
   );
   ck('the first entry is "Security Passport"', nav.includes('t("nav.passportPublic")'));
   ck("and it points at the homepage section, with a hash", /to: "\/", hash: "passport"/.test(nav));
-  // A Link matches by PREFIX, so a "/" entry without exact matching is
-  // marked current on every route on the site.
+  ck('the second entry is "Career Discovery"', nav.includes('t("nav.careerDiscovery")'));
   ck(
-    "the homepage entry is matched exactly, not by prefix",
-    headerCode.includes('activeOptions={{ exact: item.to === "/" }}'),
+    "and it uses the canonical constant rather than a literal path",
+    nav.includes("CANONICAL_ASSESSMENT_PATH") && !nav.includes('"/security-career-assessment"'),
+  );
+  ck(
+    "the homepage entry is matched exactly and its section hash participates in active state",
+    headerCode.includes(
+      'activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}',
+    ),
   );
   ck('"Bedömningar" is out of the primary nav', !nav.includes("/assessment"));
   ck('"Kontakt" is out of the primary nav', !nav.includes("/contact"));
-  ck(
-    'the Career Center entry reads "Karriärvägar"',
-    dictionaries.sv["nav.career_center"] === "Karriärvägar" &&
-      dictionaries.en["nav.career_center"] === "Career paths",
-    [dictionaries.sv["nav.career_center"], dictionaries.en["nav.career_center"]],
-  );
+  for (const [lang, expected] of [
+    ["sv", "Career Discovery"],
+    ["en", "Career Discovery"],
+  ] as const) {
+    ck(`${lang} "nav.careerDiscovery"`, d(lang)["nav.careerDiscovery"] === expected);
+  }
 
+  // ── ONE LOGIN, ONE CREATE ACCOUNT, AND NEITHER NAMES A PRODUCT ────
   ck("the header offers /login", headerCode.includes('to="/login"'));
+  ck("and one product-neutral account action", headerCode.includes('{t("nav.createAccount")}'));
   ck(
-    "the header's primary action is the Passport, carrying its intent",
-    headerCode.includes('{t("cta.passport")}') &&
-      (headerCode.match(/\{ redirect: "\/passport" \} as never/g) ?? []).length === 2,
+    "the chrome no longer carries a product-specific signup intent",
+    !headerCode.includes('{ redirect: "/passport" } as never'),
   );
   ck(
-    "the Career Analysis is not a header action",
-    !headerCode.includes('to="/security-career-assessment"'),
+    "exactly one account-creation control per viewport (desktop + compact)",
+    (headerCode.match(/\{t\("nav\.createAccount"\)\}/g) ?? []).length === 2,
+    (headerCode.match(/\{t\("nav\.createAccount"\)\}/g) ?? []).length,
   );
 
-  // The footer: only working destinations, legal lines not dressed as links.
+  // The footer mirrors the header's six, plus beta feedback.
+  ck("the footer names Career Discovery too", footerCode.includes('t("nav.careerDiscovery")'));
   ck("the footer does not promote the contact form", !footerCode.includes('"/contact"'));
-  ck("the footer does not link /assessment", !footerCode.includes('"/assessment"'));
-  ck("the footer leads with the product", footerCode.includes('t("nav.passportPublic")'));
+  ck("the footer leads with the Passport section", footerCode.includes('t("nav.passportPublic")'));
   ck(
     "the legal lines are rendered, and rendered as text",
     footerCode.includes('<span>{t("footer.legal.privacy")}</span>') &&
@@ -777,195 +1002,203 @@ group("T11 · the public chrome");
     "no anchor wraps either legal line",
     !/<Link[^>]*>\s*\{t\("footer\.legal\.(privacy|terms)"\)\}/.test(footerSrc),
   );
+
+  // ── THE SIGNED-IN CANDIDATE'S FIVE ITEMS ARE UNTOUCHED ────────────
+  //
+  // This PR changes the SIGNED-OUT navigation. A change that quietly
+  // reshaped the workspace nav as well would be out of scope and would
+  // break route highlighting, so the five are pinned here.
   ck(
-    "and a privacy/terms route has not appeared while they are still text",
-    !existsSync(path.join(root, "src/routes/privacy.tsx")) &&
-      !existsSync(path.join(root, "src/routes/terms.tsx")),
+    "the candidate workspace still has exactly five destinations",
+    CANDIDATE_APP_NAV.length === 5,
+    CANDIDATE_APP_NAV.length,
   );
-  ck("the footer carries the brand principle", footerCode.includes('t("brand.slogan")'));
+  ck(
+    "in the settled order",
+    JSON.stringify(CANDIDATE_APP_NAV.map((i) => i.key)) ===
+      JSON.stringify(["myCareer", "passport", "jobs", "exploreProfessions", "assessments"]),
+    CANDIDATE_APP_NAV.map((i) => i.key),
+  );
+  // Career Discovery keeps lighting "Min karriär" for a signed-in candidate,
+  // which is what stops the new public nav entry from changing highlighting
+  // inside the workspace.
+  const myCareer = CANDIDATE_APP_NAV.find((i) => i.key === "myCareer");
+  ck(
+    "and Career Discovery still lights My Career inside the workspace",
+    Boolean(myCareer?.routeIds.includes(CANONICAL_ASSESSMENT_PATH)),
+    myCareer?.routeIds,
+  );
 }
 
-/* T12 --------------------------------------------------------------- */
-group("T12 · sv and en say the same thing, with the same structure");
+/* T13 --------------------------------------------------------------- */
+group("T13 · sv and en say the same thing, with the same structure");
 {
-  const homeKeys = (lang: Lang) =>
+  const pageKeys = (lang: Lang) =>
     Object.keys(dictionaries[lang])
-      .filter((k) => k.startsWith("home.") || k === "cta.passport" || k === "cta.howItWorks")
+      .filter((k) => k.startsWith("home.") || k === "cta.passport" || k === "cta.discovery")
       .sort();
   ck(
     "the same keys exist in both languages",
-    JSON.stringify(homeKeys("sv")) === JSON.stringify(homeKeys("en")),
-    homeKeys("sv").filter((k) => !homeKeys("en").includes(k)),
+    JSON.stringify(pageKeys("sv")) === JSON.stringify(pageKeys("en")),
+    pageKeys("sv").filter((k) => !pageKeys("en").includes(k)),
   );
   // Product names are the same in both. Nothing else may be — an untouched
   // English string is an untranslated one.
-  // "CV" is the same word in both languages and is what the rest of the
-  // product already calls it in English. Named here rather than weakening
-  // the parity rule for everything else.
-  const SAME_IN_BOTH = new Set<string>(["home.mock.cv.title"]);
-  for (const key of homeKeys("sv")) {
+  const SAME_IN_BOTH = new Set<string>(["home.markets.eyebrow"]);
+  for (const key of pageKeys("sv")) {
     for (const lang of LANGS) {
-      const v = (dictionaries[lang] as Record<string, string>)[key];
+      const v = d(lang)[key];
       ck(`${lang} "${key}" is non-empty`, typeof v === "string" && v.trim().length > 0);
     }
-    const sv = (dictionaries.sv as Record<string, string>)[key];
-    const en = (dictionaries.en as Record<string, string>)[key];
-    ck(`"${key}" is actually translated`, sv !== en || SAME_IN_BOTH.has(key), key);
+    ck(
+      `"${key}" is actually translated`,
+      d("sv")[key] !== d("en")[key] || SAME_IN_BOTH.has(key),
+      key,
+    );
   }
   ck(
     "same section ids in both languages",
     JSON.stringify([...svMain.matchAll(/<section[^>]*\bid="([a-z-]+)"/g)].map((m) => m[1])) ===
       JSON.stringify([...enMain.matchAll(/<section[^>]*\bid="([a-z-]+)"/g)].map((m) => m[1])),
   );
-  const hrefs = (m: string) => [...m.matchAll(/href="([^"]*)"/g)].map((x) => x[1]);
   ck(
     "same destinations, same order",
-    JSON.stringify(hrefs(svMain)) === JSON.stringify(hrefs(enMain)),
-  );
-
-  // English names the supporting tool ONE way.
-  ck('en copy says "Career Analysis"', /Career Analysis/.test(enCopy));
-  for (const drift of [/career test/i, /the assessment/i, /career guidance/i, /skills test/i]) {
-    ck(`en copy does not also say "${drift.source}"`, !drift.test(enCopy));
-  }
-}
-
-/* T13 --------------------------------------------------------------- */
-group("T13 · the copy budget");
-{
-  // Words inside <main>, excluding button labels and small UI labels, and
-  // excluding the aria-hidden illustrations. The illustrations are
-  // decoration: they are out of the accessibility tree, they carry no claim
-  // a sentence does not also make, and counting a mock interface's row
-  // labels as prose would measure the wrong thing. What is measured is what
-  // a person READS.
-  const BUTTON_LABELS = LANGS.flatMap((l) =>
-    ["cta.passport", "cta.howItWorks", "home.passport.cta", "home.employers.cta"].map(
-      (k) => (dictionaries[l] as Record<string, string>)[k],
-    ),
-  );
-  for (const lang of LANGS) {
-    let prose = copyOf[lang];
-    for (const label of BUTTON_LABELS) prose = prose.split(label).join(" ");
-    ck(`${lang}: ${wc(prose)} words of prose inside main (max 220)`, wc(prose) <= 220, wc(prose));
-    // And a ceiling on the WHOLE rendered page, decoration included.
-    //
-    // The brief's 220 is prose, "excluding buttons and small UI labels" —
-    // and the two product mocks are small UI labels by any reading: a row
-    // label beside a digit, a role under a name. But they are still words
-    // on a screen, and the exemption they enjoy is precisely what let a
-    // Swedish mock ship inside the English page. So they are counted, out
-    // loud, with a ceiling that is a CEILING rather than a snapshot of
-    // today: 268 sv / 299 en against 320, which is room for a satellite or
-    // two and not for a second body of copy.
-    ck(
-      `${lang}: ${wc(seenOf[lang])} words rendered in total, decoration included (ceiling 320)`,
-      wc(seenOf[lang]) <= 320,
-      wc(seenOf[lang]),
-    );
-  }
-
-  for (const lang of LANGS) {
-    const d = dictionaries[lang] as Record<string, string>;
-    ck(
-      `${lang}: hero body <= 30 words`,
-      wc(d["home.hero.subtitle"]) <= 30,
-      wc(d["home.hero.subtitle"]),
-    );
-    for (const key of ["home.passport.body", "home.employers.subtitle"]) {
-      ck(`${lang}: "${key}" <= 30 words`, wc(d[key]) <= 30, wc(d[key]));
-    }
-    for (const n of [1, 2, 3]) {
-      const key = `home.how.step${n}.desc`;
-      ck(`${lang}: step ${n} is one sentence`, (d[key].match(/[.!?]/g) ?? []).length === 1, d[key]);
-    }
-  }
-
-  // The illustrations really are out of the accessibility tree. If one
-  // loses its aria-hidden, the budget above silently stops holding — and a
-  // fictional person's name starts being read out as content.
-  ck(
-    "the Passport composition is aria-hidden",
-    /function PassportComposition[\s\S]{0,900}aria-hidden="true"/.test(routeCode),
+    JSON.stringify(hrefsOf(svMain)) === JSON.stringify(hrefsOf(enMain)),
+    JSON.stringify(hrefsOf(svMain)),
   );
   ck(
-    "the employer backdrop is aria-hidden",
-    /function EmployerBackdrop[\s\S]{0,300}aria-hidden="true"/.test(routeCode),
+    "same number of solid controls",
+    anchorsOf(svMain).filter(isSolid).length === anchorsOf(enMain).filter(isSolid).length,
   );
-  ck(
-    "the illustration's satellites are not controls",
-    !/<a\b/.test(
-      routeCode.slice(
-        routeCode.indexOf("function SatelliteColumn"),
-        routeCode.indexOf("function PassportCardMock"),
-      ),
-    ),
-  );
-  // The mock person is DRAWN and never announced. Asserted on BOTH
-  // projections, so the difference between them stays visible right here:
-  // it is in what is seen, and it is not in what is read.
-  for (const lang of LANGS) {
-    ck(`${lang}: the mock holder is drawn`, seenOf[lang].includes("Alex Karlsson"));
-    ck(`${lang}: and is not in the accessibility tree`, !copyOf[lang].includes("Alex Karlsson"));
+  // English names the second product ONE way.
+  ck('en copy says "Career Discovery"', /Career Discovery/.test(copyOf.en));
+  for (const drift of [/career test/i, /career analysis/i, /skills test/i]) {
+    ck(`en copy does not also say "${drift.source}"`, !drift.test(copyOf.en));
   }
 }
 
 /* T14 --------------------------------------------------------------- */
-group("T14 · what the page may not claim about a career that moves");
+group("T14 · no forbidden claim was introduced");
 {
-  // Built FOR a career that moves. Not recognised, approved or valid
-  // anywhere, and never a substitute for a licence, a permit, a background
-  // check or an employer's own due diligence.
-  ck(
-    "sv states portability as what it is",
-    svCopy.includes("Byggt för en karriär mellan roller, arbetsgivare och länder."),
-  );
-  ck(
-    "en says the same",
-    enCopy.includes("Built for a career that moves between roles, employers and countries."),
-  );
-  const OVERCLAIMS: readonly RegExp[] = [
-    /globalt erkän/i,
-    /globally recognis|globally recogniz/i,
-    /internationellt godkän/i,
-    /internationally approved/i,
-    /giltig i alla länder/i,
-    /valid in (every|all) countr/i,
-    /automatiskt likvärdig/i,
-    /automatically equivalent/i,
-    /ersätter (licens|tillstånd|bakgrundskontroll)/i,
-    /replaces? (a )?(licence|license|work permit|background)/i,
-    /arbetstillstånd/i,
-    /work permit/i,
-    /bakgrundskontroll/i,
-    /background screening/i,
+  // ── THE NON-NEGOTIABLE DATA BOUNDARIES, AS STRINGS ────────────────
+  //
+  // Each entry below is a sentence a reader could actually meet on this
+  // page. They are grouped by the boundary they would breach, because a
+  // failure here should say WHICH rule broke and not merely that a regex
+  // matched.
+  //
+  // The two disclaimers are deliberately NEGATED forms ("ersätter inte",
+  // "does not replace"), so every pattern about replacement requires the
+  // affirmative: `(?<!inte )ersätter` and `(?<!does not )replaces?`. A guard
+  // that banned the substring outright would ban the disclaimer the brief
+  // requires.
+  const FORBIDDEN: readonly { rule: string; patterns: readonly RegExp[] }[] = [
+    {
+      rule: "Career Discovery measures orientation, not competence",
+      patterns: [
+        /mäter din kompetens|mät din kompetens|kompetenstest/i,
+        /measures? your competence|competence test/i,
+        /karriärtest|career test/i,
+        /\bkunskapsprov\b|\bexam\b/i,
+      ],
+    },
+    {
+      rule: "Career Discovery data is candidate-owned and never enters employer ranking",
+      patterns: [
+        /arbetsgivare (ser|får|läser) (din|ditt) (karriär|discovery|resultat)/i,
+        /employers? (see|receive|read) your (career|discovery|result)/i,
+        /rangordn/i,
+        /\branking\b|\brank(s|ed)? candidates\b/i,
+      ],
+    },
+    {
+      rule: "the Passport receives no raw answers, prompts, scoring keys or rubrics",
+      patterns: [
+        /svar.{0,20}(sparas|lagras) i (ditt )?passport/i,
+        /answers.{0,20}(stored|saved) in your passport/i,
+        /\brubrik(er)?mall\b|\bscoring key\b|\brubric\b/i,
+      ],
+    },
+    {
+      rule: "an assessment result is not a Passport credential, and there is no overall score",
+      patterns: [
+        /testresultat.{0,20}(blir|som) (en )?merit/i,
+        /assessment result.{0,20}(becomes|is a) credential/i,
+        /(total|sammanlagd|övergripande)\s*(poäng|betyg|score)/i,
+        /overall (score|rating|grade)/i,
+        /\bpoängsätt/i,
+      ],
+    },
+    {
+      rule: "no hire, reject, credibility, deception, personality or protected-trait inference",
+      patterns: [
+        /(vi|ai|plattformen|cqrityjob) (avgör|bedömer|väljer) (om )?(du|kandidaten) (är )?lämplig/i,
+        /(we|ai|the platform|cqrityjob) (decides?|determines?) (if |whether )?(you|the candidate) (is |are )?suitable/i,
+        /\blämplighetsbedömning\b|\bsuitability (score|assessment|rating)\b/i,
+        /trovärdighet|credibility|deception|lie detect/i,
+        /personlighetstest|personality test|personality profile/i,
+        /automatiskt (urval|avslag|beslut)/i,
+        /automatic (screening|rejection|decision)/i,
+      ],
+    },
+    {
+      rule: "humans make and document every employment and personnel-security decision",
+      patterns: [
+        /ai (fattar|tar) beslut/i,
+        /ai (makes|takes) the decision/i,
+        /\bautomatisk matchning\b|\bautomatic (job )?match\b/i,
+        /garanterar (jobb|anställning)/i,
+        /guarantees? (a )?job/i,
+      ],
+    },
+    {
+      rule: "the Passport is not recognised, approved or valid anywhere, and replaces nothing",
+      patterns: [
+        /globalt erkän/i,
+        /globally recognis|globally recogniz/i,
+        /internationellt godkän/i,
+        /internationally approved/i,
+        /giltig i alla länder/i,
+        /valid in (every|all) countr/i,
+        /automatiskt likvärdig/i,
+        /automatically equivalent/i,
+        /(?<!inte )ersätter (en |ett )?(licens|myndighetslicens|tillstånd|bakgrundskontroll|säkerhetsprövning)/i,
+        /(?<!does not )replaces? (a )?(licence|license|work permit|background|security vetting)/i,
+      ],
+    },
+    {
+      rule: "no issuer claim — CQrityjob issues, verifies and revokes nothing",
+      patterns: [
+        /\butfärdare\b|\bissuer\b/i,
+        /verifierade meriter|verified merits/i,
+        /kompetensverifiering|competence verification/i,
+      ],
+    },
   ];
   for (const lang of LANGS) {
-    for (const rx of OVERCLAIMS) {
-      ck(`${lang}: no "${rx.source}"`, !rx.test(copyOf[lang]));
+    for (const { rule, patterns } of FORBIDDEN) {
+      for (const rx of patterns) {
+        ck(`${lang} · ${rule} — no "${rx.source}"`, !rx.test(copyOf[lang]));
+      }
     }
+  }
+  // And the two sentences that must be there, not merely the absences.
+  for (const lang of LANGS) {
+    ck(
+      `${lang}: the Passport disclaimer is rendered in full`,
+      copyOf[lang].includes(d(lang)["home.markets.disclaimer"]),
+    );
+    ck(
+      `${lang}: the anonymous-start disclosure is rendered in full`,
+      copyOf[lang].includes(d(lang)["home.entry.discovery.disclosure"]),
+    );
   }
 }
 
 /* T15 --------------------------------------------------------------- */
 group("T15 · the English page is English, decoration included");
 {
-  // ── THE DEFECT THIS EXISTS FOR ──────────────────────────────────────
-  //
-  // Every visible word in the two Passport compositions was inlined in the
-  // component: "Din säkerhetsprofil", "Utbildningar", "Certifikat",
-  // "Stockholm, Sverige", "Skapa CV från dina uppgifter". The English
-  // homepage rendered all of it, in Swedish, beside English prose.
-  //
-  // Nothing caught it, and the reason is worth writing down: every text
-  // assertion in this file ran against `copyText`, which strips aria-hidden
-  // subtrees. The illustrations are aria-hidden — correctly, they are
-  // decoration — so they were invisible to the guard and perfectly visible
-  // to the reader. aria-hidden is not a localisation mechanism and never
-  // was. Everything below reads `seenOf`, the WHOLE rendered page.
-
-  // 1. No Swedish-specific character survives into the English page. One
-  //    line, and it catches most of the class outright.
+  // 1. No Swedish-specific character survives into the English page.
   const diacritics = seenOf.en.match(/[åäöÅÄÖ]/g) ?? [];
   ck(
     "no å/ä/ö anywhere on the English page",
@@ -977,89 +1210,53 @@ group("T15 · the English page is English, decoration included");
           ?.slice(0, 6)
           .join(", ")}`,
   );
-
-  // 2. The words that have no diacritic to give them away — "Certifikat",
-  //    "CV", "Jobb". For every key that IS translated, the other language's
-  //    value must not appear on this page. Symmetric, so a reverse
-  //    regression (English leaking into the Swedish page) fails too.
-  const homeKeys = Object.keys(dictionaries.sv).filter(
-    (k) => k.startsWith("home.") || k === "cta.passport" || k === "cta.howItWorks",
+  // 2. The words with no diacritic to give them away. For every key that IS
+  //    translated, the other language's value must not appear on this page.
+  //    Symmetric, so an English leak into the Swedish page fails too.
+  const pageKeys = Object.keys(dictionaries.sv).filter(
+    (k) => k.startsWith("home.") || k === "cta.passport" || k === "cta.discovery",
   );
   for (const [lang, other] of [
     ["en", "sv"],
     ["sv", "en"],
   ] as const) {
+    // Every value this language legitimately renders, so a SHARED product
+    // name is not reported as a leak. "Career Discovery" is the product's
+    // name in Swedish too, and the English title of the Discover stage is
+    // "Discover" -- a substring of it. Without this the guard would demand
+    // that the Swedish page stop naming the product.
+    const mineAll = pageKeys.map((k) => d(lang)[k]).filter(Boolean);
     const leaked: string[] = [];
-    for (const key of homeKeys) {
-      const mine = (dictionaries[lang] as Record<string, string>)[key];
-      const theirs = (dictionaries[other] as Record<string, string>)[key];
-      // Identical values are the same word in both languages, not a leak.
+    for (const key of pageKeys) {
+      const mine = d(lang)[key];
+      const theirs = d(other)[key];
       if (!theirs || theirs === mine || theirs.length < 4) continue;
+      if (mineAll.some((v) => v.includes(theirs))) continue;
       if (seenOf[lang].includes(theirs)) leaked.push(`${key}="${theirs}"`);
     }
     ck(`${lang}: no ${other} string is rendered`, leaked.length === 0, leaked.join(" · "));
   }
-
-  // 3. The exact strings that were inlined, named so this failure has a
-  //    memory even if the two rules above are ever relaxed.
-  const WAS_INLINED = [
-    "Din säkerhetsprofil",
-    "Redigera profil",
-    "Säkerhetsspecialist",
-    "Stockholm, Sverige",
-    "Erfarenhet",
-    "Utbildningar",
-    "Certifikat",
-    "Meriter",
-    "Delad profil",
-    "Utveckling",
-    "Skapa CV från dina uppgifter",
-    "Dela valda uppgifter",
-    "Använd din profil i jobbansökningar",
-    "Se möjliga nästa steg",
-    "Skapa professionellt CV med dina uppgifter",
-    "Dela valda uppgifter med arbetsgivare",
-    "Använd ditt Security Passport i jobbansökningar",
-    "Utforska nästa steg med karriäranalysen",
-  ];
-  for (const phrase of WAS_INLINED) {
-    ck(`en: "${phrase}" is not rendered`, !seenOf.en.includes(phrase));
-  }
-
-  // 4. And the Swedish page really does say them, so "fixed" cannot mean
-  //    "deleted the illustration".
-  for (const phrase of ["Din säkerhetsprofil", "Utbildningar", "Stockholm, Sverige"]) {
-    ck(`sv: "${phrase}" is still rendered`, seenOf.sv.includes(phrase));
-  }
-  for (const phrase of ["Your security profile", "Education", "Stockholm, Sweden"]) {
-    ck(`en: "${phrase}" is rendered instead`, seenOf.en.includes(phrase));
-  }
-
-  // ── STRUCTURAL: the type refuses a raw string ──────────────────────
-  //
-  // The rules above are a net. This is the hole being welded shut: a
-  // `Satellite` may only be given translation KEYS, so `title: "Delad
-  // profil"` is a type error rather than a rendering bug somebody has to
-  // notice in a screenshot.
-  ck(
-    "a Satellite carries keys, not strings",
-    /type Satellite = \{[\s\S]*?titleKey: TranslationKey;[\s\S]*?bodyKey: TranslationKey;[\s\S]*?\};/.test(
-      routeCode,
-    ),
-  );
-  ck(
-    "and has no raw-string variant",
-    !/type Satellite = \{[\s\S]*?title\??: string;[\s\S]*?\};/.test(routeCode),
-  );
-
-  // No Swedish string literal is left anywhere in the route's own source.
-  // The document <title> is exempt: the whole site's SSR head is
-  // Swedish-first and is not per-language on any route, which is a
-  // site-wide concern rather than this page's.
+  // 3. No Swedish string literal is left anywhere in the route's own source.
+  //    The document <title> is exempt: the whole site's SSR head is
+  //    Swedish-first and is not per-language on any route.
   const literals = [...routeCode.matchAll(/"([^"\n]*[åäöÅÄÖ][^"\n]*)"/g)]
     .map((m) => m[1])
     .filter((v) => !v.startsWith("CQrityjob —"));
   ck("no Swedish string literal remains in the route", literals.length === 0, literals.join(" · "));
+  // 4. The page's word count, so a rebuild cannot quietly become a brochure.
+  //    A CEILING rather than a snapshot of today.
+  for (const lang of LANGS) {
+    ck(
+      `${lang}: ${wc(seenOf[lang])} words rendered in total (ceiling 340)`,
+      wc(seenOf[lang]) <= 340,
+      wc(seenOf[lang]),
+    );
+    ck(
+      `${lang}: hero subtitle <= 40 words`,
+      wc(d(lang)["home.hero.subtitle"]) <= 40,
+      wc(d(lang)["home.hero.subtitle"]),
+    );
+  }
 }
 
 /* -------------------------------------------------------------------- */

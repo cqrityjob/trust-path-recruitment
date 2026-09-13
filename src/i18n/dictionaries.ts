@@ -4,6 +4,10 @@ export const dictionaries = {
   sv: {
     "nav.careers": "Säkerhetskarriärcenter",
     "nav.passportPublic": "Security Passport",
+    // The SECOND individual product, and a peer of the first in the public
+    // navigation rather than a link buried in a section. It is a product
+    // name and is therefore the same word in both languages.
+    "nav.careerDiscovery": "Career Discovery",
     "nav.career_center": "Karriärvägar",
     "nav.jobs": "Jobb",
     "nav.employers": "Arbetsgivare",
@@ -63,13 +67,15 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Där förtroende kommer först.",
 
-    // The ONE primary action on the public site. It is the Passport, not
-    // the Career Analysis: an account is the thing somebody keeps, and the
-    // Passport is what the account is FOR.
-    "cta.passport": "Skapa ditt Security Passport",
-    // The hero's quiet second control. It scrolls to the next section on
-    // the same page rather than opening a second conversion path.
-    "cta.howItWorks": "Se hur det fungerar",
+    // ── THE TWO INDIVIDUAL ENTRY ACTIONS ────────────────────────────
+    //
+    // One label each, and they are PEERS. "cta.passport" used to be the
+    // site's single primary action and was carried by the header button as
+    // well; the header now offers a product-neutral "Skapa konto", because
+    // a chrome that says "create your Security Passport" makes the Passport
+    // the only product again in every page's top bar.
+    "cta.passport": "Skapa mitt Security Passport",
+    "cta.discovery": "Starta Career Discovery",
     "cta.assessment": "Starta karriäranalysen",
     "cta.careers": "Utforska karriärvägar",
     "cta.contact": "Kontakta oss",
@@ -78,67 +84,120 @@ export const dictionaries = {
     "cta.learn_more": "Läs mer",
     "cta.all_careers": "Se alla karriärer",
 
-    // ── THE PUBLIC HOMEPAGE (2026-09-06) ────────────────────────────────
+    // ── THE PUBLIC HOMEPAGE (2026-09-13) ────────────────────────────────
     //
-    // Four sections and nothing else. The page carried eight, and somebody
-    // who read all of them still could not say what CQrityjob is: three
-    // pillars, six account capabilities, two audience paths, six role
-    // cards, a career-test campaign and two employer sections said the same
-    // few things over and over, in 437 words and 5,511px.
+    // TWO PEER ENTRANCES FOR A PERSON, ONE FOR AN ORGANISATION.
     //
-    // ── WHAT THE PAGE IS NOW ABOUT ──────────────────────────────────────
+    // The copy this block replaced said Security Passport was THE product
+    // and the Career Analysis was a supporting tool, offered once and
+    // quietly, from the third section. That position is SUPERSEDED by the
+    // owner-approved public entry architecture. CQrityjob is one Security
+    // Career Intelligence Platform with two PEER acquisition entrances for
+    // an individual -- build a Security Passport, or discover a security
+    // career -- and one entrance for an employer.
     //
-    // Security Passport. Not the Career Analysis, which is what the page
-    // used to lead with and is a SUPPORTING tool: it suggests what somebody
-    // could do next. The Passport is the thing they keep — the professional
-    // identity a security career is actually built on, and the record every
-    // other surface reads from. CV, a shared profile, job applications and
-    // development are all USES of it, which is why they are drawn around it
-    // rather than listed beside it.
-    //
-    // The order of the product, and therefore of this copy:
-    //   1 Security Passport   the persistent professional identity
-    //   2 CV and Career Card  presentations built FROM it
-    //   3 controlled sharing  the holder chooses what an employer receives
-    //   4 jobs                using the profile
-    //   5 Career Analysis     guidance about possible next steps
-    //   6 development         roles, education, future competence
-    "home.hero.eyebrow": "Din yrkesidentitet inom säkerhet",
-    "home.hero.title": "Din säkerhetskarriär. Samlad på ett ställe.",
+    // The two individual products remain SEPARATE DOMAINS and neither is a
+    // prerequisite for the other. Career Discovery measures ORIENTATION and
+    // never competence (adr-career-discovery-construct-model.md); the
+    // Passport holds a RECORD and receives no assessment answer, prompt,
+    // scoring key or rubric (adr-security-competency-product-separation.md).
+    // No sentence below may blur that, and scripts/public-homepage-check.tsx
+    // fails the build if one does.
+    "home.hero.eyebrow": "Säkerhetskarriären samlad på ett ställe",
+    "home.hero.title": "Bygg din framtid inom säkerhet",
     "home.hero.subtitle":
-      "Samla erfarenhet, meriter, certifikat och CV i ditt Security Passport. Dela rätt information med arbetsgivare och se hur du kan utvecklas vidare.",
-    // Two short lines under the actions, and they are the two promises the
-    // product can actually keep today: the record is the holder's, and
-    // nothing leaves it without their decision.
-    "home.hero.note": "Dina uppgifter · Du bestämmer vad som delas",
-    // ── WHAT "PORTABLE" MAY AND MAY NOT MEAN ────────────────────────────
-    //
-    // Built FOR a career that moves. Not: recognised, approved or valid
-    // anywhere. CQrityjob has no issuer identity, no cross-border
-    // equivalence and no authority over a licence, a work permit, a
-    // background check or a local eligibility rule — so the sentence says
-    // what the product does (collect, structure, reuse, share on the
-    // holder's terms) and stops there. International credential recognition
-    // is a future capability and is not claimed on a public page.
-    "home.hero.portable": "Byggt för en karriär mellan roller, arbetsgivare och länder.",
+      "Samla dina meriter i ett Security Passport eller upptäck vilka säkerhetsroller som passar din riktning. Fortsätt sedan med karriärvägar, CV, jobb och utveckling i samma plattform.",
 
-    // Section 2 — one continuous journey, not three feature cards. One
-    // sentence each and no buttons: the page has ONE primary action and
-    // these steps explain it rather than compete with it.
-    "home.how.title": "Samla. Styrk. Dela.",
-    "home.how.step1.title": "Samla din erfarenhet",
-    "home.how.step1.desc": "Lägg in anställningar, utbildningar, certifikat och andra meriter.",
-    "home.how.step2.title": "Visa vad uppgifterna bygger på",
-    "home.how.step2.desc": "Se tydligt vad som är registrerat, dokumenterat eller källbekräftat.",
-    "home.how.step3.title": "Använd det på dina villkor",
-    "home.how.step3.desc": "Skapa CV och dela valda uppgifter med arbetsgivare.",
+    // ── THE TWO ENTRY CARDS ─────────────────────────────────────────────
+    //
+    // Equal size, equal visual weight, two equally solid actions. The
+    // Passport is rendered first because it is the durable record; that is
+    // an ORDER and not a hierarchy, and Career Discovery may never be
+    // styled as the quiet text link it used to be.
+    "home.entry.passport.title": "Bygg ditt Security Passport",
+    "home.entry.passport.body":
+      "Samla erfarenhet, utbildning och certifieringar. Välj Sverige, Storbritannien eller Dubai och bestäm själv vad du delar.",
+    "home.entry.discovery.title": "Upptäck din säkerhetskarriär",
+    "home.entry.discovery.body":
+      "Utforska din arbetsinriktning och få förklarade förslag på roller och karriärvägar inom säkerhet.",
+    // The low-friction model, said where the action is. Career Discovery
+    // may be started without an account, keeps answers in the current tab
+    // and asks for an account when the result is saved -- and the existing
+    // claim token through email confirmation, Google and the login/signup
+    // swap is untouched by this page. This sentence exists so the entrance
+    // never implies a signup wall the product does not have.
+    "home.entry.discovery.disclosure":
+      "Du kan börja utan konto. Skapa ett konto när du vill spara resultatet och fortsätta i My Career.",
+
+    // ── THE EMPLOYER STRIP ──────────────────────────────────────────────
+    //
+    // Visually separate, below the two individual cards, and gated by the
+    // employer release flag: a disabled surface is never presented as an
+    // available one. It says what the platform supports and who decides; it
+    // never says CQrityjob or a model approves, rejects, ranks or selects
+    // anybody.
+    "home.employers.eyebrow": "För arbetsgivare",
+    "home.employers.title": "Rekryterar du inom säkerhet?",
+    "home.employers.body":
+      "Publicera jobb, hantera kandidater och använd strukturerade tester och intervjuer i samma plattform.",
+    "home.employers.cta.register": "Registrera företag",
+    "home.employers.cta.explore": "Se företagsplattformen",
+
+    // ── ONE CONNECTED LIFECYCLE ─────────────────────────────────────────
+    //
+    // An explanation of how the parts connect, NOT six competing product
+    // cards: six short stages, each with one quiet link to a canonical
+    // route that already exists. Nothing here promises a match, a job or a
+    // decision, and nothing here turns an orientation result into a merit.
+    "home.lifecycle.eyebrow": "En plattform",
+    "home.lifecycle.title": "Hela säkerhetskarriären hänger ihop",
+    "home.lifecycle.discover.title": "Upptäck",
+    "home.lifecycle.discover.body":
+      "Career Discovery och Karriärvägar visar vilka roller som finns inom säkerhet.",
+    "home.lifecycle.understand.title": "Förstå",
+    "home.lifecycle.understand.body":
+      "Du får en förklarad rapport om din inriktning, inte ett omdöme om dig.",
+    "home.lifecycle.grow.title": "Utvecklas",
+    "home.lifecycle.grow.body": "My Career samlar din profil, dina tester och din utveckling.",
+    "home.lifecycle.trust.title": "Visa",
+    "home.lifecycle.trust.body":
+      "Security Passport håller dina meriter, underlag, verifieringar och ditt CV.",
+    "home.lifecycle.work.title": "Arbeta",
+    "home.lifecycle.work.body": "Jobb, ansökningar och arbetsgivarnas processer fortsätter här.",
+    "home.lifecycle.continue.title": "Fortsätt",
+    "home.lifecycle.continue.body":
+      "Utbildning och kompetensutveckling fortsätter efter anställningen.",
+    "home.lifecycle.understand.link": "Så fungerar rapporten",
+    "home.lifecycle.grow.link": "Kom igång med My Career",
+    "home.lifecycle.continue.link": "Tester och utveckling",
+
+    // ── SECURITY PASSPORT: THE THREE MARKETS, AND WHAT IT IS NOT ────────
+    //
+    // The market names are presentation only. They come from
+    // src/lib/security-passport/public-market-scale.ts, which carries the
+    // same market-pack codes the governed overview already declares, and
+    // this page reads no Passport table, no entitlement and no credential.
+    // Nothing below is a credential record and nothing below claims one.
+    "home.markets.eyebrow": "Security Passport",
+    "home.markets.title": "Byggt för en karriär som rör sig",
+    "home.markets.body":
+      "Ditt Security Passport stöder i dag tre marknader. Du väljer själv vilka uppgifter du delar, med vem och hur länge.",
+    "home.markets.SE": "Sverige",
+    "home.markets.GB": "Storbritannien",
+    "home.markets.AE-DU": "Dubai, Förenade Arabemiraten",
+    // The disclaimer is owner-approved copy and is rendered verbatim. It is
+    // the sentence that keeps the product out of territory it has no
+    // authority in: CQrityjob issues nothing, vets nobody and decides
+    // nobody's right to work.
+    "home.markets.disclaimer":
+      "Security Passport hjälper dig att strukturera och dela information. Det ersätter inte en myndighetslicens, säkerhetsprövning, rätt att arbeta eller arbetsgivarens egna kontroller.",
 
     // ── THE THREE TRUST LEVELS, SAID OUT LOUD ON A PUBLIC PAGE ──────────
     //
-    // PR #189 settled what each level may claim. This is the first surface
-    // outside the signed-in product that states the distinction, so it has
-    // to be exact — a marketing page that says "verifierade meriter" undoes
-    // the whole containment, because a CQrityjob document review is a
+    // PR #189 settled what each level may claim, and this is still the only
+    // surface outside the signed-in product that states the distinction, so
+    // it has to be exact -- a marketing page that says "verifierade meriter"
+    // undoes the whole containment, because a CQrityjob document review is a
     // REVIEW, not the source.
     //
     //   Registrerat    the holder entered it
@@ -148,88 +207,21 @@ export const dictionaries = {
     //                  exactly ONE shape today: an employer confirming an
     //                  EMPLOYMENT PERIOD through the authorised attestation
     //                  path. No credential can reach this level, so nothing
-    //                  here says a credential was verified — an employment
+    //                  here says a credential was verified -- an employment
     //                  confirmation is not credential verification.
     //
-    // The words are the owner's ("Registrerat", not the product's internal
-    // "Egen uppgift"), and only Källbekräftat wears the green confirmation
-    // treatment. The level is a TRUST state and never a lifecycle state:
-    // nothing here says active, expired, revoked or archived.
-    // Never rendered as visible copy: it is the accessible name of the
-    // group, so a screen-reader user meets three chips as one legend
-    // rather than as three loose words after a list of steps.
+    // The words are the owner's, and only Källbekräftat wears the green
+    // confirmation treatment. The level is a TRUST state and never a
+    // lifecycle state: nothing here says active, expired, revoked or
+    // archived. An assessment result is not one of these levels and can
+    // never become one.
+    // The legend is never rendered as visible copy: it is the accessible
+    // name of the group, so a screen-reader user meets three chips as one
+    // legend rather than as three loose words.
     "home.trust.legend": "De tre nivåerna i ditt Security Passport",
     "home.trust.registered": "Registrerat",
     "home.trust.documented": "Dokumenterat",
     "home.trust.sourceConfirmed": "Källbekräftat",
-
-    "home.passport.title": "Ett Passport genom hela karriären",
-    "home.passport.body":
-      "Återanvänd samma uppgifter när du skapar CV, söker jobb eller delar din profil. När du vill vidare hjälper karriäranalysen dig att utforska nästa steg.",
-    // The one sentence that keeps the two products apart. The Passport is a
-    // RECORD of what happened; the Career Analysis is guidance about what
-    // could happen next. It measures nothing and verifies nothing, and this
-    // is the sentence that stops it being read as a competence test.
-    "home.passport.callout":
-      "Security Passport visar vad du har gjort. Karriäranalysen hjälper dig att se vad du kan göra härnäst.",
-    // The four USES of one record. A CV is an output built from collected
-    // information, never a second source of truth; "Sök jobb" is a place to
-    // apply, never a promise of a match or of employment.
-    "home.passport.use.cv": "Skapa CV",
-    "home.passport.use.share": "Dela profil",
-    "home.passport.use.jobs": "Sök jobb",
-    "home.passport.use.develop": "Utvecklas",
-    "home.passport.cta": "Utforska din karriärväg",
-
-    // Section 4 — the ONE employer section, and the quietest control on the
-    // page. It says what the product supports and who decides; it does not
-    // say CQrityjob approves, rejects, ranks or selects anybody.
-    // ── THE ILLUSTRATIONS' OWN COPY ─────────────────────────────────────
-    //
-    // Every visible word in the two Passport compositions lives here, in
-    // both languages, and none of it is inlined in the component.
-    //
-    // It was inlined, and the English homepage rendered a Swedish product
-    // mock next to English prose. `aria-hidden` did not save it and could
-    // not: it removes a subtree from the ACCESSIBILITY TREE, not from the
-    // screen. A sighted English reader saw "Din säkerhetsprofil",
-    // "Utbildningar" and "Stockholm, Sverige" beside "Your security
-    // career", which is exactly the impression of an unfinished product
-    // this rebuild exists to remove.
-    //
-    // These are small interface labels on a picture, not prose. They are
-    // still copy, they are still read, and they are still translated.
-    "home.mock.subtitle": "Din säkerhetsprofil",
-    "home.mock.edit": "Redigera profil",
-    "home.mock.role": "Säkerhetsspecialist",
-    "home.mock.location": "Stockholm, Sverige",
-    // The four categories a Passport holds. Deliberately the same words the
-    // signed-in product uses for them.
-    "home.mock.cat.experience": "Erfarenhet",
-    "home.mock.cat.education": "Utbildningar",
-    "home.mock.cat.certificates": "Certifikat",
-    "home.mock.cat.merits": "Meriter",
-    // The hero's four satellites: what one record is FOR.
-    "home.mock.cv.title": "CV",
-    "home.mock.cv.body": "Skapa CV från dina uppgifter",
-    "home.mock.share.title": "Delad profil",
-    "home.mock.share.body": "Dela valda uppgifter",
-    "home.mock.jobs.title": "Jobb",
-    "home.mock.jobs.body": "Använd din profil i jobbansökningar",
-    "home.mock.develop.title": "Utveckling",
-    "home.mock.develop.body": "Se möjliga nästa steg",
-    // Section 3's four, which name the same uses in the fuller words that
-    // section has room for. Titles are home.passport.use.* above.
-    "home.passport.use.cv.body": "Skapa professionellt CV med dina uppgifter",
-    "home.passport.use.share.body": "Dela valda uppgifter med arbetsgivare",
-    "home.passport.use.jobs.body": "Använd ditt Security Passport i jobbansökningar",
-    "home.passport.use.develop.body": "Utforska nästa steg med karriäranalysen",
-
-    "home.employers.eyebrow": "För arbetsgivare",
-    "home.employers.title": "Strukturerat stöd för rekrytering och kompetensutveckling",
-    "home.employers.subtitle":
-      "Se hur strukturerade bedömningar kan ge stöd vid rekrytering och utveckling av säkerhetspersonal. Ni fattar alltid besluten.",
-    "home.employers.cta": "Se lösningar för arbetsgivare",
 
     "careers.title": "Karriärer inom säkerhet",
     "careers.lead":
@@ -401,30 +393,84 @@ export const dictionaries = {
       "Rollen kan vara värd att utforska. Din profil har både överlapp och tydliga områden att utveckla.",
     "jobs.relevance.why.family": "Rollen ligger inom ett yrkesområde som ligger nära din profil.",
 
-    "employers.title": "För arbetsgivare",
+    // ── /employers — THE WHOLE EXISTING PLATFORM, NOT FOUR BENEFITS ─────
+    //
+    // The page this copy replaced offered four abstract benefit tiles
+    // ("Rekrytering", "Kandidatbedömning", "Kompetenstest", "Kompetens-
+    // verifiering") and said nothing about how they connect. What an
+    // employer is actually buying is ONE CONNECTED PROCESS: publish a job,
+    // receive applications, choose the assessment and interview workflow
+    // the role needs, review structured evidence together, make and
+    // document a human decision, and continue with development.
+    //
+    // Three rules bind every sentence in this block:
+    //
+    //   * CQrityjob supports a decision and never makes one. No score, no
+    //     ranking, no pass/fail, no suitability, credibility, deception,
+    //     personality or protected-trait inference, and no AI finalisation.
+    //   * BESKT is a governed METHOD, not an instrument. It produces no
+    //     result and no score, it is available only under an owner-issued
+    //     pilot grant, and it never replaces statutory security vetting
+    //     (säkerhetsprövning), which is the employer's own legal duty.
+    //   * Career Discovery data is the candidate's and never appears in an
+    //     employer surface, so no sentence here offers it.
+    "employers.title": "Hela rekryteringen av säkerhetspersonal i en plattform",
     "employers.lead":
-      "Rekrytera, bedöm och utveckla säkerhetspersonal med strukturerat beslutsstöd — utformat för säkerhetsbranschens verklighet.",
-    "employers.offer.recruit.title": "Rekrytering",
-    "employers.offer.recruit.body":
-      "Publicera jobb eller få hjälp med sökning, headhunting och rekryteringsuppdrag inom säkerhet.",
-    "employers.offer.assess.title": "Kandidatbedömning",
-    "employers.offer.assess.body":
-      "Strukturerade, rollrelevanta bedömningar som ger jämförbart underlag för rekryteringsbeslut.",
-    "employers.offer.develop.title": "Kompetenstest av befintlig personal",
-    "employers.offer.develop.body":
-      "Testa egen eller upphandlad säkerhetspersonal mot definierade rollkrav, identifiera kunskaps- och kompetensgap och planera utveckling.",
-    "employers.offer.verify.title": "Kompetensverifiering",
-    "employers.offer.verify.body":
-      "Mät kompetens mot definierade krav och följ utveckling över tid.",
+      "Publicera säkerhetsjobb, hantera ansökningar och använd strukturerade bedömningar och intervjumodeller för både vanliga säkerhetsroller och säkerhetsskyddskänsliga befattningar.",
+
+    // ── THE CONNECTED PATH ──────────────────────────────────────────────
+    "employers.path.title": "Så hänger processen ihop",
+    // Rendered apart from the five, because §8.3 separates them: the five are
+    // the recruitment itself and end in a documented human decision; this is
+    // what continues afterwards. Presenting it as a sixth peer step made the
+    // decision look like a waypoint rather than the outcome.
+    "employers.path.continuation": "Och sedan",
+    "employers.path.step1.title": "Publicera jobbet",
+    "employers.path.step1.body": "Beskriv rollen, kraven och arbetsplatsen och publicera annonsen.",
+    "employers.path.step2.title": "Ta emot och ordna ansökningarna",
+    "employers.path.step2.body":
+      "Ansökningarna samlas på ett ställe med den information kandidaten valt att dela.",
+    "employers.path.step3.title": "Välj bedömning och intervjumodell",
+    "employers.path.step3.body":
+      "Välj det arbetssätt rollen kräver — ordinarie säkerhetsroll eller säkerhetsskyddskänslig befattning.",
+    "employers.path.step4.title": "Granska underlaget tillsammans",
+    "employers.path.step4.body":
+      "Rekryteringsteamet läser samma strukturerade underlag om varje kandidat.",
+    "employers.path.step5.title": "Fatta och dokumentera beslutet",
+    "employers.path.step5.body":
+      "Människor fattar beslutet, och beslutet dokumenteras med sitt underlag.",
+    "employers.path.step6.title": "Fortsätt med utveckling",
+    "employers.path.step6.body":
+      "Efter anställningen fortsätter utbildning och kompetensutveckling i samma plattform.",
+
+    // ── TWO RECRUITMENT EXAMPLES ────────────────────────────────────────
+    "employers.examples.title": "Två sätt att rekrytera",
+    "employers.example.ordinary.title": "Ordinarie säkerhetsrekrytering",
+    "employers.example.ordinary.body":
+      "Publicera jobbet, ta emot ansökningar, använd rollrelevanta bedömningar och en strukturerad intervju, och dokumentera beslutet.",
+    "employers.example.protective.title": "Säkerhetsskyddskänslig rekrytering",
+    "employers.example.protective.body":
+      "Samma process, med granskat metodstöd från BESKT för förberedelse och strukturerad intervju.",
+    // The BESKT boundary, said where the example is read. It is a method,
+    // not an instrument; it gives no result; it is reached only through an
+    // owner-issued pilot grant; and it is not säkerhetsprövning.
+    "employers.example.protective.note":
+      "BESKT är ett metodstöd. Det ger inget resultat, ingen poäng och ingen rangordning, och det ersätter inte säkerhetsprövning enligt säkerhetsskyddslagen.",
+    "employers.example.protective.availability":
+      "BESKT är under utveckling och kan användas först efter granskning och ett uttryckligt godkännande för er organisation.",
+
     "employers.disclaimer":
-      "CQrityjob stödjer arbetsgivarens beslut. Arbetsgivaren fattar alltid det slutliga rekryterings- eller kompetensbeslutet.",
-    // The two actions on /employers. An existing customer reads the first,
-    // a new employer reads the second, and both land on the SAME unified
-    // auth routes every other visitor uses -- with /employer as the
-    // validated return destination. Neither grants anything: /employer
-    // resolves real organisation membership server-side on arrival.
-    "employers.cta.login": "Logga in för företag",
-    "employers.cta.createAccount": "Skapa företagskonto",
+      "CQrityjob stödjer arbetsgivarens beslut. Varken CQrityjob eller AI avgör om en kandidat är lämplig — arbetsgivaren fattar och dokumenterar alltid det slutliga beslutet.",
+    // The three actions, in the order the two readers need them: a new
+    // employer registers, anybody can read how the platform works, and an
+    // existing customer gets back into their workspace. All three use the
+    // SAME unified auth routes every other visitor uses, carrying /employer
+    // as the validated return destination. Neither grants anything:
+    // /employer resolves real organisation membership server-side on
+    // arrival, and intent is never a role.
+    "employers.cta.register": "Registrera företag",
+    "employers.cta.how": "Se hur plattformen fungerar",
+    "employers.cta.login": "Logga in till företagsportalen",
 
     "assessment.eyebrow": "TVÅ SEPARERADE LÖSNINGAR",
     "assessment.title": "Tester för karriär och säkerhetskompetens",
@@ -6840,6 +6886,7 @@ export const dictionaries = {
   en: {
     "nav.careers": "Security Career Center",
     "nav.passportPublic": "Security Passport",
+    "nav.careerDiscovery": "Career Discovery",
     "nav.career_center": "Career paths",
     "nav.jobs": "Jobs",
     "nav.employers": "Employers",
@@ -6867,8 +6914,8 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
 
-    "cta.passport": "Create your Security Passport",
-    "cta.howItWorks": "See how it works",
+    "cta.passport": "Create my Security Passport",
+    "cta.discovery": "Start Career Discovery",
     "cta.assessment": "Start the Career Analysis",
     "cta.careers": "Explore career paths",
     "cta.contact": "Contact us",
@@ -6877,77 +6924,68 @@ export const dictionaries = {
     "cta.learn_more": "Learn more",
     "cta.all_careers": "See all careers",
 
-    // The public homepage (2026-09-06). See the Swedish block above for the
-    // product order this copy follows. Written as English rather than
-    // translated word for word, and it names the supporting tool "Career
-    // Analysis" every time — never test, assessment or guidance.
-    "home.hero.eyebrow": "Your professional identity in security",
-    "home.hero.title": "Your security career. All in one place.",
+    // The public homepage (2026-09-13). See the Swedish block above for the
+    // architecture this copy follows: two peer individual entrances, one
+    // employer entrance, and two product domains that are never collapsed
+    // into one. Written as English rather than translated word for word,
+    // and it names the second product "Career Discovery" every time --
+    // never test, career test, assessment or guidance.
+    "home.hero.eyebrow": "Your security career in one place",
+    "home.hero.title": "Build your future in security",
     "home.hero.subtitle":
-      "Bring your experience, credentials, certificates and CV together in your Security Passport. Share the right information with employers and keep developing your career.",
-    "home.hero.note": "Your information · You choose what to share",
-    "home.hero.portable": "Built for a career that moves between roles, employers and countries.",
+      "Bring your credentials together in a Security Passport or discover which security roles fit your direction. Then continue with career paths, CV, jobs and development in the same platform.",
 
-    "home.how.title": "Collect. Support. Share.",
-    "home.how.step1.title": "Collect your experience",
-    "home.how.step1.desc": "Add employments, education, certificates and other merits.",
-    "home.how.step2.title": "Show what each record rests on",
-    "home.how.step2.desc": "See clearly what is registered, documented or source-confirmed.",
-    "home.how.step3.title": "Use it on your terms",
-    "home.how.step3.desc": "Build a CV and share selected records with employers.",
+    "home.entry.passport.title": "Build your Security Passport",
+    "home.entry.passport.body":
+      "Bring together experience, education and credentials. Choose Sweden, Great Britain or Dubai and control what you share.",
+    "home.entry.discovery.title": "Discover your security career",
+    "home.entry.discovery.body":
+      "Explore your work orientation and receive explained suggestions for security roles and career paths.",
+    "home.entry.discovery.disclosure":
+      "You can start without an account. Create one when you want to save the result and continue in My Career.",
 
-    // The three trust levels — see the Swedish block for what each one may
-    // claim. "Documented" and "Source-confirmed" are the product's own
-    // English labels (src/lib/security-passport/i18n.ts), so the marketing
-    // page and the signed-in product cannot drift apart.
+    "home.employers.eyebrow": "For employers",
+    "home.employers.title": "Hiring in security?",
+    "home.employers.body":
+      "Publish jobs, manage candidates and use structured assessments and interviews in one platform.",
+    "home.employers.cta.register": "Register company",
+    "home.employers.cta.explore": "Explore the employer platform",
+
+    "home.lifecycle.eyebrow": "One platform",
+    "home.lifecycle.title": "A security career, connected end to end",
+    "home.lifecycle.discover.title": "Discover",
+    "home.lifecycle.discover.body":
+      "Career Discovery and Career Center show which roles exist in security.",
+    "home.lifecycle.understand.title": "Understand",
+    "home.lifecycle.understand.body":
+      "You receive an explained report about your direction, not a judgement about you.",
+    "home.lifecycle.grow.title": "Grow",
+    "home.lifecycle.grow.body": "My Career holds your profile, your tests and your development.",
+    "home.lifecycle.trust.title": "Trust",
+    "home.lifecycle.trust.body":
+      "Security Passport holds your credentials, evidence, verifications and CV.",
+    "home.lifecycle.work.title": "Work",
+    "home.lifecycle.work.body": "Jobs, applications and employer processes continue here.",
+    "home.lifecycle.continue.title": "Continue",
+    "home.lifecycle.continue.body": "Learning and workforce development carry on after the hire.",
+    "home.lifecycle.understand.link": "How the report works",
+    "home.lifecycle.grow.link": "Get started in My Career",
+    "home.lifecycle.continue.link": "Tests and development",
+
+    "home.markets.eyebrow": "Security Passport",
+    "home.markets.title": "Built for a career that moves",
+    "home.markets.body":
+      "Your Security Passport supports three markets today. You decide which records you share, with whom and for how long.",
+    "home.markets.SE": "Sweden",
+    "home.markets.GB": "Great Britain",
+    "home.markets.AE-DU": "Dubai, United Arab Emirates",
+    "home.markets.disclaimer":
+      "Security Passport helps you structure and share information. It does not replace a government licence, security vetting, right-to-work check or an employer's own due diligence.",
+
     "home.trust.legend": "The three levels in your Security Passport",
     "home.trust.registered": "Registered",
     "home.trust.documented": "Documented",
     "home.trust.sourceConfirmed": "Source-confirmed",
-
-    "home.passport.title": "One Passport for your whole career",
-    "home.passport.body":
-      "Reuse your records when you build a CV, apply for jobs or share your profile. When you want to move on, the Career Analysis helps you explore your next step.",
-    "home.passport.callout":
-      "Security Passport shows what you have done. The Career Analysis helps you see what you could do next.",
-    "home.passport.use.cv": "Build a CV",
-    "home.passport.use.share": "Share a profile",
-    "home.passport.use.jobs": "Apply for jobs",
-    "home.passport.use.develop": "Keep developing",
-    "home.passport.cta": "Explore your career path",
-
-    // The illustrations' own copy — see the Swedish block for why none of
-    // it may be inlined in the component.
-    "home.mock.subtitle": "Your security profile",
-    "home.mock.edit": "Edit profile",
-    "home.mock.role": "Security specialist",
-    "home.mock.location": "Stockholm, Sweden",
-    "home.mock.cat.experience": "Experience",
-    "home.mock.cat.education": "Education",
-    "home.mock.cat.certificates": "Certificates",
-    "home.mock.cat.merits": "Merits",
-    // "CV" is the same word in both languages and is the term the rest of
-    // the product already uses in English. It is the ONE key here that is
-    // legitimately identical, and public-homepage:check names it as such
-    // rather than letting the sv/en parity rule be weakened for everything.
-    "home.mock.cv.title": "CV",
-    "home.mock.cv.body": "Build a CV from your records",
-    "home.mock.share.title": "Shared profile",
-    "home.mock.share.body": "Share selected records",
-    "home.mock.jobs.title": "Jobs",
-    "home.mock.jobs.body": "Use your profile when you apply",
-    "home.mock.develop.title": "Development",
-    "home.mock.develop.body": "See possible next steps",
-    "home.passport.use.cv.body": "Build a professional CV from your records",
-    "home.passport.use.share.body": "Share selected records with employers",
-    "home.passport.use.jobs.body": "Use your Security Passport when you apply",
-    "home.passport.use.develop.body": "Explore your next step with the Career Analysis",
-
-    "home.employers.eyebrow": "For employers",
-    "home.employers.title": "Structured support for recruitment and competence development",
-    "home.employers.subtitle":
-      "See how structured assessments can support recruitment and the development of security personnel. You always make the decisions.",
-    "home.employers.cta": "See solutions for employers",
 
     "careers.title": "Security Careers",
     "careers.lead":
@@ -7122,25 +7160,52 @@ export const dictionaries = {
     "jobs.relevance.why.family":
       "This role sits within a career area that is close to your profile.",
 
-    "employers.title": "For Employers",
+    // /employers in English. See the Swedish block for the three rules that
+    // bind every sentence here: CQrityjob supports a decision and never
+    // makes one, BESKT is a governed method that never replaces statutory
+    // security vetting, and Career Discovery data never reaches an employer.
+    "employers.title": "The complete security recruitment process in one platform",
     "employers.lead":
-      "Recruit, assess and develop security personnel with structured decision support — built for the reality of the security industry.",
-    "employers.offer.recruit.title": "Recruitment",
-    "employers.offer.recruit.body":
-      "Publish jobs or get support with sourcing, headhunting and full recruitment assignments in the security industry.",
-    "employers.offer.assess.title": "Candidate assessment",
-    "employers.offer.assess.body":
-      "Structured, role-relevant assessments that produce comparable evidence for hiring decisions.",
-    "employers.offer.develop.title": "Existing-personnel competence testing",
-    "employers.offer.develop.body":
-      "Test in-house or contracted security personnel against defined role requirements, identify knowledge and competence gaps and plan targeted development.",
-    "employers.offer.verify.title": "Competence verification",
-    "employers.offer.verify.body":
-      "Measure competence against defined requirements and track development over time.",
+      "Publish security jobs, manage applications and use structured assessments and interview models for both ordinary security roles and security-protection-sensitive positions.",
+
+    "employers.path.title": "How the process connects",
+    "employers.path.continuation": "And then",
+    "employers.path.step1.title": "Publish the job",
+    "employers.path.step1.body":
+      "Describe the role, the requirements and the site, and publish the advert.",
+    "employers.path.step2.title": "Receive and organise applications",
+    "employers.path.step2.body":
+      "Applications arrive in one place, with the information each candidate chose to share.",
+    "employers.path.step3.title": "Choose the assessment and interview workflow",
+    "employers.path.step3.body":
+      "Pick the way of working the role needs — an ordinary security role or a security-protection-sensitive position.",
+    "employers.path.step4.title": "Review the evidence with the hiring team",
+    "employers.path.step4.body":
+      "Everyone on the team reads the same structured record about each candidate.",
+    "employers.path.step5.title": "Make and document the decision",
+    "employers.path.step5.body":
+      "People make the decision, and the decision is recorded together with what it rests on.",
+    "employers.path.step6.title": "Continue with development",
+    "employers.path.step6.body":
+      "After the hire, training and competence development continue in the same platform.",
+
+    "employers.examples.title": "Two ways to recruit",
+    "employers.example.ordinary.title": "Ordinary security recruitment",
+    "employers.example.ordinary.body":
+      "Publish the job, receive applications, use role-relevant assessments and a structured interview, and document the decision.",
+    "employers.example.protective.title": "Security-protection-relevant recruitment",
+    "employers.example.protective.body":
+      "The same process, with governed BESKT method support for preparation and the structured interview.",
+    "employers.example.protective.note":
+      "BESKT is method support. It produces no result, no score and no ranking, and it does not replace security vetting under the Protective Security Act.",
+    "employers.example.protective.availability":
+      "BESKT is under development and can be used only after review and an explicit approval for your organisation.",
+
     "employers.disclaimer":
-      "CQrityjob supports employer decisions. The employer always makes the final hiring or competence decision.",
-    "employers.cta.login": "Employer login",
-    "employers.cta.createAccount": "Create employer account",
+      "CQrityjob supports the employer's decision. Neither CQrityjob nor AI determines whether a candidate is suitable — the employer always makes and documents the final decision.",
+    "employers.cta.register": "Register company",
+    "employers.cta.how": "See how the platform works",
+    "employers.cta.login": "Log in to the employer portal",
 
     "assessment.eyebrow": "TWO SEPARATE SOLUTIONS",
     "assessment.title": "Career and Security Competence Assessments",

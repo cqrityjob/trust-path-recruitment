@@ -14,6 +14,7 @@ import { countMyAcademyWork } from "@/lib/security-competency/academy-learning.f
 import { countMyReviewQueue } from "@/lib/security-competency/academy-employer.functions";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { AccountMenu, type AccountIdentity } from "./AccountMenu";
 import { workspaceStatusLabelKey } from "./workspace-status";
 
@@ -29,6 +30,27 @@ const focusRing =
  *  focus. Matches what LanguageSwitcher's `tone="onDark"` already does. */
 const focusRingOnDark =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-primary";
+
+/** The minimum hit area for EVERY interactive control in the public chrome,
+ *  at every width.
+ *
+ *  ── WHY THIS IS NOW ONE CONSTANT, AND WHY THE EXCEPTION IS GONE ───────
+ *
+ *  This header used to carry a documented exception: the desktop bar's own
+ *  36px control height (h-9) and the two-letter language toggle were argued
+ *  to be acceptable because they are mouse targets on a >=1024px viewport
+ *  and clear WCAG 2.5.8 (AA, 24 x 24). The Platform Entry Specification does
+ *  not grant that exception -- §4.2 requires the six public destinations to
+ *  be reachable "with 44 pixel minimum targets", and §12 says flatly that
+ *  "all controls have visible focus, labels and minimum 44 pixel targets".
+ *  A 1024px viewport is also a touch viewport on most tablets, which is
+ *  precisely where the old reasoning failed.
+ *
+ *  So the exception is removed rather than re-argued, BOTH dimensions are
+ *  covered, and e2e/public-homepage.spec.ts measures header, main AND footer
+ *  at 320/375/390/768/1024/1440 against `getBoundingClientRect()` -- a real
+ *  box, not a padding trick a pseudo-element could fake. */
+const touchTarget = "min-h-[44px] min-w-[44px]";
 
 /** The compact menu sheet's own surface. It scrolls independently: signed in,
  *  with an organisation and the account block, the sheet is taller than a
@@ -118,20 +140,29 @@ export function SiteHeader() {
   // their nav on public pages, and their place in the footer. See
   // candidate-app-nav.ts for the four destinations that replace them.
   //
-  // ── FIVE, NOT SIX, AND THE PRODUCT COMES FIRST (2026-09-06) ─────────
+  // ── SIX, AND THE TWO INDIVIDUAL PRODUCTS COME FIRST (2026-09-13) ────
   //
-  // "Bedömningar" and "Kontakt" are gone. Neither route is deleted and
-  // neither redirects: /assessment is a product page that belongs behind
-  // /employers rather than beside it, and /contact carries a form that
-  // calls preventDefault and sends nothing -- a top-level invitation to a
-  // dead form is worse than no invitation.
+  // The public navigation used to be five, led by Security Passport alone,
+  // because the site's position was that the Passport was THE product and
+  // Career Discovery was a supporting tool reachable only from one quiet
+  // control inside a homepage section. That position is SUPERSEDED: the two
+  // are PEER acquisition entrances, so both are named here, adjacent, in
+  // the same style and at the same level. A product that exists only as a
+  // link inside somebody else's section is not a peer.
   //
-  // "Security Passport" is first, because it is the product. It points at
-  // the homepage's own Passport section rather than a page of its own:
-  // every Passport route lives under `_authenticated`, so there is no
-  // public destination to send a signed-out visitor to, and a nav item
-  // that lands on a login wall is a dead end wearing a product name. The
-  // day a public information page exists, this entry is what changes.
+  // "Bedömningar" and "Kontakt" stay out, unchanged and for the unchanged
+  // reasons: neither route is deleted and neither redirects, but /assessment
+  // belongs behind /employers rather than beside it, and /contact carries a
+  // form that calls preventDefault and sends nothing.
+  //
+  // "Security Passport" still points at the homepage's own Passport section
+  // rather than a page of its own: every Passport route lives under
+  // `_authenticated`, so there is no public destination to send a signed-out
+  // visitor to, and a nav item that lands on a login wall is a dead end
+  // wearing a product name. No second public Passport route is created for
+  // this change. "Career Discovery" needs no such treatment -- it HAS a
+  // canonical public route, and this is it (the /discovery alias redirects
+  // here and may never be linked in its place).
   //
   // `hash` rather than a path with "#" in it: the router does not parse
   // one out of `to`, and `exact` matching is required on "/" because a
@@ -139,6 +170,7 @@ export function SiteHeader() {
   // every route on the site.
   const nav = [
     { to: "/", hash: "passport", label: t("nav.passportPublic") },
+    { to: CANONICAL_ASSESSMENT_PATH, hash: undefined, label: t("nav.careerDiscovery") },
     { to: "/career-center", hash: undefined, label: t("nav.career_center") },
     { to: "/jobs", hash: undefined, label: t("nav.jobs") },
     { to: "/employers", hash: undefined, label: t("nav.employers") },
@@ -342,7 +374,7 @@ export function SiteHeader() {
           controls. Mobile keeps its own toggle inside the menu sheet, since
           this bar is desktop-only. */}
       <div className={cn("hidden bg-primary text-primary-foreground/85", !appMode && "lg:block")}>
-        <Container className="flex h-9 items-center justify-between text-[11px] font-medium tracking-wide">
+        <Container className="flex min-h-[44px] min-w-[44px] items-center justify-between gap-4 py-1 text-[11px] font-medium tracking-wide">
           <span className="inline-flex min-w-0 items-center gap-2">
             <ShieldCheck
               className="h-3 w-3 shrink-0 text-[color:var(--gold)]"
@@ -388,7 +420,8 @@ export function SiteHeader() {
                 to="/login"
                 search={{ redirect: "/employer" } as never}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-sm whitespace-nowrap text-primary-foreground/80 underline-offset-4 transition-colors hover:text-primary-foreground hover:underline",
+                  "inline-flex items-center justify-center gap-1.5 rounded-sm px-1 whitespace-nowrap text-primary-foreground/80 underline-offset-4 transition-colors hover:text-primary-foreground hover:underline",
+                  touchTarget,
                   focusRingOnDark,
                 )}
               >
@@ -416,6 +449,7 @@ export function SiteHeader() {
             to={appMode ? "/my-career" : "/"}
             className={cn(
               "flex shrink-0 items-center gap-2.5 rounded-md font-semibold tracking-tight text-foreground",
+              touchTarget,
               focusRing,
             )}
             style={{ fontFamily: "var(--font-display)" }}
@@ -442,9 +476,10 @@ export function SiteHeader() {
                   key={item.to}
                   to={item.to}
                   hash={item.hash}
-                  activeOptions={{ exact: item.to === "/" }}
+                  activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}
                   className={cn(
-                    "relative rounded-md px-2.5 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    "relative inline-flex items-center justify-center rounded-md px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    touchTarget,
                     focusRing,
                   )}
                   activeProps={{
@@ -458,16 +493,19 @@ export function SiteHeader() {
             </nav>
           )}
 
-          {/* One control height (h-9) across the whole cluster, so the
-              language toggle, the pills, the two entrances and the account
-              button share a single optical baseline instead of four. */}
+          {/* One control height across the whole cluster, so the pills, the
+              two entrances and the account button share a single optical
+              baseline instead of four. That height is now 44px rather than
+              36px -- see `touchTarget`. These two pills render in the PUBLIC
+              header for a signed-in visitor, so they are public-page
+              controls and the same minimum binds them. */}
           <div className="hidden shrink-0 items-center gap-2 lg:flex">
             {roleLinks.map((r) => (
               <Link
                 key={r.to}
                 to={r.to}
                 className={cn(
-                  "inline-flex h-9 items-center gap-1.5 rounded-md border border-accent/40 bg-secondary px-3 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/60",
+                  "inline-flex h-11 min-w-[44px] items-center justify-center gap-1.5 rounded-md border border-accent/40 bg-secondary px-3 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/60",
                   focusRing,
                 )}
                 activeProps={{ className: "border-accent bg-secondary" }}
@@ -490,7 +528,7 @@ export function SiteHeader() {
                   <Link
                     to="/my-career"
                     className={cn(
-                      "inline-flex h-9 items-center rounded-md border border-border bg-background px-3.5 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/40 hover:bg-secondary",
+                      "inline-flex h-11 min-w-[44px] items-center justify-center rounded-md border border-border bg-background px-3.5 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/40 hover:bg-secondary",
                       focusRing,
                     )}
                     activeProps={{ className: "border-accent/50 bg-secondary" }}
@@ -512,17 +550,22 @@ export function SiteHeader() {
               // reusing that word for an action is what made this header
               // unreadable in the first place, and that fix is preserved.
               //
-              // ── WHY THE SOLID BUTTON IS NO LONGER "SKAPA KONTO" ────────
+              // ── WHY THE SOLID BUTTON IS "SKAPA KONTO" AGAIN (2026-09-13)
               //
-              // Because "Skapa konto" describes a form, not a reason. The
-              // account exists to hold a Security Passport, so the button
-              // says so and carries the intent with it: /signup with a
-              // validated `?redirect=/passport`, which is the mechanism the
-              // product already uses to make an organisation invitation and
-              // an anonymous Career Discovery claim survive registration.
-              // It survives email/password, an emailed confirmation link and
-              // Google, and it lands on the Passport's own first-run screen
-              // rather than a dashboard.
+              // It said "Skapa ditt Security Passport" and carried
+              // `?redirect=/passport`, from the period when the Passport was
+              // the site's single product. Under the two-peer-entrance
+              // architecture that button is a chrome on EVERY page telling
+              // every visitor that one of the two individual products is the
+              // one that matters -- including the visitor standing on Career
+              // Discovery.
+              //
+              // So the chrome goes back to being product-neutral: one door
+              // in at /login, one way to create an account at /signup, and
+              // no product intent attached to either. The INTENT still
+              // exists and is still carried by `?redirect=` -- it now lives
+              // on the two homepage entry cards and on the employer strip,
+              // which is where somebody has actually chosen a product.
               //
               // Nothing is lost and nothing is new: /signup is untouched,
               // the one door stays /login, and there is still exactly one
@@ -531,7 +574,7 @@ export function SiteHeader() {
                 <Link
                   to="/login"
                   className={cn(
-                    "inline-flex h-9 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    "inline-flex h-11 min-w-[44px] items-center justify-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
                     focusRing,
                   )}
                 >
@@ -539,13 +582,12 @@ export function SiteHeader() {
                 </Link>
                 <Link
                   to="/signup"
-                  search={{ redirect: "/passport" } as never}
                   className={cn(
-                    "inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-sm transition-all duration-200 hover:bg-[color:var(--primary-hover)] hover:shadow-md motion-reduce:transition-none",
+                    "inline-flex h-11 min-w-[44px] items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-sm transition-all duration-200 hover:bg-[color:var(--primary-hover)] hover:shadow-md motion-reduce:transition-none",
                     focusRing,
                   )}
                 >
-                  {t("cta.passport")}
+                  {t("nav.createAccount")}
                 </Link>
               </>
             )}
@@ -600,12 +642,12 @@ export function SiteHeader() {
                   key={item.to}
                   to={item.to}
                   hash={item.hash}
-                  activeOptions={{ exact: item.to === "/" }}
+                  activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}
                   onClick={() => setOpen(false)}
                   className={cn(
                     // 44px, not the old ~36px row: these are the primary
                     // destinations on the viewport where they are hardest to hit.
-                    "flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground",
+                    "flex min-h-[44px] min-w-[44px] items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground",
                     focusRing,
                   )}
                   activeProps={{
@@ -623,7 +665,7 @@ export function SiteHeader() {
               key={r.to}
               to={r.to}
               onClick={() => setOpen(false)}
-              className="flex min-h-[44px] items-center justify-between gap-2 rounded-md border border-accent/40 bg-secondary px-2 py-2 text-sm font-semibold text-foreground"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-between gap-2 rounded-md border border-accent/40 bg-secondary px-2 py-2 text-sm font-semibold text-foreground"
               activeProps={{ className: "border-accent" }}
             >
               {r.label}
@@ -644,7 +686,7 @@ export function SiteHeader() {
                   to="/my-career"
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "inline-flex min-h-[44px] items-center rounded-md border border-border px-3.5 text-sm font-semibold text-foreground hover:bg-secondary",
+                    "inline-flex min-h-[44px] min-w-[44px] items-center rounded-md border border-border px-3.5 text-sm font-semibold text-foreground hover:bg-secondary",
                     focusRing,
                   )}
                 >
@@ -655,7 +697,7 @@ export function SiteHeader() {
                   to="/login"
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "inline-flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium text-foreground hover:bg-secondary",
+                    "inline-flex min-h-[44px] min-w-[44px] items-center rounded-md px-3 text-sm font-medium text-foreground hover:bg-secondary",
                     focusRing,
                   )}
                 >
@@ -663,28 +705,26 @@ export function SiteHeader() {
                 </Link>
               )}
             </div>
-            {/* Mobile carries the same single entrance as desktop, and the
-                same primary action -- the Career Analysis, not account
-                creation. There is no employer door here either: an
-                organisation context is reached from the account section
-                below, by name, and only for organisations the database
-                returned.
+            {/* Mobile carries the same single entrance as desktop and the
+                same product-neutral account action. There is no employer
+                door here either: an organisation context is reached from the
+                account section below, by name, and only for organisations
+                the database returned.
 
-                It carries the same `?redirect=/passport` intent, so the
-                account somebody creates on a phone lands where the one they
-                create on a laptop lands. This sheet grows no control the
-                desktop bar does not have. */}
+                Same destination and same label as the desktop bar, so the
+                account somebody creates on a phone is the account they would
+                have created on a laptop. This sheet grows no control the
+                desktop bar does not have, and drops none it does. */}
             {signedIn !== true && (
               <Link
                 to="/signup"
-                search={{ redirect: "/passport" } as never}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex min-h-[44px] items-center justify-center rounded-md bg-primary px-4 text-center text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)] motion-reduce:transition-none",
+                  "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md bg-primary px-4 text-center text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)] motion-reduce:transition-none",
                   focusRing,
                 )}
               >
-                {t("cta.passport")}
+                {t("nav.createAccount")}
               </Link>
             )}
             {/* ── THE EMPLOYER DOOR, AT THIS WIDTH ────────────────────────
@@ -706,7 +746,7 @@ export function SiteHeader() {
                 search={{ redirect: "/employer" } as never}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex min-h-[44px] items-center justify-center gap-2 rounded-md border border-border px-4 text-center text-sm font-medium text-foreground transition-colors hover:bg-secondary",
+                  "flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border border-border px-4 text-center text-sm font-medium text-foreground transition-colors hover:bg-secondary",
                   focusRing,
                 )}
               >
@@ -742,7 +782,7 @@ export function SiteHeader() {
                 to="/my-career"
                 onClick={() => setOpen(false)}
                 data-workspace="personal"
-                className="mt-1 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                className="mt-1 flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
                 <UserRound className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate">{t("account.context.personal")}</span>
@@ -757,7 +797,7 @@ export function SiteHeader() {
                   {myWorkspaces.map((workspace) => {
                     const statusKey = workspaceStatusLabelKey(workspace.employerStatus);
                     const rowClass =
-                      "mt-1 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted";
+                      "mt-1 flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted";
                     const inner = (
                       <>
                         <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -804,7 +844,7 @@ export function SiteHeader() {
                   to="/reviews"
                   onClick={() => setOpen(false)}
                   data-workspace="reviewer"
-                  className="mt-1 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                  className="mt-1 flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
                 >
                   <Gavel className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span className="min-w-0 flex-1 truncate">
@@ -825,7 +865,7 @@ export function SiteHeader() {
               <Link
                 to="/my-career/profile"
                 onClick={() => setOpen(false)}
-                className="mt-2 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                className="mt-2 flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
                 <UserPen className="h-4 w-4" aria-hidden="true" />
                 {t("account.settings")}
