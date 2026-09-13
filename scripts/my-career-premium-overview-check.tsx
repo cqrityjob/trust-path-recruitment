@@ -1201,7 +1201,8 @@ group("T16 · the lifecycle definition is shared; the reads are not, and that is
   );
   // The mechanism moved into a shared component (PR #196) because a second
   // Passport route needs it — the workspace links to
-  // `/passport/information#sp-education`, and that page loads its sections
+  // `/passport/information#sp-credentials` (it was `#sp-education` until the
+  // general education editor moved to the profile), and that page loads its sections
   // after the browser has given up on the fragment too. The CONTRACT is
   // unchanged and is now asserted where it lives, plus the fact that the
   // index still renders it.
