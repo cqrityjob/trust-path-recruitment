@@ -31,11 +31,7 @@ export type BesktAnswerType =
   | "acknowledgement";
 
 export type BesktLifecycleState =
-  | "assigned"
-  | "notice_acknowledged"
-  | "in_progress"
-  | "submitted"
-  | "cancelled";
+  "assigned" | "notice_acknowledged" | "in_progress" | "submitted" | "cancelled";
 
 export interface BesktAssignableMethod {
   readonly methodVersionId: string;

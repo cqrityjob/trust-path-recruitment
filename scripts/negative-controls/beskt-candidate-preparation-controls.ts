@@ -861,7 +861,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the confirmation sends the notice-level hash of whichever locale was built first instead of the one on screen — the exact defect that made the earlier 'exact notice bytes' claim false",
     file: PANEL,
-    find: "          noticeContentHash: notice.noticeContentHash,\n          locale: notice.locale as \"sv-SE\" | \"en-GB\",",
+    find: '          noticeContentHash: notice.noticeContentHash,\n          locale: notice.locale as "sv-SE" | "en-GB",',
     replace:
       '          noticeContentHash: data.notice.byLocale[data.notice.locales[0]].noticeContentHash,\n          locale: data.notice.locales[0] as "sv-SE" | "en-GB",',
     guard: GUARD,
