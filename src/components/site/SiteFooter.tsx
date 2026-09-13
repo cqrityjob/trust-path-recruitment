@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
+import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { useT } from "@/i18n/context";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -14,13 +15,21 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
  *  What is here now is ONE row of links, and every one of them goes
  *  somewhere that works:
  *
- *    Security Passport · Karriärvägar · Jobb · För arbetsgivare · Om oss ·
- *    Betafeedback
+ *    Security Passport · Career Discovery · Karriärvägar · Jobb ·
+ *    För arbetsgivare · Om oss · Betafeedback
  *
  *  "Security Passport" is the homepage's own Passport section, not a page
  *  of its own: every Passport route is authenticated, and a footer link
  *  that lands a signed-out reader on a login form is a dead end wearing a
  *  product name.
+ *
+ *  ── CAREER DISCOVERY IS HERE FOR THE SAME REASON IT IS IN THE HEADER ─
+ *
+ *  The two individual products are PEERS (2026-09-13). A footer that named
+ *  one of them and not the other would restate, at the bottom of every
+ *  page, the single-product position the site has left behind. Career
+ *  Discovery needs no section trick: it has a canonical public route and
+ *  this links straight to it.
  *
  *  ── WHAT IS DELIBERATELY NOT A LINK ──────────────────────────────────
  *
@@ -41,11 +50,13 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   const links = [
-    // Same first entry as the header, for the same reason: the Passport has
-    // no public page of its own, so the product's own name points at the
+    // The same six destinations as the header, in the same order, plus beta
+    // feedback. Same first entry for the same reason: the Passport has no
+    // public page of its own, so the product's own name points at the
     // section of the homepage that explains it. `hash` rather than "#" in
     // `to` -- the router does not parse one out of the path.
     { to: "/", hash: "passport", label: t("nav.passportPublic") },
+    { to: CANONICAL_ASSESSMENT_PATH, hash: undefined, label: t("nav.careerDiscovery") },
     { to: "/career-center", hash: undefined, label: t("nav.career_center") },
     { to: "/jobs", hash: undefined, label: t("nav.jobs") },
     { to: "/employers", hash: undefined, label: t("nav.employers") },

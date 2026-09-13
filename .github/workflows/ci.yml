@@ -1116,25 +1116,47 @@ jobs:
       - name: Admin employer status guard check
         run: bun run admin-employer-status-guard:check
 
-      # ── PUBLIC HOMEPAGE ─────────────────────────────────────────────────
+      # ── THE PUBLIC ENTRY ARCHITECTURE ───────────────────────────────────
       #
       # The homepage is the one page most people see and the one nobody owns,
-      # which is how it grew to eight sections, 437 words and 5,511px saying
-      # the same few things repeatedly. This guard holds its shape: four
-      # sections, one h1, three h2, ONE visually primary action, the copy
-      # budget, sv/en parity, and — the part that is not cosmetic — that the
-      # Passport trust levels stay named and separated, that only
-      # source-confirmed reads as confirmed, and that nothing on a public
-      # page claims a credential is recognised anywhere or replaces a
-      # licence, a permit or a background check.
+      # which is how it once grew to eight sections saying the same few
+      # things repeatedly. Since 2026-09-13 it also carries the owner-approved
+      # entry architecture, and this guard is what holds it: four sections,
+      # one h1, TWO PEER individual entrances that are structurally equal
+      # (one card component, two solid actions), the employer strip behind
+      # its release flag, the connected lifecycle linking only canonical
+      # routes, the three Passport markets agreeing with the governed
+      # overview, sv/en parity, and — the part that is not cosmetic — the
+      # non-negotiable data boundaries as strings a reader could meet: no
+      # score, no ranking, no suitability, credibility, deception,
+      # personality or protected-trait inference, no AI decision, and no
+      # claim that the Passport replaces a licence, security vetting, the
+      # right to work or an employer's own checks.
       #
-      # The layout half (height, overflow at 320-1440, focus rings, target
-      # sizes, and every CTA clicked through to a destination that renders)
-      # lives in e2e/public-homepage.spec.ts, which needs a browser and a dev
-      # server and so runs locally rather than here -- the same arrangement
-      # as e2e/my-career-home.spec.ts.
+      # The layout half (overflow at 320/375/390/768/1024/1440, focus rings,
+      # target sizes, the two cards measured as the same box on screen, and
+      # every CTA clicked through to a destination that renders) lives in
+      # e2e/public-homepage.spec.ts, which needs a browser and a dev server
+      # and so runs locally rather than here -- the same arrangement as
+      # e2e/my-career-home.spec.ts.
       - name: Public homepage check
         run: bun run public-homepage:check
+
+      # /employers is where an employer decides whether CQrityjob is for
+      # them, and it is the ONE public page that names BESKT -- a governed
+      # method published under `synthetic_internal_only` and assignable only
+      # under an owner-issued, time-boxed pilot grant. A page that presented
+      # it as an available feature, or let "structured interview support"
+      # drift into "replaces säkerhetsprövning", would be the most expensive
+      # over-claim on the site. This guard holds the whole page: the approved
+      # copy, the three actions through the one door, the release flag
+      # failing closed, the six-step path ending in a documented HUMAN
+      # decision, both BESKT boundary sentences, and that candidate-owned
+      # Career Discovery data is never offered to an employer.
+      #
+      # Its layout half is e2e/employer-landing.spec.ts.
+      - name: Employer landing page check
+        run: bun run employer-landing:check
 
 
       - name: Production build

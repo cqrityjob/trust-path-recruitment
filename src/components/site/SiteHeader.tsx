@@ -14,6 +14,7 @@ import { countMyAcademyWork } from "@/lib/security-competency/academy-learning.f
 import { countMyReviewQueue } from "@/lib/security-competency/academy-employer.functions";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { AccountMenu, type AccountIdentity } from "./AccountMenu";
 import { workspaceStatusLabelKey } from "./workspace-status";
 
@@ -118,20 +119,29 @@ export function SiteHeader() {
   // their nav on public pages, and their place in the footer. See
   // candidate-app-nav.ts for the four destinations that replace them.
   //
-  // ── FIVE, NOT SIX, AND THE PRODUCT COMES FIRST (2026-09-06) ─────────
+  // ── SIX, AND THE TWO INDIVIDUAL PRODUCTS COME FIRST (2026-09-13) ────
   //
-  // "Bedömningar" and "Kontakt" are gone. Neither route is deleted and
-  // neither redirects: /assessment is a product page that belongs behind
-  // /employers rather than beside it, and /contact carries a form that
-  // calls preventDefault and sends nothing -- a top-level invitation to a
-  // dead form is worse than no invitation.
+  // The public navigation used to be five, led by Security Passport alone,
+  // because the site's position was that the Passport was THE product and
+  // Career Discovery was a supporting tool reachable only from one quiet
+  // control inside a homepage section. That position is SUPERSEDED: the two
+  // are PEER acquisition entrances, so both are named here, adjacent, in
+  // the same style and at the same level. A product that exists only as a
+  // link inside somebody else's section is not a peer.
   //
-  // "Security Passport" is first, because it is the product. It points at
-  // the homepage's own Passport section rather than a page of its own:
-  // every Passport route lives under `_authenticated`, so there is no
-  // public destination to send a signed-out visitor to, and a nav item
-  // that lands on a login wall is a dead end wearing a product name. The
-  // day a public information page exists, this entry is what changes.
+  // "Bedömningar" and "Kontakt" stay out, unchanged and for the unchanged
+  // reasons: neither route is deleted and neither redirects, but /assessment
+  // belongs behind /employers rather than beside it, and /contact carries a
+  // form that calls preventDefault and sends nothing.
+  //
+  // "Security Passport" still points at the homepage's own Passport section
+  // rather than a page of its own: every Passport route lives under
+  // `_authenticated`, so there is no public destination to send a signed-out
+  // visitor to, and a nav item that lands on a login wall is a dead end
+  // wearing a product name. No second public Passport route is created for
+  // this change. "Career Discovery" needs no such treatment -- it HAS a
+  // canonical public route, and this is it (the /discovery alias redirects
+  // here and may never be linked in its place).
   //
   // `hash` rather than a path with "#" in it: the router does not parse
   // one out of `to`, and `exact` matching is required on "/" because a
@@ -139,6 +149,7 @@ export function SiteHeader() {
   // every route on the site.
   const nav = [
     { to: "/", hash: "passport", label: t("nav.passportPublic") },
+    { to: CANONICAL_ASSESSMENT_PATH, hash: undefined, label: t("nav.careerDiscovery") },
     { to: "/career-center", hash: undefined, label: t("nav.career_center") },
     { to: "/jobs", hash: undefined, label: t("nav.jobs") },
     { to: "/employers", hash: undefined, label: t("nav.employers") },
@@ -512,17 +523,22 @@ export function SiteHeader() {
               // reusing that word for an action is what made this header
               // unreadable in the first place, and that fix is preserved.
               //
-              // ── WHY THE SOLID BUTTON IS NO LONGER "SKAPA KONTO" ────────
+              // ── WHY THE SOLID BUTTON IS "SKAPA KONTO" AGAIN (2026-09-13)
               //
-              // Because "Skapa konto" describes a form, not a reason. The
-              // account exists to hold a Security Passport, so the button
-              // says so and carries the intent with it: /signup with a
-              // validated `?redirect=/passport`, which is the mechanism the
-              // product already uses to make an organisation invitation and
-              // an anonymous Career Discovery claim survive registration.
-              // It survives email/password, an emailed confirmation link and
-              // Google, and it lands on the Passport's own first-run screen
-              // rather than a dashboard.
+              // It said "Skapa ditt Security Passport" and carried
+              // `?redirect=/passport`, from the period when the Passport was
+              // the site's single product. Under the two-peer-entrance
+              // architecture that button is a chrome on EVERY page telling
+              // every visitor that one of the two individual products is the
+              // one that matters -- including the visitor standing on Career
+              // Discovery.
+              //
+              // So the chrome goes back to being product-neutral: one door
+              // in at /login, one way to create an account at /signup, and
+              // no product intent attached to either. The INTENT still
+              // exists and is still carried by `?redirect=` -- it now lives
+              // on the two homepage entry cards and on the employer strip,
+              // which is where somebody has actually chosen a product.
               //
               // Nothing is lost and nothing is new: /signup is untouched,
               // the one door stays /login, and there is still exactly one
@@ -539,13 +555,12 @@ export function SiteHeader() {
                 </Link>
                 <Link
                   to="/signup"
-                  search={{ redirect: "/passport" } as never}
                   className={cn(
                     "inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-sm transition-all duration-200 hover:bg-[color:var(--primary-hover)] hover:shadow-md motion-reduce:transition-none",
                     focusRing,
                   )}
                 >
-                  {t("cta.passport")}
+                  {t("nav.createAccount")}
                 </Link>
               </>
             )}
@@ -663,28 +678,26 @@ export function SiteHeader() {
                 </Link>
               )}
             </div>
-            {/* Mobile carries the same single entrance as desktop, and the
-                same primary action -- the Career Analysis, not account
-                creation. There is no employer door here either: an
-                organisation context is reached from the account section
-                below, by name, and only for organisations the database
-                returned.
+            {/* Mobile carries the same single entrance as desktop and the
+                same product-neutral account action. There is no employer
+                door here either: an organisation context is reached from the
+                account section below, by name, and only for organisations
+                the database returned.
 
-                It carries the same `?redirect=/passport` intent, so the
-                account somebody creates on a phone lands where the one they
-                create on a laptop lands. This sheet grows no control the
-                desktop bar does not have. */}
+                Same destination and same label as the desktop bar, so the
+                account somebody creates on a phone is the account they would
+                have created on a laptop. This sheet grows no control the
+                desktop bar does not have, and drops none it does. */}
             {signedIn !== true && (
               <Link
                 to="/signup"
-                search={{ redirect: "/passport" } as never}
                 onClick={() => setOpen(false)}
                 className={cn(
                   "flex min-h-[44px] items-center justify-center rounded-md bg-primary px-4 text-center text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)] motion-reduce:transition-none",
                   focusRing,
                 )}
               >
-                {t("cta.passport")}
+                {t("nav.createAccount")}
               </Link>
             )}
             {/* ── THE EMPLOYER DOOR, AT THIS WIDTH ────────────────────────

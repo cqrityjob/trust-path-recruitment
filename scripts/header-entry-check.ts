@@ -165,55 +165,147 @@ expect(
 );
 
 // -----------------------------------------------------------------------
-// 4. ONE door in, ONE primary action, and account creation still reachable.
+// 3b. The approved SIX public destinations, in order, from ONE array,
+//     rendered at BOTH viewports (2026-09-13).
+//
+//     Security Passport · Career Discovery · Career Center · Jobs ·
+//     For Employers · About
+//
+//     One array is the load-bearing half. A link that exists at 1440 and
+//     not at 375 is the specific bug this shape makes impossible, and this
+//     header has had it before: an account entry existed in the desktop
+//     dropdown and nowhere on mobile until it was patched in by hand.
+// -----------------------------------------------------------------------
+{
+  const navBlock = header.slice(header.indexOf("const nav = ["));
+  const nav = navBlock.slice(0, navBlock.indexOf("] as const;"));
+  const entries = [...nav.matchAll(/to:\s*(?:"([^"]+)"|(CANONICAL_ASSESSMENT_PATH))/g)].map(
+    (m) => m[1] ?? "CANONICAL_ASSESSMENT_PATH",
+  );
+  const EXPECTED = [
+    "/",
+    "CANONICAL_ASSESSMENT_PATH",
+    "/career-center",
+    "/jobs",
+    "/employers",
+    "/about",
+  ];
+  expect(
+    JSON.stringify(entries) === JSON.stringify(EXPECTED),
+    `the public nav must be exactly ${EXPECTED.join(" · ")} in that order (found ${entries.join(" · ")})`,
+  );
+  const labels = [...nav.matchAll(/label: t\("([^"]+)"\)/g)].map((m) => m[1]);
+  expect(
+    JSON.stringify(labels) ===
+      JSON.stringify([
+        "nav.passportPublic",
+        "nav.careerDiscovery",
+        "nav.career_center",
+        "nav.jobs",
+        "nav.employers",
+        "nav.about",
+      ]),
+    `the six nav labels must be the approved keys, in order (found ${labels.join(" · ")})`,
+  );
+  // Both viewports render from THIS array and from no second list.
+  const renders = header.split("{nav.map(").length - 1;
+  expect(
+    renders === 2,
+    `the desktop bar and the compact menu must each render from \`nav\` (found ${renders} nav.map call sites)`,
+  );
+  expect(
+    (header.match(/const nav = \[/g) ?? []).length === 1,
+    "there must be exactly one public nav definition -- a second array is how the two viewports drift apart",
+  );
+}
+
+// -----------------------------------------------------------------------
+// 4. ONE door in, ONE account action, and account creation still reachable.
 // -----------------------------------------------------------------------
 expect(
   header.includes('to="/login"') && header.includes('{t("nav.signin")}'),
   'SiteHeader must offer "nav.signin" pointing at /login (the one public sign-in entrance)',
 );
 
-// The single solid action in the header row: create a Security Passport.
-// It is the same destination and the same label the homepage's one primary
-// CTA uses, so the chrome and the page cannot ask for two different things.
+// ── THE SOLID ACTION IS PRODUCT-NEUTRAL AGAIN (2026-09-13) ───────────
+//
+// It said "Skapa ditt Security Passport" and carried `?redirect=/passport`,
+// from the period when the site had a single individual product. Under the
+// two-peer-entrance architecture that button is a chrome on EVERY page
+// telling every visitor which of the two individual products matters --
+// including the visitor standing on Career Discovery. So the chrome carries
+// one Login and one Create account, and NEITHER names a product.
+//
+// The intent mechanism is not weakened and is not gone: `?redirect=` still
+// carries it, from the two homepage entry cards and the employer strip,
+// where somebody has actually chosen a product. That half is asserted by
+// scripts/public-homepage-check.tsx, against the RENDERED page.
 expect(
-  header.includes('to="/signup"') && header.includes('{t("cta.passport")}'),
-  'SiteHeader must offer "cta.passport" pointing at /signup -- the one primary action',
+  header.includes('to="/signup"') && header.includes('{t("nav.createAccount")}'),
+  'SiteHeader must offer "nav.createAccount" pointing at /signup -- the one account-creation action',
 );
 expect(
   existsSync(path.join(root, "src/routes/signup.tsx")),
   "/signup must remain the one account-creation route",
 );
 for (const [lang, expected] of [
-  ["sv", "Skapa ditt Security Passport"],
-  ["en", "Create your Security Passport"],
+  ["sv", "Skapa konto"],
+  ["en", "Create account"],
 ] as const) {
-  const actual = (dictionaries[lang] as Record<string, string>)["cta.passport"];
+  const actual = (dictionaries[lang] as Record<string, string>)["nav.createAccount"];
   expect(
     actual === expected,
-    `${lang} "cta.passport" must read "${expected}" (found ${actual === undefined ? "no entry" : `"${actual}"`})`,
+    `${lang} "nav.createAccount" must read "${expected}" (found ${actual === undefined ? "no entry" : `"${actual}"`})`,
   );
 }
 
-// ── THE INTENT SURVIVES REGISTRATION ─────────────────────────────────
+// ── DESKTOP AND THE COMPACT MENU CARRY THE SAME ONE ──────────────────
 //
-// A button that says "create your Security Passport" and lands somebody on
-// a generic dashboard has lied to them. The intent rides through signup as
-// `?redirect=/passport`, and BOTH the desktop bar and the compact menu must
-// carry it -- a sheet that dropped it would make the promise depend on the
-// width of the reader's screen.
-const PASSPORT_INTENT = '{ redirect: "/passport" } as never';
-const intentUses = header.split(PASSPORT_INTENT).length - 1;
+// Exactly two uses: the desktop bar and the compact sheet. A sheet that
+// dropped it would make account creation depend on the width of the
+// reader's screen; a third would be a second way in.
+const accountActionUses = header.split('{t("nav.createAccount")}').length - 1;
 expect(
-  intentUses === 2,
-  `the header's primary action must carry search=${PASSPORT_INTENT} on BOTH the desktop bar and the compact menu (found ${intentUses})`,
+  accountActionUses === 2,
+  `the header's account action must appear exactly twice -- desktop bar and compact menu (found ${accountActionUses})`,
 );
+
+// ── AND IT CARRIES NO PRODUCT INTENT ─────────────────────────────────
+//
+// The specific regression: re-attaching `?redirect=/passport` (or any other
+// product landing) to the chrome's account button, which is how one of two
+// peer products becomes the site's default again without anybody deciding
+// that it should.
+//
+// Scoped to the ACCOUNT-CREATION control rather than to the whole file:
+// `{ redirect: "/employer" } as never` legitimately appears in section 9,
+// on the gated "Företagsinloggning" door, which is a sign-IN for an
+// existing customer and not an account action.
+{
+  const signupLinks = [...header.matchAll(/<Link\s+to="\/signup"[\s\S]{0,800}?<\/Link>/g)].map(
+    (m) => m[0],
+  );
+  expect(
+    signupLinks.length === 2,
+    `SiteHeader must hold exactly two /signup controls -- desktop bar and compact menu (found ${signupLinks.length})`,
+  );
+  for (const link of signupLinks) {
+    expect(
+      !link.includes("search="),
+      "SiteHeader's account action must carry no search= at all -- the chrome is product-neutral, and a product intent belongs to the surface where a product was chosen",
+    );
+  }
+}
+expect(
+  !header.includes('{ redirect: "/passport" } as never'),
+  "SiteHeader must not re-attach the Passport intent anywhere -- that is how one of two peer products becomes the site default again",
+);
+// The Passport landing is still a real, non-auth route, because the
+// homepage hands it to the same one door.
 expect(
   existsSync(path.join(root, "src/routes/_authenticated.passport.index.tsx")),
-  "the primary action's landing (/passport) must be backed by the existing Passport route",
+  "the homepage's Passport intent must be backed by the existing Passport route",
 );
-// And it must be a landing the redirect allow-list actually permits: an
-// auth surface here would be a loop, and safeReturnPath would silently
-// discard it, sending everybody to the default destination instead.
 const { AUTH_SURFACES } = await import("../src/lib/auth/safe-redirect");
 expect(
   !AUTH_SURFACES.includes("/passport"),
@@ -240,11 +332,40 @@ for (const lang of ["sv", "en"] as const) {
   );
 }
 
-// The Career Analysis is NOT the header's action. It is a supporting tool,
-// offered once, from the homepage's third section.
+// ── CAREER DISCOVERY IS A NAV DESTINATION, NOT AN ACTION ─────────────
+//
+// It used to be forbidden from the header entirely, because it was "a
+// supporting tool, offered once, from the homepage's third section". It is
+// now a PEER product and belongs in the primary nav -- and only there.
+// The rule that replaces the old one is the same rule "Arbetsgivare" has
+// had since section 3: a product name in the nav is information, and an
+// action button may not wear it.
 expect(
-  !header.includes('to="/security-career-assessment"'),
-  "the Career Analysis must not be a header action -- Security Passport is the product, and the analysis is offered from the homepage's third section",
+  header.includes('t("nav.careerDiscovery")'),
+  'SiteHeader must offer "nav.careerDiscovery" in the primary nav -- Career Discovery is a peer entrance, not a link inside somebody else\'s section',
+);
+{
+  const uses = header.split('t("nav.careerDiscovery")').length - 1;
+  expect(
+    uses === 1,
+    `"nav.careerDiscovery" must be used exactly once in SiteHeader -- the primary-nav entry (found ${uses})`,
+  );
+}
+// It reaches the CANONICAL route through the module that owns the answer.
+// A literal path here is how the temporary /discovery alias becomes a
+// second competing product surface.
+expect(
+  header.includes('import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";') &&
+    header.includes("{ to: CANONICAL_ASSESSMENT_PATH,"),
+  "the Career Discovery nav entry must use CANONICAL_ASSESSMENT_PATH, not a literal path",
+);
+expect(
+  !header.includes('to="/security-career-assessment"') && !header.includes('to="/discovery"'),
+  "Career Discovery must not be a header ACTION button, and must never be linked through its alias",
+);
+expect(
+  existsSync(path.join(root, "src/routes/security-career-assessment.tsx")),
+  "the Career Discovery nav entry must be backed by the existing canonical route",
 );
 
 // The superseded doors must not come back into the chrome. They still EXIST
@@ -340,8 +461,8 @@ expect(mobileMenu.length > 0, "the mobile menu block must be present in SiteHead
 expect(mobileMenu.includes('to="/login"'), "the mobile menu must offer the one door at /login");
 // The same primary action, not a desktop-only fix.
 expect(
-  mobileMenu.includes('to="/signup"') && mobileMenu.includes('{t("cta.passport")}'),
-  "the mobile menu must offer the same primary action as the desktop bar",
+  mobileMenu.includes('to="/signup"') && mobileMenu.includes('{t("nav.createAccount")}'),
+  "the mobile menu must offer the same account action as the desktop bar",
 );
 
 // -----------------------------------------------------------------------
@@ -393,10 +514,20 @@ const EMPLOYER_GATE = "signedIn !== true && employerPortalEnabled() && (";
 // ── 9a. Both languages name it, and name it something of its own ──────
 const employerCopy = {
   "nav.employerLogin": { sv: "Företagsinloggning", en: "Employer login" },
-  "employers.cta.login": { sv: "Logga in för företag", en: "Employer login" },
-  "employers.cta.createAccount": {
-    sv: "Skapa företagskonto",
-    en: "Create employer account",
+  // /employers' own three actions. "employers.cta.createAccount" was
+  // retired on 2026-09-13 in favour of "employers.cta.register", which is
+  // the owner-approved label and the same words the homepage's employer
+  // strip uses -- the strip and the page may not ask for two different
+  // things. "employers.cta.how" is the secondary, same-page action that
+  // replaced the dead contact form as the second thing on this page.
+  "employers.cta.register": { sv: "Registrera företag", en: "Register company" },
+  "employers.cta.how": {
+    sv: "Se hur plattformen fungerar",
+    en: "See how the platform works",
+  },
+  "employers.cta.login": {
+    sv: "Logga in i företagsportalen",
+    en: "Log in to the employer portal",
   },
 } as const;
 
@@ -574,47 +705,75 @@ expect(
   "intent must not survive the legacy employer door -- it selected a form, and was never a permission",
 );
 
-// ── 9g. /employers offers both actions, and contact is not the front door ──
+// ── 9g. /employers offers the three actions, in the settled order ─────
+//
+// Register (primary) · See how the platform works (same-page) · Log in to
+// the employer portal (the existing customer). Both auth actions go through
+// the ONE door carrying /employer as a validated return path.
+//
+// The dead contact form is no longer on this page at all. /contact calls
+// preventDefault and sends nothing -- it says so in its own preview notice
+// -- and the reason it survived here as a demoted text link was that the
+// page had nothing else to offer somebody who wanted to talk first. It now
+// leads with a real entrance and explains the whole process, so an
+// invitation into a form that discards what you type has no remaining job.
+// The route is untouched and still reachable by URL.
 const employersPage = read("src/routes/employers.tsx");
 expect(
-  employersPage.includes('<PrimaryLink to="/login" search={{ redirect: "/employer" }}>') &&
-    employersPage.includes('{t("employers.cta.login")}'),
-  '/employers must offer "employers.cta.login" pointing at /login with the /employer return path',
+  employersPage.includes('<PrimaryLink to="/signup" search={{ redirect: "/employer" }}>') &&
+    employersPage.includes('{t("employers.cta.register")}'),
+  '/employers must offer "employers.cta.register" pointing at /signup with the /employer return path',
 );
 expect(
   employersPage.includes(
-    '<PrimaryLink to="/signup" search={{ redirect: "/employer" }} variant="ghost">',
-  ) && employersPage.includes('{t("employers.cta.createAccount")}'),
-  '/employers must offer "employers.cta.createAccount" pointing at /signup with the /employer return path',
+    '<PrimaryLink to="/login" search={{ redirect: "/employer" }} variant="ghost">',
+  ) && employersPage.includes('{t("employers.cta.login")}'),
+  '/employers must offer "employers.cta.login" pointing at /login with the /employer return path',
+);
+expect(
+  employersPage.includes('{t("employers.cta.how")}') &&
+    employersPage.includes('href="#how-it-works"') &&
+    employersPage.includes('id="how-it-works"'),
+  '/employers must offer "employers.cta.how" as a same-page anchor whose target exists -- a secondary action must not open a second journey',
 );
 expect(
   !/to="\/employer\/(login|register)"/.test(employersPage),
   "/employers must not send anyone through a compatibility redirect -- the one door is /login",
 );
-// The dead contact form is not the way in. /contact calls preventDefault
-// and sends nothing (it says so in its own preview notice), so it may be
-// present, but it may not come first and it may not be a primary action
-// while the two real entrances are on the page.
 {
+  const register = employersPage.indexOf('{t("employers.cta.register")}');
   const login = employersPage.indexOf('{t("employers.cta.login")}');
-  const talk = employersPage.indexOf('{t("cta.talk")}');
   expect(
-    login !== -1 && talk !== -1 && login < talk,
-    "/employers must lead with the employer entrance, not with the contact form",
-  );
-  const gated = employersPage.indexOf("employerPortalEnabled() ? (");
-  const fallback = employersPage.indexOf(") : (");
-  expect(
-    gated !== -1 &&
-      fallback > gated &&
-      !employersPage.slice(gated, fallback).includes('<PrimaryLink to="/contact">'),
-    "/contact must not be a primary action on /employers while the employer entrances are offered",
+    register !== -1 && login !== -1 && register < login,
+    "/employers must lead with registration -- the existing customer's way back in comes after it",
   );
 }
 expect(
-  existsSync(path.join(root, "src/routes/contact.tsx")),
-  "/employers still links /contact, so the route must exist",
+  !employersPage.includes('to="/contact"') && !employersPage.includes('{t("cta.talk")}'),
+  "/employers must not invite anybody into the contact form -- it calls preventDefault and sends nothing",
 );
+// ── 9h. The release flag still fails closed on this page ──────────────
+//
+// With the portal disabled there is NO registration and NO login action:
+// the page explains the platform and offers its own same-page anchor. A
+// disabled product may not be presented as an available one.
+{
+  const gated = employersPage.indexOf("portalOpen ? (");
+  const fallback = employersPage.indexOf(") : (");
+  expect(
+    gated !== -1 && fallback > gated,
+    "/employers must gate its entrances on employerPortalEnabled()",
+  );
+  expect(
+    employersPage.includes("const portalOpen = employerPortalEnabled();"),
+    "/employers must read the release flag once, at render",
+  );
+  const closed = employersPage.slice(fallback, employersPage.indexOf(")}", fallback));
+  expect(
+    !closed.includes('to="/signup"') && !closed.includes('to="/login"'),
+    "/employers must offer no entrance at all while the employer portal is disabled",
+  );
+}
 
 // -----------------------------------------------------------------------
 // Report
