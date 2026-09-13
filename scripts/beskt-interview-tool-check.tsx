@@ -390,15 +390,31 @@ ck(
   "BESKT_TOOL_INDEPENDENCE: the route must pass null — not [] — while positions are withheld",
 );
 
+/**
+ * EVERY declaration of an others list must admit the withheld case.
+ *
+ * The first version of this looked for one nullable declaration anywhere in
+ * the file and was satisfied by the inner component while the outer one had
+ * quietly lost its `| null`. The planted control caught that, so the check is
+ * now over all of them: a single non-nullable declaration is a place the
+ * withholding cannot be expressed.
+ */
+function everyOthersDeclarationIsNullable(src: string): boolean {
+  const decls = [...src.matchAll(/\bothers:\s*readonly\s+BesktOtherPosition\[\][^;\n]*/g)].map(
+    (m) => m[0],
+  );
+  return decls.length > 0 && decls.every((d) => /\|\s*null/.test(d));
+}
+
 ck(
-  "T2.2 the position section accepts others as nullable",
-  /others:\s*readonly\s+BesktOtherPosition\[\]\s*\|\s*null/.test(positionCode),
+  "T2.2 every others declaration in the position section admits the withheld case",
+  everyOthersDeclarationIsNullable(positionCode),
   "BESKT_TOOL_INDEPENDENCE_TYPE: the position section must take a nullable others list",
 );
 
 ck(
-  "T2.3 the panel section accepts others as nullable",
-  /others:\s*readonly\s+BesktOtherPosition\[\]\s*\|\s*null/.test(panelCode),
+  "T2.3 every others declaration in the panel section admits the withheld case",
+  everyOthersDeclarationIsNullable(panelCode),
   "BESKT_TOOL_INDEPENDENCE_TYPE: the panel section must take a nullable others list",
 );
 
@@ -1216,8 +1232,7 @@ ck(
       onCancel={() => {}}
     />,
   );
-  const controls =
-    `${html}${form}`.match(/<(button|select|textarea|input)\b[^>]*>/g) ?? [];
+  const controls = `${html}${form}`.match(/<(button|select|textarea|input)\b[^>]*>/g) ?? [];
   const short = controls.filter((c) => !c.includes("min-h-[44px]"));
   ck(
     "T12.5 RENDER: every rendered control meets the 44px floor",
