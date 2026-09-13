@@ -980,6 +980,12 @@ const sv = {
   // and this states the RESULT, which is the sentence a holder carries away
   // from a green tick.
   "ev.savedState": "Uppgiften är nu Dokument inlämnat — inte Verifierat.",
+  // The boundary between the two products, said on the page that holds both
+  // editors. These rows are the same sp_claims rows as the ones above; what
+  // this heading changes is what the page CLAIMS about them.
+  "info.cvSection.title": "Profil- och CV-uppgifter",
+  "info.cvSection.lead":
+    "Utbildning, språk och färdigheter hör till din profil och ditt CV — inte till säkerhetsbevisningen i ditt Passport. De redigeras här eftersom uppgiften lagras en enda gång, och de fylls i ditt CV automatiskt. De är självrapporterade tills någon har granskat dem.",
   "ev.retry": "Försök igen",
   "ev.stored": "Dokumentet ligger kvar i ditt Passport tills du tar bort det.",
   "ev.linkShort":
@@ -2997,6 +3003,9 @@ const en: Record<PassportCopyKey, string> = {
   "ev.opening": "Opening …",
   "ev.saved": "Document uploaded and saved.",
   "ev.savedState": "The entry is now Document provided — not Verified.",
+  "info.cvSection.title": "Profile and CV information",
+  "info.cvSection.lead":
+    "Education, languages and skills belong to your profile and your CV — not to the security evidence your Passport carries. They are edited here because the fact is stored exactly once, and they fill your CV automatically. They are self-reported until somebody reviews them.",
   "ev.retry": "Try again",
   "ev.stored": "The document stays in your Passport until you remove it.",
   "ev.linkShort":

@@ -110,13 +110,42 @@ export const Route = createFileRoute("/_authenticated/passport/information")({
   component: PassportInformationRoute,
 });
 
-/** The claim sections, in the order a career is usually described. */
-const CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey }[] = [
-  { kind: "education", titleKey: "claims.type.education" },
+/** The claim sections, split by WHAT THEY ARE rather than by where they are
+ *  stored.
+ *
+ *  ── WHY THE SPLIT IS PRESENTATIONAL AND NOTHING ELSE ─────────────────
+ *
+ *  Every row below is an `sp_claims` row, and stays one. The owner's pilot
+ *  review asked that general profile/CV information stop being PRESENTED as
+ *  Passport trust evidence -- which is a question about what this page says,
+ *  not about where the fact lives.
+ *
+ *  Moving these rows somewhere else would be the wrong fix twice over.
+ *  `sp_claims` is where a fact can carry evidence, a review and a
+ *  verification state, which is exactly why education and languages were put
+ *  there; and profile-destinations.ts records the owner decision behind
+ *  migration 20261007090000 in so many words -- copying a Passport fact into
+ *  a profile table "would recreate precisely the two-writer defect it
+ *  removed". One fact, one row, one writer.
+ *
+ *  The CV already reads these: cv/source-bundle.ts projects education,
+ *  languages and skills out of the same rows through EDUCATION_CLAIM_TYPES,
+ *  LANGUAGE_CLAIM_TYPES and SKILL_CLAIM_TYPES, and CvDocumentView renders
+ *  them as Utbildning / Språk / Färdigheter. So the single source of truth
+ *  the review asks for is already in place; what was missing was this page
+ *  saying which of the two products each section belongs to. */
+const PASSPORT_CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey }[] = [
   { kind: "training", titleKey: "claims.type.training" },
   { kind: "certification", titleKey: "claims.type.certification" },
   { kind: "specialisation", titleKey: "claims.type.specialisation" },
   { kind: "professional_membership", titleKey: "claims.type.professional_membership" },
+];
+
+/** Formal education. CV-owned by the owner's rule: "general education"
+ *  belongs to the canonical profile/CV, not to security trust evidence. A
+ *  security-relevant course is `training` and stays above. */
+const CV_CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey }[] = [
+  { kind: "education", titleKey: "claims.type.education" },
 ];
 
 type Editing =
@@ -627,6 +656,101 @@ function PassportInformationRoute() {
 
   if (!loaded) return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
 
+  const claimSection = (section: { kind: FreeClaimKind; titleKey: PassportCopyKey }) => {
+        const rows = freeClaims.filter((c) => c.claimType === section.kind);
+        const isEditingThis = editing?.kind === "claim" && editing.draft.claimType === section.kind;
+        return (
+          <SectionShell
+            key={section.kind}
+            icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
+            title={pt(section.titleKey)}
+            id={section.kind === "education" ? "sp-education" : undefined}
+          >
+            {rows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {rows.map((c) => (
+                  <li key={c.id} className="rounded-lg border border-border p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">{c.title}</p>
+                        {c.issuerName ? (
+                          <p className="mt-0.5 text-sm text-muted-foreground">{c.issuerName}</p>
+                        ) : null}
+                        <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
+                          <LifecycleChip state={c.lifecycleState as LifecycleState} />
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEntry("claim", c.id)}
+                          className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          {pt("entry.documentAndVerify")}
+                        </button>
+                        {c.editable ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setEditing({ kind: "claim", draft: claimToDraft(c) })}
+                              className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                              {pt("entry.edit")}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void remove("claim", c.id)}
+                              className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                              {pt("entry.remove")}
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {isEditingThis ? (
+              <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
+                <ClaimEntryForm
+                  draft={editing.draft}
+                  onChange={(d) => setEditing({ kind: "claim", draft: d })}
+                  errors={claimErrors}
+                  busy={busy}
+                  onSave={() => void commitClaim(editing.draft)}
+                  onCancel={() => {
+                    setEditing(null);
+                    setClaimErrors({});
+                  }}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setClaimErrors({});
+                  // No country is seeded. This form shows no country field,
+                  // and where somebody WORKS is not the jurisdiction of their
+                  // education, course or certificate.
+                  setEditing({ kind: "claim", draft: emptyClaimDraft(section.kind) });
+                }}
+                className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                {pt("entry.add")}
+              </button>
+            )}
+          </SectionShell>
+        );
+      };
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
       {/* The Passport workspace links here as `#sp-employment`,
@@ -907,147 +1031,82 @@ function PassportInformationRoute() {
         )}
       </SectionShell>
 
-      {/* ── Languages and practical skills ────────────────────────────── */}
-      {(
-        [
-          {
-            kind: "language",
-            titleKey: "info.languages",
-            icon: <Languages aria-hidden="true" className="h-4 w-4" />,
-          },
-          {
-            kind: "practical_skill",
-            titleKey: "info.skills",
-            icon: <Wrench aria-hidden="true" className="h-4 w-4" />,
-          },
-        ] as const
-      ).map((section) => (
-        <SectionShell
-          key={section.kind}
-          icon={section.icon}
-          title={pt(section.titleKey)}
-          // Anchored so a Next Best Action can land on the section that owns
-          // the missing answer rather than at the top of a long page.
-          id={section.kind === "language" ? "sp-languages" : "sp-skills"}
-        >
-          <SkillSection
-            claimType={section.kind}
-            types={skillTypes}
-            jurisdictions={jurisdictions}
-            entries={claims.filter((c) => c.claimType === section.kind)}
-            draft={skillDrafts[section.kind]}
-            errors={skillErrors[section.kind] ?? {}}
-            busy={busy}
-            onDraftChange={(d) => setSkillDrafts((prev) => ({ ...prev, [section.kind]: d }))}
-            onStart={() =>
-              setSkillDrafts((prev) => ({ ...prev, [section.kind]: emptySkillDraft() }))
-            }
-            onCancel={() => {
-              setSkillDrafts((prev) => ({ ...prev, [section.kind]: null }));
-              setSkillErrors((prev) => ({ ...prev, [section.kind]: {} }));
-            }}
-            onSave={(d) => void commitSkill(section.kind, d)}
-            onRemove={(id) => void remove("claim", id)}
-            onOpen={(id) => openEntry("claim", id)}
-          />
-        </SectionShell>
-      ))}
+      {/* ── Security-relevant credentials ─────────────────────────────── */}
+      {PASSPORT_CLAIM_SECTIONS.map(claimSection)}
 
-      {/* ── Education, courses, certificates, specialisations ─────────── */}
-      {CLAIM_SECTIONS.map((section) => {
-        const rows = freeClaims.filter((c) => c.claimType === section.kind);
-        const isEditingThis = editing?.kind === "claim" && editing.draft.claimType === section.kind;
-        return (
+      {/* ══════════════════════════════════════════════════════════════
+          PROFILE AND CV INFORMATION — NOT PASSPORT TRUST EVIDENCE
+          ══════════════════════════════════════════════════════════════
+          Everything below is the same kind of `sp_claims` row as
+          everything above, edited by the same writer. What changes here is
+          only what the page SAYS about it: these are the facts a CV is
+          made of, they are self-reported unless somebody reviews them, and
+          they are not the security evidence this Passport exists to carry.
+
+          They are edited here because this is where the one writer lives
+          (see the note on the section tables above); the heading is what
+          stops them reading as trust evidence. */}
+      <section aria-labelledby="sp-cv-information-heading" className="space-y-5">
+        <header className="border-t border-border pt-6">
+          <h2
+            id="sp-cv-information-heading"
+            className="text-lg font-semibold tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {pt("info.cvSection.title")}
+          </h2>
+          <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {pt("info.cvSection.lead")}
+          </p>
+        </header>
+
+        {CV_CLAIM_SECTIONS.map(claimSection)}
+        {/* ── Languages and practical skills ────────────────────────────── */}
+        {(
+          [
+            {
+              kind: "language",
+              titleKey: "info.languages",
+              icon: <Languages aria-hidden="true" className="h-4 w-4" />,
+            },
+            {
+              kind: "practical_skill",
+              titleKey: "info.skills",
+              icon: <Wrench aria-hidden="true" className="h-4 w-4" />,
+            },
+          ] as const
+        ).map((section) => (
           <SectionShell
             key={section.kind}
-            icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
+            icon={section.icon}
             title={pt(section.titleKey)}
-            id={section.kind === "education" ? "sp-education" : undefined}
+            // Anchored so a Next Best Action can land on the section that owns
+            // the missing answer rather than at the top of a long page.
+            id={section.kind === "language" ? "sp-languages" : "sp-skills"}
           >
-            {rows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {rows.map((c) => (
-                  <li key={c.id} className="rounded-lg border border-border p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{c.title}</p>
-                        {c.issuerName ? (
-                          <p className="mt-0.5 text-sm text-muted-foreground">{c.issuerName}</p>
-                        ) : null}
-                        <span className="mt-1.5 flex flex-wrap items-center gap-2">
-                          <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
-                          <LifecycleChip state={c.lifecycleState as LifecycleState} />
-                        </span>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEntry("claim", c.id)}
-                          className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                          {pt("entry.documentAndVerify")}
-                        </button>
-                        {c.editable ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setEditing({ kind: "claim", draft: claimToDraft(c) })}
-                              className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                              {pt("entry.edit")}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => void remove("claim", c.id)}
-                              className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                              {pt("entry.remove")}
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {isEditingThis ? (
-              <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
-                <ClaimEntryForm
-                  draft={editing.draft}
-                  onChange={(d) => setEditing({ kind: "claim", draft: d })}
-                  errors={claimErrors}
-                  busy={busy}
-                  onSave={() => void commitClaim(editing.draft)}
-                  onCancel={() => {
-                    setEditing(null);
-                    setClaimErrors({});
-                  }}
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setClaimErrors({});
-                  // No country is seeded. This form shows no country field,
-                  // and where somebody WORKS is not the jurisdiction of their
-                  // education, course or certificate.
-                  setEditing({ kind: "claim", draft: emptyClaimDraft(section.kind) });
-                }}
-                className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <Plus aria-hidden="true" className="h-4 w-4" />
-                {pt("entry.add")}
-              </button>
-            )}
+            <SkillSection
+              claimType={section.kind}
+              types={skillTypes}
+              jurisdictions={jurisdictions}
+              entries={claims.filter((c) => c.claimType === section.kind)}
+              draft={skillDrafts[section.kind]}
+              errors={skillErrors[section.kind] ?? {}}
+              busy={busy}
+              onDraftChange={(d) => setSkillDrafts((prev) => ({ ...prev, [section.kind]: d }))}
+              onStart={() =>
+                setSkillDrafts((prev) => ({ ...prev, [section.kind]: emptySkillDraft() }))
+              }
+              onCancel={() => {
+                setSkillDrafts((prev) => ({ ...prev, [section.kind]: null }));
+                setSkillErrors((prev) => ({ ...prev, [section.kind]: {} }));
+              }}
+              onSave={(d) => void commitSkill(section.kind, d)}
+              onRemove={(id) => void remove("claim", id)}
+              onOpen={(id) => openEntry("claim", id)}
+            />
           </SectionShell>
-        );
-      })}
+        ))}
+      </section>
 
       <p className="text-sm leading-relaxed text-muted-foreground">
         {pt("entry.selfDeclaredNote")}

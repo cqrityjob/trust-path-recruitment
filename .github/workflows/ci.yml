@@ -1122,6 +1122,9 @@ jobs:
       - name: Account confirmation state (Emsoms #3)
         run: bun run account-confirmation:check
 
+      - name: Passport / CV boundary
+        run: bun run passport-cv-boundary:check
+
       # The public header's entry points -- one door in, one way to create
       # an account, "Arbetsgivare" as information and never as an action.
       # This guard has existed since the unified-account work and was never
