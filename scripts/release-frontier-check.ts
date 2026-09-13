@@ -32,28 +32,28 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Their names come OFF this list rather than being left behind, because a
 // resolved name here hides the next genuinely stuck migration behind an
 // expectation -- the failure this list exists to prevent.
-// 20261108090000_beskt_governed_method_content is PENDING: BESKT PR 2 is a
-// schema-only branch awaiting review. It is recorded `pending` in
-// release-state.json with its objects and its rollback, and it comes OFF this
-// list the moment the owner project has applied it and evidence is recorded.
 //
-// 20261109090000_sp_pilot_catalogue_visibility is PENDING for the same reason:
-// a schema-only Security Passport correction awaiting the owner's hosted apply.
+// 20261108090000_beskt_governed_method_content,
+// 20261109090000_sp_pilot_catalogue_visibility and
+// 20261110090000_bcp_candidate_preparation are APPLIED. All three reached the
+// owner project through the official Supabase GitHub integration after #221
+// merged to main as 8ba7635c, and each is recorded in supabase_migrations under
+// its canonical version and slug rather than a generated uuid. They were then
+// verified read-only against production: the hosted function bodies are
+// byte-identical to the merged migration sources, every declared column, index,
+// trigger and constraint exists, the BCP tables carry ENABLE and FORCE RLS with
+// no table write for any role, the two oracle helpers are executable by
+// service_role only, and all nineteen new tables hold zero rows.
+// release-state.json and hosted-ledger.json carry that production evidence.
 //
-// 20261110090000_bcp_candidate_preparation is PENDING and sits BEHIND the BESKT
-// content spine: the candidate-preparation runtime hangs off it by foreign key,
-// so it can only be applied after it. Its version is 20261110 and not 20261109
-// because Supabase keys schema_migrations by the numeric prefix alone, and the
-// Passport correction above already holds 20261109090000 on main -- two files
-// sharing one version means the second is silently treated as already applied.
-// None of the three has been applied to the owner project by this branch, and
-// each comes off this list only when it has been and the evidence is recorded
-// in release-state.json.
-const expectedPending: string[] = [
-  "20261108090000_beskt_governed_method_content.sql",
-  "20261109090000_sp_pilot_catalogue_visibility.sql",
-  "20261110090000_bcp_candidate_preparation.sql",
-];
+// They came off this list in the same change that recorded the evidence, so the
+// list is empty again and the next genuinely stuck migration has nothing to
+// hide behind. Note for anyone reading the versions: 20261110 rather than
+// 20261109 for the candidate-preparation runtime is deliberate, because
+// Supabase keys schema_migrations by the numeric prefix alone and the Passport
+// correction already holds 20261109090000 -- two files sharing one version
+// means the second is silently treated as already applied.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

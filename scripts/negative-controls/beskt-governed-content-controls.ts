@@ -489,13 +489,14 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "BESKT-NC-DB-HOSTED-CLAIM",
-    defect: "release-state.json claims the migration is applied on the owner project",
+    defect:
+      "release-state.json walks the applied migration back to pending, so the repository stops recording a hosted apply that really happened",
     file: STATE,
-    find: '      "file": "20261108090000_beskt_governed_method_content.sql",\n      "hostedState": "pending",',
+    find: '      "file": "20261108090000_beskt_governed_method_content.sql",\n      "hostedState": "applied",',
     replace:
-      '      "file": "20261108090000_beskt_governed_method_content.sql",\n      "hostedState": "applied",',
+      '      "file": "20261108090000_beskt_governed_method_content.sql",\n      "hostedState": "pending",',
     guard: GUARD,
-    expect: "BESKT-DB-NO-HOSTED",
+    expect: "BESKT-DB-HOSTED",
   },
   {
     id: "BESKT-NC-DB-PR1-CONTRACT",
