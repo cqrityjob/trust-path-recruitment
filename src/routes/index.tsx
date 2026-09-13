@@ -257,24 +257,22 @@ function Index() {
               </PrimaryLink>
             </EntryCard>
 
+            {/* The low-friction model, stated beside the action it describes
+                rather than discovered after 28 questions. Career Discovery
+                starts without an account, keeps answers in this tab, and asks
+                for an account only when somebody saves the result — which is
+                exactly what the existing claim token preserves through email
+                confirmation, Google and a login/signup swap. This page adds
+                no signup wall. */}
             <EntryCard
               icon={Compass}
               titleKey="home.entry.discovery.title"
               bodyKey="home.entry.discovery.body"
+              noteKey="home.entry.discovery.disclosure"
             >
               <PrimaryLink to={CAREER_DISCOVERY} className="w-full sm:w-auto">
                 {t("cta.discovery")}
               </PrimaryLink>
-              {/* The low-friction model, stated beside the action it
-                  describes rather than discovered after 28 questions.
-                  Career Discovery starts without an account, keeps answers
-                  in this tab, and asks for an account only when somebody
-                  saves the result — which is exactly what the existing
-                  claim token preserves through email confirmation, Google
-                  and a login/signup swap. This page adds no signup wall. */}
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                {t("home.entry.discovery.disclosure")}
-              </p>
             </EntryCard>
           </div>
         </div>
@@ -451,11 +449,22 @@ function EntryCard({
   icon: Icon,
   titleKey,
   bodyKey,
+  noteKey,
   children,
 }: {
   icon: typeof ShieldCheck;
   titleKey: TranslationKey;
   bodyKey: TranslationKey;
+  /** A short qualification of the offer, rendered ABOVE the action.
+   *
+   *  Above, and not below, for a reason that only shows up in a browser:
+   *  `mt-auto` pins the action block to the bottom edge, so a note INSIDE
+   *  that block pushes its own button upwards and the two cards' actions
+   *  stop sitting on the same line. Two peers whose buttons are 50px apart
+   *  do not read as peers. With the note here, the action block holds the
+   *  control and nothing else, and both land on the same baseline at every
+   *  width where the cards are side by side. */
+  noteKey?: TranslationKey;
   children: React.ReactNode;
 }) {
   const { t } = useT();
@@ -471,6 +480,9 @@ function EntryCard({
         {t(titleKey)}
       </h2>
       <p className="mt-3 text-[0.9375rem] leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
+      {noteKey && (
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t(noteKey)}</p>
+      )}
       <div className="mt-auto pt-6">{children}</div>
     </article>
   );

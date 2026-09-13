@@ -232,6 +232,7 @@ test.describe("the public homepage", () => {
             text: (el.textContent ?? "").trim(),
             href: el.getAttribute("href"),
             h: Math.round(r.height),
+            y: Math.round(r.top),
             font: getComputedStyle(el).fontSize,
           };
         });
@@ -243,6 +244,16 @@ test.describe("the public homepage", () => {
     expect(primaries[1].href).toBe("/security-career-assessment");
     expect(primaries[0].h, "the two actions are different heights").toBe(primaries[1].h);
     expect(primaries[0].font).toBe(primaries[1].font);
+    // ── AND THEY SIT ON THE SAME LINE ────────────────────────────────
+    //
+    // The specific regression this catches: putting the Career Discovery
+    // card's "you can start without an account" note BELOW its button
+    // pushes that button ~50px up the card, and two peers whose actions are
+    // 50px apart do not read as peers however identical their classes are.
+    expect(
+      Math.abs(primaries[0].y - primaries[1].y),
+      "the two actions are not on the same baseline",
+    ).toBeLessThanOrEqual(2);
 
     // Career Discovery is not a text link anywhere in the hero.
     const discoveryLinks = await page

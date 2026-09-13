@@ -123,7 +123,7 @@ function EmployersPage() {
       <Section className="py-16 md:py-24">
         <div className="max-w-3xl">
           <h1
-            className="text-[2.1rem] font-semibold leading-[1.08] tracking-tight text-foreground sm:text-[2.9rem] md:text-[3.25rem]"
+            className="text-[2.1rem] font-semibold leading-[1.08] tracking-tight text-foreground [hyphens:auto] break-words sm:text-[2.9rem] md:text-[3.25rem] lg:[hyphens:none]"
             style={{ fontFamily: "var(--font-display)" }}
           >
             {t("employers.title")}
@@ -183,7 +183,7 @@ function EmployersPage() {
                 <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
+                <h3 className="text-base font-semibold tracking-tight text-foreground [hyphens:auto] break-words">
                   <span className="tabular-nums text-muted-foreground">{i + 1}.</span> {t(titleKey)}
                 </h3>
                 <p className="mt-1.5 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
@@ -213,7 +213,7 @@ function EmployersPage() {
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-accent">
               <ShieldCheck className="h-6 w-6" strokeWidth={1.75} aria-hidden="true" />
             </span>
-            <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
+            <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground [hyphens:auto] break-words">
               {t("employers.example.ordinary.title")}
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -225,7 +225,7 @@ function EmployersPage() {
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-accent">
               <ShieldAlert className="h-6 w-6" strokeWidth={1.75} aria-hidden="true" />
             </span>
-            <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
+            <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground [hyphens:auto] break-words">
               {t("employers.example.protective.title")}
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
