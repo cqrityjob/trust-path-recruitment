@@ -497,8 +497,13 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied entry keeps its status but loses the evidence naming the hosted version and project, leaving an owner-level claim about production with nothing behind it",
     file: STATE,
-    find: '      "evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt',
-    replace: '      "evidenceSourceRemoved": "Applied to owner production wrygicdfxwjnrugduxnt',
+    // Seven entries open their evidence with the same phrase, so the anchor runs
+    // on into the clause only this one has -- and it renames the KEY, because
+    // merely softening the prose would still leave an evidenceSource behind and
+    // the assertion would go on passing.
+    find: '"evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt through the official Supabase GitHub integration when PR #229 merged',
+    replace:
+      '"evidenceSourceRemoved": "Applied to owner production wrygicdfxwjnrugduxnt through the official Supabase GitHub integration when PR #229 merged',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },
