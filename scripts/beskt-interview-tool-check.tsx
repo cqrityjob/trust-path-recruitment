@@ -322,9 +322,24 @@ const MUTATIONS = [
   "recordBesktPanelResolution",
 ] as const;
 
+/**
+ * Exactly one exported function's source, and nothing of the next one.
+ *
+ * A fixed-length slice was the first version of this and it was WRONG: it ran
+ * past the end of a short mutation into the next one, so a defect planted in
+ * the short one was answered by its neighbour's correct code. The planted
+ * control caught it, which is what planted controls are for.
+ */
+function bodyOf(name: string): string {
+  const start = functionsCode.indexOf(`export const ${name} =`);
+  if (start === -1) return "";
+  const next = functionsCode.indexOf("\nexport ", start + 1);
+  return functionsCode.slice(start, next === -1 ? undefined : next);
+}
+
 for (const name of MUTATIONS) {
   const start = functionsCode.indexOf(`export const ${name} =`);
-  const rest = start === -1 ? "" : functionsCode.slice(start, start + 2600);
+  const rest = bodyOf(name);
   ck(
     `T1.3 ${name} validates with Zod and forwards the CALLER'S operation id`,
     start !== -1 && /\.validator\(/.test(rest) && /_operation_id:\s*data\.operationId/.test(rest),
@@ -341,8 +356,7 @@ for (const name of [
   "revealBesktPanel",
   "recordBesktPanelResolution",
 ] as const) {
-  const start = functionsCode.indexOf(`export const ${name} =`);
-  const rest = start === -1 ? "" : functionsCode.slice(start, start + 2600);
+  const rest = bodyOf(name);
   ck(
     `T1.4 ${name} forwards the revision the caller was looking at`,
     /_expected_revision:\s*data\.expectedRevision/.test(rest),
@@ -808,7 +822,9 @@ ck(
 
 ck(
   "T7.5 the history shows who recorded each version and when",
-  /recordedBy/.test(historyCode) && /recordedAt/.test(historyCode),
+  /v\.recordedBy\s*&&/.test(historyCode) &&
+    /\{v\.recordedBy\}/.test(historyCode) &&
+    /v\.recordedAt\s*&&/.test(historyCode),
   "BESKT_TOOL_HISTORY_ATTRIBUTION: each version must show who wrote it and when",
 );
 
@@ -830,7 +846,9 @@ ck(
 
 ck(
   "T8.2 a settled verification state requires a source",
-  /SOURCE_REQUIRED/.test(verifyFormCode) && /sourceRequired/.test(verifyFormCode),
+  /SOURCE_REQUIRED\.includes\(\s*state\s*\)/.test(verifyFormCode) &&
+    /source\.trim\(\)\s*===\s*""/.test(verifyFormCode) &&
+    /beskt\.conduct\.verify\.sourceRequired/.test(verifyFormCode),
   "BESKT_TOOL_VERIFICATION_SOURCE: a settled verification must name its source",
 );
 
@@ -1033,8 +1051,12 @@ ck(
 
 ck(
   "T11.2 no surface renders a raw error message",
-  !/\{\s*(\w+\.)?error(\s*as\s*Error)?\.message\s*\}/.test(ALL_SURFACE_CODE) &&
-    !/String\(\s*\w*error\w*\s*\)/.test(ALL_SURFACE_CODE),
+  // Any JSX expression that reaches `.message` off something called `error`,
+  // however it is cast or parenthesised, and any stringified error. The first
+  // version of this required the expression to start with the identifier and
+  // was walked straight past by `{(q.error as Error).message}`.
+  !/\{[^{}]*\berror\b[^{}]*\.message[^{}]*\}/.test(ALL_SURFACE_CODE) &&
+    !/String\(\s*[\w.]*[eE]rror[\w.]*\s*\)/.test(ALL_SURFACE_CODE),
   "BESKT_TOOL_RAW_ERROR: an original error message must never reach the DOM",
 );
 
@@ -1183,7 +1205,19 @@ ck(
       actions={WRITE_ACTIONS}
     />,
   );
-  const controls = html.match(/<(button|select|textarea|input)\b[^>]*>/g) ?? [];
+  const form = render(
+    <BesktEntryForm
+      itemKey="synthetic_omitted"
+      correcting={true}
+      existing={MY_ENTRY}
+      busy={false}
+      error={null}
+      onSubmit={() => {}}
+      onCancel={() => {}}
+    />,
+  );
+  const controls =
+    `${html}${form}`.match(/<(button|select|textarea|input)\b[^>]*>/g) ?? [];
   const short = controls.filter((c) => !c.includes("min-h-[44px]"));
   ck(
     "T12.5 RENDER: every rendered control meets the 44px floor",
@@ -1246,10 +1280,22 @@ ck(
 group("T13 · Saving waits for the server");
 
 ck(
-  "T13.1 the save confirmation is set only after the server answers",
-  /onSuccess:\s*async\s*\(result\)\s*=>\s*\{[\s\S]{0,200}setSavedItemKey\(result\.itemKey\)/.test(
-    routeCode,
-  ),
+  "T13.1 the save confirmation can only come from the server's own answer",
+  (() => {
+    // Every call is either "clear it" or "set it from the value the server
+    // returned". An optimistic `setSavedItemKey(input.itemKey)` is exactly the
+    // defect this exists to catch, so the check is over the ARGUMENTS rather
+    // than over the presence of one correct call somewhere in the file.
+    const calls = [...routeCode.matchAll(/setSavedItemKey\(([^)]*)\)/g)].map((m) => m[1].trim());
+    const confirmed = calls.filter((a) => a === "result.itemKey");
+    return (
+      confirmed.length === 1 &&
+      calls.every((a) => a === "null" || a === "result.itemKey") &&
+      /onSuccess:\s*async\s*\(result\)\s*=>\s*\{[\s\S]{0,240}setSavedItemKey\(result\.itemKey\)/.test(
+        routeCode,
+      )
+    );
+  })(),
   "BESKT_TOOL_SAVE_CONFIRM: a save may be reported only after the server confirms it",
 );
 
@@ -1267,7 +1313,7 @@ ck(
 
 ck(
   "T13.4 a mutation invalidates exactly the module and workspace queries",
-  /besktInvalidateAfterMutation/.test(routeCode) &&
+  /for\s*\(const key of besktInvalidateAfterMutation\(/.test(routeCode) &&
     /besktModuleKey/.test(queriesCode) &&
     /besktWorkspaceKey/.test(queriesCode),
   "BESKT_TOOL_INVALIDATION: a successful mutation must invalidate exactly the affected queries",
@@ -1302,9 +1348,17 @@ ck(
 
 ck(
   "T14.3 the planted controls exist and run in negative-controls:all",
-  /"negative-controls:beskt-interview-tool":\s*"bun run scripts\/negative-controls\/beskt-interview-tool-controls\.ts"/.test(
-    pkg,
-  ) && /negative-controls:beskt-interview-tool/.test(pkg.split('"negative-controls:all"')[1] ?? ""),
+  (() => {
+    const declared =
+      /"negative-controls:beskt-interview-tool":\s*"bun run scripts\/negative-controls\/beskt-interview-tool-controls\.ts"/.test(
+        pkg,
+      );
+    // The VALUE of negative-controls:all, not "everything after its name" --
+    // the latter is satisfied by the suite's own declaration further down the
+    // file, which says nothing about whether it RUNS.
+    const chain = /"negative-controls:all":\s*"([^"]*)"/.exec(pkg)?.[1] ?? "";
+    return declared && chain.includes("negative-controls:beskt-interview-tool");
+  })(),
   "BESKT_TOOL_CONTROLS_NOT_WIRED: the planted controls must run in negative-controls:all",
 );
 
