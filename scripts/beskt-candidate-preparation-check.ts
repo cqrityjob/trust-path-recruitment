@@ -45,6 +45,9 @@ const TYPES = join(ROOT, "src/integrations/supabase/types.ts");
 // PR 3B's candidate screen. Guarded when present so this check keeps working
 // on a schema-only branch, where the application half has not landed yet.
 const PANEL = join(ROOT, "src/components/beskt/CandidatePreparation.tsx");
+const EMPLOYER_PANEL = join(ROOT, "src/components/beskt/BesktApplicationPanel.tsx");
+const CLIENT = join(ROOT, "src/lib/beskt/candidate-preparation.functions.ts");
+const ERRORS = join(ROOT, "src/lib/beskt/errors.ts");
 
 /** The six runtime tables. Named outside `beskt_` on purpose; see the migration. */
 const TABLES = [
@@ -124,6 +127,23 @@ function read(path: string): string {
 
 function stripComments(sql: string): string {
   return sql.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, "");
+}
+
+/**
+ * The same discipline for TypeScript: assert against the CODE, never the prose
+ * beside it.
+ *
+ * This exists because the first version of the checks below read the raw file
+ * and failed on a comment that QUOTED the defect it was describing -- "this
+ * used to be `methods.data?.[0]`". A guard that a truthful comment can break
+ * is a guard that a reassuring comment can satisfy, and that is the failure
+ * mode this whole file is written against.
+ *
+ * Strings are left alone: `"BCP_STALE_REVISION"` inside the translator is real
+ * computation, not commentary.
+ */
+function stripTsComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
 /** The text of one `CREATE OR REPLACE FUNCTION public.<name>(` up to its `$$;`. */
@@ -947,6 +967,160 @@ const pr2 = read(PR2_MIGRATION);
     read(PR2_SUITE).length > 0,
     "BCP-SUITE: PR #218's own suite is left in place and still runs on its own",
   );
+}
+
+// ── 11b. The application half keeps the promises its own labels make ──────
+//
+// Every assertion here reads the REAL expression -- the mutation body, the
+// JSX attribute, the validator -- because each of these defects passed review
+// once already while a comment or a label said otherwise. They are guarded
+// only when the file is present, so a schema-only branch still runs this
+// check unchanged.
+if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
+  const panel = stripTsComments(read(PANEL));
+  const employerPanel = stripTsComments(read(EMPLOYER_PANEL));
+  const client = stripTsComments(read(CLIENT));
+
+  // ---- 0.1 · "save and exit" exits, and only after the write lands -------
+  const saveBlock = /const saveMutation = useMutation\(\{[\s\S]*?\n  \}\);/.exec(panel)?.[0] ?? "";
+  const saveSuccess = /onSuccess: async \(\) => \{([\s\S]*?)\n    \},/.exec(saveBlock)?.[1] ?? "";
+  check(
+    /await navigate\(\{ to: "\/my-career\/applications" \}\)/.test(saveSuccess),
+    "BCP-SAVE-EXIT: the control labelled save-and-exit navigates away, in onSuccess",
+  );
+  check(
+    saveSuccess.indexOf("invalidateQueries") < saveSuccess.indexOf("navigate") &&
+      !/onError:[\s\S]*?navigate\(/.test(saveBlock),
+    "BCP-SAVE-EXIT: and only after the server confirmed the write -- a failed save never navigates",
+  );
+
+  // ---- 0.2 · correction is a control, and focus lands on the question ----
+  check(
+    !/href=\{`#beskt-item-\$\{item\.itemKey\}`\}/.test(panel),
+    "BCP-CORRECT: the review no longer links to a question fragment that is not rendered",
+  );
+  check(
+    /onEdit\?:\s*\(itemKey: string\) => void/.test(panel) &&
+      /onClick=\{\(\) => onEdit\(item\.itemKey\)\}/.test(panel),
+    "BCP-CORRECT: it is a button that hands the item key to the parent",
+  );
+  const focusEffect =
+    /useEffect\(\(\) => \{\s*if \(phase !== "answer" \|\| focusItemKey === null\) return;[\s\S]*?\}, \[phase, focusItemKey\]\);/.exec(
+      panel,
+    )?.[0] ?? "";
+  check(
+    /document\.getElementById\(`beskt-item-\$\{focusItemKey\}`\)/.test(focusEffect) &&
+      /el\.focus\(\)/.test(focusEffect),
+    "BCP-CORRECT: and focus is moved to that question once the answer phase has rendered it",
+  );
+  check(
+    focusEffect.indexOf("el.focus()") < focusEffect.indexOf("replaceState"),
+    "BCP-CORRECT: the fragment is written only once the target exists, never before",
+  );
+  check(
+    /<li\s+id=\{groupId\}\s+tabIndex=\{-1\}/.test(panel),
+    "BCP-CORRECT: the question is a programmatic focus target without entering the tab order",
+  );
+
+  // ---- 0.3 · the employer CHOOSES the method ----------------------------
+  check(
+    !/methods\.data\?\.\[0\]/.test(employerPanel),
+    "BCP-METHOD-CHOICE: no silent first-method selection survives",
+  );
+  check(
+    /const method =\s*\(methods\.data \?\? \[\]\)\.find\(\(m\) => m\.methodVersionId === methodVersionId\)/.test(
+      employerPanel,
+    ),
+    "BCP-METHOD-CHOICE: the method in use is the one the employer selected",
+  );
+  check(
+    /const chooseMethod = \(id: string\) => \{[\s\S]*?setProfileId\(""\);/.test(employerPanel),
+    "BCP-METHOD-CHOICE: changing the method clears the profile, which belongs to the old one",
+  );
+  check(
+    /disabled=\{!methodVersionId \|\| !profileId \|\| startMutation\.isPending\}/.test(
+      employerPanel,
+    ),
+    "BCP-METHOD-CHOICE: and nothing can be started until both are chosen",
+  );
+
+  // ---- 0.4 · the notice version is the database's to state --------------
+  check(
+    !/beskt-prep-notice-1/.test(employerPanel) && !/beskt-prep-notice-1/.test(panel),
+    "BCP-NOTICE-VERSION: no notice version is hard-coded in a component",
+  );
+  const startFn =
+    /export const startBesktPreparation[\s\S]*?\n  \}\);/.exec(client)?.[0] ?? "";
+  check(
+    !/noticeVersion:\s*z\./.test(startFn),
+    "BCP-NOTICE-VERSION: the start validator does not accept one from the caller",
+  );
+  check(
+    /rpc\("bcp_notice_version"\)/.test(startFn) && /_notice_version: noticeVersion/.test(startFn),
+    "BCP-NOTICE-VERSION: the server reads the governed value and passes THAT to bcp_assign",
+  );
+
+  // ---- 0.5 · one answer is a radio group -------------------------------
+  check(
+    /if \(item\.answerType === "single_choice"\) \{[\s\S]*?<RadioGroup/.test(panel),
+    "BCP-CHOICE-CONTROL: single_choice renders a radio group, not checkboxes",
+  );
+  check(
+    /if \(item\.answerType === "multi_choice"\) \{[\s\S]*?<Checkbox/.test(panel),
+    "BCP-CHOICE-CONTROL: multi_choice keeps checkboxes",
+  );
+  check(
+    /const legendId = `beskt-item-\$\{item\.itemKey\}-legend`/.test(panel) &&
+      /<legend id=\{`\$\{groupId\}-legend`\}/.test(panel),
+    "BCP-CHOICE-CONTROL: each group is named by a legend that actually exists",
+  );
+
+  // ---- 0.6 · the employer can cancel a wrong assignment -----------------
+  check(
+    /rpc\("bcp_cancel"/.test(client) && /useServerFn\(cancelBesktPreparation\)/.test(employerPanel),
+    "BCP-CANCEL: the cancel RPC is reachable from the employer surface",
+  );
+  check(
+    /const cancellable =[\s\S]*?lifecycleState !== "submitted" &&[\s\S]*?lifecycleState !== "cancelled"/.test(
+      employerPanel,
+    ),
+    "BCP-CANCEL: offered only while the lifecycle admits it",
+  );
+  check(
+    /disabled=\{cancelReason\.trim\(\)\.length < 3 \|\| cancelMutation\.isPending\}/.test(
+      employerPanel,
+    ) && /<Dialog open=\{cancelOpen\}/.test(employerPanel),
+    "BCP-CANCEL: behind a confirmation dialog, and the reason is mandatory",
+  );
+
+  // ---- 0.7 · no raw database text reaches the screen ---------------------
+  const errors = existsSync(ERRORS) ? stripTsComments(read(ERRORS)) : "";
+  check(
+    /setActionError\(besktErrorKey\(e\)\)/.test(panel) &&
+      !/setActionError\(e instanceof Error \? e\.message/.test(panel),
+    "BCP-SAFE-ERRORS: the candidate screen stores a translation key, never the raised text",
+  );
+  check(
+    /setStartError\(besktErrorKey\(e\)\)/.test(employerPanel) &&
+      /setCancelError\(besktErrorKey\(e\)\)/.test(employerPanel),
+    "BCP-SAFE-ERRORS: and so does the employer screen, for start and for cancel",
+  );
+  check(
+    !/font-mono text-xs">\{(actionError|startError|cancelError|error)\}/.test(panel) &&
+      !/font-mono text-xs">\{(actionError|startError|cancelError|error)\}/.test(employerPanel),
+    "BCP-SAFE-ERRORS: no surface renders a raw error string",
+  );
+  check(
+    /const m = \/\\bBCP_\[A-Z_\]\+\\b\/\.exec\(raw\)/.test(errors) &&
+      /return MESSAGE_FOR_CODE\[code\] \?\? BESKT_GENERIC_ERROR/.test(errors),
+    "BCP-SAFE-ERRORS: the translator maps a governed code and falls back to the generic sentence",
+  );
+  for (const code of ["BCP_STALE_REVISION", "BCP_INCOMPLETE", "BCP_NOT_AUTHORISED"]) {
+    check(
+      new RegExp(`${code}: "beskt\\.error\\.`).test(errors),
+      `BCP-SAFE-ERRORS: ${code} has a sentence of its own`,
+    );
+  }
 }
 
 // ── 12. Release bookkeeping ───────────────────────────────────────────────
