@@ -108,7 +108,13 @@ async function step<T>(phase: string, name: string, body: () => Promise<T>): Pro
 /** Sign in through the one door the product has, and land on `destination`. */
 async function signIn(page: Page, email: string, destination: string): Promise<void> {
   await page.goto(`/login?redirect=${encodeURIComponent(destination)}`);
-  await page.getByLabel(/^e-?post$|^email$/i).fill(email);
+  // The sign-in form is client-rendered, and against a dev server that has
+  // just restarted the first render compiles the route. Waiting for the FIELD
+  // is waiting for an observable state, not for a duration — but it needs more
+  // than the 5 s default, or a cold start reads as a missing form.
+  const emailField = page.getByLabel(/^e-?post$|^email$/i);
+  await emailField.waitFor({ state: "visible", timeout: 120_000 });
+  await emailField.fill(email);
   await page.getByLabel(/^lösenord$|^password$/i).fill(PASSWORD);
   await page.getByRole("button", { name: /^logga in$|^sign in$/i }).click();
   // No sleep: the URL leaving /login IS the signal that the session exists.
