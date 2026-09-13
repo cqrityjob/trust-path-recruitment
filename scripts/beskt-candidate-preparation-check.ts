@@ -15,7 +15,7 @@
  * string on its own.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,6 +42,9 @@ const TSCONFIG = join(ROOT, "tsconfig.scripts.json");
 const NOTICE_COPY_CHECK = join(ROOT, "scripts/beskt-notice-copy-digest-check.ts");
 const FRONTIER = join(ROOT, "scripts/release-frontier-check.ts");
 const TYPES = join(ROOT, "src/integrations/supabase/types.ts");
+// PR 3B's candidate screen. Guarded when present so this check keeps working
+// on a schema-only branch, where the application half has not landed yet.
+const PANEL = join(ROOT, "src/components/beskt/CandidatePreparation.tsx");
 
 /** The six runtime tables. Named outside `beskt_` on purpose; see the migration. */
 const TABLES = [
@@ -692,6 +695,33 @@ const pr2 = read(PR2_MIGRATION);
     /public\.bcp_notice_hash\(_assignment_id, _locale\)/.test(ack),
     "BCP-NOTICE: and the acknowledgement compares against the hash for the locale it was shown in",
   );
+
+  // ── AND THE APPLICATION SENDS THE HASH IT ACTUALLY RENDERED ──────────
+  //
+  // Everything above is the database half. It is necessary and it is not
+  // sufficient: bcp_acknowledge_notice compares the hash it is HANDED, so a
+  // client that renders the English notice and hands over the Swedish hash
+  // passes every check above while recording a notice the candidate never
+  // read. That is precisely the defect that made the earlier "exact notice
+  // bytes" claim false, and it lives in the client, so it is asserted here.
+  //
+  // The panel must resolve ONE locale and use that resolved object for both
+  // the hash and the locale it sends -- not index `by_locale` again at the
+  // call site, where the two could diverge.
+  if (existsSync(PANEL)) {
+    const panel = read(PANEL);
+    const ackCall = /acknowledge\(\{[\s\S]*?\}\);/.exec(panel)?.[0] ?? "";
+    check(
+      /noticeContentHash:\s*notice\.noticeContentHash\b/.test(ackCall) &&
+        /locale:\s*notice\.locale\b/.test(ackCall),
+      "BCP-NOTICE: the candidate screen confirms the notice it RENDERED — the hash and the locale both come from the one resolved notice, not from a second lookup",
+    );
+    check(
+      /data-notice-locale=\{notice\.locale\}/.test(panel) &&
+        /data-notice-hash=\{notice\.noticeContentHash\}/.test(panel),
+      "BCP-NOTICE: and that binding is observable in the rendered notice, so a guard and a routed test can check it rather than trust it",
+    );
+  }
 
   check(
     /CONSTRAINT bcp_assignments_notice_first_check/.test(bare) &&

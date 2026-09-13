@@ -294,6 +294,38 @@ check(
   text(noticeSv).includes("recruitment_record") &&
     text(noticeSv).includes("GDPR art. 6(1)(b) synthetic"),
 );
+
+/* ---- 1b. The acknowledgement is bound to the notice ACTUALLY rendered -- */
+//
+// PR 3A makes the notice per-locale: every governed locale has its own
+// content hash, and bcp_acknowledge_notice records the hash it is handed. So
+// the claim "the candidate confirmed the notice they read" is only true if
+// the panel renders one locale and sends THAT locale's hash. An independent
+// review found the earlier single-hash version of this claim to be false,
+// which is why it is asserted here rather than described.
+//
+// The fixture gives the two locales different hashes on purpose: a panel that
+// ignored its `notice` prop and reached for a fixed locale would render the
+// same pair twice, and these four assertions would fail.
+const SV_HASH = PREPARATION.notice.byLocale["sv-SE"].noticeContentHash;
+const EN_HASH = PREPARATION.notice.byLocale["en-GB"].noticeContentHash;
+check(
+  "the Swedish notice declares the Swedish locale it was rendered for",
+  noticeSv.includes('data-notice-locale="sv-SE"'),
+);
+check(
+  "and carries THAT locale's content hash, which is what the confirmation records",
+  noticeSv.includes(`data-notice-hash="${SV_HASH}"`),
+);
+check(
+  "the English notice declares the English locale, and carries a DIFFERENT hash",
+  noticeEn.includes('data-notice-locale="en-GB"') &&
+    noticeEn.includes(`data-notice-hash="${EN_HASH}"`),
+);
+check(
+  "so the two locales cannot be acknowledged with one another's bytes",
+  SV_HASH !== EN_HASH && !noticeSv.includes(EN_HASH) && !noticeEn.includes(SV_HASH),
+);
 // The word "consent" is not banned from the notice -- it is REQUIRED, and
 // required to be denied. A candidate who is never told "this is not consent"
 // is left to assume that it is one, which is the misunderstanding the

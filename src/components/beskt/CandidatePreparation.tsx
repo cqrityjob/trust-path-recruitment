@@ -505,7 +505,22 @@ export function NoticePanel({
   const [confirmed, setConfirmed] = useState(false);
 
   return (
-    <section className="mt-8" aria-labelledby="beskt-notice" data-testid="beskt-notice">
+    // ── THE BINDING, MADE OBSERVABLE ─────────────────────────────────────
+    //
+    // The locale and content hash of the notice ON SCREEN. They are here so
+    // that "the acknowledgement records the notice the candidate read" is
+    // something a guard and a routed test can CHECK rather than something the
+    // pull request asserts: a panel that ignored its own `notice` prop and
+    // reached for a fixed locale would show the wrong pair here and fail.
+    // Neither is a secret -- the hash is of the governed template, and the
+    // candidate is entitled to know which notice they are being shown.
+    <section
+      className="mt-8"
+      aria-labelledby="beskt-notice"
+      data-testid="beskt-notice"
+      data-notice-locale={notice.locale}
+      data-notice-hash={notice.noticeContentHash}
+    >
       <h2 id="beskt-notice" className="text-lg font-semibold">
         {t("beskt.notice.title")}
       </h2>

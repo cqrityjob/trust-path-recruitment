@@ -22,6 +22,11 @@ const TSCONFIG = "tsconfig.scripts.json";
 const CI = ".github/workflows/ci.yml";
 const TYPES = "src/integrations/supabase/types.ts";
 const GUARD = "beskt-candidate-preparation:check";
+// PR 3B's application half: the real candidate screen, the real dictionary,
+// and the two guards that hold them to what PR 3A governs.
+const PANEL = "src/components/beskt/CandidatePreparation.tsx";
+const DICTIONARIES = "src/i18n/dictionaries.ts";
+const RENDER_GUARD = "beskt-candidate-preparation-render:check";
 
 const MUTATIONS: readonly Mutation[] = [
   // ---- RLS, grants and policies -------------------------------------------
@@ -832,6 +837,45 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "",
     guard: GUARD,
     expect: "BCP-REGISTRATION",
+  },
+
+  // ---- The application half (PR 3B) ---------------------------------------
+  //
+  // These plant defects in the REAL candidate screen and require the render
+  // guard to catch them. They exist because PR 3B's material claims are about
+  // what a candidate actually sees, and an assertion about rendered output is
+  // only worth having if a wrong render makes it fail.
+  {
+    id: "BCP-NC-NOTICE-LOCALE-IGNORED",
+    defect:
+      "the notice panel ignores the locale it was handed and always renders the Swedish notice, so an English-reading candidate would confirm bytes they never saw",
+    file: PANEL,
+    find: "      data-notice-locale={notice.locale}\n      data-notice-hash={notice.noticeContentHash}",
+    replace:
+      '      data-notice-locale={"sv-SE"}\n      data-notice-hash={data.notice.byLocale["sv-SE"].noticeContentHash}',
+    guard: RENDER_GUARD,
+    expect: "locale",
+  },
+  {
+    id: "BCP-NC-ACK-SENDS-WRONG-LOCALE-HASH",
+    defect:
+      "the confirmation sends the notice-level hash of whichever locale was built first instead of the one on screen — the exact defect that made the earlier 'exact notice bytes' claim false",
+    file: PANEL,
+    find: "          noticeContentHash: notice.noticeContentHash,\n          locale: notice.locale as \"sv-SE\" | \"en-GB\",",
+    replace:
+      '          noticeContentHash: data.notice.byLocale[data.notice.locales[0]].noticeContentHash,\n          locale: data.notice.locales[0] as "sv-SE" | "en-GB",',
+    guard: GUARD,
+    expect: "BCP-NOTICE",
+  },
+  {
+    id: "BCP-NC-NOTICE-COPY-UNGOVERNED",
+    defect:
+      "a governed notice string is reworded in the dictionary, so the copy no longer matches the template digest PR 3A governs",
+    file: DICTIONARIES,
+    find: '"beskt.notice.acknowledgeHint":',
+    replace: '"beskt.notice.acknowledgeHintRenamed":',
+    guard: "beskt-notice-copy:check",
+    expect: "dictionary",
   },
 ];
 
