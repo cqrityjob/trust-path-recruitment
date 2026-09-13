@@ -29,26 +29,51 @@
 // else. Which link is drawn has never been the boundary and is not the
 // boundary now.
 
-/** The five destinations, in the candidate's own order.
+/** The five destinations, in the owner's order.
  *
- *  Min karriär · Mitt Security Passport · Hitta jobb · Yrken och
- *  karriärvägar · Tester & utveckling. The Passport is second because it is
- *  the durable thing this product builds for a person; jobs, professions and
- *  tests are what happens around it.
+ *  Översikt · Security Passport · Jobb · Karriär · Tester & utveckling.
+ *  These are the five the owner's sketches name, one per underlined
+ *  navigation item, and the Passport is second because it is the durable
+ *  thing this product builds for a person; jobs, career and tests are what
+ *  happens around it.
  *
  *  Deliberately five.
  *
- *  Career Card, My Profile, the CV and Career Analysis are NOT here: they
- *  belong inside the overview and the account menu respectively. Premium
- *  SaaS is not more navigation. Reviewing is not here either: it is a
- *  separate authorised capability, reached from the account menu's
- *  workspace switch, and giving it equal billing beside the candidate's
- *  own products would say otherwise. */
+ *  ── "ÖVERSIKT", NOT "MIN KARRIÄR" ────────────────────────────────────
+ *
+ *  This item used to read "Min karriär" while the section strip inside
+ *  /my-career simultaneously offered "Översikt" pointing at the SAME URL:
+ *  one destination presented as two differently-named places, one above
+ *  the other. The owner's review named it, and the fix is one label and
+ *  one navigation. The strip that carried that second "Översikt" is
+ *  retired; the route shell in routes/_authenticated.my-career.tsx records
+ *  why, and candidate-navigation-canon-check.ts fails the build if a second
+ *  candidate section navigation comes back.
+ *
+ *  The ROUTE stays /my-career. The owner's rule is about the label a
+ *  candidate reads; renaming the path would break seven shipped child
+ *  routes, the account menu, the employer-side candidate views, the e2e
+ *  suites and every pilot bookmark, and buy nothing the label does not
+ *  already buy.
+ *
+ *  ── CAREER IS A DESTINATION, NOT A FOOTNOTE ──────────────────────────
+ *
+ *  Career Discovery, the saved career analysis and the career journey used
+ *  to light "Min karriär", because there was nowhere else for them to go.
+ *  They are one career product and they light Karriär now.
+ *
+ *  Career Card, My Profile, the CV and Career Analysis are NOT items here:
+ *  Career Card is hidden for the pilot, the CV is contextual from Overview
+ *  and Jobs by the owner's explicit rule, and the rest belong inside a
+ *  destination. Premium SaaS is not more navigation. Reviewing is not here
+ *  either: it is a separate authorised capability, reached from the account
+ *  menu's workspace switch, and giving it equal billing beside the
+ *  candidate's own products would say otherwise. */
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 export type CandidateNavKey =
-  | "myCareer"
-  | "exploreProfessions"
+  | "overview"
+  | "career"
   | "jobs"
   | "passport"
   | "assessments";
@@ -76,42 +101,37 @@ export type CandidateNavItem = {
 
 export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
   {
-    key: "myCareer",
+    key: "overview",
     to: "/my-career",
-    // "Min karriär" — the candidate's own words for this place, and the
-    // same words the account menu's workspace switch uses. "Översikt" named
-    // a page rather than the thing the person came for.
-    labelKey: "nav.my_career",
-    // Career Discovery, the Career Journey and the saved Career Analysis
-    // are all reached from here and all belong to it in the information
-    // architecture, so they keep My Career lit rather than lighting
-    // nothing.
+    // "Översikt" — the owner's label, and now the ONLY name this
+    // destination has anywhere in the product. The strip that used to
+    // offer a second "Översikt" at this same URL is gone.
+    labelKey: "nav.overview",
+    // Everything under the shell EXCEPT the surfaces the owner's sketches
+    // give to another destination. Those are listed on the destination
+    // that owns them, and longest-prefix resolution — not array order —
+    // is what makes the more specific entry win:
     //
-    // ── AND SO DO APPLICATIONS, SINCE #211 ─────────────────────────────
+    //   /my-career/applications → Jobb   (sketch 3's supporting area)
+    //   /my-career/reports/…    → Karriär (sketch 4's saved analysis)
     //
-    // /my-career/applications used to be listed under "Hitta jobb" below,
-    // on the reasoning that opportunities and applications are two halves
-    // of one thing in the candidate's head. That was defensible while the
-    // page stood on its own. It stopped being defensible when My Career
-    // got a shell: the page now renders inside the hub, under a strip with
-    // "Ansökningar" marked as the current section, and the primary
-    // navigation was simultaneously announcing "Hitta jobb" as the current
-    // page — the reader told, by two navigations, that they were in two
-    // places. The longest-prefix entry is gone from the jobs item and this
-    // prefix covers it.
-    routeIds: [
-      "/_authenticated/my-career",
-      "/_authenticated/journey",
-      "/_authenticated/discovery",
-      "/_authenticated/security-career-assessment",
-      "/security-career-assessment",
-      "/discovery",
-    ],
+    // This is the reverse of the #211 decision, and deliberately so. #211
+    // moved applications ONTO this item because the page rendered inside
+    // a hub strip that marked "Ansökningar" while the primary navigation
+    // marked "Hitta jobb" — two navigations telling the reader they were
+    // in two places. The strip is retired, so there is no longer a second
+    // navigation to disagree with, and the owner's sketch puts
+    // applications in Jobs. The reasoning that forced #211 is gone; the
+    // reasoning it overrode is not.
+    routeIds: ["/_authenticated/my-career"],
   },
   {
     key: "passport",
     to: "/passport",
-    labelKey: "nav.myPassport",
+    // "Security Passport" — the product's own name, as the sketch
+    // underlines it. It was "Mitt Security Passport"; the possessive is
+    // already implied by it being in the candidate's own navigation.
+    labelKey: "nav.securityPassport",
     // NOT /passport-attestations. That surface lives under the Passport's
     // name but is authorised by has_employer_role(owner|admin) — it is an
     // employer's attestation desk, not the holder's Passport, and the
@@ -121,22 +141,43 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
   {
     key: "jobs",
     to: "/jobs",
-    labelKey: "nav.findJobs",
-    // Vacancies. Applications used to be listed here too; since #211 they
-    // are a section of the My Career hub and light My Career — see the
-    // note on that item.
-    routeIds: ["/jobs"],
+    // "Jobb" — the sketch's word. "Hitta jobb" named only the discovery
+    // half of a page that is also where applications live. This reuses the
+    // marketing navigation's existing "nav.jobs" rather than adding a
+    // second key holding the identical string in both languages.
+    labelKey: "nav.jobs",
+    // Vacancies AND the candidate's own applications, which sketch 3 puts
+    // in this workspace's supporting area. The applications prefix is
+    // longer than the overview item's "/_authenticated/my-career", so
+    // longest-prefix resolution lights Jobb here without depending on the
+    // order of this array.
+    routeIds: ["/jobs", "/_authenticated/my-career/applications"],
   },
   {
-    key: "exploreProfessions",
+    key: "career",
     to: "/career-center",
-    labelKey: "nav.professionsAndPaths",
-    // The profession explorer is a candidate tool as much as a public page:
-    // "which security roles exist and what do they require" is the question
-    // Career Discovery answers for one person, asked about all of them. It
-    // carries the app chrome for somebody signed in and stays the website's
-    // page for everybody else -- the same route, two chromes, no copy.
-    routeIds: ["/career-center"],
+    // "Karriär" — sketch 4. One career product: exploring professions,
+    // Career Discovery, the saved analysis and the paths out of it.
+    labelKey: "nav.career",
+    // ── ONE CAREER PRODUCT, ONE LIT ITEM ──────────────────────────────
+    //
+    // Career Discovery (canonical and its /discovery alias), the career
+    // journey behind "Hur kommer jag dit?" and the saved career analysis
+    // at /my-career/reports all used to light "Min karriär", because
+    // Karriär was not a destination and there was nowhere else to put
+    // them. They are parts of THIS product and light it now.
+    //
+    // /my-career/reports is under the overview item's prefix, so it is
+    // listed here at greater length and wins on longest prefix.
+    routeIds: [
+      "/career-center",
+      "/_authenticated/security-career-assessment",
+      "/security-career-assessment",
+      "/_authenticated/discovery",
+      "/discovery",
+      "/_authenticated/journey",
+      "/_authenticated/my-career/reports",
+    ],
   },
   {
     key: "assessments",

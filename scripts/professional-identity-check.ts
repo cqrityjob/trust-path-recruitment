@@ -2946,9 +2946,22 @@ console.log("\n12 · candidate dead ends");
     "12.15 a complete profile produces no profile action at all",
     computeNextBestActions(ESTABLISHED).all.every((a) => a.kind !== "complete_profile_basics"),
   );
+  // The Career Card is hidden for the pilot by owner decision, so it is
+  // never recommended -- not even in the state that used to produce it (a
+  // completed report that names careers, which ESTABLISHED is). A
+  // recommendation whose destination redirects away the moment it is
+  // followed is a dead control, and ranking it lower would not have made
+  // the destination work. 12.17 checks a second, unrelated fixture as well,
+  // so re-enabling the action for one identity shape does not slip past.
   ck(
-    "12.16 a Career Card is offered when the report names careers",
-    computeNextBestActions(ESTABLISHED).all.some((a) => a.kind === "create_career_card"),
+    "12.16 a Career Card is not offered, in the very state that used to offer it",
+    computeNextBestActions(ESTABLISHED).all.every((a) => a.kind !== "create_career_card"),
+  );
+  ck(
+    "12.17 and in no other state either, while it is hidden for the pilot",
+    [ESTABLISHED, unreadableEmployment].every((i) =>
+      computeNextBestActions(i).all.every((a) => a.kind !== "create_career_card"),
+    ),
   );
 
   /* ---- G · completeness is not a verification score ---------------- */

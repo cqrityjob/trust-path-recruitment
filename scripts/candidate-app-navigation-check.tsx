@@ -146,27 +146,34 @@ const ROUTE_IDS: string[] = (() => {
 
 group("1 · one canonical link per product, desktop and mobile");
 {
-  // Five, in the candidate's own order and the candidate's own words. The
-  // Passport is SECOND because it is the durable thing this product builds
-  // for a person; jobs, professions and tests are what happens around it.
-  // "Bedömningar" was the employer's word for the instrument -- "Tester och
-  // resultat" is what the candidate is actually looking at, and the
-  // assessment domain model is unchanged underneath it.
+  // The owner's five, in the order the sketches underline them:
+  //
+  //   Översikt · Security Passport · Jobb · Karriär · Tester & utveckling
+  //
+  // The Passport is SECOND because it is the durable thing this product
+  // builds for a person; jobs, career and tests are what happens around it.
+  //
+  // Three labels are shorter than they were, and each for a stated reason.
+  // "Min karriär" became "Översikt" because the section strip inside
+  // /my-career simultaneously offered "Översikt" pointing at the SAME URL
+  // -- one destination wearing two names, one navigation above the other.
+  // "Hitta jobb" named only the discovery half of a page that also holds
+  // the candidate's applications. "Yrken och karriärvägar" named one of the
+  // four things the career page does. "Mitt Security Passport" repeated a
+  // possessive the candidate's own navigation already implies.
+  //
+  // Asserting the exact strings is the point: this table is the only place
+  // that says a label changed on purpose rather than by accident.
   const EXPECTED: { key: string; to: string; sv: string; en: string }[] = [
-    { key: "myCareer", to: "/my-career", sv: "Min karriär", en: "My Career" },
+    { key: "overview", to: "/my-career", sv: "Översikt", en: "Overview" },
     {
       key: "passport",
       to: "/passport",
-      sv: "Mitt Security Passport",
-      en: "My Security Passport",
+      sv: "Security Passport",
+      en: "Security Passport",
     },
-    { key: "jobs", to: "/jobs", sv: "Hitta jobb", en: "Find jobs" },
-    {
-      key: "exploreProfessions",
-      to: "/career-center",
-      sv: "Yrken och karriärvägar",
-      en: "Professions and career paths",
-    },
+    { key: "jobs", to: "/jobs", sv: "Jobb", en: "Jobs" },
+    { key: "career", to: "/career-center", sv: "Karriär", en: "Career" },
     // "Tester & utveckling": the area holds recruitment tests, their
     // released results AND employer-assigned training. "Tester och resultat"
     // named half of it; the two are separated INSIDE the page.
@@ -179,7 +186,7 @@ group("1 · one canonical link per product, desktop and mobile");
   );
 
   for (const variant of ["desktop", "mobile"] as const) {
-    const html = render(React.createElement(CandidateAppNav, { variant, activeKey: "myCareer" }));
+    const html = render(React.createElement(CandidateAppNav, { variant, activeKey: "overview" }));
     const hrefs = Array.from(html.matchAll(/href="([^"]*)"/g)).map((m) => m[1]!);
 
     ck(`${variant}: exactly five links`, hrefs.length === 5);
@@ -232,8 +239,8 @@ group("2 · the workspace carries no marketing navigation");
   for (const variant of ["desktop", "mobile"] as const) {
     const html = render(React.createElement(CandidateAppNav, { variant, activeKey: null }));
     ck(
-      `${variant}: the profession explorer is named as a candidate tool, not as the website's hub`,
-      html.includes(">Yrken och karriärvägar<") && !html.includes("Säkerhetskarriärcenter"),
+      `${variant}: the career destination is named as the candidate's own, not as the website's hub`,
+      html.includes(">Karriär<") && !html.includes("Säkerhetskarriärcenter"),
     );
     ck(
       `${variant}: no reviewer entry in the candidate's primary navigation`,
@@ -276,13 +283,9 @@ group("2 · the workspace carries no marketing navigation");
 group("3 · current location survives nesting");
 {
   const CASES: [string, string | null][] = [
-    ["/_authenticated/my-career/", "myCareer"],
-    ["/_authenticated/my-career/profile", "myCareer"],
-    ["/_authenticated/my-career/career-card", "myCareer"],
-    ["/_authenticated/my-career/cv/new", "myCareer"],
-    ["/_authenticated/my-career/reports/$runId", "myCareer"],
-    ["/_authenticated/journey/$targetId", "myCareer"],
-    ["/_authenticated/discovery/report/$snapshotId", "myCareer"],
+    ["/_authenticated/my-career/", "overview"],
+    ["/_authenticated/my-career/profile", "overview"],
+    ["/_authenticated/my-career/cv/new", "overview"],
     ["/_authenticated/passport/", "passport"],
     ["/_authenticated/passport/information", "passport"],
     ["/_authenticated/passport/card", "passport"],
@@ -290,21 +293,34 @@ group("3 · current location survives nesting");
     ["/_authenticated/academy/", "assessments"],
     ["/_authenticated/academy/report/$attemptId", "assessments"],
     ["/_authenticated/academy/training/$assignmentId/", "assessments"],
-    ["/career-center/", "exploreProfessions"],
-    ["/career-center/$profession", "exploreProfessions"],
+    ["/career-center/", "career"],
+    ["/career-center/$profession", "career"],
     ["/jobs/", "jobs"],
     ["/jobs/$slug", "jobs"],
     ["/jobs/profession/$professionSlug", "jobs"],
-    // ── #211: APPLICATIONS MOVED BACK TO MY CAREER ────────────────────
+    // ── ONE CAREER PRODUCT ────────────────────────────────────────────
     //
-    // They were a JOBS concept here, on the reasoning that opportunities
-    // and applications are two halves of one thing. What changed is not
-    // the reasoning but the page: /my-career/applications now renders
-    // inside the My Career hub shell, under a section strip that marks
-    // "Ansökningar" as the current section. With the old mapping the
-    // primary navigation marked "Hitta jobb" at the same time, so the two
-    // navigations on one screen disagreed about where the reader was.
-    ["/_authenticated/my-career/applications", "myCareer"],
+    // Career Discovery, its /discovery alias, the career journey behind
+    // "Hur kommer jag dit?" and the saved career analysis all used to
+    // light My Career, because Karriär was not a destination and there
+    // was nowhere else to put them. They are parts of one career product
+    // and they light it now. /my-career/reports sits UNDER the overview
+    // item's prefix and is claimed by Karriär at greater length, so this
+    // proves longest-prefix resolution and not merely array order.
+    ["/_authenticated/journey/$targetId", "career"],
+    ["/_authenticated/discovery/report/$snapshotId", "career"],
+    ["/_authenticated/security-career-assessment/session", "career"],
+    ["/_authenticated/my-career/reports/$runId", "career"],
+    // ── APPLICATIONS BELONG TO JOBS ───────────────────────────────────
+    //
+    // #211 moved them the other way, onto My Career, because the page
+    // rendered inside a hub strip marking "Ansökningar" while the primary
+    // navigation marked "Hitta jobb" -- two navigations telling the reader
+    // they were in two places. The strip is retired, so there is no second
+    // navigation left to disagree, and the owner's sketch puts
+    // applications in the Jobs workspace. Also under the overview prefix,
+    // also claimed at greater length.
+    ["/_authenticated/my-career/applications", "jobs"],
   ];
   for (const [routeId, expected] of CASES) {
     ck(

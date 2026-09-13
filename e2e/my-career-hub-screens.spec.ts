@@ -140,22 +140,44 @@ test.describe("PR #211 · the hub", () => {
     });
     await settled(page);
 
-    for (const [key, url, shot] of [
-      ["cv", "/my-career/cv", "10-cv-list-1440-sv"],
-      ["applications", "/my-career/applications", "12-applications-1440-sv"],
+    // ── ONE NAVIGATION, AND IT MARKS THE RIGHT PLACE ──────────────────
+    //
+    // This used to click through the section strip and assert the strip
+    // moved its mark. The strip is retired: it offered "Översikt" →
+    // /my-career while the primary navigation offered "Min karriär" →
+    // the same URL, one above the other. So the evidence is now taken
+    // from the only navigation a candidate has, and it asserts the
+    // property that actually matters after the change -- that the
+    // PRIMARY navigation marks the destination the owner's architecture
+    // assigns each page, and marks exactly one.
+    //
+    //   /my-career/cv           → Översikt (the CV is contextual, so it
+    //                             lights the area it is reached from)
+    //   /my-career/applications → Jobb     (the sketch puts applications
+    //                             in the Jobs workspace)
+    //
+    // The applications case is the interesting one: its route sits under
+    // the overview item's own prefix and is claimed by Jobb at greater
+    // length, so this is longest-prefix resolution proved in a browser
+    // rather than only in the guard's unit cases.
+    for (const [navKey, url, shot] of [
+      ["overview", "/my-career/cv", "10-cv-list-1440-sv"],
+      ["jobs", "/my-career/applications", "12-applications-1440-sv"],
     ] as const) {
-      await page.locator('[data-my-career-hub-nav] [data-hub-key="overview"]').click();
-      await page.waitForURL("**/my-career");
-      await page.locator(`[data-my-career-hub-nav] [data-hub-key="${key}"]`).click();
-      await page.waitForURL(`**${url}`);
+      await page.goto(url);
+      await settled(page);
       await page.waitForTimeout(800);
-      // The strip survives the navigation and moves its mark with the
-      // reader — the property the whole shell exists for.
-      await expect(page.locator(`[data-hub-key="${key}"]`)).toHaveAttribute("aria-current", "page");
-      await expect(page.locator('[data-hub-key="overview"]')).not.toHaveAttribute(
+
+      const desktopNav = page.locator('[data-candidate-app-nav="desktop"]');
+      await expect(desktopNav.locator(`[data-nav-key="${navKey}"]`)).toHaveAttribute(
         "aria-current",
         "page",
       );
+      // Exactly one item is current. Two marked items is the "two
+      // navigations disagree" failure wearing one navigation's clothes.
+      await expect(desktopNav.locator('[aria-current="page"]')).toHaveCount(1);
+      // And the retired strip is not on the page at any of these URLs.
+      await expect(page.locator("[data-my-career-hub-nav]")).toHaveCount(0);
       await expect(page.locator("h1")).toHaveCount(1);
       await page.screenshot({ path: `${OUT}/${shot}.png`, fullPage: true });
     }

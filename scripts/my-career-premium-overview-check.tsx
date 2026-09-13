@@ -762,7 +762,7 @@ group("T10 · the reviewer count is not candidate navigation");
 {
   for (const variant of ["desktop", "mobile"] as const) {
     const html = render(
-      <CandidateAppNav variant={variant} activeKey="myCareer" badgeFor={() => 34} />,
+      <CandidateAppNav variant={variant} activeKey="overview" badgeFor={() => 34} />,
     );
     ck(`${variant}: no reviewer link`, !html.includes('href="/reviews"'));
     ck(`${variant}: the five candidate destinations`, count(html, "<a ") === 5);

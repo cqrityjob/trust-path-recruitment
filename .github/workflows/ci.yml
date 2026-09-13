@@ -1117,7 +1117,7 @@ jobs:
       # door the route refuses. Asserted against rendered markup and the
       # generated route table.
       - name: My Career hub check
-        run: bun run my-career-hub:check
+        run: bun run candidate-navigation-canon:check
 
       # The public header's entry points -- one door in, one way to create
       # an account, "Arbetsgivare" as information and never as an action.

@@ -34,6 +34,8 @@
     // planted controls, on the same terms as the security guard above.
     "scripts/interview-method-tenant-read-check.ts",
     "scripts/negative-controls/interview-method-tenant-read-controls.ts",
+    "scripts/candidate-navigation-canon-check.ts",
+    "scripts/negative-controls/candidate-navigation-canon-controls.ts",
     "scripts/backend-target-lock-check.ts",
     "scripts/scripts-env.d.ts",
     "scripts/regulatory-source-monitor.ts",

@@ -441,12 +441,23 @@ export function SiteHeader() {
         )}
       >
         <Container className="flex h-16 items-center justify-between gap-4 xl:gap-8">
-          {/* In the workspace the brand mark is the way HOME — to the
-              candidate's own home, /my-career, the way it is in every
-              application. It used to drop somebody out onto the marketing
-              landing page, which is an exit, not a home. */}
+          {/* The brand mark goes to the public homepage, always, signed in
+              or not.
+
+              It briefly went to /my-career in the workspace, on the
+              reasoning that a logo is "home" and a candidate's home is
+              their own workspace. The owner's review reversed that: the
+              logo is the way OUT to the public site, and a candidate who
+              wants their overview has a navigation item called Översikt
+              sitting right beside it. One destination, one control —
+              having the logo and the first nav item lead to the same place
+              is the duplication this pass exists to remove.
+
+              `to="/"` unconditionally: a ternary here is what made the
+              mark mean two different things depending on who was reading
+              it, which is the one thing a brand mark must never do. */}
           <Link
-            to={appMode ? "/my-career" : "/"}
+            to="/"
             className={cn(
               "flex shrink-0 items-center gap-2.5 rounded-md font-semibold tracking-tight text-foreground",
               touchTarget,

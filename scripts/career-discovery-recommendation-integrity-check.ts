@@ -447,43 +447,52 @@ group("3 · The Career Card is never a dead end");
 // =========================================================================
 
 {
-  const card = read("src/routes/_authenticated.my-career.career-card.tsx");
+  // ── THE CARD IS HIDDEN FOR THE PILOT, SO IT IS NOT A DEAD END AT ALL ──
+  //
+  // This group used to assert that the Career Card PAGE never trapped a
+  // reader: that its two empty states each offered a way out, that they
+  // said why an older report carries no ranking, and that the copy never
+  // implied a frozen report would be recomputed. Those were the right
+  // assertions while the page existed.
+  //
+  // The owner's pilot review removed the Career Card, and the route is now
+  // a redirect. A page that cannot be reached cannot strand anybody, so
+  // the group asserts the stronger fact directly — and asserts it of the
+  // redirect rather than trusting that the old copy is gone.
+  //
+  // What is NOT dropped is the integrity property underneath 3.6 and 3.7:
+  // no Career Card surface may invent a ranking of its own. The renderer
+  // survives in the tree, unreferenced from the pilot UI, so that property
+  // is now asserted against the code that actually survives. Dropping it
+  // with the page would have quietly retired a real rule.
+  const cardRoute = read("src/routes/_authenticated.my-career.career-card.tsx");
 
+  ok(/throw redirect\(/.test(cardRoute), "3.1 the Career Card route redirects rather than rendering");
   ok(
-    card.includes('to="/security-career-assessment"'),
-    "3.1 the no-assessment state offers the assessment",
-  );
-  // The loop: this state used to offer only the report it is complaining
-  // about. It must now also offer the thing that actually produces a ranking.
-  const noRanking = card.slice(
-    card.indexOf("ranked.length === 0"),
-    card.indexOf("ranked.length > 0"),
+    !/component:/.test(cardRoute),
+    "3.2 and mounts no component, so nothing renders behind the redirect",
   );
   ok(
-    noRanking.includes('to="/security-career-assessment"'),
-    "3.2 the no-ranking state offers a route that can produce a ranking",
+    /to: "\/my-career"/.test(cardRoute),
+    "3.3 to the canonical overview, so an old bookmark lands somewhere true",
   );
   ok(
-    noRanking.includes("openOldReport"),
-    "3.3 and still lets the older report be opened, labelled as the older one",
-  );
-  ok(
-    /namnger yrken|names professions/.test(card),
-    "3.4 and says WHY the older report has no ranking",
-  );
-  // Truthfulness: a stored report is frozen, so the copy must not imply the
-  // old one will gain a ranking on its own.
-  ok(
-    /aldrig om|never recomputed/.test(card),
-    "3.5 without implying a saved report will be recomputed",
+    !/ranked\.length === 0|openOldReport/.test(cardRoute),
+    "3.4 and the retired page's empty states are gone rather than left unreachable",
   );
 
-  // The card still consumes the canonical ranking and computes none of its own.
+  // The retained renderer: still fed the canonical ranking, still ranks
+  // nothing itself.
+  const creator = read("src/components/career-discovery/v31/CareerCardCreator.tsx");
   ok(
-    card.includes("snapshot?.professions?.ranked"),
-    "3.6 the card reads the canonical ranked Top 3",
+    /ranked: readonly RankedProfession\[\]/.test(creator),
+    "3.5 the card renderer is handed the canonical ranked list",
   );
-  ok(!/matchProfessions|rankCareerAreas/.test(card), "3.7 and ranks nothing itself");
+  ok(!/matchProfessions|rankCareerAreas/.test(creator), "3.6 and ranks nothing itself");
+  ok(
+    !/matchProfessions|rankCareerAreas/.test(read("src/lib/career-discovery/v31/career-card.ts")),
+    "3.7 nor does the card's own domain module",
+  );
 }
 
 // =========================================================================
