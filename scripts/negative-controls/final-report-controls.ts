@@ -1668,8 +1668,12 @@ const MORE: readonly Mutation[] = [
     defect:
       "the client contract drops _draft_run_id, so the previewed three-argument cutover becomes indistinguishable from the legacy two-argument one",
     file: "src/integrations/supabase/types.ts",
-    find: "Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }",
-    replace: "Args: { _case_id: string; _expected_basis_hash: string }",
+    // Anchored on the generated line as `supabase gen types` emits it: one
+    // argument per line, alphabetical. Deleting that line is the defect --
+    // the previewed contract loses the argument that distinguishes it from
+    // the legacy two-argument one, and 14.3 must catch it.
+    find: "          _draft_run_id: string\n",
+    replace: "",
     guard: E4,
     expect: "14.3 the client types declare the previewed contract with all three arguments",
   },
