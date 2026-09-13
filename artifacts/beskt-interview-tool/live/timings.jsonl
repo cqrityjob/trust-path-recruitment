@@ -1,165 +1,165 @@
-{"phase":"overview","step":"sign in and open the interview case","ms":17993,"project":"chromium","at":"2026-09-13T15:24:32.876Z"}
-{"phase":"overview","step":"the module is present, and says what it does not produce","ms":3247,"project":"chromium","at":"2026-09-13T15:24:36.127Z"}
-{"phase":"overview","step":"the same module in English","ms":533,"project":"chromium","at":"2026-09-13T15:24:36.661Z"}
-{"phase":"open","step":"sign in straight to the BESKT route","ms":18858,"project":"chromium","at":"2026-09-13T15:24:56.159Z"}
-{"phase":"open","step":"the tool says what BESKT is and is not, before anything else","ms":1633,"project":"chromium","at":"2026-09-13T15:24:57.793Z"}
-{"phase":"open","step":"the method and its version are named","ms":40,"project":"chromium","at":"2026-09-13T15:24:57.833Z"}
-{"phase":"open","step":"the same landing in English","ms":445,"project":"chromium","at":"2026-09-13T15:24:58.278Z"}
-{"phase":"binding","step":"the digests are behind a disclosure, not on the surface","ms":881,"project":"chromium","at":"2026-09-13T15:25:02.799Z"}
-{"phase":"snapshot","step":"all three candidate states are on screen, in words","ms":849,"project":"chromium","at":"2026-09-13T15:25:07.057Z"}
-{"phase":"snapshot","step":"a skipped answer is not dressed as a warning","ms":42,"project":"chromium","at":"2026-09-13T15:25:07.100Z"}
-{"phase":"snapshot","step":"the same snapshot in English","ms":473,"project":"chromium","at":"2026-09-13T15:25:07.574Z"}
-{"phase":"snapshot","step":"the submitted answers carry no control of any kind","ms":244,"project":"chromium","at":"2026-09-13T15:25:11.871Z"}
-{"phase":"session","step":"opening the conversation support","ms":1204,"project":"chromium","at":"2026-09-13T15:25:16.526Z"}
-{"phase":"session","step":"an empty position names its blocker and offers no lock","ms":2552,"project":"chromium","at":"2026-09-13T15:25:19.078Z"}
-{"phase":"themes","step":"both derived themes are present with their reason","ms":1081,"project":"chromium","at":"2026-09-13T15:25:23.260Z"}
-{"phase":"themes","step":"each theme names the exact item key and method version","ms":319,"project":"chromium","at":"2026-09-13T15:25:23.580Z"}
-{"phase":"themes","step":"the same themes in English","ms":463,"project":"chromium","at":"2026-09-13T15:25:24.043Z"}
-{"phase":"document","step":"the form has a field per kind of claim","ms":581,"project":"chromium","at":"2026-09-13T15:25:28.813Z"}
-{"phase":"document","step":"each kind of claim goes in its own field","ms":204,"project":"chromium","at":"2026-09-13T15:25:29.018Z"}
-{"phase":"document","step":"saving goes through the governed server function","ms":806,"project":"chromium","at":"2026-09-13T15:25:29.825Z"}
-{"phase":"confirm","step":"an empty record is refused before it reaches the server","ms":553,"project":"chromium","at":"2026-09-13T15:25:34.940Z"}
-{"phase":"confirm","step":"and accepted, and confirmed, once it says something","ms":736,"project":"chromium","at":"2026-09-13T15:25:35.677Z"}
-{"phase":"correct","step":"a correction without a reason is refused","ms":667,"project":"chromium","at":"2026-09-13T15:25:40.806Z"}
-{"phase":"correct","step":"with a reason it is accepted and becomes version 2","ms":786,"project":"chromium","at":"2026-09-13T15:25:41.593Z"}
-{"phase":"history","step":"both versions are there, and which is current is said","ms":695,"project":"chromium","at":"2026-09-13T15:25:46.394Z"}
-{"phase":"verify","step":"a settled state is refused without a source","ms":587,"project":"chromium","at":"2026-09-13T15:25:51.585Z"}
-{"phase":"verify","step":"with a source it is recorded and appears in the history","ms":1165,"project":"chromium","at":"2026-09-13T15:25:52.751Z"}
-{"phase":"neutral","step":"moving to 'not verified' says what it does not mean","ms":956,"project":"chromium","at":"2026-09-13T15:25:58.346Z"}
-{"phase":"neutral","step":"and the same in English","ms":616,"project":"chromium","at":"2026-09-13T15:25:58.963Z"}
-{"phase":"lock","step":"nothing of anyone else is on the page before the lock","ms":158,"project":"chromium","at":"2026-09-13T15:26:03.738Z"}
-{"phase":"lock","step":"the confirmation says what locking changes","ms":235,"project":"chromium","at":"2026-09-13T15:26:03.973Z"}
-{"phase":"lock","step":"cancelling changes nothing, confirming locks","ms":632,"project":"chromium","at":"2026-09-13T15:26:04.605Z"}
-{"phase":"locked","step":"state, revision and time are on screen; the lock is gone","ms":197,"project":"chromium","at":"2026-09-13T15:26:09.010Z"}
-{"phase":"locked","step":"the documentation itself is no longer editable","ms":2828,"project":"chromium","at":"2026-09-13T15:26:11.838Z"}
-{"phase":"locked","step":"and the same, in English","ms":2357,"project":"chromium","at":"2026-09-13T15:26:14.196Z"}
-{"phase":"independence","step":"the second assessor signs in and joins","ms":4193,"project":"chromium","at":"2026-09-13T15:26:18.949Z"}
-{"phase":"independence","step":"the first assessor's record is nowhere on screen","ms":2446,"project":"chromium","at":"2026-09-13T15:26:21.396Z"}
-{"phase":"independence","step":"and it never arrived in any response either","ms":12,"project":"chromium","at":"2026-09-13T15:26:21.409Z"}
-{"phase":"independence","step":"and the same in English","ms":316,"project":"chromium","at":"2026-09-13T15:26:21.725Z"}
-{"phase":"second","step":"a record of their own, in their own words","ms":934,"project":"chromium","at":"2026-09-13T15:26:26.460Z"}
-{"phase":"second","step":"locked, through the same described confirmation","ms":2858,"project":"chromium","at":"2026-09-13T15:26:29.319Z"}
-{"phase":"second","step":"and only NOW does the first assessor's record appear","ms":229,"project":"chromium","at":"2026-09-13T15:26:29.549Z"}
-{"phase":"compare","step":"the other assessor's own words, in full","ms":207,"project":"chromium","at":"2026-09-13T15:26:34.164Z"}
-{"phase":"compare","step":"and no figure is derived from the pair","ms":26,"project":"chromium","at":"2026-09-13T15:26:34.190Z"}
-{"phase":"compare","step":"and the same in English","ms":392,"project":"chromium","at":"2026-09-13T15:26:34.582Z"}
-{"phase":"reopen","step":"a reopening without a reason is refused","ms":348,"project":"chromium","at":"2026-09-13T15:26:39.378Z"}
-{"phase":"reopen","step":"with a reason it reopens, and the record survives","ms":3206,"project":"chromium","at":"2026-09-13T15:26:42.585Z"}
-{"phase":"reopen","step":"and it is locked again, so the panel can be revealed","ms":2495,"project":"chromium","at":"2026-09-13T15:26:45.081Z"}
-{"phase":"panel","step":"the panel is opened, then revealed","ms":975,"project":"chromium","at":"2026-09-13T15:26:50.745Z"}
-{"phase":"panel","step":"common points and differences are both shown","ms":51,"project":"chromium","at":"2026-09-13T15:26:50.797Z"}
-{"phase":"panel","step":"a disagreement is refused without its divergent position","ms":328,"project":"chromium","at":"2026-09-13T15:26:51.126Z"}
-{"phase":"panel","step":"and recorded, word for word, once it carries one","ms":374,"project":"chromium","at":"2026-09-13T15:26:51.501Z"}
-{"phase":"panel","step":"and the assessors' own positions are untouched","ms":2945,"project":"chromium","at":"2026-09-13T15:26:54.447Z"}
-{"phase":"panel","step":"and the same panel in English","ms":2506,"project":"chromium","at":"2026-09-13T15:26:56.954Z"}
-{"phase":"refusal","step":"a member of another employer cannot reach this case","ms":4330,"project":"chromium","at":"2026-09-13T15:27:01.285Z"}
-{"phase":"overview","step":"sign in and open the interview case","ms":17410,"project":"mobile-375","at":"2026-09-13T15:27:37.649Z"}
-{"phase":"overview","step":"the module is present, and says what it does not produce","ms":4148,"project":"mobile-375","at":"2026-09-13T15:27:41.799Z"}
-{"phase":"overview","step":"the same module in English","ms":433,"project":"mobile-375","at":"2026-09-13T15:27:42.232Z"}
-{"phase":"open","step":"sign in straight to the BESKT route","ms":3076,"project":"mobile-375","at":"2026-09-13T15:27:45.908Z"}
-{"phase":"open","step":"the tool says what BESKT is and is not, before anything else","ms":1049,"project":"mobile-375","at":"2026-09-13T15:27:46.959Z"}
-{"phase":"open","step":"the method and its version are named","ms":34,"project":"mobile-375","at":"2026-09-13T15:27:46.993Z"}
-{"phase":"open","step":"the same landing in English","ms":348,"project":"mobile-375","at":"2026-09-13T15:27:47.341Z"}
-{"phase":"binding","step":"the digests are behind a disclosure, not on the surface","ms":770,"project":"mobile-375","at":"2026-09-13T15:27:51.589Z"}
-{"phase":"snapshot","step":"all three candidate states are on screen, in words","ms":683,"project":"mobile-375","at":"2026-09-13T15:27:55.845Z"}
-{"phase":"snapshot","step":"a skipped answer is not dressed as a warning","ms":41,"project":"mobile-375","at":"2026-09-13T15:27:55.887Z"}
-{"phase":"snapshot","step":"the same snapshot in English","ms":353,"project":"mobile-375","at":"2026-09-13T15:27:56.240Z"}
-{"phase":"snapshot","step":"the submitted answers carry no control of any kind","ms":168,"project":"mobile-375","at":"2026-09-13T15:28:00.343Z"}
-{"phase":"session","step":"opening the conversation support","ms":1099,"project":"mobile-375","at":"2026-09-13T15:28:04.951Z"}
-{"phase":"session","step":"an empty position names its blocker and offers no lock","ms":2477,"project":"mobile-375","at":"2026-09-13T15:28:07.429Z"}
-{"phase":"themes","step":"both derived themes are present with their reason","ms":1046,"project":"mobile-375","at":"2026-09-13T15:28:11.971Z"}
-{"phase":"themes","step":"each theme names the exact item key and method version","ms":226,"project":"mobile-375","at":"2026-09-13T15:28:12.197Z"}
-{"phase":"themes","step":"the same themes in English","ms":396,"project":"mobile-375","at":"2026-09-13T15:28:12.594Z"}
-{"phase":"document","step":"the form has a field per kind of claim","ms":372,"project":"mobile-375","at":"2026-09-13T15:28:17.035Z"}
-{"phase":"document","step":"each kind of claim goes in its own field","ms":190,"project":"mobile-375","at":"2026-09-13T15:28:17.226Z"}
-{"phase":"document","step":"saving goes through the governed server function","ms":591,"project":"mobile-375","at":"2026-09-13T15:28:17.818Z"}
-{"phase":"confirm","step":"an empty record is refused before it reaches the server","ms":370,"project":"mobile-375","at":"2026-09-13T15:28:21.739Z"}
-{"phase":"confirm","step":"and accepted, and confirmed, once it says something","ms":648,"project":"mobile-375","at":"2026-09-13T15:28:22.387Z"}
-{"phase":"correct","step":"a correction without a reason is refused","ms":452,"project":"mobile-375","at":"2026-09-13T15:28:27.410Z"}
-{"phase":"correct","step":"with a reason it is accepted and becomes version 2","ms":638,"project":"mobile-375","at":"2026-09-13T15:28:28.048Z"}
-{"phase":"history","step":"both versions are there, and which is current is said","ms":512,"project":"mobile-375","at":"2026-09-13T15:28:32.718Z"}
-{"phase":"verify","step":"a settled state is refused without a source","ms":418,"project":"mobile-375","at":"2026-09-13T15:28:37.724Z"}
-{"phase":"verify","step":"with a source it is recorded and appears in the history","ms":946,"project":"mobile-375","at":"2026-09-13T15:28:38.671Z"}
-{"phase":"neutral","step":"moving to 'not verified' says what it does not mean","ms":769,"project":"mobile-375","at":"2026-09-13T15:28:43.968Z"}
-{"phase":"neutral","step":"and the same in English","ms":502,"project":"mobile-375","at":"2026-09-13T15:28:44.470Z"}
-{"phase":"lock","step":"nothing of anyone else is on the page before the lock","ms":118,"project":"mobile-375","at":"2026-09-13T15:28:48.595Z"}
-{"phase":"lock","step":"the confirmation says what locking changes","ms":213,"project":"mobile-375","at":"2026-09-13T15:28:48.808Z"}
-{"phase":"lock","step":"cancelling changes nothing, confirming locks","ms":569,"project":"mobile-375","at":"2026-09-13T15:28:49.378Z"}
-{"phase":"locked","step":"state, revision and time are on screen; the lock is gone","ms":119,"project":"mobile-375","at":"2026-09-13T15:28:52.925Z"}
-{"phase":"locked","step":"the documentation itself is no longer editable","ms":2553,"project":"mobile-375","at":"2026-09-13T15:28:55.479Z"}
-{"phase":"locked","step":"and the same, in English","ms":2332,"project":"mobile-375","at":"2026-09-13T15:28:57.811Z"}
-{"phase":"independence","step":"the second assessor signs in and joins","ms":4428,"project":"mobile-375","at":"2026-09-13T15:29:02.773Z"}
-{"phase":"independence","step":"the first assessor's record is nowhere on screen","ms":2355,"project":"mobile-375","at":"2026-09-13T15:29:05.128Z"}
-{"phase":"independence","step":"and it never arrived in any response either","ms":10,"project":"mobile-375","at":"2026-09-13T15:29:05.139Z"}
-{"phase":"independence","step":"and the same in English","ms":221,"project":"mobile-375","at":"2026-09-13T15:29:05.361Z"}
-{"phase":"second","step":"a record of their own, in their own words","ms":690,"project":"mobile-375","at":"2026-09-13T15:29:10.498Z"}
-{"phase":"second","step":"locked, through the same described confirmation","ms":2746,"project":"mobile-375","at":"2026-09-13T15:29:13.244Z"}
-{"phase":"second","step":"and only NOW does the first assessor's record appear","ms":166,"project":"mobile-375","at":"2026-09-13T15:29:13.411Z"}
-{"phase":"compare","step":"the other assessor's own words, in full","ms":155,"project":"mobile-375","at":"2026-09-13T15:29:17.558Z"}
-{"phase":"compare","step":"and no figure is derived from the pair","ms":24,"project":"mobile-375","at":"2026-09-13T15:29:17.582Z"}
-{"phase":"compare","step":"and the same in English","ms":364,"project":"mobile-375","at":"2026-09-13T15:29:17.946Z"}
-{"phase":"reopen","step":"a reopening without a reason is refused","ms":236,"project":"mobile-375","at":"2026-09-13T15:29:22.716Z"}
-{"phase":"reopen","step":"with a reason it reopens, and the record survives","ms":2969,"project":"mobile-375","at":"2026-09-13T15:29:25.686Z"}
-{"phase":"reopen","step":"and it is locked again, so the panel can be revealed","ms":2357,"project":"mobile-375","at":"2026-09-13T15:29:28.043Z"}
-{"phase":"panel","step":"the panel is opened, then revealed","ms":846,"project":"mobile-375","at":"2026-09-13T15:29:33.282Z"}
-{"phase":"panel","step":"common points and differences are both shown","ms":41,"project":"mobile-375","at":"2026-09-13T15:29:33.323Z"}
-{"phase":"panel","step":"a disagreement is refused without its divergent position","ms":223,"project":"mobile-375","at":"2026-09-13T15:29:33.547Z"}
-{"phase":"panel","step":"and recorded, word for word, once it carries one","ms":286,"project":"mobile-375","at":"2026-09-13T15:29:33.834Z"}
-{"phase":"panel","step":"and the assessors' own positions are untouched","ms":2606,"project":"mobile-375","at":"2026-09-13T15:29:36.441Z"}
-{"phase":"panel","step":"and the same panel in English","ms":2395,"project":"mobile-375","at":"2026-09-13T15:29:38.837Z"}
-{"phase":"refusal","step":"a member of another employer cannot reach this case","ms":4165,"project":"mobile-375","at":"2026-09-13T15:29:43.002Z"}
-{"phase":"overview","step":"sign in and open the interview case","ms":17214,"project":"mobile-390","at":"2026-09-13T15:30:20.058Z"}
-{"phase":"overview","step":"the module is present, and says what it does not produce","ms":3148,"project":"mobile-390","at":"2026-09-13T15:30:23.207Z"}
-{"phase":"overview","step":"the same module in English","ms":441,"project":"mobile-390","at":"2026-09-13T15:30:23.648Z"}
-{"phase":"open","step":"sign in straight to the BESKT route","ms":3062,"project":"mobile-390","at":"2026-09-13T15:30:27.476Z"}
-{"phase":"open","step":"the tool says what BESKT is and is not, before anything else","ms":1096,"project":"mobile-390","at":"2026-09-13T15:30:28.574Z"}
-{"phase":"open","step":"the method and its version are named","ms":32,"project":"mobile-390","at":"2026-09-13T15:30:28.607Z"}
-{"phase":"open","step":"the same landing in English","ms":400,"project":"mobile-390","at":"2026-09-13T15:30:29.007Z"}
-{"phase":"binding","step":"the digests are behind a disclosure, not on the surface","ms":763,"project":"mobile-390","at":"2026-09-13T15:30:32.933Z"}
-{"phase":"snapshot","step":"all three candidate states are on screen, in words","ms":695,"project":"mobile-390","at":"2026-09-13T15:30:37.200Z"}
-{"phase":"snapshot","step":"a skipped answer is not dressed as a warning","ms":50,"project":"mobile-390","at":"2026-09-13T15:30:37.250Z"}
-{"phase":"snapshot","step":"the same snapshot in English","ms":442,"project":"mobile-390","at":"2026-09-13T15:30:37.693Z"}
-{"phase":"snapshot","step":"the submitted answers carry no control of any kind","ms":203,"project":"mobile-390","at":"2026-09-13T15:30:42.230Z"}
-{"phase":"session","step":"opening the conversation support","ms":1078,"project":"mobile-390","at":"2026-09-13T15:30:47.078Z"}
-{"phase":"session","step":"an empty position names its blocker and offers no lock","ms":2498,"project":"mobile-390","at":"2026-09-13T15:30:49.577Z"}
-{"phase":"themes","step":"both derived themes are present with their reason","ms":591,"project":"mobile-390","at":"2026-09-13T15:30:53.843Z"}
-{"phase":"themes","step":"each theme names the exact item key and method version","ms":196,"project":"mobile-390","at":"2026-09-13T15:30:54.039Z"}
-{"phase":"themes","step":"the same themes in English","ms":474,"project":"mobile-390","at":"2026-09-13T15:30:54.513Z"}
-{"phase":"document","step":"the form has a field per kind of claim","ms":353,"project":"mobile-390","at":"2026-09-13T15:31:00.737Z"}
-{"phase":"document","step":"each kind of claim goes in its own field","ms":232,"project":"mobile-390","at":"2026-09-13T15:31:00.969Z"}
-{"phase":"document","step":"saving goes through the governed server function","ms":636,"project":"mobile-390","at":"2026-09-13T15:31:01.606Z"}
-{"phase":"confirm","step":"an empty record is refused before it reaches the server","ms":459,"project":"mobile-390","at":"2026-09-13T15:31:06.511Z"}
-{"phase":"confirm","step":"and accepted, and confirmed, once it says something","ms":654,"project":"mobile-390","at":"2026-09-13T15:31:07.165Z"}
-{"phase":"correct","step":"a correction without a reason is refused","ms":459,"project":"mobile-390","at":"2026-09-13T15:31:11.818Z"}
-{"phase":"correct","step":"with a reason it is accepted and becomes version 2","ms":710,"project":"mobile-390","at":"2026-09-13T15:31:12.528Z"}
-{"phase":"history","step":"both versions are there, and which is current is said","ms":513,"project":"mobile-390","at":"2026-09-13T15:31:17.688Z"}
-{"phase":"verify","step":"a settled state is refused without a source","ms":430,"project":"mobile-390","at":"2026-09-13T15:31:22.341Z"}
-{"phase":"verify","step":"with a source it is recorded and appears in the history","ms":900,"project":"mobile-390","at":"2026-09-13T15:31:23.242Z"}
-{"phase":"neutral","step":"moving to 'not verified' says what it does not mean","ms":814,"project":"mobile-390","at":"2026-09-13T15:31:27.822Z"}
-{"phase":"neutral","step":"and the same in English","ms":576,"project":"mobile-390","at":"2026-09-13T15:31:28.399Z"}
-{"phase":"lock","step":"nothing of anyone else is on the page before the lock","ms":122,"project":"mobile-390","at":"2026-09-13T15:31:32.826Z"}
-{"phase":"lock","step":"the confirmation says what locking changes","ms":198,"project":"mobile-390","at":"2026-09-13T15:31:33.024Z"}
-{"phase":"lock","step":"cancelling changes nothing, confirming locks","ms":594,"project":"mobile-390","at":"2026-09-13T15:31:33.619Z"}
-{"phase":"locked","step":"state, revision and time are on screen; the lock is gone","ms":123,"project":"mobile-390","at":"2026-09-13T15:31:37.937Z"}
-{"phase":"locked","step":"the documentation itself is no longer editable","ms":2570,"project":"mobile-390","at":"2026-09-13T15:31:40.508Z"}
-{"phase":"locked","step":"and the same, in English","ms":2319,"project":"mobile-390","at":"2026-09-13T15:31:42.828Z"}
-{"phase":"independence","step":"the second assessor signs in and joins","ms":4428,"project":"mobile-390","at":"2026-09-13T15:31:48.032Z"}
-{"phase":"independence","step":"the first assessor's record is nowhere on screen","ms":2558,"project":"mobile-390","at":"2026-09-13T15:31:50.590Z"}
-{"phase":"independence","step":"and it never arrived in any response either","ms":12,"project":"mobile-390","at":"2026-09-13T15:31:50.603Z"}
-{"phase":"independence","step":"and the same in English","ms":288,"project":"mobile-390","at":"2026-09-13T15:31:50.891Z"}
-{"phase":"second","step":"a record of their own, in their own words","ms":758,"project":"mobile-390","at":"2026-09-13T15:31:56.965Z"}
-{"phase":"second","step":"locked, through the same described confirmation","ms":2785,"project":"mobile-390","at":"2026-09-13T15:31:59.751Z"}
-{"phase":"second","step":"and only NOW does the first assessor's record appear","ms":168,"project":"mobile-390","at":"2026-09-13T15:31:59.920Z"}
-{"phase":"compare","step":"the other assessor's own words, in full","ms":135,"project":"mobile-390","at":"2026-09-13T15:32:04.398Z"}
-{"phase":"compare","step":"and no figure is derived from the pair","ms":29,"project":"mobile-390","at":"2026-09-13T15:32:04.428Z"}
-{"phase":"compare","step":"and the same in English","ms":336,"project":"mobile-390","at":"2026-09-13T15:32:04.765Z"}
-{"phase":"reopen","step":"a reopening without a reason is refused","ms":271,"project":"mobile-390","at":"2026-09-13T15:32:09.744Z"}
-{"phase":"reopen","step":"with a reason it reopens, and the record survives","ms":2950,"project":"mobile-390","at":"2026-09-13T15:32:12.695Z"}
-{"phase":"reopen","step":"and it is locked again, so the panel can be revealed","ms":2478,"project":"mobile-390","at":"2026-09-13T15:32:15.174Z"}
-{"phase":"panel","step":"the panel is opened, then revealed","ms":803,"project":"mobile-390","at":"2026-09-13T15:32:20.238Z"}
-{"phase":"panel","step":"common points and differences are both shown","ms":41,"project":"mobile-390","at":"2026-09-13T15:32:20.279Z"}
-{"phase":"panel","step":"a disagreement is refused without its divergent position","ms":225,"project":"mobile-390","at":"2026-09-13T15:32:20.504Z"}
-{"phase":"panel","step":"and recorded, word for word, once it carries one","ms":341,"project":"mobile-390","at":"2026-09-13T15:32:20.846Z"}
-{"phase":"panel","step":"and the assessors' own positions are untouched","ms":2510,"project":"mobile-390","at":"2026-09-13T15:32:23.356Z"}
-{"phase":"panel","step":"and the same panel in English","ms":2344,"project":"mobile-390","at":"2026-09-13T15:32:25.700Z"}
-{"phase":"refusal","step":"a member of another employer cannot reach this case","ms":4297,"project":"mobile-390","at":"2026-09-13T15:32:29.998Z"}
+{"phase":"overview","step":"sign in and open the interview case","ms":17835,"project":"chromium","at":"2026-09-13T15:42:14.310Z"}
+{"phase":"overview","step":"the module is present, and says what it does not produce","ms":3250,"project":"chromium","at":"2026-09-13T15:42:17.563Z"}
+{"phase":"overview","step":"the same module in English","ms":472,"project":"chromium","at":"2026-09-13T15:42:18.035Z"}
+{"phase":"open","step":"sign in straight to the BESKT route","ms":3050,"project":"chromium","at":"2026-09-13T15:42:21.672Z"}
+{"phase":"open","step":"the tool says what BESKT is and is not, before anything else","ms":1218,"project":"chromium","at":"2026-09-13T15:42:22.890Z"}
+{"phase":"open","step":"the method and its version are named","ms":32,"project":"chromium","at":"2026-09-13T15:42:22.922Z"}
+{"phase":"open","step":"the same landing in English","ms":438,"project":"chromium","at":"2026-09-13T15:42:23.361Z"}
+{"phase":"binding","step":"the digests are behind a disclosure, not on the surface","ms":861,"project":"chromium","at":"2026-09-13T15:42:27.235Z"}
+{"phase":"snapshot","step":"all three candidate states are on screen, in words","ms":799,"project":"chromium","at":"2026-09-13T15:42:31.600Z"}
+{"phase":"snapshot","step":"a skipped answer is not dressed as a warning","ms":48,"project":"chromium","at":"2026-09-13T15:42:31.648Z"}
+{"phase":"snapshot","step":"the same snapshot in English","ms":508,"project":"chromium","at":"2026-09-13T15:42:32.157Z"}
+{"phase":"snapshot","step":"the submitted answers carry no control of any kind","ms":271,"project":"chromium","at":"2026-09-13T15:42:36.542Z"}
+{"phase":"session","step":"opening the conversation support","ms":1194,"project":"chromium","at":"2026-09-13T15:42:41.360Z"}
+{"phase":"session","step":"an empty position names its blocker and offers no lock","ms":2563,"project":"chromium","at":"2026-09-13T15:42:43.924Z"}
+{"phase":"themes","step":"both derived themes are present with their reason","ms":1122,"project":"chromium","at":"2026-09-13T15:42:48.580Z"}
+{"phase":"themes","step":"each theme names the exact item key and method version","ms":336,"project":"chromium","at":"2026-09-13T15:42:48.916Z"}
+{"phase":"themes","step":"the same themes in English","ms":532,"project":"chromium","at":"2026-09-13T15:42:49.448Z"}
+{"phase":"document","step":"the form has a field per kind of claim","ms":498,"project":"chromium","at":"2026-09-13T15:42:54.540Z"}
+{"phase":"document","step":"each kind of claim goes in its own field","ms":210,"project":"chromium","at":"2026-09-13T15:42:54.751Z"}
+{"phase":"document","step":"saving goes through the governed server function","ms":731,"project":"chromium","at":"2026-09-13T15:42:55.482Z"}
+{"phase":"confirm","step":"an empty record is refused before it reaches the server","ms":580,"project":"chromium","at":"2026-09-13T15:43:01.020Z"}
+{"phase":"confirm","step":"and accepted, and confirmed, once it says something","ms":918,"project":"chromium","at":"2026-09-13T15:43:01.939Z"}
+{"phase":"correct","step":"a correction without a reason is refused","ms":570,"project":"chromium","at":"2026-09-13T15:43:06.051Z"}
+{"phase":"correct","step":"with a reason it is accepted and becomes version 2","ms":781,"project":"chromium","at":"2026-09-13T15:43:06.833Z"}
+{"phase":"history","step":"both versions are there, and which is current is said","ms":670,"project":"chromium","at":"2026-09-13T15:43:11.612Z"}
+{"phase":"verify","step":"a settled state is refused without a source","ms":578,"project":"chromium","at":"2026-09-13T15:43:16.365Z"}
+{"phase":"verify","step":"with a source it is recorded and appears in the history","ms":1058,"project":"chromium","at":"2026-09-13T15:43:17.424Z"}
+{"phase":"neutral","step":"moving to 'not verified' says what it does not mean","ms":845,"project":"chromium","at":"2026-09-13T15:43:22.304Z"}
+{"phase":"neutral","step":"and the same in English","ms":584,"project":"chromium","at":"2026-09-13T15:43:22.888Z"}
+{"phase":"lock","step":"nothing of anyone else is on the page before the lock","ms":155,"project":"chromium","at":"2026-09-13T15:43:27.174Z"}
+{"phase":"lock","step":"the confirmation says what locking changes","ms":238,"project":"chromium","at":"2026-09-13T15:43:27.413Z"}
+{"phase":"lock","step":"cancelling changes nothing, confirming locks","ms":669,"project":"chromium","at":"2026-09-13T15:43:28.082Z"}
+{"phase":"locked","step":"state, revision and time are on screen; the lock is gone","ms":174,"project":"chromium","at":"2026-09-13T15:43:32.397Z"}
+{"phase":"locked","step":"the documentation itself is no longer editable","ms":2798,"project":"chromium","at":"2026-09-13T15:43:35.196Z"}
+{"phase":"locked","step":"and the same, in English","ms":2334,"project":"chromium","at":"2026-09-13T15:43:37.531Z"}
+{"phase":"independence","step":"the second assessor signs in and joins","ms":4622,"project":"chromium","at":"2026-09-13T15:43:42.671Z"}
+{"phase":"independence","step":"the first assessor's record is nowhere on screen","ms":2626,"project":"chromium","at":"2026-09-13T15:43:45.298Z"}
+{"phase":"independence","step":"and it never arrived in any response either","ms":11,"project":"chromium","at":"2026-09-13T15:43:45.310Z"}
+{"phase":"independence","step":"and the same in English","ms":312,"project":"chromium","at":"2026-09-13T15:43:45.623Z"}
+{"phase":"second","step":"a record of their own, in their own words","ms":986,"project":"chromium","at":"2026-09-13T15:43:50.841Z"}
+{"phase":"second","step":"locked, through the same described confirmation","ms":2897,"project":"chromium","at":"2026-09-13T15:43:53.738Z"}
+{"phase":"second","step":"and only NOW does the first assessor's record appear","ms":237,"project":"chromium","at":"2026-09-13T15:43:53.975Z"}
+{"phase":"compare","step":"the other assessor's own words, in full","ms":215,"project":"chromium","at":"2026-09-13T15:43:59.826Z"}
+{"phase":"compare","step":"and no figure is derived from the pair","ms":22,"project":"chromium","at":"2026-09-13T15:43:59.849Z"}
+{"phase":"compare","step":"and the same in English","ms":413,"project":"chromium","at":"2026-09-13T15:44:00.263Z"}
+{"phase":"reopen","step":"a reopening without a reason is refused","ms":321,"project":"chromium","at":"2026-09-13T15:44:04.720Z"}
+{"phase":"reopen","step":"with a reason it reopens, and the record survives","ms":3182,"project":"chromium","at":"2026-09-13T15:44:07.903Z"}
+{"phase":"reopen","step":"and it is locked again, so the panel can be revealed","ms":2246,"project":"chromium","at":"2026-09-13T15:44:10.150Z"}
+{"phase":"panel","step":"the panel is opened, then revealed","ms":888,"project":"chromium","at":"2026-09-13T15:44:15.641Z"}
+{"phase":"panel","step":"common points and differences are both shown","ms":47,"project":"chromium","at":"2026-09-13T15:44:15.689Z"}
+{"phase":"panel","step":"a disagreement is refused without its divergent position","ms":323,"project":"chromium","at":"2026-09-13T15:44:16.012Z"}
+{"phase":"panel","step":"and recorded, word for word, once it carries one","ms":367,"project":"chromium","at":"2026-09-13T15:44:16.380Z"}
+{"phase":"panel","step":"and the assessors' own positions are untouched","ms":2796,"project":"chromium","at":"2026-09-13T15:44:19.177Z"}
+{"phase":"panel","step":"and the same panel in English","ms":2445,"project":"chromium","at":"2026-09-13T15:44:21.623Z"}
+{"phase":"refusal","step":"a member of another employer cannot reach this case","ms":4821,"project":"chromium","at":"2026-09-13T15:44:26.445Z"}
+{"phase":"overview","step":"sign in and open the interview case","ms":17826,"project":"mobile-375","at":"2026-09-13T15:45:04.392Z"}
+{"phase":"overview","step":"the module is present, and says what it does not produce","ms":3178,"project":"mobile-375","at":"2026-09-13T15:45:07.571Z"}
+{"phase":"overview","step":"the same module in English","ms":389,"project":"mobile-375","at":"2026-09-13T15:45:07.961Z"}
+{"phase":"open","step":"sign in straight to the BESKT route","ms":3114,"project":"mobile-375","at":"2026-09-13T15:45:11.646Z"}
+{"phase":"open","step":"the tool says what BESKT is and is not, before anything else","ms":1060,"project":"mobile-375","at":"2026-09-13T15:45:12.707Z"}
+{"phase":"open","step":"the method and its version are named","ms":36,"project":"mobile-375","at":"2026-09-13T15:45:12.744Z"}
+{"phase":"open","step":"the same landing in English","ms":387,"project":"mobile-375","at":"2026-09-13T15:45:13.132Z"}
+{"phase":"binding","step":"the digests are behind a disclosure, not on the surface","ms":703,"project":"mobile-375","at":"2026-09-13T15:45:17.429Z"}
+{"phase":"snapshot","step":"all three candidate states are on screen, in words","ms":652,"project":"mobile-375","at":"2026-09-13T15:45:20.923Z"}
+{"phase":"snapshot","step":"a skipped answer is not dressed as a warning","ms":44,"project":"mobile-375","at":"2026-09-13T15:45:20.967Z"}
+{"phase":"snapshot","step":"the same snapshot in English","ms":349,"project":"mobile-375","at":"2026-09-13T15:45:21.317Z"}
+{"phase":"snapshot","step":"the submitted answers carry no control of any kind","ms":162,"project":"mobile-375","at":"2026-09-13T15:45:25.384Z"}
+{"phase":"session","step":"opening the conversation support","ms":1000,"project":"mobile-375","at":"2026-09-13T15:45:29.789Z"}
+{"phase":"session","step":"an empty position names its blocker and offers no lock","ms":2533,"project":"mobile-375","at":"2026-09-13T15:45:32.322Z"}
+{"phase":"themes","step":"both derived themes are present with their reason","ms":1042,"project":"mobile-375","at":"2026-09-13T15:45:37.004Z"}
+{"phase":"themes","step":"each theme names the exact item key and method version","ms":204,"project":"mobile-375","at":"2026-09-13T15:45:37.208Z"}
+{"phase":"themes","step":"the same themes in English","ms":422,"project":"mobile-375","at":"2026-09-13T15:45:37.631Z"}
+{"phase":"document","step":"the form has a field per kind of claim","ms":330,"project":"mobile-375","at":"2026-09-13T15:45:43.930Z"}
+{"phase":"document","step":"each kind of claim goes in its own field","ms":243,"project":"mobile-375","at":"2026-09-13T15:45:44.174Z"}
+{"phase":"document","step":"saving goes through the governed server function","ms":573,"project":"mobile-375","at":"2026-09-13T15:45:44.747Z"}
+{"phase":"confirm","step":"an empty record is refused before it reaches the server","ms":432,"project":"mobile-375","at":"2026-09-13T15:45:49.786Z"}
+{"phase":"confirm","step":"and accepted, and confirmed, once it says something","ms":676,"project":"mobile-375","at":"2026-09-13T15:45:50.462Z"}
+{"phase":"correct","step":"a correction without a reason is refused","ms":427,"project":"mobile-375","at":"2026-09-13T15:45:55.275Z"}
+{"phase":"correct","step":"with a reason it is accepted and becomes version 2","ms":630,"project":"mobile-375","at":"2026-09-13T15:45:55.905Z"}
+{"phase":"history","step":"both versions are there, and which is current is said","ms":527,"project":"mobile-375","at":"2026-09-13T15:46:01.021Z"}
+{"phase":"verify","step":"a settled state is refused without a source","ms":426,"project":"mobile-375","at":"2026-09-13T15:46:05.707Z"}
+{"phase":"verify","step":"with a source it is recorded and appears in the history","ms":960,"project":"mobile-375","at":"2026-09-13T15:46:06.667Z"}
+{"phase":"neutral","step":"moving to 'not verified' says what it does not mean","ms":762,"project":"mobile-375","at":"2026-09-13T15:46:11.506Z"}
+{"phase":"neutral","step":"and the same in English","ms":512,"project":"mobile-375","at":"2026-09-13T15:46:12.018Z"}
+{"phase":"lock","step":"nothing of anyone else is on the page before the lock","ms":110,"project":"mobile-375","at":"2026-09-13T15:46:16.649Z"}
+{"phase":"lock","step":"the confirmation says what locking changes","ms":183,"project":"mobile-375","at":"2026-09-13T15:46:16.833Z"}
+{"phase":"lock","step":"cancelling changes nothing, confirming locks","ms":565,"project":"mobile-375","at":"2026-09-13T15:46:17.399Z"}
+{"phase":"locked","step":"state, revision and time are on screen; the lock is gone","ms":118,"project":"mobile-375","at":"2026-09-13T15:46:21.550Z"}
+{"phase":"locked","step":"the documentation itself is no longer editable","ms":2615,"project":"mobile-375","at":"2026-09-13T15:46:24.165Z"}
+{"phase":"locked","step":"and the same, in English","ms":2273,"project":"mobile-375","at":"2026-09-13T15:46:26.439Z"}
+{"phase":"independence","step":"the second assessor signs in and joins","ms":3959,"project":"mobile-375","at":"2026-09-13T15:46:30.912Z"}
+{"phase":"independence","step":"the first assessor's record is nowhere on screen","ms":2673,"project":"mobile-375","at":"2026-09-13T15:46:33.586Z"}
+{"phase":"independence","step":"and it never arrived in any response either","ms":10,"project":"mobile-375","at":"2026-09-13T15:46:33.597Z"}
+{"phase":"independence","step":"and the same in English","ms":222,"project":"mobile-375","at":"2026-09-13T15:46:33.820Z"}
+{"phase":"second","step":"a record of their own, in their own words","ms":768,"project":"mobile-375","at":"2026-09-13T15:46:39.984Z"}
+{"phase":"second","step":"locked, through the same described confirmation","ms":2767,"project":"mobile-375","at":"2026-09-13T15:46:42.752Z"}
+{"phase":"second","step":"and only NOW does the first assessor's record appear","ms":164,"project":"mobile-375","at":"2026-09-13T15:46:42.917Z"}
+{"phase":"compare","step":"the other assessor's own words, in full","ms":136,"project":"mobile-375","at":"2026-09-13T15:46:47.461Z"}
+{"phase":"compare","step":"and no figure is derived from the pair","ms":22,"project":"mobile-375","at":"2026-09-13T15:46:47.484Z"}
+{"phase":"compare","step":"and the same in English","ms":294,"project":"mobile-375","at":"2026-09-13T15:46:47.778Z"}
+{"phase":"reopen","step":"a reopening without a reason is refused","ms":240,"project":"mobile-375","at":"2026-09-13T15:46:51.843Z"}
+{"phase":"reopen","step":"with a reason it reopens, and the record survives","ms":2993,"project":"mobile-375","at":"2026-09-13T15:46:54.836Z"}
+{"phase":"reopen","step":"and it is locked again, so the panel can be revealed","ms":2377,"project":"mobile-375","at":"2026-09-13T15:46:57.214Z"}
+{"phase":"panel","step":"the panel is opened, then revealed","ms":880,"project":"mobile-375","at":"2026-09-13T15:47:02.607Z"}
+{"phase":"panel","step":"common points and differences are both shown","ms":56,"project":"mobile-375","at":"2026-09-13T15:47:02.664Z"}
+{"phase":"panel","step":"a disagreement is refused without its divergent position","ms":235,"project":"mobile-375","at":"2026-09-13T15:47:02.900Z"}
+{"phase":"panel","step":"and recorded, word for word, once it carries one","ms":311,"project":"mobile-375","at":"2026-09-13T15:47:03.212Z"}
+{"phase":"panel","step":"and the assessors' own positions are untouched","ms":2655,"project":"mobile-375","at":"2026-09-13T15:47:05.867Z"}
+{"phase":"panel","step":"and the same panel in English","ms":2297,"project":"mobile-375","at":"2026-09-13T15:47:08.165Z"}
+{"phase":"refusal","step":"a member of another employer cannot reach this case","ms":4557,"project":"mobile-375","at":"2026-09-13T15:47:12.722Z"}
+{"phase":"overview","step":"sign in and open the interview case","ms":17835,"project":"mobile-390","at":"2026-09-13T15:47:52.880Z"}
+{"phase":"overview","step":"the module is present, and says what it does not produce","ms":3199,"project":"mobile-390","at":"2026-09-13T15:47:56.079Z"}
+{"phase":"overview","step":"the same module in English","ms":389,"project":"mobile-390","at":"2026-09-13T15:47:56.469Z"}
+{"phase":"open","step":"sign in straight to the BESKT route","ms":3018,"project":"mobile-390","at":"2026-09-13T15:48:00.213Z"}
+{"phase":"open","step":"the tool says what BESKT is and is not, before anything else","ms":1052,"project":"mobile-390","at":"2026-09-13T15:48:01.266Z"}
+{"phase":"open","step":"the method and its version are named","ms":38,"project":"mobile-390","at":"2026-09-13T15:48:01.304Z"}
+{"phase":"open","step":"the same landing in English","ms":445,"project":"mobile-390","at":"2026-09-13T15:48:01.749Z"}
+{"phase":"binding","step":"the digests are behind a disclosure, not on the surface","ms":879,"project":"mobile-390","at":"2026-09-13T15:48:06.481Z"}
+{"phase":"snapshot","step":"all three candidate states are on screen, in words","ms":724,"project":"mobile-390","at":"2026-09-13T15:48:11.021Z"}
+{"phase":"snapshot","step":"a skipped answer is not dressed as a warning","ms":40,"project":"mobile-390","at":"2026-09-13T15:48:11.062Z"}
+{"phase":"snapshot","step":"the same snapshot in English","ms":407,"project":"mobile-390","at":"2026-09-13T15:48:11.470Z"}
+{"phase":"snapshot","step":"the submitted answers carry no control of any kind","ms":170,"project":"mobile-390","at":"2026-09-13T15:48:15.333Z"}
+{"phase":"session","step":"opening the conversation support","ms":1062,"project":"mobile-390","at":"2026-09-13T15:48:20.010Z"}
+{"phase":"session","step":"an empty position names its blocker and offers no lock","ms":2239,"project":"mobile-390","at":"2026-09-13T15:48:22.250Z"}
+{"phase":"themes","step":"both derived themes are present with their reason","ms":606,"project":"mobile-390","at":"2026-09-13T15:48:26.441Z"}
+{"phase":"themes","step":"each theme names the exact item key and method version","ms":186,"project":"mobile-390","at":"2026-09-13T15:48:26.627Z"}
+{"phase":"themes","step":"the same themes in English","ms":449,"project":"mobile-390","at":"2026-09-13T15:48:27.077Z"}
+{"phase":"document","step":"the form has a field per kind of claim","ms":381,"project":"mobile-390","at":"2026-09-13T15:48:33.659Z"}
+{"phase":"document","step":"each kind of claim goes in its own field","ms":233,"project":"mobile-390","at":"2026-09-13T15:48:33.893Z"}
+{"phase":"document","step":"saving goes through the governed server function","ms":701,"project":"mobile-390","at":"2026-09-13T15:48:34.595Z"}
+{"phase":"confirm","step":"an empty record is refused before it reaches the server","ms":500,"project":"mobile-390","at":"2026-09-13T15:48:39.658Z"}
+{"phase":"confirm","step":"and accepted, and confirmed, once it says something","ms":700,"project":"mobile-390","at":"2026-09-13T15:48:40.359Z"}
+{"phase":"correct","step":"a correction without a reason is refused","ms":522,"project":"mobile-390","at":"2026-09-13T15:48:45.221Z"}
+{"phase":"correct","step":"with a reason it is accepted and becomes version 2","ms":687,"project":"mobile-390","at":"2026-09-13T15:48:45.908Z"}
+{"phase":"history","step":"both versions are there, and which is current is said","ms":613,"project":"mobile-390","at":"2026-09-13T15:48:51.235Z"}
+{"phase":"verify","step":"a settled state is refused without a source","ms":445,"project":"mobile-390","at":"2026-09-13T15:48:56.454Z"}
+{"phase":"verify","step":"with a source it is recorded and appears in the history","ms":896,"project":"mobile-390","at":"2026-09-13T15:48:57.350Z"}
+{"phase":"neutral","step":"moving to 'not verified' says what it does not mean","ms":782,"project":"mobile-390","at":"2026-09-13T15:49:02.532Z"}
+{"phase":"neutral","step":"and the same in English","ms":582,"project":"mobile-390","at":"2026-09-13T15:49:03.115Z"}
+{"phase":"lock","step":"nothing of anyone else is on the page before the lock","ms":121,"project":"mobile-390","at":"2026-09-13T15:49:07.985Z"}
+{"phase":"lock","step":"the confirmation says what locking changes","ms":219,"project":"mobile-390","at":"2026-09-13T15:49:08.205Z"}
+{"phase":"lock","step":"cancelling changes nothing, confirming locks","ms":592,"project":"mobile-390","at":"2026-09-13T15:49:08.797Z"}
+{"phase":"locked","step":"state, revision and time are on screen; the lock is gone","ms":130,"project":"mobile-390","at":"2026-09-13T15:49:13.599Z"}
+{"phase":"locked","step":"the documentation itself is no longer editable","ms":2557,"project":"mobile-390","at":"2026-09-13T15:49:16.157Z"}
+{"phase":"locked","step":"and the same, in English","ms":2435,"project":"mobile-390","at":"2026-09-13T15:49:18.593Z"}
+{"phase":"independence","step":"the second assessor signs in and joins","ms":4142,"project":"mobile-390","at":"2026-09-13T15:49:23.510Z"}
+{"phase":"independence","step":"the first assessor's record is nowhere on screen","ms":2505,"project":"mobile-390","at":"2026-09-13T15:49:26.015Z"}
+{"phase":"independence","step":"and it never arrived in any response either","ms":15,"project":"mobile-390","at":"2026-09-13T15:49:26.031Z"}
+{"phase":"independence","step":"and the same in English","ms":256,"project":"mobile-390","at":"2026-09-13T15:49:26.288Z"}
+{"phase":"second","step":"a record of their own, in their own words","ms":724,"project":"mobile-390","at":"2026-09-13T15:49:32.939Z"}
+{"phase":"second","step":"locked, through the same described confirmation","ms":2853,"project":"mobile-390","at":"2026-09-13T15:49:35.792Z"}
+{"phase":"second","step":"and only NOW does the first assessor's record appear","ms":179,"project":"mobile-390","at":"2026-09-13T15:49:35.972Z"}
+{"phase":"compare","step":"the other assessor's own words, in full","ms":168,"project":"mobile-390","at":"2026-09-13T15:49:40.915Z"}
+{"phase":"compare","step":"and no figure is derived from the pair","ms":31,"project":"mobile-390","at":"2026-09-13T15:49:40.946Z"}
+{"phase":"compare","step":"and the same in English","ms":401,"project":"mobile-390","at":"2026-09-13T15:49:41.348Z"}
+{"phase":"reopen","step":"a reopening without a reason is refused","ms":296,"project":"mobile-390","at":"2026-09-13T15:49:46.039Z"}
+{"phase":"reopen","step":"with a reason it reopens, and the record survives","ms":3104,"project":"mobile-390","at":"2026-09-13T15:49:49.144Z"}
+{"phase":"reopen","step":"and it is locked again, so the panel can be revealed","ms":2555,"project":"mobile-390","at":"2026-09-13T15:49:51.700Z"}
+{"phase":"panel","step":"the panel is opened, then revealed","ms":863,"project":"mobile-390","at":"2026-09-13T15:49:57.213Z"}
+{"phase":"panel","step":"common points and differences are both shown","ms":52,"project":"mobile-390","at":"2026-09-13T15:49:57.265Z"}
+{"phase":"panel","step":"a disagreement is refused without its divergent position","ms":234,"project":"mobile-390","at":"2026-09-13T15:49:57.499Z"}
+{"phase":"panel","step":"and recorded, word for word, once it carries one","ms":300,"project":"mobile-390","at":"2026-09-13T15:49:57.799Z"}
+{"phase":"panel","step":"and the assessors' own positions are untouched","ms":2569,"project":"mobile-390","at":"2026-09-13T15:50:00.369Z"}
+{"phase":"panel","step":"and the same panel in English","ms":2512,"project":"mobile-390","at":"2026-09-13T15:50:02.882Z"}
+{"phase":"refusal","step":"a member of another employer cannot reach this case","ms":5264,"project":"mobile-390","at":"2026-09-13T15:50:08.147Z"}
