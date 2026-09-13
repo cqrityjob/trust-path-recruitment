@@ -43,6 +43,9 @@ import type { SourceRead } from "@/lib/interview-intelligence/context";
 import { contextOf } from "@/lib/interview-intelligence/context-outcome";
 import { CandidateNoticePanel } from "@/components/employer/interview/CandidateNoticePanel";
 import { processLinkage } from "@/lib/employer-continuity/process-projection";
+import { getBesktCaseModule } from "@/lib/beskt/interview-conduct.functions";
+import { besktModuleKey } from "@/lib/beskt/conduct-queries";
+import { BesktModuleCard } from "@/components/employer/interview/beskt/BesktModuleCard";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/",
@@ -73,6 +76,20 @@ function Page() {
   const contextQ = useQuery({
     queryKey: ["ii", "context", caseId],
     queryFn: () => contextFn({ data: { caseId } }),
+    retry: false,
+  });
+
+  // Is there a BESKT module on this case at all?
+  //
+  // Its own query and its own key, because the answer depends on a link, a
+  // submission and a method binding that none of the reads above know about --
+  // and because a case with no BESKT preparation must cost nothing extra to
+  // open. A failure here is not a failure of the overview: the card is absent
+  // and the rest of the page is unaffected.
+  const besktFn = useServerFn(getBesktCaseModule);
+  const besktQ = useQuery({
+    queryKey: besktModuleKey(employerSlug, caseId),
+    queryFn: () => besktFn({ data: { caseId } }),
     retry: false,
   });
 
@@ -336,6 +353,16 @@ function Page() {
           </ul>
         </section>
       </div>
+
+      {/* ---- BESKT, when this case has one ----------------------------
+           Below the recruiter's own work and above the candidate notice: it
+           is a working surface, not a disclosure, but it is optional and most
+           cases will not have it. */}
+      {besktQ.data && besktQ.data.linked && (
+        <div className="mt-8 max-w-4xl">
+          <BesktModuleCard module={besktQ.data} employerSlug={employerSlug} caseId={caseId} />
+        </div>
+      )}
 
       {/* ---- What the candidate can see -------------------------------
            Below the recruiter's own work, because it is not a task -- and

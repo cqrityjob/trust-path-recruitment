@@ -637,9 +637,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
+    // The pending list is empty after the issuer evidence lands. The planted
+    // defect is unchanged: this APPLIED migration goes back on the frontier.
     find: "const expectedPending: string[] = [];",
-    replace:
-      'const expectedPending: string[] = [\n  "20261113090000_bcp_interview_conduct.sql",\n];',
+    replace: 'const expectedPending: string[] = ["20261113090000_bcp_interview_conduct.sql"];',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },

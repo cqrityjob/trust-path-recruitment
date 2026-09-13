@@ -1,0 +1,2591 @@
+{
+  "what": "BESKT PR 5B interview tool — the ROUTED browser walk",
+  "kind": "the real application on its real routes, two authenticated assessors, against a local Postgres + PostgREST stack",
+  "head": "8f21dcbdaa05bbc71f0570bc913f05a4d0f5cd0a",
+  "builtAt": "2026-09-13T15:50:10.199Z",
+  "projects": [
+    "chromium",
+    "mobile-375",
+    "mobile-390"
+  ],
+  "totalMs": 226633,
+  "stepCount": 165,
+  "phases": [
+    {
+      "project": "chromium",
+      "phase": "overview",
+      "steps": 3,
+      "ms": 21557
+    },
+    {
+      "project": "chromium",
+      "phase": "open",
+      "steps": 4,
+      "ms": 4738
+    },
+    {
+      "project": "chromium",
+      "phase": "binding",
+      "steps": 1,
+      "ms": 861
+    },
+    {
+      "project": "chromium",
+      "phase": "snapshot",
+      "steps": 4,
+      "ms": 1626
+    },
+    {
+      "project": "chromium",
+      "phase": "session",
+      "steps": 2,
+      "ms": 3757
+    },
+    {
+      "project": "chromium",
+      "phase": "themes",
+      "steps": 3,
+      "ms": 1990
+    },
+    {
+      "project": "chromium",
+      "phase": "document",
+      "steps": 3,
+      "ms": 1439
+    },
+    {
+      "project": "chromium",
+      "phase": "confirm",
+      "steps": 2,
+      "ms": 1498
+    },
+    {
+      "project": "chromium",
+      "phase": "correct",
+      "steps": 2,
+      "ms": 1351
+    },
+    {
+      "project": "chromium",
+      "phase": "history",
+      "steps": 1,
+      "ms": 670
+    },
+    {
+      "project": "chromium",
+      "phase": "verify",
+      "steps": 2,
+      "ms": 1636
+    },
+    {
+      "project": "chromium",
+      "phase": "neutral",
+      "steps": 2,
+      "ms": 1429
+    },
+    {
+      "project": "chromium",
+      "phase": "lock",
+      "steps": 3,
+      "ms": 1062
+    },
+    {
+      "project": "chromium",
+      "phase": "locked",
+      "steps": 3,
+      "ms": 5306
+    },
+    {
+      "project": "chromium",
+      "phase": "independence",
+      "steps": 4,
+      "ms": 7571
+    },
+    {
+      "project": "chromium",
+      "phase": "second",
+      "steps": 3,
+      "ms": 4120
+    },
+    {
+      "project": "chromium",
+      "phase": "compare",
+      "steps": 3,
+      "ms": 650
+    },
+    {
+      "project": "chromium",
+      "phase": "reopen",
+      "steps": 3,
+      "ms": 5749
+    },
+    {
+      "project": "chromium",
+      "phase": "panel",
+      "steps": 6,
+      "ms": 6866
+    },
+    {
+      "project": "chromium",
+      "phase": "refusal",
+      "steps": 1,
+      "ms": 4821
+    },
+    {
+      "project": "mobile-375",
+      "phase": "overview",
+      "steps": 3,
+      "ms": 21393
+    },
+    {
+      "project": "mobile-375",
+      "phase": "open",
+      "steps": 4,
+      "ms": 4597
+    },
+    {
+      "project": "mobile-375",
+      "phase": "binding",
+      "steps": 1,
+      "ms": 703
+    },
+    {
+      "project": "mobile-375",
+      "phase": "snapshot",
+      "steps": 4,
+      "ms": 1207
+    },
+    {
+      "project": "mobile-375",
+      "phase": "session",
+      "steps": 2,
+      "ms": 3533
+    },
+    {
+      "project": "mobile-375",
+      "phase": "themes",
+      "steps": 3,
+      "ms": 1668
+    },
+    {
+      "project": "mobile-375",
+      "phase": "document",
+      "steps": 3,
+      "ms": 1146
+    },
+    {
+      "project": "mobile-375",
+      "phase": "confirm",
+      "steps": 2,
+      "ms": 1108
+    },
+    {
+      "project": "mobile-375",
+      "phase": "correct",
+      "steps": 2,
+      "ms": 1057
+    },
+    {
+      "project": "mobile-375",
+      "phase": "history",
+      "steps": 1,
+      "ms": 527
+    },
+    {
+      "project": "mobile-375",
+      "phase": "verify",
+      "steps": 2,
+      "ms": 1386
+    },
+    {
+      "project": "mobile-375",
+      "phase": "neutral",
+      "steps": 2,
+      "ms": 1274
+    },
+    {
+      "project": "mobile-375",
+      "phase": "lock",
+      "steps": 3,
+      "ms": 858
+    },
+    {
+      "project": "mobile-375",
+      "phase": "locked",
+      "steps": 3,
+      "ms": 5006
+    },
+    {
+      "project": "mobile-375",
+      "phase": "independence",
+      "steps": 4,
+      "ms": 6864
+    },
+    {
+      "project": "mobile-375",
+      "phase": "second",
+      "steps": 3,
+      "ms": 3699
+    },
+    {
+      "project": "mobile-375",
+      "phase": "compare",
+      "steps": 3,
+      "ms": 452
+    },
+    {
+      "project": "mobile-375",
+      "phase": "reopen",
+      "steps": 3,
+      "ms": 5610
+    },
+    {
+      "project": "mobile-375",
+      "phase": "panel",
+      "steps": 6,
+      "ms": 6434
+    },
+    {
+      "project": "mobile-375",
+      "phase": "refusal",
+      "steps": 1,
+      "ms": 4557
+    },
+    {
+      "project": "mobile-390",
+      "phase": "overview",
+      "steps": 3,
+      "ms": 21423
+    },
+    {
+      "project": "mobile-390",
+      "phase": "open",
+      "steps": 4,
+      "ms": 4553
+    },
+    {
+      "project": "mobile-390",
+      "phase": "binding",
+      "steps": 1,
+      "ms": 879
+    },
+    {
+      "project": "mobile-390",
+      "phase": "snapshot",
+      "steps": 4,
+      "ms": 1341
+    },
+    {
+      "project": "mobile-390",
+      "phase": "session",
+      "steps": 2,
+      "ms": 3301
+    },
+    {
+      "project": "mobile-390",
+      "phase": "themes",
+      "steps": 3,
+      "ms": 1241
+    },
+    {
+      "project": "mobile-390",
+      "phase": "document",
+      "steps": 3,
+      "ms": 1315
+    },
+    {
+      "project": "mobile-390",
+      "phase": "confirm",
+      "steps": 2,
+      "ms": 1200
+    },
+    {
+      "project": "mobile-390",
+      "phase": "correct",
+      "steps": 2,
+      "ms": 1209
+    },
+    {
+      "project": "mobile-390",
+      "phase": "history",
+      "steps": 1,
+      "ms": 613
+    },
+    {
+      "project": "mobile-390",
+      "phase": "verify",
+      "steps": 2,
+      "ms": 1341
+    },
+    {
+      "project": "mobile-390",
+      "phase": "neutral",
+      "steps": 2,
+      "ms": 1364
+    },
+    {
+      "project": "mobile-390",
+      "phase": "lock",
+      "steps": 3,
+      "ms": 932
+    },
+    {
+      "project": "mobile-390",
+      "phase": "locked",
+      "steps": 3,
+      "ms": 5122
+    },
+    {
+      "project": "mobile-390",
+      "phase": "independence",
+      "steps": 4,
+      "ms": 6918
+    },
+    {
+      "project": "mobile-390",
+      "phase": "second",
+      "steps": 3,
+      "ms": 3756
+    },
+    {
+      "project": "mobile-390",
+      "phase": "compare",
+      "steps": 3,
+      "ms": 600
+    },
+    {
+      "project": "mobile-390",
+      "phase": "reopen",
+      "steps": 3,
+      "ms": 5955
+    },
+    {
+      "project": "mobile-390",
+      "phase": "panel",
+      "steps": 6,
+      "ms": 6530
+    },
+    {
+      "project": "mobile-390",
+      "phase": "refusal",
+      "steps": 1,
+      "ms": 5264
+    }
+  ],
+  "steps": [
+    {
+      "phase": "overview",
+      "step": "sign in and open the interview case",
+      "ms": 17835,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:14.310Z"
+    },
+    {
+      "phase": "overview",
+      "step": "the module is present, and says what it does not produce",
+      "ms": 3250,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:17.563Z"
+    },
+    {
+      "phase": "overview",
+      "step": "the same module in English",
+      "ms": 472,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:18.035Z"
+    },
+    {
+      "phase": "open",
+      "step": "sign in straight to the BESKT route",
+      "ms": 3050,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:21.672Z"
+    },
+    {
+      "phase": "open",
+      "step": "the tool says what BESKT is and is not, before anything else",
+      "ms": 1218,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:22.890Z"
+    },
+    {
+      "phase": "open",
+      "step": "the method and its version are named",
+      "ms": 32,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:22.922Z"
+    },
+    {
+      "phase": "open",
+      "step": "the same landing in English",
+      "ms": 438,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:23.361Z"
+    },
+    {
+      "phase": "binding",
+      "step": "the digests are behind a disclosure, not on the surface",
+      "ms": 861,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:27.235Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "all three candidate states are on screen, in words",
+      "ms": 799,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:31.600Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "a skipped answer is not dressed as a warning",
+      "ms": 48,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:31.648Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "the same snapshot in English",
+      "ms": 508,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:32.157Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "the submitted answers carry no control of any kind",
+      "ms": 271,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:36.542Z"
+    },
+    {
+      "phase": "session",
+      "step": "opening the conversation support",
+      "ms": 1194,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:41.360Z"
+    },
+    {
+      "phase": "session",
+      "step": "an empty position names its blocker and offers no lock",
+      "ms": 2563,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:43.924Z"
+    },
+    {
+      "phase": "themes",
+      "step": "both derived themes are present with their reason",
+      "ms": 1122,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:48.580Z"
+    },
+    {
+      "phase": "themes",
+      "step": "each theme names the exact item key and method version",
+      "ms": 336,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:48.916Z"
+    },
+    {
+      "phase": "themes",
+      "step": "the same themes in English",
+      "ms": 532,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:49.448Z"
+    },
+    {
+      "phase": "document",
+      "step": "the form has a field per kind of claim",
+      "ms": 498,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:54.540Z"
+    },
+    {
+      "phase": "document",
+      "step": "each kind of claim goes in its own field",
+      "ms": 210,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:54.751Z"
+    },
+    {
+      "phase": "document",
+      "step": "saving goes through the governed server function",
+      "ms": 731,
+      "project": "chromium",
+      "at": "2026-09-13T15:42:55.482Z"
+    },
+    {
+      "phase": "confirm",
+      "step": "an empty record is refused before it reaches the server",
+      "ms": 580,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:01.020Z"
+    },
+    {
+      "phase": "confirm",
+      "step": "and accepted, and confirmed, once it says something",
+      "ms": 918,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:01.939Z"
+    },
+    {
+      "phase": "correct",
+      "step": "a correction without a reason is refused",
+      "ms": 570,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:06.051Z"
+    },
+    {
+      "phase": "correct",
+      "step": "with a reason it is accepted and becomes version 2",
+      "ms": 781,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:06.833Z"
+    },
+    {
+      "phase": "history",
+      "step": "both versions are there, and which is current is said",
+      "ms": 670,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:11.612Z"
+    },
+    {
+      "phase": "verify",
+      "step": "a settled state is refused without a source",
+      "ms": 578,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:16.365Z"
+    },
+    {
+      "phase": "verify",
+      "step": "with a source it is recorded and appears in the history",
+      "ms": 1058,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:17.424Z"
+    },
+    {
+      "phase": "neutral",
+      "step": "moving to 'not verified' says what it does not mean",
+      "ms": 845,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:22.304Z"
+    },
+    {
+      "phase": "neutral",
+      "step": "and the same in English",
+      "ms": 584,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:22.888Z"
+    },
+    {
+      "phase": "lock",
+      "step": "nothing of anyone else is on the page before the lock",
+      "ms": 155,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:27.174Z"
+    },
+    {
+      "phase": "lock",
+      "step": "the confirmation says what locking changes",
+      "ms": 238,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:27.413Z"
+    },
+    {
+      "phase": "lock",
+      "step": "cancelling changes nothing, confirming locks",
+      "ms": 669,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:28.082Z"
+    },
+    {
+      "phase": "locked",
+      "step": "state, revision and time are on screen; the lock is gone",
+      "ms": 174,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:32.397Z"
+    },
+    {
+      "phase": "locked",
+      "step": "the documentation itself is no longer editable",
+      "ms": 2798,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:35.196Z"
+    },
+    {
+      "phase": "locked",
+      "step": "and the same, in English",
+      "ms": 2334,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:37.531Z"
+    },
+    {
+      "phase": "independence",
+      "step": "the second assessor signs in and joins",
+      "ms": 4622,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:42.671Z"
+    },
+    {
+      "phase": "independence",
+      "step": "the first assessor's record is nowhere on screen",
+      "ms": 2626,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:45.298Z"
+    },
+    {
+      "phase": "independence",
+      "step": "and it never arrived in any response either",
+      "ms": 11,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:45.310Z"
+    },
+    {
+      "phase": "independence",
+      "step": "and the same in English",
+      "ms": 312,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:45.623Z"
+    },
+    {
+      "phase": "second",
+      "step": "a record of their own, in their own words",
+      "ms": 986,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:50.841Z"
+    },
+    {
+      "phase": "second",
+      "step": "locked, through the same described confirmation",
+      "ms": 2897,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:53.738Z"
+    },
+    {
+      "phase": "second",
+      "step": "and only NOW does the first assessor's record appear",
+      "ms": 237,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:53.975Z"
+    },
+    {
+      "phase": "compare",
+      "step": "the other assessor's own words, in full",
+      "ms": 215,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:59.826Z"
+    },
+    {
+      "phase": "compare",
+      "step": "and no figure is derived from the pair",
+      "ms": 22,
+      "project": "chromium",
+      "at": "2026-09-13T15:43:59.849Z"
+    },
+    {
+      "phase": "compare",
+      "step": "and the same in English",
+      "ms": 413,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:00.263Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "a reopening without a reason is refused",
+      "ms": 321,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:04.720Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "with a reason it reopens, and the record survives",
+      "ms": 3182,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:07.903Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "and it is locked again, so the panel can be revealed",
+      "ms": 2246,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:10.150Z"
+    },
+    {
+      "phase": "panel",
+      "step": "the panel is opened, then revealed",
+      "ms": 888,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:15.641Z"
+    },
+    {
+      "phase": "panel",
+      "step": "common points and differences are both shown",
+      "ms": 47,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:15.689Z"
+    },
+    {
+      "phase": "panel",
+      "step": "a disagreement is refused without its divergent position",
+      "ms": 323,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:16.012Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and recorded, word for word, once it carries one",
+      "ms": 367,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:16.380Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and the assessors' own positions are untouched",
+      "ms": 2796,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:19.177Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and the same panel in English",
+      "ms": 2445,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:21.623Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "a member of another employer cannot reach this case",
+      "ms": 4821,
+      "project": "chromium",
+      "at": "2026-09-13T15:44:26.445Z"
+    },
+    {
+      "phase": "overview",
+      "step": "sign in and open the interview case",
+      "ms": 17826,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:04.392Z"
+    },
+    {
+      "phase": "overview",
+      "step": "the module is present, and says what it does not produce",
+      "ms": 3178,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:07.571Z"
+    },
+    {
+      "phase": "overview",
+      "step": "the same module in English",
+      "ms": 389,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:07.961Z"
+    },
+    {
+      "phase": "open",
+      "step": "sign in straight to the BESKT route",
+      "ms": 3114,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:11.646Z"
+    },
+    {
+      "phase": "open",
+      "step": "the tool says what BESKT is and is not, before anything else",
+      "ms": 1060,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:12.707Z"
+    },
+    {
+      "phase": "open",
+      "step": "the method and its version are named",
+      "ms": 36,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:12.744Z"
+    },
+    {
+      "phase": "open",
+      "step": "the same landing in English",
+      "ms": 387,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:13.132Z"
+    },
+    {
+      "phase": "binding",
+      "step": "the digests are behind a disclosure, not on the surface",
+      "ms": 703,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:17.429Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "all three candidate states are on screen, in words",
+      "ms": 652,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:20.923Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "a skipped answer is not dressed as a warning",
+      "ms": 44,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:20.967Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "the same snapshot in English",
+      "ms": 349,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:21.317Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "the submitted answers carry no control of any kind",
+      "ms": 162,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:25.384Z"
+    },
+    {
+      "phase": "session",
+      "step": "opening the conversation support",
+      "ms": 1000,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:29.789Z"
+    },
+    {
+      "phase": "session",
+      "step": "an empty position names its blocker and offers no lock",
+      "ms": 2533,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:32.322Z"
+    },
+    {
+      "phase": "themes",
+      "step": "both derived themes are present with their reason",
+      "ms": 1042,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:37.004Z"
+    },
+    {
+      "phase": "themes",
+      "step": "each theme names the exact item key and method version",
+      "ms": 204,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:37.208Z"
+    },
+    {
+      "phase": "themes",
+      "step": "the same themes in English",
+      "ms": 422,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:37.631Z"
+    },
+    {
+      "phase": "document",
+      "step": "the form has a field per kind of claim",
+      "ms": 330,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:43.930Z"
+    },
+    {
+      "phase": "document",
+      "step": "each kind of claim goes in its own field",
+      "ms": 243,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:44.174Z"
+    },
+    {
+      "phase": "document",
+      "step": "saving goes through the governed server function",
+      "ms": 573,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:44.747Z"
+    },
+    {
+      "phase": "confirm",
+      "step": "an empty record is refused before it reaches the server",
+      "ms": 432,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:49.786Z"
+    },
+    {
+      "phase": "confirm",
+      "step": "and accepted, and confirmed, once it says something",
+      "ms": 676,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:50.462Z"
+    },
+    {
+      "phase": "correct",
+      "step": "a correction without a reason is refused",
+      "ms": 427,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:55.275Z"
+    },
+    {
+      "phase": "correct",
+      "step": "with a reason it is accepted and becomes version 2",
+      "ms": 630,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:45:55.905Z"
+    },
+    {
+      "phase": "history",
+      "step": "both versions are there, and which is current is said",
+      "ms": 527,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:01.021Z"
+    },
+    {
+      "phase": "verify",
+      "step": "a settled state is refused without a source",
+      "ms": 426,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:05.707Z"
+    },
+    {
+      "phase": "verify",
+      "step": "with a source it is recorded and appears in the history",
+      "ms": 960,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:06.667Z"
+    },
+    {
+      "phase": "neutral",
+      "step": "moving to 'not verified' says what it does not mean",
+      "ms": 762,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:11.506Z"
+    },
+    {
+      "phase": "neutral",
+      "step": "and the same in English",
+      "ms": 512,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:12.018Z"
+    },
+    {
+      "phase": "lock",
+      "step": "nothing of anyone else is on the page before the lock",
+      "ms": 110,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:16.649Z"
+    },
+    {
+      "phase": "lock",
+      "step": "the confirmation says what locking changes",
+      "ms": 183,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:16.833Z"
+    },
+    {
+      "phase": "lock",
+      "step": "cancelling changes nothing, confirming locks",
+      "ms": 565,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:17.399Z"
+    },
+    {
+      "phase": "locked",
+      "step": "state, revision and time are on screen; the lock is gone",
+      "ms": 118,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:21.550Z"
+    },
+    {
+      "phase": "locked",
+      "step": "the documentation itself is no longer editable",
+      "ms": 2615,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:24.165Z"
+    },
+    {
+      "phase": "locked",
+      "step": "and the same, in English",
+      "ms": 2273,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:26.439Z"
+    },
+    {
+      "phase": "independence",
+      "step": "the second assessor signs in and joins",
+      "ms": 3959,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:30.912Z"
+    },
+    {
+      "phase": "independence",
+      "step": "the first assessor's record is nowhere on screen",
+      "ms": 2673,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:33.586Z"
+    },
+    {
+      "phase": "independence",
+      "step": "and it never arrived in any response either",
+      "ms": 10,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:33.597Z"
+    },
+    {
+      "phase": "independence",
+      "step": "and the same in English",
+      "ms": 222,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:33.820Z"
+    },
+    {
+      "phase": "second",
+      "step": "a record of their own, in their own words",
+      "ms": 768,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:39.984Z"
+    },
+    {
+      "phase": "second",
+      "step": "locked, through the same described confirmation",
+      "ms": 2767,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:42.752Z"
+    },
+    {
+      "phase": "second",
+      "step": "and only NOW does the first assessor's record appear",
+      "ms": 164,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:42.917Z"
+    },
+    {
+      "phase": "compare",
+      "step": "the other assessor's own words, in full",
+      "ms": 136,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:47.461Z"
+    },
+    {
+      "phase": "compare",
+      "step": "and no figure is derived from the pair",
+      "ms": 22,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:47.484Z"
+    },
+    {
+      "phase": "compare",
+      "step": "and the same in English",
+      "ms": 294,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:47.778Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "a reopening without a reason is refused",
+      "ms": 240,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:51.843Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "with a reason it reopens, and the record survives",
+      "ms": 2993,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:54.836Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "and it is locked again, so the panel can be revealed",
+      "ms": 2377,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:46:57.214Z"
+    },
+    {
+      "phase": "panel",
+      "step": "the panel is opened, then revealed",
+      "ms": 880,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:47:02.607Z"
+    },
+    {
+      "phase": "panel",
+      "step": "common points and differences are both shown",
+      "ms": 56,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:47:02.664Z"
+    },
+    {
+      "phase": "panel",
+      "step": "a disagreement is refused without its divergent position",
+      "ms": 235,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:47:02.900Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and recorded, word for word, once it carries one",
+      "ms": 311,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:47:03.212Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and the assessors' own positions are untouched",
+      "ms": 2655,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:47:05.867Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and the same panel in English",
+      "ms": 2297,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:47:08.165Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "a member of another employer cannot reach this case",
+      "ms": 4557,
+      "project": "mobile-375",
+      "at": "2026-09-13T15:47:12.722Z"
+    },
+    {
+      "phase": "overview",
+      "step": "sign in and open the interview case",
+      "ms": 17835,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:47:52.880Z"
+    },
+    {
+      "phase": "overview",
+      "step": "the module is present, and says what it does not produce",
+      "ms": 3199,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:47:56.079Z"
+    },
+    {
+      "phase": "overview",
+      "step": "the same module in English",
+      "ms": 389,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:47:56.469Z"
+    },
+    {
+      "phase": "open",
+      "step": "sign in straight to the BESKT route",
+      "ms": 3018,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:00.213Z"
+    },
+    {
+      "phase": "open",
+      "step": "the tool says what BESKT is and is not, before anything else",
+      "ms": 1052,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:01.266Z"
+    },
+    {
+      "phase": "open",
+      "step": "the method and its version are named",
+      "ms": 38,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:01.304Z"
+    },
+    {
+      "phase": "open",
+      "step": "the same landing in English",
+      "ms": 445,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:01.749Z"
+    },
+    {
+      "phase": "binding",
+      "step": "the digests are behind a disclosure, not on the surface",
+      "ms": 879,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:06.481Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "all three candidate states are on screen, in words",
+      "ms": 724,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:11.021Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "a skipped answer is not dressed as a warning",
+      "ms": 40,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:11.062Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "the same snapshot in English",
+      "ms": 407,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:11.470Z"
+    },
+    {
+      "phase": "snapshot",
+      "step": "the submitted answers carry no control of any kind",
+      "ms": 170,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:15.333Z"
+    },
+    {
+      "phase": "session",
+      "step": "opening the conversation support",
+      "ms": 1062,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:20.010Z"
+    },
+    {
+      "phase": "session",
+      "step": "an empty position names its blocker and offers no lock",
+      "ms": 2239,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:22.250Z"
+    },
+    {
+      "phase": "themes",
+      "step": "both derived themes are present with their reason",
+      "ms": 606,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:26.441Z"
+    },
+    {
+      "phase": "themes",
+      "step": "each theme names the exact item key and method version",
+      "ms": 186,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:26.627Z"
+    },
+    {
+      "phase": "themes",
+      "step": "the same themes in English",
+      "ms": 449,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:27.077Z"
+    },
+    {
+      "phase": "document",
+      "step": "the form has a field per kind of claim",
+      "ms": 381,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:33.659Z"
+    },
+    {
+      "phase": "document",
+      "step": "each kind of claim goes in its own field",
+      "ms": 233,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:33.893Z"
+    },
+    {
+      "phase": "document",
+      "step": "saving goes through the governed server function",
+      "ms": 701,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:34.595Z"
+    },
+    {
+      "phase": "confirm",
+      "step": "an empty record is refused before it reaches the server",
+      "ms": 500,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:39.658Z"
+    },
+    {
+      "phase": "confirm",
+      "step": "and accepted, and confirmed, once it says something",
+      "ms": 700,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:40.359Z"
+    },
+    {
+      "phase": "correct",
+      "step": "a correction without a reason is refused",
+      "ms": 522,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:45.221Z"
+    },
+    {
+      "phase": "correct",
+      "step": "with a reason it is accepted and becomes version 2",
+      "ms": 687,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:45.908Z"
+    },
+    {
+      "phase": "history",
+      "step": "both versions are there, and which is current is said",
+      "ms": 613,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:51.235Z"
+    },
+    {
+      "phase": "verify",
+      "step": "a settled state is refused without a source",
+      "ms": 445,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:56.454Z"
+    },
+    {
+      "phase": "verify",
+      "step": "with a source it is recorded and appears in the history",
+      "ms": 896,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:48:57.350Z"
+    },
+    {
+      "phase": "neutral",
+      "step": "moving to 'not verified' says what it does not mean",
+      "ms": 782,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:02.532Z"
+    },
+    {
+      "phase": "neutral",
+      "step": "and the same in English",
+      "ms": 582,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:03.115Z"
+    },
+    {
+      "phase": "lock",
+      "step": "nothing of anyone else is on the page before the lock",
+      "ms": 121,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:07.985Z"
+    },
+    {
+      "phase": "lock",
+      "step": "the confirmation says what locking changes",
+      "ms": 219,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:08.205Z"
+    },
+    {
+      "phase": "lock",
+      "step": "cancelling changes nothing, confirming locks",
+      "ms": 592,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:08.797Z"
+    },
+    {
+      "phase": "locked",
+      "step": "state, revision and time are on screen; the lock is gone",
+      "ms": 130,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:13.599Z"
+    },
+    {
+      "phase": "locked",
+      "step": "the documentation itself is no longer editable",
+      "ms": 2557,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:16.157Z"
+    },
+    {
+      "phase": "locked",
+      "step": "and the same, in English",
+      "ms": 2435,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:18.593Z"
+    },
+    {
+      "phase": "independence",
+      "step": "the second assessor signs in and joins",
+      "ms": 4142,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:23.510Z"
+    },
+    {
+      "phase": "independence",
+      "step": "the first assessor's record is nowhere on screen",
+      "ms": 2505,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:26.015Z"
+    },
+    {
+      "phase": "independence",
+      "step": "and it never arrived in any response either",
+      "ms": 15,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:26.031Z"
+    },
+    {
+      "phase": "independence",
+      "step": "and the same in English",
+      "ms": 256,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:26.288Z"
+    },
+    {
+      "phase": "second",
+      "step": "a record of their own, in their own words",
+      "ms": 724,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:32.939Z"
+    },
+    {
+      "phase": "second",
+      "step": "locked, through the same described confirmation",
+      "ms": 2853,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:35.792Z"
+    },
+    {
+      "phase": "second",
+      "step": "and only NOW does the first assessor's record appear",
+      "ms": 179,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:35.972Z"
+    },
+    {
+      "phase": "compare",
+      "step": "the other assessor's own words, in full",
+      "ms": 168,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:40.915Z"
+    },
+    {
+      "phase": "compare",
+      "step": "and no figure is derived from the pair",
+      "ms": 31,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:40.946Z"
+    },
+    {
+      "phase": "compare",
+      "step": "and the same in English",
+      "ms": 401,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:41.348Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "a reopening without a reason is refused",
+      "ms": 296,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:46.039Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "with a reason it reopens, and the record survives",
+      "ms": 3104,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:49.144Z"
+    },
+    {
+      "phase": "reopen",
+      "step": "and it is locked again, so the panel can be revealed",
+      "ms": 2555,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:51.700Z"
+    },
+    {
+      "phase": "panel",
+      "step": "the panel is opened, then revealed",
+      "ms": 863,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:57.213Z"
+    },
+    {
+      "phase": "panel",
+      "step": "common points and differences are both shown",
+      "ms": 52,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:57.265Z"
+    },
+    {
+      "phase": "panel",
+      "step": "a disagreement is refused without its divergent position",
+      "ms": 234,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:57.499Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and recorded, word for word, once it carries one",
+      "ms": 300,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:49:57.799Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and the assessors' own positions are untouched",
+      "ms": 2569,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:50:00.369Z"
+    },
+    {
+      "phase": "panel",
+      "step": "and the same panel in English",
+      "ms": 2512,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:50:02.882Z"
+    },
+    {
+      "phase": "refusal",
+      "step": "a member of another employer cannot reach this case",
+      "ms": 5264,
+      "project": "mobile-390",
+      "at": "2026-09-13T15:50:08.147Z"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "chromium-01-overview-module-en.png",
+      "bytes": 264374,
+      "sha256": "c02d637b9d87f69b0035eb663a1eb3da72241c476d7e0e5bb7a5a376873a5481"
+    },
+    {
+      "file": "chromium-01-overview-module-sv.png",
+      "bytes": 257666,
+      "sha256": "4c605ae6574c662a31900e0a80c361d8334c3a01e4d4baf41123e630a935f255"
+    },
+    {
+      "file": "chromium-02-tool-landing-en.png",
+      "bytes": 262209,
+      "sha256": "2ecd54381ea6a6bf266f25f565b5dfc3a0193eec61e149acdf1fe64e3b148fee"
+    },
+    {
+      "file": "chromium-02-tool-landing-sv.png",
+      "bytes": 246459,
+      "sha256": "f44d61ee1b59913a06894e483fa0369637fae9ea1e31da959ada616c642d6e97"
+    },
+    {
+      "file": "chromium-03-binding-disclosed-sv.png",
+      "bytes": 281345,
+      "sha256": "2ccda8f7fbf5519b0eae81a9319dcfd09e87ac7e4a341e0c64d4cc1e66b4f065"
+    },
+    {
+      "file": "chromium-04-snapshot-en.png",
+      "bytes": 262209,
+      "sha256": "2ecd54381ea6a6bf266f25f565b5dfc3a0193eec61e149acdf1fe64e3b148fee"
+    },
+    {
+      "file": "chromium-04-snapshot-sv.png",
+      "bytes": 246459,
+      "sha256": "f44d61ee1b59913a06894e483fa0369637fae9ea1e31da959ada616c642d6e97"
+    },
+    {
+      "file": "chromium-05-snapshot-readonly-sv.png",
+      "bytes": 246459,
+      "sha256": "f44d61ee1b59913a06894e483fa0369637fae9ea1e31da959ada616c642d6e97"
+    },
+    {
+      "file": "chromium-06-position-blocked-sv.png",
+      "bytes": 153343,
+      "sha256": "fbe6df1ded055561f9e2e7a6620993d26736952a2b07e61527869225860fbc53"
+    },
+    {
+      "file": "chromium-06-session-open-sv.png",
+      "bytes": 317022,
+      "sha256": "14b9fe5fd2e2a8e13d9a6a2868b2d20adda0a061ea7bf5992741450823c80a9e"
+    },
+    {
+      "file": "chromium-07-themes-en.png",
+      "bytes": 339443,
+      "sha256": "dc6a44302b72f7b7cdf71831a0a608a75a84080540f30effbc2659907f36dda2"
+    },
+    {
+      "file": "chromium-07-themes-sv.png",
+      "bytes": 317022,
+      "sha256": "14b9fe5fd2e2a8e13d9a6a2868b2d20adda0a061ea7bf5992741450823c80a9e"
+    },
+    {
+      "file": "chromium-08-entry-form-sv.png",
+      "bytes": 398603,
+      "sha256": "944ad47b9c08e7b1a7372e790dd6ee79e7a0bfe585fe245b61e86a1c2a5a67ac"
+    },
+    {
+      "file": "chromium-08-entry-saved-sv.png",
+      "bytes": 369256,
+      "sha256": "63d7f297bebaacac9d6628339328483dd11501eb708390745c6a2b3d129589c3"
+    },
+    {
+      "file": "chromium-09-entry-confirmed-sv.png",
+      "bytes": 397633,
+      "sha256": "4fcc64548092b0a119e5dd8b5732626af33a9d5df13cd48071c4a1444d6e5b2a"
+    },
+    {
+      "file": "chromium-09-entry-refused-sv.png",
+      "bytes": 451520,
+      "sha256": "fdab7457f2c7ec5ac5a543dd7799b0f465a0760ed302da32c1837ecc27b7a6f1"
+    },
+    {
+      "file": "chromium-10-correction-refused-sv.png",
+      "bytes": 469987,
+      "sha256": "04cb1fdbff5a5ea380f23ede89c37e2caf1cab85f6a6c575301261152adcd81e"
+    },
+    {
+      "file": "chromium-10-correction-saved-sv.png",
+      "bytes": 397505,
+      "sha256": "b2e5d25aa76be989d39c9bd5c8b0226da778f5d60fcd385ff3046ff3216164c3"
+    },
+    {
+      "file": "chromium-11-history-sv.png",
+      "bytes": 504313,
+      "sha256": "28b21f08240c6655dde008d48b076f07ff6b1d4077518f4f282726b71b5b045c"
+    },
+    {
+      "file": "chromium-12-verification-history-sv.png",
+      "bytes": 521317,
+      "sha256": "824a279407461a5572e7c96e0f153963e0a365d558524a4ff864592ebfd03453"
+    },
+    {
+      "file": "chromium-12-verification-refused-sv.png",
+      "bytes": 414344,
+      "sha256": "f511400711c4d4ed64f7f3b806d86e2e6f432cc46c39a53a75cd097256d973fd"
+    },
+    {
+      "file": "chromium-13-not-verified-neutral-en.png",
+      "bytes": 430202,
+      "sha256": "c23a2f20e187358683b345831891a955725185cf777ab840bb74c5745845282d"
+    },
+    {
+      "file": "chromium-13-not-verified-neutral-sv.png",
+      "bytes": 406675,
+      "sha256": "fe1733a8c63af0595a233af2ea68820b67bbc3a3399d9dff2229fe29e166b16e"
+    },
+    {
+      "file": "chromium-14-before-lock-sv.png",
+      "bytes": 144736,
+      "sha256": "f21caa6635be630e5f13382f984f497cfd5731901859d96f27d4f1b7c46a54df"
+    },
+    {
+      "file": "chromium-14-lock-dialog-sv.png",
+      "bytes": 154301,
+      "sha256": "532dd674f7896d107e18455199e9c15e2a4deedb042f527b74177dbcbbce99ac"
+    },
+    {
+      "file": "chromium-14-locked-sv.png",
+      "bytes": 145856,
+      "sha256": "50222fd7f53b6516466a75ff5bc16384de493c9ef7f28c0a1a9ae1ca010d8d55"
+    },
+    {
+      "file": "chromium-15-entries-readonly-sv.png",
+      "bytes": 398035,
+      "sha256": "57c578d08c43b8c0482b5da4d0706064f6ecd9c5fdd19df8bdd1fd11ce1fd82e"
+    },
+    {
+      "file": "chromium-15-locked-readonly-en.png",
+      "bytes": 145976,
+      "sha256": "956a27c32af2a011598c1efd32e276c6db2d155ebd8d7a9167795b7be710fa21"
+    },
+    {
+      "file": "chromium-15-locked-readonly-sv.png",
+      "bytes": 145856,
+      "sha256": "50222fd7f53b6516466a75ff5bc16384de493c9ef7f28c0a1a9ae1ca010d8d55"
+    },
+    {
+      "file": "chromium-16-second-assessor-joined-sv.png",
+      "bytes": 335869,
+      "sha256": "94f66c508a266a13c941fad3715b36655fef9b78e88d5efffd46b2ddbfc51198"
+    },
+    {
+      "file": "chromium-16-withheld-en.png",
+      "bytes": 155345,
+      "sha256": "13ab0af4c7ab4012461bce0d2ce7a1aabc04e5c856db1a9da1d39bb10bc738e7"
+    },
+    {
+      "file": "chromium-16-withheld-sv.png",
+      "bytes": 153559,
+      "sha256": "9c41a26027cbd2892e5bd805d596ef8620f47c050590869666a46f781356dbe5"
+    },
+    {
+      "file": "chromium-17-revealed-sv.png",
+      "bytes": 217757,
+      "sha256": "aa00f519ade37752c943e3746ed14050ad1ee3c9bb6371e80e1c2dfb05265f44"
+    },
+    {
+      "file": "chromium-17-second-documented-sv.png",
+      "bytes": 355834,
+      "sha256": "f6c8b0f89aecb020434e5d0ab9be186821b8a332fd6560d1fa553227633a46d1"
+    },
+    {
+      "file": "chromium-17-second-locked-sv.png",
+      "bytes": 217757,
+      "sha256": "aa00f519ade37752c943e3746ed14050ad1ee3c9bb6371e80e1c2dfb05265f44"
+    },
+    {
+      "file": "chromium-18-side-by-side-en.png",
+      "bytes": 188906,
+      "sha256": "a72294ef9a509cef97c590c4bfce3fdb062c25febba0063623a5a81a566030d1"
+    },
+    {
+      "file": "chromium-18-side-by-side-sv.png",
+      "bytes": 188840,
+      "sha256": "e67313ea8b1401b02bb35677dab972a4d9b81297a1b05373a1fdccfa8a3dcbf9"
+    },
+    {
+      "file": "chromium-19-relocked-sv.png",
+      "bytes": 188786,
+      "sha256": "5c05fecc3d7bc4a39d885f58dc185abee959fa9f3b1b1ba80d047f85078dded8"
+    },
+    {
+      "file": "chromium-19-reopen-refused-sv.png",
+      "bytes": 202287,
+      "sha256": "65f1a8a1a28a09aef953399eb199f3a08a9bde8a64a04df7fb711bdca3361b16"
+    },
+    {
+      "file": "chromium-19-reopened-sv.png",
+      "bytes": 406675,
+      "sha256": "fe1733a8c63af0595a233af2ea68820b67bbc3a3399d9dff2229fe29e166b16e"
+    },
+    {
+      "file": "chromium-20-outsider-refused-sv.png",
+      "bytes": 4256,
+      "sha256": "ef283a18b8918d0b48b2f3a4dc56ee99a8ad419404e2a2c6fe403b8d60093073"
+    },
+    {
+      "file": "chromium-20-panel-refused-sv.png",
+      "bytes": 194487,
+      "sha256": "83f2ac1b190fa27b4eb16dbd2e1609ec0617ee4958958a28aa390d1854295355"
+    },
+    {
+      "file": "chromium-20-panel-resolution-en.png",
+      "bytes": 199750,
+      "sha256": "e1037d89e0f59d232a96aa9ab88069b2d0916777f732e192830ba279f77e7b54"
+    },
+    {
+      "file": "chromium-20-panel-resolution-sv.png",
+      "bytes": 192892,
+      "sha256": "33fcf3809fb32a09f9b3e582f7edef3fddae35c73c89e7b910f568a4f7dfecc7"
+    },
+    {
+      "file": "chromium-20-panel-revealed-sv.png",
+      "bytes": 182551,
+      "sha256": "31c1a5a09a95b7e38b2b7fe5b90ffe9ee54cbe065305f594694167d79c63d21b"
+    },
+    {
+      "file": "chromium-20-positions-untouched-sv.png",
+      "bytes": 398035,
+      "sha256": "57c578d08c43b8c0482b5da4d0706064f6ecd9c5fdd19df8bdd1fd11ce1fd82e"
+    },
+    {
+      "file": "mobile-375-01-overview-module-en.png",
+      "bytes": 216866,
+      "sha256": "455ed494fd63ae0e8e605ed1a2f072ffea62ff9101297f63db716ad52c2016f9"
+    },
+    {
+      "file": "mobile-375-01-overview-module-sv.png",
+      "bytes": 209750,
+      "sha256": "a75959d058be22459198712ab0176a47d857c74a75aa721ac9570959777dd3f2"
+    },
+    {
+      "file": "mobile-375-02-tool-landing-en.png",
+      "bytes": 219356,
+      "sha256": "64c83015a88f6c8b63c9fb33e1de8e76cf63d6745d1a2dbf6b043317b7764335"
+    },
+    {
+      "file": "mobile-375-02-tool-landing-sv.png",
+      "bytes": 203817,
+      "sha256": "5d136371f3344eba25de3bd9532db098cf79ef79d8479e8d1d4df0f8543788e5"
+    },
+    {
+      "file": "mobile-375-03-binding-disclosed-sv.png",
+      "bytes": 240878,
+      "sha256": "b0522da490d0be2a9b3428eb023100769417a3da32ca965fc8c919afeae03588"
+    },
+    {
+      "file": "mobile-375-04-snapshot-en.png",
+      "bytes": 219338,
+      "sha256": "e4a6643db9243481f6317e15ba7f64a155fa49d47447947869042c2e6ae6a217"
+    },
+    {
+      "file": "mobile-375-04-snapshot-sv.png",
+      "bytes": 203817,
+      "sha256": "5d136371f3344eba25de3bd9532db098cf79ef79d8479e8d1d4df0f8543788e5"
+    },
+    {
+      "file": "mobile-375-05-snapshot-readonly-sv.png",
+      "bytes": 203817,
+      "sha256": "5d136371f3344eba25de3bd9532db098cf79ef79d8479e8d1d4df0f8543788e5"
+    },
+    {
+      "file": "mobile-375-06-position-blocked-sv.png",
+      "bytes": 120363,
+      "sha256": "52e692ee1c9ad2cb4b54596ccb50f70db0ad68f6ee703089cf2ac256af3a92bb"
+    },
+    {
+      "file": "mobile-375-06-session-open-sv.png",
+      "bytes": 271283,
+      "sha256": "4ed050cee742b28fcd7684f7b2f5c26483467dd450fb6eef421894739f939102"
+    },
+    {
+      "file": "mobile-375-07-themes-en.png",
+      "bytes": 291464,
+      "sha256": "409d8e82bb9fbb7b2d2f4a635a75dd2d987e440e0fca1acb3564921df245017e"
+    },
+    {
+      "file": "mobile-375-07-themes-sv.png",
+      "bytes": 271283,
+      "sha256": "4ed050cee742b28fcd7684f7b2f5c26483467dd450fb6eef421894739f939102"
+    },
+    {
+      "file": "mobile-375-08-entry-form-sv.png",
+      "bytes": 351879,
+      "sha256": "cfc23d3134bad51274ebe400d897e73e39d3e31d1765a94cb4d7249d7422a510"
+    },
+    {
+      "file": "mobile-375-08-entry-saved-sv.png",
+      "bytes": 321347,
+      "sha256": "ccd6b4898b93cdf6313cc77a772ad28f8dc89ea3590f2d02c8abd55eae7611e3"
+    },
+    {
+      "file": "mobile-375-09-entry-confirmed-sv.png",
+      "bytes": 347864,
+      "sha256": "8691957cd665b0be64bd813fcd6aea48a21add615f154ac62996df8f35ecc0d9"
+    },
+    {
+      "file": "mobile-375-09-entry-refused-sv.png",
+      "bytes": 402165,
+      "sha256": "c103bd0934ea757db984bfb6f69fd08c1940a36ef48c1133e811babaec9ad33f"
+    },
+    {
+      "file": "mobile-375-10-correction-refused-sv.png",
+      "bytes": 419169,
+      "sha256": "c3e0e9a49f40e4c72a473f10e1f09147d3dd925cfb665183a61b1b61af6daa74"
+    },
+    {
+      "file": "mobile-375-10-correction-saved-sv.png",
+      "bytes": 347503,
+      "sha256": "d86b9e1d8e262cd10fb3f60a9c6610952b4945c2d954f1cd42da9498fe13e403"
+    },
+    {
+      "file": "mobile-375-11-history-sv.png",
+      "bytes": 449020,
+      "sha256": "2c3fe5bfb8afabcbfcd27fd4fbb66cd9f466ed9223aa60352ce84c8461a592c2"
+    },
+    {
+      "file": "mobile-375-12-verification-history-sv.png",
+      "bytes": 465358,
+      "sha256": "819a8832352186043bf87d24801925c695093a9cf72f308ec30ec2717216b896"
+    },
+    {
+      "file": "mobile-375-12-verification-refused-sv.png",
+      "bytes": 363232,
+      "sha256": "9fb41065a1f15a31edaa19f3aae6f7faf2ac9dd0f27cdb13ea36631794fb8628"
+    },
+    {
+      "file": "mobile-375-13-not-verified-neutral-en.png",
+      "bytes": 377391,
+      "sha256": "e1b2c2a05c4908d57d02f49be8bebde2d1d5f2d4dc6ced1ab4e289ae63f1e296"
+    },
+    {
+      "file": "mobile-375-13-not-verified-neutral-sv.png",
+      "bytes": 356123,
+      "sha256": "fd4a3a6c79d58967a7d3b0070d57c7e12c28326b8091be8d725a3f985c112c14"
+    },
+    {
+      "file": "mobile-375-14-before-lock-sv.png",
+      "bytes": 112068,
+      "sha256": "a1c96f16311868ca211a15526f1c13bef668513d8939ccbc4150f1178c6263b3"
+    },
+    {
+      "file": "mobile-375-14-lock-dialog-sv.png",
+      "bytes": 115102,
+      "sha256": "e684e3cd92f7b78fcc13f943847ff70521361c8afa10cfe357bb0aa38f4c0e7d"
+    },
+    {
+      "file": "mobile-375-14-locked-sv.png",
+      "bytes": 112621,
+      "sha256": "1f29521f816ac0c706867ecaa246628c3caa464eceb42439c36da7e93192af0a"
+    },
+    {
+      "file": "mobile-375-15-entries-readonly-sv.png",
+      "bytes": 346470,
+      "sha256": "c01d160639f8cc49a49eee2b49e36f3e886c41dd75799a03ce66f623e74827aa"
+    },
+    {
+      "file": "mobile-375-15-locked-readonly-en.png",
+      "bytes": 115268,
+      "sha256": "38449610a972309508624121c8d808269d75f1566881d31608a584116ed1e8dc"
+    },
+    {
+      "file": "mobile-375-15-locked-readonly-sv.png",
+      "bytes": 112621,
+      "sha256": "1f29521f816ac0c706867ecaa246628c3caa464eceb42439c36da7e93192af0a"
+    },
+    {
+      "file": "mobile-375-16-second-assessor-joined-sv.png",
+      "bytes": 289733,
+      "sha256": "e2263e28d9cf0a495fff0b665fc9af533a51186c5a3839e26558c317dc877f68"
+    },
+    {
+      "file": "mobile-375-16-withheld-en.png",
+      "bytes": 123940,
+      "sha256": "d2dc02a53f0d8ba005236793fee4cdb329664138709e87a66cb859728360eebc"
+    },
+    {
+      "file": "mobile-375-16-withheld-sv.png",
+      "bytes": 120363,
+      "sha256": "52e692ee1c9ad2cb4b54596ccb50f70db0ad68f6ee703089cf2ac256af3a92bb"
+    },
+    {
+      "file": "mobile-375-17-revealed-sv.png",
+      "bytes": 182418,
+      "sha256": "8e36ea87b516f4a3d03ed6a7c160bc1d46a6893f3dff4972e82f7742da9e7af4"
+    },
+    {
+      "file": "mobile-375-17-second-documented-sv.png",
+      "bytes": 307703,
+      "sha256": "6f44e1d375617e2229a160c491af46a80558e15def0e0661b309c2decaa9fb5c"
+    },
+    {
+      "file": "mobile-375-17-second-locked-sv.png",
+      "bytes": 182418,
+      "sha256": "8e36ea87b516f4a3d03ed6a7c160bc1d46a6893f3dff4972e82f7742da9e7af4"
+    },
+    {
+      "file": "mobile-375-18-side-by-side-en.png",
+      "bytes": 157316,
+      "sha256": "bb5f0e3d9832adedbd2972a048f0d7c1c051f7acddce66152df6fe5607c961fd"
+    },
+    {
+      "file": "mobile-375-18-side-by-side-sv.png",
+      "bytes": 154417,
+      "sha256": "97b682fecfeb6a99d94226016dad372921c8f97bfe70023666ec7fd257e9a82c"
+    },
+    {
+      "file": "mobile-375-19-relocked-sv.png",
+      "bytes": 154473,
+      "sha256": "8daa297377f3dee7679a6544c419f1932f21558e737130b8c64551a9e8a81864"
+    },
+    {
+      "file": "mobile-375-19-reopen-refused-sv.png",
+      "bytes": 167301,
+      "sha256": "c4b8603970d452ff77c577720895f9956670af072d16e76eb7a56b9ea95c1a96"
+    },
+    {
+      "file": "mobile-375-19-reopened-sv.png",
+      "bytes": 356123,
+      "sha256": "fd4a3a6c79d58967a7d3b0070d57c7e12c28326b8091be8d725a3f985c112c14"
+    },
+    {
+      "file": "mobile-375-20-outsider-refused-sv.png",
+      "bytes": 2540,
+      "sha256": "e002fd064ec7e54d15c4e5a8c09811e897517bdfc14fd81e3677dba637ac8a9c"
+    },
+    {
+      "file": "mobile-375-20-panel-refused-sv.png",
+      "bytes": 160461,
+      "sha256": "e9a04b76d0ff0ed17e864d7e0df0c4ab2d3ee1a34870cbfd85e794d845a5d921"
+    },
+    {
+      "file": "mobile-375-20-panel-resolution-en.png",
+      "bytes": 165296,
+      "sha256": "54cb7ed5ecc4deeff69b88316a5e10efa317ac6cac49cece5c7e842b09edf3da"
+    },
+    {
+      "file": "mobile-375-20-panel-resolution-sv.png",
+      "bytes": 158345,
+      "sha256": "827ddda4b51a957c56f30736cf596d52c029b244317b71153d4087af1a0997f9"
+    },
+    {
+      "file": "mobile-375-20-panel-revealed-sv.png",
+      "bytes": 148159,
+      "sha256": "1eba3f029d2b931c2ba0831622c256f66c77cf9335d061b84947f8816cf0ebd6"
+    },
+    {
+      "file": "mobile-375-20-positions-untouched-sv.png",
+      "bytes": 346470,
+      "sha256": "c01d160639f8cc49a49eee2b49e36f3e886c41dd75799a03ce66f623e74827aa"
+    },
+    {
+      "file": "mobile-390-01-overview-module-en.png",
+      "bytes": 216105,
+      "sha256": "5dd8d35c180895e4c98f5f82c72eaef018a8e443767f23b08294172563d6d375"
+    },
+    {
+      "file": "mobile-390-01-overview-module-sv.png",
+      "bytes": 207568,
+      "sha256": "bd85218e62eec18fe4fe0d7d72883dd3242571916349295aae0c4fbd8c5ad390"
+    },
+    {
+      "file": "mobile-390-02-tool-landing-en.png",
+      "bytes": 219811,
+      "sha256": "d4dbca3cb4893438048bc3aef3c200e62922c241f5525586eee74e01a8e31728"
+    },
+    {
+      "file": "mobile-390-02-tool-landing-sv.png",
+      "bytes": 203977,
+      "sha256": "45b1a21b2137bd45da475fe100cd867433b98c56c2c9c4d0bf0d6f56d4a5b51c"
+    },
+    {
+      "file": "mobile-390-03-binding-disclosed-sv.png",
+      "bytes": 241161,
+      "sha256": "bb1a8d2bc06f673af9726f086cfcaf410bc237d4be06c16a774091b6831d058d"
+    },
+    {
+      "file": "mobile-390-04-snapshot-en.png",
+      "bytes": 219906,
+      "sha256": "213ec937c9c89d659a30245940ebb71f38aa18ba1c0a7238a1696fd7343778dc"
+    },
+    {
+      "file": "mobile-390-04-snapshot-sv.png",
+      "bytes": 203977,
+      "sha256": "45b1a21b2137bd45da475fe100cd867433b98c56c2c9c4d0bf0d6f56d4a5b51c"
+    },
+    {
+      "file": "mobile-390-05-snapshot-readonly-sv.png",
+      "bytes": 203977,
+      "sha256": "45b1a21b2137bd45da475fe100cd867433b98c56c2c9c4d0bf0d6f56d4a5b51c"
+    },
+    {
+      "file": "mobile-390-06-position-blocked-sv.png",
+      "bytes": 120370,
+      "sha256": "232b8957adf503bf1cf806e6ea54d3327fdb18f31dfc6e3bdb3afabece0ec739"
+    },
+    {
+      "file": "mobile-390-06-session-open-sv.png",
+      "bytes": 271088,
+      "sha256": "144a6b7069d3c2a8d9dc2c3adc5a1d78a2c774441a8d7fe73cb9b9521d5b309d"
+    },
+    {
+      "file": "mobile-390-07-themes-en.png",
+      "bytes": 291632,
+      "sha256": "918d96513e89ccbb94a61f3858f67325f1faa1e204aaa99902edc40b38f5fba6"
+    },
+    {
+      "file": "mobile-390-07-themes-sv.png",
+      "bytes": 271088,
+      "sha256": "144a6b7069d3c2a8d9dc2c3adc5a1d78a2c774441a8d7fe73cb9b9521d5b309d"
+    },
+    {
+      "file": "mobile-390-08-entry-form-sv.png",
+      "bytes": 350783,
+      "sha256": "0cc4b3e89d8f4dad1f000834aa40986429aa3219fe5c03341356ab86890a5c84"
+    },
+    {
+      "file": "mobile-390-08-entry-saved-sv.png",
+      "bytes": 320757,
+      "sha256": "23f557503cc3f5d11d3c755c35b29802611fdda6d657b813d9f122aa90628fca"
+    },
+    {
+      "file": "mobile-390-09-entry-confirmed-sv.png",
+      "bytes": 346522,
+      "sha256": "ee75499bca393486f095eaa6e9e74e77e6bdca1de00fb81af29b75adec540d3f"
+    },
+    {
+      "file": "mobile-390-09-entry-refused-sv.png",
+      "bytes": 400550,
+      "sha256": "317045c8a3ff671cec3029846a47d56bdfdc9ce45a46b7f3b768913e628c7845"
+    },
+    {
+      "file": "mobile-390-10-correction-refused-sv.png",
+      "bytes": 417340,
+      "sha256": "65f0106f150f64284c4f885aca555c8aa901e57fe4a69a5323e2dc2c2261863b"
+    },
+    {
+      "file": "mobile-390-10-correction-saved-sv.png",
+      "bytes": 346423,
+      "sha256": "aefafc154df39774e93730523682fcd879d593b00034272bdbdb71e2543ed1f3"
+    },
+    {
+      "file": "mobile-390-11-history-sv.png",
+      "bytes": 447425,
+      "sha256": "c7a904639897d89af303e51ee16e7f0f455bea1dce450eb8e12591401a74b2c8"
+    },
+    {
+      "file": "mobile-390-12-verification-history-sv.png",
+      "bytes": 463731,
+      "sha256": "288d10e6d209b92523212633ebd6d4627b191181e21cea6c39f1d15c7c9734c7"
+    },
+    {
+      "file": "mobile-390-12-verification-refused-sv.png",
+      "bytes": 362227,
+      "sha256": "1132cd88930e6168e68d59f04480efa18cc57ad0f3cb4bb51879e05715a44aaa"
+    },
+    {
+      "file": "mobile-390-13-not-verified-neutral-en.png",
+      "bytes": 377990,
+      "sha256": "406b37553fd745795de1b9e1a6b9bd082f72f3579cc77d4ce1381856a276a193"
+    },
+    {
+      "file": "mobile-390-13-not-verified-neutral-sv.png",
+      "bytes": 354916,
+      "sha256": "dee6c77832fc905d1a9786f0fdff2ee5367c14ef915f84ca2d4afcd90bdbf89d"
+    },
+    {
+      "file": "mobile-390-14-before-lock-sv.png",
+      "bytes": 111994,
+      "sha256": "6d78189490d5df49702f4d7cb873a8564b61d7931dde3a7f8db4fc4f8d4aa0ec"
+    },
+    {
+      "file": "mobile-390-14-lock-dialog-sv.png",
+      "bytes": 115117,
+      "sha256": "f6adb70609815e58df90629bcb618ae86c624dbc65d0fd13eb17d8777598534f"
+    },
+    {
+      "file": "mobile-390-14-locked-sv.png",
+      "bytes": 112487,
+      "sha256": "32a8025cbee4c0602a51cccc568557c0a0e885188e7d55411e82ed267dbe2716"
+    },
+    {
+      "file": "mobile-390-15-entries-readonly-sv.png",
+      "bytes": 346779,
+      "sha256": "81b95201bf4b2190a4b54b70f75f4af22e338a35a870deea607da6cb01e2d76b"
+    },
+    {
+      "file": "mobile-390-15-locked-readonly-en.png",
+      "bytes": 114272,
+      "sha256": "f1f85f094f3922566f8190a44b787ddd74f4077d604c1a75ec7072de36394a74"
+    },
+    {
+      "file": "mobile-390-15-locked-readonly-sv.png",
+      "bytes": 112487,
+      "sha256": "32a8025cbee4c0602a51cccc568557c0a0e885188e7d55411e82ed267dbe2716"
+    },
+    {
+      "file": "mobile-390-16-second-assessor-joined-sv.png",
+      "bytes": 289492,
+      "sha256": "07bf22fb9481a1b8f184e92f6240643dea0261786a3cad80ba70d70789d4629f"
+    },
+    {
+      "file": "mobile-390-16-withheld-en.png",
+      "bytes": 123263,
+      "sha256": "99da7531e75b3a5e7d9e63b1177e29472fa4b0d746cc1880d47972dc871ce7d0"
+    },
+    {
+      "file": "mobile-390-16-withheld-sv.png",
+      "bytes": 120370,
+      "sha256": "232b8957adf503bf1cf806e6ea54d3327fdb18f31dfc6e3bdb3afabece0ec739"
+    },
+    {
+      "file": "mobile-390-17-revealed-sv.png",
+      "bytes": 182947,
+      "sha256": "0123ddd506e2363941989146cb78e5823598556530d67309cdd3ba92fe50dee1"
+    },
+    {
+      "file": "mobile-390-17-second-documented-sv.png",
+      "bytes": 307295,
+      "sha256": "8a6bb65130a98f34900a507fc9a2918e4dc7c4ef6375fe2883a9c705c416bcc3"
+    },
+    {
+      "file": "mobile-390-17-second-locked-sv.png",
+      "bytes": 182947,
+      "sha256": "0123ddd506e2363941989146cb78e5823598556530d67309cdd3ba92fe50dee1"
+    },
+    {
+      "file": "mobile-390-18-side-by-side-en.png",
+      "bytes": 156743,
+      "sha256": "d0db72998a31e08b4ce41e25ca80f1b874d8b7bcf41baa3d84155b555aaf71f6"
+    },
+    {
+      "file": "mobile-390-18-side-by-side-sv.png",
+      "bytes": 154632,
+      "sha256": "a61384ed76ee7fff9a8f91b15ae1eac194a176a7c0366cf1b292a6500e748116"
+    },
+    {
+      "file": "mobile-390-19-relocked-sv.png",
+      "bytes": 154689,
+      "sha256": "2625ad3dd8570ffffdbb7fcf638ca0afd229ef8f2d9f9fcf35bb89ef2b71aad2"
+    },
+    {
+      "file": "mobile-390-19-reopen-refused-sv.png",
+      "bytes": 167018,
+      "sha256": "d960d12eb959651420a065b97a61b18675dd80bd9ce6a66f0dc711a0dde667e5"
+    },
+    {
+      "file": "mobile-390-19-reopened-sv.png",
+      "bytes": 354916,
+      "sha256": "dee6c77832fc905d1a9786f0fdff2ee5367c14ef915f84ca2d4afcd90bdbf89d"
+    },
+    {
+      "file": "mobile-390-20-outsider-refused-sv.png",
+      "bytes": 2742,
+      "sha256": "0712fd74071445afc9b98c41440bfd0b7a0886fc95a1e4e755d8f424c88fc8b1"
+    },
+    {
+      "file": "mobile-390-20-panel-refused-sv.png",
+      "bytes": 160742,
+      "sha256": "9680bdb0e63f5b5171ba3f873847397d5f5d520442efc16097c3958534bd9cd7"
+    },
+    {
+      "file": "mobile-390-20-panel-resolution-en.png",
+      "bytes": 165150,
+      "sha256": "c940977a3dc1678912c7810e0bd40c39bfe25408761755191fcf86099d714691"
+    },
+    {
+      "file": "mobile-390-20-panel-resolution-sv.png",
+      "bytes": 158621,
+      "sha256": "8d7d783c53c80a92b3cfc0f15618d7a18acc44c34617e1b52be009fe5a19cff6"
+    },
+    {
+      "file": "mobile-390-20-panel-revealed-sv.png",
+      "bytes": 148229,
+      "sha256": "755c64c5a36a127b803b0565feb23b17da31203a74127fac0be3532121845efa"
+    },
+    {
+      "file": "mobile-390-20-positions-untouched-sv.png",
+      "bytes": 346779,
+      "sha256": "81b95201bf4b2190a4b54b70f75f4af22e338a35a870deea607da6cb01e2d76b"
+    }
+  ],
+  "traces": {
+    "committed": false,
+    "why": "a trace records the network and therefore carries the session's bearer token",
+    "directory": "/tmp/beskt-interview-tool-traces",
+    "files": [
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-chromium.zip",
+        "bytes": 2040821,
+        "sha256": "2770ca2c3483f30404d996ababee9edd0a6ff6133f959509ebae551e530f9924"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-chromium.zip",
+        "bytes": 1994662,
+        "sha256": "36ec894b2ddeaee384db3753498ea09b85aa59b4754a35cd164ac75c22f38e56"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-chromium.zip",
+        "bytes": 2030156,
+        "sha256": "f24b2961b763736cd32965c58a2b0670b9dd62e9a09afeb13c27f7bfd2a1a85e"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-chromium.zip",
+        "bytes": 1533510,
+        "sha256": "1445c0b82baacf4bbe6399284b0312a9cee31712932cbd0840aa9a54cc742b1c"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-chromium.zip",
+        "bytes": 1740719,
+        "sha256": "8f15855894f9bbdb4c22352bd93ff0a776725153b7c420ab7c0974ba92ea0998"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-chromium.zip",
+        "bytes": 1404328,
+        "sha256": "dade0db5419a7c361ffefe8db0b4ecf06ec3eb15df01502019c5d10e46ae84b4"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-chromium.zip",
+        "bytes": 1751158,
+        "sha256": "ee31b0be6a081f054e6b01f55463bfc228bb42478daa369176c922682c2e021f"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-chromium.zip",
+        "bytes": 1804287,
+        "sha256": "5aa212a57480c51592299c549019882e3aa5c9b3127d100940d716fc8439ece6"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-chromium.zip",
+        "bytes": 1981261,
+        "sha256": "49d7231e619f044732e0b0ebd03abb9d226cc6414cddfe3c8aadfdba91ce6cef"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-chromium.zip",
+        "bytes": 1792090,
+        "sha256": "8e5ca8b48d745a553655b4b753c43c592c25a007bbb82ff5920338b4c340b752"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-chromium.zip",
+        "bytes": 1993106,
+        "sha256": "76a78141df9d51a6d31cbb1c9e50066bfd57bcce37d529ea6cfaf1cf643b69b3"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-chromium.zip",
+        "bytes": 1970267,
+        "sha256": "f1a80ea06c701d4d5147d7f2d6a6748f47157bbcafec9041525c67a45ebbfcd3"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-chromium.zip",
+        "bytes": 1770080,
+        "sha256": "e64740b7198e9bf7da3ab0196678ed5092f521dc034834b35a67b940bb05fc6f"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-chromium.zip",
+        "bytes": 2498009,
+        "sha256": "4ba5877e5940ef9d512c65662d721b3fe72f6d6e07645befc3357e8ac8485c93"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-chromium.zip",
+        "bytes": 1566638,
+        "sha256": "a6d5660d2f8cd83d8a0789525eabb304ad7cc8414d8aac34184513038b8f401e"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-chromium.zip",
+        "bytes": 1861801,
+        "sha256": "72cc1bba8095d17f9d2bde1fd068be7b3f1a97cb118f8efc3fe4440f9eab2dee"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-chromium.zip",
+        "bytes": 1968063,
+        "sha256": "dc78ffcc9bbadb566d729d21f6c8d887c93e970ce09f2434709504f93cffb145"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-chromium.zip",
+        "bytes": 2212747,
+        "sha256": "f1c3b854793cc208dea03c51e9c22d9b63f1157aec5109908ef3ba091a0973d4"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-chromium.zip",
+        "bytes": 1532356,
+        "sha256": "fe118bb8fe36596e4817becdaf945d28a5ffd0b8d3811118c57fd79642796b11"
+      },
+      {
+        "project": "chromium",
+        "file": "beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-chromium.zip",
+        "bytes": 4368035,
+        "sha256": "e86dec6c3b617d810aa152da358a9b2eb9e906d6ad79b3c793e2d8d96334f670"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-mobile-375.zip",
+        "bytes": 2412125,
+        "sha256": "186c1b950ae1d01ecfd49319c14164e422e840b540e6ddd8298d02f4e53d6906"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-mobile-375.zip",
+        "bytes": 2059218,
+        "sha256": "a079d1ed756880f9567d533de48ab1f68138143847418b0400ff47c1d026d5a3"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-mobile-375.zip",
+        "bytes": 2178415,
+        "sha256": "6c61dbb0a57ff43713389568577f783b27bd1f1d8ea9008c7e0941847ddab7fd"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-mobile-375.zip",
+        "bytes": 2090053,
+        "sha256": "1d50db9a510aaa4dd19482f3dc1a3aee468081241366a490f3362ec944085613"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-mobile-375.zip",
+        "bytes": 2069659,
+        "sha256": "e9b1799ff0f46adc5986e1a45c6e4358e86eb80c13ec23b1885bd5f4ffdaa275"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-mobile-375.zip",
+        "bytes": 1430658,
+        "sha256": "c3e9851e9413b589ea8c047f2f83f77090ce89a9be5c299d9d1b543b92eb1095"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-mobile-375.zip",
+        "bytes": 2357953,
+        "sha256": "8ac46dd9cb31a922f1a0aa291d383d14fdf594ab47a218744022d0b51b1aac58"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-mobile-375.zip",
+        "bytes": 1964766,
+        "sha256": "c32b2c0530bc64b7984cb321129a3ea3d14ed9341efe0f90e8477fe200a0a713"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-mobile-375.zip",
+        "bytes": 2196504,
+        "sha256": "f5591e35571744d57ced60e8708ae405ceb5a9c4311f03383d66b4dbe733fa6b"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-mobile-375.zip",
+        "bytes": 1786027,
+        "sha256": "5a153d6d27407d4d870cdc348eef13e3a055da603d1e6e69a39bd1fb20c7febe"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-mobile-375.zip",
+        "bytes": 2034146,
+        "sha256": "e8e4b94cdb377ef65ece75294c29f5ba321ca16c3e01293aba46762aebee1f34"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-mobile-375.zip",
+        "bytes": 2448138,
+        "sha256": "530ef456ce1587fe42bc41a45b8822c663b6925681df0846ff50d402f9c1c5d8"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-mobile-375.zip",
+        "bytes": 2474372,
+        "sha256": "c062afb3e08ea3f1aa5eb3595772e40f5961675567fb46c010db09efe2508d82"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-mobile-375.zip",
+        "bytes": 2411044,
+        "sha256": "05af55166cdc8e30898a14d70006dc22bbc38a6a13669b58d49d5b9eac2c381d"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-mobile-375.zip",
+        "bytes": 2041812,
+        "sha256": "552ff1b2175206fbbf42970f47254bce1ba825860d02e25fc47cdc96968a0901"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-mobile-375.zip",
+        "bytes": 2362106,
+        "sha256": "1484a61fb843735e0088ebfd275feae7338caca5f433180378caa39309c4d662"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-mobile-375.zip",
+        "bytes": 2046358,
+        "sha256": "142426237c5fe46a76e73c09bbdae8592dd9a5e707e4e87c93742b7fc9a0d0ce"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-mobile-375.zip",
+        "bytes": 2415346,
+        "sha256": "5bb0e0c3e7ebc826d367239dd943e004d60b59bb8b684d70a7dd7cebf7813d2a"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-mobile-375.zip",
+        "bytes": 1463941,
+        "sha256": "d67e506d0e0b8d1ce4e618f66172b977ebaf5d0b2f05b97e00e7f30aa309f075"
+      },
+      {
+        "project": "mobile-375",
+        "file": "beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-mobile-375.zip",
+        "bytes": 5058718,
+        "sha256": "82520f972a678ad353b3412f8bb9c0471d3178dbda68150269d1c27bacf61e56"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-120fb-er-rendered-as-a-conclusion-mobile-390.zip",
+        "bytes": 2388678,
+        "sha256": "b81b49910ae3cd15d43afa7a862af5efa419d8fc9ebdfdf5203cd8a3d2534060"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-12f51-s-shown-whole-and-neutrally-mobile-390.zip",
+        "bytes": 1965891,
+        "sha256": "8f2b3ffedd54d19bf88903b7c837e56e14267d7ff624f55be52c2decb480d824"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-13e1e-y-position-cannot-be-locked-mobile-390.zip",
+        "bytes": 1868197,
+        "sha256": "8aedf9fb6bd1018456cbf1187d61b6a1f8a1fd6e8ce709e9000b5131fb1451cb"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-2735a-the-server-has-confirmed-it-mobile-390.zip",
+        "bytes": 2148703,
+        "sha256": "bec6fba478da5faed607c08205d12c1254e011928a24c08af0320e2ca9cad706"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-34791-ide-factually-with-no-total-mobile-390.zip",
+        "bytes": 2050788,
+        "sha256": "3986f7dd818a24a0c55e0062bbb828d7972e18c0198904fce46462a384aab143"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-378eb--edit-the-candidate-s-words-mobile-390.zip",
+        "bytes": 1571869,
+        "sha256": "87c7e0707c862f8ada783166267b3efda7611c58937104f592c9a2ad7159b557"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-43f83-n-and-creates-a-new-version-mobile-390.zip",
+        "bytes": 2285736,
+        "sha256": "abab7dda21161186d10defe8078cc04b62eef7c343b734b00bf7137d965408f0"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-486b7-d-names-what-it-is-bound-to-mobile-390.zip",
+        "bytes": 1916240,
+        "sha256": "da0972edb65faf8c617ade4649eb90ff22c4944cb8bdf7fe2ecd99b45264afd5"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-6a5db-n-and-nothing-is-lost-by-it-mobile-390.zip",
+        "bytes": 2304630,
+        "sha256": "f3c24658d03b08a3315c8e8e0f5809b1a2c1dbf2ecd551002d0dd73430a01ac9"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-6ff5a--through-a-described-dialog-mobile-390.zip",
+        "bytes": 1898534,
+        "sha256": "add2b348b7aa2b1017c0678bc681f77aa09ac727e524792e00f28763bc85bc64"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-773c4--module-gated-by-the-server-mobile-390.zip",
+        "bytes": 1896679,
+        "sha256": "92811e6e4f4a21e54802d34bd83bf1f669abc286f35ee8b5e997f5791ee36360"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-8476b-nly-and-shows-its-own-facts-mobile-390.zip",
+        "bytes": 2310392,
+        "sha256": "c6c61c99d7de164c4a895c39674ccd07b333fbe9a0d1834c521391a13bc79941"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-8be80-ed-in-eight-separate-fields-mobile-390.zip",
+        "bytes": 2741050,
+        "sha256": "6dfde1d67b7271fe8fb9d40a8e8ff4706460b33902e5a59e39042896d983912a"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-92673-st-—-not-even-over-the-wire-mobile-390.zip",
+        "bytes": 2292420,
+        "sha256": "46cc66cb4deeed5b80f498e168b8cf98ea062549b27295742a40c9a4ab4cea5d"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-973fd-ir-exact-identity-on-screen-mobile-390.zip",
+        "bytes": 2041355,
+        "sha256": "bb8997ad07e51e237b17db1c420da03362e217f08dcb30c69a42bcea00718751"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-9d975-ted-and-the-history-is-kept-mobile-390.zip",
+        "bytes": 2290729,
+        "sha256": "c906f0e11fec490c8122ef88a0099c2e4091972ed7378d4211d83fe0be4e7315"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-b3d46--with-who-wrote-it-and-when-mobile-390.zip",
+        "bytes": 1582801,
+        "sha256": "effe44d2f9d01a128f8378d551e05ca66e7fcc0a172ec0ef78384922c703da42"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-bd849-nd-locks-their-own-position-mobile-390.zip",
+        "bytes": 2212490,
+        "sha256": "036b7e255fef2550cadda5f5319172cd57f7af26bfe98e2696c534aab9c7f00e"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-e868e-closed-rather-than-asserted-mobile-390.zip",
+        "bytes": 1593645,
+        "sha256": "db393a06069a028122345770130d989cf354e421cb29a422374014acf3c27fb4"
+      },
+      {
+        "project": "mobile-390",
+        "file": "beskt-interview-tool-BESKT-f82ca-ent-and-refuses-an-outsider-mobile-390.zip",
+        "bytes": 4721092,
+        "sha256": "e4442464fe1f7d9ea622af027c8ce357086b2d0760903b534601437c38625cb3"
+      }
+    ]
+  }
+}

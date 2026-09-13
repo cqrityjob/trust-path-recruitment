@@ -75,11 +75,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 //
 // Its name comes OFF this list in the same change that records the evidence, for
 // the reason stated above: a resolved name here hides the next genuinely stuck
-// migration behind an expectation. The list is empty again.
-// Empty again: BESKT PR 5A's interview conduct layer was applied to production
-// by the Supabase GitHub integration when PR #233 merged, and release-state.json
-// now records that with evidence. A name left here after the migration is
-// applied would hide the next genuinely stuck migration behind an expectation.
+// migration behind an expectation. The list was empty again.
+//
+// Empty again after BESKT PR 4 and again after PR 5A: the interview-case
+// bridge and the interview conduct layer were both applied to production by
+// the Supabase GitHub integration when #229 and #233 merged, and
+// release-state.json records each with evidence. A name left here after its
+// migration is applied would hide the next genuinely stuck migration behind an
+// expectation.
+//
+// 20261114090000_sp_global_certification_governed_issuer was applied by the
+// official integration after #230 merged and now has hosted evidence in
+// release-state.json. No active migration remains pending.
 const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
