@@ -2376,11 +2376,11 @@ export const finaliseReport = createServerFn({ method: "POST" })
     // bundle deployed before this release; nothing here calls it, and a
     // separate owner-approved CONTRACT migration drops it afterwards. All
     // three arguments are passed: the function has no default to fall back on.
+    // The database accepts SQL NULL for provenance; the generated client type
+    // is temporarily narrower than the hosted function's nullable UUID.
     const { data: id, error } = await context.supabase.rpc("scp_iv_finalise_previewed_report", {
       _case_id: data.caseId,
       _expected_basis_hash: data.expectedBasisHash,
-      // The database accepts SQL NULL here; the generated client type is
-      // temporarily narrower than the hosted function's nullable UUID.
       _draft_run_id: (data.draftRunId ?? null) as string,
     });
     if (error) {
