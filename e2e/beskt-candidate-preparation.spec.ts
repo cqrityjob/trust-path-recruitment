@@ -207,14 +207,44 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
     );
 
     const panel = page.getByTestId("beskt-application-panel");
-    await step("assign", "the panel offers a governed exposure profile", async () => {
+
+    await step("assign", "nothing can be started before a method is CHOSEN", async () => {
+      // Finding 0.3: the method used to be `methods.data?.[0]` -- whatever came
+      // back first, with no way to see or change it. The employer now picks,
+      // and until they do, and until a profile follows, start is refused.
       await expect(panel).toBeVisible({ timeout: 30_000 });
-      await panel
-        .getByLabel(/rollexponering|role exposure|välj|choose/i)
-        .first()
-        .click();
-      await page.getByRole("option").first().click();
+      await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
       await shot(page, "2-employer-before-start");
+    });
+
+    await step("assign", "the offered methods are the governed ones, and there is a choice", async () => {
+      await panel.getByLabel(/^metod$|^method$/i).click();
+      const options = page.getByRole("option");
+      await expect(options.first()).toBeVisible({ timeout: 15_000 });
+      // The fixture publishes two admissible methods precisely so that
+      // "the employer chooses" is observable rather than notional.
+      expect(await options.count()).toBeGreaterThanOrEqual(2);
+      await options.first().click();
+      await expect(panel.getByTestId("beskt-method-summary")).toBeVisible();
+      // A method alone is still not enough.
+      await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
+    });
+
+    await step("assign", "the profile list belongs to the CHOSEN method", async () => {
+      await panel.getByLabel(/rollexponering|role exposure/i).click();
+      await page.getByRole("option").first().click();
+      await expect(panel.getByTestId("beskt-start-submit")).toBeEnabled();
+    });
+
+    await step("assign", "changing the method clears the profile beneath it", async () => {
+      await panel.getByLabel(/^metod$|^method$/i).click();
+      await page.getByRole("option").nth(1).click();
+      // The profile belonged to the previous method; carrying it over would
+      // submit a pairing the database refuses for a fault the UI created.
+      await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
+      await panel.getByLabel(/rollexponering|role exposure/i).click();
+      await page.getByRole("option").first().click();
+      await expect(panel.getByTestId("beskt-start-submit")).toBeEnabled();
     });
 
     await step("assign", "start it", async () => {
@@ -308,13 +338,25 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       });
     });
 
-    await step("answer", "answer the first question and save", async () => {
+    await step("answer", "answer the first question and SAVE AND EXIT", async () => {
       // By id, not by the label "Ja": two different questions on this page
       // carry that label, and a locator that matched both would be a test
       // that did not know which question it was answering.
       await page.locator("#beskt-input-lone_working_experience-yes").check();
+
+      // The control says "Spara och avsluta". The assertion is that it does
+      // BOTH, on the real button -- no page.goto() standing in for the half
+      // that was missing. Landing on the applications list is the "exit".
       await page.getByTestId("beskt-save").click();
-      await expect(page.getByText(/^Sparat$/)).toBeVisible({ timeout: 30_000 });
+      await page.waitForURL(/\/my-career\/applications$/, { timeout: 30_000 });
+      await expect(page.getByTestId("beskt-my-preparations")).toBeVisible({ timeout: 30_000 });
+    });
+
+    await step("answer", "come back; the answer was really written", async () => {
+      await page.goto(`/my-career/preparation/${assignmentId}`);
+      await expect(page.locator("#beskt-input-lone_working_experience-yes")).toBeChecked({
+        timeout: 30_000,
+      });
     });
 
     await step("answer", "the saved answer OPENS the follow-up question", async () => {
@@ -341,7 +383,8 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
         await page.locator("#beskt-input-reported_incident-yes").check();
         await page.locator("#beskt-input-information_acknowledged").check();
         await page.getByTestId("beskt-save").click();
-        await expect(page.getByText(/^Sparat$/)).toBeVisible({ timeout: 30_000 });
+        await page.waitForURL(/\/my-career\/applications$/, { timeout: 30_000 });
+        await page.goto(`/my-career/preparation/${assignmentId}`);
         await expect(page.getByTestId("beskt-item-incident_context")).toBeVisible({
           timeout: 30_000,
         });
@@ -357,13 +400,11 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       await shot(page, "4-answered-sv");
     });
 
-    await step("answer", "save the omission and the oral choice too", async () => {
+    await step("resume", "save the omission and the oral choice, and LEAVE", async () => {
+      // The leaving is done by the product's own control, not by the test
+      // navigating on its behalf: that is the whole of finding 0.1.
       await page.getByTestId("beskt-save").click();
-      await expect(page.getByText(/^Sparat$/)).toBeVisible({ timeout: 30_000 });
-    });
-
-    await step("resume", "leave the preparation entirely", async () => {
-      await page.goto("/my-career/applications");
+      await page.waitForURL(/\/my-career\/applications$/, { timeout: 30_000 });
       await expect(page.getByTestId("beskt-my-preparations")).toBeVisible({ timeout: 30_000 });
     });
 
@@ -398,8 +439,37 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       await shot(page, "5-review-sv");
     });
 
+    await step("review", "every answer offers a correction control that WORKS", async () => {
+      // Finding 0.2: this was an <a href="#beskt-item-..."> pointing at a
+      // question that is not rendered during review, so the control did
+      // nothing at all. First, middle and last are each exercised, because a
+      // per-item control that works only for the first is not working.
+      const keys = await page
+        .getByTestId("beskt-review-list")
+        .locator("[data-testid^='beskt-review-edit-']")
+        .evaluateAll((nodes) =>
+          nodes.map((n) => (n.getAttribute("data-testid") ?? "").replace("beskt-review-edit-", "")),
+        );
+      expect(keys.length).toBeGreaterThanOrEqual(3);
+
+      for (const key of [keys[0], keys[Math.floor(keys.length / 2)], keys[keys.length - 1]]) {
+        await page.getByTestId("beskt-to-review").click();
+        await expect(page.getByTestId("beskt-review-list")).toBeVisible();
+        await page.getByTestId(`beskt-review-edit-${key}`).click();
+
+        // The question is really on screen -- the thing the dead fragment
+        // could never deliver -- and focus is ON it, not merely near it.
+        const question = page.getByTestId(`beskt-item-${key}`);
+        await expect(question).toBeVisible({ timeout: 15_000 });
+        await expect(question).toBeFocused();
+        expect(await page.evaluate(() => window.location.hash)).toBe(`#beskt-item-${key}`);
+      }
+    });
+
     await step("review", "go back and CORRECT one response", async () => {
-      await page.getByTestId("beskt-back-to-answers").click();
+      await page.getByTestId("beskt-to-review").click();
+      await page.getByTestId("beskt-review-edit-lone_working_example").click();
+      await expect(page.getByTestId("beskt-item-lone_working_example")).toBeFocused();
       // Undo the oral choice and answer it after all — a real correction on
       // the real control, not a state poke.
       await page.getByTestId("beskt-item-lone_working_example-oral").click();

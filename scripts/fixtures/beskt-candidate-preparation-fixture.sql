@@ -199,6 +199,7 @@ DECLARE
   _pack uuid; _v uuid; _p1 uuid;
   _s1 uuid; _s2 uuid;
   _i1 uuid; _i2 uuid; _i3 uuid; _i4 uuid; _i5 uuid; _i6 uuid;
+  _i7 uuid; _i8 uuid;
   _o_yes uuid; _o_no uuid;
   _state text; _k integer; _fk text;
 BEGIN
@@ -318,6 +319,35 @@ BEGIN
      ARRAY['suitability_inference'])
   RETURNING id INTO _i5;
 
+  -- The two remaining governed answer types, so the routed walk can exercise
+  -- all seven rather than the five the first fixture happened to use. Both are
+  -- voluntary: nothing here changes what the walk must complete to submit.
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'shift_patterns_worked', 6,
+     'Vilka arbetspass har du erfarenhet av?', 'Which shift patterns do you have experience of?',
+     'Rollen omfattar flera passtyper.', 'The role covers several shift types.',
+     'recruitment_support', 'candidate_preparation', 'multi_choice', 'voluntary', true,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i7;
+
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'most_recent_training', 7,
+     'När gick du senast en relevant utbildning?', 'When did you last attend relevant training?',
+     'Datum ger underlag för samtalet.', 'A date gives a basis for the conversation.',
+     'recruitment_support', 'candidate_preparation', 'date', 'voluntary', true,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i8;
+
   INSERT INTO public.beskt_items
     (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
      purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
@@ -335,6 +365,12 @@ BEGIN
   VALUES (_i1, 'yes', 1, 'Ja', 'Yes') RETURNING id INTO _o_yes;
   INSERT INTO public.beskt_item_options (item_id, option_key, display_order, label_sv, label_en)
   VALUES (_i1, 'no', 2, 'Nej', 'No') RETURNING id INTO _o_no;
+
+  INSERT INTO public.beskt_item_options (item_id, option_key, display_order, label_sv, label_en)
+  VALUES
+    (_i7, 'nights', 1, 'Nattpass', 'Night shifts'),
+    (_i7, 'weekends', 2, 'Helgpass', 'Weekend shifts'),
+    (_i7, 'callout', 3, 'Beredskap', 'On-call');
 
   INSERT INTO public.beskt_prompts
     (method_version_id, exposure_profile_id, item_id, prompt_key, display_order, prompt_kind, peace_stage,
@@ -490,6 +526,358 @@ BEGIN
 
   RAISE NOTICE 'synthetic journey method published: %', _v;
 END $build$;
+
+-- ---------------------------------------------------------------------------
+-- A SECOND published method.
+--
+-- Not decoration. With one admissible method the employer's "choice" is
+-- unobservable -- any UI passes, including the one that silently took
+-- whatever the database returned first, which is exactly the defect finding
+-- 0.3 is about. Two methods make choosing, and clearing the profile beneath a
+-- changed method, something a routed test can actually see.
+--
+-- Same governed path as the first: authored through the RPCs, five real gate
+-- reviews, published by someone who is not the author.
+-- ---------------------------------------------------------------------------
+DO $build_b$
+DECLARE
+  _editor    uuid := 'b4000000-0000-4000-8000-0000000000e1';
+  _publisher uuid := 'b4000000-0000-4000-8000-0000000000b1';
+  _admin     uuid := 'b4000000-0000-4000-8000-00000000ad01';
+  _employer  uuid := 'b4000000-0000-4000-8000-00000000ee01';
+  _gates     text[] := ARRAY['personnel_security', 'senior_hr', 'recruitment',
+                             'employment_privacy_legal', 'data_protection'];
+  _reviewers uuid[] := ARRAY['b4000000-0000-4000-8000-0000000000a1'::uuid,
+                             'b4000000-0000-4000-8000-0000000000a2'::uuid,
+                             'b4000000-0000-4000-8000-0000000000a3'::uuid,
+                             'b4000000-0000-4000-8000-0000000000a4'::uuid,
+                             'b4000000-0000-4000-8000-0000000000a5'::uuid];
+  _r jsonb;
+  _pack uuid; _v uuid; _p1 uuid;
+  _s1 uuid; _s2 uuid;
+  _i1 uuid; _i2 uuid; _i3 uuid; _i4 uuid; _i5 uuid; _i6 uuid;
+  _i7 uuid; _i8 uuid;
+  _o_yes uuid; _o_no uuid;
+  _state text; _k integer; _fk text;
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.scp_interview_packs WHERE slug = 'beskt-journey-synthetic-b') THEN
+    RAISE NOTICE 'the synthetic journey method already exists; leaving it alone';
+    RETURN;
+  END IF;
+
+  -- 4.1 the gate mandates already exist: the first build minted them, and the
+  --     governed RPC refuses a duplicate active grant. The same five real
+  --     reviewers review this method too.
+
+  -- 4.2 identity and version, authored through the governed RPCs
+  PERFORM pg_temp.become(_editor);
+  SET LOCAL ROLE authenticated;
+  _r := public.beskt_create_method(gen_random_uuid(), 'beskt-journey-synthetic-b',
+          'SYNTETISK BESKT-metod B för genomgång',
+          'Syntetiskt innehåll för den lokala webbläsargenomgången. Inte en produktmetod.',
+          'SYNTHETIC BESKT method B for the walkthrough');
+  _pack := (_r ->> 'pack_id')::uuid;
+  _r := public.beskt_create_method_version(gen_random_uuid(), _pack, 'recruitment_support',
+          'synthetic-journey-fixture', 'journey-b-1', 'cqrity_design_hypothesis',
+          'Syntetisk sammanfattning för genomgången.', 'Synthetic summary for the walkthrough.');
+  _v := (_r ->> 'method_version_id')::uuid;
+  RESET ROLE;
+  PERFORM pg_temp.nobody();
+
+  -- 4.3 the content itself, planted as the database owner -- which is exactly
+  --     how a migration would establish governed content.
+  INSERT INTO public.beskt_exposure_profiles
+    (method_version_id, profile_key, display_order, exposure_area, duties_sv, duties_en,
+     role_relevance_rationale_sv, role_relevance_rationale_en, permitted_mode, owning_review_role,
+     jurisdiction_reference, lawful_basis_reference, retention_class, access_class,
+     content_provenance, source_reference)
+  VALUES (_v, 'lone_working', 1, 'lone_working',
+          'Ensamarbete nattetid på en bevakad anläggning.', 'Lone working at night on a guarded site.',
+          'Rollen innebär ensamarbete utan kollega på plats.',
+          'The role involves lone working with no colleague on site.',
+          'recruitment_support', 'recruitment', 'SE',
+          'Rättslig grund: syntetisk referens för test.', 'recruitment_record', 'recruiter',
+          'cqrity_design_hypothesis', 'synthetic-journey-fixture')
+  RETURNING id INTO _p1;
+
+  INSERT INTO public.beskt_sections (method_version_id, section_key, display_order, phase, title_sv, title_en)
+  VALUES (_v, 'preparation', 1, 'candidate_preparation', 'Förberedelse', 'Preparation') RETURNING id INTO _s1;
+  INSERT INTO public.beskt_sections (method_version_id, section_key, display_order, phase, title_sv, title_en)
+  VALUES (_v, 'interview_topics', 2, 'interview', 'Intervjuämnen', 'Interview topics') RETURNING id INTO _s2;
+
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'lone_working_experience', 1,
+     'Har du erfarenhet av ensamarbete?', 'Do you have experience of lone working?',
+     'Rollen innebär ensamarbete.', 'The role involves lone working.',
+     'recruitment_support', 'candidate_preparation', 'single_choice', 'required', true,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i1;
+
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'lone_working_example', 2,
+     'Beskriv en situation du hanterade under ensamarbete.', 'Describe a situation you handled while working alone.',
+     'Konkreta exempel ger underlag för samtalet.', 'Concrete examples give a basis for the conversation.',
+     'recruitment_support', 'candidate_preparation', 'long_text', 'voluntary', true,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference', 'credibility_or_deception_inference'])
+  RETURNING id INTO _i2;
+
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'reported_incident', 3,
+     'Har du rapporterat en avvikelse i tjänsten?', 'Have you reported an incident on duty?',
+     'Rapportering ingår i rollen.', 'Reporting is part of the role.',
+     'recruitment_support', 'candidate_preparation', 'boolean', 'required', true,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i3;
+
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'incident_context', 4,
+     'Beskriv kort sammanhanget.', 'Briefly describe the context.',
+     'Sammanhang behövs för underlaget.', 'Context is needed for the basis.',
+     'recruitment_support', 'candidate_preparation', 'short_text', 'voluntary', true,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i4;
+
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'information_acknowledged', 5,
+     'Jag har tagit del av informationen om förberedelsen.', 'I have read the information about the preparation.',
+     'Kandidaten ska ha fått informationen.', 'The candidate must have received the information.',
+     'recruitment_support', 'candidate_preparation', 'acknowledgement', 'required', false,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i5;
+
+  -- The two remaining governed answer types, so the routed walk can exercise
+  -- all seven rather than the five the first fixture happened to use. Both are
+  -- voluntary: nothing here changes what the walk must complete to submit.
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'shift_patterns_worked', 6,
+     'Vilka arbetspass har du erfarenhet av?', 'Which shift patterns do you have experience of?',
+     'Rollen omfattar flera passtyper.', 'The role covers several shift types.',
+     'recruitment_support', 'candidate_preparation', 'multi_choice', 'voluntary', true,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i7;
+
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s1, _p1, 'most_recent_training', 7,
+     'När gick du senast en relevant utbildning?', 'When did you last attend relevant training?',
+     'Datum ger underlag för samtalet.', 'A date gives a basis for the conversation.',
+     'recruitment_support', 'candidate_preparation', 'date', 'voluntary', true,
+     'ordinary', 'recruiter', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i8;
+
+  INSERT INTO public.beskt_items
+    (method_version_id, section_id, exposure_profile_id, item_key, display_order, wording_sv, wording_en,
+     purpose_sv, purpose_en, permitted_mode, phase, answer_type, requiredness, discuss_orally_allowed,
+     sensitivity_class, access_class, content_provenance, source_reference, prohibited_inferences)
+  VALUES
+    (_v, _s2, _p1, 'interview_topic_lone_working', 1,
+     'Ensamarbete i praktiken.', 'Lone working in practice.',
+     'Intervjuämne från dokumenterad rollrelevans.', 'Interview topic from documented role relevance.',
+     'recruitment_support', 'interview', 'long_text', 'voluntary', true,
+     'ordinary', 'beskt_interviewer', 'cqrity_design_hypothesis', 'synthetic-journey-fixture',
+     ARRAY['suitability_inference'])
+  RETURNING id INTO _i6;
+
+  INSERT INTO public.beskt_item_options (item_id, option_key, display_order, label_sv, label_en)
+  VALUES (_i1, 'yes', 1, 'Ja', 'Yes') RETURNING id INTO _o_yes;
+  INSERT INTO public.beskt_item_options (item_id, option_key, display_order, label_sv, label_en)
+  VALUES (_i1, 'no', 2, 'Nej', 'No') RETURNING id INTO _o_no;
+
+  INSERT INTO public.beskt_item_options (item_id, option_key, display_order, label_sv, label_en)
+  VALUES
+    (_i7, 'nights', 1, 'Nattpass', 'Night shifts'),
+    (_i7, 'weekends', 2, 'Helgpass', 'Weekend shifts'),
+    (_i7, 'callout', 3, 'Beredskap', 'On-call');
+
+  INSERT INTO public.beskt_prompts
+    (method_version_id, exposure_profile_id, item_id, prompt_key, display_order, prompt_kind, peace_stage,
+     addressee, question_form, permitted_probe_bases, permitted_mode, wording_sv, wording_en,
+     content_provenance, source_reference)
+  VALUES
+    (_v, _p1, NULL, 'p1_planning', 1, 'planning_from_role_relevance', 'planning', 'interviewer', 'information_notice',
+     '{}', 'recruitment_support', 'Planera utifrån dokumenterad rollrelevans.', 'Plan from documented role relevance.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_purpose', 2, 'purpose_explanation', 'engage_explain', 'candidate', 'information_notice',
+     '{}', 'recruitment_support', 'Syftet med samtalet är att förstå din erfarenhet.', 'The purpose of this conversation is to understand your experience.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_process', 3, 'process_explanation', 'engage_explain', 'candidate', 'information_notice',
+     '{}', 'recruitment_support', 'Så här går samtalet till.', 'This is how the conversation proceeds.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_voluntary', 4, 'voluntariness_notice', 'engage_explain', 'candidate', 'information_notice',
+     '{}', 'recruitment_support', 'Du väljer själv vad du vill berätta.', 'You choose what you want to tell.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_human', 5, 'human_decision_notice', 'engage_explain', 'candidate', 'information_notice',
+     '{}', 'recruitment_support', 'Beslut fattas av arbetsgivaren, inte av systemet.', 'Decisions are made by the employer, not by the system.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_open', 6, 'open_invitation', 'account', 'candidate', 'open_question',
+     '{}', 'recruitment_support', 'Berätta om ditt arbete med ensamarbete.', 'Tell me about your work with lone working.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_free', 7, 'free_account', 'account', 'candidate', 'free_recall',
+     '{}', 'recruitment_support', 'Beskriv fritt hur en typisk natt såg ut.', 'Describe freely what a typical night looked like.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, _i2, 'p1_example', 8, 'behavioural_example', 'account', 'candidate', 'cued_recall',
+     ARRAY['submitted_answer'], 'recruitment_support', 'Ge ett konkret exempel på en situation du hanterade.', 'Give a concrete example of a situation you handled.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_listen', 9, 'listening_reflection', 'account', 'candidate', 'reflective_readback',
+     '{}', 'recruitment_support', 'Om jag förstår dig rätt så gjorde du så här.', 'If I understand you correctly, this is what you did.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, _i2, 'p1_probe', 10, 'specific_probe', 'account', 'candidate', 'neutral_clarification',
+     ARRAY['submitted_answer'], 'recruitment_support', 'Vad gjorde du först i den situationen?', 'What did you do first in that situation?',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_context', 11, 'context_opportunity', 'account', 'candidate', 'open_question',
+     '{}', 'recruitment_support', 'Finns det något i sammanhanget du vill lägga till?', 'Is there anything about the context you want to add?',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_correct', 12, 'correction_opportunity', 'account', 'candidate', 'open_question',
+     '{}', 'recruitment_support', 'Vill du rätta något av det du skrev?', 'Would you like to correct anything you wrote?',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_difference', 13, 'neutral_difference_exploration', 'account', 'candidate', 'neutral_clarification',
+     ARRAY['submitted_answer', 'candidate_correction'], 'recruitment_support', 'Här finns två olika uppgifter; hur hänger de ihop?', 'There are two different statements here; how do they fit together?',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_summary', 14, 'summary_confirmation', 'account', 'candidate', 'summary_readback',
+     '{}', 'recruitment_support', 'Har jag uppfattat dig rätt?', 'Have I understood you correctly?',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    (_v, _p1, NULL, 'p1_closure', 15, 'closure_next_step', 'closure', 'candidate', 'information_notice',
+     '{}', 'recruitment_support', 'Nästa steg är att arbetsgivaren återkommer.', 'The next step is that the employer will get back to you.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture');
+
+  INSERT INTO public.beskt_prompts
+    (method_version_id, exposure_profile_id, item_id, prompt_key, display_order, prompt_kind, peace_stage,
+     addressee, question_form, permitted_probe_bases, permitted_mode, evaluation_template_key,
+     wording_sv, wording_en, content_provenance, source_reference)
+  VALUES
+    (_v, _p1, NULL, 'p1_evaluation', 16, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback',
+     '{}', 'recruitment_support', 'method_adherence',
+     public.beskt_evaluation_template('method_adherence', 'sv'),
+     public.beskt_evaluation_template('method_adherence', 'en'),
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture');
+
+  -- Routing, so the walk exercises a real conditional: the example is asked
+  -- only of a candidate who says they have the experience, and the context
+  -- only of one who says they reported something.
+  INSERT INTO public.beskt_routing_rules
+    (method_version_id, rule_key, evaluation_order, applies_mode, source_item_id, condition_kind,
+     condition_option_id, condition_boolean, action, target_item_id)
+  VALUES
+    (_v, 'show_example_when_experienced', 1, 'recruitment_support', _i1, 'option_selected', _o_yes, NULL, 'show', _i2),
+    (_v, 'show_context_when_reported', 2, 'recruitment_support', _i3, 'boolean_equals', NULL, true, 'show', _i4);
+
+  FOR _state IN SELECT unnest(ARRAY['unaddressed', 'clarification_needed', 'sufficiently_clarified',
+      'external_verification_needed', 'conflicting_information', 'insufficient_basis', 'not_applicable']) LOOP
+    INSERT INTO public.beskt_evidence_anchors
+      (method_version_id, evidence_state, definition_sv, definition_en, inclusion_criteria_sv, inclusion_criteria_en,
+       exclusion_criteria_sv, exclusion_criteria_en, supporting_evidence_examples_sv, supporting_evidence_examples_en,
+       counter_evidence_and_protective_factors_sv, counter_evidence_and_protective_factors_en,
+       prohibited_inferences, required_next_action)
+    VALUES
+      (_v, _state, 'Definition (sv) ' || _state, 'Definition (en) ' || _state,
+       'Ingår när underlaget är ' || _state, 'Included when the basis is ' || _state,
+       'Ingår inte när underlaget är annat.', 'Excluded when the basis is otherwise.',
+       'Exempel på stödjande underlag.', 'Examples of supporting basis.',
+       'Motbevis och skyddande faktorer beaktas.', 'Counter-evidence and protective factors are considered.',
+       CASE _state WHEN 'unaddressed' THEN ARRAY['omission_as_negative_evidence', 'suitability_inference']
+                   WHEN 'conflicting_information' THEN ARRAY['inconsistency_as_dishonesty', 'credibility_or_deception_inference']
+                   ELSE ARRAY['suitability_inference'] END,
+       CASE _state WHEN 'unaddressed' THEN 'clarify_with_candidate'
+                   WHEN 'clarification_needed' THEN 'clarify_with_candidate'
+                   WHEN 'sufficiently_clarified' THEN 'none'
+                   WHEN 'external_verification_needed' THEN 'external_verification'
+                   WHEN 'conflicting_information' THEN 'offer_candidate_correction'
+                   WHEN 'insufficient_basis' THEN 'record_insufficient_basis'
+                   ELSE 'none' END);
+  END LOOP;
+
+  _k := 0;
+  FOR _fk IN SELECT unnest(ARRAY['fact', 'source_provenance', 'role_exposure_link', 'interviewer_interpretation',
+      'candidate_explanation', 'counter_evidence', 'protective_factor', 'verification_need', 'candidate_correction',
+      'sensitivity_access_class']) LOOP
+    _k := _k + 1;
+    INSERT INTO public.beskt_observation_fields
+      (method_version_id, field_key, ordinal, recorded_by, is_judgement, label_sv, label_en, definition_sv, definition_en)
+    VALUES (_v, _fk, _k,
+      CASE WHEN _fk IN ('candidate_explanation', 'candidate_correction') THEN 'candidate'
+           WHEN _fk = 'sensitivity_access_class' THEN 'system' ELSE 'interviewer' END,
+      _fk = 'interviewer_interpretation',
+      'Etikett ' || _fk, 'Label ' || _fk, 'Definition ' || _fk, 'Definition ' || _fk);
+  END LOOP;
+
+  -- 4.4 one governed touch, so the stored content hash names what was planted
+  PERFORM pg_temp.become(_editor);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.beskt_touch_draft(gen_random_uuid(), _v,
+    (SELECT revision FROM public.beskt_method_versions WHERE id = _v), 'fixture planted');
+  PERFORM public.beskt_submit_for_review(gen_random_uuid(), _v,
+    (SELECT revision FROM public.beskt_method_versions WHERE id = _v));
+  RESET ROLE;
+  PERFORM pg_temp.nobody();
+
+  -- 4.5 five separate human gates, each by its own reviewer
+  FOR _k IN 1 .. array_length(_gates, 1) LOOP
+    PERFORM pg_temp.become(_reviewers[_k]);
+    SET LOCAL ROLE authenticated;
+    PERFORM public.beskt_record_review(gen_random_uuid(), _v,
+      (SELECT revision FROM public.beskt_method_versions WHERE id = _v),
+      _gates[_k], 'approved', 'Granskad för den lokala genomgången. Reviewed for the local walkthrough.');
+    RESET ROLE;
+    PERFORM pg_temp.nobody();
+  END LOOP;
+
+  -- 4.6 published by someone who is not its author
+  PERFORM pg_temp.become(_publisher);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.beskt_publish_version(gen_random_uuid(), _v,
+    (SELECT revision FROM public.beskt_method_versions WHERE id = _v),
+    'Publicerad för den lokala genomgången.');
+  RESET ROLE;
+  PERFORM pg_temp.nobody();
+
+  -- 4.7 the pilot grant: PR 3's whole release authority, for ONE employer,
+  --     time-boxed, minted by a platform administrator. BESKT Rival AB gets
+  --     none, which is what makes its refusal in the browser meaningful.
+  PERFORM pg_temp.become(_admin);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.bcp_grant_pilot(gen_random_uuid(), _employer, _v,
+    'Lokal genomgång inför granskning. Syntetiskt innehåll, inget skarpt bruk.',
+    (current_date + 14));
+  RESET ROLE;
+  PERFORM pg_temp.nobody();
+
+  RAISE NOTICE 'synthetic journey method B published: %', _v;
+END $build_b$;
+
 
 -- ---------------------------------------------------------------------------
 -- What the walk needs to address the routes it will visit.
