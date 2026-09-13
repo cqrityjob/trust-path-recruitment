@@ -224,7 +224,7 @@ console.log("\nGROUP 3 -- CISSP and CRISC render whole");
 /* ══════════════════════════════════════════════════════════════════════
    GROUP 4 — NOTHING IN THE APPLICATION DEPENDS ON THIS SCHEMA
    ══════════════════════════════════════════════════════════════════════ */
-console.log("\nGROUP 4 -- the schema release is safe to merge on its own");
+console.log("\nGROUP 4 -- runtime remains unwired and hosted types are aligned");
 
 /* ── WHY THIS IS THE MOST IMPORTANT GROUP IN THE FILE ──────────────────
  *
@@ -261,7 +261,14 @@ const INTRODUCED = [
 ] as const;
 
 {
-  const appFiles = walk(join(root, "src"), [".ts", ".tsx"]);
+  // Generated Supabase types describe the hosted schema; they are evidence of
+  // it, not application code that calls it. Keep runtime dependencies absent
+  // until the separately reviewed application release, while requiring the
+  // generated contract to match the now-applied hosted migration.
+  const generatedTypesPath = join(root, "src/integrations/supabase/types.ts");
+  const appFiles = walk(join(root, "src"), [".ts", ".tsx"]).filter(
+    (file) => file !== generatedTypesPath,
+  );
   for (const object of INTRODUCED) {
     const offenders = appFiles.filter((f) => readFileSync(f, "utf8").includes(object));
     ok(
@@ -278,14 +285,21 @@ const INTRODUCED = [
       (intlInApp.length ? ` — ${intlInApp.map((f) => relative(root, f)).join(", ")}` : ""),
   );
 
-  // The generated types describe the HOSTED database. Regenerating them for a
-  // schema that is not applied would make types.ts assert something untrue
-  // about production, which is the claim release-state.json exists to keep
-  // honest.
-  const generated = readFileSync(join(root, "src/integrations/supabase/types.ts"), "utf8");
-  for (const object of INTRODUCED) {
-    ok(!generated.includes(object), `the generated Supabase types do NOT yet describe ${object}`);
+  const generated = readFileSync(generatedTypesPath, "utf8");
+  for (const table of INTRODUCED.slice(0, 6)) {
+    ok(
+      generated.includes(`      ${table}: {\n        Row:`),
+      `the generated Supabase types describe hosted table ${table}`,
+    );
   }
+  ok(
+    generated.includes("          scope_code: string | null"),
+    "the generated Supabase types describe hosted column sp_credential_types.scope_code",
+  );
+  ok(
+    generated.includes("      sp_certification_lifecycle_declare: {"),
+    "the generated Supabase types describe hosted function sp_certification_lifecycle_declare",
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════
