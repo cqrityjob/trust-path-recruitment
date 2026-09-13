@@ -1016,17 +1016,20 @@ group("T12 · the public chrome, and the untouched candidate chrome");
   ck(
     "in the settled order",
     JSON.stringify(CANDIDATE_APP_NAV.map((i) => i.key)) ===
-      JSON.stringify(["myCareer", "passport", "jobs", "exploreProfessions", "assessments"]),
+      JSON.stringify(["overview", "passport", "jobs", "career", "assessments"]),
     CANDIDATE_APP_NAV.map((i) => i.key),
   );
-  // Career Discovery keeps lighting "Min karriär" for a signed-in candidate,
-  // which is what stops the new public nav entry from changing highlighting
-  // inside the workspace.
-  const myCareer = CANDIDATE_APP_NAV.find((i) => i.key === "myCareer");
+  // Career Discovery keeps lighting ONE workspace destination for a signed-in
+  // candidate, which is what stops the public nav entry from changing
+  // highlighting inside the workspace. That destination is now Karriär
+  // rather than Min karriär: Career Discovery, the saved analysis and the
+  // career journey are one career product, and Karriär is a real
+  // destination now instead of a label with nowhere to point.
+  const career = CANDIDATE_APP_NAV.find((i) => i.key === "career");
   ck(
-    "and Career Discovery still lights My Career inside the workspace",
-    Boolean(myCareer?.routeIds.includes(CANONICAL_ASSESSMENT_PATH)),
-    myCareer?.routeIds,
+    "and Career Discovery still lights exactly one workspace destination -- Karriär",
+    Boolean(career?.routeIds.includes(CANONICAL_ASSESSMENT_PATH)),
+    career?.routeIds,
   );
 }
 
