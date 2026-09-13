@@ -394,6 +394,31 @@ jobs:
       - name: Passport global certification catalogue check
         run: bun run passport-global-certification:check
 
+      # `sp_claims.credential_reference` is a lookup key into somebody else's
+      # register -- the single most damaging field in the Passport to leak.
+      # Relocating it would rewrite real holder data, so the allowlist is
+      # enforced here instead: no disclosure, recipient, card, export or
+      # analytics path may name it, and the new international-certification
+      # surfaces must carry none of it either.
+      - name: Passport private credential reference check
+        run: bun run passport-private-reference:check
+
+      # The guards above read source text. This one IMPORTS the classifier and
+      # RUNS it: a regex can prove `isNationalCredential` is called and still
+      # miss that the branch beside it treats any jurisdiction as regulated
+      # authority, or that an unrecognised lifecycle state walks into the
+      # international bucket. Both of those shipped green once.
+      - name: Passport classifier behaviour (executed, not read)
+        run: bun run passport-classifier-behaviour:check
+
+      # The database is the guarantee that a governed certification cannot be
+      # attributed to an organisation that never awarded it (20261112090000).
+      # This proves the application resolves the governed issuer itself, so a
+      # holder using the product never meets that refusal — and that the
+      # browser's issuerName is discarded rather than stored.
+      - name: Passport governed issuer (application half)
+        run: bun run passport-governed-issuer:check
+
       # The application deploys when main moves; a migration is applied when
       # somebody asks. Between those two events the code can be talking to a
       # schema that has never heard of what it needs -- which took the whole

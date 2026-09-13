@@ -24,6 +24,7 @@
 // user-facing text — so it has to come from the copy module like everything
 // else, and be resolved at render time in the reader's language.
 
+import { GLOBAL_CERTIFICATION_TERRITORY, isGlobalCertification } from "./certification-scope";
 import { isCalendarDate, isFutureDate } from "./dates";
 import type { PassportCopyKey } from "./i18n";
 
@@ -104,6 +105,23 @@ export interface CredentialType {
   /** The emirate or region, where the authority is not national. `AE-DU` for a
    *  Dubai credential; NULL everywhere the regulator is the country. */
   readonly subJurisdictionCode: string | null;
+  /** The DECLARED reach of this credential — `sp_credential_types.scope_code`.
+   *
+   *  ── WHY IT IS A FIELD AND NOT A DERIVATION ─────────────────────────────
+   *
+   *  `jurisdictionCode` above is already null for two completely different
+   *  kinds of thing: a legacy row nobody has classified, and a Certified
+   *  Protection Professional — a real, governed, portable certification that
+   *  authorises nothing anywhere. Telling them apart from the absence of a
+   *  country is impossible, and guessing is how a Passport comes to present
+   *  somebody's free-text "CPP" as a governed international certification.
+   *
+   *  So the definition SAYS. `global_professional` is an international
+   *  professional certification; `national_regulated` belongs to a country;
+   *  `null` is undeclared, which is what every pre-existing row is and what
+   *  it stays until somebody reviews it. Read it through
+   *  `isGlobalCertification`, never by comparing the string at a call site. */
+  readonly scopeCode: string | null;
 }
 
 /** The name a governed credential must carry, in the reader's language.
@@ -156,6 +174,31 @@ const CREDENTIAL_MARKS: Readonly<Record<string, string>> = {
   OV_REFRESHER: "OVF",
   OV_TRANSPORT: "OVT",
   SE_PERSONNEL_APPROVAL: "PG",
+
+  // The international professional certifications (20261111090000). Each mark
+  // is the credential's OWN published abbreviation, which is what every reader
+  // of one of these recognises — and it is pinned against
+  // `sp_credential_types.symbol_label` by
+  // scripts/passport-global-certification-check.ts rather than trusted here.
+  //
+  // CISSP and CRISC are five characters. The plate's CHECK was relaxed from
+  // four to eight in the same migration, because truncating "CISSP" to "CISS"
+  // prints a credential nobody awards onto the surface a candidate screenshots
+  // and sends to an employer.
+  INTL_ASIS_APP: "APP",
+  INTL_ASIS_CPP: "CPP",
+  INTL_ASIS_PCI: "PCI",
+  INTL_ASIS_PSP: "PSP",
+  INTL_ISC2_CC: "CC",
+  INTL_ISC2_CGRC: "CGRC",
+  INTL_ISC2_SSCP: "SSCP",
+  INTL_ISC2_CISSP: "CISSP",
+  INTL_ISC2_CCSP: "CCSP",
+  INTL_ISACA_CISA: "CISA",
+  INTL_ISACA_CISM: "CISM",
+  INTL_ISACA_CRISC: "CRISC",
+  INTL_ACFE_CFE: "CFE",
+  INTL_ACAMS_CAMS: "CAMS",
 };
 
 export function credentialMark(code: string | null | undefined): string | null {
@@ -495,7 +538,14 @@ export function validateCredential(
   if (isBlank(draft.title) && !titleIsControlled(type)) {
     errors.push({ field: "title", messageKey: "cred.error.titleRequired" });
   }
-  if (isBlank(draft.jurisdictionCode)) {
+  // A jurisdiction is required of a credential that HAS one. An international
+  // professional certification does not: it is awarded by an organisation
+  // rather than granted in a territory, `credentialClaimFields` stores NULL in
+  // both jurisdiction columns for it, and
+  // `SP_GLOBAL_CERTIFICATION_HAS_NO_JURISDICTION` refuses anything else.
+  // Demanding a country here would make the form ask for a fact the database
+  // then refuses to store.
+  if (!isGlobalCertification(type) && isBlank(draft.jurisdictionCode)) {
     errors.push({ field: "jurisdictionCode", messageKey: "cred.error.jurisdictionRequired" });
   }
 
@@ -592,10 +642,63 @@ export interface CredentialClaimFields {
  * exactly that row — rather than either of them trusting a stub that said
  * "saved".
  */
+/**
+ * Who a claim records as its issuer.
+ *
+ * ── THE CATALOGUE NAMES A GOVERNED ISSUER; THE HOLDER NAMES THE REST ───
+ *
+ * For a governed international certification the issuer is a FACT about the
+ * credential rather than a field about this holder: a CPP is awarded by ASIS
+ * International or it is not a CPP. So the client's `issuerName` is discarded
+ * outright and the governed display name is written.
+ *
+ * That is not a formatting nicety. Until 20261112090000 nothing connected the
+ * two: `authenticated` holds INSERT and UPDATE on its own `sp_claims` rows,
+ * `sp_disclosure_payload` emits `claimed_issuer_name` to a RECIPIENT, and a
+ * holder could store INTL_ASIS_CPP as 'Fake Corporation' — reproduced against
+ * a full replay. That migration makes the database refuse it for every
+ * caller; this makes the application send the right value in the first place,
+ * so a holder using the product never meets the refusal. Both halves are
+ * needed: this one binds the browser, the trigger binds a direct PostgREST
+ * write carrying the holder's own token.
+ *
+ * When a global definition arrives with no resolved issuer the answer is
+ * NULL, never the submitted text. Saying nothing is the one direction this is
+ * allowed to fail in; saying the wrong organisation is the defect itself.
+ *
+ * Nothing is inferred. The name arrives from the catalogue read — never from
+ * the title, the abbreviation or a search alias. A national credential's
+ * appointing authority and a free-text claim's issuer are untouched, because
+ * those genuinely are the holder's to state.
+ *
+ * A named function rather than a ternary inside the row literal: the rule is
+ * the kind a reader has to be able to find, and a formatter is free to
+ * reshape an expression until no guard can match it.
+ */
+function issuerNameFor(
+  draft: CredentialDraft,
+  type: CredentialType,
+  governedIssuerName: string | null | undefined,
+): string | null {
+  if (!isGlobalCertification(type)) return nullIfBlank(draft.issuerName);
+  return governedIssuerName ? nullIfBlank(governedIssuerName) : null;
+}
+
 export function credentialClaimFields(
   draft: CredentialDraft,
   type: CredentialType,
   mode: "draft" | "active",
+  /** The issuer the CATALOGUE records for a governed international
+   *  certification — `sp_certification_definitions -> sp_certification_issuers`
+   *  — resolved by the server, never sent by the browser.
+   *
+   *  Required in practice for a global definition and optional in the type so
+   *  every existing caller (a national credential, a free-text claim, the
+   *  browser suite computing an expected row) keeps working unchanged. When a
+   *  global definition arrives without one, the issuer is written as NULL
+   *  rather than as whatever the client typed: the one direction this is
+   *  allowed to fail in is towards saying nothing. */
+  governedIssuerName?: string | null,
 ): CredentialClaimFields {
   return {
     claim_type: type.claimType,
@@ -605,9 +708,56 @@ export function credentialClaimFields(
     // value is one canonical string, and the surfaces resolve the reader's
     // language from `credential_code`.
     title: titleIsControlled(type) ? type.nameSv : (nullIfBlank(draft.title) ?? type.nameSv),
-    claimed_issuer_name: nullIfBlank(draft.issuerName),
-    jurisdiction_code: type.jurisdictionCode ?? nullIfBlank(draft.jurisdictionCode),
-    sub_jurisdiction_code: type.subJurisdictionCode,
+    // ── THE CATALOGUE NAMES THE ISSUER, NOT THE HOLDER ────────────────
+    //
+    // For a governed international certification the issuer is a FACT about
+    // the credential, not a field about this holder: a CPP is awarded by ASIS
+    // International or it is not a CPP. So the client's `issuerName` is
+    // discarded outright and the governed display name is written.
+    //
+    // This is not a formatting nicety. Until 20261112090000 nothing connected
+    // the two: `authenticated` holds INSERT and UPDATE on its own sp_claims
+    // rows, `sp_disclosure_payload` emits `claimed_issuer_name` to a
+    // RECIPIENT, and a holder could store INTL_ASIS_CPP as 'Fake Corporation'
+    // — reproduced against a full replay. That migration makes the database
+    // refuse it for every caller; this makes the application send the right
+    // value in the first place, so a holder using the product never meets the
+    // refusal.
+    //
+    // Both halves are needed and neither replaces the other. A rule here
+    // binds the browser; the trigger binds a direct PostgREST write with the
+    // holder's own token.
+    //
+    // Nothing is inferred: the name arrives from the catalogue read, never
+    // from the title, the abbreviation or a search alias. A national
+    // credential's appointing authority and a free-text claim's issuer are
+    // untouched — those are genuinely the holder's to state.
+    claimed_issuer_name: issuerNameFor(draft, type, governedIssuerName),
+    // ── THE SCOPE DECIDES THE TERRITORY, BEFORE THE DEFINITION DOES ────
+    //
+    // For a national credential this is PR #222's rule, unchanged: the
+    // definition's own market, on every write, so a correction from a Dubai
+    // card to a British licence clears the emirate rather than leaving it
+    // behind.
+    //
+    // For an international professional certification both columns are NULL,
+    // and the fallback to the draft's country is SKIPPED. That fallback is
+    // what made this necessary: a global definition carries no jurisdiction,
+    // so `type.jurisdictionCode ?? draft.jurisdictionCode` would have reached
+    // `emptyCredentialDraft()`'s "SE" and filed a Certified Protection
+    // Professional as a Swedish credential — from where one grouping query
+    // presents it as a current-market credential in Sweden, which is the
+    // precise claim this product exists not to make.
+    //
+    // The fallback survives for a definition with NO declared scope and no
+    // jurisdiction of its own: a legacy or unregulated row, where the holder's
+    // own answer is still the best available.
+    ...(isGlobalCertification(type)
+      ? GLOBAL_CERTIFICATION_TERRITORY
+      : {
+          jurisdiction_code: type.jurisdictionCode ?? nullIfBlank(draft.jurisdictionCode),
+          sub_jurisdiction_code: type.subJurisdictionCode,
+        }),
     issued_on: draft.issuedOn,
     valid_from: draft.validFrom ?? draft.issuedOn,
     valid_until: draft.validUntil,

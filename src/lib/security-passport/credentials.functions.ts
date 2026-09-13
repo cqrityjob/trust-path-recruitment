@@ -24,6 +24,7 @@
 // the guarantee. Neither is load-bearing on its own.
 
 import { createServerFn } from "@tanstack/react-start";
+import { isGlobalCertification } from "./certification-scope";
 import { isCalendarDate } from "./dates";
 import {
   isMissingPilotLayer,
@@ -44,7 +45,7 @@ import {
   type ProvenanceDecisionRow,
   type ProvenanceRequestRow,
 } from "./provenance";
-import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import {
   CREDENTIAL_CODE_MAX_LENGTH,
   clearIncompatible,
@@ -108,6 +109,68 @@ export const listSelectableMarkets = createServerFn({ method: "GET" })
     }));
   });
 
+/* ------------------------------------------------------------------ */
+/* Reading the taxonomy                                                 */
+/* ------------------------------------------------------------------ */
+
+/** The columns every taxonomy read needs.
+ *
+ *  `scope_code` is among them, and it is no longer conditional. Migration
+ *  20261111090000 is applied on the owner project and recorded `applied` in
+ *  `supabase/release-state.json`, so the column exists, the generated types
+ *  describe it, and a read that selects it succeeds. The retry-without-scope
+ *  fallback that stood here while the migration was in flight is deliberately
+ *  gone: it can only mask a real failure now, and a taxonomy read that fails
+ *  must fail loudly rather than quietly report that nothing declares a scope. */
+const TAXONOMY_COLUMNS =
+  "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code, scope_code";
+
+/** One `sp_credential_types` row as the taxonomy reads want it — projected
+ *  from the GENERATED row type, so a renamed or retyped column is a compile
+ *  error here rather than a runtime surprise. */
+type TaxonomyRow = Pick<
+  Tables<"sp_credential_types">,
+  | "code"
+  | "category"
+  | "claim_type"
+  | "name_sv"
+  | "name_en"
+  | "symbol_label"
+  | "requires_valid_until"
+  | "requires_issuer"
+  | "requires_scope"
+  | "narrow_result_only"
+  | "title_is_holder_written"
+  | "jurisdiction_code"
+  | "sub_jurisdiction_code"
+  | "scope_code"
+>;
+
+/** One mapper, used by every taxonomy read, so the form, the correction form
+ *  and the write path cannot disagree about what a definition says.
+ *
+ *  `scopeCode` is carried through exactly as the catalogue declares it. It is
+ *  never inferred from a jurisdiction, a title, an abbreviation or an issuer,
+ *  and a null stays null — undeclared is not global. */
+function toCredentialType(r: TaxonomyRow): CredentialType {
+  return {
+    code: r.code,
+    category: r.category as CredentialCategory,
+    claimType: r.claim_type,
+    nameSv: r.name_sv,
+    nameEn: r.name_en,
+    symbolLabel: r.symbol_label,
+    requiresValidUntil: r.requires_valid_until,
+    requiresIssuer: r.requires_issuer,
+    requiresScope: r.requires_scope,
+    narrowResultOnly: r.narrow_result_only,
+    titleIsHolderWritten: r.title_is_holder_written,
+    jurisdictionCode: r.jurisdiction_code,
+    subJurisdictionCode: r.sub_jurisdiction_code,
+    scopeCode: r.scope_code,
+  };
+}
+
 /** The supported credentials, straight from the database.
  *
  *  Not a constant in the bundle: the taxonomy is data, and a fifth credential
@@ -117,28 +180,12 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<readonly CredentialType[]> => {
     const { data, error } = await context.supabase
       .from("sp_credential_types")
-      .select(
-        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code",
-      )
+      .select(TAXONOMY_COLUMNS)
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
 
-    return (data ?? []).map((r) => ({
-      code: r.code,
-      category: r.category as CredentialCategory,
-      claimType: r.claim_type,
-      nameSv: r.name_sv,
-      nameEn: r.name_en,
-      symbolLabel: r.symbol_label,
-      requiresValidUntil: r.requires_valid_until,
-      requiresIssuer: r.requires_issuer,
-      requiresScope: r.requires_scope,
-      narrowResultOnly: r.narrow_result_only,
-      titleIsHolderWritten: r.title_is_holder_written,
-      jurisdictionCode: r.jurisdiction_code,
-      subJurisdictionCode: r.sub_jurisdiction_code,
-    }));
+    return (data ?? []).map(toCredentialType);
   });
 
 /* ------------------------------------------------------------------ */
@@ -204,9 +251,6 @@ export interface RegulatedCredentialAvailability {
   /** Non-empty only when `state` is "open" or "open_pilot". */
   readonly types: readonly CredentialType[];
 }
-
-const TAXONOMY_COLUMNS =
-  "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code";
 
 export const getRegulatedCredentialAvailability = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -321,22 +365,146 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
       jurisdictionCode,
       subJurisdictionCode,
       marketPackCode: pack.code,
-      types: (data ?? []).map((r) => ({
-        code: r.code,
-        category: r.category as CredentialCategory,
-        claimType: r.claim_type,
-        nameSv: r.name_sv,
-        nameEn: r.name_en,
-        symbolLabel: r.symbol_label,
-        requiresValidUntil: r.requires_valid_until,
-        requiresIssuer: r.requires_issuer,
-        requiresScope: r.requires_scope,
-        narrowResultOnly: r.narrow_result_only,
-        titleIsHolderWritten: r.title_is_holder_written,
-        jurisdictionCode: r.jurisdiction_code,
-        subJurisdictionCode: r.sub_jurisdiction_code,
-      })),
+      types: (data ?? []).map(toCredentialType),
     };
+  });
+
+/* ------------------------------------------------------------------ */
+/* International professional certifications                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One international professional certification, as the catalogue governs it.
+ *
+ * A SEPARATE reader from `getRegulatedCredentialAvailability`, and the
+ * separation is the point. That function answers "given where this holder
+ * works, what may they register", and every answer it can give is bounded by a
+ * market pack. A CPP is bounded by nothing: it is available to a holder in
+ * Sweden, a holder in Dubai, a holder in a country nobody has authored rules
+ * for and a holder who has stated no country at all, and it needs no pilot
+ * entitlement. Asking the market question about it would have produced
+ * `unsupported` for most of the world.
+ *
+ * None of it is permission to work. An international certification evidences
+ * competence and authorises nothing anywhere, which is why the catalogue is
+ * read here and never joined to eligibility or to a derived title.
+ */
+export interface GlobalCertificationType {
+  readonly type: CredentialType;
+  readonly issuerCode: string;
+  /** The controlled display name. The ONLY name any surface prints — aliases
+   *  exist for search and never for rendering. */
+  readonly issuerDisplayName: string;
+  readonly issuerOfficialUrl: string;
+  readonly abbreviation: string;
+  readonly programmeUrl: string;
+  readonly maintenancePolicyUrl: string;
+  readonly maintenancePolicyType: string;
+  /** The PROGRAMME's cycle in months, where one is published. Null for an
+   *  annual-compliance programme. Never added to a holder's award date: see
+   *  `sp_claim_certification_lifecycle`, which is where a holder's own dated
+   *  statement lives. */
+  readonly maintenanceCycleMonths: number | null;
+  readonly maintenanceSummaryEn: string;
+  /** How a third party could check standing with this issuer, and whether not
+   *  finding somebody means anything. An opt-in directory's absence proves
+   *  nothing, and a caller that cannot tell the modes apart will eventually
+   *  render "not found" as "not certified". */
+  readonly verificationMode: string;
+  readonly publicVerificationUrl: string | null;
+  readonly absenceIsInconclusive: boolean;
+  readonly sourceReviewedOn: string;
+  readonly retiredOn: string | null;
+}
+
+/**
+ * The governed international catalogue.
+ *
+ * ── WHAT THIS PHASE DOES WITH IT ───────────────────────────────────────
+ *
+ * Nothing visible. No route calls it, no component renders it, and the add
+ * flow that will is the next phase's. It exists now because the resolver, the
+ * write path and the classifier are this phase's deliverable and each of them
+ * needs one reader that is not the market reader — and because a catalogue
+ * with no reader cannot be tested end to end.
+ *
+ * ── WHY IT READS ACTIVE ONLY ───────────────────────────────────────────
+ *
+ * This is the SELECTION list: what a holder may newly add. A retired
+ * definition stays readable through `listCredentialTypes` and through the
+ * Passport snapshot, so an existing claim against it still renders — which is
+ * the other half of the same rule, and the reason `retiredOn` is carried here
+ * rather than used as a filter somewhere else.
+ *
+ * ── AN ERROR IS AN ERROR ───────────────────────────────────────────────
+ *
+ * While 20261111090000 was unapplied this read tolerated a missing relation
+ * and answered with an empty catalogue. The migration is applied now, so that
+ * tolerance is gone and every error throws. The distinction it protects is the
+ * one that matters most here: an EMPTY catalogue is a fact about the
+ * catalogue, and a holder shown "no certifications available" because a read
+ * was refused, timed out or hit a permission error has been told something
+ * untrue. A failure is reported as a failure.
+ */
+export const listGlobalCertificationTypes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly GlobalCertificationType[]> => {
+    // The taxonomy embed is hinted with the CREDENTIAL_CODE foreign key by
+    // name, and it has to be: `sp_certification_definitions` references
+    // `sp_credential_types` twice — once as its own identity, and once as
+    // `replaced_by_code` for a superseded programme's successor. An unhinted
+    // embed is ambiguous, and PostgREST refuses the WHOLE request rather than
+    // picking one, so the catalogue would have failed to load rather than
+    // loading the wrong rows. The generated types now catch that at compile
+    // time.
+    const { data, error } = await context.supabase
+      .from("sp_certification_definitions")
+      .select(
+        `credential_code, abbreviation, programme_url, maintenance_policy_url,
+         maintenance_policy_type, maintenance_cycle_months, maintenance_summary_en,
+         public_verification_url, source_reviewed_on, retired_on,
+         sp_certification_issuers!inner (
+           issuer_code, display_name, official_url,
+           verification_mode, public_verification_url, absence_is_inconclusive
+         ),
+         sp_credential_types!sp_certification_definitions_credential_code_fkey!inner (
+           code, category, claim_type, name_sv, name_en, symbol_label,
+           requires_valid_until, requires_issuer, requires_scope,
+           narrow_result_only, title_is_holder_written,
+           jurisdiction_code, sub_jurisdiction_code, scope_code, is_active,
+           sort_order
+         )`,
+      )
+      .is("retired_on", null)
+      .order("credential_code", { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    return (data ?? [])
+      .filter((r) => r.sp_credential_types.is_active)
+      .sort((a, b) => a.sp_credential_types.sort_order - b.sp_credential_types.sort_order)
+      .map((r) => ({
+        type: toCredentialType(r.sp_credential_types),
+        issuerCode: r.sp_certification_issuers.issuer_code,
+        issuerDisplayName: r.sp_certification_issuers.display_name,
+        issuerOfficialUrl: r.sp_certification_issuers.official_url,
+        abbreviation: r.abbreviation,
+        programmeUrl: r.programme_url,
+        maintenancePolicyUrl: r.maintenance_policy_url,
+        maintenancePolicyType: r.maintenance_policy_type,
+        maintenanceCycleMonths: r.maintenance_cycle_months,
+        maintenanceSummaryEn: r.maintenance_summary_en,
+        verificationMode: r.sp_certification_issuers.verification_mode,
+        // The programme may override the issuer's route; NULL means inherit,
+        // and inheriting NULL — ACAMS — is the honest answer that no confirmed
+        // public lookup exists. A fabricated URL here would be a verification
+        // route that does not exist.
+        publicVerificationUrl:
+          r.public_verification_url ?? r.sp_certification_issuers.public_verification_url,
+        absenceIsInconclusive: r.sp_certification_issuers.absence_is_inconclusive,
+        sourceReviewedOn: r.source_reviewed_on,
+        retiredOn: r.retired_on,
+      }));
   });
 
 /* ------------------------------------------------------------------ */
@@ -534,30 +702,17 @@ export const saveCredential = createServerFn({ method: "POST" })
     // than assumed from the code string.
     let type: CredentialType | null = null;
     if (data.credentialCode) {
+      // Through the same columns and the same mapper as the two list paths, so
+      // the write and the form cannot disagree about what a definition says —
+      // including about its declared scope, which decides the territory below.
       const { data: row, error } = await supabase
         .from("sp_credential_types")
-        .select(
-          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only, title_is_holder_written, jurisdiction_code, sub_jurisdiction_code",
-        )
+        .select(TAXONOMY_COLUMNS)
         .eq("code", data.credentialCode)
         .maybeSingle();
       if (error) throw new Error(error.message);
       if (!row) throw new Error("SP_CREDENTIAL_CODE_UNKNOWN");
-      type = {
-        code: row.code,
-        category: row.category as CredentialCategory,
-        claimType: row.claim_type,
-        nameSv: row.name_sv,
-        nameEn: row.name_en,
-        symbolLabel: row.symbol_label,
-        requiresValidUntil: row.requires_valid_until,
-        requiresIssuer: row.requires_issuer,
-        requiresScope: row.requires_scope,
-        narrowResultOnly: row.narrow_result_only,
-        titleIsHolderWritten: row.title_is_holder_written,
-        jurisdictionCode: row.jurisdiction_code,
-        subJurisdictionCode: row.sub_jurisdiction_code,
-      };
+      type = toCredentialType(row);
     }
 
     const mode = data.activate ? "active" : "draft";
@@ -596,7 +751,38 @@ export const saveCredential = createServerFn({ method: "POST" })
     // It is pure and exported so the browser suite can compute the row a
     // captured payload becomes, and the SQL suite can prove the trigger
     // accepts exactly that row.
-    const fields = credentialClaimFields(draft, type, mode);
+    // ── THE GOVERNED ISSUER IS RESOLVED HERE, NOT SENT ─────────────────
+    //
+    // For a governed international certification the issuer is a fact about
+    // the credential rather than a field about this holder, so it is read
+    // from the catalogue and the client's `issuerName` is discarded. A CPP is
+    // awarded by ASIS International or it is not a CPP.
+    //
+    // This read happens ONLY for a global definition. A national credential's
+    // appointing authority and a free-text claim's issuer are the holder's to
+    // state and are not touched, so nothing else pays for this.
+    //
+    // A failed read THROWS. Falling back to the submitted value would restore
+    // the exact defect 20261112090000 closes; falling back to NULL silently
+    // would drop a governed fact the holder can see is missing and cannot
+    // fix. Neither is an honest answer to "the catalogue did not load".
+    let governedIssuerName: string | null = null;
+    if (type && isGlobalCertification(type)) {
+      const { data: definition, error: issuerError } = await supabase
+        .from("sp_certification_definitions")
+        .select(`sp_certification_issuers!inner ( display_name )`)
+        .eq("credential_code", type.code)
+        .maybeSingle();
+      if (issuerError) throw new Error(issuerError.message);
+      // A global definition with no certification detail row is a catalogue
+      // that contradicts itself. The database refuses the write for exactly
+      // this case (SP_GLOBAL_CERTIFICATION_ISSUER_UNKNOWN); refusing here too
+      // means the holder gets a named error instead of a trigger message.
+      if (!definition) throw new Error("SP_GLOBAL_CERTIFICATION_ISSUER_UNKNOWN");
+      governedIssuerName = definition.sp_certification_issuers.display_name;
+    }
+
+    const fields = credentialClaimFields(draft, type, mode, governedIssuerName);
 
     if (data.claimId) {
       // RLS already restricts the holder to their own rows, and to draft/active
