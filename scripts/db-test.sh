@@ -3327,9 +3327,12 @@ DELETE FROM auth.users WHERE id::text LIKE 'b6000000%';
 -- pack's created_by, which the identity guard correctly refuses.
 ALTER TABLE public.scp_interview_packs DISABLE TRIGGER ALL;
 ALTER TABLE public.beskt_method_versions DISABLE TRIGGER ALL;
+ALTER TABLE public.beskt_item_options DISABLE TRIGGER ALL;
 ALTER TABLE public.beskt_items DISABLE TRIGGER ALL;
 ALTER TABLE public.beskt_sections DISABLE TRIGGER ALL;
 ALTER TABLE public.beskt_exposure_profiles DISABLE TRIGGER ALL;
+ALTER TABLE public.beskt_method_events DISABLE TRIGGER ALL;
+ALTER TABLE public.beskt_method_reviews DISABLE TRIGGER ALL;
 DELETE FROM public.beskt_item_options WHERE item_id IN (
   SELECT i.id FROM public.beskt_items i JOIN public.beskt_method_versions v ON v.id = i.method_version_id
    JOIN public.scp_interview_packs p ON p.id = v.pack_id WHERE p.slug = 'race-synthetic');
@@ -3351,9 +3354,12 @@ DELETE FROM public.beskt_method_reviews WHERE method_version_id IN (
 DELETE FROM public.beskt_method_versions WHERE pack_id IN (
   SELECT id FROM public.scp_interview_packs WHERE slug = 'race-synthetic');
 DELETE FROM public.scp_interview_packs WHERE slug = 'race-synthetic';
+ALTER TABLE public.beskt_method_reviews ENABLE TRIGGER ALL;
+ALTER TABLE public.beskt_method_events ENABLE TRIGGER ALL;
 ALTER TABLE public.beskt_exposure_profiles ENABLE TRIGGER ALL;
 ALTER TABLE public.beskt_sections ENABLE TRIGGER ALL;
 ALTER TABLE public.beskt_items ENABLE TRIGGER ALL;
+ALTER TABLE public.beskt_item_options ENABLE TRIGGER ALL;
 ALTER TABLE public.beskt_method_versions ENABLE TRIGGER ALL;
 ALTER TABLE public.scp_interview_packs ENABLE TRIGGER ALL;
 SQL
