@@ -465,19 +465,29 @@ const bare = stripComments(migration);
     typeof entry?.rollback === "string" && typeof entry?.verify === "string",
     "IMTR-REGISTRATION: with its rollback and a hosted verification query recorded",
   );
-  // SCHEMA-FIRST. Nothing hosted was written from this change: the entry is
-  // pending until the owner applies it and records evidence, at which point
-  // this assertion is updated in the same change as the evidence.
+  // SCHEMA-FIRST, now settled. The official Supabase GitHub integration applied
+  // the migration when #241 merged; the entry is therefore "applied" and MUST
+  // carry the read-only evidence that says so. Asserting both together is the
+  // point: a state flipped without evidence is exactly the unproved claim this
+  // guard exists to refuse.
   check(
-    entry?.hostedState === "pending" && !entry?.evidenceSource,
-    "IMTR-REGISTRATION: it is declared pending -- nothing hosted was written for this change",
+    entry?.hostedState === "applied",
+    "IMTR-REGISTRATION: it is declared applied -- the integration applied it to production on merge",
+  );
+  check(
+    typeof entry?.evidenceSource === "string" && entry.evidenceSource.length > 0,
+    "IMTR-REGISTRATION: with hosted evidence recorded alongside that state, never a bare flip",
+  );
+  check(
+    entry?.evidenceSource?.includes("wrygicdfxwjnrugduxnt") === true,
+    "IMTR-REGISTRATION: and that evidence names the one canonical hosted project",
   );
   const frontier = read(FRONTIER);
   check(
-    new RegExp(`const expectedPending: string\\[\\] = \\[[^\\]]*"${MIGRATION_NAME}"`).test(
-      frontier,
+    !new RegExp(`"${MIGRATION_NAME}"`).test(
+      /const expectedPending: string\[\] = \[[^\]]*\]/.exec(frontier)?.[0] ?? "",
     ),
-    "IMTR-REGISTRATION: and the frontier selection check expects exactly that pending migration",
+    "IMTR-REGISTRATION: and the frontier selection check no longer expects it pending",
   );
 }
 

@@ -1,9 +1,11 @@
 # Pilot blocker 2 — the employer read boundary of the interview-method library
 
-**Status: draft PR, schema release only. Nothing hosted was written from this
-work. The migration is `pending` on the release frontier until the owner
-applies it through the official Supabase GitHub integration and records the
-evidence.**
+**Status: merged, and APPLIED to production. The official Supabase GitHub
+integration applied the migration to `wrygicdfxwjnrugduxnt` when PR #241 merged
+to main as `7e338f2a43fbfe91b2c26228f04d7b3487d67d61`. The release frontier now
+records it as `applied` with read-only hosted evidence, and no active migration
+remains pending. No hosted write was issued from the evidence session: every
+statement behind section 10 is a read.**
 
 - Baseline: `origin/main` `5267e29d24ad873dab0a41fee52a0a8a26b66f54`
   (merge of PR #239), CI run 34767671763 green on that SHA.
@@ -242,7 +244,83 @@ Negative controls, three layers:
    `supabase/release-state.json`, remove the file from `expectedPending` in
    `scripts/release-frontier-check.ts`, update the `IMTR-REGISTRATION`
    pending assertion in the guard, and refresh `supabase/hosted-ledger.json`
-   from a read-only ledger read.
+   from a read-only ledger read. **Done — see section 10.**
 5. Do **not** publish through Lovable and do **not** apply through Lovable's
    migration mechanism; the integration is the only hosted write path for
    this file.
+
+## 10. Hosted evidence (read-only, 2026-09-13T17:43:43Z)
+
+Step 9.3's queries were run against `wrygicdfxwjnrugduxnt` through the Supabase
+management API. Every statement was a read; nothing was applied, re-applied or
+repaired, and no row was inserted, updated or deleted.
+
+**Recorded identity.** `supabase_migrations.schema_migrations` carries version
+`20261115090000`, name `scp_interview_method_library_tenant_read` — the
+canonical filename's own version and slug, not a generated uuid, so no
+canonical-to-hosted alias is needed and a clean replay executes nothing twice.
+It is the ledger frontier, row 280.
+
+**Ledger, proved rather than assumed.** `md5(string_agg(version || ':' || name,
+',' ORDER BY version))` over production's rows *excluding* `20261115090000` is
+`9c77cb921cae6a46a233ffb5b9cd308c` — exactly the all-rows digest the previous
+evidence recorded, and exactly the digest of the previously committed 279-row
+`supabase/hosted-ledger.json`. So no earlier row was rewritten. Over all 280
+rows, production and the refreshed committed file both give
+`cbe34f3fef140aa15c8810e8b8169425`.
+
+**The predicate.** `public.scp_iv_employer_may_read_method(_method_id uuid)` is
+`SECURITY DEFINER`, `STABLE`, and pins `proconfig = {search_path=public}`.
+`has_function_privilege` is **false** for `anon`, **true** for `authenticated`
+and `service_role`; `aclexplode` finds no grantee `0`, so PUBLIC cannot execute
+it. The stored body matches none of `raw_user_meta_data`, `user_metadata`,
+`app_metadata`, `jwt.claims` — membership is resolved from
+`employer_memberships`, never from a user-editable claim.
+
+**Body equivalence.** `md5(prosrc)` on production is
+`608dd25e6f7db6a10f619b042b6273a9`, byte-identical to the body extracted from
+the merged migration (file sha256
+`9c6aaa4f6344e5184c28bda914b12d66ab7a470ad269823afbd9f2545be7258d`). Zero
+differing, zero repo-only, zero hosted-only.
+
+**The five policies.** Each is a `SELECT` policy whose `qual` names
+`scp_iv_employer_may_read_method(`, and **none** still names
+`employer_memberships`:
+
+| Table | Policy | Routed through predicate | Still bare membership |
+| --- | --- | --- | --- |
+| `scp_interview_methods` | `scp_interview_methods_employer_read` | yes | no |
+| `scp_interview_method_practices` | `scp_interview_method_practices_employer_read` | yes | no |
+| `scp_interview_conduct_steps` | `scp_interview_conduct_steps_read` | yes | no |
+| `scp_interview_conduct_prohibitions` | `scp_interview_conduct_prohibitions_read` | yes | no |
+| `scp_interview_conduct_guidance` | `scp_interview_conduct_guidance_read` | yes | no |
+
+**The five tables.** All carry `relrowsecurity`. None carries an unconditional
+policy (no `qual = 'true'`, no `with_check = 'true'`, no `SELECT`/`ALL` policy
+with a NULL `qual`). Each retains a `SELECT` policy whose `qual` names
+`scp_interview_can_read(auth.uid())`, so the governance reader was not
+collateral damage. `has_table_privilege('anon', …, 'SELECT')` is false on all
+five, and `information_schema.role_table_grants` shows no `PUBLIC` grant on any
+of them.
+
+**Exercised, not only inspected.** With no signed-in principal, `bool_or` of the
+predicate over every method in the library returns **false** — it fails closed
+at the door — and `scp_iv_employer_may_read_method(NULL)` returns **false**.
+
+**Live consequence, stated rather than hidden.** Production holds 6 library
+methods, **0 approved** and all 6 `draft`, and 9 interview cases pinning 2
+distinct methods. The approved branch therefore admits nothing today, and the
+pinned-case continuity branch is the only live path — exactly the outcome
+section 5 predicted. Approving the PEACE/ORBIT methods remains a governed
+content-role decision, not a policy change.
+
+**Advisors.** Security advisors return six lint groups. Exactly one names an
+object of this migration:
+`authenticated_security_definer_function_executable` (WARN), which names the
+predicate because the migration deliberately grants it to `authenticated`,
+matching its own `GRANT` list. `anon_security_definer_function_executable` does
+**not** name the predicate, so anon is closed on production as well as in the
+catalogue. The single ERROR group (`security_definer_view`) and the remaining
+groups (`rls_enabled_no_policy`, `extension_in_public`,
+`auth_leaked_password_protection`) name no object of this migration and are
+pre-existing.

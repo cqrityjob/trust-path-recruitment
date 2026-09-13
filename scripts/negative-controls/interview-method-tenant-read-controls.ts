@@ -272,23 +272,40 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },
+  // The migration is now APPLIED on production, so these three controls plant
+  // the defects that state makes possible: a bare flip with the evidence taken
+  // away, evidence that names some other database, and a frontier that still
+  // expects a migration production has already run. Each is an owner-level
+  // claim about production that nothing stands behind.
   {
-    id: "IMTR-NC-CLAIMED-APPLIED",
+    id: "IMTR-NC-APPLIED-WITHOUT-EVIDENCE",
     defect:
-      "the pending migration is declared applied with no evidence, an owner-level claim about production with nothing behind it",
+      "the applied state keeps its evidence under a different key, so the frontier asserts an owner-level fact about production with nothing behind it",
     file: STATE,
-    find: '"file": "20261115090000_scp_interview_method_library_tenant_read.sql",\n      "hostedState": "pending",',
+    find: '"hostedState": "applied",\n      "evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt by the official Supabase GitHub integration when PR #241',
     replace:
-      '"file": "20261115090000_scp_interview_method_library_tenant_read.sql",\n      "hostedState": "applied",',
+      '"hostedState": "applied",\n      "evidenceWithheld": "Applied to owner production wrygicdfxwjnrugduxnt by the official Supabase GitHub integration when PR #241',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },
   {
-    id: "IMTR-NC-FRONTIER-FORGOTTEN",
-    defect: "the frontier selection check stops expecting the pending migration",
+    id: "IMTR-NC-EVIDENCE-WRONG-PROJECT",
+    defect:
+      "the evidence names a database that is not the one canonical hosted project, so it proves nothing about wrygicdfxwjnrugduxnt",
+    file: STATE,
+    find: '"evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt by the official',
+    replace: '"evidenceSource": "Applied to owner production lovable-cloud-substitute by the official',
+    guard: GUARD,
+    expect: "IMTR-REGISTRATION",
+  },
+  {
+    id: "IMTR-NC-FRONTIER-STILL-PENDING",
+    defect:
+      "the frontier selection check still expects the migration pending after production has applied it, which would mask the next genuinely stuck migration behind a stale expectation",
     file: FRONTIER,
-    find: 'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
-    replace: "const expectedPending: string[] = [];",
+    find: "const expectedPending: string[] = [];",
+    replace:
+      'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },

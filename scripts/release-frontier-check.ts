@@ -89,11 +89,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // release-state.json. No active migration remains pending.
 //
 // Pilot blocker 2: the interview-method library employer read boundary
-// (20261115090000) is pending BY DESIGN until the owner applies it through the
-// integration; the draft PR is not merged and nothing hosted was written from
-// its session. Its name comes off this list in the same change that records
-// the evidence.
-const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];
+// (20261115090000) was applied to production by the official integration when
+// #241 merged, and release-state.json now records it as applied with read-only
+// evidence. Its name comes off this list in that same change, as planned, so
+// an applied migration cannot sit here masking the next genuinely stuck one.
+// No active migration remains pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
