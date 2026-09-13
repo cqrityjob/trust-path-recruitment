@@ -228,8 +228,8 @@ const MUTATIONS: readonly Mutation[] = [
     file: THEMES,
     find:
       "          {topic.itemKey}\n" +
-      '          <span className="sr-only"> · {t("beskt.conduct.themes.methodVersion")}: </span>\n' +
       '          {" · "}\n' +
+      '          <span className="sr-only">{t("beskt.conduct.themes.methodVersion")}: </span>\n' +
       "          {methodVersionId}",
     replace: '          {""}',
     guard: GUARD,
