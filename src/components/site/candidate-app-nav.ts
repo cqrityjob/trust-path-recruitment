@@ -45,7 +45,10 @@
  *  /my-career simultaneously offered "Översikt" pointing at the SAME URL:
  *  one destination presented as two differently-named places, one above
  *  the other. The owner's review named it, and the fix is one label and
- *  one navigation -- see hub-sections.ts for the strip that went with it.
+ *  one navigation. The strip that carried that second "Översikt" is
+ *  retired; the route shell in routes/_authenticated.my-career.tsx records
+ *  why, and candidate-navigation-canon-check.ts fails the build if a second
+ *  candidate section navigation comes back.
  *
  *  The ROUTE stays /my-career. The owner's rule is about the label a
  *  candidate reads; renaming the path would break seven shipped child
