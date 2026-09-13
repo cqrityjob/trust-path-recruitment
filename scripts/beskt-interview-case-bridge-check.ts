@@ -174,7 +174,11 @@ const pr3 = stripComments(read(PR3_MIGRATION));
     "BRIDGE-NO-PARALLEL: and nothing resembling a parallel case, interview, application, evidence or session store",
   );
   check(
-    /INSERT INTO public\.scp_interview_case_sources/.test(bare),
+    // The word boundary is load-bearing: without it, renaming the target to
+    // scp_interview_case_sources_disabled would still satisfy a prefix match,
+    // and the assertion would go on passing while the evidence row was never
+    // written. A planted control proved exactly that.
+    /INSERT INTO public\.scp_interview_case_sources\b(?!_)/.test(bare),
     "BRIDGE-REUSE: the link registers itself on the EXISTING scp_interview_case_sources evidence structure",
   );
   check(
@@ -516,8 +520,13 @@ const pr3 = stripComments(read(PR3_MIGRATION));
     );
   }
   check(
-    !/USING \(true\)/.test(bare) && !/WITH CHECK \(true\)/.test(bare),
-    "BRIDGE-RLS: no unconditional policy exists anywhere in PR 4",
+    // `USING (true)` is the obvious spelling; `USING (true OR ...)` is the one
+    // that reads like a real predicate and admits everyone anyway. A planted
+    // control got past the first form of this check with exactly that, so the
+    // assertion now refuses a predicate that OPENS on true however it
+    // continues.
+    !/USING \(\s*true\b/.test(bare) && !/WITH CHECK \(\s*true\b/.test(bare),
+    "BRIDGE-RLS: no policy predicate opens on an unconditional true anywhere in PR 4",
   );
 
   // A definer-rights trigger function granted to `authenticated` is published

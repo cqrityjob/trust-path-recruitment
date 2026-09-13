@@ -73,8 +73,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the rebuilt event CHECK silently drops an existing member, breaking PR 3's own writes",
     file: MIG,
-    find: "    'response_saved', 'response_submitted',",
-    replace: "    'response_submitted',",
+    find: "    'assignment_created', 'notice_acknowledged', 'response_saved',",
+    replace: "    'assignment_created', 'notice_acknowledged',",
     guard: GUARD,
     expect: "BRIDGE-VOCABULARY",
   },
@@ -497,9 +497,9 @@ const MUTATIONS: readonly Mutation[] = [
       "release-state.json claims the migration is already applied on the hosted database, which is exactly the unverified claim this stack exists to prevent",
     file: STATE,
     find:
-      '"file": "20261112090000_bcp_interview_case_bridge.sql",\n    "hostedState": "pending",',
+      '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "pending",',
     replace:
-      '"file": "20261112090000_bcp_interview_case_bridge.sql",\n    "hostedState": "applied",',
+      '"file": "20261112090000_bcp_interview_case_bridge.sql",\n      "hostedState": "applied",',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },
