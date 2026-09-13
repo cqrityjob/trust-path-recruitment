@@ -525,14 +525,9 @@ const MUTATIONS: readonly Mutation[] = [
     // evidence then took that one off again, so the list is empty once more.
     // The defect being planted never changes: the APPLIED bcp migration back on
     // the frontier list.
-    // PR 4 put its own genuinely pending migration in the list, so the anchor is
-    // that line rather than an empty one.
-    // PR 5A put its own genuinely pending migration in the list, so the anchor
-    // is that line rather than an empty one. The planted defect is unchanged:
-    // the APPLIED migration back on the frontier.
-    // Pilot blocker 2 put its own genuinely pending migration in the list, so
-    // the anchor is that one-line list rather than an empty one. The planted
-    // defect is unchanged: the APPLIED migration back on the frontier.
+    // The pending list carries pilot blocker 2's genuinely pending migration,
+    // so the anchor is that one-line list rather than an empty one. The planted
+    // defect is unchanged: this APPLIED migration goes back on the frontier.
     find: 'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
     replace:
       'const expectedPending: string[] = [\n  "20261115090000_scp_interview_method_library_tenant_read.sql",\n  "20261110090000_bcp_candidate_preparation.sql",\n];',

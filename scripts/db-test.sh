@@ -4396,6 +4396,44 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# The governed issuer (20261114090000).
+#
+# This suite exists because of a defect that was REPRODUCED, not imagined: as
+# an ordinary holder -- SET ROLE authenticated with their own auth.uid() --
+# INTL_ASIS_CPP could be stored with claimed_issuer_name = 'Fake Corporation',
+# and the issuer could be changed to anything afterwards by an UPDATE touching
+# only that column. sp_disclosure_payload emits it to a RECIPIENT.
+#
+# Every write below runs as that same principal. A suite proving the rule only
+# under a superuser would prove nothing about the caller who can actually
+# reach these rows.
+# ---------------------------------------------------------------------------
+echo "==> Running the Security Passport governed-issuer suite"
+set +e
+SPGI_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_governed_issuer_test.sql 2>&1)"
+SPGI_RC=$?
+set -e
+
+echo "$SPGI_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPGI_PASSED="$(echo "$SPGI_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPGI_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the governed-issuer suite exited with code ${SPGI_RC}." >&2
+  echo "$SPGI_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport governed issuer"
+else
+  echo "    ok  ${SPGI_PASSED} governed-issuer assertions passed"
+  # The floor is not decoration. The cheapest way to make a security suite
+  # green is to delete the assertion that is failing, and GROUP 1.2 (a forged
+  # issuer on a DRAFT) is the one that caught a rule placed one block too low.
+  if [ "$SPGI_PASSED" -lt 26 ]; then
+    echo "FAIL: expected at least 26 governed-issuer assertions, only ${SPGI_PASSED} ran." >&2
+    suite_failed "Security Passport governed issuer (assertion shortfall: floor 26)"
+  fi
+fi
+
 echo "==> Verifying the global certification rollback preserves every holder row"
 # The rollback contract is not "the objects disappear". It is "the objects
 # disappear AND every row a holder ever wrote is byte-for-byte what it was",
