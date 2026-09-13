@@ -3320,12 +3320,48 @@ DELETE FROM public.jobs WHERE employer_id::text LIKE 'b6000000%';
 DELETE FROM public.employer_memberships WHERE employer_id::text LIKE 'b6000000%';
 DELETE FROM public.employers WHERE id::text LIKE 'b6000000%';
 DELETE FROM auth.users WHERE id::text LIKE 'b6000000%';
+
+-- The governed method the race fixture built and COMMITTED. It is authored by
+-- the shared fixture's b2 editor, so leaving it here makes the pre-existing
+-- BESKT cleanup further down fail: deleting that editor would SET NULL on the
+-- pack's created_by, which the identity guard correctly refuses.
+ALTER TABLE public.scp_interview_packs DISABLE TRIGGER ALL;
+ALTER TABLE public.beskt_method_versions DISABLE TRIGGER ALL;
+ALTER TABLE public.beskt_items DISABLE TRIGGER ALL;
+ALTER TABLE public.beskt_sections DISABLE TRIGGER ALL;
+ALTER TABLE public.beskt_exposure_profiles DISABLE TRIGGER ALL;
+DELETE FROM public.beskt_item_options WHERE item_id IN (
+  SELECT i.id FROM public.beskt_items i JOIN public.beskt_method_versions v ON v.id = i.method_version_id
+   JOIN public.scp_interview_packs p ON p.id = v.pack_id WHERE p.slug = 'race-synthetic');
+DELETE FROM public.beskt_items WHERE method_version_id IN (
+  SELECT v.id FROM public.beskt_method_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id
+   WHERE p.slug = 'race-synthetic');
+DELETE FROM public.beskt_sections WHERE method_version_id IN (
+  SELECT v.id FROM public.beskt_method_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id
+   WHERE p.slug = 'race-synthetic');
+DELETE FROM public.beskt_exposure_profiles WHERE method_version_id IN (
+  SELECT v.id FROM public.beskt_method_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id
+   WHERE p.slug = 'race-synthetic');
+DELETE FROM public.beskt_method_events WHERE method_version_id IN (
+  SELECT v.id FROM public.beskt_method_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id
+   WHERE p.slug = 'race-synthetic');
+DELETE FROM public.beskt_method_reviews WHERE method_version_id IN (
+  SELECT v.id FROM public.beskt_method_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id
+   WHERE p.slug = 'race-synthetic');
+DELETE FROM public.beskt_method_versions WHERE pack_id IN (
+  SELECT id FROM public.scp_interview_packs WHERE slug = 'race-synthetic');
+DELETE FROM public.scp_interview_packs WHERE slug = 'race-synthetic';
+ALTER TABLE public.beskt_exposure_profiles ENABLE TRIGGER ALL;
+ALTER TABLE public.beskt_sections ENABLE TRIGGER ALL;
+ALTER TABLE public.beskt_items ENABLE TRIGGER ALL;
+ALTER TABLE public.beskt_method_versions ENABLE TRIGGER ALL;
+ALTER TABLE public.scp_interview_packs ENABLE TRIGGER ALL;
 SQL
 
 # Prove the cleanup was complete rather than assuming it: anything the fixture
 # left behind would break the PR 4 and PR 3 sections below in a way that is
 # hard to read from here.
-CNDR_LEFT="$(psql -tAq -d "$TEST_DB" -c "select (select count(*) from public.bcp_conduct_sessions) + (select count(*) from public.bcp_case_links where employer_id::text like 'b6000000%') + (select count(*) from public.bcp_events where employer_id::text like 'b6000000%') + (select count(*) from public.employers where id::text like 'b6000000%');")"
+CNDR_LEFT="$(psql -tAq -d "$TEST_DB" -c "select (select count(*) from public.bcp_conduct_sessions) + (select count(*) from public.bcp_case_links where employer_id::text like 'b6000000%') + (select count(*) from public.bcp_events where employer_id::text like 'b6000000%') + (select count(*) from public.employers where id::text like 'b6000000%') + (select count(*) from public.scp_interview_packs where slug = 'race-synthetic');")"
 if [ "$CNDR_LEFT" != "0" ]; then
   echo "FAIL: the conduct race fixture left ${CNDR_LEFT} synthetic row(s) behind." >&2
   CND_FAILED=1
