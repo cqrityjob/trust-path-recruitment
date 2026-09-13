@@ -635,6 +635,29 @@ export const dictionaries = {
     "auth.signup.check_email": "Kolla din inkorg — vi har skickat en verifieringslänk.",
     "auth.signup.check_email_employer":
       "Verifiera din e-postadress för att fortsätta. Därefter granskar vi din företagsregistrering.",
+    // ── The inbox-confirmation state ──────────────────────────────────
+    //
+    // These replace the registration form once it has been submitted. The
+    // form used to stay on screen behind a one-line notice, so the only
+    // thing the page offered was the button that had already worked --
+    // which is how somebody creates the same account twice and reads an
+    // error instead of the instruction.
+    "auth.confirm.heading": "Kontrollera din e-post",
+    "auth.confirm.body":
+      "Vi har skickat en verifieringslänk till adressen nedan. Öppna länken för att aktivera ditt konto — du kommer tillbaka hit när det är klart.",
+    "auth.confirm.bodyEmployer":
+      "Vi har skickat en verifieringslänk till adressen nedan. Öppna länken för att aktivera ditt konto. Därefter granskar vi din företagsregistrering.",
+    "auth.confirm.sentTo": "Skickad till",
+    "auth.confirm.notArrived": "Inget mejl? Kontrollera skräpposten först.",
+    "auth.confirm.resend": "Skicka igen",
+    "auth.confirm.resending": "Skickar…",
+    "auth.confirm.resent": "Vi har skickat länken igen.",
+    "auth.confirm.changeEmail": "Ändra e-postadress",
+    // Said in words, because the destination is the reason the person
+    // started: a claimed Career Discovery-resultat must survive the trip
+    // through the inbox.
+    "auth.confirm.destinationKept":
+      "Du kommer tillbaka dit du var på väg när du har verifierat adressen.",
     "auth.companyName": "Företagsnamn",
     "auth.companyCountry": "Land",
     "employer.pending.heading": "Företagskonto granskas",
@@ -7371,6 +7394,19 @@ export const dictionaries = {
     "auth.signup.check_email": "Check your inbox — we've sent a verification link.",
     "auth.signup.check_email_employer":
       "Verify your email address to continue. Your company registration will then be reviewed.",
+    "auth.confirm.heading": "Check your email",
+    "auth.confirm.body":
+      "We've sent a verification link to the address below. Open it to activate your account — you'll come back here when it's done.",
+    "auth.confirm.bodyEmployer":
+      "We've sent a verification link to the address below. Open it to activate your account. Your company registration will then be reviewed.",
+    "auth.confirm.sentTo": "Sent to",
+    "auth.confirm.notArrived": "No email? Check your spam folder first.",
+    "auth.confirm.resend": "Send again",
+    "auth.confirm.resending": "Sending…",
+    "auth.confirm.resent": "We've sent the link again.",
+    "auth.confirm.changeEmail": "Change email address",
+    "auth.confirm.destinationKept":
+      "You'll return to where you were heading once the address is verified.",
     "auth.companyName": "Company name",
     "auth.companyCountry": "Country",
     "employer.pending.heading": "Company account under review",

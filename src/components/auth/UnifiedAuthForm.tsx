@@ -129,6 +129,22 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [info, setInfo] = useState<string | null>(null);
+  // ── THE INBOX-CONFIRMATION STATE ────────────────────────────────────
+  //
+  // Non-null once sign-up has succeeded WITHOUT returning a session, which
+  // is the only case where there is an email to go and read. It carries
+  // the address the link was sent to and the destination the link will
+  // come back to, so the panel can state both rather than imply them.
+  //
+  // It REPLACES the form. Previously the form stayed on screen behind a
+  // one-line notice, so the only control the page still offered was the
+  // button that had already worked -- press it again and the answer is
+  // "User already registered", an error about the thing that succeeded.
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState<{
+    readonly email: string;
+    readonly returnTo: string;
+  } | null>(null);
+  const [resending, setResending] = useState(false);
   const errorRef = useRef<HTMLDivElement | null>(null);
 
   const isSignup = mode === "signup";
@@ -304,9 +320,10 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
           return;
         }
 
-        setInfo(
-          t(forOrganisation ? "auth.signup.check_email_employer" : "auth.signup.check_email"),
-        );
+        // No session means the project requires confirmation, so there IS
+        // an email to go and read. Hand over to the confirmation panel and
+        // take the form off the page.
+        setAwaitingConfirmation({ email: email.trim(), returnTo });
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -320,6 +337,44 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Send the verification link again, to the SAME address and with the
+   *  SAME return path. Both come from the stored state rather than from
+   *  the form's fields, which are no longer on screen -- so a resend can
+   *  never quietly change where the link goes. */
+  async function onResend() {
+    if (!awaitingConfirmation) return;
+    setErrors([]);
+    setInfo(null);
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: awaitingConfirmation.email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login?redirect=${encodeURIComponent(
+            awaitingConfirmation.returnTo,
+          )}`,
+        },
+      });
+      if (error) throw error;
+      setInfo(t("auth.confirm.resent"));
+    } catch (err) {
+      reportErrors([err instanceof Error ? err.message : String(err)]);
+    } finally {
+      setResending(false);
+    }
+  }
+
+  /** Back to the form, with the address still in the field so a typo is a
+   *  correction rather than a re-type. The password is deliberately kept
+   *  too: the account does not exist until the link is opened, so
+   *  submitting again is a legitimate retry of the same registration. */
+  function onChangeEmail() {
+    setAwaitingConfirmation(null);
+    setInfo(null);
+    setErrors([]);
   }
 
   async function onGoogle() {
@@ -473,6 +528,87 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
               {!sessionKnown ? (
                 // Never paint a form we may be about to navigate away from.
                 <p className="mt-8 text-sm text-muted-foreground">{t("auth.redirecting")}</p>
+              ) : awaitingConfirmation ? (
+                /* ── REGISTERED: THE INBOX IS THE NEXT STEP ──────────────
+                   The form is GONE, not disabled and not merely captioned.
+                   What replaces it says three things the one-line notice
+                   never did: which address the link went to, what to do if
+                   it does not arrive, and that the destination the person
+                   was heading for is still waiting for them. */
+                <div data-testid="auth-awaiting-confirmation" className="mt-8">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {t("auth.confirm.heading")}
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {t(forOrganisation ? "auth.confirm.bodyEmployer" : "auth.confirm.body")}
+                  </p>
+
+                  {/* The address, shown rather than assumed. A typo in an
+                      email address is invisible until nothing arrives. */}
+                  <div className="mt-4 rounded-md border border-border bg-secondary/40 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      {t("auth.confirm.sentTo")}
+                    </p>
+                    <p
+                      data-testid="auth-confirmation-email"
+                      className="mt-1 break-all text-sm font-medium text-foreground"
+                    >
+                      {awaitingConfirmation.email}
+                    </p>
+                  </div>
+
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {t("auth.confirm.notArrived")}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t("auth.confirm.destinationKept")}
+                  </p>
+
+                  {/* Announced, not merely painted: a resend that only
+                      changes a colour tells a screen-reader user nothing. */}
+                  {info && (
+                    <p
+                      role="status"
+                      className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"
+                    >
+                      {info}
+                    </p>
+                  )}
+                  {errors.length > 0 && (
+                    <div
+                      ref={errorRef}
+                      tabIndex={-1}
+                      role="alert"
+                      className="mt-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <ul className="list-disc space-y-1 pl-4 text-sm text-destructive">
+                        {errors.map((message) => (
+                          <li key={message}>{message}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={onResend}
+                      disabled={resending}
+                      data-testid="auth-confirmation-resend"
+                      className="inline-flex min-h-11 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {resending ? t("auth.confirm.resending") : t("auth.confirm.resend")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onChangeEmail}
+                      data-testid="auth-confirmation-change-email"
+                      className="inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold text-accent underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      {t("auth.confirm.changeEmail")}
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <button

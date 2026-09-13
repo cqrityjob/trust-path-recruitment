@@ -35,6 +35,8 @@
     "scripts/interview-method-tenant-read-check.ts",
     "scripts/negative-controls/interview-method-tenant-read-controls.ts",
     "scripts/candidate-navigation-canon-check.ts",
+    "scripts/account-confirmation-state-check.ts",
+    "scripts/negative-controls/account-confirmation-controls.ts",
     "scripts/negative-controls/candidate-navigation-canon-controls.ts",
     "scripts/backend-target-lock-check.ts",
     "scripts/scripts-env.d.ts",
