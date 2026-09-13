@@ -528,17 +528,19 @@ builds none of it.
 
 No application code at all — no server function, no resolver, no classifier, no
 form, no route, no component. No share transport change. No recipient field. No
-market activated (Sweden remains the only active pack). Nothing written to
-hosted Supabase. No generated types regenerated — `types.ts` describes the
-hosted database, and rewriting it for a schema that is not applied would make
-it assert something untrue about production. No Edge Function, no DNS, no
-Lovable action, no deployment, no publication.
+market activated (Sweden remains the only active pack). The migration was later
+applied through the official Supabase GitHub integration and verified read-only,
+as recorded in `release-state.json`; the generated `types.ts` now describes that
+hosted schema. No Edge Function, DNS change or application publication was part
+of the schema release.
 
-`scripts/passport-global-certification-check.ts` GROUP 4 asserts the whole of
-that first sentence mechanically: for each of the six new tables, the new
-column and the `INTL_` code namespace, no file under `src/` mentions it, and
-the generated types do not describe it. The day Phase 1B wires the catalogue
-up is therefore a deliberate change to that guard, not a drift past it.
+`scripts/passport-global-certification-check.ts` GROUP 4 asserts the boundary
+mechanically: excluding the generated Supabase contract, no application file
+under `src/` names any of the six new tables, the new column, the function or
+the `INTL_` code namespace. It also requires the generated types to describe
+the six hosted tables, `sp_credential_types.scope_code`, and the lifecycle RPC.
+The day Phase 1B wires the catalogue up remains a deliberate change to that
+guard, not a drift past it.
 
 ### The order from here
 

@@ -383,11 +383,10 @@ jobs:
         run: bun run passport-market-catalogue:check
 
       # Security Passport Phase 1A — the international-certification SCHEMA.
-      # Reads SQL only and imports nothing under src/, because the property it
-      # exists to protect is that this release has no application dependency:
-      # it must be safe to merge and apply while the running app continues
-      # against the old hosted schema. GROUP 4 asserts exactly that, object by
-      # object. The rest pins the fourteen reviewed definitions, the five
+      # The migration is applied and verified on the hosted owner database.
+      # GROUP 4 keeps runtime application code independent until its separate
+      # release, while requiring generated Supabase types to describe the
+      # hosted tables, column and RPC. The rest pins the fourteen reviewed definitions, the five
       # controlled issuers, the honest gaps (ACAMS has no verification URL, the
       # ACFE directory's absence is inconclusive), the constraint that keeps a
       # portable certification from creating eligibility or a title, and the

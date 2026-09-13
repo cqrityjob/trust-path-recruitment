@@ -962,8 +962,10 @@ group("T12 · the public chrome, and the untouched candidate chrome");
     nav.includes("CANONICAL_ASSESSMENT_PATH") && !nav.includes('"/security-career-assessment"'),
   );
   ck(
-    "the homepage entry is matched exactly, not by prefix",
-    headerCode.includes('activeOptions={{ exact: item.to === "/" }}'),
+    "the homepage entry is matched exactly and its section hash participates in active state",
+    headerCode.includes(
+      'activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}',
+    ),
   );
   ck('"Bedömningar" is out of the primary nav', !nav.includes("/assessment"));
   ck('"Kontakt" is out of the primary nav', !nav.includes("/contact"));
