@@ -3110,6 +3110,77 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# BESKT PR 4 -- the bridge to the existing interview case.
+#
+# Runs BEFORE the PR 3 rollback below, because it is built on PR 3's tables:
+# bcp_case_links carries foreign keys into bcp_assignments and bcp_responses,
+# so PR 3 cannot be unwound while PR 4 stands. Everything the suite plants is
+# synthetic and lives inside its own transaction, which is rolled back.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT interview-case bridge assertions"
+set +e
+BRG_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_interview_case_bridge_test.sql 2>&1)"
+BRG_RC=$?
+set -e
+BRG_PASSED="$(echo "$BRG_OUT" | grep -c "ok  " || true)"
+BRG_FAILED=0
+if [ "$BRG_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT interview-case bridge suite exited with code ${BRG_RC}." >&2
+  echo "$BRG_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  BRG_FAILED=1
+else
+  echo "    ok  ${BRG_PASSED} BESKT interview-case bridge assertions passed"
+  if [ "$BRG_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 BESKT interview-case bridge assertions, only ${BRG_PASSED} ran." >&2
+    BRG_FAILED=1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# The PR 4 rollback, for real, then the migration re-applied over it. The
+# rollback restores two governed vocabularies verbatim -- the interview
+# source kinds and the BESKT event names -- which the migration's own
+# postflight then re-proves.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT PR 4 rollback and re-apply"
+set +e
+BRG_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261112090000_bcp_interview_case_bridge_rollback.sql 2>&1)"
+BRG_RB_RC=$?
+set -e
+if [ "$BRG_RB_RC" -ne 0 ] || ! echo "$BRG_RB" | grep -q "BESKT_INTERVIEW_CASE_BRIDGE_ROLLBACK ok"; then
+  echo "FAIL: the BESKT interview-case bridge rollback did not verify." >&2
+  echo "$BRG_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  BRG_FAILED=1
+else
+  echo "    ok  the PR 4 rollback drops only the bridge and restores both governed vocabularies verbatim"
+fi
+
+set +e
+BRG_RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/migrations/20261112090000_bcp_interview_case_bridge.sql 2>&1)"
+BRG_RE_RC=$?
+set -e
+if [ "$BRG_RE_RC" -ne 0 ] || ! echo "$BRG_RE" | grep -q "BESKT_INTERVIEW_CASE_BRIDGE_PROOF ok"; then
+  echo "FAIL: the BESKT PR 4 migration does not re-apply over the rolled-back state." >&2
+  echo "$BRG_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  BRG_FAILED=1
+else
+  echo "    ok  and the PR 4 migration re-applies cleanly over it"
+fi
+
+if [ "$BRG_FAILED" -ne 0 ]; then
+  suite_failed "BESKT interview-case bridge"
+fi
+
+# Stand PR 4 down so PR 3 can be unwound below. Same reason as the PR 3/PR 2
+# ordering further down: the foreign keys are real, and the rollback scripts
+# correctly refuse to leave a dangling one.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261112090000_bcp_interview_case_bridge_rollback.sql >/dev/null
+
+# ---------------------------------------------------------------------------
 # The PR 3 rollback, for real, in one transaction -- then the migration
 # re-applied over the rolled-back state. It restores PR #218's three read
 # contracts verbatim, which the migration's own postflight then re-proves.
@@ -3226,9 +3297,13 @@ else
   echo "    ok  and the BESKT migration re-applies cleanly over the rolled-back state"
 fi
 
-# The database ends the BESKT block in the release state: PR 2 and then PR 3.
+# The database ends the BESKT block in the release state: PR 2, then PR 3,
+# then PR 4 -- the same order the frontier applies them in, and the reverse of
+# the order they were stood down in above.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261110090000_bcp_candidate_preparation.sql >/dev/null
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261112090000_bcp_interview_case_bridge.sql >/dev/null
 
 # The race fixtures: the rollback above dropped their versions with the
 # domain and deleted their identities; the planted principals go too.
