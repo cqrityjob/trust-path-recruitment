@@ -1,277 +1,132 @@
-{"phase":"library","step":"sign in as the recruiter","ms":12677,"project":"chromium","at":"2026-09-13T06:37:32.319Z"}
-{"phase":"library","step":"the section is present and is not a test","ms":980,"project":"chromium","at":"2026-09-13T06:37:33.300Z"}
-{"phase":"library","step":"the same page in English","ms":222,"project":"chromium","at":"2026-09-13T06:37:33.522Z"}
-{"phase":"assign","step":"sign in and open the application","ms":2380,"project":"chromium","at":"2026-09-13T06:37:36.342Z"}
-{"phase":"assign","step":"the panel offers a governed exposure profile","ms":2011,"project":"chromium","at":"2026-09-13T06:37:38.353Z"}
-{"phase":"assign","step":"start it","ms":172,"project":"chromium","at":"2026-09-13T06:37:38.526Z"}
-{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":242,"project":"chromium","at":"2026-09-13T06:37:38.769Z"}
-{"phase":"notice","step":"sign in and find it in My Career","ms":2895,"project":"chromium","at":"2026-09-13T06:37:42.062Z"}
-{"phase":"notice","step":"all nine matters are disclosed","ms":385,"project":"chromium","at":"2026-09-13T06:37:42.448Z"}
-{"phase":"notice","step":"it says plainly that it is not a consent","ms":168,"project":"chromium","at":"2026-09-13T06:37:42.617Z"}
-{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":357,"project":"chromium","at":"2026-09-13T06:37:42.974Z"}
-{"phase":"notice","step":"acknowledge it","ms":423,"project":"chromium","at":"2026-09-13T06:37:43.397Z"}
-{"phase":"answer","step":"reopen the preparation","ms":2622,"project":"chromium","at":"2026-09-13T06:37:46.554Z"}
-{"phase":"answer","step":"answer the first question and save","ms":171,"project":"chromium","at":"2026-09-13T06:37:46.725Z"}
-{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":98,"project":"chromium","at":"2026-09-13T06:37:46.824Z"}
-{"phase":"answer","step":"take that question orally instead","ms":71,"project":"chromium","at":"2026-09-13T06:37:46.895Z"}
-{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":311,"project":"chromium","at":"2026-09-13T06:37:47.207Z"}
-{"phase":"answer","step":"skip the context question","ms":205,"project":"chromium","at":"2026-09-13T06:37:47.412Z"}
-{"phase":"answer","step":"save the omission and the oral choice too","ms":65,"project":"chromium","at":"2026-09-13T06:37:47.477Z"}
-{"phase":"resume","step":"leave the preparation entirely","ms":1661,"project":"chromium","at":"2026-09-13T06:37:49.138Z"}
-{"phase":"resume","step":"come back and find the EXACT same answers","ms":1837,"project":"chromium","at":"2026-09-13T06:37:50.976Z"}
-{"phase":"review","step":"reopen and go to the review","ms":2876,"project":"chromium","at":"2026-09-13T06:37:54.322Z"}
-{"phase":"review","step":"go back and CORRECT one response","ms":340,"project":"chromium","at":"2026-09-13T06:37:54.662Z"}
-{"phase":"review","step":"the correction is what the review now shows","ms":49,"project":"chromium","at":"2026-09-13T06:37:54.712Z"}
-{"phase":"submit","step":"submit it once","ms":251,"project":"chromium","at":"2026-09-13T06:37:54.963Z"}
-{"phase":"submit","step":"read-only means read-only","ms":119,"project":"chromium","at":"2026-09-13T06:37:55.082Z"}
-{"phase":"submit","step":"and in English","ms":165,"project":"chromium","at":"2026-09-13T06:37:55.248Z"}
-{"phase":"readback","step":"sign in and open the application","ms":2267,"project":"chromium","at":"2026-09-13T06:37:57.877Z"}
-{"phase":"readback","step":"the submitted basis is readable now","ms":955,"project":"chromium","at":"2026-09-13T06:37:58.832Z"}
-{"phase":"readback","step":"the neutral states are shown AS states","ms":167,"project":"chromium","at":"2026-09-13T06:37:58.999Z"}
-{"phase":"readback","step":"no judgement anywhere on the surface","ms":253,"project":"chromium","at":"2026-09-13T06:37:59.252Z"}
-{"phase":"refusal","step":"another candidate is refused this preparation","ms":2913,"project":"chromium","at":"2026-09-13T06:38:02.422Z"}
-{"phase":"refusal","step":"a member of another employer is refused the readback","ms":2826,"project":"chromium","at":"2026-09-13T06:38:05.249Z"}
-{"phase":"library","step":"sign in as the recruiter","ms":20745,"project":"mobile-375","at":"2026-09-13T06:38:30.375Z"}
-{"phase":"library","step":"the section is present and is not a test","ms":940,"project":"mobile-375","at":"2026-09-13T06:38:31.319Z"}
-{"phase":"library","step":"the same page in English","ms":179,"project":"mobile-375","at":"2026-09-13T06:38:31.498Z"}
-{"phase":"assign","step":"sign in and open the application","ms":2270,"project":"mobile-375","at":"2026-09-13T06:38:34.138Z"}
-{"phase":"assign","step":"the panel offers a governed exposure profile","ms":2804,"project":"mobile-375","at":"2026-09-13T06:38:36.942Z"}
-{"phase":"assign","step":"start it","ms":305,"project":"mobile-375","at":"2026-09-13T06:38:37.247Z"}
-{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":96,"project":"mobile-375","at":"2026-09-13T06:38:37.343Z"}
-{"phase":"notice","step":"sign in and find it in My Career","ms":2740,"project":"mobile-375","at":"2026-09-13T06:38:40.533Z"}
-{"phase":"notice","step":"all nine matters are disclosed","ms":398,"project":"mobile-375","at":"2026-09-13T06:38:40.931Z"}
-{"phase":"notice","step":"it says plainly that it is not a consent","ms":142,"project":"mobile-375","at":"2026-09-13T06:38:41.075Z"}
-{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":310,"project":"mobile-375","at":"2026-09-13T06:38:41.385Z"}
-{"phase":"notice","step":"acknowledge it","ms":372,"project":"mobile-375","at":"2026-09-13T06:38:41.757Z"}
-{"phase":"answer","step":"reopen the preparation","ms":2564,"project":"mobile-375","at":"2026-09-13T06:38:44.830Z"}
-{"phase":"answer","step":"answer the first question and save","ms":164,"project":"mobile-375","at":"2026-09-13T06:38:44.994Z"}
-{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":94,"project":"mobile-375","at":"2026-09-13T06:38:45.088Z"}
-{"phase":"answer","step":"take that question orally instead","ms":71,"project":"mobile-375","at":"2026-09-13T06:38:45.159Z"}
-{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":309,"project":"mobile-375","at":"2026-09-13T06:38:45.468Z"}
-{"phase":"answer","step":"skip the context question","ms":151,"project":"mobile-375","at":"2026-09-13T06:38:45.619Z"}
-{"phase":"answer","step":"save the omission and the oral choice too","ms":77,"project":"mobile-375","at":"2026-09-13T06:38:45.696Z"}
-{"phase":"resume","step":"leave the preparation entirely","ms":1649,"project":"mobile-375","at":"2026-09-13T06:38:47.345Z"}
-{"phase":"resume","step":"come back and find the EXACT same answers","ms":1811,"project":"mobile-375","at":"2026-09-13T06:38:49.156Z"}
-{"phase":"review","step":"reopen and go to the review","ms":2797,"project":"mobile-375","at":"2026-09-13T06:38:52.422Z"}
-{"phase":"review","step":"go back and CORRECT one response","ms":319,"project":"mobile-375","at":"2026-09-13T06:38:52.741Z"}
-{"phase":"review","step":"the correction is what the review now shows","ms":56,"project":"mobile-375","at":"2026-09-13T06:38:52.798Z"}
-{"phase":"submit","step":"submit it once","ms":260,"project":"mobile-375","at":"2026-09-13T06:38:53.058Z"}
-{"phase":"submit","step":"read-only means read-only","ms":92,"project":"mobile-375","at":"2026-09-13T06:38:53.150Z"}
-{"phase":"submit","step":"and in English","ms":153,"project":"mobile-375","at":"2026-09-13T06:38:53.304Z"}
-{"phase":"readback","step":"sign in and open the application","ms":2227,"project":"mobile-375","at":"2026-09-13T06:38:55.906Z"}
-{"phase":"readback","step":"the submitted basis is readable now","ms":923,"project":"mobile-375","at":"2026-09-13T06:38:56.829Z"}
-{"phase":"readback","step":"the neutral states are shown AS states","ms":122,"project":"mobile-375","at":"2026-09-13T06:38:56.951Z"}
-{"phase":"readback","step":"no judgement anywhere on the surface","ms":218,"project":"mobile-375","at":"2026-09-13T06:38:57.170Z"}
-{"phase":"refusal","step":"another candidate is refused this preparation","ms":2860,"project":"mobile-375","at":"2026-09-13T06:39:00.267Z"}
-{"phase":"refusal","step":"a member of another employer is refused the readback","ms":2748,"project":"mobile-375","at":"2026-09-13T06:39:03.015Z"}
-{"phase":"library","step":"sign in as the recruiter","ms":12664,"project":"mobile-390","at":"2026-09-13T06:39:27.980Z"}
-{"phase":"library","step":"the section is present and is not a test","ms":954,"project":"mobile-390","at":"2026-09-13T06:39:28.935Z"}
-{"phase":"library","step":"the same page in English","ms":191,"project":"mobile-390","at":"2026-09-13T06:39:29.127Z"}
-{"phase":"assign","step":"sign in and open the application","ms":3873,"project":"mobile-390","at":"2026-09-13T06:39:33.535Z"}
-{"phase":"assign","step":"the panel offers a governed exposure profile","ms":2484,"project":"mobile-390","at":"2026-09-13T06:39:36.020Z"}
-{"phase":"assign","step":"start it","ms":275,"project":"mobile-390","at":"2026-09-13T06:39:36.295Z"}
-{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":113,"project":"mobile-390","at":"2026-09-13T06:39:36.408Z"}
-{"phase":"notice","step":"sign in and find it in My Career","ms":2829,"project":"mobile-390","at":"2026-09-13T06:39:39.844Z"}
-{"phase":"notice","step":"all nine matters are disclosed","ms":405,"project":"mobile-390","at":"2026-09-13T06:39:40.250Z"}
-{"phase":"notice","step":"it says plainly that it is not a consent","ms":142,"project":"mobile-390","at":"2026-09-13T06:39:40.393Z"}
-{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":318,"project":"mobile-390","at":"2026-09-13T06:39:40.711Z"}
-{"phase":"notice","step":"acknowledge it","ms":441,"project":"mobile-390","at":"2026-09-13T06:39:41.152Z"}
-{"phase":"answer","step":"reopen the preparation","ms":2630,"project":"mobile-390","at":"2026-09-13T06:39:44.532Z"}
-{"phase":"answer","step":"answer the first question and save","ms":204,"project":"mobile-390","at":"2026-09-13T06:39:44.737Z"}
-{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":62,"project":"mobile-390","at":"2026-09-13T06:39:44.799Z"}
-{"phase":"answer","step":"take that question orally instead","ms":73,"project":"mobile-390","at":"2026-09-13T06:39:44.873Z"}
-{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":295,"project":"mobile-390","at":"2026-09-13T06:39:45.169Z"}
-{"phase":"answer","step":"skip the context question","ms":167,"project":"mobile-390","at":"2026-09-13T06:39:45.336Z"}
-{"phase":"answer","step":"save the omission and the oral choice too","ms":89,"project":"mobile-390","at":"2026-09-13T06:39:45.425Z"}
-{"phase":"resume","step":"leave the preparation entirely","ms":2122,"project":"mobile-390","at":"2026-09-13T06:39:47.547Z"}
-{"phase":"resume","step":"come back and find the EXACT same answers","ms":1786,"project":"mobile-390","at":"2026-09-13T06:39:49.334Z"}
-{"phase":"review","step":"reopen and go to the review","ms":2815,"project":"mobile-390","at":"2026-09-13T06:39:52.720Z"}
-{"phase":"review","step":"go back and CORRECT one response","ms":288,"project":"mobile-390","at":"2026-09-13T06:39:53.008Z"}
-{"phase":"review","step":"the correction is what the review now shows","ms":48,"project":"mobile-390","at":"2026-09-13T06:39:53.056Z"}
-{"phase":"submit","step":"submit it once","ms":259,"project":"mobile-390","at":"2026-09-13T06:39:53.315Z"}
-{"phase":"submit","step":"read-only means read-only","ms":84,"project":"mobile-390","at":"2026-09-13T06:39:53.399Z"}
-{"phase":"submit","step":"and in English","ms":170,"project":"mobile-390","at":"2026-09-13T06:39:53.569Z"}
-{"phase":"readback","step":"sign in and open the application","ms":2300,"project":"mobile-390","at":"2026-09-13T06:39:56.360Z"}
-{"phase":"readback","step":"the submitted basis is readable now","ms":916,"project":"mobile-390","at":"2026-09-13T06:39:57.277Z"}
-{"phase":"readback","step":"the neutral states are shown AS states","ms":122,"project":"mobile-390","at":"2026-09-13T06:39:57.399Z"}
-{"phase":"readback","step":"no judgement anywhere on the surface","ms":201,"project":"mobile-390","at":"2026-09-13T06:39:57.600Z"}
-{"phase":"refusal","step":"another candidate is refused this preparation","ms":2923,"project":"mobile-390","at":"2026-09-13T06:40:00.913Z"}
-{"phase":"refusal","step":"a member of another employer is refused the readback","ms":2792,"project":"mobile-390","at":"2026-09-13T06:40:03.706Z"}
-{"phase":"library","step":"sign in as the recruiter","ms":28378,"project":"chromium","at":"2026-09-13T07:49:03.354Z"}
-{"phase":"library","step":"the section is present and is not a test","ms":1513,"project":"chromium","at":"2026-09-13T07:49:04.936Z"}
-{"phase":"library","step":"the same page in English","ms":469,"project":"chromium","at":"2026-09-13T07:49:05.406Z"}
-{"phase":"assign","step":"sign in and open the application","ms":3049,"project":"chromium","at":"2026-09-13T07:49:08.662Z"}
-{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2290,"project":"chromium","at":"2026-09-13T07:49:10.952Z"}
-{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":450,"project":"chromium","at":"2026-09-13T07:49:11.403Z"}
-{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":540,"project":"chromium","at":"2026-09-13T07:49:11.944Z"}
-{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1147,"project":"chromium","at":"2026-09-13T07:49:13.091Z"}
-{"phase":"assign","step":"start it","ms":442,"project":"chromium","at":"2026-09-13T07:49:13.534Z"}
-{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":240,"project":"chromium","at":"2026-09-13T07:49:13.774Z"}
-{"phase":"notice","step":"sign in and find it in My Career","ms":3253,"project":"chromium","at":"2026-09-13T07:49:17.207Z"}
-{"phase":"notice","step":"all nine matters are disclosed","ms":924,"project":"chromium","at":"2026-09-13T07:49:18.131Z"}
-{"phase":"notice","step":"it says plainly that it is not a consent","ms":311,"project":"chromium","at":"2026-09-13T07:49:18.442Z"}
-{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":560,"project":"chromium","at":"2026-09-13T07:49:19.002Z"}
-{"phase":"notice","step":"acknowledge it","ms":631,"project":"chromium","at":"2026-09-13T07:49:19.633Z"}
-{"phase":"answer","step":"reopen the preparation","ms":3026,"project":"chromium","at":"2026-09-13T07:49:22.814Z"}
-{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":491,"project":"chromium","at":"2026-09-13T07:49:23.309Z"}
-{"phase":"answer","step":"come back; the answer was really written","ms":2906,"project":"chromium","at":"2026-09-13T07:49:26.215Z"}
-{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":11,"project":"chromium","at":"2026-09-13T07:49:26.226Z"}
-{"phase":"answer","step":"take that question orally instead","ms":87,"project":"chromium","at":"2026-09-13T07:49:26.313Z"}
-{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":3285,"project":"chromium","at":"2026-09-13T07:49:29.600Z"}
-{"phase":"answer","step":"skip the context question","ms":460,"project":"chromium","at":"2026-09-13T07:49:30.061Z"}
-{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":347,"project":"chromium","at":"2026-09-13T07:49:30.409Z"}
-{"phase":"resume","step":"come back and find the EXACT same answers","ms":2487,"project":"chromium","at":"2026-09-13T07:49:32.896Z"}
-{"phase":"review","step":"reopen and go to the review","ms":33313,"project":"chromium","at":"2026-09-13T07:50:06.392Z"}
-{"phase":"library","step":"sign in as the recruiter","ms":16061,"project":"chromium","at":"2026-09-13T07:51:07.874Z"}
-{"phase":"library","step":"the section is present and is not a test","ms":1632,"project":"chromium","at":"2026-09-13T07:51:09.509Z"}
-{"phase":"library","step":"the same page in English","ms":301,"project":"chromium","at":"2026-09-13T07:51:09.811Z"}
-{"phase":"assign","step":"sign in and open the application","ms":3053,"project":"chromium","at":"2026-09-13T07:51:13.060Z"}
-{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2478,"project":"chromium","at":"2026-09-13T07:51:15.540Z"}
-{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":354,"project":"chromium","at":"2026-09-13T07:51:15.895Z"}
-{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":559,"project":"chromium","at":"2026-09-13T07:51:16.454Z"}
-{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1063,"project":"chromium","at":"2026-09-13T07:51:17.518Z"}
-{"phase":"assign","step":"start it","ms":463,"project":"chromium","at":"2026-09-13T07:51:17.981Z"}
-{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":411,"project":"chromium","at":"2026-09-13T07:51:18.392Z"}
-{"phase":"notice","step":"sign in and find it in My Career","ms":3237,"project":"chromium","at":"2026-09-13T07:51:21.794Z"}
-{"phase":"notice","step":"all nine matters are disclosed","ms":520,"project":"chromium","at":"2026-09-13T07:51:22.314Z"}
-{"phase":"notice","step":"it says plainly that it is not a consent","ms":219,"project":"chromium","at":"2026-09-13T07:51:22.534Z"}
-{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":553,"project":"chromium","at":"2026-09-13T07:51:23.088Z"}
-{"phase":"notice","step":"acknowledge it","ms":544,"project":"chromium","at":"2026-09-13T07:51:23.633Z"}
-{"phase":"answer","step":"reopen the preparation","ms":2989,"project":"chromium","at":"2026-09-13T07:51:26.801Z"}
-{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":523,"project":"chromium","at":"2026-09-13T07:51:27.324Z"}
-{"phase":"answer","step":"come back; the answer was really written","ms":2798,"project":"chromium","at":"2026-09-13T07:51:30.122Z"}
-{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":10,"project":"chromium","at":"2026-09-13T07:51:30.132Z"}
-{"phase":"answer","step":"take that question orally instead","ms":95,"project":"chromium","at":"2026-09-13T07:51:30.228Z"}
-{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":3318,"project":"chromium","at":"2026-09-13T07:51:33.546Z"}
-{"phase":"answer","step":"skip the context question","ms":485,"project":"chromium","at":"2026-09-13T07:51:34.031Z"}
-{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":288,"project":"chromium","at":"2026-09-13T07:51:34.320Z"}
-{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":309,"project":"chromium","at":"2026-09-13T07:51:34.629Z"}
-{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":382,"project":"chromium","at":"2026-09-13T07:51:35.012Z"}
-{"phase":"resume","step":"come back and find the EXACT same answers","ms":2330,"project":"chromium","at":"2026-09-13T07:51:37.343Z"}
-{"phase":"review","step":"reopen and go to the review","ms":3491,"project":"chromium","at":"2026-09-13T07:51:41.025Z"}
-{"phase":"review","step":"every answer offers a correction control that WORKS","ms":237077,"project":"chromium","at":"2026-09-13T07:55:38.102Z"}
-{"phase":"library","step":"sign in as the recruiter","ms":31544,"project":"chromium","at":"2026-09-13T07:56:38.047Z"}
-{"phase":"library","step":"the section is present and is not a test","ms":1610,"project":"chromium","at":"2026-09-13T07:56:39.658Z"}
-{"phase":"library","step":"the same page in English","ms":277,"project":"chromium","at":"2026-09-13T07:56:39.937Z"}
-{"phase":"assign","step":"sign in and open the application","ms":3151,"project":"chromium","at":"2026-09-13T07:56:43.281Z"}
-{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2624,"project":"chromium","at":"2026-09-13T07:56:45.906Z"}
-{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":355,"project":"chromium","at":"2026-09-13T07:56:46.262Z"}
-{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":548,"project":"chromium","at":"2026-09-13T07:56:46.810Z"}
-{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1110,"project":"chromium","at":"2026-09-13T07:56:47.921Z"}
-{"phase":"assign","step":"start it","ms":454,"project":"chromium","at":"2026-09-13T07:56:48.376Z"}
-{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":368,"project":"chromium","at":"2026-09-13T07:56:48.745Z"}
-{"phase":"notice","step":"sign in and find it in My Career","ms":3342,"project":"chromium","at":"2026-09-13T07:56:52.274Z"}
-{"phase":"notice","step":"all nine matters are disclosed","ms":921,"project":"chromium","at":"2026-09-13T07:56:53.196Z"}
-{"phase":"notice","step":"it says plainly that it is not a consent","ms":272,"project":"chromium","at":"2026-09-13T07:56:53.468Z"}
-{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":504,"project":"chromium","at":"2026-09-13T07:56:53.973Z"}
-{"phase":"notice","step":"acknowledge it","ms":566,"project":"chromium","at":"2026-09-13T07:56:54.540Z"}
-{"phase":"answer","step":"reopen the preparation","ms":3526,"project":"chromium","at":"2026-09-13T07:56:58.243Z"}
-{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":546,"project":"chromium","at":"2026-09-13T07:56:58.789Z"}
-{"phase":"answer","step":"come back; the answer was really written","ms":2934,"project":"chromium","at":"2026-09-13T07:57:01.724Z"}
-{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":25,"project":"chromium","at":"2026-09-13T07:57:01.750Z"}
-{"phase":"answer","step":"take that question orally instead","ms":98,"project":"chromium","at":"2026-09-13T07:57:01.849Z"}
-{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":2295,"project":"chromium","at":"2026-09-13T07:57:04.144Z"}
-{"phase":"answer","step":"skip the context question","ms":531,"project":"chromium","at":"2026-09-13T07:57:04.676Z"}
-{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":269,"project":"chromium","at":"2026-09-13T07:57:04.945Z"}
-{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":285,"project":"chromium","at":"2026-09-13T07:57:05.230Z"}
-{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":377,"project":"chromium","at":"2026-09-13T07:57:05.607Z"}
-{"phase":"resume","step":"come back and find the EXACT same answers","ms":2596,"project":"chromium","at":"2026-09-13T07:57:08.208Z"}
-{"phase":"review","step":"reopen and go to the review","ms":3307,"project":"chromium","at":"2026-09-13T07:57:11.710Z"}
-{"phase":"review","step":"every answer offers a correction control that WORKS","ms":863,"project":"chromium","at":"2026-09-13T07:57:12.574Z"}
-{"phase":"review","step":"go back and CORRECT one response","ms":697,"project":"chromium","at":"2026-09-13T07:57:13.271Z"}
-{"phase":"review","step":"the correction is what the review now shows","ms":93,"project":"chromium","at":"2026-09-13T07:57:13.364Z"}
-{"phase":"submit","step":"submit it once","ms":293,"project":"chromium","at":"2026-09-13T07:57:13.657Z"}
-{"phase":"submit","step":"read-only means read-only","ms":175,"project":"chromium","at":"2026-09-13T07:57:13.832Z"}
-{"phase":"submit","step":"and in English","ms":258,"project":"chromium","at":"2026-09-13T07:57:14.091Z"}
-{"phase":"readback","step":"sign in and open the application","ms":2527,"project":"chromium","at":"2026-09-13T07:57:16.790Z"}
-{"phase":"readback","step":"the submitted basis is readable now","ms":1006,"project":"chromium","at":"2026-09-13T07:57:17.797Z"}
-{"phase":"readback","step":"the neutral states are shown AS states","ms":261,"project":"chromium","at":"2026-09-13T07:57:18.059Z"}
-{"phase":"readback","step":"no judgement anywhere on the surface","ms":379,"project":"chromium","at":"2026-09-13T07:57:18.439Z"}
-{"phase":"refusal","step":"another candidate is refused this preparation","ms":3428,"project":"chromium","at":"2026-09-13T07:57:21.976Z"}
-{"phase":"refusal","step":"a member of another employer is refused the readback","ms":3202,"project":"chromium","at":"2026-09-13T07:57:25.178Z"}
-{"phase":"library","step":"sign in as the recruiter","ms":15799,"project":"chromium","at":"2026-09-13T07:58:25.988Z"}
-{"phase":"library","step":"the section is present and is not a test","ms":1601,"project":"chromium","at":"2026-09-13T07:58:27.593Z"}
-{"phase":"library","step":"the same page in English","ms":285,"project":"chromium","at":"2026-09-13T07:58:27.878Z"}
-{"phase":"assign","step":"sign in and open the application","ms":3187,"project":"chromium","at":"2026-09-13T07:58:31.261Z"}
-{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2420,"project":"chromium","at":"2026-09-13T07:58:33.682Z"}
-{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":386,"project":"chromium","at":"2026-09-13T07:58:34.069Z"}
-{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":484,"project":"chromium","at":"2026-09-13T07:58:34.556Z"}
-{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1131,"project":"chromium","at":"2026-09-13T07:58:35.687Z"}
-{"phase":"assign","step":"start it","ms":441,"project":"chromium","at":"2026-09-13T07:58:36.128Z"}
-{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":346,"project":"chromium","at":"2026-09-13T07:58:36.475Z"}
-{"phase":"notice","step":"sign in and find it in My Career","ms":3396,"project":"chromium","at":"2026-09-13T07:58:40.055Z"}
-{"phase":"notice","step":"all nine matters are disclosed","ms":480,"project":"chromium","at":"2026-09-13T07:58:40.537Z"}
-{"phase":"notice","step":"it says plainly that it is not a consent","ms":216,"project":"chromium","at":"2026-09-13T07:58:40.753Z"}
-{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":501,"project":"chromium","at":"2026-09-13T07:58:41.255Z"}
-{"phase":"notice","step":"acknowledge it","ms":565,"project":"chromium","at":"2026-09-13T07:58:41.820Z"}
-{"phase":"answer","step":"reopen the preparation","ms":2980,"project":"chromium","at":"2026-09-13T07:58:45.001Z"}
-{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":523,"project":"chromium","at":"2026-09-13T07:58:45.524Z"}
-{"phase":"answer","step":"come back; the answer was really written","ms":2338,"project":"chromium","at":"2026-09-13T07:58:47.863Z"}
-{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":16,"project":"chromium","at":"2026-09-13T07:58:47.880Z"}
-{"phase":"answer","step":"take that question orally instead","ms":108,"project":"chromium","at":"2026-09-13T07:58:47.989Z"}
-{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":3205,"project":"chromium","at":"2026-09-13T07:58:51.195Z"}
-{"phase":"answer","step":"skip the context question","ms":428,"project":"chromium","at":"2026-09-13T07:58:51.623Z"}
-{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":258,"project":"chromium","at":"2026-09-13T07:58:51.882Z"}
-{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":299,"project":"chromium","at":"2026-09-13T07:58:52.182Z"}
-{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":362,"project":"chromium","at":"2026-09-13T07:58:52.544Z"}
-{"phase":"resume","step":"come back and find the EXACT same answers","ms":3613,"project":"chromium","at":"2026-09-13T07:58:56.158Z"}
-{"phase":"review","step":"reopen and go to the review","ms":3404,"project":"chromium","at":"2026-09-13T07:58:59.756Z"}
-{"phase":"review","step":"every answer offers a correction control that WORKS","ms":852,"project":"chromium","at":"2026-09-13T07:59:00.609Z"}
-{"phase":"review","step":"go back and CORRECT one response","ms":745,"project":"chromium","at":"2026-09-13T07:59:01.356Z"}
-{"phase":"review","step":"the correction is what the review now shows","ms":88,"project":"chromium","at":"2026-09-13T07:59:01.444Z"}
-{"phase":"submit","step":"submit it once","ms":300,"project":"chromium","at":"2026-09-13T07:59:01.745Z"}
-{"phase":"submit","step":"read-only means read-only","ms":179,"project":"chromium","at":"2026-09-13T07:59:01.924Z"}
-{"phase":"submit","step":"and in English","ms":257,"project":"chromium","at":"2026-09-13T07:59:02.181Z"}
-{"phase":"readback","step":"sign in and open the application","ms":2588,"project":"chromium","at":"2026-09-13T07:59:04.949Z"}
-{"phase":"readback","step":"the submitted basis is readable now","ms":1158,"project":"chromium","at":"2026-09-13T07:59:06.107Z"}
-{"phase":"readback","step":"the neutral states are shown AS states","ms":260,"project":"chromium","at":"2026-09-13T07:59:06.368Z"}
-{"phase":"readback","step":"no judgement anywhere on the surface","ms":390,"project":"chromium","at":"2026-09-13T07:59:06.759Z"}
-{"phase":"refusal","step":"another candidate is refused this preparation","ms":3431,"project":"chromium","at":"2026-09-13T07:59:10.301Z"}
-{"phase":"refusal","step":"a member of another employer is refused the readback","ms":3187,"project":"chromium","at":"2026-09-13T07:59:13.489Z"}
-{"phase":"cancel","step":"start one with the FIRST method","ms":6253,"project":"chromium","at":"2026-09-13T07:59:19.828Z"}
-{"phase":"cancel","step":"cancelling demands a reason before it will proceed","ms":483,"project":"chromium","at":"2026-09-13T07:59:20.311Z"}
-{"phase":"cancel","step":"cancel it, and the start form comes back","ms":5281,"project":"chromium","at":"2026-09-13T07:59:25.592Z"}
-{"phase":"library","step":"sign in as the recruiter","ms":28474,"project":"chromium","at":"2026-09-13T08:00:18.655Z"}
-{"phase":"library","step":"the section is present and is not a test","ms":1652,"project":"chromium","at":"2026-09-13T08:00:20.308Z"}
-{"phase":"library","step":"the same page in English","ms":288,"project":"chromium","at":"2026-09-13T08:00:20.597Z"}
-{"phase":"assign","step":"sign in and open the application","ms":3123,"project":"chromium","at":"2026-09-13T08:00:23.935Z"}
-{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2412,"project":"chromium","at":"2026-09-13T08:00:26.348Z"}
-{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":397,"project":"chromium","at":"2026-09-13T08:00:26.746Z"}
-{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":524,"project":"chromium","at":"2026-09-13T08:00:27.271Z"}
-{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1076,"project":"chromium","at":"2026-09-13T08:00:28.347Z"}
-{"phase":"assign","step":"start it","ms":458,"project":"chromium","at":"2026-09-13T08:00:28.805Z"}
-{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":360,"project":"chromium","at":"2026-09-13T08:00:29.166Z"}
-{"phase":"notice","step":"sign in and find it in My Career","ms":3742,"project":"chromium","at":"2026-09-13T08:00:33.150Z"}
-{"phase":"notice","step":"all nine matters are disclosed","ms":909,"project":"chromium","at":"2026-09-13T08:00:34.060Z"}
-{"phase":"notice","step":"it says plainly that it is not a consent","ms":239,"project":"chromium","at":"2026-09-13T08:00:34.299Z"}
-{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":473,"project":"chromium","at":"2026-09-13T08:00:34.773Z"}
-{"phase":"notice","step":"acknowledge it","ms":595,"project":"chromium","at":"2026-09-13T08:00:35.369Z"}
-{"phase":"answer","step":"reopen the preparation","ms":3607,"project":"chromium","at":"2026-09-13T08:00:39.152Z"}
-{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":526,"project":"chromium","at":"2026-09-13T08:00:39.680Z"}
-{"phase":"answer","step":"come back; the answer was really written","ms":2947,"project":"chromium","at":"2026-09-13T08:00:42.630Z"}
-{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":9,"project":"chromium","at":"2026-09-13T08:00:42.640Z"}
-{"phase":"answer","step":"take that question orally instead","ms":96,"project":"chromium","at":"2026-09-13T08:00:42.737Z"}
-{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":2798,"project":"chromium","at":"2026-09-13T08:00:45.536Z"}
-{"phase":"answer","step":"skip the context question","ms":516,"project":"chromium","at":"2026-09-13T08:00:46.054Z"}
-{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":294,"project":"chromium","at":"2026-09-13T08:00:46.349Z"}
-{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":309,"project":"chromium","at":"2026-09-13T08:00:46.658Z"}
-{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":438,"project":"chromium","at":"2026-09-13T08:00:47.096Z"}
-{"phase":"resume","step":"come back and find the EXACT same answers","ms":2650,"project":"chromium","at":"2026-09-13T08:00:49.746Z"}
-{"phase":"review","step":"reopen and go to the review","ms":3937,"project":"chromium","at":"2026-09-13T08:00:53.876Z"}
-{"phase":"review","step":"every answer offers a correction control that WORKS","ms":844,"project":"chromium","at":"2026-09-13T08:00:54.721Z"}
-{"phase":"review","step":"go back and CORRECT one response","ms":662,"project":"chromium","at":"2026-09-13T08:00:55.384Z"}
-{"phase":"review","step":"the correction is what the review now shows","ms":66,"project":"chromium","at":"2026-09-13T08:00:55.450Z"}
-{"phase":"submit","step":"submit it once","ms":261,"project":"chromium","at":"2026-09-13T08:00:55.711Z"}
-{"phase":"submit","step":"read-only means read-only","ms":177,"project":"chromium","at":"2026-09-13T08:00:55.889Z"}
-{"phase":"submit","step":"and in English","ms":230,"project":"chromium","at":"2026-09-13T08:00:56.119Z"}
-{"phase":"readback","step":"sign in and open the application","ms":2599,"project":"chromium","at":"2026-09-13T08:00:58.899Z"}
-{"phase":"readback","step":"the submitted basis is readable now","ms":1128,"project":"chromium","at":"2026-09-13T08:01:00.028Z"}
-{"phase":"readback","step":"the neutral states are shown AS states","ms":294,"project":"chromium","at":"2026-09-13T08:01:00.322Z"}
-{"phase":"readback","step":"no judgement anywhere on the surface","ms":377,"project":"chromium","at":"2026-09-13T08:01:00.700Z"}
-{"phase":"refusal","step":"another candidate is refused this preparation","ms":3891,"project":"chromium","at":"2026-09-13T08:01:04.704Z"}
-{"phase":"refusal","step":"a member of another employer is refused the readback","ms":4361,"project":"chromium","at":"2026-09-13T08:01:09.065Z"}
-{"phase":"cancel","step":"start one with the FIRST method","ms":5350,"project":"chromium","at":"2026-09-13T08:01:14.512Z"}
-{"phase":"cancel","step":"cancelling demands a reason before it will proceed","ms":565,"project":"chromium","at":"2026-09-13T08:01:15.078Z"}
-{"phase":"cancel","step":"cancel it, and the start form comes back","ms":538,"project":"chromium","at":"2026-09-13T08:01:15.617Z"}
-{"phase":"cancel","step":"the replacement uses a DIFFERENT method and profile","ms":1665,"project":"chromium","at":"2026-09-13T08:01:17.283Z"}
-{"phase":"cancel","step":"and the same flow reads in English","ms":464,"project":"chromium","at":"2026-09-13T08:01:17.747Z"}
+{"phase":"library","step":"sign in as the recruiter","ms":18434,"project":"chromium","at":"2026-09-13T08:20:03.678Z"}
+{"phase":"library","step":"the section is present and is not a test","ms":1582,"project":"chromium","at":"2026-09-13T08:20:05.261Z"}
+{"phase":"library","step":"the same page in English","ms":276,"project":"chromium","at":"2026-09-13T08:20:05.538Z"}
+{"phase":"assign","step":"sign in and open the application","ms":2560,"project":"chromium","at":"2026-09-13T08:20:08.622Z"}
+{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":3987,"project":"chromium","at":"2026-09-13T08:20:12.609Z"}
+{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":455,"project":"chromium","at":"2026-09-13T08:20:13.065Z"}
+{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":520,"project":"chromium","at":"2026-09-13T08:20:13.586Z"}
+{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1080,"project":"chromium","at":"2026-09-13T08:20:14.667Z"}
+{"phase":"assign","step":"start it","ms":422,"project":"chromium","at":"2026-09-13T08:20:15.090Z"}
+{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":341,"project":"chromium","at":"2026-09-13T08:20:15.432Z"}
+{"phase":"notice","step":"sign in and find it in My Career","ms":3278,"project":"chromium","at":"2026-09-13T08:20:19.549Z"}
+{"phase":"notice","step":"all nine matters are disclosed","ms":901,"project":"chromium","at":"2026-09-13T08:20:20.451Z"}
+{"phase":"notice","step":"it says plainly that it is not a consent","ms":219,"project":"chromium","at":"2026-09-13T08:20:20.671Z"}
+{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":469,"project":"chromium","at":"2026-09-13T08:20:21.140Z"}
+{"phase":"notice","step":"acknowledge it","ms":552,"project":"chromium","at":"2026-09-13T08:20:21.693Z"}
+{"phase":"answer","step":"reopen the preparation","ms":3017,"project":"chromium","at":"2026-09-13T08:20:25.349Z"}
+{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":476,"project":"chromium","at":"2026-09-13T08:20:25.825Z"}
+{"phase":"answer","step":"come back; the answer was really written","ms":2304,"project":"chromium","at":"2026-09-13T08:20:28.130Z"}
+{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":10,"project":"chromium","at":"2026-09-13T08:20:28.140Z"}
+{"phase":"answer","step":"take that question orally instead","ms":95,"project":"chromium","at":"2026-09-13T08:20:28.235Z"}
+{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":2270,"project":"chromium","at":"2026-09-13T08:20:30.506Z"}
+{"phase":"answer","step":"skip the context question","ms":448,"project":"chromium","at":"2026-09-13T08:20:30.955Z"}
+{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":264,"project":"chromium","at":"2026-09-13T08:20:31.220Z"}
+{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":311,"project":"chromium","at":"2026-09-13T08:20:31.531Z"}
+{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":378,"project":"chromium","at":"2026-09-13T08:20:31.910Z"}
+{"phase":"resume","step":"come back and find the EXACT same answers","ms":2653,"project":"chromium","at":"2026-09-13T08:20:34.564Z"}
+{"phase":"review","step":"reopen and go to the review","ms":3303,"project":"chromium","at":"2026-09-13T08:20:38.654Z"}
+{"phase":"review","step":"every answer offers a correction control that WORKS","ms":822,"project":"chromium","at":"2026-09-13T08:20:39.476Z"}
+{"phase":"review","step":"go back and CORRECT one response","ms":713,"project":"chromium","at":"2026-09-13T08:20:40.189Z"}
+{"phase":"review","step":"the correction is what the review now shows","ms":80,"project":"chromium","at":"2026-09-13T08:20:40.269Z"}
+{"phase":"submit","step":"submit it once","ms":301,"project":"chromium","at":"2026-09-13T08:20:40.570Z"}
+{"phase":"submit","step":"read-only means read-only","ms":165,"project":"chromium","at":"2026-09-13T08:20:40.735Z"}
+{"phase":"submit","step":"and in English","ms":252,"project":"chromium","at":"2026-09-13T08:20:40.988Z"}
+{"phase":"readback","step":"sign in and open the application","ms":2470,"project":"chromium","at":"2026-09-13T08:20:43.959Z"}
+{"phase":"readback","step":"the submitted basis is readable now","ms":1131,"project":"chromium","at":"2026-09-13T08:20:45.091Z"}
+{"phase":"readback","step":"the neutral states are shown AS states","ms":254,"project":"chromium","at":"2026-09-13T08:20:45.345Z"}
+{"phase":"readback","step":"no judgement anywhere on the surface","ms":386,"project":"chromium","at":"2026-09-13T08:20:45.732Z"}
+{"phase":"refusal","step":"another candidate is refused this preparation","ms":3774,"project":"chromium","at":"2026-09-13T08:20:49.835Z"}
+{"phase":"refusal","step":"a member of another employer is refused the readback","ms":3161,"project":"chromium","at":"2026-09-13T08:20:52.996Z"}
+{"phase":"cancel","step":"start one with the FIRST method","ms":4786,"project":"chromium","at":"2026-09-13T08:20:58.112Z"}
+{"phase":"cancel","step":"cancelling demands a reason before it will proceed","ms":565,"project":"chromium","at":"2026-09-13T08:20:58.677Z"}
+{"phase":"cancel","step":"cancel it, and the start form comes back","ms":510,"project":"chromium","at":"2026-09-13T08:20:59.187Z"}
+{"phase":"cancel","step":"the replacement uses a DIFFERENT method and profile","ms":1714,"project":"chromium","at":"2026-09-13T08:21:00.901Z"}
+{"phase":"cancel","step":"and the same flow reads in English","ms":463,"project":"chromium","at":"2026-09-13T08:21:01.364Z"}
+{"phase":"library","step":"sign in as the recruiter","ms":29285,"project":"mobile-375","at":"2026-09-13T08:21:36.897Z"}
+{"phase":"library","step":"the section is present and is not a test","ms":1553,"project":"mobile-375","at":"2026-09-13T08:21:38.451Z"}
+{"phase":"library","step":"the same page in English","ms":222,"project":"mobile-375","at":"2026-09-13T08:21:38.673Z"}
+{"phase":"assign","step":"sign in and open the application","ms":2921,"project":"mobile-375","at":"2026-09-13T08:21:42.093Z"}
+{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2127,"project":"mobile-375","at":"2026-09-13T08:21:44.221Z"}
+{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":360,"project":"mobile-375","at":"2026-09-13T08:21:44.582Z"}
+{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":514,"project":"mobile-375","at":"2026-09-13T08:21:45.097Z"}
+{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1097,"project":"mobile-375","at":"2026-09-13T08:21:46.194Z"}
+{"phase":"assign","step":"start it","ms":492,"project":"mobile-375","at":"2026-09-13T08:21:46.687Z"}
+{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":188,"project":"mobile-375","at":"2026-09-13T08:21:46.878Z"}
+{"phase":"notice","step":"sign in and find it in My Career","ms":3205,"project":"mobile-375","at":"2026-09-13T08:21:51.122Z"}
+{"phase":"notice","step":"all nine matters are disclosed","ms":903,"project":"mobile-375","at":"2026-09-13T08:21:52.025Z"}
+{"phase":"notice","step":"it says plainly that it is not a consent","ms":160,"project":"mobile-375","at":"2026-09-13T08:21:52.186Z"}
+{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":417,"project":"mobile-375","at":"2026-09-13T08:21:52.603Z"}
+{"phase":"notice","step":"acknowledge it","ms":512,"project":"mobile-375","at":"2026-09-13T08:21:53.115Z"}
+{"phase":"answer","step":"reopen the preparation","ms":3525,"project":"mobile-375","at":"2026-09-13T08:21:57.312Z"}
+{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":475,"project":"mobile-375","at":"2026-09-13T08:21:57.788Z"}
+{"phase":"answer","step":"come back; the answer was really written","ms":2869,"project":"mobile-375","at":"2026-09-13T08:22:00.658Z"}
+{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":23,"project":"mobile-375","at":"2026-09-13T08:22:00.682Z"}
+{"phase":"answer","step":"take that question orally instead","ms":108,"project":"mobile-375","at":"2026-09-13T08:22:00.791Z"}
+{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":3293,"project":"mobile-375","at":"2026-09-13T08:22:04.084Z"}
+{"phase":"answer","step":"skip the context question","ms":343,"project":"mobile-375","at":"2026-09-13T08:22:04.427Z"}
+{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":245,"project":"mobile-375","at":"2026-09-13T08:22:04.672Z"}
+{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":288,"project":"mobile-375","at":"2026-09-13T08:22:04.961Z"}
+{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":340,"project":"mobile-375","at":"2026-09-13T08:22:05.302Z"}
+{"phase":"resume","step":"come back and find the EXACT same answers","ms":2452,"project":"mobile-375","at":"2026-09-13T08:22:07.754Z"}
+{"phase":"review","step":"reopen and go to the review","ms":3235,"project":"mobile-375","at":"2026-09-13T08:22:11.989Z"}
+{"phase":"review","step":"every answer offers a correction control that WORKS","ms":854,"project":"mobile-375","at":"2026-09-13T08:22:12.844Z"}
+{"phase":"review","step":"go back and CORRECT one response","ms":548,"project":"mobile-375","at":"2026-09-13T08:22:13.393Z"}
+{"phase":"review","step":"the correction is what the review now shows","ms":68,"project":"mobile-375","at":"2026-09-13T08:22:13.461Z"}
+{"phase":"submit","step":"submit it once","ms":295,"project":"mobile-375","at":"2026-09-13T08:22:13.756Z"}
+{"phase":"submit","step":"read-only means read-only","ms":109,"project":"mobile-375","at":"2026-09-13T08:22:13.865Z"}
+{"phase":"submit","step":"and in English","ms":216,"project":"mobile-375","at":"2026-09-13T08:22:14.081Z"}
+{"phase":"readback","step":"sign in and open the application","ms":2434,"project":"mobile-375","at":"2026-09-13T08:22:17.114Z"}
+{"phase":"readback","step":"the submitted basis is readable now","ms":1010,"project":"mobile-375","at":"2026-09-13T08:22:18.125Z"}
+{"phase":"readback","step":"the neutral states are shown AS states","ms":172,"project":"mobile-375","at":"2026-09-13T08:22:18.298Z"}
+{"phase":"readback","step":"no judgement anywhere on the surface","ms":266,"project":"mobile-375","at":"2026-09-13T08:22:18.565Z"}
+{"phase":"refusal","step":"another candidate is refused this preparation","ms":3251,"project":"mobile-375","at":"2026-09-13T08:22:22.166Z"}
+{"phase":"refusal","step":"a member of another employer is refused the readback","ms":3096,"project":"mobile-375","at":"2026-09-13T08:22:25.262Z"}
+{"phase":"cancel","step":"start one with the FIRST method","ms":7253,"project":"mobile-375","at":"2026-09-13T08:22:32.830Z"}
+{"phase":"cancel","step":"cancelling demands a reason before it will proceed","ms":353,"project":"mobile-375","at":"2026-09-13T08:22:33.184Z"}
+{"phase":"cancel","step":"cancel it, and the start form comes back","ms":448,"project":"mobile-375","at":"2026-09-13T08:22:33.633Z"}
+{"phase":"cancel","step":"the replacement uses a DIFFERENT method and profile","ms":1522,"project":"mobile-375","at":"2026-09-13T08:22:35.155Z"}
+{"phase":"cancel","step":"and the same flow reads in English","ms":371,"project":"mobile-375","at":"2026-09-13T08:22:35.526Z"}
+{"phase":"library","step":"sign in as the recruiter","ms":16869,"project":"mobile-390","at":"2026-09-13T08:23:12.047Z"}
+{"phase":"library","step":"the section is present and is not a test","ms":1552,"project":"mobile-390","at":"2026-09-13T08:23:13.600Z"}
+{"phase":"library","step":"the same page in English","ms":237,"project":"mobile-390","at":"2026-09-13T08:23:13.837Z"}
+{"phase":"assign","step":"sign in and open the application","ms":2946,"project":"mobile-390","at":"2026-09-13T08:23:17.498Z"}
+{"phase":"assign","step":"nothing can be started before a method is CHOSEN","ms":2023,"project":"mobile-390","at":"2026-09-13T08:23:19.521Z"}
+{"phase":"assign","step":"the offered methods are the governed ones, and there is a choice","ms":518,"project":"mobile-390","at":"2026-09-13T08:23:20.039Z"}
+{"phase":"assign","step":"the profile list belongs to the CHOSEN method","ms":517,"project":"mobile-390","at":"2026-09-13T08:23:20.557Z"}
+{"phase":"assign","step":"changing the method clears the profile beneath it","ms":1125,"project":"mobile-390","at":"2026-09-13T08:23:21.682Z"}
+{"phase":"assign","step":"start it","ms":506,"project":"mobile-390","at":"2026-09-13T08:23:22.189Z"}
+{"phase":"assign","step":"a draft shows the employer NOTHING of the candidate's","ms":154,"project":"mobile-390","at":"2026-09-13T08:23:22.344Z"}
+{"phase":"notice","step":"sign in and find it in My Career","ms":3299,"project":"mobile-390","at":"2026-09-13T08:23:27.036Z"}
+{"phase":"notice","step":"all nine matters are disclosed","ms":916,"project":"mobile-390","at":"2026-09-13T08:23:27.953Z"}
+{"phase":"notice","step":"it says plainly that it is not a consent","ms":153,"project":"mobile-390","at":"2026-09-13T08:23:28.107Z"}
+{"phase":"notice","step":"it declares WHICH governed notice is on screen","ms":352,"project":"mobile-390","at":"2026-09-13T08:23:28.459Z"}
+{"phase":"notice","step":"acknowledge it","ms":483,"project":"mobile-390","at":"2026-09-13T08:23:28.943Z"}
+{"phase":"answer","step":"reopen the preparation","ms":3035,"project":"mobile-390","at":"2026-09-13T08:23:32.825Z"}
+{"phase":"answer","step":"answer the first question and SAVE AND EXIT","ms":457,"project":"mobile-390","at":"2026-09-13T08:23:33.284Z"}
+{"phase":"answer","step":"come back; the answer was really written","ms":2818,"project":"mobile-390","at":"2026-09-13T08:23:36.102Z"}
+{"phase":"answer","step":"the saved answer OPENS the follow-up question","ms":15,"project":"mobile-390","at":"2026-09-13T08:23:36.118Z"}
+{"phase":"answer","step":"take that question orally instead","ms":104,"project":"mobile-390","at":"2026-09-13T08:23:36.222Z"}
+{"phase":"answer","step":"answer the boolean and save, which opens the context question","ms":3681,"project":"mobile-390","at":"2026-09-13T08:23:39.904Z"}
+{"phase":"answer","step":"skip the context question","ms":368,"project":"mobile-390","at":"2026-09-13T08:23:40.273Z"}
+{"phase":"answer","step":"every governed ANSWER TYPE is answerable in the browser","ms":332,"project":"mobile-390","at":"2026-09-13T08:23:40.606Z"}
+{"phase":"answer","step":"single_choice is a RADIO group, and cannot be un-answered","ms":333,"project":"mobile-390","at":"2026-09-13T08:23:40.939Z"}
+{"phase":"resume","step":"save the omission and the oral choice, and LEAVE","ms":377,"project":"mobile-390","at":"2026-09-13T08:23:41.316Z"}
+{"phase":"resume","step":"come back and find the EXACT same answers","ms":2470,"project":"mobile-390","at":"2026-09-13T08:23:43.788Z"}
+{"phase":"review","step":"reopen and go to the review","ms":3301,"project":"mobile-390","at":"2026-09-13T08:23:48.118Z"}
+{"phase":"review","step":"every answer offers a correction control that WORKS","ms":828,"project":"mobile-390","at":"2026-09-13T08:23:48.946Z"}
+{"phase":"review","step":"go back and CORRECT one response","ms":555,"project":"mobile-390","at":"2026-09-13T08:23:49.502Z"}
+{"phase":"review","step":"the correction is what the review now shows","ms":96,"project":"mobile-390","at":"2026-09-13T08:23:49.598Z"}
+{"phase":"submit","step":"submit it once","ms":276,"project":"mobile-390","at":"2026-09-13T08:23:49.874Z"}
+{"phase":"submit","step":"read-only means read-only","ms":118,"project":"mobile-390","at":"2026-09-13T08:23:49.993Z"}
+{"phase":"submit","step":"and in English","ms":184,"project":"mobile-390","at":"2026-09-13T08:23:50.178Z"}
+{"phase":"readback","step":"sign in and open the application","ms":2473,"project":"mobile-390","at":"2026-09-13T08:23:53.378Z"}
+{"phase":"readback","step":"the submitted basis is readable now","ms":1047,"project":"mobile-390","at":"2026-09-13T08:23:54.426Z"}
+{"phase":"readback","step":"the neutral states are shown AS states","ms":168,"project":"mobile-390","at":"2026-09-13T08:23:54.595Z"}
+{"phase":"readback","step":"no judgement anywhere on the surface","ms":284,"project":"mobile-390","at":"2026-09-13T08:23:54.880Z"}
+{"phase":"refusal","step":"another candidate is refused this preparation","ms":3371,"project":"mobile-390","at":"2026-09-13T08:23:58.718Z"}
+{"phase":"refusal","step":"a member of another employer is refused the readback","ms":3268,"project":"mobile-390","at":"2026-09-13T08:24:01.988Z"}
+{"phase":"cancel","step":"start one with the FIRST method","ms":6813,"project":"mobile-390","at":"2026-09-13T08:24:09.131Z"}
+{"phase":"cancel","step":"cancelling demands a reason before it will proceed","ms":411,"project":"mobile-390","at":"2026-09-13T08:24:09.543Z"}
+{"phase":"cancel","step":"cancel it, and the start form comes back","ms":443,"project":"mobile-390","at":"2026-09-13T08:24:09.987Z"}
+{"phase":"cancel","step":"the replacement uses a DIFFERENT method and profile","ms":1573,"project":"mobile-390","at":"2026-09-13T08:24:11.560Z"}
+{"phase":"cancel","step":"and the same flow reads in English","ms":397,"project":"mobile-390","at":"2026-09-13T08:24:11.957Z"}
