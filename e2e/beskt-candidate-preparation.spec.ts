@@ -115,6 +115,12 @@ async function useEnglish(page: Page): Promise<void> {
   await expect(page.locator("html")).toHaveAttribute("lang", /^en/, { timeout: 15_000 });
 }
 
+/** The same control, back the other way, for a test that must end where it began. */
+async function useSwedish(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "sv", exact: true }).first().click();
+  await expect(page.locator("html")).toHaveAttribute("lang", /^sv/, { timeout: 15_000 });
+}
+
 /**
  * Scoring vocabulary is allowed on screen ONLY inside a sentence that denies
  * or distinguishes a score -- "no result, no score, no ranking" is the
@@ -260,6 +266,28 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       await expect(page.getByTestId("beskt-save")).toHaveCount(0);
       await expectFitsViewport(page);
       await shot(page, "3-notice-sv");
+    });
+
+    await step("notice", "it declares WHICH governed notice is on screen", async () => {
+      // The acknowledgement records the hash of the locale the candidate read,
+      // so the screen has to say which one that is. Swedish here, and the two
+      // locales must not share a hash -- otherwise "you confirmed the notice
+      // you read" would be unfalsifiable.
+      const notice = page.getByTestId("beskt-notice");
+      await expect(notice).toHaveAttribute("data-notice-locale", "sv-SE");
+      const svHash = await notice.getAttribute("data-notice-hash");
+      expect(svHash).toMatch(/^[0-9a-f]{64}$/);
+
+      await useEnglish(page);
+      await expect(notice).toHaveAttribute("data-notice-locale", "en-GB");
+      const enHash = await notice.getAttribute("data-notice-hash");
+      expect(enHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(enHash).not.toBe(svHash);
+      await expect(notice).toContainText(/not consent/i);
+      await shot(page, "3-notice-en");
+
+      await useSwedish(page);
+      await expect(notice).toHaveAttribute("data-notice-locale", "sv-SE");
     });
 
     await step("notice", "acknowledge it", async () => {
