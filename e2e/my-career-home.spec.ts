@@ -604,13 +604,21 @@ test.describe("/my-career — the real route", () => {
     await expect(page.locator("[data-primary-cta]")).toHaveCount(1);
   });
 
-  // ── THE HUB'S OWN ACCESSIBILITY, IN A BROWSER ──────────────────────
+  // ── THE CANDIDATE'S ONE NAVIGATION, BY KEYBOARD ────────────────────
   //
-  // my-career-hub:check proves aria-current, the weight and the rule from
-  // rendered markup. It cannot prove that a keyboard can REACH the tabs, or
-  // that reaching one draws a visible ring, or that the page has exactly one
-  // <h1> once every query has answered. Those are what this is for.
-  test("hub · the section strip is reachable by keyboard, with a visible ring", async ({
+  // This used to walk the My Career section strip. The strip is retired:
+  // it offered "Översikt" → /my-career directly beneath a primary
+  // navigation offering "Min karriär" → the same URL. The accessibility
+  // property it proved still has to hold, and now it has to hold of the
+  // navigation that survived — which is the only one a candidate has, so
+  // if a keyboard cannot work it there is no second navigation to fall
+  // back on.
+  //
+  // candidate-navigation-canon:check proves the five destinations, their
+  // uniqueness and their labels from source. It cannot prove that a
+  // keyboard REACHES them, that reaching one draws a visible ring, or that
+  // the page has exactly one <h1> once every query has answered.
+  test("nav · the primary navigation is reachable by keyboard, with a visible ring", async ({
     page,
   }) => {
     await mount(page, "hub_active");
@@ -620,29 +628,35 @@ test.describe("/my-career — the real route", () => {
     // not zero because the header is still a skeleton.
     await expect(page.locator("h1")).toHaveCount(1);
 
-    // Tab from the top of the document until the first hub tab has focus.
-    // A strip that a keyboard cannot get to is not navigation.
+    // The retired strip is not on the page at all.
+    await expect(page.locator("[data-my-career-hub-nav]")).toHaveCount(0);
+
+    // Tab from the top of the document until the first navigation item has
+    // focus. A navigation a keyboard cannot get to is not navigation.
     await page.evaluate(() => document.body.focus());
     let reached = false;
     for (let i = 0; i < 40 && !reached; i += 1) {
       await page.keyboard.press("Tab");
       reached = await page.evaluate(
-        () => document.activeElement?.getAttribute("data-hub-key") === "overview",
+        () => document.activeElement?.getAttribute("data-nav-key") === "overview",
       );
     }
-    expect(reached, "the first hub tab was not reachable within 40 tab stops").toBe(true);
+    expect(reached, "the first navigation item was not reachable within 40 tab stops").toBe(true);
 
     // Focus must be VISIBLE. The class is the contract the design system
     // renders; an element focused with no focus style is a keyboard user
-    // navigating blind.
+    // navigating blind. This navigation had NO ring until the strip was
+    // retired and it became the only one, which is exactly the regression
+    // this assertion now stands against.
     const focusClass = await page.evaluate(() => document.activeElement?.className ?? "");
-    expect(focusClass).toMatch(/focus-visible:outline/);
+    expect(focusClass).toMatch(/focus-visible:ring-2/);
 
-    // And the rest of the strip follows, in order, on plain Tab.
-    for (const key of ["passport", "cv", "discovery", "applications", "sharing"]) {
+    // And the rest of the owner's five follow, in the sketch order, on
+    // plain Tab.
+    for (const key of ["passport", "jobs", "career", "assessments"]) {
       await page.keyboard.press("Tab");
       await expect
-        .poll(() => page.evaluate(() => document.activeElement?.getAttribute("data-hub-key")))
+        .poll(() => page.evaluate(() => document.activeElement?.getAttribute("data-nav-key")))
         .toBe(key);
     }
   });

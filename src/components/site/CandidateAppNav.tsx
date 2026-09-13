@@ -81,9 +81,23 @@ export function CandidateAppNav({
             data-nav-key={item.key}
             className={cn(
               "transition-colors",
+              // ── A VISIBLE FOCUS RING, AND A REAL HIT AREA ──────────────
+              //
+              // This navigation had neither on desktop. It did not show
+              // while the retired My Career section strip was on the page,
+              // because THAT strip had a ring and a keyboard user landing
+              // on it could at least see where they were. With the strip
+              // gone this is the candidate's only navigation, so a keyboard
+              // user tabbing through it would have been navigating blind.
+              //
+              // The ring token is the one the public header already uses,
+              // rather than a second definition that can drift from it.
+              // min-h-[44px] on desktop too: the owner's rule is 44x44 for
+              // every interactive target, and "py-1 text-sm" is 22px tall.
+              "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               mobile
-                ? "flex min-h-[44px] items-center justify-between gap-2 rounded-md border-l-2 px-2 py-2 text-sm hover:bg-muted"
-                : "relative inline-flex items-center gap-1.5 py-1 text-sm",
+                ? "flex min-h-[44px] items-center justify-between gap-2 border-l-2 px-2 py-2 text-sm hover:bg-muted"
+                : "relative inline-flex min-h-[44px] items-center gap-1.5 py-1 text-sm",
               current
                 ? mobile
                   ? "border-accent font-semibold text-foreground"
