@@ -108,9 +108,21 @@ const COPY = {
     "Självrapporterat. Ingen har granskat det.",
     "Self-reported. Nobody has reviewed it.",
   ),
+  // ── WHERE EACH FACT BELONGS, AND WHERE IT IS EDITED ─────────────────
+  //
+  // These are two different questions, and this sentence used to answer
+  // only the second -- "education and languages live in the Security
+  // Passport" -- which the owner's review read, correctly, as the product
+  // calling CV facts Passport content.
+  //
+  // They are edited with the Passport because the fact is stored exactly
+  // once, as an sp_claims row, which is what lets it carry a document and a
+  // review. That is a storage and review argument, not a claim about what
+  // kind of fact it is. The Passport page now says the same thing from its
+  // own side, under "Profil- och CV-uppgifter".
   whySplit: c(
-    "Anställningar, utbildningar, intyg och språk bor i Security Passport. Där kan de granskas och verifieras — vilket en profiluppgift aldrig kan.",
-    "Employment, education, credentials and languages live in the Security Passport. There they can be reviewed and verified — which a profile field never can.",
+    "Anställningar och säkerhetsintyg är bevisning i ditt Security Passport. Utbildning, språk och färdigheter hör till din profil och ditt CV — de redigeras tillsammans med Passportet eftersom uppgiften lagras en enda gång och kan granskas där, men de är inte säkerhetsbevisning.",
+    "Employment and security credentials are evidence in your Security Passport. Education, languages and skills belong to your profile and CV — they are edited alongside the Passport because the fact is stored exactly once and can be reviewed there, but they are not security evidence.",
   ),
 } as const;
 

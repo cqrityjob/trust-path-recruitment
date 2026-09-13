@@ -182,6 +182,33 @@ check(
 );
 
 /* ------------------------------------------------------------------ */
+console.log("\n5b · the two pages do not contradict each other about ownership");
+
+// The profile page and the Passport page both describe the split. If they
+// disagree, one of them is lying to the candidate -- and the profile page
+// used to say, in so many words, that education and languages "live in the
+// Security Passport", which is what the review read as the product calling
+// CV facts Passport content.
+const profilePage = read("src/routes/_authenticated.my-career.profile.tsx");
+check(
+  !/utbildningar, intyg och språk bor i Security Passport/i.test(profilePage),
+  "the profile page no longer says education and languages LIVE in the Passport",
+);
+check(
+  /hör till din profil och ditt CV/i.test(profilePage) &&
+    /belong to your profile and CV/i.test(profilePage),
+  "it says, in both languages, that they belong to the profile and CV",
+);
+check(
+  /inte säkerhetsbevisning/i.test(profilePage) && /not security evidence/i.test(profilePage),
+  "and that they are not security evidence — the same statement the Passport page makes",
+);
+check(
+  /(lagras en enda gång|stored exactly once)/i.test(profilePage),
+  "while still explaining WHY they are edited with the Passport: one fact, stored once",
+);
+
+/* ------------------------------------------------------------------ */
 console.log("\n6 · nothing that pointed at these sections is now a dead link");
 
 const dest = read(DESTINATIONS);

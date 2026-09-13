@@ -83,6 +83,17 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "the Passport credential sections are rendered at all",
   },
   {
+    id: "PCB-NC-PAGES-CONTRADICT",
+    defect:
+      "the profile page goes back to saying education and languages LIVE in the Security Passport, so the two pages tell the candidate different things about the same facts",
+    file: "src/routes/_authenticated.my-career.profile.tsx",
+    find: '    "Anställningar och säkerhetsintyg är bevisning i ditt Security Passport. Utbildning, språk och färdigheter hör till din profil och ditt CV — de redigeras tillsammans med Passportet eftersom uppgiften lagras en enda gång och kan granskas där, men de är inte säkerhetsbevisning.",',
+    replace:
+      '    "Anställningar, utbildningar, intyg och språk bor i Security Passport. Där kan de granskas och verifieras — vilket en profiluppgift aldrig kan.",',
+    guard: GUARD,
+    expect: "no longer says education and languages LIVE in the Passport",
+  },
+  {
     id: "PCB-NC-DEEP-LINK-BROKEN",
     defect:
       "the education anchor is dropped, so profile-destinations' deep link lands at the top of a long page instead of the section it names",
