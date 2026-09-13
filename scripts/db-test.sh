@@ -3251,9 +3251,18 @@ else
   echo "    ok  the rollback REFUSES to discard a recorded interview, and says so by name"
 fi
 
+# Remove the race fixture's whole synthetic world.
+#
+# The suite above runs in one transaction and is rolled back; the race fixture
+# cannot, because two connections need committed rows. So everything it planted
+# is removed here by its own b6 prefix -- the conduct rows, the PR 4 link and
+# its case source, the ledger rows, and the people and records underneath.
+#
+# The append-only guards are disabled around the ledger deletes. That is
+# cleanup of SYNTHETIC rows in a disposable replay database, not a licence
+# anything holds in production: nothing but this harness can reach these
+# statements, and the guards are re-enabled immediately.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" > /dev/null <<'SQL'
--- bcp_events is append-only and stays so: the rollback tolerates the history
--- it cannot remove, which is the contract being exercised here.
 DELETE FROM public.bcp_conduct_panel_resolutions;
 DELETE FROM public.bcp_conduct_panels;
 DELETE FROM public.bcp_conduct_verifications;
@@ -3266,7 +3275,61 @@ ALTER TABLE public.bcp_conduct_positions ENABLE TRIGGER bcp_conduct_positions_gu
 ALTER TABLE public.bcp_conduct_sessions DISABLE TRIGGER bcp_conduct_sessions_guard;
 DELETE FROM public.bcp_conduct_sessions;
 ALTER TABLE public.bcp_conduct_sessions ENABLE TRIGGER bcp_conduct_sessions_guard;
+
+ALTER TABLE public.bcp_case_links DISABLE TRIGGER bcp_case_links_guard;
+DELETE FROM public.bcp_case_topics
+ WHERE link_id IN (SELECT id FROM public.bcp_case_links
+                    WHERE employer_id::text LIKE 'b6000000%');
+DELETE FROM public.bcp_case_links WHERE employer_id::text LIKE 'b6000000%';
+ALTER TABLE public.bcp_case_links ENABLE TRIGGER bcp_case_links_guard;
+
+ALTER TABLE public.bcp_events DISABLE TRIGGER ALL;
+DELETE FROM public.bcp_events WHERE employer_id::text LIKE 'b6000000%';
+ALTER TABLE public.bcp_events ENABLE TRIGGER ALL;
+
+DELETE FROM public.scp_interview_case_sources
+ WHERE case_id IN (SELECT id FROM public.scp_interview_cases
+                    WHERE employer_id::text LIKE 'b6000000%');
+DELETE FROM public.scp_interview_cases WHERE employer_id::text LIKE 'b6000000%';
+
+ALTER TABLE public.bcp_answers DISABLE TRIGGER ALL;
+ALTER TABLE public.bcp_responses DISABLE TRIGGER ALL;
+ALTER TABLE public.bcp_assignments DISABLE TRIGGER ALL;
+ALTER TABLE public.bcp_notice_acknowledgements DISABLE TRIGGER ALL;
+DELETE FROM public.bcp_answers WHERE response_id IN (
+  SELECT r.id FROM public.bcp_responses r JOIN public.bcp_assignments a ON a.id = r.assignment_id
+   WHERE a.employer_id::text LIKE 'b6000000%');
+DELETE FROM public.bcp_notice_acknowledgements WHERE assignment_id IN (
+  SELECT id FROM public.bcp_assignments WHERE employer_id::text LIKE 'b6000000%');
+DELETE FROM public.bcp_responses WHERE assignment_id IN (
+  SELECT id FROM public.bcp_assignments WHERE employer_id::text LIKE 'b6000000%');
+DELETE FROM public.bcp_assignments WHERE employer_id::text LIKE 'b6000000%';
+ALTER TABLE public.bcp_notice_acknowledgements ENABLE TRIGGER ALL;
+ALTER TABLE public.bcp_assignments ENABLE TRIGGER ALL;
+ALTER TABLE public.bcp_responses ENABLE TRIGGER ALL;
+ALTER TABLE public.bcp_answers ENABLE TRIGGER ALL;
+
+ALTER TABLE public.bcp_pilot_grants DISABLE TRIGGER ALL;
+DELETE FROM public.bcp_pilot_grants WHERE employer_id::text LIKE 'b6000000%';
+ALTER TABLE public.bcp_pilot_grants ENABLE TRIGGER ALL;
+
+DELETE FROM public.job_applications WHERE employer_id::text LIKE 'b6000000%';
+DELETE FROM public.jobs WHERE employer_id::text LIKE 'b6000000%';
+DELETE FROM public.employer_memberships WHERE employer_id::text LIKE 'b6000000%';
+DELETE FROM public.employers WHERE id::text LIKE 'b6000000%';
+DELETE FROM auth.users WHERE id::text LIKE 'b6000000%';
 SQL
+
+# Prove the cleanup was complete rather than assuming it: anything the fixture
+# left behind would break the PR 4 and PR 3 sections below in a way that is
+# hard to read from here.
+CNDR_LEFT="$(psql -tAq -d "$TEST_DB" -c "select (select count(*) from public.bcp_conduct_sessions) + (select count(*) from public.bcp_case_links where employer_id::text like 'b6000000%') + (select count(*) from public.bcp_events where employer_id::text like 'b6000000%') + (select count(*) from public.employers where id::text like 'b6000000%');")"
+if [ "$CNDR_LEFT" != "0" ]; then
+  echo "FAIL: the conduct race fixture left ${CNDR_LEFT} synthetic row(s) behind." >&2
+  CND_FAILED=1
+else
+  echo "    ok  and the race fixture's synthetic world is removed completely"
+fi
 
 set +e
 CND_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
