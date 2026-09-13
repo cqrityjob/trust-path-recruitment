@@ -7,30 +7,42 @@
 // languages, driving licence, ordinary work history, general skills and
 // profile prose belong to the candidate's canonical profile/CV.
 //
-// ── WHY THE FIX IS PRESENTATIONAL, AND WHY THAT IS THE RIGHT FIX ───────
+// ── THE UI MOVES; THE DATA DOES NOT ────────────────────────────────────
 //
-// Every one of those facts is an `sp_claims` row, and must stay one.
-// `sp_claims` is where a fact can carry evidence, a review and a
-// verification state -- which is why education and languages were put there
-// -- and profile-destinations.ts records the owner decision behind migration
+// An earlier attempt at this only RELABELLED the education, language and
+// skill editors where they stood, inside /passport/information. The owner's
+// review was explicit that relabelling is not enough: the general fields
+// must LEAVE the Passport experience so the Passport becomes short. So the
+// editors moved to /my-career/profile.
+//
+// What did NOT move is the data. Every one of those facts is an `sp_claims`
+// row and must stay exactly one row with exactly one writer. `sp_claims` is
+// where a fact can carry evidence, a review and a verification state --
+// which is why education and languages were put there -- and
+// profile-destinations.ts records the owner decision behind migration
 // 20261007090000 in so many words: copying a Passport fact into a profile
 // table "would recreate precisely the two-writer defect it removed".
 //
-// The single source of truth the review asks for therefore already exists:
-// cv/source-bundle.ts projects education, languages and skills out of those
-// same rows, and CvDocumentView renders them. What was missing was the
-// Passport page SAYING which of the two products each section belongs to.
+// So the move is a move of the EDITOR, not of the record.
+// GeneralProfileClaims mounts the same ClaimEntryForm and SkillSection
+// against the same saveClaimEntry/saveSkillEntry write path, and
+// cv/source-bundle.ts keeps projecting the same rows into the CV.
 //
-// So this guard asserts the boundary in both directions:
+// This guard asserts every side of that:
 //
-//   1. The CV-owned sections are inside a region that names them as profile
-//      and CV information, and that region says they are not the security
-//      evidence the Passport carries.
-//   2. They are NOT in the Passport's own credential table.
-//   3. The security-relevant kinds ARE, and did not follow them across.
-//   4. One row, one writer: no second table, no copy, no duplicate editor.
+//   1. The Passport's claim table carries only security-relevant kinds.
+//   2. /passport/information renders NO editor for the general kinds --
+//      not a relabelled one, not a read-only mirror.
+//   3. The profile page DOES render them, through the shared components
+//      and the existing write functions.
+//   4. Exactly one editor per claim kind across the whole tree: no second
+//      table, no copy, no duplicate writer.
+//   4b. The old Passport deep links redirect to the new location instead
+//      of landing on an anchor that no longer exists.
 //   5. The CV reads those same rows, so nothing stops rendering.
-//   6. The deep links that point at these sections still resolve.
+//   5b. Both pages tell the candidate the same story about ownership, in
+//      both languages.
+//   6. The Passport keeps only the anchors it still owns.
 //
 // Run: bun run passport-cv-boundary:check
 
@@ -46,6 +58,10 @@ const DESTINATIONS = "src/lib/professional-identity/profile-destinations.ts";
 const SOURCE_BUNDLE = "src/lib/professional-identity/cv/source-bundle.ts";
 const CV_VIEW = "src/components/professional-identity/CvDocumentView.tsx";
 const TYPES = "src/lib/professional-identity/types.ts";
+const EDITOR = "src/components/professional-identity/GeneralProfileClaims.tsx";
+const PROFILE_PAGE = "src/routes/_authenticated.my-career.profile.tsx";
+const WORKSPACE = "src/components/security-passport/PassportWorkspace.tsx";
+const I18N = "src/lib/security-passport/i18n.ts";
 
 const failures: string[] = [];
 let assertions = 0;
@@ -65,97 +81,143 @@ const infoRaw = read(INFO);
 const info = code(infoRaw);
 
 /* ------------------------------------------------------------------ */
-console.log("\n1 · the two section tables are split by product");
+console.log("\n1 · the Passport keeps only security-relevant claim kinds");
 
 const passportTable = /const PASSPORT_CLAIM_SECTIONS[^[]*\[([\s\S]*?)\];/.exec(info)?.[1] ?? "";
-const cvTable = /const CV_CLAIM_SECTIONS[^[]*\[([\s\S]*?)\];/.exec(info)?.[1] ?? "";
-
 check(passportTable.length > 0, "the Passport credential table exists");
-check(cvTable.length > 0, "the CV information table exists");
-
-check(
-  !/"education"/.test(passportTable),
-  "general education is NOT a Passport credential section",
-);
-check(/"education"/.test(cvTable), "it is a CV information section");
 
 for (const kind of ["training", "certification", "specialisation", "professional_membership"]) {
   check(
     new RegExp(`"${kind}"`).test(passportTable),
     `${kind} stays a Passport credential — it is security-relevant`,
   );
+}
+for (const kind of ["education", "language", "practical_skill"]) {
   check(
-    !new RegExp(`"${kind}"`).test(cvTable),
-    `and did not follow education across into CV information`,
+    !new RegExp(`"${kind}"`).test(passportTable),
+    `${kind} is NOT a Passport credential section`,
   );
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\n2 · CV-owned sections render inside a region that names them");
+console.log("\n2 · /passport/information renders no general CV editor");
 
-const region = info.slice(
-  info.indexOf('aria-labelledby="sp-cv-information-heading"'),
-  info.lastIndexOf("</section>"),
-);
-check(region.length > 0, "the profile/CV region exists and is labelled");
+check(!/<SkillSection/.test(info), "no languages or practical-skills editor on the Passport page");
 check(
-  /CV_CLAIM_SECTIONS\.map\(claimSection\)/.test(region),
-  "education is rendered inside it",
+  !/emptySkillDraft|validateSkill|saveSkillEntry/.test(info),
+  "and none of the skill editing machinery is left behind to be re-wired",
 );
-check(/<SkillSection/.test(region), "languages and practical skills are rendered inside it");
 check(
-  /info\.cvSection\.title/.test(region) && /info\.cvSection\.lead/.test(region),
-  "and the region carries its own heading and explanation",
+  !/CV_CLAIM_SECTIONS/.test(info),
+  "no general-education section table remains on the Passport page",
 );
-
-// Security evidence comes first on the page; profile/CV information follows.
-//
-// BOTH indices are required to exist. A bare `a < b` on two indexOf results
-// is true whenever the first is missing, because -1 is less than everything
-// -- so deleting the Passport credential sections altogether would have
-// SATISFIED this assertion. PCB-NC-ORDER-INVERTED found exactly that, which
-// is what a negative control is for.
-const passportIdx = info.indexOf("PASSPORT_CLAIM_SECTIONS.map(claimSection)");
-const cvRegionIdx = info.indexOf('aria-labelledby="sp-cv-information-heading"');
-check(passportIdx >= 0, "the Passport credential sections are rendered at all");
-check(cvRegionIdx >= 0, "and the profile/CV region is rendered at all");
+// The Passport MAY point at the profile. A link is not an editor.
 check(
-  passportIdx >= 0 && cvRegionIdx >= 0 && passportIdx < cvRegionIdx,
-  "security evidence comes first; profile/CV information follows it",
+  /info\.generalMoved/.test(info) && /data-cta="general-profile"/.test(info),
+  "it links to the profile instead, which the owner's rule allows",
+);
+check(
+  /const GENERAL_PROFILE_ROUTE = "\/my-career\/profile"/.test(info),
+  "and that link points at the profile PAGE, not the overview",
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n3 · the copy says what the boundary is");
+console.log("\n3 · the profile renders the canonical editors, on the same rows");
 
-const i18n = read("src/lib/security-passport/i18n.ts");
-for (const key of ["info.cvSection.title", "info.cvSection.lead"]) {
-  const n = i18n.split(`"${key}":`).length - 1;
-  check(n === 2, `${key} is authored in Swedish and English (found ${n})`);
+const profileEditor = code(read(EDITOR));
+const profilePage = read(PROFILE_PAGE);
+
+check(
+  /<GeneralProfileClaims/.test(profilePage),
+  "the profile page mounts the general profile/CV editors",
+);
+check(/<SkillSection/.test(profileEditor), "languages and practical skills are edited there");
+check(/<ClaimEntryForm/.test(profileEditor), "and general education is edited there");
+
+// THE SAME WRITE PATH. Not a new server function, not a profile table.
+for (const fn of ["saveClaimEntry", "saveSkillEntry", "removeEntry"]) {
+  check(
+    new RegExp(`\\b${fn}\\b`).test(profileEditor),
+    `it writes through the existing ${fn} server function`,
+  );
 }
 check(
-  /inte till säkerhetsbevisningen/i.test(i18n),
-  "the Swedish lead says these are NOT the Passport's security evidence",
+  /listMyEntries/.test(profileEditor),
+  "and reads the same sp_claims entries the Passport reads",
 );
 check(
-  /not to the security evidence your Passport carries/i.test(i18n),
-  "and the English lead says the same",
+  !/security_career_profiles/.test(profileEditor),
+  "it writes nothing into the profile table — one fact, one row",
+);
+check(
+  !/createServerFn/.test(profileEditor),
+  "and defines no server function of its own — no second write path",
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n4 · one fact, one row, one writer");
+console.log("\n4 · exactly one editor per claim kind");
 
-// No second storage. The fix must never have been "copy it somewhere else".
+// Each kind must be editable in exactly one place. This is the assertion
+// that would catch "moved the UI but left the old one behind".
+for (const kind of ["education", "language", "practical_skill"]) {
+  const onPassport = new RegExp(`"${kind}"`).test(passportTable);
+  const onProfile = new RegExp(`"${kind}"`).test(profileEditor);
+  check(
+    !onPassport && onProfile,
+    `${kind} is edited on the profile and nowhere else`,
+  );
+}
+for (const kind of ["training", "certification", "specialisation", "professional_membership"]) {
+  check(
+    !new RegExp(`"${kind}"`).test(profileEditor),
+    `${kind} did NOT follow them — security credentials stay in the Passport`,
+  );
+}
+
+/* ------------------------------------------------------------------ */
+console.log("\n4b · old deep links go to the new home rather than failing silently");
+
+const dest = read(DESTINATIONS);
+for (const [section, anchor] of [
+  ["education", "profile-education"],
+  ["skills", "profile-skills"],
+  ["languages", "profile-languages"],
+] as const) {
+  check(
+    new RegExp(`${section}: \\{ owner: "profile", href: "/my-career/profile#${anchor}" \\}`).test(
+      dest,
+    ),
+    `profile-destinations routes ${section} to the profile editor`,
+  );
+  check(
+    profileEditor.includes(`"${anchor}"`),
+    `and ${anchor} is a real id the editor renders`,
+  );
+}
+// A fragment that names nothing is silent, so the retired ones redirect.
+for (const old of ["#sp-education", "#sp-languages", "#sp-skills"]) {
+  check(
+    info.includes(`"${old}"`),
+    `the retired ${old} deep link is redirected rather than left to fail quietly`,
+  );
+}
 check(
-  !/security_career_profiles/.test(info),
-  "the Passport information page writes nothing into the profile table",
+  /GENERAL_PROFILE_ROUTE, hash: target, replace: true/.test(info),
+  "the redirect replaces history, so Back does not bounce between the two pages",
+);
+// And the Passport's own add-merit control must not offer what moved.
+const workspace = code(read(WORKSPACE));
+check(
+  !/hash: "sp-education"/.test(workspace),
+  "the add-a-merit chooser no longer points at the retired education anchor",
 );
 check(
-  (infoRaw.match(/<SkillSection/g) ?? []).length === 1,
-  "there is exactly one skills/languages editor, not one per region",
+  /hash: "sp-credentials"/.test(workspace),
+  "it points at the credential sections that remain",
 );
 check(
-  (info.match(/const claimSection =/g) ?? []).length === 1,
-  "and one claim-section renderer shared by both groups, not two copies",
+  /id="sp-credentials"/.test(info),
+  "and that anchor is a real id on the Passport page",
 );
 
 /* ------------------------------------------------------------------ */
@@ -189,7 +251,6 @@ console.log("\n5b · the two pages do not contradict each other about ownership"
 // used to say, in so many words, that education and languages "live in the
 // Security Passport", which is what the review read as the product calling
 // CV facts Passport content.
-const profilePage = read("src/routes/_authenticated.my-career.profile.tsx");
 check(
   !/utbildningar, intyg och språk bor i Security Passport/i.test(profilePage),
   "the profile page no longer says education and languages LIVE in the Passport",
@@ -201,22 +262,67 @@ check(
 );
 check(
   /inte säkerhetsbevisning/i.test(profilePage) && /not security evidence/i.test(profilePage),
-  "and that they are not security evidence — the same statement the Passport page makes",
+  "and that they are not security evidence, in both languages",
+);
+
+// The Passport's pointer is the other half of the same sentence. If only
+// one page denies it, a candidate who reads the other one still has no
+// answer to "is my degree trust evidence?" -- and the pointer is now the
+// ONLY thing the Passport says about these fields, so it carries the whole
+// statement on its own.
+const i18n = read(I18N);
+const movedCopy = [...i18n.matchAll(/"info\.generalMoved":\s*"([^"]+)"/g)].map((m) => m[1]);
+// Exactly two: the sv dictionary and the en one. Asserted before the two
+// index reads below, so a dictionary that lost the key fails HERE rather
+// than passing an `undefined` into a regex that then reads as "absent".
+check(
+  movedCopy.length === 2,
+  `info.generalMoved is defined in both dictionaries (found ${movedCopy.length})`,
+);
+check(
+  movedCopy.length === 2 && /inte säkerhetsbevisning/i.test(movedCopy[0]),
+  "the Swedish Passport pointer also says these are not security evidence",
+);
+check(
+  movedCopy.length === 2 && /not security evidence/i.test(movedCopy[1]),
+  "and so does the English one — neither page denies it alone",
+);
+
+// The region heading these fields used to carry on the Passport is gone,
+// so its copy keys must be gone too. A key left behind is how the region
+// gets quietly reinstated later.
+check(
+  !/"info\.cvSection\./.test(i18n),
+  "the removed CV region's copy keys are deleted rather than orphaned",
+);
+check(
+  /(redigeras här nedan|edited below)/i.test(profilePage),
+  "and says the general facts are edited HERE, on the profile",
+);
+check(
+  /(redigeras där|edited there)/i.test(profilePage),
+  "while security evidence is edited in the Passport",
 );
 check(
   /(lagras en enda gång|stored exactly once)/i.test(profilePage),
-  "while still explaining WHY they are edited with the Passport: one fact, stored once",
+  "and that the fact is stored exactly once wherever it is entered",
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n6 · nothing that pointed at these sections is now a dead link");
+console.log("\n6 · the Passport keeps only the anchors it still owns");
 
-const dest = read(DESTINATIONS);
-for (const anchor of ["sp-education", "sp-languages", "sp-skills", "sp-employment"]) {
-  if (!dest.includes(anchor)) continue;
+// sp-employment stays: employment evidence is Passport content and is still
+// edited there. The three that moved must NOT still be ids here, or the
+// redirect above would never fire and the reader would land on an empty
+// section.
+check(
+  infoRaw.includes('"sp-employment"'),
+  "sp-employment is still a real id — employment evidence did not move",
+);
+for (const retired of ["sp-education", "sp-languages", "sp-skills"]) {
   check(
-    infoRaw.includes(`"${anchor}"`),
-    `${anchor} is still a real id on the page that profile-destinations points at`,
+    !new RegExp(`id=\\{?"${retired}"`).test(infoRaw) && !infoRaw.includes(`id="${retired}"`),
+    `${retired} is no longer an id on the Passport page — its editor left`,
   );
 }
 

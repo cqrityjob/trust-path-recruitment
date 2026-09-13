@@ -1419,9 +1419,15 @@ group("7 · one heading, one dominant call, three real destinations");
     "7.4c employment goes to the employment section",
     hrefFor("employment") === "/passport/information#sp-employment",
   );
+  // This option used to land on `#sp-education`, the general-education
+  // editor. That editor is on /my-career/profile now: general education is
+  // profile and CV information, not Passport evidence. The option survives
+  // because a security COURSE or CERTIFICATE is still a merit and is still
+  // entered on the Passport -- it points at the credential sections that
+  // remain. The rule underneath is unchanged: the destination must exist.
   ck(
-    "7.4d education goes to the education section",
-    hrefFor("education") === "/passport/information#sp-education",
+    "7.4d a course or certificate goes to the credential sections",
+    hrefFor("education") === "/passport/information#sp-credentials",
   );
   ck(
     "7.4e a credential goes to the credential form",
@@ -1433,7 +1439,13 @@ group("7 · one heading, one dominant call, three real destinations");
   // the browser has given up on one.
   const info = read("src/routes/_authenticated.passport.information.tsx");
   ck("7.4g #sp-employment exists on the information page", info.includes('id="sp-employment"'));
-  ck("7.4h #sp-education exists on the information page", info.includes('"sp-education"'));
+  ck("7.4h #sp-credentials exists on the information page", info.includes('id="sp-credentials"'));
+  // And the retired anchor is gone rather than left as a second, emptier
+  // place the same option could have pointed at.
+  ck(
+    "7.4h2 #sp-education is no longer an id there — its editor moved to the profile",
+    !info.includes('id="sp-education"'),
+  );
   ck(
     "7.4i and that page scrolls to an arriving fragment once its sections exist",
     info.includes("<ScrollToHashOnceReady />"),

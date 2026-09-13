@@ -519,8 +519,8 @@ const sv = {
   "ws.add.title": "Vad vill du lägga till?",
   "ws.add.employment": "Anställning",
   "ws.add.employmentBody": "En roll hos en arbetsgivare.",
-  "ws.add.education": "Utbildning, kurs eller certifikat",
-  "ws.add.educationBody": "Något du har gått eller tagit.",
+  "ws.add.education": "Kurs eller certifikat",
+  "ws.add.educationBody": "En säkerhetskurs eller ett intyg du har tagit. Allmän utbildning hör till din profil.",
   "ws.add.credential": "Behörighet eller förordnande",
   "ws.add.credentialBody": "Förordnanden, licenser och utbildningar för din arbetsmarknad.",
 
@@ -998,9 +998,10 @@ const sv = {
   // The boundary between the two products, said on the page that holds both
   // editors. These rows are the same sp_claims rows as the ones above; what
   // this heading changes is what the page CLAIMS about them.
-  "info.cvSection.title": "Profil- och CV-uppgifter",
-  "info.cvSection.lead":
-    "Utbildning, språk och färdigheter hör till din profil och ditt CV — inte till säkerhetsbevisningen i ditt Passport. De redigeras här eftersom uppgiften lagras en enda gång, och de fylls i ditt CV automatiskt. De är självrapporterade tills någon har granskat dem.",
+  // The Passport MAY point at the profile; it may not edit there.
+  "info.generalMoved":
+    "Utbildning, språk och färdigheter — körkort inräknat — hör till din profil och ditt CV, redigeras där och är inte säkerhetsbevisning.",
+  "info.generalMovedLink": "Öppna profil- och CV-uppgifter",
   "ev.retry": "Försök igen",
   "ev.stored": "Dokumentet ligger kvar i ditt Passport tills du tar bort det.",
   "ev.linkShort":
@@ -2651,8 +2652,8 @@ const en: Record<PassportCopyKey, string> = {
   "ws.add.title": "What would you like to add?",
   "ws.add.employment": "Employment",
   "ws.add.employmentBody": "A role with an employer.",
-  "ws.add.education": "Education, course or certificate",
-  "ws.add.educationBody": "Something you took or completed.",
+  "ws.add.education": "Course or certificate",
+  "ws.add.educationBody": "A security course or certificate you completed. General education belongs to your profile.",
   "ws.add.credential": "Authorisation or appointment",
   "ws.add.credentialBody": "Appointments, licences and training for your work market.",
 
@@ -3021,9 +3022,9 @@ const en: Record<PassportCopyKey, string> = {
   "ev.opening": "Opening …",
   "ev.saved": "Document uploaded and saved.",
   "ev.savedState": "The entry is now Document provided — not Verified.",
-  "info.cvSection.title": "Profile and CV information",
-  "info.cvSection.lead":
-    "Education, languages and skills belong to your profile and your CV — not to the security evidence your Passport carries. They are edited here because the fact is stored exactly once, and they fill your CV automatically. They are self-reported until somebody reviews them.",
+  "info.generalMoved":
+    "Education, languages and skills — driving licence among them — belong to your profile and CV, are edited there, and are not security evidence.",
+  "info.generalMovedLink": "Open profile and CV information",
   "ev.retry": "Try again",
   "ev.stored": "The document stays in your Passport until you remove it.",
   "ev.linkShort":

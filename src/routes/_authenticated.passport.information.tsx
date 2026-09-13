@@ -29,7 +29,7 @@
 // visible point.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
@@ -58,7 +58,7 @@ import {
   type RegulatedCredentialAvailability,
 } from "@/lib/security-passport/credentials.functions";
 import { catalogueOptionsFor } from "@/lib/security-passport/market-catalogue";
-import { Briefcase, GraduationCap, Languages, Plus, ShieldCheck, Wrench } from "lucide-react";
+import { Briefcase, GraduationCap, Plus, ShieldCheck } from "lucide-react";
 import { CAREER_PROFILE_ROUTE } from "@/lib/security-passport/profile-basics";
 import {
   listCurrentProfessionOptions,
@@ -68,17 +68,14 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import {
   listMyEntries,
-  listSkillTypes,
   removeEntry,
   saveClaimEntry,
   saveExperienceEntry,
-  saveSkillEntry,
   listJurisdictions,
   type ClaimEntry,
   type ExperienceEntry,
   type FreeClaimKind,
   type Jurisdiction,
-  type SkillType,
 } from "@/lib/security-passport/entries.functions";
 import { formatPeriodRange, formatWorkLocation } from "@/lib/security-passport/format";
 import { credentialPresentationOf } from "@/lib/security-passport/trust-presentation";
@@ -97,12 +94,6 @@ import {
   type ClaimDraft,
   type ExperienceDraft,
 } from "@/components/security-passport/EntryForms";
-import {
-  SkillSection,
-  emptySkillDraft,
-  validateSkill,
-  type SkillDraft,
-} from "@/components/security-passport/SkillSection";
 import type { AssertionLevel, LifecycleState } from "@/lib/security-passport/types";
 
 export const Route = createFileRoute("/_authenticated/passport/information")({
@@ -134,6 +125,14 @@ export const Route = createFileRoute("/_authenticated/passport/information")({
  *  them as Utbildning / Språk / Färdigheter. So the single source of truth
  *  the review asks for is already in place; what was missing was this page
  *  saying which of the two products each section belongs to. */
+/** Where the general profile/CV editors live.
+ *
+ *  Deliberately NOT `CAREER_PROFILE_ROUTE`, which is "/my-career" -- the
+ *  overview. Education, languages and skills are edited one level down, on
+ *  the profile page, and pointing at the overview would land the reader on
+ *  a page that does not contain what the link promised. */
+const GENERAL_PROFILE_ROUTE = "/my-career/profile" as const;
+
 const PASSPORT_CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey }[] = [
   { kind: "training", titleKey: "claims.type.training" },
   { kind: "certification", titleKey: "claims.type.certification" },
@@ -141,12 +140,6 @@ const PASSPORT_CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: Passpor
   { kind: "professional_membership", titleKey: "claims.type.professional_membership" },
 ];
 
-/** Formal education. CV-owned by the owner's rule: "general education"
- *  belongs to the canonical profile/CV, not to security trust evidence. A
- *  security-relevant course is `training` and stays above. */
-const CV_CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey }[] = [
-  { kind: "education", titleKey: "claims.type.education" },
-];
 
 type Editing =
   | { kind: "experience"; draft: ExperienceDraft }
@@ -345,9 +338,7 @@ function PassportInformationRoute() {
   const saveExp = useServerFn(saveExperienceEntry);
   const saveClaim = useServerFn(saveClaimEntry);
   const doRemove = useServerFn(removeEntry);
-  const loadSkillTypes = useServerFn(listSkillTypes);
   const loadJurisdictions = useServerFn(listJurisdictions);
-  const saveSkill = useServerFn(saveSkillEntry);
 
   const [experience, setExperience] = useState<readonly ExperienceEntry[]>([]);
   const [claims, setClaims] = useState<readonly ClaimEntry[]>([]);
@@ -373,32 +364,24 @@ function PassportInformationRoute() {
   const [editing, setEditing] = useState<Editing>(null);
   const [expErrors, setExpErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [claimErrors, setClaimErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
-  const [skillTypes, setSkillTypes] = useState<readonly SkillType[]>([]);
   const [jurisdictions, setJurisdictions] = useState<readonly Jurisdiction[]>([]);
   // One draft per section, keyed by claim_type, so opening the language form
   // does not close a half-filled licence form.
-  const [skillDrafts, setSkillDrafts] = useState<Record<string, SkillDraft | null>>({
-    language: null,
-    practical_skill: null,
-  });
-  const [skillErrors, setSkillErrors] = useState<Record<string, Record<string, PassportCopyKey>>>({
-    language: {},
-    practical_skill: {},
-  });
 
   /** Resolves true only when the read-back returned. Callers must not
    *  report success without it: a write that cannot be read back has not
    *  been shown to have happened. */
   const refresh = useCallback(async (): Promise<boolean> => {
     try {
-      const [data, types, jurs] = await Promise.all([
+      // Skill types are no longer read here: languages and practical skills
+      // are edited on the canonical profile, and this page stopped needing
+      // their vocabulary when their editors left it.
+      const [data, jurs] = await Promise.all([
         load({ data: undefined }),
-        loadSkillTypes({ data: undefined }),
         loadJurisdictions({ data: undefined }),
       ]);
       setExperience(data.experience);
       setClaims(data.claims);
-      setSkillTypes(types);
       setJurisdictions(jurs);
       invalidateCandidateReadModels();
       return true;
@@ -409,11 +392,35 @@ function PassportInformationRoute() {
     } finally {
       setLoaded(true);
     }
-  }, [load, loadSkillTypes, loadJurisdictions, failed, pt, invalidateCandidateReadModels]);
+  }, [load, loadJurisdictions, failed, pt, invalidateCandidateReadModels]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // ── OLD DEEP LINKS LAND WHERE THE EDITOR WENT ───────────────────────
+  //
+  // `#sp-education`, `#sp-languages` and `#sp-skills` were real ids on this
+  // page and are in browser histories, in bookmarks, and in any recommended
+  // next step issued before this change. Their editors are on the canonical
+  // profile now, so the fragment names nothing here.
+  //
+  // A fragment that matches no element is silent: the page simply opens at
+  // the top and the reader is left to hunt for a section that is not there.
+  // So the three are redirected to their new home rather than left to fail
+  // quietly. `replace` so Back does not bounce between the two pages.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const moved: Readonly<Record<string, string>> = {
+      "#sp-education": "profile-education",
+      "#sp-languages": "profile-languages",
+      "#sp-skills": "profile-skills",
+    };
+    const hash = window.location.hash;
+    const target = moved[hash];
+    if (!target) return;
+    void navigate({ to: GENERAL_PROFILE_ROUTE, hash: target, replace: true });
+  }, [navigate]);
 
   // The four taxonomy credentials are shown here for completeness but are
   // never edited here — they belong to the credential form.
@@ -534,40 +541,6 @@ function PassportInformationRoute() {
     }
   }
 
-  async function commitSkill(claimType: "language" | "practical_skill", draft: SkillDraft) {
-    const type = skillTypes.find((t) => t.code === draft.skillCode);
-    const errs = validateSkill(draft, type, jurisdictions);
-    setSkillErrors((prev) => ({ ...prev, [claimType]: errs }));
-    if (Object.keys(errs).length > 0) return;
-
-    setBusy(true);
-    beginOperation();
-    try {
-      await saveSkill({
-        data: {
-          id: null,
-          claimType,
-          skillCode: draft.skillCode,
-          // The database refuses a level on a type that has no scale, so the
-          // empty string must become null rather than travel as "".
-          skillLevel: draft.skillLevel || null,
-          jurisdictionCode: draft.jurisdictionCode.trim().toUpperCase() || null,
-          validUntil: draft.validUntil || null,
-          holderNote: draft.holderNote.trim() || null,
-        },
-      });
-      setSkillDrafts((prev) => ({ ...prev, [claimType]: null }));
-      // Read-back before success. "Sparat." is a claim about persistence, so
-      // it is only made once the server has handed the entry back.
-      if (await refresh()) succeeded(pt("entry.saved"));
-    } catch (err) {
-      console.error("[passport] skill save failed", err);
-      failed(pt("common.error"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function remove(kind: "claim" | "experience", id: string) {
     if (!window.confirm(pt("entry.removeConfirm"))) return;
     setBusy(true);
@@ -664,7 +637,6 @@ function PassportInformationRoute() {
             key={section.kind}
             icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
             title={pt(section.titleKey)}
-            id={section.kind === "education" ? "sp-education" : undefined}
           >
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>
@@ -1032,81 +1004,33 @@ function PassportInformationRoute() {
       </SectionShell>
 
       {/* ── Security-relevant credentials ─────────────────────────────── */}
-      {PASSPORT_CLAIM_SECTIONS.map(claimSection)}
+      {/* Anchored so "add a course or certificate" lands on the sections
+          that own it rather than at the top of a long page. It replaces
+          `sp-education`, which left with the education editor. */}
+      <div id="sp-credentials" className="scroll-mt-24 space-y-5">
+        {PASSPORT_CLAIM_SECTIONS.map(claimSection)}
+      </div>
 
-      {/* ══════════════════════════════════════════════════════════════
-          PROFILE AND CV INFORMATION — NOT PASSPORT TRUST EVIDENCE
-          ══════════════════════════════════════════════════════════════
-          Everything below is the same kind of `sp_claims` row as
-          everything above, edited by the same writer. What changes here is
-          only what the page SAYS about it: these are the facts a CV is
-          made of, they are self-reported unless somebody reviews them, and
-          they are not the security evidence this Passport exists to carry.
+      {/* ── GENERAL PROFILE AND CV FACTS ARE NOT EDITED HERE ──────────
+          Education, languages and practical skills (driving licence among
+          them) were edited on this page, which is what made a candidate
+          come to the Security Passport to record their degree. Their
+          editors are on the canonical profile now.
 
-          They are edited here because this is where the one writer lives
-          (see the note on the section tables above); the heading is what
-          stops them reading as trust evidence. */}
-      <section aria-labelledby="sp-cv-information-heading" className="space-y-5">
-        <header className="border-t border-border pt-6">
-          <h2
-            id="sp-cv-information-heading"
-            className="text-lg font-semibold tracking-tight text-foreground"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {pt("info.cvSection.title")}
-          </h2>
-          <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-            {pt("info.cvSection.lead")}
-          </p>
-        </header>
-
-        {CV_CLAIM_SECTIONS.map(claimSection)}
-        {/* ── Languages and practical skills ────────────────────────────── */}
-        {(
-          [
-            {
-              kind: "language",
-              titleKey: "info.languages",
-              icon: <Languages aria-hidden="true" className="h-4 w-4" />,
-            },
-            {
-              kind: "practical_skill",
-              titleKey: "info.skills",
-              icon: <Wrench aria-hidden="true" className="h-4 w-4" />,
-            },
-          ] as const
-        ).map((section) => (
-          <SectionShell
-            key={section.kind}
-            icon={section.icon}
-            title={pt(section.titleKey)}
-            // Anchored so a Next Best Action can land on the section that owns
-            // the missing answer rather than at the top of a long page.
-            id={section.kind === "language" ? "sp-languages" : "sp-skills"}
-          >
-            <SkillSection
-              claimType={section.kind}
-              types={skillTypes}
-              jurisdictions={jurisdictions}
-              entries={claims.filter((c) => c.claimType === section.kind)}
-              draft={skillDrafts[section.kind]}
-              errors={skillErrors[section.kind] ?? {}}
-              busy={busy}
-              onDraftChange={(d) => setSkillDrafts((prev) => ({ ...prev, [section.kind]: d }))}
-              onStart={() =>
-                setSkillDrafts((prev) => ({ ...prev, [section.kind]: emptySkillDraft() }))
-              }
-              onCancel={() => {
-                setSkillDrafts((prev) => ({ ...prev, [section.kind]: null }));
-                setSkillErrors((prev) => ({ ...prev, [section.kind]: {} }));
-              }}
-              onSave={(d) => void commitSkill(section.kind, d)}
-              onRemove={(id) => void remove("claim", id)}
-              onOpen={(id) => openEntry("claim", id)}
-            />
-          </SectionShell>
-        ))}
-      </section>
+          This is a LINK, not a second editor: one fact, one row, one write
+          path. The rows themselves did not move -- each is still an
+          `sp_claims` row, and an entry's evidence and verification are
+          still handled on its own Passport entry page. */}
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        {pt("info.generalMoved")}{" "}
+        <Link
+          to={GENERAL_PROFILE_ROUTE}
+          data-cta="general-profile"
+          className="font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {pt("info.generalMovedLink")}
+        </Link>
+      </p>
 
       <p className="text-sm leading-relaxed text-muted-foreground">
         {pt("entry.selfDeclaredNote")}
