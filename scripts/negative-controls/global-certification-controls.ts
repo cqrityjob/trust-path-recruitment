@@ -8,9 +8,9 @@
  *
  * ── SCHEMA RELEASE ONLY ────────────────────────────────────────────────
  *
- * Every file mutated here is SQL, or the generated types. The controls for the
- * write mapping, the scope predicates and the classifier belong to the
- * application release, with the guard groups that check them.
+ * Every file mutated here is SQL, application code, or the generated types.
+ * The controls for the write mapping, the scope predicates and the classifier
+ * belong to the application release, with the guard groups that check them.
  *
  * The set is chosen from the load-bearing invariants rather than from what is
  * easy to mutate: the ownership predicate, the global-scope constraint, the
@@ -443,15 +443,14 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "so a future INTL_ code cannot be swept up by it",
   },
 
-  /* ── The schema release stays schema-only ────────────────────────── */
+  /* ── Runtime stays schema-independent; generated types stay honest ─ */
   //
-  // The property that makes this branch safe to merge on its own: the running
-  // application must not reference anything the migration introduces. If it
-  // did, Lovable would rebuild from main against a database that has never
-  // heard of it — the 2026-08-25 outage.
+  // The running application remains independent until the separately reviewed
+  // application release. Generated types are excluded from that scan because
+  // they describe the hosted schema, where this migration is now applied.
   {
     id: "GC-NC-APPLICATION-DEPENDS-ON-SCHEMA",
-    defect: "application code starts reading a column this migration has not applied yet",
+    defect: "application code starts reading a schema object before the application release",
     file: "src/lib/security-passport/credentials.ts",
     find: "export const CREDENTIAL_CODE_MAX_LENGTH = 48;",
     replace: "export const CREDENTIAL_CODE_MAX_LENGTH = 48;\nexport const PENDING = 'scope_code';",
@@ -459,13 +458,13 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "no application file references scope_code",
   },
   {
-    id: "GC-NC-TYPES-REGENERATED-EARLY",
-    defect: "the generated Supabase types claim a table that is not hosted yet",
+    id: "GC-NC-TYPES-MISSING-HOSTED-TABLE",
+    defect: "the generated Supabase types omit a table that exists in the hosted schema",
     file: "src/integrations/supabase/types.ts",
-    find: "export type Json =",
-    replace: "// sp_certification_definitions\nexport type Json =",
+    find: "      sp_certification_definitions: {\n        Row:",
+    replace: "      sp_certification_definitions_missing: {\n        Row:",
     guard: GUARD,
-    expect: "the generated Supabase types do NOT yet describe sp_certification_definitions",
+    expect: "the generated Supabase types describe hosted table sp_certification_definitions",
   },
 ];
 
