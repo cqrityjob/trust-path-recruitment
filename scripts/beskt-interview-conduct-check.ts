@@ -194,6 +194,14 @@ function tableColumns(sql: string, table: string): string[] {
     .filter((n) => n.length > 0 && !/^(CONSTRAINT|UNIQUE|PRIMARY|CHECK|FOREIGN|EXCLUDE)$/i.test(n));
 }
 
+/** The text of the bcp_events CHECK the migration rebuilds, and nothing else. */
+function eventCheckText(sql: string): string {
+  const at = sql.indexOf("ADD CONSTRAINT bcp_events_event_check");
+  if (at === -1) return "";
+  const end = sql.indexOf("));", at);
+  return end === -1 ? "" : sql.slice(at, end + 3);
+}
+
 const sql = read(MIGRATION);
 const bare = stripComments(sql);
 const rb = read(ROLLBACK);
@@ -375,7 +383,7 @@ const race = read(RACE);
   );
   check(
     /BCP_CONDUCT_VERIFICATION_UNRECORDED/.test(g) &&
-      /FROM public\.bcp_conduct_verifications v/.test(g),
+      /IF NOT EXISTS \(\s*SELECT 1 FROM public\.bcp_conduct_verifications v/.test(g),
     "CONDUCT-APPEND-ONLY: the one field that moves in place — the verification state — moves only with a history row behind it",
   );
   check(
@@ -385,12 +393,19 @@ const race = read(RACE);
   const save = functionText(sql, "bcp_conduct_save_entry");
   const saveBody = save ? functionBody(save) : "";
   check(
-    /BCP_CONDUCT_CORRECTION_REASON_REQUIRED/.test(saveBody),
-    "CONDUCT-CORRECTION: a correction states why, so the history can be read afterwards",
+    /IF length\(btrim\(coalesce\(_correction_reason, ''\)\)\) < 3 THEN[\s\S]{0,200}BCP_CONDUCT_CORRECTION_REASON_REQUIRED/.test(
+      saveBody,
+    ),
+    "CONDUCT-CORRECTION: a correction states why, by a REACHABLE condition and not merely a message",
   );
   check(
-    saveBody.indexOf("UPDATE public.bcp_conduct_entries") <
-      saveBody.indexOf("INSERT INTO public.bcp_conduct_entries"),
+    // Both indexes must be real. indexOf returns -1 when the vacate step is
+    // deleted outright, and -1 is less than everything, so the bare comparison
+    // passed with the defect applied -- a planted control caught it.
+    saveBody.includes("UPDATE public.bcp_conduct_entries") &&
+      saveBody.includes("INSERT INTO public.bcp_conduct_entries") &&
+      saveBody.indexOf("UPDATE public.bcp_conduct_entries") <
+        saveBody.indexOf("INSERT INTO public.bcp_conduct_entries"),
     "CONDUCT-CORRECTION: the predecessor vacates the live slot BEFORE the successor enters it, or the index would refuse both",
   );
   check(
@@ -464,7 +479,7 @@ const race = read(RACE);
     const text = functionText(sql, fn);
     const body = text ? functionBody(text) : "";
     check(
-      /BCP_CONDUCT_NOT_OWN_POSITION/.test(body),
+      /IF _p\.assessor_id <> _caller THEN[\s\S]{0,200}BCP_CONDUCT_NOT_OWN_POSITION/.test(body),
       `CONDUCT-INDEPENDENCE: ${fn} refuses to touch anybody else's position`,
     );
   }
@@ -553,6 +568,12 @@ const race = read(RACE);
 
 // ── 8. The vocabulary is extended, never narrowed ────────────────────────
 {
+  // Read the CONSTRAINT, not the file. Every one of these names also appears in
+  // the postflight loop and in the RPCs that raise them, so testing the whole
+  // migration would pass even after the CHECK had dropped the member -- which a
+  // planted control proved, twice.
+  const eventCheck = eventCheckText(bare);
+  check(eventCheck.length > 0, "CONDUCT-VOCABULARY: the migration rebuilds the bcp_events CHECK");
   for (const existing of [
     "assignment_created",
     "notice_acknowledged",
@@ -566,7 +587,7 @@ const race = read(RACE);
     "case_unlinked",
   ]) {
     check(
-      new RegExp(`'${existing}'`).test(bare),
+      new RegExp(`'${existing}'`).test(eventCheck),
       `CONDUCT-VOCABULARY: the rebuilt event CHECK still admits '${existing}' — a rebuild that dropped one would break PR 3 or PR 4 silently`,
     );
   }
@@ -583,12 +604,8 @@ const race = read(RACE);
     "conduct_panel_resolution_recorded",
   ]) {
     check(
-      new RegExp(`'${added}'`).test(bare),
-      `CONDUCT-AUDIT: the ledger admits '${added}', so that action is explainable afterwards`,
-    );
-    check(
-      new RegExp(`'${added}'`).test(functionText(sql, "bcp_conduct_start_session") ? bare : bare),
-      `CONDUCT-AUDIT: and '${added}' is named in the migration rather than only in a comment`,
+      new RegExp(`'${added}'`).test(eventCheck),
+      `CONDUCT-AUDIT: the ledger's own CHECK admits '${added}', so that action is explainable afterwards`,
     );
   }
 }
@@ -596,7 +613,8 @@ const race = read(RACE);
 // ── 9. Preflight and postflight ──────────────────────────────────────────
 {
   check(
-    /BCP_CONDUCT_PREFLIGHT/.test(bare) && /to_regclass\('public\.' \|\| t\) IS NULL/.test(bare),
+    /RAISE EXCEPTION 'BCP_CONDUCT_PREFLIGHT/.test(bare) &&
+      /to_regclass\('public\.' \|\| t\) IS NULL/.test(bare),
     "CONDUCT-PREFLIGHT: the migration refuses early and by name if PR 3 or PR 4 is absent",
   );
   check(

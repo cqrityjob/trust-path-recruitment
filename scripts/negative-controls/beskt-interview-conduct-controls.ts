@@ -217,9 +217,11 @@ const MUTATIONS: readonly Mutation[] = [
     id: "CND-NC-RECORD-INTO-ANOTHERS-POSITION",
     defect: "one assessor can record into another's position",
     file: MIG,
-    find: "  IF _p.assessor_id <> _caller THEN\n    RAISE EXCEPTION 'BCP_CONDUCT_NOT_OWN_POSITION: you may only record in your own position.'",
+    // Two RPCs carry this check in the same words, so the anchor runs on into
+    // the line only the save path has after it.
+    find: "  -- YOUR OWN POSITION ONLY. Recording into someone else's is exactly the\n  -- contamination the independence rule exists to prevent.\n  IF _p.assessor_id <> _caller THEN",
     replace:
-      "  IF false THEN\n    RAISE EXCEPTION 'BCP_CONDUCT_NOT_OWN_POSITION: you may only record in your own position.'",
+      "  -- YOUR OWN POSITION ONLY. Recording into someone else's is exactly the\n  -- contamination the independence rule exists to prevent.\n  IF false THEN",
     guard: GUARD,
     expect: "CONDUCT-INDEPENDENCE",
   },
