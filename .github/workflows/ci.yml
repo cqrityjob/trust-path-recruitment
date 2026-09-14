@@ -1458,6 +1458,15 @@ jobs:
       - name: Signed-in CV browser suite
         run: bun run e2e:cv
 
+      # The profile workspace's section overview, in the same browser and
+      # against the same dev server. The deterministic guard proves the
+      # markup asks for a link; only this can show that following a row puts
+      # the editor on screen, that the row clears 44px once laid out, and
+      # that nothing overflows at 375px. It rides this job because the server
+      # is already up here -- a browser proof that no job runs is not a proof.
+      - name: Profile section navigation browser suite
+        run: bun run e2e:profile-nav
+
       - name: Server log
         if: failure()
         run: cat /tmp/dev-server.log
