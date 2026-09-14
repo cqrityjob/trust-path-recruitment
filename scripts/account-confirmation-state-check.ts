@@ -38,7 +38,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const read = (p: string): string => readFileSync(join(ROOT, p), "utf8");
 
-const FORM = "src/components/auth/UnifiedAuthForm.tsx";
+const FORM = "src/components/auth/UnifiedAuthPanel.tsx";
 const DICT = "src/i18n/dictionaries.ts";
 
 const failures: string[] = [];

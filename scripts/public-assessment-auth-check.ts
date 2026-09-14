@@ -156,7 +156,7 @@ ok(
 // (docs/architecture/adr-unified-account-and-professional-identity.md). One
 // form instead of four means one place for this to regress rather than four,
 // and every property below is unchanged.
-const form = read("src/components/auth/UnifiedAuthForm.tsx");
+const form = read("src/components/auth/UnifiedAuthPanel.tsx");
 ok(
   form.includes("rememberOAuthReturn"),
   "1.13 the auth form remembers the destination before leaving",

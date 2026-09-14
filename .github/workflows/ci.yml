@@ -1131,6 +1131,9 @@ jobs:
       - name: Candidate destination composition (sketches 3, 4, 5)
         run: bun run candidate-destination-composition:check
 
+      - name: Candidate journey composition (images 0, 1, 2)
+        run: bun run candidate-journey-composition:check
+
       # The public header's entry points -- one door in, one way to create
       # an account, "Arbetsgivare" as information and never as an action.
       # This guard has existed since the unified-account work and was never

@@ -33,6 +33,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
+import {
+  PassportSectionNav,
+  type PassportSectionLink,
+} from "@/components/security-passport/PassportSectionNav";
 import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
 import { MarketCredentialSection } from "@/components/security-passport/MarketCredentialSection";
 import {
@@ -133,6 +137,11 @@ export const Route = createFileRoute("/_authenticated/passport/information")({
  *  a page that does not contain what the link promised. */
 const GENERAL_PROFILE_ROUTE = "/my-career/profile" as const;
 
+/** The section row's destinations. Employment first because it is the
+ *  first section on the page, then the credential sections in the order
+ *  they render — DERIVED from PASSPORT_CLAIM_SECTIONS below rather than
+ *  restated, so a section added there appears in the row automatically and
+ *  the two cannot drift. */
 const PASSPORT_CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey }[] = [
   { kind: "training", titleKey: "claims.type.training" },
   { kind: "certification", titleKey: "claims.type.certification" },
@@ -140,6 +149,13 @@ const PASSPORT_CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: Passpor
   { kind: "professional_membership", titleKey: "claims.type.professional_membership" },
 ];
 
+const SECTION_LINKS: readonly PassportSectionLink[] = [
+  { anchor: "sp-employment", titleKey: "info.employment" },
+  ...PASSPORT_CLAIM_SECTIONS.map((s) => ({
+    anchor: `sp-${s.kind}`,
+    titleKey: s.titleKey,
+  })),
+];
 
 type Editing =
   | { kind: "experience"; draft: ExperienceDraft }
@@ -635,6 +651,11 @@ function PassportInformationRoute() {
         return (
           <SectionShell
             key={section.kind}
+            // Its own anchor, so the section row can reach it. ADDITIVE:
+            // the #sp-credentials wrapper id stays exactly where it was,
+            // so the add-a-merit chooser and every #246 redirect still
+            // resolve to the same place they did before.
+            id={`sp-${section.kind}`}
             icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
             title={pt(section.titleKey)}
           >
@@ -1002,6 +1023,14 @@ function PassportInformationRoute() {
           </button>
         )}
       </SectionShell>
+
+      {/* ── SECTION ROW (image 2) ────────────────────────────────────────
+          In-page links, never tabs: every section below stays in the
+          document, because #sp-credentials and #sp-employment are linked
+          from elsewhere and PR #246's retired-anchor redirects land here.
+          A redirect onto a hidden panel is a redirect that silently
+          fails. */}
+      <PassportSectionNav label={pt("info.sections.label")} sections={SECTION_LINKS} />
 
       {/* ── Security-relevant credentials ─────────────────────────────── */}
       {/* Anchored so "add a course or certificate" lands on the sections

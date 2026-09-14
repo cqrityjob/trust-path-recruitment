@@ -528,7 +528,7 @@ group("T5 · both primary destinations are canonical and safe");
   );
 
   // And the Passport intent survives every account path the form supports.
-  const authForm = code(read("src/components/auth/UnifiedAuthForm.tsx"));
+  const authForm = code(read("src/components/auth/UnifiedAuthPanel.tsx"));
   ck(
     "signup reads ?redirect= through safeReturnPath",
     authForm.includes('safeReturnPath(params.get("redirect")'),

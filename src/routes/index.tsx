@@ -22,6 +22,8 @@ import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { PUBLIC_MARKET_SCALE } from "@/components/site/passport-market-scale";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
+import { UnifiedAuthPanel } from "@/components/auth/UnifiedAuthPanel";
+import { useSignedIn } from "@/hooks/useSignedIn";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 /** ── THE OWNER-APPROVED PUBLIC ENTRY ARCHITECTURE ──────────────────────
@@ -165,6 +167,10 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { t } = useT();
   const navigate = useNavigate();
+  // `=== false`, not `!== true`: `null` is "the client has not answered
+  // yet", and rendering the panel then would paint a login form on a
+  // public page and snatch it back once a session turned up.
+  const showAuthPanel = useSignedIn() === false;
 
   // Authenticated visitors land on their personal dashboard. Runs
   // client-side only; SSR still serves the public landing page for crawlers
@@ -221,7 +227,37 @@ function Index() {
           }}
         />
         <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-12 sm:pt-14 md:px-8 md:pb-20 md:pt-12">
-          <div className="mx-auto max-w-3xl text-center animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none">
+          {/* ── IMAGE 0'S TWO COLUMNS ───────────────────────────────────
+              Proposition left, a working login panel right.
+
+              The panel is the SAME component /login mounts — one
+              implementation, two mount points, no second auth flow. It is
+              rendered only for a visitor the client has confirmed is
+              signed OUT, and that is not a nicety: the panel navigates an
+              authenticated visitor to their workspace, which is right on
+              /login and would eject somebody from the public homepage
+              here. `signedIn === false`, never `!== true`, so the
+              not-yet-known state renders the page as it was rather than
+              flashing a form.
+
+              With no panel the hero keeps its centred full-width form,
+              which is also what a static render sees.
+
+              xl, NOT lg. At 1024 -- exactly where lg begins -- splitting
+              the hero would narrow the two entry cards enough to push
+              them past a 768px-tall fold, and public-homepage.spec.ts
+              asserts (blocking) that both entry actions fit a 1024x768
+              viewport in both languages. Below xl the panel stacks under
+              the cards instead, which keeps the same priority order:
+              proposition, the two entrances, then the way back in. */}
+          <div className={cn(showAuthPanel && "xl:grid xl:grid-cols-12 xl:items-start xl:gap-12")}>
+          <div className={cn(showAuthPanel && "xl:col-span-7")}>
+          <div
+            className={cn(
+              "mx-auto max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none",
+              showAuthPanel ? "text-center xl:mx-0 xl:text-left" : "text-center",
+            )}
+          >
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               {t("home.hero.eyebrow")}
             </p>
@@ -274,6 +310,14 @@ function Index() {
                 {t("cta.discovery")}
               </PrimaryLink>
             </EntryCard>
+          </div>
+          </div>
+
+          {showAuthPanel && (
+            <div className="mt-12 xl:col-span-5 xl:mt-0" data-home-auth-panel>
+              <UnifiedAuthPanel mode="signin" />
+            </div>
+          )}
           </div>
         </div>
       </section>

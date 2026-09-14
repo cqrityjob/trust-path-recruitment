@@ -1463,3 +1463,97 @@ test.describe("three markets — the real routes", () => {
     });
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Image 2 · the section row
+   ══════════════════════════════════════════════════════════════════════
+
+   Links, never tabs. candidate-journey-composition:check proves the
+   source has no tab widget; only a browser can prove that every section
+   is still IN THE DOCUMENT, that a direct hash still lands, and that back
+   and forward move the current-section marker.
+
+   This matters beyond presentation: PR #246 redirects the retired
+   #sp-education, #sp-languages and #sp-skills onto this page's anchors,
+   and a redirect that lands on a hidden panel fails silently. */
+
+test.describe("image 2 — the Passport section row", () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  const SCENARIO = {
+    availability: AVAIL.gbPilot,
+    work: { jurisdictionCode: "GB", subJurisdictionCode: null },
+  } as const;
+
+  test("the row is a nav of links, and every section stays in the document", async ({ page }) => {
+    await mount(page, SCENARIO, "sv", "/passport/information");
+
+    const nav = page.locator("[data-passport-section-nav]");
+    await expect(nav).toBeVisible();
+    // A landmark with an accessible name, not an unlabelled div.
+    await expect(nav).toHaveAttribute("aria-label", /.+/);
+    // Tabs would hide the rest. Nothing here is a tab.
+    await expect(page.locator('[role="tab"]')).toHaveCount(0);
+    await expect(page.locator('[role="tabpanel"]')).toHaveCount(0);
+
+    // Every destination the row offers resolves to a real element that is
+    // present — not merely in the markup, but attached and reachable.
+    const anchors = await nav.locator("[data-section-link]").evaluateAll((els) =>
+      els.map((e) => e.getAttribute("data-section-link") ?? ""),
+    );
+    expect(anchors.length, "the row offers no sections").toBeGreaterThan(1);
+    for (const a of anchors) {
+      await expect(page.locator(`#${a}`), `#${a} is not in the document`).toHaveCount(1);
+    }
+
+    // The anchors other surfaces link to survive the row.
+    await expect(page.locator("#sp-credentials")).toHaveCount(1);
+    await expect(page.locator("#sp-employment")).toHaveCount(1);
+  });
+
+  test("a direct hash lands, and back and forward move the marker", async ({ page }) => {
+    await mount(page, SCENARIO, "sv", "/passport/information#sp-employment");
+
+    const nav = page.locator("[data-passport-section-nav]");
+    await expect(nav).toBeVisible();
+    await expect(
+      nav.locator('[data-section-link="sp-employment"]'),
+      "a direct hash does not mark its section",
+    ).toHaveAttribute("aria-current", "location");
+
+    // Follow a second section, then walk history.
+    const second = nav.locator("[data-section-link]").nth(1);
+    const secondAnchor = await second.getAttribute("data-section-link");
+    await second.click();
+    await expect(page).toHaveURL(new RegExp(`#${secondAnchor}$`));
+    await expect(second).toHaveAttribute("aria-current", "location");
+
+    await page.goBack();
+    await expect(
+      nav.locator('[data-section-link="sp-employment"]'),
+      "Back did not move the current-section marker",
+    ).toHaveAttribute("aria-current", "location");
+
+    await page.goForward();
+    await expect(second).toHaveAttribute("aria-current", "location");
+  });
+
+  test("the row survives a refresh on a deep hash", async ({ page }) => {
+    await mount(page, SCENARIO, "en", "/passport/information#sp-certification");
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.locator("[data-passport-section-nav]")).toBeVisible();
+    await expect(page.locator("#sp-certification")).toHaveCount(1);
+  });
+
+  for (const width of [320, 768, 1440] as const) {
+    test(`the row does not overflow the page at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await mount(page, SCENARIO, "sv", "/passport/information");
+      await expect(page.locator("[data-passport-section-nav]")).toBeVisible();
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${overflow}px of sideways scroll at ${width}px`).toBeLessThanOrEqual(1);
+    });
+  }
+});

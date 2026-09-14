@@ -139,7 +139,7 @@ const googleEntryPoints = [
   // The single front door (/login and /signup both render it). The four
   // audience-named routes are compatibility redirects and carry no Google
   // button of their own.
-  "src/components/auth/UnifiedAuthForm.tsx",
+  "src/components/auth/UnifiedAuthPanel.tsx",
   "src/routes/admin.login.tsx",
 ];
 for (const relPath of googleEntryPoints) {

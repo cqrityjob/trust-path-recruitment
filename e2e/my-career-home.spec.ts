@@ -704,3 +704,63 @@ test.describe("/my-career — the real route", () => {
     });
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   Image 1 · the Passport card on Överskt
+   ══════════════════════════════════════════════════════════════════════
+
+   candidate-journey-composition:check proves the card reuses the same
+   builder and the same canonical read, and that it restates none of
+   PassportSummary's figures. Only a browser can prove that both are
+   actually on screen together, that the card renders real snapshot data
+   rather than a placeholder, and that a holder with no Passport gets no
+   empty card. */
+
+test.describe("image 1 — the Passport card on Överskt", () => {
+  test("the card and the summary both render, and the card is not a placeholder", async ({
+    page,
+  }) => {
+    await mount(page, "general_jobs");
+
+    const card = page.locator('[data-overview-passport-card="ready"]');
+    await expect(card).toBeVisible({ timeout: 30_000 });
+
+    // The real presentation, with real snapshot data behind it — the card
+    // renders the holder's name from getMyPassport, not a fixed string in
+    // the component.
+    await expect(card.getByText(/Amina Karlsson/i).first()).toBeVisible();
+
+    // And the summary it must not replace is still there.
+    await expect(page.locator("[data-passport-summary]").first()).toBeVisible();
+
+    // One card, not two: the Passport page's side column must not have
+    // been mounted here as well.
+    await expect(page.locator("[data-passport-side-column]")).toHaveCount(0);
+  });
+
+  test("the card links to the canonical full view", async ({ page }) => {
+    await mount(page, "general_jobs");
+    const link = page.locator('[data-cta="overview-open-card"]');
+    await expect(link).toBeVisible({ timeout: 30_000 });
+    await expect(link).toHaveAttribute("href", /\/passport\/card$/);
+  });
+
+  test("a holder with no Passport gets no empty card", async ({ page }) => {
+    // The recommended next step is already asking them to open one; a
+    // blank card beside it would be a second, quieter ask.
+    await mount(page, "new_user");
+    await expect(page.locator('[data-overview-passport-card="ready"]')).toHaveCount(0);
+  });
+
+  for (const width of [320, 768, 1440] as const) {
+    test(`the card does not overflow Överskt at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await mount(page, "general_jobs");
+      await expect(page.locator("[data-overview-passport-card]")).toBeVisible({ timeout: 30_000 });
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `${overflow}px of sideways scroll at ${width}px`).toBeLessThanOrEqual(1);
+    });
+  }
+});
