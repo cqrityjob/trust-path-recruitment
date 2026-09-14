@@ -202,7 +202,22 @@ test.describe("the public homepage", () => {
       document.body.append(probe);
       const navy = getComputedStyle(probe).backgroundColor;
       probe.remove();
+      // The subject of this assertion is the two peer ENTRANCES — the
+      // Passport action and the Career Discovery action — and that they
+      // are peers: same height, same font size, same baseline.
+      //
+      // The login panel's submit is the same PrimaryButton component, so
+      // it carries the same navy, and it lives inside #hero. It is not an
+      // entrance: it is the returning-user path, and it is primary WITHIN
+      // ITS OWN CARD, which is what scopes it. Counting it here would not
+      // measure anything about the two entrances being peers.
+      //
+      // Scoped, not loosened: it is still exactly two, still the same two
+      // hrefs in the same order, still the same height, font and baseline.
+      // A third solid action appearing anywhere else in the hero still
+      // fails this.
       return [...document.querySelectorAll<HTMLElement>("#hero a, #hero button")]
+        .filter((el) => !el.closest("[data-home-auth-panel]"))
         .filter((el) => getComputedStyle(el).backgroundColor === navy)
         .map((el) => {
           const r = el.getBoundingClientRect();
