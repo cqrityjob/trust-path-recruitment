@@ -139,11 +139,11 @@ test.describe("image 0 · the landing page carries a working login panel", () =>
     });
   }
 
-  // The panel is stacked BELOW the two entrances rather than beside them,
-  // precisely so their geometry does not change (see the note in
-  // routes/index.tsx). This asserts that: the cards are still peers and
-  // still where they were, with the panel on the page.
-  test("the two entry cards are unchanged with the panel on the page", async ({ page }) => {
+  // At xl the hero splits and the cards share their row with the panel.
+  // They must still be peers — that is what makes them two entrances
+  // rather than a primary and a fallback — and the density that buys the
+  // fold is applied to BOTH or neither.
+  test("the two entry cards are still peers beside the panel", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await gotoHome(page);
     const boxes = await page.locator("#hero article").evaluateAll((els) =>
@@ -156,6 +156,34 @@ test.describe("image 0 · the landing page carries a working login panel", () =>
     expect(Math.abs(boxes[0].w - boxes[1].w)).toBeLessThanOrEqual(2);
     expect(Math.abs(boxes[0].top - boxes[1].top)).toBeLessThanOrEqual(2);
   });
+
+  // The reason the hero tightens when the panel shows. public-homepage.spec
+  // already asserts this at 1440 without the panel; this asserts it holds
+  // WITH the panel, at the widths where the split is active, in both
+  // languages. If the density ever stops paying for the column, this fails
+  // here rather than in the suite that does not know the panel exists.
+  for (const width of [1440, 1920] as const) {
+    test(`both entrances stay above the fold beside the panel at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      for (const lang of ["sv", "en"] as const) {
+        await gotoHome(page);
+        await setLang(page, lang);
+        await expect(page.locator(PANEL)).toBeVisible({ timeout: 30_000 });
+        const cards = await page.locator("#hero article").all();
+        expect(cards).toHaveLength(2);
+        for (const card of cards) {
+          await expect(card, `${lang}: an entrance is below the fold at ${width}px`).toBeInViewport();
+        }
+        // And its action, not merely its top edge.
+        for (const action of await page.locator("#hero article a").all()) {
+          await expect(
+            action,
+            `${lang}: an entrance action is below the fold at ${width}px`,
+          ).toBeInViewport();
+        }
+      }
+    });
+  }
 });
 
 test.describe("/login keeps working, on the same implementation", () => {
