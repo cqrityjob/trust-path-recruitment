@@ -200,10 +200,40 @@ SELECT pg_temp.ok(
     WHERE g.value <> 'true'::jsonb) > 0,
   'G3.4 gates are still outstanding on this version');
 
+-- Read as a real OPERATOR. 20261116090000 made cd_outstanding_reviews
+-- operator-only by owner decision: the record is still there and still
+-- visible, but only to a platform administrator or an internal tester, and no
+-- longer to an unauthenticated owner session. The assertion's point -- removing
+-- the block did not remove the information -- is unchanged; who may see it is
+-- what changed, so the read is retargeted rather than the claim weakened.
+INSERT INTO auth.users (id, email)
+VALUES ('30000000-0000-0000-0000-0000000003b0', 'g34b-operator@example.test');
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('30000000-0000-0000-0000-0000000003b0', 'admin');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '30000000-0000-0000-0000-0000000003b0';
+
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_outstanding_reviews
     WHERE definition_version = '2026-scd-v3.0.0') > 0,
-  'G3.4b outstanding reviews remain VISIBLE after the block was removed');
+  'G3.4b outstanding reviews remain VISIBLE to an operator after the block was removed');
+
+RESET ROLE;
+RESET request.jwt.claim.sub;
+
+-- ...and are NOT visible to anyone else. The same fact, from the other side,
+-- so this assertion also fails if the operator gate is ever removed.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_outstanding_reviews
+    WHERE definition_version = '2026-scd-v3.0.0') = 0,
+  'G3.4c and an ordinary candidate sees none of them');
+
+RESET ROLE;
+RESET request.jwt.claim.sub;
 
 -- Clear the gates for the remaining fixtures. Transaction-local, rolled back.
 UPDATE public.cd_definition_versions

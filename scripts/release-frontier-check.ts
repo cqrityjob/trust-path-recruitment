@@ -93,7 +93,6 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // #241 merged, and release-state.json now records it as applied with read-only
 // evidence. Its name comes off this list in that same change, as planned, so
 // an applied migration cannot sit here masking the next genuinely stuck one.
-// No active migration remains pending.
 const expectedPending: string[] = [
   // Pending BY DESIGN until the owner merges this PR and the Supabase GitHub
   // integration applies it. It comes off this list in the same change that
