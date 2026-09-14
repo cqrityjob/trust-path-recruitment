@@ -68,7 +68,22 @@ export const SECTION_DESTINATIONS: Readonly<Record<CompletenessSection, SectionD
   profession: { owner: "profile", href: "/my-career/profile?edit=profession#career-profile" },
   experience: { owner: "profile", href: "/my-career/profile?edit=profession#career-profile" },
   location: { owner: "passport", href: "/passport/information#sp-work-country" },
-  employment: { owner: "passport", href: "/passport/information#sp-employment" },
+  // ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──────────
+  //
+  // This pointed at the Passport because the employment EDITOR lived
+  // there. The owner moved the general authoring editors to the profile
+  // and was explicit that this does not follow from the evidence
+  // boundary: "sp-employment may remain a real Passport section and
+  // anchor. Employment evidence has not moved. However, the general
+  // authoring editor for employment history must move to the canonical
+  // Profile workspace."
+  //
+  // So the OWNER of the write is the profile, and the record is the same
+  // sp_experience_periods row written by the same saveExperienceEntry.
+  // Documenting and verifying a period is still Passport work, reached
+  // from #sp-employment, which is still a real section with a real
+  // anchor and unchanged deep links.
+  employment: { owner: "profile", href: "/my-career/profile#profile-employment" },
   // ── MOVED TO THE PROFILE, WHERE THE OWNER'S REVIEW PUT THEM ─────────
   //
   // These three were edited inside /passport/information, which is what

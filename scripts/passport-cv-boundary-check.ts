@@ -170,10 +170,7 @@ console.log("\n4 · exactly one editor per claim kind");
 for (const kind of ["education", "language", "practical_skill"]) {
   const onPassport = new RegExp(`"${kind}"`).test(passportTable);
   const onProfile = new RegExp(`"${kind}"`).test(profileEditor);
-  check(
-    !onPassport && onProfile,
-    `${kind} is edited on the profile and nowhere else`,
-  );
+  check(!onPassport && onProfile, `${kind} is edited on the profile and nowhere else`);
 }
 for (const kind of ["training", "certification", "specialisation", "professional_membership"]) {
   check(
@@ -197,10 +194,7 @@ for (const [section, anchor] of [
     ),
     `profile-destinations routes ${section} to the profile editor`,
   );
-  check(
-    profileEditor.includes(`"${anchor}"`),
-    `and ${anchor} is a real id the editor renders`,
-  );
+  check(profileEditor.includes(`"${anchor}"`), `and ${anchor} is a real id the editor renders`);
 }
 // A fragment that names nothing is silent, so the retired ones redirect.
 for (const old of ["#sp-education", "#sp-languages", "#sp-skills"]) {
@@ -219,14 +213,8 @@ check(
   !/hash: "sp-education"/.test(workspace),
   "the add-a-merit chooser no longer points at the retired education anchor",
 );
-check(
-  /hash: "sp-credentials"/.test(workspace),
-  "it points at the credential sections that remain",
-);
-check(
-  /id="sp-credentials"/.test(info),
-  "and that anchor is a real id on the Passport page",
-);
+check(/hash: "sp-credentials"/.test(workspace), "it points at the credential sections that remain");
+check(/id="sp-credentials"/.test(info), "and that anchor is a real id on the Passport page");
 
 /* ------------------------------------------------------------------ */
 console.log("\n5 · the CV reads those same rows, so nothing stops rendering");
@@ -319,14 +307,96 @@ check(
 /* ------------------------------------------------------------------ */
 console.log("\n6 · the Passport keeps only the anchors it still owns");
 
-// sp-employment stays: employment evidence is Passport content and is still
-// edited there. The three that moved must NOT still be ids here, or the
-// redirect above would never fire and the reader would land on an empty
-// section.
+// ── THE OWNER SUPERSEDED THE EDITOR LOCATION, NOT THE EVIDENCE BOUNDARY ─
+//
+// This assertion used to read "employment evidence is Passport content and
+// is still EDITED there", and I treated the second half as immutable and
+// reported the relocation as blocked. The owner corrected that directly:
+//
+//   "The sp-employment section may remain a real Passport section and
+//    anchor. Employment evidence has not moved. However, the general
+//    authoring editor for employment history must move to the canonical
+//    Profile workspace. Do not interpret 'employment evidence did not
+//    move' as 'employment history must still be authored inside Passport'."
+//
+// So the boundary is unchanged and sharper: Profile/CV owns AUTHORING of
+// general personal and career information; the Security Passport owns
+// evidence, provenance, verification and sharing. Both halves are now
+// asserted, because a one-sided assertion is what let the two be confused.
 check(
   infoRaw.includes('"sp-employment"'),
-  "sp-employment is still a real id — employment evidence did not move",
+  "sp-employment is still a real Passport section — evidence and verification did not move",
 );
+// Bound to the employment section's OWN evidence control, not to the copy
+// key: that key appears twice on this page, so a page-wide search stayed
+// true with the employment one removed — which a negative control caught.
+check(
+  /onClick=\{\(\) => openEntry\("experience", e\.id\)\}/.test(infoRaw),
+  "and it still offers documenting and verification against those same rows",
+);
+
+// 1 · The authoring editor is mounted on the profile, and only there.
+{
+  const EDITOR = "src/components/professional-identity/EmploymentHistoryEditor.tsx";
+  const editor = read(EDITOR);
+  const profileRoute = read("src/routes/_authenticated.my-career.profile.tsx");
+  const destinations = read("src/lib/professional-identity/profile-destinations.ts");
+  check(
+    profileRoute.includes("<EmploymentHistoryEditor"),
+    "the canonical employment authoring editor is mounted on /my-career/profile",
+  );
+  check(
+    editor.includes("<ExperienceForm"),
+    "and it mounts the EXISTING ExperienceForm rather than a second implementation",
+  );
+  // 2 · The Passport mounts no duplicate authoring editor.
+  check(
+    !infoRaw.includes("<ExperienceForm"),
+    "the Passport mounts no employment authoring form — one editor, one place",
+  );
+  check(!/saveExperienceEntry/.test(infoRaw), "and it no longer holds the employment write path");
+  // 3 · The same canonical record and writer.
+  // Bound to the CALL, not the import. A negative control proved that
+  // checking for the identifier alone passed with the writer replaced by a
+  // stub, because the import line still carried the name.
+  check(
+    editor.includes("useServerFn(saveExperienceEntry)") &&
+      editor.includes("useServerFn(listMyEntries)"),
+    "the editor reuses the canonical employment reader and writer",
+  );
+
+  // The destination map must keep sending general employment here.
+  check(
+    destinations.includes(
+      'employment: { owner: "profile", href: "/my-career/profile#profile-employment" }',
+    ),
+    "the employment destination is the profile workspace, not the Passport",
+  );
+  check(!editor.includes("createServerFn"), "and defines no server function of its own");
+  // 4 · Evidence, reviewer decisions and verification do not follow it.
+  const editorCode = editor.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  for (const leak of [
+    "requestVerification",
+    "reviewerDecision",
+    "recordDecision",
+    "evidenceUrl",
+    "uploadEvidence",
+  ]) {
+    check(
+      !editorCode.includes(leak),
+      `the profile editor must not carry ${leak} — evidence and verification stay in the Passport`,
+    );
+  }
+  // 5 · Neither side becomes a dead end.
+  check(
+    editor.includes("sp-employment"),
+    "the profile editor links to the Passport section that documents and verifies these rows",
+  );
+  check(
+    infoRaw.includes("profile-employment"),
+    "and the Passport section links to the canonical editor",
+  );
+}
 for (const retired of ["sp-education", "sp-languages", "sp-skills"]) {
   check(
     !new RegExp(`id=\\{?"${retired}"`).test(infoRaw) && !infoRaw.includes(`id="${retired}"`),

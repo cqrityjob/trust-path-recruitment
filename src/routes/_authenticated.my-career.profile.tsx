@@ -57,6 +57,7 @@ import {
 } from "@/lib/professional-identity/completeness";
 import { SECTION_DESTINATIONS } from "@/lib/professional-identity/profile-destinations";
 import { GeneralProfileClaims } from "@/components/professional-identity/GeneralProfileClaims";
+import { EmploymentHistoryEditor } from "@/components/professional-identity/EmploymentHistoryEditor";
 import {
   CREDENTIAL_CLAIM_TYPES,
   EDUCATION_CLAIM_TYPES,
@@ -436,6 +437,18 @@ function ProfilePage() {
               </p>
               <div className="mt-5">
                 <GeneralProfileClaims />
+              </div>
+
+              {/* ── EMPLOYMENT HISTORY, AUTHORED HERE (owner, 2026-09-14) ──
+                  Adding, editing and removing a period moved to this
+                  workspace with the owner's correction. Documenting and
+                  verifying a period did NOT: that stays on the Passport's
+                  `#sp-employment` section, against these same rows, and
+                  the editor links there rather than growing controls of
+                  its own. One record, one writer, two responsibilities in
+                  the two places that own them. */}
+              <div className="mt-8 border-t border-border pt-8">
+                <EmploymentHistoryEditor defaultCountry={identity.workCountry ?? null} />
               </div>
             </section>
           </div>

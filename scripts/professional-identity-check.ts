@@ -3005,6 +3005,10 @@ console.log("\n12 · candidate dead ends");
   const profileSurface = [
     profileCard,
     read("src/components/professional-identity/GeneralProfileClaims.tsx"),
+    // Employment authoring moved here with the owner's 2026-09-14
+    // correction, in its own extracted editor. Exactly the case the note
+    // above describes: a real page component of the profile workspace.
+    read("src/components/professional-identity/EmploymentHistoryEditor.tsx"),
   ].join("\n");
   for (const section of COMPLETENESS_SECTION_ORDER) {
     const { href, owner } = SECTION_DESTINATIONS[section];

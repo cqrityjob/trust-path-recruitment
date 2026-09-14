@@ -16,6 +16,10 @@
 import { runControls, type Mutation } from "./runner";
 
 const HEADER = "src/components/professional-identity/CareerPageHeader.tsx";
+const EDITOR = "src/components/professional-identity/EmploymentHistoryEditor.tsx";
+const PROFILE = "src/routes/_authenticated.my-career.profile.tsx";
+const DESTINATIONS = "src/lib/professional-identity/profile-destinations.ts";
+const INFO = "src/routes/_authenticated.passport.information.tsx";
 const CLAIMS = "src/components/professional-identity/GeneralProfileClaims.tsx";
 const DASH = "my-career-dashboard:check";
 const BOUNDARY = "passport-cv-boundary:check";
@@ -64,6 +68,83 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "const CV_CLAIM_KINDS: { kind: string; titleKey: string }[] = [];",
     guard: BOUNDARY,
     expect: "education",
+  },
+
+  // ---- The employment editor goes back to the Passport ---------------------
+  {
+    id: "PE-NC-EMPLOYMENT-EDITOR-BACK-IN-PASSPORT",
+    defect:
+      "the Passport mounts the employment authoring form again, so a person must go to the Security Passport to record ordinary work history",
+    file: INFO,
+    find: "        {/* ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──",
+    replace:
+      '        {editing?.kind === "experience" ? <ExperienceForm /> : null}\n        {/* ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──',
+    guard: BOUNDARY,
+    expect: "mounts no employment authoring form",
+  },
+  {
+    id: "PE-NC-EMPLOYMENT-EDITOR-UNMOUNTED",
+    defect:
+      "the profile stops mounting the canonical employment editor, so the authoring moved out of the Passport and landed nowhere",
+    file: PROFILE,
+    find: "                <EmploymentHistoryEditor defaultCountry={identity.workCountry ?? null} />",
+    replace: "",
+    guard: BOUNDARY,
+    expect: "mounted on /my-career/profile",
+  },
+  {
+    id: "PE-NC-EMPLOYMENT-SECOND-IMPLEMENTATION",
+    defect:
+      "the profile editor stops using the shared ExperienceForm, which is how a second employment form quietly appears",
+    file: EDITOR,
+    find: "          <ExperienceForm",
+    replace: "          <form data-second-implementation",
+    guard: BOUNDARY,
+    expect: "EXISTING ExperienceForm",
+  },
+  {
+    id: "PE-NC-EMPLOYMENT-SECOND-WRITER",
+    defect:
+      "the profile editor stops using the canonical writer, which is the two-writer defect migration 20261007090000 removed",
+    file: EDITOR,
+    find: "  const saveExp = useServerFn(saveExperienceEntry);",
+    replace: "  const saveExp = async (_: unknown) => undefined;",
+    guard: BOUNDARY,
+    expect: "canonical employment reader and writer",
+  },
+
+  // ---- Evidence leaks the other way ---------------------------------------
+  {
+    id: "PE-NC-VERIFICATION-LEAKS-INTO-PROFILE",
+    defect:
+      "a verification request control appears in the profile editor, so evidence and verification stop being the Passport's alone",
+    file: EDITOR,
+    find: "  const doRemove = useServerFn(removeEntry);",
+    replace: "  const doRemove = useServerFn(removeEntry);\n  const ask = requestVerification;",
+    guard: BOUNDARY,
+    expect: "must not carry requestVerification",
+  },
+  {
+    id: "PE-NC-PASSPORT-LOSES-EVIDENCE",
+    defect:
+      "the Passport's employment section stops offering documenting and verification, so moving the editor quietly took the evidence with it",
+    file: INFO,
+    find: '                      onClick={() => openEntry("experience", e.id)}',
+    replace: "                      onClick={() => undefined}",
+    guard: BOUNDARY,
+    expect: "still offers documenting and verification",
+  },
+
+  // ---- The destination map points general information back at the Passport --
+  {
+    id: "PE-NC-DESTINATION-BACK-TO-PASSPORT",
+    defect:
+      "the employment destination points at the Passport again, so every recommendation and summary sends the candidate to the wrong product to edit ordinary work history",
+    file: DESTINATIONS,
+    find: '  employment: { owner: "profile", href: "/my-career/profile#profile-employment" },',
+    replace: '  employment: { owner: "passport", href: "/passport/information#sp-employment" },',
+    guard: BOUNDARY,
+    expect: "the employment destination is the profile workspace",
   },
 ];
 

@@ -74,7 +74,6 @@ import {
   listMyEntries,
   removeEntry,
   saveClaimEntry,
-  saveExperienceEntry,
   listJurisdictions,
   type ClaimEntry,
   type ExperienceEntry,
@@ -88,13 +87,9 @@ import { LifecycleChip } from "@/components/security-passport/LifecycleChip";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
 import {
   ClaimEntryForm,
-  ExperienceForm,
   claimToDraft,
   emptyClaimDraft,
-  emptyExperienceDraft,
-  experienceToDraft,
   validateClaim,
-  validateExperience,
   type ClaimDraft,
   type ExperienceDraft,
 } from "@/components/security-passport/EntryForms";
@@ -351,7 +346,6 @@ function PassportInformationRoute() {
   useEffect(() => {
     void refreshWorkCountry();
   }, [refreshWorkCountry]);
-  const saveExp = useServerFn(saveExperienceEntry);
   const saveClaim = useServerFn(saveClaimEntry);
   const doRemove = useServerFn(removeEntry);
   const loadJurisdictions = useServerFn(listJurisdictions);
@@ -378,7 +372,6 @@ function PassportInformationRoute() {
   const succeeded = useCallback((text: string) => setOutcome({ kind: "ok", text }), []);
   const failed = useCallback((text: string) => setOutcome({ kind: "error", text }), []);
   const [editing, setEditing] = useState<Editing>(null);
-  const [expErrors, setExpErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [claimErrors, setClaimErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [jurisdictions, setJurisdictions] = useState<readonly Jurisdiction[]>([]);
   // One draft per section, keyed by claim_type, so opening the language form
@@ -493,39 +486,6 @@ function PassportInformationRoute() {
     [taxonomyClaims, hereClaimIds],
   );
   const freeClaims = useMemo(() => claims.filter((c) => c.credentialCode === null), [claims]);
-
-  async function commitExperience(draft: ExperienceDraft) {
-    const errs = validateExperience(draft);
-    setExpErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-    setBusy(true);
-    beginOperation();
-    try {
-      await saveExp({
-        data: {
-          id: draft.id,
-          employerName: draft.employerName,
-          roleTitle: draft.roleTitle,
-          employmentType: draft.employmentType,
-          fteFraction: draft.fteFraction,
-          securityRelevance: draft.securityRelevance,
-          securityFraction: draft.securityFraction,
-          startedOn: draft.startedOn,
-          endedOn: draft.ongoing ? null : draft.endedOn,
-          jurisdictionCode: draft.jurisdictionCode,
-        },
-      });
-      setEditing(null);
-      // Read-back before success. "Sparat." is a claim about persistence, so
-      // it is only made once the server has handed the entry back.
-      if (await refresh()) succeeded(pt("entry.saved"));
-    } catch (err) {
-      console.error("[passport] experience save failed", err);
-      failed(pt("common.error"));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function commitClaim(draft: ClaimDraft) {
     const errs = validateClaim(draft);
@@ -646,103 +606,103 @@ function PassportInformationRoute() {
   if (!loaded) return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
 
   const claimSection = (section: { kind: FreeClaimKind; titleKey: PassportCopyKey }) => {
-        const rows = freeClaims.filter((c) => c.claimType === section.kind);
-        const isEditingThis = editing?.kind === "claim" && editing.draft.claimType === section.kind;
-        return (
-          <SectionShell
-            key={section.kind}
-            // Its own anchor, so the section row can reach it. ADDITIVE:
-            // the #sp-credentials wrapper id stays exactly where it was,
-            // so the add-a-merit chooser and every #246 redirect still
-            // resolve to the same place they did before.
-            id={`sp-${section.kind}`}
-            icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
-            title={pt(section.titleKey)}
-          >
-            {rows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {rows.map((c) => (
-                  <li key={c.id} className="rounded-lg border border-border p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{c.title}</p>
-                        {c.issuerName ? (
-                          <p className="mt-0.5 text-sm text-muted-foreground">{c.issuerName}</p>
-                        ) : null}
-                        <span className="mt-1.5 flex flex-wrap items-center gap-2">
-                          <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
-                          <LifecycleChip state={c.lifecycleState as LifecycleState} />
-                        </span>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap gap-2">
+    const rows = freeClaims.filter((c) => c.claimType === section.kind);
+    const isEditingThis = editing?.kind === "claim" && editing.draft.claimType === section.kind;
+    return (
+      <SectionShell
+        key={section.kind}
+        // Its own anchor, so the section row can reach it. ADDITIVE:
+        // the #sp-credentials wrapper id stays exactly where it was,
+        // so the add-a-merit chooser and every #246 redirect still
+        // resolve to the same place they did before.
+        id={`sp-${section.kind}`}
+        icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
+        title={pt(section.titleKey)}
+      >
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {rows.map((c) => (
+              <li key={c.id} className="rounded-lg border border-border p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{c.title}</p>
+                    {c.issuerName ? (
+                      <p className="mt-0.5 text-sm text-muted-foreground">{c.issuerName}</p>
+                    ) : null}
+                    <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
+                      <LifecycleChip state={c.lifecycleState as LifecycleState} />
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEntry("claim", c.id)}
+                      className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {pt("entry.documentAndVerify")}
+                    </button>
+                    {c.editable ? (
+                      <>
                         <button
                           type="button"
-                          onClick={() => openEntry("claim", c.id)}
+                          onClick={() => setEditing({ kind: "claim", draft: claimToDraft(c) })}
                           className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
-                          {pt("entry.documentAndVerify")}
+                          {pt("entry.edit")}
                         </button>
-                        {c.editable ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setEditing({ kind: "claim", draft: claimToDraft(c) })}
-                              className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                              {pt("entry.edit")}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => void remove("claim", c.id)}
-                              className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                              {pt("entry.remove")}
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void remove("claim", c.id)}
+                          className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          {pt("entry.remove")}
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
-            {isEditingThis ? (
-              <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
-                <ClaimEntryForm
-                  draft={editing.draft}
-                  onChange={(d) => setEditing({ kind: "claim", draft: d })}
-                  errors={claimErrors}
-                  busy={busy}
-                  onSave={() => void commitClaim(editing.draft)}
-                  onCancel={() => {
-                    setEditing(null);
-                    setClaimErrors({});
-                  }}
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setClaimErrors({});
-                  // No country is seeded. This form shows no country field,
-                  // and where somebody WORKS is not the jurisdiction of their
-                  // education, course or certificate.
-                  setEditing({ kind: "claim", draft: emptyClaimDraft(section.kind) });
-                }}
-                className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <Plus aria-hidden="true" className="h-4 w-4" />
-                {pt("entry.add")}
-              </button>
-            )}
-          </SectionShell>
-        );
-      };
+        {isEditingThis ? (
+          <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
+            <ClaimEntryForm
+              draft={editing.draft}
+              onChange={(d) => setEditing({ kind: "claim", draft: d })}
+              errors={claimErrors}
+              busy={busy}
+              onSave={() => void commitClaim(editing.draft)}
+              onCancel={() => {
+                setEditing(null);
+                setClaimErrors({});
+              }}
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setClaimErrors({});
+              // No country is seeded. This form shows no country field,
+              // and where somebody WORKS is not the jurisdiction of their
+              // education, course or certificate.
+              setEditing({ kind: "claim", draft: emptyClaimDraft(section.kind) });
+            }}
+            className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            {pt("entry.add")}
+          </button>
+        )}
+      </SectionShell>
+    );
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
@@ -958,27 +918,6 @@ function PassportInformationRoute() {
                     >
                       {pt("entry.documentAndVerify")}
                     </button>
-                    {e.editable ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditing({ kind: "experience", draft: experienceToDraft(e) })
-                          }
-                          className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                          {pt("entry.edit")}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void remove("experience", e.id)}
-                          className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                          {pt("entry.remove")}
-                        </button>
-                      </>
-                    ) : null}
                   </div>
                 </div>
               </li>
@@ -986,42 +925,29 @@ function PassportInformationRoute() {
           </ul>
         )}
 
-        {editing?.kind === "experience" ? (
-          <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
-            <ExperienceForm
-              draft={editing.draft}
-              onChange={(d) => setEditing({ kind: "experience", draft: d })}
-              errors={expErrors}
-              busy={busy}
-              onSave={() => void commitExperience(editing.draft)}
-              onCancel={() => {
-                setEditing(null);
-                setExpErrors({});
-              }}
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setExpErrors({});
-              // Seeded from the holder's own CONFIRMED work country, and from nothing
-              // else. An unconfirmed legacy 'SE' is not an answer they gave, so
-              // it must not become the country on a new employment either --
-              // `workCountry.confirmed` is what separates the two.
-              setEditing({
-                kind: "experience",
-                draft: emptyExperienceDraft(
-                  workCountry?.confirmed ? workCountry.jurisdictionCode : null,
-                ),
-              });
-            }}
-            className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        {/* ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──
+            Adding, editing and removing a period is now done on the
+            canonical profile workspace. What stays here is what this
+            section is for and what the owner kept explicitly: the
+            periods themselves, their assertion level and lifecycle,
+            and "Underlag och kontroll" — documenting, source
+            confirmation, verification requests and reviewer decisions,
+            against these same rows.
+
+            The section, its id and its deep links are untouched:
+            `#sp-employment` is still a real section, still linked from
+            elsewhere, and still where PR #246's retired-anchor
+            redirects land. */}
+        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+          <Link
+            to="/my-career/profile"
+            hash="profile-employment"
+            data-employment-authoring-link
+            className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <Plus aria-hidden="true" className="h-4 w-4" />
             {pt("info.addEmployment")}
-          </button>
-        )}
+          </Link>
+        </p>
       </SectionShell>
 
       {/* ── SECTION ROW (image 2) ────────────────────────────────────────
