@@ -763,6 +763,78 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     await expect(page.locator("#sections-heading")).toBeVisible({ timeout: 20_000 });
   });
 
+  // ── THE RELOCATED EDITORS ARE ALL ON THE ONE PAGE ───────────────────
+  //
+  // The owner's list: basic information, work country and employment
+  // history must be reachable from /my-career/profile, and evidence and
+  // verification must stay in the Passport.
+  //
+  // What this suite CANNOT prove is the write round trip. The harness
+  // answers every server function from a stub table by route
+  // interception, so "save, reload, the value is still there" would be
+  // testing the stub, not persistence. That proof belongs to a suite with
+  // a real backend and is not claimed here.
+  for (const lang of ["sv", "en"] as const) {
+    test(`${lang}: basics, work country and employment are all editable on the profile`, async ({
+      page,
+    }) => {
+      await mount(page, "general_jobs", {
+        lang,
+        path: "/my-career/profile",
+        ready: "#sections-heading",
+      });
+
+      // One page, three editors, each with its own anchor.
+      await expect(page.locator("[data-profile-basics]")).toHaveCount(1);
+      await expect(page.locator("[data-profile-work-country]")).toHaveCount(1);
+      await expect(page.locator("[data-profile-employment]")).toHaveCount(1);
+
+      // And the general claim editors that were already here.
+      await expect(page.locator("#profile-education")).toHaveCount(1);
+
+      // Evidence and verification did NOT follow the editors across.
+      const main = page.locator("main");
+      await expect(main.locator("[data-request-verification]")).toHaveCount(0);
+      await expect(main.locator('a[href*="/passport/entry/"]')).toHaveCount(0);
+    });
+  }
+
+  test("the profile's employment editor points at the Passport for evidence", async ({ page }) => {
+    await mount(page, "general_jobs", {
+      path: "/my-career/profile",
+      ready: "#sections-heading",
+    });
+    const link = page.locator("[data-employment-evidence-link]");
+    await expect(link).toHaveCount(1);
+    await expect(link).toHaveAttribute("href", /\/passport\/information#sp-employment$/);
+  });
+
+  test("every control on the profile workspace clears 44px and keeps a focus ring", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await mount(page, "general_jobs", {
+      path: "/my-career/profile",
+      ready: "#sections-heading",
+    });
+    const small = await page.locator("main").evaluate((root) => {
+      const out: string[] = [];
+      for (const el of root.querySelectorAll("a[href],button,summary")) {
+        const b = el.getBoundingClientRect();
+        if (b.width === 0 && b.height === 0) continue;
+        if (b.height < 43.5)
+          out.push(`${el.tagName}:${(el.textContent || "").trim().slice(0, 24)}`);
+      }
+      return out;
+    });
+    expect(small, `under 44px on the profile workspace: ${JSON.stringify(small)}`).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+  });
+
   // ── THE OWNER'S TWO-COLUMN COMPOSITION ──────────────────────────────
   //
   // Career left and wider, Passport right and narrower, on desktop; the
@@ -804,6 +876,38 @@ test.describe("image 1 — the Passport card on Överskt", () => {
         passportTop,
       );
     }
+  });
+
+  test("the Passport column shows what the Passport CONTAINS, not only its totals", async ({
+    page,
+  }) => {
+    await mount(page, "general_jobs");
+    const region = page.locator("[data-overview-passport-region]");
+    await expect(region).toBeVisible({ timeout: 30_000 });
+
+    const contents = region.locator("[data-overview-passport-contents]");
+    await expect(contents).toHaveCount(1);
+    // It resolved to a real state rather than sitting in its skeleton.
+    await expect(contents).toHaveAttribute(/data-overview-passport-contents/, /ready|empty/, {
+      timeout: 30_000,
+    });
+
+    // Populated fixture: real rows, each carrying a title and a status —
+    // and every row is a claim the fixture actually holds.
+    const rows = contents.locator("[data-passport-content-row]");
+    expect(await rows.count(), "a populated Passport must show its contents").toBeGreaterThan(0);
+    await expect(rows.first()).not.toBeEmpty();
+
+    // Provenance stays on the Passport: no issuer, verifier or evidence
+    // link leaks onto Överskt.
+    await expect(region.locator('a[href*="/passport/entry/"]')).toHaveCount(0);
+
+    // It sits between the card and the totals.
+    const cardY = (await region.locator("[data-overview-passport-card]").boundingBox())!.y;
+    const contentsY = (await contents.boundingBox())!.y;
+    const totalsY = (await region.locator("[data-passport-summary]").boundingBox())!.y;
+    expect(cardY).toBeLessThan(contentsY);
+    expect(contentsY).toBeLessThan(totalsY);
   });
 
   test("the Passport column holds one card, one summary and one way in", async ({ page }) => {
