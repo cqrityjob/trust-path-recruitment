@@ -476,7 +476,7 @@ function MyCareerPage() {
   const retryIdentity = () => void identityQ.refetch();
 
   return (
-    <Section className="py-8 md:py-10" containerClassName="max-w-[1240px]">
+    <Section className="py-8 md:py-10" containerClassName="max-w-6xl">
       {/* 0 · What just happened, when the person got here by claiming a
              Career Discovery result. Announced, because a candidate who
              created an account for exactly one reason should be TOLD that
@@ -494,7 +494,7 @@ function MyCareerPage() {
             to="/security-career-assessment/report/$snapshotId"
             params={{ snapshotId: savedReport }}
             data-testid="career-discovery-claim-open-report"
-            className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-semibold tracking-tight text-foreground transition-all duration-200 ease-out hover:border-[color:var(--accent)]/40 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {say(CLAIMED.open)}
           </Link>

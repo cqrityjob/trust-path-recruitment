@@ -178,7 +178,7 @@ function JobsDiscoveryPage() {
           <div className="min-w-0">
             <form
               onSubmit={submitSearch}
-              className="rounded-lg border border-border bg-background p-4"
+              className="rounded-xl border border-border bg-card p-4 shadow-xs"
             role="search"
             aria-label={t("jobs.discover.title")}
           >
@@ -195,7 +195,7 @@ function JobsDiscoveryPage() {
                 placeholder={t("jobs.search.location_placeholder")}
                 aria-label={t("jobs.search.location_placeholder")}
               />
-              <Button type="submit">{t("jobs.search.submit")}</Button>
+              <Button type="submit" size="lg">{t("jobs.search.submit")}</Button>
             </div>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
@@ -246,7 +246,7 @@ function JobsDiscoveryPage() {
                 <button
                   type="button"
                   onClick={reset}
-                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                  className="inline-flex min-h-11 items-center text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {t("jobs.search.reset")}
                 </button>
@@ -269,7 +269,9 @@ function JobsDiscoveryPage() {
         </div>
 
         <section className="mt-16 border-t border-border pt-10">
-          <h2 className="text-2xl font-semibold">{t("jobs.browse.families.title")}</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {t("jobs.browse.families.title")}
+          </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {t("jobs.browse.families.subtitle")}
           </p>
@@ -279,7 +281,7 @@ function JobsDiscoveryPage() {
                 key={f.id}
                 to="/jobs/family/$familyId"
                 params={{ familyId: f.id }}
-                className="rounded-lg border border-border bg-background p-4 transition hover:border-foreground/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="rounded-xl border border-border bg-card p-4 transition-all duration-200 ease-out hover:border-[color:var(--accent)]/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <h3 className="font-medium">{f.name[lang]}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">

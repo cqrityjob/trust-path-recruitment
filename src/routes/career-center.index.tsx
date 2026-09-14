@@ -542,7 +542,7 @@ function TestFact({ children }: { children: React.ReactNode }) {
 function TrustCard({ titleKey, bodyKey }: { titleKey: TranslationKey; bodyKey: TranslationKey }) {
   const { t } = useT();
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
+    <div className="rounded-xl border border-border bg-card p-6">
       <h3 className="text-sm font-semibold tracking-tight text-foreground">{t(titleKey)}</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
     </div>
