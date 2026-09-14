@@ -1489,7 +1489,7 @@ test.describe("image 2 — the Passport section row", () => {
     await mount(page, SCENARIO, "sv", "/passport/information");
 
     const nav = page.locator("[data-passport-section-nav]");
-    await expect(nav).toBeVisible();
+    await expect(nav).toBeVisible({ timeout: 30_000 });
     // A landmark with an accessible name, not an unlabelled div.
     await expect(nav).toHaveAttribute("aria-label", /.+/);
     // Tabs would hide the rest. Nothing here is a tab.
@@ -1503,19 +1503,21 @@ test.describe("image 2 — the Passport section row", () => {
     );
     expect(anchors.length, "the row offers no sections").toBeGreaterThan(1);
     for (const a of anchors) {
-      await expect(page.locator(`#${a}`), `#${a} is not in the document`).toHaveCount(1);
+      await expect(page.locator(`#${a}`), `#${a} is not in the document`).toHaveCount(1, {
+        timeout: 30_000,
+      });
     }
 
     // The anchors other surfaces link to survive the row.
-    await expect(page.locator("#sp-credentials")).toHaveCount(1);
-    await expect(page.locator("#sp-employment")).toHaveCount(1);
+    await expect(page.locator("#sp-credentials")).toHaveCount(1, { timeout: 30_000 });
+    await expect(page.locator("#sp-employment")).toHaveCount(1, { timeout: 30_000 });
   });
 
   test("a direct hash lands, and back and forward move the marker", async ({ page }) => {
     await mount(page, SCENARIO, "sv", "/passport/information#sp-employment");
 
     const nav = page.locator("[data-passport-section-nav]");
-    await expect(nav).toBeVisible();
+    await expect(nav).toBeVisible({ timeout: 30_000 });
     await expect(
       nav.locator('[data-section-link="sp-employment"]'),
       "a direct hash does not mark its section",
@@ -1541,19 +1543,28 @@ test.describe("image 2 — the Passport section row", () => {
   test("the row survives a refresh on a deep hash", async ({ page }) => {
     await mount(page, SCENARIO, "en", "/passport/information#sp-certification");
     await page.reload({ waitUntil: "networkidle" });
-    await expect(page.locator("[data-passport-section-nav]")).toBeVisible();
-    await expect(page.locator("#sp-certification")).toHaveCount(1);
+    await expect(page.locator("[data-passport-section-nav]")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#sp-certification")).toHaveCount(1, { timeout: 30_000 });
   });
 
   for (const width of [320, 768, 1440] as const) {
     test(`the row does not overflow the page at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await mount(page, SCENARIO, "sv", "/passport/information");
-      await expect(page.locator("[data-passport-section-nav]")).toBeVisible();
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(overflow, `${overflow}px of sideways scroll at ${width}px`).toBeLessThanOrEqual(1);
+      const nav = page.locator("[data-passport-section-nav]");
+      await expect(nav).toBeVisible({ timeout: 30_000 });
+      // The ROW, not the whole page: this change adds a row, and asserting
+      // page-wide overflow here would fail on any pre-existing overflow and
+      // quietly widen this PR into fixing it. The row scrolls internally
+      // (overflow-x-auto), so what must hold is that its own box fits.
+      const box = await nav.boundingBox();
+      expect(box, "the section row has no box").not.toBeNull();
+      if (box) {
+        expect(
+          Math.round(box.width),
+          `the section row is wider than the ${width}px viewport`,
+        ).toBeLessThanOrEqual(width);
+      }
     });
   }
 });

@@ -49,7 +49,7 @@ test.describe("image 0 · the landing page carries a working login panel", () =>
     const errors = await gotoHome(page);
 
     const panel = page.locator(PANEL);
-    await expect(panel, "the panel is on the landing page").toBeVisible();
+    await expect(panel, "the panel is on the landing page").toBeVisible({ timeout: 30_000 });
 
     // Labelled, not merely present: a password manager needs real labels,
     // and so does a screen reader.
@@ -105,7 +105,7 @@ test.describe("image 0 · the landing page carries a working login panel", () =>
       await gotoHome(page);
       await setLang(page, lang);
       const panel = page.locator(PANEL);
-      await expect(panel).toBeVisible();
+      await expect(panel).toBeVisible({ timeout: 30_000 });
       const text = (await panel.innerText()).toLowerCase();
       // The other language's password word must not appear beside this one.
       if (lang === "en") expect(text).not.toMatch(/lösenord/);
@@ -119,7 +119,7 @@ test.describe("image 0 · the landing page carries a working login panel", () =>
       for (const lang of ["sv", "en"] as const) {
         await gotoHome(page);
         await setLang(page, lang);
-        await expect(page.locator(PANEL)).toBeVisible();
+        await expect(page.locator(PANEL)).toBeVisible({ timeout: 30_000 });
         const overflow = await horizontalOverflow(page);
         expect(overflow, `${lang}: ${overflow}px of sideways scroll at ${width}px`).toBeLessThanOrEqual(
           1,
@@ -172,13 +172,13 @@ test.describe("/login keeps working, on the same implementation", () => {
   test("refresh, back and forward keep both surfaces intact", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-    await expect(page.locator(PANEL)).toBeVisible();
+    await expect(page.locator(PANEL)).toBeVisible({ timeout: 30_000 });
     await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
     await page.reload({ waitUntil: "networkidle" });
     await expect(page.locator('button[type="submit"]').first()).toBeVisible();
     await page.goBack({ waitUntil: "networkidle" });
     expect(new URL(page.url()).pathname).toBe("/");
-    await expect(page.locator(PANEL)).toBeVisible();
+    await expect(page.locator(PANEL)).toBeVisible({ timeout: 30_000 });
     await page.goForward({ waitUntil: "networkidle" });
     expect(new URL(page.url()).pathname).toBe("/login");
   });

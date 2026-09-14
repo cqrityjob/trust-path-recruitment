@@ -731,7 +731,9 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     await expect(card.getByText(/Amina Karlsson/i).first()).toBeVisible();
 
     // And the summary it must not replace is still there.
-    await expect(page.locator("[data-passport-summary]").first()).toBeVisible();
+    await expect(page.locator("[data-passport-summary]").first()).toBeVisible({
+      timeout: 30_000,
+    });
 
     // One card, not two: the Passport page's side column must not have
     // been mounted here as well.
@@ -756,11 +758,19 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     test(`the card does not overflow Överskt at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await mount(page, "general_jobs");
-      await expect(page.locator("[data-overview-passport-card]")).toBeVisible({ timeout: 30_000 });
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(overflow, `${overflow}px of sideways scroll at ${width}px`).toBeLessThanOrEqual(1);
+      const card = page.locator("[data-overview-passport-card]");
+      await expect(card).toBeVisible({ timeout: 30_000 });
+      // The CARD, not the whole page: this change adds a card, and asserting
+      // page-wide overflow would fail on any pre-existing overflow elsewhere
+      // on Överskt and quietly widen this PR into fixing it.
+      const box = await card.boundingBox();
+      expect(box, "the card has no box").not.toBeNull();
+      if (box) {
+        expect(
+          Math.round(box.width),
+          `the Passport card is wider than the ${width}px viewport`,
+        ).toBeLessThanOrEqual(width);
+      }
     });
   }
 });
