@@ -26,6 +26,7 @@ import {
 import { useState, useEffect } from "react";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { AssessmentInvite } from "@/components/jobs/AssessmentInvite";
+import { JobsSideColumn } from "@/components/jobs/JobsSideColumn";
 
 type JobSearch = {
   q?: string;
@@ -113,6 +114,12 @@ function JobsDiscoveryPage() {
     profileState.status === "ready" ? profileState.data.profile : undefined;
   const showInvite =
     profileState.status === "anonymous" || profileState.status === "no_profile";
+  // Signed in is NOT "not anonymous": `loading` is the state before the
+  // client has observed a session at all, and treating it as signed in
+  // would fire an authenticated read on every anonymous page view and
+  // flash a panel that then vanishes.
+  const signedIn =
+    profileState.status === "no_profile" || profileState.status === "ready";
 
   const setParam = (key: keyof JobSearch, value: string) =>
     navigate({
@@ -162,93 +169,104 @@ function JobsDiscoveryPage() {
           </p>
         </header>
 
-        <form
-          onSubmit={submitSearch}
-          className="mt-8 rounded-lg border border-border bg-background p-4"
-          role="search"
-          aria-label={t("jobs.discover.title")}
-        >
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-            <Input
-              value={qInput}
-              onChange={(e) => setQInput(e.target.value)}
-              placeholder={t("jobs.search.keyword_placeholder")}
-              aria-label={t("jobs.search.keyword_placeholder")}
-            />
-            <Input
-              value={locInput}
-              onChange={(e) => setLocInput(e.target.value)}
-              placeholder={t("jobs.search.location_placeholder")}
-              aria-label={t("jobs.search.location_placeholder")}
-            />
-            <Button type="submit">{t("jobs.search.submit")}</Button>
-          </div>
-
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            <FilterSelect
-              label={t("jobs.filter.family")}
-              value={search.family ?? ""}
-              onChange={(v) => setParam("family", v)}
-              options={careerAreaLabels.map((f) => ({ value: f.id, label: f.name[lang] }))}
-              anyLabel={t("jobs.filter.any")}
-            />
-            <FilterSelect
-              label={t("jobs.filter.employment_type")}
-              value={search.employment ?? ""}
-              onChange={(v) => setParam("employment", v)}
-              options={EMPLOYMENT_TYPES.map((v) => ({ value: v, label: employmentTypeLabel(v, lang) }))}
-              anyLabel={t("jobs.filter.any")}
-            />
-            <FilterSelect
-              label={t("jobs.filter.workplace_type")}
-              value={search.workplace ?? ""}
-              onChange={(v) => setParam("workplace", v)}
-              options={WORKPLACE_TYPES.map((v) => ({ value: v, label: workplaceTypeLabel(v, lang) }))}
-              anyLabel={t("jobs.filter.any")}
-            />
-            <FilterSelect
-              label={t("jobs.filter.experience_level")}
-              value={search.experience ?? ""}
-              onChange={(v) => setParam("experience", v)}
-              options={EXPERIENCE_LEVELS.map((v) => ({ value: v, label: experienceLevelLabel(v, lang) }))}
-              anyLabel={t("jobs.filter.any")}
-            />
-            <FilterSelect
-              label={t("jobs.filter.country")}
-              value={search.country ?? ""}
-              onChange={(v) => setParam("country", v)}
-              options={[
-                { value: "SE", label: "Sverige / Sweden" },
-                { value: "NO", label: "Norge / Norway" },
-                { value: "DK", label: "Danmark / Denmark" },
-                { value: "FI", label: "Suomi / Finland" },
-              ]}
-              anyLabel={t("jobs.filter.any")}
-            />
-          </div>
-
-          {hasFilters && (
-            <div className="mt-3 flex justify-end">
-              <button
-                type="button"
-                onClick={reset}
-                className="text-xs text-muted-foreground underline hover:text-foreground"
-              >
-                {t("jobs.search.reset")}
-              </button>
+        {/* ── SKETCH 3'S TWO COLUMNS ──────────────────────────────────
+            Search and results first in SOURCE order, so a screen reader
+            and every viewport below lg meet the job search before the
+            supporting panel -- the same rule the Passport page follows.
+            The side column is the supporting area, not a second page. */}
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)] lg:items-start">
+          <div className="min-w-0">
+            <form
+              onSubmit={submitSearch}
+              className="rounded-lg border border-border bg-background p-4"
+            role="search"
+            aria-label={t("jobs.discover.title")}
+          >
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <Input
+                value={qInput}
+                onChange={(e) => setQInput(e.target.value)}
+                placeholder={t("jobs.search.keyword_placeholder")}
+                aria-label={t("jobs.search.keyword_placeholder")}
+              />
+              <Input
+                value={locInput}
+                onChange={(e) => setLocInput(e.target.value)}
+                placeholder={t("jobs.search.location_placeholder")}
+                aria-label={t("jobs.search.location_placeholder")}
+              />
+              <Button type="submit">{t("jobs.search.submit")}</Button>
             </div>
-          )}
-        </form>
 
-        <JobResults
-          jobs={jobsQuery.data}
-          isLoading={jobsQuery.isLoading}
-          isError={jobsQuery.isError}
-          lang={lang}
-          profile={profile}
-        />
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <FilterSelect
+                label={t("jobs.filter.family")}
+                value={search.family ?? ""}
+                onChange={(v) => setParam("family", v)}
+                options={careerAreaLabels.map((f) => ({ value: f.id, label: f.name[lang] }))}
+                anyLabel={t("jobs.filter.any")}
+              />
+              <FilterSelect
+                label={t("jobs.filter.employment_type")}
+                value={search.employment ?? ""}
+                onChange={(v) => setParam("employment", v)}
+                options={EMPLOYMENT_TYPES.map((v) => ({ value: v, label: employmentTypeLabel(v, lang) }))}
+                anyLabel={t("jobs.filter.any")}
+              />
+              <FilterSelect
+                label={t("jobs.filter.workplace_type")}
+                value={search.workplace ?? ""}
+                onChange={(v) => setParam("workplace", v)}
+                options={WORKPLACE_TYPES.map((v) => ({ value: v, label: workplaceTypeLabel(v, lang) }))}
+                anyLabel={t("jobs.filter.any")}
+              />
+              <FilterSelect
+                label={t("jobs.filter.experience_level")}
+                value={search.experience ?? ""}
+                onChange={(v) => setParam("experience", v)}
+                options={EXPERIENCE_LEVELS.map((v) => ({ value: v, label: experienceLevelLabel(v, lang) }))}
+                anyLabel={t("jobs.filter.any")}
+              />
+              <FilterSelect
+                label={t("jobs.filter.country")}
+                value={search.country ?? ""}
+                onChange={(v) => setParam("country", v)}
+                options={[
+                  { value: "SE", label: "Sverige / Sweden" },
+                  { value: "NO", label: "Norge / Norway" },
+                  { value: "DK", label: "Danmark / Denmark" },
+                  { value: "FI", label: "Suomi / Finland" },
+                ]}
+                anyLabel={t("jobs.filter.any")}
+              />
+            </div>
 
-        {showInvite && <AssessmentInvite />}
+            {hasFilters && (
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                >
+                  {t("jobs.search.reset")}
+                </button>
+              </div>
+            )}
+          </form>
+
+          <JobResults
+            jobs={jobsQuery.data}
+            isLoading={jobsQuery.isLoading}
+            isError={jobsQuery.isError}
+            lang={lang}
+            profile={profile}
+          />
+
+            {showInvite && <AssessmentInvite />}
+          </div>
+
+          <JobsSideColumn signedIn={signedIn} />
+        </div>
 
         <section className="mt-16 border-t border-border pt-10">
           <h2 className="text-2xl font-semibold">{t("jobs.browse.families.title")}</h2>

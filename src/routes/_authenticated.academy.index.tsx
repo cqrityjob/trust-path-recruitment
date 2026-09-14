@@ -33,8 +33,9 @@ import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BookOpen, GraduationCap, ShieldCheck } from "lucide-react";
+import { BookOpen, Compass, GraduationCap, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { AssessmentPanel } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
@@ -199,6 +200,33 @@ function AcademyHome() {
           </Link>
         </section>
       )}
+      {/* ── SKETCH 5 · CAREER DISCOVERY ─────────────────────────────────
+          A POINTER, and deliberately only a pointer.
+
+          Career Discovery is ONE product and it is reached through Karriär
+          — the route audit is explicit that it is not a sixth navigation
+          item. Sketch 5 nonetheless names it here, and both are satisfiable
+          at once: this destination may say the analysis exists and link to
+          it; it may not host the run or render a second entry into it. That
+          is the same rule the Passport follows when it points at the
+          profile.
+
+          The link is CANONICAL_ASSESSMENT_PATH, never the /discovery alias,
+          so this is not a second way in with its own history. */}
+      <section className="mt-10">
+        <SectionHeading
+          icon={Compass}
+          title={t("academy.home.careerDiscovery.title")}
+          lede={t("academy.home.careerDiscovery.body")}
+        />
+        <Link
+          to={CANONICAL_ASSESSMENT_PATH}
+          data-cta="academy-career-discovery"
+          className="inline-flex h-11 items-center rounded-[10px] border border-border bg-card px-5 text-sm font-semibold text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {t("academy.home.careerDiscovery.cta")}
+        </Link>
+      </section>
     </AssessmentLayout>
   );
 }

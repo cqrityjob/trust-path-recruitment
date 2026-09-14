@@ -791,8 +791,16 @@ export const dictionaries = {
     "candidate.auth.swap.to_signup": "Skapa kandidatkonto",
     "candidate.auth.swap.to_signin": "Har du redan ett konto? Logga in",
 
+    // Sketch 3's supporting column on /jobs. Its own keys rather than
+    // reusing the applications page's heading: "Mina ansökningar" is a
+    // page title, this is a panel beside a search field.
+    "jobs.side.applications.title": "Dina ansökningar",
+    "jobs.side.applications.seeAll": "Se alla",
+    "jobs.side.applications.sent": "Skickad",
+    "jobs.side.cv.title": "Mitt CV",
+    "jobs.side.cv.body": "Hantera och uppdatera ditt CV",
     "candidate.applications.heading": "Mina ansökningar",
-    "candidate.applications.backToMyCareer": "Tillbaka till Min karriär",
+    "candidate.applications.backToMyCareer": "Tillbaka till Översikt",
     "candidate.applications.loading": "Läser in ansökningar…",
     "candidate.applications.empty": "Du har inte skickat in några ansökningar än.",
     "candidate.applications.error.load": "Kunde inte hämta dina ansökningar.",
@@ -1422,7 +1430,7 @@ export const dictionaries = {
     "sca.scp.summary.cancel": "Avbryt",
     "sca.report.loading": "Laddar din rapport…",
     "sca.report.notFound": "Rapporten kunde inte hittas.",
-    "sca.report.backToMyCareer": "Tillbaka till Min karriär",
+    "sca.report.backToMyCareer": "Tillbaka till Översikt",
     "sca.report.legacyEmpty":
       "Det här resultatet sparades innan fullständiga rapporter fanns tillgängliga. Gör om testet för att få en sparad rapport.",
     "sca.report.retake": "Gör om testet",
@@ -2531,7 +2539,7 @@ export const dictionaries = {
     "admin.accountMenu.signOut": "Logga ut",
     "admin.accessDenied.heading": "Åtkomst nekad",
     "admin.accessDenied.body": "Det här kontot har inte administratörsbehörighet.",
-    "admin.accessDenied.backToMyCareer": "Tillbaka till Min karriär",
+    "admin.accessDenied.backToMyCareer": "Tillbaka till Översikt",
     "admin.loading": "Läser in…",
     "admin.error.body":
       "Administratörssidan kunde inte laddas. Försök igen eller logga in på nytt.",
@@ -3243,6 +3251,15 @@ export const dictionaries = {
     "cc.step.jurisdiction": "Gäller i",
 
     // ── Vägar från ditt nuvarande yrke (pathFrom) ───────────────────────
+    // Sketch 4's two hero entry cards. They NAME the two routes into a
+    // career path; the sections they link to own the content.
+    "cc.entry.fromProfession.title": "Vägar från yrket i din profil",
+    "cc.entry.fromProfession.body":
+      "Se relevanta karriärvägar baserat på ditt nuvarande yrke och din profil.",
+    "cc.entry.fromAnalysis.title": "Vägar utifrån din karriäranalys",
+    "cc.entry.fromAnalysis.body":
+      "Få personliga karriärförslag baserat på dina resultat, kompetenser och intressen.",
+    "cc.entry.cta": "Utforska vägar",
     "cc.path.eyebrow": "Från ditt yrke",
     "cc.path.title": "Vägar från ditt nuvarande yrke",
     "cc.path.titleFor": "Vägar från {role}",
@@ -4794,6 +4811,15 @@ export const dictionaries = {
     "academy.home.learning": "Övningsläge",
     "academy.home.learningLede":
       "Öva fritt, med återkoppling efter varje fråga. Övningsfrågorna är andra frågor än de i bedömningen.",
+    // Sketch 5's Career Discovery card. A POINTER, not a second copy of
+    // the product: Career Discovery is one product and it is reached
+    // through Karriär. Tests & Development may name it and link to it --
+    // it may not host the run. Same rule as the Passport pointing at the
+    // profile.
+    "academy.home.careerDiscovery.title": "Karriäranalys (Career Discovery)",
+    "academy.home.careerDiscovery.body":
+      "Få insikter om vilka roller och karriärvägar som passar dig baserat på din profil och dina resultat.",
+    "academy.home.careerDiscovery.cta": "Starta karriäranalys",
     "academy.home.practise": "Börja öva",
     "academy.home.practiseAgain": "Öva igen",
     "academy.home.noModulesTitle": "Inga övningar tillgängliga",
@@ -7523,8 +7549,13 @@ export const dictionaries = {
     "candidate.auth.swap.to_signup": "Create a candidate account",
     "candidate.auth.swap.to_signin": "Already have an account? Log in",
 
+    "jobs.side.applications.title": "Your applications",
+    "jobs.side.applications.seeAll": "See all",
+    "jobs.side.applications.sent": "Sent",
+    "jobs.side.cv.title": "My CV",
+    "jobs.side.cv.body": "Manage and update your CV",
     "candidate.applications.heading": "My applications",
-    "candidate.applications.backToMyCareer": "Back to My Career",
+    "candidate.applications.backToMyCareer": "Back to Overview",
     "candidate.applications.loading": "Loading applications…",
     "candidate.applications.empty": "You haven't submitted any applications yet.",
     "candidate.applications.error.load": "Could not load your applications.",
@@ -8090,7 +8121,7 @@ export const dictionaries = {
     "sca.scp.summary.cancel": "Cancel",
     "sca.report.loading": "Loading your report…",
     "sca.report.notFound": "That report could not be found.",
-    "sca.report.backToMyCareer": "Back to My Career",
+    "sca.report.backToMyCareer": "Back to Overview",
     "sca.report.legacyEmpty":
       "This result was saved before full reports were available. Retake the assessment to get a saved report.",
     "sca.report.retake": "Retake assessment",
@@ -9170,7 +9201,7 @@ export const dictionaries = {
     "admin.accountMenu.signOut": "Sign out",
     "admin.accessDenied.heading": "Access denied",
     "admin.accessDenied.body": "This account does not have administrator access.",
-    "admin.accessDenied.backToMyCareer": "Back to My Career",
+    "admin.accessDenied.backToMyCareer": "Back to Overview",
     "admin.loading": "Loading…",
     "admin.error.body": "The admin page could not be loaded. Try again or sign in again.",
     "admin.employers.list.heading": "Employer moderation",
@@ -9864,6 +9895,13 @@ export const dictionaries = {
     "cc.step.jurisdiction": "Applies in",
 
     // ── Paths from your current role (pathFrom) ─────────────────────────
+    "cc.entry.fromProfession.title": "Paths from the profession in your profile",
+    "cc.entry.fromProfession.body":
+      "See relevant career paths based on your current profession and your profile.",
+    "cc.entry.fromAnalysis.title": "Paths from your career analysis",
+    "cc.entry.fromAnalysis.body":
+      "Get personal career suggestions based on your results, skills and interests.",
+    "cc.entry.cta": "Explore paths",
     "cc.path.eyebrow": "From your role",
     "cc.path.title": "Paths from your current role",
     "cc.path.titleFor": "Paths from {role}",
@@ -11366,6 +11404,10 @@ export const dictionaries = {
     "academy.home.learning": "Learning Mode",
     "academy.home.learningLede":
       "Practise freely, with feedback after every question. The practice questions are different questions from the assessment ones.",
+    "academy.home.careerDiscovery.title": "Career analysis (Career Discovery)",
+    "academy.home.careerDiscovery.body":
+      "Get insight into which roles and career paths suit you, based on your profile and your results.",
+    "academy.home.careerDiscovery.cta": "Start career analysis",
     "academy.home.practise": "Start practising",
     "academy.home.practiseAgain": "Practise again",
     "academy.home.noModulesTitle": "No practice available",
