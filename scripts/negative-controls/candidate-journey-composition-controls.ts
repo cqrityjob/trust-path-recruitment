@@ -144,8 +144,11 @@ const MUTATIONS: readonly Mutation[] = [
     id: "CJC-NC-SECTION-ANCHORS-LOST",
     defect: "the per-section anchors are dropped, so every link in the row resolves to nothing",
     file: INFO,
-    find: "            id={`sp-${section.kind}`}",
-    replace: "            id={undefined}",
+    // Anchored WITHOUT leading whitespace: this control broke once when a
+    // prettier run normalised the surrounding indentation, which says
+    // nothing about the anchors it exists to protect.
+    find: "id={`sp-${section.kind}`}",
+    replace: "id={undefined}",
     guard: GUARD,
     expect: "each credential section has its own anchor",
   },
