@@ -189,12 +189,33 @@ group("1 · exactly one primary next action, and it is the engine's");
   );
   const engine = computeNextBestActions(many, m.signals, NOW).all;
   ck("more than one action qualified", engine.length > 1);
+  // Reachability is by DESTINATION, not by exact query string.
+  //
+  // This compared the action's whole href, including `?edit=…#anchor`, and
+  // passed only because some other control on the page happened to render
+  // that exact intent — `complete_profile_basics` was reachable solely
+  // because "Redigera mina uppgifter" carried `?edit=profession`. The owner
+  // has since made that button lead to the profile workspace itself, so the
+  // coincidence is gone while the destination is not: basics are still
+  // edited at /my-career/profile, and the page still links there.
+  //
+  // The query and the anchor are an intent refinement on one destination,
+  // not a different destination. They are not unchecked: every
+  // SECTION_DESTINATIONS anchor is asserted to exist on the receiving
+  // surface by professional-identity-check, which is where a dead deep link
+  // is caught. What THIS guard is for is that the page offers a way to do
+  // each thing it recommends.
+  const destinationOf = (href: string) => href.split(/[?#]/)[0]!;
+  const reaches = (href: string) => {
+    const dest = destinationOf(href);
+    return [...html.matchAll(/href="([^"]+)"/g)].some((m) => destinationOf(m[1]!) === dest);
+  };
   ck(
-    "every qualifying action is reachable by href",
-    engine.every((a) => html.includes(`href="${a.href}`)),
+    "every qualifying action's destination is reachable from the page",
+    engine.every((a) => reaches(a.href)),
     engine
-      .filter((a) => !html.includes(`href="${a.href}`))
-      .map((a) => a.kind)
+      .filter((a) => !reaches(a.href))
+      .map((a) => `${a.kind}→${destinationOf(a.href)}`)
       .join(","),
   );
   ck("and only one wears the primary treatment", count(html, 'data-next-action="') === 1);

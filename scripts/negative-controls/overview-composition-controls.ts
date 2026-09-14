@@ -43,7 +43,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "Overview regrows its own add-a-merit destination, so the Passport page is no longer the one place a merit is added",
     file: ROUTE,
-    find: '          <OverviewPassportCard lang={lang as Lang} />',
+    find: "          <OverviewPassportCard lang={lang as Lang} />",
     replace:
       '          <OverviewPassportCard lang={lang as Lang} />\n          <Link to="/passport/credentials/new">add</Link>',
     guard: DASH,

@@ -740,6 +740,29 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     await expect(page.locator("[data-passport-side-column]")).toHaveCount(0);
   });
 
+  // ── ONE BUTTON, ONE CANONICAL PLACE ─────────────────────────────────
+  test('"Redigera mina uppgifter" opens the complete workspace, not the limited dialog', async ({
+    page,
+  }) => {
+    await mount(page, "general_jobs");
+    const edit = page.locator("[data-edit-details]").first();
+    await expect(edit).toBeVisible({ timeout: 30_000 });
+
+    // No quick-edit intent in the href at all.
+    const href = await edit.getAttribute("href");
+    expect(href, "the control must carry no quick-edit intent").toBe("/my-career/profile");
+
+    await edit.click();
+    await page.waitForURL("**/my-career/profile", { timeout: 20_000 });
+    expect(new URL(page.url()).search, "no ?edit= intent survived the click").toBe("");
+
+    // It NAVIGATED. A dialog opening over Overview is the defect.
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+
+    // And the page it landed on offers the sections rather than a few fields.
+    await expect(page.locator("#sections-heading")).toBeVisible({ timeout: 20_000 });
+  });
+
   // ── THE OWNER'S TWO-COLUMN COMPOSITION ──────────────────────────────
   //
   // Career left and wider, Passport right and narrower, on desktop; the

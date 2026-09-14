@@ -14,7 +14,6 @@ import { AlertTriangle, BadgeCheck, RefreshCcw } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { homeRoleTitle, type HomeProfile } from "@/lib/professional-identity/home-presentation";
 import { formatWorkLocation } from "@/lib/security-passport/format";
-import { SECTION_DESTINATIONS } from "@/lib/professional-identity/profile-destinations";
 import { L, Lf, type Lang } from "./copy";
 import { COMMON, HEADER } from "./home-copy";
 import { LINK } from "./home-format";
@@ -80,7 +79,21 @@ export function CareerPageHeader({
                 {L(HEADER.basicsComplete, l)}
               </p>
             )}
-            <Link to={SECTION_DESTINATIONS.profession.href} data-edit-details className={LINK}>
+            {/* ── ONE BUTTON, ONE CANONICAL PLACE (owner, 2026-09-14) ──
+                This carried `?edit=profession#career-profile`, which opened
+                the limited quick-edit dialog holding a few career-profile
+                fields. A person who wanted to record their education,
+                languages or driving licence had to close it and go looking.
+                The owner's decision is that "Redigera mina uppgifter" leads
+                to the complete profile workspace, so it navigates to the
+                page itself and the page offers every section.
+
+                The dialog is NOT deleted: the completeness ladder still
+                deep-links to it for the specific profession/experience
+                gap, which is a legitimate flow with its own destination in
+                profile-destinations.ts. What changed is what THIS control
+                does. */}
+            <Link to="/my-career/profile" data-edit-details className={LINK}>
               {L(HEADER.editDetails, l)}
             </Link>
           </div>

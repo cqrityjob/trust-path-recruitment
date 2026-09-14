@@ -269,6 +269,45 @@ expect(
 );
 
 // ---------------------------------------------------------------------------
+// 3b. "Redigera mina uppgifter" leads to the complete workspace
+// ---------------------------------------------------------------------------
+// It used to carry `?edit=profession#career-profile`, which opened the
+// limited quick-edit dialog holding a few career-profile fields: a person
+// who wanted to record their education, languages or driving licence had
+// to close it and go looking. The owner's decision is one button, one
+// canonical place.
+//
+// The dialog is deliberately NOT asserted absent from the product — the
+// completeness ladder still deep-links to it for the profession/experience
+// gap, which is a legitimate flow with its own destination. What is
+// asserted is what THIS control does.
+{
+  const headerPath = "src/components/professional-identity/CareerPageHeader.tsx";
+  const headerSrc = read(headerPath);
+  const editLink = /<Link\s+to=\{?"?([^"'>}]+)"?\}?\s+data-edit-details/.exec(headerSrc);
+  expect(
+    editLink !== null,
+    `${headerPath}: the "Redigera mina uppgifter" control must carry data-edit-details.`,
+  );
+  expect(
+    editLink?.[1] === "/my-career/profile",
+    `${headerPath}: it must navigate to the complete profile workspace, ` +
+      `not to a quick-edit intent (found ${editLink?.[1] ?? "nothing"}).`,
+  );
+  // Scoped to the ELEMENT, not the file: the comment above that link
+  // quotes the old `?edit=profession` intent it replaced, and a file-wide
+  // search for that string matches the explanation as readily as a
+  // regression.
+  const open = headerSrc.indexOf('<Link to="/my-career/profile" data-edit-details');
+  const element = open === -1 ? "" : headerSrc.slice(open, headerSrc.indexOf(">", open) + 1);
+  expect(
+    open !== -1 && !/\bsearch=|\bhash=|edit=/.test(element),
+    `${headerPath}: it must carry no quick-edit intent — no search, hash or edit ` +
+      `parameter on that link (found: ${element || "no matching link"}).`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 4. Sections self-hide, and no empty container is rendered
 // ---------------------------------------------------------------------------
 for (const [file, guard] of [
