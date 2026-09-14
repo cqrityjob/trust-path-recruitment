@@ -515,14 +515,31 @@ console.log("\nOWNERSHIP -- one candidate cannot read or edit another's answers"
 console.log("\nPLACEMENT -- Mitt Security Passport > Mina uppgifter");
 {
   const route = read("src/routes/_authenticated.passport.information.tsx");
-  ck("the information page renders the basics card", route.includes("<ProfileBasicsCard"));
-  // Unconditional. The defect was an editor that existed only while the
-  // Passport was incomplete, so a render behind `onboardingState` or
-  // `isEmpty` would rebuild it.
+  // ── THE EDITOR MOVED; THE RULE DID NOT (owner, 2026-09-14) ──────────
+  //
+  // This asserted the basics card was on the PASSPORT page, permanently.
+  // The owner moved the general authoring editors to the canonical profile
+  // workspace: a display name is not security evidence, and correcting it
+  // should never have required opening the Security Passport.
+  //
+  // What this section exists to prevent is unchanged and is now asserted
+  // where the editor lives — the defect was an editor that existed only
+  // while the Passport was incomplete, so a render behind `onboardingState`
+  // or `isEmpty` would rebuild it. It must be permanent and unconditional.
+  const basicsSection = read("src/components/professional-identity/ProfileBasicsSection.tsx");
+  const profileRoute = read("src/routes/_authenticated.my-career.profile.tsx");
+  ck(
+    "the canonical profile workspace renders the basics card",
+    profileRoute.includes("<ProfileBasicsSection") && basicsSection.includes("<ProfileBasicsCard"),
+  );
   ck(
     "and renders it unconditionally, not only while onboarding is unfinished",
-    /<ProfileBasicsCard/.test(route) &&
-      !/\{\s*\w*[Oo]nboarding\w*\s*(&&|\?)[\s\S]{0,80}<ProfileBasicsCard/.test(route),
+    !/\{\s*\w*[Oo]nboarding\w*\s*(&&|\?)[\s\S]{0,80}<ProfileBasicsCard/.test(basicsSection) &&
+      !/\{\s*\w*[Oo]nboarding\w*\s*(&&|\?)[\s\S]{0,80}<ProfileBasicsSection/.test(profileRoute),
+  );
+  ck(
+    "and the Passport no longer carries a second copy of it",
+    !route.includes("<ProfileBasicsCard"),
   );
   ck(
     "the delegated targets exist to be reached",

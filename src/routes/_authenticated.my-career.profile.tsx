@@ -458,7 +458,7 @@ function ProfilePage() {
                   its own. One record, one writer, two responsibilities in
                   the two places that own them. */}
               <div className="mt-8 border-t border-border pt-8">
-                <EmploymentHistoryEditor defaultCountry={identity.workCountry ?? null} />
+                <EmploymentHistoryEditor />
               </div>
             </section>
           </div>

@@ -49,6 +49,7 @@ import {
   saveExperienceEntry,
   type ExperienceEntry,
 } from "@/lib/security-passport/entries.functions";
+import { getMyPassport } from "@/lib/security-passport/passport.functions";
 import {
   ExperienceForm,
   emptyExperienceDraft,
@@ -66,19 +67,11 @@ import { useT } from "@/i18n/context";
 const CONTROL =
   "inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
-export function EmploymentHistoryEditor({
-  defaultCountry = null,
-  className = "",
-}: {
-  /** The holder's confirmed work country, used only to seed a NEW period.
-   *  An unconfirmed value is not an answer they gave and must not become
-   *  the country on a new employment. */
-  defaultCountry?: string | null;
-  className?: string;
-}) {
+export function EmploymentHistoryEditor({ className = "" }: { className?: string }) {
   const { pt } = usePassportCopy();
   const { lang } = useT();
   const load = useServerFn(listMyEntries);
+  const loadProfile = useServerFn(getMyPassport);
   const saveExp = useServerFn(saveExperienceEntry);
   const doRemove = useServerFn(removeEntry);
 
@@ -86,6 +79,14 @@ export function EmploymentHistoryEditor({
   const [draft, setDraft] = useState<ExperienceDraft | null>(null);
   const [errors, setErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [busy, setBusy] = useState(false);
+  /** Only a CONFIRMED work country seeds a new period. An unconfirmed
+   *  legacy 'SE' is not an answer the holder gave, and must not become the
+   *  country on an employment they are entering now — the rule this
+   *  editor carried on the Passport and carries here unchanged. */
+  const [workCountry, setWorkCountry] = useState<{
+    jurisdictionCode: string | null;
+    confirmed: boolean;
+  } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +107,15 @@ export function EmploymentHistoryEditor({
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+    void loadProfile({ data: undefined })
+      .then((snap) =>
+        setWorkCountry({
+          jurisdictionCode: snap.profile?.jurisdictionCode ?? null,
+          confirmed: Boolean(snap.profile?.workLocationConfirmedAt),
+        }),
+      )
+      .catch(() => {});
+  }, [refresh, loadProfile]);
 
   async function commit(next: ExperienceDraft) {
     const errs = validateExperience(next);
@@ -258,7 +267,9 @@ export function EmploymentHistoryEditor({
           data-add-employment
           onClick={() => {
             setErrors({});
-            setDraft(emptyExperienceDraft(defaultCountry));
+            setDraft(
+              emptyExperienceDraft(workCountry?.confirmed ? workCountry.jurisdictionCode : null),
+            );
           }}
         >
           {pt("info.addEmployment")}
