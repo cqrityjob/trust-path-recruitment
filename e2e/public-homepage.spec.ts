@@ -126,9 +126,27 @@ test.describe("the public homepage", () => {
   });
 
   // H3 ──────────────────────────────────────────────────────────────────
-  test("one h1, five h2, and the framing the brief settled", async ({ page }) => {
+  test("one h1, six h2, and the framing the brief settled", async ({ page }) => {
     expect(await page.locator("main h1").count()).toBe(1);
-    expect(await page.locator("main h2").count()).toBe(5);
+    // SIX since the owner's image 0 put a working login panel on this page.
+    // Five are the page's own sections; the sixth is the panel's own
+    // heading ("Logga in"), which is a real section heading for a real
+    // section and belongs in the count.
+    //
+    // Still an exact equality, deliberately: the rule this encodes is that
+    // this page's heading structure is KNOWN and fixed, and that rule is
+    // what catches a stray heading arriving later. Loosening it to >= to
+    // accommodate the panel would give that up.
+    //
+    // The panel carries a second h2 in its awaiting-confirmation state,
+    // which a fresh load never reaches. If a future test drives the panel
+    // into that state it will read seven, and that is correct rather than
+    // a regression.
+    //
+    // scripts/public-homepage-check.tsx still asserts FIVE and is right to:
+    // it renders the route with no session observed, so showAuthPanel is
+    // false and the panel is not there to count.
+    expect(await page.locator("main h2").count()).toBe(6);
     expect(await page.locator("main h3").count()).toBe(6);
     await expect(page.locator("main h1")).toHaveText("Bygg din framtid inom säkerhet");
 
