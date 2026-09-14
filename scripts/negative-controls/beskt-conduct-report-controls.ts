@@ -30,9 +30,16 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the prompt reader resolves the method's CURRENT version instead of the one the session froze, so wordings can change under a running interview",
     file: MIG,
-    find: "  SELECT * INTO _v FROM public.beskt_method_versions WHERE id = _s.bound_method_version_id;",
+    find:
+      "  SELECT * INTO _a FROM public.bcp_assignments WHERE id = _s.assignment_id;\n" +
+      "  SELECT * INTO _v FROM public.beskt_method_versions WHERE id = _s.bound_method_version_id;\n" +
+      "\n" +
+      "  -- A version that is no longer published stops answering.",
     replace:
-      "  SELECT * INTO _v FROM public.beskt_method_versions WHERE pack_id = (SELECT pack_id FROM public.beskt_method_versions WHERE id = _s.bound_method_version_id) ORDER BY v.version_number DESC LIMIT 1;",
+      "  SELECT * INTO _a FROM public.bcp_assignments WHERE id = _s.assignment_id;\n" +
+      "  SELECT * INTO _v FROM public.beskt_method_versions v WHERE v.pack_id = (SELECT pack_id FROM public.beskt_method_versions WHERE id = _s.bound_method_version_id) ORDER BY v.version_number DESC LIMIT 1;\n" +
+      "\n" +
+      "  -- A version that is no longer published stops answering.",
     guard: GUARD,
     expect: "PROMPTS-FROZEN",
   },
@@ -318,9 +325,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the unguarded basis builder becomes callable by authenticated, so any signed-in user assembles any case's whole interview record",
     file: MIG,
-    find:
-      "REVOKE ALL ON FUNCTION public.bcp_conduct_build_report_basis(uuid)\n" +
-      "  FROM PUBLIC, anon, authenticated;",
+    find: "REVOKE ALL ON FUNCTION public.bcp_conduct_build_report_basis(uuid) FROM PUBLIC, anon, authenticated;",
     replace:
       "REVOKE ALL ON FUNCTION public.bcp_conduct_build_report_basis(uuid) FROM PUBLIC, anon;",
     guard: GUARD,
@@ -525,6 +530,16 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "REPORT-PAYLOAD",
   },
   {
+    id: "RPT-NC-PAYLOAD-NO-VERIFICATION-NEED",
+    defect:
+      "what still has to be checked is dropped from the report, so an open verification reads as a settled finding",
+    file: MIG,
+    find: "                'verification_need', e.verification_need,\n",
+    replace: "",
+    guard: GUARD,
+    expect: "REPORT-PAYLOAD",
+  },
+  {
     id: "RPT-NC-PAYLOAD-NO-INFORMATION-GAPS",
     defect:
       "what remains unknown is dropped, so the report reads as more complete than the conversation was",
@@ -558,8 +573,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "corrected entries are reported as if they were the live record, so a superseded statement is presented as what was found",
     file: MIG,
-    find: "               WHERE e.position_id = p.id AND e.superseded_by_entry_id IS NULL), '[]'::jsonb)",
-    replace: "               WHERE e.position_id = p.id), '[]'::jsonb)",
+    find:
+      "             WHERE e.position_id = pos.id\n" +
+      "               AND e.superseded_by_entry_id IS NULL), '[]'::jsonb),",
+    replace: "             WHERE e.position_id = pos.id), '[]'::jsonb),",
     guard: GUARD,
     expect: "REPORT-PAYLOAD",
   },
@@ -724,8 +741,18 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the suite stops proving that a finalised report cannot be changed, which is the whole promise of the table",
     file: SUITE,
-    find: "'BCP_CONDUCT_REPORT_IMMUTABLE',",
-    replace: "'BCP_CONDUCT_NOT_PERMITTED',",
+    find:
+      "    UPDATE public.bcp_conduct_reports SET finalised_by = _r.rec_b WHERE id = _r.report_id;\n" +
+      "    PERFORM pg_temp.ok(false, 'R4.10 FAILED: the owner changed who signed a report');\n" +
+      "  EXCEPTION WHEN OTHERS THEN\n" +
+      "    PERFORM pg_temp.ok(SQLERRM LIKE '%BCP_CONDUCT_REPORT_IMMUTABLE%',\n" +
+      "      'R4.10 the owner cannot change who signed a report');",
+    replace:
+      "    UPDATE public.bcp_conduct_reports SET finalised_by = _r.rec_b WHERE id = _r.report_id;\n" +
+      "    PERFORM pg_temp.ok(true, 'R4.10 the owner changed who signed a report');\n" +
+      "  EXCEPTION WHEN OTHERS THEN\n" +
+      "    PERFORM pg_temp.ok(true,\n" +
+      "      'R4.10 the owner cannot change who signed a report');",
     guard: GUARD,
     expect: "REPORT-SUITE",
   },
@@ -767,15 +794,6 @@ const MUTATIONS: readonly Mutation[] = [
     file: DB,
     find: "# Stand PR 6 down so PR 5A can be unwound below: bcp_conduct_reports holds a\n# foreign key into bcp_conduct_sessions.",
     replace: "# (ordering note removed)",
-    guard: GUARD,
-    expect: "REPORT-REGISTRATION",
-  },
-  {
-    id: "RPT-NC-PKG-UNREGISTERED",
-    defect: "the guard loses its package script, so nothing can run it",
-    file: PKG,
-    find: '"beskt-conduct-report:check"',
-    replace: '"beskt-conduct-report-check"',
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
   },

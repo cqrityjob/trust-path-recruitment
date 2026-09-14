@@ -154,6 +154,20 @@ const RECORDED_FIELDS = [
   "sensitivity_class",
 ] as const;
 
+/** Fields the builder renders twice: on the live entry AND in its correction
+ *  history. verification_need, verification_state, sensitivity_class and
+ *  correction_reason are deliberately NOT in this set -- a verification belongs
+ *  to the entry that is current, and correction_reason exists only on the
+ *  history side -- so requiring two renderings of them would be requiring a
+ *  duplication the model does not have. */
+const LIVE_AND_HISTORY_FIELDS = new Set<string>([
+  "observable_fact",
+  "candidate_explanation",
+  "interviewer_interpretation",
+  "alternative_explanation",
+  "protective_factor",
+]);
+
 const failures: string[] = [];
 let assertions = 0;
 
@@ -288,7 +302,10 @@ const suite = read(SUITE);
     "PROMPTS-PUBLISHED: a version that is not published stops answering",
   );
   check(
-    /_v\.mode <> 'recruitment_support'/.test(body),
+    // The CASE that names the reason repeats this comparison verbatim, so a
+    // bare search for the phrase passed with the refusal itself disabled --
+    // a planted control proved it. The GUARD condition is what must be read.
+    /OR _v\.mode <> 'recruitment_support' THEN/.test(body),
     "PROMPTS-MODE: and a security-vetting method is never rendered as recruitment support",
   );
   for (const reason of ["version_not_found", "mode_not_permitted", "version_not_published"]) {
@@ -760,9 +777,13 @@ function insertIndex(body: string): number {
     );
   }
   for (const field of RECORDED_FIELDS) {
+    // BOTH renderings, counted: the live entry and the correction history each
+    // carry the field, so finding it once passed even after the live entry had
+    // dropped it -- which a planted control proved twice.
+    const renderings = (builder.match(new RegExp(`'${field}', `, "g")) ?? []).length;
     check(
-      new RegExp(`'${field}', `).test(builder),
-      `REPORT-PAYLOAD: and carries ${field} as its own field, so the method's distinctions survive into the frozen document`,
+      renderings >= (LIVE_AND_HISTORY_FIELDS.has(field) ? 2 : 1),
+      `REPORT-PAYLOAD: and carries ${field} as its own field in every rendering that has one, so the method's distinctions survive into the frozen document (found ${renderings})`,
     );
   }
   check(
@@ -777,7 +798,12 @@ function insertIndex(body: string): number {
     "REPORT-NO-JUDGEMENT: and the builder computes no average, total or percentile over anything a human said",
   );
   check(
-    /superseded_by_entry_id IS NULL/.test(builder),
+    // The phrase appears in four separate clauses, so finding it anywhere
+    // proved nothing about the entries list -- a planted control removed the
+    // one that matters and this assertion went on passing. Read the clause.
+    /FROM public\.bcp_conduct_entries e\s+WHERE e\.position_id = pos\.id\s+AND e\.superseded_by_entry_id IS NULL/.test(
+      builder,
+    ),
     "REPORT-PAYLOAD: the live record is what is reported, and corrections are carried as history beside it rather than silently replacing it",
   );
   check(
@@ -881,13 +907,16 @@ function insertIndex(body: string): number {
 // ── 12 · The rollback refuses rather than discards ──────────────────────────
 {
   check(
-    /FROM public\.bcp_conduct_reports;[\s\S]{0,600}RAISE EXCEPTION[\s\S]{0,300}BCP_CONDUCT_REPORT_ROLLBACK/.test(
+    // The CONDITION, not merely a message near it: replacing `IF _reports <> 0`
+    // with `IF false` left the RAISE in place and this assertion passed with
+    // the refusal gone -- a planted control proved exactly that.
+    /SELECT count\(\*\) INTO _reports FROM public\.bcp_conduct_reports;\s+IF _reports <> 0 THEN\s+RAISE EXCEPTION\s+'BCP_CONDUCT_REPORT_ROLLBACK/.test(
       rbBare,
     ),
     "REPORT-ROLLBACK: it refuses while any finalised report exists — a signed document about a named person is not a script's to discard",
   );
   check(
-    /bcp_events WHERE event = 'conduct_report_finalised'[\s\S]{0,600}RAISE EXCEPTION[\s\S]{0,300}BCP_CONDUCT_REPORT_ROLLBACK/.test(
+    /bcp_events WHERE event = 'conduct_report_finalised';\s+IF _events <> 0 THEN\s+RAISE EXCEPTION\s+'BCP_CONDUCT_REPORT_ROLLBACK/.test(
       rbBare,
     ),
     "REPORT-ROLLBACK: and refuses while the append-only ledger records that one was signed, because that entry can never be deleted to make the unwind fit",
@@ -961,9 +990,13 @@ function insertIndex(body: string): number {
     /BCP_CONDUCT_STALE_PREVIEW/.test(suite) && /BCP_CONDUCT_REPORT_BLOCKED/.test(suite),
     "REPORT-SUITE: and proves the refusals, not only the success path",
   );
+  const immutabilityProofs = (suite.match(/BCP_CONDUCT_REPORT_IMMUTABLE/g) ?? []).length;
   check(
-    /BCP_CONDUCT_REPORT_IMMUTABLE/.test(suite),
-    "REPORT-SUITE: including that a finalised report cannot be changed",
+    // COUNTED. The table promises five separate things -- the payload, both
+    // hashes, the signer, the row itself and the status direction -- and one
+    // surviving refusal is not proof of the other four.
+    immutabilityProofs >= 5,
+    `REPORT-SUITE: including that a finalised report cannot be changed, proved against the table OWNER for every frozen field (found ${immutabilityProofs} refusals)`,
   );
   check(
     /'anon'/.test(suite),
