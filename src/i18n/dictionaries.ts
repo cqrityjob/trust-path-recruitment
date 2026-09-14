@@ -6958,7 +6958,7 @@ export const dictionaries = {
     "nav.jobs": "Jobs",
     "nav.employers": "Employers",
     "nav.assessment": "Assessments",
-    "nav.about": "About",
+    "nav.about": "About us",
     "nav.contact": "Contact",
     "nav.signin": "Sign in",
     "nav.employerLogin": "Employer login",
