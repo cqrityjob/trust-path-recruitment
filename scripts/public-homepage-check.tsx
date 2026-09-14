@@ -1007,7 +1007,7 @@ group("T12 · the public chrome, and the untouched candidate chrome");
   //
   // This PR changes the SIGNED-OUT navigation. A change that quietly
   // reshaped the workspace nav as well would be out of scope and would
-  // break route highlighting, so the five are pinned here.
+  // break route highlighting, so the six are pinned here.
   ck(
     // Six since the owner's images 1 and 2 put the CV in the navigation.
     "the candidate workspace still has exactly six destinations",
