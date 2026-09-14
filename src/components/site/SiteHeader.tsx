@@ -14,7 +14,6 @@ import { countMyAcademyWork } from "@/lib/security-competency/academy-learning.f
 import { countMyReviewQueue } from "@/lib/security-competency/academy-employer.functions";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
-import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { AccountMenu, type AccountIdentity } from "./AccountMenu";
 import { workspaceStatusLabelKey } from "./workspace-status";
 
@@ -140,40 +139,45 @@ export function SiteHeader() {
   // their nav on public pages, and their place in the footer. See
   // candidate-app-nav.ts for the four destinations that replace them.
   //
-  // ── SIX, AND THE TWO INDIVIDUAL PRODUCTS COME FIRST (2026-09-13) ────
+  // ── FIVE, AND NO PRODUCT NAMES IN THE PUBLIC BAR (owner, 2026-09-14) ─
   //
-  // The public navigation used to be five, led by Security Passport alone,
-  // because the site's position was that the Passport was THE product and
-  // Career Discovery was a supporting tool reachable only from one quiet
-  // control inside a homepage section. That position is SUPERSEDED: the two
-  // are PEER acquisition entrances, so both are named here, adjacent, in
-  // the same style and at the same level. A product that exists only as a
-  // link inside somebody else's section is not a peer.
+  // This bar used to name Security Passport and Career Discovery as two of
+  // six items. The owner's decision is that a public visitor does not
+  // navigate by product name: they arrive as a candidate, an employer, or
+  // someone reading about the company. So the bar is now five AUDIENCE and
+  // TOPIC entries, and the two products are reached through the content
+  // rather than through the chrome.
+  //
+  // NOTHING IS REMOVED FROM THE SITE. Both products keep their routes,
+  // their homepage sections, their calls to action and their authenticated
+  // destinations. Security Passport keeps the homepage's #passport section
+  // and its card's call to action; Career Discovery keeps its own canonical
+  // route, the hero's "Starta Career Discovery" entry and its footer link. The footer still names both, deliberately: the
+  // decision was about the header only. (Career Discovery's canonical
+  // route constant is deliberately not named in this file any more --
+  // header-entry-check asserts its absence here.)
+  //
+  // "För dig" is the public umbrella for candidate content, and it points
+  // at the public landing page itself -- which IS that content: the
+  // proposition, both candidate entrances, the Passport section and the
+  // lifecycle. No second candidate page was created for this, because the
+  // canonical one already exists and duplicating it is the defect this
+  // decision exists to remove. /employers is its employer counterpart.
   //
   // "Bedömningar" and "Kontakt" stay out, unchanged and for the unchanged
   // reasons: neither route is deleted and neither redirects, but /assessment
   // belongs behind /employers rather than beside it, and /contact carries a
   // form that calls preventDefault and sends nothing.
   //
-  // "Security Passport" still points at the homepage's own Passport section
-  // rather than a page of its own: every Passport route lives under
-  // `_authenticated`, so there is no public destination to send a signed-out
-  // visitor to, and a nav item that lands on a login wall is a dead end
-  // wearing a product name. No second public Passport route is created for
-  // this change. "Career Discovery" needs no such treatment -- it HAS a
-  // canonical public route, and this is it (the /discovery alias redirects
-  // here and may never be linked in its place).
-  //
-  // `hash` rather than a path with "#" in it: the router does not parse
-  // one out of `to`, and `exact` matching is required on "/" because a
-  // Link matches by PREFIX -- without it this item is marked current on
-  // every route on the site.
+  // `exact` matching is required on "/" because a Link matches by PREFIX --
+  // without it this item is marked current on every route on the site. The
+  // `hash` field is kept on the shape (all five are undefined today) so the
+  // active-state contract below stays one expression rather than two.
   const nav = [
-    { to: "/", hash: "passport", label: t("nav.passportPublic") },
-    { to: CANONICAL_ASSESSMENT_PATH, hash: undefined, label: t("nav.careerDiscovery") },
-    { to: "/career-center", hash: undefined, label: t("nav.career_center") },
+    { to: "/", hash: undefined, label: t("nav.forYou") },
     { to: "/jobs", hash: undefined, label: t("nav.jobs") },
     { to: "/employers", hash: undefined, label: t("nav.employers") },
+    { to: "/career-center", hash: undefined, label: t("nav.career_center") },
     { to: "/about", hash: undefined, label: t("nav.about") },
   ] as const;
 

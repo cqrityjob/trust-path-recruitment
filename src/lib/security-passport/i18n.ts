@@ -520,7 +520,8 @@ const sv = {
   "ws.add.employment": "Anställning",
   "ws.add.employmentBody": "En roll hos en arbetsgivare.",
   "ws.add.education": "Kurs eller certifikat",
-  "ws.add.educationBody": "En säkerhetskurs eller ett intyg du har tagit. Allmän utbildning hör till din profil.",
+  "ws.add.educationBody":
+    "En säkerhetskurs eller ett intyg du har tagit. Allmän utbildning hör till din profil.",
   "ws.add.credential": "Behörighet eller förordnande",
   "ws.add.credentialBody": "Förordnanden, licenser och utbildningar för din arbetsmarknad.",
 
@@ -845,6 +846,8 @@ const sv = {
   "basics.savedNotice": "Dina grunduppgifter är sparade.",
   // Named after what they change, not after where the control happens to sit.
   "basics.editWorkCountry": "Ändra arbetsland",
+  "basics.workCountryUnset": "Arbetsland inte angivet.",
+  "basics.browseMarketLabel": "Visa behörigheter för",
   "basics.editCurrentRole": "Ändra nuvarande roll",
   "basics.editProfession": "Ändra i din karriärprofil",
   "basics.editedInCareerProfile":
@@ -2656,7 +2659,8 @@ const en: Record<PassportCopyKey, string> = {
   "ws.add.employment": "Employment",
   "ws.add.employmentBody": "A role with an employer.",
   "ws.add.education": "Course or certificate",
-  "ws.add.educationBody": "A security course or certificate you completed. General education belongs to your profile.",
+  "ws.add.educationBody":
+    "A security course or certificate you completed. General education belongs to your profile.",
   "ws.add.credential": "Authorisation or appointment",
   "ws.add.credentialBody": "Appointments, licences and training for your work market.",
 
@@ -2897,6 +2901,8 @@ const en: Record<PassportCopyKey, string> = {
   "basics.save": "Save profile basics",
   "basics.savedNotice": "Your profile basics have been saved.",
   "basics.editWorkCountry": "Change work country",
+  "basics.workCountryUnset": "Work country not stated.",
+  "basics.browseMarketLabel": "Show authorisations for",
   "basics.editCurrentRole": "Change current role",
   "basics.editProfession": "Change in your career profile",
   "basics.editedInCareerProfile":

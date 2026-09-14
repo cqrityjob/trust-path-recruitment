@@ -196,22 +196,169 @@ expect(
   routeGrids.length === 1,
   `${routePath}: exactly one 12-column row — the above-the-fold pair. Found ${routeGrids.length}.`,
 );
+// That row is now the PAGE split the owner specified: the career area on
+// the left, the Security Passport on the right. `items-start` rather than
+// `items-stretch` because these are two columns of different natural
+// length, not a pair of cards that must match — stretching the shorter one
+// is what made the old pair look ragged in the first place.
 expect(
-  /grid items-stretch gap-4 lg:grid-cols-12/.test(routeCode),
-  `${routePath}: the above-the-fold pair must stretch to equal height rather than ` +
-    "leaving one card floating beside a taller sibling.",
+  /grid items-start gap-8 lg:grid-cols-12/.test(routeCode),
+  `${routePath}: the career/Passport split must be one items-start 12-column row.`,
 );
-// Source order IS mobile order: one column at 375, the recommendation first
-// and the Passport second. A CSS reordering would make the two disagree.
+expect(
+  /className="min-w-0 lg:col-span-8"/.test(routeCode) &&
+    /className="min-w-0 lg:col-span-4"/.test(routeCode),
+  `${routePath}: career left and wider (8), Passport right and narrower (4).`,
+);
+// Source order IS mobile order: one column at 375, the COMPLETE career area
+// first and the COMPLETE Passport area second. A CSS reordering would make
+// the two disagree.
 expect(
   routeCode.indexOf("<NextBestAction") < routeCode.indexOf("<PassportSummary"),
   `${routePath}: the recommended next step must precede the Passport in source order, ` +
     "so the single mobile column shows it first.",
 );
 expect(
+  routeCode.indexOf("<CareerPageHeader") < routeCode.indexOf("<HubStatusGrid") &&
+    routeCode.indexOf("<HubStatusGrid") < routeCode.indexOf("<OverviewPassportCard"),
+  `${routePath}: the whole career area must precede the whole Passport area in source ` +
+    "order — on a phone the career column is read to its end before the Passport begins.",
+);
+// The Passport card belongs to the Passport region, and the region is one
+// region. This is the duplication the owner removed: a card in its own
+// full-width row below the fold, a statistics panel beside the
+// recommendation, and a second add-a-merit link.
+expect(
+  /<aside\b[^>]*data-overview-passport-region/s.test(routeCode) ||
+    /data-overview-passport-region/.test(routeCode),
+  `${routePath}: the Passport column must be one labelled region.`,
+);
+expect(
+  (routeCode.match(/<OverviewPassportCard/g) ?? []).length === 1 &&
+    (routeCode.match(/<PassportSummary/g) ?? []).length === 1,
+  `${routePath}: exactly one Passport card and one Passport summary on Overview.`,
+);
+expect(
+  routeCode.indexOf("<OverviewPassportCard") < routeCode.indexOf("<PassportSummary"),
+  `${routePath}: the visual Passport card comes first, then what it contains.`,
+);
+
+// ── WHAT IT CONTAINS, NOT ONLY WHAT STATE IT IS IN ───────────────────────
+//
+// Status totals describe the Passport; they never say what is in it. The
+// owner's correction requires an actual contents preview directly beneath
+// the card, and this asserts the totals cannot quietly become the whole
+// answer again.
+{
+  const contentsPath = "src/components/professional-identity/OverviewPassportContents.tsx";
+  const contents = read(contentsPath);
+  expect(
+    routeCode.includes("<OverviewPassportContents"),
+    `${routePath}: the Passport column must show what the Passport contains, not only its totals.`,
+  );
+  expect(
+    routeCode.indexOf("<OverviewPassportCard") < routeCode.indexOf("<OverviewPassportContents") &&
+      routeCode.indexOf("<OverviewPassportContents") < routeCode.indexOf("<PassportSummary"),
+    `${routePath}: card, then contents, then the totals as secondary support.`,
+  );
+  // The CANONICAL reader, not a new one.
+  expect(
+    contents.includes("listMyEntries"),
+    `${contentsPath}: the preview must read the canonical listMyEntries.`,
+  );
+  expect(
+    !contents.includes("createServerFn"),
+    `${contentsPath}: the preview must not define a server function of its own.`,
+  );
+  // Real rows, and a truthful empty state rather than placeholder content.
+  expect(
+    /data-overview-passport-contents="empty"/.test(contents) &&
+      /data-overview-passport-contents="ready"/.test(contents),
+    `${contentsPath}: the preview must distinguish a real empty Passport from a populated one.`,
+  );
+  // Overview is a summary surface. Provenance belongs to the Passport.
+  //
+  // Comments are stripped first: the component's own note explains which
+  // provenance fields it deliberately does NOT render, and a raw search
+  // matches that explanation as readily as a regression.
+  const contentsCode = contents.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  for (const leak of [
+    "issuerName",
+    "verifierName",
+    "verificationMethod",
+    "evidenceUrl",
+    "reviewer",
+  ]) {
+    expect(
+      !contentsCode.includes(leak),
+      `${contentsPath}: ${leak} is Passport provenance and must not be rendered on Överskt.`,
+    );
+  }
+}
+// Checked in the route AND in the Passport column's own components: a
+// negative control proved that asserting only on the route left the
+// assertion dead, because the second action used to live inside
+// PassportSummary and could simply come back there.
+for (const [file, code] of [
+  [routePath, routeCode],
+  [
+    "src/components/professional-identity/PassportSummary.tsx",
+    read("src/components/professional-identity/PassportSummary.tsx"),
+  ],
+  [
+    "src/components/professional-identity/OverviewPassportCard.tsx",
+    read("src/components/professional-identity/OverviewPassportCard.tsx"),
+  ],
+] as const) {
+  expect(
+    !code.includes("/passport/credentials/new"),
+    `${file}: Overview must not carry its own add-a-merit destination — the ` +
+      "Passport page owns it.",
+  );
+}
+expect(
   !/order-\d|lg:order-/.test(routeCode),
   `${routePath}: no CSS reordering — source order and reading order must agree.`,
 );
+
+// ---------------------------------------------------------------------------
+// 3b. "Redigera mina uppgifter" leads to the complete workspace
+// ---------------------------------------------------------------------------
+// It used to carry `?edit=profession#career-profile`, which opened the
+// limited quick-edit dialog holding a few career-profile fields: a person
+// who wanted to record their education, languages or driving licence had
+// to close it and go looking. The owner's decision is one button, one
+// canonical place.
+//
+// The dialog is deliberately NOT asserted absent from the product — the
+// completeness ladder still deep-links to it for the profession/experience
+// gap, which is a legitimate flow with its own destination. What is
+// asserted is what THIS control does.
+{
+  const headerPath = "src/components/professional-identity/CareerPageHeader.tsx";
+  const headerSrc = read(headerPath);
+  const editLink = /<Link\s+to=\{?"?([^"'>}]+)"?\}?\s+data-edit-details/.exec(headerSrc);
+  expect(
+    editLink !== null,
+    `${headerPath}: the "Redigera mina uppgifter" control must carry data-edit-details.`,
+  );
+  expect(
+    editLink?.[1] === "/my-career/profile",
+    `${headerPath}: it must navigate to the complete profile workspace, ` +
+      `not to a quick-edit intent (found ${editLink?.[1] ?? "nothing"}).`,
+  );
+  // Scoped to the ELEMENT, not the file: the comment above that link
+  // quotes the old `?edit=profession` intent it replaced, and a file-wide
+  // search for that string matches the explanation as readily as a
+  // regression.
+  const open = headerSrc.indexOf('<Link to="/my-career/profile" data-edit-details');
+  const element = open === -1 ? "" : headerSrc.slice(open, headerSrc.indexOf(">", open) + 1);
+  expect(
+    open !== -1 && !/\bsearch=|\bhash=|edit=/.test(element),
+    `${headerPath}: it must carry no quick-edit intent — no search, hash or edit ` +
+      `parameter on that link (found: ${element || "no matching link"}).`,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // 4. Sections self-hide, and no empty container is rendered

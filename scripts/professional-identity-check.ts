@@ -1151,8 +1151,7 @@ console.log("\n4 · CV source bundle");
   );
   ck(
     "a CQrityjob document review presents as documented, not verified, live",
-    liveTrust.claims["c-review"] !== undefined &&
-      !presentsAsVerified(liveTrust.claims["c-review"]),
+    liveTrust.claims["c-review"] !== undefined && !presentsAsVerified(liveTrust.claims["c-review"]),
   );
 
   ck("the career insight is opt-in and absent by default", bundle.careerInsight === null);
@@ -2897,11 +2896,18 @@ console.log("\n12 · candidate dead ends");
 
   /* ---- D · a recommendation is never a self-link ------------------- */
 
-  // The Passport-owned sections, for somebody who HAS a Passport: each must
-  // carry the anchor of the section that owns it rather than a front door.
-  // Everything answered except the employment history, so employment is
-  // genuinely the next thing the ladder should name. A fixture missing an
-  // earlier section would test the ordering rather than the destination.
+  // Every section a recommendation can name must carry the anchor of the
+  // editor that owns it rather than a front door, whichever surface that
+  // editor sits on. Everything is answered here except the employment
+  // history, so employment is genuinely the next thing the ladder should
+  // name. A fixture missing an earlier section would test the ordering
+  // rather than the destination.
+  //
+  // The surface roots a recommendation must never settle for: landing on one
+  // of these means the person is told to go somewhere and then left to find
+  // the editor themselves, which is the defect this section exists to catch.
+  const FRONT_DOORS = ["/my-career", "/my-career/profile", "/passport", "/passport/information"];
+
   const holder = identity({
     displayName: "Ola Nord",
     currentStatus: "working_in_industry",
@@ -2914,10 +2920,31 @@ console.log("\n12 · candidate dead ends");
     currentProfessionTitleEn: "Security officer",
     yearsOfExperience: "3-5",
   });
+  // Requirement B moved employment-history AUTHORING to the canonical
+  // profile workspace. The Passport keeps its employment section as a real
+  // section for evidence, provenance and verification, but the editor that
+  // actually answers "add your work experience" now lives on the profile.
+  // The rule under test is unchanged -- a recommendation lands on the editor
+  // that answers it, never on a surface's front door -- so only the owning
+  // section moved, and the destination moved with it.
   const holderAction = computeNextBestActions(holder).all.find((a) => a.section === "employment");
+  const holderHref = holderAction?.href ?? "";
+  // Three separate claims, because collapsing them lets one edit satisfy the
+  // other: the ladder must agree with the map, the map must hold the
+  // canonical value, and that value must be an editor rather than a front
+  // door. Editing only the map now fails 12.11a; editing only the ladder
+  // fails 12.11.
   ck(
-    "12.11 'add your work experience' lands on the employment section, not the Passport's front door",
-    holderAction?.href === "/passport/information#sp-employment",
+    "12.11 'add your work experience' lands on the destination the map owns for employment",
+    holderHref === SECTION_DESTINATIONS.employment.href,
+  );
+  ck(
+    "12.11a and that canonical destination is the profile workspace's employment editor",
+    SECTION_DESTINATIONS.employment.href === "/my-career/profile#profile-employment",
+  );
+  ck(
+    "12.11b which is an anchored editor, never a surface's front door",
+    !FRONT_DOORS.includes(holderHref) && (holderHref.split("#")[1] ?? "").length > 0,
   );
 
   /* ---- E · a read that did not answer decides nothing -------------- */
@@ -3005,6 +3032,11 @@ console.log("\n12 · candidate dead ends");
   const profileSurface = [
     profileCard,
     read("src/components/professional-identity/GeneralProfileClaims.tsx"),
+    // Employment authoring moved here with the owner's 2026-09-14
+    // correction, in its own extracted editor. Exactly the case the note
+    // above describes: a real page component of the profile workspace.
+    read("src/components/professional-identity/EmploymentHistoryEditor.tsx"),
+    read("src/components/professional-identity/ProfileBasicsSection.tsx"),
   ].join("\n");
   for (const section of COMPLETENESS_SECTION_ORDER) {
     const { href, owner } = SECTION_DESTINATIONS[section];

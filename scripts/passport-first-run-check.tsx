@@ -859,11 +859,23 @@ ck(
   "and the entry page seeds no country into a claim",
   !/emptyClaimDraft\([\s\S]{0,160}workCountry/.test(infoRoute),
 );
+// The employment AUTHORING editor moved to /my-career/profile with the
+// owner's 2026-09-14 correction, and this rule moved with it unchanged: an
+// unconfirmed legacy 'SE' is not an answer the holder gave and must not
+// become the country on an employment they are entering now. Asserted
+// where the call now lives.
+const employmentEditor = code(
+  read("src/components/professional-identity/EmploymentHistoryEditor.tsx"),
+);
 ck(
   "while an EMPLOYMENT, which does show the field, may be seeded from a CONFIRMED work country",
   /emptyExperienceDraft\(\s*workCountry\?\.confirmed \? workCountry\.jurisdictionCode : null,?\s*\)/.test(
-    infoRoute,
+    employmentEditor,
   ),
+);
+ck(
+  "and the Passport no longer seeds one, because it no longer creates one",
+  !/emptyExperienceDraft\(/.test(infoRoute),
 );
 
 // And no employer is required to exist. "Do not require a current employer"

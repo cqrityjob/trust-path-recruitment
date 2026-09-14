@@ -38,7 +38,7 @@ const MUTATIONS: readonly Mutation[] = [
     file: HOME,
     find: "  const showAuthPanel = useSignedIn() === false;",
     replace:
-      "  const showAuthPanel = useSignedIn() === false;\n  const homeSignIn = () => supabase.auth.signInWithPassword({ email: \"\", password: \"\" });",
+      '  const showAuthPanel = useSignedIn() === false;\n  const homeSignIn = () => supabase.auth.signInWithPassword({ email: "", password: "" });',
     guard: GUARD,
     expect: "signInWithPassword lives in the panel and nowhere else",
   },
@@ -69,7 +69,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "Överskt stops showing the Passport card, which is the delta the audit itself recorded as unresolved",
     file: OVERVIEW,
-    find: '      <OverviewPassportCard lang={lang as Lang} className="mt-4" />',
+    // Repointed: the card moved into the Passport column, where it no
+    // longer needs its own top margin.
+    find: "          <OverviewPassportCard lang={lang as Lang} />",
     replace: "",
     guard: GUARD,
     expect: "Överskt mounts the Passport card",
@@ -140,11 +142,13 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "CJC-NC-SECTION-ANCHORS-LOST",
-    defect:
-      "the per-section anchors are dropped, so every link in the row resolves to nothing",
+    defect: "the per-section anchors are dropped, so every link in the row resolves to nothing",
     file: INFO,
-    find: "            id={`sp-${section.kind}`}",
-    replace: "            id={undefined}",
+    // Anchored WITHOUT leading whitespace: this control broke once when a
+    // prettier run normalised the surrounding indentation, which says
+    // nothing about the anchors it exists to protect.
+    find: "id={`sp-${section.kind}`}",
+    replace: "id={undefined}",
     guard: GUARD,
     expect: "each credential section has its own anchor",
   },
@@ -174,7 +178,8 @@ const MUTATIONS: readonly Mutation[] = [
       "the row reads window.location instead of the router, so back and forward leave the marker on whichever section was current at mount",
     file: NAV,
     find: "  const location = useLocation();",
-    replace: "  const location = { hash: typeof window === \"undefined\" ? \"\" : window.location.hash };",
+    replace:
+      '  const location = { hash: typeof window === "undefined" ? "" : window.location.hash };',
     guard: GUARD,
     expect: "the hash comes from the router",
   },

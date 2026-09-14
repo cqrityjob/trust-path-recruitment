@@ -32,7 +32,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
 import {
   PassportSectionNav,
   type PassportSectionLink,
@@ -48,18 +47,12 @@ import {
   currentMarket,
   otherMarkets,
 } from "@/lib/security-passport/market-profiles";
-import {
-  getMyPassport,
-  savePassportBasics,
-  setWorkCountry,
-} from "@/lib/security-passport/passport.functions";
-import {
-  ProfileBasicsCard,
-  type ProfileBasicsPatch,
-} from "@/components/security-passport/ProfileBasicsCard";
+import { getMyPassport } from "@/lib/security-passport/passport.functions";
 import {
   getRegulatedCredentialAvailability,
+  listSelectableMarkets,
   type RegulatedCredentialAvailability,
+  type SelectableMarket,
 } from "@/lib/security-passport/credentials.functions";
 import { catalogueOptionsFor } from "@/lib/security-passport/market-catalogue";
 import { Briefcase, GraduationCap, Plus, ShieldCheck } from "lucide-react";
@@ -74,7 +67,6 @@ import {
   listMyEntries,
   removeEntry,
   saveClaimEntry,
-  saveExperienceEntry,
   listJurisdictions,
   type ClaimEntry,
   type ExperienceEntry,
@@ -88,13 +80,9 @@ import { LifecycleChip } from "@/components/security-passport/LifecycleChip";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
 import {
   ClaimEntryForm,
-  ExperienceForm,
   claimToDraft,
   emptyClaimDraft,
-  emptyExperienceDraft,
-  experienceToDraft,
   validateClaim,
-  validateExperience,
   type ClaimDraft,
   type ExperienceDraft,
 } from "@/components/security-passport/EntryForms";
@@ -207,17 +195,29 @@ function PassportInformationRoute() {
   // straight on /passport/information still sees, and can correct, the country
   // their whole Passport is spoken in.
   const loadProfile = useServerFn(getMyPassport);
-  const saveWorkCountry = useServerFn(setWorkCountry);
   // The governed answer to "what may this holder register here". NOT a literal
   // credential list: see MarketCredentialSection for why the literal was a
   // regulatory claim rather than a convenience.
   const loadAvailability = useServerFn(getRegulatedCredentialAvailability);
+  const loadMarkets = useServerFn(listSelectableMarkets);
   const [workCountry, setWorkCountryState] = useState<{
     jurisdictionCode: string | null;
     subJurisdictionCode: string | null;
     confirmed: boolean;
   } | null>(null);
   const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
+  /** ── THE MARKET SELECTOR IS A BROWSING FILTER (owner, 2026-09-14) ────
+   *
+   *  Looking at what Great Britain regulates is not a statement that you
+   *  work there. This is local state only: it never calls setWorkCountry,
+   *  never writes a row, and is discarded when the page is left. `null`
+   *  means "the market I actually work in", which is what a holder sees on
+   *  arrival — the saved answer, not a remembered browse. */
+  const [browseMarket, setBrowseMarket] = useState<{
+    jurisdictionCode: string;
+    subJurisdictionCode: string | null;
+  } | null>(null);
+  const [selectableMarkets, setSelectableMarkets] = useState<readonly SelectableMarket[]>([]);
   // Three states for the catalogue read, kept apart from the answer itself:
   // "no answer yet" and "the read failed" both leave `availability` null, and
   // a section that could not tell them apart would draw a healthy, slow read
@@ -246,7 +246,6 @@ function PassportInformationRoute() {
     professionSlug: string;
     declaredAccurateAt: string | null;
   } | null>(null);
-  const saveBasics = useServerFn(savePassportBasics);
   // Display titles for the profession the basics card SHOWS and does not
   // edit. Best-effort: a failure degrades one line to the stored slug, never
   // the page.
@@ -337,7 +336,7 @@ function PassportInformationRoute() {
     }
 
     try {
-      const next = await loadAvailability({ data: undefined });
+      const next = await loadAvailability({ data: browseMarket ?? undefined });
       if (seq !== availabilitySeq.current) return;
       setAvailability(next);
       setAvailabilityStatus("ready");
@@ -347,11 +346,22 @@ function PassportInformationRoute() {
       setAvailability(null);
       setAvailabilityStatus("failed");
     }
-  }, [loadProfile, loadAvailability, invalidateCandidateReadModels]);
+  }, [loadProfile, loadAvailability, invalidateCandidateReadModels, browseMarket]);
   useEffect(() => {
     void refreshWorkCountry();
   }, [refreshWorkCountry]);
-  const saveExp = useServerFn(saveExperienceEntry);
+
+  useEffect(() => {
+    let alive = true;
+    void loadMarkets({ data: undefined })
+      .then((m) => {
+        if (alive) setSelectableMarkets(m);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [loadMarkets]);
   const saveClaim = useServerFn(saveClaimEntry);
   const doRemove = useServerFn(removeEntry);
   const loadJurisdictions = useServerFn(listJurisdictions);
@@ -378,7 +388,6 @@ function PassportInformationRoute() {
   const succeeded = useCallback((text: string) => setOutcome({ kind: "ok", text }), []);
   const failed = useCallback((text: string) => setOutcome({ kind: "error", text }), []);
   const [editing, setEditing] = useState<Editing>(null);
-  const [expErrors, setExpErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [claimErrors, setClaimErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [jurisdictions, setJurisdictions] = useState<readonly Jurisdiction[]>([]);
   // One draft per section, keyed by claim_type, so opening the language form
@@ -494,39 +503,6 @@ function PassportInformationRoute() {
   );
   const freeClaims = useMemo(() => claims.filter((c) => c.credentialCode === null), [claims]);
 
-  async function commitExperience(draft: ExperienceDraft) {
-    const errs = validateExperience(draft);
-    setExpErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-    setBusy(true);
-    beginOperation();
-    try {
-      await saveExp({
-        data: {
-          id: draft.id,
-          employerName: draft.employerName,
-          roleTitle: draft.roleTitle,
-          employmentType: draft.employmentType,
-          fteFraction: draft.fteFraction,
-          securityRelevance: draft.securityRelevance,
-          securityFraction: draft.securityFraction,
-          startedOn: draft.startedOn,
-          endedOn: draft.ongoing ? null : draft.endedOn,
-          jurisdictionCode: draft.jurisdictionCode,
-        },
-      });
-      setEditing(null);
-      // Read-back before success. "Sparat." is a claim about persistence, so
-      // it is only made once the server has handed the entry back.
-      if (await refresh()) succeeded(pt("entry.saved"));
-    } catch (err) {
-      console.error("[passport] experience save failed", err);
-      failed(pt("common.error"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function commitClaim(draft: ClaimDraft) {
     const errs = validateClaim(draft);
     setClaimErrors(errs);
@@ -580,63 +556,6 @@ function PassportInformationRoute() {
     void navigate({ to: "/passport/entry/$kind/$entryId", params: { kind, entryId: id } });
   }
 
-  async function commitBasics(patch: ProfileBasicsPatch) {
-    beginOperation();
-    await saveBasics({ data: patch });
-    // Read-back before the card reports success. "Sparat" is a claim about
-    // persistence and is not made until the server has handed the row back —
-    // the same rule every other save on this page follows.
-    await refreshWorkCountry();
-    succeeded(pt("basics.savedNotice"));
-  }
-
-  /* ── THE SIX ANSWERS, RESOLVED FROM WHERE EACH ONE ACTUALLY LIVES ────
-   *
-   * Two profile columns, one confirmed country, one real employment row and
-   * one timestamp. The card is given the finished answers rather than any of
-   * these sources, so it never has to know — and cannot write back to the two
-   * that are domain rows.
-   *
-   * The current role is read from the holder's live employment, not from the
-   * onboarding answer that seeded it. Those two diverge the moment somebody
-   * edits their employment below, and the record is the truth; a stored
-   * wizard answer is only what they typed once. */
-  const currentPeriod = experience.find((e) => e.endedOn === null) ?? experience[0] ?? null;
-  const basicsAnswers: Record<string, string> = {
-    "identity.displayName": basics?.displayName ?? "",
-    "identity.headline": basics?.headline ?? "",
-    "profession.profession": basics?.professionSlug ?? "",
-    // Confirmed only. An unconfirmed legacy 'SE' is not an answer the holder
-    // gave, so the question reads as unanswered — exactly as it does
-    // everywhere else in the Passport.
-    "jurisdiction.jurisdiction": workCountry?.confirmed
-      ? (workCountry.subJurisdictionCode ?? workCountry.jurisdictionCode ?? "")
-      : "",
-    "currentRole.employer": currentPeriod?.employerName ?? "",
-    "currentRole.role": currentPeriod?.roleTitle ?? "",
-    "currentRole.startedOn": currentPeriod?.startedOn ?? "",
-    "declaration.declared": basics?.declaredAccurateAt ? "true" : "",
-  };
-  // The stored profession is a slug ("vaktare"), which is a database
-  // identifier and not something a person reads. The card shows it, does not
-  // edit it, and would otherwise render the raw slug — so the catalogue's own
-  // title is resolved for display only. Completeness is still computed from
-  // `basicsAnswers`, never from this.
-  const professionTitle = professionOptions.find((p) => p.slug === basics?.professionSlug) ?? null;
-  const basicsDisplay: Record<string, string> = {
-    "profession.profession": professionTitle
-      ? lang === "sv"
-        ? professionTitle.title_sv
-        : professionTitle.title_en
-      : "",
-    // "AE-DU" is a code, not something a person reads. The holder's own
-    // location is formatted with the sub-jurisdiction intact, because
-    // flattening Dubai into "UAE" makes the country-wide claim.
-    "jurisdiction.jurisdiction": workCountry?.confirmed
-      ? formatWorkLocation(workCountry.jurisdictionCode, workCountry.subJurisdictionCode, lang)
-      : "",
-  };
-
   function focusById(id: string) {
     const el = document.getElementById(id);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -646,103 +565,103 @@ function PassportInformationRoute() {
   if (!loaded) return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
 
   const claimSection = (section: { kind: FreeClaimKind; titleKey: PassportCopyKey }) => {
-        const rows = freeClaims.filter((c) => c.claimType === section.kind);
-        const isEditingThis = editing?.kind === "claim" && editing.draft.claimType === section.kind;
-        return (
-          <SectionShell
-            key={section.kind}
-            // Its own anchor, so the section row can reach it. ADDITIVE:
-            // the #sp-credentials wrapper id stays exactly where it was,
-            // so the add-a-merit chooser and every #246 redirect still
-            // resolve to the same place they did before.
-            id={`sp-${section.kind}`}
-            icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
-            title={pt(section.titleKey)}
-          >
-            {rows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {rows.map((c) => (
-                  <li key={c.id} className="rounded-lg border border-border p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{c.title}</p>
-                        {c.issuerName ? (
-                          <p className="mt-0.5 text-sm text-muted-foreground">{c.issuerName}</p>
-                        ) : null}
-                        <span className="mt-1.5 flex flex-wrap items-center gap-2">
-                          <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
-                          <LifecycleChip state={c.lifecycleState as LifecycleState} />
-                        </span>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap gap-2">
+    const rows = freeClaims.filter((c) => c.claimType === section.kind);
+    const isEditingThis = editing?.kind === "claim" && editing.draft.claimType === section.kind;
+    return (
+      <SectionShell
+        key={section.kind}
+        // Its own anchor, so the section row can reach it. ADDITIVE:
+        // the #sp-credentials wrapper id stays exactly where it was,
+        // so the add-a-merit chooser and every #246 redirect still
+        // resolve to the same place they did before.
+        id={`sp-${section.kind}`}
+        icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
+        title={pt(section.titleKey)}
+      >
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {rows.map((c) => (
+              <li key={c.id} className="rounded-lg border border-border p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{c.title}</p>
+                    {c.issuerName ? (
+                      <p className="mt-0.5 text-sm text-muted-foreground">{c.issuerName}</p>
+                    ) : null}
+                    <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
+                      <LifecycleChip state={c.lifecycleState as LifecycleState} />
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEntry("claim", c.id)}
+                      className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {pt("entry.documentAndVerify")}
+                    </button>
+                    {c.editable ? (
+                      <>
                         <button
                           type="button"
-                          onClick={() => openEntry("claim", c.id)}
+                          onClick={() => setEditing({ kind: "claim", draft: claimToDraft(c) })}
                           className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
-                          {pt("entry.documentAndVerify")}
+                          {pt("entry.edit")}
                         </button>
-                        {c.editable ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setEditing({ kind: "claim", draft: claimToDraft(c) })}
-                              className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                              {pt("entry.edit")}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => void remove("claim", c.id)}
-                              className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                              {pt("entry.remove")}
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void remove("claim", c.id)}
+                          className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          {pt("entry.remove")}
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
-            {isEditingThis ? (
-              <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
-                <ClaimEntryForm
-                  draft={editing.draft}
-                  onChange={(d) => setEditing({ kind: "claim", draft: d })}
-                  errors={claimErrors}
-                  busy={busy}
-                  onSave={() => void commitClaim(editing.draft)}
-                  onCancel={() => {
-                    setEditing(null);
-                    setClaimErrors({});
-                  }}
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setClaimErrors({});
-                  // No country is seeded. This form shows no country field,
-                  // and where somebody WORKS is not the jurisdiction of their
-                  // education, course or certificate.
-                  setEditing({ kind: "claim", draft: emptyClaimDraft(section.kind) });
-                }}
-                className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <Plus aria-hidden="true" className="h-4 w-4" />
-                {pt("entry.add")}
-              </button>
-            )}
-          </SectionShell>
-        );
-      };
+        {isEditingThis ? (
+          <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
+            <ClaimEntryForm
+              draft={editing.draft}
+              onChange={(d) => setEditing({ kind: "claim", draft: d })}
+              errors={claimErrors}
+              busy={busy}
+              onSave={() => void commitClaim(editing.draft)}
+              onCancel={() => {
+                setEditing(null);
+                setClaimErrors({});
+              }}
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setClaimErrors({});
+              // No country is seeded. This form shows no country field,
+              // and where somebody WORKS is not the jurisdiction of their
+              // education, course or certificate.
+              setEditing({ kind: "claim", draft: emptyClaimDraft(section.kind) });
+            }}
+            className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            {pt("entry.add")}
+          </button>
+        )}
+      </SectionShell>
+    );
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
@@ -784,22 +703,30 @@ function PassportInformationRoute() {
           it before the profile resolves would leave every field empty and the
           count reading "1 av 6" for a holder who had answered five. The
           entries below load on their own clock and are unaffected. */}
-      {basics ? (
-        <ProfileBasicsCard
-          answers={basicsAnswers}
-          displayAnswers={basicsDisplay}
-          declaredAccurateAt={basics?.declaredAccurateAt ?? null}
-          onSave={commitBasics}
-          // The two answers that ARE domain rows are edited by the controls that
-          // own them, further down this same page. One fact, one writer.
-          // Current profession is NOT edited here. Its canonical home is the
-          // Professional Profile on /my-career, and the Passport mirrors it
-          // rather than keeping a second, independently written copy.
-          onEditProfession={() => void navigate({ to: CAREER_PROFILE_ROUTE })}
-          onEditWorkCountry={() => focusById("sp-work-country")}
-          onEditCurrentRole={() => focusById("sp-employment")}
-        />
-      ) : null}
+      {/* ── BASICS ARE EDITED ON THE PROFILE (owner, 2026-09-14) ────
+          Display name, headline and the accuracy declaration are not
+          security evidence, and correcting them should never have
+          required opening the Security Passport. The card moved to
+          /my-career/profile with its reads, its writer and its rules
+          intact. This page keeps what it owns. */}
+      {/* The anchor STAYS. #sp-profile-basics is linked from elsewhere and
+          from PR #246's retired-anchor redirects; a moved editor must not
+          turn a live deep link into a landing on nothing. What the reader
+          finds here is a pointer to where the editing now happens. */}
+      <p
+        id="sp-profile-basics"
+        tabIndex={-1}
+        className="scroll-mt-24 text-sm leading-relaxed text-muted-foreground"
+      >
+        <Link
+          to="/my-career/profile"
+          hash="profile-basics"
+          data-basics-authoring-link
+          className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {pt("basics.title")}
+        </Link>
+      </p>
 
       {/* ── 2. WORK COUNTRY AND AUTHORISATIONS ────────────────────────── */}
       <div className="space-y-5">
@@ -818,16 +745,76 @@ function PassportInformationRoute() {
         {/* ── Where the holder works ────────────────────────────────────── */}
         {/* Every credential below is read in the context of a country, and this
           is the one control that sets it. */}
+        {/* Where a person works is a profile answer, not a credential. The
+            control moved to the profile; this section and its
+            #sp-work-country anchor stay, because the catalogue below is
+            decided by that answer and deep links land here. */}
         {workCountry ? (
-          <WorkCountryCard
-            jurisdictionCode={workCountry.jurisdictionCode}
-            subJurisdictionCode={workCountry.subJurisdictionCode}
-            confirmed={workCountry.confirmed}
-            onSave={async (value) => {
-              await saveWorkCountry({ data: { workCountry: value } });
-              await refreshWorkCountry();
-            }}
-          />
+          <div
+            id="sp-work-country"
+            tabIndex={-1}
+            data-saved-work-country={
+              workCountry.confirmed ? (workCountry.jurisdictionCode ?? "") : ""
+            }
+            className="scroll-mt-24 text-sm leading-relaxed text-muted-foreground"
+          >
+            {/* READ-ONLY. The saved answer is stated here and edited in one
+                place, on the profile. */}
+            <p>
+              {workCountry.confirmed
+                ? formatWorkLocation(
+                    workCountry.jurisdictionCode,
+                    workCountry.subJurisdictionCode,
+                    lang,
+                  )
+                : pt("basics.workCountryUnset")}{" "}
+              <Link
+                to="/my-career/profile"
+                hash="profile-work-country"
+                data-work-country-authoring-link
+                className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {pt("basics.editWorkCountry")}
+              </Link>
+            </p>
+
+            {/* ── BROWSING FILTER, NOT AN ANSWER ────────────────────────
+                Changes which market's catalogue is shown below and nothing
+                else: local state, no write, discarded on leaving. It opens
+                on the holder's own market every time, so a browse is never
+                mistaken for what they told us. */}
+            {selectableMarkets.length > 0 ? (
+              <label className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {pt("basics.browseMarketLabel")}
+                </span>
+                <select
+                  data-market-filter
+                  className="inline-flex min-h-11 rounded-md border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  value={
+                    browseMarket
+                      ? `${browseMarket.jurisdictionCode}|${browseMarket.subJurisdictionCode ?? ""}`
+                      : `${workCountry.jurisdictionCode ?? ""}|${workCountry.subJurisdictionCode ?? ""}`
+                  }
+                  onChange={(e) => {
+                    const [j, sub] = e.target.value.split("|");
+                    setBrowseMarket(
+                      j ? { jurisdictionCode: j, subJurisdictionCode: sub || null } : null,
+                    );
+                  }}
+                >
+                  {selectableMarkets.map((m) => (
+                    <option
+                      key={m.marketPackCode}
+                      value={`${m.jurisdictionCode}|${m.subJurisdictionCode ?? ""}`}
+                    >
+                      {lang === "sv" ? m.nameSv : m.nameEn}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
         ) : null}
 
         {/* ── The selected market, and only the selected market ────────── */}
@@ -958,27 +945,6 @@ function PassportInformationRoute() {
                     >
                       {pt("entry.documentAndVerify")}
                     </button>
-                    {e.editable ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditing({ kind: "experience", draft: experienceToDraft(e) })
-                          }
-                          className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                          {pt("entry.edit")}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void remove("experience", e.id)}
-                          className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-3 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                          {pt("entry.remove")}
-                        </button>
-                      </>
-                    ) : null}
                   </div>
                 </div>
               </li>
@@ -986,42 +952,29 @@ function PassportInformationRoute() {
           </ul>
         )}
 
-        {editing?.kind === "experience" ? (
-          <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
-            <ExperienceForm
-              draft={editing.draft}
-              onChange={(d) => setEditing({ kind: "experience", draft: d })}
-              errors={expErrors}
-              busy={busy}
-              onSave={() => void commitExperience(editing.draft)}
-              onCancel={() => {
-                setEditing(null);
-                setExpErrors({});
-              }}
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setExpErrors({});
-              // Seeded from the holder's own CONFIRMED work country, and from nothing
-              // else. An unconfirmed legacy 'SE' is not an answer they gave, so
-              // it must not become the country on a new employment either --
-              // `workCountry.confirmed` is what separates the two.
-              setEditing({
-                kind: "experience",
-                draft: emptyExperienceDraft(
-                  workCountry?.confirmed ? workCountry.jurisdictionCode : null,
-                ),
-              });
-            }}
-            className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        {/* ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──
+            Adding, editing and removing a period is now done on the
+            canonical profile workspace. What stays here is what this
+            section is for and what the owner kept explicitly: the
+            periods themselves, their assertion level and lifecycle,
+            and "Underlag och kontroll" — documenting, source
+            confirmation, verification requests and reviewer decisions,
+            against these same rows.
+
+            The section, its id and its deep links are untouched:
+            `#sp-employment` is still a real section, still linked from
+            elsewhere, and still where PR #246's retired-anchor
+            redirects land. */}
+        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+          <Link
+            to="/my-career/profile"
+            hash="profile-employment"
+            data-employment-authoring-link
+            className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <Plus aria-hidden="true" className="h-4 w-4" />
             {pt("info.addEmployment")}
-          </button>
-        )}
+          </Link>
+        </p>
       </SectionShell>
 
       {/* ── SECTION ROW (image 2) ────────────────────────────────────────

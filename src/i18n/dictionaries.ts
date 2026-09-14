@@ -8,6 +8,7 @@ export const dictionaries = {
     // navigation rather than a link buried in a section. It is a product
     // name and is therefore the same word in both languages.
     "nav.careerDiscovery": "Career Discovery",
+    "nav.forYou": "För dig",
     "nav.career_center": "Karriärvägar",
     "nav.jobs": "Jobb",
     "nav.employers": "Arbetsgivare",
@@ -6952,11 +6953,12 @@ export const dictionaries = {
     "nav.careers": "Security Career Center",
     "nav.passportPublic": "Security Passport",
     "nav.careerDiscovery": "Career Discovery",
+    "nav.forYou": "For you",
     "nav.career_center": "Career paths",
     "nav.jobs": "Jobs",
     "nav.employers": "Employers",
     "nav.assessment": "Assessments",
-    "nav.about": "About",
+    "nav.about": "About us",
     "nav.contact": "Contact",
     "nav.signin": "Sign in",
     "nav.employerLogin": "Employer login",
