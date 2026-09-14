@@ -426,10 +426,16 @@ check(
     "and no longer holds their write paths",
   );
   // The deep links the move could have killed.
+  // RENDERED, not merely referenced. This checked for the bare string and
+  // passed while #sp-work-country was dead: its id= lived inside
+  // WorkCountryCard, so removing that card took the anchor with it while
+  // the route still mentioned the name in a comment and a getElementById
+  // call. The browser suite caught what this did not.
   for (const anchorId of ["sp-profile-basics", "sp-work-country", "sp-employment"]) {
     check(
-      infoRaw.includes(`"${anchorId}"`),
-      `#${anchorId} is still a real anchor on the Passport — a moved editor must not kill a live deep link`,
+      new RegExp(`id=\\{?"${anchorId}"`).test(infoRaw) ||
+        new RegExp("id=\\{`" + anchorId + "`\\}").test(infoRaw),
+      `#${anchorId} must be RENDERED on the Passport — a moved editor must not kill a live deep link`,
     );
   }
   check(

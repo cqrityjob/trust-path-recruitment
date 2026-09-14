@@ -723,7 +723,11 @@ function PassportInformationRoute() {
             #sp-work-country anchor stay, because the catalogue below is
             decided by that answer and deep links land here. */}
         {workCountry ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p
+            id="sp-work-country"
+            tabIndex={-1}
+            className="scroll-mt-24 text-sm leading-relaxed text-muted-foreground"
+          >
             <Link
               to="/my-career/profile"
               hash="profile-work-country"
