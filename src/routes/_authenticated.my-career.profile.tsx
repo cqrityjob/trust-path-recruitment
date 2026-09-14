@@ -58,6 +58,7 @@ import {
 import { SECTION_DESTINATIONS } from "@/lib/professional-identity/profile-destinations";
 import { GeneralProfileClaims } from "@/components/professional-identity/GeneralProfileClaims";
 import { EmploymentHistoryEditor } from "@/components/professional-identity/EmploymentHistoryEditor";
+import { ProfileBasicsSection } from "@/components/professional-identity/ProfileBasicsSection";
 import {
   CREDENTIAL_CLAIM_TYPES,
   EDUCATION_CLAIM_TYPES,
@@ -435,7 +436,16 @@ function ProfilePage() {
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 {L(COPY.generalSectionLead, l)}
               </p>
+              {/* ── BASIC INFORMATION AND WORK COUNTRY (owner, 2026-09-14) ─
+                  Moved here from /passport/information. Neither is security
+                  evidence, and editing them should never have required
+                  opening the Security Passport. Same cards, same writers,
+                  same rows. */}
               <div className="mt-5">
+                <ProfileBasicsSection />
+              </div>
+
+              <div className="mt-8 border-t border-border pt-8">
                 <GeneralProfileClaims />
               </div>
 

@@ -32,7 +32,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
 import {
   PassportSectionNav,
   type PassportSectionLink,
@@ -48,15 +47,7 @@ import {
   currentMarket,
   otherMarkets,
 } from "@/lib/security-passport/market-profiles";
-import {
-  getMyPassport,
-  savePassportBasics,
-  setWorkCountry,
-} from "@/lib/security-passport/passport.functions";
-import {
-  ProfileBasicsCard,
-  type ProfileBasicsPatch,
-} from "@/components/security-passport/ProfileBasicsCard";
+import { getMyPassport } from "@/lib/security-passport/passport.functions";
 import {
   getRegulatedCredentialAvailability,
   type RegulatedCredentialAvailability,
@@ -202,7 +193,6 @@ function PassportInformationRoute() {
   // straight on /passport/information still sees, and can correct, the country
   // their whole Passport is spoken in.
   const loadProfile = useServerFn(getMyPassport);
-  const saveWorkCountry = useServerFn(setWorkCountry);
   // The governed answer to "what may this holder register here". NOT a literal
   // credential list: see MarketCredentialSection for why the literal was a
   // regulatory claim rather than a convenience.
@@ -241,7 +231,6 @@ function PassportInformationRoute() {
     professionSlug: string;
     declaredAccurateAt: string | null;
   } | null>(null);
-  const saveBasics = useServerFn(savePassportBasics);
   // Display titles for the profession the basics card SHOWS and does not
   // edit. Best-effort: a failure degrades one line to the stored slug, never
   // the page.
@@ -540,63 +529,6 @@ function PassportInformationRoute() {
     void navigate({ to: "/passport/entry/$kind/$entryId", params: { kind, entryId: id } });
   }
 
-  async function commitBasics(patch: ProfileBasicsPatch) {
-    beginOperation();
-    await saveBasics({ data: patch });
-    // Read-back before the card reports success. "Sparat" is a claim about
-    // persistence and is not made until the server has handed the row back —
-    // the same rule every other save on this page follows.
-    await refreshWorkCountry();
-    succeeded(pt("basics.savedNotice"));
-  }
-
-  /* ── THE SIX ANSWERS, RESOLVED FROM WHERE EACH ONE ACTUALLY LIVES ────
-   *
-   * Two profile columns, one confirmed country, one real employment row and
-   * one timestamp. The card is given the finished answers rather than any of
-   * these sources, so it never has to know — and cannot write back to the two
-   * that are domain rows.
-   *
-   * The current role is read from the holder's live employment, not from the
-   * onboarding answer that seeded it. Those two diverge the moment somebody
-   * edits their employment below, and the record is the truth; a stored
-   * wizard answer is only what they typed once. */
-  const currentPeriod = experience.find((e) => e.endedOn === null) ?? experience[0] ?? null;
-  const basicsAnswers: Record<string, string> = {
-    "identity.displayName": basics?.displayName ?? "",
-    "identity.headline": basics?.headline ?? "",
-    "profession.profession": basics?.professionSlug ?? "",
-    // Confirmed only. An unconfirmed legacy 'SE' is not an answer the holder
-    // gave, so the question reads as unanswered — exactly as it does
-    // everywhere else in the Passport.
-    "jurisdiction.jurisdiction": workCountry?.confirmed
-      ? (workCountry.subJurisdictionCode ?? workCountry.jurisdictionCode ?? "")
-      : "",
-    "currentRole.employer": currentPeriod?.employerName ?? "",
-    "currentRole.role": currentPeriod?.roleTitle ?? "",
-    "currentRole.startedOn": currentPeriod?.startedOn ?? "",
-    "declaration.declared": basics?.declaredAccurateAt ? "true" : "",
-  };
-  // The stored profession is a slug ("vaktare"), which is a database
-  // identifier and not something a person reads. The card shows it, does not
-  // edit it, and would otherwise render the raw slug — so the catalogue's own
-  // title is resolved for display only. Completeness is still computed from
-  // `basicsAnswers`, never from this.
-  const professionTitle = professionOptions.find((p) => p.slug === basics?.professionSlug) ?? null;
-  const basicsDisplay: Record<string, string> = {
-    "profession.profession": professionTitle
-      ? lang === "sv"
-        ? professionTitle.title_sv
-        : professionTitle.title_en
-      : "",
-    // "AE-DU" is a code, not something a person reads. The holder's own
-    // location is formatted with the sub-jurisdiction intact, because
-    // flattening Dubai into "UAE" makes the country-wide claim.
-    "jurisdiction.jurisdiction": workCountry?.confirmed
-      ? formatWorkLocation(workCountry.jurisdictionCode, workCountry.subJurisdictionCode, lang)
-      : "",
-  };
-
   function focusById(id: string) {
     const el = document.getElementById(id);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -744,22 +676,30 @@ function PassportInformationRoute() {
           it before the profile resolves would leave every field empty and the
           count reading "1 av 6" for a holder who had answered five. The
           entries below load on their own clock and are unaffected. */}
-      {basics ? (
-        <ProfileBasicsCard
-          answers={basicsAnswers}
-          displayAnswers={basicsDisplay}
-          declaredAccurateAt={basics?.declaredAccurateAt ?? null}
-          onSave={commitBasics}
-          // The two answers that ARE domain rows are edited by the controls that
-          // own them, further down this same page. One fact, one writer.
-          // Current profession is NOT edited here. Its canonical home is the
-          // Professional Profile on /my-career, and the Passport mirrors it
-          // rather than keeping a second, independently written copy.
-          onEditProfession={() => void navigate({ to: CAREER_PROFILE_ROUTE })}
-          onEditWorkCountry={() => focusById("sp-work-country")}
-          onEditCurrentRole={() => focusById("sp-employment")}
-        />
-      ) : null}
+      {/* ── BASICS ARE EDITED ON THE PROFILE (owner, 2026-09-14) ────
+          Display name, headline and the accuracy declaration are not
+          security evidence, and correcting them should never have
+          required opening the Security Passport. The card moved to
+          /my-career/profile with its reads, its writer and its rules
+          intact. This page keeps what it owns. */}
+      {/* The anchor STAYS. #sp-profile-basics is linked from elsewhere and
+          from PR #246's retired-anchor redirects; a moved editor must not
+          turn a live deep link into a landing on nothing. What the reader
+          finds here is a pointer to where the editing now happens. */}
+      <p
+        id="sp-profile-basics"
+        tabIndex={-1}
+        className="scroll-mt-24 text-sm leading-relaxed text-muted-foreground"
+      >
+        <Link
+          to="/my-career/profile"
+          hash="profile-basics"
+          data-basics-authoring-link
+          className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {pt("basics.title")}
+        </Link>
+      </p>
 
       {/* ── 2. WORK COUNTRY AND AUTHORISATIONS ────────────────────────── */}
       <div className="space-y-5">
@@ -778,16 +718,21 @@ function PassportInformationRoute() {
         {/* ── Where the holder works ────────────────────────────────────── */}
         {/* Every credential below is read in the context of a country, and this
           is the one control that sets it. */}
+        {/* Where a person works is a profile answer, not a credential. The
+            control moved to the profile; this section and its
+            #sp-work-country anchor stay, because the catalogue below is
+            decided by that answer and deep links land here. */}
         {workCountry ? (
-          <WorkCountryCard
-            jurisdictionCode={workCountry.jurisdictionCode}
-            subJurisdictionCode={workCountry.subJurisdictionCode}
-            confirmed={workCountry.confirmed}
-            onSave={async (value) => {
-              await saveWorkCountry({ data: { workCountry: value } });
-              await refreshWorkCountry();
-            }}
-          />
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            <Link
+              to="/my-career/profile"
+              hash="profile-work-country"
+              data-work-country-authoring-link
+              className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {pt("basics.editWorkCountry")}
+            </Link>
+          </p>
         ) : null}
 
         {/* ── The selected market, and only the selected market ────────── */}

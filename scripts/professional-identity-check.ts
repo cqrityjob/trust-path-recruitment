@@ -1151,8 +1151,7 @@ console.log("\n4 · CV source bundle");
   );
   ck(
     "a CQrityjob document review presents as documented, not verified, live",
-    liveTrust.claims["c-review"] !== undefined &&
-      !presentsAsVerified(liveTrust.claims["c-review"]),
+    liveTrust.claims["c-review"] !== undefined && !presentsAsVerified(liveTrust.claims["c-review"]),
   );
 
   ck("the career insight is opt-in and absent by default", bundle.careerInsight === null);
@@ -3009,6 +3008,7 @@ console.log("\n12 · candidate dead ends");
     // correction, in its own extracted editor. Exactly the case the note
     // above describes: a real page component of the profile workspace.
     read("src/components/professional-identity/EmploymentHistoryEditor.tsx"),
+    read("src/components/professional-identity/ProfileBasicsSection.tsx"),
   ].join("\n");
   for (const section of COMPLETENESS_SECTION_ORDER) {
     const { href, owner } = SECTION_DESTINATIONS[section];

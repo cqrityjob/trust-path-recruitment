@@ -396,6 +396,51 @@ check(
     infoRaw.includes("profile-employment"),
     "and the Passport section links to the canonical editor",
   );
+
+  // ── BASICS AND WORK COUNTRY FOLLOWED THE SAME RULE ──────────────────
+  //
+  // Neither is security evidence. Their editors moved to the profile with
+  // the same treatment: the existing components, the existing writers, the
+  // same rows — and the Passport's anchors kept alive as pointers so no
+  // deep link lands on nothing.
+  const basicsSection = read("src/components/professional-identity/ProfileBasicsSection.tsx");
+  check(
+    profileRoute.includes("<ProfileBasicsSection"),
+    "basic information and work country are edited on /my-career/profile",
+  );
+  check(
+    basicsSection.includes("<ProfileBasicsCard") && basicsSection.includes("<WorkCountryCard"),
+    "and they mount the EXISTING cards rather than second implementations",
+  );
+  check(
+    basicsSection.includes("useServerFn(savePassportBasics)") &&
+      basicsSection.includes("useServerFn(setWorkCountry)"),
+    "through the canonical basics and work-country writers",
+  );
+  check(
+    !infoRaw.includes("<ProfileBasicsCard") && !infoRaw.includes("<WorkCountryCard"),
+    "the Passport mounts neither card — one editor, one place",
+  );
+  check(
+    !/useServerFn\(savePassportBasics\)|useServerFn\(setWorkCountry\)/.test(infoRaw),
+    "and no longer holds their write paths",
+  );
+  // The deep links the move could have killed.
+  for (const anchorId of ["sp-profile-basics", "sp-work-country", "sp-employment"]) {
+    check(
+      infoRaw.includes(`"${anchorId}"`),
+      `#${anchorId} is still a real anchor on the Passport — a moved editor must not kill a live deep link`,
+    );
+  }
+  check(
+    destinations.includes(
+      'identity: { owner: "profile", href: "/my-career/profile#profile-basics" }',
+    ) &&
+      destinations.includes(
+        'location: { owner: "profile", href: "/my-career/profile#profile-work-country" }',
+      ),
+    "and the destination map sends basics and work country to the profile",
+  );
 }
 for (const retired of ["sp-education", "sp-languages", "sp-skills"]) {
   check(

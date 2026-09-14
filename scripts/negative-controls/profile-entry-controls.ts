@@ -17,6 +17,7 @@ import { runControls, type Mutation } from "./runner";
 
 const HEADER = "src/components/professional-identity/CareerPageHeader.tsx";
 const EDITOR = "src/components/professional-identity/EmploymentHistoryEditor.tsx";
+const BASICS = "src/components/professional-identity/ProfileBasicsSection.tsx";
 const PROFILE = "src/routes/_authenticated.my-career.profile.tsx";
 const DESTINATIONS = "src/lib/professional-identity/profile-destinations.ts";
 const INFO = "src/routes/_authenticated.passport.information.tsx";
@@ -145,6 +146,59 @@ const MUTATIONS: readonly Mutation[] = [
     replace: '  employment: { owner: "passport", href: "/passport/information#sp-employment" },',
     guard: BOUNDARY,
     expect: "the employment destination is the profile workspace",
+  },
+
+  // ---- Basics and work country go back to the Passport ---------------------
+  {
+    id: "PE-NC-BASICS-BACK-IN-PASSPORT",
+    defect:
+      "the Passport mounts the profile-basics card again, so correcting a display name means opening the Security Passport",
+    file: INFO,
+    find: "      {/* The anchor STAYS.",
+    replace: "      <ProfileBasicsCard />\n      {/* The anchor STAYS.",
+    guard: BOUNDARY,
+    expect: "mounts neither card",
+  },
+  {
+    id: "PE-NC-WORK-COUNTRY-BACK-IN-PASSPORT",
+    defect: "the Passport mounts the work-country card again",
+    file: INFO,
+    find: '        {workCountry ? (\n          <p className="text-sm leading-relaxed text-muted-foreground">',
+    replace: "        {workCountry ? (\n          <WorkCountryCard />",
+    guard: BOUNDARY,
+    expect: "mounts neither card",
+  },
+  {
+    id: "PE-NC-BASICS-UNMOUNTED",
+    defect:
+      "the profile stops mounting the basics section, so the editors left the Passport and landed nowhere",
+    file: PROFILE,
+    find: "                <ProfileBasicsSection />",
+    replace: "",
+    guard: BOUNDARY,
+    expect: "edited on /my-career/profile",
+  },
+  {
+    id: "PE-NC-BASICS-SECOND-WRITER",
+    defect:
+      "the basics section stops using the canonical writer, which is the two-writer defect migration 20261007090000 removed",
+    file: BASICS,
+    find: "  const saveBasics = useServerFn(savePassportBasics);",
+    replace: "  const saveBasics = async (_: unknown) => undefined;",
+    guard: BOUNDARY,
+    expect: "canonical basics and work-country writers",
+  },
+
+  // ---- A moved editor kills a live deep link -------------------------------
+  {
+    id: "PE-NC-DEAD-DEEP-LINK",
+    defect:
+      "the #sp-profile-basics anchor is dropped when its editor moves, so every existing deep link and PR #246 redirect lands on nothing",
+    file: INFO,
+    find: '        id="sp-profile-basics"',
+    replace: '        id="sp-profile-basics-removed"',
+    guard: BOUNDARY,
+    expect: "is still a real anchor on the Passport",
   },
 ];
 

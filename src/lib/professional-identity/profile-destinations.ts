@@ -64,10 +64,14 @@ export interface SectionDestination {
  */
 export const SECTION_DESTINATIONS: Readonly<Record<CompletenessSection, SectionDestination>> = {
   situation: { owner: "profile", href: "/my-career/profile?edit=profession#career-profile" },
-  identity: { owner: "passport", href: "/passport/information#sp-profile-basics" },
+  // Basic information is not security evidence. Its editor moved to the
+  // profile with the owner's 2026-09-14 correction; the row is unchanged.
+  identity: { owner: "profile", href: "/my-career/profile#profile-basics" },
   profession: { owner: "profile", href: "/my-career/profile?edit=profession#career-profile" },
   experience: { owner: "profile", href: "/my-career/profile?edit=profession#career-profile" },
-  location: { owner: "passport", href: "/passport/information#sp-work-country" },
+  // Where a person works is a profile answer, not a credential. Same
+  // sp_passport_profiles row, same setWorkCountry writer, new editor home.
+  location: { owner: "profile", href: "/my-career/profile#profile-work-country" },
   // ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──────────
   //
   // This pointed at the Passport because the employment EDITOR lived

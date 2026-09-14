@@ -151,10 +151,7 @@ export const PASSPORT = {
     "Innehållet kunde inte läsas just nu. Ingenting har tagits bort.",
     "The contents could not be read just now. Nothing has been removed.",
   ),
-  contentsMore: cp(
-    c("och 1 till", "and 1 more"),
-    c("och {0} till", "and {0} more"),
-  ),
+  contentsMore: cp(c("och 1 till", "and 1 more"), c("och {0} till", "and {0} more")),
   /** /passport/credentials/new creates a CREDENTIAL. The label says so. */
   addCredential: c("Lägg till ett intyg eller en utbildning", "Add a certificate or qualification"),
   clarification: cp(
