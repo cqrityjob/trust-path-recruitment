@@ -765,7 +765,11 @@ group("T10 · the reviewer count is not candidate navigation");
       <CandidateAppNav variant={variant} activeKey="overview" badgeFor={() => 34} />,
     );
     ck(`${variant}: no reviewer link`, !html.includes('href="/reviews"'));
-    ck(`${variant}: the five candidate destinations`, count(html, "<a ") === 5);
+    // Six since images 1 and 2 put the CV in the navigation. The rule
+    // underneath is unchanged and is what T10 is actually about: the
+    // reviewer count rides on a nav item's badge without adding a link, so
+    // the destination count must not move when a badge is present.
+    ck(`${variant}: the six candidate destinations`, count(html, "<a ") === 6);
     ck(`${variant}: "Tester & utveckling" is the fifth`, html.includes("Tester &amp; utveckling"));
   }
   ck(
