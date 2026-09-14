@@ -279,18 +279,42 @@ test.describe("the public homepage", () => {
     }
   });
 
-  test("the homepage keeps public navigation neutral until a section is selected", async ({
-    page,
-  }) => {
+  // REPLACES "the homepage keeps public navigation neutral until a section
+  // is selected". That test drove the header's Security Passport item,
+  // which pointed at `/#passport` and which the owner has removed from the
+  // public bar. Neutrality was never the rule worth protecting — correct
+  // active state was, and the old nav could only express it by carrying an
+  // item that was current for no page.
+  //
+  // "För dig" points at `/` and is matched exactly, so on the homepage it
+  // IS current, and that is right. What must hold is that exactly one item
+  // is current, that it is the right one, and that it follows navigation.
+  test("exactly one public nav item is current, and it follows the route", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.reload({ waitUntil: "networkidle" });
 
-    const passport = page.locator('header nav[aria-label="Primary"] a[href="/#passport"]:visible');
-    await expect(passport).not.toHaveAttribute("aria-current", "page");
+    const items = page.locator('header nav[aria-label="Primary"] a:visible');
+    const currentLabels = async () =>
+      (
+        await items.evaluateAll((els) =>
+          els
+            .filter((e) => e.getAttribute("aria-current") === "page")
+            .map((e) => e.textContent ?? ""),
+        )
+      ).map((x) => x.trim());
 
-    await passport.click();
-    await expect(page).toHaveURL(/\/#passport$/);
-    await expect(passport).toHaveAttribute("aria-current", "page");
+    expect(await currentLabels(), "on / the umbrella item is the current one").toEqual(["För dig"]);
+
+    await items.filter({ hasText: "Jobb" }).first().click();
+    await page.waitForURL("**/jobs", { timeout: 15_000 });
+    expect(await currentLabels(), "the marker follows the route").toEqual(["Jobb"]);
+
+    // And "För dig" is matched EXACTLY: a prefix match would leave it
+    // current on /jobs too, which is the defect `exact` exists to stop.
+    await expect(items.filter({ hasText: "För dig" }).first()).not.toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   // H6 ──────────────────────────────────────────────────────────────────
@@ -548,11 +572,16 @@ test.describe("the public homepage", () => {
     ["en", ["For you", "Jobs", "Employers", "Career paths", "About us"]],
   ] as const) {
     test(`${lang}: the public bar is exactly the owner's five, in order`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
       await setLang(page, lang);
       await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-      const labels = (await page.locator('header nav[aria-label="Primary"] a').allInnerTexts()).map(
-        (x) => x.trim(),
-      );
+      // `:visible`, because the desktop bar and the compact menu BOTH carry
+      // aria-label="Primary" and both are in the DOM at every width — only
+      // one of them is on screen. Without this the labels come back twice,
+      // which is exactly what this assertion caught the first time it ran.
+      const labels = (
+        await page.locator('header nav[aria-label="Primary"] a:visible').allInnerTexts()
+      ).map((x) => x.trim());
       expect(labels, `${lang} public nav`).toEqual([...expected]);
     });
   }
