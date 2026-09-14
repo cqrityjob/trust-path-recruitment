@@ -194,7 +194,7 @@ function AcademyHome() {
           <Link
             to="/academy/learning/$formId"
             params={{ formId: learningForm.data.formId }}
-            className="inline-flex h-11 items-center rounded-[10px] border border-border bg-card px-5 text-sm font-semibold text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-11 items-center rounded-md border border-border bg-card px-5 text-sm font-semibold text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {t("academy.home.practise")}
           </Link>
@@ -222,7 +222,7 @@ function AcademyHome() {
         <Link
           to={CANONICAL_ASSESSMENT_PATH}
           data-cta="academy-career-discovery"
-          className="inline-flex h-11 items-center rounded-[10px] border border-border bg-card px-5 text-sm font-semibold text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="inline-flex h-11 items-center rounded-md border border-border bg-card px-5 text-sm font-semibold text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {t("academy.home.careerDiscovery.cta")}
         </Link>
@@ -242,7 +242,7 @@ function SectionHeading({
 }) {
   return (
     <div className="mb-3">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+      <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
         <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
         {title}
       </h2>
@@ -261,7 +261,7 @@ function SectionHeading({
 function PurposePanel({ purpose, recruitment }: { purpose: string | null; recruitment: boolean }) {
   const { t } = useT();
   return (
-    <div className="mt-3 rounded-[10px] bg-[color:var(--surface-subtle)] p-3">
+    <div className="mt-3 rounded-md bg-[color:var(--surface-subtle)] p-3">
       <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
         <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
         {t("academy.home.purpose")}
@@ -329,7 +329,7 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
           <Link
             to="/academy/$attemptId"
             params={{ attemptId: row.workId }}
-            className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-11 items-center rounded-md bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {row.progressDone > 0 ? t("academy.resume") : t("academy.start")}
           </Link>
@@ -338,7 +338,7 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
           <Link
             to="/academy/report/$attemptId"
             params={{ attemptId: row.workId }}
-            className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-11 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {t("academy.home.openReport")}
           </Link>
@@ -349,7 +349,7 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
             order, including the ones that are not theirs to do. No timeframe is
             promised, because none exists. */}
         {done && !row.releasedAt && (
-          <div className="w-full rounded-[10px] bg-[color:var(--surface-subtle)] p-3">
+          <div className="w-full rounded-md bg-[color:var(--surface-subtle)] p-3">
             <p className="text-[13px] font-medium text-foreground">
               {t("academy.home.awaitingRelease")}
             </p>
@@ -412,7 +412,7 @@ function TrainingCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
         <Link
           to="/academy/training/$assignmentId"
           params={{ assignmentId: row.workId }}
-          className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="inline-flex h-11 items-center rounded-md bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {/* "Continue" keys off the assignment having been STARTED, not off a
               module having been finished. progressDone counts completed
