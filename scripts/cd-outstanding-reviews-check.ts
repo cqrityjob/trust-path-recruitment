@@ -66,7 +66,18 @@ const files: string[] = readdirSync(MIGRATIONS)
 
 interface Declaration {
   file: string;
+  pos: number;
   statement: string;
+}
+
+interface OptionEvent {
+  file: string;
+  pos: number;
+  /** A CREATE [OR REPLACE] VIEW RESETS every reloption; an ALTER merges. */
+  resets: boolean;
+  invoker: boolean | null;
+  barrier: boolean | null;
+  raw: string;
 }
 
 /**
@@ -74,8 +85,8 @@ interface Declaration {
  * the terminating semicolon that is not inside a string literal. The bodies
  * here contain no dollar quotes, so a literal-aware scan is enough.
  */
-function declarationsOf(sql: string, view: string): string[] {
-  const out: string[] = [];
+function declarationsOf(sql: string, view: string): Declaration[] {
+  const out: Declaration[] = [];
   const re = new RegExp(`CREATE\\s+(?:OR\\s+REPLACE\\s+)?VIEW\\s+(?:public\\.)?${view}\\b`, "gi");
   let m: RegExpExecArray | null;
   while ((m = re.exec(sql)) !== null) {
@@ -94,83 +105,140 @@ function declarationsOf(sql: string, view: string): string[] {
       }
       i += 1;
     }
-    out.push(sql.slice(m.index, i + 1));
+    out.push({ file: "", pos: m.index, statement: sql.slice(m.index, i + 1) });
   }
   return out;
 }
 
-function lastDeclaration(view: string): Declaration | null {
-  let found: Declaration | null = null;
-  for (const file of files) {
-    const sql = readFileSync(join(MIGRATIONS, file), "utf8");
-    for (const statement of declarationsOf(sql, view)) {
-      found = { file, statement };
-    }
-  }
-  return found;
-}
-
-// Also track the last ALTER VIEW ... SET (...) so a contradictory later ALTER
-// cannot pass unnoticed.
-function lastAlterOptions(view: string): { file: string; options: string } | null {
-  let found: { file: string; options: string } | null = null;
-  const re = new RegExp(`ALTER\\s+VIEW\\s+(?:public\\.)?${view}\\s+SET\\s*\\(([^)]*)\\)`, "gi");
-  for (const file of files) {
-    const sql = readFileSync(join(MIGRATIONS, file), "utf8");
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(sql)) !== null) {
-      found = { file, options: m[1] };
-    }
-  }
-  return found;
-}
-
 const norm = (s: string) => s.replace(/\s+/g, "").toLowerCase();
+
+/** Reads one reloption out of a WITH/SET clause; null when it is not mentioned. */
+function optionIn(clause: string, name: string): boolean | null {
+  const m = new RegExp(`${name}\\s*=\\s*(true|false)`, "i").exec(clause);
+  return m === null ? null : m[1].toLowerCase() === "true";
+}
+
+/**
+ * Every statement that can change this view's reloptions, in replay order:
+ * declarations (which RESET them -- the whole cause of this finding) and
+ * ALTER VIEW ... SET (...) (which merge only the options they mention).
+ *
+ * Ordered by (file, character position) so that an ALTER LATER IN THE SAME FILE
+ * as the declaration is still seen as later. An earlier version of this guard
+ * compared filenames only, and the negative control CDO-NC-ALTERED-BACK-LATER
+ * proved that assertion dead.
+ */
+function optionEvents(view: string): OptionEvent[] {
+  const events: OptionEvent[] = [];
+  const alterRe = new RegExp(`ALTER\\s+VIEW\\s+(?:public\\.)?${view}\\s+SET\\s*\\(([^)]*)\\)`, "gi");
+
+  for (const file of files) {
+    const sql = readFileSync(join(MIGRATIONS, file), "utf8");
+
+    for (const decl of declarationsOf(sql, view)) {
+      const withClause = /^[\s\S]*?\bAS\b/i.exec(decl.statement)?.[0] ?? "";
+      events.push({
+        file,
+        pos: decl.pos,
+        resets: true,
+        invoker: optionIn(withClause, "security_invoker") ?? false,
+        barrier: optionIn(withClause, "security_barrier") ?? false,
+        raw: decl.statement,
+      });
+    }
+
+    let m: RegExpExecArray | null;
+    while ((m = alterRe.exec(sql)) !== null) {
+      // An ALTER that mentions neither option changes nothing we track.
+      const invoker = optionIn(m[1], "security_invoker");
+      const barrier = optionIn(m[1], "security_barrier");
+      if (invoker === null && barrier === null) continue;
+      events.push({ file, pos: m.index, resets: false, invoker, barrier, raw: m[0] });
+    }
+  }
+
+  return events.sort((a, b) =>
+    a.file === b.file ? a.pos - b.pos : files.indexOf(a.file) - files.indexOf(b.file),
+  );
+}
+
+/** Folds the events into the reloptions the database ends up with. */
+function finalOptions(view: string): {
+  invoker: boolean;
+  barrier: boolean;
+  lastDeclaration: OptionEvent | null;
+  undoneBy: OptionEvent | null;
+} {
+  let invoker = false;
+  let barrier = false;
+  let lastDeclaration: OptionEvent | null = null;
+  let undoneBy: OptionEvent | null = null;
+
+  for (const e of optionEvents(view)) {
+    if (e.resets) {
+      invoker = e.invoker === true;
+      barrier = e.barrier === true;
+      lastDeclaration = e;
+      undoneBy = null;
+      continue;
+    }
+    if (e.invoker !== null) {
+      // An ALTER that turns invoker OFF after a declaration that had it on is
+      // the specific regression worth naming.
+      if (invoker && !e.invoker) undoneBy = e;
+      invoker = e.invoker;
+    }
+    if (e.barrier !== null) barrier = e.barrier;
+  }
+
+  return { invoker, barrier, lastDeclaration, undoneBy };
+}
 
 // ---------------------------------------------------------------------------
 // 1. cd_outstanding_reviews must end operator-only.
 // ---------------------------------------------------------------------------
 
-const decl = lastDeclaration(VIEW);
+const outstanding = finalOptions(VIEW);
+const decl = outstanding.lastDeclaration;
 
 if (decl === null) {
-  fail("CDO-GUARD-VIEW-MISSING", `no CREATE VIEW for public.${VIEW} survives in the migration history`);
+  fail(
+    "CDO-GUARD-VIEW-MISSING",
+    `no CREATE VIEW for public.${VIEW} survives in the migration history`,
+  );
 } else {
-  const flat = norm(decl.statement);
-
-  if (!flat.includes("security_invoker=true")) {
+  if (outstanding.undoneBy !== null) {
+    fail(
+      "CDO-GUARD-ALTERED-BACK",
+      `${outstanding.undoneBy.file} runs "${outstanding.undoneBy.raw.replace(/\s+/g, " ")}" AFTER the ` +
+        `operator-only declaration of public.${VIEW}, turning it back into a definer view.`,
+    );
+  } else if (!outstanding.invoker) {
     fail(
       "CDO-GUARD-NOT-INVOKER",
-      `the last declaration of public.${VIEW} (${decl.file}) does not set security_invoker = true in the same statement. ` +
-        `A bare CREATE OR REPLACE VIEW RESETS reloptions -- that is how this finding arrived in 20260731100000.`,
+      `public.${VIEW} ends as security_invoker = false. Its last declaration (${decl.file}) must set ` +
+        `security_invoker = true IN THE SAME STATEMENT: a bare CREATE OR REPLACE VIEW RESETS reloptions -- ` +
+        `that is how this finding arrived in 20260731100000.`,
     );
   }
 
-  if (!flat.includes("security_barrier=true")) {
+  if (!outstanding.barrier) {
     fail(
       "CDO-GUARD-NOT-BARRIER",
-      `the last declaration of public.${VIEW} (${decl.file}) does not set security_barrier = true. ` +
-        `The view now carries a qual, so a caller-supplied function in an outer WHERE could be evaluated before it.`,
+      `public.${VIEW} ends as security_barrier = false (last declared in ${decl.file}). ` +
+        `The view now carries a qual, so a caller-supplied function in an outer WHERE could be ` +
+        `evaluated against rows before the operator predicate filters them.`,
     );
   }
 
-  if (!/cd_is_internal_tester\s*\(\s*auth\.uid\(\)\s*\)/i.test(decl.statement)) {
+  if (!/cd_is_internal_tester\s*\(\s*auth\.uid\(\)\s*\)/i.test(decl.raw)) {
     fail(
       "CDO-GUARD-NO-OPERATOR-PREDICATE",
-      `the last declaration of public.${VIEW} (${decl.file}) has no cd_is_internal_tester(auth.uid()) gate in its body. ` +
-        `security_invoker alone is NOT sufficient: the permissive "live readable" policy on cd_definition_versions ` +
-        `is OR-ed in and keeps every pilot/active instrument's gates readable by every signed-in user.`,
+      `the last declaration of public.${VIEW} (${decl.file}) has no cd_is_internal_tester(auth.uid()) gate ` +
+        `in its body. security_invoker alone is NOT sufficient: the permissive "live readable" policy on ` +
+        `cd_definition_versions is OR-ed in and keeps every pilot/active instrument's gates readable by ` +
+        `every signed-in user.`,
     );
-  }
-
-  const alter = lastAlterOptions(VIEW);
-  if (alter !== null && files.indexOf(alter.file) > files.indexOf(decl.file)) {
-    if (norm(alter.options).includes("security_invoker=false")) {
-      fail(
-        "CDO-GUARD-ALTERED-BACK",
-        `${alter.file} runs ALTER VIEW public.${VIEW} SET (${alter.options}) AFTER the operator-only declaration, turning it back into a definer view.`,
-      );
-    }
   }
 }
 
@@ -178,20 +246,11 @@ if (decl === null) {
 // 2. The contrast case must be left alone.
 // ---------------------------------------------------------------------------
 
-const lineageAlter = lastAlterOptions(LINEAGE);
-const lineageDecl = lastDeclaration(LINEAGE);
-const lineageIsInvoker = (() => {
-  if (lineageAlter === null && lineageDecl === null) return null;
-  if (lineageAlter === null) return norm(lineageDecl!.statement).includes("security_invoker=true");
-  if (lineageDecl === null) return norm(lineageAlter.options).includes("security_invoker=true");
-  return files.indexOf(lineageAlter.file) >= files.indexOf(lineageDecl.file)
-    ? norm(lineageAlter.options).includes("security_invoker=true")
-    : norm(lineageDecl.statement).includes("security_invoker=true");
-})();
+const lineage = finalOptions(LINEAGE);
 
-if (lineageIsInvoker === null) {
+if (lineage.lastDeclaration === null) {
   fail("CDO-GUARD-LINEAGE-MISSING", `public.${LINEAGE} no longer appears in the migration history`);
-} else if (lineageIsInvoker) {
+} else if (lineage.invoker) {
   fail(
     "CDO-GUARD-LINEAGE-FLIPPED",
     `public.${LINEAGE} ends as security_invoker = true. Its definer semantics are a REVIEWED decision ` +
@@ -268,7 +327,7 @@ if (failures.length > 0) {
 
 console.log(
   `cd-outstanding-reviews-check: ${files.length} migrations scanned in filename order\n` +
-    `  public.${VIEW}: last declared in ${decl!.file}, security_invoker = true, ` +
+    `  public.${VIEW}: last declared in ${decl?.file ?? "(unknown)"}, security_invoker = true, ` +
     `security_barrier = true, gated on cd_is_internal_tester(auth.uid())\n` +
     `  public.${LINEAGE}: still deliberately security_invoker = false (untouched)\n\n` +
     `OK: outstanding review gates are operator-only, and the reviewed definer view was left alone.`,
