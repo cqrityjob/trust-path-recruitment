@@ -165,11 +165,16 @@ expect(
 );
 
 // -----------------------------------------------------------------------
-// 3b. The approved SIX public destinations, in order, from ONE array,
-//     rendered at BOTH viewports (2026-09-13).
+// 3b. The approved FIVE public destinations, in order, from ONE array,
+//     rendered at BOTH viewports (owner, 2026-09-14).
 //
-//     Security Passport · Career Discovery · Career Center · Jobs ·
-//     For Employers · About
+//     För dig · Jobb · Arbetsgivare · Karriärvägar · Om oss
+//
+//     This REPLACES the six-destination expectation rather than relaxing
+//     it: the list is still exact, still ordered, still label-checked and
+//     still required to come from one array rendered at both viewports.
+//     Security Passport and Career Discovery are asserted ABSENT below,
+//     which the old shape could not express.
 //
 //     One array is the load-bearing half. A link that exists at 1440 and
 //     not at 375 is the specific bug this shape makes impossible, and this
@@ -182,14 +187,7 @@ expect(
   const entries = [...nav.matchAll(/to:\s*(?:"([^"]+)"|(CANONICAL_ASSESSMENT_PATH))/g)].map(
     (m) => m[1] ?? "CANONICAL_ASSESSMENT_PATH",
   );
-  const EXPECTED = [
-    "/",
-    "CANONICAL_ASSESSMENT_PATH",
-    "/career-center",
-    "/jobs",
-    "/employers",
-    "/about",
-  ];
+  const EXPECTED = ["/", "/jobs", "/employers", "/career-center", "/about"];
   expect(
     JSON.stringify(entries) === JSON.stringify(EXPECTED),
     `the public nav must be exactly ${EXPECTED.join(" · ")} in that order (found ${entries.join(" · ")})`,
@@ -197,15 +195,8 @@ expect(
   const labels = [...nav.matchAll(/label: t\("([^"]+)"\)/g)].map((m) => m[1]);
   expect(
     JSON.stringify(labels) ===
-      JSON.stringify([
-        "nav.passportPublic",
-        "nav.careerDiscovery",
-        "nav.career_center",
-        "nav.jobs",
-        "nav.employers",
-        "nav.about",
-      ]),
-    `the six nav labels must be the approved keys, in order (found ${labels.join(" · ")})`,
+      JSON.stringify(["nav.forYou", "nav.jobs", "nav.employers", "nav.career_center", "nav.about"]),
+    `the five nav labels must be the approved keys, in order (found ${labels.join(" · ")})`,
   );
   // Both viewports render from THIS array and from no second list.
   const renders = header.split("{nav.map(").length - 1;
@@ -216,6 +207,39 @@ expect(
   expect(
     (header.match(/const nav = \[/g) ?? []).length === 1,
     "there must be exactly one public nav definition -- a second array is how the two viewports drift apart",
+  );
+
+  // ── THE TWO PRODUCTS ARE OUT OF THE BAR, AND STILL ON THE SITE ──────
+  //
+  // The owner removed them from the HEADER. Removing them from the site
+  // would be a different and much worse change, so both halves are
+  // asserted: absent from the chrome, present in the content.
+  expect(
+    !nav.includes("nav.passportPublic") && !nav.includes("nav.careerDiscovery"),
+    "Security Passport and Career Discovery must not be public-header nav items",
+  );
+  expect(
+    !header.includes("CANONICAL_ASSESSMENT_PATH"),
+    "the public header must not link Career Discovery's canonical route -- it is reached from the content",
+  );
+}
+
+// 3c. Both products remain reachable away from the header.
+// -----------------------------------------------------------------------
+{
+  const home = read("src/routes/index.tsx");
+  const footer = read("src/components/site/SiteFooter.tsx");
+  expect(
+    home.includes('id="passport"'),
+    "the homepage must keep its Security Passport section -- it is how the product is reached now",
+  );
+  expect(
+    home.includes("CANONICAL_ASSESSMENT_PATH") || home.includes("CAREER_DISCOVERY"),
+    "the homepage must keep a Career Discovery entrance",
+  );
+  expect(
+    footer.includes('t("nav.passportPublic")') && footer.includes('t("nav.careerDiscovery")'),
+    "the footer must still name both products -- the decision was about the header only",
   );
 }
 
@@ -332,33 +356,24 @@ for (const lang of ["sv", "en"] as const) {
   );
 }
 
-// ── CAREER DISCOVERY IS A NAV DESTINATION, NOT AN ACTION ─────────────
+// ── CAREER DISCOVERY IS OUT OF THE HEADER ENTIRELY (owner, 2026-09-14) ─
 //
-// It used to be forbidden from the header entirely, because it was "a
-// supporting tool, offered once, from the homepage's third section". It is
-// now a PEER product and belongs in the primary nav -- and only there.
-// The rule that replaces the old one is the same rule "Arbetsgivare" has
-// had since section 3: a product name in the nav is information, and an
-// action button may not wear it.
-expect(
-  header.includes('t("nav.careerDiscovery")'),
-  'SiteHeader must offer "nav.careerDiscovery" in the primary nav -- Career Discovery is a peer entrance, not a link inside somebody else\'s section',
-);
-{
-  const uses = header.split('t("nav.careerDiscovery")').length - 1;
-  expect(
-    uses === 1,
-    `"nav.careerDiscovery" must be used exactly once in SiteHeader -- the primary-nav entry (found ${uses})`,
-  );
-}
-// It reaches the CANONICAL route through the module that owns the answer.
-// A literal path here is how the temporary /discovery alias becomes a
-// second competing product surface.
-expect(
-  header.includes('import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";') &&
-    header.includes("{ to: CANONICAL_ASSESSMENT_PATH,"),
-  "the Career Discovery nav entry must use CANONICAL_ASSESSMENT_PATH, not a literal path",
-);
+// The rule here has now moved twice, so the history matters. It was first
+// forbidden from the header (a supporting tool reached from a homepage
+// section), then REQUIRED in it (a peer product deserving a nav item),
+// and the owner has now removed it again along with Security Passport:
+// the public bar names audiences and topics, not products.
+//
+// What has never changed, and is what the remaining assertion protects,
+// is that Career Discovery must not be a header ACTION button and must
+// never be linked through its temporary /discovery alias. That rule held
+// under all three arrangements, and it is the one that stops the alias
+// becoming a second competing product surface.
+//
+// Its presence in the header is now asserted ABSENT, in section 3b, and
+// its continued reachability from the homepage and the footer is asserted
+// in 3c -- so removing it from the chrome cannot quietly remove it from
+// the product.
 expect(
   !header.includes('to="/security-career-assessment"') && !header.includes('to="/discovery"'),
   "Career Discovery must not be a header ACTION button, and must never be linked through its alias",

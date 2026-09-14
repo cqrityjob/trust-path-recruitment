@@ -30,7 +30,7 @@
 //       separated, only source-confirmed reads as confirmed
 //   T11 the signed-in redirect to /my-career is intact, and is the only
 //       redirect implementation on the route
-//   T12 the public chrome: six nav destinations, one Login, one Create
+//   T12 the public chrome: five nav destinations, one Login, one Create
 //       account, and the signed-in candidate nav is untouched
 //   T13 sv and en carry the same keys, structure and destinations
 //   T14 NO FORBIDDEN CLAIM was introduced — the data boundaries, as
@@ -942,24 +942,22 @@ group("T12 · the public chrome, and the untouched candidate chrome");
     (m) => m[1] ?? CANONICAL_ASSESSMENT_PATH,
   );
   ck(
-    "six primary nav destinations, the two individual products first",
+    "five primary nav destinations: audiences and topics, no product names",
     JSON.stringify(entries) ===
-      JSON.stringify([
-        "/",
-        CANONICAL_ASSESSMENT_PATH,
-        "/career-center",
-        "/jobs",
-        "/employers",
-        "/about",
-      ]),
+      JSON.stringify(["/", "/jobs", "/employers", "/career-center", "/about"]),
     entries,
   );
-  ck('the first entry is "Security Passport"', nav.includes('t("nav.passportPublic")'));
-  ck("and it points at the homepage section, with a hash", /to: "\/", hash: "passport"/.test(nav));
-  ck('the second entry is "Career Discovery"', nav.includes('t("nav.careerDiscovery")'));
   ck(
-    "and it uses the canonical constant rather than a literal path",
-    nav.includes("CANONICAL_ASSESSMENT_PATH") && !nav.includes('"/security-career-assessment"'),
+    'the first entry is "För dig", the public candidate umbrella',
+    nav.includes('t("nav.forYou")'),
+  );
+  ck(
+    "and it points at the public landing page itself, with no hash and no second page",
+    /\{ to: "\/", hash: undefined, label: t\("nav\.forYou"\) \}/.test(nav),
+  );
+  ck(
+    "neither product is a public-header nav item any more",
+    !nav.includes("nav.passportPublic") && !nav.includes("nav.careerDiscovery"),
   );
   ck(
     "the homepage entry is matched exactly and its section hash participates in active state",

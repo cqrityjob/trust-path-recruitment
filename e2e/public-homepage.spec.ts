@@ -463,12 +463,6 @@ test.describe("the public homepage", () => {
     { name: 'lifecycle "Jobb"', scope: "#lifecycle", label: "Jobb", url: "/jobs" },
     { name: 'header "Logga in"', scope: "header", label: "Logga in", url: "/login" },
     {
-      name: 'header "Career Discovery"',
-      scope: "header",
-      label: "Career Discovery",
-      url: "/security-career-assessment",
-    },
-    {
       name: 'header "Karriärvägar"',
       scope: "header",
       label: "Karriärvägar",
@@ -518,17 +512,50 @@ test.describe("the public homepage", () => {
   }
 
   // H12 ─────────────────────────────────────────────────────────────────
-  test('the header\'s "Security Passport" reaches the homepage section it names', async ({
+  //
+  // REPLACES "the header's Security Passport reaches the homepage section
+  // it names". The owner removed both product names from the public bar,
+  // so that journey no longer exists. What replaces it is the pair of
+  // facts that make the removal safe rather than lossy: the products are
+  // gone from the CHROME, and still present in the CONTENT.
+  test("neither product is named in the public header, and both are still reachable", async ({
     page,
   }) => {
-    await page.locator("header").getByRole("link", { name: "Om oss" }).first().click();
-    await page.waitForURL("**/about");
-    await page.locator("header").getByRole("link", { name: "Security Passport" }).first().click();
-    await page.waitForURL((u) => u.pathname === "/", { timeout: 15_000 });
-    await page.waitForTimeout(600);
+    const header = page.locator("header");
+    await expect(header.getByRole("link", { name: "Security Passport" })).toHaveCount(0);
+    await expect(header.getByRole("link", { name: "Career Discovery" })).toHaveCount(0);
+
+    // The Passport section is still on the page, under its own heading.
     await expect(page.locator("#passport h2")).toBeVisible();
-    expect(new URL(page.url()).hash).toBe("#passport");
+    // And Career Discovery still has its hero entrance.
+    await expect(
+      page.locator("#hero").getByRole("link", { name: "Starta Career Discovery" }),
+    ).toHaveCount(1);
+
+    // The footer, deliberately untouched by this decision, still names both.
+    const footer = await page.locator("footer").innerText();
+    expect(footer).toContain("Security Passport");
+    expect(footer).toContain("Career Discovery");
   });
+
+  // H12b ────────────────────────────────────────────────────────────────
+  //
+  // The owner's five, in order, in BOTH languages, at the desktop bar.
+  // Exact and ordered: this replaces the six-destination expectation with
+  // the same strictness rather than relaxing it.
+  for (const [lang, expected] of [
+    ["sv", ["För dig", "Jobb", "Arbetsgivare", "Karriärvägar", "Om oss"]],
+    ["en", ["For you", "Jobs", "Employers", "Career paths", "About us"]],
+  ] as const) {
+    test(`${lang}: the public bar is exactly the owner's five, in order`, async ({ page }) => {
+      await setLang(page, lang);
+      await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+      const labels = (await page.locator('header nav[aria-label="Primary"] a').allInnerTexts()).map(
+        (x) => x.trim(),
+      );
+      expect(labels, `${lang} public nav`).toEqual([...expected]);
+    });
+  }
 
   // H13 ─────────────────────────────────────────────────────────────────
   //
@@ -667,7 +694,7 @@ test.describe("the public homepage", () => {
   // are mouse targets on a >=1024px viewport that clear WCAG 2.5.8's 24 x 24.
   //
   // The Platform Entry Specification does not grant that exemption. §4.2
-  // requires the six public destinations to be reachable "with 44 pixel
+  // requires the public destinations to be reachable "with 44 pixel
   // minimum targets" and §12 requires it of every control. A 1024px viewport
   // is also a tablet. So the exemption is gone, header/main/footer are all
   // measured, both dimensions are measured, and the components were changed
@@ -693,7 +720,7 @@ test.describe("the public homepage", () => {
     await shot(
       page,
       "homepage-sv-375-menu-open",
-      "Compact menu open at 375px; all six destinations at >= 44 x 44",
+      "Compact menu open at 375px; all five destinations at >= 44 x 44",
     );
   });
 
@@ -774,21 +801,20 @@ test.describe("the homepage at every required width", () => {
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 
-  test("the compact menu carries all six destinations at 375px", async ({ page }) => {
+  test("the compact menu carries the same five destinations, in the same order, at 375px", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: /meny/i }).first().click();
     await expect(page.locator("#site-menu nav a").first()).toBeVisible();
-    const labels = await page.locator("#site-menu nav a").allInnerTexts();
-    for (const label of [
-      "Security Passport",
-      "Career Discovery",
-      "Karriärvägar",
-      "Jobb",
-      "Arbetsgivare",
-      "Om oss",
-    ]) {
-      expect(labels.join(" | "), `"${label}" is missing from the compact menu`).toContain(label);
+    const labels = (await page.locator("#site-menu nav a").allInnerTexts()).map((x) => x.trim());
+
+    // Same ORDER, not merely the same set: one information architecture at
+    // both viewports is the whole point of the single `nav` array.
+    expect(labels).toEqual(["För dig", "Jobb", "Arbetsgivare", "Karriärvägar", "Om oss"]);
+    for (const gone of ["Security Passport", "Career Discovery"]) {
+      expect(labels.join(" | "), `"${gone}" must not be in the compact menu`).not.toContain(gone);
     }
     // One Login and one Create account, on a phone as on a laptop.
     const header = await page.locator("header").innerText();
