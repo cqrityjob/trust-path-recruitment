@@ -165,8 +165,11 @@ const MUTATIONS: readonly Mutation[] = [
     id: "PE-NC-WORK-COUNTRY-BACK-IN-PASSPORT",
     defect: "the Passport mounts the work-country card again",
     file: INFO,
-    find: '        {workCountry ? (\n          <p className="text-sm leading-relaxed text-muted-foreground">',
-    replace: "        {workCountry ? (\n          <WorkCountryCard />",
+    // Anchored on the element alone, not its surrounding markup: this
+    // control broke when the pointer paragraph became the read-only
+    // section that carries the anchor and the browsing filter.
+    find: '<div\n            id="sp-work-country"',
+    replace: '<WorkCountryCard />\n          <div\n            id="sp-work-country"',
     guard: BOUNDARY,
     expect: "mounts neither card",
   },
@@ -200,7 +203,9 @@ const MUTATIONS: readonly Mutation[] = [
     find: '        id="sp-profile-basics"',
     replace: '        id="sp-profile-basics-removed"',
     guard: BOUNDARY,
-    expect: "is still a real anchor on the Passport",
+    // Matches the guard's message after it was strengthened to require a
+    // RENDERED id rather than a mention of the name.
+    expect: "must be RENDERED on the Passport",
   },
 ];
 
