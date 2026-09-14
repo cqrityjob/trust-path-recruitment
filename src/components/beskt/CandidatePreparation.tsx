@@ -314,9 +314,13 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
         <AlertTitle>{t(denied ? "beskt.prep.denied" : "beskt.prep.error")}</AlertTitle>
         <AlertDescription>
           <Button asChild size="sm" variant="outline" className="mt-2 min-h-[44px]">
+            {/* The PAGE this returns to is Översikt. `nav.my_career` names
+                the workspace in the account menu's context switch, not
+                this destination -- using it here is the same "one place,
+                two names" the navigation canon removed. */}
             <Link to="/my-career">
               <ArrowLeft aria-hidden="true" className="mr-1.5 h-4 w-4" />
-              {t("nav.my_career")}
+              {t("nav.overview")}
             </Link>
           </Button>
         </AlertDescription>

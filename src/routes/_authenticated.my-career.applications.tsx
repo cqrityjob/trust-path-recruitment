@@ -13,6 +13,7 @@ import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/job-intelligence/date-format";
+import { APPLICATION_STATUS_LABEL_KEY } from "@/lib/job-intelligence/application-status-labels";
 import { ApplicationPassportShare } from "@/components/jobs/ApplicationPassportShare";
 import { MyPreparations } from "@/components/beskt/MyPreparations";
 import {
@@ -34,14 +35,10 @@ export const Route = createFileRoute("/_authenticated/my-career/applications")({
   component: MyApplicationsPage,
 });
 
-const STATUS_LABEL_KEY: Record<ApplicationStatus, TranslationKey> = {
-  submitted: "candidate.applications.status.submitted",
-  reviewing: "candidate.applications.status.reviewing",
-  interview: "candidate.applications.status.interview",
-  rejected: "candidate.applications.status.rejected",
-  hired: "candidate.applications.status.hired",
-  withdrawn: "candidate.applications.status.withdrawn",
-};
+// Moved to a shared module when sketch 3 gave the Jobs workspace a summary
+// of these same applications: two copies of this map is how the two
+// surfaces start calling the same status different things.
+const STATUS_LABEL_KEY = APPLICATION_STATUS_LABEL_KEY;
 
 const WITHDRAWABLE: ApplicationStatus[] = ["submitted", "reviewing", "interview"];
 

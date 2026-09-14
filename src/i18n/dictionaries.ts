@@ -791,8 +791,16 @@ export const dictionaries = {
     "candidate.auth.swap.to_signup": "Skapa kandidatkonto",
     "candidate.auth.swap.to_signin": "Har du redan ett konto? Logga in",
 
+    // Sketch 3's supporting column on /jobs. Its own keys rather than
+    // reusing the applications page's heading: "Mina ansökningar" is a
+    // page title, this is a panel beside a search field.
+    "jobs.side.applications.title": "Dina ansökningar",
+    "jobs.side.applications.seeAll": "Se alla",
+    "jobs.side.applications.sent": "Skickad",
+    "jobs.side.cv.title": "Mitt CV",
+    "jobs.side.cv.body": "Hantera och uppdatera ditt CV",
     "candidate.applications.heading": "Mina ansökningar",
-    "candidate.applications.backToMyCareer": "Tillbaka till Min karriär",
+    "candidate.applications.backToMyCareer": "Tillbaka till Översikt",
     "candidate.applications.loading": "Läser in ansökningar…",
     "candidate.applications.empty": "Du har inte skickat in några ansökningar än.",
     "candidate.applications.error.load": "Kunde inte hämta dina ansökningar.",
@@ -1422,7 +1430,7 @@ export const dictionaries = {
     "sca.scp.summary.cancel": "Avbryt",
     "sca.report.loading": "Laddar din rapport…",
     "sca.report.notFound": "Rapporten kunde inte hittas.",
-    "sca.report.backToMyCareer": "Tillbaka till Min karriär",
+    "sca.report.backToMyCareer": "Tillbaka till Översikt",
     "sca.report.legacyEmpty":
       "Det här resultatet sparades innan fullständiga rapporter fanns tillgängliga. Gör om testet för att få en sparad rapport.",
     "sca.report.retake": "Gör om testet",
@@ -2531,7 +2539,7 @@ export const dictionaries = {
     "admin.accountMenu.signOut": "Logga ut",
     "admin.accessDenied.heading": "Åtkomst nekad",
     "admin.accessDenied.body": "Det här kontot har inte administratörsbehörighet.",
-    "admin.accessDenied.backToMyCareer": "Tillbaka till Min karriär",
+    "admin.accessDenied.backToMyCareer": "Tillbaka till Översikt",
     "admin.loading": "Läser in…",
     "admin.error.body":
       "Administratörssidan kunde inte laddas. Försök igen eller logga in på nytt.",
@@ -7523,8 +7531,13 @@ export const dictionaries = {
     "candidate.auth.swap.to_signup": "Create a candidate account",
     "candidate.auth.swap.to_signin": "Already have an account? Log in",
 
+    "jobs.side.applications.title": "Your applications",
+    "jobs.side.applications.seeAll": "See all",
+    "jobs.side.applications.sent": "Sent",
+    "jobs.side.cv.title": "My CV",
+    "jobs.side.cv.body": "Manage and update your CV",
     "candidate.applications.heading": "My applications",
-    "candidate.applications.backToMyCareer": "Back to My Career",
+    "candidate.applications.backToMyCareer": "Back to Overview",
     "candidate.applications.loading": "Loading applications…",
     "candidate.applications.empty": "You haven't submitted any applications yet.",
     "candidate.applications.error.load": "Could not load your applications.",
@@ -8090,7 +8103,7 @@ export const dictionaries = {
     "sca.scp.summary.cancel": "Cancel",
     "sca.report.loading": "Loading your report…",
     "sca.report.notFound": "That report could not be found.",
-    "sca.report.backToMyCareer": "Back to My Career",
+    "sca.report.backToMyCareer": "Back to Overview",
     "sca.report.legacyEmpty":
       "This result was saved before full reports were available. Retake the assessment to get a saved report.",
     "sca.report.retake": "Retake assessment",
@@ -9170,7 +9183,7 @@ export const dictionaries = {
     "admin.accountMenu.signOut": "Sign out",
     "admin.accessDenied.heading": "Access denied",
     "admin.accessDenied.body": "This account does not have administrator access.",
-    "admin.accessDenied.backToMyCareer": "Back to My Career",
+    "admin.accessDenied.backToMyCareer": "Back to Overview",
     "admin.loading": "Loading…",
     "admin.error.body": "The admin page could not be loaded. Try again or sign in again.",
     "admin.employers.list.heading": "Employer moderation",
