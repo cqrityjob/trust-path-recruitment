@@ -641,16 +641,13 @@ const MUTATIONS: readonly Mutation[] = [
     // and its hosted evidence is recorded, so the list is EMPTY again and the
     // anchor is the empty list. The planted defect is unchanged and always
     // has been: this APPLIED migration goes back on the frontier.
-    // RE-ANCHORED by PR #252, which put a genuinely pending migration back on
-    // this list. The anchor tracks the list's CURRENT shape, so it is now the
-    // last entry plus the closing bracket rather than the empty list. The
-    // planted defect is unchanged and always has been: this APPLIED migration
-    // goes back on the frontier. Planting it alongside a legitimately pending
-    // name is in fact the stronger control -- it proves the guard notices a
-    // stale entry even when the list is not supposed to be empty.
-    find: "  \"20261116090000_cd_outstanding_reviews_operator_only.sql\",\n];",
+    // RE-ANCHORED AGAIN now that 20261116090000 is applied and off the list,
+    // so the anchor is the empty list once more. The planted defect is
+    // unchanged and always has been: this APPLIED migration goes back on the
+    // frontier, where a resolved name would hide the next genuinely stuck one.
+    find: "const expectedPending: string[] = [];",
     replace:
-      '  "20261116090000_cd_outstanding_reviews_operator_only.sql",\n  "20261113090000_bcp_interview_conduct.sql",\n];',
+      'const expectedPending: string[] = ["20261113090000_bcp_interview_conduct.sql"];',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },
