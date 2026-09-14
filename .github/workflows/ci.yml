@@ -798,6 +798,18 @@ jobs:
       - name: Interview-method library tenant-read guard
         run: bun run interview-method-tenant-read:check
 
+      # The operator-only correction of public.cd_outstanding_reviews
+      # (20261116090000): the surviving view declaration must set
+      # security_invoker = true IN THE SAME STATEMENT -- a bare CREATE OR
+      # REPLACE VIEW resets reloptions, which is exactly how the finding
+      # arrived -- and must carry the cd_is_internal_tester(auth.uid()) gate,
+      # because security_invoker alone leaves the permissive "live readable"
+      # policy OR-ed in. It also asserts that scp_scoring_version_lineage, whose
+      # definer semantics ARE a reviewed decision, was left alone. Its planted
+      # controls run in negative-controls:all.
+      - name: Outstanding-reviews operator-only guard
+        run: bun run cd-outstanding-reviews:check
+
       # BESKT PR 5B -- the VISIBLE interview tool inside Interview Intelligence:
       # the module gate, the immutable submitted snapshot, the deterministic
       # themes, the eight separate documentation fields, corrections and
