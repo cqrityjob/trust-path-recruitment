@@ -169,7 +169,10 @@ export function EmploymentHistoryEditor({ className = "" }: { className?: string
       id="profile-employment"
       aria-labelledby="profile-employment-heading"
       data-profile-employment
-      className={className}
+      // The section overview links straight here, so the anchor carries its
+      // own scroll offset: without it the fixed header lands on top of the
+      // heading the reader was sent to.
+      className={`scroll-mt-24 ${className}`}
     >
       <h3
         id="profile-employment-heading"

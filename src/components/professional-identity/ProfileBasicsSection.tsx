@@ -171,7 +171,10 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
       id="profile-basics"
       aria-labelledby="profile-basics-heading"
       data-profile-basics
-      className={className}
+      // The section overview links straight here, so the anchor carries its
+      // own scroll offset: without it the fixed header lands on top of the
+      // heading the reader was sent to.
+      className={`scroll-mt-24 ${className}`}
     >
       <h3 id="profile-basics-heading" className="sr-only">
         {pt("basics.title")}
@@ -205,7 +208,7 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
         onEditCurrentRole={() => focusById("profile-employment")}
       />
 
-      <div id="profile-work-country" className="mt-6" data-profile-work-country>
+      <div id="profile-work-country" className="mt-6 scroll-mt-24" data-profile-work-country>
         <WorkCountryCard
           jurisdictionCode={country.jurisdictionCode}
           subJurisdictionCode={country.subJurisdictionCode}

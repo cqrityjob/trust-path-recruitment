@@ -105,6 +105,39 @@ export const SECTION_DESTINATIONS: Readonly<Record<CompletenessSection, SectionD
   careerDirection: { owner: "discovery", href: "/security-career-assessment" },
 };
 
+/** A canonical destination, split into the parts a router `Link` takes. */
+export interface SectionLinkTarget {
+  readonly to: string;
+  readonly search?: Readonly<Record<string, string>>;
+  readonly hash?: string;
+}
+
+/**
+ * The same destination, as `to` / `search` / `hash`.
+ *
+ * The section overview needs to LINK to these, and a router link takes the
+ * three parts separately rather than one string. Deriving them here is what
+ * keeps `SECTION_DESTINATIONS` the only place a route or an anchor is
+ * written down: a surface that re-typed `#profile-employment` next to its
+ * own link would be a second source of truth, and the two would drift the
+ * first time a section moved -- which is exactly how a recommendation ended
+ * up pointing at an editor that had already been relocated.
+ *
+ * Pure string work, no router import: this file is read by guards and by
+ * server-side code that must not pull the router in.
+ */
+export function sectionLinkTarget(section: CompletenessSection): SectionLinkTarget {
+  const { href } = SECTION_DESTINATIONS[section];
+  const [beforeHash = "", hash = ""] = href.split("#");
+  const [to = "", query = ""] = beforeHash.split("?");
+  const search = query ? Object.fromEntries(new URLSearchParams(query)) : undefined;
+  return {
+    to,
+    ...(search ? { search } : {}),
+    ...(hash ? { hash } : {}),
+  };
+}
+
 /** What the caller knows that the identity read model does not. */
 export interface ReachabilitySignals {
   /** Whether Career Discovery would admit THIS person. `false` withholds the
