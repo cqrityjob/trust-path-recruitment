@@ -1492,9 +1492,12 @@ test.describe("image 2 — the Passport section row", () => {
     await expect(nav).toBeVisible({ timeout: 30_000 });
     // A landmark with an accessible name, not an unlabelled div.
     await expect(nav).toHaveAttribute("aria-label", /.+/);
-    // Tabs would hide the rest. Nothing here is a tab.
-    await expect(page.locator('[role="tab"]')).toHaveCount(0);
-    await expect(page.locator('[role="tabpanel"]')).toHaveCount(0);
+    // Tabs would hide the rest. Scoped to the row: asserting the whole
+    // PAGE carries no tab makes a claim about every shared component that
+    // happens to render here, which is not what this change is responsible
+    // for and not what "the row is links, not tabs" means.
+    await expect(nav.locator('[role="tab"]')).toHaveCount(0);
+    await expect(nav.locator('[role="tabpanel"]')).toHaveCount(0);
 
     // Every destination the row offers resolves to a real element that is
     // present — not merely in the markup, but attached and reachable.
@@ -1542,7 +1545,7 @@ test.describe("image 2 — the Passport section row", () => {
 
   test("the row survives a refresh on a deep hash", async ({ page }) => {
     await mount(page, SCENARIO, "en", "/passport/information#sp-certification");
-    await page.reload({ waitUntil: "networkidle" });
+    await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.locator("[data-passport-section-nav]")).toBeVisible({ timeout: 30_000 });
     await expect(page.locator("#sp-certification")).toHaveCount(1, { timeout: 30_000 });
   });
