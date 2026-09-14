@@ -286,6 +286,51 @@ function payloadOf(route: Route): Record<string, unknown> {
   }
 }
 
+/** The input of a server function, whichever way it travelled.
+ *
+ *  POST functions carry it in the body, which `payloadOf` reads. GET
+ *  functions carry it in the URL instead — 25 of them in this codebase do
+ *  — and reading only the body silently returns {} for every one of them.
+ *  That is what made the market filter look inert here: the stub answered
+ *  for Sweden because it never saw that Great Britain had been asked for.
+ *
+ *  The search-parameter NAME is not assumed: every parameter that parses
+ *  as the server-function envelope is accepted. */
+function inputOf(route: Route): Record<string, unknown> {
+  const post = payloadOf(route);
+  if (Object.keys(post).length > 0) return post;
+  try {
+    for (const [, raw] of new URL(route.request().url()).searchParams) {
+      try {
+        const decoded = fromJSON(JSON.parse(raw)) as { data?: unknown };
+        const data = (decoded as { data?: unknown })?.data ?? decoded;
+        if (data && typeof data === "object") return data as Record<string, unknown>;
+      } catch {
+        /* not the envelope — try the next parameter */
+      }
+    }
+  } catch {
+    /* unparseable URL */
+  }
+  // And the base64 path segment, which already carries the export name and
+  // may carry the input beside it. Checked too rather than assumed away:
+  // this cannot run locally, and a second CI cycle costs more than a
+  // dozen lines that try both shapes.
+  try {
+    const m = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(route.request().url());
+    if (m) {
+      const json = JSON.parse(
+        Buffer.from(m[1]!.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+      ) as { data?: unknown; payload?: unknown };
+      const data = json?.data ?? json?.payload;
+      if (data && typeof data === "object") return data as Record<string, unknown>;
+    }
+  } catch {
+    /* not there either */
+  }
+  return {};
+}
+
 const ok = (route: Route, body: unknown) =>
   route.fulfill({
     status: 200,
@@ -481,7 +526,7 @@ async function mount(
         // The browsing filter sends the market it wants; with no payload
         // the function answers for the holder's saved country, exactly as
         // it always did.
-        const asked = payloadOf(route) as {
+        const asked = inputOf(route) as {
           jurisdictionCode?: string;
           subJurisdictionCode?: string | null;
         } | null;
