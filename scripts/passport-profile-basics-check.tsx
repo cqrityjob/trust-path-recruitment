@@ -620,7 +620,10 @@ console.log("\nLANGUAGE -- both, and different from each other");
     'the label is the owner\'s wording, not "kort yrkesbeskrivning"',
     html.includes("Yrkestitel som visas") && !/[Kk]ort yrkesbeskrivning/.test(html),
   );
-  ck("English reads 'Displayed professional title'", passportT("onboarding.identity.headline", "en") === "Displayed professional title");
+  ck(
+    "English reads 'Displayed professional title'",
+    passportT("onboarding.identity.headline", "en") === "Displayed professional title",
+  );
 
   // Help text exists, in both languages, and says what to enter.
   const helpSv = passportT("onboarding.identity.headlineHelp", "sv");
@@ -645,7 +648,10 @@ console.log("\nLANGUAGE -- both, and different from each other");
   ck(
     "the title is not presented as a credential or certification",
     !/credential|certification|certifiering|beh\u00f6righet/i.test(
-      html.slice(Math.max(0, html.indexOf("Yrkestitel som visas") - 400), html.indexOf("Yrkestitel som visas") + 400),
+      html.slice(
+        Math.max(0, html.indexOf("Yrkestitel som visas") - 400),
+        html.indexOf("Yrkestitel som visas") + 400,
+      ),
     ),
   );
 }
