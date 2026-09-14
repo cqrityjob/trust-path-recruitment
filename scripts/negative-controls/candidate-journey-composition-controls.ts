@@ -22,46 +22,35 @@ const GUARD = "candidate-journey-composition:check";
 const MUTATIONS: readonly Mutation[] = [
   /* ── SCREEN 0 · ONE AUTH FLOW ──────────────────────────────────────── */
   {
-    id: "CJC-NC-PANEL-MOUNTED-UNVERIFIED",
+    id: "CJC-NC-PANEL-GONE",
     defect:
-      "the panel is mounted on / while public-homepage.spec.ts still pins the page as a two-entrance marketing page — the state that failed six CI runs, each on a different invariant",
+      "the landing page stops mounting the login panel, so image 0's entrance is a link again",
     file: HOME,
-    find: "  const navigate = useNavigate();",
-    replace:
-      '  const navigate = useNavigate();\n  const panel = <UnifiedAuthPanel mode="signin" />;',
+    find: '              <UnifiedAuthPanel mode="signin" />',
+    replace: "",
     guard: GUARD,
-    expect: "does not mount the auth panel yet",
-  },
-  {
-    id: "CJC-NC-BLOCKER-UNRECORDED",
-    defect:
-      "the note explaining why the panel is not mounted is deleted, so the gap becomes invisible and the next reader assumes it was never wanted",
-    file: HOME,
-    find: "IMAGE 0'S LOGIN PANEL IS NOT MOUNTED HERE",
-    replace: "IMAGE 0",
-    guard: GUARD,
-    expect: "the route records why",
+    expect: "/ mounts the auth panel",
   },
   {
     id: "CJC-NC-SECOND-AUTH-FLOW",
     defect:
-      "THE FAILURE MODE THE EXTRACTION EXISTS TO PREVENT: the landing page grows a sign-in call of its own, so there are two authentication implementations that drift the first time either is touched",
+      "THE FAILURE MODE: the landing page grows a sign-in call of its own, so there are two authentication implementations that will drift the first time either is touched",
     file: HOME,
-    find: "  const navigate = useNavigate();",
+    find: "  const showAuthPanel = useSignedIn() === false;",
     replace:
-      '  const navigate = useNavigate();\n  const homeSignIn = () => supabase.auth.signInWithPassword({ email: "", password: "" });',
+      "  const showAuthPanel = useSignedIn() === false;\n  const homeSignIn = () => supabase.auth.signInWithPassword({ email: \"\", password: \"\" });",
     guard: GUARD,
     expect: "signInWithPassword lives in the panel and nowhere else",
   },
   {
-    id: "CJC-NC-SESSION-SIGNAL-COLLAPSES",
+    id: "CJC-NC-PANEL-SHOWN-TO-EVERYONE",
     defect:
-      "the session signal loses its third state, so 'not answered yet' becomes indistinguishable from 'signed out' — which is what paints a login form on a public page and snatches it back",
-    file: "src/hooks/useSignedIn.ts",
-    find: "export type SignedInState = boolean | null;",
-    replace: "export type SignedInState = boolean;",
+      "the panel renders before the session is known, so it paints on a public page and is snatched back — and the panel navigates a signed-in visitor off the homepage entirely",
+    file: HOME,
+    find: "  const showAuthPanel = useSignedIn() === false;",
+    replace: "  const showAuthPanel = useSignedIn() !== true;",
     guard: GUARD,
-    expect: "three-state",
+    expect: "renders only for a visitor confirmed signed OUT",
   },
   {
     id: "CJC-NC-LOGIN-PAGE-INLINES-PANEL",
