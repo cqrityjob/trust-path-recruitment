@@ -88,7 +88,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the profile stops mounting the canonical employment editor, so the authoring moved out of the Passport and landed nowhere",
     file: PROFILE,
-    find: "                <EmploymentHistoryEditor defaultCountry={identity.workCountry ?? null} />",
+    // Repointed: the defaultCountry prop was removed when the editor took
+    // over resolving the CONFIRMED work country itself.
+    find: "<EmploymentHistoryEditor />",
     replace: "",
     guard: BOUNDARY,
     expect: "mounted on /my-career/profile",
