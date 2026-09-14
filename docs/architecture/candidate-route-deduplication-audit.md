@@ -65,12 +65,26 @@ a public and an authenticated half:
 | `/security-career-assessment` + `/_authenticated/security-career-assessment/{session,report/$snapshotId,history}` | **canonical assessment flow** (`CANONICAL_ASSESSMENT_PATH`) |
 | `/discovery` + `/_authenticated/discovery/{session,report/$snapshotId,history}` | **redirect** — already an alias of the canonical path; kept so existing links and mid-redirect sessions resolve |
 | `/careers` | **public marketing page**, not a candidate app destination |
-| `/journey`, `/journey/$targetId` | **canonical career-path destination** — this is what `Hur kommer jag dit?` must reach (Emsoms #1) |
+| `/journey`, `/journey/$targetId` | **canonical career-path destination** — this is what `Hur kommer jag dit?` must reach |
 | `/assessment` | public entry; **redirect** to the canonical assessment path |
 
 Career Discovery and Career Analysis are **one** product, reached through
-destination 4. They are not a sixth navigation item and must not appear inside
-Tests & Development.
+destination 4. They are not a sixth navigation item.
+
+**Refined by sketch 5 (PR C2).** The owner's Tests & Development sketch names
+Career Discovery on that page. That is compatible with the rule above, and the
+distinction is the one the Passport/profile split already draws: Tests &
+Development **may name the analysis and link to it**; it **may not host the run
+or offer a second entry into it**. The link is `CANONICAL_ASSESSMENT_PATH`, never
+the `/discovery` alias, so it is a pointer at the one product rather than a
+second way in with its own history. The earlier wording here — "must not appear
+inside Tests & Development" — was too strong: it forbade the pointer as well as
+the product.
+
+**Emsoms #1 is not this row.** An earlier revision of this document attached
+Emsoms #1 to the `Hur kommer jag dit?` journey link. Emsoms #1 is the universal
+public landing-page structure, which belongs to the dedicated public-landing
+phase and is untouched by the candidate-workspace PRs.
 
 ### 2.4 Jobs
 

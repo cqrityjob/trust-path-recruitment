@@ -3251,6 +3251,15 @@ export const dictionaries = {
     "cc.step.jurisdiction": "Gäller i",
 
     // ── Vägar från ditt nuvarande yrke (pathFrom) ───────────────────────
+    // Sketch 4's two hero entry cards. They NAME the two routes into a
+    // career path; the sections they link to own the content.
+    "cc.entry.fromProfession.title": "Vägar från yrket i din profil",
+    "cc.entry.fromProfession.body":
+      "Se relevanta karriärvägar baserat på ditt nuvarande yrke och din profil.",
+    "cc.entry.fromAnalysis.title": "Vägar utifrån din karriäranalys",
+    "cc.entry.fromAnalysis.body":
+      "Få personliga karriärförslag baserat på dina resultat, kompetenser och intressen.",
+    "cc.entry.cta": "Utforska vägar",
     "cc.path.eyebrow": "Från ditt yrke",
     "cc.path.title": "Vägar från ditt nuvarande yrke",
     "cc.path.titleFor": "Vägar från {role}",
@@ -4802,6 +4811,15 @@ export const dictionaries = {
     "academy.home.learning": "Övningsläge",
     "academy.home.learningLede":
       "Öva fritt, med återkoppling efter varje fråga. Övningsfrågorna är andra frågor än de i bedömningen.",
+    // Sketch 5's Career Discovery card. A POINTER, not a second copy of
+    // the product: Career Discovery is one product and it is reached
+    // through Karriär. Tests & Development may name it and link to it --
+    // it may not host the run. Same rule as the Passport pointing at the
+    // profile.
+    "academy.home.careerDiscovery.title": "Karriäranalys (Career Discovery)",
+    "academy.home.careerDiscovery.body":
+      "Få insikter om vilka roller och karriärvägar som passar dig baserat på din profil och dina resultat.",
+    "academy.home.careerDiscovery.cta": "Starta karriäranalys",
     "academy.home.practise": "Börja öva",
     "academy.home.practiseAgain": "Öva igen",
     "academy.home.noModulesTitle": "Inga övningar tillgängliga",
@@ -9877,6 +9895,13 @@ export const dictionaries = {
     "cc.step.jurisdiction": "Applies in",
 
     // ── Paths from your current role (pathFrom) ─────────────────────────
+    "cc.entry.fromProfession.title": "Paths from the profession in your profile",
+    "cc.entry.fromProfession.body":
+      "See relevant career paths based on your current profession and your profile.",
+    "cc.entry.fromAnalysis.title": "Paths from your career analysis",
+    "cc.entry.fromAnalysis.body":
+      "Get personal career suggestions based on your results, skills and interests.",
+    "cc.entry.cta": "Explore paths",
     "cc.path.eyebrow": "From your role",
     "cc.path.title": "Paths from your current role",
     "cc.path.titleFor": "Paths from {role}",
@@ -11379,6 +11404,10 @@ export const dictionaries = {
     "academy.home.learning": "Learning Mode",
     "academy.home.learningLede":
       "Practise freely, with feedback after every question. The practice questions are different questions from the assessment ones.",
+    "academy.home.careerDiscovery.title": "Career analysis (Career Discovery)",
+    "academy.home.careerDiscovery.body":
+      "Get insight into which roles and career paths suit you, based on your profile and your results.",
+    "academy.home.careerDiscovery.cta": "Start career analysis",
     "academy.home.practise": "Start practising",
     "academy.home.practiseAgain": "Practise again",
     "academy.home.noModulesTitle": "No practice available",

@@ -12,6 +12,7 @@ import {
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
+import { CareerEntryCards } from "@/components/career-center/CareerEntryCards";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { MVP_QUESTION_COUNT } from "@/lib/career-discovery/v31/personal-layer";
 import { DURATION_CLAIM, DURATION_CLAIM_MINUTES } from "@/lib/career-discovery/v31/duration";
@@ -258,7 +259,10 @@ function CareerCenterHub() {
             </PrimaryLink>
           )
         }
-        aside={<TrustRail />}
+        // Sketch 4 puts the two ways INTO a career path here. TrustRail
+        // moves to the catalogue section it actually describes -- see the
+        // note there -- rather than being dropped.
+        aside={<CareerEntryCards pathAnchor={PATH_ANCHOR} personalAnchor={PERSONAL_ANCHOR} />}
       />
 
       {/* ── 2. FRÅN DITT YRKE (pathFrom) ────────────────────────────── */}
@@ -309,13 +313,24 @@ function CareerCenterHub() {
 
       {/* ── 5. UTFORSKA YRKEN — behind an explicit click ───────────── */}
       <Section bordered id={EXPLORER_ANCHOR} className="bg-secondary/40 py-16 md:py-20">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.explore.title")}
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-            {t("cc.explore.subtitle")}
-          </p>
+        {/* TrustRail used to sit in the hero aside, which sketch 4 gives to
+            the two path entry cards. It is not hero content: it counts the
+            profession guides and says where they come from, which is a
+            statement about THIS section's catalogue. So it moves here
+            rather than being deleted — the reader still gets it, beside
+            the thing it describes. */}
+        <div className="grid gap-8 md:grid-cols-12 md:items-start">
+          <div className="max-w-2xl md:col-span-7">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+              {t("cc.explore.title")}
+            </h2>
+            <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+              {t("cc.explore.subtitle")}
+            </p>
+          </div>
+          <div className="md:col-span-5">
+            <TrustRail />
+          </div>
         </div>
 
         {/* The two surviving destinations of the retired "Var står du i dag?"
