@@ -16,7 +16,7 @@
 // the canon that replaced it, which is strictly more than the old guard
 // covered.
 //
-//   1. FIVE destinations, the owner's five, each exactly once, and no two
+//   1. SIX destinations, the owner's six, each exactly once, and no two
 //      of them resolving to the same place.
 //   2. No retired label returns. "Min karriär" may not be a candidate
 //      navigation label while "Översikt" is the name of that destination.
@@ -78,24 +78,34 @@ const navSrc = read(NAV_SRC);
 const navCode = code(navSrc);
 
 /* ------------------------------------------------------------------ */
-/* 1 · The owner's five, once each, no two the same                    */
+/* 1 · The owner's six, once each, no two the same                     */
 /* ------------------------------------------------------------------ */
-console.log("\n1 · the five canonical destinations");
+console.log("\n1 · the six canonical destinations");
 
 const keys = Array.from(navCode.matchAll(/key: "([^"]+)"/g)).map((m) => m[1]!);
 const tos = Array.from(navCode.matchAll(/\n\s*to: "([^"]+)"/g)).map((m) => m[1]!);
 const labelKeys = Array.from(navCode.matchAll(/labelKey: "([^"]+)"/g)).map((m) => m[1]!);
 
-const EXPECTED_KEYS = ["overview", "passport", "jobs", "career", "assessments"];
-const EXPECTED_TOS = ["/my-career", "/passport", "/jobs", "/career-center", "/academy"];
+// Six since the owner's images 1 and 2 put the CV in the navigation. It was
+// five, and candidate-app-nav.ts records that reversal on the `cv` entry.
+// The ORDER is the images' order, not this array's convenience.
+const EXPECTED_KEYS = ["overview", "passport", "cv", "jobs", "career", "assessments"];
+const EXPECTED_TOS = [
+  "/my-career",
+  "/passport",
+  "/my-career/cv",
+  "/jobs",
+  "/career-center",
+  "/academy",
+];
 
 check(
   keys.join(",") === EXPECTED_KEYS.join(","),
-  `the navigation is exactly the owner's five, in the sketch order (got ${keys.join(",") || "nothing"})`,
+  `the navigation is exactly the owner's six, in the images' order (got ${keys.join(",") || "nothing"})`,
 );
 check(
   tos.join(",") === EXPECTED_TOS.join(","),
-  "each of the five points at its canonical destination",
+  "each of the six points at its canonical destination",
 );
 check(
   new Set(tos).size === tos.length,
@@ -133,18 +143,64 @@ check(
 );
 
 /* ------------------------------------------------------------------ */
-/* 4 · The CV is contextual, never primary                             */
+/* 4 · The CV is a destination AND still contextually reachable        */
 /* ------------------------------------------------------------------ */
-console.log("\n4 · the CV is not a primary destination");
+//
+// This section asserted the opposite until the owner's images 1 and 2 put
+// the CV in the navigation: it required that NO nav entry point at the CV,
+// on the earlier explicit rule that it is reached from Översikt and Jobb.
+//
+// The rule underneath survives the reversal and is what is asserted now.
+// A capability has ONE canonical home, and a summary elsewhere LINKS to it
+// rather than replacing it. So the CV must have exactly one navigation
+// entry, pointing at its canonical route — and the contextual entries must
+// STILL be there. Adding the nav item and ripping out the Overview tile or
+// the Jobs card would be the regression this now catches, and it is the
+// one a naive "the CV is in the nav now" edit would cause.
+console.log("\n4 · the CV is a destination, and the contextual paths survive");
 
+const cvEntries = tos.filter((t) => t.includes("/cv"));
 check(
-  !tos.some((t) => t.includes("/cv")),
-  "no navigation entry points at the CV -- the owner's rule is that it is reached from Översikt and Jobb",
+  cvEntries.length === 1,
+  `exactly one navigation entry points at the CV (got ${cvEntries.length})`,
 );
 check(
-  !keys.includes("cv"),
-  "there is no CV navigation key",
+  cvEntries[0] === "/my-career/cv",
+  "and it points at the canonical CV route, not /cv/new or a deep link",
 );
+check(keys.includes("cv"), "the CV navigation key exists");
+
+// The contextual paths the CV had before it was promoted. A nav item does
+// not replace them: the Overview status grid and the Jobs side column are
+// where somebody meets the CV in the middle of doing something else.
+const hubGrid = code(read("src/components/professional-identity/HubStatusGrid.tsx"));
+check(
+  /"\/my-career\/cv"/.test(hubGrid),
+  "the Overview status grid still reaches the CV",
+);
+const jobsColumn = code(read("src/components/jobs/JobsSideColumn.tsx"));
+check(
+  /to="\/my-career\/cv"/.test(jobsColumn),
+  "and the Jobs side column still does too",
+);
+
+// A destination promoted into the navigation must stop presenting itself as
+// subordinate to a sibling. The CV index opened with a back arrow to
+// Översikt — correct while the CV was reached only from there, wrong once
+// somebody arrives from the nav bar, and labelled with the WORKSPACE name
+// on top of that. Every primary destination is checked, not just the CV,
+// because the next promotion will have the same defect.
+for (const [label, file] of [
+  ["the CV", "src/routes/_authenticated.my-career.cv.index.tsx"],
+  ["the Passport", "src/routes/_authenticated.passport.index.tsx"],
+  ["Tests & Development", "src/routes/_authenticated.academy.index.tsx"],
+] as const) {
+  const page = code(read(file));
+  check(
+    !/<Link\s+to="\/my-career"[\s>]/.test(page),
+    `${label} does not open with a back-link to a sibling destination`,
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* 5 · Career Card is hidden for the pilot                             */

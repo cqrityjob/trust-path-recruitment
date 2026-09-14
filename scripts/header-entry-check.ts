@@ -316,7 +316,7 @@ expect(
 // sign-in surface's swap link is asserted because it is the other way in,
 // and a guard that only checked the header button would pass a product
 // where somebody already on /login could not find registration.
-const authForm = read("src/components/auth/UnifiedAuthForm.tsx");
+const authForm = read("src/components/auth/UnifiedAuthPanel.tsx");
 expect(
   authForm.includes('to={isSignup ? "/login" : "/signup"}'),
   "the sign-in surface must carry the swap link to /signup",
@@ -431,8 +431,8 @@ expect(
   "PortalAuthForm must be removed, not left orphaned -- an unused second auth form is a second auth form",
 );
 expect(
-  read("src/components/auth/UnifiedAuthForm.tsx").includes("signInWithPassword"),
-  "UnifiedAuthForm must be the component that signs people in",
+  read("src/components/auth/UnifiedAuthPanel.tsx").includes("signInWithPassword"),
+  "UnifiedAuthPanel must be the component that signs people in",
 );
 
 // /admin/login is deliberately separate and stays separate: it verifies

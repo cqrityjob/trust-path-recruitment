@@ -17,7 +17,7 @@
 // edit from returning, and none of them is visible to a type checker.
 //
 //   1. FOUR destinations, each exactly ONCE, desktop and mobile, in the
-//      same order. Not five. Not four on desktop and three at 375.
+//      same order. Not six. Not five on desktop and three at 375.
 //
 //   2. The candidate's chrome carries no marketing item. /employers,
 //      /about, /contact, /assessment and /career-center may not appear in
@@ -146,9 +146,12 @@ const ROUTE_IDS: string[] = (() => {
 
 group("1 · one canonical link per product, desktop and mobile");
 {
-  // The owner's five, in the order the sketches underline them:
+  // The owner's six, in the order the images underline them:
   //
-  //   Översikt · Security Passport · Jobb · Karriär · Tester & utveckling
+  //   Översikt · Security Passport · CV · Jobb · Karriär · Tester & utveckling
+  //
+  // Six since images 1 and 2 put the CV in the navigation; it was five, and
+  // candidate-app-nav.ts records that reversal on the `cv` entry.
   //
   // The Passport is SECOND because it is the durable thing this product
   // builds for a person; jobs, career and tests are what happens around it.
@@ -172,6 +175,9 @@ group("1 · one canonical link per product, desktop and mobile");
       sv: "Security Passport",
       en: "Security Passport",
     },
+    // Third, per images 1 and 2. The label is the same word in both
+    // languages, which is why sv and en match here.
+    { key: "cv", to: "/my-career/cv", sv: "CV", en: "CV" },
     { key: "jobs", to: "/jobs", sv: "Jobb", en: "Jobs" },
     { key: "career", to: "/career-center", sv: "Karriär", en: "Career" },
     // "Tester & utveckling": the area holds recruitment tests, their
@@ -181,7 +187,7 @@ group("1 · one canonical link per product, desktop and mobile");
   ];
 
   ck(
-    "the navigation is exactly five items, in the agreed order",
+    "the navigation is exactly six items, in the agreed order",
     CANDIDATE_APP_NAV.map((i) => i.key).join(",") === EXPECTED.map((e) => e.key).join(","),
   );
 
@@ -189,9 +195,9 @@ group("1 · one canonical link per product, desktop and mobile");
     const html = render(React.createElement(CandidateAppNav, { variant, activeKey: "overview" }));
     const hrefs = Array.from(html.matchAll(/href="([^"]*)"/g)).map((m) => m[1]!);
 
-    ck(`${variant}: exactly five links`, hrefs.length === 5);
+    ck(`${variant}: exactly six links`, hrefs.length === 6);
     ck(
-      `${variant}: the five destinations, in order`,
+      `${variant}: the six destinations, in order`,
       hrefs.join(",") === EXPECTED.map((e) => e.to).join(","),
     );
     for (const e of EXPECTED) {
@@ -285,7 +291,15 @@ group("3 · current location survives nesting");
   const CASES: [string, string | null][] = [
     ["/_authenticated/my-career/", "overview"],
     ["/_authenticated/my-career/profile", "overview"],
-    ["/_authenticated/my-career/cv/new", "overview"],
+    // The CV is its own destination now; its routeId prefix is longer than
+    // the overview item's, so longest-prefix resolution lights CV for every
+    // CV route rather than leaving them on Översikt.
+    ["/_authenticated/my-career/cv", "cv"],
+    ["/_authenticated/my-career/cv/", "cv"],
+    ["/_authenticated/my-career/cv/new", "cv"],
+    ["/_authenticated/my-career/cv/$cvId", "cv"],
+    // Still Översikt: a sibling whose prefix is NOT the CV's.
+    ["/_authenticated/my-career/career-card", "overview"],
     ["/_authenticated/passport/", "passport"],
     ["/_authenticated/passport/information", "passport"],
     ["/_authenticated/passport/card", "passport"],
@@ -473,6 +487,8 @@ group("6 · every navigation item resolves");
     "/jobs": "src/routes/jobs.index.tsx",
     "/passport": "src/routes/_authenticated.passport.index.tsx",
     "/academy": "src/routes/_authenticated.academy.index.tsx",
+    // The CV's own index, reached through the layout route of the same name.
+    "/my-career/cv": "src/routes/_authenticated.my-career.cv.index.tsx",
   };
   for (const item of CANDIDATE_APP_NAV) {
     const file = ROUTE_FILES[item.to];
@@ -582,7 +598,7 @@ group("7 · one name per product");
     ck(`${lang}: dictionaries still load`, values.length > 0);
   }
 
-  // The five concepts stay five concepts.
+  // The concepts stay distinct concepts.
   ck(
     "Career Card and Security Passport are never the same sentence's subject",
     !/Career Card[^.]{0,40}(är|is) [^.]{0,20}Security Passport/i.test(workspace),
@@ -653,7 +669,7 @@ group("7 · one name per product");
 /* 8 · The account menu owns My Profile, the nav does not              */
 /* ------------------------------------------------------------------ */
 
-group("8 · primary navigation stays five items");
+group("8 · primary navigation stays six items");
 {
   const menu = code(read("src/components/site/AccountMenu.tsx"));
   ck("My Profile is reached from the account menu", menu.includes('to="/my-career/profile"'));
@@ -663,7 +679,7 @@ group("8 · primary navigation stays five items");
       dictionaries.en["account.settings"] === "My Profile",
   );
   for (const to of ["/my-career/profile", "/my-career/career-card", "/discovery"]) {
-    ck(`${to} is NOT a fifth primary navigation item`, !CANDIDATE_APP_NAV.some((i) => i.to === to));
+    ck(`${to} is NOT a primary navigation item`, !CANDIDATE_APP_NAV.some((i) => i.to === to));
   }
   ck("sign out is still in the account menu", menu.includes('t("account.signOut")'));
 

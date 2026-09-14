@@ -126,9 +126,27 @@ test.describe("the public homepage", () => {
   });
 
   // H3 ──────────────────────────────────────────────────────────────────
-  test("one h1, five h2, and the framing the brief settled", async ({ page }) => {
+  test("one h1, six h2, and the framing the brief settled", async ({ page }) => {
     expect(await page.locator("main h1").count()).toBe(1);
-    expect(await page.locator("main h2").count()).toBe(5);
+    // SIX since the owner's image 0 put a working login panel on this page.
+    // Five are the page's own sections; the sixth is the panel's own
+    // heading ("Logga in"), which is a real section heading for a real
+    // section and belongs in the count.
+    //
+    // Still an exact equality, deliberately: the rule this encodes is that
+    // this page's heading structure is KNOWN and fixed, and that rule is
+    // what catches a stray heading arriving later. Loosening it to >= to
+    // accommodate the panel would give that up.
+    //
+    // The panel carries a second h2 in its awaiting-confirmation state,
+    // which a fresh load never reaches. If a future test drives the panel
+    // into that state it will read seven, and that is correct rather than
+    // a regression.
+    //
+    // scripts/public-homepage-check.tsx still asserts FIVE and is right to:
+    // it renders the route with no session observed, so showAuthPanel is
+    // false and the panel is not there to count.
+    expect(await page.locator("main h2").count()).toBe(6);
     expect(await page.locator("main h3").count()).toBe(6);
     await expect(page.locator("main h1")).toHaveText("Bygg din framtid inom säkerhet");
 
@@ -184,7 +202,22 @@ test.describe("the public homepage", () => {
       document.body.append(probe);
       const navy = getComputedStyle(probe).backgroundColor;
       probe.remove();
+      // The subject of this assertion is the two peer ENTRANCES — the
+      // Passport action and the Career Discovery action — and that they
+      // are peers: same height, same font size, same baseline.
+      //
+      // The login panel's submit is the same PrimaryButton component, so
+      // it carries the same navy, and it lives inside #hero. It is not an
+      // entrance: it is the returning-user path, and it is primary WITHIN
+      // ITS OWN CARD, which is what scopes it. Counting it here would not
+      // measure anything about the two entrances being peers.
+      //
+      // Scoped, not loosened: it is still exactly two, still the same two
+      // hrefs in the same order, still the same height, font and baseline.
+      // A third solid action appearing anywhere else in the hero still
+      // fails this.
       return [...document.querySelectorAll<HTMLElement>("#hero a, #hero button")]
+        .filter((el) => !el.closest("[data-home-auth-panel]"))
         .filter((el) => getComputedStyle(el).backgroundColor === navy)
         .map((el) => {
           const r = el.getBoundingClientRect();
@@ -462,8 +495,20 @@ test.describe("the public homepage", () => {
 
       // Not an unexpected authentication wall. /login is the one destination
       // that is supposed to ask for credentials.
+      //
+      // toHaveCount RETRIES; a bare .count() is a single sample. waitForURL
+      // resolves when the router commits the URL, which is before the
+      // outgoing route unmounts, so a one-shot read here can still see the
+      // page we just left. That was invisible while / held no password
+      // field and became a flake the moment the homepage gained its login
+      // panel — it struck 3 of these 8 destinations, and the two reached by
+      // page.goto rather than by a click never failed at all.
+      //
+      // This does not soften the rule. A destination that genuinely asks
+      // for a credential still fails, because the field is still there when
+      // the retries run out. Only the in-flight transition stops counting.
       if (cta.url !== "/login") {
-        expect(await page.locator('input[type="password"]').count()).toBe(0);
+        await expect(page.locator('input[type="password"]')).toHaveCount(0);
       }
 
       await page.goBack({ waitUntil: "networkidle" });
@@ -967,7 +1012,10 @@ test.describe("routed evidence — the individual entrances", () => {
     await page.waitForURL("**/security-career-assessment**", { timeout: 15_000 });
     expect(new URL(page.url()).pathname).toBe("/security-career-assessment");
     // Signed out, and no credential asked for before the first question.
-    expect(await page.locator('input[type="password"]').count()).toBe(0);
+    // Retried rather than sampled once, for the reason recorded on the
+    // round-trip assertion above: this arrives by a click from /, so a
+    // single read can still catch the homepage mid-transition.
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 20_000 });
     await shot(
       page,

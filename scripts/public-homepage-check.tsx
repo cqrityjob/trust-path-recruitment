@@ -528,7 +528,7 @@ group("T5 · both primary destinations are canonical and safe");
   );
 
   // And the Passport intent survives every account path the form supports.
-  const authForm = code(read("src/components/auth/UnifiedAuthForm.tsx"));
+  const authForm = code(read("src/components/auth/UnifiedAuthPanel.tsx"));
   ck(
     "signup reads ?redirect= through safeReturnPath",
     authForm.includes('safeReturnPath(params.get("redirect")'),
@@ -1007,16 +1007,17 @@ group("T12 · the public chrome, and the untouched candidate chrome");
   //
   // This PR changes the SIGNED-OUT navigation. A change that quietly
   // reshaped the workspace nav as well would be out of scope and would
-  // break route highlighting, so the five are pinned here.
+  // break route highlighting, so the six are pinned here.
   ck(
-    "the candidate workspace still has exactly five destinations",
-    CANDIDATE_APP_NAV.length === 5,
+    // Six since the owner's images 1 and 2 put the CV in the navigation.
+    "the candidate workspace still has exactly six destinations",
+    CANDIDATE_APP_NAV.length === 6,
     CANDIDATE_APP_NAV.length,
   );
   ck(
     "in the settled order",
     JSON.stringify(CANDIDATE_APP_NAV.map((i) => i.key)) ===
-      JSON.stringify(["overview", "passport", "jobs", "career", "assessments"]),
+      JSON.stringify(["overview", "passport", "cv", "jobs", "career", "assessments"]),
     CANDIDATE_APP_NAV.map((i) => i.key),
   );
   // Career Discovery keeps lighting ONE workspace destination for a signed-in

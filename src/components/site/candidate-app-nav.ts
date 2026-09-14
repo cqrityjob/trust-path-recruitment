@@ -31,13 +31,14 @@
 
 /** The five destinations, in the owner's order.
  *
- *  Översikt · Security Passport · Jobb · Karriär · Tester & utveckling.
+ *  Översikt · Security Passport · CV · Jobb · Karriär · Tester & utveckling.
  *  These are the five the owner's sketches name, one per underlined
  *  navigation item, and the Passport is second because it is the durable
  *  thing this product builds for a person; jobs, career and tests are what
  *  happens around it.
  *
- *  Deliberately five.
+ *  Six. This was five until the owner's images 1 and 2 put the CV in
+ *  the navigation; the reversal is recorded on the `cv` entry below.
  *
  *  ── "ÖVERSIKT", NOT "MIN KARRIÄR" ────────────────────────────────────
  *
@@ -62,10 +63,10 @@
  *  to light "Min karriär", because there was nowhere else for them to go.
  *  They are one career product and they light Karriär now.
  *
- *  Career Card, My Profile, the CV and Career Analysis are NOT items here:
- *  Career Card is hidden for the pilot, the CV is contextual from Overview
- *  and Jobs by the owner's explicit rule, and the rest belong inside a
- *  destination. Premium SaaS is not more navigation. Reviewing is not here
+ *  Career Card, My Profile and Career Analysis are NOT items here: Career
+ *  Card is hidden for the pilot, and the rest belong inside a destination.
+ *  The CV WAS in this list, on the owner's earlier explicit rule; images 1
+ *  and 2 moved it into the navigation and the `cv` entry records why. Premium SaaS is not more navigation. Reviewing is not here
  *  either: it is a separate authorised capability, reached from the account
  *  menu's workspace switch, and giving it equal billing beside the
  *  candidate's own products would say otherwise. */
@@ -74,6 +75,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 export type CandidateNavKey =
   | "overview"
   | "career"
+  | "cv"
   | "jobs"
   | "passport"
   | "assessments";
@@ -137,6 +139,36 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
     // employer's attestation desk, not the holder's Passport, and the
     // segment-boundary rule in matchesRouteId keeps it out.
     routeIds: ["/_authenticated/passport"],
+  },
+  {
+    key: "cv",
+    to: "/my-career/cv",
+    // "CV" — the owner's images 1 and 2 both place it third, between the
+    // Passport and Jobb.
+    //
+    // ── THIS REVERSES AN EARLIER EXPLICIT RULE, DELIBERATELY ──────────
+    //
+    // Until now the CV was contextual from Överskt and Jobs and NOT a
+    // navigation item, on the owner's explicit rule, and this file said
+    // "deliberately five" because of it. The owner's authenticated
+    // navigation is now six and names the CV in it. That is a product
+    // decision they are entitled to change; what must not happen is the
+    // change arriving silently, so the reversal is recorded here rather
+    // than the old reasoning being quietly deleted.
+    //
+    // The CONTEXTUAL entries stay as well — the Overview status grid and
+    // the Jobs side column both still reach the CV. A destination having
+    // a nav item has never meant nothing else may link to it; what the
+    // canon forbids is two entries resolving to the same place, and a
+    // summary linking to its canonical page is the pattern this codebase
+    // already uses everywhere.
+    labelKey: "nav.cv",
+    // The CV layout route. Longer than the overview item's
+    // "/_authenticated/my-career", so longest-prefix resolution lights CV
+    // for /my-career/cv, /cv/new and /cv/$cvId without depending on the
+    // order of this array — the same mechanism applications and reports
+    // already rely on.
+    routeIds: ["/_authenticated/my-career/cv"],
   },
   {
     key: "jobs",

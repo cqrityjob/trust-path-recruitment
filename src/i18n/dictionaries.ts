@@ -40,6 +40,7 @@ export const dictionaries = {
     // WORKSPACE (the account menu's context switch); "Översikt" names the
     // page inside it.
     "nav.overview": "Översikt",
+    "nav.cv": "CV",
     "nav.exploreProfessions": "Utforska yrken",
     "nav.passport": "Security Passport",
     "nav.myAssessments": "Bedömningar",
@@ -6963,6 +6964,7 @@ export const dictionaries = {
     "nav.signin.tooltip": "Coming soon",
     "nav.my_career": "My Career",
     "nav.overview": "Overview",
+    "nav.cv": "CV",
     "nav.exploreProfessions": "Explore professions",
     "nav.passport": "Security Passport",
     "nav.myAssessments": "Assessments",

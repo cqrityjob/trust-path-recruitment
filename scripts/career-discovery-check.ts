@@ -1192,7 +1192,7 @@ expect(
 // uuid lives in the return path's QUERY STRING, and navigating to a path
 // that still contains "?" loses it, leaving the candidate on a dead-end
 // session page.
-const authForm = read("src/components/auth/UnifiedAuthForm.tsx");
+const authForm = read("src/components/auth/UnifiedAuthPanel.tsx");
 expect(
   authForm.includes("splitReturnPath") &&
     !authForm.includes("navigate({ to: resolveDestination() })"),

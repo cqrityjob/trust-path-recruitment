@@ -56,7 +56,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: '    key: "passport",\n    to: "/passport",',
     replace: '    key: "assessments",\n    to: "/academy",',
     guard: GUARD,
-    expect: "the owner's five, in the sketch order",
+    expect: "the owner's six, in the images' order",
   },
 
   // ---- A control with nowhere to go ----------------------------------------
@@ -73,14 +73,39 @@ const MUTATIONS: readonly Mutation[] = [
 
   // ---- The CV, which the owner made contextual on purpose ------------------
   {
-    id: "CNC-NC-CV-PROMOTED",
+    // This control used to plant "the CV is promoted to a primary
+    // destination" and require the guard to REFUSE it. The owner's images 1
+    // and 2 put the CV in the navigation, so that is now correct and the
+    // control would be testing the opposite of the rule. Replaced by the
+    // three below, which plant the ways the promotion can go wrong.
+    id: "CNC-NC-CV-DUPLICATED",
     defect:
-      "the CV is promoted back to a primary destination, against the owner's explicit rule that it is reached from Översikt and Jobb",
+      "a second navigation entry also points at the CV, so one capability has two doors -- the Översikt/Min karriär defect, generalised",
     file: NAV,
     find: '    key: "career",\n    to: "/career-center",',
     replace: '    key: "career",\n    to: "/my-career/cv",',
     guard: GUARD,
-    expect: "no navigation entry points at the CV",
+    expect: "exactly one navigation entry points at the CV",
+  },
+  {
+    id: "CNC-NC-CV-NONCANONICAL",
+    defect:
+      "the CV entry points at /cv/new rather than the canonical CV route, so the navigation always starts a new CV instead of opening the one that exists",
+    file: NAV,
+    find: '    key: "cv",\n    to: "/my-career/cv",',
+    replace: '    key: "cv",\n    to: "/my-career/cv/new",',
+    guard: GUARD,
+    expect: "points at the canonical CV route",
+  },
+  {
+    id: "CNC-NC-CV-CONTEXT-LOST",
+    defect:
+      "promoting the CV to the navigation strips it out of the Overview status grid, so it stops being reachable where somebody meets it mid-task",
+    file: "src/components/professional-identity/HubStatusGrid.tsx",
+    find: '<Go to={cv.state === "none" ? "/my-career/cv/new" : "/my-career/cv"}>',
+    replace: '<Go to={cv.state === "none" ? "/my-career/cv/new" : "/my-career/cv/new"}>',
+    guard: GUARD,
+    expect: "the Overview status grid still reaches the CV",
   },
 
   // ---- Career Card coming back ---------------------------------------------

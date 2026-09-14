@@ -20,6 +20,7 @@ import { CareerPageHeader } from "@/components/professional-identity/CareerPageH
 import { NextBestAction } from "@/components/professional-identity/NextBestAction";
 import { PassportSummary } from "@/components/professional-identity/PassportSummary";
 import { HubStatusGrid } from "@/components/professional-identity/HubStatusGrid";
+import { OverviewPassportCard } from "@/components/professional-identity/OverviewPassportCard";
 import { RecentActivity } from "@/components/professional-identity/RecentActivity";
 import { LinkEarlierResult } from "@/components/professional-identity/LinkEarlierResult";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
@@ -49,7 +50,7 @@ import { getMyAssessmentHistory } from "@/lib/security-competency/assessment-lif
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import type { CareerProfileForJobsV1 } from "@/lib/career-intelligence-engine/profile-for-jobs";
-import { c, L, type Copy } from "@/components/professional-identity/copy";
+import { c, L, type Copy, type Lang } from "@/components/professional-identity/copy";
 import { ACTIVITY, CAREER } from "@/components/professional-identity/home-copy";
 
 /** The "your result is saved" state, shown once on arrival from a claim.
@@ -553,6 +554,21 @@ function MyCareerPage() {
           />
         </div>
       </div>
+
+      {/* 3b · The Passport CARD (image 1's "Passportkort").
+          The same buildPassportCard + DirectionC the Passport page and
+          /passport/card render, off the same canonical getMyPassport read.
+          One card, one builder, one read — and no figures, because
+          PassportSummary directly above owns those.
+
+          ITS OWN ROW, not a third column in the row above. Image 1 draws
+          the three side by side, but that row's 5/7 split is the Emsoms
+          #10/#12 fix — the Passport summary is the wider card, and
+          my-career-premium-overview pins it. Re-cutting it to fit a third
+          column would undo a shipped fix and squeeze the card to 256px at
+          lg. The owner's correction asks for one next step, one summary
+          and one card on Överskt; it does not require them in one row. */}
+      <OverviewPassportCard lang={lang as Lang} className="mt-4" />
 
       {/* 4 · The other four areas, one fact each.
           Every one of these was a full product section here until #211.

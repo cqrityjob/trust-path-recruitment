@@ -2058,6 +2058,9 @@ const sv = {
   "info.title": "Mina uppgifter",
   "info.lead":
     "Här lägger du in din bakgrund. Allt sparas direkt och du kan fortsätta när du vill. Behörigheter har egna formulär eftersom de har egna regler.",
+  // The section row's accessible name (image 2). Names what the row IS,
+  // not what it does, because it is a nav landmark and not a control.
+  "info.sections.label": "Avsnitt i ditt Passport",
   "info.employment": "Anställningar",
   // Phase 11 — languages and practical skills.
   "info.languages": "Språk",
@@ -3941,6 +3944,7 @@ const en: Record<PassportCopyKey, string> = {
   "info.title": "My information",
   "info.lead":
     "This is where you enter your background. Everything saves immediately and you can continue whenever you like. Credentials have their own forms because they have their own rules.",
+  "info.sections.label": "Sections in your Passport",
   "info.employment": "Employment",
   "info.languages": "Languages",
   "info.skills": "Practical skills",
