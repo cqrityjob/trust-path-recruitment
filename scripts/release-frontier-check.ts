@@ -93,8 +93,20 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // #241 merged, and release-state.json now records it as applied with read-only
 // evidence. Its name comes off this list in that same change, as planned, so
 // an applied migration cannot sit here masking the next genuinely stuck one.
-// No active migration remains pending.
-const expectedPending: string[] = [];
+//
+// BESKT PR 6 (20261116090000_bcp_conduct_prompts_and_report) is the one
+// migration pending by design. It is a schema-only change: the governed
+// conduct-prompt reader and the immutable BESKT report chain. No application
+// code on this branch names any object it introduces, so release-parity-check
+// has nothing to block, and its name comes off this list only once the
+// official integration has applied it and release-state.json carries hosted
+// evidence -- never on the strength of a merge alone.
+const expectedPending: string[] = [
+  // BESKT PR 6. Schema only: no application code on this branch names
+  // bcp_conduct_topic_prompts or any object of the report chain, so nothing
+  // ships against it. The Supabase GitHub integration applies it on merge.
+  "20261116090000_bcp_conduct_prompts_and_report.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

@@ -396,6 +396,24 @@ BEGIN
     _prev -> 'blockers' @> '[{"code":"BCP_CONDUCT_NOTHING_DOCUMENTED"}]'::jsonb,
     'R1.1 an empty conversation is blocked for having nothing to report');
 
+  -- The blocker reader answers directly too, not only through the preview:
+  -- a screen that wants to say what is missing without rendering the whole
+  -- document calls it on its own, and it has to be reachable that way.
+  PERFORM pg_temp.ok(
+    pg_temp.count_as(_r.rec_a,
+      format('SELECT count(*) FROM public.bcp_conduct_report_blockers(%L)', _r.sess)) > 0,
+    'R1.1b the blocker reader is reachable on its own, not only through the preview');
+
+  -- And finalising while a blocker stands is refused BY NAME. Proving the
+  -- preview lists a blocker is not the same as proving the signature path
+  -- honours it -- a report written over an open blocker is the failure this
+  -- whole chain exists to prevent.
+  PERFORM pg_temp.must_fail_as('authenticated', _r.rec_a,
+    format('SELECT public.bcp_conduct_finalise_report(%L, %L, %L)',
+           gen_random_uuid(), _r.sess, _prev ->> 'basis_hash'),
+    'BCP_CONDUCT_REPORT_BLOCKED',
+    'R1.1c and finalising while a blocker stands is refused, even with the correct basis hash');
+
   -- Document both themes as the first assessor.
   PERFORM pg_temp.become(_r.rec_a); SET LOCAL ROLE authenticated;
   SELECT revision INTO _rev FROM public.bcp_conduct_positions WHERE id = _r.pos1;
