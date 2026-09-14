@@ -16,7 +16,12 @@
  */
 import { runControls, type Mutation } from "./runner";
 
-const FORM = "src/components/auth/UnifiedAuthForm.tsx";
+// The auth implementation moved to UnifiedAuthPanel when image 0 put a
+// working login panel on the public landing page; UnifiedAuthForm is now
+// the /login PAGE around it. The confirmation state, its resend and its
+// return path all live in the panel, so that is where these mutations
+// plant. The defects and the expectations are unchanged.
+const FORM = "src/components/auth/UnifiedAuthPanel.tsx";
 const DICT = "src/i18n/dictionaries.ts";
 const GUARD = "account-confirmation:check";
 
@@ -57,8 +62,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the confirmation branch is moved after the form's, so both can paint and the form survives the submission again",
     file: FORM,
-    find: "              ) : awaitingConfirmation ? (",
-    replace: "              ) : awaitingConfirmation && false ? (",
+    find: "      ) : awaitingConfirmation ? (",
+    replace: "      ) : awaitingConfirmation && false ? (",
     guard: GUARD,
     expect: "ACS-REPLACES",
   },
@@ -67,8 +72,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the address the link was sent to is no longer shown, so a typo stays invisible until nothing ever arrives",
     file: FORM,
-    find: "                      {awaitingConfirmation.email}",
-    replace: "                      {null}",
+    find: "              {awaitingConfirmation.email}",
+    replace: "              {null}",
     guard: GUARD,
     expect: "ACS-SHOWS",
   },
@@ -77,8 +82,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the panel stops saying the destination survived, so somebody mid-Career-Discovery has no reason to believe their result is still waiting",
     file: FORM,
-    find: '                    {t("auth.confirm.destinationKept")}',
-    replace: "                    {null}",
+    find: '            {t("auth.confirm.destinationKept")}',
+    replace: "            {null}",
     guard: GUARD,
     expect: "ACS-SHOWS",
   },
@@ -108,9 +113,9 @@ const MUTATIONS: readonly Mutation[] = [
       "the resend outcome is painted but never announced, so a screen-reader user cannot tell whether pressing it did anything",
     file: FORM,
     find:
-      '                      role="status"\n                      className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"',
+      '              role="status"\n              className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"',
     replace:
-      '                      data-was-status="true"\n                      className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"',
+      '              data-was-status="true"\n              className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"',
     guard: GUARD,
     expect: "ACS-ACTIONS",
   },
