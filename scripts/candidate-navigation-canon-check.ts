@@ -184,6 +184,24 @@ check(
   "and the Jobs side column still does too",
 );
 
+// A destination promoted into the navigation must stop presenting itself as
+// subordinate to a sibling. The CV index opened with a back arrow to
+// Översikt — correct while the CV was reached only from there, wrong once
+// somebody arrives from the nav bar, and labelled with the WORKSPACE name
+// on top of that. Every primary destination is checked, not just the CV,
+// because the next promotion will have the same defect.
+for (const [label, file] of [
+  ["the CV", "src/routes/_authenticated.my-career.cv.index.tsx"],
+  ["the Passport", "src/routes/_authenticated.passport.index.tsx"],
+  ["Tests & Development", "src/routes/_authenticated.academy.index.tsx"],
+] as const) {
+  const page = code(read(file));
+  check(
+    !/<Link\s+to="\/my-career"[\s>]/.test(page),
+    `${label} does not open with a back-link to a sibling destination`,
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* 5 · Career Card is hidden for the pilot                             */
 /* ------------------------------------------------------------------ */

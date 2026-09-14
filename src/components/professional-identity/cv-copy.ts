@@ -15,7 +15,6 @@ import type { BundleSection } from "@/lib/professional-identity/cv/bundle-diff";
 
 export const CV = {
   /* -- shared ------------------------------------------------------- */
-  back: c("Min karriär", "My Career"),
   backToList: c("Alla CV", "All CVs"),
   title: c("Ditt CV", "Your CV"),
   lede: c(

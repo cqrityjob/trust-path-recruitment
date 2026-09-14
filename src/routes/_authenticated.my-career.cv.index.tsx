@@ -20,7 +20,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, FileText, Loader2, Plus, RefreshCcw, Sparkles } from "lucide-react";
+import { ArrowRight, FileText, Loader2, Plus, RefreshCcw, Sparkles } from "lucide-react";
 import { Container } from "@/components/site/Container";
 import { L, Lf, type Lang } from "@/components/professional-identity/copy";
 import { CV, CV_MISSING_FIELD } from "@/components/professional-identity/cv-copy";
@@ -87,14 +87,17 @@ function CvListPage() {
   return (
     <>
       <Container className="py-10 md:py-14">
-        <Link
-          to="/my-career"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          {L(CV.back, l)}
-        </Link>
+        {/* No back-link to Översikt. The CV is a primary destination in the
+            candidate navigation now (images 1 and 2), reached directly from
+            the nav bar rather than only from the Overview tile — so a back
+            arrow to a SIBLING destination is wrong twice over: the reader
+            usually did not come from there, and it presents one destination
+            as subordinate to another. The navigation is the way between
+            destinations; the CV's own children still link back to this list.
 
+            It also read "Min karriär", which names the WORKSPACE in the
+            account menu's context switch and not the Översikt page — the
+            one-place-two-names defect the navigation canon removed. */}
         <h1
           className="mt-4 text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
           style={{ fontFamily: "var(--font-display)" }}
