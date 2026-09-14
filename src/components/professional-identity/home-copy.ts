@@ -139,6 +139,22 @@ export const PASSPORT = {
     "Your own entries are marked as added by you. A merit is shown as verified only once the source itself has confirmed it. Where CQrityjob has reviewed a document, the merit is shown as documented.",
   ),
   open: c("Öppna mitt Security Passport", "Open my Security Passport"),
+  /** The contents preview beneath the card. The owner's correction: status
+   *  totals say what STATE the Passport is in; they do not say what is in
+   *  it. This names the contents. */
+  contentsHeading: c("I ditt Security Passport", "In your Security Passport"),
+  contentsEmpty: c(
+    "Ditt Security Passport innehåller inga meriter ännu.",
+    "Your Security Passport does not hold any merits yet.",
+  ),
+  contentsUnreadable: c(
+    "Innehållet kunde inte läsas just nu. Ingenting har tagits bort.",
+    "The contents could not be read just now. Nothing has been removed.",
+  ),
+  contentsMore: cp(
+    c("och 1 till", "and 1 more"),
+    c("och {0} till", "and {0} more"),
+  ),
   /** /passport/credentials/new creates a CREDENTIAL. The label says so. */
   addCredential: c("Lägg till ett intyg eller en utbildning", "Add a certificate or qualification"),
   clarification: cp(

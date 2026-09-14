@@ -84,6 +84,29 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "no CSS reordering",
   },
 
+  // ---- The contents preview is replaced by counts alone --------------------
+  {
+    id: "OV-NC-CONTENTS-REPLACED-BY-COUNTS",
+    defect:
+      "the Passport column stops showing what the Passport CONTAINS and offers only status totals, which describe its state and never its contents",
+    file: ROUTE,
+    find: '          <OverviewPassportContents lang={lang as Lang} className="mt-5" />',
+    replace: "",
+    guard: DASH,
+    expect: "must show what the Passport contains",
+  },
+  {
+    id: "OV-NC-CONTENTS-BEFORE-CARD",
+    defect:
+      "the contents preview is moved above the card, so the column no longer reads card-then-contents",
+    file: ROUTE,
+    find: "          <OverviewPassportCard lang={lang as Lang} />\n\n          {/* WHAT IS IN IT",
+    replace:
+      "          <OverviewPassportContents lang={lang as Lang} />\n          <OverviewPassportCard lang={lang as Lang} />\n\n          {/* WHAT IS IN IT",
+    guard: DASH,
+    expect: "card, then contents, then the totals",
+  },
+
   // ---- The column split loses its meaning ----------------------------------
   {
     id: "OV-NC-COLUMNS-SWAPPED",

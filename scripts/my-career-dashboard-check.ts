@@ -242,6 +242,59 @@ expect(
   routeCode.indexOf("<OverviewPassportCard") < routeCode.indexOf("<PassportSummary"),
   `${routePath}: the visual Passport card comes first, then what it contains.`,
 );
+
+// ── WHAT IT CONTAINS, NOT ONLY WHAT STATE IT IS IN ───────────────────────
+//
+// Status totals describe the Passport; they never say what is in it. The
+// owner's correction requires an actual contents preview directly beneath
+// the card, and this asserts the totals cannot quietly become the whole
+// answer again.
+{
+  const contentsPath = "src/components/professional-identity/OverviewPassportContents.tsx";
+  const contents = read(contentsPath);
+  expect(
+    routeCode.includes("<OverviewPassportContents"),
+    `${routePath}: the Passport column must show what the Passport contains, not only its totals.`,
+  );
+  expect(
+    routeCode.indexOf("<OverviewPassportCard") < routeCode.indexOf("<OverviewPassportContents") &&
+      routeCode.indexOf("<OverviewPassportContents") < routeCode.indexOf("<PassportSummary"),
+    `${routePath}: card, then contents, then the totals as secondary support.`,
+  );
+  // The CANONICAL reader, not a new one.
+  expect(
+    contents.includes("listMyEntries"),
+    `${contentsPath}: the preview must read the canonical listMyEntries.`,
+  );
+  expect(
+    !contents.includes("createServerFn"),
+    `${contentsPath}: the preview must not define a server function of its own.`,
+  );
+  // Real rows, and a truthful empty state rather than placeholder content.
+  expect(
+    /data-overview-passport-contents="empty"/.test(contents) &&
+      /data-overview-passport-contents="ready"/.test(contents),
+    `${contentsPath}: the preview must distinguish a real empty Passport from a populated one.`,
+  );
+  // Overview is a summary surface. Provenance belongs to the Passport.
+  //
+  // Comments are stripped first: the component's own note explains which
+  // provenance fields it deliberately does NOT render, and a raw search
+  // matches that explanation as readily as a regression.
+  const contentsCode = contents.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  for (const leak of [
+    "issuerName",
+    "verifierName",
+    "verificationMethod",
+    "evidenceUrl",
+    "reviewer",
+  ]) {
+    expect(
+      !contentsCode.includes(leak),
+      `${contentsPath}: ${leak} is Passport provenance and must not be rendered on Överskt.`,
+    );
+  }
+}
 // Checked in the route AND in the Passport column's own components: a
 // negative control proved that asserting only on the route left the
 // assertion dead, because the second action used to live inside
