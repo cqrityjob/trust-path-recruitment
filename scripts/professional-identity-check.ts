@@ -2929,13 +2929,21 @@ console.log("\n12 · candidate dead ends");
   // section moved, and the destination moved with it.
   const holderAction = computeNextBestActions(holder).all.find((a) => a.section === "employment");
   const holderHref = holderAction?.href ?? "";
+  // Three separate claims, because collapsing them lets one edit satisfy the
+  // other: the ladder must agree with the map, the map must hold the
+  // canonical value, and that value must be an editor rather than a front
+  // door. Editing only the map now fails 12.11a; editing only the ladder
+  // fails 12.11.
   ck(
-    "12.11 'add your work experience' lands on the employment editor, not a surface's front door",
-    holderHref === SECTION_DESTINATIONS.employment.href &&
-      holderHref === "/my-career/profile#profile-employment",
+    "12.11 'add your work experience' lands on the destination the map owns for employment",
+    holderHref === SECTION_DESTINATIONS.employment.href,
   );
   ck(
-    "12.11b and that destination is an anchored editor, not any surface's front door",
+    "12.11a and that canonical destination is the profile workspace's employment editor",
+    SECTION_DESTINATIONS.employment.href === "/my-career/profile#profile-employment",
+  );
+  ck(
+    "12.11b which is an anchored editor, never a surface's front door",
     !FRONT_DOORS.includes(holderHref) && (holderHref.split("#")[1] ?? "").length > 0,
   );
 
