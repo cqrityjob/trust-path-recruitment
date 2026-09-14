@@ -512,13 +512,15 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
-    // Pilot blocker 2's migration was applied by the official integration
-    // and its hosted evidence is recorded, so the list is EMPTY again and the
-    // anchor is the empty list. The planted defect is unchanged and always
-    // has been: this APPLIED migration goes back on the frontier.
-    find: "const expectedPending: string[] = [];",
+    // The anchor tracks the list's CURRENT shape, which moves as migrations are
+    // applied and new ones become pending; today it ends with BESKT PR 6
+    // (20261116090000), the one migration pending by design. The planted defect
+    // never changes: this APPLIED migration goes back on the frontier list,
+    // where a resolved name would hide the next genuinely stuck one behind an
+    // expectation.
+    find: '  "20261116090000_bcp_conduct_prompts_and_report.sql",\n];',
     replace:
-      'const expectedPending: string[] = ["20261112090000_bcp_interview_case_bridge.sql"];',
+      '  "20261116090000_bcp_conduct_prompts_and_report.sql",\n  "20261112090000_bcp_interview_case_bridge.sql",\n];',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },

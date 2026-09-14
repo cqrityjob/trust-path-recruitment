@@ -294,7 +294,8 @@ const MUTATIONS: readonly Mutation[] = [
       "the evidence names a database that is not the one canonical hosted project, so it proves nothing about wrygicdfxwjnrugduxnt",
     file: STATE,
     find: '"evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt by the official',
-    replace: '"evidenceSource": "Applied to owner production lovable-cloud-substitute by the official',
+    replace:
+      '"evidenceSource": "Applied to owner production lovable-cloud-substitute by the official',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },
@@ -303,9 +304,15 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the frontier selection check still expects the migration pending after production has applied it, which would mask the next genuinely stuck migration behind a stale expectation",
     file: FRONTIER,
-    find: "const expectedPending: string[] = [];",
+    // The anchor tracks the list's CURRENT shape, which moves as migrations are
+    // applied and new ones become pending; today it ends with BESKT PR 6
+    // (20261116090000), the one migration pending by design. The planted defect
+    // never changes: this APPLIED migration goes back on the frontier list,
+    // where a resolved name would hide the next genuinely stuck one behind an
+    // expectation.
+    find: '  "20261116090000_bcp_conduct_prompts_and_report.sql",\n];',
     replace:
-      'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
+      '  "20261116090000_bcp_conduct_prompts_and_report.sql",\n  "20261115090000_scp_interview_method_library_tenant_read.sql",\n];',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },
