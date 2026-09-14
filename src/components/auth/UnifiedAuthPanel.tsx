@@ -724,11 +724,19 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
             </PrimaryButton>
           </form>
 
+          {/* Both controls below carry min-h-11, like every other control in
+              this panel. They did not, because /login does not assert a
+              minimum hit area — and the panel now also mounts on the public
+              landing page, which does: public-homepage.spec.ts fails any
+              target under 44x44 in main, at every required width. The
+              homepage holds the stricter and better rule, so the controls
+              meet it rather than the rule being relaxed for them, and
+              /login gets the same improvement. */}
           <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
             <Link
               to={isSignup ? "/login" : "/signup"}
               search={swapSearch as never}
-              className="font-medium text-accent underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 items-center font-medium text-accent underline-offset-4 hover:underline"
             >
               {t(isSignup ? "auth.swap.to_signin" : "auth.swap.to_signup")}
             </Link>
@@ -737,7 +745,7 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
                 type="button"
                 onClick={onReset}
                 disabled={busy}
-                className="text-muted-foreground underline-offset-4 hover:underline disabled:opacity-60"
+                className="inline-flex min-h-11 items-center text-muted-foreground underline-offset-4 hover:underline disabled:opacity-60"
               >
                 {t("auth.reset.link")}
               </button>
