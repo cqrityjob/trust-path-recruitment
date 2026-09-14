@@ -2896,11 +2896,18 @@ console.log("\n12 · candidate dead ends");
 
   /* ---- D · a recommendation is never a self-link ------------------- */
 
-  // The Passport-owned sections, for somebody who HAS a Passport: each must
-  // carry the anchor of the section that owns it rather than a front door.
-  // Everything answered except the employment history, so employment is
-  // genuinely the next thing the ladder should name. A fixture missing an
-  // earlier section would test the ordering rather than the destination.
+  // Every section a recommendation can name must carry the anchor of the
+  // editor that owns it rather than a front door, whichever surface that
+  // editor sits on. Everything is answered here except the employment
+  // history, so employment is genuinely the next thing the ladder should
+  // name. A fixture missing an earlier section would test the ordering
+  // rather than the destination.
+  //
+  // The surface roots a recommendation must never settle for: landing on one
+  // of these means the person is told to go somewhere and then left to find
+  // the editor themselves, which is the defect this section exists to catch.
+  const FRONT_DOORS = ["/my-career", "/my-career/profile", "/passport", "/passport/information"];
+
   const holder = identity({
     displayName: "Ola Nord",
     currentStatus: "working_in_industry",
@@ -2913,10 +2920,23 @@ console.log("\n12 · candidate dead ends");
     currentProfessionTitleEn: "Security officer",
     yearsOfExperience: "3-5",
   });
+  // Requirement B moved employment-history AUTHORING to the canonical
+  // profile workspace. The Passport keeps its employment section as a real
+  // section for evidence, provenance and verification, but the editor that
+  // actually answers "add your work experience" now lives on the profile.
+  // The rule under test is unchanged -- a recommendation lands on the editor
+  // that answers it, never on a surface's front door -- so only the owning
+  // section moved, and the destination moved with it.
   const holderAction = computeNextBestActions(holder).all.find((a) => a.section === "employment");
+  const holderHref = holderAction?.href ?? "";
   ck(
-    "12.11 'add your work experience' lands on the employment section, not the Passport's front door",
-    holderAction?.href === "/passport/information#sp-employment",
+    "12.11 'add your work experience' lands on the employment editor, not a surface's front door",
+    holderHref === SECTION_DESTINATIONS.employment.href &&
+      holderHref === "/my-career/profile#profile-employment",
+  );
+  ck(
+    "12.11b and that destination is an anchored editor, not any surface's front door",
+    !FRONT_DOORS.includes(holderHref) && (holderHref.split("#")[1] ?? "").length > 0,
   );
 
   /* ---- E · a read that did not answer decides nothing -------------- */
