@@ -252,9 +252,28 @@ export interface RegulatedCredentialAvailability {
   readonly types: readonly CredentialType[];
 }
 
+/** Browse another market's catalogue WITHOUT changing anything.
+ *
+ *  Optional, and absent by default: every existing caller passes nothing and
+ *  gets exactly the behaviour it always had — the holder's own saved market,
+ *  read from their profile row.
+ *
+ *  This exists because the Passport's market selector is a BROWSING filter
+ *  (owner, 2026-09-14). Looking at what Great Britain regulates is not a
+ *  statement that you work there, so the selector must not write. This
+ *  function has never written and still does not: it reads a different
+ *  market pack when asked, and touches no row. */
+const browseMarketInput = z
+  .object({
+    jurisdictionCode: z.string().min(2),
+    subJurisdictionCode: z.string().nullable().optional(),
+  })
+  .optional();
+
 export const getRegulatedCredentialAvailability = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<RegulatedCredentialAvailability> => {
+  .validator((d: unknown) => browseMarketInput.parse(d ?? undefined))
+  .handler(async ({ context, data: browse }): Promise<RegulatedCredentialAvailability> => {
     const { supabase, userId } = context;
 
     const { data: profile, error: profileError } = await supabase
@@ -264,8 +283,14 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
       .maybeSingle();
     if (profileError) throw new Error(profileError.message);
 
-    const jurisdictionCode = profile?.jurisdiction_code ?? null;
-    const subJurisdictionCode = profile?.sub_jurisdiction_code ?? null;
+    // The browsed market when one is asked for, the saved one otherwise.
+    // Note the sub-jurisdiction follows whichever answer supplied the
+    // country: mixing a browsed country with a saved region would describe
+    // a market that does not exist.
+    const jurisdictionCode = browse?.jurisdictionCode ?? profile?.jurisdiction_code ?? null;
+    const subJurisdictionCode = browse
+      ? (browse.subJurisdictionCode ?? null)
+      : (profile?.sub_jurisdiction_code ?? null);
 
     const none = {
       jurisdictionCode,

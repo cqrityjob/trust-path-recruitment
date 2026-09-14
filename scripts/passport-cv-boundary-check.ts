@@ -366,6 +366,38 @@ check(
   );
 
   // The destination map must keep sending general employment here.
+  // ── THE MARKET SELECTOR IS A FILTER, NOT AN ANSWER ──────────────────
+  //
+  // The owner separated two things that had been one control: the PERSISTED
+  // work-country fact, whose editor is on the profile, and the Passport's
+  // catalogue BROWSING filter, which changes what is displayed and nothing
+  // else. Looking at what Great Britain regulates is not a statement that
+  // you work there.
+  //
+  // Comments stripped first: the route explains that the filter never
+  // writes, and a raw search matches that sentence as readily as a call.
+  const infoCode = infoRaw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  check(
+    infoRaw.includes("data-market-filter"),
+    "the Passport keeps a market selector for browsing its catalogue",
+  );
+  check(
+    !/useServerFn\(setWorkCountry\)|setWorkCountry\(\{/.test(infoCode),
+    "and it never writes the work country — that is the profile's one editor",
+  );
+  check(
+    /const \[browseMarket, setBrowseMarket\] = useState/.test(infoCode),
+    "the filter is local state, discarded when the page is left",
+  );
+  check(
+    /browseMarket \?\? undefined/.test(infoCode),
+    "and the catalogue read follows it without persisting it",
+  );
+  check(
+    infoRaw.includes("data-saved-work-country"),
+    "the saved market is stated read-only beside it, so a browse is never mistaken for the answer",
+  );
+
   check(
     destinations.includes(
       'employment: { owner: "profile", href: "/my-career/profile#profile-employment" }',

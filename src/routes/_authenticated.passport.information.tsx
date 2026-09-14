@@ -50,7 +50,9 @@ import {
 import { getMyPassport } from "@/lib/security-passport/passport.functions";
 import {
   getRegulatedCredentialAvailability,
+  listSelectableMarkets,
   type RegulatedCredentialAvailability,
+  type SelectableMarket,
 } from "@/lib/security-passport/credentials.functions";
 import { catalogueOptionsFor } from "@/lib/security-passport/market-catalogue";
 import { Briefcase, GraduationCap, Plus, ShieldCheck } from "lucide-react";
@@ -197,12 +199,25 @@ function PassportInformationRoute() {
   // credential list: see MarketCredentialSection for why the literal was a
   // regulatory claim rather than a convenience.
   const loadAvailability = useServerFn(getRegulatedCredentialAvailability);
+  const loadMarkets = useServerFn(listSelectableMarkets);
   const [workCountry, setWorkCountryState] = useState<{
     jurisdictionCode: string | null;
     subJurisdictionCode: string | null;
     confirmed: boolean;
   } | null>(null);
   const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
+  /** ── THE MARKET SELECTOR IS A BROWSING FILTER (owner, 2026-09-14) ────
+   *
+   *  Looking at what Great Britain regulates is not a statement that you
+   *  work there. This is local state only: it never calls setWorkCountry,
+   *  never writes a row, and is discarded when the page is left. `null`
+   *  means "the market I actually work in", which is what a holder sees on
+   *  arrival — the saved answer, not a remembered browse. */
+  const [browseMarket, setBrowseMarket] = useState<{
+    jurisdictionCode: string;
+    subJurisdictionCode: string | null;
+  } | null>(null);
+  const [selectableMarkets, setSelectableMarkets] = useState<readonly SelectableMarket[]>([]);
   // Three states for the catalogue read, kept apart from the answer itself:
   // "no answer yet" and "the read failed" both leave `availability` null, and
   // a section that could not tell them apart would draw a healthy, slow read
@@ -321,7 +336,7 @@ function PassportInformationRoute() {
     }
 
     try {
-      const next = await loadAvailability({ data: undefined });
+      const next = await loadAvailability({ data: browseMarket ?? undefined });
       if (seq !== availabilitySeq.current) return;
       setAvailability(next);
       setAvailabilityStatus("ready");
@@ -331,10 +346,22 @@ function PassportInformationRoute() {
       setAvailability(null);
       setAvailabilityStatus("failed");
     }
-  }, [loadProfile, loadAvailability, invalidateCandidateReadModels]);
+  }, [loadProfile, loadAvailability, invalidateCandidateReadModels, browseMarket]);
   useEffect(() => {
     void refreshWorkCountry();
   }, [refreshWorkCountry]);
+
+  useEffect(() => {
+    let alive = true;
+    void loadMarkets({ data: undefined })
+      .then((m) => {
+        if (alive) setSelectableMarkets(m);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [loadMarkets]);
   const saveClaim = useServerFn(saveClaimEntry);
   const doRemove = useServerFn(removeEntry);
   const loadJurisdictions = useServerFn(listJurisdictions);
@@ -723,20 +750,71 @@ function PassportInformationRoute() {
             #sp-work-country anchor stay, because the catalogue below is
             decided by that answer and deep links land here. */}
         {workCountry ? (
-          <p
+          <div
             id="sp-work-country"
             tabIndex={-1}
+            data-saved-work-country={
+              workCountry.confirmed ? (workCountry.jurisdictionCode ?? "") : ""
+            }
             className="scroll-mt-24 text-sm leading-relaxed text-muted-foreground"
           >
-            <Link
-              to="/my-career/profile"
-              hash="profile-work-country"
-              data-work-country-authoring-link
-              className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              {pt("basics.editWorkCountry")}
-            </Link>
-          </p>
+            {/* READ-ONLY. The saved answer is stated here and edited in one
+                place, on the profile. */}
+            <p>
+              {workCountry.confirmed
+                ? formatWorkLocation(
+                    workCountry.jurisdictionCode,
+                    workCountry.subJurisdictionCode,
+                    lang,
+                  )
+                : pt("basics.workCountryUnset")}{" "}
+              <Link
+                to="/my-career/profile"
+                hash="profile-work-country"
+                data-work-country-authoring-link
+                className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {pt("basics.editWorkCountry")}
+              </Link>
+            </p>
+
+            {/* ── BROWSING FILTER, NOT AN ANSWER ────────────────────────
+                Changes which market's catalogue is shown below and nothing
+                else: local state, no write, discarded on leaving. It opens
+                on the holder's own market every time, so a browse is never
+                mistaken for what they told us. */}
+            {selectableMarkets.length > 0 ? (
+              <label className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {pt("basics.browseMarketLabel")}
+                </span>
+                <select
+                  data-market-filter
+                  className="inline-flex min-h-11 rounded-md border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  value={
+                    browseMarket
+                      ? `${browseMarket.jurisdictionCode}|${browseMarket.subJurisdictionCode ?? ""}`
+                      : `${workCountry.jurisdictionCode ?? ""}|${workCountry.subJurisdictionCode ?? ""}`
+                  }
+                  onChange={(e) => {
+                    const [j, sub] = e.target.value.split("|");
+                    setBrowseMarket(
+                      j ? { jurisdictionCode: j, subJurisdictionCode: sub || null } : null,
+                    );
+                  }}
+                >
+                  {selectableMarkets.map((m) => (
+                    <option
+                      key={m.marketPackCode}
+                      value={`${m.jurisdictionCode}|${m.subJurisdictionCode ?? ""}`}
+                    >
+                      {lang === "sv" ? m.nameSv : m.nameEn}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
         ) : null}
 
         {/* ── The selected market, and only the selected market ────────── */}

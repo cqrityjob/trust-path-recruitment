@@ -297,6 +297,9 @@ const boom = (route: Route, message: string) =>
 
 let unmatched: string[] = [];
 let pageErrors: string[] = [];
+/** Every server function the page invoked, in order. Lets a test assert
+ *  that a control wrote NOTHING, rather than inferring it from state. */
+let serverCalls: string[] = [];
 /** Every grant and revoke the admin surface sent, exactly as the server
  *  function received it. */
 let adminWrites: Array<{ fn: string; data: Record<string, unknown> }> = [];
@@ -361,6 +364,7 @@ async function mount(
 ) {
   unmatched = [];
   pageErrors = [];
+  serverCalls = [];
   adminWrites = [];
   savedPayloads = [];
   savedRows = [];
@@ -402,6 +406,7 @@ async function mount(
 
   await page.route("**/_serverFn/**", async (route) => {
     const name = exportOf(route.request().url()) ?? "?";
+    serverCalls.push(name);
     switch (name) {
       /* ── the holder's Passport ─────────────────────────────────────── */
       case "getMyPassport":
@@ -455,15 +460,35 @@ async function mount(
         });
       case "listMyVerificationRequests":
         return ok(route, { requests: [], decisions: [] });
+      // The markets the Passport's BROWSING filter offers. Reading this
+      // list changes nothing: it is the catalogue picker, not an answer.
+      case "listSelectableMarkets":
+        return ok(
+          route,
+          (scenario.markets ?? markets({ work: "SE", pilot: [] })).map((m) => ({
+            marketPackCode: m.marketPackCode,
+            jurisdictionCode: m.jurisdictionCode,
+            subJurisdictionCode: m.subJurisdictionCode,
+            nameSv: m.nameSv,
+            nameEn: m.nameEn,
+          })),
+        );
       case "listPassportMarketOverview":
         if (scenario.marketsFail) return boom(route, "market overview failed");
         return ok(route, scenario.markets ?? markets({ work: "SE", pilot: [] }));
       case "getRegulatedCredentialAvailability": {
         if (scenario.availabilityFails) return boom(route, "availability failed");
-        const perMarket =
-          scenario.availabilityByMarket?.[
-            state.work.subJurisdictionCode ?? state.work.jurisdictionCode
-          ];
+        // The browsing filter sends the market it wants; with no payload
+        // the function answers for the holder's saved country, exactly as
+        // it always did.
+        const asked = payloadOf(route) as {
+          jurisdictionCode?: string;
+          subJurisdictionCode?: string | null;
+        } | null;
+        const key = asked?.jurisdictionCode
+          ? (asked.subJurisdictionCode ?? asked.jurisdictionCode)
+          : (state.work.subJurisdictionCode ?? state.work.jurisdictionCode);
+        const perMarket = scenario.availabilityByMarket?.[key];
         if (perMarket) {
           await new Promise((r) => setTimeout(r, perMarket.delayMs));
           return ok(route, perMarket.body);
@@ -1251,7 +1276,9 @@ test.describe("three markets — the real routes", () => {
     await expect(section.locator('[data-testid="market-pilot-status"]')).toHaveCount(0);
 
     await mount(page, { availabilityFails: true }, "sv", "/passport/information");
-    // The work-country control survives, and the catalogue's failure is in
+    // The work-country SECTION survives — it states the saved market
+    // read-only now, the editor having moved to the profile — and the
+    // catalogue's failure is in
     // words: a failed read is drawn AS a failed read with a retry — never as
     // "no work country", which would tell a holder who named Sweden that
     // they had not.
@@ -1331,8 +1358,11 @@ test.describe("three markets — the real routes", () => {
     const section = page.locator('[data-testid="market-credential-section"]');
     await expect(section).toHaveAttribute("data-market-read", "loading");
 
-    await page.locator("#sp-work-country").selectOption("GB");
-    await page.getByRole("button", { name: "Spara arbetsland" }).click();
+    // The market selector is a BROWSING filter: it changes which
+    // catalogue is displayed and writes nothing. The race this test
+    // exists for is unchanged — a second read is opened while the first
+    // is still in flight, and the stale one must lose.
+    await page.locator("[data-market-filter]").selectOption("GB|");
 
     // While Great Britain's catalogue loads: the section is loading, names
     // no Swedish option, and offers nothing selectable.
@@ -1353,6 +1383,50 @@ test.describe("three markets — the real routes", () => {
     await expect(section.locator("[data-credential-code]")).toHaveCount(13);
     await expect(section.locator('[data-credential-code="VU1"]')).toHaveCount(0);
     await expect(section.locator('[data-testid="market-pilot-status"]')).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("browsing another market changes the catalogue and NOT the saved profile", async ({
+    page,
+  }) => {
+    // The owner's separation: the persisted work-country fact is edited in
+    // one place, on the profile; the Passport's selector only decides which
+    // catalogue is on screen. Looking at Great Britain is not a statement
+    // that you work there.
+    await mount(
+      page,
+      {
+        availabilityByMarket: {
+          SE: { body: AVAIL.se, delayMs: 0 },
+          GB: { body: AVAIL.gbPilot, delayMs: 0 },
+        },
+        markets: markets({ work: "SE", pilot: ["GB"] }),
+        work: { jurisdictionCode: "SE", subJurisdictionCode: null },
+      },
+      "sv",
+      "/passport/information",
+    );
+
+    const section = page.locator('[data-testid="market-credential-section"]');
+    const saved = page.locator("[data-saved-work-country]");
+
+    // Arrives on the holder's OWN market, from the saved answer.
+    await expect(section).toHaveAttribute("data-market", "SE", { timeout: 30_000 });
+    await expect(saved).toHaveAttribute("data-saved-work-country", "SE");
+
+    await page.locator("[data-market-filter]").selectOption("GB|");
+
+    // The catalogue follows the browse...
+    await expect(section).toHaveAttribute("data-market", "GB", { timeout: 30_000 });
+    // ...and the saved answer does not move.
+    await expect(saved).toHaveAttribute("data-saved-work-country", "SE");
+    // Nothing was written: setWorkCountry was never called.
+    expect(serverCalls.filter((c) => c === "setWorkCountry")).toEqual([]);
+
+    // And a fresh arrival still opens on the saved market, never on the
+    // browse — the filter is discarded with the page.
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(section).toHaveAttribute("data-market", "SE", { timeout: 30_000 });
     expect(pageErrors).toEqual([]);
   });
 
