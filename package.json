@@ -14,6 +14,7 @@
     "passport-sharing-flow:check": "bun run scripts/passport-sharing-flow-check.tsx",
     "my-career-gate:check": "bun run scripts/my-career-assessment-gate-check.ts",
     "my-career-dashboard:check": "bun run scripts/my-career-dashboard-check.ts",
+    "profile-section-navigation:check": "bun run scripts/profile-section-navigation-check.ts",
     "my-career-experience:check": "bun run scripts/my-career-experience-check.tsx",
     "my-career-premium-overview:check": "bun run scripts/my-career-premium-overview-check.tsx",
     "passport-share-transport:check": "bun run scripts/passport-share-transport-check.ts",
@@ -209,6 +210,7 @@
     "negative-controls:account-confirmation": "bun run scripts/negative-controls/account-confirmation-controls.ts",
     "negative-controls:candidate-navigation-canon": "bun run scripts/negative-controls/candidate-navigation-canon-controls.ts",
     "negative-controls:public-header": "bun run scripts/negative-controls/public-header-controls.ts",
+    "negative-controls:profile-section-navigation": "bun run scripts/negative-controls/profile-section-navigation-controls.ts",
     "negative-controls:overview-composition": "bun run scripts/negative-controls/overview-composition-controls.ts",
     "negative-controls:profile-entry": "bun run scripts/negative-controls/profile-entry-controls.ts"
   },

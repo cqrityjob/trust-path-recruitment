@@ -55,7 +55,10 @@ import {
   computeProfileCompleteness,
   type CompletenessSection,
 } from "@/lib/professional-identity/completeness";
-import { SECTION_DESTINATIONS } from "@/lib/professional-identity/profile-destinations";
+import {
+  SECTION_DESTINATIONS,
+  sectionLinkTarget,
+} from "@/lib/professional-identity/profile-destinations";
 import { GeneralProfileClaims } from "@/components/professional-identity/GeneralProfileClaims";
 import { EmploymentHistoryEditor } from "@/components/professional-identity/EmploymentHistoryEditor";
 import { ProfileBasicsSection } from "@/components/professional-identity/ProfileBasicsSection";
@@ -348,11 +351,25 @@ function ProfilePage() {
                     would list two permanent failures against a profile that
                     has answered everything it was asked. */}
                 {completeness.applicableSections.map((section) => {
-                  const { owner, href } = SECTION_DESTINATIONS[section];
+                  const { owner } = SECTION_DESTINATIONS[section];
                   const { text, claims } = summarise(identity, section, l);
                   const done = completeness.completedSections.includes(section);
-                  return (
-                    <li key={section} className="p-4 md:p-5">
+                  // ── EVERY SECTION THIS PAGE OWNS IS REACHABLE ───────
+                  //
+                  // The index used to render a link only when
+                  // `!done && owner !== "profile"`. Nine of the ten rows
+                  // are profile-owned, so the overview named where to go
+                  // and then left the reader to scroll a long page for it
+                  // -- and a section that was already filled in could not
+                  // be opened at all, which is precisely when somebody
+                  // wants to go and correct it.
+                  //
+                  // A profile-owned row is now itself the link, done or
+                  // not. Non-profile rows keep the behaviour they had:
+                  // this change is the profile's own navigation, not a
+                  // redesign of how Career Discovery is offered.
+                  const rowBody = (
+                    <>
                       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                         <h3 className="text-sm font-semibold text-foreground">
                           {L(SECTION_TITLE[section], l)}
@@ -386,17 +403,49 @@ function ProfilePage() {
                           {text || L(COPY.empty, l)}
                         </p>
                       )}
+                    </>
+                  );
 
+                  // The destination split into the parts a router link
+                  // takes, derived from SECTION_DESTINATIONS rather than
+                  // written again here: three of these carry `?edit=` as
+                  // well as an anchor, and a hand-built `to` string would
+                  // be a second place the route is spelled.
+                  const target = sectionLinkTarget(section);
+
+                  if (owner === "profile") {
+                    return (
+                      <li key={section}>
+                        <Link
+                          to={target.to}
+                          search={target.search}
+                          hash={target.hash}
+                          aria-label={L(SECTION_TITLE[section], l)}
+                          data-section-link={section}
+                          className="flex min-h-[44px] flex-col justify-center p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-[-2px] md:p-5"
+                        >
+                          {rowBody}
+                        </Link>
+                      </li>
+                    );
+                  }
+
+                  return (
+                    <li key={section} className="p-4 md:p-5">
+                      {rowBody}
                       {/* The section's OWN destination, not its product's
                           front door. "Add your work experience" that lands
                           at the top of a long Passport page leaves the
                           person to find the section themselves, which is
                           the same errand the recommendation was supposed to
                           have done for them. */}
-                      {!done && owner !== "profile" && (
+                      {!done && (
                         <Link
-                          to={href}
-                          className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent underline-offset-4 hover:underline"
+                          to={target.to}
+                          search={target.search}
+                          hash={target.hash}
+                          data-section-link={section}
+                          className="mt-2.5 inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-accent underline-offset-4 hover:underline"
                         >
                           {L(owner === "passport" ? COPY.openPassport : COPY.openDiscovery, l)}
                           <ArrowRight className="h-3 w-3" aria-hidden="true" />
