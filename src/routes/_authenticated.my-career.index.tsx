@@ -501,145 +501,127 @@ function MyCareerPage() {
         </div>
       )}
 
-      {/* 1 · Who am I */}
-      <CareerPageHeader profile={model.profile} onRetry={retryIdentity} />
+      {/* ── THE OWNER'S TWO-COLUMN OVERVIEW ────────────────────────────
+          Career on the left, the Security Passport on the right. ONE grid,
+          and source order IS mobile order: the complete career area, then
+          the complete Passport area. No CSS reordering, so what a screen
+          reader hears and what a phone shows are the same sequence.
 
-      {/* 2 · The one next step, 3 · the Passport — two columns on desktop,
-          one column at 375 in source order.
+          The Passport region used to be spread across three places on this
+          page — a wide statistics panel beside the recommendation, a
+          full-width "so here is your Passport" preview below it, and a
+          second add-a-merit link. All three are consolidated into the one
+          column on the right: the card, what it contains, and one way in.
+          Nothing was deleted; the add-a-merit destination lives on the
+          Passport page, which owns it. */}
+      <div className="mt-8 grid items-start gap-8 lg:grid-cols-12">
+        {/* ── LEFT · DIN KARRIÄR ─────────────────────────────────────
+            The person's career journey, complete and self-contained.
+            Overview summarises and navigates; it does not edit. */}
+        <div className="min-w-0 lg:col-span-8">
+          <CareerPageHeader profile={model.profile} onRetry={retryIdentity} />
 
-          ── THE PASSPORT IS THE WIDER CARD (Emsoms #10, #12) ───────────
-          The owner's review found the Security Passport "insufficiently
-          visible on Overview" and asked for its summary to be positioned
-          as a PRIMARY part of the page. It was the narrower of the two
-          cards (5 columns against the recommendation's 7), which read as
-          the supporting figure beside the real content.
-
-          The weights are swapped rather than the order. §5 of the brief
-          sets the sequence itself -- identity, then the recommended next
-          step, then the Passport -- and that sequence is also what a
-          screen reader and every viewport below `lg` follow, since the
-          grid collapses to source order. So the fix is visual weight,
-          which is what "insufficiently visible" actually named, and the
-          document's own ordering is left alone.
-
-          The recommendation does not suffer for it: it is one action and
-          a sentence, and it was never the card that needed seven columns.
-
-          Market and jurisdiction are deliberately NOT added here. The
-          passport model on this page carries counts and a setup state and
-          no market, and the brief is equally clear that the complete
-          Passport workspace must not be duplicated onto Overview -- the
-          market selector belongs to the Passport page itself. */}
-      <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-5">
           <NextBestAction
-            // h-full on the SECTION. Both cards' <article> already had it,
-            // so the article was stretching to a wrapper that was not
-            // stretching itself — which is why the pair has been visibly
-            // ragged since #190 despite items-stretch on the row.
-            className="h-full"
+            // h-full was for the old side-by-side pair, where this card had
+            // to match the height of the Passport summary beside it. It now
+            // stacks inside the career column, so stretching it to the full
+            // column height would leave a tall card holding one sentence.
+            className="mt-8"
             next={model.nextAction}
             onRetry={retryIdentity}
             onPrimaryClick={(key, destination) => analytics.click(key as never, destination)}
           />
+
+          <HubStatusGrid
+            cv={model.cv}
+            career={model.career}
+            careerClosed={assessmentClosed}
+            // Offered ONLY when the analysis named a family AND that family
+            // has open roles right now: `filtered` is the model's word for
+            // both. A link that lands on "no results" is not a dead route, but
+            // it is a dead promise, and the hub makes one promise per module.
+            careerJobsFamilyId={model.jobs.state === "filtered" ? (familyId ?? null) : null}
+            applications={model.applications}
+            sharing={model.sharing}
+            onRetryCv={() => void cvsQ.refetch()}
+            onRetryCareer={() => {
+              void activeQ.refetch();
+              void storedReportQ.refetch();
+            }}
+            onRetryApplications={() => void myApplicationsQ.refetch()}
+            onRetrySharing={() => void sharesQ.refetch()}
+            className="mt-8"
+          />
+
+          {/* 5 · A result taken before this account existed. Renders nothing
+              when there is nothing to link, which is almost always — it is an
+              offer, not a section. */}
+          <LinkEarlierResult rows={linkableQ.data ?? []} onLinked={onLinked} />
+
+          {/* 6 and 7 · The two things that are neither a status nor a step.
+              Folded away in one quiet block at the foot of the page: each
+              costs a row until somebody asks for it, and neither is what
+              anybody opened their career home to read. */}
+          <div className="mt-8 space-y-3">
+            {/* 6 · Every earlier analysis — v3 reports AND legacy v2.1 runs, in
+              one chronological list.
+              It stays HERE rather than moving to /security-career-assessment/
+              history, which is the destination the module links to for a
+              report: that page lists v3 reports only, so a candidate whose
+              earlier result is a v2.1 run would lose it entirely. Folded away,
+              conditional on there actually being one, and never opening onto
+              an empty list. */}
+            {model.earlierReports.state === "ready" && model.earlierReports.count > 0 && (
+              <details className="border-t border-border pt-3" data-earlier-reports>
+                <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  {say(CAREER.earlier)} ({model.earlierReports.count})
+                </summary>
+                <div className="mt-2">
+                  <ReportHistoryList
+                    legacyRuns={model.earlierReports.legacyRuns as never}
+                    discoveryReports={model.earlierReports.discoveryReports}
+                  />
+                </div>
+              </details>
+            )}
+
+            {/* 7 · What happened, folded away.
+              Activity is the one thing on the overview that is neither a
+              status nor a next step: nobody opens their career home to read a
+              log. It keeps its place and its reads and costs one row until
+              somebody asks for it. */}
+            {(model.activity.items.length > 0 || model.activity.partial) && (
+              <details className="border-t border-border pt-3" data-hub-activity>
+                <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  {say(ACTIVITY.heading)}
+                </summary>
+                <RecentActivity activity={model.activity} className="mt-2 border-t-0 pt-0" />
+              </details>
+            )}
+          </div>
         </div>
-        <div className="lg:col-span-7">
+
+        {/* ── RIGHT · MITT SECURITY PASSPORT ─────────────────────────
+            The visual card first, then what the Passport actually
+            contains, then ONE way in. A person should be able to read
+            this column and know: this is mine, this is what is in it,
+            this is its verification state, this is where I open it. */}
+        <aside
+          className="min-w-0 lg:col-span-4"
+          aria-labelledby="passport-summary-heading"
+          data-overview-passport-region
+        >
+          <OverviewPassportCard lang={lang as Lang} />
+
           <PassportSummary
-            className="h-full"
+            className="mt-4"
             passport={model.passport}
             onRetry={() => {
               void identityQ.refetch();
               void verificationsQ.refetch();
             }}
           />
-        </div>
-      </div>
-
-      {/* 3b · The Passport CARD (image 1's "Passportkort").
-          The same buildPassportCard + DirectionC the Passport page and
-          /passport/card render, off the same canonical getMyPassport read.
-          One card, one builder, one read — and no figures, because
-          PassportSummary directly above owns those.
-
-          ITS OWN ROW, not a third column in the row above. Image 1 draws
-          the three side by side, but that row's 5/7 split is the Emsoms
-          #10/#12 fix — the Passport summary is the wider card, and
-          my-career-premium-overview pins it. Re-cutting it to fit a third
-          column would undo a shipped fix and squeeze the card to 256px at
-          lg. The owner's correction asks for one next step, one summary
-          and one card on Överskt; it does not require them in one row. */}
-      <OverviewPassportCard lang={lang as Lang} className="mt-4" />
-
-      {/* 4 · The other four areas, one fact each.
-          Every one of these was a full product section here until #211.
-          The DETAIL moved to the page that owns it; what is left is the
-          state and the way in. */}
-      <HubStatusGrid
-        cv={model.cv}
-        career={model.career}
-        careerClosed={assessmentClosed}
-        // Offered ONLY when the analysis named a family AND that family
-        // has open roles right now: `filtered` is the model's word for
-        // both. A link that lands on "no results" is not a dead route, but
-        // it is a dead promise, and the hub makes one promise per module.
-        careerJobsFamilyId={model.jobs.state === "filtered" ? (familyId ?? null) : null}
-        applications={model.applications}
-        sharing={model.sharing}
-        onRetryCv={() => void cvsQ.refetch()}
-        onRetryCareer={() => {
-          void activeQ.refetch();
-          void storedReportQ.refetch();
-        }}
-        onRetryApplications={() => void myApplicationsQ.refetch()}
-        onRetrySharing={() => void sharesQ.refetch()}
-        className="mt-8"
-      />
-
-      {/* 5 · A result taken before this account existed. Renders nothing
-          when there is nothing to link, which is almost always — it is an
-          offer, not a section. */}
-      <LinkEarlierResult rows={linkableQ.data ?? []} onLinked={onLinked} />
-
-      {/* 6 and 7 · The two things that are neither a status nor a step.
-          Folded away in one quiet block at the foot of the page: each
-          costs a row until somebody asks for it, and neither is what
-          anybody opened their career home to read. */}
-      <div className="mt-8 space-y-3">
-        {/* 6 · Every earlier analysis — v3 reports AND legacy v2.1 runs, in
-          one chronological list.
-          It stays HERE rather than moving to /security-career-assessment/
-          history, which is the destination the module links to for a
-          report: that page lists v3 reports only, so a candidate whose
-          earlier result is a v2.1 run would lose it entirely. Folded away,
-          conditional on there actually being one, and never opening onto
-          an empty list. */}
-        {model.earlierReports.state === "ready" && model.earlierReports.count > 0 && (
-          <details className="border-t border-border pt-3" data-earlier-reports>
-            <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              {say(CAREER.earlier)} ({model.earlierReports.count})
-            </summary>
-            <div className="mt-2">
-              <ReportHistoryList
-                legacyRuns={model.earlierReports.legacyRuns as never}
-                discoveryReports={model.earlierReports.discoveryReports}
-              />
-            </div>
-          </details>
-        )}
-
-        {/* 7 · What happened, folded away.
-          Activity is the one thing on the overview that is neither a
-          status nor a next step: nobody opens their career home to read a
-          log. It keeps its place and its reads and costs one row until
-          somebody asks for it. */}
-        {(model.activity.items.length > 0 || model.activity.partial) && (
-          <details className="border-t border-border pt-3" data-hub-activity>
-            <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              {say(ACTIVITY.heading)}
-            </summary>
-            <RecentActivity activity={model.activity} className="mt-2 border-t-0 pt-0" />
-          </details>
-        )}
+        </aside>
       </div>
     </Section>
   );

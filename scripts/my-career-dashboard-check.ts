@@ -196,18 +196,73 @@ expect(
   routeGrids.length === 1,
   `${routePath}: exactly one 12-column row — the above-the-fold pair. Found ${routeGrids.length}.`,
 );
+// That row is now the PAGE split the owner specified: the career area on
+// the left, the Security Passport on the right. `items-start` rather than
+// `items-stretch` because these are two columns of different natural
+// length, not a pair of cards that must match — stretching the shorter one
+// is what made the old pair look ragged in the first place.
 expect(
-  /grid items-stretch gap-4 lg:grid-cols-12/.test(routeCode),
-  `${routePath}: the above-the-fold pair must stretch to equal height rather than ` +
-    "leaving one card floating beside a taller sibling.",
+  /grid items-start gap-8 lg:grid-cols-12/.test(routeCode),
+  `${routePath}: the career/Passport split must be one items-start 12-column row.`,
 );
-// Source order IS mobile order: one column at 375, the recommendation first
-// and the Passport second. A CSS reordering would make the two disagree.
+expect(
+  /className="min-w-0 lg:col-span-8"/.test(routeCode) &&
+    /className="min-w-0 lg:col-span-4"/.test(routeCode),
+  `${routePath}: career left and wider (8), Passport right and narrower (4).`,
+);
+// Source order IS mobile order: one column at 375, the COMPLETE career area
+// first and the COMPLETE Passport area second. A CSS reordering would make
+// the two disagree.
 expect(
   routeCode.indexOf("<NextBestAction") < routeCode.indexOf("<PassportSummary"),
   `${routePath}: the recommended next step must precede the Passport in source order, ` +
     "so the single mobile column shows it first.",
 );
+expect(
+  routeCode.indexOf("<CareerPageHeader") < routeCode.indexOf("<HubStatusGrid") &&
+    routeCode.indexOf("<HubStatusGrid") < routeCode.indexOf("<OverviewPassportCard"),
+  `${routePath}: the whole career area must precede the whole Passport area in source ` +
+    "order — on a phone the career column is read to its end before the Passport begins.",
+);
+// The Passport card belongs to the Passport region, and the region is one
+// region. This is the duplication the owner removed: a card in its own
+// full-width row below the fold, a statistics panel beside the
+// recommendation, and a second add-a-merit link.
+expect(
+  /<aside\b[^>]*data-overview-passport-region/s.test(routeCode) ||
+    /data-overview-passport-region/.test(routeCode),
+  `${routePath}: the Passport column must be one labelled region.`,
+);
+expect(
+  (routeCode.match(/<OverviewPassportCard/g) ?? []).length === 1 &&
+    (routeCode.match(/<PassportSummary/g) ?? []).length === 1,
+  `${routePath}: exactly one Passport card and one Passport summary on Overview.`,
+);
+expect(
+  routeCode.indexOf("<OverviewPassportCard") < routeCode.indexOf("<PassportSummary"),
+  `${routePath}: the visual Passport card comes first, then what it contains.`,
+);
+// Checked in the route AND in the Passport column's own components: a
+// negative control proved that asserting only on the route left the
+// assertion dead, because the second action used to live inside
+// PassportSummary and could simply come back there.
+for (const [file, code] of [
+  [routePath, routeCode],
+  [
+    "src/components/professional-identity/PassportSummary.tsx",
+    read("src/components/professional-identity/PassportSummary.tsx"),
+  ],
+  [
+    "src/components/professional-identity/OverviewPassportCard.tsx",
+    read("src/components/professional-identity/OverviewPassportCard.tsx"),
+  ],
+] as const) {
+  expect(
+    !code.includes("/passport/credentials/new"),
+    `${file}: Overview must not carry its own add-a-merit destination — the ` +
+      "Passport page owns it.",
+  );
+}
 expect(
   !/order-\d|lg:order-/.test(routeCode),
   `${routePath}: no CSS reordering — source order and reading order must agree.`,

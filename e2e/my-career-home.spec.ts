@@ -740,6 +740,65 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     await expect(page.locator("[data-passport-side-column]")).toHaveCount(0);
   });
 
+  // ── THE OWNER'S TWO-COLUMN COMPOSITION ──────────────────────────────
+  //
+  // Career left and wider, Passport right and narrower, on desktop; the
+  // COMPLETE career area above the COMPLETE Passport area on a phone. The
+  // static guards prove source order; these prove what is actually on
+  // screen, which is the half source order cannot show.
+  test("desktop: the career area is left of the Passport column, and the Passport is narrower", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await mount(page, "general_jobs");
+
+    const region = page.locator("[data-overview-passport-region]");
+    await expect(region).toBeVisible({ timeout: 30_000 });
+    const passport = (await region.boundingBox())!;
+    const career = (await page.locator("[data-career-header]").boundingBox())!;
+
+    expect(career.x, "the career area must start left of the Passport column").toBeLessThan(
+      passport.x,
+    );
+    expect(passport.width, "the Passport column must be the narrower of the two").toBeLessThan(
+      career.width,
+    );
+  });
+
+  test("mobile: the whole career area comes before the whole Passport area", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await mount(page, "general_jobs");
+
+    const region = page.locator("[data-overview-passport-region]");
+    await expect(region).toBeVisible({ timeout: 30_000 });
+    const passportTop = (await region.boundingBox())!.y;
+
+    // Every career surface on the page sits above the Passport column --
+    // not merely the first one, which a reversed order could still satisfy.
+    for (const sel of ["[data-career-header]", "[data-next-best-action]", "[data-hub-module]"]) {
+      const box = (await page.locator(sel).first().boundingBox())!;
+      expect(box.y, `${sel} must sit above the Passport column on a phone`).toBeLessThan(
+        passportTop,
+      );
+    }
+  });
+
+  test("the Passport column holds one card, one summary and one way in", async ({ page }) => {
+    await mount(page, "general_jobs");
+    const region = page.locator("[data-overview-passport-region]");
+    await expect(region).toBeVisible({ timeout: 30_000 });
+
+    // The consolidation the owner asked for: not two cards, not two
+    // summaries, and not a second Passport action competing with the
+    // canonical one.
+    await expect(page.locator("[data-overview-passport-card]")).toHaveCount(1);
+    await expect(page.locator("[data-passport-summary]")).toHaveCount(1);
+    await expect(region.locator('[data-cta="overview-open-passport"]')).toHaveCount(1);
+
+    // The add-a-merit destination belongs to the Passport page.
+    await expect(page.locator('a[href*="/passport/credentials/new"]')).toHaveCount(0);
+  });
+
   test("the card links to the canonical full view", async ({ page }) => {
     await mount(page, "general_jobs");
     const link = page.locator('[data-cta="overview-open-card"]');

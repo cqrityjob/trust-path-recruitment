@@ -898,13 +898,19 @@ group("T14 · the page order, and the Passport early");
   // page that owns it, and each keeps its own component and its own
   // rendering guarantees, asserted elsewhere in this file and in
   // my-career-experience-check.
+  // The order changed with the owner's two-column correction: the COMPLETE
+  // career area now precedes the COMPLETE Passport area, so HubStatusGrid,
+  // LinkEarlierResult and RecentActivity (all career) come before the
+  // Passport card and summary rather than after them. That is the mobile
+  // reading order the correction asks for, and source order still is it.
   const order = [
     "<CareerPageHeader",
     "<NextBestAction",
-    "<PassportSummary",
     "<HubStatusGrid",
     "<LinkEarlierResult",
     "<RecentActivity",
+    "<OverviewPassportCard",
+    "<PassportSummary",
   ];
   const positions = order.map((tag) => route.indexOf(tag));
   ck(
@@ -913,30 +919,39 @@ group("T14 · the page order, and the Passport early");
     positions.join(","),
   );
 
-  // ── THE PASSPORT IS THE WIDER CARD (Emsoms #10, #12) ─────────────────
+  // ── THE PASSPORT IS ITS OWN COLUMN (owner, 2026-09-14) ───────────────
   //
-  // The owner found the Security Passport "insufficiently visible on
-  // Overview" and asked for its summary to be a PRIMARY part of the page.
-  // It was the narrower of the two top cards, which read as the supporting
-  // figure beside the real content. The ORDER above is unchanged -- §5 of
-  // the brief sets it, and it is what a screen reader and every viewport
-  // below `lg` follow, since the grid collapses to source order. So this
-  // asserts the weight, which is what "insufficiently visible" named.
+  // This assertion previously required the Passport SUMMARY to be the
+  // wider of two top cards (7 against the recommendation's 5) -- the
+  // Emsoms #10/#12 fix for "insufficiently visible on Overview".
   //
-  // Read from the column the component actually sits in, not from a count
+  // The owner has now superseded that arrangement rather than reversed the
+  // intent behind it. Visibility no longer comes from out-weighing the
+  // recommendation inside a shared row; it comes from the Passport owning
+  // a column of its own, led by the visual card, with its contents and one
+  // way in beneath it. So the numbers move (career 8, Passport 4) while
+  // what they protect does not: the Passport is a primary, self-contained
+  // part of this page and cannot be reduced to a figure beside something
+  // else.
+  //
+  // Read from the column each component actually sits in, not from a count
   // of class names: both spans exist on the page, and asserting only that
-  // "col-span-7 appears" would pass with the two cards swapped back.
+  // "col-span-4 appears" would pass with the two columns swapped.
   const nextCol = route.lastIndexOf("lg:col-span-", route.indexOf("<NextBestAction"));
-  const passportCol = route.lastIndexOf("lg:col-span-", route.indexOf("<PassportSummary"));
+  const passportCol = route.lastIndexOf("lg:col-span-", route.indexOf("<OverviewPassportCard"));
   ck(
-    "the recommended next step takes five columns",
-    route.slice(nextCol, nextCol + 16).includes("lg:col-span-5"),
+    "the career column is the wider one (8)",
+    route.slice(nextCol, nextCol + 16).includes("lg:col-span-8"),
     route.slice(nextCol, nextCol + 16),
   );
   ck(
-    "and the Passport summary takes seven -- it is the wider card, not the narrower one",
-    route.slice(passportCol, passportCol + 16).includes("lg:col-span-7"),
+    "and the Passport has a column of its own (4), led by the card",
+    route.slice(passportCol, passportCol + 16).includes("lg:col-span-4"),
     route.slice(passportCol, passportCol + 16),
+  );
+  ck(
+    "the Passport column is one labelled region, not scattered across the page",
+    route.includes("data-overview-passport-region"),
   );
   // The six that left must not creep back onto the overview: a hub that
   // regrows one full product section regrows all of them.

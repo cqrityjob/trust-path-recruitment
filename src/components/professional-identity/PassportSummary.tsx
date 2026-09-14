@@ -38,24 +38,26 @@ function Count({
   const l = lang as Lang;
   return (
     <div
-      className="min-w-0"
+      className="flex min-w-0 items-baseline justify-between gap-3 py-1.5"
       data-merit-count={testId}
       data-count={value === null ? "unknown" : String(value)}
     >
+      <dt className="min-w-0 text-sm text-muted-foreground">
+        {label}
+        {value === null && (
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            {unavailableLabel ?? L(PASSPORT.reviewUnknown, l)}
+          </span>
+        )}
+      </dt>
       <dd
-        className={`m-0 text-2xl font-semibold tabular-nums ${
+        className={`m-0 shrink-0 text-base font-semibold tabular-nums ${
           value === null ? "text-muted-foreground" : "text-foreground"
         }`}
         style={{ fontFamily: "var(--font-display)" }}
       >
         {value === null ? "—" : value}
       </dd>
-      <dt className="mt-0.5 text-xs text-muted-foreground">{label}</dt>
-      {value === null && (
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {unavailableLabel ?? L(PASSPORT.reviewUnknown, l)}
-        </p>
-      )}
     </div>
   );
 }
@@ -127,7 +129,7 @@ export function PassportSummary({
                 that is NAMED as a total, so the same merit cannot be
                 described one way here and another way there, and two
                 categories cannot silently overlap. */}
-            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
+            <dl className="mt-4 divide-y divide-border border-y border-border">
               <Count
                 value={figures.totalCurrent}
                 label={L(PASSPORT.total, l)}
@@ -180,16 +182,16 @@ export function PassportSummary({
           </>
         )}
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 pt-5">
-          <Link to="/passport" className={LINK}>
+        {/* ONE canonical way in. A second "add a credential" action used
+            to sit beside this; the Passport page owns adding a merit, and
+            repeating it here was the duplication the owner asked to
+            remove. (The route is deliberately not named in this file —
+            my-career-dashboard-check asserts its absence here.) */}
+        <div className="mt-auto pt-5">
+          <Link to="/passport" className={LINK} data-cta="overview-open-passport">
             {L(PASSPORT.open, l)}
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
-          {passport.state !== "unavailable" && (
-            <Link to="/passport/credentials/new" className={LINK}>
-              {L(PASSPORT.addCredential, l)}
-            </Link>
-          )}
         </div>
       </article>
     </section>
