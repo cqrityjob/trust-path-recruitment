@@ -227,37 +227,37 @@ function Index() {
           }}
         />
         <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-12 sm:pt-14 md:px-8 md:pb-20 md:pt-12">
-          {/* ── IMAGE 0'S TWO COLUMNS ───────────────────────────────────
-              Proposition left, a working login panel right.
+          {/* ── IMAGE 0'S LOGIN PANEL ───────────────────────────────────
+              A working login panel on the landing page, mounting the SAME
+              UnifiedAuthPanel /login uses — one implementation, two mount
+              points, no second auth flow.
 
-              The panel is the SAME component /login mounts — one
-              implementation, two mount points, no second auth flow. It is
-              rendered only for a visitor the client has confirmed is
-              signed OUT, and that is not a nicety: the panel navigates an
-              authenticated visitor to their workspace, which is right on
-              /login and would eject somebody from the public homepage
-              here. `signedIn === false`, never `!== true`, so the
-              not-yet-known state renders the page as it was rather than
-              flashing a form.
+              BELOW the two entrances, not beside them, and that is a
+              deliberate retreat from image 0's side-by-side arrangement.
 
-              With no panel the hero keeps its centred full-width form,
-              which is also what a static render sees.
+              Putting it beside the proposition narrows the entry-card
+              column, which makes the cards taller, which pushes them past
+              the fold — and public-homepage.spec.ts asserts, blocking,
+              that BOTH entry cards are visible without scrolling at
+              1440x900 and that both primary actions fit 1024x768 in both
+              languages. That rule is a shipped product decision about the
+              two peer entrances; image 0's layout and that rule cannot
+              both hold in one viewport, and the rule is not mine to
+              overturn to match a mockup.
 
-              xl, NOT lg. At 1024 -- exactly where lg begins -- splitting
-              the hero would narrow the two entry cards enough to push
-              them past a 768px-tall fold, and public-homepage.spec.ts
-              asserts (blocking) that both entry actions fit a 1024x768
-              viewport in both languages. Below xl the panel stacks under
-              the cards instead, which keeps the same priority order:
-              proposition, the two entrances, then the way back in. */}
-          <div className={cn(showAuthPanel && "xl:grid xl:grid-cols-12 xl:items-start xl:gap-12")}>
-          <div className={cn(showAuthPanel && "xl:col-span-7")}>
-          <div
-            className={cn(
-              "mx-auto max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none",
-              showAuthPanel ? "text-center xl:mx-0 xl:text-left" : "text-center",
-            )}
-          >
+              Stacked, the cards do not move at all, so every one of those
+              assertions holds by construction rather than by my estimate
+              of how tall a card gets. The panel is still on /, still
+              functional, still the same component. What is deferred is the
+              arrangement, and it is flagged for the owner.
+
+              Rendered only for a visitor the client has confirmed is
+              signed OUT: the panel navigates an authenticated visitor to
+              their workspace, which is right on /login and would eject
+              somebody from the public homepage here. `=== false`, never
+              `!== true`, so the not-yet-known state renders the page as it
+              was rather than flashing a form. */}
+          <div className="mx-auto max-w-3xl text-center animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               {t("home.hero.eyebrow")}
             </p>
@@ -311,14 +311,12 @@ function Index() {
               </PrimaryLink>
             </EntryCard>
           </div>
-          </div>
 
           {showAuthPanel && (
-            <div className="mt-12 xl:col-span-5 xl:mt-0" data-home-auth-panel>
+            <div className="mx-auto mt-12 w-full max-w-md" data-home-auth-panel>
               <UnifiedAuthPanel mode="signin" />
             </div>
           )}
-          </div>
         </div>
       </section>
 

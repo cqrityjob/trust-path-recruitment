@@ -139,10 +139,11 @@ test.describe("image 0 · the landing page carries a working login panel", () =>
     });
   }
 
-  // The entry cards are the other half of the hero. They were peers before
-  // the panel arrived and must still be: the panel narrows their column,
-  // it must not make one of them different from the other.
-  test("the two entry cards are still peers beside the panel", async ({ page }) => {
+  // The panel is stacked BELOW the two entrances rather than beside them,
+  // precisely so their geometry does not change (see the note in
+  // routes/index.tsx). This asserts that: the cards are still peers and
+  // still where they were, with the panel on the page.
+  test("the two entry cards are unchanged with the panel on the page", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await gotoHome(page);
     const boxes = await page.locator("#hero article").evaluateAll((els) =>
