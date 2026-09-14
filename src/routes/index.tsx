@@ -22,8 +22,6 @@ import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { PUBLIC_MARKET_SCALE } from "@/components/site/passport-market-scale";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
-import { UnifiedAuthPanel } from "@/components/auth/UnifiedAuthPanel";
-import { useSignedIn } from "@/hooks/useSignedIn";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 /** ── THE OWNER-APPROVED PUBLIC ENTRY ARCHITECTURE ──────────────────────
@@ -167,10 +165,6 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { t } = useT();
   const navigate = useNavigate();
-  // `=== false`, not `!== true`: `null` is "the client has not answered
-  // yet", and rendering the panel then would paint a login form on a
-  // public page and snatch it back once a session turned up.
-  const showAuthPanel = useSignedIn() === false;
 
   // Authenticated visitors land on their personal dashboard. Runs
   // client-side only; SSR still serves the public landing page for crawlers
@@ -226,51 +220,35 @@ function Index() {
             maskImage: "linear-gradient(to bottom, black, transparent 88%)",
           }}
         />
-        <div
-          className={cn(
-            "relative mx-auto w-full max-w-6xl px-6 pb-16 pt-12 sm:pt-14 md:px-8 md:pb-20 md:pt-12",
-            showAuthPanel && "xl:pb-14 xl:pt-8",
-          )}
-        >
-          {/* ── IMAGE 0'S COMPOSITION ───────────────────────────────────
-              Proposition and the two candidate entrances on the left, the
-              shared login panel on the right, from xl up. Below xl the
-              panel stacks under the entrances, which keeps the priority
-              order (what this is, the two ways in, then the way back in)
-              rather than shrinking a desktop grid.
+        <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-12 sm:pt-14 md:px-8 md:pb-20 md:pt-12">
+          {/* ── IMAGE 0'S LOGIN PANEL IS NOT MOUNTED HERE ──────────────
+              The owner's image 0 puts a working login panel on this page,
+              and UnifiedAuthPanel exists precisely so it can be mounted
+              without a second authentication implementation. It is not
+              mounted, and that is a reported blocker rather than a
+              decision.
 
-              xl, NOT lg: at 1024 — where lg begins — the narrowed column
-              pushes the entry actions past a 768px fold, and
-              public-homepage.spec.ts asserts (blocking) that both fit
-              1024x768 in both languages. At 1024 this page therefore
-              renders exactly as it did before the panel existed.
+              public-homepage.spec.ts pins this page's whole structure as a
+              marketing page with exactly two entrances: an exact heading
+              count, exactly two navy primary actions in the hero, a 44px
+              minimum on every target, a focus ring on every focusable, and
+              more. A whole interactive component in #hero violates several
+              of those at once. Three were found and fixed — the heading
+              count, the primaries count, the two controls missing 44px —
+              and each one only revealed the next, across six CI runs.
 
-              At 1440 the two entrances must still be above the fold, and
-              a narrower column makes their cards taller. That is paid for
-              by DENSITY, not by dropping an entrance: when the panel is
-              showing, and only then, the hero tightens its top padding,
-              its heading size and the gaps around the cards, and the cards
-              take `compact`. Both cards take it identically, so they stay
-              peers — which is the other thing that spec measures.
+              Landing it needs someone who can RUN that suite and revise it
+              deliberately for the page's new shape. This sandbox cannot:
+              Playwright does not run here, and the failure output is
+              unreachable (get_job_logs caps below it, check runs carry no
+              annotations, and the trace artifact and plain-text job log are
+              both on Azure blob storage, which the egress proxy denies).
 
-              Every tightening class is xl-prefixed and gated on
-              showAuthPanel, so a signed-in visitor and a static render see
-              the page exactly as it was.
-
-              The panel renders only for a visitor the client has confirmed
-              is signed OUT: it navigates an authenticated visitor to their
-              workspace, which is right on /login and would eject somebody
-              from the public homepage here. `=== false`, never `!== true`,
-              so the not-yet-known state renders the page as it was rather
-              than flashing a form. */}
-          <div className={cn(showAuthPanel && "xl:grid xl:grid-cols-12 xl:items-start xl:gap-12")}>
-          <div className={cn(showAuthPanel && "xl:col-span-7")}>
-          <div
-            className={cn(
-              "mx-auto max-w-3xl text-center animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none",
-              showAuthPanel && "xl:mx-0 xl:text-left",
-            )}
-          >
+              What survives is the part that made it possible and is
+              proved: UnifiedAuthPanel is extracted, /login mounts it, and
+              mounting it here is a one-line change once the suite can be
+              revised alongside it. */}
+          <div className="mx-auto max-w-3xl text-center animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               {t("home.hero.eyebrow")}
             </p>
@@ -278,20 +256,12 @@ function Index() {
                 compound does not fit on any line; the document carries
                 `lang`, so the browser breaks where Swedish permits. */}
             <h1
-              className={cn(
-                "mx-auto mt-5 max-w-[18ch] text-balance text-[2.1rem] font-semibold leading-[1.07] tracking-tight text-foreground [hyphens:auto] sm:text-[2.9rem] md:text-[3rem] lg:[hyphens:none] lg:[text-wrap:pretty]",
-                showAuthPanel && "xl:mx-0 xl:mt-4 xl:text-[2.5rem]",
-              )}
+              className="mx-auto mt-5 max-w-[18ch] text-balance text-[2.1rem] font-semibold leading-[1.07] tracking-tight text-foreground [hyphens:auto] sm:text-[2.9rem] md:text-[3rem] lg:[hyphens:none] lg:[text-wrap:pretty]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {t("home.hero.title")}
             </h1>
-            <p
-              className={cn(
-                "mx-auto mt-5 max-w-[58ch] text-base leading-relaxed text-muted-foreground md:text-[1.0625rem]",
-                showAuthPanel && "xl:mx-0 xl:mt-4",
-              )}
-            >
+            <p className="mx-auto mt-5 max-w-[58ch] text-base leading-relaxed text-muted-foreground md:text-[1.0625rem]">
               {t("home.hero.subtitle")}
             </p>
           </div>
@@ -303,17 +273,11 @@ function Index() {
               quieter, would have to change the shared constant to get it,
               and scripts/public-homepage-check.tsx reads the rendered class
               attributes to prove neither has. */}
-          <div
-            className={cn(
-              "mx-auto mt-12 grid max-w-5xl grid-cols-1 items-stretch gap-5 md:mt-10 md:grid-cols-2 md:gap-6",
-              showAuthPanel && "xl:mx-0 xl:mt-8",
-            )}
-          >
+          <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 items-stretch gap-5 md:mt-10 md:grid-cols-2 md:gap-6">
             <EntryCard
               icon={ShieldCheck}
               titleKey="home.entry.passport.title"
               bodyKey="home.entry.passport.body"
-              compact={showAuthPanel}
             >
               <PrimaryLink to="/signup" search={PASSPORT_INTENT} className="w-full sm:w-auto">
                 {t("cta.passport")}
@@ -332,23 +296,11 @@ function Index() {
               titleKey="home.entry.discovery.title"
               bodyKey="home.entry.discovery.body"
               noteKey="home.entry.discovery.disclosure"
-              compact={showAuthPanel}
             >
               <PrimaryLink to={CAREER_DISCOVERY} className="w-full sm:w-auto">
                 {t("cta.discovery")}
               </PrimaryLink>
             </EntryCard>
-          </div>
-          </div>
-
-          {showAuthPanel && (
-            <div
-              className="mx-auto mt-12 w-full max-w-md xl:col-span-5 xl:mx-0 xl:mt-0 xl:max-w-none"
-              data-home-auth-panel
-            >
-              <UnifiedAuthPanel mode="signin" />
-            </div>
-          )}
           </div>
         </div>
       </section>
@@ -526,17 +478,10 @@ function EntryCard({
   bodyKey,
   noteKey,
   children,
-  /** Denser at xl, for the one case that needs it: the hero splits to seat
-   *  image 0's login panel, the card column narrows, and the cards grow
-   *  taller than the fold public-homepage.spec.ts measures. BOTH cards take
-   *  it or neither does — they are peers, and that spec measures that too.
-   *  Every class it adds is xl-prefixed, so nothing below xl moves. */
-  compact = false,
 }: {
   icon: typeof ShieldCheck;
   titleKey: TranslationKey;
   bodyKey: TranslationKey;
-  compact?: boolean;
   /** A short qualification of the offer, rendered ABOVE the action.
    *
    *  Above, and not below, for a reason that only shows up in a browser:
@@ -551,38 +496,21 @@ function EntryCard({
 }) {
   const { t } = useT();
   return (
-    <article
-      className={cn(
-        "flex h-full flex-col rounded-2xl border border-border bg-background p-6 shadow-[var(--shadow-sm)] md:p-7",
-        compact && "xl:p-5",
-      )}
-    >
+    <article className="flex h-full flex-col rounded-2xl border border-border bg-background p-6 shadow-[var(--shadow-sm)] md:p-7">
       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-accent">
         <Icon className="h-6 w-6" strokeWidth={1.75} aria-hidden="true" />
       </span>
       <h2
-        className={cn(
-          "mt-5 text-[1.35rem] font-semibold leading-tight tracking-tight text-foreground md:text-[1.5rem]",
-          compact && "xl:mt-4 xl:text-[1.3rem]",
-        )}
+        className="mt-5 text-[1.35rem] font-semibold leading-tight tracking-tight text-foreground md:text-[1.5rem]"
         style={{ fontFamily: "var(--font-display)" }}
       >
         {t(titleKey)}
       </h2>
-      <p
-        className={cn(
-          "mt-3 text-[0.9375rem] leading-relaxed text-muted-foreground",
-          compact && "xl:mt-2.5 xl:text-sm",
-        )}
-      >
-        {t(bodyKey)}
-      </p>
+      <p className="mt-3 text-[0.9375rem] leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
       {noteKey && (
-        <p className={cn("mt-3 text-xs leading-relaxed text-muted-foreground", compact && "xl:mt-2.5")}>
-          {t(noteKey)}
-        </p>
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t(noteKey)}</p>
       )}
-      <div className={cn("mt-auto pt-6", compact && "xl:pt-5")}>{children}</div>
+      <div className="mt-auto pt-6">{children}</div>
     </article>
   );
 }
