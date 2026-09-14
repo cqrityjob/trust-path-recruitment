@@ -1174,7 +1174,7 @@ BEGIN
   PERFORM pg_temp.ok(_n = 0, 'C9.1 NO SCORE PATH: no scoring, ranking, suitability or verdict column exists');
 
   -- bcp_conduct_reports.payload is the ONE deliberate exception, and it arrived
-  -- with BESKT PR 6 (20261116090000). The conduct tables are the RECORD, with a
+  -- with BESKT PR 6 (20261117090000). The conduct tables are the RECORD, with a
   -- column per kind of claim precisely so none can be collapsed into another;
   -- the report is a FROZEN RENDERING of that record at one instant, whose whole
   -- purpose is to be a single immutable value carrying a single hash. Every

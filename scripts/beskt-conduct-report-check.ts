@@ -22,11 +22,11 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 
-const MIGRATION_NAME = "20261116090000_bcp_conduct_prompts_and_report.sql";
+const MIGRATION_NAME = "20261117090000_bcp_conduct_prompts_and_report.sql";
 const MIGRATION = join(ROOT, "supabase/migrations", MIGRATION_NAME);
 const ROLLBACK = join(
   ROOT,
-  "supabase/rollback/20261116090000_bcp_conduct_prompts_and_report_rollback.sql",
+  "supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql",
 );
 const SUITE = join(ROOT, "supabase/tests/bcp_conduct_prompts_and_report_test.sql");
 const PR5A_MIGRATION = join(ROOT, "supabase/migrations/20261113090000_bcp_interview_conduct.sql");
@@ -1018,11 +1018,11 @@ function insertIndex(body: string): number {
   );
   check(
     dbTest.includes("BESKT_CONDUCT_PROMPTS_AND_REPORT_PROOF ok") ||
-      dbTest.includes("supabase/migrations/20261116090000_bcp_conduct_prompts_and_report.sql"),
+      dbTest.includes("supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql"),
     "REPORT-REGISTRATION: and the migration is re-applied for real over the rolled-back state",
   );
   check(
-    dbTest.includes("supabase/rollback/20261116090000_bcp_conduct_prompts_and_report_rollback.sql"),
+    dbTest.includes("supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql"),
     "REPORT-REGISTRATION: and the rollback is executed for real",
   );
   check(

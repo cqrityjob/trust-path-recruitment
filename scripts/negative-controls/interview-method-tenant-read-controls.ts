@@ -305,14 +305,15 @@ const MUTATIONS: readonly Mutation[] = [
       "the frontier selection check still expects the migration pending after production has applied it, which would mask the next genuinely stuck migration behind a stale expectation",
     file: FRONTIER,
     // The anchor tracks the list's CURRENT shape, which moves as migrations are
-    // applied and new ones become pending; today it ends with BESKT PR 6
-    // (20261116090000), the one migration pending by design. The planted defect
-    // never changes: this APPLIED migration goes back on the frontier list,
-    // where a resolved name would hide the next genuinely stuck one behind an
-    // expectation.
-    find: '  "20261116090000_bcp_conduct_prompts_and_report.sql",\n];',
+    // applied and new ones become pending. Today it ends with BESKT PR 6
+    // (20261117090000), the second of the two migrations pending by design. The
+    // planted defect never changes: this APPLIED migration goes back on the
+    // frontier list. Planting it alongside legitimately pending names is in
+    // fact the stronger control -- it proves the guard notices a stale entry
+    // even when the list is not supposed to be empty.
+    find: '  "20261117090000_bcp_conduct_prompts_and_report.sql",\n];',
     replace:
-      '  "20261116090000_bcp_conduct_prompts_and_report.sql",\n  "20261115090000_scp_interview_method_library_tenant_read.sql",\n];',
+      '  "20261117090000_bcp_conduct_prompts_and_report.sql",\n  "20261115090000_scp_interview_method_library_tenant_read.sql",\n];',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },

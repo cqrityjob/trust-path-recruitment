@@ -1,4 +1,4 @@
--- ROLLBACK for 20261116090000_bcp_conduct_prompts_and_report.
+-- ROLLBACK for 20261117090000_bcp_conduct_prompts_and_report.
 --
 -- Drops the prompt reader and the whole report chain, and narrows the one
 -- governed vocabulary this migration widened back to exactly the members it

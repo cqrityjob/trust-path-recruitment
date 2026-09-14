@@ -1645,6 +1645,116 @@ if [ "$ML_FAILED" -ne 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Outstanding review gates are operator-only (20261116090000).
+#
+# public.cd_outstanding_reviews lost its security_invoker option to a bare
+# CREATE OR REPLACE VIEW in 20260731100000 -- that statement RESETS reloptions
+# -- and silently became a definer view, so every signed-in user read the
+# governance gates of every definition version. The owner's decision of
+# 2026-09-14 is that only platform administrators and internal testers may.
+#
+# The planted defect below is the ORIGINAL one: the view re-declared with no
+# reloptions and no operator predicate, exactly as it stood on main. The suite
+# MUST fail on an assertion. Restoring only the flag would not be the original
+# defect -- and, as the suite's CDO13/CDO14 pair shows, would not be a fix
+# either, because the permissive "live readable" policy is OR-ed in.
+# ---------------------------------------------------------------------------
+echo "==> Running outstanding-reviews operator-only assertions"
+set +e
+CDO_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cd_outstanding_reviews_operator_only_test.sql 2>&1)"
+CDO_RC=$?
+set -e
+
+echo "$CDO_OUT" | grep -E "ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /' || true
+CDO_PASSED="$(echo "$CDO_OUT" | grep -c "ok  " || true)"
+CDO_FAILED=0
+
+if [ "$CDO_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the outstanding-reviews operator-only suite exited with code ${CDO_RC}." >&2
+  echo "$CDO_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  CDO_FAILED=1
+else
+  echo "    ok  ${CDO_PASSED} outstanding-reviews operator-only assertions passed"
+  if [ "$CDO_PASSED" -lt 16 ]; then
+    echo "FAIL: expected at least 16 operator-only assertions, only ${CDO_PASSED} ran." >&2
+    echo "      A denial suite that silently stops running assertions passes silently." >&2
+    CDO_FAILED=1
+  fi
+fi
+
+# The harness-level negative control: the original definer view, planted back.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" <<'PLANT' >/dev/null
+DROP VIEW public.cd_outstanding_reviews;
+CREATE VIEW public.cd_outstanding_reviews AS
+SELECT dv.definition_version, dv.lifecycle_status, g.key AS review_gate,
+       (g.value = 'true'::jsonb) AS cleared
+FROM public.cd_definition_versions dv
+CROSS JOIN LATERAL jsonb_each(dv.review_status) AS g(key, value)
+WHERE g.value <> 'true'::jsonb;
+REVOKE ALL ON public.cd_outstanding_reviews FROM anon;
+GRANT SELECT ON public.cd_outstanding_reviews TO authenticated;
+PLANT
+set +e
+CDO_WEAK="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cd_outstanding_reviews_operator_only_test.sql 2>&1)"
+CDO_WEAK_RC=$?
+set -e
+if [ "$CDO_WEAK_RC" -eq 0 ] || ! echo "$CDO_WEAK" | grep -q "ASSERTION FAILED"; then
+  echo "FAIL: the operator-only suite PASSED with the original definer view planted back." >&2
+  echo "      The suite cannot tell the corrected view from the finding, so it guards nothing." >&2
+  echo "$CDO_WEAK" | grep -iE "ERROR:|FEL:" | head -3 >&2
+  CDO_FAILED=1
+else
+  echo "    ok  the suite FAILS with the original defect planted back: $(echo "$CDO_WEAK" | grep -o 'ASSERTION FAILED: CDO[0-9]*' | head -1)"
+fi
+
+# Rollback, over the planted state, must reproduce that same pre-migration
+# shape and verify it.
+set +e
+CDO_RB="$(psql -v ON_ERROR_STOP=1 -1 -d "$TEST_DB" \
+  -f supabase/rollback/20261116090000_cd_outstanding_reviews_operator_only_rollback.sql 2>&1)"
+CDO_RB_RC=$?
+set -e
+if [ "$CDO_RB_RC" -ne 0 ] || ! echo "$CDO_RB" | grep -q "CD_OUTSTANDING_REVIEWS_OPERATOR_ONLY_ROLLBACK ok"; then
+  echo "FAIL: the outstanding-reviews operator-only rollback did not verify." >&2
+  echo "$CDO_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+  CDO_FAILED=1
+else
+  echo "    ok  the rollback restores the definer-mode, ungated view verbatim"
+fi
+
+set +e
+CDO_RE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/migrations/20261116090000_cd_outstanding_reviews_operator_only.sql 2>&1)"
+CDO_RE_RC=$?
+set -e
+if [ "$CDO_RE_RC" -ne 0 ] || ! echo "$CDO_RE" | grep -q "CD_OUTSTANDING_REVIEWS_OPERATOR_ONLY_PROOF ok"; then
+  echo "FAIL: the outstanding-reviews migration does not re-apply over the rolled-back state." >&2
+  echo "$CDO_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CDO_FAILED=1
+else
+  echo "    ok  and the migration re-applies cleanly over it, with its postflight proof"
+fi
+
+# And the suite passes again on the re-applied schema, so the run does not
+# leave a planted defect behind for every later suite.
+set +e
+CDO_AGAIN="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cd_outstanding_reviews_operator_only_test.sql 2>&1)"
+CDO_AGAIN_RC=$?
+set -e
+if [ "$CDO_AGAIN_RC" -ne 0 ]; then
+  echo "FAIL: the operator-only suite does not pass again after rollback and re-apply." >&2
+  echo "$CDO_AGAIN" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -5 >&2
+  CDO_FAILED=1
+else
+  echo "    ok  the suite passes again on the re-applied schema"
+fi
+
+if [ "$CDO_FAILED" -ne 0 ]; then
+  suite_failed "outstanding reviews operator only"
+fi
+
+# ---------------------------------------------------------------------------
 # Interview evidence reliability (20261020090000): evidence stays bound to its
 # case, question, application and employer; the writers are idempotent under
 # double-click and retry; an assessment covers the material that existed when
@@ -3504,7 +3614,7 @@ echo "==> Running BESKT PR 6 rollback and re-apply"
 # thing the design says nobody may remove, the owner included.
 set +e
 RPT_RB_REFUSAL="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20261116090000_bcp_conduct_prompts_and_report_rollback.sql 2>&1)"
+  -f supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql 2>&1)"
 RPT_RB_RC=$?
 set -e
 if [ "$RPT_RB_RC" -eq 0 ]; then
@@ -3525,7 +3635,7 @@ fi
 # of each. Re-applying proves the way back is real rather than asserted.
 set +e
 RPT_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261116090000_bcp_conduct_prompts_and_report.sql 2>&1)"
+  -f supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql 2>&1)"
 RPT_RE_RC=$?
 set -e
 if [ "$RPT_RE_RC" -ne 0 ]; then
@@ -3543,7 +3653,7 @@ fi
 # Stand PR 6 down so PR 5A can be unwound below: bcp_conduct_reports holds a
 # foreign key into bcp_conduct_sessions.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20261116090000_bcp_conduct_prompts_and_report_rollback.sql >/dev/null
+  -f supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql >/dev/null
 
 set +e
 CND_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \

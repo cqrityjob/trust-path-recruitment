@@ -12,8 +12,8 @@
  */
 import { runControls, type Mutation } from "./runner";
 
-const MIG = "supabase/migrations/20261116090000_bcp_conduct_prompts_and_report.sql";
-const RB = "supabase/rollback/20261116090000_bcp_conduct_prompts_and_report_rollback.sql";
+const MIG = "supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql";
+const RB = "supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql";
 const SUITE = "supabase/tests/bcp_conduct_prompts_and_report_test.sql";
 const DB = "scripts/db-test.sh";
 const STATE = "supabase/release-state.json";
@@ -830,9 +830,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "release-state.json claims the migration is applied to production when nothing established that, which is the exact unverified claim this stack exists to prevent",
     file: STATE,
-    find: '"file": "20261116090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "pending",',
+    find: '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "pending",',
     replace:
-      '"file": "20261116090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "unverified",',
+      '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "unverified",',
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
   },
@@ -851,7 +851,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the migration comes off the owner-level pending list while release-state.json still says pending, so the two files disagree about production",
     file: FRONTIER,
-    find: '  "20261116090000_bcp_conduct_prompts_and_report.sql",\n',
+    find: '  "20261117090000_bcp_conduct_prompts_and_report.sql",\n',
     replace: "",
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
