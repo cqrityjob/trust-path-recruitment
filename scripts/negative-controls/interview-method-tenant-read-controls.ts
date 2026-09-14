@@ -303,9 +303,16 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the frontier selection check still expects the migration pending after production has applied it, which would mask the next genuinely stuck migration behind a stale expectation",
     file: FRONTIER,
-    find: "const expectedPending: string[] = [];",
+    // RE-ANCHORED by PR #252, which put a genuinely pending migration back on
+    // this list. The anchor tracks the list's CURRENT shape, so it is now the
+    // last entry plus the closing bracket rather than the empty list. The
+    // planted defect is unchanged and always has been: this APPLIED migration
+    // goes back on the frontier. Planting it alongside a legitimately pending
+    // name is in fact the stronger control -- it proves the guard notices a
+    // stale entry even when the list is not supposed to be empty.
+    find: "  \"20261116090000_cd_outstanding_reviews_operator_only.sql\",\n];",
     replace:
-      'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
+      '  "20261116090000_cd_outstanding_reviews_operator_only.sql",\n  "20261115090000_scp_interview_method_library_tenant_read.sql",\n];',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },

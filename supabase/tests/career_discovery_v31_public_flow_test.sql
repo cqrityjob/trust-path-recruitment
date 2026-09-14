@@ -74,10 +74,38 @@ SELECT pg_temp.ok(
 
 -- Outstanding reviews still exist and are still visible. Removing the block
 -- did not remove the record.
+--
+-- Read as a real OPERATOR: 20261116090000 made cd_outstanding_reviews
+-- operator-only by owner decision, so "visible" now means visible to a platform
+-- administrator or internal tester. The claim is unchanged; the principal is.
+INSERT INTO auth.users (id, email)
+VALUES ('e1e1e1e1-0000-0000-0000-0000000000a1', 'public-flow-operator@example.test');
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('e1e1e1e1-0000-0000-0000-0000000000a1', 'admin');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1e1e1e1-0000-0000-0000-0000000000a1';
+
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_outstanding_reviews
     WHERE definition_version = '2026-scd-v3.1.0') > 0,
-  'P1.3 outstanding reviews remain tracked on the live instrument');
+  'P1.3 outstanding reviews remain tracked on the live instrument, for an operator');
+
+RESET ROLE;
+RESET request.jwt.claim.sub;
+
+-- The candidate who just started a session against this very instrument sees
+-- none of its governance gates.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1e1e1e1-0000-0000-0000-000000000001';
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_outstanding_reviews
+    WHERE definition_version = '2026-scd-v3.1.0') = 0,
+  'P1.3b and the candidate on that instrument sees none of them');
+
+RESET ROLE;
+RESET request.jwt.claim.sub;
 
 DO $$ BEGIN RAISE NOTICE 'GROUP P2 — temporary pilot test instrument'; END $$;
 
