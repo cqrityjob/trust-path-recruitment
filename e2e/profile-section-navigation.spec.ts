@@ -20,7 +20,7 @@
 // layout, and claims nothing about persistence.
 import { test, expect } from "@playwright/test";
 import { SECTION_DESTINATIONS } from "../src/lib/professional-identity/profile-destinations";
-import { mount, takeMountBookkeeping } from "./support/career-home-harness";
+import { mount, ok, takeMountBookkeeping } from "./support/career-home-harness";
 
 // An unstubbed server function must fail the scenario rather than pass
 // quietly: the same rule the rest of these suites hold themselves to.
@@ -33,6 +33,19 @@ test.afterEach(() => {
   ).toEqual([]);
   expect(c.errors, c.errors.join("\n")).toEqual([]);
 });
+
+// The profile workspace asks for four server functions the career-home stub
+// table does not carry -- it was built for /my-career, where none of these
+// editors mount. Empty is the right answer for these scenarios: the overview
+// lists a section whether or not it has content, and what is under test is
+// whether the row opens, not what it contains. Shapes match the ones
+// e2e/passport-first-run.spec.ts already returns for the same functions.
+const PROFILE_EDITOR_STUBS = {
+  getMySecurityCareerProfile: ok(null),
+  listMyEntries: ok({ experience: [], claims: [] }),
+  listJurisdictions: ok([]),
+  listSkillTypes: ok([]),
+};
 
 test.describe("the profile section overview", () => {
   // ── THE SECTION OVERVIEW IS NAVIGATION ──────────────────────────────
@@ -52,6 +65,7 @@ test.describe("the profile section overview", () => {
         lang,
         path: "/my-career/profile",
         ready: "#sections-heading",
+        overrides: PROFILE_EDITOR_STUBS,
       });
 
       const links = page.locator("a[data-section-link]");
@@ -87,6 +101,7 @@ test.describe("the profile section overview", () => {
     await mount(page, "general_jobs", {
       path: "/my-career/profile",
       ready: "#sections-heading",
+      overrides: PROFILE_EDITOR_STUBS,
     });
 
     // Whatever this fixture has filled in, a row that reads as complete must
@@ -111,6 +126,7 @@ test.describe("the profile section overview", () => {
     await mount(page, "general_jobs", {
       path: "/my-career/profile",
       ready: "#sections-heading",
+      overrides: PROFILE_EDITOR_STUBS,
     });
 
     await page.locator('a[data-section-link="employment"]').click();
@@ -125,6 +141,7 @@ test.describe("the profile section overview", () => {
     await mount(page, "general_jobs", {
       path: "/my-career/profile",
       ready: "#sections-heading",
+      overrides: PROFILE_EDITOR_STUBS,
     });
 
     const link = page.locator('a[data-section-link="education"]');
@@ -139,6 +156,7 @@ test.describe("the profile section overview", () => {
     await mount(page, "general_jobs", {
       path: "/my-career/profile",
       ready: "#sections-heading",
+      overrides: PROFILE_EDITOR_STUBS,
     });
 
     const small = await page.locator("a[data-section-link]").evaluateAll((els) =>
