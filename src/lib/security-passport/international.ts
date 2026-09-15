@@ -73,3 +73,31 @@ export interface CredentialStandardAdapter {
   /** Parsing must not imply signature verification, issuer trust or acceptance. */
   parseUntrusted(input: Uint8Array): Promise<EvidenceExtractionProposal>;
 }
+
+export interface CredentialVerificationEvent {
+  claimId: string;
+  result: string;
+  decidedAt: string;
+  validUntil: string | null;
+}
+/** A verified claim needs a current authoritative approval. This read model
+ * cannot raise trust; an elapsed/superseded review loses its current badge. */
+export function currentCredentialVerification(
+  claim: Claim,
+  events: readonly CredentialVerificationEvent[],
+  today: string,
+): Claim {
+  if (claim.assertionLevel !== "verified") return claim;
+  const event = events
+    .filter((e) => e.claimId === claim.id)
+    .sort((a, b) => b.decidedAt.localeCompare(a.decidedAt))[0];
+  if (event?.result === "approved" && (!event.validUntil || event.validUntil.slice(0, 10) >= today))
+    return claim;
+  return {
+    ...claim,
+    assertionLevel: "document_provided",
+    verifierName: null,
+    verificationMethod: null,
+    verifiedOn: null,
+  };
+}

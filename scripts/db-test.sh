@@ -156,6 +156,23 @@ for f in supabase/migrations/*.sql; do
 done
 echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # STRICT-REPLAY-CONTRACT END
+# International Passport: test fixtures roll back; rollback refuses adoption.
+for passport_round in before after; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2; do
+    passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
+    passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
+    echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
+  done
+  if [ "$passport_round" = before ]; then
+    for passport_migration in 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118090000_sp_international_passport_foundation; do
+      psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
+    done
+    for passport_migration in 20261118090000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2; do
+      psql_q -d "$TEST_DB" -f "supabase/migrations/${passport_migration}.sql" >/dev/null
+    done
+  fi
+done
+
 
 # ---------------------------------------------------------------------------
 # 3b. Walk back to the phase-1 CV state.
@@ -5908,6 +5925,7 @@ fi
 
 # The schema foundation must be independently reversible without touching an
 # existing disclosure, then safely re-applicable for the remaining suites.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261120090000_sp_credential_selective_sharing_v2_rollback.sql >/dev/null
 echo "==> Proving share-gateway rollback and re-apply"
 SPGW_DISCLOSURE_BEFORE="$(psql -Atq -d "$TEST_DB" -c "SELECT count(*) FROM public.sp_disclosures WHERE id='e7100000-0000-4000-8000-000000000001'")"
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
@@ -6294,6 +6312,8 @@ fi
 # up. This run is the dependency order a real rollback would follow: the
 # consumer goes before the thing it consumes.
 # ---------------------------------------------------------------------------
+psql_q -d "$TEST_DB" -f supabase/rollback/20261119090000_sp_international_credential_wallet_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20261118090000_sp_international_passport_foundation_rollback.sql >/dev/null
 echo "==> Standing the CV write path down ahead of the Passport rollbacks"
 set +e
 CVSD_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \

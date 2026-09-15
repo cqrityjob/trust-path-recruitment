@@ -1,9 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { CredentialDetails, CredentialIssuer, CredentialJurisdiction } from "./international";
+import type {
+  CredentialDetails,
+  CredentialIssuer,
+  CredentialJurisdiction,
+  CredentialVerificationEvent,
+} from "./international";
 
 export interface InternationalPassportMetadata {
   details: readonly CredentialDetails[];
+  verificationEvents: readonly CredentialVerificationEvent[];
   jurisdictions: readonly CredentialJurisdiction[];
   issuers: readonly CredentialIssuer[];
 }
@@ -11,7 +17,7 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<InternationalPassportMetadata> => {
     const db = context.supabase;
-    const [details, jurisdictions, authorities, issuers] = await Promise.all([
+    const [details, jurisdictions, authorities, issuers, requests, decisions] = await Promise.all([
       // New schema stays explicitly pending in release-state.json. RLS resolves
       // claim ownership; there is no caller-provided holder or service client.
       db
@@ -27,11 +33,23 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
         .from("sp_certification_issuers")
         .select("id,display_name,official_url,public_verification_url")
         .eq("is_active", true),
+      db.from("sp_verification_requests").select("id,claim_id"),
+      db
+        .from("sp_verification_decisions")
+        .select("request_id,decision,decided_at,valid_until")
+        .order("decided_at", { ascending: true }),
     ]);
-    if ([details, jurisdictions, authorities, issuers].some((r) => r.error)) {
+    if ([details, jurisdictions, authorities, issuers, requests, decisions].some((r) => r.error)) {
       throw new Error("International Passport metadata unavailable");
     }
+    const claimOf = new Map((requests.data ?? []).map((r) => [r.id, r.claim_id]));
     return {
+      verificationEvents: (decisions.data ?? []).flatMap((d) => {
+        const claimId = claimOf.get(d.request_id);
+        return claimId
+          ? [{ claimId, result: d.decision, decidedAt: d.decided_at, validUntil: d.valid_until }]
+          : [];
+      }),
       details: details.data as unknown as CredentialDetails[],
       jurisdictions: jurisdictions.data as unknown as CredentialJurisdiction[],
       issuers: [

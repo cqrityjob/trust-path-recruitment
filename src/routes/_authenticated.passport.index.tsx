@@ -1,3 +1,11 @@
+import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
+import {
+  deriveVerificationAttention,
+  VERIFICATION_ATTENTION_UNAVAILABLE,
+  type VerificationAttention,
+} from "@/lib/professional-identity/verification-attention";
+import { isPassportCredential } from "@/lib/security-passport/credential-passport";
+import type { ReviewReadState } from "@/lib/security-passport/workspace";
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,21 +32,33 @@ function PassportWorkspaceRoute() {
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
   const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
   const [reviews, setReviews] = useState<ReadonlyMap<string, string> | null>(null);
+  const [attention, setAttention] = useState<VerificationAttention | null>(null);
+  const [reviewState, setReviewState] = useState<ReviewReadState>("loading");
   const [error, setError] = useState(false);
   const refresh = useCallback(async () => {
     setError(false);
+    let currentSnapshot: PassportSnapshot | null = null;
     try {
       const [s, m] = await Promise.all([
         load({ data: undefined }),
         loadMetadata({ data: undefined }),
       ]);
+      currentSnapshot = s;
       setSnapshot(s);
       setMetadata(m);
     } catch {
       setError(true);
     }
+    setReviewState("loading");
     try {
       const r = await loadReviews({ data: undefined });
+      setReviewState("available");
+      const owned = new Set(
+        currentSnapshot?.holder.claims.filter(isPassportCredential).map((c) => c.id) ?? [],
+      );
+      setAttention(
+        deriveVerificationAttention(r.requests.filter((r) => r.claimId && owned.has(r.claimId))),
+      );
       setReviews(
         new Map(
           r.requests
@@ -50,6 +70,8 @@ function PassportWorkspaceRoute() {
         ),
       );
     } catch {
+      setReviewState("failed");
+      setAttention(VERIFICATION_ATTENTION_UNAVAILABLE);
       setReviews(null);
     }
   }, [load, loadMetadata, loadReviews]);
@@ -76,14 +98,31 @@ function PassportWorkspaceRoute() {
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-6 lg:flex-row">
       <div className="min-w-0 flex-1 lg:order-2">
+        <section id="attention" aria-labelledby="attention-heading" tabIndex={-1}>
+          <h2 id="attention-heading" className="sr-only">
+            {pt("att.title")}
+          </h2>
+          <VerificationOutcomes
+            attention={attention ?? VERIFICATION_ATTENTION_UNAVAILABLE}
+            showClear={false}
+            showUnavailable={false}
+            titleOf={(item) =>
+              snapshot.holder.claims.find((c) => c.id === item.subjectId)?.titleSv ??
+              pt("att.entryRemoved")
+            }
+            hrefOf={(item) => `/passport/entry/claim/${item.subjectId}`}
+          />
+        </section>
         <CredentialWallet
           snapshot={snapshot}
           metadata={metadata}
           reviews={reviews}
+          reviewState={reviewState}
           now={new Date().toISOString().slice(0, 10)}
         />
       </div>
       <PassportSideColumn
+        metadata={metadata}
         snapshot={snapshot}
         today={new Date().toISOString().slice(0, 10)}
         className="lg:order-1"

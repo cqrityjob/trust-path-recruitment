@@ -1,6 +1,7 @@
 import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
 import {
   getInternationalPassportMetadata,
+  saveInternationalCredential,
   type InternationalPassportMetadata,
 } from "@/lib/security-passport/international.functions";
 // Security Passport — one entry, and everything that can happen to it.
@@ -88,6 +89,7 @@ function PassportEntryRoute() {
   const { kind, entryId } = useParams({ from: "/_authenticated/passport/entry/$kind/$entryId" });
   const isClaim = kind === "claim";
 
+  const saveInternational = useServerFn(saveInternationalCredential);
   const loadInternational = useServerFn(getInternationalPassportMetadata);
   const [international, setInternational] = useState<InternationalPassportMetadata | null>(null);
   const loadPassport = useServerFn(getMyPassport);
@@ -804,6 +806,8 @@ function PassportEntryRoute() {
             <div className="mt-3">
               {internationalDetail ? (
                 <InternationalCredentialForm
+                  metadata={international}
+                  onSave={(data) => saveInternational({ data })}
                   key={claim.id}
                   initial={{
                     claim_id: claim.id,

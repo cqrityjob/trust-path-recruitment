@@ -1,3 +1,4 @@
+import type { InternationalPassportMetadata } from "@/lib/security-passport/international.functions";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Lock } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -11,11 +12,13 @@ const LINK =
 export function PassportSideColumn({
   snapshot,
   today,
+  metadata,
   className = "",
 }: {
   snapshot: PassportSnapshot;
   /** Injected so the guard can render a fixed day rather than "now". */
   today: string;
+  metadata?: InternationalPassportMetadata;
   className?: string;
 }) {
   const { pt } = usePassportCopy();
@@ -37,7 +40,7 @@ export function PassportSideColumn({
         </h2>
         {/* The owner summary never creates or displays a share token. */}
         <div className="mt-2">
-          <CompactPassportCard snapshot={snapshot} today={today} />
+          <CompactPassportCard snapshot={snapshot} today={today} metadata={metadata} />
         </div>
         <Link to="/passport/card" data-cta="open-card" className={`${LINK} mt-2`}>
           {pt("side.openCard")}

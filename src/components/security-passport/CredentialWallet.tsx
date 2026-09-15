@@ -8,6 +8,7 @@ import {
 import {
   CREDENTIAL_CLASSES,
   credentialClass,
+  currentCredentialVerification,
   credentialDate,
 } from "@/lib/security-passport/international";
 import { validityOf } from "@/lib/security-passport/validity";
@@ -22,27 +23,29 @@ export function CredentialWallet({
   snapshot,
   metadata,
   reviews,
+  reviewState,
   now,
 }: {
   snapshot: PassportSnapshot;
   metadata: InternationalPassportMetadata;
+  reviewState: "loading" | "available" | "failed";
   reviews: ReadonlyMap<string, string> | null;
   now: string;
 }) {
   const { lang } = usePassportCopy();
-  const t = (sv: string, en: string) => (lang === "sv" ? sv : en);
+  const copy = (sv: string, en: string) => (lang === "sv" ? sv : en);
   const holder = credentialPassportHolder(snapshot.holder);
   const identity = snapshot.profileIdentity;
   const title = lang === "sv" ? identity?.titleSv : identity?.titleEn;
   const details = new Map(metadata.details.map((d) => [d.claim_id, d]));
   const territory = (code: string | null | undefined) => {
     const j = metadata.jurisdictions.find((v) => v.code === code);
-    return j ? (lang === "sv" ? j.name_sv : j.name_en) : code || t("Inte angivet", "Not stated");
+    return j ? (lang === "sv" ? j.name_sv : j.name_en) : code || copy("Inte angivet", "Not stated");
   };
   return (
     <section data-credential-wallet className="min-w-0 space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold">{t("Mina yrkesbevis", "My credentials")}</h1>
+        <h1 className="text-2xl font-semibold">{copy("Mina yrkesbevis", "My credentials")}</h1>
         <p className="mt-2 text-lg">{title || PASSPORT_OWNERSHIP[lang].noTitle}</p>
         <p className="mt-1 text-xs text-muted-foreground">{PASSPORT_OWNERSHIP[lang].titleSource}</p>
         <div className="mt-4 flex flex-wrap gap-3">
@@ -50,26 +53,27 @@ export function CredentialWallet({
             to="/passport/credentials/new"
             className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 font-medium text-primary-foreground"
           >
-            {t("Lägg till yrkesbevis", "Add credential")}
+            {copy("Lägg till yrkesbevis", "Add credential")}
           </Link>
           <Link
             to="/passport/share"
             className="inline-flex min-h-11 items-center rounded-md border border-border px-4 font-medium"
           >
-            {t("Välj och dela", "Select and share")}
+            {copy("Välj och dela", "Select and share")}
           </Link>
         </div>
       </header>
       {holder.claims.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-5">
-          {t(
+          {copy(
             "Du har inga yrkesbevis här ännu. Ditt CV och din anställningshistorik finns kvar i Profil och CV.",
             "No credentials here yet. Your CV and employment history remain in Profile and CV.",
           )}
         </p>
       ) : null}
-      <ul className="grid gap-3" aria-label={t("Yrkesbevis", "Credentials")}>
-        {holder.claims.map((c) => {
+      <ul className="grid gap-3" aria-label={copy("Yrkesbevis", "Credentials")}>
+        {holder.claims.map((original) => {
+          const c = currentCredentialVerification(original, metadata.verificationEvents, now);
           const d = details.get(c.id);
           const validity = validityOf(c.lifecycleState, c.validUntil, now);
           const state = credentialPresentationOf(c, validity.effectiveState);
@@ -93,27 +97,27 @@ export function CredentialWallet({
                   </p>
                   <h2 className="break-words text-base font-semibold">{c.titleSv}</h2>
                   <p className="mt-1 break-words text-sm">
-                    {t("Utfärdare", "Issuer")}: {c.issuerName}
+                    {copy("Utfärdare", "Issuer")}: {c.issuerName}
                   </p>
                   <p className="mt-1 text-sm">
-                    {t("Giltighetsjurisdiktion", "Validity jurisdiction")}:{" "}
+                    {copy("Giltighetsjurisdiktion", "Validity jurisdiction")}:{" "}
                     {d?.validity_jurisdiction_code
                       ? territory(d.validity_jurisdiction_code)
                       : formatWorkLocation(c.jurisdictionCode, c.subJurisdictionCode, lang)}
                   </p>
                   {d?.issuing_country_code && (
                     <p className="text-sm">
-                      {t("Utfärdarland", "Issuing country")}: {territory(d.issuing_country_code)}
+                      {copy("Utfärdarland", "Issuing country")}: {territory(d.issuing_country_code)}
                     </p>
                   )}
                   <p className="mt-2 text-xs">
-                    {t("Utfärdad", "Issued")}: {credentialDate(c.issuedOn, lang)} ·{" "}
-                    {t("Giltig till", "Valid until")}:{" "}
+                    {copy("Utfärdad", "Issued")}: {credentialDate(c.issuedOn, lang)} ·{" "}
+                    {copy("Giltig till", "Valid until")}:{" "}
                     {c.validUntil
                       ? credentialDate(c.validUntil, lang)
                       : d?.no_expiry === true
-                        ? t("Uttryckligen utan utgångsdatum", "Explicitly no expiry")
-                        : t("Inte angivet", "Not stated")}
+                        ? copy("Uttryckligen utan utgångsdatum", "Explicitly no expiry")
+                        : copy("Inte angivet", "Not stated")}
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <AssertionChip
@@ -125,14 +129,16 @@ export function CredentialWallet({
                     <LifecycleChip state={validity.effectiveState} />
                     {reviews === null ? (
                       <span className="text-xs">
-                        {t("Granskningsstatus kunde inte läsas", "Review status unavailable")}
+                        {reviewState === "loading"
+                          ? copy("Läser granskningsstatus…", "Loading review status…")
+                          : copy("Granskningsstatus kunde inte läsas", "Review status unavailable")}
                       </span>
                     ) : (
                       review && (
                         <span className="text-xs">
                           {review === "pending"
-                            ? t("Väntar på granskning", "Pending review")
-                            : t("Komplettering begärd", "Clarification requested")}
+                            ? copy("Väntar på granskning", "Pending review")
+                            : copy("Komplettering begärd", "Clarification requested")}
                         </span>
                       )
                     )}
@@ -142,7 +148,7 @@ export function CredentialWallet({
                     params={{ kind: "claim", entryId: c.id }}
                     className="mt-2 inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4"
                   >
-                    {t("Detaljer, ändra eller arkivera", "Details, edit or archive")}
+                    {copy("Detaljer, ändra eller arkivera", "Details, edit or archive")}
                   </Link>
                 </div>
               </div>
@@ -151,7 +157,7 @@ export function CredentialWallet({
         })}
       </ul>
       <p className="text-xs leading-relaxed text-muted-foreground">
-        {t(
+        {copy(
           "Kontroll gäller endast det angivna underlaget och omfattningen. Den är inte en säkerhetsprövning, anställningsrekommendation eller garanti om internationellt erkännande.",
           "A check covers only the recorded evidence and scope. It is not security clearance, an employment recommendation or a guarantee of international recognition.",
         )}

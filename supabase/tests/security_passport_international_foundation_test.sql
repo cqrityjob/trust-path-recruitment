@@ -27,6 +27,8 @@ INSERT INTO public.sp_credential_details(claim_id,credential_class,original_lang
 SELECT pg_temp.ok((SELECT count(*)=1 FROM public.sp_credential_details),'holder reads own details');
 SELECT pg_temp.refused($q$UPDATE public.sp_claims SET assertion_level='verified' WHERE id='f1800000-0000-4000-8000-000000000011'$q$,'holder cannot verify claim');
 SELECT pg_temp.refused($q$UPDATE public.sp_credential_details SET issuing_jurisdiction_code='GB',issuing_country_code='SE' WHERE claim_id='f1800000-0000-4000-8000-000000000011'$q$,'country and jurisdiction cannot contradict');
+SELECT pg_temp.refused($q$UPDATE public.sp_credential_details SET validity_jurisdiction_code='GB' WHERE claim_id='f1800000-0000-4000-8000-000000000011'$q$,'metadata cannot contradict claim validity');
+SELECT pg_temp.refused($q$UPDATE public.sp_claims SET valid_until='2030-01-01' WHERE id='f1800000-0000-4000-8000-000000000011'$q$,'no-expiry metadata prevents contradictory expiry write');
 SELECT set_config('request.jwt.claim.sub','f1800000-0000-4000-8000-000000000002',true);
 SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_credential_details),'other holder cannot read details');
 SELECT pg_temp.refused($q$INSERT INTO public.sp_credential_details(claim_id,credential_class) VALUES ('f1800000-0000-4000-8000-000000000011','permit')$q$,'other holder cannot attach metadata');

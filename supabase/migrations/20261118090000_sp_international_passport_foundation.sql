@@ -145,6 +145,11 @@ BEGIN
    IF j.country_code IS NOT NULL AND j.country_code IS DISTINCT FROM NEW.issuing_country_code
    THEN RAISE EXCEPTION 'SP_ISSUING_COUNTRY_CONFLICT'; END IF;
  END IF;
+ IF NEW.validity_jurisdiction_code IS NOT NULL THEN
+   SELECT * INTO j FROM public.sp_credential_jurisdictions WHERE code=NEW.validity_jurisdiction_code;
+   IF j.country_code IS DISTINCT FROM c.jurisdiction_code OR j.subdivision_code IS DISTINCT FROM c.sub_jurisdiction_code
+   THEN RAISE EXCEPTION 'SP_VALIDITY_SCOPE_CONFLICT'; END IF;
+ END IF;
  NEW.updated_at:=now();
  RETURN NEW;
 END $$;

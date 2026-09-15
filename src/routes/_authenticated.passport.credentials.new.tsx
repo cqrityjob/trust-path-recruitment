@@ -1,3 +1,8 @@
+import {
+  getInternationalPassportMetadata,
+  saveInternationalCredential,
+  type InternationalPassportMetadata,
+} from "@/lib/security-passport/international.functions";
 import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
 // Security Passport — add a supported credential, live.
 //
@@ -63,6 +68,9 @@ function NewCredentialRoute() {
   // eight Swedish ones, and was being offered to a holder who had told the
   // product they work in Dubai. This asks the market question instead: given
   // where this holder works, what may they register, and if nothing, why.
+  const loadMetadata = useServerFn(getInternationalPassportMetadata);
+  const saveInternational = useServerFn(saveInternationalCredential);
+  const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
   const loadAvailability = useServerFn(getRegulatedCredentialAvailability);
   const loadDrafts = useServerFn(listMyCredentialDrafts);
   const doSave = useServerFn(saveCredential);
@@ -79,10 +87,12 @@ function NewCredentialRoute() {
 
   const refresh = useCallback(async () => {
     try {
-      const [a, d] = await Promise.all([
+      const [a, d, m] = await Promise.all([
         loadAvailability({ data: undefined }),
         loadDrafts({ data: undefined }),
+        loadMetadata({ data: undefined }),
       ]);
+      setMetadata(m);
       setAvailability(a);
       setDrafts(d);
     } catch (err) {
@@ -91,7 +101,7 @@ function NewCredentialRoute() {
     } finally {
       setLoaded(true);
     }
-  }, [loadAvailability, loadDrafts, pt]);
+  }, [loadAvailability, loadDrafts, loadMetadata, pt]);
 
   useEffect(() => {
     void refresh();
@@ -193,7 +203,10 @@ function NewCredentialRoute() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
-      <InternationalCredentialForm />
+      <InternationalCredentialForm
+        metadata={metadata}
+        onSave={(data) => saveInternational({ data })}
+      />
       <button
         type="button"
         onClick={() => void navigate({ to: "/passport" })}

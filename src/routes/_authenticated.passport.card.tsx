@@ -1,3 +1,7 @@
+import {
+  getInternationalPassportMetadata,
+  type InternationalPassportMetadata,
+} from "@/lib/security-passport/international.functions";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,14 +18,19 @@ export const Route = createFileRoute("/_authenticated/passport/card")({
 function PassportCardRoute() {
   const { pt, lang } = usePassportCopy();
   const load = useServerFn(getMyPassport);
+  const loadMetadata = useServerFn(getInternationalPassportMetadata);
+  const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    void load({ data: undefined })
-      .then((s) => {
-        if (alive) setSnapshot(s);
+    void Promise.all([load({ data: undefined }), loadMetadata({ data: undefined })])
+      .then(([s, m]) => {
+        if (alive) {
+          setSnapshot(s);
+          setMetadata(m);
+        }
       })
       .catch(() => {
         if (alive) setError(pt("live.error"));
@@ -29,7 +38,7 @@ function PassportCardRoute() {
     return () => {
       alive = false;
     };
-  }, [load, pt]);
+  }, [load, loadMetadata, pt]);
 
   if (error) {
     return (
@@ -46,7 +55,11 @@ function PassportCardRoute() {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:flex-row lg:items-start">
       <div className="w-full lg:w-[380px] lg:shrink-0">
-        <CompactPassportCard snapshot={snapshot} today={new Date().toISOString().slice(0, 10)} />
+        <CompactPassportCard
+          metadata={metadata ?? undefined}
+          snapshot={snapshot}
+          today={new Date().toISOString().slice(0, 10)}
+        />
       </div>
 
       <div className="min-w-0 flex-1 space-y-4">

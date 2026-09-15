@@ -1,12 +1,21 @@
-import { describe, expect, test } from "bun:test";
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import {
   credentialPassportHolder,
   isPassportCredential,
 } from "../src/lib/security-passport/credential-passport";
 import { personaById } from "../src/lib/security-passport/fixtures/personas";
+import {
+  credentialDate,
+  CREDENTIAL_CLASSES,
+  currentCredentialVerification,
+} from "../src/lib/security-passport/international";
+import { readPassportProfileIdentity } from "../src/lib/security-passport/profile-identity.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "../src/integrations/supabase/types";
 
 describe("credential-only Passport ownership", () => {
-  test.each([
+  for (const [claimType, credentialCode, expected] of [
     ["certification", null, true],
     ["licence", null, true],
     ["training", "VU1", true],
@@ -15,36 +24,30 @@ describe("credential-only Passport ownership", () => {
     ["specialisation", null, false],
     ["education", null, false],
     ["professional_membership", null, false],
-  ] as const)("%s / %s belongs to Passport: %s", (claimType, credentialCode, expected) => {
-    expect(isPassportCredential({ claimType, credentialCode })).toBe(expected);
-  });
-  test("projecting the wallet leaves CV source rows intact", () => {
+  ] as const)
+    it(`${claimType}/${credentialCode}`, () =>
+      assert.equal(isPassportCredential({ claimType, credentialCode }), expected));
+  it("projection preserves CV source rows", () => {
     const source = personaById("overlapping-employers");
     const before = JSON.stringify(source);
     const projected = credentialPassportHolder(source);
-    expect(projected.periods).toEqual([]);
-    expect(projected.claims.every(isPassportCredential)).toBe(true);
-    expect(source.periods.length).toBeGreaterThan(0);
-    expect(JSON.stringify(source)).toBe(before);
+    assert.deepEqual(projected.periods, []);
+    assert(projected.claims.every(isPassportCredential));
+    assert(source.periods.length > 0);
+    assert.equal(JSON.stringify(source), before);
   });
 });
-
-import { credentialDate, CREDENTIAL_CLASSES } from "../src/lib/security-passport/international";
-import { readPassportProfileIdentity } from "../src/lib/security-passport/profile-identity.server";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "../src/integrations/supabase/types";
-
-describe("international identity and dates", () => {
-  test("all seven classes have both display languages", () => {
-    expect(Object.keys(CREDENTIAL_CLASSES)).toHaveLength(7);
-    expect(Object.values(CREDENTIAL_CLASSES).every((c) => c.sv && c.en)).toBe(true);
+describe("international identity, locale and review expiry", () => {
+  it("seven classes translated", () => {
+    assert.equal(Object.keys(CREDENTIAL_CLASSES).length, 7);
+    assert(Object.values(CREDENTIAL_CLASSES).every((c) => c.sv && c.en));
   });
-  test("a missing date is unknown, never no expiry", () => {
-    expect(credentialDate(null, "en")).toBe("Not stated");
-    expect(credentialDate(null, "sv")).toBe("Inte angivet");
-    expect(credentialDate("2026-01-05", "en")).toBe("5 Jan 2026");
+  it("missing expiry remains unknown", () => {
+    assert.equal(credentialDate(null, "en"), "Not stated");
+    assert.equal(credentialDate(null, "sv"), "Inte angivet");
+    assert.equal(credentialDate("2026-01-05", "en"), "5 Jan 2026");
   });
-  test("a Profile update replaces the title and clearing it never revives a Passport headline", async () => {
+  it("canonical title updates and clears", async () => {
     let title: string | null = "Security analyst";
     const db = {
       from(table: string) {
@@ -64,10 +67,43 @@ describe("international identity and dates", () => {
         return query;
       },
     } as unknown as SupabaseClient<Database>;
-    expect((await readPassportProfileIdentity(db, "owner")).titleEn).toBe("Security analyst");
+    assert.equal((await readPassportProfileIdentity(db, "owner")).titleEn, title);
     title = "Operations manager";
-    expect((await readPassportProfileIdentity(db, "owner")).titleEn).toBe(title);
+    assert.equal((await readPassportProfileIdentity(db, "owner")).titleEn, title);
     title = null;
-    expect((await readPassportProfileIdentity(db, "owner")).titleEn).toBeNull();
+    assert.equal((await readPassportProfileIdentity(db, "owner")).titleEn, null);
   });
+  const base = {
+    ...personaById("overlapping-employers").claims[0]!,
+    assertionLevel: "verified" as const,
+  };
+  for (const [result, validUntil, expected] of [
+    ["approved", "2027-01-01", "verified"],
+    ["approved", "2025-01-01", "document_provided"],
+    ["revoked", null, "document_provided"],
+    ["rejected", null, "document_provided"],
+  ] as const)
+    it(`review ${result}/${validUntil}`, () =>
+      assert.equal(
+        currentCredentialVerification(
+          base,
+          [{ claimId: base.id, result, decidedAt: "2026-01-01", validUntil }],
+          "2026-09-15",
+        ).assertionLevel,
+        expected,
+      ));
+  it("no event cannot sustain verified status", () =>
+    assert.equal(
+      currentCredentialVerification(base, [], "2026-09-15").assertionLevel,
+      "document_provided",
+    ));
+  it("an approval never promotes a self-reported claim", () =>
+    assert.equal(
+      currentCredentialVerification(
+        { ...base, assertionLevel: "self_declared" },
+        [{ claimId: base.id, result: "approved", decidedAt: "2026-01-01", validUntil: null }],
+        "2026-09-15",
+      ).assertionLevel,
+      "self_declared",
+    ));
 });
