@@ -639,16 +639,16 @@ const MUTATIONS: readonly Mutation[] = [
     file: FRONTIER,
     // The anchor tracks the list's CURRENT shape, which moves as migrations are
     // applied and new ones become pending -- it has been the empty list, a
-    // one-entry list and a two-entry list in the last three PRs alone. Today it
-    // is BESKT PR 6 (20261117090000), the one migration pending by design. The
-    // planted defect never changes: this APPLIED migration goes back on the
-    // frontier list, where a resolved name would hide the next genuinely stuck
-    // one. Planting it BESIDE a legitimately pending name is in fact the
-    // stronger control -- it proves the guard notices a stale entry even when
-    // the list is not supposed to be empty.
-    find: '  "20261117090000_bcp_conduct_prompts_and_report.sql",\n];',
+    // one-entry list and a two-entry list across the last few PRs. Today it
+    // ends with BESKT PR 7 (20261118090000); BESKT PR 6 (20261117090000) sits
+    // above it, merged as #254 but not yet applied. The planted defect never
+    // changes: this APPLIED migration goes back on the frontier list, where a
+    // resolved name would hide the next genuinely stuck one. Planting it BESIDE
+    // legitimately pending names is the stronger control -- it proves the guard
+    // notices a stale entry even when the list is not supposed to be empty.
+    find: '  "20261118090000_beskt_governed_content_authoring.sql",\n];',
     replace:
-      '  "20261117090000_bcp_conduct_prompts_and_report.sql",\n  "20261113090000_bcp_interview_conduct.sql",\n];',
+      '  "20261118090000_beskt_governed_content_authoring.sql",\n  "20261113090000_bcp_interview_conduct.sql",\n];',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },

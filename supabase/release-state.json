@@ -60,6 +60,63 @@
       "rollback": "supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql"
     },
     {
+      "file": "20261118090000_beskt_governed_content_authoring.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "beskt_author_exposure_profile",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_section",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_item",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_prompt",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_routing_rule",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_evidence_anchor",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_observation_field",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_activation_requirement",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_delete_content",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_content_gate",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_content_commit",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_content_reject_unknown_keys",
+          "kind": "function"
+        }
+      ],
+      "note": "BESKT PR 7 -- THE GOVERNED WAY TO AUTHOR METHOD CONTENT. Schema only; no application code on this branch names any object below. CLOSES A GAP NOBODY HAD NAMED: 20261108090000 built the whole governed LIFECYCLE of a BESKT method -- create, version, submit, review, publish, suspend, retire, grant, revoke, ten RPCs reachable from a browser -- and built no way to author the CONTENT those RPCs move through. beskt_exposure_profiles, beskt_sections, beskt_items, beskt_item_options, beskt_prompts, beskt_routing_rules, beskt_evidence_anchors, beskt_observation_fields and beskt_activation_requirements grant authenticated SELECT and nothing else; ALL goes to service_role; no function in any migration inserts a row into any of them; beskt_touch_draft only recomputes the hash. The database suite's own fixture builds method content by dropping OUT of the authenticated role and writing as the table owner, which is the admission that no client path exists. So a theme, question, option, purpose, prompt, routing rule or exposure profile could only be created as service_role (which must never reach a browser) or inside a migration (which is exactly how production content must NOT be seeded). ADDS NINE DOORS: beskt_author_exposure_profile, _section, _item (options travel with it and are reconciled by key), _prompt, _routing_rule, _evidence_anchor, _observation_field, _activation_requirement, and beskt_delete_content. They are DOORS, NOT LAW: every content invariant already lives in beskt_guard_child_row(), which fires on INSERT/UPDATE/DELETE for all nine tables and holds against the table owner -- and therefore against these functions, which run as the owner. Draft-only editing, no re-parenting, same-version references, the exposure-profile boundary, the PEACE stage binding, the Evaluation template, routing direction and mode escalation are not restated, because restating them would create a second place to be wrong. What is added in front of that law: auth.uid(); the SAME scp_interview_can_edit() editor role beskt_touch_draft already demands (no new role, no new grant table); replay answered through the existing beskt_operation_begin BEFORE any write; the version locked at the revision the caller saw through the existing beskt_lock_version; draft-or-in-review only, refused by name; the content hash recomputed and the revision advanced exactly as beskt_touch_draft does; an event appended to the existing ledger. PAYLOADS ARE jsonb AND THAT IS A TYPED CONTRACT, NOT A BLOB: an item carries twenty governed columns, so each door takes one object and then REFUSES ANY KEY IT DOES NOT KNOW (beskt_content_reject_unknown_keys) -- a misspelled purpose_sv is refused by name rather than dropped on the floor, and nothing is stored as jsonb; every value lands in the typed column it always had. NO NEW CLIENT DML: not one grant on any content table changes, asserted by the postflight against information_schema. NO JUDGEMENT: no door accepts a score, weight, threshold, rank or verdict because no such column exists, also asserted against the catalogue. SEEDS NOTHING: BESKT v1 is authored by real editors through these doors, never by the migration that opens them.",
+      "verify": "Replay locally with bash scripts/db-test.sh: the migration raises BESKT_GOVERNED_CONTENT_AUTHORING_PROOF ok from its own postflight, supabase/tests/beskt_governed_content_authoring_test.sql must report at least 55 assertions with zero failures -- its first block authors a COMPLETE method through the doors as an editor in the authenticated role and SUBMITS it to the five gates, which is the claim this migration exists to make true -- the rollback must raise BESKT_GOVERNED_CONTENT_AUTHORING_ROLLBACK ok, and the migration must re-apply cleanly over the rolled-back schema. Hosted, read-only, once applied: SELECT count(*) FROM information_schema.role_table_grants WHERE table_schema='public' AND table_name IN ('beskt_exposure_profiles','beskt_sections','beskt_items','beskt_item_options','beskt_prompts','beskt_routing_rules','beskt_evidence_anchors','beskt_observation_fields','beskt_activation_requirements') AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE') AND grantee IN ('anon','authenticated','PUBLIC');  -- expect 0: the doors are functions, not widened grants. Then: SELECT p.proname, p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'beskt\\\\_author\\\\_%';  -- expect eight rows, all SECURITY DEFINER. Then: SELECT has_function_privilege('authenticated','public.beskt_content_gate(uuid,integer)','EXECUTE');  -- expect f: the gate applies no authorisation of its own. Then: SELECT has_function_privilege('anon','public.beskt_author_item(uuid,uuid,integer,jsonb)','EXECUTE');  -- expect f. Then: SELECT prosecdef, provolatile FROM pg_proc WHERE proname='beskt_content_reject_unknown_keys';  -- expect f|i: the payload checker is pure. Then: SELECT count(*) FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid JOIN pg_proc p ON p.oid=tg.tgfoid WHERE p.proname='beskt_guard_child_row' AND NOT tg.tgisinternal;  -- expect 9: the law these doors stand on is still attached to every content table. Then: SELECT count(*) FROM public.beskt_method_events WHERE event IN ('content_upserted','content_deleted');  -- expect 0 immediately after apply: the migration authors nothing. Source-level: bun run beskt-content-authoring:check and bun run negative-controls:beskt-content-authoring.",
+      "rollback": "supabase/rollback/20261118090000_beskt_governed_content_authoring_rollback.sql"
+    },
+    {
       "file": "20261115090000_scp_interview_method_library_tenant_read.sql",
       "hostedState": "applied",
       "evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt by the official Supabase GitHub integration when PR #241 merged to main as 7e338f2a43fbfe91b2c26228f04d7b3487d67d61; the integration applied it automatically on merge, so no hosted write was issued from this evidence session. Verified read-only on 2026-09-13 through the Supabase management API; every statement below is a read, and nothing was applied, re-applied or repaired. RECORDED IDENTITY: supabase_migrations.schema_migrations carries version 20261115090000, name scp_interview_method_library_tenant_read -- the canonical filename's own version and slug, not a generated uuid, so no canonical-to-hosted alias is required and a clean replay executes nothing twice. It is the ledger frontier (row 280). LEDGER: supabase/hosted-ledger.json was refreshed from the same read and proved faithful rather than assumed -- md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's 279 rows excluding 20261115090000 is 9c77cb921cae6a46a233ffb5b9cd308c, which is exactly the all-rows digest recorded by the previous evidence AND the digest of the previously committed 279-row file, so no earlier row was rewritten; over all 280 rows production and the committed file both give cbe34f3fef140aa15c8810e8b8169425. PREDICATE: public.scp_iv_employer_may_read_method(_method_id uuid) exists, is SECURITY DEFINER, is STABLE, and pins proconfig {search_path=public}. Grants are exactly what the migration declares: has_function_privilege is false for anon, true for authenticated and service_role, and aclexplode finds no grantee 0, so PUBLIC cannot execute it. Its body names no raw_user_meta_data, user_metadata, app_metadata or jwt.claims, so membership is resolved from employer_memberships and never from a user-editable claim. BODY EQUIVALENCE: md5(prosrc) on production is 608dd25e6f7db6a10f619b042b6273a9, byte-identical to the function body extracted from the merged migration source supabase/migrations/20261115090000_scp_interview_method_library_tenant_read.sql (file sha256 9c6aaa4f6344e5184c28bda914b12d66ab7a470ad269823afbd9f2545be7258d). Zero differing, zero repo-only, zero hosted-only. POLICIES: all five employer read policies are SELECT policies routed through the predicate -- scp_interview_methods_employer_read, scp_interview_method_practices_employer_read, scp_interview_conduct_steps_read, scp_interview_conduct_prohibitions_read and scp_interview_conduct_guidance_read each have a qual naming scp_iv_employer_may_read_method( and NONE still names employer_memberships, so membership alone no longer decides. TABLES: all five library tables carry relrowsecurity; none carries an unconditional policy (no qual='true', no with_check='true', no SELECT/ALL policy with a NULL qual); each retains a SELECT policy whose qual names scp_interview_can_read(auth.uid()), so the governance reader was not collateral damage; has_table_privilege('anon', ...) is false on all five; and information_schema.role_table_grants shows no PUBLIC grant on any of them. EXERCISED, NOT ONLY INSPECTED: with no signed-in principal, bool_or over every method in the library returns false, so the predicate fails closed at the door, and scp_iv_employer_may_read_method(NULL) returns false. LIVE CONSEQUENCE, stated rather than hidden: production holds 6 library methods, 0 of them approved and all 6 draft, and 9 interview cases pinning 2 distinct methods. So the approved branch admits nothing today and the pinned-case continuity branch is the only live path -- exactly the governed outcome the migration's header predicts. NO WRITE, NO SEED: no row was inserted, updated or deleted; no test user, employer, membership or case was created; no approval state was changed. ADVISORS: Supabase security advisors were run and nothing is hidden. Six lint groups are returned. Exactly one names an object of this migration: authenticated_security_definer_function_executable (WARN), which names the predicate because the migration deliberately grants it to authenticated -- matching its own GRANT list. anon_security_definer_function_executable does NOT name the predicate, so anon is closed on production as well as in the catalogue. The single ERROR group (security_definer_view) and every remaining group (rls_enabled_no_policy, extension_in_public, auth_leaked_password_protection) name no object of this migration and are pre-existing.",

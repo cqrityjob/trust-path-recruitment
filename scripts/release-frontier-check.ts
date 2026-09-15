@@ -98,16 +98,25 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // evidence in release-state.json and hosted-ledger.json -- so it is off this
 // list, as planned.
 //
-// BESKT PR 6 is now the one migration pending by design. It was RENUMBERED
-// from 20261116090000 to 20261117090000 because #252 claimed that version
-// first and two active migrations may not share one. It comes off this list
-// only in the change that records its own hostedState: applied with hosted
-// evidence -- never on the strength of a merge alone.
+// TWO migrations are now pending by design, and they come off this list one at
+// a time, each in the change that records its OWN hostedState: applied with
+// hosted evidence -- never on the strength of a merge alone.
+//
+//   20261117090000  BESKT PR 6, merged as #254. Renumbered from 20261116090000
+//                   because #252 claimed that version first and two active
+//                   migrations may not share one. Merged is not applied: it
+//                   stays here until the integration has run it and the
+//                   evidence is recorded.
+//   20261118090000  BESKT PR 7, this branch. The nine governed doors through
+//                   which a human content editor authors BESKT method content,
+//                   which until now could be written only as service_role or
+//                   inside a migration.
+//
+// No application code on this branch names an object either one introduces, so
+// release-parity-check has nothing to block.
 const expectedPending: string[] = [
-  // BESKT PR 6. Schema only: no application code on this branch names
-  // bcp_conduct_topic_prompts or any object of the report chain, so nothing
-  // ships against it. The Supabase GitHub integration applies it on merge.
   "20261117090000_bcp_conduct_prompts_and_report.sql",
+  "20261118090000_beskt_governed_content_authoring.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
