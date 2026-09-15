@@ -1,0 +1,481 @@
+{
+  "reportedPassingAssertionBlocks": [
+    {
+      "line": 505,
+      "count": 16,
+      "text": "16 assertions passed: Passport international_foundation (before rollback/reapply)"
+    },
+    {
+      "line": 506,
+      "count": 18,
+      "text": "18 assertions passed: Passport international_wallet (before rollback/reapply)"
+    },
+    {
+      "line": 507,
+      "count": 27,
+      "text": "27 assertions passed: Passport credential_sharing_v2 (before rollback/reapply)"
+    },
+    {
+      "line": 508,
+      "count": 97,
+      "text": "97 assertions passed: Passport closed_catalogue (before rollback/reapply)"
+    },
+    {
+      "line": 509,
+      "count": 16,
+      "text": "16 assertions passed: Passport international_foundation (after rollback/reapply)"
+    },
+    {
+      "line": 510,
+      "count": 18,
+      "text": "18 assertions passed: Passport international_wallet (after rollback/reapply)"
+    },
+    {
+      "line": 511,
+      "count": 27,
+      "text": "27 assertions passed: Passport credential_sharing_v2 (after rollback/reapply)"
+    },
+    {
+      "line": 512,
+      "count": 97,
+      "text": "97 assertions passed: Passport closed_catalogue (after rollback/reapply)"
+    },
+    {
+      "line": 541,
+      "count": 162,
+      "text": "ok  162 assertions passed"
+    },
+    {
+      "line": 543,
+      "count": 132,
+      "text": "ok  132 Career Discovery assertions passed"
+    },
+    {
+      "line": 555,
+      "count": 64,
+      "text": "ok  64 Career Discovery v3.1 assertions passed"
+    },
+    {
+      "line": 567,
+      "count": 58,
+      "text": "ok  58 Career Discovery v3.1 completion assertions passed"
+    },
+    {
+      "line": 574,
+      "count": 28,
+      "text": "ok  28 public v3.1 flow assertions passed"
+    },
+    {
+      "line": 583,
+      "count": 84,
+      "text": "ok  84 personal layer assertions passed"
+    },
+    {
+      "line": 592,
+      "count": 21,
+      "text": "ok  21 CD calibration access assertions passed"
+    },
+    {
+      "line": 602,
+      "count": 52,
+      "text": "ok  52 Competency Graph assertions passed"
+    },
+    {
+      "line": 613,
+      "count": 39,
+      "text": "ok  39 Academy assertions passed"
+    },
+    {
+      "line": 622,
+      "count": 62,
+      "text": "ok  62 content assertions passed"
+    },
+    {
+      "line": 627,
+      "count": 19,
+      "text": "ok  19 Phase 2 assertions passed"
+    },
+    {
+      "line": 641,
+      "count": 106,
+      "text": "ok  106 journey assertions passed"
+    },
+    {
+      "line": 656,
+      "count": 105,
+      "text": "ok  105 Vaktare journey assertions passed"
+    },
+    {
+      "line": 664,
+      "count": 34,
+      "text": "ok  34 purpose-governance assertions passed"
+    },
+    {
+      "line": 676,
+      "count": 57,
+      "text": "ok  57 report audience assertions passed"
+    },
+    {
+      "line": 684,
+      "count": 24,
+      "text": "ok  24 report evidence-scope assertions passed"
+    },
+    {
+      "line": 695,
+      "count": 60,
+      "text": "ok  60 recruitment brief assertions passed"
+    },
+    {
+      "line": 705,
+      "count": 80,
+      "text": "ok  80 recruitment journey assertions passed"
+    },
+    {
+      "line": 715,
+      "count": 70,
+      "text": "ok  70 lifecycle bridge assertions passed"
+    },
+    {
+      "line": 722,
+      "count": 47,
+      "text": "ok  47 pilot security-gate assertions passed"
+    },
+    {
+      "line": 724,
+      "count": 70,
+      "text": "ok  70 employer response-reviewer assertions passed"
+    },
+    {
+      "line": 726,
+      "count": 36,
+      "text": "ok  36 person identity spine assertions passed"
+    },
+    {
+      "line": 728,
+      "count": 36,
+      "text": "ok  36 workforce lifecycle E2E assertions passed"
+    },
+    {
+      "line": 730,
+      "count": 19,
+      "text": "ok  19 standard recruitment availability assertions passed"
+    },
+    {
+      "line": 737,
+      "count": 60,
+      "text": "ok  60 option-order integrity assertions passed"
+    },
+    {
+      "line": 750,
+      "count": 21,
+      "text": "ok  21 language contract assertions passed"
+    },
+    {
+      "line": 760,
+      "count": 45,
+      "text": "ok  45 content library assertions passed"
+    },
+    {
+      "line": 770,
+      "count": 45,
+      "text": "ok  45 training journey assertions passed"
+    },
+    {
+      "line": 776,
+      "count": 18,
+      "text": "ok  18 people model assertions passed"
+    },
+    {
+      "line": 779,
+      "count": 26,
+      "text": "ok  26 employer onboarding assertions passed"
+    },
+    {
+      "line": 788,
+      "count": 73,
+      "text": "ok  73 Role Interview Pack assertions passed"
+    },
+    {
+      "line": 799,
+      "count": 85,
+      "text": "ok  85 Interview Intelligence runtime assertions passed"
+    },
+    {
+      "line": 811,
+      "count": 99,
+      "text": "ok  99 Interview Intelligence integrity assertions passed"
+    },
+    {
+      "line": 823,
+      "count": 75,
+      "text": "ok  75 CQrity TRUST assertions passed"
+    },
+    {
+      "line": 834,
+      "count": 50,
+      "text": "ok  50 open pilot entitlement assertions passed"
+    },
+    {
+      "line": 841,
+      "count": 32,
+      "text": "ok  32 interview start-contract assertions passed"
+    },
+    {
+      "line": 848,
+      "count": 27,
+      "text": "ok  27 AI gate and provenance assertions passed"
+    },
+    {
+      "line": 859,
+      "count": 63,
+      "text": "ok  63 Interview Copilot assertions passed"
+    },
+    {
+      "line": 861,
+      "count": 62,
+      "text": "ok  62 TRUST conduct layer assertions passed"
+    },
+    {
+      "line": 863,
+      "count": 24,
+      "text": "ok  24 tenant isolation assertions passed"
+    },
+    {
+      "line": 877,
+      "count": 123,
+      "text": "ok  123 interview-method library tenant-read assertions passed"
+    },
+    {
+      "line": 882,
+      "count": 19,
+      "text": "ok  19 outstanding-reviews operator-only assertions passed"
+    },
+    {
+      "line": 897,
+      "count": 72,
+      "text": "ok  72 interview evidence reliability assertions passed"
+    },
+    {
+      "line": 915,
+      "count": 192,
+      "text": "ok  192 TRUST evidence report R0 assertions passed"
+    },
+    {
+      "line": 926,
+      "count": 25,
+      "text": "ok  25 facet-resolution assertions passed"
+    },
+    {
+      "line": 942,
+      "count": 80,
+      "text": "ok  80 TRUST evidence report R3A assertions passed"
+    },
+    {
+      "line": 971,
+      "count": 15,
+      "text": "ok  15 R2A expand-phase assertions passed"
+    },
+    {
+      "line": 980,
+      "count": 27,
+      "text": "ok  27 R2A continuity assertions passed"
+    },
+    {
+      "line": 988,
+      "count": 33,
+      "text": "ok  33 R2A-3 contract assertions passed"
+    },
+    {
+      "line": 990,
+      "count": 29,
+      "text": "ok  29 job lifecycle assertions passed"
+    },
+    {
+      "line": 1004,
+      "count": 69,
+      "text": "ok  69 canonical Professional Profile assertions passed"
+    },
+    {
+      "line": 1010,
+      "count": 16,
+      "text": "ok  16 canonical Professional Profile contract assertions passed"
+    },
+    {
+      "line": 1020,
+      "count": 35,
+      "text": "ok  35 CV documents privacy assertions passed"
+    },
+    {
+      "line": 1057,
+      "count": 27,
+      "text": "ok  27 admin assignment cancellation assertions passed"
+    },
+    {
+      "line": 1065,
+      "count": 31,
+      "text": "ok  31 E2 issuer participant-preview assertions passed"
+    },
+    {
+      "line": 1083,
+      "count": 442,
+      "text": "ok  442 BESKT governed-content assertions passed"
+    },
+    {
+      "line": 1085,
+      "count": 65,
+      "text": "ok  65 BESKT content-authoring assertions passed"
+    },
+    {
+      "line": 1104,
+      "count": 247,
+      "text": "ok  247 BESKT candidate-preparation assertions passed"
+    },
+    {
+      "line": 1106,
+      "count": 47,
+      "text": "ok  47 BESKT interview-case bridge assertions passed"
+    },
+    {
+      "line": 1108,
+      "count": 93,
+      "text": "ok  93 BESKT interview-conduct assertions passed"
+    },
+    {
+      "line": 1110,
+      "count": 69,
+      "text": "ok  69 BESKT prompts-and-report assertions passed"
+    },
+    {
+      "line": 1145,
+      "count": 51,
+      "text": "ok  51 rollback assertions passed"
+    },
+    {
+      "line": 1147,
+      "count": 14,
+      "text": "ok  14 job archive assertions passed"
+    },
+    {
+      "line": 1149,
+      "count": 48,
+      "text": "ok  48 self-publication assertions passed"
+    },
+    {
+      "line": 1158,
+      "count": 303,
+      "text": "ok  303 skill/language taxonomy assertions passed"
+    },
+    {
+      "line": 1165,
+      "count": 41,
+      "text": "ok  41 Security Passport Phase 3/4 assertions passed"
+    },
+    {
+      "line": 1219,
+      "count": 50,
+      "text": "ok  50 Security Passport Phase 11 assertions passed"
+    },
+    {
+      "line": 1256,
+      "count": 15,
+      "text": "ok  15 UK title rule assertions passed"
+    },
+    {
+      "line": 1275,
+      "count": 15,
+      "text": "ok  15 work country assertions passed"
+    },
+    {
+      "line": 1342,
+      "count": 59,
+      "text": "ok  59 security hardening assertions passed"
+    },
+    {
+      "line": 1349,
+      "count": 20,
+      "text": "ok  20 expand-phase assertions passed"
+    },
+    {
+      "line": 1458,
+      "count": 32,
+      "text": "ok  32 internal note privacy assertions passed"
+    },
+    {
+      "line": 1469,
+      "count": 57,
+      "text": "ok  57 Passport reviewer role assertions passed"
+    },
+    {
+      "line": 1477,
+      "count": 34,
+      "text": "ok  34 employer matching and eligibility assertions passed"
+    },
+    {
+      "line": 1564,
+      "count": 11,
+      "text": "ok  11 concurrent first-merit assertions passed"
+    },
+    {
+      "line": 1584,
+      "count": 14,
+      "text": "ok  14 two-ops race assertions passed"
+    },
+    {
+      "line": 1597,
+      "count": 25,
+      "text": "ok  25 share-gateway assertions passed"
+    },
+    {
+      "line": 1622,
+      "count": 34,
+      "text": "ok  34 cv_documents lockdown assertions passed"
+    },
+    {
+      "line": 1698,
+      "count": 4,
+      "text": "ok  4 post-rollback correction assertions passed"
+    }
+  ],
+  "reportedPassingAssertions": 5169,
+  "failedSuites": [
+    "Admin Control Center lifecycle",
+    "CQrityjob CV application source",
+    "cv_documents controlled write path",
+    "employer final-report basis",
+    "Security Passport application disclosure",
+    "Security Passport Phase 2",
+    "Security Passport Phase 5",
+    "Security Passport three-market foundation",
+    "Security Passport Phase 6",
+    "Security Passport Phase 6b",
+    "Security Passport Phase 7",
+    "Security Passport Phase 8",
+    "Security Passport Phase 10",
+    "Security Passport Swedish truth model",
+    "Security Passport UK market pack",
+    "Security Passport disclosure holder jurisdiction",
+    "Security Passport pilot bug fix #1",
+    "Security Passport internal-pilot entitlement",
+    "Security Passport pilot catalogue visibility",
+    "Security Passport pilot write path",
+    "Security Passport global professional certification",
+    "Security Passport governed issuer",
+    "global certification rollback fixture",
+    "global certification rollback",
+    "global certification rollback data safety",
+    "global certification rollback refusal",
+    "Security Passport Dubai market pack",
+    "Security Passport rollback data safety",
+    "Security Passport scope disclosure boundary",
+    "Security Passport legacy scope correction",
+    "Security Passport jurisdiction catalogue",
+    "Security Passport trust boundaries",
+    "Security Passport trust-source containment",
+    "Security Passport employer employment verification",
+    "Security Passport concurrent decision (setup)",
+    "Security Passport first merit",
+    "Security Passport selected-merit sharing",
+    "pilot bug fix #1 rollback (data loss)"
+  ],
+  "completeSuitePassed": false
+}

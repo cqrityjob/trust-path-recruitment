@@ -1,0 +1,125 @@
+{
+  "suites": [
+    {
+      "suite": "negative-controls:p0a",
+      "mutations": 6
+    },
+    {
+      "suite": "negative-controls:share-gateway-schema",
+      "mutations": 4
+    },
+    {
+      "suite": "negative-controls:share-gateway-transport",
+      "mutations": 4
+    },
+    {
+      "suite": "negative-controls:candidate-navigation-canon",
+      "mutations": 14
+    },
+    {
+      "suite": "negative-controls:account-confirmation",
+      "mutations": 10
+    },
+    {
+      "suite": "negative-controls:passport-cv-boundary",
+      "mutations": 18
+    },
+    {
+      "suite": "negative-controls:passport-page-composition",
+      "mutations": 7
+    },
+    {
+      "suite": "negative-controls:candidate-destination-composition",
+      "mutations": 17
+    },
+    {
+      "suite": "negative-controls:candidate-journey-composition",
+      "mutations": 15
+    },
+    {
+      "suite": "negative-controls:employer-continuity",
+      "mutations": 33
+    },
+    {
+      "suite": "negative-controls:negative-controls:assessment-release",
+      "mutations": 34
+    },
+    {
+      "suite": "negative-controls:negative-controls:interview-governance",
+      "mutations": 40
+    },
+    {
+      "suite": "negative-controls:final-report",
+      "mutations": 151
+    },
+    {
+      "suite": "negative-controls:beskt-architecture",
+      "mutations": 18
+    },
+    {
+      "suite": "negative-controls:beskt-governed-content",
+      "mutations": 151
+    },
+    {
+      "suite": "negative-controls:beskt-candidate-preparation",
+      "mutations": 92
+    },
+    {
+      "suite": "negative-controls:beskt-interview-case-bridge",
+      "mutations": 53
+    },
+    {
+      "suite": "negative-controls:beskt-interview-conduct",
+      "mutations": 64
+    },
+    {
+      "suite": "negative-controls:beskt-interview-tool",
+      "mutations": 41
+    },
+    {
+      "suite": "negative-controls:beskt-conduct-report",
+      "mutations": 73
+    },
+    {
+      "suite": "negative-controls:beskt-content-authoring",
+      "mutations": 57
+    },
+    {
+      "suite": "negative-controls:global-certification",
+      "mutations": 52
+    },
+    {
+      "suite": "negative-controls:classifier-behaviour",
+      "mutations": 11
+    },
+    {
+      "suite": "negative-controls:governed-issuer",
+      "mutations": 7
+    },
+    {
+      "suite": "negative-controls:interview-method-tenant-read",
+      "mutations": 28
+    },
+    {
+      "suite": "negative-controls:cd-outstanding-reviews",
+      "mutations": 15
+    },
+    {
+      "suite": "negative-controls:public-header",
+      "mutations": 7
+    },
+    {
+      "suite": "negative-controls:overview-composition",
+      "mutations": 9
+    },
+    {
+      "suite": "negative-controls:profile-entry",
+      "mutations": 16
+    },
+    {
+      "suite": "negative-controls:profile-section-navigation",
+      "mutations": 17
+    }
+  ],
+  "detected": 1064
+}

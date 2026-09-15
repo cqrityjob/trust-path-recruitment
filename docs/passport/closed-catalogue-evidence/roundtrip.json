@@ -1,0 +1,58 @@
+{
+  "migrations": 287,
+  "tests": [
+    {
+      "round": "before",
+      "suite": "international_foundation",
+      "passed": 16
+    },
+    {
+      "round": "before",
+      "suite": "international_wallet",
+      "passed": 18
+    },
+    {
+      "round": "before",
+      "suite": "credential_sharing_v2",
+      "passed": 27
+    },
+    {
+      "round": "before",
+      "suite": "closed_catalogue",
+      "passed": 97
+    },
+    {
+      "round": "after",
+      "suite": "international_foundation",
+      "passed": 16
+    },
+    {
+      "round": "after",
+      "suite": "international_wallet",
+      "passed": 18
+    },
+    {
+      "round": "after",
+      "suite": "credential_sharing_v2",
+      "passed": 27
+    },
+    {
+      "round": "after",
+      "suite": "closed_catalogue",
+      "passed": 97
+    }
+  ],
+  "rollback": [
+    "20261121090000_sp_closed_credential_catalogue",
+    "20261120090000_sp_credential_selective_sharing_v2",
+    "20261119090000_sp_international_credential_wallet",
+    "20261118100000_sp_international_passport_foundation"
+  ],
+  "reapply": [
+    "20261118100000_sp_international_passport_foundation",
+    "20261119090000_sp_international_credential_wallet",
+    "20261120090000_sp_credential_selective_sharing_v2",
+    "20261121090000_sp_closed_credential_catalogue"
+  ],
+  "pass": true
+}

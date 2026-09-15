@@ -1,0 +1,24 @@
+f1a3f6d8a3dc09aa13c3941878ff6492ea6776df fix(passport): reject unbounded credential dates
+e2ace2a3f468a0aa8f4a2fda812eab4be1bd96e3 fix(passport): require current catalogue territory and effective dates
+f46eae25a284cf78cf4918e2e3fdd26426cd8a6f fix(passport): select approved definitions across candidate flows
+c4f3e6ad47c055c32278489a4c7a082df9c51d30 fix(passport): enforce the closed governed credential catalogue
+5bba305410e90d13290e053f8d9f853f56e7540e Merge remote-tracking branch 'origin/main' into codex/passport-finalization
+c486a60969e124be3f8fb8257c15243e1d07772f docs(passport): record newer main and occupied PR number 256
+596c154a41cd03465b52f0be80835d8fa0ab9b96 docs(passport): record combined-head verification and failed browser gate
+1d60f45906465c4f7aafd99896868167521b7159 test(passport): align local fixtures with credential-only product boundaries
+05855cb9be97502806ad9522a01df75041e71356 test(passport): prove real local Auth Storage and selective sharing journeys
+6436a3ce9ba397124148cde57f6ec284a6b485bf fix(passport): reject revoked Auth sessions at private data boundaries
+42491e243318b7a061924eecb12b36815a90f30e fix(passport): restore attention links and combined-head regression controls
+34b2117ced6baa63a0f95b74288d095428456fdc merge: include PR #255 and resolve Passport migration version collision
+dbd47abe0806ae27ddcc6266ff60a15b9de2d018 docs(passport): record final validation and hosted release gate
+1a043ea91514af530376a47d5c64c908d040462c fix(passport): require v2 field consent from credential details
+cfad4fc701273aae0ee795273e9bc0170c0316a6 chore(passport): isolate explicit frontier entries from concurrent work
+f6eb5f1263fb6116f8210a957369fc3da23e8f64 test(passport): cover international journeys and preserve Profile CV regressions
+b4953949dc94ef5c3f608c409400cfc2f4458a05 fix(passport): derive current trust from review events and enforce metadata scope
+517e6578345ae937102f77823a587d815b0aa5aa feat(passport): enforce credential-only selective disclosure v2
+1233e8ed3b62d9f4337c2dbd5639631ef66f41bb feat(passport): present a compact credential-only Passport Card
+93afcb19185afb0042c7b32bce9f532d77261bec feat(passport): add international wallet and atomic credential editing
+ae4a30431c8bb31ce848187df394bc67cd9b9f39 feat(passport): separate credential entry from Profile and CV content
+fb47c8af992ea7fa6a240595050a0eb5455021ee feat(passport): expose international metadata and authoritative issuer read models
+b12ffb4df7f4bfa48336dcbdeb8b7d7771e1aff8 feat(passport): add international credential metadata and adapter foundation
+10207dccad273bf8a36024dbfb8505a4f8c93804 feat(passport): define credential ownership and canonical profile read model
