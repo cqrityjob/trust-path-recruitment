@@ -30,7 +30,7 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
+const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
 const USER_ID = "00000000-0000-4000-8000-0000000000f1";
 
 /* ------------------------------------------------------------------ */
@@ -365,6 +365,8 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
       console.log(`[rpc] ${name} <- ${String(route.request().postData()).slice(0, 400)}`);
 
     switch (name) {
+      case "getInternationalPassportMetadata":
+        return ok(route, { details: [], verificationEvents: [], jurisdictions: [], issuers: [] });
       case "getMyPassport":
         if (db.failPassportRead) return boom(route, "read failed");
         return ok(route, snapshot());
@@ -547,7 +549,7 @@ async function mount(page: Page, path: string, lang: "sv" | "en" = "sv") {
     }
   });
 
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     const url = route.request().url();
     if (url.includes("/auth/v1/user")) {
       return route.fulfill({
@@ -673,7 +675,7 @@ async function mountSignedOut(
     },
   };
 
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     const url = route.request().url();
     if (url.includes("/auth/v1/signup")) {
       return route.fulfill({
@@ -725,9 +727,9 @@ async function waitForScreen(page: Page, name: string) {
 }
 
 /** Fill the details screen for a course. Uses labels, not generated ids. */
-async function fillCourse(page: Page, title = "Väktarutbildning VU1", provider = "BYA") {
-  await page.getByLabel("Kursens namn").fill(title);
-  await page.getByLabel("Utbildare").fill(provider);
+async function fillCertification(page: Page, title = "Väktarutbildning VU1", provider = "BYA") {
+  await page.getByLabel("Certifieringens namn").fill(title);
+  await page.getByLabel("Utfärdare").fill(provider);
 }
 
 test.beforeEach(() => {
@@ -789,13 +791,10 @@ test.describe("Security Passport — the first run", () => {
     expect(db.calls.ensureFirstRunPassport).toBeGreaterThan(0);
   });
 
-  test("3 · every one of the five kinds can be the first merit, and each is self-declared", async ({
+  test("3 · both credential kinds can be the first merit, and each is self-declared", async ({
     page,
   }) => {
     for (const [kind, titleLabel, orgLabel] of [
-      ["employment", "Roll eller titel", "Arbetsgivare"],
-      ["education", "Utbildningens namn", "Skola eller lärosäte"],
-      ["course", "Kursens namn", "Utbildare"],
       ["certification", "Certifieringens namn", "Utfärdare"],
       ["licence", "Behörighetens namn", "Myndighet eller utfärdare"],
     ] as const) {
@@ -815,10 +814,7 @@ test.describe("Security Passport — the first run", () => {
 
       await page.getByLabel(titleLabel).fill(`Test ${kind}`);
       await page.getByLabel(orgLabel).fill("Organisation AB");
-      if (kind === "employment") {
-        await page.getByLabel("Land där du arbetade").selectOption("GB");
-        await page.getByLabel("Startdatum").fill("2024-03-01");
-      }
+
       await page.locator('[data-testid="first-merit-declaration"]').check();
       await page.locator('[data-cta="save-merit"]').click();
 
@@ -830,17 +826,17 @@ test.describe("Security Passport — the first run", () => {
     }
   });
 
-  test("4 · a course merit needs no employer, no profession and no country", async ({ page }) => {
+  test("4 · a certification needs no employer, profession or guessed country", async ({ page }) => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
 
     // The country field is not even rendered for a course.
     await expect(page.getByLabel("Land där du arbetade")).toHaveCount(0);
 
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
     await waitForScreen(page, "done");
@@ -849,26 +845,12 @@ test.describe("Security Passport — the first run", () => {
     expect(db.merits[0].country).toBeNull();
   });
 
-  test("5 · employment refuses to save without an explicitly chosen country", async ({ page }) => {
+  test("5 · CV-only kinds are absent from Passport first-run choices", async ({ page }) => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="employment"]').click();
-    await waitForScreen(page, "details");
-
-    // NOTHING is preselected. This is the whole defect: the column's DEFAULT
-    // is a country, so an unanswered field is an assertion nobody made.
-    await expect(page.getByLabel("Land där du arbetade")).toHaveValue("");
-
-    await page.getByLabel("Roll eller titel").fill("Väktare");
-    await page.getByLabel("Arbetsgivare").fill("Bevakning AB");
-    await page.getByLabel("Startdatum").fill("2024-03-01");
-    await page.locator('[data-testid="first-merit-declaration"]').check();
-    await page.locator('[data-cta="save-merit"]').click();
-
-    // Still on the form, with the country flagged, and nothing written.
-    await expect(page.locator('[data-first-run="details"]')).toBeVisible();
-    await expect(page.getByLabel("Land där du arbetade")).toHaveAttribute("aria-invalid", "true");
+    for (const kind of ["employment", "education", "course"])
+      await expect(page.locator(`[data-merit-kind="${kind}"]`)).toHaveCount(0);
     expect(db.merits).toHaveLength(0);
     expect(db.calls.completeFirstMerit ?? 0).toBe(0);
   });
@@ -877,9 +859,9 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-cta="save-merit"]').click();
 
     await expect(page.locator('[data-first-run="details"]')).toBeVisible();
@@ -895,9 +877,9 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page, "Halvfärdig kurs");
+    await fillCertification(page, "Halvfärdig kurs");
     await page.locator('[data-cta="save-and-exit"]').click();
     await page.waitForURL(/\/my-career/, { timeout: 20_000 });
 
@@ -947,9 +929,9 @@ test.describe("Security Passport — the first run", () => {
     db.completeDelayMs = 1200;
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
 
     // Same shape as scenario 2: two clicks in one tick, before the button can
@@ -973,15 +955,15 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page, "Första namnet");
+    await fillCertification(page, "Första namnet");
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.waitForTimeout(900);
 
     // Retype and save INSIDE the debounce window, so the pending autosave
     // still holds the old value when the completion starts.
-    await page.getByLabel("Kursens namn").fill("Rättat namn");
+    await page.getByLabel("Certifieringens namn").fill("Rättat namn");
     await page.locator('[data-cta="save-merit"]').click();
     await waitForScreen(page, "done");
 
@@ -997,9 +979,9 @@ test.describe("Security Passport — the first run", () => {
     db.readbackMode = "error";
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
 
@@ -1021,9 +1003,9 @@ test.describe("Security Passport — the first run", () => {
     db.readbackMode = "missing";
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
     await waitForScreen(page, "unconfirmed");
@@ -1092,9 +1074,9 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
     await waitForScreen(page, "done");
@@ -1121,9 +1103,9 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
     await waitForScreen(page, "done");
@@ -1139,9 +1121,9 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
     await waitForScreen(page, "done");
@@ -1163,9 +1145,9 @@ test.describe("Security Passport — the first run", () => {
     await waitForScreen(page, "choose");
     await expect(page.getByRole("heading", { name: "Start with your first merit" })).toBeVisible();
 
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await page.getByLabel("Name of the course").fill("Guard training");
+    await page.getByLabel("Name of the certification").fill("Guard training");
     await page.getByLabel("Training provider").fill("BYA");
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
@@ -1188,15 +1170,15 @@ test.describe("Security Passport — the first run", () => {
     // there reaches the choices.
     await expect(page.getByRole("heading", { name: "Börja med din första merit" })).toBeFocused();
 
-    const tile = page.locator('[data-merit-kind="course"]');
+    const tile = page.locator('[data-merit-kind="certification"]');
     await tile.focus();
     await expect(tile).toBeFocused();
     await page.keyboard.press("Enter");
     await waitForScreen(page, "details");
     await expect(page.getByRole("heading", { name: "Om din kurs" })).toBeFocused();
 
-    await page.getByLabel("Kursens namn").fill("Tangentbord");
-    await page.getByLabel("Utbildare").fill("BYA");
+    await page.getByLabel("Certifieringens namn").fill("Tangentbord");
+    await page.getByLabel("Utfärdare").fill("BYA");
     const box = page.locator('[data-testid="first-merit-declaration"]');
     await box.focus();
     await page.keyboard.press("Space");
@@ -1222,7 +1204,7 @@ test.describe("Security Passport — the first run", () => {
     }
 
     await page.setViewportSize({ width: 375, height: 800 });
-    await page.locator('[data-merit-kind="employment"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
     for (const width of [320, 360, 375, 390]) {
       await page.setViewportSize({ width, height: 800 });
@@ -1275,10 +1257,10 @@ test.describe("Security Passport — the first run", () => {
     expect(overflowing, overflowing.join(", ")).toEqual([]);
 
     // And it is still operable: the choices are visible and clickable.
-    await expect(page.locator('[data-merit-kind="course"]')).toBeVisible();
-    await page.locator('[data-merit-kind="course"]').click();
+    await expect(page.locator('[data-merit-kind="certification"]')).toBeVisible();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await expect(page.getByLabel("Kursens namn")).toBeVisible();
+    await expect(page.getByLabel("Certifieringens namn")).toBeVisible();
 
     const detailsOverflow = await page.evaluate(() => {
       const w = document.documentElement.clientWidth;
@@ -1307,12 +1289,12 @@ test.describe("Security Passport — the first run", () => {
     if (process.env.E2E_NC_UNORDERED) db.disableRevisionRule = true;
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
 
-    await page.getByLabel("Kursens namn").fill("Äldre");
+    await page.getByLabel("Certifieringens namn").fill("Äldre");
     await page.waitForTimeout(900); // let the debounce fire the slow save
-    await page.getByLabel("Kursens namn").fill("Nyare");
+    await page.getByLabel("Certifieringens namn").fill("Nyare");
     await page.waitForTimeout(4000); // both settle
 
     // The revisions the server SAW are strictly ascending — the chain never
@@ -1330,9 +1312,9 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
     await waitForScreen(page, "done");
@@ -1355,12 +1337,12 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
 
     // Type and navigate INSIDE the debounce window, so the pending write has
     // not fired when the component unmounts.
-    await page.getByLabel("Kursens namn").fill("Skrivet precis innan");
+    await page.getByLabel("Certifieringens namn").fill("Skrivet precis innan");
     await page.locator('[data-cta="save-and-exit"]').click();
     await page.waitForURL(/\/my-career/, { timeout: 20_000 });
 
@@ -1371,9 +1353,9 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page, "Får inte försvinna", "BYA");
+    await fillCertification(page, "Får inte försvinna", "BYA");
 
     db.failDraftSaves = true;
     await page.locator('[data-cta="save-and-exit"]').click();
@@ -1386,8 +1368,8 @@ test.describe("Security Passport — the first run", () => {
     await expect(page.locator("[data-save-error]")).toBeVisible();
     await expect(page.locator("[data-save-error]")).toContainText("Utkastet kunde inte sparas");
     // And every value is still in the form.
-    await expect(page.getByLabel("Kursens namn")).toHaveValue("Får inte försvinna");
-    await expect(page.getByLabel("Utbildare")).toHaveValue("BYA");
+    await expect(page.getByLabel("Certifieringens namn")).toHaveValue("Får inte försvinna");
+    await expect(page.getByLabel("Utfärdare")).toHaveValue("BYA");
     // With a retry that works once the failure clears.
     db.failDraftSaves = false;
     await page.locator('[data-cta="retry"]').click();
@@ -1402,9 +1384,9 @@ test.describe("Security Passport — the first run", () => {
     db.dropCompletionResponseOnce = true;
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page, "Förlorat svar");
+    await fillCertification(page, "Förlorat svar");
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
     await page.waitForTimeout(1500);
@@ -1435,17 +1417,15 @@ test.describe("Security Passport — the first run", () => {
     await expect(page.locator("[data-merit-title]")).toHaveText("Förlorat svar");
   });
 
-  test("32 · a readback whose country disagrees is not reported as saved", async ({ page }) => {
+  test("32 · a readback whose issuer disagrees is not reported as saved", async ({ page }) => {
     db.profile = profileOf();
-    db.readbackOverride = { country: "GB" };
+    db.readbackOverride = { organisation: "Different issuer" };
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="employment"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await page.getByLabel("Roll eller titel").fill("Väktare");
-    await page.getByLabel("Arbetsgivare").fill("Bevakning AB");
-    await page.getByLabel("Land där du arbetade").selectOption("SE");
-    await page.getByLabel("Startdatum").fill("2024-03-01");
+    await page.getByLabel("Certifieringens namn").fill("Väktare");
+    await page.getByLabel("Utfärdare").fill("Bevakning AB");
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
 
@@ -1453,17 +1433,15 @@ test.describe("Security Passport — the first run", () => {
     await expect(page.locator('[data-first-run="done"]')).toHaveCount(0);
   });
 
-  test("33 · a readback whose start date disagrees is not reported as saved", async ({ page }) => {
+  test("33 · a readback whose title disagrees is not reported as saved", async ({ page }) => {
     db.profile = profileOf();
-    db.readbackOverride = { startedOn: "2001-01-01" };
+    db.readbackOverride = { title: "Different title" };
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="employment"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await page.getByLabel("Roll eller titel").fill("Väktare");
-    await page.getByLabel("Arbetsgivare").fill("Bevakning AB");
-    await page.getByLabel("Land där du arbetade").selectOption("SE");
-    await page.getByLabel("Startdatum").fill("2024-03-01");
+    await page.getByLabel("Certifieringens namn").fill("Väktare");
+    await page.getByLabel("Utfärdare").fill("Bevakning AB");
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
 
@@ -1495,7 +1473,7 @@ test.describe("Security Passport — the first run", () => {
     // typed answers, and no operation id at all.
     db.profile = profileOf({
       onboardingAnswers: {
-        "firstMerit.kind": "course",
+        "firstMerit.kind": "certification",
         "firstMerit.title": "Gammalt utkast",
         "firstMerit.organisation": "BYA",
         "firstMerit.operationId": "",
@@ -1505,7 +1483,7 @@ test.describe("Security Passport — the first run", () => {
     });
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "details");
-    await expect(page.getByLabel("Kursens namn")).toHaveValue("Gammalt utkast");
+    await expect(page.getByLabel("Certifieringens namn")).toHaveValue("Gammalt utkast");
 
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
@@ -1543,9 +1521,9 @@ test.describe("Security Passport — the first run", () => {
     db.profile = profileOf();
     await mount(page, "/passport/onboarding");
     await waitForScreen(page, "choose");
-    await page.locator('[data-merit-kind="course"]').click();
+    await page.locator('[data-merit-kind="certification"]').click();
     await waitForScreen(page, "details");
-    await fillCourse(page);
+    await fillCertification(page);
     await page.locator('[data-testid="first-merit-declaration"]').check();
     await page.locator('[data-cta="save-merit"]').click();
     await waitForScreen(page, "done");

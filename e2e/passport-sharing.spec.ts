@@ -445,7 +445,7 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
     }
   });
 
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) =>
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",

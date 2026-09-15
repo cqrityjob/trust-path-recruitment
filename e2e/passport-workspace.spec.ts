@@ -28,7 +28,7 @@ import path from "node:path";
 import { test, expect, type Page, type Route } from "@playwright/test";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
+const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
 const USER_ID = "00000000-0000-4000-8000-0000000000f1";
 
 /** Where review screenshots go, when they are asked for. */
@@ -458,6 +458,8 @@ async function mount(
   await page.route("**/_serverFn/**", async (route) => {
     const name = exportOf(route.request().url()) ?? "?";
     switch (name) {
+      case "getInternationalPassportMetadata":
+        return ok(route, { details: [], verificationEvents: [], jurisdictions: [], issuers: [] });
       case "getMyPassport":
         if (scenario.passportFails) return boom(route, "read failed");
         return ok(route, snapshotOf(scenario));
@@ -618,7 +620,7 @@ async function mount(
     }
   });
 
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     const url = route.request().url();
     if (url.includes("/auth/v1/user")) {
       return route.fulfill({

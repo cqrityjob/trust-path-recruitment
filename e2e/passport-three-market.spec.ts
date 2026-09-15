@@ -43,7 +43,7 @@ import {
 } from "../src/lib/security-passport/credentials";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
+const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
 const USER_ID = "00000000-0000-4000-8000-0000000003a1";
 const ADMIN_ID = "00000000-0000-4000-8000-0000000000ad";
 const SHOT_DIR = process.env.PASSPORT_SHOTS ?? "";
@@ -454,6 +454,8 @@ async function mount(
     serverCalls.push(name);
     switch (name) {
       /* ── the holder's Passport ─────────────────────────────────────── */
+      case "getInternationalPassportMetadata":
+        return ok(route, { details: [], verificationEvents: [], jurisdictions: [], issuers: [] });
       case "getMyPassport":
         return ok(route, {
           profile: {
@@ -711,7 +713,7 @@ async function mount(
     }
   });
 
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     if (route.request().url().includes("/auth/v1/user")) {
       return route.fulfill({
         status: 200,

@@ -615,7 +615,7 @@ export async function signedIn(page: Page, model: ServerModel, opts: Options = {
 
   // Nothing may reach the real project. Every request to it is answered here,
   // and the only one the client makes with a planted session is the user read.
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     if (route.request().url().includes("/auth/v1/user")) {
       return route.fulfill({
         status: 200,

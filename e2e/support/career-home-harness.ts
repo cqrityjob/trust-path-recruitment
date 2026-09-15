@@ -98,8 +98,9 @@ export function passportSnapshot(f: HomeFixture) {
         credentialCode: null,
         skillCode: null,
         skillLevel: c.skillLevel,
-        title: c.title,
-        claimedIssuerName: c.issuerName,
+        titleSv: c.title,
+        titleEn: c.title,
+        issuerName: c.issuerName,
         jurisdictionCode: "SE",
         subJurisdictionCode: null,
         authorisationScope: null,
@@ -251,6 +252,33 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
       report: null,
     }),
     getMyPassport: ok(passportSnapshot(f)),
+    listMyEntries:
+      i.identity.state === "ready"
+        ? ok({
+            experience: passportSnapshot(f).holder.periods.map((p) => ({
+              ...p,
+              verifierName: null,
+              verificationMethod: null,
+              editable: p.assertionLevel === "self_declared",
+            })),
+            claims: passportSnapshot(f).holder.claims.map((c) => ({
+              ...c,
+              title: c.titleEn,
+              verifierName: null,
+              verificationMethod: null,
+              editable: c.assertionLevel === "self_declared" && c.lifecycleState === "active",
+            })),
+          })
+        : identity,
+    getMySecurityCareerProfile: ok(null),
+    listSkillTypes: ok([]),
+    listJurisdictions: ok([{ code: "SE", nameSv: "Sverige", nameEn: "Sweden" }]),
+    getInternationalPassportMetadata: ok({
+      details: [],
+      verificationEvents: [],
+      jurisdictions: [],
+      issuers: [],
+    }),
     ensureMyPassport: ok({ created: false }),
     getRegulatedCredentialAvailability: ok({
       state: "open",
@@ -350,7 +378,7 @@ export async function mount(
   });
 
   // Supabase: the auth "who am I" call, and the two direct REST reads.
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     const url = route.request().url();
     if (url.includes("/auth/v1/user")) {
       return route.fulfill({
