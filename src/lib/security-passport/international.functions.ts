@@ -54,3 +54,44 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
       ],
     };
   });
+
+import { z } from "zod";
+import { CREDENTIAL_CLASSES } from "./international";
+const internationalInput = z
+  .object({
+    claim_id: z.string().uuid().optional(),
+    version: z.number().int().positive().optional(),
+    class: z.enum(
+      Object.keys(CREDENTIAL_CLASSES) as [
+        keyof typeof CREDENTIAL_CLASSES,
+        ...(keyof typeof CREDENTIAL_CLASSES)[],
+      ],
+    ),
+    title: z.string().trim().min(1).max(240),
+    issuer: z.string().trim().min(1).max(240),
+    country: z
+      .string()
+      .regex(/^[A-Z]{2}$/)
+      .or(z.literal("")),
+    issuing_jurisdiction: z.string().max(64),
+    validity_jurisdiction: z.string().max(64),
+    language: z.string().max(35),
+    identifier: z.string().max(120),
+    issued_on: z.string().max(10),
+    valid_until: z.string().max(10),
+    no_expiry: z.boolean().nullable(),
+  })
+  .strict();
+export type InternationalCredentialInput = z.infer<typeof internationalInput>;
+export const saveInternationalCredential = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => internationalInput.parse(data))
+  .handler(async ({ context, data }): Promise<{ id: string }> => {
+    const result = (await context.supabase.rpc(
+      "sp_save_international_credential" as never,
+      { _input: data } as never,
+    )) as unknown as { data: unknown; error: unknown };
+    if (result.error || typeof result.data !== "string")
+      throw new Error("Credential could not be saved");
+    return { id: result.data };
+  });

@@ -1,3 +1,8 @@
+import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
+import {
+  getInternationalPassportMetadata,
+  type InternationalPassportMetadata,
+} from "@/lib/security-passport/international.functions";
 // Security Passport — one entry, and everything that can happen to it.
 //
 // A qualification and an employment period share this page because they
@@ -83,6 +88,8 @@ function PassportEntryRoute() {
   const { kind, entryId } = useParams({ from: "/_authenticated/passport/entry/$kind/$entryId" });
   const isClaim = kind === "claim";
 
+  const loadInternational = useServerFn(getInternationalPassportMetadata);
+  const [international, setInternational] = useState<InternationalPassportMetadata | null>(null);
   const loadPassport = useServerFn(getMyPassport);
   const loadEvidence = useServerFn(listMyEvidence);
   const loadRequests = useServerFn(listMyVerificationRequests);
@@ -126,7 +133,7 @@ function PassportEntryRoute() {
     // anyway, which is worse than no retry at all.
     setError(null);
     try {
-      const [snap, ev, reqs, types] = await Promise.all([
+      const [snap, ev, reqs, types, metadata] = await Promise.all([
         loadPassport({ data: undefined }),
         loadEvidence({ data: undefined }),
         loadRequests({ data: undefined }),
@@ -134,7 +141,9 @@ function PassportEntryRoute() {
         // taxonomy rather than a list here, so a credential that becomes
         // scoped later asks for it without a code change.
         loadCredentialTypes({ data: undefined }),
+        loadInternational({ data: undefined }),
       ]);
+      setInternational(metadata);
       setSnapshot(snap);
       setEvidence(ev);
       setRequests(reqs.requests);
@@ -149,7 +158,7 @@ function PassportEntryRoute() {
       console.error("[passport] entry load failed", err);
       setError(pt("live.readError"));
     }
-  }, [loadPassport, loadEvidence, loadRequests, loadCredentialTypes, pt]);
+  }, [loadPassport, loadEvidence, loadRequests, loadCredentialTypes, loadInternational, pt]);
 
   useEffect(() => {
     void refresh();
@@ -395,6 +404,7 @@ function PassportEntryRoute() {
       ).scope ?? false)
     : false;
 
+  const internationalDetail = international?.details.find((d) => d.claim_id === entryId);
   const mayCorrect =
     claim !== null &&
     (validity.effectiveState === "active" || validity.effectiveState === "expired");
@@ -792,18 +802,39 @@ function PassportEntryRoute() {
           </h3>
           {correcting && correctionPrefill && claim ? (
             <div className="mt-3">
-              <CredentialCorrectionForm
-                requiresScope={correctionRequiresScope}
-                claim={claim}
-                privateFields={correctionPrefill}
-                busy={correctionBusy}
-                serverError={correctionError}
-                onSubmit={(values) => void submitCorrection(values)}
-                onCancel={() => {
-                  setCorrecting(false);
-                  setCorrectionPrefill(null);
-                }}
-              />
+              {internationalDetail ? (
+                <InternationalCredentialForm
+                  key={claim.id}
+                  initial={{
+                    claim_id: claim.id,
+                    version: claim.versionNo,
+                    class: internationalDetail.credential_class,
+                    title: claim.titleSv,
+                    issuer: claim.issuerName ?? "",
+                    country: internationalDetail.issuing_country_code ?? "",
+                    issuing_jurisdiction: internationalDetail.issuing_jurisdiction_code ?? "",
+                    validity_jurisdiction: internationalDetail.validity_jurisdiction_code ?? "",
+                    language: internationalDetail.original_language ?? "",
+                    identifier: correctionPrefill.credentialReference ?? "",
+                    issued_on: claim.issuedOn ?? "",
+                    valid_until: claim.validUntil ?? "",
+                    no_expiry: internationalDetail.no_expiry,
+                  }}
+                />
+              ) : (
+                <CredentialCorrectionForm
+                  requiresScope={correctionRequiresScope}
+                  claim={claim}
+                  privateFields={correctionPrefill}
+                  busy={correctionBusy}
+                  serverError={correctionError}
+                  onSubmit={(values) => void submitCorrection(values)}
+                  onCancel={() => {
+                    setCorrecting(false);
+                    setCorrectionPrefill(null);
+                  }}
+                />
+              )}
             </div>
           ) : (
             <>

@@ -6,6 +6,19 @@
   }, 
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
+{
+  "file": "20261119090000_sp_international_credential_wallet.sql",
+  "hostedState": "pending",
+  "introduces": [
+    {
+      "object": "sp_save_international_credential",
+      "kind": "function"
+    }
+  ],
+  "note": "Atomic owner-only international credential create/correction. Local execution only; no hosted changes.",
+  "verify": "security_passport_international_wallet_test.sql; rollback and reapply locally.",
+  "rollback": "supabase/rollback/20261119090000_sp_international_credential_wallet_rollback.sql"
+},
     {
       "file": "20261118090000_sp_international_passport_foundation.sql",
       "hostedState": "pending",

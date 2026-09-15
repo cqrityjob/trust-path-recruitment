@@ -1,3 +1,4 @@
+import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
 // Security Passport — add a supported credential, live.
 //
 // The one place a VU1, VU2, ordningsvaktsförordnande or skyddsvakts-
@@ -192,6 +193,7 @@ function NewCredentialRoute() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
+      <InternationalCredentialForm />
       <button
         type="button"
         onClick={() => void navigate({ to: "/passport" })}
