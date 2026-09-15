@@ -1,0 +1,9 @@
+$ bun run scripts/sql-security-guard-check.ts
+sql-security-guard-check: 284 migrations replayed in filename order
+  SECURITY DEFINER functions surviving:      401
+  reviewed anon-executable definer functions: 4
+  identity-bearing tables tracked:            40
+  policies surviving:                        373
+
+OK: no surviving SECURITY DEFINER function is unpinned or unreviewably public,
+    and no identity-bearing table takes an unconstrained anonymous write.
