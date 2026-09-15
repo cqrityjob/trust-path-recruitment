@@ -1173,10 +1173,25 @@ BEGIN
           OR c.column_name = 'points');
   PERFORM pg_temp.ok(_n = 0, 'C9.1 NO SCORE PATH: no scoring, ranking, suitability or verdict column exists');
 
+  -- bcp_conduct_reports.payload is the ONE deliberate exception, and it arrived
+  -- with BESKT PR 6 (20261117090000). The conduct tables are the RECORD, with a
+  -- column per kind of claim precisely so none can be collapsed into another;
+  -- the report is a FROZEN RENDERING of that record at one instant, whose whole
+  -- purpose is to be a single immutable value carrying a single hash. Every
+  -- field inside it was written into a typed conduct column first. The
+  -- exception is stated here by table AND column, so a free-form blob anywhere
+  -- else -- including a second one on the report table -- still fails.
   SELECT count(*) INTO _n FROM information_schema.columns c
    WHERE c.table_schema = 'public' AND c.table_name LIKE 'bcp\_%' ESCAPE '\'
-     AND c.data_type = 'jsonb' AND c.table_name <> 'bcp_events';
+     AND c.data_type = 'jsonb' AND c.table_name <> 'bcp_events'
+     AND NOT (c.table_name = 'bcp_conduct_reports' AND c.column_name = 'payload');
   PERFORM pg_temp.ok(_n = 0, 'C9.2 answers are typed: no free-form jsonb answer document exists');
+
+  SELECT count(*) INTO _n FROM information_schema.columns c
+   WHERE c.table_schema = 'public' AND c.table_name = 'bcp_conduct_reports'
+     AND c.data_type = 'jsonb';
+  PERFORM pg_temp.ok(_n = 1,
+    'C9.2b and the single permitted rendering is exactly one column on the report table, so a second blob cannot arrive beside it');
 
   SELECT count(*) INTO _n FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE n.nspname = 'public' AND p.proname LIKE 'bcp\_%' ESCAPE '\'

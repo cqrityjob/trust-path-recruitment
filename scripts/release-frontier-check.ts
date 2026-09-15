@@ -93,19 +93,31 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // #241 merged, and release-state.json now records it as applied with read-only
 // evidence. Its name comes off this list in that same change, as planned, so
 // an applied migration cannot sit here masking the next genuinely stuck one.
-// 20261116090000 was applied by the official integration when PR #252 merged,
-// and PR #253 recorded its hosted evidence in release-state.json and
-// hosted-ledger.json -- so it is off this list, as planned.
+// 20261116090000_cd_outstanding_reviews_operator_only was applied by the
+// official integration when PR #252 merged, and PR #253 recorded its hosted
+// evidence in release-state.json and hosted-ledger.json -- so it is off this
+// list, as planned.
 //
-// BESKT PR 7 is the one migration pending by design. It is schema only: the
-// nine governed doors through which a human content editor authors BESKT
-// method content, which until now could be written only as service_role or
-// inside a migration. No application code on this branch names any object it
-// introduces, so release-parity-check has nothing to block, and its name comes
-// off this list only once the official integration has applied it and
-// release-state.json carries hosted evidence -- never on the strength of a
-// merge alone.
-const expectedPending: string[] = ["20261118090000_beskt_governed_content_authoring.sql"];
+// TWO migrations are now pending by design, and they come off this list one at
+// a time, each in the change that records its OWN hostedState: applied with
+// hosted evidence -- never on the strength of a merge alone.
+//
+//   20261117090000  BESKT PR 6, merged as #254. Renumbered from 20261116090000
+//                   because #252 claimed that version first and two active
+//                   migrations may not share one. Merged is not applied: it
+//                   stays here until the integration has run it and the
+//                   evidence is recorded.
+//   20261118090000  BESKT PR 7, this branch. The nine governed doors through
+//                   which a human content editor authors BESKT method content,
+//                   which until now could be written only as service_role or
+//                   inside a migration.
+//
+// No application code on this branch names an object either one introduces, so
+// release-parity-check has nothing to block.
+const expectedPending: string[] = [
+  "20261117090000_bcp_conduct_prompts_and_report.sql",
+  "20261118090000_beskt_governed_content_authoring.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

@@ -513,16 +513,17 @@ const MUTATIONS: readonly Mutation[] = [
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
     // The anchor tracks the list's CURRENT shape, which moves as migrations are
-    // applied and new ones become pending -- it has been the empty list and a
-    // one-entry list several times over. Today it is BESKT PR 7
-    // (20261118090000), the one migration pending by design. The planted defect
-    // never changes: this APPLIED migration goes back on the frontier list,
-    // where a resolved name would hide the next genuinely stuck one. Planting it
-    // BESIDE a legitimately pending name is the stronger control -- it proves the
-    // guard notices a stale entry even when the list is not supposed to be empty.
-    find: '["20261118090000_beskt_governed_content_authoring.sql"]',
+    // applied and new ones become pending -- it has been the empty list, a
+    // one-entry list and a two-entry list across the last few PRs. Today it
+    // ends with BESKT PR 7 (20261118090000); BESKT PR 6 (20261117090000) sits
+    // above it, merged as #254 but not yet applied. The planted defect never
+    // changes: this APPLIED migration goes back on the frontier list, where a
+    // resolved name would hide the next genuinely stuck one. Planting it BESIDE
+    // legitimately pending names is the stronger control -- it proves the guard
+    // notices a stale entry even when the list is not supposed to be empty.
+    find: '  "20261118090000_beskt_governed_content_authoring.sql",\n];',
     replace:
-      '["20261118090000_beskt_governed_content_authoring.sql", "20261112090000_bcp_interview_case_bridge.sql"]',
+      '  "20261118090000_beskt_governed_content_authoring.sql",\n  "20261112090000_bcp_interview_case_bridge.sql",\n];',
     guard: GUARD,
     expect: "BRIDGE-REGISTRATION",
   },
