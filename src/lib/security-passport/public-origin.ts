@@ -76,6 +76,16 @@ export function publicShareUrl(token: string): string {
  *  HTTP request or in the Referer header. */
 export function publicShareGatewayOrigin(): string {
   const configured = import.meta.env?.VITE_SUPABASE_URL;
+  // Explicit local integration mode is development-only. A production build
+  // cannot emit a loopback share even if the test flag is accidentally set.
+  if (
+    import.meta.env.DEV &&
+    import.meta.env.VITE_PASSPORT_LOCAL_INTEGRATION === "1" &&
+    typeof configured === "string" &&
+    /^https?:\/\/127\.0\.0\.1:\d+$/.test(configured)
+  ) {
+    return configured;
+  }
   if (typeof configured === "string" && configured.trim() !== "") {
     const trimmed = configured.trim().replace(/\/+$/, "");
     if (/^https:\/\//i.test(trimmed) && !isEphemeralHost(trimmed)) return trimmed;
