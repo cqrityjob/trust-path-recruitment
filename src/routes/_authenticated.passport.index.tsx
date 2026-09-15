@@ -1,3 +1,6 @@
+import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
+import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
+import { attentionFor } from "@/lib/security-passport/attention";
 import { VerificationOutcomes } from "@/components/professional-identity/VerificationOutcomes";
 import {
   deriveVerificationAttention,
@@ -98,6 +101,7 @@ function PassportWorkspaceRoute() {
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-6 lg:flex-row">
       <div className="min-w-0 flex-1 lg:order-2">
+        <ScrollToHashOnceReady />
         <section id="attention" aria-labelledby="attention-heading" tabIndex={-1}>
           <h2 id="attention-heading" className="sr-only">
             {pt("att.title")}
@@ -111,6 +115,18 @@ function PassportWorkspaceRoute() {
               pt("att.entryRemoved")
             }
             hrefOf={(item) => `/passport/entry/claim/${item.subjectId}`}
+          />
+          <AttentionPanel
+            summary={attentionFor(
+              snapshot.holder.claims.filter(isPassportCredential),
+              [],
+              new Date().toISOString().slice(0, 10),
+            )}
+            buckets={["expired", "expiring"]}
+            otherAttention
+            onOpenEntry={(kind, entryId) =>
+              void navigate({ to: "/passport/entry/$kind/$entryId", params: { kind, entryId } })
+            }
           />
         </section>
         <CredentialWallet

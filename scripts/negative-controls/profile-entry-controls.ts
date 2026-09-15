@@ -65,8 +65,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the profile stops owning the general claim kinds, which is how general education and languages end up being edited inside the Security Passport again",
     file: CLAIMS,
-    find: 'const CV_CLAIM_KINDS = [{ kind: "education" as const, titleKey: "claims.type.education" as const }];',
-    replace: "const CV_CLAIM_KINDS: { kind: string; titleKey: string }[] = [];",
+    find: '  { kind: "education", titleKey: "claims.type.education", anchor: "profile-education" },',
+    replace: "",
     guard: BOUNDARY,
     expect: "education",
   },
@@ -77,9 +77,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the Passport mounts the employment authoring form again, so a person must go to the Security Passport to record ordinary work history",
     file: INFO,
-    find: "        {/* ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──",
+    find: '      <div id="sp-credentials" className="scroll-mt-24 space-y-5">',
     replace:
-      '        {editing?.kind === "experience" ? <ExperienceForm /> : null}\n        {/* ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──',
+      '      <ExperienceForm />\n      <div id="sp-credentials" className="scroll-mt-24 space-y-5">',
     guard: BOUNDARY,
     expect: "mounts no employment authoring form",
   },
@@ -128,14 +128,14 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "must not carry requestVerification",
   },
   {
-    id: "PE-NC-PASSPORT-LOSES-EVIDENCE",
+    id: "PE-NC-CV-HISTORY-RETURNS-TO-PASSPORT",
     defect:
-      "the Passport's employment section stops offering documenting and verification, so moving the editor quietly took the evidence with it",
+      "the retired employment anchor grows a CV history control inside Passport instead of pointing to the canonical Profile",
     file: INFO,
-    find: '                      onClick={() => openEntry("experience", e.id)}',
-    replace: "                      onClick={() => undefined}",
+    find: "            data-employment-authoring-link",
+    replace: '            onClick={() => openEntry("experience", e.id)}',
     guard: BOUNDARY,
-    expect: "still offers documenting and verification",
+    expect: "employment anchor points to the canonical profile without rendering CV history",
   },
 
   // ---- The destination map points general information back at the Passport --
