@@ -88,13 +88,9 @@ async function main() {
     good(await owner.from("sp_passport_profiles").insert({ holder_user_id: uid })),
   );
   const data = {
-    class: "permit",
-    title: "Local Permit Alpha",
-    issuer: "Fictional Test Authority",
-    country: "SE",
-    issuing_jurisdiction: "SE",
-    validity_jurisdiction: "GB",
-    language: "en",
+    definition_code: "INTL_ASIS_CPP",
+    market_country: "",
+    market_region: "",
     identifier: "OPTIONAL-PRIVATE-123",
     issued_on: "2026-01-01",
     valid_until: "2028-01-01",
@@ -105,10 +101,115 @@ async function main() {
     cid = good(await owner.rpc("sp_save_international_credential", { _input: data }));
     second = good(
       await owner.rpc("sp_save_international_credential", {
-        _input: { ...data, title: "Local Permit Beta" },
+        _input: { ...data, definition_code: "INTL_ASIS_PSP" },
       }),
     );
     ok(cid && second, "missing claims");
+  });
+  await check("Closed catalogue rejects custom and unknown definitions over RPC", async () => {
+    for (const input of [
+      { title: "Unlisted", issuer: "Fake", class: "certification" },
+      { definition_code: "UNKNOWN" },
+    ])
+      ok(
+        (await owner.rpc("sp_save_international_credential", { _input: input })).error,
+        "custom definition accepted",
+      );
+  });
+  await check("Governed metadata cannot be injected through RPC", async () => {
+    for (const field of [
+      "title",
+      "issuer",
+      "country",
+      "issuing_jurisdiction",
+      "validity_jurisdiction",
+      "class",
+      "language",
+    ])
+      ok(
+        (
+          await owner.rpc("sp_save_international_credential", {
+            _input: { ...data, [field]: "forged" },
+          })
+        ).error,
+        "metadata accepted: " + field,
+      );
+  });
+  await check("Wrong-market definition and unapproved no-expiry fail closed", async () => {
+    for (const patch of [{ market_country: "SE" }, { market_region: "AE-DU" }, { no_expiry: true }])
+      ok(
+        (await owner.rpc("sp_save_international_credential", { _input: { ...data, ...patch } }))
+          .error,
+        "ineligible selection accepted",
+      );
+  });
+  await check("Candidate cannot write governed catalogue or issuers over REST", async () => {
+    for (const table of [
+      "sp_credential_types",
+      "sp_certification_definitions",
+      "sp_certification_issuers",
+      "sp_authorities",
+      "sp_credential_definition_metadata",
+    ])
+      ok((await owner.from(table).insert({})).error, "catalogue insert accepted: " + table);
+    ok(
+      (
+        await owner
+          .from("sp_certification_issuers")
+          .update({ display_name: "Forged" })
+          .eq("issuer_code", "ASIS")
+      ).error,
+      "issuer update accepted",
+    );
+  });
+  await check("Direct claim REST cannot alter governed identity or territory", async () => {
+    for (const patch of [
+      { title: "Forged" },
+      { claimed_issuer_name: "Forged" },
+      { jurisdiction_code: "SE" },
+      { authorisation_scope: "global" },
+      { credential_code: null },
+    ])
+      ok(
+        (await owner.from("sp_claims").update(patch).eq("id", cid)).error,
+        "direct metadata update accepted",
+      );
+  });
+  await check("Inactive and deprecated definitions are unavailable over real RPC", async () => {
+    sql("UPDATE public.sp_credential_types SET is_active=false WHERE code='INTL_ASIS_CPP'");
+    try {
+      ok(
+        (await owner.rpc("sp_save_international_credential", { _input: data })).error,
+        "inactive definition accepted",
+      );
+    } finally {
+      sql("UPDATE public.sp_credential_types SET is_active=true WHERE code='INTL_ASIS_CPP'");
+    }
+    sql(
+      "UPDATE public.sp_certification_definitions SET retired_on=current_date WHERE credential_code='INTL_ASIS_CPP'",
+    );
+    try {
+      ok(
+        (await owner.rpc("sp_save_international_credential", { _input: data })).error,
+        "retired definition accepted",
+      );
+    } finally {
+      sql(
+        "UPDATE public.sp_certification_definitions SET retired_on=NULL WHERE credential_code='INTL_ASIS_CPP'",
+      );
+    }
+  });
+  await check("ASIS selection retains exactly the existing definitions and issuer", async () => {
+    const rows = good(
+      await owner
+        .from("sp_approved_credential_catalogue")
+        .select("code,issuer_id")
+        .in("code", ["INTL_ASIS_CPP", "INTL_ASIS_PSP", "INTL_ASIS_PCI"]),
+    );
+    ok(
+      rows.length === 3 && new Set(rows.map((r) => r.issuer_id)).size === 1,
+      "ASIS catalogue duplicated",
+    );
   });
   await check("Other candidate cannot read claims or metadata", async () => {
     for (const t of ["sp_claims", "sp_credential_details"])
@@ -349,7 +450,7 @@ async function main() {
   await check("Second candidate can create own credential before logout", async () =>
     good(
       await other.rpc("sp_save_international_credential", {
-        _input: { ...data, title: "Other own credential" },
+        _input: { ...data, definition_code: "INTL_ASIS_PCI" },
       }),
     ),
   );
@@ -469,7 +570,13 @@ async function main() {
   await check("Corrections preserve version history", async () => {
     const next = good(
       await owner.rpc("sp_save_international_credential", {
-        _input: { ...data, claim_id: second, version: 1, title: "Local Permit Beta corrected" },
+        _input: {
+          ...data,
+          claim_id: second,
+          version: 1,
+          definition_code: "INTL_ASIS_PSP",
+          identifier: "CORRECTED-PSP",
+        },
       }),
     );
     ok(next !== second, "correction overwrote claim");

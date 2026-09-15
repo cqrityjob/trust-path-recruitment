@@ -50,6 +50,22 @@ const snapshot = {
   eventCount: 0,
 };
 const metadata = {
+  definitions: ["CPP", "PSP", "PCI"].map((code) => ({
+    code: "INTL_ASIS_" + code,
+    name_sv: "ASIS " + code,
+    name_en: "ASIS " + code,
+    credential_class: "certification",
+    scope_code: "global_professional",
+    country: null,
+    region: null,
+    issuer_id: "existing-asis",
+    issuer_name: "ASIS International",
+    official_url: null,
+    verification_url: null,
+    requires_valid_until: false,
+    allows_no_expiry: false,
+  })),
+
   details: [],
   verificationEvents: [],
   issuers: [],
@@ -133,19 +149,27 @@ test("CV-only holder gets a credential empty state, not repeated onboarding", as
   await expect(page).toHaveURL(/\/passport\/?$/);
   assertNoRefusals(refusals);
 });
-test("international add form exposes seven classes and distinct territories", async ({ page }) => {
+test("closed catalogue selects approved definitions and never accepts custom metadata", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
   const refusals = await mount(page, "/passport/credentials/new");
-  await page.locator("[data-international-credential-form] summary").click();
-  await expect(page.getByLabel("Credential class").locator("option")).toHaveCount(7);
-  await page.getByRole("combobox", { name: "Issuing country", exact: true }).selectOption("SE");
-  await page
-    .getByRole("combobox", { name: "Validity jurisdiction (self-reported)", exact: true })
-    .selectOption("GB");
-  await expect(page.getByRole("combobox", { name: "Issuing country", exact: true })).toHaveValue(
-    "SE",
+  await page.getByLabel("Search catalogue").fill("ASIS");
+  const selector = page.getByLabel("Approved credential");
+  await expect(selector.locator("option")).toHaveCount(4);
+  await selector.selectOption("INTL_ASIS_CPP");
+  await expect(page.getByLabel("Credential identifier (optional)")).toBeVisible();
+  await expect(page.getByLabel("Original credential name", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Issuer (self-reported)", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
+  await page.getByLabel("Search catalogue").fill("Unlisted custom credential");
+  await expect(page.getByRole("status")).toHaveText(
+    "Your credential is not currently available in CQrityjob Security Passport.",
   );
-  await page.getByLabel("The credential explicitly states that it has no expiry date").check();
-  await expect(page.getByLabel("Valid until", { exact: true })).toBeDisabled();
+  await page.getByRole("combobox", { name: "Scope", exact: true }).selectOption("national");
+  await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("GB");
+  await expect(selector.locator("option")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Save as self-reported" })).toHaveCount(0);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   assertNoRefusals(refusals);
 });
@@ -264,8 +288,17 @@ test("v2 consent travels to preview and creation, then the link can be revoked",
 });
 
 test("international add, correction successor and archive remain reachable", async ({ page }) => {
+  test.setTimeout(60_000);
   const refusals = await mount(page, "/passport/credentials/new");
-  let current = { ...claim };
+  let current = {
+    ...claim,
+    credentialCode: "INTL_ASIS_CPP",
+    titleSv: "ASIS CPP",
+    titleEn: "ASIS CPP",
+    issuerName: "ASIS International",
+    jurisdictionCode: null,
+    subJurisdictionCode: null,
+  };
   const writes: string[] = [];
   let archived = false;
   const detail = () => ({
@@ -292,8 +325,6 @@ test("international add, correction successor and archive remain reachable", asy
         current = {
           ...current,
           id: "f1900000-0000-4000-8000-000000000011",
-          titleSv: "Corrected original",
-          titleEn: "Corrected original",
           versionNo: 2,
         };
       return ok({ id: current.id });
@@ -308,22 +339,20 @@ test("international add, correction successor and archive remain reachable", asy
     }
     return route.fallback();
   });
-  await page.locator("[data-international-credential-form] summary").click();
-  await page
-    .getByLabel("Original credential name", { exact: true })
-    .fill("Original international credential");
-  await page.getByLabel("Issuer (self-reported)", { exact: true }).fill("Example issuer");
+
+  await page.getByLabel("Approved credential").selectOption("INTL_ASIS_CPP");
+  await page.getByLabel("Credential identifier (optional)").fill("ORIGINAL-1");
   await page.getByRole("button", { name: "Save as self-reported", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(current.id));
   await expect(
     page.getByRole("link", { name: "Select credentials and permitted fields", exact: true }),
   ).toHaveAttribute("href", "/passport/share");
   await page.getByRole("button", { name: "Correct this entry", exact: true }).click();
-  await page.locator("[data-international-credential-form] summary").click();
-  await page.getByLabel("Original credential name", { exact: true }).fill("Corrected original");
+
+  await page.getByLabel("Credential identifier (optional)").fill("CORRECTED-2");
   await page.getByRole("button", { name: "Save as self-reported", exact: true }).click();
   await expect(page).toHaveURL(/f1900000-0000-4000-8000-000000000011/);
-  await expect(page.locator("main")).toContainText("Corrected original");
+  await expect(page.locator("main")).toContainText("ASIS CPP");
   expect(writes).toHaveLength(2);
   expect(writes[1]).toContain("version");
   expect(writes[1]).toContain(claim.id);

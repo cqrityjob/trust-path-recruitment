@@ -814,17 +814,17 @@ console.log("\nGROUP 5 -- validity ordering is caught HERE, not by the constrain
 
   // ── 8. The refusals are named, in both languages ────────────────────
   const routeSrc = readFileSync(
-    join(process.cwd(), "src/routes/_authenticated.passport.credentials.new.tsx"),
+    join(process.cwd(), "supabase/migrations/20261121090000_sp_closed_credential_catalogue.sql"),
     "utf8",
   );
   for (const code of [
-    "SP_CREDENTIAL_JURISDICTION_MISMATCH",
-    "SP_SUB_JURISDICTION_REQUIRED",
-    "SP_SUB_JURISDICTION_NOT_SUPPORTED",
-    "SP_CREDENTIAL_NOT_AVAILABLE",
-    "SP_MARKET_PACK_NOT_ACTIVE",
+    "SP_GOVERNED_METADATA_IMMUTABLE",
+    "SP_DEFINITION_NOT_AVAILABLE_IN_MARKET",
+    "SP_APPROVED_DEFINITION_REQUIRED",
+    "SP_NO_EXPIRY_NOT_APPROVED",
+    "SP_INVALID_CREDENTIAL_INPUT",
   ]) {
-    ok(routeSrc.includes(code), `the save-error mapping names ${code}`);
+    ok(routeSrc.includes(code), `the closed database writer enforces ${code}`);
   }
   for (const lang of ["sv", "en"] as const) {
     for (const key of [

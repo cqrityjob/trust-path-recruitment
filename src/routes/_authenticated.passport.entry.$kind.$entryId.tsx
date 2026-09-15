@@ -781,7 +781,7 @@ function PassportEntryRoute() {
           </h3>
           {correcting && correctionPrefill && claim ? (
             <div className="mt-3">
-              {internationalDetail ? (
+              {isPassportCredential(claim) ? (
                 <InternationalCredentialForm
                   metadata={international}
                   onSave={(data) => saveInternational({ data })}
@@ -789,17 +789,13 @@ function PassportEntryRoute() {
                   initial={{
                     claim_id: claim.id,
                     version: claim.versionNo,
-                    class: internationalDetail.credential_class,
-                    title: claim.titleSv,
-                    issuer: claim.issuerName ?? "",
-                    country: internationalDetail.issuing_country_code ?? "",
-                    issuing_jurisdiction: internationalDetail.issuing_jurisdiction_code ?? "",
-                    validity_jurisdiction: internationalDetail.validity_jurisdiction_code ?? "",
-                    language: internationalDetail.original_language ?? "",
+                    definition_code: claim.credentialCode ?? "",
+                    market_country: claim.jurisdictionCode ?? "",
+                    market_region: claim.subJurisdictionCode ?? "",
                     identifier: correctionPrefill.credentialReference ?? "",
                     issued_on: claim.issuedOn ?? "",
                     valid_until: claim.validUntil ?? "",
-                    no_expiry: internationalDetail.no_expiry,
+                    no_expiry: internationalDetail?.no_expiry ?? null,
                   }}
                 />
               ) : (

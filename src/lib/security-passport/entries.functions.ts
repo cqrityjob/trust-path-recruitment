@@ -562,6 +562,7 @@ export const saveClaimEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => claimInput.parse(data))
   .handler(async ({ context, data }): Promise<{ id: string }> => {
+    if (data.claimType === "certification") throw new Error("SP_APPROVED_DEFINITION_REQUIRED");
     const { supabase, userId } = context;
 
     if (data.id) {

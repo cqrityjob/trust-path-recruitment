@@ -522,14 +522,46 @@ ck(
 // The route must render the unconfirmed screen for anything that is not a
 // confirmation -- never the success screen.
 const routeSrc = code(read("src/routes/_authenticated.passport.onboarding.tsx"));
+
+// Final owner decision replaces free-text first-merit capture with the closed catalogue.
 ck(
-  "the route shows success only on 'confirmed'",
-  /outcome === "confirmed"/.test(routeSrc) && routeSrc.includes('setPhase({ kind: "unconfirmed"'),
+  "onboarding never renders free-text merit capture",
+  !/ChooseMeritScreen|MeritDetailsScreen/.test(routeSrc),
 );
 ck(
-  "a thrown readback becomes 'unknown' rather than a failure",
-  /catch[\s\S]{0,400}outcome = "unknown"/.test(routeSrc),
+  "onboarding cannot submit custom first merits",
+  !/completeFirstMerit|saveFirstRunDraft/.test(routeSrc),
 );
+ck(
+  "existing Passport leads to approved definitions",
+  routeSrc.includes('to="/passport/credentials/new"'),
+);
+ck(
+  "Passport creation uses the existing idempotent operation",
+  routeSrc.includes("useServerFn(ensureFirstRunPassport)"),
+);
+ck("creation is awaited before navigating", /await create\([\s\S]*await navigate\(/.test(routeSrc));
+ck(
+  "creation invalidates shared read models",
+  routeSrc.includes("await invalidatePassportAndCareer(qc)"),
+);
+ck(
+  "load failures render the retry state",
+  routeSrc.includes('setState("error")') && routeSrc.includes("<FirstRunLoadError"),
+);
+ck(
+  "creation failures are reported",
+  routeSrc.includes("setFailed(true)") && routeSrc.includes("fr.error.createFailed"),
+);
+ck(
+  "busy creation cannot be submitted twice",
+  routeSrc.includes("if (busy) return;") && routeSrc.includes("busy={busy}"),
+);
+ck(
+  "onboarding does not write any governed metadata",
+  !/definition_code:|claimed_issuer_name:|jurisdiction_code:/.test(routeSrc),
+);
+
 const SV_UNKNOWN = text(html(<MeritUnconfirmedScreen onGoToPassport={noop} />, "sv"));
 ck(
   "the unconfirmed screen says it could not confirm",
@@ -585,15 +617,7 @@ ck(
   "and the Passport-creation failure has its own sentence",
   /"fr\.error\.createFailed"[\s\S]{0,220}Security Passport kunde inte skapas/.test(svCopy),
 );
-ck(
-  "the route classifies before it speaks",
-  routeSrc.includes('classifyCompletionFailure(err) === "refused"') &&
-    routeSrc.includes('{ kind: "indeterminate" }'),
-);
-ck(
-  "and a retry BUTTON appears only where it is a different action from the primary CTA",
-  /onRetry=\{error\?\.kind === "draft_failed"/.test(routeSrc),
-);
+
 ck(
   "the indeterminate copy names the primary button instead of duplicating it",
   /"fr\.error\.saveIndeterminate"[\s\S]{0,400}Spara i mitt Passport/.test(svCopy),
@@ -604,11 +628,6 @@ ck(
    ══════════════════════════════════════════════════════════════════════ */
 group("T4c · the load-error state");
 
-ck(
-  "a failed read reaches its own phase, never 'create'",
-  /catch[\s\S]{0,300}setPhase\(\{ kind: "load_error" \}\)/.test(routeSrc) &&
-    !/catch[\s\S]{0,300}setPhase\(\{ kind: "create" \}\)/.test(routeSrc),
-);
 const SV_LOAD_ERR = text(html(<FirstRunLoadError onRetry={noop} />, "sv"));
 const EN_LOAD_ERR = text(html(<FirstRunLoadError onRetry={noop} />, "en"));
 ck(
@@ -634,41 +653,12 @@ group("T5 · idempotency, single flight, flush, and a save that is not a draft")
 
 const serverSrc = code(read("src/lib/security-passport/first-run.functions.ts"));
 
-ck(
-  "the operation id is minted when the kind is chosen, before any attempt",
-  /onChoose[\s\S]{0,700}operationId: draft\.operationId \?\? newOperationId\(\)/.test(routeSrc),
-);
-ck("and is autosaved with the draft", /onChoose[\s\S]{0,900}scheduleDraft\(next\)/.test(routeSrc));
-ck(
-  "the completion is single flight",
-  routeSrc.includes("if (inFlightComplete.current) return;") &&
-    routeSrc.includes("inFlightComplete.current = run;"),
-);
-ck(
-  "the pending debounced save is flushed and awaited before completing",
-  /runCompletion[\s\S]{0,400}await flushDraft\(\)/.test(routeSrc),
-);
-ck(
-  "and the completion sends the CURRENT field values, not the stored draft",
-  /await complete\(\{[\s\S]{0,600}title: current\.title\.trim\(\)/.test(routeSrc),
-);
-ck(
-  "'Save and exit' writes a draft and never completes",
-  /onSaveAndExit[\s\S]{0,500}await enqueue\(draft\)/.test(routeSrc) &&
-    !/onSaveAndExit[\s\S]{0,500}complete\(\{/.test(routeSrc),
-);
 // ── DEFECT 4 ────────────────────────────────────────────────────────
 //
 // It used to navigate from a `finally`, so a FAILED draft save still took the
 // person away and told them nothing. The navigation is now after the try, and
 // the catch returns.
-ck(
-  "and navigates only after the save resolved",
-  /onSaveAndExit[\s\S]{0,700}catch[\s\S]{0,260}setError\(\{ kind: "draft_failed" \}\)[\s\S]{0,120}return;[\s\S]{0,120}navigate\(\{ to: "\/my-career" \}\)/.test(
-    routeSrc,
-  ),
-);
-ck("there is no navigation inside a finally", !/finally[\s\S]{0,200}navigate\(/.test(routeSrc));
+
 ck(
   "and the destination is stated before the button is pressed",
   journeySrc.includes('pt("fr.saveExit.hint")'),
@@ -676,20 +666,6 @@ ck(
 
 /* ---- ordered draft persistence, and the durable operation id ------- */
 
-ck(
-  "draft writes are chained, so two saves never overlap",
-  routeSrc.includes("chain.current.then(() => writeNow(next))"),
-);
-ck(
-  "each save carries a strictly increasing revision",
-  /revision\.current \+= 1;[\s\S]{0,120}saveDraft\(\{ data: \{ step, answers, revision: rev \} \}\)/.test(
-    routeSrc,
-  ),
-);
-ck(
-  "the revision is seeded from what the server already holds",
-  routeSrc.includes("Math.max(revision.current, profile?.onboardingDraftRevision ?? 0)"),
-);
 ck(
   "the server refuses a stale revision and a completed onboarding, in ONE update",
   /\.lt\("onboarding_draft_revision", data\.revision\)[\s\S]{0,120}\.neq\("onboarding_state", "completed"\)/.test(
@@ -699,24 +675,6 @@ ck(
 ck(
   "and says WHICH rule refused, so a finished tab is not reported as a failure",
   serverSrc.includes("DRAFT_COMPLETED") && serverSrc.includes("DRAFT_STALE"),
-);
-ck(
-  "a missing operation id is minted, persisted and AWAITED before any completion",
-  /ensureOperationId[\s\S]{0,600}await enqueue\(withId\)/.test(routeSrc) &&
-    /runCompletion[\s\S]{0,300}await ensureOperationId\(submitted\)/.test(routeSrc),
-);
-ck(
-  "and the completion uses that exact id rather than making one inline",
-  routeSrc.includes("operationId: current.operationId as string") &&
-    !/complete\(\{[\s\S]{0,300}newOperationId\(\)/.test(routeSrc),
-);
-ck(
-  "leaving the page flushes what is pending",
-  /removeEventListener\("beforeunload"[\s\S]{0,320}void flushDraft\(\)/.test(routeSrc),
-);
-ck(
-  "and an unsaved form warns before the browser unloads it",
-  routeSrc.includes('addEventListener("beforeunload"') && routeSrc.includes("unsaved.current"),
 );
 
 ck(
@@ -1068,28 +1026,6 @@ for (const dest of DESTINATIONS) {
   ck(`${dest} is a real route`, ROUTES.includes(ROUTE_FILE[dest]));
 }
 
-// The confirmation screen offers three actions; they must be three different
-// places, or one of them is decoration.
-// Scoped to the confirmation screen's own JSX. `onGoToPassport` also appears
-// on the unconfirmed screen, which is a different screen with one action.
-const doneJsx = routeSrc.slice(
-  routeSrc.indexOf("<MeritSavedScreen"),
-  routeSrc.indexOf("/>", routeSrc.indexOf("<MeritSavedScreen")),
-);
-const doneProps = ["onGoToPassport=", "onAddAnother=", "onCompleteProfile="];
-ck(
-  "screen 4 wires three distinct actions",
-  doneJsx.length > 0 && doneProps.every((p) => doneJsx.split(p).length === 2),
-);
-ck(
-  "and they lead to three different places",
-  routeSrc.includes('onGoToPassport={() => void navigate({ to: "/passport" })}') &&
-    routeSrc.includes("onAddAnother={onAddAnother}") &&
-    routeSrc.includes('onCompleteProfile={() => void navigate({ to: "/passport/information" })}'),
-);
-
-// The overview must no longer send anybody back into the journey: that would
-// be a loop, because the journey sends a holder with a merit to the overview.
 const overviewSrc = code(read("src/routes/_authenticated.passport.index.tsx"));
 const onboardingTargets = [...overviewSrc.matchAll(/to: "\/passport\/onboarding"/g)];
 ck(
@@ -1114,16 +1050,6 @@ ck(
 ck(
   "so are the verification requests",
   PASSPORT_QUERY_KEYS.some((k) => k[0] === "passport" && k[1] === "my-verification-requests"),
-);
-ck(
-  "the route invalidates after a completion",
-  /finished\.current = true;[\s\S]{0,1600}await invalidatePassportAndCareer\(qc\)/.test(routeSrc),
-);
-ck(
-  "and after creating the Passport",
-  /await createPassport\(\{ data: undefined \}\);\s*await invalidatePassportAndCareer\(qc\)/.test(
-    routeSrc,
-  ),
 );
 
 // The home reads these keys. If it stops, the list above is stale and this

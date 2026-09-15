@@ -602,7 +602,15 @@ function PassportInformationRoute() {
           </ul>
         )}
 
-        {isEditingThis ? (
+        {section.kind === "certification" ? (
+          <button
+            type="button"
+            className="mt-4 min-h-11 underline"
+            onClick={() => void navigate({ to: "/passport/credentials/new" })}
+          >
+            {pt("entry.add")}
+          </button>
+        ) : isEditingThis ? (
           <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
             <ClaimEntryForm
               draft={editing.draft}

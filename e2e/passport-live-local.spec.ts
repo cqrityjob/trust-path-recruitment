@@ -58,21 +58,24 @@ test("real owner adds and selectively shares a credential, recipient loses acces
     timeout: 30_000,
   });
   await expect(page.locator("main")).not.toContainText("PRIVATE CV ONLY");
-  const title = `Browser credential ${testInfo.project.name} ${Date.now()}`;
+  const definitionCodes = {
+    chromium: "INTL_ASIS_PCI",
+    "mobile-375": "INTL_ISC2_CISSP",
+    "mobile-390": "INTL_ISACA_CISM",
+  };
+  const code = definitionCodes[testInfo.project.name as keyof typeof definitionCodes];
   await page.getByRole("link", { name: "Add credential", exact: true }).click();
-  await page.locator("[data-international-credential-form] summary").click();
-  await page.getByLabel("Original credential name", { exact: true }).fill(title);
-  await page.getByLabel("Issuer (self-reported)", { exact: true }).fill("Fictional browser issuer");
+  const selector = page.getByLabel("Approved credential");
+  await selector.selectOption(code);
+  const title = (await selector.locator(`option[value="${code}"]`).textContent())!.split(" — ")[0];
+  await expect(page.getByLabel("Original credential name", { exact: true })).toHaveCount(0);
   await page.getByLabel("Credential identifier (optional)").fill("BROWSER-OPTIONAL");
-  await page.getByRole("combobox", { name: "Issuing country", exact: true }).selectOption("SE");
-  await page
-    .getByRole("combobox", { name: "Validity jurisdiction (self-reported)", exact: true })
-    .selectOption("GB");
   await page.getByRole("button", { name: "Save as self-reported", exact: true }).click();
   await expect(page).toHaveURL(/\/passport\/entry\/claim\//, { timeout: 30_000 });
   await expect(page.locator("main")).toContainText(title);
+  const claimId = new URL(page.url()).pathname.split("/").pop()!;
   await page.goto(`${base}/passport/share`);
-  const selection = page.locator("[data-merit-option]").filter({ hasText: title });
+  const selection = page.locator(`[data-merit-option="claim:${claimId}"]`);
   await selection.locator('input[type="checkbox"]').check();
   await expect(page.getByLabel("My name (subject to privacy settings)")).not.toBeChecked();
   await expect(page.getByLabel("Credential identifiers", { exact: true })).not.toBeChecked();

@@ -720,11 +720,11 @@ const credentialRoute = readFileSync(
   "utf8",
 );
 assert(
-  credentialRoute.includes("getRegulatedCredentialAvailability") &&
+  credentialRoute.includes("getInternationalPassportMetadata") &&
     // The comment above the import legitimately NAMES the function it replaced
     // in order to explain why, so this looks for a call rather than the word.
     !/useServerFn\(listCredentialTypes\)/.test(credentialRoute),
-  "the add-credential route asks what THIS holder's market allows, not what is active anywhere",
+  "the add route reads the database-governed catalogue through Passport metadata",
 );
 assert(
   credentialForm.includes("closedMarket") &&
@@ -785,8 +785,8 @@ console.log("\nWRITE PATH -- the save payload cannot desync from the schema");
   );
 
   assert(
-    /doSave\(\{\s*data:\s*\{[^}]*\.\.\.draft/.test(route),
-    "the route SPREADS the draft into the save payload",
+    /onSave=\{\(data\) => save\(\{ data \}\)\}/.test(route),
+    "the route passes the typed closed-catalogue command without remapping fields",
   );
 
   // Every field the draft carries must exist in the server's input schema.
