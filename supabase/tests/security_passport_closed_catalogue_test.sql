@@ -66,6 +66,16 @@ SELECT pg_temp.ok((SELECT no_expiry FROM public.sp_credential_details WHERE clai
 SELECT public.sp_save_international_credential('{"definition_code":"OV","market_country":"SE","valid_until":"2030-01-01"}') AS national_claim \gset
 SELECT pg_temp.ok((SELECT jurisdiction_code='SE' AND claimed_issuer_name='Polismyndigheten' FROM public.sp_claims WHERE id=:'national_claim'),'national definition uses its existing governed authority and country');
 RESET ROLE;
+UPDATE public.sp_jurisdictions SET is_active=false WHERE code='SE';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.denied($q$SELECT public.sp_save_international_credential('{"definition_code":"OV","market_country":"SE","valid_until":"2030-01-01"}')$q$,'inactive selected country rejected');
+RESET ROLE;
+UPDATE public.sp_jurisdictions SET is_active=true WHERE code='SE';
+UPDATE public.sp_certification_definitions SET effective_from=current_date+1 WHERE credential_code='INTL_ASIS_CPP';
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.denied($q$SELECT public.sp_save_international_credential('{"definition_code":"INTL_ASIS_CPP"}')$q$,'future definition not yet selectable');
+RESET ROLE;
+UPDATE public.sp_certification_definitions SET effective_from=current_date WHERE credential_code='INTL_ASIS_CPP';
 UPDATE public.sp_credential_types SET is_active=false WHERE code='INTL_ASIS_CPP';
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.denied($q$SELECT public.sp_save_international_credential('{"definition_code":"INTL_ASIS_CPP"}')$q$,'inactive definition rejected');

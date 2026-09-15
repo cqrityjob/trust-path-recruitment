@@ -18,14 +18,18 @@ SELECT t.code, t.claim_type, t.name_sv, t.name_en,
 FROM public.sp_credential_types t
 LEFT JOIN public.sp_certification_definitions d ON d.credential_code=t.code
 LEFT JOIN public.sp_certification_issuers i ON i.id=d.issuer_id AND i.is_active
- AND (i.effective_to IS NULL OR i.effective_to>current_date)
+ AND i.effective_from<=current_date AND (i.effective_to IS NULL OR i.effective_to>current_date)
 LEFT JOIN public.sp_authorities a ON a.id=t.authority_id AND a.is_active
 LEFT JOIN public.sp_credential_definition_metadata m ON m.credential_code=t.code
 WHERE t.is_active AND NOT t.requires_scope AND m.deprecated_at IS NULL
+ AND (d.effective_from IS NULL OR d.effective_from<=current_date)
  AND (d.retired_on IS NULL OR d.retired_on>current_date)
  AND public.sp_is_passport_credential(t.claim_type,t.code)
  AND ((t.scope_code='global_professional' AND i.id IS NOT NULL)
- OR (t.scope_code='national_regulated' AND a.id IS NOT NULL AND EXISTS (
+ OR (t.scope_code='national_regulated' AND a.id IS NOT NULL
+ AND EXISTS (SELECT 1 FROM public.sp_jurisdictions j WHERE j.code=t.jurisdiction_code AND j.is_active)
+ AND (t.sub_jurisdiction_code IS NULL OR EXISTS (SELECT 1 FROM public.sp_sub_jurisdictions j WHERE j.code=t.sub_jurisdiction_code AND j.is_active))
+ AND EXISTS (
    SELECT 1 FROM public.sp_market_packs p WHERE p.code=t.market_pack_code
    AND p.is_active AND p.superseded_on IS NULL
    AND p.jurisdiction_code=t.jurisdiction_code
