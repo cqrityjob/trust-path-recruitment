@@ -650,8 +650,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the migration comes off the owner-level pending list while release-state.json still says pending",
     file: FRONTIER,
-    find: '  "20261118090000_beskt_governed_content_authoring.sql",\n',
-    replace: "",
+    // Prettier collapses a one-entry array onto a single line, so the anchor is
+    // the array literal itself rather than an indented element.
+    find: '["20261118090000_beskt_governed_content_authoring.sql"]',
+    replace: "[]",
     guard: GUARD,
     expect: "AUTHORING-REGISTRATION",
   },

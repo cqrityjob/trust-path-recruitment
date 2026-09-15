@@ -645,9 +645,9 @@ const MUTATIONS: readonly Mutation[] = [
     // where a resolved name would hide the next genuinely stuck one. Planting it
     // BESIDE a legitimately pending name is the stronger control -- it proves the
     // guard notices a stale entry even when the list is not supposed to be empty.
-    find: '  "20261118090000_beskt_governed_content_authoring.sql",\n];',
+    find: '["20261118090000_beskt_governed_content_authoring.sql"]',
     replace:
-      '  "20261118090000_beskt_governed_content_authoring.sql",\n  "20261113090000_bcp_interview_conduct.sql",\n];',
+      '["20261118090000_beskt_governed_content_authoring.sql", "20261113090000_bcp_interview_conduct.sql"]',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },

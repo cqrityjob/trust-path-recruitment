@@ -458,7 +458,11 @@ const proof = postflightText(bare);
     "AUTHORING-SEPARATION: and no door grants anybody a governance mandate",
   );
   check(
-    !/SET content_status/.test(bare),
+    // Read the UPDATE, not the phrase. A control that appended
+    // `, content_status = 'published'` to the finisher's SET list never wrote
+    // the literal "SET content_status" and this assertion passed with the
+    // defect applied.
+    !/UPDATE public\.beskt_method_versions[\s\S]{0,400}content_status\s*=/.test(bare),
     "AUTHORING-SEPARATION: and no door moves a version's lifecycle status — publishing is a separate act by a separate person",
   );
   check(
@@ -585,7 +589,9 @@ const proof = postflightText(bare);
     /^BEGIN;/m.test(suite) && /^ROLLBACK;/m.test(suite),
     "AUTHORING-SUITE: and the whole suite runs in one transaction that is rolled back, so it seeds nothing",
   );
-  const labels = [...suite.matchAll(/'(A\d+\.\d+ [^']+)'/g)].map((m) => m[1]);
+  // A1d's labels carry a letter suffix; the earlier pattern silently collected
+  // none of them, so a duplicate planted there went unnoticed.
+  const labels = [...suite.matchAll(/'(A\d+[a-z]?\.\d+[a-z]? [^']+)'/g)].map((m) => m[1]);
   check(
     labels.length >= 55,
     `AUTHORING-SUITE: it carries at least 55 labelled assertions (found ${labels.length})`,
