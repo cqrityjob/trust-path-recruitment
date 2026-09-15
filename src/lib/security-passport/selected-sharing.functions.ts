@@ -142,7 +142,7 @@ export const createSelectedShare = createServerFn({ method: "POST" })
  *  replay cannot be mistaken for a creation by one caller and not the other —
  *  the difference is whether a token came back, and a missing token must never
  *  be reported as a link the holder can send. */
-function readCreateResult(result: unknown): CreateShareResult {
+export function readCreateResult(result: unknown): CreateShareResult {
   const row = result as {
     status?: string;
     token?: string;
@@ -150,6 +150,12 @@ function readCreateResult(result: unknown): CreateShareResult {
     expires_at?: string | null;
     previous_revoked?: boolean;
   } | null;
+  if (
+    !row?.disclosure_id ||
+    !["created", "already_created"].includes(row.status ?? "") ||
+    (row.status === "created" && !row.token)
+  )
+    throw new Error("Invalid share response");
   if (row?.status === "created" && row.token) {
     return {
       status: "created",

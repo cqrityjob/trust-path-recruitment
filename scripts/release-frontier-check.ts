@@ -99,6 +99,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 const expectedPending: string[] = [
   "20261118090000_sp_international_passport_foundation.sql",
   "20261119090000_sp_international_credential_wallet.sql",
+  "20261120090000_sp_credential_selective_sharing_v2.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
