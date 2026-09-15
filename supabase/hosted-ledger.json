@@ -13,7 +13,7 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-13T17:43:43Z",
+  "readAt": "2026-09-14T18:53:00Z",
   "readBy": "Post-merge read-only verification for the interview-method library tenant read (pilot blocker 2): supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #241 merged to main as 7e338f2a43fbfe91b2c26228f04d7b3487d67d61. 280 rows. The previous 279-row snapshot is proved unchanged rather than assumed: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261115090000 is 9c77cb921cae6a46a233ffb5b9cd308c, which is exactly the all-rows digest recorded in the previous snapshot and the digest of the committed 279-row file, so no earlier row was rewritten. Over all 280 rows production gives cbe34f3fef140aa15c8810e8b8169425. The single added row is the canonical identity 20261115090000 / scp_interview_method_library_tenant_read -- the migration filename's own version and slug, not a generated uuid -- applied automatically by the official Supabase GitHub integration on merge; this evidence session issued no hosted write.",
   "versions": [
     {
@@ -1135,6 +1135,10 @@
     {
       "version": "20261115090000",
       "name": "scp_interview_method_library_tenant_read"
+    },
+    {
+      "version": "20261116090000",
+      "name": "cd_outstanding_reviews_operator_only"
     }
   ]
 }

@@ -93,20 +93,17 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // #241 merged, and release-state.json now records it as applied with read-only
 // evidence. Its name comes off this list in that same change, as planned, so
 // an applied migration cannot sit here masking the next genuinely stuck one.
+// 20261116090000_cd_outstanding_reviews_operator_only was applied by the
+// official integration when PR #252 merged, and PR #253 recorded its hosted
+// evidence in release-state.json and hosted-ledger.json -- so it is off this
+// list, as planned.
 //
-// TWO migrations are pending by design on this branch. PR #252's
-// 20261116090000_cd_outstanding_reviews_operator_only came in from main; BESKT
-// PR 6 is the second, and it was RENUMBERED to 20261117090000 because #252
-// claimed 20261116090000 first and two active migrations may not share a
-// version. Each comes off this list only in the change that records its own
-// hostedState: applied with hosted evidence -- never on the strength of a
-// merge alone.
+// BESKT PR 6 is now the one migration pending by design. It was RENUMBERED
+// from 20261116090000 to 20261117090000 because #252 claimed that version
+// first and two active migrations may not share one. It comes off this list
+// only in the change that records its own hostedState: applied with hosted
+// evidence -- never on the strength of a merge alone.
 const expectedPending: string[] = [
-  // Pending BY DESIGN until the owner merges this PR and the Supabase GitHub
-  // integration applies it. It comes off this list in the same change that
-  // records hostedState: applied, so an applied migration cannot sit here
-  // masking the next genuinely stuck one.
-  "20261116090000_cd_outstanding_reviews_operator_only.sql",
   // BESKT PR 6. Schema only: no application code on this branch names
   // bcp_conduct_topic_prompts or any object of the report chain, so nothing
   // ships against it. The Supabase GitHub integration applies it on merge.
