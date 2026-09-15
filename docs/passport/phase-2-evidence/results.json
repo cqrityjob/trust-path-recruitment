@@ -174,5 +174,21 @@
     "20261118100000_sp_international_passport_foundation.sql",
     "20261119090000_sp_international_credential_wallet.sql",
     "20261120090000_sp_credential_selective_sharing_v2.sql"
-  ]
+  ],
+  "originMainIncluded": "5e37060a35415880935c8525bcfb32d2d0f38bc3",
+  "originMainAtFinalInspection": "6fc986af315ff30de4909efb1a076afd39bbd069",
+  "laterMainIncluded": false,
+  "existingPr256": {
+    "number": 256,
+    "title": "Record the hosted apply of BESKT PR 6 and PR 7, and close the schema-first gate",
+    "url": "https://github.com/cqrityjob/trust-path-recruitment/pull/256",
+    "merged": true,
+    "mergedAt": "2026-09-15T18:16:45Z",
+    "mergeCommitSha": "6fc986af315ff30de4909efb1a076afd39bbd069",
+    "baseSha": "5e37060a35415880935c8525bcfb32d2d0f38bc3",
+    "head": "claude/beskt-hosted-evidence-sync",
+    "source": "GitHub connector get_pr_info, final inspection",
+    "createdByThisTask": false
+  },
+  "prNumberingBlock": "PR #256 is already merged for unrelated BESKT evidence; no Passport PR was created or assigned."
 }

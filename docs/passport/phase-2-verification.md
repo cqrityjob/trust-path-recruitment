@@ -2,9 +2,15 @@
 
 ## Recommendation
 
-**FIX REQUIRED.** The combined branch includes PR #255 and the real local Passport integration passes. The complete browser regression run has failures, so the owner's condition for pushing and opening the Passport PR is not satisfied. No Passport PR was created; no number was assigned. The requested title remains **PR #256 — International Security Passport Foundation** for a later all-green submission. GitHub controls the assigned number; none was reserved.
+**FIX REQUIRED.** The combined branch includes PR #255 and the real local Passport integration passes. The complete browser regression run has failures, so the owner's condition for pushing and opening the Passport PR is not satisfied. No Passport PR was created; no number was assigned. At final Git inspection, PR **#256 was already merged for a different task**: [Record the hosted apply of BESKT PR 6 and PR 7, and close the schema-first gate](https://github.com/cqrityjob/trust-path-recruitment/pull/256). It is not a Passport PR and was not created by this task. The exact requested Passport numbering is therefore unavailable; no replacement PR was created.
 
 **Hosted changes: NONE. Production data changes/deletions: NONE. Merge/deploy: NONE.** No hosted Supabase project calls were made during Phase 2. Hosted release guards remain blocked, as required, and separate owner approval is still needed.
+
+### Late main change — not included in these test results
+
+The final inspection found `origin/main` at **`6fc986af315ff30de4909efb1a076afd39bbd069`**, incorporating the separate PR #256. The completed verification ran against PR #255 main **`5e37060a35415880935c8525bcfb32d2d0f38bc3`** plus Passport. The later merge changes 11 guard/ledger files, records the two BESKT migrations as applied, and changes negative-control expectations. It is **not** included in the tested Passport head. The owner’s next-PR numbering requirement can no longer be satisfied literally. Work stopped at reporting this discovery; no new merge, push or PR was attempted.
+
+A later continuation needs to merge this newer main without rewriting history, reconcile its hosted-evidence bookkeeping, repair the browser failures, and rerun combined-head verification. The counts below are historical evidence for the precisely identified tested source, not a claim that the newest main is verified.
 
 ## Connection and Git record
 
@@ -14,14 +20,15 @@
 | Default branch | `main` |
 | Working branch | `codex/passport-finalization` |
 | PR #255 included | **YES**, merge commit is an ancestor of the combined branch |
-| Exact `origin/main` after PR #255 | `5e37060a35415880935c8525bcfb32d2d0f38bc3` |
+| Included main immediately after PR #255 | `5e37060a35415880935c8525bcfb32d2d0f38bc3` |
+| Current `origin/main` at final inspection | `6fc986af315ff30de4909efb1a076afd39bbd069` — later PR #256, **not included** |
 | Tested combined implementation SHA | `1d60f45906465c4f7aafd99896868167521b7159` |
 | Local `main` | `6fbf4f61edc006bfc33749d65f7348cc7a47fd0e`; it does **not** match `origin/main` and was not used for implementation |
 | Current migration collisions | **NONE**; 286 active versions, zero duplicate groups |
 | Passport PR number / URL | **NOT CREATED / N/A** |
 | CI | **Not run for this unpublished combined head**; local checks below are not GitHub CI |
 
-`git fetch origin` and GitHub's PR #255 merged metadata verified the new baseline before synchronization. GitHub CLI is installed but unauthenticated; the repository metadata was verified through the GitHub connector instead. The merge commit `34b2117` preserves both parent histories. No rebase, force-push, squash or discarded Passport commit occurred. The exact implementation commits and full changed-file inventory are in [delivery-manifest.json](phase-2-evidence/delivery-manifest.json). This report and its evidence are committed after the tested implementation; their documentation-only commit does not change application or migration source.
+`git fetch origin` and GitHub's PR #255 merged metadata verified the new baseline before synchronization. GitHub CLI is installed but unauthenticated; the repository metadata and the separately merged PR #256 were verified through the GitHub connector instead. The merge commit `34b2117` preserves both parent histories. No rebase, force-push, squash or discarded Passport commit occurred. The exact implementation commits and full changed-file inventory are in [delivery-manifest.json](phase-2-evidence/delivery-manifest.json). This report and its evidence are committed after the tested implementation; their documentation-only commit does not change application or migration source.
 
 Supabase control-plane project remains the owner-accepted `wrygicdfxwjnrugduxnt`. `.env.local` remains intentionally local (`http://127.0.0.1:54321`, `cqrityjob-local-staging`) and byte-identical, SHA-256 `d14e60e4d818a8d32eb2a82f0c5cdd1aa3dc8d3a485c37309e818666f3610a11`. No production link or production credentials were added. The task-owned SQL cluster, app servers, HTTPS proxy and Docker stack were stopped after verification; local data directories/volumes were preserved. The pre-existing app on 3117 and Supabase listener on 54321 remain running.
 
@@ -109,7 +116,7 @@ The accepted lint-debt decision applies to lint only; it does not waive these br
 
 ## Migration and data safety
 
-Three pending Passport migrations, in order: **20261118100000 → 20261119090000 → 20261120090000**. The merged BESKT **20261117090000** and **20261118090000** precede them. The release ledger lists five pending migrations; this is repository evidence, not a fresh claim that hosted state was queried in this phase.
+Three pending Passport migrations, in order: **20261118100000 → 20261119090000 → 20261120090000**. The merged BESKT **20261117090000** and **20261118090000** precede them. The **tested branch** release ledger lists five pending migrations. The later PR #256 records the two BESKT migrations as applied; that evidence has not been merged into this branch. Reconcile the newer ledger before any continuation. This task did not query or change hosted schema.
 
 The [migration safety review](phase-2-migration-review.md) gives every table, function, trigger/policy/grant group, transaction boundary, lock risk, data effect, dependency and rollback behavior, plus a future execution checklist. [Post-apply SQL](phase-2-evidence/post-apply-verification.sql) was run read-only against the local stack. All nine new tables have RLS, all nine restrictive session policies are present, private builders are inaccessible to ordinary roles, and `passport-evidence` is private.
 
@@ -117,6 +124,6 @@ No obsolete-data cleanup is proposed or required. **Expected production deletion
 
 ## Remaining risks and next gate
 
-The complete browser suite must be repaired and rerun without weakening assertions. Finish the missing live regression fixture combinations and repeat the combined-head checks after any fixes. Only after those gates pass may this branch be pushed and the requested PR created; stop and report if GitHub assigns a number other than #256. Do not merge it.
+The complete browser suite must be repaired and rerun without weakening assertions. Finish the missing live regression fixture combinations and repeat the combined-head checks after any fixes. Only after those gates pass may this branch be pushed. The owner must also resolve the now-unavailable #256 numbering requirement before PR creation; no new number was assigned to Passport. Do not merge or deploy.
 
 Hosted migration/deployment remains separately blocked. New session checks add database work on private operations; production-scale latency and DDL lock durations were not measured. Catalogue coverage remains the existing governed 11 national/regional entries. External issuer adapters, machine-extraction execution and cryptographic credential issuance remain foundations rather than completed integrations. No hosted smoke test was performed.

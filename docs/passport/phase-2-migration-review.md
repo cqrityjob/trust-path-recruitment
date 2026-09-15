@@ -2,6 +2,8 @@
 
 This review supersedes the migration filenames and combined-head caveats in the historical Phase 1 report. **No hosted migration or data change was executed.** The files below are all pending. No Passport test-data cleanup is proposed: expected production deletions are **0 rows in every table**, including Passport, Profile, CV, jobs, employers and assessments. Hosted row counts were not re-read; local fixture counts are not production counts.
 
+**Late frontier note:** after this verification, final inspection found main at `6fc986af315ff30de4909efb1a076afd39bbd069` (separate PR #256). That PR records the two earlier BESKT migrations as already applied. This branch still has the tested pre-#256 ledger. Reconcile the fresh ledger first; never replay an already applied hosted migration. The sequence below describes dependencies, not permission to replay production history.
+
 ## Required order
 
 Apply only after separate owner approval and release preparation:

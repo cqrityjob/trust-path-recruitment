@@ -3,6 +3,8 @@
 Tested implementation: `1d60f45906465c4f7aafd99896868167521b7159`.
 Included main / PR #255: `5e37060a35415880935c8525bcfb32d2d0f38bc3`.
 
+Final inspection found newer main `6fc986af315ff30de4909efb1a076afd39bbd069` and an already-merged, non-Passport PR #256. That later state is not included in these tests; see `existing-pr-256.json`. No Passport PR was created.
+
 - `results.json`: final exact counts and gate outcome.
 - `delivery-manifest.json`: preserved commits, phase changes and complete Passport file inventory.
 - `browser-results.json` / `browser-failures.md`: every final matrix outcome and actionable failure locations.
