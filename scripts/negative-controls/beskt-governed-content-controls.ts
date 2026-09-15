@@ -1415,6 +1415,20 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "BESKT-DB-READ-CONTRACT",
   },
+  // ---- the identity of PR 2's migration ------------------------------------
+  //
+  // The four limbs of BESKT-DB-MIGRATION guard against the PR 2 migration being
+  // MISSING, DUPLICATED, PARKED or REPLACED. Three of those are facts about the
+  // FILESYSTEM -- a file absent, a second file at the same numeric version, a
+  // copy in supabase/archive/parked-migrations -- and this harness mutates file
+  // CONTENT, restoring byte for byte; it cannot create, rename or delete a file,
+  // so it cannot plant them. Version collisions are independently covered by
+  // migration-duplicate-check.ts, which fails the build on "active version
+  // collisions" and runs in the same CI job.
+  //
+  // The REPLACED limb is content, and it is the one that actually drifted. Both
+  // halves of its conjunction are planted below, so neither can rot into the
+  // other's coverage.
   {
     id: "BGC-NC-SECOND-DOMAIN-CREATOR",
     defect:
@@ -1423,6 +1437,16 @@ const MUTATIONS: readonly Mutation[] = [
     find: "-- ---------------------------------------------------------------------------\n-- 11 · Postflight.",
     replace:
       "CREATE TABLE public.beskt_second_domain (id uuid PRIMARY KEY);\n\n-- ---------------------------------------------------------------------------\n-- 11 · Postflight.",
+    guard: GUARD,
+    expect: "exactly one active migration creates the BESKT content domain",
+  },
+  {
+    id: "BGC-NC-DOMAIN-CREATOR-MOVED",
+    defect:
+      "PR 2's own migration stops being the one that creates the domain — the count would still be one, but it would be the WRONG file, which is how a silent re-establishment elsewhere would look",
+    file: MIG,
+    find: "CREATE TABLE public.beskt_method_versions (",
+    replace: "CREATE TABLE public.beskt_renamed_method_versions (",
     guard: GUARD,
     expect: "BESKT-DB-MIGRATION",
   },
