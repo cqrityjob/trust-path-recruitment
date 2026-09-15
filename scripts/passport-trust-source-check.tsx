@@ -643,7 +643,9 @@ group("GROUP 6 — the method and attribution keys follow the same rule");
       /subjectKind=\{isClaim \? "credential" : "employment"\}/.test(
         code("src/routes/_authenticated.passport.entry.$kind.$entryId.tsx"),
       ) &&
-      /subjectKind: "employment"/.test(code("src/routes/_authenticated.passport.information.tsx")),
+      !code("src/routes/_authenticated.passport.information.tsx").includes(
+        'openEntry("experience", e.id)',
+      ),
   );
   // The recipient SURFACE moved out of the route (PR #197): the holder's
   // preview and the public page have to be the same component or the preview

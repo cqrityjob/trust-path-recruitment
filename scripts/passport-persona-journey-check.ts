@@ -280,9 +280,10 @@ for (const st of ["expired", "revoked", "disputed", "superseded", "draft"] as Li
     );
   }
   assert(
-    readFileSync(join(ROOT, "src/routes/p.$token.tsx"), "utf8").includes(
-      'pt("identity.eligibility")',
-    ),
+    readFileSync(
+      join(ROOT, "src/components/security-passport/live/RecipientPassportView.tsx"),
+      "utf8",
+    ).includes('pt("identity.eligibility")'),
     "the public token page renders the eligibility row",
   );
   const social = readFileSync(join(ROOT, "src/lib/security-passport/social.ts"), "utf8");

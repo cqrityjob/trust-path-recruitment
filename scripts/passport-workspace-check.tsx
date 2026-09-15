@@ -1699,14 +1699,16 @@ group("9 · the route wires it, and nothing else decides trust");
 {
   const route = code(read("src/routes/_authenticated.passport.index.tsx"));
 
-  ck("9.1 the route renders the workspace", route.includes("<PassportWorkspace"));
+  ck("9.1 the route renders the workspace", route.includes("<CredentialWallet"));
   ck(
     "9.2 and derives it with buildPassportWorkspace rather than deciding for itself",
-    route.includes("buildPassportWorkspace("),
+    code(read("src/components/security-passport/CredentialWallet.tsx")).includes(
+      "credentialPassportHolder(",
+    ),
   );
   ck(
     "9.3 the first run still owns an empty Passport",
-    route.includes("deriveFirstRunState") && route.includes('firstRun.screen !== "overview"'),
+    route.includes("snapshot && !snapshot.profile"),
   );
   ck(
     "9.4 the hand-off is a replace, so Back does not loop",
@@ -1714,13 +1716,12 @@ group("9 · the route wires it, and nothing else decides trust");
   );
   ck(
     "9.5 the two reads are independent — a failed verification read is caught on its own",
-    /refreshVerification[\s\S]{0,600}catch/.test(route) &&
+    /const r = await loadReviews[\s\S]*?catch/.test(route) &&
       !/Promise\.all\(\[[\s\S]*?loadRequests/.test(route),
   );
   ck(
     "9.6 a failed OR PENDING verification read reaches the derivation as unknown",
-    route.includes('reviewState === "available" ? attention : null') &&
-      route.includes("reviewState,"),
+    route.includes("reviews={reviews}") && route.includes("reviewState={reviewState}"),
   );
   ck(
     "9.6a and loading is a state of its own, never the failure sentinel",

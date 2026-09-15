@@ -227,9 +227,6 @@ ck(
 );
 
 for (const [kind, sv, en] of [
-  ["employment", "Anställning", "Employment"],
-  ["education", "Utbildning", "Education"],
-  ["course", "Kurs", "Course"],
   ["certification", "Certifiering", "Certification"],
   ["licence", "Licens eller behörighet", "Licence or professional authorisation"],
 ] as const) {

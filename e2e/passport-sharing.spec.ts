@@ -31,7 +31,7 @@ import { test, expect, type Page, type Route } from "@playwright/test";
 import { fromJSON } from "seroval";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
+const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
 const USER_ID = "00000000-0000-4000-8000-0000000000f1";
 const SHOT_DIR = process.env.PASSPORT_SHOTS ?? "";
 const SHOT_TAG = process.env.PASSPORT_SHOTS_TAG ?? "after";

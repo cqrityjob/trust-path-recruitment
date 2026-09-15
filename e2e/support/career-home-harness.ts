@@ -28,7 +28,7 @@ import {
 } from "../../src/lib/professional-identity/fixtures/career-home-fixtures";
 import type { HomePresentationInput } from "../../src/lib/professional-identity/home-presentation";
 export const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-export const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
+export const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
 export const USER_ID = "00000000-0000-4000-8000-000000000001";
 
 // ── THREE IDENTIFIER DOMAINS, THREE VISIBLY DIFFERENT UUIDS ───────────

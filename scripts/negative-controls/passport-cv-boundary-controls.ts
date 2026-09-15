@@ -38,9 +38,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "THE ORIGINAL DEFECT: general education goes back into the Passport's credential table, where it reads as security trust evidence",
     file: INFO,
-    find: '  { kind: "training", titleKey: "claims.type.training" },',
+    find: '  { kind: "certification", titleKey: "claims.type.certification" },',
     replace:
-      '  { kind: "education", titleKey: "claims.type.education" },\n  { kind: "training", titleKey: "claims.type.training" },',
+      '  { kind: "education", titleKey: "claims.type.education" },\n  { kind: "certification", titleKey: "claims.type.certification" },',
     guard: GUARD,
     expect: "education is NOT a Passport credential section",
   },
@@ -49,10 +49,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a security certification drifts the other way onto the profile, so real trust evidence stops being Passport content and escapes its verification path",
     file: EDITOR,
-    find:
-      'const CV_CLAIM_KINDS = [{ kind: "education" as const, titleKey: "claims.type.education" as const }];',
+    find: "const CV_CLAIM_KINDS = [",
     replace:
-      'const CV_CLAIM_KINDS = [\n  { kind: "education" as const, titleKey: "claims.type.education" as const },\n  { kind: "certification" as const, titleKey: "claims.type.certification" as const },\n];',
+      'const CV_CLAIM_KINDS = [\n  { kind: "certification" as const, titleKey: "claims.type.certification" as const },',
     guard: GUARD,
     expect: "certification did NOT follow them",
   },
@@ -63,9 +62,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the skills editor is left mounted on the Passport page as well, so the move is cosmetic and one fact has two editors",
     file: INFO,
-    find: "      <div id=\"sp-credentials\" className=\"scroll-mt-24 space-y-5\">",
+    find: '      <div id="sp-credentials" className="scroll-mt-24 space-y-5">',
     replace:
-      "      <SkillSection claimType=\"language\" types={[]} entries={[]} draft={null} errors={{}} busy={false} onDraftChange={() => {}} onStart={() => {}} onCancel={() => {}} onSave={() => {}} onRemove={() => {}} onOpen={() => {}} />\n      <div id=\"sp-credentials\" className=\"scroll-mt-24 space-y-5\">",
+      '      <SkillSection claimType="language" types={[]} entries={[]} draft={null} errors={{}} busy={false} onDraftChange={() => {}} onStart={() => {}} onCancel={() => {}} onSave={() => {}} onRemove={() => {}} onOpen={() => {}} />\n      <div id="sp-credentials" className="scroll-mt-24 space-y-5">',
     guard: GUARD,
     expect: "no languages or practical-skills editor on the Passport page",
   },
@@ -84,8 +83,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the credential sections and their anchor disappear from the Passport entirely, leaving a page that links away and shows nothing of its own",
     file: INFO,
-    find:
-      "      <div id=\"sp-credentials\" className=\"scroll-mt-24 space-y-5\">\n        {PASSPORT_CLAIM_SECTIONS.map(claimSection)}\n      </div>\n",
+    find: '      <div id="sp-credentials" className="scroll-mt-24 space-y-5">\n        {PASSPORT_CLAIM_SECTIONS.map(claimSection)}\n      </div>\n',
     replace: "",
     guard: GUARD,
     expect: "that anchor is a real id on the Passport page",
@@ -99,7 +97,7 @@ const MUTATIONS: readonly Mutation[] = [
     file: EDITOR,
     find: "function SectionShell({",
     replace:
-      "const saveGeneralClaim = createServerFn({ method: \"POST\" }).handler(async () => null);\n\nfunction SectionShell({",
+      'const saveGeneralClaim = createServerFn({ method: "POST" }).handler(async () => null);\n\nfunction SectionShell({',
     guard: GUARD,
     expect: "defines no server function of its own",
   },
@@ -109,8 +107,7 @@ const MUTATIONS: readonly Mutation[] = [
       "the moved editor copies the fact into the profile table -- precisely the two-writer defect migration 20261007090000 removed",
     file: EDITOR,
     find: "function SectionShell({",
-    replace:
-      "const MIRROR_TABLE = \"security_career_profiles\";\n\nfunction SectionShell({",
+    replace: 'const MIRROR_TABLE = "security_career_profiles";\n\nfunction SectionShell({',
     guard: GUARD,
     expect: "writes nothing into the profile table",
   },
@@ -162,7 +159,8 @@ const MUTATIONS: readonly Mutation[] = [
       "the languages anchor is dropped from the moved editor, so the destination's deep link names nothing and lands at the top of the profile",
     file: EDITOR,
     find: '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "profile-languages" },',
-    replace: '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "languages" },',
+    replace:
+      '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "languages" },',
     guard: GUARD,
     expect: "profile-languages is a real id",
   },
@@ -193,8 +191,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the profile page goes back to saying education and languages LIVE in the Security Passport, so the two pages tell the candidate different things about the same facts",
     file: PROFILE,
-    find:
-      '    "Anställningar och säkerhetsintyg är bevisning i ditt Security Passport och redigeras där. Utbildning, språk och färdigheter hör till din profil och ditt CV, redigeras här nedan och är inte säkerhetsbevisning.',
+    find: '    "Anställningar och säkerhetsintyg är bevisning i ditt Security Passport och redigeras där. Utbildning, språk och färdigheter hör till din profil och ditt CV, redigeras här nedan och är inte säkerhetsbevisning.',
     replace:
       '    "Anställningar, utbildningar, intyg och språk bor i Security Passport. Där kan de granskas och verifieras — vilket en profiluppgift aldrig kan.',
     guard: GUARD,
@@ -205,8 +202,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the English Passport pointer loses the denial the Swedish one keeps, so the boundary is stated to Swedish readers only",
     file: I18N,
-    find:
-      "belong to your profile and CV, are edited there, and are not security evidence.",
+    find: "belong to your profile and CV, are edited there, and are not security evidence.",
     replace: "belong to your profile and CV, and are edited there.",
     guard: GUARD,
     expect: "so does the English one",

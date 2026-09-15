@@ -163,8 +163,10 @@ function PassportEntryRoute() {
   }, [loadPassport, loadEvidence, loadRequests, loadCredentialTypes, loadInternational, pt]);
 
   useEffect(() => {
+    setCorrecting(false);
+    setCorrectionPrefill(null);
     void refresh();
-  }, [refresh]);
+  }, [refresh, entryId]);
 
   // The version chain is claim-only and loaded separately: it is history,
   // and a failure to load it must not take down the entry itself.
