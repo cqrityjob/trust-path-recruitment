@@ -264,10 +264,26 @@ check(
   proofAt > 0 && /RAISE NOTICE 'BESKT_GOVERNED_CONTENT_PROOF ok'/.test(proof),
   "BESKT-DB-MIGRATION: the migration ends in the BESKT_GOVERNED_CONTENT_PROOF ok postflight",
 );
-check(
-  readdirSync(join(ROOT, "supabase/migrations")).filter((f) => /beskt/i.test(f)).length === 1,
-  "BESKT-DB-MIGRATION: exactly one BESKT migration exists in the active path",
-);
+// The property this protects is that PR 2's content DOMAIN is built in one
+// place -- not that the word "beskt" appears in exactly one filename. Counting
+// filenames was a proxy for it, and the proxy broke the moment a later,
+// separately reviewed BESKT migration was added (20261118090000, the governed
+// content-authoring doors), which creates no table and redefines nothing here.
+// So read the real thing: exactly one active migration CREATES the beskt_
+// tables, and it is this one.
+{
+  const creators = readdirSync(join(ROOT, "supabase/migrations"))
+    .filter((f) => f.endsWith(".sql"))
+    .filter((f) =>
+      readFileSync(join(ROOT, "supabase/migrations", f), "utf8").includes(
+        "CREATE TABLE public.beskt_",
+      ),
+    );
+  check(
+    creators.length === 1 && creators[0] === MIGRATION_NAME,
+    `BESKT-DB-MIGRATION: exactly one active migration creates the BESKT content domain, and it is ${MIGRATION_NAME} (found: ${creators.join(", ") || "none"})`,
+  );
+}
 check(
   !/CREATE OR REPLACE FUNCTION public\.scp_interview_pack_content_hash\(/.test(sql),
   "BESKT-DB-MIGRATION: the role-interview content hash is not redefined (every recorded review hash stays checkable)",

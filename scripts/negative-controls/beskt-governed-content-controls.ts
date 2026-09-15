@@ -1415,6 +1415,17 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "BESKT-DB-READ-CONTRACT",
   },
+  {
+    id: "BGC-NC-SECOND-DOMAIN-CREATOR",
+    defect:
+      "a second active migration starts creating BESKT content tables, so the PR 2 domain is no longer built in one reviewable place",
+    file: "supabase/migrations/20261118090000_beskt_governed_content_authoring.sql",
+    find: "-- ---------------------------------------------------------------------------\n-- 11 · Postflight.",
+    replace:
+      "CREATE TABLE public.beskt_second_domain (id uuid PRIMARY KEY);\n\n-- ---------------------------------------------------------------------------\n-- 11 · Postflight.",
+    guard: GUARD,
+    expect: "BESKT-DB-MIGRATION",
+  },
 ];
 
 runControls("beskt-governed-content", MUTATIONS);
