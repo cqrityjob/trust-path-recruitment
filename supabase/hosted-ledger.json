@@ -13,8 +13,8 @@
   ],
   "source": "Supabase management API list_migrations, read-only",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-14T18:53:00Z",
-  "readBy": "Post-merge read-only verification for the interview-method library tenant read (pilot blocker 2): supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #241 merged to main as 7e338f2a43fbfe91b2c26228f04d7b3487d67d61. 280 rows. The previous 279-row snapshot is proved unchanged rather than assumed: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261115090000 is 9c77cb921cae6a46a233ffb5b9cd308c, which is exactly the all-rows digest recorded in the previous snapshot and the digest of the committed 279-row file, so no earlier row was rewritten. Over all 280 rows production gives cbe34f3fef140aa15c8810e8b8169425. The single added row is the canonical identity 20261115090000 / scp_interview_method_library_tenant_read -- the migration filename's own version and slug, not a generated uuid -- applied automatically by the official Supabase GitHub integration on merge; this evidence session issued no hosted write.",
+  "readAt": "2026-09-15T17:30:00Z",
+  "readBy": "Post-merge read-only verification for BESKT PR 6 and PR 7: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #254 merged to main as 25470f4e62b7ea3f0f7f360c5f4ae818b440a2f7 and PR #255 merged as 5e37060 (head f9e79da05cb3f842ccb8c3b19279d9ed3abecac5). 283 rows. The previous 281-row snapshot is proved unchanged rather than assumed: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261117090000 and 20261118090000 is 3959c7c2e0a9bb8d33f37b7de5058efc, which is exactly the digest of the previously committed 281-row file, so no earlier row was rewritten. Over all 283 rows production gives 6e7b26cd3c434345d1b9f29ffb637630. The two added rows carry the canonical identities 20261117090000 / bcp_conduct_prompts_and_report and 20261118090000 / beskt_governed_content_authoring -- each migration filename's own version and slug, not a generated uuid, so no canonical-to-hosted alias is required and a clean replay executes nothing twice. Both were applied automatically by the official Supabase GitHub integration on merge; this evidence session issued no hosted write and re-ran neither migration.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1139,6 +1139,14 @@
     {
       "version": "20261116090000",
       "name": "cd_outstanding_reviews_operator_only"
+    },
+    {
+      "version": "20261117090000",
+      "name": "bcp_conduct_prompts_and_report"
+    },
+    {
+      "version": "20261118090000",
+      "name": "beskt_governed_content_authoring"
     }
   ]
 }

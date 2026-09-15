@@ -627,11 +627,26 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "AUT-NC-STATE-CLAIMS-APPLIED",
     defect:
-      "release-state.json claims the migration is applied to production when nothing established that",
+      "release-state.json stops saying the migration is applied, so the repository and production disagree and an application PR that depends on it would be blocked for no reason",
     file: STATE,
-    find: '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "pending",',
+    find: '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "applied",',
     replace:
       '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "unverified",',
+    guard: GUARD,
+    expect: "AUTHORING-REGISTRATION",
+  },
+  {
+    // The half that matters most now: "applied" is a statement about
+    // production, and the only thing separating it from a guess is the
+    // evidence beside it. An entry that cannot say how it knows is exactly the
+    // entry that goes stale next.
+    id: "AUT-NC-STATE-DROPS-EVIDENCE",
+    defect:
+      "the applied entry keeps its claim but loses the evidence naming the hosted version, slug and project it was verified against",
+    file: STATE,
+    find: '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "applied",\n      "evidenceSource": "Applied',
+    replace:
+      '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "applied",\n      "evidenceSourceRemoved": "Applied',
     guard: GUARD,
     expect: "AUTHORING-REGISTRATION",
   },
@@ -650,14 +665,13 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the migration comes off the owner-level pending list while release-state.json still says pending",
     file: FRONTIER,
-    // The anchor is this migration's own ELEMENT LINE, not the array literal.
-    // Prettier collapses a one-entry array onto one line and expands a
-    // two-entry one, so an anchor written for either shape breaks the moment
-    // another migration becomes pending -- which it did, when #254 merged and
-    // 20261117090000 joined the list. The element line is the same in both
-    // shapes, and the filename occurs exactly once in this file.
-    find: '  "20261118090000_beskt_governed_content_authoring.sql",\n',
-    replace: "",
+    // This migration is APPLIED now, so the defect inverts: putting it back
+    // on the owner-level pending list would contradict release-state.json,
+    // which records it as applied with hosted evidence. The anchor is the
+    // empty list Prettier produces when nothing is pending.
+    find: "const expectedPending: string[] = [];",
+    replace:
+      'const expectedPending: string[] = ["20261118090000_beskt_governed_content_authoring.sql"];',
     guard: GUARD,
     expect: "AUTHORING-REGISTRATION",
   },

@@ -293,9 +293,12 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the evidence names a database that is not the one canonical hosted project, so it proves nothing about wrygicdfxwjnrugduxnt",
     file: STATE,
-    find: '"evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt by the official',
+    // Anchored on THIS migration's own entry. Several entries now open their
+    // evidence with the same sentence, so the bare prefix is ambiguous and the
+    // harness refuses it -- correctly: an ambiguous anchor is a broken control.
+    find: '"file": "20261115090000_scp_interview_method_library_tenant_read.sql",\n      "hostedState": "applied",\n      "evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt by the official',
     replace:
-      '"evidenceSource": "Applied to owner production lovable-cloud-substitute by the official',
+      '"file": "20261115090000_scp_interview_method_library_tenant_read.sql",\n      "hostedState": "applied",\n      "evidenceSource": "Applied to owner production lovable-cloud-substitute by the official',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },
@@ -305,17 +308,15 @@ const MUTATIONS: readonly Mutation[] = [
       "the frontier selection check still expects the migration pending after production has applied it, which would mask the next genuinely stuck migration behind a stale expectation",
     file: FRONTIER,
     // The anchor tracks the list's CURRENT shape, which moves as migrations are
-    // applied and new ones become pending -- it has been the empty list, a
-    // one-entry list and a two-entry list across the last few PRs. Today it
-    // ends with BESKT PR 7 (20261118090000); BESKT PR 6 (20261117090000) sits
-    // above it, merged as #254 but not yet applied. The planted defect never
-    // changes: this APPLIED migration goes back on the frontier list, where a
-    // resolved name would hide the next genuinely stuck one. Planting it BESIDE
-    // legitimately pending names is the stronger control -- it proves the guard
-    // notices a stale entry even when the list is not supposed to be empty.
-    find: '  "20261118090000_beskt_governed_content_authoring.sql",\n];',
+    // applied and new ones become pending. Today it is EMPTY again: BESKT PR 6
+    // and PR 7 were applied by the official integration on merge and their
+    // hosted evidence is recorded, so both came off the list in that same
+    // change. The planted defect never changes: this APPLIED migration goes
+    // back on the frontier list, where a resolved name would hide the next
+    // genuinely stuck one.
+    find: "const expectedPending: string[] = [];",
     replace:
-      '  "20261118090000_beskt_governed_content_authoring.sql",\n  "20261115090000_scp_interview_method_library_tenant_read.sql",\n];',
+      'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },

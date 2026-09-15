@@ -697,6 +697,7 @@ const proof = postflightText(bare);
     frontier?: Array<{
       file?: string;
       hostedState?: string;
+      evidenceSource?: string;
       verify?: unknown;
       rollback?: unknown;
       introduces?: Array<{ object?: string }>;
@@ -708,8 +709,19 @@ const proof = postflightText(bare);
     "AUTHORING-REGISTRATION: the migration is declared in release-state.json",
   );
   check(
-    entry?.hostedState === "pending",
-    "AUTHORING-REGISTRATION: and declared PENDING — it has not been applied to the hosted database",
+    entry?.hostedState === "applied",
+    "AUTHORING-REGISTRATION: and declared APPLIED — the official Supabase GitHub integration applied it to production when PR #255 merged",
+  );
+  check(
+    typeof entry?.evidenceSource === "string" && entry.evidenceSource.length > 0,
+    'AUTHORING-REGISTRATION: and an applied entry carries evidence, because "applied" without it is exactly the unverified claim this stack exists to prevent',
+  );
+  check(
+    typeof entry?.evidenceSource === "string" &&
+      entry.evidenceSource.includes("20261118090000") &&
+      entry.evidenceSource.includes("beskt_governed_content_authoring") &&
+      entry.evidenceSource.includes("wrygicdfxwjnrugduxnt"),
+    "AUTHORING-REGISTRATION: and that evidence names the real hosted version, the recorded name and the project it was verified against",
   );
   check(
     entry?.verify !== undefined && entry?.rollback !== undefined,
@@ -723,10 +735,12 @@ const proof = postflightText(bare);
     "AUTHORING-REGISTRATION: and declares every object it introduces",
   );
   check(
-    (
+    // Once applied, the migration must NOT be on the owner-level pending list:
+    // a resolved name left there hides the next genuinely stuck migration.
+    !(
       /const expectedPending: string\[\] = \[([\s\S]*?)\];/.exec(read(FRONTIER))?.[1] ?? ""
     ).includes(MIGRATION_NAME),
-    "AUTHORING-REGISTRATION: and is on the owner-level pending list, so the two files cannot disagree about production",
+    "AUTHORING-REGISTRATION: and is no longer declared pending on the release frontier, so the two files cannot disagree about production",
   );
 }
 
@@ -751,7 +765,7 @@ const proof = postflightText(bare);
   walk(join(ROOT, "src"));
   check(
     offenders.length === 0,
-    `AUTHORING-SCHEMA-FIRST: no application code names an object of this pending migration (${offenders.slice(0, 3).join("; ") || "none"})`,
+    `AUTHORING-SCHEMA-FIRST: no application code named an object of this migration while it was pending; it is applied now, so the admin UI that consumes these doors is release-eligible (${offenders.slice(0, 3).join("; ") || "none"})`,
   );
   check(
     read(DOMAIN).includes("CREATE OR REPLACE FUNCTION public.beskt_guard_child_row()"),

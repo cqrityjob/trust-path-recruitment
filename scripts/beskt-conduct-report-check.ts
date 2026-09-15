@@ -1071,6 +1071,7 @@ function insertIndex(body: string): number {
     frontier?: Array<{
       file?: string;
       hostedState?: string;
+      evidenceSource?: string;
       verify?: unknown;
       rollback?: unknown;
       introduces?: Array<{ object?: string }>;
@@ -1082,8 +1083,19 @@ function insertIndex(body: string): number {
     "REPORT-REGISTRATION: the migration is declared in release-state.json",
   );
   check(
-    entry?.hostedState === "pending",
-    "REPORT-REGISTRATION: and declared PENDING — it has not been applied to the hosted database, and saying otherwise without evidence is the exact claim this stack exists to prevent",
+    entry?.hostedState === "applied",
+    "REPORT-REGISTRATION: and declared APPLIED — the official Supabase GitHub integration applied it to production when PR #254 merged",
+  );
+  check(
+    typeof entry?.evidenceSource === "string" && entry.evidenceSource.length > 0,
+    'REPORT-REGISTRATION: and an applied entry carries evidence, because "applied" without it is exactly the unverified claim this stack exists to prevent',
+  );
+  check(
+    typeof entry?.evidenceSource === "string" &&
+      entry.evidenceSource.includes("20261117090000") &&
+      entry.evidenceSource.includes("bcp_conduct_prompts_and_report") &&
+      entry.evidenceSource.includes("wrygicdfxwjnrugduxnt"),
+    "REPORT-REGISTRATION: and that evidence names the real hosted version, the recorded name and the project it was verified against",
   );
   check(
     entry?.verify !== undefined && entry?.rollback !== undefined,
@@ -1103,10 +1115,13 @@ function insertIndex(body: string): number {
 
   const frontier = read(FRONTIER);
   check(
-    (/const expectedPending: string\[\] = \[([\s\S]*?)\];/.exec(frontier)?.[1] ?? "").includes(
+    // The mirror of the assertion above: once applied, the migration must NOT
+    // be on the owner-level pending list. A resolved name left there hides the
+    // next genuinely stuck migration behind an expectation.
+    !(/const expectedPending: string\[\] = \[([\s\S]*?)\];/.exec(frontier)?.[1] ?? "").includes(
       MIGRATION_NAME,
     ),
-    "REPORT-REGISTRATION: and is on the owner-level pending list, so the release frontier and release-state.json cannot disagree about production",
+    "REPORT-REGISTRATION: and is no longer declared pending on the release frontier, so the two files cannot disagree about production",
   );
 }
 
@@ -1137,7 +1152,7 @@ function insertIndex(body: string): number {
   walk(join(ROOT, "src"));
   check(
     offenders.length === 0,
-    `REPORT-SCHEMA-FIRST: no application code names an object of this pending migration (${offenders.slice(0, 3).join("; ") || "none"})`,
+    `REPORT-SCHEMA-FIRST: no application code named an object of this migration while it was pending; it is applied now, so the application PR that consumes it is release-eligible (${offenders.slice(0, 3).join("; ") || "none"})`,
   );
 }
 
