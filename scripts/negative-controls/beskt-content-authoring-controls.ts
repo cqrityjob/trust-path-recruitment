@@ -650,10 +650,14 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the migration comes off the owner-level pending list while release-state.json still says pending",
     file: FRONTIER,
-    // Prettier collapses a one-entry array onto a single line, so the anchor is
-    // the array literal itself rather than an indented element.
-    find: '["20261118090000_beskt_governed_content_authoring.sql"]',
-    replace: "[]",
+    // The anchor is this migration's own ELEMENT LINE, not the array literal.
+    // Prettier collapses a one-entry array onto one line and expands a
+    // two-entry one, so an anchor written for either shape breaks the moment
+    // another migration becomes pending -- which it did, when #254 merged and
+    // 20261117090000 joined the list. The element line is the same in both
+    // shapes, and the filename occurs exactly once in this file.
+    find: '  "20261118090000_beskt_governed_content_authoring.sql",\n',
+    replace: "",
     guard: GUARD,
     expect: "AUTHORING-REGISTRATION",
   },
