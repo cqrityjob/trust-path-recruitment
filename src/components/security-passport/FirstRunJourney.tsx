@@ -249,32 +249,34 @@ export function ChooseMeritScreen({ onChoose }: { onChoose: (kind: FirstMeritKin
             card that happens to look pressable — the whole tile is the
             button, so a tap anywhere on it does what it looks like it does. */}
         <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-          {FIRST_MERIT_KINDS.map((kind) => {
-            const meta = KIND_META[kind];
-            const Icon = meta.icon;
-            return (
-              <li key={kind}>
-                <button
-                  type="button"
-                  data-merit-kind={kind}
-                  onClick={() => onChoose(kind)}
-                  className="group flex h-full w-full items-start gap-3 rounded-xl border border-border bg-background p-4 text-left transition-colors hover:border-accent hover:bg-accent/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground transition-colors group-hover:bg-accent/15">
-                    <Icon aria-hidden="true" className="h-4.5 w-4.5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-foreground">
-                      {pt(meta.labelKey)}
+          {FIRST_MERIT_KINDS.filter((kind) => kind === "certification" || kind === "licence").map(
+            (kind) => {
+              const meta = KIND_META[kind];
+              const Icon = meta.icon;
+              return (
+                <li key={kind}>
+                  <button
+                    type="button"
+                    data-merit-kind={kind}
+                    onClick={() => onChoose(kind)}
+                    className="group flex h-full w-full items-start gap-3 rounded-xl border border-border bg-background p-4 text-left transition-colors hover:border-accent hover:bg-accent/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground transition-colors group-hover:bg-accent/15">
+                      <Icon aria-hidden="true" className="h-4.5 w-4.5" />
                     </span>
-                    <span className="mt-0.5 block text-sm leading-relaxed text-muted-foreground">
-                      {pt(meta.hintKey)}
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-foreground">
+                        {pt(meta.labelKey)}
+                      </span>
+                      <span className="mt-0.5 block text-sm leading-relaxed text-muted-foreground">
+                        {pt(meta.hintKey)}
+                      </span>
                     </span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+                  </button>
+                </li>
+              );
+            },
+          )}
         </ul>
       </Card>
     </div>

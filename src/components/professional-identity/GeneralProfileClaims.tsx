@@ -1,46 +1,6 @@
-// Education, languages and practical skills — edited where they belong.
-//
-// ── WHY THIS MOVED, AND WHAT DID NOT MOVE WITH IT ──────────────────────
-//
-// The owner's pilot review asked for a Security Passport that is short and
-// focused: security trust evidence, and nothing else. Relabelling these
-// sections inside /passport/information was not enough — a candidate still
-// went to the Passport to record their degree and the languages they speak.
-// So the EDITORS move to the canonical profile, which is where those facts
-// belong.
-//
-// The DATA does not move, and must not. Every row here is an `sp_claims`
-// row and stays one:
-//
-//   * sp_claims is where a fact can carry a document, a review and a
-//     verification state. That is why education and languages were put
-//     there, and it is still true after this change.
-//   * profile-destinations.ts records the owner decision behind migration
-//     20261007090000 in so many words: copying a Passport fact into a
-//     profile table "would recreate precisely the two-writer defect it
-//     removed".
-//   * cv/source-bundle.ts already projects these same rows into the CV
-//     through EDUCATION_CLAIM_TYPES, LANGUAGE_CLAIM_TYPES and
-//     SKILL_CLAIM_TYPES. Moving the editor does not disturb that: the CV
-//     goes on reading exactly the records this screen writes.
-//
-// ── ONE EDITOR, ONE WRITE PATH ─────────────────────────────────────────
-//
-// Nothing here is a new implementation. The forms are the SAME
-// `ClaimEntryForm` and `SkillSection` the Passport uses for its own claim
-// kinds, and the writes are the SAME `saveClaimEntry`, `saveSkillEntry` and
-// `removeEntry` server functions. What changed is where they are mounted
-// and for WHICH claim kinds:
-//
-//   education, language, practical_skill   → here, the profile
-//   training, certification,               → /passport/information
-//   specialisation, professional_membership
-//
-// The two sets are disjoint, so no claim kind has two editors.
-//
-// Driving licence needs no special case and no new field: it is the
-// `driving_licence` code of the `practical_skill` claim type (Körkort, on
-// the category scale), so it arrives with the practical skills below.
+// Profile/CV owns general education, courses, specialisations, memberships,
+// languages and skills. Credential-coded rows retain the governed Passport editor.
+// All writes use the established single source; evidence links remain valid.
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -79,7 +39,20 @@ import type { AssertionLevel, LifecycleState } from "@/lib/security-passport/typ
 /** The claim kinds this surface owns. Education only: a security course is
  *  `training` and a security certificate is `certification`, and both stay
  *  in the Passport. */
-const CV_CLAIM_KINDS = [{ kind: "education" as const, titleKey: "claims.type.education" as const }];
+const CV_CLAIM_KINDS = [
+  { kind: "education", titleKey: "claims.type.education", anchor: "profile-education" },
+  { kind: "training", titleKey: "claims.type.training", anchor: "profile-training" },
+  {
+    kind: "specialisation",
+    titleKey: "claims.type.specialisation",
+    anchor: "profile-specialisation",
+  },
+  {
+    kind: "professional_membership",
+    titleKey: "claims.type.professional_membership",
+    anchor: "profile-professional_membership",
+  },
+] as const;
 
 const SKILL_SECTIONS = [
   { kind: "language" as const, titleKey: "info.languages" as const, anchor: "profile-languages" },
@@ -131,9 +104,10 @@ export function GeneralProfileClaims({ className = "" }: { className?: string })
   const [skillDrafts, setSkillDrafts] = useState<
     Record<"language" | "practical_skill", SkillDraft | null>
   >({ language: null, practical_skill: null });
-  const [skillErrors, setSkillErrors] = useState<
-    Record<string, Record<string, PassportCopyKey>>
-  >({ language: {}, practical_skill: {} });
+  const [skillErrors, setSkillErrors] = useState<Record<string, Record<string, PassportCopyKey>>>({
+    language: {},
+    practical_skill: {},
+  });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -155,8 +129,12 @@ export function GeneralProfileClaims({ className = "" }: { className?: string })
 
   useEffect(() => {
     void refresh();
-    void loadSkillTypes({ data: undefined }).then(setSkillTypes).catch(() => {});
-    void loadJurisdictions({ data: undefined }).then(setJurisdictions).catch(() => {});
+    void loadSkillTypes({ data: undefined })
+      .then(setSkillTypes)
+      .catch(() => {});
+    void loadJurisdictions({ data: undefined })
+      .then(setJurisdictions)
+      .catch(() => {});
   }, [refresh, loadSkillTypes, loadJurisdictions]);
 
   async function commitClaim(draft: ClaimDraft) {
@@ -255,12 +233,14 @@ export function GeneralProfileClaims({ className = "" }: { className?: string })
       ) : null}
 
       {CV_CLAIM_KINDS.map((section) => {
-        const rows = claims.filter((c) => c.claimType === section.kind);
+        const rows = claims.filter(
+          (c) => c.claimType === section.kind && c.credentialCode === null,
+        );
         const isEditingThis = editing?.claimType === section.kind;
         return (
           <SectionShell
             key={section.kind}
-            id="profile-education"
+            id={section.anchor}
             icon={<GraduationCap aria-hidden="true" className="h-4 w-4" />}
             title={pt(section.titleKey)}
           >

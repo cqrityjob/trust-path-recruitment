@@ -16,6 +16,7 @@ import { Section } from "@/components/site/Section";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
+import { PassportOwnership } from "@/components/security-passport/PassportOwnership";
 
 export const Route = createFileRoute("/_authenticated/passport")({
   ssr: false,
@@ -106,6 +107,7 @@ function PassportShell() {
           </nav>
         )}
 
+        {!firstRun && <PassportOwnership />}
         <Outlet />
       </Section>
     </SiteLayout>

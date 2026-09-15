@@ -250,7 +250,16 @@ function renderedAnchors(file: string, src: string): AnchorHit[] {
       // seen from the inside, and counting both reported every table-driven
       // anchor as rendered twice.
       if (!/^[A-Z]/.test(tagNameOf(tag))) continue;
-      for (const anchor of declared) out.push({ anchor, file, tag, src });
+      // Resolve the particular mapped table. Several independent section
+      // lists now use section.anchor; counting every declared anchor at
+      // every map site invents duplicate DOM ids.
+      const prefix = src.slice(0, m.index);
+      const mapNames = [...prefix.matchAll(/([A-Z_]+)\.map\(/g)];
+      const name = mapNames.at(-1)?.[1];
+      const declaration = name ? src.slice(src.indexOf("const " + name)) : "";
+      const table = declaration.slice(0, declaration.indexOf("]"));
+      const local = [...table.matchAll(/\banchor:\s*"([A-Za-z0-9_-]+)"/g)].map((hit) => hit[1]!);
+      for (const anchor of local.length ? local : declared) out.push({ anchor, file, tag, src });
     }
   }
 
