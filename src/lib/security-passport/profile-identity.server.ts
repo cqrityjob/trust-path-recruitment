@@ -18,7 +18,7 @@ export async function readPassportProfileIdentity(
   ]);
   if (profile.error || career.error) throw new Error("Passport profile identity unavailable");
   const slug = career.data?.current_profession_slug;
-  if (!slug || career.data?.current_profession_other?.trim()) {
+  if (!slug) {
     const title = career.data?.current_profession_other?.trim() || null;
     return { displayName: profile.data?.display_name ?? null, titleSv: title, titleEn: title };
   }
@@ -31,7 +31,9 @@ export async function readPassportProfileIdentity(
   if (profession.error) throw new Error("Passport profession catalogue unavailable");
   return {
     displayName: profile.data?.display_name ?? null,
-    titleSv: profession.data?.title_sv ?? null,
-    titleEn: profession.data?.title_en ?? null,
+    titleSv:
+      profession.data?.title_sv?.trim() || career.data?.current_profession_other?.trim() || null,
+    titleEn:
+      profession.data?.title_en?.trim() || career.data?.current_profession_other?.trim() || null,
   };
 }
