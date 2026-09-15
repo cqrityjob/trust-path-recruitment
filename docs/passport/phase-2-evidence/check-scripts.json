@@ -1,0 +1,603 @@
+[
+  {
+    "name": "admin-employer-status-guard:check",
+    "status": 0
+  },
+  {
+    "name": "public-assessment-auth:check",
+    "status": 0
+  },
+  {
+    "name": "passport-error-scope:check",
+    "status": 0
+  },
+  {
+    "name": "passport-reviewer-decision:check",
+    "status": 0
+  },
+  {
+    "name": "passport-employer-verification:check",
+    "status": 0
+  },
+  {
+    "name": "passport-employer-matching:check",
+    "status": 0
+  },
+  {
+    "name": "passport-decision-truthfulness:check",
+    "status": 0
+  },
+  {
+    "name": "passport-trust-source:check",
+    "status": 0
+  },
+  {
+    "name": "passport-sharing-flow:check",
+    "status": 0
+  },
+  {
+    "name": "my-career-gate:check",
+    "status": 0
+  },
+  {
+    "name": "my-career-dashboard:check",
+    "status": 0
+  },
+  {
+    "name": "profile-section-navigation:check",
+    "status": 0
+  },
+  {
+    "name": "my-career-experience:check",
+    "status": 0
+  },
+  {
+    "name": "my-career-premium-overview:check",
+    "status": 0
+  },
+  {
+    "name": "passport-share-transport:check",
+    "status": 0
+  },
+  {
+    "name": "interview-method-tenant-read:check",
+    "status": 0
+  },
+  {
+    "name": "cd-outstanding-reviews:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-architecture:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-governed-content:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-conduct-report:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-content-authoring:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-candidate-preparation:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-interview-case-bridge:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-interview-conduct:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-interview-tool:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-notice-copy:check",
+    "status": 0
+  },
+  {
+    "name": "beskt-candidate-preparation-render:check",
+    "status": 0
+  },
+  {
+    "name": "passport-share-gateway-transport:check",
+    "status": 0
+  },
+  {
+    "name": "passport-share-gateway-schema:check",
+    "status": 0
+  },
+  {
+    "name": "passport-skill-contract:check",
+    "status": 0
+  },
+  {
+    "name": "v31-evidence-payload:check",
+    "status": 0
+  },
+  {
+    "name": "passport-separation:check",
+    "status": 0
+  },
+  {
+    "name": "application-dialog-scroll:check",
+    "status": 0
+  },
+  {
+    "name": "kg:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery:check",
+    "status": 0
+  },
+  {
+    "name": "cie:check",
+    "status": 0
+  },
+  {
+    "name": "career-profession-bridge:check",
+    "status": 0
+  },
+  {
+    "name": "employer-taxonomy:check",
+    "status": 0
+  },
+  {
+    "name": "invitation-email-guard:check",
+    "status": 0
+  },
+  {
+    "name": "passport-fixture:check",
+    "status": 0
+  },
+  {
+    "name": "passport-first-run:check",
+    "status": 0
+  },
+  {
+    "name": "passport-workspace:check",
+    "status": 0
+  },
+  {
+    "name": "trust-surface:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-v31-professions:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-v31-golden-personas:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-recommendation:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-profession-differentiation:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-claim:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-conversion:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-canonical-result:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-recommendation-integrity:check",
+    "status": 0
+  },
+  {
+    "name": "career-journey:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-career-card:check",
+    "status": 0
+  },
+  {
+    "name": "prepilot-candidate-surface:check",
+    "status": 0
+  },
+  {
+    "name": "academy-parity:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-report:check",
+    "status": 0
+  },
+  {
+    "name": "question-library:check",
+    "status": 0
+  },
+  {
+    "name": "employer-job-form:check",
+    "status": 0
+  },
+  {
+    "name": "security-competency-separation:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-v31:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-v32-content:check",
+    "status": 0
+  },
+  {
+    "name": "career-discovery-v32-equivalence:check",
+    "status": 0
+  },
+  {
+    "name": "assessment-assignment:check",
+    "status": 0
+  },
+  {
+    "name": "assessment-reliability:check",
+    "status": 0
+  },
+  {
+    "name": "assessment-panels-render:check",
+    "status": 0
+  },
+  {
+    "name": "assessment-language-contract:check",
+    "status": 0
+  },
+  {
+    "name": "vaktare-pilot-truth:check",
+    "status": 0
+  },
+  {
+    "name": "vaktare-content-quality:check",
+    "status": 0
+  },
+  {
+    "name": "vaktare-self-report-quality:check",
+    "status": 0
+  },
+  {
+    "name": "trust-evidence-report:check",
+    "status": 0
+  },
+  {
+    "name": "trust-next-step-parity:check",
+    "status": 0
+  },
+  {
+    "name": "legacy-assessment-routes:check",
+    "status": 0
+  },
+  {
+    "name": "deploy-plan:check",
+    "status": 0
+  },
+  {
+    "name": "deploy-plan-negative:check",
+    "status": 0
+  },
+  {
+    "name": "migrations:check",
+    "status": 0
+  },
+  {
+    "name": "migrations-duplicate:check",
+    "status": 0
+  },
+  {
+    "name": "schema-first-release:check",
+    "status": 1
+  },
+  {
+    "name": "release-parity:check",
+    "status": 0
+  },
+  {
+    "name": "release-frontier:check",
+    "status": 0
+  },
+  {
+    "name": "auth-provider-target:check",
+    "status": 0
+  },
+  {
+    "name": "backend-target-lock:check",
+    "status": 0
+  },
+  {
+    "name": "passport-title-derivation:check",
+    "status": 0
+  },
+  {
+    "name": "passport-identity-engine:check",
+    "status": 0
+  },
+  {
+    "name": "passport-persona-journey:check",
+    "status": 0
+  },
+  {
+    "name": "passport-credential-form:check",
+    "status": 0
+  },
+  {
+    "name": "passport-date-validation:check",
+    "status": 0
+  },
+  {
+    "name": "passport-pilot-bugfix:check",
+    "status": 0
+  },
+  {
+    "name": "passport-profile-basics:check",
+    "status": 0
+  },
+  {
+    "name": "passport-market-profiles:check",
+    "status": 0
+  },
+  {
+    "name": "passport-market-catalogue:check",
+    "status": 0
+  },
+  {
+    "name": "passport-schema-drift:check",
+    "status": 0
+  },
+  {
+    "name": "passport-global-certification:check",
+    "status": 0
+  },
+  {
+    "name": "passport-private-reference:check",
+    "status": 0
+  },
+  {
+    "name": "passport-classifier-behaviour:check",
+    "status": 0
+  },
+  {
+    "name": "passport-governed-issuer:check",
+    "status": 0
+  },
+  {
+    "name": "passport-regulatory-claim:check",
+    "status": 0
+  },
+  {
+    "name": "passport-scope-surface:check",
+    "status": 0
+  },
+  {
+    "name": "mcp-exposure:check",
+    "status": 0
+  },
+  {
+    "name": "admin-portal:check",
+    "status": 0
+  },
+  {
+    "name": "admin-lifecycle:check",
+    "status": 0
+  },
+  {
+    "name": "admin-error-contract:check",
+    "status": 0
+  },
+  {
+    "name": "review-contribution:check",
+    "status": 0
+  },
+  {
+    "name": "employer-process-continuity:check",
+    "status": 0
+  },
+  {
+    "name": "employer-assessment-release:check",
+    "status": 0
+  },
+  {
+    "name": "employer-final-report:check",
+    "status": 0
+  },
+  {
+    "name": "interview-context-governance:check",
+    "status": 0
+  },
+  {
+    "name": "employer-recruitment-flow:check",
+    "status": 0
+  },
+  {
+    "name": "employer-journey:check",
+    "status": 0
+  },
+  {
+    "name": "employer-registration:check",
+    "status": 0
+  },
+  {
+    "name": "employer-library-purpose:check",
+    "status": 0
+  },
+  {
+    "name": "employer-decision-error:check",
+    "status": 0
+  },
+  {
+    "name": "employer-job-lifecycle:check",
+    "status": 0
+  },
+  {
+    "name": "employer-hire-continuity:check",
+    "status": 0
+  },
+  {
+    "name": "employer-other-taxonomy:check",
+    "status": 0
+  },
+  {
+    "name": "review-proposal-contract:check",
+    "status": 0
+  },
+  {
+    "name": "candidate-notification:check",
+    "status": 0
+  },
+  {
+    "name": "emma-uat:check",
+    "status": 0
+  },
+  {
+    "name": "passport-recipient-card:check",
+    "status": 0
+  },
+  {
+    "name": "header-entry:check",
+    "status": 0
+  },
+  {
+    "name": "employer-landing:check",
+    "status": 0
+  },
+  {
+    "name": "public-homepage:check",
+    "status": 0
+  },
+  {
+    "name": "recruitment-decision-support:check",
+    "status": 0
+  },
+  {
+    "name": "recruitment-report-render:check",
+    "status": 0
+  },
+  {
+    "name": "sql-security:check",
+    "status": 0
+  },
+  {
+    "name": "interview-pack-contract:check",
+    "status": 0
+  },
+  {
+    "name": "interview-pack-render:check",
+    "status": 0
+  },
+  {
+    "name": "interview-ai-eval:check",
+    "status": 0
+  },
+  {
+    "name": "interview-ux-contract:check",
+    "status": 0
+  },
+  {
+    "name": "interview-runtime-contract:check",
+    "status": 0
+  },
+  {
+    "name": "interview-context-bridge:check",
+    "status": 0
+  },
+  {
+    "name": "interview-context-bridge-history:check",
+    "status": 0,
+    "note": "Rerun after the real local report journey finalized a report: 7 passed, 0 failed."
+  },
+  {
+    "name": "interview-finalisation-capability:check",
+    "status": 0
+  },
+  {
+    "name": "interview-recruiter-workflow:check",
+    "status": 0
+  },
+  {
+    "name": "interview-finalisation-rpc:check",
+    "status": 0
+  },
+  {
+    "name": "interview-ai-provider:check",
+    "status": 0
+  },
+  {
+    "name": "interview-evidence-reliability:check",
+    "status": 0
+  },
+  {
+    "name": "interview-gold-independence:check",
+    "status": 0
+  },
+  {
+    "name": "recruitment-assessment-ux:check",
+    "status": 0
+  },
+  {
+    "name": "career-center:check",
+    "status": 0
+  },
+  {
+    "name": "professional-identity:check",
+    "status": 0
+  },
+  {
+    "name": "cv-application-source:check",
+    "status": 0
+  },
+  {
+    "name": "cv-pilot:check",
+    "status": 0
+  },
+  {
+    "name": "cv-provider-minimisation:check",
+    "status": 0
+  },
+  {
+    "name": "candidate-app-navigation:check",
+    "status": 0
+  },
+  {
+    "name": "candidate-navigation-canon:check",
+    "status": 0
+  },
+  {
+    "name": "account-confirmation:check",
+    "status": 0
+  },
+  {
+    "name": "candidate-journey-composition:check",
+    "status": 0
+  },
+  {
+    "name": "candidate-destination-composition:check",
+    "status": 0
+  },
+  {
+    "name": "passport-cv-boundary:check",
+    "status": 0
+  },
+  {
+    "name": "passport-page-composition:check",
+    "status": 0
+  }
+]

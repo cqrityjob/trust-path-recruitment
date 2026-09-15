@@ -1,0 +1,178 @@
+{
+  "verdict": "FIX REQUIRED",
+  "testedImplementation": "1d60f45906465c4f7aafd99896868167521b7159",
+  "originMain": "5e37060a35415880935c8525bcfb32d2d0f38bc3",
+  "pr255Included": true,
+  "branch": "codex/passport-finalization",
+  "passportPrNumber": null,
+  "passportPrUrl": null,
+  "ci": "Not run: combined branch not pushed; all-green PR gate failed",
+  "hostedChanges": "NONE",
+  "productionDataChanges": "NONE",
+  "productionDeletions": 0,
+  "environmentLocalSha256": "d14e60e4d818a8d32eb2a82f0c5cdd1aa3dc8d3a485c37309e818666f3610a11",
+  "checks": {
+    "typechecks": {
+      "passed": 2
+    },
+    "changedLint": {
+      "files": 48,
+      "errors": 0,
+      "warnings": 0
+    },
+    "fullLint": {
+      "errors": 99259,
+      "warnings": 469,
+      "newErrors": 0,
+      "newWarnings": 0
+    },
+    "trackedLint": {
+      "baselineErrors": 1117,
+      "baselineWarnings": 74,
+      "finalErrors": 1006,
+      "finalWarnings": 74
+    },
+    "checkScripts": {
+      "passed": 149,
+      "expectedHostedReleaseBlock": 1,
+      "total": 150,
+      "excluded": "regulatory-sources:check (external scheduled monitor)"
+    },
+    "migrations": {
+      "active": 286,
+      "parked": 45,
+      "neverReplay": 1,
+      "versionCollisions": 0,
+      "duplicateGroups": 0
+    },
+    "sql": {
+      "reportedAssertions": 6765,
+      "numericPassingGroups": 120,
+      "passportBeforeAfter": 122,
+      "retainedV1": 122,
+      "gateway": 25,
+      "exit": 0
+    },
+    "dockerReplay": {
+      "applied": 286,
+      "skipped": 0,
+      "failed": 0
+    },
+    "domain": {
+      "passed": 18,
+      "failed": 0
+    },
+    "negativeControls": {
+      "suites": 30,
+      "detectedMutations": 1062,
+      "exit": 0
+    },
+    "productionBuild": {
+      "exit": 0,
+      "developmentOnlyGatewayFlagAbsentFromBuiltOutput": true
+    },
+    "browser": {
+      "total": 1497,
+      "passed": 970,
+      "failed": 211,
+      "skipped": 316,
+      "flaky": 0,
+      "durationMs": 2233943.38
+    },
+    "realPassportBrowser": {
+      "passed": 3,
+      "failed": 0,
+      "projects": [
+        "chromium",
+        "mobile-375",
+        "mobile-390"
+      ]
+    },
+    "realBesktBrowser": {
+      "preparationPassed": 8,
+      "interviewToolPassed": 20,
+      "failed": 0,
+      "project": "chromium"
+    },
+    "realEmployerReportBrowser": {
+      "passed": 4,
+      "failed": 2,
+      "project": "chromium"
+    },
+    "mainBaselineBrowser": {
+      "failed": 3,
+      "passed": 0,
+      "diagnosticOnly": true
+    },
+    "employerFinalisationRpc": {
+      "passed": 6,
+      "failed": 0
+    },
+    "reportImmutability": {
+      "passed": 7,
+      "failed": 0
+    },
+    "liveApi": {
+      "passed": 34,
+      "failed": 0,
+      "groups": {
+        "authOwnershipAndProfileCv": {
+          "passed": 15,
+          "caseNumbers": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            22,
+            27,
+            29,
+            30,
+            34
+          ]
+        },
+        "storage": {
+          "passed": 9,
+          "caseNumbers": [
+            11,
+            12,
+            13,
+            14,
+            20,
+            21,
+            28,
+            31,
+            33
+          ]
+        },
+        "selectiveDisclosure": {
+          "passed": 10,
+          "caseNumbers": [
+            15,
+            16,
+            17,
+            18,
+            19,
+            23,
+            24,
+            25,
+            26,
+            32
+          ]
+        }
+      }
+    }
+  },
+  "pendingMigrations": [
+    "20261117090000_bcp_conduct_prompts_and_report.sql",
+    "20261118090000_beskt_governed_content_authoring.sql",
+    "20261118100000_sp_international_passport_foundation.sql",
+    "20261119090000_sp_international_credential_wallet.sql",
+    "20261120090000_sp_credential_selective_sharing_v2.sql"
+  ]
+}
