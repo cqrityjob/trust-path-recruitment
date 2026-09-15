@@ -7,6 +7,31 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
 {
+  "file": "20261121090000_sp_closed_credential_catalogue.sql",
+  "hostedState": "pending",
+  "introduces": [
+    {
+      "object": "sp_approved_credential_catalogue",
+      "kind": "view"
+    },
+    {
+      "object": "allows_no_expiry",
+      "kind": "column",
+      "table": "sp_credential_types"
+    },
+    {
+      "object": "sp_closed_catalogue_claim_guard",
+      "kind": "function"
+    },
+    {
+      "object": "sp_closed_catalogue_details_guard",
+      "kind": "function"
+    }
+  ],
+  "note": "Closed catalogue owner decision. Reuses existing definitions/issuers. No personal rows changed or deleted. Hosted execution NOT authorized.",
+  "rollback": "supabase/rollback/20261121090000_sp_closed_credential_catalogue_rollback.sql"
+},
+{
   "file": "20261120090000_sp_credential_selective_sharing_v2.sql",
   "hostedState": "pending",
   "introduces": [

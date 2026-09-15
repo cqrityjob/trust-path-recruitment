@@ -12,7 +12,7 @@ INSERT INTO public.sp_passport_profiles(holder_user_id,privacy_mode) VALUES('f20
 UPDATE public.profiles SET display_name='Canonical Name' WHERE id='f2000000-0000-4000-8000-000000000001';
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','f2000000-0000-4000-8000-000000000001',true);
-SELECT public.sp_save_international_credential('{"class":"permit","title":"Permit original","issuer":"Reported authority","country":"SE","validity_jurisdiction":"GB","identifier":"PRIVATE-123","valid_until":"2020-01-01"}') AS claim_id \gset
+SELECT public.sp_save_international_credential('{"definition_code":"INTL_ASIS_CPP","identifier":"PRIVATE-123","valid_until":"2020-01-01"}') AS claim_id \gset
 INSERT INTO public.sp_claims(holder_user_id,claim_type,title) VALUES(auth.uid(),'education','Unrelated CV') RETURNING id AS cv_id \gset
 SELECT pg_temp.refused(format('SELECT public.sp_preview_credential_disclosure_v2(ARRAY[%L]::uuid[],ARRAY[]::text[],7,NULL,''en'')',:'cv_id'),'SP_CREDENTIAL_NOT_SHAREABLE');
 SELECT pg_temp.refused(format('SELECT public.sp_preview_credential_disclosure_v2(ARRAY[%L]::uuid[],ARRAY[''evidence''],7,NULL,''en'')',:'claim_id'),'SP_INVALID_CREDENTIAL_SELECTION');
@@ -58,7 +58,7 @@ SELECT pg_temp.ok(public.sp_get_disclosure_session(repeat('e',64))->>'status'='u
 SELECT pg_temp.ok(EXISTS(SELECT 1 FROM public.sp_credential_share_events WHERE disclosure_id=:'replacement_id' AND event_type='expiry_observed'),'observed expiry audited');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_credential_share_events WHERE row_to_json(sp_credential_share_events)::text LIKE '%'||repeat('e',64)||'%'),'audit stores no session secrets');
 SET LOCAL ROLE authenticated;
-SELECT public.sp_save_international_credential(jsonb_build_object('claim_id',:'claim_id','version',1,'class','permit','title','Corrected credential','issuer','Reported authority','country','SE','validity_jurisdiction','GB')) AS successor \gset
+SELECT public.sp_save_international_credential(jsonb_build_object('claim_id',:'claim_id','version',1,'definition_code','INTL_ASIS_CPP','identifier','CHANGED')) AS successor \gset
 SELECT pg_temp.ok(EXISTS(SELECT 1 FROM public.sp_credential_share_events WHERE disclosure_id=:'replacement_id' AND event_type='claim_changed'),'correction affecting a selected credential audited');
 RESET ROLE;
 SELECT pg_temp.ok(jsonb_array_length(public.sp_credential_payload_v2('f2000000-0000-4000-8000-000000000001',ARRAY[:'claim_id']::uuid[],'{}',NULL,'en',now()+interval '1 day',now())->'verified_claims')=0,'superseded selected claim removed without broadening scope');
