@@ -96,11 +96,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // No active migration remains pending: 20261116090000 was applied by the
 // official integration when PR #252 merged, and its hosted evidence is
 // recorded in release-state.json and hosted-ledger.json.
-const expectedPending: string[] = [
-  "20261118090000_sp_international_passport_foundation.sql",
-  "20261119090000_sp_international_credential_wallet.sql",
-  "20261120090000_sp_credential_selective_sharing_v2.sql",
-];
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
@@ -138,6 +134,14 @@ const parked = [
   "20261022090000_scp_vaktare_v1_content_review.sql",
   "20261023090000_scp_vaktare_v1_self_report_quality.sql",
 ];
+
+// Passport finalization adds explicit pending entries independently of other
+// work at the release frontier. Each stays pending until hosted evidence exists.
+expectedPending.push(
+  "20261118090000_sp_international_passport_foundation.sql",
+  "20261119090000_sp_international_credential_wallet.sql",
+  "20261120090000_sp_credential_selective_sharing_v2.sql",
+);
 
 const active = new Set(readdirSync(migrationsDir).filter((file) => file.endsWith(".sql")));
 const pending = state.frontier
