@@ -88,6 +88,7 @@ export interface PassportProfile {
 }
 
 export interface PassportSnapshot {
+  readonly profileIdentity?: import("./credential-passport").PassportProfileIdentity;
   readonly profile: PassportProfile | null;
   readonly holder: PassportHolder;
   readonly eventCount: number;
@@ -492,7 +493,9 @@ export const getMyPassport = createServerFn({ method: "GET" })
       hasCareerDiscoveryResult: false,
     };
 
-    return { profile, holder, eventCount: eventsRes.count ?? 0 };
+    const { readPassportProfileIdentity } = await import("./profile-identity.server");
+    const profileIdentity = await readPassportProfileIdentity(db, userId);
+    return { profile, holder, eventCount: eventsRes.count ?? 0, profileIdentity };
   });
 
 /* ------------------------------------------------------------------ */
