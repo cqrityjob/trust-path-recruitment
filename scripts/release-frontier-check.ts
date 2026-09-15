@@ -93,10 +93,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // #241 merged, and release-state.json now records it as applied with read-only
 // evidence. Its name comes off this list in that same change, as planned, so
 // an applied migration cannot sit here masking the next genuinely stuck one.
-// No active migration remains pending: 20261116090000 was applied by the
-// official integration when PR #252 merged, and its hosted evidence is
-// recorded in release-state.json and hosted-ledger.json.
-const expectedPending: string[] = [];
+// 20261116090000 was applied by the official integration when PR #252 merged,
+// and PR #253 recorded its hosted evidence in release-state.json and
+// hosted-ledger.json -- so it is off this list, as planned.
+//
+// BESKT PR 7 is the one migration pending by design. It is schema only: the
+// nine governed doors through which a human content editor authors BESKT
+// method content, which until now could be written only as service_role or
+// inside a migration. No application code on this branch names any object it
+// introduces, so release-parity-check has nothing to block, and its name comes
+// off this list only once the official integration has applied it and
+// release-state.json carries hosted evidence -- never on the strength of a
+// merge alone.
+const expectedPending: string[] = ["20261118090000_beskt_governed_content_authoring.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

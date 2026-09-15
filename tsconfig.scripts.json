@@ -139,6 +139,8 @@
     // read.
     "scripts/beskt-governed-content-check.ts",
     "scripts/beskt-candidate-preparation-check.ts",
+    "scripts/beskt-content-authoring-check.ts",
+    "scripts/negative-controls/beskt-content-authoring-controls.ts",
     "scripts/beskt-notice-copy-digest-check.ts",
     "scripts/beskt-candidate-preparation-render-check.tsx",
     "scripts/beskt-candidate-preparation-evidence.ts",
