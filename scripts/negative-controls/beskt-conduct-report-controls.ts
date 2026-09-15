@@ -828,11 +828,26 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "RPT-NC-STATE-CLAIMS-APPLIED",
     defect:
-      "release-state.json claims the migration is applied to production when nothing established that, which is the exact unverified claim this stack exists to prevent",
+      "release-state.json stops saying the migration is applied, so the repository and production disagree and an application PR that depends on it would be blocked for no reason",
     file: STATE,
-    find: '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "pending",',
+    find: '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "applied",',
     replace:
       '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "unverified",',
+    guard: GUARD,
+    expect: "REPORT-REGISTRATION",
+  },
+  {
+    // The half that matters most now: "applied" is a statement about
+    // production, and the only thing separating it from a guess is the
+    // evidence beside it. An entry that cannot say how it knows is exactly the
+    // entry that goes stale next.
+    id: "RPT-NC-STATE-DROPS-EVIDENCE",
+    defect:
+      "the applied entry keeps its claim but loses the evidence naming the hosted version, slug and project it was verified against",
+    file: STATE,
+    find: '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "applied",\n      "evidenceSource": "Applied',
+    replace:
+      '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "applied",\n      "evidenceSourceRemoved": "Applied',
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
   },
@@ -847,12 +862,15 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "REPORT-REGISTRATION",
   },
   {
-    id: "RPT-NC-FRONTIER-NOT-PENDING",
+    id: "RPT-NC-FRONTIER-STALE-PENDING",
     defect:
-      "the migration comes off the owner-level pending list while release-state.json still says pending, so the two files disagree about production",
+      "the APPLIED migration is put back on the owner-level pending list, where a resolved name hides the next genuinely stuck migration behind an expectation and contradicts release-state.json",
     file: FRONTIER,
-    find: '  "20261117090000_bcp_conduct_prompts_and_report.sql",\n',
-    replace: "",
+    // Applied now, so the defect inverts: the anchor is the empty list Prettier
+    // produces when nothing is pending.
+    find: "const expectedPending: string[] = [];",
+    replace:
+      'const expectedPending: string[] = ["20261117090000_bcp_conduct_prompts_and_report.sql"];',
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
   },

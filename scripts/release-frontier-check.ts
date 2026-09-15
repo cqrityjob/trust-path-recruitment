@@ -95,29 +95,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // an applied migration cannot sit here masking the next genuinely stuck one.
 // 20261116090000_cd_outstanding_reviews_operator_only was applied by the
 // official integration when PR #252 merged, and PR #253 recorded its hosted
-// evidence in release-state.json and hosted-ledger.json -- so it is off this
-// list, as planned.
+// evidence.
 //
-// TWO migrations are now pending by design, and they come off this list one at
-// a time, each in the change that records its OWN hostedState: applied with
-// hosted evidence -- never on the strength of a merge alone.
+// BESKT PR 6 (20261117090000, merged as #254) and BESKT PR 7 (20261118090000,
+// merged as #255) were applied by that same integration on merge, and this
+// change records their hosted evidence in release-state.json and
+// hosted-ledger.json -- so both come off this list HERE, in the same change
+// that records it, exactly as planned. A merge alone would never have been
+// enough, and an applied migration left on this list would mask the next
+// genuinely stuck one.
 //
-//   20261117090000  BESKT PR 6, merged as #254. Renumbered from 20261116090000
-//                   because #252 claimed that version first and two active
-//                   migrations may not share one. Merged is not applied: it
-//                   stays here until the integration has run it and the
-//                   evidence is recorded.
-//   20261118090000  BESKT PR 7, this branch. The nine governed doors through
-//                   which a human content editor authors BESKT method content,
-//                   which until now could be written only as service_role or
-//                   inside a migration.
-//
-// No application code on this branch names an object either one introduces, so
-// release-parity-check has nothing to block.
-const expectedPending: string[] = [
-  "20261117090000_bcp_conduct_prompts_and_report.sql",
-  "20261118090000_beskt_governed_content_authoring.sql",
-];
+// No active migration remains pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
