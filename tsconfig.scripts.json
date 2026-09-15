@@ -139,6 +139,8 @@
     // read.
     "scripts/beskt-governed-content-check.ts",
     "scripts/beskt-candidate-preparation-check.ts",
+    "scripts/beskt-content-authoring-check.ts",
+    "scripts/negative-controls/beskt-content-authoring-controls.ts",
     "scripts/beskt-notice-copy-digest-check.ts",
     "scripts/beskt-candidate-preparation-render-check.tsx",
     "scripts/beskt-candidate-preparation-evidence.ts",
@@ -155,6 +157,8 @@
     // migration's function bodies and DDL. A parser that silently stopped
     // matching would report a contract it never read.
     "scripts/beskt-interview-conduct-check.ts",
+    "scripts/beskt-conduct-report-check.ts",
+    "scripts/negative-controls/beskt-conduct-report-controls.ts",
     "scripts/negative-controls/beskt-interview-conduct-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",

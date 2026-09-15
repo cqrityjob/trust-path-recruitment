@@ -164,10 +164,10 @@ for passport_round in before after; do
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
-    for passport_migration in 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118090000_sp_international_passport_foundation; do
+    for passport_migration in 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
       psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
     done
-    for passport_migration in 20261118090000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2; do
+    for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2; do
       psql_q -d "$TEST_DB" -f "supabase/migrations/${passport_migration}.sql" >/dev/null
     done
   fi
@@ -3019,6 +3019,83 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# BESKT PR 7 -- the governed content-authoring doors.
+#
+# The suite's first block is the claim the whole PR exists for: an editor
+# holding only the platform content role, acting through the authenticated
+# role, authors a COMPLETE method -- profiles, sections, items with options,
+# sixteen prompts, routing, the seven evidence anchors and the ten observation
+# fields -- and submits it to the five gates. No service_role, no table owner,
+# no migration. Everything after it proves the doors did not become a way
+# around beskt_guard_child_row().
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT content-authoring assertions"
+set +e
+AUT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/beskt_governed_content_authoring_test.sql 2>&1)"
+AUT_RC=$?
+set -e
+AUT_PASSED="$(echo "$AUT_OUT" | grep -c "ok  " || true)"
+AUT_FAILED=0
+if [ "$AUT_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT content-authoring suite exited with code ${AUT_RC}." >&2
+  echo "$AUT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  AUT_FAILED=1
+else
+  echo "    ok  ${AUT_PASSED} BESKT content-authoring assertions passed"
+  if [ "$AUT_PASSED" -lt 55 ]; then
+    echo "FAIL: expected at least 55 BESKT content-authoring assertions, only ${AUT_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    AUT_FAILED=1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# The PR 7 rollback, for real, then the migration re-applied over it.
+#
+# The suite above rolls back, so no authoring event is committed and the clean
+# path is the expected one. The REFUSAL path -- a rollback that will not
+# discard the doors once the append-only ledger records authoring through them
+# -- is proved by the suite itself and by the source guard, because an
+# append-only event cannot be planted and then removed here.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT PR 7 rollback and re-apply"
+set +e
+AUT_RB="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261118090000_beskt_governed_content_authoring_rollback.sql 2>&1)"
+AUT_RB_RC=$?
+set -e
+if [ "$AUT_RB_RC" -ne 0 ] || ! echo "$AUT_RB" | grep -q "BESKT_GOVERNED_CONTENT_AUTHORING_ROLLBACK ok"; then
+  if echo "$AUT_RB" | grep -q "BESKT_CONTENT_AUTHORING_ROLLBACK"; then
+    echo "    ok  the PR 7 rollback refuses by name rather than discarding doors the ledger records"
+  else
+    echo "FAIL: the BESKT content-authoring rollback did not verify." >&2
+    echo "$AUT_RB" | grep -iE "ERROR:|FEL:|EXCEPTION" | head -5 >&2
+    AUT_FAILED=1
+  fi
+else
+  echo "    ok  the PR 7 rollback removes the nine doors and leaves every authored row and guard standing"
+fi
+
+set +e
+AUT_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261118090000_beskt_governed_content_authoring.sql 2>&1)"
+AUT_RE_RC=$?
+set -e
+if [ "$AUT_RE_RC" -ne 0 ] || ! echo "$AUT_RE" | grep -q "BESKT_GOVERNED_CONTENT_AUTHORING_PROOF ok"; then
+  echo "FAIL: the BESKT PR 7 migration does not re-apply over the rolled-back state." >&2
+  echo "$AUT_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  AUT_FAILED=1
+else
+  echo "    ok  and the PR 7 migration re-applies cleanly over it"
+fi
+
+if [ "$AUT_FAILED" -ne 0 ]; then
+  suite_failed "BESKT content authoring"
+fi
+
+
+# ---------------------------------------------------------------------------
 # One open version per method, under a REAL race: two sessions, two
 # operation ids, one method, genuinely in flight at once. Session A creates
 # the version and holds its transaction open; session B starts while A is
@@ -3381,6 +3458,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# BESKT PR 6 -- the governed prompts and the report chain.
+#
+# Runs immediately after PR 5A and before anything is stood down: it is built
+# on PR 5A's tables (bcp_conduct_reports carries a foreign key into
+# bcp_conduct_sessions), so PR 5A cannot be unwound while PR 6 stands.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT prompts-and-report assertions"
+set +e
+RPT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_conduct_prompts_and_report_test.sql 2>&1)"
+RPT_RC=$?
+set -e
+RPT_PASSED="$(echo "$RPT_OUT" | grep -c "ok  " || true)"
+RPT_FAILED=0
+if [ "$RPT_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT prompts-and-report suite exited with code ${RPT_RC}." >&2
+  echo "$RPT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  RPT_FAILED=1
+else
+  echo "    ok  ${RPT_PASSED} BESKT prompts-and-report assertions passed"
+  if [ "$RPT_PASSED" -lt 60 ]; then
+    echo "FAIL: expected at least 60 BESKT prompts-and-report assertions, only ${RPT_PASSED} ran." >&2
+    RPT_FAILED=1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Two people press "lock my position" at the same instant, in two real
 # connections. Exactly one lock must land and the other must be refused by
 # name -- not both, not neither, and not a torn row. The suite above runs in
@@ -3591,6 +3695,60 @@ else
   echo "    ok  and the race fixture's synthetic world is removed completely"
 fi
 
+# ---------------------------------------------------------------------------
+# The PR 6 rollback, for real, then the migration re-applied over it.
+#
+# Runs BEFORE PR 5A's own rollback: bcp_conduct_reports holds a foreign key
+# into bcp_conduct_sessions, and neither rollback uses CASCADE, so dropping
+# the conduct layer while PR 6 still stands on it would refuse -- correctly.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT PR 6 rollback and re-apply"
+
+# It must REFUSE while a finalised report exists -- that document is the one
+# thing the design says nobody may remove, the owner included.
+set +e
+RPT_RB_REFUSAL="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql 2>&1)"
+RPT_RB_RC=$?
+set -e
+if [ "$RPT_RB_RC" -eq 0 ]; then
+  # No report was finalised by the suite above (it rolls back), so a clean
+  # rollback here is the expected path and nothing was destroyed.
+  echo "    ok  the PR 6 rollback runs cleanly when no report has been finalised"
+else
+  if echo "$RPT_RB_REFUSAL" | grep -q "BCP_CONDUCT_REPORT_ROLLBACK"; then
+    echo "    ok  the PR 6 rollback refuses by name rather than discarding a signed report"
+  else
+    echo "FAIL: the PR 6 rollback failed for an unexpected reason." >&2
+    echo "$RPT_RB_REFUSAL" | grep -iE "ERROR:|FEL:" | head -5 >&2
+    RPT_FAILED=1
+  fi
+fi
+
+# Whatever happened above, PR 6's objects must be gone or intact -- never half
+# of each. Re-applying proves the way back is real rather than asserted.
+set +e
+RPT_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql 2>&1)"
+RPT_RE_RC=$?
+set -e
+if [ "$RPT_RE_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT PR 6 migration does not re-apply over the rolled-back state." >&2
+  echo "$RPT_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  RPT_FAILED=1
+else
+  echo "    ok  and the PR 6 migration re-applies cleanly over it"
+fi
+
+if [ "$RPT_FAILED" -ne 0 ]; then
+  suite_failed "BESKT prompts and report"
+fi
+
+# Stand PR 6 down so PR 5A can be unwound below: bcp_conduct_reports holds a
+# foreign key into bcp_conduct_sessions.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql >/dev/null
+
 set +e
 CND_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
   -f supabase/rollback/20261113090000_bcp_interview_conduct_rollback.sql 2>&1)"
@@ -3758,6 +3916,13 @@ done
 if [ "$BGD_FAILED" -ne 0 ]; then
   BG_FAILED=1
 fi
+
+# Stand PR 7 down so the BESKT domain can be unwound below. Its nine doors are
+# named beskt_*, and the domain rollback's own postflight refuses while ANY
+# beskt_ function survives -- correctly: an authoring door onto a domain that
+# no longer exists would be a function pointing at nothing.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261118090000_beskt_governed_content_authoring_rollback.sql >/dev/null
 
 # Applied for real, in one transaction as the file requires, then the
 # migration re-applied (-f, never -c "\i").
@@ -6313,7 +6478,7 @@ fi
 # consumer goes before the thing it consumes.
 # ---------------------------------------------------------------------------
 psql_q -d "$TEST_DB" -f supabase/rollback/20261119090000_sp_international_credential_wallet_rollback.sql >/dev/null
-psql_q -d "$TEST_DB" -f supabase/rollback/20261118090000_sp_international_passport_foundation_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20261118100000_sp_international_passport_foundation_rollback.sql >/dev/null
 echo "==> Standing the CV write path down ahead of the Passport rollbacks"
 set +e
 CVSD_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
@@ -7142,10 +7307,12 @@ echo "              ${SPRC_PASSED} rollback correction assertions,"
 echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
               ${BI_PASSED} employer final-report basis assertions,
               ${BG_PASSED} BESKT governed-content assertions,
+              ${AUT_PASSED} BESKT content-authoring assertions,
               ${BGR_PASSED} BESKT one-open-version race assertions,
               ${BGP_PASSED} BESKT child-write versus publication race assertions,
               ${BGD_PASSED} BESKT rollback planted-dependency assertions,
               ${BCP_PASSED} BESKT candidate-preparation assertions,
               ${BRG_PASSED} BESKT interview-case bridge assertions,
-              ${CND_PASSED} BESKT interview-conduct assertions"
+              ${CND_PASSED} BESKT interview-conduct assertions,
+              ${RPT_PASSED} BESKT prompts-and-report assertions"
 echo "===================================================="

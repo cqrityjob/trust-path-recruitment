@@ -45,7 +45,7 @@
   "rollback": "supabase/rollback/20261119090000_sp_international_credential_wallet_rollback.sql"
 },
     {
-      "file": "20261118090000_sp_international_passport_foundation.sql",
+      "file": "20261118100000_sp_international_passport_foundation.sql",
       "hostedState": "pending",
       "evidenceSource": "Local development only. Hosted execution is not authorized.",
       "introduces": [
@@ -80,7 +80,117 @@
       ],
       "note": "International Passport additive metadata; no existing personal rows changed. Fable recovery waived by owner.",
       "verify": "Local full replay plus security_passport_international_foundation_test.sql and rollback/reapply. Hosted remains pending.",
-      "rollback": "supabase/rollback/20261118090000_sp_international_passport_foundation_rollback.sql"
+      "rollback": "supabase/rollback/20261118100000_sp_international_passport_foundation_rollback.sql"
+    },
+    {
+      "file": "20261117090000_bcp_conduct_prompts_and_report.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "bcp_conduct_topic_prompts",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_conduct_reports",
+          "kind": "table"
+        },
+        {
+          "object": "bcp_conduct_reports_one_final_per_session_idx",
+          "kind": "index"
+        },
+        {
+          "object": "bcp_guard_conduct_report",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_conduct_build_report_basis",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_conduct_basis_hash",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_conduct_report_blockers",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_conduct_preview_report",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_conduct_finalise_report",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_conduct_final_report",
+          "kind": "function"
+        },
+        {
+          "object": "bcp_conduct_report_versions",
+          "kind": "function"
+        }
+      ],
+      "note": "BESKT PR 6 -- THE GOVERNED CONDUCT PROMPTS AND THE IMMUTABLE REPORT CHAIN. Schema only; no application code on this branch names any object below, so nothing is released against a pending migration. Closes the two gaps the conduct layer left open after PR 5A (20261113090000) and PR 5B: an interviewer could see the frozen themes and questions of a session but had NO governed way to read the permitted follow-up prompts, and a completed interview had no ending -- bcp_conduct_* held positions, entries, verifications, panels and resolutions, and not one of the thirteen PR 5A client RPCs could finalise anything a human could read back. (1) READ SURFACE: bcp_conduct_topic_prompts(uuid) is the only new read path and returns nothing on its own authority -- auth.uid() first, session existence second, then the EXISTING case authority scp_iv_can_read_case(), so a prompt is visible exactly to whoever may already read the case. It never reads the current published method: it resolves the session's FROZEN method_version_id, and answers {available:false, reason} for version_not_found, mode_not_permitted and version_not_published, so a draft, suspended, retired or security-vetting version yields no prompt text at all. Prompts are joined on the frozen exposure_profile_id and the session's own themes and items, and every row must carry permitted_mode='recruitment_support' on BOTH the prompt and its item, with access_class <> 'authorised_security_function'. No client role gains table access to beskt_prompts, which still carries exactly one policy. (2) THE REPORT CHAIN reuses PR #216's architecture (20261107090000) rather than inventing a second one: preview -> blockers -> basis hash -> immutable finalisation -> readback. bcp_conduct_reports is append-only -- RLS ENABLE and FORCE, zero write policies, zero INSERT/UPDATE/DELETE grants to anon, authenticated or service_role, and a row trigger that refuses every DELETE and permits exactly one UPDATE, final -> superseded, comparing every other column field by field so a supersede cannot smuggle an edit. A partial unique index keeps at most one final report per session. bcp_conduct_basis_hash() deliberately strips {audit_events} before hashing: finalising APPENDS the event the payload carries, so a basis over the whole payload would invalidate itself the instant the report was written and the unchanged-basis branch could never match. The content hash still covers the whole document. The builder bcp_conduct_build_report_basis() is INTERNAL -- granted to service_role only, never to authenticated -- so the assembled basis is reachable only through preview and finalisation, both of which check case authority. (3) NO JUDGEMENT: the migration adds no column named for a score, points, weight, threshold, total, rank, suitability, credibility, truthfulness, recommendation, risk, verdict, deception, hire, confidence, rating, grade or level -- asserted by the postflight against the catalogue, not promised in a comment -- and every payload the chain returns carries produces_score:false, produces_ranking:false, produces_recommendation:false and interpretation:'none'. The report records what was asked, what was said, what was corrected, what was verified, what each assessor independently held, what the panel resolved and what remains unknown. It reaches no conclusion about a person. (4) SEEDS NOTHING: the migration inserts zero reports and zero method content. BESKT v1 is produced through the governance RPCs by real authorised people, never by a migration.",
+      "verify": "Replay locally with bash scripts/db-test.sh: the migration raises BESKT_CONDUCT_PROMPTS_AND_REPORT_PROOF ok from its own postflight, supabase/tests/bcp_conduct_prompts_and_report_test.sql must report at least 60 assertions with zero failures, the rollback must raise BESKT_CONDUCT_PROMPTS_AND_REPORT_ROLLBACK ok, and the migration must re-apply cleanly over the rolled-back schema. Hosted, read-only, once applied: SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid='public.bcp_conduct_reports'::regclass;  -- expect t|t. Then: SELECT count(*) FROM pg_policy WHERE polrelid='public.bcp_conduct_reports'::regclass AND polcmd <> 'r';  -- expect 0. Then: SELECT count(*) FROM information_schema.role_table_grants WHERE table_name='bcp_conduct_reports' AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE') AND grantee IN ('anon','authenticated','service_role','PUBLIC');  -- expect 0. Then: SELECT has_table_privilege('anon','public.bcp_conduct_reports','SELECT');  -- expect f. Then: SELECT p.proname, p.prosecdef, (SELECT count(*) FROM unnest(p.proconfig) c WHERE c LIKE 'search\\\\_path=%') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'bcp_conduct_%report%' OR p.proname='bcp_conduct_topic_prompts';  -- every client function SECURITY DEFINER with a pinned search_path. Then: SELECT has_function_privilege('authenticated','public.bcp_conduct_build_report_basis(uuid)','EXECUTE'), has_function_privilege('anon','public.bcp_conduct_topic_prompts(uuid)','EXECUTE');  -- expect f|f: the builder is internal and anon is closed. Then: SELECT prosecdef, provolatile FROM pg_proc WHERE proname='bcp_conduct_basis_hash';  -- expect f|i: a pure hash is not a definer function. Then: SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='bcp_guard_conduct_report' AND (has_function_privilege('anon',p.oid,'EXECUTE') OR has_function_privilege('authenticated',p.oid,'EXECUTE') OR has_function_privilege('service_role',p.oid,'EXECUTE'));  -- expect 0: PostgREST must not publish the invariant checker. Then: SELECT count(*) FROM public.bcp_conduct_reports;  -- expect 0 immediately after apply. Then: SELECT count(*) FROM pg_policy WHERE polrelid='public.beskt_prompts'::regclass;  -- expect 1, unchanged. Source-level: bun run beskt-conduct-report:check and bun run negative-controls:beskt-conduct-report.",
+      "rollback": "supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql"
+    },
+    {
+      "file": "20261118090000_beskt_governed_content_authoring.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "beskt_author_exposure_profile",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_section",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_item",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_prompt",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_routing_rule",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_evidence_anchor",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_observation_field",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_author_activation_requirement",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_delete_content",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_content_gate",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_content_commit",
+          "kind": "function"
+        },
+        {
+          "object": "beskt_content_reject_unknown_keys",
+          "kind": "function"
+        }
+      ],
+      "note": "BESKT PR 7 -- THE GOVERNED WAY TO AUTHOR METHOD CONTENT. Schema only; no application code on this branch names any object below. CLOSES A GAP NOBODY HAD NAMED: 20261108090000 built the whole governed LIFECYCLE of a BESKT method -- create, version, submit, review, publish, suspend, retire, grant, revoke, ten RPCs reachable from a browser -- and built no way to author the CONTENT those RPCs move through. beskt_exposure_profiles, beskt_sections, beskt_items, beskt_item_options, beskt_prompts, beskt_routing_rules, beskt_evidence_anchors, beskt_observation_fields and beskt_activation_requirements grant authenticated SELECT and nothing else; ALL goes to service_role; no function in any migration inserts a row into any of them; beskt_touch_draft only recomputes the hash. The database suite's own fixture builds method content by dropping OUT of the authenticated role and writing as the table owner, which is the admission that no client path exists. So a theme, question, option, purpose, prompt, routing rule or exposure profile could only be created as service_role (which must never reach a browser) or inside a migration (which is exactly how production content must NOT be seeded). ADDS NINE DOORS: beskt_author_exposure_profile, _section, _item (options travel with it and are reconciled by key), _prompt, _routing_rule, _evidence_anchor, _observation_field, _activation_requirement, and beskt_delete_content. They are DOORS, NOT LAW: every content invariant already lives in beskt_guard_child_row(), which fires on INSERT/UPDATE/DELETE for all nine tables and holds against the table owner -- and therefore against these functions, which run as the owner. Draft-only editing, no re-parenting, same-version references, the exposure-profile boundary, the PEACE stage binding, the Evaluation template, routing direction and mode escalation are not restated, because restating them would create a second place to be wrong. What is added in front of that law: auth.uid(); the SAME scp_interview_can_edit() editor role beskt_touch_draft already demands (no new role, no new grant table); replay answered through the existing beskt_operation_begin BEFORE any write; the version locked at the revision the caller saw through the existing beskt_lock_version; draft-or-in-review only, refused by name; the content hash recomputed and the revision advanced exactly as beskt_touch_draft does; an event appended to the existing ledger. PAYLOADS ARE jsonb AND THAT IS A TYPED CONTRACT, NOT A BLOB: an item carries twenty governed columns, so each door takes one object and then REFUSES ANY KEY IT DOES NOT KNOW (beskt_content_reject_unknown_keys) -- a misspelled purpose_sv is refused by name rather than dropped on the floor, and nothing is stored as jsonb; every value lands in the typed column it always had. NO NEW CLIENT DML: not one grant on any content table changes, asserted by the postflight against information_schema. NO JUDGEMENT: no door accepts a score, weight, threshold, rank or verdict because no such column exists, also asserted against the catalogue. SEEDS NOTHING: BESKT v1 is authored by real editors through these doors, never by the migration that opens them.",
+      "verify": "Replay locally with bash scripts/db-test.sh: the migration raises BESKT_GOVERNED_CONTENT_AUTHORING_PROOF ok from its own postflight, supabase/tests/beskt_governed_content_authoring_test.sql must report at least 55 assertions with zero failures -- its first block authors a COMPLETE method through the doors as an editor in the authenticated role and SUBMITS it to the five gates, which is the claim this migration exists to make true -- the rollback must raise BESKT_GOVERNED_CONTENT_AUTHORING_ROLLBACK ok, and the migration must re-apply cleanly over the rolled-back schema. Hosted, read-only, once applied: SELECT count(*) FROM information_schema.role_table_grants WHERE table_schema='public' AND table_name IN ('beskt_exposure_profiles','beskt_sections','beskt_items','beskt_item_options','beskt_prompts','beskt_routing_rules','beskt_evidence_anchors','beskt_observation_fields','beskt_activation_requirements') AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE') AND grantee IN ('anon','authenticated','PUBLIC');  -- expect 0: the doors are functions, not widened grants. Then: SELECT p.proname, p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname LIKE 'beskt\\\\_author\\\\_%';  -- expect eight rows, all SECURITY DEFINER. Then: SELECT has_function_privilege('authenticated','public.beskt_content_gate(uuid,integer)','EXECUTE');  -- expect f: the gate applies no authorisation of its own. Then: SELECT has_function_privilege('anon','public.beskt_author_item(uuid,uuid,integer,jsonb)','EXECUTE');  -- expect f. Then: SELECT prosecdef, provolatile FROM pg_proc WHERE proname='beskt_content_reject_unknown_keys';  -- expect f|i: the payload checker is pure. Then: SELECT count(*) FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid JOIN pg_proc p ON p.oid=tg.tgfoid WHERE p.proname='beskt_guard_child_row' AND NOT tg.tgisinternal;  -- expect 9: the law these doors stand on is still attached to every content table. Then: SELECT count(*) FROM public.beskt_method_events WHERE event IN ('content_upserted','content_deleted');  -- expect 0 immediately after apply: the migration authors nothing. Source-level: bun run beskt-content-authoring:check and bun run negative-controls:beskt-content-authoring.",
+      "rollback": "supabase/rollback/20261118090000_beskt_governed_content_authoring_rollback.sql"
     },
     {
       "file": "20261115090000_scp_interview_method_library_tenant_read.sql",

@@ -264,10 +264,84 @@ check(
   proofAt > 0 && /RAISE NOTICE 'BESKT_GOVERNED_CONTENT_PROOF ok'/.test(proof),
   "BESKT-DB-MIGRATION: the migration ends in the BESKT_GOVERNED_CONTENT_PROOF ok postflight",
 );
-check(
-  readdirSync(join(ROOT, "supabase/migrations")).filter((f) => /beskt/i.test(f)).length === 1,
-  "BESKT-DB-MIGRATION: exactly one BESKT migration exists in the active path",
-);
+// ---------------------------------------------------------------------------
+// THE IDENTITY OF PR 2'S MIGRATION, in four limbs.
+//
+// This assertion used to be
+//
+//     readdirSync(migrations).filter((f) => /beskt/i.test(f)).length === 1
+//
+// read as "exactly one BESKT migration exists in the active path". That was
+// never the property worth protecting; it was a PROXY for it, and the proxy
+// was correct only for as long as PR 2 happened to be the only migration with
+// "beskt" in its filename. The moment a second, legitimate, separately
+// reviewed BESKT migration arrived (20261118090000, the governed
+// content-authoring doors) the count went to 2 and the guard failed — not
+// because anything about PR 2 had changed, but because the proxy had aged out.
+// Raising the expected total to 2 would only move the same failure to the next
+// legitimate BESKT migration, so the count is gone entirely.
+//
+// What this guard actually owns is PR 2's own migration. Later BESKT and BCP
+// migrations are owned and verified by their own guards
+// (beskt-candidate-preparation, beskt-interview-case-bridge,
+// beskt-interview-conduct, beskt-conduct-report, beskt-content-authoring), and
+// this one must not speak for them. So the four things that could go wrong
+// with PR 2's migration are checked directly and separately, each naming
+// itself on failure: it must not be MISSING, DUPLICATED, PARKED or REPLACED.
+// ---------------------------------------------------------------------------
+{
+  const activeDir = join(ROOT, "supabase/migrations");
+  const active = readdirSync(activeDir).filter((f) => f.endsWith(".sql"));
+
+  // 1 · NOT MISSING, and present exactly once, by its exact canonical name —
+  //     never by a *beskt*.sql glob.
+  const exact = active.filter((f) => f === MIGRATION_NAME);
+  check(
+    exact.length === 1,
+    `BESKT-DB-MIGRATION: ${MIGRATION_NAME} is present exactly once in the active path (found ${exact.length})`,
+  );
+
+  // 2 · NOT PARKED. A parked copy alongside an active one means the reviewed
+  //     history has been forked; a parked copy INSTEAD of an active one means
+  //     PR 2 has been retired without anybody saying so.
+  check(
+    !existsSync(join(ROOT, "supabase/archive/parked-migrations", MIGRATION_NAME)),
+    `BESKT-DB-MIGRATION: ${MIGRATION_NAME} is not parked — the governed content domain is live history, not archived`,
+  );
+
+  // 3 · NOT DUPLICATED, by numeric version. Two active migrations sharing a
+  //     version make replay order undefined, and a second file at 20261108090000
+  //     under any name could redefine this domain in a replay. Checked across
+  //     the WHOLE active path, so a collision anywhere fails here too.
+  const versionOf = (f: string) => f.split("_")[0] ?? "";
+  const byVersion = new Map<string, string[]>();
+  for (const f of active) {
+    const v = versionOf(f);
+    byVersion.set(v, [...(byVersion.get(v) ?? []), f]);
+  }
+  const collisions = [...byVersion.entries()].filter(([, files]) => files.length > 1);
+  check(
+    collisions.length === 0,
+    `BESKT-DB-MIGRATION: no active migration shares a numeric version with another (${collisions.map(([v, f]) => `${v}: ${f.join(" + ")}`).join("; ") || "none"})`,
+  );
+  check(
+    (byVersion.get(versionOf(MIGRATION_NAME)) ?? []).length === 1,
+    `BESKT-DB-MIGRATION: version ${versionOf(MIGRATION_NAME)} belongs to ${MIGRATION_NAME} alone`,
+  );
+
+  // 4 · NOT REPLACED. The domain is CREATED in exactly one place. A later
+  //     migration may add doors, policies or functions onto these tables — that
+  //     is what the later BESKT PRs do and their own guards cover it — but a
+  //     second file creating beskt_ tables would mean the domain had been
+  //     forked or re-established somewhere this guard never reads.
+  const creators = active.filter((f) =>
+    readFileSync(join(activeDir, f), "utf8").includes("CREATE TABLE public.beskt_"),
+  );
+  check(
+    creators.length === 1 && creators[0] === MIGRATION_NAME,
+    `BESKT-DB-MIGRATION: exactly one active migration creates the BESKT content domain, and it is ${MIGRATION_NAME} (found: ${creators.join(", ") || "none"})`,
+  );
+}
 check(
   !/CREATE OR REPLACE FUNCTION public\.scp_interview_pack_content_hash\(/.test(sql),
   "BESKT-DB-MIGRATION: the role-interview content hash is not redefined (every recorded review hash stays checkable)",
