@@ -60,6 +60,13 @@ BEGIN
    AND (NEW.claim_type IS DISTINCT FROM OLD.claim_type OR NEW.credential_code IS DISTINCT FROM OLD.credential_code)
  THEN RAISE EXCEPTION 'SP_DEFINITION_IMMUTABLE' USING ERRCODE='23514'; END IF;
  IF NOT public.sp_is_passport_credential(NEW.claim_type,NEW.credential_code) THEN RETURN NEW; END IF;
+ -- PostgreSQL accepts infinity as a date. It must not bypass governed no-expiry.
+ IF NOT isfinite(NEW.issued_on) OR NOT isfinite(NEW.valid_from) OR NOT isfinite(NEW.valid_until)
+ OR NEW.issued_on NOT BETWEEN DATE '1900-01-01' AND DATE '2200-12-31'
+ OR NEW.valid_from NOT BETWEEN DATE '1900-01-01' AND DATE '2200-12-31'
+ OR NEW.valid_until NOT BETWEEN DATE '1900-01-01' AND DATE '2200-12-31'
+ THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_DATE' USING ERRCODE='23514'; END IF;
+
  SELECT * INTO d FROM public.sp_approved_credential_catalogue WHERE code=NEW.credential_code;
  IF NOT FOUND THEN RAISE EXCEPTION 'SP_APPROVED_DEFINITION_REQUIRED' USING ERRCODE='23514'; END IF;
  IF NEW.claim_type IS DISTINCT FROM d.claim_type OR NEW.title NOT IN (d.name_sv,d.name_en)
@@ -110,6 +117,9 @@ BEGIN
  OR nullif(_input->>'market_region','') IS DISTINCT FROM d.region
  THEN RAISE EXCEPTION 'SP_DEFINITION_NOT_AVAILABLE_IN_MARKET'; END IF;
  IF length(coalesce(_input->>'identifier',''))>120 THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_INPUT'; END IF;
+ IF nullif(_input->>'issued_on','') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+ OR nullif(_input->>'valid_until','') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+ THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_DATE'; END IF;
  _issued:=nullif(_input->>'issued_on','')::date; _expiry:=nullif(_input->>'valid_until','')::date;
  _no_expiry:=(_input->>'no_expiry')::boolean;
  IF _no_expiry IS TRUE AND (NOT d.allows_no_expiry OR d.requires_valid_until) THEN RAISE EXCEPTION 'SP_NO_EXPIRY_NOT_APPROVED'; END IF;

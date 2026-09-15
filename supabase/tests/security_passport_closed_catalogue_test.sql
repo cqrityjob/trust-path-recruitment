@@ -36,6 +36,9 @@ SELECT pg_temp.denied($q$UPDATE public.sp_claims SET claimed_issuer_name='Fake' 
 SELECT pg_temp.denied($q$UPDATE public.sp_claims SET jurisdiction_code='SE' WHERE holder_user_id=auth.uid()$q$,'direct country tampering rejected');
 SELECT pg_temp.denied($q$UPDATE public.sp_claims SET sub_jurisdiction_code='AE-DU' WHERE holder_user_id=auth.uid()$q$,'direct region tampering rejected');
 SELECT pg_temp.denied($q$UPDATE public.sp_claims SET authorisation_scope='global' WHERE holder_user_id=auth.uid()$q$,'direct scope tampering rejected');
+SELECT pg_temp.denied($q$SELECT public.sp_save_international_credential('{"definition_code":"INTL_ASIS_CPP","valid_until":"infinity"}')$q$,'RPC infinity cannot bypass no-expiry permission');
+SELECT pg_temp.denied($q$UPDATE public.sp_claims SET valid_until='infinity' WHERE holder_user_id=auth.uid()$q$,'direct infinite expiry rejected');
+SELECT pg_temp.denied($q$UPDATE public.sp_claims SET valid_until='9999-01-01' WHERE holder_user_id=auth.uid()$q$,'out-of-range expiry rejected');
 SELECT pg_temp.denied($q$UPDATE public.sp_claims SET credential_code=NULL WHERE holder_user_id=auth.uid()$q$,'definition cannot be detached');
 SELECT pg_temp.denied($q$UPDATE public.sp_credential_details SET credential_class='permit'$q$,'detail class tampering rejected');
 SELECT pg_temp.denied($q$UPDATE public.sp_credential_details SET original_language='sv'$q$,'detail language tampering rejected');
