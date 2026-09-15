@@ -32,6 +32,7 @@ CREATE FUNCTION public.sp_assert_credential_selection(_ids uuid[],_fields text[]
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 BEGIN
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED'; END IF;
+ IF NOT public.sp_passport_session_active() THEN RAISE EXCEPTION 'SP_SESSION_REVOKED' USING ERRCODE='42501'; END IF;
  IF coalesce(cardinality(_ids),0) NOT BETWEEN 1 AND 200 OR array_position(_ids,NULL) IS NOT NULL
  OR _fields IS NULL OR cardinality(_fields)>2 OR array_position(_fields,NULL) IS NOT NULL
  OR NOT _fields <@ ARRAY['holder_name','identifier']::text[] THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_SELECTION'; END IF;
@@ -115,6 +116,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE _r jsonb; _id uuid; _fields_sorted text[]; _old text[];
 BEGIN
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED'; END IF;
+ IF NOT public.sp_passport_session_active() THEN RAISE EXCEPTION 'SP_SESSION_REVOKED' USING ERRCODE='42501'; END IF;
  IF _request_key IS NULL THEN RAISE EXCEPTION 'SP_REQUEST_KEY_REQUIRED'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended('sp_share:'||auth.uid()::text||':'||_request_key::text,0));
  PERFORM public.sp_assert_credential_selection(_claim_ids,_fields);
@@ -143,6 +145,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE _f text[]; _r jsonb; _ids uuid[];
 BEGIN
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED'; END IF;
+ IF NOT public.sp_passport_session_active() THEN RAISE EXCEPTION 'SP_SESSION_REVOKED' USING ERRCODE='42501'; END IF;
  SELECT p.permitted_fields INTO _f FROM public.sp_credential_disclosure_policy p JOIN public.sp_disclosures d ON d.id=p.disclosure_id
  WHERE d.id=_disclosure_id AND d.holder_user_id=auth.uid();
  IF FOUND THEN

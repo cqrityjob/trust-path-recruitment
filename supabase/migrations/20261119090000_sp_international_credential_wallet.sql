@@ -1,4 +1,50 @@
 BEGIN;
+-- GoTrue logout revokes refresh tokens, but a signed access JWT remains
+-- cryptographically valid until exp. Passport checks its live session as well.
+-- No JWT user_metadata is trusted and no other user's session is exposed.
+CREATE FUNCTION public.sp_passport_session_active()
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+ SELECT CASE
+   -- SQL/admin operations carry no Auth JWT; existing owner/role checks still apply.
+   WHEN coalesce(auth.jwt(), '{}'::jsonb) = '{}'::jsonb THEN true
+   WHEN auth.jwt()->>'role' IS DISTINCT FROM 'authenticated' THEN true
+   ELSE EXISTS (SELECT 1 FROM auth.sessions s
+     WHERE s.id::text = auth.jwt()->>'session_id' AND s.user_id = auth.uid()
+       AND (s.not_after IS NULL OR s.not_after > now()))
+ END
+$$;
+REVOKE ALL ON FUNCTION public.sp_passport_session_active() FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.sp_passport_session_active() TO authenticated;
+
+CREATE FUNCTION public.sp_passport_session_write_guard()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE _row jsonb := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
+BEGIN
+ -- The shared claim spine also carries CV records. Their behaviour is unchanged.
+ IF TG_TABLE_NAME = 'sp_claims' AND NOT public.sp_is_passport_credential(_row->>'claim_type',_row->>'credential_code') THEN
+   IF TG_OP='DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+ END IF;
+ IF NOT public.sp_passport_session_active() THEN RAISE EXCEPTION 'SP_SESSION_REVOKED' USING ERRCODE='42501'; END IF;
+ IF TG_OP='DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+END $$;
+REVOKE ALL ON FUNCTION public.sp_passport_session_write_guard() FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE POLICY sp_credential_session_read ON public.sp_claims AS RESTRICTIVE FOR ALL TO authenticated
+ USING (NOT public.sp_is_passport_credential(claim_type,credential_code) OR public.sp_passport_session_active())
+ WITH CHECK (NOT public.sp_is_passport_credential(claim_type,credential_code) OR public.sp_passport_session_active());
+CREATE TRIGGER sp_credential_session_write BEFORE INSERT OR UPDATE OR DELETE ON public.sp_claims
+ FOR EACH ROW EXECUTE FUNCTION public.sp_passport_session_write_guard();
+
+DO $$ DECLARE _table text; BEGIN
+ FOREACH _table IN ARRAY ARRAY['sp_passport_profiles','sp_credential_details','sp_evidence','sp_verification_requests','sp_verification_decisions','sp_disclosures','sp_disclosure_items'] LOOP
+   EXECUTE format('CREATE POLICY sp_private_session_read ON public.%I AS RESTRICTIVE FOR ALL TO authenticated USING (public.sp_passport_session_active()) WITH CHECK (public.sp_passport_session_active())',_table);
+   EXECUTE format('CREATE TRIGGER sp_private_session_write BEFORE INSERT OR UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.sp_passport_session_write_guard()',_table);
+ END LOOP;
+END $$;
+CREATE POLICY sp_evidence_session_read ON storage.objects AS RESTRICTIVE FOR ALL TO authenticated
+ USING (bucket_id <> 'passport-evidence' OR public.sp_passport_session_active())
+ WITH CHECK (bucket_id <> 'passport-evidence' OR public.sp_passport_session_active());
+
 -- One transaction for the legacy claim/version spine and its international
 -- metadata. Input is a command, not a JSON document used as domain storage.
 CREATE FUNCTION public.sp_save_international_credential(_input jsonb)
@@ -7,6 +53,7 @@ DECLARE _id uuid; _old public.sp_claims%ROWTYPE; _class text; _type text;
  _valid_country text; _valid_subdivision text; _country text; _issued date; _expiry date; _no_expiry boolean; _title text; _issuer text;
 BEGIN
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED'; END IF;
+ IF NOT public.sp_passport_session_active() THEN RAISE EXCEPTION 'SP_SESSION_REVOKED' USING ERRCODE='42501'; END IF;
  IF jsonb_typeof(_input) IS DISTINCT FROM 'object' OR EXISTS (
  SELECT 1 FROM jsonb_object_keys(_input) k WHERE k <> ALL(ARRAY['claim_id','version','class','title','issuer','country','issuing_jurisdiction','validity_jurisdiction','language','identifier','issued_on','valid_until','no_expiry']))
  THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_INPUT'; END IF;

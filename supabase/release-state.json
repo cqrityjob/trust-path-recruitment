@@ -38,6 +38,14 @@
     {
       "object": "sp_save_international_credential",
       "kind": "function"
+    },
+    {
+      "object": "sp_passport_session_active",
+      "kind": "function"
+    },
+    {
+      "object": "sp_passport_session_write_guard",
+      "kind": "function"
     }
   ],
   "note": "Atomic owner-only international credential create/correction. Local execution only; no hosted changes.",
