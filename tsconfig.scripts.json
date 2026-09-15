@@ -155,6 +155,8 @@
     // migration's function bodies and DDL. A parser that silently stopped
     // matching would report a contract it never read.
     "scripts/beskt-interview-conduct-check.ts",
+    "scripts/beskt-conduct-report-check.ts",
+    "scripts/negative-controls/beskt-conduct-report-controls.ts",
     "scripts/negative-controls/beskt-interview-conduct-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",

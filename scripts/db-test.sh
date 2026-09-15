@@ -3364,6 +3364,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# BESKT PR 6 -- the governed prompts and the report chain.
+#
+# Runs immediately after PR 5A and before anything is stood down: it is built
+# on PR 5A's tables (bcp_conduct_reports carries a foreign key into
+# bcp_conduct_sessions), so PR 5A cannot be unwound while PR 6 stands.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT prompts-and-report assertions"
+set +e
+RPT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_conduct_prompts_and_report_test.sql 2>&1)"
+RPT_RC=$?
+set -e
+RPT_PASSED="$(echo "$RPT_OUT" | grep -c "ok  " || true)"
+RPT_FAILED=0
+if [ "$RPT_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT prompts-and-report suite exited with code ${RPT_RC}." >&2
+  echo "$RPT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  RPT_FAILED=1
+else
+  echo "    ok  ${RPT_PASSED} BESKT prompts-and-report assertions passed"
+  if [ "$RPT_PASSED" -lt 60 ]; then
+    echo "FAIL: expected at least 60 BESKT prompts-and-report assertions, only ${RPT_PASSED} ran." >&2
+    RPT_FAILED=1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Two people press "lock my position" at the same instant, in two real
 # connections. Exactly one lock must land and the other must be refused by
 # name -- not both, not neither, and not a torn row. The suite above runs in
@@ -3573,6 +3600,60 @@ if [ "$CNDR_LEFT" != "0" ]; then
 else
   echo "    ok  and the race fixture's synthetic world is removed completely"
 fi
+
+# ---------------------------------------------------------------------------
+# The PR 6 rollback, for real, then the migration re-applied over it.
+#
+# Runs BEFORE PR 5A's own rollback: bcp_conduct_reports holds a foreign key
+# into bcp_conduct_sessions, and neither rollback uses CASCADE, so dropping
+# the conduct layer while PR 6 still stands on it would refuse -- correctly.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT PR 6 rollback and re-apply"
+
+# It must REFUSE while a finalised report exists -- that document is the one
+# thing the design says nobody may remove, the owner included.
+set +e
+RPT_RB_REFUSAL="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql 2>&1)"
+RPT_RB_RC=$?
+set -e
+if [ "$RPT_RB_RC" -eq 0 ]; then
+  # No report was finalised by the suite above (it rolls back), so a clean
+  # rollback here is the expected path and nothing was destroyed.
+  echo "    ok  the PR 6 rollback runs cleanly when no report has been finalised"
+else
+  if echo "$RPT_RB_REFUSAL" | grep -q "BCP_CONDUCT_REPORT_ROLLBACK"; then
+    echo "    ok  the PR 6 rollback refuses by name rather than discarding a signed report"
+  else
+    echo "FAIL: the PR 6 rollback failed for an unexpected reason." >&2
+    echo "$RPT_RB_REFUSAL" | grep -iE "ERROR:|FEL:" | head -5 >&2
+    RPT_FAILED=1
+  fi
+fi
+
+# Whatever happened above, PR 6's objects must be gone or intact -- never half
+# of each. Re-applying proves the way back is real rather than asserted.
+set +e
+RPT_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql 2>&1)"
+RPT_RE_RC=$?
+set -e
+if [ "$RPT_RE_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT PR 6 migration does not re-apply over the rolled-back state." >&2
+  echo "$RPT_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  RPT_FAILED=1
+else
+  echo "    ok  and the PR 6 migration re-applies cleanly over it"
+fi
+
+if [ "$RPT_FAILED" -ne 0 ]; then
+  suite_failed "BESKT prompts and report"
+fi
+
+# Stand PR 6 down so PR 5A can be unwound below: bcp_conduct_reports holds a
+# foreign key into bcp_conduct_sessions.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261117090000_bcp_conduct_prompts_and_report_rollback.sql >/dev/null
 
 set +e
 CND_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
@@ -7127,5 +7208,6 @@ echo "              ${E2PP_PASSED} E2 issuer participant-preview assertions,
               ${BGD_PASSED} BESKT rollback planted-dependency assertions,
               ${BCP_PASSED} BESKT candidate-preparation assertions,
               ${BRG_PASSED} BESKT interview-case bridge assertions,
-              ${CND_PASSED} BESKT interview-conduct assertions"
+              ${CND_PASSED} BESKT interview-conduct assertions,
+              ${RPT_PASSED} BESKT prompts-and-report assertions"
 echo "===================================================="

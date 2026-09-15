@@ -637,17 +637,18 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
-    // Pilot blocker 2's migration was applied by the official integration
-    // and its hosted evidence is recorded, so the list is EMPTY again and the
-    // anchor is the empty list. The planted defect is unchanged and always
-    // has been: this APPLIED migration goes back on the frontier.
-    // RE-ANCHORED AGAIN now that 20261116090000 is applied and off the list,
-    // so the anchor is the empty list once more. The planted defect is
-    // unchanged and always has been: this APPLIED migration goes back on the
-    // frontier, where a resolved name would hide the next genuinely stuck one.
-    find: "const expectedPending: string[] = [];",
+    // The anchor tracks the list's CURRENT shape, which moves as migrations are
+    // applied and new ones become pending -- it has been the empty list, a
+    // one-entry list and a two-entry list in the last three PRs alone. Today it
+    // is BESKT PR 6 (20261117090000), the one migration pending by design. The
+    // planted defect never changes: this APPLIED migration goes back on the
+    // frontier list, where a resolved name would hide the next genuinely stuck
+    // one. Planting it BESIDE a legitimately pending name is in fact the
+    // stronger control -- it proves the guard notices a stale entry even when
+    // the list is not supposed to be empty.
+    find: '  "20261117090000_bcp_conduct_prompts_and_report.sql",\n];',
     replace:
-      'const expectedPending: string[] = ["20261113090000_bcp_interview_conduct.sql"];',
+      '  "20261117090000_bcp_conduct_prompts_and_report.sql",\n  "20261113090000_bcp_interview_conduct.sql",\n];',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },
