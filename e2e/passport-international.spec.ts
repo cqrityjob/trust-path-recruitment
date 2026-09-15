@@ -315,6 +315,9 @@ test("international add, correction successor and archive remain reachable", asy
   await page.getByLabel("Issuer (self-reported)", { exact: true }).fill("Example issuer");
   await page.getByRole("button", { name: "Save as self-reported", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(current.id));
+  await expect(
+    page.getByRole("link", { name: "Select credentials and permitted fields", exact: true }),
+  ).toHaveAttribute("href", "/passport/share");
   await page.getByRole("button", { name: "Correct this entry", exact: true }).click();
   await page.locator("[data-international-credential-form] summary").click();
   await page.getByLabel("Original credential name", { exact: true }).fill("Corrected original");
