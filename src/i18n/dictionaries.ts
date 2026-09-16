@@ -124,6 +124,13 @@ export const dictionaries = {
     "home.hero.title": "Bygg din framtid inom säkerhet",
     "home.hero.subtitle":
       "Samla dina meriter i ett Security Passport eller upptäck vilka säkerhetsroller som passar din riktning. Fortsätt sedan med karriärvägar, CV, jobb och utveckling i samma plattform.",
+    "home.account.returning": "Har du redan ett konto?",
+    "home.passportPreview.private": "Privat som standard",
+    "home.passportPreview.record": "Din professionella dokumentation",
+    "home.passportPreview.title": "Meriter med tydlig källa och status",
+    "home.passportPreview.body":
+      "Du väljer vad mottagaren ser. Delningslänkar är tidsbegränsade och förblir under din kontroll.",
+    "home.passportPreview.markets": "Marknader som stöds i dag",
 
     // ── THE TWO ENTRY CARDS ─────────────────────────────────────────────
     //
@@ -7004,6 +7011,13 @@ export const dictionaries = {
     "home.hero.title": "Build your future in security",
     "home.hero.subtitle":
       "Bring your credentials together in a Security Passport or discover which security roles fit your direction. Then continue with career paths, CV, jobs and development in the same platform.",
+    "home.account.returning": "Already have an account?",
+    "home.passportPreview.private": "Private by default",
+    "home.passportPreview.record": "Your professional record",
+    "home.passportPreview.title": "Credentials with a clear source and status",
+    "home.passportPreview.body":
+      "You choose what a recipient sees. Share links expire and remain under your control.",
+    "home.passportPreview.markets": "Markets supported today",
 
     "home.entry.passport.title": "Build your Security Passport",
     "home.entry.passport.body":

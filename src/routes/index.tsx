@@ -22,8 +22,7 @@ import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { PUBLIC_MARKET_SCALE } from "@/components/site/passport-market-scale";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
-import { UnifiedAuthPanel } from "@/components/auth/UnifiedAuthPanel";
-import { useSignedIn } from "@/hooks/useSignedIn";
+import { HomePassportPreview } from "@/components/site/HomePassportPreview";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 /** ── THE OWNER-APPROVED PUBLIC ENTRY ARCHITECTURE ──────────────────────
@@ -167,11 +166,6 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { t } = useT();
   const navigate = useNavigate();
-  // `=== false`, not `!== true`: `null` is "the client has not answered
-  // yet", and rendering the panel then would paint a login form on a
-  // public page and snatch it back once a session turned up.
-  const showAuthPanel = useSignedIn() === false;
-
   // Authenticated visitors land on their personal dashboard. Runs
   // client-side only; SSR still serves the public landing page for crawlers
   // and signed-out users. This is the ONLY redirect implementation on this
@@ -226,129 +220,82 @@ function Index() {
             maskImage: "linear-gradient(to bottom, black, transparent 88%)",
           }}
         />
-        <div
-          className={cn(
-            "relative mx-auto w-full max-w-6xl px-6 pb-16 pt-12 sm:pt-14 md:px-8 md:pb-20 md:pt-12",
-            showAuthPanel && "xl:pb-14 xl:pt-8",
-          )}
-        >
-          {/* ── IMAGE 0'S COMPOSITION ───────────────────────────────────
-              Proposition and the two candidate entrances on the left, the
-              shared login panel on the right, from xl up. Below xl the
-              panel stacks under the entrances, which keeps the priority
-              order (what this is, the two ways in, then the way back in)
-              rather than shrinking a desktop grid.
-
-              xl, NOT lg: at 1024 — where lg begins — the narrowed column
-              pushes the entry actions past a 768px fold, and
-              public-homepage.spec.ts asserts (blocking) that both fit
-              1024x768 in both languages. At 1024 this page therefore
-              renders exactly as it did before the panel existed.
-
-              At 1440 the two entrances must still be above the fold, and
-              a narrower column makes their cards taller. That is paid for
-              by DENSITY, not by dropping an entrance: when the panel is
-              showing, and only then, the hero tightens its top padding,
-              its heading size and the gaps around the cards, and the cards
-              take `compact`. Both cards take it identically, so they stay
-              peers — which is the other thing that spec measures.
-
-              Every tightening class is xl-prefixed and gated on
-              showAuthPanel, so a signed-in visitor and a static render see
-              the page exactly as it was.
-
-              The panel renders only for a visitor the client has confirmed
-              is signed OUT: it navigates an authenticated visitor to their
-              workspace, which is right on /login and would eject somebody
-              from the public homepage here. `=== false`, never `!== true`,
-              so the not-yet-known state renders the page as it was rather
-              than flashing a form. */}
-          <div className={cn(showAuthPanel && "xl:grid xl:grid-cols-12 xl:items-start xl:gap-12")}>
-          <div className={cn(showAuthPanel && "xl:col-span-7")}>
-          <div
-            className={cn(
-              "mx-auto max-w-3xl text-center animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none",
-              showAuthPanel && "xl:mx-0 xl:text-left",
-            )}
-          >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              {t("home.hero.eyebrow")}
-            </p>
-            {/* `[hyphens:auto]` earns its keep at 320-390px, where a Swedish
+        <div className="relative mx-auto w-full max-w-6xl px-6 pb-14 pt-10 sm:pt-12 md:px-8 md:pb-16 lg:pt-14">
+          {/* Product proposition and two peer entrances stay primary. The
+              generic Passport preview demonstrates the product without
+              inventing a holder, credential, status, score, or claim. */}
+          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.85fr)] lg:gap-12">
+            <div>
+              <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {t("home.hero.eyebrow")}
+                </p>
+                {/* `[hyphens:auto]` earns its keep at 320-390px, where a Swedish
                 compound does not fit on any line; the document carries
                 `lang`, so the browser breaks where Swedish permits. */}
-            <h1
-              className={cn(
-                "mx-auto mt-5 max-w-[18ch] text-balance text-[2.1rem] font-semibold leading-[1.07] tracking-tight text-foreground [hyphens:auto] sm:text-[2.9rem] md:text-[3rem] lg:[hyphens:none] lg:[text-wrap:pretty]",
-                showAuthPanel && "xl:mx-0 xl:mt-4 xl:text-[2.5rem]",
-              )}
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              {t("home.hero.title")}
-            </h1>
-            <p
-              className={cn(
-                "mx-auto mt-5 max-w-[58ch] text-base leading-relaxed text-muted-foreground md:text-[1.0625rem]",
-                showAuthPanel && "xl:mx-0 xl:mt-4",
-              )}
-            >
-              {t("home.hero.subtitle")}
-            </p>
-          </div>
+                <h1
+                  className="mt-4 max-w-[17ch] text-balance text-[2.15rem] font-semibold leading-[1.06] tracking-tight text-foreground [hyphens:auto] sm:text-[3rem] lg:text-[3.35rem] lg:[hyphens:none] lg:[text-wrap:pretty]"
+                  style={{ fontFamily: "var(--font-display)" }}
+                >
+                  {t("home.hero.title")}
+                </h1>
+                <p className="mt-5 max-w-[58ch] text-base leading-relaxed text-muted-foreground md:text-[1.0625rem]">
+                  {t("home.hero.subtitle")}
+                </p>
+              </div>
 
-          {/* ── THE TWO PEER CARDS ───────────────────────────────────────
+              {/* ── THE TWO PEER CARDS ───────────────────────────────────────
               ONE grid, ONE set of card classes, TWO solid actions. The
               symmetry is structural rather than a promise in a comment: a
               card that wanted to be bigger, or an action that wanted to be
               quieter, would have to change the shared constant to get it,
               and scripts/public-homepage-check.tsx reads the rendered class
               attributes to prove neither has. */}
-          <div
-            className={cn(
-              "mx-auto mt-12 grid max-w-5xl grid-cols-1 items-stretch gap-5 md:mt-10 md:grid-cols-2 md:gap-6",
-              showAuthPanel && "xl:mx-0 xl:mt-8",
-            )}
-          >
-            <EntryCard
-              icon={ShieldCheck}
-              titleKey="home.entry.passport.title"
-              bodyKey="home.entry.passport.body"
-              compact={showAuthPanel}
-            >
-              <PrimaryLink to="/signup" search={PASSPORT_INTENT} className="w-full sm:w-auto">
-                {t("cta.passport")}
-              </PrimaryLink>
-            </EntryCard>
+              <div className="mt-8 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
+                <EntryCard
+                  icon={ShieldCheck}
+                  titleKey="home.entry.passport.title"
+                  bodyKey="home.entry.passport.body"
+                  compact
+                >
+                  <PrimaryLink to="/signup" search={PASSPORT_INTENT} className="w-full sm:w-auto">
+                    {t("cta.passport")}
+                  </PrimaryLink>
+                </EntryCard>
 
-            {/* The low-friction model, stated beside the action it describes
+                {/* The low-friction model, stated beside the action it describes
                 rather than discovered after 28 questions. Career Discovery
                 starts without an account, keeps answers in this tab, and asks
                 for an account only when somebody saves the result — which is
                 exactly what the existing claim token preserves through email
                 confirmation, Google and a login/signup swap. This page adds
                 no signup wall. */}
-            <EntryCard
-              icon={Compass}
-              titleKey="home.entry.discovery.title"
-              bodyKey="home.entry.discovery.body"
-              noteKey="home.entry.discovery.disclosure"
-              compact={showAuthPanel}
-            >
-              <PrimaryLink to={CAREER_DISCOVERY} className="w-full sm:w-auto">
-                {t("cta.discovery")}
-              </PrimaryLink>
-            </EntryCard>
-          </div>
-          </div>
-
-          {showAuthPanel && (
-            <div
-              className="mx-auto mt-12 w-full max-w-md xl:col-span-5 xl:mx-0 xl:mt-0 xl:max-w-none"
-              data-home-auth-panel
-            >
-              <UnifiedAuthPanel mode="signin" />
+                <EntryCard
+                  icon={Compass}
+                  titleKey="home.entry.discovery.title"
+                  bodyKey="home.entry.discovery.body"
+                  noteKey="home.entry.discovery.disclosure"
+                  compact
+                >
+                  <PrimaryLink to={CAREER_DISCOVERY} className="w-full sm:w-auto">
+                    {t("cta.discovery")}
+                  </PrimaryLink>
+                </EntryCard>
+              </div>
             </div>
-          )}
+
+            <div className="mx-auto w-full max-w-md lg:sticky lg:top-32 lg:max-w-none">
+              <HomePassportPreview />
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                {t("home.account.returning")}{" "}
+                <Link
+                  to="/login"
+                  className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {t("nav.signin")}
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -578,7 +525,12 @@ function EntryCard({
         {t(bodyKey)}
       </p>
       {noteKey && (
-        <p className={cn("mt-3 text-xs leading-relaxed text-muted-foreground", compact && "xl:mt-2.5")}>
+        <p
+          className={cn(
+            "mt-3 text-xs leading-relaxed text-muted-foreground",
+            compact && "xl:mt-2.5",
+          )}
+        >
           {t(noteKey)}
         </p>
       )}

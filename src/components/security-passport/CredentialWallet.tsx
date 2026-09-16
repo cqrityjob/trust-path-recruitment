@@ -57,9 +57,9 @@ export function CredentialWallet({
       aria-labelledby="credential-wallet-heading"
       tabIndex={-1}
       data-credential-wallet
-      className="min-w-0 space-y-7"
+      className="min-w-0 space-y-6"
     >
-      <header className="flex flex-wrap items-end justify-between gap-5">
+      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-border pb-6">
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[.16em] text-muted-foreground">
             <Lock size={12} aria-hidden="true" />
@@ -67,7 +67,7 @@ export function CredentialWallet({
           </p>
           <h1
             id="credential-wallet-heading"
-            className="text-3xl font-semibold tracking-tight sm:text-4xl"
+            className="text-3xl font-semibold tracking-tight sm:text-[2.5rem]"
           >
             {identity?.displayName || copy("Mitt Security Passport", "My Security Passport")}
           </h1>
@@ -83,7 +83,7 @@ export function CredentialWallet({
         <div className="flex flex-wrap gap-3">
           <Link
             to="/passport/credentials/new"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <Plus size={17} aria-hidden="true" />
             {copy("Lägg till meriter", "Add credential")}
@@ -91,13 +91,13 @@ export function CredentialWallet({
           <Link
             to="/passport/share"
             data-cta="share"
-            className="inline-flex min-h-11 items-center rounded-xl border border-border px-5 text-sm font-medium"
+            className="inline-flex min-h-11 items-center rounded-md border border-border px-5 text-sm font-medium transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {copy("Välj och dela", "Select and share")}
           </Link>
         </div>
       </header>
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <dl className="grid grid-cols-2 overflow-hidden rounded-lg border border-border bg-card sm:grid-cols-5">
         {[
           [active.length, copy("Aktiva meriter", "Active credentials")],
           [verified, copy("Granskade dokument", "Documents reviewed")],
@@ -111,8 +111,11 @@ export function CredentialWallet({
             copy("Pågående granskningar", "Open reviews"),
           ],
         ].map(([value, label]) => (
-          <div key={label} className="rounded-2xl border border-border bg-card p-4">
-            <dd className="text-3xl font-semibold tracking-tight">{value}</dd>
+          <div
+            key={label}
+            className="border-b border-r border-border p-3.5 last:border-r-0 sm:border-b-0"
+          >
+            <dd className="text-2xl font-semibold tracking-tight">{value}</dd>
             <dt className="mt-1 text-xs text-muted-foreground">{label}</dt>
           </div>
         ))}
@@ -125,7 +128,7 @@ export function CredentialWallet({
         </p>
       )}
       {!claims.length && (
-        <div className="rounded-2xl border border-dashed border-border p-8">
+        <div className="rounded-lg border border-dashed border-border bg-secondary/30 p-6">
           <h2 className="text-xl font-semibold">
             {copy("Din första merit", "Your first credential")}
           </h2>
@@ -180,7 +183,7 @@ export function CredentialWallet({
                   <li
                     key={c.id}
                     data-credential-row
-                    className="flex min-w-0 flex-col rounded-2xl border border-border bg-card p-5 shadow-sm"
+                    className="flex min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm"
                   >
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <CredentialSymbol

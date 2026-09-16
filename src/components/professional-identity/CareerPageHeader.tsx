@@ -29,9 +29,13 @@ export function CareerPageHeader({
   const l = lang as Lang;
 
   return (
-    <header data-career-header data-profile-state={profile.state}>
+    <header
+      data-career-header
+      data-profile-state={profile.state}
+      className="border-b border-border pb-6"
+    >
       <h1
-        className="text-2xl font-semibold tracking-tight text-balance text-foreground md:text-3xl"
+        className="text-3xl font-semibold tracking-tight text-balance text-foreground md:text-4xl"
         style={{ fontFamily: "var(--font-display)" }}
       >
         {profile.greetingName ? Lf(HEADER.title, l, profile.greetingName) : L(HEADER.titleAnon, l)}

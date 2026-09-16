@@ -99,7 +99,10 @@ function PassportWorkspaceRoute() {
   if (!snapshot || !metadata || !snapshot.profile)
     return <p role="status">{lang === "sv" ? "Läser meriter…" : "Loading credentials…"}</p>;
   return (
-    <div data-passport-workspace className="mx-auto flex max-w-[1280px] flex-col gap-8">
+    <div
+      data-passport-workspace
+      className="mx-auto grid max-w-[1280px] gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start xl:gap-10"
+    >
       <div className="min-w-0 flex flex-col gap-6">
         <ScrollToHashOnceReady />
         <CredentialWallet
@@ -142,7 +145,7 @@ function PassportWorkspaceRoute() {
         metadata={metadata}
         snapshot={snapshot}
         today={new Date().toISOString().slice(0, 10)}
-        className="lg:!w-full lg:grid lg:grid-cols-2 lg:items-start lg:gap-6"
+        className="lg:sticky lg:top-28 lg:!w-full"
       />
     </div>
   );

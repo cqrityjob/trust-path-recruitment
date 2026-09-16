@@ -2,8 +2,8 @@
  * Negative controls for screens 0, 1 and 2.
  *
  * Each mutation is a way the composition regresses while still looking
- * plausible in a diff: a second auth flow, a panel shown to the wrong
- * visitor, a card that repeats the summary's figures, a row of tabs that
+ * plausible in a diff: a second auth flow, a missing login route, a card
+ * that repeats the summary's figures, a row of tabs that
  * hides the sections other surfaces deep-link into.
  *
  * Run: bun run negative-controls:candidate-journey-composition
@@ -22,35 +22,33 @@ const GUARD = "candidate-journey-composition:check";
 const MUTATIONS: readonly Mutation[] = [
   /* ── SCREEN 0 · ONE AUTH FLOW ──────────────────────────────────────── */
   {
-    id: "CJC-NC-PANEL-GONE",
-    defect:
-      "the landing page stops mounting the login panel, so image 0's entrance is a link again",
+    id: "CJC-NC-LOGIN-LINK-GONE",
+    defect: "the landing page loses the returning-user route to the canonical login page",
     file: HOME,
-    find: '              <UnifiedAuthPanel mode="signin" />',
-    replace: "",
+    find: '                to="/login"',
+    replace: '                to="/signup"',
     guard: GUARD,
-    expect: "/ mounts the auth panel",
+    expect: "/ routes returning users to the canonical login page",
   },
   {
     id: "CJC-NC-SECOND-AUTH-FLOW",
     defect:
       "THE FAILURE MODE: the landing page grows a sign-in call of its own, so there are two authentication implementations that will drift the first time either is touched",
     file: HOME,
-    find: "  const showAuthPanel = useSignedIn() === false;",
+    find: "  const employerOpen = employerPortalEnabled();",
     replace:
-      '  const showAuthPanel = useSignedIn() === false;\n  const homeSignIn = () => supabase.auth.signInWithPassword({ email: "", password: "" });',
+      '  const employerOpen = employerPortalEnabled();\n  const homeSignIn = () => supabase.auth.signInWithPassword({ email: "", password: "" });',
     guard: GUARD,
     expect: "signInWithPassword lives in the panel and nowhere else",
   },
   {
-    id: "CJC-NC-PANEL-SHOWN-TO-EVERYONE",
-    defect:
-      "the panel renders before the session is known, so it paints on a public page and is snatched back — and the panel navigates a signed-in visitor off the homepage entirely",
+    id: "CJC-NC-AUTH-PANEL-RETURNS",
+    defect: "the homepage embeds the full authentication panel and becomes login-led again",
     file: HOME,
-    find: "  const showAuthPanel = useSignedIn() === false;",
-    replace: "  const showAuthPanel = useSignedIn() !== true;",
+    find: 'import { HomePassportPreview } from "@/components/site/HomePassportPreview";',
+    replace: 'import { UnifiedAuthPanel } from "@/components/auth/UnifiedAuthPanel";',
     guard: GUARD,
-    expect: "renders only for a visitor confirmed signed OUT",
+    expect: "/ does not embed the full authentication form",
   },
   {
     id: "CJC-NC-LOGIN-PAGE-INLINES-PANEL",

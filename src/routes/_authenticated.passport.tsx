@@ -55,8 +55,11 @@ function PassportShell() {
           rhythm; the first run, which is a short form, takes it too. */}
       <Section className="py-5 md:py-7">
         {firstRun ? null : (
-          <nav aria-label={pt("card.brand")} className="mb-6 border-b border-border">
-            <ul className="-mb-px grid grid-cols-3 gap-1 sm:flex sm:flex-wrap">
+          <nav
+            aria-label={pt("card.brand")}
+            className="mb-6 overflow-x-auto border-b border-border"
+          >
+            <ul className="-mb-px flex min-w-max gap-1">
               {NAV.map((item) => {
                 const active = item.hash
                   ? pathname === item.to && hash === item.hash
@@ -70,7 +73,7 @@ function PassportShell() {
                       hash={item.hash}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "inline-flex min-h-11 w-full items-center justify-center border-b-2 px-2 text-center text-xs sm:w-auto sm:px-3 sm:text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                        "inline-flex min-h-11 items-center justify-center whitespace-nowrap border-b-2 px-3 text-center text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                         active
                           ? "border-accent text-foreground"
                           : "border-transparent text-muted-foreground hover:text-foreground",
