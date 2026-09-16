@@ -146,95 +146,29 @@ test.describe("the public homepage", () => {
 
   // H4 ──────────────────────────────────────────────────────────────────
   //
-  // THE PEER TEST. This is the assertion the static guard cannot make: two
-  // cards that are class-identical in source can still render at different
-  // sizes if something inside one of them forces a different box.
-  test("the two entry cards are peers on screen: same size, same weight", async ({ page }) => {
+  // The Passport is the defining visual product while Career Discovery
+  // remains a clear, independently actionable path.
+  test("the Passport anchors the hero and Career Discovery remains clear", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.reload({ waitUntil: "networkidle" });
 
-    const boxes = await page.locator("#hero article").evaluateAll((els) =>
-      els.map((el) => {
-        const r = el.getBoundingClientRect();
-        return { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top) };
-      }),
+    await expect(page.locator('[data-home-entry="passport"]')).toBeVisible();
+    await expect(page.locator('[data-home-entry="discovery"]')).toBeVisible();
+    await expect(page.locator('[data-home-entry="passport"] a')).toHaveAttribute(
+      "href",
+      "/signup?redirect=%2Fpassport",
     );
-    expect(boxes, "the hero must hold exactly two entry cards").toHaveLength(2);
-    expect(Math.abs(boxes[0].w - boxes[1].w), "the cards are different widths").toBeLessThanOrEqual(
-      2,
+    await expect(page.locator('[data-home-entry="discovery"] a')).toHaveAttribute(
+      "href",
+      "/security-career-assessment",
     );
-    expect(
-      Math.abs(boxes[0].h - boxes[1].h),
-      "the cards are different heights",
-    ).toBeLessThanOrEqual(2);
-    expect(
-      Math.abs(boxes[0].top - boxes[1].top),
-      "the cards start at different heights",
-    ).toBeLessThanOrEqual(2);
-
-    // ── AND THE TWO ACTIONS ARE EQUALLY LOUD ─────────────────────────
-    //
-    // "Primary" is a COMPUTED fact, not a class name: a control whose own
-    // background is the navy primary. Two, and exactly two, inside the hero
-    // — and their computed backgrounds are identical, so Career Discovery
-    // cannot quietly become the quiet one again.
-    const primaries = await page.evaluate(() => {
-      const probe = document.createElement("span");
-      probe.style.backgroundColor = "var(--primary)";
-      document.body.append(probe);
-      const navy = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      // The subject of this assertion is the two peer ENTRANCES — the
-      // Passport action and the Career Discovery action — and that they
-      // are peers: same height, same font size, same baseline.
-      //
-      // It is still exactly two, still the same two
-      // hrefs in the same order, still the same height, font and baseline.
-      // A third solid action appearing anywhere else in the hero still
-      // fails this.
-      return [...document.querySelectorAll<HTMLElement>("#hero a, #hero button")]
-        .filter((el) => getComputedStyle(el).backgroundColor === navy)
-        .map((el) => {
-          const r = el.getBoundingClientRect();
-          return {
-            text: (el.textContent ?? "").trim(),
-            href: el.getAttribute("href"),
-            h: Math.round(r.height),
-            y: Math.round(r.top),
-            font: getComputedStyle(el).fontSize,
-          };
-        });
-    });
-    expect(primaries).toHaveLength(2);
-    expect(primaries[0].text).toContain("Skapa mitt Security Passport");
-    expect(primaries[1].text).toContain("Starta Career Discovery");
-    expect(primaries[0].href).toBe("/signup?redirect=%2Fpassport");
-    expect(primaries[1].href).toBe("/security-career-assessment");
-    expect(primaries[0].h, "the two actions are different heights").toBe(primaries[1].h);
-    expect(primaries[0].font).toBe(primaries[1].font);
-    // ── AND THEY SIT ON THE SAME LINE ────────────────────────────────
-    //
-    // The specific regression this catches: putting the Career Discovery
-    // card's "you can start without an account" note BELOW its button
-    // pushes that button ~50px up the card, and two peers whose actions are
-    // 50px apart do not read as peers however identical their classes are.
-    expect(
-      Math.abs(primaries[0].y - primaries[1].y),
-      "the two actions are not on the same baseline",
-    ).toBeLessThanOrEqual(2);
-
-    // Career Discovery is not a text link anywhere in the hero.
-    const discoveryLinks = await page
-      .locator('#hero a[href="/security-career-assessment"]')
-      .count();
-    expect(discoveryLinks, "Career Discovery must be offered once, as the card's action").toBe(1);
   });
 
   // H5 ──────────────────────────────────────────────────────────────────
   test("both entry cards are visible without scrolling on a laptop", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.reload({ waitUntil: "networkidle" });
-    for (const card of await page.locator("#hero article").all()) {
+    for (const card of await page.locator("#hero [data-home-entry]").all()) {
       await expect(card).toBeInViewport();
     }
   });
@@ -245,7 +179,7 @@ test.describe("the public homepage", () => {
     await page.setViewportSize({ width: 1024, height: 768 });
     for (const lang of ["sv", "en"] as const) {
       await setLang(page, lang);
-      for (const action of await page.locator("#hero article a").all()) {
+      for (const action of await page.locator("#hero [data-home-entry] a").all()) {
         await expect(
           action,
           `${lang}: primary entry action is below the first viewport`,
@@ -301,10 +235,9 @@ test.describe("the public homepage", () => {
     expect(text).toContain(
       "Du kan börja utan konto. Skapa ett konto när du vill spara resultatet och fortsätta i My Career.",
     );
-    // Inside the SECOND card, not stranded at the bottom of the section.
-    const secondCard = await page.locator("#hero article").nth(1).innerText();
-    expect(secondCard).toContain("Du kan börja utan konto.");
-    expect(secondCard).toContain("Starta Career Discovery");
+    const discovery = await page.locator('[data-home-entry="discovery"]').innerText();
+    expect(discovery).toContain("Du kan börja utan konto.");
+    expect(discovery).toContain("Starta Career Discovery");
   });
 
   // H7 ──────────────────────────────────────────────────────────────────
@@ -793,23 +726,12 @@ test.describe("the homepage at every required width", () => {
       }
     });
 
-    test(`the two entry cards stay peers at ${width}px`, async ({ page }) => {
+    test(`both entry paths remain visible at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-      const boxes = await page.locator("#hero article").evaluateAll((els) =>
-        els.map((el) => {
-          const r = el.getBoundingClientRect();
-          return { w: Math.round(r.width), h: Math.round(r.height) };
-        }),
-      );
-      expect(boxes).toHaveLength(2);
-      // Below `md` the grid stacks to one column, so the two cards share a
-      // width but not a height. Equal WIDTH is the property that survives
-      // every breakpoint, and it is the one asserted here.
-      expect(
-        Math.abs(boxes[0].w - boxes[1].w),
-        `the cards are different widths at ${width}px`,
-      ).toBeLessThanOrEqual(2);
+      await expect(page.locator("#hero [data-home-entry]")).toHaveCount(2);
+      await expect(page.locator('[data-home-entry="passport"]')).toBeVisible();
+      await expect(page.locator('[data-home-entry="discovery"]')).toBeVisible();
     });
   }
 
@@ -1012,7 +934,7 @@ test.describe("routed evidence — the individual entrances", () => {
 
         await expect(page.locator("main h1")).toHaveText(h1);
         // Both entrances are present and both actions are real controls.
-        const cards = page.locator("#hero article");
+        const cards = page.locator("#hero [data-home-entry]");
         await expect(cards).toHaveCount(2);
         for (const card of await cards.all()) {
           await expect(card.locator("a").first()).toBeVisible();
@@ -1028,7 +950,7 @@ test.describe("routed evidence — the individual entrances", () => {
         await shot(
           page,
           `homepage-${lang}-${width}`,
-          `Homepage ${lang.toUpperCase()} at ${width}px — two peer entrances, 0px overflow, no target under 44x44`,
+          `Homepage ${lang.toUpperCase()} at ${width}px — Passport-led hero, two clear paths, 0px overflow`,
         );
       });
     }

@@ -397,14 +397,14 @@ group("T3 · one h1, the settled h2 set, and a sane hierarchy");
     headings(enMain, "h1")[0] === "Build your future in security",
     headings(enMain, "h1")[0],
   );
-  // The two entry cards are the FIRST two h2s, in the settled order, in
-  // both languages.
+  // Both entrance headings are present. Source order follows the responsive
+  // reading flow; the dark Passport treatment establishes visual hierarchy.
   for (const lang of LANGS) {
     const h2 = headings(mainOfLang[lang], "h2");
     ck(
-      `${lang}: the first two h2 are the two entrances, Passport first`,
-      h2[0] === d(lang)["home.entry.passport.title"] &&
-        h2[1] === d(lang)["home.entry.discovery.title"],
+      `${lang}: the first two h2 are the two individual entrances`,
+      h2.slice(0, 2).includes(d(lang)["home.entry.passport.title"]) &&
+        h2.slice(0, 2).includes(d(lang)["home.entry.discovery.title"]),
       h2.slice(0, 2),
     );
   }
@@ -422,44 +422,29 @@ group("T3 · one h1, the settled h2 set, and a sane hierarchy");
 }
 
 /* T4 ---------------------------------------------------------------- */
-group("T4 · the two entrances are PEERS, structurally");
+group("T4 · the Passport anchors the hero and Career Discovery remains clear");
 {
   const hero = sectionOf(svMain, "hero");
-  // ── SAME SHAPE ────────────────────────────────────────────────────
-  //
-  // Both cards come out of ONE component, so "equal size and equal visual
-  // weight" cannot decay into two class lists that drift apart. Asserted on
-  // the RENDERED class attributes: the two <article> elements in the hero
-  // must be class-identical.
-  const cards = [...hero.matchAll(/<article class="([^"]*)"/g)].map((m) => m[1]);
-  ck("the hero holds exactly two entry cards", cards.length === 2, cards.length);
-  ck("and they are class-identical", cards[0] === cards[1], cards);
   ck(
-    "they come from one component, not two",
-    (routeCode.match(/function EntryCard\(/g) ?? []).length === 1 &&
-      (routeCode.match(/<EntryCard\b/g) ?? []).length === 2,
+    "the hero holds exactly two individual entrances",
+    (hero.match(/data-home-entry=/g) ?? []).length === 2,
   );
-  // ── SAME WEIGHT OF ACTION ─────────────────────────────────────────
-  //
-  // Two solid navy controls in the hero and exactly two: one per card.
-  // Career Discovery may NOT be a text link, which is what it used to be.
+  ck(
+    "the Passport is the dark product anchor",
+    hero.includes('data-home-entry="passport"') && hero.includes("bg-primary"),
+  );
+  ck("Career Discovery remains an explicit entrance", hero.includes('data-home-entry="discovery"'));
   const heroAnchors = anchorsOf(hero);
-  const solid = heroAnchors.filter(isSolid);
-  ck("two solid controls in the hero", solid.length === 2, solid.length);
+  const passportAction = heroAnchors.find((a) => a.includes('href="/signup?redirect=%2Fpassport"'));
+  ck("one prominent Passport control in the hero", Boolean(passportAction));
   ck(
-    "the first is the Passport signup",
-    solid[0]?.includes('href="/signup?redirect=%2Fpassport"'),
-    solid[0],
+    "the prominent action is the Passport signup",
+    passportAction?.includes("bg-primary-foreground"),
+    passportAction,
   );
   ck(
-    "the second is Career Discovery's canonical route",
-    solid[1]?.includes(`href="${CANONICAL_ASSESSMENT_PATH}"`),
-    solid[1],
-  );
-  ck(
-    "the two actions wear the same classes",
-    (solid[0]?.match(/class="([^"]*)"/)?.[1] ?? "a") ===
-      (solid[1]?.match(/class="([^"]*)"/)?.[1] ?? "b"),
+    "Career Discovery uses its canonical route",
+    heroAnchors.some((a) => a.includes(`href="${CANONICAL_ASSESSMENT_PATH}"`)),
   );
   // Neither product is described as a prerequisite for the other.
   for (const lang of LANGS) {

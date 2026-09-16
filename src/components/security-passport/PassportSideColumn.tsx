@@ -29,7 +29,7 @@ export function PassportSideColumn({
     <aside
       data-passport-side-column
       aria-labelledby="sp-side-card-heading"
-      className={`w-full space-y-5 lg:w-[340px] lg:shrink-0 ${className}`}
+      className={`w-full space-y-6 lg:w-[360px] lg:shrink-0 ${className}`}
     >
       <section>
         <h2
@@ -51,7 +51,7 @@ export function PassportSideColumn({
       {/* ── Integrity, privacy and sharing ───────────────────────────── */}
       <section
         aria-labelledby="sp-side-privacy-heading"
-        className="rounded-lg border border-border bg-card p-4"
+        className="border-t border-border pt-5"
         data-passport-privacy-summary
       >
         <h2

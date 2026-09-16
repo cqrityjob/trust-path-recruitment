@@ -101,7 +101,7 @@ function PassportWorkspaceRoute() {
   return (
     <div
       data-passport-workspace
-      className="mx-auto grid max-w-[1280px] gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start xl:gap-10"
+      className="mx-auto grid max-w-[1280px] gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start xl:gap-10"
     >
       <div className="min-w-0 flex flex-col gap-6">
         <ScrollToHashOnceReady />

@@ -28,11 +28,11 @@ async function gotoHome(page: Page): Promise<string[]> {
 }
 
 test.describe("the landing page is product-led", () => {
-  test("a signed-out visitor sees the product preview and two peer entrances", async ({ page }) => {
+  test("a signed-out visitor sees the Passport anchor and both entrances", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const errors = await gotoHome(page);
     await expect(page.locator(PREVIEW)).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator("#hero article")).toHaveCount(2);
+    await expect(page.locator("#hero [data-home-entry]")).toHaveCount(2);
     await expect(page.locator('#hero input[type="email"]')).toHaveCount(0);
     await expect(page.locator('#hero a[href="/login"]')).toBeVisible();
     expect(errors, `console errors: ${errors.join(" | ")}`).toEqual([]);
@@ -105,22 +105,13 @@ test.describe("the landing page is product-led", () => {
     });
   }
 
-  // At xl the hero splits and the cards share their row with the panel.
-  // They must still be peers — that is what makes them two entrances
-  // rather than a primary and a fallback — and the density that buys the
-  // fold is applied to BOTH or neither.
-  test("the two entry cards remain peers beside the preview", async ({ page }) => {
+  test("the Passport is the visual anchor and Career Discovery remains clear", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await gotoHome(page);
-    const boxes = await page.locator("#hero article").evaluateAll((els) =>
-      els.map((el) => {
-        const r = el.getBoundingClientRect();
-        return { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top) };
-      }),
-    );
-    expect(boxes).toHaveLength(2);
-    expect(Math.abs(boxes[0].w - boxes[1].w)).toBeLessThanOrEqual(2);
-    expect(Math.abs(boxes[0].top - boxes[1].top)).toBeLessThanOrEqual(2);
+    await expect(page.locator('[data-home-entry="passport"]')).toBeVisible();
+    await expect(page.locator('[data-home-entry="discovery"]')).toBeVisible();
+    await expect(page.locator('[data-home-entry="passport"] a')).toBeVisible();
+    await expect(page.locator('[data-home-entry="discovery"] a')).toBeVisible();
   });
 
   for (const width of [1440, 1920] as const) {
@@ -132,16 +123,16 @@ test.describe("the landing page is product-led", () => {
         await gotoHome(page);
         await setLang(page, lang);
         await expect(page.locator(PREVIEW)).toBeVisible({ timeout: 30_000 });
-        const cards = await page.locator("#hero article").all();
-        expect(cards).toHaveLength(2);
-        for (const card of cards) {
+        const entries = await page.locator("#hero [data-home-entry]").all();
+        expect(entries).toHaveLength(2);
+        for (const card of entries) {
           await expect(
             card,
             `${lang}: an entrance is below the fold at ${width}px`,
           ).toBeInViewport();
         }
         // And its action, not merely its top edge.
-        for (const action of await page.locator("#hero article a").all()) {
+        for (const action of await page.locator("#hero [data-home-entry] a").all()) {
           await expect(
             action,
             `${lang}: an entrance action is below the fold at ${width}px`,

@@ -27,28 +27,28 @@ export function SecurityPassportPreview({
   return (
     <article
       data-compact-passport-card
-      className="relative isolate min-w-0 overflow-hidden rounded-xl border border-primary-foreground/20 bg-primary p-6 text-primary-foreground shadow-[var(--shadow-lg)]"
+      className="relative isolate min-w-0 overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-6"
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-36 bg-primary-foreground/[0.04]"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-primary-foreground/40"
       />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-2xl font-semibold tracking-tight">CQrityjob</p>
+          <p className="text-lg font-semibold tracking-tight">CQrityjob</p>
           <p className="mt-1 text-xs tracking-[.16em] text-primary-foreground/65">
             SECURITY PASSPORT
           </p>
         </div>
-        <span className="flex items-center gap-1.5 rounded-full border border-primary-foreground/20 px-3 py-1.5 text-xs text-primary-foreground/80">
+        <span className="flex items-center gap-1.5 rounded-full bg-primary-foreground/10 px-3 py-1.5 text-xs text-primary-foreground/80">
           <Lock size={12} aria-hidden="true" />
           {copy("Privat förhandsvisning", "Private preview")}
         </span>
       </header>
-      <div className="my-8 flex items-center gap-4">
+      <div className="my-7 flex items-center gap-4">
         <div
           aria-hidden="true"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-primary-foreground/25 bg-primary-foreground/5 text-xl font-light text-primary-foreground"
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/10 text-xl font-medium text-primary-foreground"
         >
           {identity?.displayName
             ?.split(" ")
@@ -74,8 +74,11 @@ export function SecurityPassportPreview({
           {claims.map((c) => {
             const state = credentialProductStatus(c, metadata?.verificationEvents ?? [], today);
             return (
-              <li key={c.id} className="flex items-start justify-between gap-3">
-                <span className="min-w-0 break-words text-sm">
+              <li
+                key={c.id}
+                className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-l-2 border-primary-foreground/25 pl-3"
+              >
+                <span className="min-w-0 break-words text-sm font-medium">
                   {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
                 </span>
                 <span className="max-w-[45%] shrink-0 text-right text-xs text-primary-foreground/80">
