@@ -3,22 +3,23 @@
   "branch": "codex/passport-product-finalization",
   "base_main": "351dea8",
   "production": {
-    "writes": 0,
-    "migration_applications": 0,
-    "data_changes": 0,
+    "migration_applications": 1,
+    "history_alias_inserts": 1,
+    "existing_application_data_changes": 0,
+    "new_review_rows": 36,
+    "new_organisation_role_rows": 105,
     "deletions": 0,
     "pr_257_migrations_unchanged": true,
-    "hosted_ledger_unchanged": true,
-    "stale_cli_project_calls": 0
+    "stale_cli_project_calls": 0,
+    "evidence": "hosted-application.json"
   },
   "release": {
-    "pending_migrations": [
-      "20261123090000_sp_credential_organisation_roles.sql"
-    ],
-    "recommendation": "FIX REQUIRED",
-    "hosted_application_authorised": false,
+    "pending_migrations": [],
+    "recommendation": "CI PENDING",
+    "hosted_application_authorised": true,
+    "canonical_alias_verified": true,
     "owner_visual_approval": "PENDING",
-    "reason": "Schema-first release and empty deploy-plan gates correctly reject application code until the separately authorised hosted migration has been applied and verified. Explicit owner visual approval also remains required."
+    "reason": "Hosted application and canonical alias verified. Schema-first guard unchanged. Final reconciliation-head CI pending; no merge or publication."
   },
   "checks": [
     {
@@ -1006,5 +1007,43 @@
     "user_facing_occurrences": 0,
     "legacy_preview_route": "/passport/card retained; existing shared links unchanged",
     "preview_component": "SecurityPassportPreview"
+  },
+  "historical_preflight": {
+    "verified_at_utc": "2026-09-16T18:52:27.503380+00:00",
+    "production": {
+      "writes": 0,
+      "migration_applications": 0,
+      "data_changes": 0,
+      "deletions": 0,
+      "pr_257_migrations_unchanged": true,
+      "hosted_ledger_unchanged": true,
+      "stale_cli_project_calls": 0
+    },
+    "release": {
+      "pending_migrations": [
+        "20261123090000_sp_credential_organisation_roles.sql"
+      ],
+      "recommendation": "FIX REQUIRED",
+      "hosted_application_authorised": false,
+      "owner_visual_approval": "PENDING",
+      "reason": "Schema-first release and empty deploy-plan gates correctly reject application code until the separately authorised hosted migration has been applied and verified. Explicit owner visual approval also remains required."
+    }
+  },
+  "hosted_reconciliation": "hosted-application.json",
+  "reconciliation_checks": {
+    "deterministicChecksPassed": 149,
+    "typechecksPassed": 2,
+    "changedFileLint": "PASS",
+    "productionBuild": "PASS",
+    "cleanReplayFiles": 295,
+    "cleanReplayRlsRollbackReapply": "PASS",
+    "newMigrationAssertionsBeforeAndAfterReapply": 22,
+    "mutationSuites": 30,
+    "mutationsDetected": 1064,
+    "logs": {
+      "replay": "a76454d568ddc4caa0857cd540bffefde24d0376c3361c71e040e1c46479fadb",
+      "build": "d0ffff18843dd4ea5bc35c0f950fd7af13ac086b63ded394af0fc2b2d221704e",
+      "mutations": "387d21847a1cbc6f492ff9c706b571dc2e475aa55a0bf2272bb021c910d57418"
+    }
   }
 }

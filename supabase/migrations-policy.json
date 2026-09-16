@@ -532,6 +532,13 @@
       "hostedName": "cv_owned_application_snapshot",
       "reason": "Applied once to CQrityjob Production (wrygicdfxwjnrugduxnt) through the authenticated Supabase connector from pinned PR #257 head 01efb0731359de2a8939c37ded817f008459366d. Canonical 20261122090000 maps to hosted 20260916155620 / cv_owned_application_snapshot. SHA-256 b5bd06661fef9dd5266ab362553a68d77583b8a4c8fd5fdc430a5a21c8139936. Direct-access provenance follows the existing hostedLedgerOverrides convention, not appliedThroughLovable. The canonical file remains unchanged at its required replay position. The generated-version file is a comment-only ledger marker. On 2026-09-16 owner-authorized history-only reconciliation added the canonical version/name alias with no SQL body, preserving the original hosted row. Do not re-execute migration SQL. Evidence: docs/passport/hosted-application-evidence/verification.json; local reconciliation: docs/release/2026-09-16-pr257-local-history-reconciliation.md.",
       "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20261122090000','20260916155620');"
+    },
+    {
+      "file": "20261123090000_sp_credential_organisation_roles.sql",
+      "hostedVersion": "20260916190510",
+      "hostedName": "sp_credential_organisation_roles",
+      "reason": "Applied once to CQrityjob Production (wrygicdfxwjnrugduxnt) through the authenticated Supabase connector from pinned PR #258 head d8bd02689fb5b4473b18940df309e0ede7fee0e7. SHA-256 c05fdadc1ad96543cbcb979a6c39d7b9866615ae957a8fa7925889723334db62 matches the hosted statements exactly. Canonical SQL remains unchanged at its required replay position; generated identity has a comment-only marker. A separately owner-authorized canonical version/name alias with NULL statements is verified in production. Do not re-execute. Evidence: docs/passport/product-finalization/hosted-application.json",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20261123090000','20260916190510');"
     }
   ],
   "appliedThroughLovable": [

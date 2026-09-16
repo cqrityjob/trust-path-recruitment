@@ -105,8 +105,8 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // enough, and an applied migration left on this list would mask the next
 // genuinely stuck one.
 //
-// Product schema is reviewed locally; hosted application has not been authorised.
-const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql"];
+// PR #258 applied and verified through the connector; canonical history alias verified.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
@@ -144,6 +144,7 @@ const hostedLedgerMarkers = [
   "20260916155521_sp_credential_selective_sharing_v2.sql",
   "20260916155551_sp_closed_credential_catalogue.sql",
   "20260916155620_cv_owned_application_snapshot.sql",
+  "20260916190510_sp_credential_organisation_roles.sql",
 ];
 const parked = [
   "20261022090000_scp_vaktare_v1_content_review.sql",

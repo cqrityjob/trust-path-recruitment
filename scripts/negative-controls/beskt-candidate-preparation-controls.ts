@@ -519,10 +519,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: "scripts/release-frontier-check.ts",
-    // Track the genuinely pending product migration while planting an already-applied version.
-    find: 'const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql"];',
-    replace:
-      'const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql","20261110090000_bcp_candidate_preparation.sql"];',
+    // Plant an already-applied version into the empty pending frontier.
+    find: "const expectedPending: string[] = [];",
+    replace: 'const expectedPending: string[] = ["20261110090000_bcp_candidate_preparation.sql"];',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },

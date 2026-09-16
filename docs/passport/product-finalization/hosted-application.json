@@ -1,0 +1,1582 @@
+{
+  "verifiedAt": "2026-09-16 19:10:18.316816+00",
+  "project": {
+    "name": "CQrityjob Production",
+    "ref": "wrygicdfxwjnrugduxnt"
+  },
+  "pinnedSourceHead": "d8bd02689fb5b4473b18940df309e0ede7fee0e7",
+  "canonicalFile": "20261123090000_sp_credential_organisation_roles.sql",
+  "canonicalVersion": "20261123090000",
+  "hostedVersion": "20260916190510",
+  "hostedName": "sp_credential_organisation_roles",
+  "sqlSha256": "c05fdadc1ad96543cbcb979a6c39d7b9866615ae957a8fa7925889723334db62",
+  "history": {
+    "beforeApplication": {
+      "count": 293,
+      "digest": "7d231b2f2537f266ffb4f475c2fa4895"
+    },
+    "afterApplication": {
+      "count": 294,
+      "digest": "bc86f4921f2c1849e0c2d82dc7a23aec"
+    },
+    "afterAlias": {
+      "count": 295,
+      "digest": "34c5227c6f2fcfe71cfebc7b4082d91e"
+    },
+    "digestMethod": "md5(string_agg(row_to_json(m)::text, newline ORDER BY version)); includes complete ledger rows",
+    "ledgerCount": 295,
+    "ledgerDigest": "34c5227c6f2fcfe71cfebc7b4082d91e",
+    "target": [
+      {
+        "name": "sp_credential_organisation_roles",
+        "sha256": "c05fdadc1ad96543cbcb979a6c39d7b9866615ae957a8fa7925889723334db62",
+        "version": "20260916190510",
+        "statement_count": 1,
+        "statements_null": false
+      },
+      {
+        "name": "sp_credential_organisation_roles",
+        "sha256": null,
+        "version": "20261123090000",
+        "statement_count": null,
+        "statements_null": true
+      }
+    ],
+    "original294Unchanged": true,
+    "baselineChanges": [],
+    "schemaUnchangedByAlias": true,
+    "authAndStorageUnchanged": true
+  },
+  "verification": {
+    "baselineBefore": [
+      {
+        "row_count": 69,
+        "table_name": "cig_professions",
+        "content_digest": "fca2c2cc0ebbf3c5f1a1deb3ac2bc31d"
+      },
+      {
+        "row_count": 3,
+        "table_name": "cv_document_operations",
+        "content_digest": "f72f83cadffd0a25af9e1e0744790b9c"
+      },
+      {
+        "row_count": 3,
+        "table_name": "cv_documents",
+        "content_digest": "18e08f337aefea03b7a6cda273133156"
+      },
+      {
+        "row_count": 12,
+        "table_name": "job_applications",
+        "content_digest": "442b557da2441e351d7f8e2ca80189a7"
+      },
+      {
+        "row_count": 13,
+        "table_name": "profiles",
+        "content_digest": "b50cf260c96e015f61e438d763e5eb59"
+      },
+      {
+        "row_count": 3,
+        "table_name": "security_career_profiles",
+        "content_digest": "3d4cabd1ca95522ac4f39fe2c25cbeb7"
+      },
+      {
+        "row_count": 5,
+        "table_name": "sp_authorities",
+        "content_digest": "3348bcbdc81640ca4d71cac9d38803b8"
+      },
+      {
+        "row_count": 14,
+        "table_name": "sp_certification_definitions",
+        "content_digest": "292df1e32df0fed1eb0699a971698595"
+      },
+      {
+        "row_count": 8,
+        "table_name": "sp_certification_issuer_aliases",
+        "content_digest": "8e87e6ac283de4ff049e1dfe2744c054"
+      },
+      {
+        "row_count": 5,
+        "table_name": "sp_certification_issuers",
+        "content_digest": "edfbec67cd81f3ca147c22d7c44bc243"
+      },
+      {
+        "row_count": 31,
+        "table_name": "sp_certification_sources",
+        "content_digest": "35ec4f29b1d890e15f7a843d39682a2a"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_claim_certification_lifecycle",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 42,
+        "table_name": "sp_claims",
+        "content_digest": "6aad94bf4668355db3a73160eb61eec4"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_adapter_mappings",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 7,
+        "table_name": "sp_credential_classes",
+        "content_digest": "b9733baf7d9ff5a4e4e9072f1511045b"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_definition_jurisdictions",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_definition_metadata",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_details",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_disclosure_policy",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 11,
+        "table_name": "sp_credential_jurisdictions",
+        "content_digest": "3b5538f81ad680295d90523d3252d4df"
+      },
+      {
+        "row_count": 2,
+        "table_name": "sp_credential_scopes",
+        "content_digest": "e44fcf7bff9e03516056f3671a14f8ba"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_share_events",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 73,
+        "table_name": "sp_credential_types",
+        "content_digest": "00e8f52e2c53966d593e047e51a6b807"
+      },
+      {
+        "row_count": 38,
+        "table_name": "sp_disclosure_accesses",
+        "content_digest": "0ea0eead51d8cced97d2481a5aa0426d"
+      },
+      {
+        "row_count": 12,
+        "table_name": "sp_disclosure_items",
+        "content_digest": "e8faabfafdc1d89d3e3189c4349610e6"
+      },
+      {
+        "row_count": 32,
+        "table_name": "sp_disclosures",
+        "content_digest": "1336d23e2fad1935da26c59e67559634"
+      },
+      {
+        "row_count": 10,
+        "table_name": "sp_evidence",
+        "content_digest": "a4bceba113571457a0d8adb657d292a4"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_evidence_extractions",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 3,
+        "table_name": "sp_experience_periods",
+        "content_digest": "01aae714494e918fc3fc17ceb8fa9919"
+      },
+      {
+        "row_count": 3,
+        "table_name": "sp_jurisdictions",
+        "content_digest": "3091c16e1d87d498e14385590e5beb7a"
+      },
+      {
+        "row_count": 5,
+        "table_name": "sp_market_packs",
+        "content_digest": "66a017d78811deafcf182d5b29360a7d"
+      },
+      {
+        "row_count": 134,
+        "table_name": "sp_passport_events",
+        "content_digest": "ce3869798f71dc517a6efe044aaf8349"
+      },
+      {
+        "row_count": 2,
+        "table_name": "sp_passport_operations",
+        "content_digest": "ced02db803940be1835b098fb9ac65d7"
+      },
+      {
+        "row_count": 3,
+        "table_name": "sp_passport_profiles",
+        "content_digest": "2c31a02da6ab34f3a40f0e42f531ac16"
+      },
+      {
+        "row_count": 3,
+        "table_name": "sp_pilot_members",
+        "content_digest": "e0a913ce5c6fef8df7e51c4e6f5c3690"
+      },
+      {
+        "row_count": 1,
+        "table_name": "sp_profession_families",
+        "content_digest": "407ac12230f9db4e11ce95c3a690eb3f"
+      },
+      {
+        "row_count": 90,
+        "table_name": "sp_professional_titles",
+        "content_digest": "d2e45010773366c584257f520cb6f15c"
+      },
+      {
+        "row_count": 10,
+        "table_name": "sp_public_access_throttle",
+        "content_digest": "41e174db49e80920364ad3c8d8aba6b8"
+      },
+      {
+        "row_count": 1,
+        "table_name": "sp_recognition_policies",
+        "content_digest": "4e4803b27697a9178d478836637d5792"
+      },
+      {
+        "row_count": 33,
+        "table_name": "sp_regulated_roles",
+        "content_digest": "71715f6e665f1e6a6598c660487f8595"
+      },
+      {
+        "row_count": 26,
+        "table_name": "sp_regulatory_sources",
+        "content_digest": "bebd387ff52fad829d920a83d1d3d269"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_share_handoffs",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_share_sessions",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 24,
+        "table_name": "sp_skill_types",
+        "content_digest": "5292105c4f82300d7a703dfeb60441a6"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_source_review_items",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 8,
+        "table_name": "sp_sub_jurisdictions",
+        "content_digest": "137bf7d4f52e2e06ae8814f0f7b1fffb"
+      },
+      {
+        "row_count": 9,
+        "table_name": "sp_verification_decisions",
+        "content_digest": "c9e72ccd28f38a49890de8929ad065a0"
+      },
+      {
+        "row_count": 9,
+        "table_name": "sp_verification_requests",
+        "content_digest": "f8e789ef90be3afb8b5a220a835136ed"
+      }
+    ],
+    "baselineAfter": [
+      {
+        "row_count": 69,
+        "table_name": "cig_professions",
+        "content_digest": "fca2c2cc0ebbf3c5f1a1deb3ac2bc31d"
+      },
+      {
+        "row_count": 3,
+        "table_name": "cv_document_operations",
+        "content_digest": "f72f83cadffd0a25af9e1e0744790b9c"
+      },
+      {
+        "row_count": 3,
+        "table_name": "cv_documents",
+        "content_digest": "18e08f337aefea03b7a6cda273133156"
+      },
+      {
+        "row_count": 12,
+        "table_name": "job_applications",
+        "content_digest": "442b557da2441e351d7f8e2ca80189a7"
+      },
+      {
+        "row_count": 13,
+        "table_name": "profiles",
+        "content_digest": "b50cf260c96e015f61e438d763e5eb59"
+      },
+      {
+        "row_count": 3,
+        "table_name": "security_career_profiles",
+        "content_digest": "3d4cabd1ca95522ac4f39fe2c25cbeb7"
+      },
+      {
+        "row_count": 5,
+        "table_name": "sp_authorities",
+        "content_digest": "3348bcbdc81640ca4d71cac9d38803b8"
+      },
+      {
+        "row_count": 14,
+        "table_name": "sp_certification_definitions",
+        "content_digest": "292df1e32df0fed1eb0699a971698595"
+      },
+      {
+        "row_count": 8,
+        "table_name": "sp_certification_issuer_aliases",
+        "content_digest": "8e87e6ac283de4ff049e1dfe2744c054"
+      },
+      {
+        "row_count": 5,
+        "table_name": "sp_certification_issuers",
+        "content_digest": "edfbec67cd81f3ca147c22d7c44bc243"
+      },
+      {
+        "row_count": 31,
+        "table_name": "sp_certification_sources",
+        "content_digest": "35ec4f29b1d890e15f7a843d39682a2a"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_claim_certification_lifecycle",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 42,
+        "table_name": "sp_claims",
+        "content_digest": "6aad94bf4668355db3a73160eb61eec4"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_adapter_mappings",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 7,
+        "table_name": "sp_credential_classes",
+        "content_digest": "b9733baf7d9ff5a4e4e9072f1511045b"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_definition_jurisdictions",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_definition_metadata",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_details",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_disclosure_policy",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 11,
+        "table_name": "sp_credential_jurisdictions",
+        "content_digest": "3b5538f81ad680295d90523d3252d4df"
+      },
+      {
+        "row_count": 2,
+        "table_name": "sp_credential_scopes",
+        "content_digest": "e44fcf7bff9e03516056f3671a14f8ba"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_credential_share_events",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 73,
+        "table_name": "sp_credential_types",
+        "content_digest": "00e8f52e2c53966d593e047e51a6b807"
+      },
+      {
+        "row_count": 38,
+        "table_name": "sp_disclosure_accesses",
+        "content_digest": "0ea0eead51d8cced97d2481a5aa0426d"
+      },
+      {
+        "row_count": 12,
+        "table_name": "sp_disclosure_items",
+        "content_digest": "e8faabfafdc1d89d3e3189c4349610e6"
+      },
+      {
+        "row_count": 32,
+        "table_name": "sp_disclosures",
+        "content_digest": "1336d23e2fad1935da26c59e67559634"
+      },
+      {
+        "row_count": 10,
+        "table_name": "sp_evidence",
+        "content_digest": "a4bceba113571457a0d8adb657d292a4"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_evidence_extractions",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 3,
+        "table_name": "sp_experience_periods",
+        "content_digest": "01aae714494e918fc3fc17ceb8fa9919"
+      },
+      {
+        "row_count": 3,
+        "table_name": "sp_jurisdictions",
+        "content_digest": "3091c16e1d87d498e14385590e5beb7a"
+      },
+      {
+        "row_count": 5,
+        "table_name": "sp_market_packs",
+        "content_digest": "66a017d78811deafcf182d5b29360a7d"
+      },
+      {
+        "row_count": 134,
+        "table_name": "sp_passport_events",
+        "content_digest": "ce3869798f71dc517a6efe044aaf8349"
+      },
+      {
+        "row_count": 2,
+        "table_name": "sp_passport_operations",
+        "content_digest": "ced02db803940be1835b098fb9ac65d7"
+      },
+      {
+        "row_count": 3,
+        "table_name": "sp_passport_profiles",
+        "content_digest": "2c31a02da6ab34f3a40f0e42f531ac16"
+      },
+      {
+        "row_count": 3,
+        "table_name": "sp_pilot_members",
+        "content_digest": "e0a913ce5c6fef8df7e51c4e6f5c3690"
+      },
+      {
+        "row_count": 1,
+        "table_name": "sp_profession_families",
+        "content_digest": "407ac12230f9db4e11ce95c3a690eb3f"
+      },
+      {
+        "row_count": 90,
+        "table_name": "sp_professional_titles",
+        "content_digest": "d2e45010773366c584257f520cb6f15c"
+      },
+      {
+        "row_count": 10,
+        "table_name": "sp_public_access_throttle",
+        "content_digest": "41e174db49e80920364ad3c8d8aba6b8"
+      },
+      {
+        "row_count": 1,
+        "table_name": "sp_recognition_policies",
+        "content_digest": "4e4803b27697a9178d478836637d5792"
+      },
+      {
+        "row_count": 33,
+        "table_name": "sp_regulated_roles",
+        "content_digest": "71715f6e665f1e6a6598c660487f8595"
+      },
+      {
+        "row_count": 26,
+        "table_name": "sp_regulatory_sources",
+        "content_digest": "bebd387ff52fad829d920a83d1d3d269"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_share_handoffs",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_share_sessions",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 24,
+        "table_name": "sp_skill_types",
+        "content_digest": "5292105c4f82300d7a703dfeb60441a6"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sp_source_review_items",
+        "content_digest": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 8,
+        "table_name": "sp_sub_jurisdictions",
+        "content_digest": "137bf7d4f52e2e06ae8814f0f7b1fffb"
+      },
+      {
+        "row_count": 9,
+        "table_name": "sp_verification_decisions",
+        "content_digest": "c9e72ccd28f38a49890de8929ad065a0"
+      },
+      {
+        "row_count": 9,
+        "table_name": "sp_verification_requests",
+        "content_digest": "f8e789ef90be3afb8b5a220a835136ed"
+      }
+    ],
+    "protectedBefore": [
+      {
+        "table_name": "auth.users",
+        "row_count": 17,
+        "content_digest": "1cb5a96e94d8e38bf882711394c6f02c"
+      },
+      {
+        "table_name": "storage.objects",
+        "row_count": 17,
+        "content_digest": "beb843e6b230c160fc69c99a46343a0a"
+      },
+      {
+        "table_name": "storage.buckets",
+        "row_count": 2,
+        "content_digest": "e4ad3a0c46592d78adc213b4523ae323"
+      }
+    ],
+    "protectedAfter": [
+      {
+        "table_name": "auth.users",
+        "row_count": 17,
+        "content_digest": "1cb5a96e94d8e38bf882711394c6f02c"
+      },
+      {
+        "table_name": "storage.objects",
+        "row_count": 17,
+        "content_digest": "beb843e6b230c160fc69c99a46343a0a"
+      },
+      {
+        "table_name": "storage.buckets",
+        "row_count": 2,
+        "content_digest": "e4ad3a0c46592d78adc213b4523ae323"
+      }
+    ],
+    "security": {
+      "indexes": [
+        "CREATE UNIQUE INDEX sp_credential_definition_reviews_pkey ON public.sp_credential_definition_reviews USING btree (credential_code)",
+        "CREATE INDEX sp_credential_organisation_roles_authority_id_idx ON public.sp_credential_organisation_roles USING btree (authority_id)",
+        "CREATE INDEX sp_credential_organisation_roles_certification_issuer_id_idx ON public.sp_credential_organisation_roles USING btree (certification_issuer_id)",
+        "CREATE UNIQUE INDEX sp_credential_organisation_roles_pkey ON public.sp_credential_organisation_roles USING btree (credential_code, role)"
+      ],
+      "storage": [
+        {
+          "name": "passport-evidence",
+          "public": false
+        },
+        {
+          "name": "job-application-cvs",
+          "public": false
+        }
+      ],
+      "functions": [
+        {
+          "name": "sp_assert_credential_selection",
+          "body_matches": true,
+          "security_definer": true,
+          "empty_search_path": true,
+          "no_client_execute": true
+        },
+        {
+          "name": "sp_credential_payload_v2",
+          "body_matches": true,
+          "security_definer": true,
+          "empty_search_path": true,
+          "no_client_execute": true
+        }
+      ],
+      "title_consent": [
+        {
+          "title_off": true,
+          "no_holder_without_consent": true,
+          "no_credentials_without_selection": true
+        },
+        {
+          "title_off": true,
+          "no_holder_without_consent": true,
+          "no_credentials_without_selection": true
+        },
+        {
+          "title_off": true,
+          "no_holder_without_consent": true,
+          "no_credentials_without_selection": true
+        }
+      ],
+      "new_table_security": [
+        {
+          "rls": true,
+          "table": "sp_credential_definition_reviews",
+          "forced": true,
+          "no_anon": true,
+          "no_service": true,
+          "no_client_write": true,
+          "authenticated_select": true
+        },
+        {
+          "rls": true,
+          "table": "sp_credential_organisation_roles",
+          "forced": true,
+          "no_anon": true,
+          "no_service": true,
+          "no_client_write": true,
+          "authenticated_select": true
+        }
+      ],
+      "passport_tables_without_rls": 0
+    },
+    "seedAndTitleConsent": {
+      "roles_exact": true,
+      "title_opt_in": true,
+      "reviews_exact": true
+    },
+    "insertedRows": {
+      "reviews": 36,
+      "organisationRoles": 105
+    },
+    "existingRowDeletions": 0,
+    "existingApplicationDataChanges": 0
+  },
+  "operations": {
+    "migrationAppliedOnceInPriorTurn": true,
+    "migrationsReapplied": 0,
+    "aliasRowsInsertedThisReconciliation": 1,
+    "aliasStatementsNull": true,
+    "aliasTransaction": "-- Owner-authorized single canonical history-only alias, following PR #198.\n-- Project: wrygicdfxwjnrugduxnt; canonical 20261123090000 -> hosted 20260916190510.\nBEGIN;\nLOCK TABLE supabase_migrations.schema_migrations IN SHARE ROW EXCLUSIVE MODE;\nDO $alias$\nDECLARE inserted integer;\nBEGIN\n IF (SELECT count(*) FROM supabase_migrations.schema_migrations) <> 294\n OR (SELECT md5(string_agg(row_to_json(m)::text,E'\\n' ORDER BY version)) FROM supabase_migrations.schema_migrations m) <> 'bc86f4921f2c1849e0c2d82dc7a23aec'\n THEN RAISE EXCEPTION 'PR258_LEDGER_CHANGED'; END IF;\n IF EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261123090000')\n THEN RAISE EXCEPTION 'PR258_ALIAS_ALREADY_EXISTS'; END IF;\n IF (SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version='20260916190510' AND name='sp_credential_organisation_roles'\n AND encode(sha256(convert_to(array_to_string(statements,E'\\n'),'UTF8')),'hex')='c05fdadc1ad96543cbcb979a6c39d7b9866615ae957a8fa7925889723334db62') <> 1\n THEN RAISE EXCEPTION 'PR258_APPLICATION_MISMATCH'; END IF;\n INSERT INTO supabase_migrations.schema_migrations(version,name)\n VALUES ('20261123090000','sp_credential_organisation_roles')\n ON CONFLICT(version) DO NOTHING;\n GET DIAGNOSTICS inserted=ROW_COUNT;\n IF inserted <> 1 OR (SELECT count(*) FROM supabase_migrations.schema_migrations) <> 295\n THEN RAISE EXCEPTION 'PR258_ALIAS_COUNT_MISMATCH'; END IF;\nEND $alias$;\nCOMMIT;\n",
+    "otherHostedWritesThisReconciliation": 0,
+    "staleProjectCalls": 0,
+    "supabaseCliCalls": 0,
+    "merged": false,
+    "published": false
+  },
+  "priorStoppedProbe": {
+    "reason": "Supplemental read-only seed-comparison SQL used a semicolon inside a quoted value as a statement boundary and failed to parse. No assertions ran in that query.",
+    "resolution": "Corrected statement extraction respects quoted SQL strings. Read-only exact 36-review/105-role content and explicit title-consent verification now pass."
+  },
+  "localValidation": {
+    "checks": [
+      {
+        "name": "app-typecheck",
+        "status": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "scripts-typecheck",
+        "status": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "changed-file-lint",
+        "status": 0,
+        "note": "Initial formatting findings corrected; final lint passed.",
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "admin-employer-status-guard:check",
+        "status": 0,
+        "logSha256": "d09dfbddb033134a3deeaf97754f838a6fb4b5a58f877c714a2d4d5cf70b0d5b"
+      },
+      {
+        "name": "public-assessment-auth:check",
+        "status": 0,
+        "logSha256": "e17c102091f01ab4baba0d69059bb921d0d517b091d0ac80da42223274d96123"
+      },
+      {
+        "name": "passport-error-scope:check",
+        "status": 0,
+        "logSha256": "5ed850436e753cc27f629046de2f932b20d8655d8a67b03a90098267fdfe00c5"
+      },
+      {
+        "name": "passport-reviewer-decision:check",
+        "status": 0,
+        "logSha256": "9baa94814f8b19fda5b22aaa9dc2beae7c0dd3d8af98f82d3a5a79f02f74b6a7"
+      },
+      {
+        "name": "passport-employer-verification:check",
+        "status": 0,
+        "logSha256": "739ecee4518060cafadbbae25a9af8abcc26e64ec1bc6b004240b559618e9371"
+      },
+      {
+        "name": "passport-employer-matching:check",
+        "status": 0,
+        "logSha256": "168a2eb94915ed2529431892409b18ce9db4e8a15a0ca46d4cc78e71a6c2f5a4"
+      },
+      {
+        "name": "passport-decision-truthfulness:check",
+        "status": 0,
+        "logSha256": "d12bd022bc2efb5c8535982368e56fa2263bba0a78bb0215e74508613693ab68"
+      },
+      {
+        "name": "passport-trust-source:check",
+        "status": 0,
+        "logSha256": "e47e7f00f11901bd6fbb610f9b6a708d3d5ed5be14130dc4569c027bcaf458d6"
+      },
+      {
+        "name": "passport-sharing-flow:check",
+        "status": 0,
+        "logSha256": "49c2c5a822906064e704af388c0f462eec9ce382677ea82bbed0edc5b618016a"
+      },
+      {
+        "name": "my-career-gate:check",
+        "status": 0,
+        "logSha256": "5c149af0b7bc6f8ac19a8824243f10c7832bb5dd6f7ea3ee3f94c26a950aeaf0"
+      },
+      {
+        "name": "my-career-dashboard:check",
+        "status": 0,
+        "logSha256": "14622fc104b4804479f9083fe1d633c8f9312697bac7a518c24c021ad33896b4"
+      },
+      {
+        "name": "profile-section-navigation:check",
+        "status": 0,
+        "logSha256": "398bdb2d2baa405f038ddfefad64bb9e6032e1be43fea71b223b78977d6b2f77"
+      },
+      {
+        "name": "my-career-experience:check",
+        "status": 0,
+        "logSha256": "ce48f7d03a6f1a2e4e1f3ada0b426480c77f9b445da81ccb9f131a25320b23b6"
+      },
+      {
+        "name": "my-career-premium-overview:check",
+        "status": 0,
+        "logSha256": "23164644754e60474921e75171b5f6e103a44948d8c5b56be32e5e6a2ebd1f37"
+      },
+      {
+        "name": "passport-share-transport:check",
+        "status": 0,
+        "logSha256": "98305983a21e731dd2391cbfb051b65ca98761d60ea65f6bedc2c8a4bbf779c3"
+      },
+      {
+        "name": "interview-method-tenant-read:check",
+        "status": 0,
+        "logSha256": "ca4fb0cac386a917facd38665d382545ce4c09e2daaebbbda7ef6f1d9e6535c4"
+      },
+      {
+        "name": "cd-outstanding-reviews:check",
+        "status": 0,
+        "logSha256": "829b7e1d961f0df70c016ac0b24d9f487549b05b5e595166607ffab3e33cd05d"
+      },
+      {
+        "name": "beskt-architecture:check",
+        "status": 0,
+        "logSha256": "4a073f4457a40ea1d462354ffaf9434d234735b9294ec525c9ba9da8dd3809a1"
+      },
+      {
+        "name": "beskt-governed-content:check",
+        "status": 0,
+        "logSha256": "7752fc4e42a55f178fb1afbda9f8fb90ba14c67a2cc491f985fd506fcad9b5c7"
+      },
+      {
+        "name": "beskt-conduct-report:check",
+        "status": 0,
+        "logSha256": "60e4f83ac5890bc24b01cfb300a08e0de0410f82f0d099ad91c7e1e83fae5588"
+      },
+      {
+        "name": "beskt-content-authoring:check",
+        "status": 0,
+        "logSha256": "4ef292fb273cb5368a27ebc0f1fa1b91a1cd0304740c0b0dca3442392decf500"
+      },
+      {
+        "name": "beskt-candidate-preparation:check",
+        "status": 0,
+        "logSha256": "5178f672c1f6bcbd56084dfbe7d1ed982dcf004785b25475b18f25a9b86f8307"
+      },
+      {
+        "name": "beskt-interview-case-bridge:check",
+        "status": 0,
+        "logSha256": "42f113251abb13f01e7e910e69e164cb1c08de40795422575bfd396b1b0e1347"
+      },
+      {
+        "name": "beskt-interview-conduct:check",
+        "status": 0,
+        "logSha256": "15af4f796e0629a0b10bfc790304b711ef1221e9dba8617b3cabcea792154766"
+      },
+      {
+        "name": "beskt-interview-tool:check",
+        "status": 0,
+        "logSha256": "89779414d89005c54302687ee9816ed4e8f86870f04a8ee48a1fcf22a8b462c4"
+      },
+      {
+        "name": "beskt-notice-copy:check",
+        "status": 0,
+        "logSha256": "f4f63094d72af5082fb98625b913a7a62ecbe102df2409250f5a07533572544f"
+      },
+      {
+        "name": "beskt-candidate-preparation-render:check",
+        "status": 0,
+        "logSha256": "019f38b8f3e8611b7e78843ce9f3aadca2f71600ec47976e643f1aefe0baef88"
+      },
+      {
+        "name": "passport-share-gateway-transport:check",
+        "status": 0,
+        "logSha256": "a7a6dbebda30c73fcbf1351e34d773e4c4b366d0916ad486d0594e646e06f7ed"
+      },
+      {
+        "name": "passport-share-gateway-schema:check",
+        "status": 0,
+        "logSha256": "9ed962cae76c74d9d57588d140142df0da0cf7c286158c1c142d4172b6adb848"
+      },
+      {
+        "name": "passport-skill-contract:check",
+        "status": 0,
+        "logSha256": "8d9c748920e94fc29c3c68a6527b3e15a609bf3df9456e7d675a27157156993a"
+      },
+      {
+        "name": "v31-evidence-payload:check",
+        "status": 0,
+        "logSha256": "01f78fdf6e0085aba21debcd42738a795cbb4afb63e63e117cf6f335fbd4897a"
+      },
+      {
+        "name": "passport-separation:check",
+        "status": 0,
+        "logSha256": "e4e7d5f20937dd0009412474d014f151e55c070f8c13825d3c5e776b53ae8f15"
+      },
+      {
+        "name": "application-dialog-scroll:check",
+        "status": 0,
+        "logSha256": "a9dbb06286aff2a093eb317326244891397fe3f5075b8bf2eb8429bc932d57e4"
+      },
+      {
+        "name": "kg:check",
+        "status": 0,
+        "logSha256": "918d26400f1082186b9f2b54cff5217cd4c0bfece9d012ad06d739d44eb576dd"
+      },
+      {
+        "name": "career-discovery:check",
+        "status": 0,
+        "logSha256": "3436a9ddbd54993d844dde4a1e5f162d31dfbe087718e06d4c659071d438b9ce"
+      },
+      {
+        "name": "cie:check",
+        "status": 0,
+        "logSha256": "4bb76634f05b0637135e34281f88ae2dcaef7be372a484b877920047444d3e31"
+      },
+      {
+        "name": "career-profession-bridge:check",
+        "status": 0,
+        "logSha256": "0ad1f7b6244d4ad77c595c690cb82f65a1bb3cbfcebf7d64e91f42a8911f69b8"
+      },
+      {
+        "name": "employer-taxonomy:check",
+        "status": 0,
+        "logSha256": "9ac862886cb46826d8b4abb6258811abdcb68860814e46dee2ac7aeace4238a6"
+      },
+      {
+        "name": "invitation-email-guard:check",
+        "status": 0,
+        "logSha256": "92f67509ef5498893dc26cfe89b6354a809a979ed16e18d1d166e7f228d3dbd8"
+      },
+      {
+        "name": "passport-fixture:check",
+        "status": 0,
+        "logSha256": "5e50da621529acbb6897af34059fdba2042f8260066ee7f91d340e59ed5a05c8"
+      },
+      {
+        "name": "passport-first-run:check",
+        "status": 0,
+        "logSha256": "0e539f2f8870d640cba6c1ace17f1f0588cd52e7210f1ab976826d289cd2fefb"
+      },
+      {
+        "name": "passport-workspace:check",
+        "status": 0,
+        "logSha256": "6b3df32a10a100eec692588dcf139e2fc6a311840c270ea9c9e877ca382a9a95"
+      },
+      {
+        "name": "trust-surface:check",
+        "status": 0,
+        "logSha256": "d719d0d5b27d4c7e0554bade5fb98748504706327e0f155e8c0b0fc8908ec6d1"
+      },
+      {
+        "name": "career-discovery-v31-professions:check",
+        "status": 0,
+        "logSha256": "1d8de2dea2fa424ce8b4408a3a6958e5f0154348984e47cf063b9629a5287ade"
+      },
+      {
+        "name": "career-discovery-v31-golden-personas:check",
+        "status": 0,
+        "logSha256": "c8bba3251375d0910cad3eb714b7b8361f6db3062c2881a22f1de0e578e76e3e"
+      },
+      {
+        "name": "career-discovery-recommendation:check",
+        "status": 0,
+        "logSha256": "6ea7f85ee2118ebaccca05602ada04243870c64f35ea699b50f5d067544fb67d"
+      },
+      {
+        "name": "career-discovery-profession-differentiation:check",
+        "status": 0,
+        "logSha256": "912fdc2c8b946475ef43038d602b3a698a2cd2c7c072d1a5188ca85d13f8088d"
+      },
+      {
+        "name": "career-discovery-claim:check",
+        "status": 0,
+        "logSha256": "55f3de8e220840189501c014a46657f84778b8bbbc893cfe0fb9a562a229b583"
+      },
+      {
+        "name": "career-discovery-conversion:check",
+        "status": 0,
+        "logSha256": "fb42a075c3f57b29ba455911bd3ff48c64adf2beb2df6506095b19152b65df89"
+      },
+      {
+        "name": "career-discovery-canonical-result:check",
+        "status": 0,
+        "logSha256": "d8af42f021335560b60c1c6a3926e21efe65cb7d276f5a47da0beb6aec7165f7"
+      },
+      {
+        "name": "career-discovery-recommendation-integrity:check",
+        "status": 0,
+        "logSha256": "8e8bd70071954b72605bace95e4be64ca06b8ba6e9c547b26185d897a982e16f"
+      },
+      {
+        "name": "career-journey:check",
+        "status": 0,
+        "logSha256": "a1c64e6627c2dcc18127127d0fbbaf3e1927f731958084bbb5587e81f1bcc312"
+      },
+      {
+        "name": "career-discovery-career-card:check",
+        "status": 0,
+        "logSha256": "660e07c3369ec84e055fb23eca276d65c313e9f0d1cfbc9996316ee5144ef08a"
+      },
+      {
+        "name": "prepilot-candidate-surface:check",
+        "status": 0,
+        "logSha256": "08b4d45392bb6f4bf86a3885f0005c20df26c2bc16bbb61cb0167486d5990885"
+      },
+      {
+        "name": "academy-parity:check",
+        "status": 0,
+        "logSha256": "d55c85c208fa58ccd1d48f6e26a84dc0260abd32669a45b56fcb46e4541af399"
+      },
+      {
+        "name": "career-discovery-report:check",
+        "status": 0,
+        "logSha256": "2ae0d518dc3435b81644fff631b784269b74b93379b9bbff24a06620fe481337"
+      },
+      {
+        "name": "question-library:check",
+        "status": 0,
+        "logSha256": "75e6967bc45a7524d31ca121b0d537c23b8cb387e7c502547d12357bf862f99b"
+      },
+      {
+        "name": "employer-job-form:check",
+        "status": 0,
+        "logSha256": "3197203390c19bc3eb6bbd0286cfd9ee071dac274b7bba6c6f0af898da3a968b"
+      },
+      {
+        "name": "security-competency-separation:check",
+        "status": 0,
+        "logSha256": "ad98dc973957ea558627f4c1d1dc3628a9b34430777e6b9dbc921d77e82b1abd"
+      },
+      {
+        "name": "career-discovery-v31:check",
+        "status": 0,
+        "logSha256": "0ebdf965b23904965e8676721b945c8b75251c91e71cd8ea6e18fb0b74fcc439"
+      },
+      {
+        "name": "career-discovery-v32-content:check",
+        "status": 0,
+        "logSha256": "f6bd491da3114789e355bad3cd4cb857a7ec3c792c6b0445f5110595467e8ee9"
+      },
+      {
+        "name": "career-discovery-v32-equivalence:check",
+        "status": 0,
+        "logSha256": "25573b11e3a22b9e2c49585323ef4664a6363d46e7f57e2296db0e9e234c96fe"
+      },
+      {
+        "name": "assessment-assignment:check",
+        "status": 0,
+        "logSha256": "7024fd438164d58a18b8e8adeee3483cc8e4369d51ae431b8698249ddcf0e240"
+      },
+      {
+        "name": "assessment-reliability:check",
+        "status": 0,
+        "logSha256": "9b47d54a346f80b96888f075570060521d571fb4659bc6100d77f1eb0d4ffc27"
+      },
+      {
+        "name": "assessment-panels-render:check",
+        "status": 0,
+        "logSha256": "ce05935c730c28deedf5cf2a38a5451a1c32422e239052f90dc1778321c20db1"
+      },
+      {
+        "name": "assessment-language-contract:check",
+        "status": 0,
+        "logSha256": "8ee9eb5b264d2f3ad50d45089fbbf0220a8b433dd0e43b0225136f5984eb672d"
+      },
+      {
+        "name": "vaktare-pilot-truth:check",
+        "status": 0,
+        "logSha256": "96fe24bfbb35f58d363b3e62f2587662cf6ea68907c1be93ad2c964b521f0796"
+      },
+      {
+        "name": "vaktare-content-quality:check",
+        "status": 0,
+        "logSha256": "a08551c24091779514e64a3e38f5042bc2a64587f744fa51714cf138e1680860"
+      },
+      {
+        "name": "vaktare-self-report-quality:check",
+        "status": 0,
+        "logSha256": "c9becb80f20619062e84663fee983f67bdef69f3d41e45d199f15ccfd03f361a"
+      },
+      {
+        "name": "trust-evidence-report:check",
+        "status": 0,
+        "logSha256": "68a36d00c19b7c065f023259f68c0556abe411605446dfccb70567257e3cf2c4"
+      },
+      {
+        "name": "trust-next-step-parity:check",
+        "status": 0,
+        "logSha256": "c8c3b3efbe4a712cd5d3f9b8624e39247807ec93b6c1208dc7066e5e7daf6370"
+      },
+      {
+        "name": "legacy-assessment-routes:check",
+        "status": 0,
+        "logSha256": "a7c0e1e26cfd9080b28a6c1e07f3cb13d8229b3921b5b4bb6fca69639a5f94be"
+      },
+      {
+        "name": "deploy-plan:check",
+        "status": 0,
+        "logSha256": "5f2f68372cba077091e8ddb4d883c3f60842a801a093aefe21cc44861f69e06b"
+      },
+      {
+        "name": "deploy-plan-negative:check",
+        "status": 0,
+        "logSha256": "ece50615215ce88e7805f64c5cff6951940a865ed29810b5f9bdcfed883490bb"
+      },
+      {
+        "name": "migrations:check",
+        "status": 0,
+        "logSha256": "cbc91e8c45167bb1214f866a08f63a0568206e954ea414653a0f45ea3eb35f6f"
+      },
+      {
+        "name": "migrations-duplicate:check",
+        "status": 0,
+        "logSha256": "b4c6119fbf8c48429a5930b54d02c56ba260f3c9f147e453219315e2064b39e4"
+      },
+      {
+        "name": "schema-first-release:check",
+        "status": 0,
+        "logSha256": "040724e54ce67c8f7a68168119833571ec2a32c8e3d1de58df7a097419056ce0"
+      },
+      {
+        "name": "release-parity:check",
+        "status": 0,
+        "logSha256": "71fd0726e0eb2603b73469eb0f2992731296bc7cb0692d31200fc3128a44840f"
+      },
+      {
+        "name": "release-frontier:check",
+        "status": 0,
+        "logSha256": "9ca996b0b16321410557c21d5b2fd5328d35fa09a06926851f554bb7ceeb971a"
+      },
+      {
+        "name": "auth-provider-target:check",
+        "status": 0,
+        "logSha256": "b51140275daf1322c307350e296ee8c77c8dd8f5fc38fe4aff3d02425186ac33"
+      },
+      {
+        "name": "backend-target-lock:check",
+        "status": 0,
+        "logSha256": "7c5ba05f0a513cd927f642cc7c4de8886141bab74f3ec1fcb6e55c3f3537d152"
+      },
+      {
+        "name": "passport-title-derivation:check",
+        "status": 0,
+        "logSha256": "c9ebadff0db7838289ddfb158473d8772fcbe8af2d457a7d4b5ab40139272191"
+      },
+      {
+        "name": "passport-identity-engine:check",
+        "status": 0,
+        "logSha256": "10f6d5cfe049a2326082437156fb92d3f655e4f87a36986d14c48174235121f0"
+      },
+      {
+        "name": "passport-persona-journey:check",
+        "status": 0,
+        "logSha256": "a904ce7f389ca7764843d02ed763a5f497b6827408f1223414cfd759344895d1"
+      },
+      {
+        "name": "passport-credential-form:check",
+        "status": 0,
+        "logSha256": "fff9a17123becb26d4ab6e8ab5bb73633189194e217e2d98cbf154d80fe75d2f"
+      },
+      {
+        "name": "passport-date-validation:check",
+        "status": 0,
+        "logSha256": "c75158cde0ee28f1f7d15cfa13899c15798f7c3a8852d928b009961fcd7b68db"
+      },
+      {
+        "name": "passport-pilot-bugfix:check",
+        "status": 0,
+        "logSha256": "f33cb587e16409bb2da56ae5d34cea24e03dd46b24804230f0fdf8cee44a704a"
+      },
+      {
+        "name": "passport-profile-basics:check",
+        "status": 0,
+        "logSha256": "b10653a27b665799303b2ce61c69ed42fc074997b969a81eaa3394816e59c55a"
+      },
+      {
+        "name": "passport-market-profiles:check",
+        "status": 0,
+        "logSha256": "b70f3c6690744dafce68995fefa7e7a81e2261498aa8b6272cbb3e2d2fc21434"
+      },
+      {
+        "name": "passport-market-catalogue:check",
+        "status": 0,
+        "logSha256": "360f8eda23558b595fc38e9df46e2eb313540140195638f3db8a67f3a090ed5b"
+      },
+      {
+        "name": "passport-schema-drift:check",
+        "status": 0,
+        "logSha256": "96d6136c0921c669ba1484ba9e6f20e6a2452e3d866d00776b19a66c33706b77"
+      },
+      {
+        "name": "passport-global-certification:check",
+        "status": 0,
+        "logSha256": "a4997d6f3de545569e2632df752c47e6fd8af062b22b3e303876f8f730c90fb7"
+      },
+      {
+        "name": "passport-private-reference:check",
+        "status": 0,
+        "logSha256": "f88bc1d6bee6eb654ab5e33f0aa1a2eda355623ea527fe39732c8e494c26f4bd"
+      },
+      {
+        "name": "passport-classifier-behaviour:check",
+        "status": 0,
+        "logSha256": "f3ce007ce3354e2770dbb2c5d10e492b6fe35afec34ca887237b24dde72bfd13"
+      },
+      {
+        "name": "passport-governed-issuer:check",
+        "status": 0,
+        "logSha256": "dd2f47cb41a53e61cc185ec13bb67aa1858ff2e11896fab80842851ca547dda4"
+      },
+      {
+        "name": "passport-regulatory-claim:check",
+        "status": 0,
+        "logSha256": "5074d14523b30d2d8c74b7d67e52086cebf81954097b9bd7f2a25232b95cd9f1"
+      },
+      {
+        "name": "passport-scope-surface:check",
+        "status": 0,
+        "logSha256": "d2e45b67f1bc337504e1d2cd02ef7e0893c3d2e6adfcc856cb5718bb01f22b85"
+      },
+      {
+        "name": "mcp-exposure:check",
+        "status": 0,
+        "logSha256": "6f59493c3980082dc5b99f09177dec4e2346e62a5395ddd5bb2ac5e36c8648b0"
+      },
+      {
+        "name": "admin-portal:check",
+        "status": 0,
+        "logSha256": "05c3d79dc95cf3d3a4c675fdaa10158425afefeca8df8e0156117fe70cb85ff2"
+      },
+      {
+        "name": "admin-lifecycle:check",
+        "status": 0,
+        "logSha256": "b8a544824f5026dfab33fa2a8edc3a490106f8a1d4981dcbec1d35bfe5485a01"
+      },
+      {
+        "name": "admin-error-contract:check",
+        "status": 0,
+        "logSha256": "e80cfa22412cd05071e96ffa8359c8a922ee18ab2fc86114cec425a7b378f6a4"
+      },
+      {
+        "name": "review-contribution:check",
+        "status": 0,
+        "logSha256": "2e213414e6cd9e45d7e3aeccc49bac797cf671b3cd51fc395b6edcb62f7d1cba"
+      },
+      {
+        "name": "employer-process-continuity:check",
+        "status": 0,
+        "logSha256": "0c9f687385bfcd8e430084362e240ae6ca3699f8d5c3dac3456cec080a541546"
+      },
+      {
+        "name": "employer-assessment-release:check",
+        "status": 0,
+        "logSha256": "e0d12ff5e2a9a7cc20eef3c864c0768088dc6db440e9e786a54e024159d8611d"
+      },
+      {
+        "name": "employer-final-report:check",
+        "status": 0,
+        "logSha256": "dcf26f62ac252f48255ba31587087bb6064bafb09ef78186d9f7ec665efdab02"
+      },
+      {
+        "name": "interview-context-governance:check",
+        "status": 0,
+        "logSha256": "6b4fc35f7c40890e3504bcdde2d502a25cbff718cc78ab5f5f335b68a31e878b"
+      },
+      {
+        "name": "employer-recruitment-flow:check",
+        "status": 0,
+        "logSha256": "e85fd7186c53541eb93adc5d936d20dab29b1031b5cf439f5fcc2ef17be3c095"
+      },
+      {
+        "name": "employer-journey:check",
+        "status": 0,
+        "logSha256": "3c0437114cd0d691a6b82f33ba83d4a2b7f3fd498c5299bb69f4a752298c3c6b"
+      },
+      {
+        "name": "employer-registration:check",
+        "status": 0,
+        "logSha256": "8a06bd78be5dc1cea15681153e1a932677fe9d24a42bbb4935b251234dfc01b4"
+      },
+      {
+        "name": "employer-library-purpose:check",
+        "status": 0,
+        "logSha256": "5619e6dc44bed18edc7d25ab91da6cb8a34eb385c0dbfb6aa1b8405e7c3c6bab"
+      },
+      {
+        "name": "employer-decision-error:check",
+        "status": 0,
+        "logSha256": "fa12507016c0dc8b69398fd359c7a1301d0b1000397a01060265c262970e22ec"
+      },
+      {
+        "name": "employer-job-lifecycle:check",
+        "status": 0,
+        "logSha256": "4014d81da94f15a15a9cedcbd765f361f25882bac7038c86a1ef0db1da7cb962"
+      },
+      {
+        "name": "employer-hire-continuity:check",
+        "status": 0,
+        "logSha256": "504da8f4922ecbf364686bc1f57c817abe7c8cfad391afc65fcc7128f3b4883a"
+      },
+      {
+        "name": "employer-other-taxonomy:check",
+        "status": 0,
+        "logSha256": "f45e5c7bbb6def82ab12be1235a781707f6c181df0451b4aa58e4bfb49f04a67"
+      },
+      {
+        "name": "review-proposal-contract:check",
+        "status": 0,
+        "logSha256": "90371c09254914dd5732f9fa5e346c456012db4b08b441dd1df082c4bfb9055f"
+      },
+      {
+        "name": "candidate-notification:check",
+        "status": 0,
+        "logSha256": "4b64e68707f0232e2c85eed0192937d096d6d00291743d27c618299035f8c189"
+      },
+      {
+        "name": "emma-uat:check",
+        "status": 0,
+        "logSha256": "066a484da65228018eefc2e8889920fd0e3b2182fa90f37084957b6a0ec8cad2"
+      },
+      {
+        "name": "passport-recipient-card:check",
+        "status": 0,
+        "logSha256": "b0020c76e8bc3d9cb0a6852221f660453ce22ff93fe487eb30ea5b1fc59a7e9e"
+      },
+      {
+        "name": "header-entry:check",
+        "status": 0,
+        "logSha256": "59ea734403c00a7f4c276b8b0632891a1682fbc9ad03d0a44a55f6971d6cca99"
+      },
+      {
+        "name": "employer-landing:check",
+        "status": 0,
+        "logSha256": "f7a6afb16cb844c5eedbee081fe530c78bc7dd5e5514d03b2bb36a7a75ffdec6"
+      },
+      {
+        "name": "public-homepage:check",
+        "status": 0,
+        "logSha256": "81a550b3ebc79185cd0419f3dc63c70772df684fc1b144c0eb4925c35f381315"
+      },
+      {
+        "name": "recruitment-decision-support:check",
+        "status": 0,
+        "logSha256": "fa1c9d26c486f538a57bc2845683284c9f905fa71a3557c2256b9b7c0b1affe7"
+      },
+      {
+        "name": "recruitment-report-render:check",
+        "status": 0,
+        "logSha256": "b6d3db24cef7b452b284b085a9146cedebcb473dd63f61b8cb037e0a5e4e788f"
+      },
+      {
+        "name": "sql-security:check",
+        "status": 0,
+        "logSha256": "7a72da519079849ceeec2b6b02596f9b45b73d2af6c4118150b7877ed1d33445"
+      },
+      {
+        "name": "interview-pack-contract:check",
+        "status": 0,
+        "logSha256": "9a72b4ab1878dcb5386f4e9a7042d60fdc137f52b6669c98195f215b84c0d82a"
+      },
+      {
+        "name": "interview-pack-render:check",
+        "status": 0,
+        "logSha256": "06563c6a2a5528d89090174161ef009b8e9c9a12184b699a7c648b6fb11b0cda"
+      },
+      {
+        "name": "interview-ai-eval:check",
+        "status": 0,
+        "logSha256": "1944ec7897563bccfa865728c791026e91b9a470d8b1faa40dc5612f11e6c29a"
+      },
+      {
+        "name": "interview-ux-contract:check",
+        "status": 0,
+        "logSha256": "122c0e1c30a3a42dff10f429bc99b963902dfda03a8740163712f26041acaedb"
+      },
+      {
+        "name": "interview-runtime-contract:check",
+        "status": 0,
+        "logSha256": "e95b865e920d3722fb0cbaed5026a4bed41cd5087b9a84bdbe9a9807972f5088"
+      },
+      {
+        "name": "interview-context-bridge:check",
+        "status": 0,
+        "logSha256": "ab34da34773de1f521c97839bebe41463fe4e77696172b5b7d9848b23cf24dc0"
+      },
+      {
+        "name": "interview-finalisation-capability:check",
+        "status": 0,
+        "logSha256": "4873b5775f41188de299639f76a3f607137700ed9811f9313aad3cb20555aa38"
+      },
+      {
+        "name": "interview-recruiter-workflow:check",
+        "status": 0,
+        "logSha256": "1e59ce3e175e4527bd254c191761be710abfc3fd6c8e0527c5ea6fe8946e4ceb"
+      },
+      {
+        "name": "interview-ai-provider:check",
+        "status": 0,
+        "logSha256": "144d178a4cde5d9eed3691850522caad211b66d2e6f55e79d47ded9c74f6b7e8"
+      },
+      {
+        "name": "interview-evidence-reliability:check",
+        "status": 0,
+        "logSha256": "9fa619e1be4751e03611b638c062055e38dd97b895e7f18022dffbcf28cf9694"
+      },
+      {
+        "name": "interview-gold-independence:check",
+        "status": 0,
+        "logSha256": "be0dffeb28a37062f713c0c8c15f484d3317833c35c539f34b644d8afc97fb6e"
+      },
+      {
+        "name": "recruitment-assessment-ux:check",
+        "status": 0,
+        "logSha256": "c8f05cb189b5f08388d8a04b141258a6919b286cf36f7b5f897fab5f1ac87a67"
+      },
+      {
+        "name": "career-center:check",
+        "status": 0,
+        "logSha256": "ee5d2a73671216497b1f5aea466fb368d9e12ebcef9addf1b9f1dee101dc3d22"
+      },
+      {
+        "name": "professional-identity:check",
+        "status": 0,
+        "logSha256": "02b5b17235a2729d4c2e70b692524069221c8c1d455acceb8259d9ddfe63e473"
+      },
+      {
+        "name": "cv-application-source:check",
+        "status": 0,
+        "logSha256": "71d30d9a91483ca119ba997e78e4e03440209939ca32e48200298b6dd55f4388"
+      },
+      {
+        "name": "cv-pilot:check",
+        "status": 0,
+        "logSha256": "6b5324d00069dc978af3260bbab963d9f39b4f1e2cccf66ccd1d8e9ab5638440"
+      },
+      {
+        "name": "cv-provider-minimisation:check",
+        "status": 0,
+        "logSha256": "fab8757fde911d7b18264981c9678cbc5e51f16dbe1b919d85509dbf655fe3a8"
+      },
+      {
+        "name": "candidate-app-navigation:check",
+        "status": 0,
+        "logSha256": "6cb4cd80cce06ed2ee2308bd6e34ce4daa460657a564c8986331a2e6e321ec44"
+      },
+      {
+        "name": "candidate-navigation-canon:check",
+        "status": 0,
+        "logSha256": "1c97daa1ee18eb85eff6379a5ade8dba7e91a526ad3d4cd41041481b6939f58e"
+      },
+      {
+        "name": "account-confirmation:check",
+        "status": 0,
+        "logSha256": "d8c3c42cba96faef6f34d201a1b3c746fc83085f352f4a0ef8ca5d1d91812a5e"
+      },
+      {
+        "name": "candidate-journey-composition:check",
+        "status": 0,
+        "logSha256": "801f223f8590fdcd93fdc4aadf5449c12694f619f47c110547d692cc773f7af2"
+      },
+      {
+        "name": "candidate-destination-composition:check",
+        "status": 0,
+        "logSha256": "6ec4169b6d05d5423f2e2e93a205377cf0c9e3e05ef9b48b7052eeb6c68db687"
+      },
+      {
+        "name": "passport-cv-boundary:check",
+        "status": 0,
+        "logSha256": "e740792e4ead3e2bb284b947302fa57bb849e6f22a8d955268ed1a554e113f40"
+      },
+      {
+        "name": "passport-page-composition:check",
+        "status": 0,
+        "logSha256": "26c884e24d71379ac0d06aad8e50b867727a969f0108c5235b897c9dcaf8bb9e"
+      },
+      {
+        "name": "passport-product:check",
+        "status": 0,
+        "logSha256": "cfd8f198fb120edd1abbadd474af86b3400a79f9b4e5cb00422fd83acc0c489b"
+      },
+      {
+        "name": "deploy-plan:gate",
+        "status": 0,
+        "logSha256": "f5258a021c4ac6b20b154473cafaf207ba5340772027f7a0afa23918fae035dc"
+      }
+    ],
+    "deterministicChecksPassed": 149,
+    "typechecksPassed": 2,
+    "changedFileLint": "PASS",
+    "productionBuild": "PASS",
+    "cleanReplayFiles": 295,
+    "cleanReplayRlsRollbackReapply": "PASS",
+    "newMigrationAssertionsBeforeAndAfterReapply": 22,
+    "mutationSuites": 30,
+    "mutationsDetected": 1064,
+    "logs": {
+      "replay": "a76454d568ddc4caa0857cd540bffefde24d0376c3361c71e040e1c46479fadb",
+      "build": "d0ffff18843dd4ea5bc35c0f950fd7af13ac086b63ded394af0fc2b2d221704e",
+      "mutations": "387d21847a1cbc6f492ff9c706b571dc2e475aa55a0bf2272bb021c910d57418"
+    },
+    "markerNegativeControls": [
+      {
+        "marker": "20260904190901_scp_trust_evidence_report_r1_provenance.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260904190901_scp_trust_evidence_report_r1_provenance.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260916155430_sp_international_passport_foundation.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260916155430_sp_international_passport_foundation.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260916155456_sp_international_credential_wallet.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260916155456_sp_international_credential_wallet.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260916155521_sp_credential_selective_sharing_v2.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260916155521_sp_credential_selective_sharing_v2.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260916155551_sp_closed_credential_catalogue.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260916155551_sp_closed_credential_catalogue.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260916155620_cv_owned_application_snapshot.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260916155620_cv_owned_application_snapshot.sql",
+        "mutation": "executable",
+        "detected": true
+      },
+      {
+        "marker": "20260916190510_sp_credential_organisation_roles.sql",
+        "mutation": "missing",
+        "detected": true
+      },
+      {
+        "marker": "20260916190510_sp_credential_organisation_roles.sql",
+        "mutation": "executable",
+        "detected": true
+      }
+    ]
+  },
+  "commitScope": [
+    "docs/passport/product-finalization/README.md",
+    "docs/passport/product-finalization/hosted-application.json",
+    "docs/passport/product-finalization/hosted-postflight.sql",
+    "docs/passport/product-finalization/verification.json",
+    "scripts/negative-controls/beskt-candidate-preparation-controls.ts",
+    "scripts/negative-controls/beskt-conduct-report-controls.ts",
+    "scripts/negative-controls/beskt-content-authoring-controls.ts",
+    "scripts/negative-controls/beskt-interview-case-bridge-controls.ts",
+    "scripts/negative-controls/beskt-interview-conduct-controls.ts",
+    "scripts/negative-controls/interview-method-tenant-read-controls.ts",
+    "scripts/release-frontier-check.ts",
+    "supabase/hosted-ledger.json",
+    "supabase/migrations-policy.json",
+    "supabase/migrations/20260916190510_sp_credential_organisation_roles.sql",
+    "supabase/release-state.json"
+  ]
+}

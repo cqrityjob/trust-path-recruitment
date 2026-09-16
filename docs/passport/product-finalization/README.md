@@ -32,7 +32,7 @@ Detail-page copy distinguishes document review from source confirmation. Review 
 
 Legacy holder-entered organisation strings are retained as personal history, labelled as such on detail pages, and no longer promoted to official catalogue facts in the wallet or v2 public payload.
 
-## Local schema change; hosted approval required
+## Verified hosted schema and history
 
 `20261123090000_sp_credential_organisation_roles.sql` adds two catalogue extensions keyed to the existing credential types:
 
@@ -41,7 +41,7 @@ Legacy holder-entered organisation strings are retained as personal history, lab
 
 Both tables have ENABLE/FORCE RLS and authenticated SELECT only. No candidate, anonymous or service-role table writes are granted. The existing private v2 payload function resolves official issuer identity from these roles and preserves subsequent revoked/expired state for previously selected claims. Its execute grants remain revoked.
 
-The migration also extends the immutable disclosure-field constraint and private selection validator to accept explicit Profile-title consent. No existing disclosure or application row is updated. The rollback restores both private functions and the previous field constraint, then drops the two new tables. It refuses if a title-consent policy exists, preserving share history. It is for disposable local verification, not production. No PR #257 migration contents were changed or reapplied to production. The committed hosted ledger is untouched. Release-state truthfully records the new migration as **pending**; the schema-first and empty-deploy-plan gates must block application release until separately approved hosted application and verification.
+The migration also extends the immutable disclosure-field constraint and private selection validator to accept explicit Profile-title consent. No existing disclosure or application row is updated. The rollback restores both private functions and the previous field constraint, then drops the two new tables. It refuses if a title-consent policy exists, preserving share history. It is for disposable local verification, not production. No PR #257 migration contents were changed or reapplied to production. The owner-authorized application is verified as hosted `20260916190510`, with canonical alias `20261123090000` (NULL statements). The truthful ledger snapshot contains 295 rows. Release-state records the migration as applied; the generated-version marker contains comments only. Schema-first and deployment guards retain their existing enforcement. See `hosted-application.json` for checksums, before/after fingerprints and security results.
 
 VU1/VU2 and SV availability is unchanged; this release does not approve new training providers, remove required scope, activate UK/AE markets or broaden the catalogue gate. The application deliberately fails closed if the new metadata tables cannot be read.
 
@@ -57,6 +57,6 @@ The only product name is Security Passport. The private preview keeps `/passport
 
 The credential flow uses broad merit/credential terminology, “Certifikats- eller licensnummer”, localized file buttons and an ISO date field with Swedish format guidance. It uses the shared calendar-date validator. Expiry/no-expiry remains controlled by the approved definition. Document review remains distinct from source confirmation; international recipients no longer see an unknown-jurisdiction placeholder.
 
-`hosted-preflight.json` records the connector-only read-only preflight, SQL checksum, ledger frontier, baseline counts and exact expected impact. The production ledger has 293 entries through `20261122090000`; no equivalent migration or new role/review table exists. Hosted writes and stale-project calls are zero. Owner approval is required before any application of this pending migration.
+`hosted-preflight.json` records the connector-only read-only preflight, SQL checksum, ledger frontier, baseline counts and exact expected impact. That historical preflight recorded 293 entries through `20261122090000`, with neither new table present. The subsequent separately authorized application and canonical history alias are recorded in `hosted-application.json`: 293 → 294 → 295 entries, 36 exact reviews, 105 exact roles, unchanged baseline counts/digests and zero deletions. No migration SQL was reapplied; the stale project received zero calls. The corrected read-only seed/content and title-consent probes passed.
 
 `security_passport_organisation_roles_test.sql` proves actual RPC selection and persisted title consent. `passport-live-local.spec.ts` creates a dedicated unchecked credential and proves its code, title and private identifier are absent from the actual recipient server response and page. The real live tests also confirm share revocation. Screenshot evidence includes the default-off title checkbox and the explicitly shared, self-reported title.

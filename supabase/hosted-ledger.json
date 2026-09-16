@@ -11,10 +11,10 @@
     "Refresh it by re-reading the ledger read-only and replacing versions[] whole.",
     "A stale snapshot is worse than none, so the check prints its age."
   ],
-  "source": "Supabase connector list_migrations and read-only SQL, explicit project wrygicdfxwjnrugduxnt",
+  "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-16T16:51:47.838600+00:00",
-  "readBy": "Owner-authorized PR #257 canonical history aliases, following PR #198. Five version/name-only rows inserted atomically through Supabase connector execute_sql with explicit project wrygicdfxwjnrugduxnt; statements NULL. Ledger 288 -> 293; all original 288 complete rows unchanged. Version/name digest 50f01cb436da2a3e1d8ae601c86fa3e0 -> 0f3837262ef76802e763ddcf935ba7fd. No migration SQL reapplied; no application schema/data changes. See docs/release/2026-09-16-pr257-local-history-verification.json.",
+  "readAt": "2026-09-16 19:10:18.316816+00",
+  "readBy": "PR #258 owner-authorized application and separate canonical history-only alias, verified through the Supabase connector. Ledger 293 -> 294 -> 295. The original 294 complete rows are unchanged by the alias; canonical alias statements are NULL. Exact pinned SQL checksum, all 48 baseline counts/digests, Auth/Storage and security verified. Evidence: docs/passport/product-finalization/hosted-application.json",
   "versions": [
     {
       "version": "20260716153446",
@@ -953,6 +953,10 @@
       "name": "cv_owned_application_snapshot"
     },
     {
+      "version": "20260916190510",
+      "name": "sp_credential_organisation_roles"
+    },
+    {
       "version": "20260917090000",
       "name": "superadmin_permanent_account_deletion"
     },
@@ -1187,6 +1191,10 @@
     {
       "version": "20261122090000",
       "name": "cv_owned_application_snapshot"
+    },
+    {
+      "version": "20261123090000",
+      "name": "sp_credential_organisation_roles"
     }
   ]
 }
