@@ -53,11 +53,11 @@ function PassportShell() {
           window, so a holder opening their Passport met a screen of nothing
           before the first word. The whole product shell takes the tighter
           rhythm; the first run, which is a short form, takes it too. */}
-      <Section className="py-5 md:py-7">
+      <Section className="bg-secondary/30 py-5 md:py-7">
         {firstRun ? null : (
           <nav
             aria-label={pt("card.brand")}
-            className="mb-6 overflow-x-auto border-b border-border"
+            className="mb-7 overflow-x-auto border-b border-border bg-background/70"
           >
             <ul className="-mb-px flex min-w-max gap-1">
               {NAV.map((item) => {

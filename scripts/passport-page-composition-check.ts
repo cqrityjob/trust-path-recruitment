@@ -63,11 +63,11 @@ console.log("\n1 · the two columns exist, and the sketch's left column is the l
 check(/<PassportSideColumn/.test(index), "the Passport page renders a side column");
 check(/<CredentialWallet/.test(index), "and the Passport workspace");
 check(
-  /max-w-\[1280px\]/.test(index) && /lg:grid-cols-2/.test(index),
+  /max-w-\[1280px\]/.test(index) && /lg:grid-cols-\[minmax\(0,1fr\)_360px\]/.test(index),
   "the wallet uses the desktop width and supporting card/settings form a two-column region",
 );
 check(
-  !/lg:order-[12]/.test(index) && /md:grid-cols-2 xl:grid-cols-3/.test(workspace),
+  !/lg:order-[12]/.test(index) && /divide-y divide-border/.test(workspace),
   "the responsive wallet uses one markup and never reorders identity behind the credential list",
 );
 

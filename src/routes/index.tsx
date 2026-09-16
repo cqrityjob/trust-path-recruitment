@@ -224,7 +224,7 @@ function Index() {
           {/* Product proposition and two peer entrances stay primary. The
               generic Passport preview demonstrates the product without
               inventing a holder, credential, status, score, or claim. */}
-          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.85fr)] lg:gap-12">
+          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)] lg:gap-14">
             <div>
               <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -244,25 +244,9 @@ function Index() {
                 </p>
               </div>
 
-              {/* ── THE TWO PEER CARDS ───────────────────────────────────────
-              ONE grid, ONE set of card classes, TWO solid actions. The
-              symmetry is structural rather than a promise in a comment: a
-              card that wanted to be bigger, or an action that wanted to be
-              quieter, would have to change the shared constant to get it,
-              and scripts/public-homepage-check.tsx reads the rendered class
-              attributes to prove neither has. */}
-              <div className="mt-8 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2">
-                <EntryCard
-                  icon={ShieldCheck}
-                  titleKey="home.entry.passport.title"
-                  bodyKey="home.entry.passport.body"
-                  compact
-                >
-                  <PrimaryLink to="/signup" search={PASSPORT_INTENT} className="w-full sm:w-auto">
-                    {t("cta.passport")}
-                  </PrimaryLink>
-                </EntryCard>
-
+              {/* Career Discovery remains a clear independent path while the
+                  dark Passport preview carries the defining product identity. */}
+              <div className="mt-8 border-y border-border py-5">
                 {/* The low-friction model, stated beside the action it describes
                 rather than discovered after 28 questions. Career Discovery
                 starts without an account, keeps answers in this tab, and asks
@@ -270,22 +254,49 @@ function Index() {
                 exactly what the existing claim token preserves through email
                 confirmation, Google and a login/signup swap. This page adds
                 no signup wall. */}
-                <EntryCard
-                  icon={Compass}
-                  titleKey="home.entry.discovery.title"
-                  bodyKey="home.entry.discovery.body"
-                  noteKey="home.entry.discovery.disclosure"
-                  compact
+                <article
+                  className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"
+                  data-home-entry="discovery"
                 >
-                  <PrimaryLink to={CAREER_DISCOVERY} className="w-full sm:w-auto">
+                  <div className="flex min-w-0 gap-4">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-accent">
+                      <Compass className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                    <div>
+                      <h2 className="text-lg font-semibold text-foreground">
+                        {t("home.entry.discovery.title")}
+                      </h2>
+                      <p className="mt-1 max-w-[48ch] text-sm text-muted-foreground">
+                        {t("home.entry.discovery.body")}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("home.entry.discovery.disclosure")}
+                      </p>
+                    </div>
+                  </div>
+                  <PrimaryLink
+                    to={CAREER_DISCOVERY}
+                    variant="ghost"
+                    className="w-full shrink-0 sm:w-auto"
+                  >
                     {t("cta.discovery")}
                   </PrimaryLink>
-                </EntryCard>
+                </article>
               </div>
             </div>
 
             <div className="mx-auto w-full max-w-md lg:sticky lg:top-32 lg:max-w-none">
-              <HomePassportPreview />
+              <HomePassportPreview
+                action={
+                  <PrimaryLink
+                    to="/signup"
+                    search={PASSPORT_INTENT}
+                    className="border border-primary-foreground bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                  >
+                    {t("cta.passport")}
+                  </PrimaryLink>
+                }
+              />
               <p className="mt-4 text-center text-sm text-muted-foreground">
                 {t("home.account.returning")}{" "}
                 <Link
@@ -452,90 +463,6 @@ function Index() {
         </div>
       </Section>
     </SiteLayout>
-  );
-}
-
-/* ── THE TWO ENTRY CARDS, FROM ONE COMPONENT ───────────────────────────
- *
- * Deliberately one component and not two. "Equal size and equal visual
- * weight" is a property that decays the moment each card owns its own
- * classes and somebody nudges one of them; here the only difference between
- * the Passport card and the Career Discovery card is the icon, the two
- * dictionary keys, and what the caller puts in `children`.
- *
- * `h-full` on the article plus `items-stretch` on the grid makes the pair
- * the same height at every width, and `mt-auto` pins both actions to the
- * bottom edge so a longer body on one side cannot raise its button above
- * the other's. */
-function EntryCard({
-  icon: Icon,
-  titleKey,
-  bodyKey,
-  noteKey,
-  children,
-  /** Denser at xl, for the one case that needs it: the hero splits to seat
-   *  image 0's login panel, the card column narrows, and the cards grow
-   *  taller than the fold public-homepage.spec.ts measures. BOTH cards take
-   *  it or neither does — they are peers, and that spec measures that too.
-   *  Every class it adds is xl-prefixed, so nothing below xl moves. */
-  compact = false,
-}: {
-  icon: typeof ShieldCheck;
-  titleKey: TranslationKey;
-  bodyKey: TranslationKey;
-  compact?: boolean;
-  /** A short qualification of the offer, rendered ABOVE the action.
-   *
-   *  Above, and not below, for a reason that only shows up in a browser:
-   *  `mt-auto` pins the action block to the bottom edge, so a note INSIDE
-   *  that block pushes its own button upwards and the two cards' actions
-   *  stop sitting on the same line. Two peers whose buttons are 50px apart
-   *  do not read as peers. With the note here, the action block holds the
-   *  control and nothing else, and both land on the same baseline at every
-   *  width where the cards are side by side. */
-  noteKey?: TranslationKey;
-  children: React.ReactNode;
-}) {
-  const { t } = useT();
-  return (
-    <article
-      className={cn(
-        "flex h-full flex-col rounded-2xl border border-border bg-background p-6 shadow-[var(--shadow-sm)] md:p-7",
-        compact && "xl:p-5",
-      )}
-    >
-      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-accent">
-        <Icon className="h-6 w-6" strokeWidth={1.75} aria-hidden="true" />
-      </span>
-      <h2
-        className={cn(
-          "mt-5 text-[1.35rem] font-semibold leading-tight tracking-tight text-foreground md:text-[1.5rem]",
-          compact && "xl:mt-4 xl:text-[1.3rem]",
-        )}
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        {t(titleKey)}
-      </h2>
-      <p
-        className={cn(
-          "mt-3 text-[0.9375rem] leading-relaxed text-muted-foreground",
-          compact && "xl:mt-2.5 xl:text-sm",
-        )}
-      >
-        {t(bodyKey)}
-      </p>
-      {noteKey && (
-        <p
-          className={cn(
-            "mt-3 text-xs leading-relaxed text-muted-foreground",
-            compact && "xl:mt-2.5",
-          )}
-        >
-          {t(noteKey)}
-        </p>
-      )}
-      <div className={cn("mt-auto pt-6", compact && "xl:pt-5")}>{children}</div>
-    </article>
   );
 }
 

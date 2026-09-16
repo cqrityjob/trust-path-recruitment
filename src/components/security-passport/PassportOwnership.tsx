@@ -8,9 +8,9 @@ export function PassportOwnership() {
   return (
     <details
       aria-label={lang === "sv" ? "Profil, CV och Passport" : "Profile, CV and Passport"}
-      className="mt-8 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground"
+      className="mt-10 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground"
     >
-      <summary className="min-h-11 cursor-pointer font-medium">
+      <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-foreground">
         {lang === "sv" ? "Om ditt Passport, Profil och CV" : "About your Passport, Profile and CV"}
       </summary>
       <p className="font-medium">{copy.passport}</p>

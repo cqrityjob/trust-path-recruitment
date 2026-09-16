@@ -131,6 +131,12 @@ export const dictionaries = {
     "home.passportPreview.body":
       "Du väljer vad mottagaren ser. Delningslänkar är tidsbegränsade och förblir under din kontroll.",
     "home.passportPreview.markets": "Marknader som stöds i dag",
+    "home.passportPreview.issuer": "Källa",
+    "home.passportPreview.source": "Dokumenterad källa",
+    "home.passportPreview.jurisdiction": "Jurisdiktion",
+    "home.passportPreview.marketScope": "Vald marknad",
+    "home.passportPreview.trustState": "Tillitstillstånd",
+    "home.passportPreview.sharing": "Delning",
 
     // ── THE TWO ENTRY CARDS ─────────────────────────────────────────────
     //
@@ -7018,6 +7024,12 @@ export const dictionaries = {
     "home.passportPreview.body":
       "You choose what a recipient sees. Share links expire and remain under your control.",
     "home.passportPreview.markets": "Markets supported today",
+    "home.passportPreview.issuer": "Source",
+    "home.passportPreview.source": "Documented source",
+    "home.passportPreview.jurisdiction": "Jurisdiction",
+    "home.passportPreview.marketScope": "Selected market",
+    "home.passportPreview.trustState": "Trust state",
+    "home.passportPreview.sharing": "Sharing",
 
     "home.entry.passport.title": "Build your Security Passport",
     "home.entry.passport.body":

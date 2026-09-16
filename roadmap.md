@@ -10,6 +10,8 @@
 - [x] Desktop/tablet/390px/375px Preview evidence and accessibility checks
 - [x] Changed-file lint and focused homepage, header, candidate-journey and Passport regression suites
 - [x] Final owner-review report; branch remains unmerged and unpublished
+- [ ] Approved premium refinement: dark Passport anchor, editorial homepage, credential-record presentation
+- [ ] Premium refinement verification: SV/EN, desktop, 390px and 375px
 
 ## Frozen boundaries
 
