@@ -31,7 +31,7 @@
 
 import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { BookOpen, Compass, GraduationCap, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
@@ -54,6 +54,7 @@ export const Route = createFileRoute("/_authenticated/academy/")({
 
 function AcademyHome() {
   const { t, lang } = useT();
+  const qc = useQueryClient();
   const listWork = useServerFn(listAcademyWork);
   const claimFn = useServerFn(claimAssessmentInvitations);
   const formFn = useServerFn(getLearningFormForModule);
@@ -79,8 +80,14 @@ function AcademyHome() {
   const bound = claim.data?.bound ?? 0;
   const refetchWork = work.refetch;
   useEffect(() => {
-    if (bound > 0) void refetchWork();
-  }, [bound, refetchWork]);
+    if (bound > 0) {
+      // The first list may have started before the invitation was claimed.
+      // Cancel it explicitly: refetch alone can reuse its pending promise.
+      void qc
+        .cancelQueries({ queryKey: ["academy", "work"], exact: true })
+        .then(() => refetchWork());
+    }
+  }, [bound, qc, refetchWork]);
   const learningForm = useQuery({
     queryKey: ["academy", "learning-form"],
     queryFn: () => formFn(),

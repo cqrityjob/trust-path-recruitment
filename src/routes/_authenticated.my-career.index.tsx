@@ -304,8 +304,14 @@ function MyCareerPage() {
   const bound = claimQ.data?.bound ?? 0;
   const refetchWork = academyWorkQ.refetch;
   useEffect(() => {
-    if (bound > 0) void refetchWork();
-  }, [bound, refetchWork]);
+    if (bound > 0) {
+      // A plain refetch reuses an initial request with no cached data. That
+      // request may predate the claim, so discard it before reading again.
+      void qc
+        .cancelQueries({ queryKey: ["academy", "work"], exact: true })
+        .then(() => refetchWork());
+    }
+  }, [bound, qc, refetchWork]);
 
   // The participant's own pipeline states. This is what decides whether a
   // test is waiting on the employer, released, or something else.

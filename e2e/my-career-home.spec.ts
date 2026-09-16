@@ -161,53 +161,69 @@ test.describe("/my-career — the real route", () => {
     await expect(page.locator('[data-hub-module="discovery"]')).toBeVisible();
   });
 
-  test("6 · a pending emailed invitation appears during the same visit", async ({ page }) => {
-    let listed = 0;
-    const invited = work({
-      workId: "att-invited",
-      deadline: new Date(Date.now() + 2 * 86_400_000).toISOString(),
-      progressDone: 0,
-    });
-    await mount(page, "eight_unverified", {
-      overrides: {
-        claimAssessmentInvitations: ok({ bound: 1, expired: 0 }),
-        // First list: nothing yet. After the claim bound one, the refetch sees it.
-        listAcademyWork: async (route) => {
-          listed += 1;
-          return route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              result: listed === 1 ? [] : [invited],
-              error: null,
-              context: {},
-            }),
-          });
+  for (const path of ["/my-career", "/academy"])
+    test(`6 · a pending emailed invitation appears during the same visit on ${path}`, async ({
+      page,
+    }) => {
+      let listed = 0;
+      const invited = work({
+        workId: "att-invited",
+        deadline: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+        progressDone: 0,
+      });
+      await mount(page, "eight_unverified", {
+        path,
+        ready: path === "/academy" ? "main h1" : "[data-career-header]",
+        overrides: {
+          getLearningFormForModule: ok(null),
+          claimAssessmentInvitations: ok({ bound: 1, expired: 0 }),
+          // First list: nothing yet. After the claim bound one, the refetch sees it.
+          listAcademyWork: async (route) => {
+            listed += 1;
+            const initialRead = listed === 1;
+            // The invitation claim wins the race against the pre-claim list.
+            // A refresh must not reuse that still-pending, now stale request.
+            if (initialRead) await new Promise((resolve) => setTimeout(resolve, 500));
+            return route.fulfill({
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({
+                result: initialRead ? [] : [invited],
+                error: null,
+                context: {},
+              }),
+            });
+          },
+          getMyAssessmentHistory: ok([
+            history({ attemptId: "att-invited", lifecycleState: "invited" }),
+          ]),
         },
-        getMyAssessmentHistory: ok([
-          history({ attemptId: "att-invited", lifecycleState: "invited" }),
-        ]),
-      },
+      });
+      if (path === "/academy") {
+        await expect(page.locator('main a[href="/academy/att-invited"]')).toBeVisible();
+        await expect(page.locator("main")).toContainText("Nordväkt AB");
+        expect(listed).toBeGreaterThanOrEqual(2);
+        return;
+      }
+      // The claimed invitation is an open test with a deadline, so it becomes
+      // the recommended step on THIS visit — no reload, no second visit.
+      await expect(page.locator("[data-primary-cta]")).toHaveAttribute(
+        "href",
+        "/academy/att-invited",
+        { timeout: 10_000 },
+      );
+      expect(listed).toBeGreaterThanOrEqual(2);
+      await expect(page.locator('[data-next-action="primary"] [data-primary-meta]')).toContainText(
+        "Begärt av Nordväkt AB",
+      );
+      // #211: the tests LIST left the overview for /academy, which is the
+      // page that owns it; that the list does not then pretend the test does
+      // not exist is asserted against the component, over these same
+      // fixtures, by my-career-premium-overview:check. What this spec still
+      // proves is the part that is timing and cannot be proved statically:
+      // the claim ran, the list was refetched, and the invitation became the
+      // recommended step on THIS visit.
     });
-    // The claimed invitation is an open test with a deadline, so it becomes
-    // the recommended step on THIS visit — no reload, no second visit.
-    await expect(page.locator("[data-primary-cta]")).toHaveAttribute(
-      "href",
-      "/academy/att-invited",
-      { timeout: 10_000 },
-    );
-    expect(listed).toBeGreaterThanOrEqual(2);
-    await expect(page.locator('[data-next-action="primary"] [data-primary-meta]')).toContainText(
-      "Begärt av Nordväkt AB",
-    );
-    // #211: the tests LIST left the overview for /academy, which is the
-    // page that owns it; that the list does not then pretend the test does
-    // not exist is asserted against the component, over these same
-    // fixtures, by my-career-premium-overview:check. What this spec still
-    // proves is the part that is timing and cannot be proved statically:
-    // the claim ran, the list was refetched, and the invitation became the
-    // recommended step on THIS visit.
-  });
 
   test("7 · a recruitment test names the requesting organisation and the role, never an employer of the applicant", async ({
     page,
