@@ -12,6 +12,7 @@
 - [x] Final owner-review report; branch remains unmerged and unpublished
 - [ ] Security Passport correction: terminology and Profile separation
 - [ ] Security Passport correction: flagship overview and premium credential records
+- [ ] Security Passport product identity: globally coherent, profession-neutral credential wallet system
 - [ ] Security Passport correction: add-credential and selective-sharing presentation
 - [ ] Homepage Passport anchor coherence only
 - [ ] Preview evidence: overview desktop/mobile, add credential, real ASIS-style credential display, share preview, homepage anchor
