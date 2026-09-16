@@ -104,7 +104,7 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, claimed_issuer_name, lifecycle_state)
-  VALUES (_h, 'certification', 'CPP', 'Fake Corporation', 'active');
+  VALUES (_h, 'training', 'CPP course notes', 'Training provider', 'active');
   RESET ROLE;
   SELECT to_jsonb(c) - 'id' - 'created_at' - 'updated_at' INTO _free_before
     FROM public.sp_claims c WHERE c.holder_user_id = _h AND c.credential_code IS NULL;
@@ -113,22 +113,22 @@ BEGIN
   RAISE NOTICE 'GROUP 1 -- a forged issuer is refused, in every lifecycle state';
   -- =====================================================================
   _r := pg_temp.file_issuer(_h, 'INTL_ASIS_CPP', 'Fake Corporation', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_ISSUER_NOT_GOVERNED',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '1.1 an ACTIVE CPP may not be attributed to Fake Corporation (got ' || _r || ')');
 
   -- The one that a rule placed after the draft early-return would have let
   -- through: stored as a false attribution, refused only later at activation.
   _r := pg_temp.file_issuer(_h, 'INTL_ASIS_CPP', 'Fake Corporation', 'draft');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_ISSUER_NOT_GOVERNED',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '1.2 nor may a DRAFT CPP (got ' || _r || ')');
 
   _r := pg_temp.file_issuer(_h, 'INTL_ASIS_CPP', 'Government of Sweden', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_ISSUER_NOT_GOVERNED',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '1.3 nor to a state that grants no such thing (got ' || _r || ')');
 
   -- A near miss is still a miss: nothing here does fuzzy matching.
   _r := pg_temp.file_issuer(_h, 'INTL_ASIS_CPP', 'ASIS', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_ISSUER_NOT_GOVERNED',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '1.4 nor the short form ASIS (got ' || _r || ')');
 
   -- =====================================================================
@@ -142,7 +142,7 @@ BEGIN
   PERFORM pg_temp.ok(_alias <> _isc2, '2.2 and it is not the controlled display name');
 
   _r := pg_temp.file_issuer(_h, 'INTL_ISC2_CISSP', _alias, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_ISSUER_NOT_GOVERNED',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '2.3 an alias may not be STORED as the issuer (got ' || _r || ')');
 
   PERFORM pg_temp.ok(
@@ -156,31 +156,25 @@ BEGIN
   _r := pg_temp.file_issuer(_h, 'INTL_ISC2_CISSP', _isc2, 'active');
   PERFORM pg_temp.ok(_r = 'OK', '3.1 the governed issuer is accepted (got ' || _r || ')');
 
-  -- IDENTITY, NOT PRESENCE. Whether an issuer must be named at all is the
-  -- catalogue's business (sp_credential_types.requires_issuer), and all
-  -- fourteen governed certifications currently say false. This rule governs
-  -- WHICH issuer may be stored, never whether one must be -- an absent issuer
-  -- is incomplete, not a false attribution. An earlier draft of the migration
-  -- also refused an active claim with a NULL issuer; it contradicted the
-  -- catalogue's own flag and broke 20261111090000's canonical write path,
-  -- which files a CPP exactly the way the product does.
+  -- Legacy requires_issuer flags are retained. The closed catalogue additionally
+  -- requires every personal claim to carry its definition’s canonical issuer.
   PERFORM pg_temp.ok(
     (SELECT bool_and(NOT requires_issuer) FROM public.sp_credential_types
       WHERE scope_code = 'global_professional'),
     '3.2 the catalogue does not require an issuer on a global certification');
 
   _r := pg_temp.file_issuer(_h, 'INTL_ASIS_CPP', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '3.3 so an ACTIVE claim may omit it, exactly as 20261111090000 files one (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
+    '3.3 an ACTIVE claim cannot erase the governed issuer (got ' || _r || ')');
 
   _r := pg_temp.file_issuer(_h, 'INTL_ASIS_PSP', NULL, 'draft');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '3.4 and a DRAFT may be silent about it while the holder types (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
+    '3.4 a DRAFT also requires the canonical governed issuer (got ' || _r || ')');
 
-  -- Whitespace is trimmed for comparison but the rule is exact otherwise.
+  -- Direct writes cannot substitute a whitespace variant of governed metadata.
   _r := pg_temp.file_issuer(_h, 'INTL_ISACA_CISA', '  ISACA  ', 'active');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '3.5 surrounding whitespace does not make a governed name forged (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
+    '3.5 direct writes must preserve the exact canonical issuer (got ' || _r || ')');
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 4 -- a holder cannot re-issue an existing claim';
@@ -190,7 +184,7 @@ BEGIN
   PERFORM pg_temp.ok(_cissp IS NOT NULL, '4.1 the governed CISSP claim exists');
 
   _r := pg_temp.reissue(_h, _cissp, 'Fake Corporation');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_ISSUER_NOT_GOVERNED',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '4.2 changing ONLY the issuer is refused (got ' || _r || ')');
 
   SELECT claimed_issuer_name INTO _r FROM public.sp_claims WHERE id = _cissp;
@@ -201,8 +195,8 @@ BEGIN
   -- attribution. Named here rather than left unstated so the boundary of this
   -- rule is visible to the next reader.
   _r := pg_temp.reissue(_h, _cissp, NULL);
-  PERFORM pg_temp.ok(_r = 'OK',
-    '4.4 a holder may clear the issuer, which claims nothing about anybody (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
+    '4.4 a holder cannot clear the governed issuer (got ' || _r || ')');
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 5 -- nothing else changed';
@@ -214,33 +208,37 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, credential_code, title, claimed_issuer_name,
      jurisdiction_code, lifecycle_state)
-  SELECT _h, t.claim_type, 'VU1', t.name_sv, 'Any Training Provider AB', 'SE', 'active'
-    FROM public.sp_credential_types t WHERE t.code = 'VU1'
+  SELECT _h, t.claim_type, t.code, t.name_sv, t.issuer_name, t.country, 'active'
+    FROM public.sp_approved_credential_catalogue t WHERE t.code = 'OV_TRAINING'
   RETURNING id INTO _vu1;
   RESET ROLE;
   PERFORM pg_temp.ok(_vu1 IS NOT NULL,
-    '5.1 a Swedish credential still accepts an arbitrary appointing authority');
+    '5.1 a Swedish credential uses its governed authority');
 
   _r := pg_temp.reissue(_h, _vu1, 'Someone Else Entirely');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '5.2 and the holder may still correct it (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
+    '5.2 a holder cannot replace the national authority (got ' || _r || ')');
 
   -- Free text is not upgraded and not constrained: it names no credential.
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, claimed_issuer_name, lifecycle_state)
-  VALUES (_h, 'certification', 'CISSP', 'Fake Corporation', 'active');
+  BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,claimed_issuer_name,lifecycle_state)
+    VALUES(_h,'certification','CISSP','Fake Corporation','active');
+    RAISE EXCEPTION 'ASSERTION FAILED: custom credential accepted';
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM<>'SP_APPROVED_DEFINITION_REQUIRED' THEN RAISE; END IF;
+  END;
   RESET ROLE;
   SELECT count(*) INTO _n FROM public.sp_claims
    WHERE holder_user_id = _h AND credential_code IS NULL;
-  PERFORM pg_temp.ok(_n = 2,
-    '5.3 a free-text claim may still name anything (got ' || _n || ')');
+  PERFORM pg_temp.ok(_n = 1,
+    '5.3 custom credential rejected without touching the existing CV course (got ' || _n || ')');
 
   PERFORM pg_temp.ok(
     (SELECT to_jsonb(c) - 'id' - 'created_at' - 'updated_at' = _free_before
        FROM public.sp_claims c
-      WHERE c.holder_user_id = _h AND c.credential_code IS NULL AND c.title = 'CPP'),
+      WHERE c.holder_user_id = _h AND c.credential_code IS NULL AND c.title = 'CPP course notes'),
     '5.4 and the pre-existing free-text row is byte-for-byte unchanged');
 
   -- The certification that WAS accepted was not promoted by being governed.

@@ -232,8 +232,15 @@ BEGIN
   _r := pg_temp.try_claim_as(_gb_user, 'UK_SIA_LICENCE_DS',
         'SIA Licence — Door Supervision', 'GB', NULL, 'licence', '2030-01-01',
         'Security Industry Authority');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '3.6 THE FIX: the GB member registers a GB licence as authenticated (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+    '3.6 pilot catalogue visibility does not approve a GB claim (got ' || _r || ')');
+  -- Historical claim only: database-owner fixture, guarded candidate admission tested above.
+  ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
+  _r := pg_temp.try_claim_as(_gb_user, 'UK_SIA_LICENCE_DS', 'SIA Licence — Door Supervision', 'GB', NULL, 'licence',
+    '2030-01-01', 'Security Industry Authority', NULL);
+  ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
+  PERFORM pg_temp.ok(_r='OK', '3.6h historical fixture exists for post-revocation visibility');
+
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 4 -- the entitlement is PER MARKET, in the read too';
@@ -286,8 +293,8 @@ BEGIN
     _r := pg_temp.try_claim_as(_ni_user, 'UK_SIA_LICENCE_VI',
           'SIA Licence — Vehicle Immobilisation (Northern Ireland)',
           'GB', 'GB-NI', 'licence', '2030-01-01', 'Security Industry Authority');
-    PERFORM pg_temp.ok(_r = 'OK',
-      '5.7 the NI member registers vehicle immobilisation as authenticated (got ' || _r || ')');
+    PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+      '5.7 NI catalogue visibility does not approve a claim (got ' || _r || ')');
   ELSE
     RAISE NOTICE 'ok  5.5 GB-NI pack absent; NI assertions skipped';
     RAISE NOTICE 'ok  5.6 GB-NI pack absent; NI assertions skipped';
@@ -398,11 +405,18 @@ BEGIN
   _r := pg_temp.try_claim_as(_du_user, 'AE_DU_SIRA_CARD_GUARD',
         'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence', '2030-01-01',
         'Security Industry Regulatory Agency', 'Fiktivt bevakningsbolag');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '9.10 the claim trigger still admits the entitled member as authenticated (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+    '9.10 the closed catalogue refuses the unapproved definition even for a member (got ' || _r || ')');
+  -- Historical claim only: database-owner fixture, guarded candidate admission tested above.
+  ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
+  _r := pg_temp.try_claim_as(_du_user, 'AE_DU_SIRA_CARD_GUARD', 'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence',
+    '2030-01-01', 'Security Industry Regulatory Agency', 'Fiktivt bevakningsbolag');
+  ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
+  PERFORM pg_temp.ok(_r='OK', '9.10h historical fixture exists for post-revocation visibility');
+
   _r := pg_temp.try_claim_as(_public, 'AE_DU_SIRA_CARD_GUARD',
         'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'SP_MARKET_PACK_NOT_ACTIVE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '9.11 and still refuses the non-member with the same public refusal (got ' || _r || ')');
 
   -- Revocation, seen through the restricted functions, as the former member.

@@ -156,6 +156,11 @@ for f in supabase/migrations/*.sql; do
 done
 echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # STRICT-REPLAY-CONTRACT END
+# Preserve an empty, fully migrated database for destructive historical rollback
+# proofs. Later suites legitimately adopt international credentials; a rollback
+# of their catalogue must refuse, not erase those fixtures to make a test pass.
+psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
   for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue; do
@@ -4727,6 +4732,16 @@ else
 fi
 
 echo "==> Verifying the global certification rollback preserves every holder row"
+# This proof starts before catalogue adoption in a separate local database.
+# The main suite database keeps all earlier holder records and the final schema.
+PASSPORT_MAIN_TEST_DB="$TEST_DB"
+TEST_DB="${PASSPORT_MAIN_TEST_DB}_global_rollback"
+psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
+psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
+for passport_migration in 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
+  psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
+done
 # The rollback contract is not "the objects disappear". It is "the objects
 # disappear AND every row a holder ever wrote is byte-for-byte what it was",
 # and after real adoption "the rollback REFUSES rather than deleting one".
@@ -4820,6 +4835,16 @@ fi
 
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/tests/security_passport_global_certification_rollback_cleanup.sql >/dev/null
+
+# Restore the latest issuer guard and all dependent Passport units, then prove
+# the closed contract again before discarding this isolated rollback database.
+psql_q -d "$TEST_DB" -f supabase/migrations/20261114090000_sp_global_certification_governed_issuer.sql >/dev/null
+for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2 20261121090000_sp_closed_credential_catalogue; do
+  psql_q -d "$TEST_DB" -f "supabase/migrations/${passport_migration}.sql" >/dev/null
+done
+psql_q -d "$TEST_DB" -f supabase/tests/security_passport_closed_catalogue_test.sql >/dev/null
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB};" >/dev/null
+TEST_DB="$PASSPORT_MAIN_TEST_DB"
 
 echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
 set +e
@@ -5646,8 +5671,8 @@ else
     "4.3 an employment with no stated country is refused, not defaulted" \
     "5.1 education can be the first merit" \
     "5.2 course can be the first merit" \
-    "5.3 certification can be the first merit" \
-    "5.4 licence can be the first merit" \
+    "5.3 custom certification first merit is prohibited" \
+    "5.4 custom licence first merit is prohibited" \
     "6.1 a legacy completed profile can still record its first merit" \
     "12.4 the body names no trust column, so the merit takes the defaults" \
     "2.12 NEGATIVE CONTROL: a planted audit event cannot impersonate a completed operation" \
@@ -7131,6 +7156,16 @@ fi
 # The Swedish rollback must run FIRST: it restores the claim trigger to the
 # three-market version that the next step then replaces with the pre-market
 # one. The other order leaves a trigger describing a schema that is gone.
+# The adopted verification history must not be deleted by an old rollback.
+# Preserve the suite database; use a disposable clone for pre-adoption reversal.
+PASSPORT_ROLLBACK_SOURCE_DB="$TEST_DB"
+TEST_DB="${PASSPORT_ROLLBACK_SOURCE_DB}_sweden_rollback"
+psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_ROLLBACK_SOURCE_DB};" >/dev/null
+# Only generated local fixture accounts owning types removed by this rollback.
+# Account erasure honours all cascade/append-only guards; none are disabled.
+psql_q -d "$TEST_DB" -c "SELECT 'local fixture accounts removed from rollback clone' AS operation, count(*) FROM auth.users WHERE id IN (SELECT holder_user_id FROM public.sp_claims WHERE credential_code IN ('OV_TRAINING','OV_REFRESHER','OV_TRANSPORT','SE_PERSONNEL_APPROVAL'));"
+psql_q -d "$TEST_DB" -c "DELETE FROM auth.users WHERE id IN (SELECT holder_user_id FROM public.sp_claims WHERE credential_code IN ('OV_TRAINING','OV_REFRESHER','OV_TRANSPORT','SE_PERSONNEL_APPROVAL'));" >/dev/null
 echo "==> Verifying the Swedish truth model rollback"
 set +e
 # The Swedish rollback REFUSES while any holder row records what an

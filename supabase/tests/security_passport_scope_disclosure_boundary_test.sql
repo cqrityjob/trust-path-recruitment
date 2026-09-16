@@ -31,6 +31,8 @@ BEGIN
   INSERT INTO public.sp_passport_profiles (holder_user_id, display_name)
   VALUES (_h, 'Testinnehavare') ON CONFLICT (holder_user_id) DO NOTHING;
 
+  -- Historical scoped record: seed as owner, then restore the final guard before all disclosure assertions.
+  ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
   INSERT INTO public.sp_claims
     (id, holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      claimed_issuer_name, valid_until, authorisation_scope,
@@ -38,6 +40,7 @@ BEGIN
   VALUES (_claim, _h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'SE',
           'Länsstyrelsen', current_date + 300, _scope,
           'verified', 'active', _verifier, now());
+  ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 1 -- a public card never names the protected object';

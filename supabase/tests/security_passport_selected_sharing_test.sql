@@ -93,18 +93,18 @@ VALUES
   -- in the catalogue and is named by its definition; the fixtures obey the
   -- same triggers real rows do.
   ('d1c00000-0000-4000-8000-000000000001','d1000000-0000-4000-8000-000000000001',
-   'training','Väktarutbildning 1 (VU1)','VU1','SE','Utbildaren AB (fiktiv)',
+   'training','Ordningsvaktsutbildning (grundutbildning)','OV_TRAINING','SE','Polismyndigheten',
    DATE '2024-03-01', NULL, NULL,'verified','active',
    'd1000000-0000-4000-8000-000000000003', now(), now() - interval '10 days'),
   -- C2 · SELECTED · an ISSUER confirmation, which this product cannot
   -- structurally support, and a scope-bearing approval.
   ('d1c00000-0000-4000-8000-000000000002','d1000000-0000-4000-8000-000000000001',
-   'licence','Skyddsvaktsförordnande','SV','SE','Länsstyrelsen (fiktiv)',
-   DATE '2023-06-01', current_date + 200,'Skyddsobjekt: Kaj 12 (fiktivt)',
+   'licence','Ordningsvaktsförordnande','OV','SE','Polismyndigheten',
+   DATE '2023-06-01', current_date + 200,NULL,
    'verified','active','d1000000-0000-4000-8000-000000000003', now(), now() - interval '5 days'),
   -- C3 · NOT selected, and shareable in every other way.
   ('d1c00000-0000-4000-8000-000000000003','d1000000-0000-4000-8000-000000000001',
-   'certification','Hjärt- och lungräddning (fiktiv)',NULL,'SE','Utbildaren AB (fiktiv)',
+   'certification','Certified Protection Professional (CPP)','INTL_ASIS_CPP',NULL,'ASIS International',
    DATE '2025-01-10', current_date + 500, NULL,'verified','active',
    'd1000000-0000-4000-8000-000000000003', now(), now() - interval '3 days'),
   -- C4 · SELECTED · self-declared, and shareable. The reversal this suite is
@@ -116,12 +116,12 @@ VALUES
   -- C5 · a document attached and nobody has assessed it. Shareable, and on the
   -- public ladder it sits on the self-declared rung, not the documented one.
   ('d1c00000-0000-4000-8000-000000000005','d1000000-0000-4000-8000-000000000001',
-   'training','Inlämnat dokument (fiktivt)',NULL,'SE','Utbildaren AB (fiktiv)',
+   'training','Inlämnat dokument (fiktivt)',NULL,'SE','Polismyndigheten',
    DATE '2025-03-01', NULL, NULL,'document_provided','active', NULL, NULL,
    now() - interval '2 days'),
   -- C6 · archived. Never shareable, at any assertion level.
   ('d1c00000-0000-4000-8000-000000000006','d1000000-0000-4000-8000-000000000001',
-   'training','Security Guard Training 1 (VU1)','VU1','SE','Utbildaren AB (fiktiv)',
+   'training','Public Order Guard Training','OV_TRAINING','SE','Polismyndigheten',
    DATE '2019-01-01', NULL, NULL,'verified','superseded',
    'd1000000-0000-4000-8000-000000000003', now(), now() - interval '400 days'),
   -- C7 · unfinished. Never shareable.
@@ -130,7 +130,7 @@ VALUES
    NULL, NULL, NULL,'self_declared','draft', NULL, NULL, now() - interval '1 day'),
   -- Another holder's credential, for the ownership boundary.
   ('d1c00000-0000-4000-8000-0000000000ff','d1000000-0000-4000-8000-000000000002',
-   'training','Väktarutbildning 1 (VU1)','VU1','SE','Utbildaren AB (fiktiv)',
+   'training','Ordningsvaktsutbildning (grundutbildning)','OV_TRAINING','SE','Polismyndigheten',
    DATE '2024-01-01', NULL, NULL,'verified','active',
    'd1000000-0000-4000-8000-000000000003', now(), now() - interval '9 days');
 
@@ -182,7 +182,7 @@ VALUES
   ('d1f00000-0000-4000-8000-000000000003','d1000000-0000-4000-8000-000000000001',
    'd1000000-0000-4000-8000-000000000003','CQrityjob','approved','document_review'),
   ('d1f00000-0000-4000-8000-000000000004','d1000000-0000-4000-8000-000000000001',
-   'd1000000-0000-4000-8000-000000000003','Länsstyrelsen (fiktiv)','approved',
+   'd1000000-0000-4000-8000-000000000003','Polismyndigheten','approved',
    'issuer_confirmation');
 
 
@@ -224,8 +224,8 @@ BEGIN
   SELECT array_agg(x ->> 'title' ORDER BY x ->> 'title')
     INTO _keys FROM jsonb_array_elements(_payload -> 'verified_claims') x;
   PERFORM pg_temp.ok(_keys = ARRAY['Egen anteckning (fiktiv)',
-                                   'Skyddsvaktsförordnande',
-                                   'Väktarutbildning 1 (VU1)'],
+                                   'Ordningsvaktsförordnande',
+                                   'Ordningsvaktsutbildning (grundutbildning)'],
     '1.4 the payload carries EXACTLY the three selected credentials');
 
   -- The pairing that makes 1.4 mean something: C3 is active, verified and of
@@ -234,7 +234,7 @@ BEGIN
     (SELECT assertion_level = 'verified' AND lifecycle_state = 'active'
        FROM public.sp_claims WHERE id = 'd1c00000-0000-4000-8000-000000000003'),
     '1.5 POSITIVE CONTROL the unselected credential is shareable in every other way');
-  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Hjärt- och lungräddning%',
+  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Certified Protection Professional%',
     '1.6 MUTATION it appears nowhere in the payload');
 
   SELECT array_agg(x ->> 'employer' ORDER BY x ->> 'employer')
@@ -307,7 +307,7 @@ BEGIN
      claimed_issuer_name, issued_on, valid_until, assertion_level,
      lifecycle_state, verified_by_user_id, verified_at)
   VALUES ('d1c00000-0000-4000-8000-000000000008','d1000000-0000-4000-8000-000000000001',
-    'certification','Ny merit efter delning (fiktiv)',NULL,'SE','Utbildaren AB (fiktiv)',
+    'certification','Physical Security Professional (PSP)','INTL_ASIS_PSP',NULL,'ASIS International',
     current_date, current_date + 365,'verified','active',
     'd1000000-0000-4000-8000-000000000003', now());
 
@@ -321,7 +321,7 @@ BEGIN
 
   PERFORM pg_temp.ok(jsonb_array_length(_payload -> 'verified_claims') = 3,
     '2.1 the existing share still carries three');
-  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Ny merit efter delning%',
+  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Physical Security Professional%',
     '2.2 a merit recorded after the share was created is NOT in it');
 END $$;
 
@@ -343,7 +343,7 @@ BEGIN
   _payload := public.sp_get_disclosure(current_setting('sp_test.token'));
   PERFORM pg_temp.ok(jsonb_array_length(_payload -> 'verified_claims') = 2,
     '3.1 a revoked credential drops out of an existing share');
-  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Skyddsvaktsförordnande%',
+  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Ordningsvaktsförordnande%',
     '3.2 it is not still presented as current');
 
   -- Restored: the rest of the suite needs it back.
@@ -879,10 +879,10 @@ BEGIN
   _payload := public.sp_get_disclosure(current_setting('sp_test.token'));
 
   SELECT x INTO _c FROM jsonb_array_elements(_payload -> 'verified_claims') x
-   WHERE x ->> 'title' = 'Skyddsvaktsförordnande';
+   WHERE x ->> 'title' = 'Ordningsvaktsförordnande';
 
-  PERFORM pg_temp.ok((_c ->> 'scope_limited')::boolean IS TRUE,
-    '10.1 the recipient is told the approval HAS limits');
+  PERFORM pg_temp.ok((_c ->> 'scope_limited')::boolean IS FALSE,
+    '10.1 governed OV has no candidate-defined scope');
   PERFORM pg_temp.ok(_c ->> 'authorisation_scope' IS NULL,
     '10.2 but not what they are — a chosen-scope share is not an employer package');
   PERFORM pg_temp.ok(_payload::text NOT LIKE '%Kaj 12%',
@@ -892,11 +892,11 @@ BEGIN
   -- product refuses to dress it as a source confirmation in the presentation
   -- layer (PR #189); the database does not rewrite the record to achieve that.
   PERFORM pg_temp.ok(_c ->> 'verification_method' = 'issuer_confirmation'
-                 AND _c ->> 'verifier_organisation' = 'Länsstyrelsen (fiktiv)',
+                 AND _c ->> 'verifier_organisation' = 'Polismyndigheten',
     '10.4 a recorded issuer confirmation travels as exactly what it is');
 
   SELECT x INTO _c FROM jsonb_array_elements(_payload -> 'verified_claims') x
-   WHERE x ->> 'title' = 'Väktarutbildning 1 (VU1)';
+   WHERE x ->> 'title' = 'Ordningsvaktsutbildning (grundutbildning)';
   PERFORM pg_temp.ok(_c ->> 'verification_method' = 'document_review'
                  AND _c ->> 'verifier_organisation' = 'CQrityjob',
     '10.5 a CQrityjob document review is carried AS a document review');

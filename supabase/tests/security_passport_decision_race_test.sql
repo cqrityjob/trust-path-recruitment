@@ -83,12 +83,12 @@ DECLARE _h uuid := 'cb000000-0000-0000-0000-00000000000b'; _claim uuid; _req uui
 BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, assertion_level,
-     lifecycle_state, claimed_issuer_name, valid_from, valid_until)
+     lifecycle_state, claimed_issuer_name, valid_from, valid_until, jurisdiction_code)
   VALUES (_h,
-          (SELECT claim_type FROM public.sp_credential_types WHERE code = 'VU1'),
-          (SELECT name_sv FROM public.sp_credential_types WHERE code = 'VU1'),
-          'VU1', 'document_provided', 'active',
-          'Fiktiv utbildningsanordnare', DATE '2026-01-01', DATE '2027-12-31')
+          (SELECT claim_type FROM public.sp_credential_types WHERE code = 'OV_TRAINING'),
+          (SELECT name_sv FROM public.sp_credential_types WHERE code = 'OV_TRAINING'),
+          'OV_TRAINING', 'document_provided', 'active',
+          'Polismyndigheten', DATE '2026-01-01', DATE '2027-12-31', 'SE')
   RETURNING id INTO _claim;
 
   INSERT INTO public.sp_verification_requests (holder_user_id, request_kind, status, claim_id)

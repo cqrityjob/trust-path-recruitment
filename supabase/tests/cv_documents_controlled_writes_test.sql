@@ -155,23 +155,11 @@ DO $$ BEGIN RAISE NOTICE 'GROUP N — the hole is open in phase 1, and the bound
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.as_holder('50000000-0000-0000-0000-00000000000a');
 
--- ── N1. FINAL LOCKDOWN AND HISTORICAL CORRUPTION ─────────────────────
+-- ── N1. THE DOOR IS STILL OPEN, AND THAT IS THE DESIGN ─────────────────
 --
--- Candidate writes must fail. Seed the historical corruption as the database
--- owner only after proving that denial; submission must reject it too.
-SELECT pg_temp.must_fail($attack$INSERT INTO public.cv_documents (owner_user_id, title, source_bundle)
-VALUES ('50000000-0000-0000-0000-00000000000a', 'Fabricated',
-        jsonb_build_object(
-          'identity',   jsonb_build_object('displayName', 'Karin Wallin'),
-          'employment', jsonb_build_array(jsonb_build_object(
-                          'id', 'ffffffff-0000-0000-0000-000000000001',
-                          'employerName', 'Säkerhetspolisen',
-                          'roleTitle',    'Operativ chef',
-                          'startedOn',    '2011-01-01')),
-          'education',  '[]'::jsonb));$attack$, 'permission denied', 'N0 direct candidate CV fabrication is denied under final lockdown');
-RESET ROLE;
--- Privileged fixture represents corrupted historical data: the submission
--- boundary must still reject it even when it predates the write lockdown.
+-- Nothing is re-granted here. This is the privilege 20261010090000 left in
+-- place and phase 1 deliberately does not take away, because the published
+-- application depends on it.
 INSERT INTO public.cv_documents (owner_user_id, title, source_bundle)
 VALUES ('50000000-0000-0000-0000-00000000000a', 'Fabricated',
         jsonb_build_object(
@@ -188,7 +176,7 @@ RESET ROLE;
 SELECT pg_temp.ok(
   (SELECT source_bundle #>> '{employment,0,employerName}' FROM public.cv_documents
     WHERE title = 'Fabricated') = 'Säkerhetspolisen',
-  'N1 privileged historical corruption fixture carries the forged employment');
+  'N1 in phase 1 a holder CAN still write an employment that never happened');
 
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM public.sp_experience_periods
@@ -837,13 +825,12 @@ SELECT pg_temp.ok(
 DO $$ BEGIN RAISE NOTICE 'GROUP P — privileges'; END $$;
 -- ═════════════════════════════════════════════════════════════════════════
 
--- The final combined schema retains SELECT and closes every direct write.
 SELECT pg_temp.ok(
   has_table_privilege('authenticated', 'public.cv_documents', 'SELECT')
-  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'INSERT')
-  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'UPDATE')
-  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'DELETE'),
-  'P1 final schema permits reads but prohibits direct candidate CV writes');
+  AND has_table_privilege('authenticated', 'public.cv_documents', 'INSERT')
+  AND has_table_privilege('authenticated', 'public.cv_documents', 'UPDATE')
+  AND has_table_privilege('authenticated', 'public.cv_documents', 'DELETE'),
+  'P1 phase 1 leaves the published application''s direct writes intact');
 
 SELECT pg_temp.ok(
   NOT has_table_privilege('authenticated', 'public.cv_documents', 'TRUNCATE'),

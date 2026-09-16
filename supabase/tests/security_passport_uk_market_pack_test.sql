@@ -51,7 +51,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 1.5 an unreviewed market accepted a claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_MARKET_PACK_NOT_ACTIVE%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 1.5 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  1.5 no UK credential can be recorded until the pack is reviewed';
@@ -167,9 +167,9 @@ BEGIN
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       credential_reference, lifecycle_state)
+       credential_reference, lifecycle_state, claimed_issuer_name)
     VALUES (_h, 'licence', 'SIA Licence — Door Supervision', 'UK_SIA_LICENCE_DS', 'GB',
-            'ABCD567812345678', 'draft');
+            'ABCD567812345678', 'draft', 'Security Industry Authority');
     RAISE EXCEPTION 'ASSERTION FAILED: 4.2 a non-numeric licence number was accepted in a draft';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  4.2 the format binds drafts too, so the holder is told immediately';
@@ -187,9 +187,11 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      claimed_issuer_name, credential_reference)
-  VALUES (_h, 'training', 'Licence-linked qualification — Door Supervision', 'UK_SIA_QUAL_DS', 'GB',
-          'Approved Training Provider Ltd', 'AO/2026/DS/00417');
-  RAISE NOTICE 'ok  4.4 a qualification certificate number is not forced into that shape';
+  VALUES (_h, 'training', 'Ordningsvaktsutbildning (grundutbildning)', 'OV_TRAINING', 'SE',
+          'Polismyndigheten', 'AO/2026/DS/00417');
+  RAISE NOTICE 'ok  4.4 an approved training certificate number is not forced into the licence shape';
+  IF EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code='UK_SIA_QUAL_DS') THEN RAISE EXCEPTION 'ASSERTION FAILED: qualification with no governed issuer exposed'; END IF;
+  RAISE NOTICE 'ok  4.5 qualification without a governed issuer remains withheld even after market activation';
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 5 -- nothing crosses a market, in either direction';
