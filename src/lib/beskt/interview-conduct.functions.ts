@@ -625,10 +625,8 @@ export const recordBesktPanelResolution = createServerFn({ method: "POST" })
       _expected_revision: data.expectedRevision,
       _item_key: data.itemKey,
       _resolution_kind: data.resolutionKind,
-      // The generated types type these optional SQL arguments as non-nullable;
-      // the database accepts NULL for "not provided".
-      _agreed_statement: (data.agreedStatement ?? null) as unknown as string,
-      _divergent_statement: (data.divergentStatement ?? null) as unknown as string,
+      _agreed_statement: data.agreedStatement ?? null,
+      _divergent_statement: data.divergentStatement ?? null,
       _rationale: data.rationale,
     });
     if (error) throw new Error(error.message);
