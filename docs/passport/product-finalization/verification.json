@@ -1,5 +1,5 @@
 {
-  "verified_at_utc": "2026-09-16T17:54:50.418703+00:00",
+  "verified_at_utc": "2026-09-16T18:04:24.512342+00:00",
   "branch": "codex/passport-product-finalization",
   "base_main": "351dea8",
   "production": {
@@ -24,7 +24,7 @@
     {
       "name": "production-build",
       "result": "PASS",
-      "log_sha256": "ef02fa0fd7c386c29029a302e101bd764b91e9343516257dded612d1986ce19e"
+      "log_sha256": "2e2d6b57c23935817d07683f41832a7e9b3505db527f57dce0fcdd635f9835fb"
     },
     {
       "name": "app-typecheck",
@@ -674,7 +674,7 @@
     {
       "name": "interview-ai-eval:check",
       "result": "PASS",
-      "log_sha256": "1944ec7897563bccfa865728c791026e91b9a470d8b1faa40dc5612f11e6c29a"
+      "log_sha256": "607cdd237c93b91d19dd3bda16dc5ee36168925d68d6aad0365e3ba0a80ba9ce"
     },
     {
       "name": "interview-ux-contract:check",
@@ -903,6 +903,7 @@
     "e2e/passport-first-run.spec.ts": "a8a64e06f7da3a8ac71ff99c38fd2485ed2ba627a0a9599bee03a7d4b9697505",
     "e2e/passport-international.spec.ts": "4694ec655b481a9f1de6c569992cf30a99b89f9d7efe7f07ed0a9b61fcf4757d",
     "e2e/passport-live-local.spec.ts": "981ed7770f58bd7b621d64291eb2af52c916ad4514206bbe6cd7c4953b56efe0",
+    "e2e/passport-product-visual.spec.ts": "5aba2123c4c0259506b02f2ae983dcc24cf6e6e3a2df46982ba98abb33789886",
     "e2e/passport-three-market.spec.ts": "1dd9fc4c7d32bb32a2bc303ec151380262d02c69fc40de2786c3ff303cb875df",
     "e2e/passport-workspace.spec.ts": "616c4fc5bfa2d2b81387db263a078b44f98df077eb0d641db71aff6b7e293476",
     "scripts/db-test.sh": "f7aa690f11a9d8f309dbd03fb1436e2ccb4fffee0e800bd2cd70a6691a29224a",
@@ -916,15 +917,21 @@
     "scripts/negative-controls/overview-composition-controls.ts": "903f79050bc898e86b6bf83a63d93c695917d76788e5d1b0063671b1af2cfece",
     "scripts/negative-controls/passport-page-composition-controls.ts": "651fd74906380dfb00b23b1a50e3a9a6b221a3e4e318446358f77d7dacb22b75",
     "scripts/passport-page-composition-check.ts": "35ba901add17ba4be2adb0434924fa2365cea54d293ba420a481aeb43e29c21f",
+    "scripts/passport-product-check.ts": "3cac70dc9ffe4b20a08bf33a3c1b4f6ce12dc845014aa3b56f21524944a82baf",
     "scripts/passport-profile-basics-check.tsx": "56ed32931bde3b51d5774a001691ce18f5ca7c554e1efd5550033fb3547e2e1e",
     "scripts/passport-trust-source-check.tsx": "c2bcb7290a87ff0dab42feef677815d0328ab46c46ea892109f3b42fe3828476",
     "scripts/release-frontier-check.ts": "383bf9ce9dfc23d7638a4470136d0f719364cdd83d07a2f562e8bdeb39045755",
     "src/components/security-passport/CompactPassportCard.tsx": "a1f56f9998c4a468aad47e4d8a825543257e4fc64c29c1ff62f20ab5969dc240",
+    "src/components/security-passport/CredentialDefinitionContext.tsx": "daa82855ebf9060ea35b9007ef4b27431ecd5c231c95f3b019e403a8cc00b6f8",
     "src/components/security-passport/CredentialWallet.tsx": "d21d49eed4676b5533b1ff5e03ec5767208218a1c662885ebd8f13de715c2b80",
     "src/components/security-passport/InternationalCredentialForm.tsx": "ac81682bd4d843b406200a3b66dd61ff2da1dc83cbd8fd4dc2fa9619886a67e6",
     "src/components/security-passport/PassportOwnership.tsx": "e23f164c96951ac6eb728c0bf87100412292e532287dd7f10008762ff94ca34d",
+    "src/components/security-passport/SecureShareQr.tsx": "0a3e1703c0182b8af28756f9ca0940f3e60f76c71eea68eee33f6cda4450c384",
     "src/components/security-passport/live/RecipientPassportCard.tsx": "d4f60af83bb00d58be2c856cb32ca6e664fa8932faffacbcbcc5cf569d4215cb",
+    "src/components/security-passport/live/VerificationPanel.tsx": "2c385c85b5ef0ba310ecab135d24d8b8ba1955f6704f6cde8b071cf9b4c6a2b0",
+    "src/lib/security-passport/i18n.ts": "669830e8ccc263f424a5cee8f0f186901d20c6486a43cfb1460f73370acdfd7d",
     "src/lib/security-passport/international.functions.ts": "8f6a1df573bf74475a1430a7e7c9633e70cd03c15ae43c4da49e822a43ed228a",
+    "src/lib/security-passport/product-status.ts": "23c6ed48845cfa3658a36cead8a956effae909764ab0a5bd7acb903a623fb43f",
     "src/lib/security-passport/use-qr.ts": "125bffedad86ddf035ae3361f143bb5505dfeee73ba74e400f7f4b51af1a1f3b",
     "src/routes/_authenticated.passport.card.tsx": "5bc8dc2e2414e961ec271e0bf6a838af50560f38233e0ebeee6db15a48be5e50",
     "src/routes/_authenticated.passport.credentials.new.tsx": "088656037d9beff0a3b32e269328e8f9f7b3e5220d40ecdf39acc2f5981b2d5d",
@@ -932,14 +939,14 @@
     "src/routes/_authenticated.passport.index.tsx": "a86a5f97a61f17eee2adc9ce03bf9c6bb535e1f1172f7d7d47f426fdb86a17ed",
     "src/routes/_authenticated.passport.share.tsx": "7bd6cafdc916f678d71eacf7836063f76c225a5db8a029bb0ae9424dc38d1c30",
     "src/routes/_authenticated.passport.tsx": "cc4f90debcb423a959d8925e6a282ad684d5d70c8c11a3092a1ac0589eb43595",
-    "supabase/release-state.json": "fd04026455bf222201ba678876fffdc3b09ff50bfe42cf9e447ba87dd408a990",
-    "e2e/passport-product-visual.spec.ts": "c9082f9ef53fa6d7334485b61fd1c1b48d8df5ae986cf3f89499659c1bf0922b",
-    "scripts/passport-product-check.ts": "3cac70dc9ffe4b20a08bf33a3c1b4f6ce12dc845014aa3b56f21524944a82baf",
-    "src/components/security-passport/CredentialDefinitionContext.tsx": "daa82855ebf9060ea35b9007ef4b27431ecd5c231c95f3b019e403a8cc00b6f8",
-    "src/components/security-passport/SecureShareQr.tsx": "0a3e1703c0182b8af28756f9ca0940f3e60f76c71eea68eee33f6cda4450c384",
-    "src/lib/security-passport/product-status.ts": "23c6ed48845cfa3658a36cead8a956effae909764ab0a5bd7acb903a623fb43f",
     "supabase/migrations/20261123090000_sp_credential_organisation_roles.sql": "47069140175906d7c0eb4fc167c6997daa05896d5bb819f5bce48eda40fd46e8",
+    "supabase/release-state.json": "fd04026455bf222201ba678876fffdc3b09ff50bfe42cf9e447ba87dd408a990",
     "supabase/rollback/20261123090000_sp_credential_organisation_roles_rollback.sql": "08f3f1fc3056d5acada9c66735feb4600418daaab31bab09be14dd6d95c23553",
     "supabase/tests/security_passport_organisation_roles_test.sql": "8d0a5c44620fc236edbbde85457584dd828810d4b752ac2a77527fcbd5c44af9"
+  },
+  "presentation_followup": {
+    "copy": "Document review and source confirmation explicitly separated in Swedish and English.",
+    "history": "Completed review history uses decision date; submission date is retained as fallback when undecided.",
+    "verification": "149 deterministic checks rerun: 148 pass, schema-first blocked as expected; deployment gate also correctly blocked. Changed-file lint and production build pass. Final visual rerun 6/6 includes different submission/decision dates and coherent private evidence/review fixtures. Decision truthfulness guard passes."
   }
 }

@@ -980,7 +980,7 @@ const sv = {
   "ev.uploading": "Laddar upp …",
   "ev.none": "Inga dokument ännu.",
   "ev.ceiling":
-    "Att ladda upp ett dokument gör uppgiften Dokument inlämnat. Det blir inte Verifierat förrän någon annan har granskat det.",
+    "Uppladdat underlag är inte verifierat mot källan. CQrityjobs dokumentgranskning gäller dokumentet; en källbekräftelse är en separat kontroll.",
   "ev.limits": "PDF, JPG, PNG eller HEIC. Högst 8 MB.",
   "ev.tooLarge": "Filen är för stor. Högst 8 MB.",
   "ev.badType": "Filtypen stöds inte. Använd PDF, JPG, PNG eller HEIC.",
@@ -1022,7 +1022,7 @@ const sv = {
   "ev.count": "dokument",
   "ver.title": "Verifiering",
   "ver.lead":
-    "Du kan aldrig verifiera dig själv. Verifiering görs av CQrityjob eller av en arbetsgivare som känner till anställningen.",
+    "CQrityjob granskar dokument. Arbetsgivarbekräftelse gäller enbart anställningar. Du kan inte verifiera dig själv.",
   "ver.request": "Begär verifiering",
   "ver.requestCq": "Låt CQrityjob granska dokumentationen",
   "ver.requestCqHelp":
@@ -2108,7 +2108,7 @@ const sv = {
   "cred.category.appointment": "Tidsbegränsat förordnande",
   "cred.field.validFromHelp": "Endast om beslutet anger ett annat startdatum än beslutsdatumet.",
   "cred.docsNotApproval":
-    "Underlag är inte samma sak som godkännande. En uppladdad handling gör uppgiften dokumenterad — bara en genomförd kontroll kan göra den verifierad.",
+    "Varje resultat visar vad som kontrollerats och av vem. Dokumentgranskning bekräftar inte aktuell status hos utfärdaren.",
   "cred.evidenceNext":
     "När uppgiften är tillagd kan du ladda upp underlag och skicka den för kontroll.",
   "cred.addAction": "Lägg till behörighet",
@@ -3022,7 +3022,7 @@ const en: Record<PassportCopyKey, string> = {
   "ev.uploading": "Uploading …",
   "ev.none": "No documents yet.",
   "ev.ceiling":
-    "Uploading a document makes the entry Document provided. It does not become Verified until somebody else has reviewed it.",
+    "Uploaded evidence is not verified against its source. CQrityjob document review checks the document; source confirmation is a separate check.",
   "ev.limits": "PDF, JPG, PNG or HEIC. 8 MB maximum.",
   "ev.tooLarge": "That file is too large. 8 MB maximum.",
   "ev.badType": "That file type is not supported. Use PDF, JPG, PNG or HEIC.",
@@ -3051,7 +3051,7 @@ const en: Record<PassportCopyKey, string> = {
   "ev.count": "documents",
   "ver.title": "Verification",
   "ver.lead":
-    "You can never verify yourself. Verification is done by CQrityjob, or by an employer with direct knowledge of the employment.",
+    "CQrityjob reviews documents. Employer confirmation applies only to employment. You cannot verify yourself.",
   "ver.request": "Request verification",
   "ver.requestCq": "Have CQrityjob review the documentation",
   "ver.requestCqHelp":
@@ -3993,7 +3993,7 @@ const en: Record<PassportCopyKey, string> = {
   "cred.field.validFromHelp":
     "Only if the decision states a start date other than the decision date.",
   "cred.docsNotApproval":
-    "Documentation is not the same as approval. An uploaded document makes an entry documented — only a completed check can make it verified.",
+    "Each result states what was checked and by whom. Document review does not confirm current standing with the issuer.",
   "cred.evidenceNext":
     "Once the entry is added you can upload documentation and submit it for checking.",
   "cred.addAction": "Add a credential",

@@ -28,6 +28,8 @@ Organisation roles reference the existing authority or certification-body record
 - Personnel approval and civilian SV approval reference Länsstyrelsen. SV remains scope-restricted and not selectable through a scope-free candidate flow. [Guarding companies and personnel](https://www.lansstyrelsen.se/ostergotland/samhalle/tillstand-for-att-utova-verksamhet/bevakningsforetag.html), [SV approval application](https://www.lansstyrelsen.se/download/18.4dec946918b853a3b1e4901/1698847159075/Ans%C3%B6kan%20om%20godk%C3%A4nnande%20av%20skyddsvakt%202023.pdf).
 - SIA licences reference SIA as issuer/regulator. Qualifications distinguish awarding body from training provider; SIA does not deliver training. Licences normally last three years, with the one-year Northern Ireland vehicle-immobilisation exception. [Licensing](https://www.gov.uk/guidance/apply-for-an-sia-licence), [training](https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence).
 
+Detail-page copy distinguishes document review from source confirmation. Review history dates a completed result by its decision date, with submission date used only when no decision date exists.
+
 Legacy holder-entered organisation strings are retained as personal history, labelled as such on detail pages, and no longer promoted to official catalogue facts in the wallet or v2 public payload.
 
 ## Local schema change; hosted approval required

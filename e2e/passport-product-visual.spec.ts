@@ -258,6 +258,48 @@ for (const lang of ["en", "sv"] as const) {
         },
       ],
     };
+    const reviewHistory = {
+      requests: [
+        {
+          id: "demo-review",
+          claimId: claim.id,
+          periodId: null,
+          kind: "cqrityjob_review",
+          status: "approved",
+          submittedAt: "2026-09-09T12:00:00Z",
+          decidedAt: "2026-09-10T12:00:00Z",
+          method: "document_review",
+          holderMessage: null,
+          validFrom: "2026-09-10",
+          validUntil: "2030-01-01",
+          targetEmployerId: null,
+        },
+      ],
+      decisions: [
+        {
+          id: "demo-decision",
+          requestId: "demo-review",
+          decision: "approved",
+          organisation: "CQrityjob",
+          method: "document_review",
+          decidedAt: "2026-09-10T12:00:00Z",
+          validFrom: "2026-09-10",
+          validUntil: "2030-01-01",
+        },
+      ],
+    };
+    const evidence = [
+      {
+        id: "demo-private-evidence",
+        claimId: claim.id,
+        periodId: null,
+        fileName: "cpp-document.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 12345,
+        uploadedAt: "2026-09-09T11:00:00Z",
+        lifecycleState: "active",
+      },
+    ];
     const recipientPayload = {
       status: "active",
       package: "selected_merits",
@@ -303,9 +345,13 @@ for (const lang of ["en", "sv"] as const) {
           ? { ...snapshot, holder: { ...snapshot.holder, claims: demoClaims } }
           : name === "getInternationalPassportMetadata"
             ? demoMetadata
-            : name === "getPublicDisclosureFromCookie"
-              ? recipientPayload
-              : undefined;
+            : name === "listMyVerificationRequests"
+              ? reviewHistory
+              : name === "listMyEvidence"
+                ? evidence
+                : name === "getPublicDisclosureFromCookie"
+                  ? recipientPayload
+                  : undefined;
       if (result !== undefined)
         return route.fulfill({
           status: 200,
@@ -348,6 +394,8 @@ for (const lang of ["en", "sv"] as const) {
     await capture("add-review");
     await page.goto(`${base}/passport/entry/claim/${claim.id}`);
     await expect(page.locator("[data-definition-context]")).toBeVisible();
+    await expect(page.locator("[data-verification-history]")).toContainText("2026-09-10");
+    await expect(page.locator("[data-verification-history]")).not.toContainText("2026-09-09");
     await capture("credential-detail");
     await page.goto(`${base}/passport/card`);
     await expect(page.locator("[data-compact-passport-card]")).toContainText(

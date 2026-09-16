@@ -689,11 +689,11 @@ export function VerificationPanel({
         {requests.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">{pt("ver.historyEmpty")}</p>
         ) : (
-          <ul className="mt-2 space-y-1.5">
+          <ul data-verification-history className="mt-2 space-y-1.5">
             {requests.map((r) => (
               <li key={r.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
                 <span className="tabular-nums text-muted-foreground">
-                  {r.submittedAt.slice(0, 10)}
+                  {(r.decidedAt ?? r.submittedAt).slice(0, 10)}
                 </span>
                 <span className="text-foreground">
                   {pt(STATUS_KEY[r.status] ?? "ver.status.pending")}
