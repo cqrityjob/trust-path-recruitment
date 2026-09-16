@@ -32,6 +32,7 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-primary-foreground/40"
       />
+      <div aria-hidden="true" className="pointer-events-none absolute top-0 right-0 -z-10 h-56 w-40 border-l border-primary-foreground/10 opacity-60" />
 
       <header className="flex items-start justify-between gap-4 border-b border-primary-foreground/15 pb-5">
         <div>

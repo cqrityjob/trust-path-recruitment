@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, Globe2, MapPin, Plus, Lock } from "lucide-react";
+import { ArrowUpRight, FileCheck2, Globe2, MapPin, Plus, Lock, Share2, UserRound } from "lucide-react";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import type { InternationalPassportMetadata } from "@/lib/security-passport/international.functions";
 import { credentialPassportHolder } from "@/lib/security-passport/credential-passport";
@@ -12,6 +12,8 @@ import { credentialPresentationOf } from "@/lib/security-passport/trust-presenta
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { CredentialSymbol } from "./CredentialSymbol";
+import { CredentialRecord, CredentialRecordFact } from "./CredentialRecord";
+import { LifecycleChip } from "./LifecycleChip";
 
 export function CredentialWallet({
   snapshot,
@@ -57,37 +59,39 @@ export function CredentialWallet({
       aria-labelledby="credential-wallet-heading"
       tabIndex={-1}
       data-credential-wallet
-      className="min-w-0 space-y-7"
+      className="min-w-0 space-y-8"
     >
-      <header className="relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-7">
+      <header className="relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-8">
         <div
           aria-hidden="true"
           className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40"
         />
-        <div className="flex flex-wrap items-end justify-between gap-5">
+        <div aria-hidden="true" className="absolute top-0 right-0 h-48 w-48 border-l border-primary-foreground/10 opacity-50" />
+        <div className="relative grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
-            <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[.14em] text-primary-foreground/65">
+            <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.14em] text-primary-foreground/65">
               <Lock size={12} aria-hidden="true" />
-              {copy("Ditt privata yrkespass", "Your private professional passport")}
+              Security Passport
             </p>
             <h1
               id="credential-wallet-heading"
-              className="break-words text-3xl font-semibold tracking-tight !text-primary-foreground sm:text-[2.5rem]"
+              className="break-words text-3xl font-semibold !text-primary-foreground sm:text-[2.5rem]"
             >
               {identity?.displayName || copy("Mitt Security Passport", "My Security Passport")}
             </h1>
-            <p className="mt-2 text-primary-foreground/75">
+            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-primary-foreground/80">
               {title ||
                 copy(
                   "Komplettera din yrkestitel i Profil",
                   "Add your professional title in Profile",
                 )}{" "}
-              <span className="text-xs text-primary-foreground/50">
-                · {copy("från Profil", "from Profile")}
+              <span className="inline-flex items-center gap-1 text-xs text-primary-foreground/55">
+                <UserRound size={12} aria-hidden="true" />
+                {copy("från Profil", "from Profile")}
               </span>
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
             <Link
               to="/passport/credentials/new"
               className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary-foreground px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -98,13 +102,18 @@ export function CredentialWallet({
             <Link
               to="/passport/share"
               data-cta="share"
-              className="inline-flex min-h-11 items-center rounded-md border border-primary-foreground/25 px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center gap-2 rounded-md border border-primary-foreground/25 px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
+              <Share2 size={16} aria-hidden="true" />
               {copy("Välj och dela", "Select and share")}
             </Link>
           </div>
         </div>
-        <dl className="mt-7 grid grid-cols-2 border-t border-primary-foreground/15 pt-4 sm:grid-cols-5">
+        <div className="relative mt-8 border-t border-primary-foreground/15 pt-5">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/50">
+            {copy("Din professionella dokumentation", "Your professional records")}
+          </p>
+          <dl className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-5">
           {[
             [active.length, copy("Aktiva meriter", "Active credentials")],
             [verified, copy("Granskade dokument", "Documents reviewed")],
@@ -120,7 +129,7 @@ export function CredentialWallet({
           ].map(([value, label]) => (
             <div
               key={label}
-              className="min-w-0 border-primary-foreground/15 px-3 py-2 first:pl-0 sm:border-l sm:first:border-l-0 sm:last:pr-0"
+              className="min-w-0 border-primary-foreground/15 sm:border-l sm:pl-4 sm:first:border-l-0 sm:first:pl-0"
             >
               <dd className="text-xl font-semibold tabular-nums text-primary-foreground">
                 {value}
@@ -128,7 +137,8 @@ export function CredentialWallet({
               <dt className="mt-1 text-xs leading-snug text-primary-foreground/55">{label}</dt>
             </div>
           ))}
-        </dl>
+          </dl>
+        </div>
       </header>
       {reviews === null && (
         <p role="status" data-review-read-status className="rounded-xl bg-muted p-3 text-sm">
@@ -172,10 +182,7 @@ export function CredentialWallet({
                 {group.length}
               </span>
             </h2>
-            <ul
-              className="divide-y divide-border border-y border-border"
-              aria-label={copy("Meriter", "Credentials")}
-            >
+            <ul className="space-y-3" aria-label={copy("Meriter", "Credentials")}>
               {group.map((row) => {
                 const c = row.claim;
                 const detail = metadata.details.find((d) => d.claim_id === c.id);
@@ -190,68 +197,69 @@ export function CredentialWallet({
                   : undefined;
                 const definition = metadata.definitions?.find((d) => d.code === c.credentialCode);
                 return (
-                  <li
-                    key={c.id}
-                    data-credential-row
-                    className="grid min-w-0 gap-4 py-5 sm:grid-cols-[auto_minmax(0,1fr)_minmax(9rem,auto)] sm:items-center"
-                  >
-                    <div className="flex items-start gap-3 sm:block">
+                  <li key={c.id} data-credential-row className="min-w-0">
+                    <CredentialRecord
+                      symbol={
                       <CredentialSymbol
                         code={c.credentialCode}
                         state={credentialPresentationOf(c, row.lifecycle)}
                         name={lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
                         decorative
+                        size={52}
+                        className="relative z-10"
                       />
-                      <span className="rounded-full bg-secondary px-2.5 py-1 text-xs sm:mt-3 sm:inline-flex">
-                        {global
-                          ? copy("Internationellt", "International")
-                          : country(detail?.validity_jurisdiction_code || c.jurisdictionCode) ||
-                            copy("Område ej angivet", "Area not stated")}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">
+                      }
+                      eyebrow={
                         {CREDENTIAL_CLASSES[credentialClass(c, detail)][lang]}
-                      </p>
-                      <h3 className="mt-1 break-words text-lg font-semibold leading-snug">
+                      }
+                      title={
                         {definition
                           ? definition[lang === "sv" ? "name_sv" : "name_en"]
                           : lang === "sv"
                             ? c.titleSv
                             : c.titleEn || c.titleSv}
-                      </h3>
-                      <p className="mt-2 break-words text-sm text-muted-foreground">
-                        {officialIssuer ||
-                          (issuerRole?.document_specific
-                            ? copy("Utfärdare enligt dokumentet", "Issuer recorded on the document")
-                            : definition?.issuer_name) ||
-                          copy(
-                            "Officiell organisation behöver bekräftas",
-                            "Official organisation needs confirmation",
-                          )}
-                      </p>
-                    </div>
-                    <div className="min-w-0 sm:text-right">
-                      <span
-                        className={`inline-flex rounded-lg px-2.5 py-1.5 text-xs font-medium ${row.checked ? "bg-emerald-50 text-emerald-800" : row.lifecycle === "active" ? "bg-slate-100 text-slate-700" : "bg-amber-50 text-amber-900"}`}
-                      >
-                        {row.label[lang]}
-                      </span>
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {c.validUntil
-                          ? `${copy("Angivet slutdatum", "Recorded expiry")}: ${credentialDate(c.validUntil, lang)}`
-                          : detail?.no_expiry
-                            ? copy(
-                                "Utan utgångsdatum enligt definitionen",
-                                "No expiry permitted by definition",
-                              )
-                            : copy("Slutdatum inte angivet", "Expiry not stated")}
-                      </p>
-                    </div>
-                    <Link
+                      }
+                      metadata={
+                        <>
+                          <CredentialRecordFact
+                            label={copy("Källa / utfärdare", "Source / issuer")}
+                            value={officialIssuer ||
+                              (issuerRole?.document_specific
+                                ? copy("Utfärdare enligt dokumentet", "Issuer recorded on the document")
+                                : definition?.issuer_name) ||
+                              copy("Officiell organisation behöver bekräftas", "Official organisation needs confirmation")}
+                          />
+                          <CredentialRecordFact
+                            label={copy("Jurisdiktion", "Jurisdiction")}
+                            value={global
+                              ? copy("Internationell", "International")
+                              : country(detail?.validity_jurisdiction_code || c.jurisdictionCode) ||
+                                copy("Område ej angivet", "Area not stated")}
+                          />
+                          <CredentialRecordFact
+                            label={copy("Giltighet", "Validity")}
+                            value={c.validUntil
+                              ? credentialDate(c.validUntil, lang)
+                              : detail?.no_expiry
+                                ? copy("Utan utgångsdatum", "No expiry")
+                                : copy("Slutdatum inte angivet", "Expiry not stated")}
+                          />
+                        </>
+                      }
+                      states={
+                        <div className="flex flex-wrap gap-2 sm:flex-col sm:items-end">
+                          <span className="inline-flex rounded-full border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-foreground">
+                            <FileCheck2 size={13} className="mr-1.5" aria-hidden="true" />
+                            {row.label[lang]}
+                          </span>
+                          <LifecycleChip state={row.lifecycle} />
+                        </div>
+                      }
+                      action={
+                        <Link
                       to="/passport/entry/$kind/$entryId"
                       params={{ kind: "claim", entryId: c.id }}
-                      className="flex min-h-11 items-center justify-between gap-2 text-sm font-medium sm:col-start-2 sm:col-end-4 sm:border-t sm:border-border sm:pt-3"
+                      className="flex min-h-11 items-center justify-between gap-2 text-sm font-semibold text-accent"
                     >
                       {row.status === "registered"
                         ? copy("Lägg till underlag", "Add evidence")
@@ -259,7 +267,9 @@ export function CredentialWallet({
                           ? copy("Komplettera uppgifter", "Provide information")
                           : copy("Öppna meriter", "View credential")}
                       <ArrowUpRight size={16} aria-hidden="true" />
-                    </Link>
+                        </Link>
+                      }
+                    />
                   </li>
                 );
               })}
