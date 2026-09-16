@@ -6,6 +6,18 @@
   }, 
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
+    {
+      "file": "20261122090000_cv_owned_application_snapshot.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "cv_owned_application_snapshot"
+        }
+      ],
+      "note": "Real local API regression found invoker submission calling revoked private CV helpers. Owner-checked read wrapper preserves private helpers and application RLS. Hosted changes NOT authorised.",
+      "rollback": "supabase/rollback/20261122090000_cv_owned_application_snapshot_rollback.sql"
+    },
 {
   "file": "20261121090000_sp_closed_credential_catalogue.sql",
   "hostedState": "pending",

@@ -179,6 +179,18 @@ for passport_round in before after; do
 done
 
 
+# Saved-CV application submission must work as authenticated, not just postgres.
+for cv_round in before after; do
+  cv_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cv_owned_application_snapshot_test.sql 2>&1)" || { echo "$cv_output"; exit 1; }
+  cv_count="$(printf '%s\n' "$cv_output" | grep -c 'NOTICE:  ok ' || true)"
+  [ "$cv_count" -ge 19 ] || { echo "CV snapshot assertion shortfall: $cv_count"; exit 1; }
+  echo "    $cv_count assertions passed: authenticated CV submission ($cv_round rollback/reapply)"
+  if [ "$cv_round" = before ]; then
+    psql_q -d "$TEST_DB" -f supabase/rollback/20261122090000_cv_owned_application_snapshot_rollback.sql >/dev/null
+    psql_q -d "$TEST_DB" -f supabase/migrations/20261122090000_cv_owned_application_snapshot.sql >/dev/null
+  fi
+done
+
 # ---------------------------------------------------------------------------
 # 3b. Walk back to the phase-1 CV state.
 #
@@ -196,6 +208,10 @@ done
 # Skipped silently where the file does not exist, so this script is identical
 # on a branch that does not carry phase 3.
 # ---------------------------------------------------------------------------
+# Stand down the later owner-snapshot entry point before testing the historical
+# four-entry-point CV contract. Its final authenticated contract and its own
+# rollback/reapply have already run above, against the fully replayed schema.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261122090000_cv_owned_application_snapshot_rollback.sql >/dev/null
 if [ -f supabase/rollback/20261103090000_cv_documents_lockdown_rollback.sql ]; then
   echo "==> Standing the CV lockdown down to reach the phase-1 state"
   psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
