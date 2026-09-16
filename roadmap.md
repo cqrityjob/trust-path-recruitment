@@ -16,6 +16,7 @@
 - [ ] Security Passport correction: add-credential and selective-sharing presentation
 - [ ] Homepage Passport anchor coherence only
 - [ ] Preview evidence: overview desktop/mobile, add credential, real ASIS-style credential display, share preview, homepage anchor
+- [ ] Owner visual gate: prove at least one real Preview credential uses the premium record system, or report the data limitation
 - [ ] Verification: SV/EN, desktop, 390px, 375px, focused checks and browser smoke tests
 
 ## Frozen boundaries

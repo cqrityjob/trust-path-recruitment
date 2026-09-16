@@ -83,6 +83,7 @@ No server-function, database, generated-type, catalogue, assessment, BESKT, BCP,
 - Profile identity and Security Passport documentation are visibly distinct.
 - The overview reads as a premium professional Passport rather than a dashboard.
 - Existing APP/CPP/PSP or other real credentials receive a distinctive visual record treatment without invented data.
+- At least one real credential available in Preview visibly demonstrates the new premium credential-record system; if existing Preview data cannot provide one, report that limitation and do not fabricate content or mark the pass complete.
 - National, international, employer-issued, education, and training credentials can share the same visual grammar while retaining their own metadata and jurisdictions.
 - The experience communicates a holder's professional identity in the security industry, not merely certificate storage; this remains an internal design objective, not unsupported public marketing copy.
 - Trust and lifecycle states remain explicit and semantically correct.
